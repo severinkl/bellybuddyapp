@@ -40,28 +40,33 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ref.watch(ingredientSuggestionProvider.notifier).newCount;
 
     return Scaffold(
+      backgroundColor: AppTheme.background,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _loadData,
           color: AppTheme.primary,
-          child: SingleChildScrollView(
+          child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Padding(
+            slivers: [
+              const SliverToBoxAdapter(
+                child: Padding(
                   padding: EdgeInsets.fromLTRB(24, 24, 24, 0),
                   child: _DashboardHeader(),
                 ),
-                const SizedBox(height: 24),
-                const Padding(
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 24)),
+              const SliverToBoxAdapter(
+                child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 24),
                   child: _TrackerCards(),
                 ),
-                const SizedBox(height: 32),
-                _ForYouSection(newCount: newCount),
-              ],
-            ),
+              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 32)),
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: _ForYouSection(newCount: newCount),
+              ),
+            ],
           ),
         ),
       ),
@@ -212,44 +217,53 @@ class _ForYouSection extends StatelessWidget {
               ),
             ),
           ),
-          GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: 12,
-            crossAxisSpacing: 12,
-            childAspectRatio: 1.3,
+          Row(
             children: [
-              FeatureCard(
-                imageAsset: AppConstants.fuerDichCard,
-                label: 'Für dich',
-                icon: Icons.auto_awesome,
-                iconColor: AppTheme.primary,
-                onTap: () => context.push(RoutePaths.recommendations),
+              Expanded(
+                child: FeatureCard(
+                  imageAsset: AppConstants.fuerDichCard,
+                  label: 'Für dich',
+                  icon: Icons.auto_awesome,
+                  iconColor: AppTheme.primary,
+                  onTap: () => context.push(RoutePaths.recommendations),
+                ),
               ),
-              FeatureCard(
-                imageAsset: AppConstants.alternativenCard,
-                label: 'Alternativen',
-                icon: Icons.eco,
-                iconColor: AppTheme.chipGluten,
-                badgeCount: newCount,
-                onTap: () => context.push(RoutePaths.ingredientSuggestions),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FeatureCard(
+                  imageAsset: AppConstants.alternativenCard,
+                  label: 'Alternativen',
+                  icon: Icons.eco,
+                  iconColor: AppTheme.chipGluten,
+                  badgeCount: newCount,
+                  onTap: () => context.push(RoutePaths.ingredientSuggestions),
+                ),
               ),
-              FeatureCard(
-                imageAsset: AppConstants.rezepteCard,
-                label: 'Rezepte',
-                icon: Icons.restaurant_menu,
-                iconColor: AppTheme.foreground,
-                onTap: () => context.push(RoutePaths.recipes),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: FeatureCard(
+                  imageAsset: AppConstants.rezepteCard,
+                  label: 'Rezepte',
+                  icon: Icons.restaurant_menu,
+                  iconColor: AppTheme.foreground,
+                  onTap: () => context.push(RoutePaths.recipes),
+                ),
               ),
-              FeatureCard(
-                imageAsset: AppConstants.susiPhone,
-                label: 'Wissen',
-                icon: Icons.menu_book,
-                iconColor: AppTheme.foreground,
-                onTap: () => launchUrl(
-                  Uri.parse('https://www.myfodmap.at/blog'),
-                  mode: LaunchMode.externalApplication,
+              const SizedBox(width: 12),
+              Expanded(
+                child: FeatureCard(
+                  imageAsset: AppConstants.susiPhone,
+                  label: 'Wissen',
+                  icon: Icons.menu_book,
+                  iconColor: AppTheme.foreground,
+                  onTap: () => launchUrl(
+                    Uri.parse('https://www.myfodmap.at/blog'),
+                    mode: LaunchMode.externalApplication,
+                  ),
                 ),
               ),
             ],

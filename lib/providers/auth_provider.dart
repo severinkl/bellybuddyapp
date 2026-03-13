@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 import '../services/supabase_service.dart';
@@ -23,15 +22,3 @@ final isAuthenticatedProvider = Provider<bool>((ref) {
     error: (_, _) => false,
   );
 });
-
-/// Whether onboarding has been seen
-final isOnboardedProvider = FutureProvider<bool>((ref) async {
-  final prefs = await SharedPreferences.getInstance();
-  return prefs.getBool('onboarding_seen') ?? false;
-});
-
-/// Mark onboarding as seen
-Future<void> markOnboardingSeen() async {
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.setBool('onboarding_seen', true);
-}

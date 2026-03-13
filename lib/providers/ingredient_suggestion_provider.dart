@@ -29,7 +29,7 @@ class IngredientSuggestionNotifier
               (e['ingredients'] as Map<String, dynamic>?)?['name'] as String?;
           e['ingredient_name'] = ingredientName;
           return IngredientSuggestion.fromJson(e);
-        }).toList(),
+        }).where((s) => s.ingredientId != null).toList(),
       );
     } catch (e, st) {
       state = AsyncValue.error(e, st);

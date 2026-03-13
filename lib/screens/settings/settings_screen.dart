@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../../config/app_theme.dart';
 import '../../router/route_names.dart';
 import '../../widgets/common/bb_settings_item.dart';
 
@@ -9,7 +10,11 @@ class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Einstellungen')),
+      backgroundColor: AppTheme.screenBackground,
+      appBar: AppBar(
+        backgroundColor: AppTheme.screenBackground,
+        title: const Text('Einstellungen'),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -24,12 +29,12 @@ class SettingsScreen extends StatelessWidget {
             BbSettingsItem(
               icon: Icons.notifications_outlined,
               title: 'Benachrichtigungen',
-              subtitle: 'Push-Nachrichten & Erinnerungen',
+              subtitle: 'Push-Benachrichtigungen & Erinnerungen',
               onTap: () => context.push(RoutePaths.settingsNotifications),
             ),
             const SizedBox(height: 12),
             BbSettingsItem(
-              icon: Icons.lock_outline,
+              icon: Icons.shield_outlined,
               title: 'Konto & Sicherheit',
               subtitle: 'Abmelden, Passwort ändern, Konto verwalten',
               onTap: () => context.push(RoutePaths.settingsAccount),

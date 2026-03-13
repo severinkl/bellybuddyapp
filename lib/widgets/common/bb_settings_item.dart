@@ -22,9 +22,19 @@ class BbSettingsItem extends StatelessWidget {
     return PressScaleWrapper(
       onTap: onTap,
       child: BbCard(
+        color: Colors.white,
+        showBorder: false,
         child: Row(
           children: [
-            Icon(icon, color: AppTheme.foreground, size: 24),
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: AppTheme.primary.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: AppTheme.primary, size: 24),
+            ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(

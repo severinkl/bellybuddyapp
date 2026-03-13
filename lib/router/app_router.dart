@@ -3,14 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
 import '../utils/logger.dart';
-import '../providers/profile_provider.dart';
 import '../screens/auth/auth_screen.dart';
 import '../screens/auth/reset_password_screen.dart';
 import '../screens/dashboard/dashboard_screen.dart';
 import '../screens/diary/diary_screen.dart';
 import '../screens/ingredient_suggestions/ingredient_suggestions_screen.dart';
 import '../screens/not_found_screen.dart';
-import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/recommendations/recommendations_screen.dart';
 import '../screens/recipes/recipes_screen.dart';
 import '../screens/registration/registration_wizard_screen.dart';
@@ -22,6 +20,8 @@ import '../screens/trackers/drink/drink_tracker_screen.dart';
 import '../screens/trackers/gut_feeling/gut_feeling_tracker_screen.dart';
 import '../screens/trackers/meal/meal_tracker_screen.dart';
 import '../screens/trackers/toilet/toilet_tracker_screen.dart';
+import '../screens/welcome/welcome_screen.dart';
+import '../config/app_theme.dart';
 import '../widgets/common/bb_bottom_nav.dart';
 import '../widgets/common/swipeable_pages.dart';
 import 'route_names.dart';
@@ -29,8 +29,6 @@ import 'route_names.dart';
 class _RouterRefreshNotifier extends ChangeNotifier {
   _RouterRefreshNotifier(Ref ref) {
     ref.listen(isAuthenticatedProvider, (_, _) => notifyListeners());
-    ref.listen(profileProvider, (_, _) => notifyListeners());
-    ref.listen(isOnboardedProvider, (_, _) => notifyListeners());
   }
 }
 
@@ -38,62 +36,37 @@ const _log = AppLogger('Router');
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
-    initialLocation: RoutePaths.onboarding,
+    initialLocation: RoutePaths.welcome,
     refreshListenable: _RouterRefreshNotifier(ref),
     errorBuilder: (context, state) => const NotFoundScreen(),
     redirect: (context, state) {
       final isAuthenticated = ref.read(isAuthenticatedProvider);
-      final isOnboarded =
-          ref.read(isOnboardedProvider).asData?.value ?? false;
-      final profileState = ref.read(profileProvider);
-      final profileLoading = profileState.isLoading;
-      final hasProfile = ref.read(hasProfileProvider);
-
       final path = state.matchedLocation;
-      _log.debug('redirect: path=$path auth=$isAuthenticated onboarded=$isOnboarded profileLoading=$profileLoading hasProfile=$hasProfile');
 
-      final isAuthRoute = path == RoutePaths.auth ||
-          path == RoutePaths.onboarding ||
-          path == RoutePaths.registration ||
+      final isAuthRoute = path == RoutePaths.welcome ||
+          path == RoutePaths.auth ||
           path == RoutePaths.resetPassword;
 
-      // Not authenticated
+      _log.debug('redirect: path=$path auth=$isAuthenticated');
+
       if (!isAuthenticated) {
-        if (path == RoutePaths.onboarding || path == RoutePaths.auth || path == RoutePaths.resetPassword) {
-          return null;
-        }
-        return isOnboarded ? RoutePaths.auth : RoutePaths.onboarding;
+        // Allow unauthenticated users on welcome, auth, registration, reset-password
+        if (isAuthRoute || path == RoutePaths.registration) return null;
+        return RoutePaths.welcome;
       }
 
-      // Authenticated but profile not yet loaded — don't redirect yet
-      if (profileLoading) {
-        return null;
-      }
-
-      // Authenticated but profile fetch failed — stay put, don't redirect to registration
-      if (profileState.hasError && !profileState.hasValue) {
-        _log.debug('profile in error state, staying put');
-        return null;
-      }
-
-      // Authenticated but no profile
-      if (!hasProfile) {
-        if (path == RoutePaths.registration) return null;
-        return RoutePaths.registration;
-      }
-
-      // Authenticated with profile, on auth route
-      if (hasProfile && isAuthRoute) {
-        return RoutePaths.dashboard;
-      }
+      // Authenticated on auth route → dashboard
+      // NOTE: /registration is NOT in isAuthRoute — user stays there to finish
+      // saving profile after signup before being redirected
+      if (isAuthRoute) return RoutePaths.dashboard;
 
       return null;
     },
     routes: [
       GoRoute(
-        path: RoutePaths.onboarding,
-        name: RouteNames.onboarding,
-        builder: (context, state) => const OnboardingScreen(),
+        path: RoutePaths.welcome,
+        name: RouteNames.welcome,
+        builder: (context, state) => const WelcomeScreen(),
       ),
       GoRoute(
         path: RoutePaths.auth,
@@ -115,6 +88,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return Scaffold(
+            backgroundColor: AppTheme.beige,
             body: SwipeablePages(
               currentIndex: navigationShell.currentIndex,
               pageCount: 2,

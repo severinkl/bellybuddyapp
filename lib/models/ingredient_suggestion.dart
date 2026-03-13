@@ -7,7 +7,7 @@ part 'ingredient_suggestion.g.dart';
 abstract class IngredientSuggestion with _$IngredientSuggestion {
   const factory IngredientSuggestion({
     required String id,
-    @JsonKey(name: 'ingredient_id') required String ingredientId,
+    @JsonKey(name: 'ingredient_id') String? ingredientId,
     @JsonKey(name: 'ingredient_name') String? ingredientName,
     String? helptext,
     @JsonKey(name: 'meal_count') @Default(0) int mealCount,

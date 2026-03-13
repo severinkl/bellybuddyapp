@@ -5,16 +5,17 @@ import '../../config/app_theme.dart';
 import '../../models/user_profile.dart';
 import '../../providers/profile_provider.dart';
 import '../../router/route_names.dart';
+import '../../services/auth_service.dart';
 import '../../services/haptic_service.dart';
 import '../../utils/logger.dart';
 import '../../widgets/common/bb_button.dart';
+import 'steps/auth_step.dart';
 import 'steps/birth_year_step.dart';
 import 'steps/gender_step.dart';
 import 'steps/height_weight_step.dart';
 import 'steps/diet_step.dart';
 import 'steps/symptoms_step.dart';
 import 'steps/intolerances_step.dart';
-import 'steps/completion_step.dart';
 
 class RegistrationWizardScreen extends ConsumerStatefulWidget {
   const RegistrationWizardScreen({super.key});
@@ -30,6 +31,7 @@ class _RegistrationWizardScreenState
   final _pageController = PageController();
   int _currentStep = 0;
   bool _isSaving = false;
+  String? _authError;
 
   // Form state
   int? _birthYear;
@@ -68,30 +70,59 @@ class _RegistrationWizardScreenState
     }
   }
 
-  Future<void> _saveProfile() async {
-    setState(() => _isSaving = true);
+  Future<void> _createProfile() async {
+    final profile = UserProfile(
+      birthYear: _birthYear,
+      gender: _gender,
+      height: _height,
+      weight: _weight,
+      diet: _diet,
+      symptoms: _symptoms,
+      intolerances: _intolerances,
+      fructoseTriggers: _fructoseTriggers,
+      lactoseTriggers: _lactoseTriggers,
+      histaminTriggers: _histaminTriggers,
+    );
+    await ref.read(profileProvider.notifier).createProfile(profile);
+  }
+
+  Future<void> _handleEmailSignUp(String email, String password) async {
+    setState(() { _isSaving = true; _authError = null; });
     try {
-      final profile = UserProfile(
-        birthYear: _birthYear,
-        gender: _gender,
-        height: _height,
-        weight: _weight,
-        diet: _diet,
-        symptoms: _symptoms,
-        intolerances: _intolerances,
-        fructoseTriggers: _fructoseTriggers,
-        lactoseTriggers: _lactoseTriggers,
-        histaminTriggers: _histaminTriggers,
-      );
-      await ref.read(profileProvider.notifier).createProfile(profile);
+      await AuthService.signUpWithEmail(email, password);
+      await _createProfile();
       if (mounted) context.go(RoutePaths.dashboard);
     } catch (e) {
-      _log.error('profile save failed', e);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fehler beim Speichern: $e')),
-        );
-      }
+      _log.error('email sign-up failed', e);
+      if (mounted) setState(() => _authError = 'Registrierung fehlgeschlagen.');
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _handleGoogleSignUp() async {
+    setState(() { _isSaving = true; _authError = null; });
+    try {
+      await AuthService.signInWithGoogle();
+      await _createProfile();
+      if (mounted) context.go(RoutePaths.dashboard);
+    } catch (e) {
+      _log.error('google sign-up failed', e);
+      if (mounted) setState(() => _authError = 'Google-Anmeldung fehlgeschlagen.');
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _handleAppleSignUp() async {
+    setState(() { _isSaving = true; _authError = null; });
+    try {
+      await AuthService.signInWithApple();
+      await _createProfile();
+      if (mounted) context.go(RoutePaths.dashboard);
+    } catch (e) {
+      _log.error('apple sign-up failed', e);
+      if (mounted) setState(() => _authError = 'Apple-Anmeldung fehlgeschlagen.');
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -177,9 +208,12 @@ class _RegistrationWizardScreenState
                     onHistaminTriggersChanged: (v) =>
                         setState(() => _histaminTriggers = v),
                   ),
-                  CompletionStep(
-                    isSaving: _isSaving,
-                    onSave: _saveProfile,
+                  AuthStep(
+                    isLoading: _isSaving,
+                    error: _authError,
+                    onEmailSignUp: _handleEmailSignUp,
+                    onGoogleSignUp: _handleGoogleSignUp,
+                    onAppleSignUp: _handleAppleSignUp,
                   ),
                 ],
               ),

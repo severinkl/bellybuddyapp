@@ -109,8 +109,8 @@ class _SplashScreenState extends State<SplashScreen>
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFFF7F5F2), // hsl(30, 30%, 96%)
-              Color(0xFFF0EBE4), // hsl(25, 25%, 93%)
+              AppTheme.card,
+              AppTheme.beige,
             ],
           ),
         ),

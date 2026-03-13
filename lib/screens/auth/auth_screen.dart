@@ -8,9 +8,8 @@ import '../../router/route_names.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/common/bb_button.dart';
 import '../../widgets/common/bb_auth_banner.dart';
-import '../../widgets/common/bb_password_hint.dart';
 
-enum _AuthView { login, register, forgotPassword }
+enum _AuthView { login, forgotPassword }
 
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
@@ -35,26 +34,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     super.dispose();
   }
 
-  bool get _isPasswordValid {
-    final p = _passwordController.text;
-    return p.length >= 8 &&
-        p.contains(RegExp(r'[A-Z]')) &&
-        p.contains(RegExp(r'[a-z]')) &&
-        p.contains(RegExp(r'[0-9]'));
-  }
-
-  /// After login, fetch profile and navigate to the right screen.
-  Future<void> _navigateAfterAuth({bool isNewUser = false}) async {
+  Future<void> _navigateAfterAuth() async {
     if (!mounted) return;
-    if (isNewUser) {
-      context.go(RoutePaths.registration);
-      return;
-    }
-    // Fetch profile to determine if registration is complete
     await ref.read(profileProvider.notifier).fetchProfile();
     if (!mounted) return;
-    final hasProfile = ref.read(hasCompletedRegistrationProvider);
-    context.go(hasProfile ? RoutePaths.dashboard : RoutePaths.registration);
+    context.go(RoutePaths.dashboard);
   }
 
   Future<void> _handleEmailAuth() async {
@@ -64,28 +48,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       _error = null;
     });
     try {
-      if (_view == _AuthView.register) {
-        if (!_isPasswordValid) return;
-        await AuthService.signUpWithEmail(
-          _emailController.text.trim(),
-          _passwordController.text,
-        );
-        await _navigateAfterAuth(isNewUser: true);
-      } else {
-        await AuthService.signInWithEmail(
-          _emailController.text.trim(),
-          _passwordController.text,
-        );
-        await _navigateAfterAuth();
-      }
+      await AuthService.signInWithEmail(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+      await _navigateAfterAuth();
     } catch (e) {
-      setState(() {
-        if (_view == _AuthView.register) {
-          _error = 'Diese E-Mail ist bereits registriert.';
-        } else {
-          _error = 'E-Mail oder Passwort ist falsch.';
-        }
-      });
+      setState(() => _error = 'E-Mail oder Passwort ist falsch.');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -152,9 +121,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 Text(
                   _view == _AuthView.forgotPassword
                       ? 'Passwort vergessen?'
-                      : _view == _AuthView.register
-                          ? 'Konto erstellen'
-                          : 'Willkommen zurück',
+                      : 'Willkommen zurück',
                   style: const TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w700,
@@ -166,9 +133,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 Text(
                   _view == _AuthView.forgotPassword
                       ? 'Gib deine E-Mail ein, um dein Passwort zurückzusetzen.'
-                      : _view == _AuthView.register
-                          ? 'Erstelle dein Belly Buddy Konto'
-                          : 'Melde dich bei Belly Buddy an',
+                      : 'Melde dich bei Belly Buddy an',
                   style: const TextStyle(
                     fontSize: 15,
                     color: AppTheme.mutedForeground,
@@ -218,39 +183,17 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   ),
                   const SizedBox(height: 8),
 
-                  // Password validation hints (register only)
-                  if (_view == _AuthView.register) ...[
-                    BbPasswordHint(
-                      text: 'Mindestens 8 Zeichen',
-                      isValid: _passwordController.text.length >= 8,
+                  // Forgot password link
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton(
+                      onPressed: () => setState(() {
+                        _view = _AuthView.forgotPassword;
+                        _error = null;
+                      }),
+                      child: const Text('Passwort vergessen?'),
                     ),
-                    BbPasswordHint(
-                      text: 'Mindestens ein Großbuchstabe',
-                      isValid: _passwordController.text.contains(RegExp(r'[A-Z]')),
-                    ),
-                    BbPasswordHint(
-                      text: 'Mindestens ein Kleinbuchstabe',
-                      isValid: _passwordController.text.contains(RegExp(r'[a-z]')),
-                    ),
-                    BbPasswordHint(
-                      text: 'Mindestens eine Zahl',
-                      isValid: _passwordController.text.contains(RegExp(r'[0-9]')),
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-
-                  // Forgot password link (login only)
-                  if (_view == _AuthView.login)
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: TextButton(
-                        onPressed: () => setState(() {
-                          _view = _AuthView.forgotPassword;
-                          _error = null;
-                        }),
-                        child: const Text('Passwort vergessen?'),
-                      ),
-                    ),
+                  ),
                 ],
 
                 const SizedBox(height: 16),
@@ -259,9 +202,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 BbButton(
                   label: _view == _AuthView.forgotPassword
                       ? 'Zurücksetzen'
-                      : _view == _AuthView.register
-                          ? 'Registrieren'
-                          : 'Anmelden',
+                      : 'Anmelden',
                   isLoading: _isLoading,
                   onPressed: _view == _AuthView.forgotPassword
                       ? _handleResetPassword
@@ -302,25 +243,23 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
                 const SizedBox(height: 24),
 
-                // Toggle login/register or back
+                // Toggle or back
                 TextButton(
-                  onPressed: () => setState(() {
-                    _error = null;
-                    _resetSent = false;
+                  onPressed: () {
                     if (_view == _AuthView.forgotPassword) {
-                      _view = _AuthView.login;
-                    } else if (_view == _AuthView.login) {
-                      _view = _AuthView.register;
+                      setState(() {
+                        _error = null;
+                        _resetSent = false;
+                        _view = _AuthView.login;
+                      });
                     } else {
-                      _view = _AuthView.login;
+                      context.go(RoutePaths.registration);
                     }
-                  }),
+                  },
                   child: Text(
                     _view == _AuthView.forgotPassword
                         ? 'Zurück zur Anmeldung'
-                        : _view == _AuthView.login
-                            ? 'Noch kein Konto? Registrieren'
-                            : 'Bereits registriert? Anmelden',
+                        : 'Noch kein Konto? Registrieren',
                   ),
                 ),
               ],

@@ -52,7 +52,9 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
     }
 
     return Scaffold(
+      backgroundColor: AppTheme.screenBackground,
       appBar: AppBar(
+        backgroundColor: AppTheme.screenBackground,
         leading: IconButton(
           icon: const Icon(Icons.close),
           onPressed: () => context.pop(),

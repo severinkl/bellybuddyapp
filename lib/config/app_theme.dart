@@ -6,7 +6,7 @@ class AppTheme {
   // Core colors (from HSL CSS variables)
   static const Color background = Color(0xFFFFFFFF);
   static const Color foreground = Color(0xFF302820);
-  static const Color beige = Color(0xFFF0EBE4);
+  static const Color beige = Color(0xFFF5EFE7);
   static const Color card = Color(0xFFF9F7F4);
   static const Color cardForeground = Color(0xFF302820);
   static const Color primary = Color(0xFFB5CC47);
@@ -32,11 +32,18 @@ class AppTheme {
   static const Color chipSorbit = Color(0xFFE8712C);
 
   // Bottom nav gradient
-  static const Color navGradientStart = Color(0xFFF5DDD3);
-  static const Color navGradientEnd = Color(0xFFE8BFC4);
+  static const Color navGradientStart = Color(0xFFFFB5C1);
+  static const Color navGradientEnd = Color(0xFFFFD5C1);
 
-  // Mood tracker
-  static const Color moodBackground = Color(0xFFF0D6DB);
+  // Tracker screen background (light blush tint of gradient)
+  static const Color screenBackground = Color(0xFFFFF0F2);
+
+  // Convenience gradient
+  static const LinearGradient pinkPeachGradient = LinearGradient(
+    colors: [navGradientStart, navGradientEnd],
+    begin: Alignment.centerLeft,
+    end: Alignment.centerRight,
+  );
   static const Color moodSliderActive = Color(0xFFB5CC47);
   static const Color moodSliderInactive = Color(0xFFE3E0DC);
 

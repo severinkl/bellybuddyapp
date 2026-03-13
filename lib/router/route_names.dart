@@ -1,7 +1,7 @@
 class RouteNames {
   RouteNames._();
 
-  static const String onboarding = 'onboarding';
+  static const String welcome = 'welcome';
   static const String auth = 'auth';
   static const String resetPassword = 'reset-password';
   static const String registration = 'registration';
@@ -23,7 +23,7 @@ class RouteNames {
 class RoutePaths {
   RoutePaths._();
 
-  static const String onboarding = '/onboarding';
+  static const String welcome = '/welcome';
   static const String auth = '/auth';
   static const String resetPassword = '/reset-password';
   static const String registration = '/registration';

@@ -23,6 +23,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
   final _ingredientController = TextEditingController();
   final _picker = ImagePicker();
   bool _isEditingTitle = false;
+  bool _isAddingIngredient = false;
 
   @override
   void dispose() {
@@ -84,7 +85,9 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     }
 
     return Scaffold(
+      backgroundColor: AppTheme.screenBackground,
       appBar: AppBar(
+        backgroundColor: AppTheme.screenBackground,
         leading: IconButton(
           icon: const Icon(Icons.close),
           onPressed: () => context.pop(),
@@ -106,7 +109,13 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(_titleController.text),
+                    Flexible(
+                      child: Text(
+                        _titleController.text,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                     const SizedBox(width: 4),
                     const Icon(Icons.edit, size: 16),
                   ],
@@ -148,6 +157,13 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
             ),
             const SizedBox(height: 16),
 
+            // Date/Time (right after image)
+            DateTimePickerTile(
+              value: state.trackedAt,
+              onChanged: (dt) => ref.read(mealTrackerProvider.notifier).setTrackedAt(dt),
+            ),
+            const SizedBox(height: 16),
+
             if (state.isAnalyzing)
               const Center(
                 child: Padding(
@@ -162,71 +178,90 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
                 ),
               ),
 
-            // Ingredients
-            const Text(
-              'Zutaten',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _ingredientController,
-              decoration: InputDecoration(
-                hintText: 'Zutat hinzufügen...',
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.add),
-                  onPressed: () {
-                    ref.read(mealTrackerProvider.notifier).addIngredient(_ingredientController.text);
-                    _ingredientController.clear();
-                  },
-                ),
+            // Ingredients section with pinkish/mauve background
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
               ),
-              onChanged: (v) => ref.read(mealTrackerProvider.notifier).searchIngredients(v),
-              onSubmitted: (v) {
-                ref.read(mealTrackerProvider.notifier).addIngredient(v);
-                _ingredientController.clear();
-              },
-            ),
-
-            if (state.ingredientSuggestions.isNotEmpty)
-              Container(
-                margin: const EdgeInsets.only(top: 4),
-                decoration: BoxDecoration(
-                  color: AppTheme.card,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppTheme.border),
-                ),
-                child: Column(
-                  children: state.ingredientSuggestions.map((s) {
-                    return ListTile(
-                      title: Text(s),
-                      dense: true,
-                      onTap: () {
-                        ref.read(mealTrackerProvider.notifier).addIngredient(s);
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Zutaten',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  if (_isAddingIngredient) ...[
+                    TextField(
+                      controller: _ingredientController,
+                      autofocus: true,
+                      decoration: InputDecoration(
+                        hintText: 'Zutat hinzufügen...',
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () {
+                            _ingredientController.clear();
+                            ref.read(mealTrackerProvider.notifier).searchIngredients('');
+                            setState(() => _isAddingIngredient = false);
+                          },
+                        ),
+                      ),
+                      onChanged: (v) => ref.read(mealTrackerProvider.notifier).searchIngredients(v),
+                      onSubmitted: (v) {
+                        ref.read(mealTrackerProvider.notifier).addIngredient(v);
                         _ingredientController.clear();
+                        ref.read(mealTrackerProvider.notifier).searchIngredients('');
+                        setState(() => _isAddingIngredient = false);
                       },
-                    );
-                  }).toList(),
-                ),
+                    ),
+                    if (state.ingredientSuggestions.isNotEmpty)
+                      Container(
+                        margin: const EdgeInsets.only(top: 4),
+                        decoration: BoxDecoration(
+                          color: AppTheme.card,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppTheme.border),
+                        ),
+                        child: Column(
+                          children: state.ingredientSuggestions.map((s) {
+                            return ListTile(
+                              title: Text(s),
+                              dense: true,
+                              onTap: () {
+                                ref.read(mealTrackerProvider.notifier).addIngredient(s);
+                                _ingredientController.clear();
+                                ref.read(mealTrackerProvider.notifier).searchIngredients('');
+                                setState(() => _isAddingIngredient = false);
+                              },
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                    const SizedBox(height: 8),
+                  ],
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      ...state.ingredients.map((ingredient) {
+                        return Chip(
+                          label: Text(ingredient),
+                          labelStyle: const TextStyle(color: Colors.black),
+                          onDeleted: () =>
+                              ref.read(mealTrackerProvider.notifier).removeIngredient(ingredient),
+                        );
+                      }),
+                      ActionChip(
+                        backgroundColor: AppTheme.primary,
+                        label: const Text('+ Hinzufügen'),
+                        onPressed: () => setState(() => _isAddingIngredient = true),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: state.ingredients.map((ingredient) {
-                return Chip(
-                  label: Text(ingredient),
-                  onDeleted: () =>
-                      ref.read(mealTrackerProvider.notifier).removeIngredient(ingredient),
-                );
-              }).toList(),
-            ),
-            const SizedBox(height: 16),
-
-            // Date/Time
-            DateTimePickerTile(
-              value: state.trackedAt,
-              onChanged: (dt) => ref.read(mealTrackerProvider.notifier).setTrackedAt(dt),
             ),
             const SizedBox(height: 16),
 
