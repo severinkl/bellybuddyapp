@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../utils/logger.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/user_profile.dart';
@@ -18,6 +19,7 @@ class SettingsProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
+  static const _log = AppLogger('SettingsProfile');
   Timer? _debounce;
   bool _saved = false;
 
@@ -34,7 +36,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
   @override
   void initState() {
     super.initState();
-    ref.read(profileProvider.notifier).fetchProfile();
+    Future.microtask(() => ref.read(profileProvider.notifier).fetchProfile());
   }
 
   @override
@@ -54,7 +56,9 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
             if (mounted) setState(() => _saved = false);
           });
         }
-      } catch (_) {}
+      } catch (e) {
+        _log.error('failed to save profile', e);
+      }
     });
   }
 

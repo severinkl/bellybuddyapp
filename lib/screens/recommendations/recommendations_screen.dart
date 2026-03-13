@@ -17,7 +17,7 @@ class _RecommendationsScreenState
   @override
   void initState() {
     super.initState();
-    ref.read(recommendationProvider.notifier).fetchRecommendations();
+    Future.microtask(() => ref.read(recommendationProvider.notifier).fetchRecommendations());
   }
 
   @override

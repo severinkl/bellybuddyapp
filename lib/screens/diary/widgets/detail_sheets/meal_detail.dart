@@ -1,0 +1,38 @@
+import 'package:flutter/material.dart';
+import '../../../../config/app_theme.dart';
+import '../../../../models/meal_entry.dart';
+import '../meal_image.dart';
+
+class MealDetail extends StatelessWidget {
+  final MealEntry meal;
+
+  const MealDetail({super.key, required this.meal});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (meal.imageUrl != null) MealImage(imageUrl: meal.imageUrl!),
+        if (meal.ingredients.isNotEmpty) ...[
+          const Text(
+            'Zutaten',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children:
+                meal.ingredients.map((i) => Chip(label: Text(i))).toList(),
+          ),
+        ],
+        if (meal.notes != null) ...[
+          const SizedBox(height: 16),
+          Text(meal.notes!,
+              style: const TextStyle(color: AppTheme.mutedForeground)),
+        ],
+      ],
+    );
+  }
+}

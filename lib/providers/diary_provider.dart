@@ -1,78 +1,39 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/meal_entry.dart';
-import '../models/toilet_entry.dart';
-import '../models/gut_feeling_entry.dart';
-import '../models/drink_entry.dart';
+import '../config/constants.dart';
+import '../models/diary_entry.dart';
+import '../services/entry_query_service.dart';
 import '../services/supabase_service.dart';
 import '../utils/gut_feeling_rating.dart';
 
-enum DiaryEntryType { meal, toilet, gutFeeling, drink }
-
-class DiaryEntry {
-  final String id;
-  final DiaryEntryType type;
-  final DateTime trackedAt;
-  final String title;
-  final String subtitle;
-  final dynamic data;
-
-  const DiaryEntry({
-    required this.id,
-    required this.type,
-    required this.trackedAt,
-    required this.title,
-    required this.subtitle,
-    this.data,
-  });
-}
+export '../models/diary_entry.dart';
 
 /// Selected date for the diary view
-final diaryDateProvider = StateProvider<DateTime>((ref) {
-  final now = DateTime.now();
-  return DateTime(now.year, now.month, now.day);
-});
+class _DiaryDateNotifier extends Notifier<DateTime> {
+  @override
+  DateTime build() {
+    final now = DateTime.now();
+    return DateTime(now.year, now.month, now.day);
+  }
+
+  void set(DateTime date) => state = date;
+}
+
+final diaryDateProvider =
+    NotifierProvider<_DiaryDateNotifier, DateTime>(_DiaryDateNotifier.new);
 
 /// Fetches and merges all entry types for the selected date
 final diaryEntriesProvider = FutureProvider.family<List<DiaryEntry>, DateTime>((ref, date) async {
   final userId = SupabaseService.userId;
   if (userId == null) return [];
 
-  final startOfDay = DateTime(date.year, date.month, date.day);
-  final endOfDay = startOfDay.add(const Duration(days: 1));
-  final start = startOfDay.toIso8601String();
-  final end = endOfDay.toIso8601String();
-
-  final results = await Future.wait([
-    SupabaseService.client
-        .from('meal_entries')
-        .select()
-        .eq('user_id', userId)
-        .gte('tracked_at', start)
-        .lt('tracked_at', end),
-    SupabaseService.client
-        .from('toilet_entries')
-        .select()
-        .eq('user_id', userId)
-        .gte('tracked_at', start)
-        .lt('tracked_at', end),
-    SupabaseService.client
-        .from('gut_feeling_entries')
-        .select()
-        .eq('user_id', userId)
-        .gte('tracked_at', start)
-        .lt('tracked_at', end),
-    SupabaseService.client
-        .from('drink_entries')
-        .select('*, drinks(name)')
-        .eq('user_id', userId)
-        .gte('tracked_at', start)
-        .lt('tracked_at', end),
-  ]);
+  final result = await EntryQueryService.fetchEntriesForDateRange(
+    userId: userId,
+    date: date,
+  );
 
   final entries = <DiaryEntry>[];
 
-  for (final row in results[0] as List) {
-    final meal = MealEntry.fromJson(row);
+  for (final meal in result.meals) {
     entries.add(DiaryEntry(
       id: meal.id,
       type: DiaryEntryType.meal,
@@ -83,21 +44,18 @@ final diaryEntriesProvider = FutureProvider.family<List<DiaryEntry>, DateTime>((
     ));
   }
 
-  for (final row in results[1] as List) {
-    final toilet = ToiletEntry.fromJson(row);
-    final descriptions = {1: 'Sehr hart', 2: 'Hart', 3: 'Normal', 4: 'Weich', 5: 'Flüssig'};
+  for (final toilet in result.toiletEntries) {
     entries.add(DiaryEntry(
       id: toilet.id,
       type: DiaryEntryType.toilet,
       trackedAt: toilet.trackedAt,
       title: 'Toilettengang',
-      subtitle: descriptions[toilet.stoolType] ?? 'Normal',
+      subtitle: AppConstants.stoolTypeDescriptions[toilet.stoolType] ?? 'Normal',
       data: toilet,
     ));
   }
 
-  for (final row in results[2] as List) {
-    final gut = GutFeelingEntry.fromJson(row);
+  for (final gut in result.gutFeelings) {
     final rating = calculateGutFeelingRating(gut);
     entries.add(DiaryEntry(
       id: gut.id,
@@ -109,8 +67,7 @@ final diaryEntriesProvider = FutureProvider.family<List<DiaryEntry>, DateTime>((
     ));
   }
 
-  for (final row in results[3] as List) {
-    final drink = DrinkEntry.fromDbRow(row);
+  for (final drink in result.drinks) {
     entries.add(DiaryEntry(
       id: drink.id,
       type: DiaryEntryType.drink,
@@ -125,13 +82,3 @@ final diaryEntriesProvider = FutureProvider.family<List<DiaryEntry>, DateTime>((
   return entries;
 });
 
-/// Delete an entry by type and ID
-Future<void> deleteEntry(DiaryEntryType type, String id) async {
-  final table = switch (type) {
-    DiaryEntryType.meal => 'meal_entries',
-    DiaryEntryType.toilet => 'toilet_entries',
-    DiaryEntryType.gutFeeling => 'gut_feeling_entries',
-    DiaryEntryType.drink => 'drink_entries',
-  };
-  await SupabaseService.client.from(table).delete().eq('id', id);
-}

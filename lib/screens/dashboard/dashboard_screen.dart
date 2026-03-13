@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/entries_provider.dart';
+import '../../providers/ingredient_suggestion_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../router/route_names.dart';
-import '../../widgets/common/bb_card.dart';
-import '../../widgets/common/mascot_image.dart';
 import '../../widgets/common/press_scale_wrapper.dart';
+import 'widgets/feature_card.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -21,16 +23,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _loadData();
+    Future.microtask(_loadData);
   }
 
   Future<void> _loadData() async {
-    await ref.read(profileProvider.notifier).fetchProfile();
-    await ref.read(entriesProvider.notifier).loadEntries(DateTime.now());
+    await Future.wait<void>([
+      ref.read(profileProvider.notifier).fetchProfile(),
+      ref.read(entriesProvider.notifier).loadEntries(DateTime.now()),
+      ref.read(ingredientSuggestionProvider.notifier).fetchSuggestions(),
+    ]);
   }
 
   @override
   Widget build(BuildContext context) {
+    final newCount =
+        ref.watch(ingredientSuggestionProvider.notifier).newCount;
+
     return Scaffold(
       body: SafeArea(
         child: RefreshIndicator(
@@ -38,18 +46,20 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           color: AppTheme.primary,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(24),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header with greeting
-                _DashboardHeader(),
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(24, 24, 24, 0),
+                  child: _DashboardHeader(),
+                ),
                 const SizedBox(height: 24),
-                // Tracker cards
-                _TrackerCards(),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 24),
+                  child: _TrackerCards(),
+                ),
                 const SizedBox(height: 32),
-                // For You section
-                _ForYouSection(),
+                _ForYouSection(newCount: newCount),
               ],
             ),
           ),
@@ -60,44 +70,35 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 }
 
 class _DashboardHeader extends StatelessWidget {
+  const _DashboardHeader();
+
   @override
   Widget build(BuildContext context) {
-    final hour = DateTime.now().hour;
-    final greeting = hour < 12
-        ? 'Guten Morgen'
-        : hour < 18
-            ? 'Guten Tag'
-            : 'Guten Abend';
-
     return Row(
+      mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                '$greeting!',
-                style: const TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.foreground,
+        GestureDetector(
+          onTap: () => context.push(RoutePaths.settings),
+          child: Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppTheme.beige,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.06),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
-              ),
-              const SizedBox(height: 4),
-              const Text(
-                'Wie geht es deinem Bauch heute?',
-                style: TextStyle(
-                  fontSize: 15,
-                  color: AppTheme.mutedForeground,
-                ),
-              ),
-            ],
+              ],
+            ),
+            child: const Icon(
+              Icons.settings,
+              color: AppTheme.foreground,
+              size: 20,
+            ),
           ),
-        ),
-        const MascotImage(
-          assetPath: AppConstants.susiPhone,
-          width: 72,
-          height: 72,
         ),
       ],
     );
@@ -105,53 +106,26 @@ class _DashboardHeader extends StatelessWidget {
 }
 
 class _TrackerCards extends StatelessWidget {
+  const _TrackerCards();
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
       children: [
-        const Text(
-          'Schnell tracken',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: AppTheme.foreground,
+        Expanded(
+          child: _TrackerCard(
+            svgPath: AppConstants.logoSvg,
+            label: 'Bauchgefühl',
+            onTap: () => context.push(RoutePaths.gutFeelingTracker),
           ),
         ),
-        const SizedBox(height: 12),
-        GridView.count(
-          crossAxisCount: 2,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: 1.4,
-          children: [
-            _TrackerCard(
-              icon: Icons.restaurant,
-              label: 'Mahlzeit',
-              color: AppTheme.primary,
-              onTap: () => context.push(RoutePaths.mealTracker),
-            ),
-            _TrackerCard(
-              icon: Icons.wc,
-              label: 'Toilette',
-              color: AppTheme.info,
-              onTap: () => context.push(RoutePaths.toiletTracker),
-            ),
-            _TrackerCard(
-              icon: Icons.favorite,
-              label: 'Stimmung',
-              color: AppTheme.warning,
-              onTap: () => context.push(RoutePaths.gutFeelingTracker),
-            ),
-            _TrackerCard(
-              icon: Icons.local_drink,
-              label: 'Getränke',
-              color: AppTheme.success,
-              onTap: () => context.push(RoutePaths.drinkTracker),
-            ),
-          ],
+        const SizedBox(width: 12),
+        Expanded(
+          child: _TrackerCard(
+            svgPath: AppConstants.toiletPaperSvg,
+            label: 'Klo',
+            onTap: () => context.push(RoutePaths.toiletTracker),
+          ),
         ),
       ],
     );
@@ -159,15 +133,13 @@ class _TrackerCards extends StatelessWidget {
 }
 
 class _TrackerCard extends StatelessWidget {
-  final IconData icon;
+  final String svgPath;
   final String label;
-  final Color color;
   final VoidCallback onTap;
 
   const _TrackerCard({
-    required this.icon,
+    required this.svgPath,
     required this.label,
-    required this.color,
     required this.onTap,
   });
 
@@ -175,26 +147,35 @@ class _TrackerCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return PressScaleWrapper(
       onTap: onTap,
-      child: BbCard(
+      child: Container(
+        constraints: const BoxConstraints(minHeight: 120),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: AppTheme.beige,
+          borderRadius: BorderRadius.circular(16),
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(icon, color: color, size: 24),
+            SvgPicture.asset(
+              svgPath,
+              width: 48,
+              height: 48,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Text(
               label,
               style: const TextStyle(
-                fontSize: 14,
+                fontSize: 15,
                 fontWeight: FontWeight.w500,
                 color: AppTheme.foreground,
+              ),
+            ),
+            const Text(
+              'Tracker',
+              style: TextStyle(
+                fontSize: 13,
+                color: AppTheme.mutedForeground,
               ),
             ),
           ],
@@ -205,140 +186,76 @@ class _TrackerCard extends StatelessWidget {
 }
 
 class _ForYouSection extends StatelessWidget {
+  final int newCount;
+
+  const _ForYouSection({required this.newCount});
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Für dich',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w600,
-            color: AppTheme.foreground,
-          ),
-        ),
-        const SizedBox(height: 12),
-        PressScaleWrapper(
-          onTap: () => context.push(RoutePaths.recommendations),
-          child: BbCard(
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: AppTheme.primary.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.lightbulb_outline, color: AppTheme.primary),
-                ),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Empfehlungen',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.foreground,
-                        ),
-                      ),
-                      Text(
-                        'Personalisierte Tipps für dich',
-                        style: TextStyle(fontSize: 13, color: AppTheme.mutedForeground),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.chevron_right, color: AppTheme.mutedForeground),
-              ],
+    return Container(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+      decoration: const BoxDecoration(
+        color: AppTheme.beige,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.only(left: 4, bottom: 16),
+            child: Text(
+              'Für dich erstellt',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.foreground,
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 12),
-        PressScaleWrapper(
-          onTap: () => context.push(RoutePaths.ingredientSuggestions),
-          child: BbCard(
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: AppTheme.warning.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.search, color: AppTheme.warning),
+          GridView.count(
+            crossAxisCount: 2,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            mainAxisSpacing: 12,
+            crossAxisSpacing: 12,
+            childAspectRatio: 1.3,
+            children: [
+              FeatureCard(
+                imageAsset: AppConstants.fuerDichCard,
+                label: 'Für dich',
+                icon: Icons.auto_awesome,
+                iconColor: AppTheme.primary,
+                onTap: () => context.push(RoutePaths.recommendations),
+              ),
+              FeatureCard(
+                imageAsset: AppConstants.alternativenCard,
+                label: 'Alternativen',
+                icon: Icons.eco,
+                iconColor: AppTheme.chipGluten,
+                badgeCount: newCount,
+                onTap: () => context.push(RoutePaths.ingredientSuggestions),
+              ),
+              FeatureCard(
+                imageAsset: AppConstants.rezepteCard,
+                label: 'Rezepte',
+                icon: Icons.restaurant_menu,
+                iconColor: AppTheme.foreground,
+                onTap: () => context.push(RoutePaths.recipes),
+              ),
+              FeatureCard(
+                imageAsset: AppConstants.susiPhone,
+                label: 'Wissen',
+                icon: Icons.menu_book,
+                iconColor: AppTheme.foreground,
+                onTap: () => launchUrl(
+                  Uri.parse('https://www.myfodmap.at/blog'),
+                  mode: LaunchMode.externalApplication,
                 ),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Zutaten-Vorschläge',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.foreground,
-                        ),
-                      ),
-                      Text(
-                        'Problematische Zutaten erkennen',
-                        style: TextStyle(fontSize: 13, color: AppTheme.mutedForeground),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.chevron_right, color: AppTheme.mutedForeground),
-              ],
-            ),
+              ),
+            ],
           ),
-        ),
-        const SizedBox(height: 12),
-        PressScaleWrapper(
-          onTap: () => context.push(RoutePaths.recipes),
-          child: BbCard(
-            child: Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: AppTheme.success.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.menu_book, color: AppTheme.success),
-                ),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Rezepte',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.foreground,
-                        ),
-                      ),
-                      Text(
-                        'Verträgliche Rezepte entdecken',
-                        style: TextStyle(fontSize: 13, color: AppTheme.mutedForeground),
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.chevron_right, color: AppTheme.mutedForeground),
-              ],
-            ),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

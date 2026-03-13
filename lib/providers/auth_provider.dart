@@ -17,7 +17,11 @@ final currentUserProvider = Provider<User?>((ref) {
 /// Whether user is authenticated
 final isAuthenticatedProvider = Provider<bool>((ref) {
   final authState = ref.watch(authStateProvider);
-  return authState.whenOrNull(data: (state) => state.session != null) ?? false;
+  return authState.when(
+    data: (state) => state.session != null,
+    loading: () => SupabaseService.isAuthenticated,
+    error: (_, _) => false,
+  );
 });
 
 /// Whether onboarding has been seen

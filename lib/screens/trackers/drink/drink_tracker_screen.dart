@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:uuid/uuid.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
-import '../../../models/drink.dart';
-import '../../../models/drink_entry.dart';
-import '../../../providers/entries_provider.dart';
+import '../../../providers/drink_tracker_provider.dart';
 import '../../../router/route_names.dart';
 import '../../../services/haptic_service.dart';
-import '../../../services/supabase_service.dart';
+import '../../../utils/save_helper.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/bb_success_overlay.dart';
+import '../../../widgets/common/date_time_picker_tile.dart';
 
 class DrinkTrackerScreen extends ConsumerStatefulWidget {
   const DrinkTrackerScreen({super.key});
@@ -24,21 +22,13 @@ class DrinkTrackerScreen extends ConsumerStatefulWidget {
 class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
   final _searchController = TextEditingController();
   final _customAmountController = TextEditingController();
-  DateTime _trackedAt = DateTime.now();
-  List<Drink> _allDrinks = [];
-  List<Drink> _filteredDrinks = [];
-  Drink? _selectedDrink;
-  int? _selectedAmount;
-  bool _isLoading = true;
-  bool _isSaving = false;
-  bool _showSuccess = false;
-  int _todayTotal = 0;
 
   @override
   void initState() {
     super.initState();
-    _loadDrinks();
-    _loadTodayTotal();
+    final notifier = ref.read(drinkTrackerProvider.notifier);
+    notifier.loadDrinks();
+    notifier.loadTodayTotal();
   }
 
   @override
@@ -48,87 +38,11 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
     super.dispose();
   }
 
-  Future<void> _loadDrinks() async {
-    try {
-      final data = await SupabaseService.client
-          .from('drinks')
-          .select()
-          .order('name');
-      setState(() {
-        _allDrinks = (data as List).map((e) => Drink.fromDbRow(e)).toList();
-        _filteredDrinks = _allDrinks;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _loadTodayTotal() async {
-    try {
-      final userId = SupabaseService.userId;
-      if (userId == null) return;
-      final now = DateTime.now();
-      final startOfDay = DateTime(now.year, now.month, now.day);
-      final data = await SupabaseService.client
-          .from('drink_entries')
-          .select('amount_ml')
-          .eq('user_id', userId)
-          .gte('tracked_at', startOfDay.toIso8601String())
-          .lt('tracked_at', startOfDay.add(const Duration(days: 1)).toIso8601String());
-      final total = (data as List).fold<int>(0, (sum, e) => sum + (e['amount_ml'] as int));
-      setState(() => _todayTotal = total);
-    } catch (_) {}
-  }
-
-  void _filterDrinks(String query) {
-    if (query.isEmpty) {
-      setState(() => _filteredDrinks = _allDrinks);
-      return;
-    }
-    final words = query.toLowerCase().split(' ');
-    setState(() {
-      _filteredDrinks = _allDrinks.where((d) {
-        final name = d.name.toLowerCase();
-        return words.every((w) => name.contains(w));
-      }).toList()
-        ..sort((a, b) {
-          final aStarts = a.name.toLowerCase().startsWith(query.toLowerCase());
-          final bStarts = b.name.toLowerCase().startsWith(query.toLowerCase());
-          if (aStarts && !bStarts) return -1;
-          if (!aStarts && bStarts) return 1;
-          return a.name.compareTo(b.name);
-        });
-    });
-  }
-
-  Future<void> _save() async {
-    if (_selectedDrink == null || _selectedAmount == null) return;
-    setState(() => _isSaving = true);
-    try {
-      final entry = DrinkEntry(
-        id: const Uuid().v4(),
-        trackedAt: _trackedAt,
-        drinkId: _selectedDrink!.id,
-        drinkName: _selectedDrink!.name,
-        amountMl: _selectedAmount!,
-      );
-      await ref.read(entriesProvider.notifier).addDrinkEntry(entry);
-      setState(() => _showSuccess = true);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Fehler beim Speichern.')),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    if (_showSuccess) {
+    final state = ref.watch(drinkTrackerProvider);
+
+    if (state.showSuccess) {
       return BbSuccessOverlay(
         message: 'Getränk gespeichert!',
         onDismissed: () {
@@ -145,7 +59,7 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
         ),
         title: const Text('Was hast du getrunken?'),
       ),
-      body: _isLoading
+      body: state.isLoading
           ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
           : SingleChildScrollView(
               padding: const EdgeInsets.all(24),
@@ -165,7 +79,7 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
                         const Icon(Icons.water_drop, color: AppTheme.info),
                         const SizedBox(width: 8),
                         Text(
-                          'Heute: $_todayTotal ml',
+                          'Heute: ${state.todayTotal} ml',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.w600,
@@ -184,7 +98,7 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
                       hintText: 'Getränk suchen...',
                       prefixIcon: Icon(Icons.search),
                     ),
-                    onChanged: _filterDrinks,
+                    onChanged: ref.read(drinkTrackerProvider.notifier).filterDrinks,
                   ),
                   const SizedBox(height: 16),
 
@@ -192,12 +106,12 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
-                    children: _filteredDrinks.take(20).map((drink) {
-                      final isSelected = _selectedDrink?.id == drink.id;
+                    children: state.filteredDrinks.take(20).map((drink) {
+                      final isSelected = state.selectedDrink?.id == drink.id;
                       return GestureDetector(
                         onTap: () {
                           HapticService.selection();
-                          setState(() => _selectedDrink = drink);
+                          ref.read(drinkTrackerProvider.notifier).selectDrink(drink);
                         },
                         child: Container(
                           padding: const EdgeInsets.symmetric(
@@ -225,7 +139,7 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
                     }).toList(),
                   ),
 
-                  if (_selectedDrink != null) ...[
+                  if (state.selectedDrink != null) ...[
                     const SizedBox(height: 24),
                     const Text(
                       'Menge',
@@ -238,11 +152,11 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
                       spacing: 8,
                       runSpacing: 8,
                       children: AppConstants.drinkSizes.map((size) {
-                        final isSelected = _selectedAmount == size;
+                        final isSelected = state.selectedAmount == size;
                         return GestureDetector(
                           onTap: () {
                             HapticService.selection();
-                            setState(() => _selectedAmount = size);
+                            ref.read(drinkTrackerProvider.notifier).selectAmount(size);
                           },
                           child: Container(
                             padding: const EdgeInsets.symmetric(
@@ -279,55 +193,34 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
                       onChanged: (v) {
                         final parsed = int.tryParse(v);
                         if (parsed != null && parsed > 0) {
-                          setState(() => _selectedAmount = parsed);
+                          ref.read(drinkTrackerProvider.notifier).selectAmount(parsed);
                         }
                       },
                     ),
                     const SizedBox(height: 16),
 
                     // Date/Time
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.access_time),
-                      title: Text(
-                        '${_trackedAt.day}.${_trackedAt.month}.${_trackedAt.year} '
-                        '${_trackedAt.hour.toString().padLeft(2, '0')}:'
-                        '${_trackedAt.minute.toString().padLeft(2, '0')} Uhr',
-                      ),
-                      onTap: () async {
-                        final date = await showDatePicker(
-                          context: context,
-                          initialDate: _trackedAt,
-                          firstDate: DateTime(2020),
-                          lastDate: DateTime.now(),
-                          locale: const Locale('de'),
-                        );
-                        if (date != null && mounted) {
-                          final time = await showTimePicker(
-                            context: context,
-                            initialTime: TimeOfDay.fromDateTime(_trackedAt),
-                          );
-                          if (time != null) {
-                            setState(() {
-                              _trackedAt = DateTime(
-                                date.year, date.month, date.day,
-                                time.hour, time.minute,
-                              );
-                            });
-                          }
-                        }
-                      },
+                    DateTimePickerTile(
+                      value: state.trackedAt,
+                      onChanged: ref.read(drinkTrackerProvider.notifier).setTrackedAt,
                     ),
                     const SizedBox(height: 24),
                     BbButton(
                       label: 'Getränk speichern',
-                      isLoading: _isSaving,
-                      onPressed: _selectedAmount != null ? _save : null,
+                      isLoading: state.isSaving,
+                      onPressed: state.selectedAmount != null ? _save : null,
                     ),
                   ],
                 ],
               ),
             ),
+    );
+  }
+
+  Future<void> _save() async {
+    await saveWithFeedback(
+      context,
+      () => ref.read(drinkTrackerProvider.notifier).save(),
     );
   }
 }

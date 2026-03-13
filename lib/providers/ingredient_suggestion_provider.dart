@@ -3,8 +3,9 @@ import '../models/ingredient_suggestion.dart';
 import '../services/supabase_service.dart';
 
 class IngredientSuggestionNotifier
-    extends StateNotifier<AsyncValue<List<IngredientSuggestion>>> {
-  IngredientSuggestionNotifier() : super(const AsyncValue.loading());
+    extends Notifier<AsyncValue<List<IngredientSuggestion>>> {
+  @override
+  AsyncValue<List<IngredientSuggestion>> build() => const AsyncValue.loading();
 
   Future<void> fetchSuggestions() async {
     state = const AsyncValue.loading();
@@ -61,8 +62,6 @@ class IngredientSuggestionNotifier
   }
 }
 
-final ingredientSuggestionProvider = StateNotifierProvider<
+final ingredientSuggestionProvider = NotifierProvider<
     IngredientSuggestionNotifier,
-    AsyncValue<List<IngredientSuggestion>>>((ref) {
-  return IngredientSuggestionNotifier();
-});
+    AsyncValue<List<IngredientSuggestion>>>(IngredientSuggestionNotifier.new);

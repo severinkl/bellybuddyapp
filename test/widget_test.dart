@@ -1,8 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('App smoke test', (WidgetTester tester) async {
-    // Placeholder - requires Supabase initialization
-    expect(true, isTrue);
-  });
+  // See test/utils/ for unit tests covering:
+  // - mime_utils_test.dart: MIME type mapping
+  // - date_format_utils_test.dart: German date/time formatting
+  // - gut_feeling_rating_test.dart: gut feeling rating calculation
 }

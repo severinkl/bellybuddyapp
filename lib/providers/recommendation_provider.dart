@@ -3,8 +3,9 @@ import '../models/recommendation.dart';
 import '../services/supabase_service.dart';
 import '../services/edge_function_service.dart';
 
-class RecommendationNotifier extends StateNotifier<AsyncValue<List<Recommendation>>> {
-  RecommendationNotifier() : super(const AsyncValue.loading());
+class RecommendationNotifier extends Notifier<AsyncValue<List<Recommendation>>> {
+  @override
+  AsyncValue<List<Recommendation>> build() => const AsyncValue.loading();
 
   Future<void> fetchRecommendations() async {
     state = const AsyncValue.loading();
@@ -40,6 +41,5 @@ class RecommendationNotifier extends StateNotifier<AsyncValue<List<Recommendatio
 }
 
 final recommendationProvider =
-    StateNotifierProvider<RecommendationNotifier, AsyncValue<List<Recommendation>>>((ref) {
-  return RecommendationNotifier();
-});
+    NotifierProvider<RecommendationNotifier, AsyncValue<List<Recommendation>>>(
+        RecommendationNotifier.new);

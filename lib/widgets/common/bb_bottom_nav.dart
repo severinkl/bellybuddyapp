@@ -16,57 +16,111 @@ class BbBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     final currentIndex = navigationShell.currentIndex;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final isDiary = currentIndex == 1;
 
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [AppTheme.navGradientStart, AppTheme.navGradientEnd],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 64 + (bottomPadding > 0 ? 0 : 12),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              // Home
-              _NavItem(
-                icon: Icons.home_outlined,
-                activeIcon: Icons.home,
-                label: 'Home',
-                isActive: currentIndex == 0,
-                onTap: () {
-                  HapticService.light();
-                  navigationShell.goBranch(0);
-                },
-              ),
-              // Central meal tracker button
-              _CenterButton(
-                onTap: () {
-                  HapticService.light();
-                  context.push(RoutePaths.mealTracker);
-                },
-              ),
-              // Diary
-              _NavItem(
-                icon: Icons.menu_book_outlined,
-                activeIcon: Icons.menu_book,
-                label: 'Tagebuch',
-                isActive: currentIndex == 1,
-                onTap: () {
-                  HapticService.light();
-                  navigationShell.goBranch(1);
-                },
-              ),
-            ],
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Wavy separator
+        CustomPaint(
+          size: Size(MediaQuery.of(context).size.width, 20),
+          painter: _WavePainter(
+            backgroundColor: isDiary ? AppTheme.background : AppTheme.beige,
           ),
         ),
-      ),
+        // Nav bar
+        Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              colors: [AppTheme.navGradientStart, AppTheme.navGradientEnd],
+              begin: Alignment.centerLeft,
+              end: Alignment.centerRight,
+            ),
+          ),
+          child: SafeArea(
+            top: false,
+            child: SizedBox(
+              height: 64 + (bottomPadding > 0 ? 0 : 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  // Home
+                  _NavItem(
+                    icon: Icons.home_outlined,
+                    activeIcon: Icons.home,
+                    label: 'Home',
+                    isActive: currentIndex == 0,
+                    onTap: () {
+                      HapticService.light();
+                      navigationShell.goBranch(0);
+                    },
+                  ),
+                  // Central meal tracker button
+                  _CenterButton(
+                    onTap: () {
+                      HapticService.light();
+                      context.push(RoutePaths.mealTracker);
+                    },
+                  ),
+                  // Diary
+                  _NavItem(
+                    icon: Icons.menu_book_outlined,
+                    activeIcon: Icons.menu_book,
+                    label: 'Tagebuch',
+                    isActive: currentIndex == 1,
+                    onTap: () {
+                      HapticService.light();
+                      navigationShell.goBranch(1);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
+}
+
+class _WavePainter extends CustomPainter {
+  final Color backgroundColor;
+
+  _WavePainter({required this.backgroundColor});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Fill background
+    final bgPaint = Paint()..color = backgroundColor;
+    canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
+
+    // Draw wave filled with nav gradient
+    final wavePaint = Paint()
+      ..shader = const LinearGradient(
+        colors: [AppTheme.navGradientStart, AppTheme.navGradientEnd],
+        begin: Alignment.centerLeft,
+        end: Alignment.centerRight,
+      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+
+    final path = Path();
+    final w = size.width;
+    final h = size.height;
+
+    // Wave: M0,0 C80,0 120,40 200,40 C280,40 320,0 400,0 L400,40 L0,40 Z
+    // Scaled to actual width
+    path.moveTo(0, 0);
+    path.cubicTo(w * 0.2, 0, w * 0.3, h, w * 0.5, h);
+    path.cubicTo(w * 0.7, h, w * 0.8, 0, w, 0);
+    path.lineTo(w, h);
+    path.lineTo(0, h);
+    path.close();
+
+    canvas.drawPath(path, wavePaint);
+  }
+
+  @override
+  bool shouldRepaint(_WavePainter oldDelegate) =>
+      backgroundColor != oldDelegate.backgroundColor;
 }
 
 class _NavItem extends StatelessWidget {

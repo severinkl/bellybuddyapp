@@ -1,0 +1,69 @@
+import 'package:flutter/material.dart';
+import '../../../../config/constants.dart';
+import '../../../../widgets/common/mood_slider_row.dart';
+
+class BauchgefuehlTab extends StatelessWidget {
+  final int bloating, gas, cramps, fullness;
+  final ValueChanged<int> onBloatingChanged, onGasChanged, onCrampsChanged, onFullnessChanged;
+
+  const BauchgefuehlTab({
+    super.key,
+    required this.bloating,
+    required this.gas,
+    required this.cramps,
+    required this.fullness,
+    required this.onBloatingChanged,
+    required this.onGasChanged,
+    required this.onCrampsChanged,
+    required this.onFullnessChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Wie ist dein Bauchgefühl?',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 16),
+          MoodSliderRow(
+            value: bloating,
+            onChanged: onBloatingChanged,
+            rightLabel: 'Blähbauch',
+            leftMascot: AppConstants.mascotHappyStomach,
+            rightMascot: AppConstants.mascotBloatingStomach,
+            mascotScale: 1.5,
+          ),
+          MoodSliderRow(
+            value: gas,
+            onChanged: onGasChanged,
+            rightLabel: 'Blähungen',
+            leftMascot: AppConstants.mascotZen,
+            rightMascot: AppConstants.mascotFlatulance,
+            mascotScale: 1.5,
+          ),
+          MoodSliderRow(
+            value: cramps,
+            onChanged: onCrampsChanged,
+            rightLabel: 'Krämpfe',
+            leftMascot: AppConstants.mascotNoCramp,
+            rightMascot: AppConstants.mascotCramp,
+            mascotScale: 1.5,
+          ),
+          MoodSliderRow(
+            value: fullness,
+            onChanged: onFullnessChanged,
+            rightLabel: 'Völlegefühl',
+            leftMascot: AppConstants.mascotInLove,
+            rightMascot: AppConstants.mascotFullness,
+            mascotScale: 1.5,
+          ),
+        ],
+      ),
+    );
+  }
+}

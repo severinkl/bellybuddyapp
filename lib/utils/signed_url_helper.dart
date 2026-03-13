@@ -1,4 +1,5 @@
 import '../services/storage_service.dart';
+import 'logger.dart';
 
 /// Extracts a storage file path from various Supabase URL formats.
 /// If the input is already a path (no http), returns it as-is.
@@ -40,8 +41,8 @@ Future<String?> resolveSignedMealImageUrl(String? urlOrPath) async {
       bucket: 'meal-images',
       path: path,
     );
-  } catch (_) {
-    // Fall back to original
+  } catch (e) {
+    const AppLogger('SignedUrlHelper').error('failed to resolve URL', e);
     return urlOrPath;
   }
 }

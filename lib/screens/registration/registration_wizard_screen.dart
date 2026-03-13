@@ -6,6 +6,7 @@ import '../../models/user_profile.dart';
 import '../../providers/profile_provider.dart';
 import '../../router/route_names.dart';
 import '../../services/haptic_service.dart';
+import '../../utils/logger.dart';
 import '../../widgets/common/bb_button.dart';
 import 'steps/birth_year_step.dart';
 import 'steps/gender_step.dart';
@@ -25,6 +26,7 @@ class RegistrationWizardScreen extends ConsumerStatefulWidget {
 
 class _RegistrationWizardScreenState
     extends ConsumerState<RegistrationWizardScreen> {
+  static const _log = AppLogger('Registration');
   final _pageController = PageController();
   int _currentStep = 0;
   bool _isSaving = false;
@@ -84,9 +86,10 @@ class _RegistrationWizardScreenState
       await ref.read(profileProvider.notifier).createProfile(profile);
       if (mounted) context.go(RoutePaths.dashboard);
     } catch (e) {
+      _log.error('profile save failed', e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Fehler beim Speichern des Profils.')),
+          SnackBar(content: Text('Fehler beim Speichern: $e')),
         );
       }
     } finally {

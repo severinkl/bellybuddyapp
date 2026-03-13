@@ -46,6 +46,8 @@ class _SplashScreenState extends State<SplashScreen>
     AppConstants.toiletPaperIcon,
   ];
 
+  bool _started = false;
+
   @override
   void initState() {
     super.initState();
@@ -62,7 +64,15 @@ class _SplashScreenState extends State<SplashScreen>
       curve: Curves.easeIn,
     );
     _controller.forward();
-    _preloadAndWait();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_started) {
+      _started = true;
+      _preloadAndWait();
+    }
   }
 
   Future<void> _preloadAndWait() async {

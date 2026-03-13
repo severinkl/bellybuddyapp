@@ -10,6 +10,8 @@ abstract class DrinkEntry with _$DrinkEntry {
     @JsonKey(name: 'user_id') String? userId,
     @JsonKey(name: 'tracked_at') required DateTime trackedAt,
     @JsonKey(name: 'drink_id') required String drinkId,
+    /// Excluded from JSON serialization. Populated only by [fromDbRow]
+    /// which reads the joined `drinks(name)` data.
     @JsonKey(includeFromJson: false, includeToJson: false)
     @Default('Unbekanntes Getränk')
     String drinkName,
@@ -21,7 +23,12 @@ abstract class DrinkEntry with _$DrinkEntry {
   factory DrinkEntry.fromJson(Map<String, dynamic> json) =>
       _$DrinkEntryFromJson(json);
 
-  /// Create from database row with joined drink name
+  /// Canonical factory for database rows.
+  ///
+  /// [fromJson] cannot restore [drinkName] because the field is excluded
+  /// via `@JsonKey(includeFromJson: false)`. Database queries join with
+  /// `drinks(name)`, so [fromDbRow] extracts the drink name from the
+  /// nested join data.
   factory DrinkEntry.fromDbRow(Map<String, dynamic> row) {
     final drinks = row['drinks'] as Map<String, dynamic>?;
     return DrinkEntry(

@@ -3,15 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import '../../../config/app_theme.dart';
-import '../../../config/constants.dart';
 import '../../../models/gut_feeling_entry.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../router/route_names.dart';
 import '../../../services/haptic_service.dart';
+import '../../../utils/save_helper.dart';
 import '../../../widgets/common/bb_button.dart';
-import '../../../widgets/common/bb_slider.dart';
 import '../../../widgets/common/bb_success_overlay.dart';
-import '../../../widgets/common/mascot_image.dart';
+import 'widgets/bauchgefuehl_tab.dart';
+import 'widgets/stimmung_tab.dart';
 
 class GutFeelingTrackerScreen extends ConsumerStatefulWidget {
   const GutFeelingTrackerScreen({super.key});
@@ -56,30 +56,29 @@ class _GutFeelingTrackerScreenState
 
   Future<void> _save() async {
     setState(() => _isSaving = true);
-    try {
-      final entry = GutFeelingEntry(
-        id: const Uuid().v4(),
-        trackedAt: _trackedAt,
-        bloating: _bloating,
-        gas: _gas,
-        cramps: _cramps,
-        fullness: _fullness,
-        stress: _stress,
-        happiness: _happiness,
-        energy: _energy,
-        focus: _focus,
-        bodyFeel: _bodyFeel,
-      );
-      await ref.read(entriesProvider.notifier).addGutFeeling(entry);
-      setState(() => _showSuccess = true);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Fehler beim Speichern.')),
-        );
+    final entry = GutFeelingEntry(
+      id: const Uuid().v4(),
+      trackedAt: _trackedAt,
+      bloating: _bloating,
+      gas: _gas,
+      cramps: _cramps,
+      fullness: _fullness,
+      stress: _stress,
+      happiness: _happiness,
+      energy: _energy,
+      focus: _focus,
+      bodyFeel: _bodyFeel,
+    );
+    final success = await saveWithFeedback(
+      context,
+      () => ref.read(entriesProvider.notifier).addGutFeeling(entry),
+    );
+    if (mounted) {
+      if (success) {
+        setState(() => _showSuccess = true);
+      } else {
+        setState(() => _isSaving = false);
       }
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -119,7 +118,7 @@ class _GutFeelingTrackerScreenState
             child: TabBarView(
               controller: _tabController,
               children: [
-                _BauchgefuehlTab(
+                BauchgefuehlTab(
                   bloating: _bloating,
                   gas: _gas,
                   cramps: _cramps,
@@ -129,7 +128,7 @@ class _GutFeelingTrackerScreenState
                   onCrampsChanged: (v) => setState(() => _cramps = v),
                   onFullnessChanged: (v) => setState(() => _fullness = v),
                 ),
-                _StimmungTab(
+                StimmungTab(
                   stress: _stress,
                   happiness: _happiness,
                   energy: _energy,
@@ -151,210 +150,6 @@ class _GutFeelingTrackerScreenState
               isLoading: _isSaving,
               onPressed: _save,
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MoodSliderRow extends StatelessWidget {
-  final int value;
-  final ValueChanged<int> onChanged;
-  final String? leftLabel;
-  final String rightLabel;
-  final String leftMascot;
-  final String rightMascot;
-  final double mascotScale;
-
-  const _MoodSliderRow({
-    required this.value,
-    required this.onChanged,
-    this.leftLabel,
-    required this.rightLabel,
-    required this.leftMascot,
-    required this.rightMascot,
-    this.mascotScale = 1.0,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final mascotSize = 48.0 * mascotScale;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: () {
-              HapticService.selection();
-              onChanged(1);
-            },
-            child: MascotImage(
-              assetPath: leftMascot,
-              width: mascotSize,
-              height: mascotSize,
-            ),
-          ),
-          Expanded(
-            child: BbSlider(
-              value: value,
-              variant: SliderVariant.danger,
-              onChanged: onChanged,
-              rightLabel: rightLabel,
-              leftLabel: leftLabel,
-            ),
-          ),
-          GestureDetector(
-            onTap: () {
-              HapticService.selection();
-              onChanged(5);
-            },
-            child: MascotImage(
-              assetPath: rightMascot,
-              width: mascotSize,
-              height: mascotSize,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _BauchgefuehlTab extends StatelessWidget {
-  final int bloating, gas, cramps, fullness;
-  final ValueChanged<int> onBloatingChanged, onGasChanged, onCrampsChanged, onFullnessChanged;
-
-  const _BauchgefuehlTab({
-    required this.bloating,
-    required this.gas,
-    required this.cramps,
-    required this.fullness,
-    required this.onBloatingChanged,
-    required this.onGasChanged,
-    required this.onCrampsChanged,
-    required this.onFullnessChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Wie ist dein Bauchgefühl?',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 16),
-          _MoodSliderRow(
-            value: bloating,
-            onChanged: onBloatingChanged,
-            rightLabel: 'Blähbauch',
-            leftMascot: AppConstants.mascotHappyStomach,
-            rightMascot: AppConstants.mascotBloatingStomach,
-            mascotScale: 1.5,
-          ),
-          _MoodSliderRow(
-            value: gas,
-            onChanged: onGasChanged,
-            rightLabel: 'Blähungen',
-            leftMascot: AppConstants.mascotZen,
-            rightMascot: AppConstants.mascotFlatulance,
-            mascotScale: 1.5,
-          ),
-          _MoodSliderRow(
-            value: cramps,
-            onChanged: onCrampsChanged,
-            rightLabel: 'Krämpfe',
-            leftMascot: AppConstants.mascotNoCramp,
-            rightMascot: AppConstants.mascotCramp,
-            mascotScale: 1.5,
-          ),
-          _MoodSliderRow(
-            value: fullness,
-            onChanged: onFullnessChanged,
-            rightLabel: 'Völlegefühl',
-            leftMascot: AppConstants.mascotInLove,
-            rightMascot: AppConstants.mascotFullness,
-            mascotScale: 1.5,
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _StimmungTab extends StatelessWidget {
-  final int stress, happiness, energy, focus, bodyFeel;
-  final ValueChanged<int> onStressChanged, onHappinessChanged, onEnergyChanged,
-      onFocusChanged, onBodyFeelChanged;
-
-  const _StimmungTab({
-    required this.stress,
-    required this.happiness,
-    required this.energy,
-    required this.focus,
-    required this.bodyFeel,
-    required this.onStressChanged,
-    required this.onHappinessChanged,
-    required this.onEnergyChanged,
-    required this.onFocusChanged,
-    required this.onBodyFeelChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Wie ist deine Stimmung?',
-            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 16),
-          _MoodSliderRow(
-            value: stress,
-            onChanged: onStressChanged,
-            leftLabel: 'entspannt',
-            rightLabel: 'gestresst',
-            leftMascot: AppConstants.mascotHappy,
-            rightMascot: AppConstants.mascotStressed,
-          ),
-          _MoodSliderRow(
-            value: happiness,
-            onChanged: onHappinessChanged,
-            leftLabel: 'glücklich',
-            rightLabel: 'traurig',
-            leftMascot: AppConstants.mascotHappy,
-            rightMascot: AppConstants.mascotSad,
-          ),
-          _MoodSliderRow(
-            value: energy,
-            onChanged: onEnergyChanged,
-            leftLabel: 'energiegeladen',
-            rightLabel: 'müde',
-            leftMascot: AppConstants.mascotEnergetic,
-            rightMascot: AppConstants.mascotBored,
-          ),
-          _MoodSliderRow(
-            value: focus,
-            onChanged: onFocusChanged,
-            leftLabel: 'fokussiert',
-            rightLabel: 'unkonzentriert',
-            leftMascot: AppConstants.mascotClear,
-            rightMascot: AppConstants.mascotUnfocused,
-          ),
-          _MoodSliderRow(
-            value: bodyFeel,
-            onChanged: onBodyFeelChanged,
-            leftLabel: 'wohl',
-            rightLabel: 'unwohl',
-            leftMascot: AppConstants.mascotCool,
-            rightMascot: AppConstants.mascotNervous,
           ),
         ],
       ),

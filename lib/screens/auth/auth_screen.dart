@@ -7,6 +7,8 @@ import '../../providers/profile_provider.dart';
 import '../../router/route_names.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/common/bb_button.dart';
+import '../../widgets/common/bb_auth_banner.dart';
+import '../../widgets/common/bb_password_hint.dart';
 
 enum _AuthView { login, register, forgotPassword }
 
@@ -176,33 +178,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 const SizedBox(height: 32),
 
                 if (_error != null)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: AppTheme.destructive.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      _error!,
-                      style: const TextStyle(color: AppTheme.destructive, fontSize: 14),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
+                  BbAuthBanner(text: _error!, isError: true),
 
                 if (_resetSent && _view == _AuthView.forgotPassword)
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: AppTheme.success.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Text(
-                      'E-Mail zum Zurücksetzen wurde gesendet!',
-                      style: TextStyle(color: AppTheme.success, fontSize: 14),
-                      textAlign: TextAlign.center,
-                    ),
+                  const BbAuthBanner(
+                    text: 'E-Mail zum Zurücksetzen wurde gesendet!',
+                    isError: false,
                   ),
 
                 // Email field
@@ -239,19 +220,19 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
                   // Password validation hints (register only)
                   if (_view == _AuthView.register) ...[
-                    _PasswordHint(
+                    BbPasswordHint(
                       text: 'Mindestens 8 Zeichen',
                       isValid: _passwordController.text.length >= 8,
                     ),
-                    _PasswordHint(
+                    BbPasswordHint(
                       text: 'Mindestens ein Großbuchstabe',
                       isValid: _passwordController.text.contains(RegExp(r'[A-Z]')),
                     ),
-                    _PasswordHint(
+                    BbPasswordHint(
                       text: 'Mindestens ein Kleinbuchstabe',
                       isValid: _passwordController.text.contains(RegExp(r'[a-z]')),
                     ),
-                    _PasswordHint(
+                    BbPasswordHint(
                       text: 'Mindestens eine Zahl',
                       isValid: _passwordController.text.contains(RegExp(r'[0-9]')),
                     ),
@@ -346,37 +327,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _PasswordHint extends StatelessWidget {
-  final String text;
-  final bool isValid;
-
-  const _PasswordHint({required this.text, required this.isValid});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
-      child: Row(
-        children: [
-          Icon(
-            isValid ? Icons.check_circle : Icons.circle_outlined,
-            size: 16,
-            color: isValid ? AppTheme.success : AppTheme.mutedForeground,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: 13,
-              color: isValid ? AppTheme.success : AppTheme.mutedForeground,
-            ),
-          ),
-        ],
       ),
     );
   }

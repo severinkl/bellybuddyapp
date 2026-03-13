@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import '../../config/app_theme.dart';
@@ -11,14 +12,14 @@ import '../../widgets/common/mascot_image.dart';
 import '../../widgets/common/bb_button.dart';
 import '../../widgets/common/bb_card.dart';
 
-class OnboardingScreen extends StatefulWidget {
+class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   final _pageController = PageController();
   int _currentPage = 0;
   Timer? _autoAdvanceTimer;
@@ -73,20 +74,22 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
-  void _onSkip() async {
+  Future<void> _markSeenAndNavigate() async {
     await markOnboardingSeen();
+    ref.invalidate(isOnboardedProvider);
     if (mounted) context.go(RoutePaths.auth);
   }
 
-  void _onNext() async {
+  void _onSkip() => _markSeenAndNavigate();
+
+  void _onNext() {
     if (_currentPage < _slides.length - 1) {
       _pageController.nextPage(
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOut,
       );
     } else {
-      await markOnboardingSeen();
-      if (mounted) context.go(RoutePaths.auth);
+      _markSeenAndNavigate();
     }
   }
 

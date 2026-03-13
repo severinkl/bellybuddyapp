@@ -3,12 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import '../../../config/app_theme.dart';
+import '../../../config/constants.dart';
 import '../../../models/toilet_entry.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../router/route_names.dart';
 import '../../../widgets/common/bb_button.dart';
+import '../../../utils/save_helper.dart';
 import '../../../widgets/common/bb_slider.dart';
 import '../../../widgets/common/bb_success_overlay.dart';
+import '../../../widgets/common/date_time_picker_tile.dart';
 
 class ToiletTrackerScreen extends ConsumerStatefulWidget {
   const ToiletTrackerScreen({super.key});
@@ -24,32 +27,25 @@ class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
   bool _isSaving = false;
   bool _showSuccess = false;
 
-  static const _descriptions = {
-    1: 'Sehr hart',
-    2: 'Hart',
-    3: 'Normal',
-    4: 'Weich',
-    5: 'Flüssig',
-  };
+  static const _descriptions = AppConstants.stoolTypeDescriptions;
 
   Future<void> _save() async {
     setState(() => _isSaving = true);
-    try {
-      final entry = ToiletEntry(
-        id: const Uuid().v4(),
-        trackedAt: _trackedAt,
-        stoolType: _stoolType,
-      );
-      await ref.read(entriesProvider.notifier).addToiletEntry(entry);
-      setState(() => _showSuccess = true);
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Fehler beim Speichern.')),
-        );
+    final entry = ToiletEntry(
+      id: const Uuid().v4(),
+      trackedAt: _trackedAt,
+      stoolType: _stoolType,
+    );
+    final success = await saveWithFeedback(
+      context,
+      () => ref.read(entriesProvider.notifier).addToiletEntry(entry),
+    );
+    if (mounted) {
+      if (success) {
+        setState(() => _showSuccess = true);
+      } else {
+        setState(() => _isSaving = false);
       }
-    } finally {
-      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -111,37 +107,9 @@ class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
             const SizedBox(height: 32),
 
             // Date/Time
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.access_time),
-              title: Text(
-                '${_trackedAt.day}.${_trackedAt.month}.${_trackedAt.year} '
-                '${_trackedAt.hour.toString().padLeft(2, '0')}:'
-                '${_trackedAt.minute.toString().padLeft(2, '0')} Uhr',
-              ),
-              onTap: () async {
-                final date = await showDatePicker(
-                  context: context,
-                  initialDate: _trackedAt,
-                  firstDate: DateTime(2020),
-                  lastDate: DateTime.now(),
-                  locale: const Locale('de'),
-                );
-                if (date != null && mounted) {
-                  final time = await showTimePicker(
-                    context: context,
-                    initialTime: TimeOfDay.fromDateTime(_trackedAt),
-                  );
-                  if (time != null) {
-                    setState(() {
-                      _trackedAt = DateTime(
-                        date.year, date.month, date.day,
-                        time.hour, time.minute,
-                      );
-                    });
-                  }
-                }
-              },
+            DateTimePickerTile(
+              value: _trackedAt,
+              onChanged: (dt) => setState(() => _trackedAt = dt),
             ),
 
             const Spacer(),

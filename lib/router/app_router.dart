@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/auth_provider.dart';
+import '../utils/logger.dart';
 import '../providers/profile_provider.dart';
 import '../screens/auth/auth_screen.dart';
 import '../screens/auth/reset_password_screen.dart';
@@ -25,17 +26,32 @@ import '../widgets/common/bb_bottom_nav.dart';
 import '../widgets/common/swipeable_pages.dart';
 import 'route_names.dart';
 
+class _RouterRefreshNotifier extends ChangeNotifier {
+  _RouterRefreshNotifier(Ref ref) {
+    ref.listen(isAuthenticatedProvider, (_, _) => notifyListeners());
+    ref.listen(profileProvider, (_, _) => notifyListeners());
+    ref.listen(isOnboardedProvider, (_, _) => notifyListeners());
+  }
+}
+
+const _log = AppLogger('Router');
+
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: RoutePaths.onboarding,
+    refreshListenable: _RouterRefreshNotifier(ref),
     errorBuilder: (context, state) => const NotFoundScreen(),
     redirect: (context, state) {
       final isAuthenticated = ref.read(isAuthenticatedProvider);
       final isOnboarded =
-          ref.read(isOnboardedProvider).valueOrNull ?? false;
-      final hasProfile = ref.read(hasCompletedRegistrationProvider);
+          ref.read(isOnboardedProvider).asData?.value ?? false;
+      final profileState = ref.read(profileProvider);
+      final profileLoading = profileState.isLoading;
+      final hasProfile = ref.read(hasProfileProvider);
 
       final path = state.matchedLocation;
+      _log.debug('redirect: path=$path auth=$isAuthenticated onboarded=$isOnboarded profileLoading=$profileLoading hasProfile=$hasProfile');
+
       final isAuthRoute = path == RoutePaths.auth ||
           path == RoutePaths.onboarding ||
           path == RoutePaths.registration ||
@@ -49,14 +65,25 @@ final routerProvider = Provider<GoRouter>((ref) {
         return isOnboarded ? RoutePaths.auth : RoutePaths.onboarding;
       }
 
+      // Authenticated but profile not yet loaded — don't redirect yet
+      if (profileLoading) {
+        return null;
+      }
+
+      // Authenticated but profile fetch failed — stay put, don't redirect to registration
+      if (profileState.hasError && !profileState.hasValue) {
+        _log.debug('profile in error state, staying put');
+        return null;
+      }
+
       // Authenticated but no profile
-      if (isAuthenticated && !hasProfile) {
+      if (!hasProfile) {
         if (path == RoutePaths.registration) return null;
         return RoutePaths.registration;
       }
 
       // Authenticated with profile, on auth route
-      if (isAuthenticated && hasProfile && isAuthRoute) {
+      if (hasProfile && isAuthRoute) {
         return RoutePaths.dashboard;
       }
 

@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/diary_provider.dart';
+import '../../providers/entries_provider.dart';
+import '../../router/route_names.dart';
 import '../../services/haptic_service.dart';
-import '../../widgets/common/bb_card.dart';
+import '../../widgets/common/bb_button.dart';
 import '../../widgets/common/mascot_image.dart';
 import 'widgets/diary_detail_sheets.dart';
+import '../../utils/date_format_utils.dart';
+import 'widgets/diary_entry_card.dart';
 
 class DiaryScreen extends ConsumerWidget {
   const DiaryScreen({super.key});
@@ -16,7 +20,6 @@ class DiaryScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final date = ref.watch(diaryDateProvider);
     final entriesAsync = ref.watch(diaryEntriesProvider(date));
-    final dateFormat = DateFormat('d. MMMM yyyy', 'de_DE');
     final isToday = _isSameDay(date, DateTime.now());
 
     return Scaffold(
@@ -28,8 +31,8 @@ class DiaryScreen extends ConsumerWidget {
               onPressed: () {
                 HapticService.light();
                 final now = DateTime.now();
-                ref.read(diaryDateProvider.notifier).state =
-                    DateTime(now.year, now.month, now.day);
+                ref.read(diaryDateProvider.notifier).set(
+                    DateTime(now.year, now.month, now.day));
               },
               child: const Text('Heute'),
             ),
@@ -54,16 +57,42 @@ class DiaryScreen extends ConsumerWidget {
                     icon: const Icon(Icons.chevron_left),
                     onPressed: () {
                       HapticService.light();
-                      ref.read(diaryDateProvider.notifier).state =
-                          date.subtract(const Duration(days: 1));
+                      ref.read(diaryDateProvider.notifier).set(
+                          date.subtract(const Duration(days: 1)));
                     },
                   ),
-                  Text(
-                    dateFormat.format(date),
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.foreground,
+                  GestureDetector(
+                    onTap: () async {
+                      final picked = await showDatePicker(
+                        context: context,
+                        initialDate: date,
+                        firstDate: DateTime(2020),
+                        lastDate: DateTime.now(),
+                        locale: const Locale('de', 'DE'),
+                      );
+                      if (picked != null) {
+                        HapticService.light();
+                        ref.read(diaryDateProvider.notifier).set(picked);
+                      }
+                    },
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(
+                          Icons.calendar_today,
+                          size: 18,
+                          color: AppTheme.mutedForeground,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          formatDateLong(date),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.foreground,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   IconButton(
@@ -72,8 +101,8 @@ class DiaryScreen extends ConsumerWidget {
                         ? null
                         : () {
                             HapticService.light();
-                            ref.read(diaryDateProvider.notifier).state =
-                                date.add(const Duration(days: 1));
+                            ref.read(diaryDateProvider.notifier).set(
+                                date.add(const Duration(days: 1)));
                           },
                   ),
                 ],
@@ -101,7 +130,7 @@ class DiaryScreen extends ConsumerWidget {
                           ),
                           const SizedBox(height: 16),
                           const Text(
-                            'Keine Einträge',
+                            'Bereit zum Tracken?',
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.w600,
@@ -109,11 +138,35 @@ class DiaryScreen extends ConsumerWidget {
                             ),
                           ),
                           const SizedBox(height: 4),
-                          const Text(
-                            'Tracke deine erste Mahlzeit!',
-                            style: TextStyle(
+                          Text(
+                            isToday
+                                ? 'Noch keine Daten für heute.'
+                                : 'Keine Daten für diesen Tag.',
+                            style: const TextStyle(
                               fontSize: 14,
                               color: AppTheme.mutedForeground,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 48),
+                            child: Column(
+                              children: [
+                                BbButton(
+                                  label: 'Bauchgefühl tracken',
+                                  icon: Icons.favorite,
+                                  onPressed: () =>
+                                      context.push(RoutePaths.gutFeelingTracker),
+                                ),
+                                const SizedBox(height: 12),
+                                BbButton(
+                                  label: 'Toilettengang tracken',
+                                  icon: Icons.wc,
+                                  isOutlined: true,
+                                  onPressed: () =>
+                                      context.push(RoutePaths.toiletTracker),
+                                ),
+                              ],
                             ),
                           ),
                         ],
@@ -125,11 +178,11 @@ class DiaryScreen extends ConsumerWidget {
                     itemCount: entries.length,
                     itemBuilder: (context, index) {
                       final entry = entries[index];
-                      return _DiaryEntryCard(
+                      return DiaryEntryCard(
                         entry: entry,
                         onTap: () => showDiaryDetailSheet(context, ref, entry),
                         onDismissed: () async {
-                          await deleteEntry(entry.type, entry.id);
+                          await ref.read(entriesProvider.notifier).deleteByType(entry.type.name, entry.id);
                           ref.invalidate(diaryEntriesProvider(date));
                         },
                       );
@@ -146,122 +199,4 @@ class DiaryScreen extends ConsumerWidget {
 
   bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
-}
-
-class _DiaryEntryCard extends StatelessWidget {
-  final DiaryEntry entry;
-  final VoidCallback onTap;
-  final VoidCallback onDismissed;
-
-  const _DiaryEntryCard({
-    required this.entry,
-    required this.onTap,
-    required this.onDismissed,
-  });
-
-  IconData get _icon => switch (entry.type) {
-        DiaryEntryType.meal => Icons.restaurant,
-        DiaryEntryType.toilet => Icons.wc,
-        DiaryEntryType.gutFeeling => Icons.favorite,
-        DiaryEntryType.drink => Icons.local_drink,
-      };
-
-  Color get _color => switch (entry.type) {
-        DiaryEntryType.meal => AppTheme.primary,
-        DiaryEntryType.toilet => AppTheme.info,
-        DiaryEntryType.gutFeeling => AppTheme.warning,
-        DiaryEntryType.drink => AppTheme.success,
-      };
-
-  @override
-  Widget build(BuildContext context) {
-    final timeFormat = DateFormat('HH:mm', 'de_DE');
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Dismissible(
-        key: Key(entry.id),
-        direction: DismissDirection.endToStart,
-        confirmDismiss: (_) async {
-          HapticService.medium();
-          return await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Eintrag löschen?'),
-              content: const Text('Möchtest du diesen Eintrag wirklich löschen?'),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Abbrechen'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  style: TextButton.styleFrom(foregroundColor: AppTheme.destructive),
-                  child: const Text('Löschen'),
-                ),
-              ],
-            ),
-          );
-        },
-        onDismissed: (_) => onDismissed(),
-        background: Container(
-          alignment: Alignment.centerRight,
-          padding: const EdgeInsets.only(right: 20),
-          decoration: BoxDecoration(
-            color: AppTheme.destructive,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: const Icon(Icons.delete, color: Colors.white),
-        ),
-        child: GestureDetector(
-          onTap: onTap,
-          child: BbCard(
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: _color.withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(_icon, color: _color, size: 20),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        entry.title,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.foreground,
-                        ),
-                      ),
-                      Text(
-                        entry.subtitle,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: AppTheme.mutedForeground,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Text(
-                  timeFormat.format(entry.trackedAt),
-                  style: const TextStyle(
-                    fontSize: 13,
-                    color: AppTheme.mutedForeground,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
 }

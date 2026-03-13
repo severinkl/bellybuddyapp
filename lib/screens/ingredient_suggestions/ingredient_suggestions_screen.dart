@@ -19,7 +19,7 @@ class _IngredientSuggestionsScreenState
   @override
   void initState() {
     super.initState();
-    ref.read(ingredientSuggestionProvider.notifier).fetchSuggestions();
+    Future.microtask(() => ref.read(ingredientSuggestionProvider.notifier).fetchSuggestions());
   }
 
   @override

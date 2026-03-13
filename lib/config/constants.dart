@@ -56,9 +56,20 @@ class AppConstants {
   // Other images
   static const String susiPhone = '$imagesBasePath/susi-phone.png';
   static const String fuerDichCard = '$imagesBasePath/fuer-dich-card.png';
+  static const String alternativenCard = '$imagesBasePath/alternativen-card.jpg';
+  static const String rezepteCard = '$imagesBasePath/rezepte-card.jpg';
   static const String logoSvg = '$imagesBasePath/logo.svg';
   static const String toiletPaperIcon = '$iconsBasePath/toilet-paper-icon.png';
   static const String toiletPaperSvg = '$iconsBasePath/toilet-paper-3.svg';
+
+  // Stool type descriptions
+  static const Map<int, String> stoolTypeDescriptions = {
+    1: 'Sehr hart',
+    2: 'Hart',
+    3: 'Normal',
+    4: 'Weich',
+    5: 'Flüssig',
+  };
 
   // Drink sizes
   static const List<int> drinkSizes = [250, 500, 750, 1000];

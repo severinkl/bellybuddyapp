@@ -17,4 +17,18 @@ analyzer:
     - "**/*.g.dart"
 
 linter:
-  rules: []
+  rules:
+    - prefer_const_constructors
+    - prefer_const_declarations
+    - prefer_const_literals_to_create_immutables
+    - avoid_print
+    - require_trailing_commas
+    - prefer_single_quotes
+    - sort_child_properties_last
+    - use_key_in_widget_constructors
+    - sized_box_for_whitespace
+    - avoid_unnecessary_containers
+    - prefer_is_empty
+    - prefer_is_not_empty
+    - unnecessary_string_interpolations
+    - no_leading_underscores_for_local_identifiers

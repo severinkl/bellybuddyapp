@@ -1,6 +1,7 @@
 import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
+import '../utils/mime_utils.dart';
 import 'supabase_service.dart';
 
 class StorageService {
@@ -17,7 +18,7 @@ class StorageService {
     await SupabaseService.storage.from(bucket).uploadBinary(
       fileName,
       fileBytes,
-      fileOptions: FileOptions(contentType: 'image/$extension'),
+      fileOptions: FileOptions(contentType: mimeTypeForExtension(extension)),
     );
     return fileName;
   }

@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/meal_entry.dart';
 import '../../../models/toilet_entry.dart';
 import '../../../models/gut_feeling_entry.dart';
 import '../../../models/drink_entry.dart';
 import '../../../providers/diary_provider.dart';
-import '../../../utils/gut_feeling_rating.dart';
-import '../../../utils/signed_url_helper.dart';
+import '../../../providers/entries_provider.dart';
+import '../../../utils/date_format_utils.dart';
+import 'detail_sheets/meal_detail.dart';
+import 'detail_sheets/toilet_detail.dart';
+import 'detail_sheets/gut_feeling_detail.dart';
+import 'detail_sheets/drink_detail.dart';
 
 void showDiaryDetailSheet(BuildContext context, WidgetRef ref, DiaryEntry entry) {
   showModalBottomSheet(
@@ -23,10 +25,10 @@ void showDiaryDetailSheet(BuildContext context, WidgetRef ref, DiaryEntry entry)
         maxChildSize: 0.9,
         expand: false,
         builder: (context, scrollController) {
-          return SingleChildScrollView(
-            controller: scrollController,
-            padding: const EdgeInsets.all(24),
-            child: _buildContent(context, ref, entry),
+          return _DiaryDetailContent(
+            entry: entry,
+            parentRef: ref,
+            scrollController: scrollController,
           );
         },
       );
@@ -34,246 +36,271 @@ void showDiaryDetailSheet(BuildContext context, WidgetRef ref, DiaryEntry entry)
   );
 }
 
-Widget _buildContent(BuildContext context, WidgetRef ref, DiaryEntry entry) {
-  final dateFormat = DateFormat('EEEE, dd.MM.yyyy HH:mm', 'de_DE');
-  final formattedDate = '${dateFormat.format(entry.trackedAt)} Uhr';
+class _DiaryDetailContent extends StatefulWidget {
+  final DiaryEntry entry;
+  final WidgetRef parentRef;
+  final ScrollController scrollController;
 
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Center(
-        child: Container(
-          width: 40,
-          height: 4,
-          decoration: BoxDecoration(
-            color: AppTheme.muted,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-      ),
-      const SizedBox(height: 16),
-      Text(
-        entry.title,
-        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
-      ),
-      const SizedBox(height: 4),
-      Text(
-        formattedDate,
-        style: const TextStyle(fontSize: 14, color: AppTheme.mutedForeground),
-      ),
-      const SizedBox(height: 24),
-      _buildTypeSpecificContent(entry),
-      const SizedBox(height: 24),
-      SizedBox(
-        width: double.infinity,
-        child: OutlinedButton(
-          onPressed: () async {
-            Navigator.pop(context);
-            await deleteEntry(entry.type, entry.id);
-            final date = ref.read(diaryDateProvider);
-            ref.invalidate(diaryEntriesProvider(date));
-          },
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppTheme.destructive,
-            side: const BorderSide(color: AppTheme.destructive),
-          ),
-          child: const Text('Eintrag löschen'),
-        ),
-      ),
-    ],
-  );
-}
-
-Widget _buildTypeSpecificContent(DiaryEntry entry) {
-  switch (entry.type) {
-    case DiaryEntryType.meal:
-      final meal = entry.data as MealEntry;
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (meal.imageUrl != null)
-            _MealImage(imageUrl: meal.imageUrl!),
-          if (meal.ingredients.isNotEmpty) ...[
-            const Text(
-              'Zutaten',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: meal.ingredients.map((i) => Chip(label: Text(i))).toList(),
-            ),
-          ],
-          if (meal.notes != null) ...[
-            const SizedBox(height: 16),
-            Text(meal.notes!, style: const TextStyle(color: AppTheme.mutedForeground)),
-          ],
-        ],
-      );
-
-    case DiaryEntryType.toilet:
-      final toilet = entry.data as ToiletEntry;
-      final descriptions = {1: 'Sehr hart', 2: 'Hart', 3: 'Normal', 4: 'Weich', 5: 'Flüssig'};
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Konsistenz: ${descriptions[toilet.stoolType] ?? 'Normal'}',
-            style: const TextStyle(fontSize: 16),
-          ),
-          Text(
-            'Stufe ${toilet.stoolType} von 5',
-            style: const TextStyle(color: AppTheme.mutedForeground),
-          ),
-        ],
-      );
-
-    case DiaryEntryType.gutFeeling:
-      final gut = entry.data as GutFeelingEntry;
-      final rating = calculateGutFeelingRating(gut);
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: rating.color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              rating.level.label,
-              style: TextStyle(
-                color: rating.color,
-                fontWeight: FontWeight.w600,
-                fontSize: 14,
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          _detailRow('Blähbauch', gut.bloating),
-          _detailRow('Blähungen', gut.gas),
-          _detailRow('Krämpfe', gut.cramps),
-          _detailRow('Völlegefühl', gut.fullness),
-          if (gut.stress != null) _detailRow('Stress', gut.stress!),
-          if (gut.happiness != null) _detailRow('Glück', gut.happiness!),
-          if (gut.energy != null) _detailRow('Energie', gut.energy!),
-          if (gut.focus != null) _detailRow('Fokus', gut.focus!),
-          if (gut.bodyFeel != null) _detailRow('Körpergefühl', gut.bodyFeel!),
-        ],
-      );
-
-    case DiaryEntryType.drink:
-      final drink = entry.data as DrinkEntry;
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            '${drink.amountMl} ml',
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-          ),
-          if (drink.notes != null) ...[
-            const SizedBox(height: 8),
-            Text(drink.notes!, style: const TextStyle(color: AppTheme.mutedForeground)),
-          ],
-        ],
-      );
-  }
-}
-
-Widget _detailRow(String label, int value) {
-  final color = getValueColor(value);
-  return Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 15)),
-        Text(
-          '$value / 5',
-          style: TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w600,
-            color: color,
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-/// Stateful widget that resolves a signed URL for a meal image.
-class _MealImage extends StatefulWidget {
-  final String imageUrl;
-  const _MealImage({required this.imageUrl});
+  const _DiaryDetailContent({
+    required this.entry,
+    required this.parentRef,
+    required this.scrollController,
+  });
 
   @override
-  State<_MealImage> createState() => _MealImageState();
+  State<_DiaryDetailContent> createState() => _DiaryDetailContentState();
 }
 
-class _MealImageState extends State<_MealImage> {
-  String? _resolvedUrl;
-  bool _loading = true;
+class _DiaryDetailContentState extends State<_DiaryDetailContent> {
+  bool _isEditing = false;
+  bool _saving = false;
+
+  // Gut feeling edit state
+  late int _bloating;
+  late int _gas;
+  late int _cramps;
+  late int _fullness;
+  int? _stress;
+  int? _happiness;
+  int? _energy;
+  int? _focus;
+  int? _bodyFeel;
+
+  // Toilet edit state
+  late int _stoolType;
+
+  // Drink edit state
+  late TextEditingController _amountController;
+  late TextEditingController _notesController;
 
   @override
   void initState() {
     super.initState();
-    _resolve();
+    _amountController = TextEditingController();
+    _notesController = TextEditingController();
+    _resetEditState();
   }
 
-  Future<void> _resolve() async {
-    final url = await resolveSignedMealImageUrl(widget.imageUrl);
-    if (mounted) {
-      setState(() {
-        _resolvedUrl = url;
-        _loading = false;
-      });
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  void _resetEditState() {
+    switch (widget.entry.type) {
+      case DiaryEntryType.gutFeeling:
+        final gut = widget.entry.data as GutFeelingEntry;
+        _bloating = gut.bloating;
+        _gas = gut.gas;
+        _cramps = gut.cramps;
+        _fullness = gut.fullness;
+        _stress = gut.stress;
+        _happiness = gut.happiness;
+        _energy = gut.energy;
+        _focus = gut.focus;
+        _bodyFeel = gut.bodyFeel;
+      case DiaryEntryType.toilet:
+        final toilet = widget.entry.data as ToiletEntry;
+        _stoolType = toilet.stoolType;
+      case DiaryEntryType.drink:
+        final drink = widget.entry.data as DrinkEntry;
+        _amountController.text = drink.amountMl.toString();
+        _notesController.text = drink.notes ?? '';
+      case DiaryEntryType.meal:
+        break;
+    }
+  }
+
+  bool get _canEdit => widget.entry.type != DiaryEntryType.meal;
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    try {
+      final id = widget.entry.id;
+      final notifier = widget.parentRef.read(entriesProvider.notifier);
+      switch (widget.entry.type) {
+        case DiaryEntryType.gutFeeling:
+          await notifier.updateGutFeelingById(id, {
+            'bloating': _bloating,
+            'gas': _gas,
+            'cramps': _cramps,
+            'fullness': _fullness,
+            'stress': _stress,
+            'happiness': _happiness,
+            'energy': _energy,
+            'focus': _focus,
+            'body_feel': _bodyFeel,
+          });
+        case DiaryEntryType.toilet:
+          await notifier.updateToiletById(id, {
+            'stool_type': _stoolType,
+          });
+        case DiaryEntryType.drink:
+          await notifier.updateDrinkById(id, {
+            'amount_ml': int.tryParse(_amountController.text) ??
+                (widget.entry.data as DrinkEntry).amountMl,
+            'notes':
+                _notesController.text.isEmpty ? null : _notesController.text,
+          });
+        case DiaryEntryType.meal:
+          break;
+      }
+      final date = widget.parentRef.read(diaryDateProvider);
+      widget.parentRef.invalidate(diaryEntriesProvider(date));
+      if (mounted) Navigator.pop(context);
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return Container(
-        height: 180,
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: AppTheme.muted,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Center(
-          child: CircularProgressIndicator(
-            color: AppTheme.primary,
-            strokeWidth: 2,
-          ),
-        ),
-      );
-    }
+    final formattedDate = formatDateTimeFull(widget.entry.trackedAt);
 
-    if (_resolvedUrl == null) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 16),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: CachedNetworkImage(
-          imageUrl: _resolvedUrl!,
-          height: 180,
-          width: double.infinity,
-          fit: BoxFit.cover,
-          placeholder: (_, __) => Container(
-            height: 180,
-            color: AppTheme.muted,
-          ),
-          errorWidget: (_, __, ___) => Container(
-            height: 180,
-            color: AppTheme.muted,
-            child: const Center(
-              child: Icon(Icons.image_not_supported, color: AppTheme.mutedForeground),
+    return SingleChildScrollView(
+      controller: widget.scrollController,
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppTheme.muted,
+                borderRadius: BorderRadius.circular(2),
+              ),
             ),
           ),
-        ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  widget.entry.title,
+                  style: const TextStyle(
+                      fontSize: 22, fontWeight: FontWeight.w700),
+                ),
+              ),
+              if (_canEdit && !_isEditing)
+                IconButton(
+                  icon: const Icon(Icons.edit, size: 20),
+                  onPressed: () => setState(() => _isEditing = true),
+                ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            formattedDate,
+            style: const TextStyle(
+                fontSize: 14, color: AppTheme.mutedForeground),
+          ),
+          const SizedBox(height: 24),
+          _buildTypeSpecificContent(),
+          const SizedBox(height: 24),
+          if (_isEditing) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _saving
+                        ? null
+                        : () {
+                            _resetEditState();
+                            setState(() => _isEditing = false);
+                          },
+                    child: const Text('Abbrechen'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _saving ? null : _save,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primary,
+                      foregroundColor: Colors.white,
+                    ),
+                    child: _saving
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text('Speichern'),
+                  ),
+                ),
+              ],
+            ),
+          ] else
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () async {
+                  Navigator.pop(context);
+                  await widget.parentRef.read(entriesProvider.notifier).deleteByType(
+                    widget.entry.type.name, widget.entry.id);
+                  final date = widget.parentRef.read(diaryDateProvider);
+                  widget.parentRef.invalidate(diaryEntriesProvider(date));
+                },
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.destructive,
+                  side: const BorderSide(color: AppTheme.destructive),
+                ),
+                child: const Text('Eintrag löschen'),
+              ),
+            ),
+        ],
       ),
     );
+  }
+
+  Widget _buildTypeSpecificContent() {
+    switch (widget.entry.type) {
+      case DiaryEntryType.meal:
+        return MealDetail(meal: widget.entry.data as MealEntry);
+      case DiaryEntryType.toilet:
+        return ToiletDetail(
+          toilet: widget.entry.data as ToiletEntry,
+          isEditing: _isEditing,
+          editStoolType: _stoolType,
+          onStoolTypeChanged: (v) => setState(() => _stoolType = v),
+        );
+      case DiaryEntryType.gutFeeling:
+        return GutFeelingDetail(
+          gut: widget.entry.data as GutFeelingEntry,
+          isEditing: _isEditing,
+          bloating: _bloating,
+          gas: _gas,
+          cramps: _cramps,
+          fullness: _fullness,
+          stress: _stress,
+          happiness: _happiness,
+          energy: _energy,
+          focus: _focus,
+          bodyFeel: _bodyFeel,
+          onBloatingChanged: (v) => setState(() => _bloating = v),
+          onGasChanged: (v) => setState(() => _gas = v),
+          onCrampsChanged: (v) => setState(() => _cramps = v),
+          onFullnessChanged: (v) => setState(() => _fullness = v),
+          onStressChanged: (v) => setState(() => _stress = v),
+          onHappinessChanged: (v) => setState(() => _happiness = v),
+          onEnergyChanged: (v) => setState(() => _energy = v),
+          onFocusChanged: (v) => setState(() => _focus = v),
+          onBodyFeelChanged: (v) => setState(() => _bodyFeel = v),
+        );
+      case DiaryEntryType.drink:
+        return DrinkDetail(
+          drink: widget.entry.data as DrinkEntry,
+          isEditing: _isEditing,
+          amountController: _amountController,
+          notesController: _notesController,
+        );
+    }
   }
 }

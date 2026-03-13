@@ -25,16 +25,18 @@ class AuthService {
     return response;
   }
 
+  static bool _googleInitialized = false;
+
   static Future<AuthResponse> signInWithGoogle() async {
     const webClientId = ''; // TODO: Add Google OAuth web client ID
-    final googleSignIn = GoogleSignIn(serverClientId: webClientId);
-    final googleUser = await googleSignIn.signIn();
-    if (googleUser == null) {
-      throw Exception('Google sign-in aborted');
+
+    if (!_googleInitialized) {
+      await GoogleSignIn.instance.initialize(serverClientId: webClientId);
+      _googleInitialized = true;
     }
-    final googleAuth = await googleUser.authentication;
-    final idToken = googleAuth.idToken;
-    final accessToken = googleAuth.accessToken;
+
+    final googleUser = await GoogleSignIn.instance.authenticate();
+    final idToken = googleUser.authentication.idToken;
 
     if (idToken == null) {
       throw Exception('No ID token received from Google');
@@ -43,7 +45,6 @@ class AuthService {
     return await _auth.signInWithIdToken(
       provider: OAuthProvider.google,
       idToken: idToken,
-      accessToken: accessToken,
     );
   }
 
