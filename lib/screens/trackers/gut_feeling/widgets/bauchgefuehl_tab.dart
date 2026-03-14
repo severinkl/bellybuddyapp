@@ -34,6 +34,7 @@ class BauchgefuehlTab extends StatelessWidget {
           rightLabel: 'Blähbauch',
           leftMascot: AppConstants.mascotHappyStomach,
           rightMascot: AppConstants.mascotBloatingStomach,
+          mascotFit: BoxFit.cover,
         ),
         MoodSliderRow(
           value: gas,
@@ -41,6 +42,7 @@ class BauchgefuehlTab extends StatelessWidget {
           rightLabel: 'Blähungen',
           leftMascot: AppConstants.mascotZen,
           rightMascot: AppConstants.mascotFlatulance,
+          mascotFit: BoxFit.cover,
         ),
         MoodSliderRow(
           value: cramps,
@@ -48,6 +50,7 @@ class BauchgefuehlTab extends StatelessWidget {
           rightLabel: 'Krämpfe',
           leftMascot: AppConstants.mascotNoCramp,
           rightMascot: AppConstants.mascotCramp,
+          mascotFit: BoxFit.cover,
         ),
         MoodSliderRow(
           value: fullness,
@@ -55,6 +58,7 @@ class BauchgefuehlTab extends StatelessWidget {
           rightLabel: 'Völlegefühl',
           leftMascot: AppConstants.mascotInLove,
           rightMascot: AppConstants.mascotFullness,
+          mascotFit: BoxFit.cover,
         ),
       ],
     );

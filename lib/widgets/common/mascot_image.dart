@@ -4,21 +4,23 @@ class MascotImage extends StatelessWidget {
   final String assetPath;
   final double width;
   final double height;
+  final BoxFit fit;
 
   const MascotImage({
     super.key,
     required this.assetPath,
     this.width = 48,
     this.height = 48,
+    this.fit = BoxFit.contain,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Image.asset(
+    final image = Image.asset(
       assetPath,
       width: width,
       height: height,
-      fit: BoxFit.contain,
+      fit: fit,
       errorBuilder: (context, error, stackTrace) {
         return SizedBox(
           width: width,
@@ -27,5 +29,13 @@ class MascotImage extends StatelessWidget {
         );
       },
     );
+
+    if (fit == BoxFit.cover) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: image,
+      );
+    }
+    return image;
   }
 }

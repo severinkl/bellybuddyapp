@@ -11,6 +11,7 @@ class MoodSliderRow extends StatelessWidget {
   final String leftMascot;
   final String rightMascot;
   final double mascotScale;
+  final BoxFit mascotFit;
 
   const MoodSliderRow({
     super.key,
@@ -21,6 +22,7 @@ class MoodSliderRow extends StatelessWidget {
     required this.leftMascot,
     required this.rightMascot,
     this.mascotScale = 1.0,
+    this.mascotFit = BoxFit.contain,
   });
 
   @override
@@ -41,9 +43,10 @@ class MoodSliderRow extends StatelessWidget {
               assetPath: leftMascot,
               size: mascotSize,
               isActive: leftActive,
+              fit: mascotFit,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 6),
           Expanded(
             child: BbSlider(
               value: value,
@@ -53,7 +56,7 @@ class MoodSliderRow extends StatelessWidget {
               leftLabel: leftLabel,
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 6),
           GestureDetector(
             onTap: () {
               HapticService.selection();
@@ -63,6 +66,7 @@ class MoodSliderRow extends StatelessWidget {
               assetPath: rightMascot,
               size: mascotSize,
               isActive: rightActive,
+              fit: mascotFit,
             ),
           ),
         ],
@@ -75,11 +79,13 @@ class _AnimatedMascot extends StatefulWidget {
   final String assetPath;
   final double size;
   final bool isActive;
+  final BoxFit fit;
 
   const _AnimatedMascot({
     required this.assetPath,
     required this.size,
     required this.isActive,
+    this.fit = BoxFit.contain,
   });
 
   @override
@@ -153,6 +159,7 @@ class _AnimatedMascotState extends State<_AnimatedMascot>
         assetPath: widget.assetPath,
         width: widget.size,
         height: widget.size,
+        fit: widget.fit,
       ),
     );
   }
