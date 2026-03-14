@@ -25,11 +25,7 @@ class AppTheme {
   static const Color ring = Color(0xFFB5CC47);
 
   // Chip colors
-  static const Color chipLaktose = Color(0xFF3B82F6);
-  static const Color chipFruktose = Color(0xFFE8712C);
-  static const Color chipGluten = Color(0xFFAABF52);
-  static const Color chipHistamin = Color(0xFF3B82F6);
-  static const Color chipSorbit = Color(0xFFE8712C);
+  static const Color chipDefault = Color(0xFFAABF52);
 
   // Bottom nav gradient
   static const Color navGradientStart = Color(0xFFFFB5C1);
@@ -46,6 +42,30 @@ class AppTheme {
   );
   static const Color moodSliderActive = Color(0xFFB5CC47);
   static const Color moodSliderInactive = Color(0xFFE3E0DC);
+
+  // Gut feeling colors
+  static const Color gutFeelingGood = Color(0xFF40BF40);
+  static const Color gutFeelingNeutral = Color(0xFFE6B800);
+  static const Color gutFeelingBad = Color(0xFFD93636);
+
+  // Shadow
+  static const Color shadow = Color(0x20000000);
+
+  // Font sizes
+  static const double fontSizeXS = 9;
+  static const double fontSizeSM = 11;
+  static const double fontSizeCaption = 12;
+  static const double fontSizeCaptionLG = 13;
+  static const double fontSizeBody = 14;
+  static const double fontSizeBodyLG = 15;
+  static const double fontSizeSubtitle = 16;
+  static const double fontSizeSubtitleLG = 17;
+  static const double fontSizeTitle = 18;
+  static const double fontSizeTitleLG = 20;
+  static const double fontSizeHeading = 22;
+  static const double fontSizeHeadingLG = 24;
+  static const double fontSizeDisplay = 28;
+  static const double fontSizeDisplayLG = 30;
 
   // Stool scale colors
   static const List<Color> stoolColors = [
@@ -70,23 +90,6 @@ class AppTheme {
     return stoolColors[type - 1];
   }
 
-  // Intolerance chip color
-  static Color chipColorForIntolerance(String intolerance) {
-    switch (intolerance) {
-      case 'Laktose':
-        return chipLaktose;
-      case 'Fruktose':
-        return chipFruktose;
-      case 'Gluten':
-        return chipGluten;
-      case 'Histamin':
-        return chipHistamin;
-      case 'Sorbit':
-        return chipSorbit;
-      default:
-        return primary;
-    }
-  }
 
   static ThemeData get theme => ThemeData(
         useMaterial3: true,
@@ -112,7 +115,7 @@ class AppTheme {
           centerTitle: true,
           titleTextStyle: TextStyle(
             color: foreground,
-            fontSize: 18,
+            fontSize: fontSizeTitle,
             fontWeight: FontWeight.w600,
           ),
         ),
@@ -134,7 +137,7 @@ class AppTheme {
               borderRadius: BorderRadius.circular(16),
             ),
             textStyle: const TextStyle(
-              fontSize: 16,
+              fontSize: fontSizeSubtitle,
               fontWeight: FontWeight.w500,
             ),
             elevation: 0,
@@ -149,7 +152,7 @@ class AppTheme {
             ),
             side: const BorderSide(color: border),
             textStyle: const TextStyle(
-              fontSize: 16,
+              fontSize: fontSizeSubtitle,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -158,7 +161,7 @@ class AppTheme {
           style: TextButton.styleFrom(
             foregroundColor: primary,
             textStyle: const TextStyle(
-              fontSize: 16,
+              fontSize: fontSizeSubtitle,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -206,7 +209,7 @@ class AppTheme {
           ),
           side: BorderSide.none,
           labelStyle: const TextStyle(
-            fontSize: 14,
+            fontSize: fontSizeBody,
             fontWeight: FontWeight.w500,
           ),
         ),

@@ -23,7 +23,7 @@ class BbChipSelector extends StatelessWidget {
       runSpacing: 8,
       children: options.map((option) {
         final isSelected = selected.contains(option);
-        final chipColor = chipColorBuilder?.call(option) ?? AppTheme.primary;
+        final chipColor = chipColorBuilder?.call(option) ?? AppTheme.chipDefault;
         return FilterChip(
           label: Text(option),
           selected: isSelected,
