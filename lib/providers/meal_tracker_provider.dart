@@ -19,7 +19,7 @@ class MealTrackerState {
   final bool isAnalyzing;
   final bool isSaving;
   final bool showSuccess;
-  final List<String> ingredientSuggestions;
+  final List<IngredientSuggestion> ingredientSuggestions;
   final Object? ingredientSearchError;
   final String? notes;
   final DateTime trackedAt;
@@ -46,7 +46,7 @@ class MealTrackerState {
     bool? isAnalyzing,
     bool? isSaving,
     bool? showSuccess,
-    List<String>? ingredientSuggestions,
+    List<IngredientSuggestion>? ingredientSuggestions,
     Object? ingredientSearchError,
     String? notes,
     DateTime? trackedAt,
@@ -80,6 +80,13 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
     state = state.copyWith(imageBytes: bytes, imageFileName: fileName);
   }
 
+  void clearImage() {
+    state = MealTrackerState(
+      trackedAt: state.trackedAt,
+      notes: state.notes,
+    );
+  }
+
   Future<void> analyzeImage(Uint8List bytes, String filename) async {
     state = state.copyWith(isAnalyzing: true);
     try {
@@ -105,7 +112,7 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
   }
 
   Future<void> searchIngredients(String query) async {
-    if (query.length < 2) {
+    if (query.length < 3) {
       state = state.copyWith(ingredientSuggestions: []);
       return;
     }
@@ -128,11 +135,21 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
       ingredients: [...state.ingredients, trimmed],
       ingredientSuggestions: [],
     );
+    // Write new ingredient to DB (fire-and-forget)
+    IngredientService.insertIfNew(trimmed).ignore();
   }
 
   void removeIngredient(String name) {
     state = state.copyWith(
       ingredients: state.ingredients.where((i) => i != name).toList(),
+    );
+  }
+
+  Future<void> deleteUserIngredient(String id) async {
+    await IngredientService.deleteUserIngredient(id);
+    state = state.copyWith(
+      ingredientSuggestions:
+          state.ingredientSuggestions.where((s) => s.id != id).toList(),
     );
   }
 

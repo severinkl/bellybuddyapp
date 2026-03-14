@@ -1,13 +1,53 @@
 import 'supabase_service.dart';
 
+class IngredientSuggestion {
+  final String id;
+  final String name;
+  final bool isOwn;
+
+  const IngredientSuggestion({
+    required this.id,
+    required this.name,
+    required this.isOwn,
+  });
+}
+
 class IngredientService {
-  static Future<List<String>> search(String query, {int limit = 10}) async {
+  static Future<List<IngredientSuggestion>> search(String query,
+      {int limit = 10}) async {
+    final userId = SupabaseService.userId;
     final data = await SupabaseService.client
         .from('ingredients')
-        .select('name')
+        .select('id, name, added_by_user_id')
         .ilike('name', '%$query%')
         .limit(limit);
-    return data.map((e) => e['name'] as String).toList();
+    return data
+        .map((e) => IngredientSuggestion(
+              id: e['id'] as String,
+              name: e['name'] as String,
+              isOwn: e['added_by_user_id'] == userId,
+            ))
+        .toList();
+  }
+
+  static Future<void> insertIfNew(String name) async {
+    final userId = SupabaseService.userId;
+    if (userId == null) return;
+    final existing = await SupabaseService.client
+        .from('ingredients')
+        .select('id')
+        .ilike('name', name)
+        .limit(1);
+    if (existing.isNotEmpty) return;
+    await SupabaseService.client.from('ingredients').insert({
+      'name': name,
+      'added_via': 'user',
+      'added_by_user_id': userId,
+    });
+  }
+
+  static Future<void> deleteUserIngredient(String id) async {
+    await SupabaseService.client.from('ingredients').delete().eq('id', id);
   }
 
   static Future<List<Map<String, dynamic>>> fetchSuggestions(

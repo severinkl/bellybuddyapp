@@ -104,7 +104,7 @@ class AppConstants {
   ];
 
   // Drink sizes
-  static const List<int> drinkSizes = [250, 500, 750, 1000];
+  static const List<int> drinkSizes = [250, 330, 500, 1000];
 
   // Default reminder time
   static const List<int> defaultReminderTimes = [18];

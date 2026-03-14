@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import '../../../../config/app_theme.dart';
+import '../../../../services/ingredient_service.dart';
 
 class IngredientSearch extends StatefulWidget {
   final List<String> ingredients;
-  final List<String> suggestions;
+  final List<IngredientSuggestion> suggestions;
   final ValueChanged<String> onSearch;
   final ValueChanged<String> onAdd;
   final ValueChanged<String> onRemove;
+  final ValueChanged<String> onDeleteIngredient;
 
   const IngredientSearch({
     super.key,
@@ -15,6 +17,7 @@ class IngredientSearch extends StatefulWidget {
     required this.onSearch,
     required this.onAdd,
     required this.onRemove,
+    required this.onDeleteIngredient,
   });
 
   @override
@@ -31,7 +34,9 @@ class _IngredientSearchState extends State<IngredientSearch> {
     super.dispose();
   }
 
-  void _submitIngredient(String value) {
+  void _submitIngredient() {
+    final value = _controller.text.trim();
+    if (value.isEmpty) return;
     widget.onAdd(value);
     _controller.clear();
     widget.onSearch('');
@@ -40,6 +45,11 @@ class _IngredientSearchState extends State<IngredientSearch> {
 
   @override
   Widget build(BuildContext context) {
+    // Filter out already-added ingredients
+    final filteredSuggestions = widget.suggestions
+        .where((s) => !widget.ingredients.contains(s.name))
+        .toList();
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -55,24 +65,43 @@ class _IngredientSearchState extends State<IngredientSearch> {
           ),
           const SizedBox(height: 8),
           if (_isAdding) ...[
-            TextField(
-              controller: _controller,
-              autofocus: true,
-              decoration: InputDecoration(
-                hintText: 'Zutat hinzufügen...',
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () {
-                    _controller.clear();
-                    widget.onSearch('');
-                    setState(() => _isAdding = false);
-                  },
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText: 'Mind. 3 Zeichen...',
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () {
+                          _controller.clear();
+                          widget.onSearch('');
+                          setState(() => _isAdding = false);
+                        },
+                      ),
+                    ),
+                    onChanged: widget.onSearch,
+                    onSubmitted: (_) => _submitIngredient(),
+                  ),
                 ),
-              ),
-              onChanged: widget.onSearch,
-              onSubmitted: _submitIngredient,
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: _submitIngredient,
+                  child: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                      color: AppTheme.primary,
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.check, color: Colors.white, size: 20),
+                  ),
+                ),
+              ],
             ),
-            if (widget.suggestions.isNotEmpty)
+            if (filteredSuggestions.isNotEmpty)
               Container(
                 margin: const EdgeInsets.only(top: 4),
                 decoration: BoxDecoration(
@@ -81,11 +110,25 @@ class _IngredientSearchState extends State<IngredientSearch> {
                   border: Border.all(color: AppTheme.border),
                 ),
                 child: Column(
-                  children: widget.suggestions.map((s) {
+                  children: filteredSuggestions.map((s) {
                     return ListTile(
-                      title: Text(s),
+                      title: Text(s.name),
                       dense: true,
-                      onTap: () => _submitIngredient(s),
+                      onTap: () {
+                        _controller.text = s.name;
+                        _controller.selection = TextSelection.fromPosition(
+                          TextPosition(offset: s.name.length),
+                        );
+                        widget.onSearch('');
+                      },
+                      trailing: s.isOwn
+                          ? IconButton(
+                              icon: const Icon(Icons.delete_outline,
+                                  size: 20, color: AppTheme.mutedForeground),
+                              onPressed: () =>
+                                  widget.onDeleteIngredient(s.id),
+                            )
+                          : null,
                     );
                   }).toList(),
                 ),

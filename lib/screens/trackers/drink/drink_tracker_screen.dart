@@ -5,9 +5,11 @@ import '../../../config/constants.dart';
 import '../../../providers/drink_tracker_provider.dart';
 import '../../../utils/save_helper.dart';
 import '../../../widgets/common/bb_button.dart';
-import '../../../widgets/common/date_time_picker_tile.dart';
-import '../../../widgets/common/selectable_item_grid.dart';
+import '../../../widgets/common/date_time_chips.dart';
 import '../../../widgets/common/tracker_screen_scaffold.dart';
+import 'widgets/drink_search.dart';
+import 'widgets/drink_size_selector.dart';
+import 'widgets/quick_drink_grid.dart';
 
 class DrinkTrackerScreen extends ConsumerStatefulWidget {
   const DrinkTrackerScreen({super.key});
@@ -18,9 +20,6 @@ class DrinkTrackerScreen extends ConsumerStatefulWidget {
 }
 
 class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
-  final _searchController = TextEditingController();
-  final _customAmountController = TextEditingController();
-
   @override
   void initState() {
     super.initState();
@@ -29,120 +28,176 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
     notifier.loadTodayTotal();
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _customAmountController.dispose();
-    super.dispose();
+  String _formatAmount(int ml) {
+    if (ml >= 1000) {
+      final liters = (ml / 1000).toStringAsFixed(1);
+      return '${liters.replaceAll('.0', '')} L';
+    }
+    return '$ml ml';
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(drinkTrackerProvider);
+    final canSave = state.selectedDrink != null &&
+        state.selectedAmount != null &&
+        state.selectedAmount! > 0;
 
     return TrackerScreenScaffold(
-      title: 'Was hast du getrunken?',
+      title: 'Was hast du getrunken? 💧',
       showSuccess: state.showSuccess,
       successMessage: 'Getränk gespeichert!',
       successMascotAsset: AppConstants.mascotEnergetic,
       body: state.isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Today's total
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppTheme.info.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+          ? const Center(
+              child: CircularProgressIndicator(color: AppTheme.primary))
+          : Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const Icon(Icons.water_drop, color: AppTheme.info),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Heute: ${state.todayTotal} ml',
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.info,
-                          ),
+                        // Today's total with live preview
+                        _buildTodayTotal(state),
+                        const SizedBox(height: 16),
+
+                        // Date/Time picker — always visible
+                        DateTimeChips(
+                          value: state.trackedAt,
+                          onChanged: ref
+                              .read(drinkTrackerProvider.notifier)
+                              .setTrackedAt,
                         ),
+                        const SizedBox(height: 16),
+
+                        // Autocomplete search
+                        const DrinkSearch(),
+                        const SizedBox(height: 16),
+
+                        // Selected drink chip with deselect
+                        if (state.selectedDrink != null) ...[
+                          _buildSelectedChip(state),
+                          const SizedBox(height: 16),
+                        ],
+
+                        // Quick drink grid (recent drinks)
+                        const QuickDrinkGrid(),
+
+                        // Size selector — shown when a drink is selected
+                        if (state.selectedDrink != null) ...[
+                          const SizedBox(height: 24),
+                          const DrinkSizeSelector(),
+                        ],
+
+                        const SizedBox(height: 24),
                       ],
                     ),
                   ),
-                  const SizedBox(height: 16),
-
-                  // Search
-                  TextField(
-                    controller: _searchController,
-                    decoration: const InputDecoration(
-                      hintText: 'Getränk suchen...',
-                      prefixIcon: Icon(Icons.search),
-                    ),
-                    onChanged: ref.read(drinkTrackerProvider.notifier).filterDrinks,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Drink grid
-                  SelectableItemGrid(
-                    items: state.filteredDrinks.take(20).toList(),
-                    selectedValue: state.selectedDrink,
-                    onSelected: ref.read(drinkTrackerProvider.notifier).selectDrink,
-                    labelBuilder: (drink) => drink.name,
-                  ),
-
-                  if (state.selectedDrink != null) ...[
-                    const SizedBox(height: 24),
-                    const Text(
-                      'Menge',
-                      style: TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w600),
-                    ),
-                    const SizedBox(height: 8),
-                    // Predefined sizes
-                    SelectableItemGrid(
-                      items: AppConstants.drinkSizes,
-                      selectedValue: state.selectedAmount,
-                      onSelected: ref.read(drinkTrackerProvider.notifier).selectAmount,
-                      labelBuilder: (size) => '$size ml',
-                    ),
-                    const SizedBox(height: 8),
-                    // Custom amount
-                    TextField(
-                      controller: _customAmountController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        hintText: 'Andere Menge (ml)',
-                      ),
-                      onChanged: (v) {
-                        final parsed = int.tryParse(v);
-                        if (parsed != null && parsed > 0) {
-                          ref.read(drinkTrackerProvider.notifier).selectAmount(parsed);
-                        }
-                      },
-                    ),
-                    const SizedBox(height: 16),
-
-                    // Date/Time
-                    DateTimePickerTile(
-                      value: state.trackedAt,
-                      onChanged: ref.read(drinkTrackerProvider.notifier).setTrackedAt,
-                    ),
-                    const SizedBox(height: 24),
-                    BbButton(
-                      label: 'Getränk speichern',
+                ),
+                // Fixed bottom save button
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                  child: SafeArea(
+                    top: false,
+                    child: BbButton(
+                      label: 'speichern',
                       isLoading: state.isSaving,
-                      onPressed: state.selectedAmount != null ? _save : null,
+                      onPressed: canSave ? _save : null,
                     ),
-                  ],
-                ],
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildTodayTotal(DrinkTrackerState state) {
+    final pendingAmount = state.selectedAmount ?? 0;
+    final totalWithPending = state.todayTotal + pendingAmount;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: AppTheme.info.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.water_drop, color: AppTheme.info, size: 20),
+          const SizedBox(width: 8),
+          const Text(
+            'Heute: ',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppTheme.mutedForeground,
+            ),
+          ),
+          Text(
+            _formatAmount(totalWithPending),
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.foreground,
+            ),
+          ),
+          if (pendingAmount > 0) ...[
+            const SizedBox(width: 4),
+            Text(
+              '(+${_formatAmount(pendingAmount)})',
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.info,
               ),
             ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSelectedChip(DrinkTrackerState state) {
+    return Row(
+      children: [
+        const Text(
+          'Ausgewählt:',
+          style: TextStyle(
+            fontSize: 14,
+            color: AppTheme.mutedForeground,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppTheme.info,
+            borderRadius: BorderRadius.circular(100),
+          ),
+          child: Text(
+            state.selectedDrink!.name,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.white,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        GestureDetector(
+          onTap: () =>
+              ref.read(drinkTrackerProvider.notifier).clearSelection(),
+          child: const Text(
+            '✕',
+            style: TextStyle(
+              fontSize: 14,
+              color: AppTheme.mutedForeground,
+            ),
+          ),
+        ),
+      ],
     );
   }
 

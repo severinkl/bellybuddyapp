@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
@@ -9,6 +8,7 @@ import '../../../providers/entries_provider.dart';
 import '../../../utils/save_helper.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/bb_slider.dart';
+import '../../../widgets/common/date_time_chips.dart';
 import '../../../widgets/common/tracker_screen_scaffold.dart';
 
 class ToiletTrackerScreen extends ConsumerStatefulWidget {
@@ -24,39 +24,6 @@ class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
   DateTime _trackedAt = DateTime.now();
   bool _isSaving = false;
   bool _showSuccess = false;
-
-  Future<void> _pickDate() async {
-    final date = await showDatePicker(
-      context: context,
-      initialDate: _trackedAt,
-      firstDate: DateTime(2020),
-      lastDate: DateTime.now(),
-      locale: const Locale('de'),
-    );
-    if (date != null && mounted) {
-      setState(() {
-        _trackedAt = DateTime(
-          date.year, date.month, date.day,
-          _trackedAt.hour, _trackedAt.minute,
-        );
-      });
-    }
-  }
-
-  Future<void> _pickTime() async {
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(_trackedAt),
-    );
-    if (time != null && mounted) {
-      setState(() {
-        _trackedAt = DateTime(
-          _trackedAt.year, _trackedAt.month, _trackedAt.day,
-          time.hour, time.minute,
-        );
-      });
-    }
-  }
 
   Future<void> _save() async {
     setState(() => _isSaving = true);
@@ -92,23 +59,9 @@ class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Date & Time chips
-            Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _DateTimeChip(
-                    label: DateFormat('dd.MM.yyyy').format(_trackedAt),
-                    icon: Icons.calendar_today_outlined,
-                    onTap: _pickDate,
-                  ),
-                  const SizedBox(width: 8),
-                  _DateTimeChip(
-                    label: DateFormat('HH:mm').format(_trackedAt),
-                    icon: Icons.access_time_outlined,
-                    onTap: _pickTime,
-                  ),
-                ],
-              ),
+            DateTimeChips(
+              value: _trackedAt,
+              onChanged: (dt) => setState(() => _trackedAt = dt),
             ),
             const SizedBox(height: 32),
 
@@ -139,47 +92,6 @@ class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
               isLoading: _isSaving,
               onPressed: _save,
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _DateTimeChip extends StatelessWidget {
-  final String label;
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _DateTimeChip({
-    required this.label,
-    required this.icon,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: AppTheme.background,
-          borderRadius: BorderRadius.circular(24),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.foreground,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Icon(icon, size: 18, color: AppTheme.mutedForeground),
           ],
         ),
       ),

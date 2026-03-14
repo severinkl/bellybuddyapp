@@ -9,9 +9,11 @@ import 'entries_provider.dart';
 
 class DrinkTrackerState {
   final List<Drink> allDrinks;
-  final List<Drink> filteredDrinks;
+  final List<Drink> quickDrinks;
+  final List<Drink> suggestions;
   final Drink? selectedDrink;
   final int? selectedAmount;
+  final String customAmount;
   final bool isLoading;
   final bool isSaving;
   final bool showSuccess;
@@ -20,9 +22,11 @@ class DrinkTrackerState {
 
   DrinkTrackerState({
     this.allDrinks = const [],
-    this.filteredDrinks = const [],
+    this.quickDrinks = const [],
+    this.suggestions = const [],
     this.selectedDrink,
     this.selectedAmount,
+    this.customAmount = '',
     this.isLoading = true,
     this.isSaving = false,
     this.showSuccess = false,
@@ -30,11 +34,15 @@ class DrinkTrackerState {
     DateTime? trackedAt,
   }) : trackedAt = trackedAt ?? DateTime.now();
 
+  static const _unset = Object();
+
   DrinkTrackerState copyWith({
     List<Drink>? allDrinks,
-    List<Drink>? filteredDrinks,
-    Drink? selectedDrink,
-    int? selectedAmount,
+    List<Drink>? quickDrinks,
+    List<Drink>? suggestions,
+    Object? selectedDrink = _unset,
+    Object? selectedAmount = _unset,
+    String? customAmount,
     bool? isLoading,
     bool? isSaving,
     bool? showSuccess,
@@ -43,9 +51,15 @@ class DrinkTrackerState {
   }) {
     return DrinkTrackerState(
       allDrinks: allDrinks ?? this.allDrinks,
-      filteredDrinks: filteredDrinks ?? this.filteredDrinks,
-      selectedDrink: selectedDrink ?? this.selectedDrink,
-      selectedAmount: selectedAmount ?? this.selectedAmount,
+      quickDrinks: quickDrinks ?? this.quickDrinks,
+      suggestions: suggestions ?? this.suggestions,
+      selectedDrink: identical(selectedDrink, _unset)
+          ? this.selectedDrink
+          : selectedDrink as Drink?,
+      selectedAmount: identical(selectedAmount, _unset)
+          ? this.selectedAmount
+          : selectedAmount as int?,
+      customAmount: customAmount ?? this.customAmount,
       isLoading: isLoading ?? this.isLoading,
       isSaving: isSaving ?? this.isSaving,
       showSuccess: showSuccess ?? this.showSuccess,
@@ -63,9 +77,27 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
   Future<void> loadDrinks() async {
     try {
       final drinks = await DrinkService.fetchAll();
+
+      // Build quick drinks from recent entries
+      final userId = SupabaseService.userId;
+      List<Drink> quick = [];
+      if (userId != null) {
+        final recentIds = await DrinkService.fetchRecentDrinkIds(userId);
+        final wasserDrink = drinks
+            .where((d) => d.name.toLowerCase() == 'wasser')
+            .firstOrNull;
+        if (wasserDrink != null) quick.add(wasserDrink);
+        for (final id in recentIds) {
+          if (id == wasserDrink?.id) continue;
+          final drink = drinks.where((d) => d.id == id).firstOrNull;
+          if (drink != null) quick.add(drink);
+        }
+      }
+      if (quick.isEmpty) quick = drinks.take(11).toList();
+
       state = state.copyWith(
         allDrinks: drinks,
-        filteredDrinks: drinks,
+        quickDrinks: quick,
         isLoading: false,
       );
     } catch (e) {
@@ -85,36 +117,98 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
     }
   }
 
-  void filterDrinks(String query) {
-    if (query.isEmpty) {
-      state = state.copyWith(filteredDrinks: state.allDrinks);
+  void searchDrinks(String query) {
+    if (query.trim().isEmpty) {
+      state = state.copyWith(suggestions: []);
       return;
     }
-    final words = query.toLowerCase().split(' ');
+    final words =
+        query.toLowerCase().split(' ').where((w) => w.isNotEmpty).toList();
     final filtered = state.allDrinks.where((d) {
       final name = d.name.toLowerCase();
       return words.every((w) => name.contains(w));
     }).toList()
       ..sort((a, b) {
-        final aStarts = a.name.toLowerCase().startsWith(query.toLowerCase());
-        final bStarts = b.name.toLowerCase().startsWith(query.toLowerCase());
+        final firstWord = words.first;
+        final aName = a.name.toLowerCase();
+        final bName = b.name.toLowerCase();
+
+        final aStarts = aName.startsWith(firstWord);
+        final bStarts = bName.startsWith(firstWord);
         if (aStarts && !bStarts) return -1;
         if (!aStarts && bStarts) return 1;
+
+        final aWordStarts = aName.split(' ').any((w) => w.startsWith(firstWord));
+        final bWordStarts = bName.split(' ').any((w) => w.startsWith(firstWord));
+        if (aWordStarts && !bWordStarts) return -1;
+        if (!aWordStarts && bWordStarts) return 1;
+
         return a.name.compareTo(b.name);
       });
-    state = state.copyWith(filteredDrinks: filtered);
+    state = state.copyWith(suggestions: filtered.take(8).toList());
   }
 
-  void selectDrink(Drink drink) {
-    state = state.copyWith(selectedDrink: drink);
+  void toggleDrink(Drink drink) {
+    if (state.selectedDrink?.id == drink.id) {
+      state = state.copyWith(
+        selectedDrink: null,
+        selectedAmount: null,
+        customAmount: '',
+        suggestions: [],
+      );
+    } else {
+      state = state.copyWith(
+        selectedDrink: drink,
+        suggestions: [],
+      );
+    }
+  }
+
+  void clearSelection() {
+    state = state.copyWith(
+      selectedDrink: null,
+      selectedAmount: null,
+      customAmount: '',
+    );
   }
 
   void selectAmount(int amount) {
-    state = state.copyWith(selectedAmount: amount);
+    state = state.copyWith(selectedAmount: amount, customAmount: '');
+  }
+
+  void setCustomAmount(String value) {
+    final parsed = int.tryParse(value);
+    state = state.copyWith(
+      customAmount: value,
+      selectedAmount: (parsed != null && parsed > 0) ? parsed : null,
+    );
   }
 
   void setTrackedAt(DateTime dt) {
     state = state.copyWith(trackedAt: dt);
+  }
+
+  Future<void> deleteDrink(Drink drink) async {
+    try {
+      await DrinkService.deleteDrink(drink.id);
+      final updatedAll =
+          state.allDrinks.where((d) => d.id != drink.id).toList();
+      final updatedQuick =
+          state.quickDrinks.where((d) => d.id != drink.id).toList();
+      final updatedSuggestions =
+          state.suggestions.where((d) => d.id != drink.id).toList();
+      state = state.copyWith(
+        allDrinks: updatedAll,
+        quickDrinks: updatedQuick,
+        suggestions: updatedSuggestions,
+      );
+      if (state.selectedDrink?.id == drink.id) {
+        clearSelection();
+      }
+    } catch (e) {
+      _log.error('failed to delete drink', e);
+      rethrow;
+    }
   }
 
   Future<void> save() async {
@@ -129,6 +223,7 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
         amountMl: state.selectedAmount!,
       );
       await ref.read(entriesProvider.notifier).addDrinkEntry(entry);
+      await loadTodayTotal();
       state = state.copyWith(isSaving: false, showSuccess: true);
     } catch (e) {
       state = state.copyWith(isSaving: false);
