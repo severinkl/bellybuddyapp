@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../config/constants.dart';
 import '../../../providers/meal_tracker_provider.dart';
 import '../../../router/route_names.dart';
 import '../../../utils/save_helper.dart';
@@ -50,9 +51,10 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
           : _titleController.text,
       showSuccess: state.showSuccess,
       successMessage: 'Mahlzeit gespeichert!',
-      successAction: ElevatedButton(
-        onPressed: () => context.push(RoutePaths.drinkTracker),
-        child: const Text('Getränk dazu tracken'),
+      successMascotAsset: AppConstants.mascotCool,
+      successAction: GestureDetector(
+        onTap: () => context.push(RoutePaths.drinkTracker),
+        child: const Text('Getränk hinzufügen'),
       ),
       body: _buildBody(state),
     );

@@ -29,6 +29,7 @@ class ToiletDetail extends StatelessWidget {
           children: List.generate(5, (i) {
             final type = i + 1;
             final isSelected = type == currentType;
+            final color = AppTheme.stoolColor(type);
             return Expanded(
               child: GestureDetector(
                 onTap: isEditing ? () => onStoolTypeChanged(type) : null,
@@ -37,11 +38,11 @@ class ToiletDetail extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? AppTheme.info
-                        : AppTheme.info.withValues(alpha: 0.1),
+                        ? color
+                        : color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                     border: isSelected
-                        ? Border.all(color: AppTheme.info, width: 2)
+                        ? Border.all(color: color, width: 2)
                         : null,
                   ),
                   child: Column(
@@ -51,7 +52,7 @@ class ToiletDetail extends StatelessWidget {
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 16,
-                          color: isSelected ? Colors.white : AppTheme.info,
+                          color: isSelected ? Colors.white : color,
                         ),
                       ),
                       const SizedBox(height: 2),

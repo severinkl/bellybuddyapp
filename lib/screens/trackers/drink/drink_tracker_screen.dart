@@ -44,6 +44,7 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
       title: 'Was hast du getrunken?',
       showSuccess: state.showSuccess,
       successMessage: 'Getränk gespeichert!',
+      successMascotAsset: AppConstants.mascotEnergetic,
       body: state.isLoading
           ? const Center(child: CircularProgressIndicator(color: AppTheme.primary))
           : SingleChildScrollView(

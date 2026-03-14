@@ -25,9 +25,11 @@ class MoodSliderRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final mascotSize = 48.0 * mascotScale;
+    final mascotSize = 56.0 * mascotScale;
+    final leftActive = value == 1;
+    final rightActive = value > 1;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 12),
       child: Row(
         children: [
           GestureDetector(
@@ -35,12 +37,13 @@ class MoodSliderRow extends StatelessWidget {
               HapticService.selection();
               onChanged(1);
             },
-            child: MascotImage(
+            child: _AnimatedMascot(
               assetPath: leftMascot,
-              width: mascotSize,
-              height: mascotSize,
+              size: mascotSize,
+              isActive: leftActive,
             ),
           ),
+          const SizedBox(width: 12),
           Expanded(
             child: BbSlider(
               value: value,
@@ -50,18 +53,106 @@ class MoodSliderRow extends StatelessWidget {
               leftLabel: leftLabel,
             ),
           ),
+          const SizedBox(width: 12),
           GestureDetector(
             onTap: () {
               HapticService.selection();
               onChanged(5);
             },
-            child: MascotImage(
+            child: _AnimatedMascot(
               assetPath: rightMascot,
-              width: mascotSize,
-              height: mascotSize,
+              size: mascotSize,
+              isActive: rightActive,
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _AnimatedMascot extends StatefulWidget {
+  final String assetPath;
+  final double size;
+  final bool isActive;
+
+  const _AnimatedMascot({
+    required this.assetPath,
+    required this.size,
+    required this.isActive,
+  });
+
+  @override
+  State<_AnimatedMascot> createState() => _AnimatedMascotState();
+}
+
+class _AnimatedMascotState extends State<_AnimatedMascot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _bounceController;
+  late final Animation<double> _bounceAnimation;
+  bool _wasActive = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _wasActive = widget.isActive;
+    _bounceController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _bounceAnimation = TweenSequence<double>([
+      TweenSequenceItem(
+        tween: Tween(begin: 1.0, end: 1.15)
+            .chain(CurveTween(curve: Curves.easeOut)),
+        weight: 40,
+      ),
+      TweenSequenceItem(
+        tween: Tween(begin: 1.15, end: 1.0)
+            .chain(CurveTween(curve: Curves.elasticOut)),
+        weight: 60,
+      ),
+    ]).animate(_bounceController);
+  }
+
+  @override
+  void didUpdateWidget(_AnimatedMascot oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isActive && !_wasActive) {
+      _bounceController.forward(from: 0);
+    }
+    _wasActive = widget.isActive;
+  }
+
+  @override
+  void dispose() {
+    _bounceController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final targetScale = widget.isActive ? 1.1 : 0.9;
+    final targetOpacity = widget.isActive ? 1.0 : 0.4;
+
+    return AnimatedBuilder(
+      animation: _bounceController,
+      builder: (context, child) {
+        return AnimatedOpacity(
+          opacity: targetOpacity,
+          duration: const Duration(milliseconds: 300),
+          child: AnimatedScale(
+            scale: _bounceController.isAnimating
+                ? _bounceAnimation.value
+                : targetScale,
+            duration: const Duration(milliseconds: 300),
+            child: child,
+          ),
+        );
+      },
+      child: MascotImage(
+        assetPath: widget.assetPath,
+        width: widget.size,
+        height: widget.size,
       ),
     );
   }

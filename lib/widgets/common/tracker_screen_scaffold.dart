@@ -8,6 +8,8 @@ class TrackerScreenScaffold extends StatelessWidget {
   final String title;
   final bool showSuccess;
   final String successMessage;
+  final String? successSubMessage;
+  final String? successMascotAsset;
   final Widget body;
   final Widget? successAction;
   final VoidCallback? onSuccessDismissed;
@@ -18,6 +20,8 @@ class TrackerScreenScaffold extends StatelessWidget {
     required this.showSuccess,
     required this.successMessage,
     required this.body,
+    this.successSubMessage,
+    this.successMascotAsset,
     this.successAction,
     this.onSuccessDismissed,
   });
@@ -27,6 +31,8 @@ class TrackerScreenScaffold extends StatelessWidget {
     if (showSuccess) {
       return BbSuccessOverlay(
         message: successMessage,
+        subMessage: successSubMessage ?? 'Dein Eintrag wurde erfolgreich erfasst.',
+        mascotAsset: successMascotAsset,
         onDismissed: onSuccessDismissed ?? () => context.go(RoutePaths.dashboard),
         action: successAction,
       );
@@ -37,7 +43,7 @@ class TrackerScreenScaffold extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppTheme.screenBackground,
         leading: IconButton(
-          icon: const Icon(Icons.close),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
         title: Text(title),
