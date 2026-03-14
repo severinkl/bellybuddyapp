@@ -40,7 +40,7 @@ class BbChipSelector extends StatelessWidget {
           selectedColor: chipColor.withValues(alpha: 0.2),
           checkmarkColor: chipColor,
           labelStyle: TextStyle(
-            color: isSelected ? chipColor : AppTheme.foreground,
+            color: AppTheme.foreground,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
           ),
           side: BorderSide(

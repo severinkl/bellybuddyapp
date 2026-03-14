@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/gut_feeling_entry.dart';
 import '../../../providers/entries_provider.dart';
-import '../../../router/route_names.dart';
 import '../../../services/haptic_service.dart';
 import '../../../utils/save_helper.dart';
 import '../../../widgets/common/bb_button.dart';
-import '../../../widgets/common/bb_success_overlay.dart';
+import '../../../widgets/common/tracker_screen_scaffold.dart';
 import 'widgets/bauchgefuehl_tab.dart';
 import 'widgets/stimmung_tab.dart';
 
@@ -29,7 +27,7 @@ class _GutFeelingTrackerScreenState
   bool _isSaving = false;
   bool _showSuccess = false;
 
-  // Bauchgefühl values
+  // Bauchgefuehl values
   int _bloating = 1;
   int _gas = 1;
   int _cramps = 1;
@@ -84,38 +82,27 @@ class _GutFeelingTrackerScreenState
 
   @override
   Widget build(BuildContext context) {
-    if (_showSuccess) {
-      return BbSuccessOverlay(
-        message: 'Eintrag gespeichert!',
-        onDismissed: () {
-          if (mounted) context.go(RoutePaths.dashboard);
-        },
-      );
-    }
-
-    return Scaffold(
-      backgroundColor: AppTheme.screenBackground,
-      appBar: AppBar(
-        backgroundColor: AppTheme.screenBackground,
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text('Wie geht es dir?'),
-        bottom: TabBar(
-          controller: _tabController,
-          indicatorColor: AppTheme.primary,
-          labelColor: AppTheme.foreground,
-          unselectedLabelColor: AppTheme.mutedForeground,
-          onTap: (_) => HapticService.light(),
-          tabs: const [
-            Tab(text: 'Bauchgefühl'),
-            Tab(text: 'Stimmung'),
-          ],
-        ),
-      ),
+    return TrackerScreenScaffold(
+      title: 'Wie geht es dir?',
+      showSuccess: _showSuccess,
+      successMessage: 'Eintrag gespeichert!',
       body: Column(
         children: [
+          // Tab bar placed below the AppBar via the body
+          Material(
+            color: AppTheme.screenBackground,
+            child: TabBar(
+              controller: _tabController,
+              indicatorColor: AppTheme.primary,
+              labelColor: AppTheme.foreground,
+              unselectedLabelColor: AppTheme.mutedForeground,
+              onTap: (_) => HapticService.light(),
+              tabs: const [
+                Tab(text: 'Bauchgefühl'),
+                Tab(text: 'Stimmung'),
+              ],
+            ),
+          ),
           Expanded(
             child: TabBarView(
               controller: _tabController,

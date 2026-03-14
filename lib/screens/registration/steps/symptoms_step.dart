@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
-import '../../../config/constants.dart';
 import '../../../widgets/common/bb_selection_button.dart';
-import '../../../widgets/common/mascot_image.dart';
 
 class SymptomsStep extends StatelessWidget {
   final List<String> selected;
@@ -25,8 +23,6 @@ class SymptomsStep extends StatelessWidget {
       child: Column(
         children: [
           const SizedBox(height: 24),
-          const MascotImage(assetPath: AppConstants.mascotNervous, width: 120, height: 120),
-          const SizedBox(height: 16),
           const Text(
             'Welche Beschwerden nerven dich?',
             style: TextStyle(

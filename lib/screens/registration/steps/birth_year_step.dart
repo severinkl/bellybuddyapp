@@ -37,17 +37,20 @@ class BirthYearStep extends StatelessWidget {
             style: TextStyle(fontSize: 15, color: AppTheme.mutedForeground),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 32),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppTheme.beige,
-              borderRadius: BorderRadius.circular(24),
-            ),
-            child: BbScrollPicker(
-              items: years,
-              selectedValue: value,
-              onChanged: onChanged,
+          const SizedBox(height: 24),
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.beige,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: BbScrollPicker(
+                items: years,
+                selectedValue: value,
+                onChanged: onChanged,
+                expand: true,
+              ),
             ),
           ),
         ],

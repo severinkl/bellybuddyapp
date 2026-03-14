@@ -81,12 +81,12 @@ class FeatureCard extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(icon, size: 14, color: iconColor),
+                      Icon(icon, size: 16, color: iconColor),
                       const SizedBox(width: 4),
                       Text(
                         label,
                         style: const TextStyle(
-                          fontSize: 13,
+                          fontSize: 15,
                           fontWeight: FontWeight.w500,
                           color: AppTheme.foreground,
                         ),

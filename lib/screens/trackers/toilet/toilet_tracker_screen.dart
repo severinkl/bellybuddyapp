@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/toilet_entry.dart';
 import '../../../providers/entries_provider.dart';
-import '../../../router/route_names.dart';
-import '../../../widgets/common/bb_button.dart';
 import '../../../utils/save_helper.dart';
+import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/bb_slider.dart';
-import '../../../widgets/common/bb_success_overlay.dart';
 import '../../../widgets/common/date_time_picker_tile.dart';
+import '../../../widgets/common/tracker_screen_scaffold.dart';
 
 class ToiletTrackerScreen extends ConsumerStatefulWidget {
   const ToiletTrackerScreen({super.key});
@@ -51,25 +49,10 @@ class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_showSuccess) {
-      return BbSuccessOverlay(
-        message: 'Toilettengang gespeichert!',
-        onDismissed: () {
-          if (mounted) context.go(RoutePaths.dashboard);
-        },
-      );
-    }
-
-    return Scaffold(
-      backgroundColor: AppTheme.screenBackground,
-      appBar: AppBar(
-        backgroundColor: AppTheme.screenBackground,
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => context.pop(),
-        ),
-        title: const Text('Am Klo gewesen?'),
-      ),
+    return TrackerScreenScaffold(
+      title: 'Am Klo gewesen?',
+      showSuccess: _showSuccess,
+      successMessage: 'Toilettengang gespeichert!',
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(

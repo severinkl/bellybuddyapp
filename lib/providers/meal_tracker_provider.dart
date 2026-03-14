@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/meal_entry.dart';
 import '../services/edge_function_service.dart';
+import '../services/ingredient_service.dart';
 import '../services/storage_service.dart';
 import '../services/supabase_service.dart';
 import '../utils/logger.dart';
@@ -110,14 +111,9 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
     }
     state = state.copyWith(ingredientSearchError: null);
     try {
-      final data = await SupabaseService.client
-          .from('ingredients')
-          .select('name')
-          .ilike('name', '%$query%')
-          .limit(10);
+      final results = await IngredientService.search(query);
       state = state.copyWith(
-        ingredientSuggestions:
-            data.map((e) => e['name'] as String).toList(),
+        ingredientSuggestions: results,
       );
     } catch (e) {
       _log.error('ingredient search failed', e);

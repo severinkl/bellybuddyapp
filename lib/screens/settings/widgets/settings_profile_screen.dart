@@ -23,16 +23,6 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
   Timer? _debounce;
   bool _saved = false;
 
-  static const _symptoms = [
-    'Blähungen', 'Bauchschmerzen', 'Durchfall', 'Verstopfung',
-    'Übelkeit', 'Sodbrennen', 'Krämpfe', 'Völlegefühl',
-  ];
-
-  static const _intolerances = [
-    'Laktose', 'Gluten', 'Fruktose', 'Histamin', 'Sorbit',
-    'Nüsse', 'Eier', 'Soja', 'Weizen',
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -157,7 +147,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                 const Text('Symptome', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 BbChipSelector(
-                  options: _symptoms,
+                  options: AppConstants.symptomOptions,
                   selected: profile.symptoms,
                   onChanged: (v) => _debounceSave(profile.copyWith(symptoms: v)),
                 ),
@@ -167,7 +157,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                 const Text('Unverträglichkeiten', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                 const SizedBox(height: 8),
                 BbChipSelector(
-                  options: _intolerances,
+                  options: AppConstants.intoleranceOptions,
                   selected: profile.intolerances,
                   chipColorBuilder: AppTheme.chipColorForIntolerance,
                   onChanged: (v) {

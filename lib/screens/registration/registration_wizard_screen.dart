@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../config/app_theme.dart';
 import '../../models/user_profile.dart';
 import '../../providers/profile_provider.dart';
@@ -34,10 +35,10 @@ class _RegistrationWizardScreenState
   String? _authError;
 
   // Form state
-  int? _birthYear;
+  int _birthYear = 1985;
   String? _gender;
-  int? _height;
-  int? _weight;
+  int _height = 170;
+  int _weight = 70;
   String? _diet;
   List<String> _symptoms = [];
   List<String> _intolerances = [];
@@ -56,8 +57,16 @@ class _RegistrationWizardScreenState
     setState(() => _currentStep = step);
   }
 
+  bool get _canAdvance {
+    return switch (_currentStep) {
+      1 => _gender != null,  // Gender is mandatory
+      3 => _diet != null,    // Diet is mandatory
+      _ => true,
+    };
+  }
+
   void _next() {
-    if (_currentStep < _totalSteps - 1) {
+    if (_currentStep < _totalSteps - 1 && _canAdvance) {
       HapticService.light();
       _goToStep(_currentStep + 1);
     }
@@ -92,7 +101,12 @@ class _RegistrationWizardScreenState
       if (mounted) context.go(RoutePaths.dashboard);
     } catch (e) {
       _log.error('email sign-up failed', e);
-      if (mounted) setState(() => _authError = 'Registrierung fehlgeschlagen.');
+      if (mounted) {
+        final message = (e is AuthApiException && e.code == 'user_already_exists')
+            ? 'Diese E-Mail ist bereits registriert. Bitte melde dich an.'
+            : 'Registrierung fehlgeschlagen.';
+        setState(() => _authError = message);
+      }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -209,7 +223,7 @@ class _RegistrationWizardScreenState
                 child: BbButton(
                   label: 'Weiter',
                   icon: Icons.arrow_forward,
-                  onPressed: _next,
+                  onPressed: _canAdvance ? _next : null,
                 ),
               ),
             // Back button (all steps)

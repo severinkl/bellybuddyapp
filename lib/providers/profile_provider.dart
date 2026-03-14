@@ -1,6 +1,6 @@
-import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user_profile.dart';
+import '../services/profile_service.dart';
 import '../services/supabase_service.dart';
 import '../services/auth_service.dart';
 import '../utils/logger.dart';
@@ -28,20 +28,8 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
         return;
       }
 
-      final data = await SupabaseService.client
-          .from('profiles')
-          .select()
-          .eq('user_id', userId)
-          .maybeSingle();
-
-      _log.debug('fetchProfile: data=$data');
-
-      if (data == null) {
-        state = const AsyncValue.data(null);
-        return;
-      }
-
-      state = AsyncValue.data(UserProfile.fromJson(data));
+      final profile = await ProfileService.fetchByUserId(userId);
+      state = AsyncValue.data(profile);
     } catch (e, st) {
       _log.error('fetchProfile (attempt ${attempt + 1}/$_maxRetries)', e);
       if (attempt < _maxRetries - 1) {
@@ -67,9 +55,7 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
       data.removeWhere((key, value) => value == null);
 
       _log.debug('creating profile for $userId');
-      await SupabaseService.client
-          .from('profiles')
-          .upsert(data, onConflict: 'user_id');
+      await ProfileService.upsert(data);
       // Fetch the full profile from DB (includes DB-generated fields like id, created_at)
       await fetchProfile();
     } catch (e, st) {
@@ -87,10 +73,7 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
       final data = profile.toJson();
       data.remove('user_id');
 
-      await SupabaseService.client
-          .from('profiles')
-          .update(data)
-          .eq('user_id', userId);
+      await ProfileService.update(userId, data);
 
       state = AsyncValue.data(profile.copyWith(userId: userId));
     } catch (e, st) {

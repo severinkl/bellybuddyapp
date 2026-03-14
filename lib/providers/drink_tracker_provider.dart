@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/drink.dart';
 import '../models/drink_entry.dart';
+import '../services/drink_service.dart';
 import '../services/supabase_service.dart';
 import '../utils/logger.dart';
 import 'entries_provider.dart';
@@ -61,17 +62,14 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
 
   Future<void> loadDrinks() async {
     try {
-      final data = await SupabaseService.client
-          .from('drinks')
-          .select()
-          .order('name');
-      final drinks = data.map((e) => Drink.fromDbRow(e)).toList();
+      final drinks = await DrinkService.fetchAll();
       state = state.copyWith(
         allDrinks: drinks,
         filteredDrinks: drinks,
         isLoading: false,
       );
     } catch (e) {
+      _log.error('failed to load drinks', e);
       state = state.copyWith(isLoading: false);
     }
   }
@@ -80,17 +78,7 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
     try {
       final userId = SupabaseService.userId;
       if (userId == null) return;
-      final now = DateTime.now();
-      final startOfDay = DateTime(now.year, now.month, now.day);
-      final data = await SupabaseService.client
-          .from('drink_entries')
-          .select('amount_ml')
-          .eq('user_id', userId)
-          .gte('tracked_at', startOfDay.toIso8601String())
-          .lt('tracked_at',
-              startOfDay.add(const Duration(days: 1)).toIso8601String());
-      final total =
-          data.fold<int>(0, (sum, e) => sum + (e['amount_ml'] as int));
+      final total = await DrinkService.fetchTodayTotal(userId);
       state = state.copyWith(todayTotal: total);
     } catch (e) {
       _log.error('failed to load today total', e);

@@ -153,13 +153,13 @@ class _NavItem extends StatelessWidget {
               color: isActive
                   ? AppTheme.foreground
                   : AppTheme.foreground.withValues(alpha: 0.6),
-              size: 24,
+              size: 32,
             ),
             const SizedBox(height: 4),
             Text(
               label,
               style: TextStyle(
-                fontSize: 11,
+                fontSize: 14,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
                 color: isActive
                     ? AppTheme.foreground
@@ -191,10 +191,10 @@ class _CenterButton extends StatelessWidget {
           children: [
             // Circle button — positioned to overflow upward
             Positioned(
-              top: -20,
+              top: -26,
               child: Container(
-                width: 64,
-                height: 64,
+                width: 72,
+                height: 72,
                 decoration: const BoxDecoration(
                   color: AppTheme.primary,
                   shape: BoxShape.circle,
@@ -209,7 +209,7 @@ class _CenterButton extends StatelessWidget {
                 child: const Icon(
                   Icons.add,
                   color: AppTheme.primaryForeground,
-                  size: 32,
+                  size: 36,
                 ),
               ),
             ),
@@ -219,7 +219,7 @@ class _CenterButton extends StatelessWidget {
               child: Text(
                 'Essen tracken',
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 14,
                   fontWeight: FontWeight.w500,
                   color: AppTheme.foreground,
                 ),

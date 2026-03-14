@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/ingredient_suggestion.dart';
+import '../services/ingredient_service.dart';
 import '../services/supabase_service.dart';
 
 class IngredientSuggestionNotifier
@@ -16,12 +17,7 @@ class IngredientSuggestionNotifier
         return;
       }
 
-      final data = await SupabaseService.client
-          .from('ingredient_suggestions')
-          .select('*, ingredients(name)')
-          .eq('user_id', userId)
-          .isFilter('dismissed_at', null)
-          .order('created_at', ascending: false);
+      final data = await IngredientService.fetchSuggestions(userId);
 
       state = AsyncValue.data(
         data.map((e) {
@@ -36,10 +32,7 @@ class IngredientSuggestionNotifier
   }
 
   Future<void> dismissSuggestion(String id) async {
-    await SupabaseService.client
-        .from('ingredient_suggestions')
-        .update({'dismissed_at': DateTime.now().toIso8601String()})
-        .eq('id', id);
+    await IngredientService.dismissSuggestion(id);
 
     state = state.whenData(
       (suggestions) => suggestions.where((s) => s.id != id).toList(),
@@ -47,10 +40,7 @@ class IngredientSuggestionNotifier
   }
 
   Future<void> markSeen(String id) async {
-    await SupabaseService.client
-        .from('ingredient_suggestions')
-        .update({'seen_at': DateTime.now().toIso8601String()})
-        .eq('id', id);
+    await IngredientService.markSuggestionSeen(id);
   }
 
   int get newCount {

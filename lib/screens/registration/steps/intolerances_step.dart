@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
+import '../../../config/constants.dart';
 import '../../../widgets/common/bb_chip_selector.dart';
+import '../../../widgets/common/mascot_image.dart';
 
 class IntolerancesStep extends StatelessWidget {
   final List<String> selected;
@@ -23,18 +25,6 @@ class IntolerancesStep extends StatelessWidget {
     required this.histaminTriggers,
     required this.onHistaminTriggersChanged,
   });
-
-  static const _options = [
-    'Laktose',
-    'Gluten',
-    'Fruktose',
-    'Sorbit',
-    'Histamin',
-    'Soja',
-    'Milch',
-    'Erdnuss',
-    'Weizen',
-  ];
 
   void _showTriggerModal(BuildContext context, String intolerance) {
     List<String> triggers;
@@ -90,6 +80,8 @@ class IntolerancesStep extends StatelessWidget {
       child: Column(
         children: [
           const SizedBox(height: 24),
+          const MascotImage(assetPath: AppConstants.mascotNervous, width: 120, height: 120),
+          const SizedBox(height: 16),
           const Text(
             'Wurden dir Unverträglichkeiten diagnostiziert?',
             style: TextStyle(
@@ -107,7 +99,7 @@ class IntolerancesStep extends StatelessWidget {
           ),
           const SizedBox(height: 32),
           BbChipSelector(
-            options: _options,
+            options: AppConstants.intoleranceOptions,
             selected: selected,
             onChanged: (newSelected) {
               // Check if a trigger-eligible intolerance was just added

@@ -45,62 +45,68 @@ class HeightWeightStep extends StatelessWidget {
             style: TextStyle(fontSize: 15, color: AppTheme.mutedForeground),
             textAlign: TextAlign.center,
           ),
-          const Spacer(),
-          Flexible(
+          const SizedBox(height: 24),
+          Expanded(
             child: Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppTheme.beige,
-              borderRadius: BorderRadius.circular(24),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.beige,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      children: [
+                        const Text(
+                          'Größe',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.mutedForeground,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Expanded(
+                          child: BbScrollPicker(
+                            items: heights,
+                            selectedValue: height ?? 170,
+                            onChanged: onHeightChanged,
+                            labelBuilder: (v) => '$v cm',
+                            expand: true,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 24),
+                  Expanded(
+                    child: Column(
+                      children: [
+                        const Text(
+                          'Gewicht',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.mutedForeground,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Expanded(
+                          child: BbScrollPicker(
+                            items: weights,
+                            selectedValue: weight ?? 70,
+                            onChanged: onWeightChanged,
+                            labelBuilder: (v) => '$v kg',
+                            expand: true,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
-            child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  children: [
-                    const Text(
-                      'Größe',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: AppTheme.mutedForeground,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    BbScrollPicker(
-                      items: heights,
-                      selectedValue: height,
-                      onChanged: onHeightChanged,
-                      labelBuilder: (v) => '$v cm',
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 24),
-              Expanded(
-                child: Column(
-                  children: [
-                    const Text(
-                      'Gewicht',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: AppTheme.mutedForeground,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    BbScrollPicker(
-                      items: weights,
-                      selectedValue: weight,
-                      onChanged: onWeightChanged,
-                      labelBuilder: (v) => '$v kg',
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          ),
           ),
         ],
       ),

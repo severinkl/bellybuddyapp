@@ -52,7 +52,7 @@ class _SettingsNotificationsScreenState
                   contentPadding: EdgeInsets.zero,
                   onChanged: (v) {
                     setState(() => _pushEnabled = v);
-                    // TODO: OneSignal opt-in/out
+                    // FIXME(feature): Implement OneSignal opt-in/out toggle
                   },
                 ),
                 const Divider(),

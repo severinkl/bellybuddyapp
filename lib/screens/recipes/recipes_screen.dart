@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../config/app_theme.dart';
+import '../../config/constants.dart';
 import '../../providers/recipes_provider.dart';
 import '../../services/storage_service.dart';
 import '../../widgets/common/bb_card.dart';
@@ -38,7 +39,7 @@ class RecipesScreen extends ConsumerWidget {
                   child: SingleChildScrollView(
                     scrollDirection: Axis.horizontal,
                     child: Row(
-                      children: ['Vegetarisch', 'Vegan', 'Glutenfrei', 'Laktosefrei']
+                      children: AppConstants.recipeFilterTags
                           .map((tag) {
                         final isActive = state.filters.contains(tag);
                         return Padding(

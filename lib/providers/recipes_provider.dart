@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recipe.dart';
+import '../services/recipe_service.dart';
 import '../services/supabase_service.dart';
 import '../utils/logger.dart';
 
@@ -58,12 +59,7 @@ class RecipesNotifier extends Notifier<RecipesState> {
   Future<void> _loadRecipes() async {
     state = state.copyWith(error: null);
     try {
-      final data = await SupabaseService.client
-          .from('recipes')
-          .select()
-          .order('title');
-      final recipes =
-          data.map((e) => Recipe.fromJson(e)).toList();
+      final recipes = await RecipeService.fetchAll();
       state = state.copyWith(
         allRecipes: recipes,
         filtered: recipes,
@@ -80,13 +76,8 @@ class RecipesNotifier extends Notifier<RecipesState> {
     final userId = SupabaseService.userId;
     if (userId == null) return;
     try {
-      final data = await SupabaseService.client
-          .from('user_favorite_recipes')
-          .select('recipe_id')
-          .eq('user_id', userId);
-      state = state.copyWith(
-        favorites: data.map((e) => e['recipe_id'] as String).toSet(),
-      );
+      final favorites = await RecipeService.fetchFavoriteIds(userId);
+      state = state.copyWith(favorites: favorites);
     } catch (e) {
       _log.error('failed to load favorites', e);
     }
@@ -96,20 +87,18 @@ class RecipesNotifier extends Notifier<RecipesState> {
     final userId = SupabaseService.userId;
     if (userId == null) return;
     final newFavorites = Set<String>.from(state.favorites);
-    if (newFavorites.contains(recipeId)) {
-      await SupabaseService.client
-          .from('user_favorite_recipes')
-          .delete()
-          .eq('user_id', userId)
-          .eq('recipe_id', recipeId);
-      newFavorites.remove(recipeId);
-    } else {
-      await SupabaseService.client
-          .from('user_favorite_recipes')
-          .insert({'user_id': userId, 'recipe_id': recipeId});
-      newFavorites.add(recipeId);
+    try {
+      if (newFavorites.contains(recipeId)) {
+        await RecipeService.removeFavorite(userId, recipeId);
+        newFavorites.remove(recipeId);
+      } else {
+        await RecipeService.addFavorite(userId, recipeId);
+        newFavorites.add(recipeId);
+      }
+      state = state.copyWith(favorites: newFavorites);
+    } catch (e) {
+      _log.error('failed to toggle favorite', e);
     }
-    state = state.copyWith(favorites: newFavorites);
   }
 
   void setSearch(String query) {

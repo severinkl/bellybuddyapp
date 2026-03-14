@@ -144,7 +144,7 @@ class _AuthStepState extends State<AuthStep> {
             BbButton(
               label: 'Registrieren',
               isLoading: widget.isLoading,
-              onPressed: _submit,
+              onPressed: _isPasswordValid ? _submit : null,
             ),
 
             const SizedBox(height: 24),

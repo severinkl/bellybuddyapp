@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 class AppConstants {
   AppConstants._();
 
@@ -7,6 +9,19 @@ class AppConstants {
   static const double spacingMd = 16.0;
   static const double spacingLg = 24.0;
   static const double spacingXl = 32.0;
+
+  // Spacing widgets
+  static const gap4 = SizedBox(height: 4);
+  static const gap8 = SizedBox(height: 8);
+  static const gap12 = SizedBox(height: 12);
+  static const gap16 = SizedBox(height: 16);
+  static const gap24 = SizedBox(height: 24);
+  static const gap32 = SizedBox(height: 32);
+
+  // Common padding
+  static const paddingSm = EdgeInsets.all(8);
+  static const paddingMd = EdgeInsets.all(16);
+  static const paddingLg = EdgeInsets.all(24);
 
   // Border radius
   static const double radiusSm = 8.0;
@@ -70,6 +85,23 @@ class AppConstants {
     4: 'Weich',
     5: 'Flüssig',
   };
+
+  // Intolerance options (used in registration + settings)
+  static const List<String> intoleranceOptions = [
+    'Laktose', 'Gluten', 'Fruktose', 'Histamin', 'Sorbit',
+    'Nüsse', 'Eier', 'Soja', 'Weizen',
+  ];
+
+  // Symptom options (used in registration + settings)
+  static const List<String> symptomOptions = [
+    'Blähungen', 'Bauchschmerzen', 'Durchfall', 'Verstopfung',
+    'Übelkeit', 'Sodbrennen', 'Krämpfe', 'Völlegefühl',
+  ];
+
+  // Recipe filter tags
+  static const List<String> recipeFilterTags = [
+    'Vegetarisch', 'Vegan', 'Glutenfrei', 'Laktosefrei',
+  ];
 
   // Drink sizes
   static const List<int> drinkSizes = [250, 500, 750, 1000];

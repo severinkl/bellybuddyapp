@@ -28,7 +28,8 @@ class AuthService {
   static bool _googleInitialized = false;
 
   static Future<AuthResponse> signInWithGoogle() async {
-    const webClientId = ''; // TODO: Add Google OAuth web client ID
+    // FIXME(config): Set Google OAuth web client ID from Supabase dashboard
+    const webClientId = '';
 
     if (!_googleInitialized) {
       await GoogleSignIn.instance.initialize(serverClientId: webClientId);
