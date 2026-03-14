@@ -59,10 +59,10 @@ class AppTheme {
   // Danger slider colors (green → yellow → red)
   static Color dangerSliderColor(double value, {int maxValue = 5}) {
     final t = (value - 1) / (maxValue - 1);
-    if (t <= 0.5) {
-      return Color.lerp(success, warning, t * 2)!;
+    if (t <= 0.25) {
+      return Color.lerp(success, warning, t * 4)!;
     }
-    return Color.lerp(warning, destructive, (t - 0.5) * 2)!;
+    return Color.lerp(warning, destructive, (t - 0.25) / 0.75)!;
   }
 
   static Color stoolColor(int type) {

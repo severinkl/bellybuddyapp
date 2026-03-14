@@ -43,17 +43,15 @@ class MoodTabSelector extends StatelessWidget {
           curve: Curves.easeInOut,
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isActive ? Colors.white : Colors.transparent,
+            color: isActive ? Colors.white : Colors.white.withValues(alpha: 0.0),
             borderRadius: BorderRadius.circular(100),
-            boxShadow: isActive
-                ? [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.08),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2),
-                    ),
-                  ]
-                : null,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: isActive ? 0.08 : 0.0),
+                blurRadius: isActive ? 8 : 0,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: AnimatedDefaultTextStyle(
             duration: const Duration(milliseconds: 200),

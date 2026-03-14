@@ -44,6 +44,9 @@ class _GutFeelingTrackerScreenState
   int _focus = 1;
   int _bodyFeel = 1;
 
+  // Page controller for smooth tab transitions
+  late final PageController _pageController;
+
   // Entry animations
   late final AnimationController _entryController;
   late final Animation<Offset> _tabSelectorSlide;
@@ -54,6 +57,7 @@ class _GutFeelingTrackerScreenState
   @override
   void initState() {
     super.initState();
+    _pageController = PageController();
     _entryController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
@@ -88,6 +92,7 @@ class _GutFeelingTrackerScreenState
 
   @override
   void dispose() {
+    _pageController.dispose();
     _entryController.dispose();
     super.dispose();
   }
@@ -120,11 +125,18 @@ class _GutFeelingTrackerScreenState
     }
   }
 
+  void _animateToTab(int tab) {
+    _pageController.animateToPage(
+      tab,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeInOut,
+    );
+  }
+
   void _onNextOrSave() {
     if (_activeTab == 0) {
       HapticService.light();
-      setState(() => _activeTab = 1);
-      _entryController.forward(from: 0);
+      _animateToTab(1);
     } else {
       _save();
     }
@@ -151,75 +163,88 @@ class _GutFeelingTrackerScreenState
         title: const Text('Wie geht es dir?'),
       ),
       body: Stack(
+        fit: StackFit.expand,
         children: [
-          // Scrollable content
-          SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 128),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Pill tab selector
-                SlideTransition(
+          Column(
+            children: [
+              // Pill tab selector (fixed, not scrollable)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: SlideTransition(
                   position: _tabSelectorSlide,
                   child: FadeTransition(
                     opacity: _tabSelectorFade,
                     child: MoodTabSelector(
                       activeTab: _activeTab,
                       onTabChanged: (tab) {
+                        HapticService.light();
                         setState(() => _activeTab = tab);
-                        _entryController.forward(from: 0);
+                        _animateToTab(tab);
                       },
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
+              ),
+              const SizedBox(height: 24),
 
-                // Content area with entry animation
-                SlideTransition(
+              // PageView for smooth tab transitions
+              Expanded(
+                child: SlideTransition(
                   position: _slidersSlide,
                   child: FadeTransition(
                     opacity: _slidersFade,
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 200),
-                      child: _activeTab == 0
-                          ? BauchgefuehlTab(
-                              key: const ValueKey('bauchgefuehl'),
-                              bloating: _bloating,
-                              gas: _gas,
-                              cramps: _cramps,
-                              fullness: _fullness,
-                              onBloatingChanged: (v) =>
-                                  setState(() => _bloating = v),
-                              onGasChanged: (v) =>
-                                  setState(() => _gas = v),
-                              onCrampsChanged: (v) =>
-                                  setState(() => _cramps = v),
-                              onFullnessChanged: (v) =>
-                                  setState(() => _fullness = v),
-                            )
-                          : StimmungTab(
-                              key: const ValueKey('stimmung'),
-                              stress: _stress,
-                              happiness: _happiness,
-                              energy: _energy,
-                              focus: _focus,
-                              bodyFeel: _bodyFeel,
-                              onStressChanged: (v) =>
-                                  setState(() => _stress = v),
-                              onHappinessChanged: (v) =>
-                                  setState(() => _happiness = v),
-                              onEnergyChanged: (v) =>
-                                  setState(() => _energy = v),
-                              onFocusChanged: (v) =>
-                                  setState(() => _focus = v),
-                              onBodyFeelChanged: (v) =>
-                                  setState(() => _bodyFeel = v),
-                            ),
+                    child: PageView(
+                      controller: _pageController,
+                      onPageChanged: (index) {
+                        if (_activeTab != index) {
+                          HapticService.light();
+                          setState(() => _activeTab = index);
+                        }
+                      },
+                      children: [
+                        SingleChildScrollView(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 128),
+                          child: BauchgefuehlTab(
+                            bloating: _bloating,
+                            gas: _gas,
+                            cramps: _cramps,
+                            fullness: _fullness,
+                            onBloatingChanged: (v) =>
+                                setState(() => _bloating = v),
+                            onGasChanged: (v) =>
+                                setState(() => _gas = v),
+                            onCrampsChanged: (v) =>
+                                setState(() => _cramps = v),
+                            onFullnessChanged: (v) =>
+                                setState(() => _fullness = v),
+                          ),
+                        ),
+                        SingleChildScrollView(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 128),
+                          child: StimmungTab(
+                            stress: _stress,
+                            happiness: _happiness,
+                            energy: _energy,
+                            focus: _focus,
+                            bodyFeel: _bodyFeel,
+                            onStressChanged: (v) =>
+                                setState(() => _stress = v),
+                            onHappinessChanged: (v) =>
+                                setState(() => _happiness = v),
+                            onEnergyChanged: (v) =>
+                                setState(() => _energy = v),
+                            onFocusChanged: (v) =>
+                                setState(() => _focus = v),
+                            onBodyFeelChanged: (v) =>
+                                setState(() => _bodyFeel = v),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
 
           // Fixed bottom button with gradient backdrop
