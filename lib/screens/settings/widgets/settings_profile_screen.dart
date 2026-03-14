@@ -166,7 +166,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                     for (final item in added) {
                       if (triggerIntolerances.contains(item)) {
                         Future.microtask(() {
-                          if (!mounted) return;
+                          if (!context.mounted) return;
                           showIntoleranceTriggerModal(
                             context: context,
                             intolerance: item,

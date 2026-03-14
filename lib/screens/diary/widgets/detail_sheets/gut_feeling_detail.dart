@@ -2,51 +2,18 @@ import 'package:flutter/material.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../models/gut_feeling_entry.dart';
 import '../../../../utils/gut_feeling_rating.dart';
+import 'gut_feeling_edit_state.dart';
 
 class GutFeelingDetail extends StatefulWidget {
   final GutFeelingEntry gut;
   final bool isEditing;
-  final int bloating;
-  final int gas;
-  final int cramps;
-  final int fullness;
-  final int? stress;
-  final int? happiness;
-  final int? energy;
-  final int? focus;
-  final int? bodyFeel;
-  final ValueChanged<int> onBloatingChanged;
-  final ValueChanged<int> onGasChanged;
-  final ValueChanged<int> onCrampsChanged;
-  final ValueChanged<int> onFullnessChanged;
-  final ValueChanged<int> onStressChanged;
-  final ValueChanged<int> onHappinessChanged;
-  final ValueChanged<int> onEnergyChanged;
-  final ValueChanged<int> onFocusChanged;
-  final ValueChanged<int> onBodyFeelChanged;
+  final GutFeelingEditState? editState;
 
   const GutFeelingDetail({
     super.key,
     required this.gut,
     required this.isEditing,
-    required this.bloating,
-    required this.gas,
-    required this.cramps,
-    required this.fullness,
-    this.stress,
-    this.happiness,
-    this.energy,
-    this.focus,
-    this.bodyFeel,
-    required this.onBloatingChanged,
-    required this.onGasChanged,
-    required this.onCrampsChanged,
-    required this.onFullnessChanged,
-    required this.onStressChanged,
-    required this.onHappinessChanged,
-    required this.onEnergyChanged,
-    required this.onFocusChanged,
-    required this.onBodyFeelChanged,
+    this.editState,
   });
 
   @override
@@ -57,17 +24,18 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
   int _gutFeelingTab = 0;
 
   double _calculateEditAvg() {
+    final es = widget.editState!;
     final values = <int>[
-      widget.bloating,
-      widget.gas,
-      widget.cramps,
-      widget.fullness,
+      es.bloating,
+      es.gas,
+      es.cramps,
+      es.fullness,
     ];
-    if (widget.stress != null) values.add(widget.stress!);
-    if (widget.happiness != null) values.add(widget.happiness!);
-    if (widget.energy != null) values.add(widget.energy!);
-    if (widget.focus != null) values.add(widget.focus!);
-    if (widget.bodyFeel != null) values.add(widget.bodyFeel!);
+    if (es.stress != null) values.add(es.stress!);
+    if (es.happiness != null) values.add(es.happiness!);
+    if (es.energy != null) values.add(es.energy!);
+    if (es.focus != null) values.add(es.focus!);
+    if (es.bodyFeel != null) values.add(es.bodyFeel!);
     return values.reduce((a, b) => a + b) / values.length;
   }
 
@@ -157,13 +125,13 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
 
   Widget _buildBauchgefuehlTab() {
     if (widget.isEditing) {
+      final es = widget.editState!;
       return Column(
         children: [
-          _editSlider('Blähbauch', widget.bloating, widget.onBloatingChanged),
-          _editSlider('Blähungen', widget.gas, widget.onGasChanged),
-          _editSlider('Krämpfe', widget.cramps, widget.onCrampsChanged),
-          _editSlider(
-              'Völlegefühl', widget.fullness, widget.onFullnessChanged),
+          _editSlider('Blähbauch', es.bloating, es.onBloatingChanged),
+          _editSlider('Blähungen', es.gas, es.onGasChanged),
+          _editSlider('Krämpfe', es.cramps, es.onCrampsChanged),
+          _editSlider('Völlegefühl', es.fullness, es.onFullnessChanged),
         ],
       );
     }
@@ -179,18 +147,15 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
 
   Widget _buildStimmungTab() {
     if (widget.isEditing) {
+      final es = widget.editState!;
       return Column(
         children: [
+          _editSlider('Stress', es.stress ?? 3, es.onStressChanged),
+          _editSlider('Glück', es.happiness ?? 3, es.onHappinessChanged),
+          _editSlider('Energie', es.energy ?? 3, es.onEnergyChanged),
+          _editSlider('Fokus', es.focus ?? 3, es.onFocusChanged),
           _editSlider(
-              'Stress', widget.stress ?? 3, widget.onStressChanged),
-          _editSlider(
-              'Glück', widget.happiness ?? 3, widget.onHappinessChanged),
-          _editSlider(
-              'Energie', widget.energy ?? 3, widget.onEnergyChanged),
-          _editSlider(
-              'Fokus', widget.focus ?? 3, widget.onFocusChanged),
-          _editSlider(
-              'Körpergefühl', widget.bodyFeel ?? 3, widget.onBodyFeelChanged),
+              'Körpergefühl', es.bodyFeel ?? 3, es.onBodyFeelChanged),
         ],
       );
     }

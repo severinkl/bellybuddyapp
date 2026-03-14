@@ -38,15 +38,15 @@ class TrackerCard extends StatelessWidget {
             Text(
               label,
               style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
+                fontSize: 17,
+                fontWeight: FontWeight.w600,
                 color: AppTheme.foreground,
               ),
             ),
             const Text(
               'Tracker',
               style: TextStyle(
-                fontSize: 13,
+                fontSize: 14,
                 color: AppTheme.mutedForeground,
               ),
             ),

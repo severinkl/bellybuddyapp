@@ -99,11 +99,10 @@ class _SettingsNotificationsScreenState
                         'title': 'Test',
                         'body': 'Test-Benachrichtigung von Belly Buddy',
                       });
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Test-Benachrichtigung gesendet!')),
-                        );
-                      }
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Test-Benachrichtigung gesendet!')),
+                      );
                     } catch (_) {}
                   },
                   child: const Text('Test-Benachrichtigung senden'),

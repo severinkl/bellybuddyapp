@@ -107,7 +107,10 @@ class IntolerancesStep extends StatelessWidget {
               onChanged(newSelected);
               for (final item in added) {
                 if (['Fruktose', 'Laktose', 'Histamin'].contains(item)) {
-                  Future.microtask(() => _showTriggerModal(context, item));
+                  Future.microtask(() {
+                    if (!context.mounted) return;
+                    _showTriggerModal(context, item);
+                  });
                 }
               }
             },

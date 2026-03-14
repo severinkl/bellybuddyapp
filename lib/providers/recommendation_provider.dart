@@ -1,10 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recommendation.dart';
+import '../providers/profile_provider.dart';
 import '../services/recommendation_service.dart';
 import '../services/supabase_service.dart';
 import '../services/edge_function_service.dart';
 
-class RecommendationNotifier extends Notifier<AsyncValue<List<Recommendation>>> {
+class RecommendationNotifier
+    extends Notifier<AsyncValue<List<Recommendation>>> {
   @override
   AsyncValue<List<Recommendation>> build() => const AsyncValue.loading();
 
@@ -17,7 +19,8 @@ class RecommendationNotifier extends Notifier<AsyncValue<List<Recommendation>>> 
         return;
       }
 
-      final recommendations = await RecommendationService.fetchByUserId(userId);
+      final recommendations =
+          await RecommendationService.fetchByUserId(userId);
       state = AsyncValue.data(recommendations);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -25,9 +28,32 @@ class RecommendationNotifier extends Notifier<AsyncValue<List<Recommendation>>> 
   }
 
   Future<void> refreshRecommendations() async {
+    state = const AsyncValue.loading();
     try {
-      await EdgeFunctionService.invoke('diet-recommendations');
-      await fetchRecommendations();
+      final userId = SupabaseService.userId;
+      if (userId == null) {
+        state = const AsyncValue.data([]);
+        return;
+      }
+
+      // Gather user context from profile
+      final profile = ref.read(profileProvider).whenOrNull(data: (p) => p);
+      final context = await RecommendationService.fetchRecentContext(userId);
+
+      final body = <String, dynamic>{
+        if (profile != null) ...{
+          'symptoms': profile.symptoms,
+          'intolerances': profile.intolerances,
+          'diet': profile.diet,
+        },
+        ...context,
+      };
+
+      await EdgeFunctionService.invoke('diet-recommendations', body: body);
+      // Re-fetch to get the newly saved recommendation from DB
+      final recommendations =
+          await RecommendationService.fetchByUserId(userId);
+      state = AsyncValue.data(recommendations);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }

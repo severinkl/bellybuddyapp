@@ -11,6 +11,7 @@ import '../../../utils/date_format_utils.dart';
 import 'detail_sheets/meal_detail.dart';
 import 'detail_sheets/toilet_detail.dart';
 import 'detail_sheets/gut_feeling_detail.dart';
+import 'detail_sheets/gut_feeling_edit_state.dart';
 import 'detail_sheets/drink_detail.dart';
 
 void showDiaryDetailSheet(BuildContext context, WidgetRef ref, DiaryEntry entry) {
@@ -275,24 +276,28 @@ class _DiaryDetailContentState extends State<_DiaryDetailContent> {
         return GutFeelingDetail(
           gut: widget.entry.data as GutFeelingEntry,
           isEditing: _isEditing,
-          bloating: _bloating,
-          gas: _gas,
-          cramps: _cramps,
-          fullness: _fullness,
-          stress: _stress,
-          happiness: _happiness,
-          energy: _energy,
-          focus: _focus,
-          bodyFeel: _bodyFeel,
-          onBloatingChanged: (v) => setState(() => _bloating = v),
-          onGasChanged: (v) => setState(() => _gas = v),
-          onCrampsChanged: (v) => setState(() => _cramps = v),
-          onFullnessChanged: (v) => setState(() => _fullness = v),
-          onStressChanged: (v) => setState(() => _stress = v),
-          onHappinessChanged: (v) => setState(() => _happiness = v),
-          onEnergyChanged: (v) => setState(() => _energy = v),
-          onFocusChanged: (v) => setState(() => _focus = v),
-          onBodyFeelChanged: (v) => setState(() => _bodyFeel = v),
+          editState: _isEditing
+              ? GutFeelingEditState(
+                  bloating: _bloating,
+                  gas: _gas,
+                  cramps: _cramps,
+                  fullness: _fullness,
+                  stress: _stress,
+                  happiness: _happiness,
+                  energy: _energy,
+                  focus: _focus,
+                  bodyFeel: _bodyFeel,
+                  onBloatingChanged: (v) => setState(() => _bloating = v),
+                  onGasChanged: (v) => setState(() => _gas = v),
+                  onCrampsChanged: (v) => setState(() => _cramps = v),
+                  onFullnessChanged: (v) => setState(() => _fullness = v),
+                  onStressChanged: (v) => setState(() => _stress = v),
+                  onHappinessChanged: (v) => setState(() => _happiness = v),
+                  onEnergyChanged: (v) => setState(() => _energy = v),
+                  onFocusChanged: (v) => setState(() => _focus = v),
+                  onBodyFeelChanged: (v) => setState(() => _bodyFeel = v),
+                )
+              : null,
         );
       case DiaryEntryType.drink:
         return DrinkDetail(

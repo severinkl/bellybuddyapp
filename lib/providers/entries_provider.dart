@@ -3,16 +3,10 @@ import '../models/meal_entry.dart';
 import '../models/toilet_entry.dart';
 import '../models/gut_feeling_entry.dart';
 import '../models/drink_entry.dart';
+import '../services/entry_crud_service.dart';
 import '../services/entry_query_service.dart';
 import '../services/supabase_service.dart';
-
-/// Table name for each entry type
-const _tableFor = {
-  'meal': 'meal_entries',
-  'toilet': 'toilet_entries',
-  'gutFeeling': 'gut_feeling_entries',
-  'drink': 'drink_entries',
-};
+import '../utils/logger.dart';
 
 /// State holding all entries for a given date range
 class EntriesState {
@@ -52,6 +46,8 @@ class EntriesState {
 }
 
 class EntriesNotifier extends Notifier<EntriesState> {
+  static const _log = AppLogger('EntriesNotifier');
+
   @override
   EntriesState build() => const EntriesState();
 
@@ -74,64 +70,45 @@ class EntriesNotifier extends Notifier<EntriesState> {
         drinks: result.drinks,
         isLoading: false,
       );
-    } catch (e) {
+    } catch (e, st) {
+      _log.error('loadEntries failed for $date', e, st);
       state = state.copyWith(isLoading: false, error: e);
       rethrow;
     }
   }
 
-  // -- Private CRUD helpers --
-
-  Future<void> _insertEntry(String table, Map<String, dynamic> data) async {
-    data['user_id'] = SupabaseService.userId;
-    data.remove('id');
-    data.remove('created_at');
-    await SupabaseService.client.from(table).insert(data);
-  }
-
-  Future<void> _updateEntry(String table, String id, Map<String, dynamic> data) async {
-    data.remove('id');
-    data.remove('user_id');
-    data.remove('created_at');
-    await SupabaseService.client.from(table).update(data).eq('id', id);
-  }
-
-  Future<void> _deleteEntry(String table, String id) async {
-    await SupabaseService.client.from(table).delete().eq('id', id);
-  }
-
   // -- Meal CRUD --
 
   Future<void> addMeal(MealEntry meal) =>
-      _insertEntry(_tableFor['meal']!, meal.toJson());
+      EntryCrudService.insert(entryTableFor['meal']!, meal.toJson());
 
   Future<void> updateMeal(MealEntry meal) =>
-      _updateEntry(_tableFor['meal']!, meal.id, meal.toJson());
+      EntryCrudService.update(entryTableFor['meal']!, meal.id, meal.toJson());
 
   Future<void> deleteMeal(String id) =>
-      _deleteEntry(_tableFor['meal']!, id);
+      EntryCrudService.delete(entryTableFor['meal']!, id);
 
   // -- Toilet CRUD --
 
   Future<void> addToiletEntry(ToiletEntry entry) =>
-      _insertEntry(_tableFor['toilet']!, entry.toJson());
+      EntryCrudService.insert(entryTableFor['toilet']!, entry.toJson());
 
   Future<void> updateToiletEntry(ToiletEntry entry) =>
-      _updateEntry(_tableFor['toilet']!, entry.id, entry.toJson());
+      EntryCrudService.update(entryTableFor['toilet']!, entry.id, entry.toJson());
 
   Future<void> deleteToiletEntry(String id) =>
-      _deleteEntry(_tableFor['toilet']!, id);
+      EntryCrudService.delete(entryTableFor['toilet']!, id);
 
   // -- Gut feeling CRUD --
 
   Future<void> addGutFeeling(GutFeelingEntry entry) =>
-      _insertEntry(_tableFor['gutFeeling']!, entry.toJson());
+      EntryCrudService.insert(entryTableFor['gutFeeling']!, entry.toJson());
 
   Future<void> updateGutFeeling(GutFeelingEntry entry) =>
-      _updateEntry(_tableFor['gutFeeling']!, entry.id, entry.toJson());
+      EntryCrudService.update(entryTableFor['gutFeeling']!, entry.id, entry.toJson());
 
   Future<void> deleteGutFeeling(String id) =>
-      _deleteEntry(_tableFor['gutFeeling']!, id);
+      EntryCrudService.delete(entryTableFor['gutFeeling']!, id);
 
   // -- Drink CRUD --
 
@@ -146,7 +123,7 @@ class EntriesNotifier extends Notifier<EntriesState> {
       'amount_ml': entry.amountMl,
       'notes': entry.notes,
     };
-    await SupabaseService.client.from(_tableFor['drink']!).insert(data);
+    await SupabaseService.client.from(entryTableFor['drink']!).insert(data);
   }
 
   Future<void> updateDrinkEntry(DrinkEntry entry) async {
@@ -156,24 +133,16 @@ class EntriesNotifier extends Notifier<EntriesState> {
       'amount_ml': entry.amountMl,
       'notes': entry.notes,
     };
-    await SupabaseService.client.from(_tableFor['drink']!).update(data).eq('id', entry.id);
+    await SupabaseService.client.from(entryTableFor['drink']!).update(data).eq('id', entry.id);
   }
 
   Future<void> deleteDrinkEntry(String id) =>
-      _deleteEntry(_tableFor['drink']!, id);
+      EntryCrudService.delete(entryTableFor['drink']!, id);
 
   // -- Generic delete by type (used by diary) --
 
-  Future<void> deleteByType(String type, String id) async {
-    final table = switch (type) {
-      'meal' => _tableFor['meal']!,
-      'toilet' => _tableFor['toilet']!,
-      'gutFeeling' => _tableFor['gutFeeling']!,
-      'drink' => _tableFor['drink']!,
-      _ => throw ArgumentError('Unknown entry type: $type'),
-    };
-    await _deleteEntry(table, id);
-  }
+  Future<void> deleteByType(String type, String id) =>
+      EntryCrudService.deleteByType(type, id);
 
   // -- Typed update by ID (used by diary detail sheets) --
 
@@ -189,7 +158,7 @@ class EntriesNotifier extends Notifier<EntriesState> {
     int? focus,
     int? bodyFeel,
   }) =>
-      _updateEntry(_tableFor['gutFeeling']!, id, {
+      EntryCrudService.update(entryTableFor['gutFeeling']!, id, {
         'bloating': bloating,
         'gas': gas,
         'cramps': cramps,
@@ -205,7 +174,7 @@ class EntriesNotifier extends Notifier<EntriesState> {
     String id, {
     required int stoolType,
   }) =>
-      _updateEntry(_tableFor['toilet']!, id, {
+      EntryCrudService.update(entryTableFor['toilet']!, id, {
         'stool_type': stoolType,
       });
 
@@ -214,7 +183,7 @@ class EntriesNotifier extends Notifier<EntriesState> {
     required int amountMl,
     String? notes,
   }) =>
-      _updateEntry(_tableFor['drink']!, id, {
+      EntryCrudService.update(entryTableFor['drink']!, id, {
         'amount_ml': amountMl,
         'notes': notes,
       });

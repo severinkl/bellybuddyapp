@@ -95,14 +95,14 @@ class _SettingsAccountScreenState extends ConsumerState<SettingsAccountScreen> {
               setState(() => _isDeleting = true);
               try {
                 await AuthService.deleteAccount();
-                if (mounted) context.go(RoutePaths.auth);
+                if (!context.mounted) return;
+                context.go(RoutePaths.auth);
               } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Fehler beim Löschen.')),
-                  );
-                  setState(() => _isDeleting = false);
-                }
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Fehler beim Löschen.')),
+                );
+                setState(() => _isDeleting = false);
               }
             },
             style: TextButton.styleFrom(foregroundColor: AppTheme.destructive),

@@ -35,8 +35,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final newCount =
-        ref.watch(ingredientSuggestionProvider.notifier).newCount;
+    final newCount = ref.watch(ingredientSuggestionProvider).whenOrNull(
+          data: (groups) => groups.where((g) => g.isNew).length,
+        ) ??
+        0;
 
     return Scaffold(
       backgroundColor: AppTheme.background,
