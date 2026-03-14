@@ -93,7 +93,7 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
       state = state.copyWith(
         title: result['title'] as String? ?? state.title,
         ingredients: result['ingredients'] != null
-            ? List<String>.from(result['ingredients'] as List)
+            ? List<String>.from(result['ingredients'] as List? ?? [])
             : state.ingredients,
         isAnalyzing: false,
       );
@@ -117,7 +117,7 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
           .limit(10);
       state = state.copyWith(
         ingredientSuggestions:
-            (data as List).map((e) => e['name'] as String).toList(),
+            data.map((e) => e['name'] as String).toList(),
       );
     } catch (e) {
       _log.error('ingredient search failed', e);

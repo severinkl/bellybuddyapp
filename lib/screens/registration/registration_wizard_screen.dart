@@ -64,10 +64,8 @@ class _RegistrationWizardScreenState
   }
 
   void _back() {
-    if (_currentStep > 0) {
-      HapticService.light();
-      _goToStep(_currentStep - 1);
-    }
+    HapticService.light();
+    _goToStep(_currentStep - 1);
   }
 
   Future<void> _createProfile() async {
@@ -142,29 +140,15 @@ class _RegistrationWizardScreenState
           children: [
             // Progress indicator
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
-              child: Row(
-                children: [
-                  if (_currentStep > 0)
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back),
-                      onPressed: _back,
-                    )
-                  else
-                    const SizedBox(width: 48),
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: (_currentStep + 1) / _totalSteps,
-                        backgroundColor: AppTheme.muted,
-                        valueColor: const AlwaysStoppedAnimation(AppTheme.primary),
-                        minHeight: 6,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 48),
-                ],
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(4),
+                child: LinearProgressIndicator(
+                  value: (_currentStep + 1) / _totalSteps,
+                  backgroundColor: AppTheme.muted,
+                  valueColor: const AlwaysStoppedAnimation(AppTheme.primary),
+                  minHeight: 6,
+                ),
               ),
             ),
             // Steps
@@ -221,12 +205,30 @@ class _RegistrationWizardScreenState
             // Next button (not on last step)
             if (_currentStep < _totalSteps - 1)
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
                 child: BbButton(
                   label: 'Weiter',
+                  icon: Icons.arrow_forward,
                   onPressed: _next,
                 ),
               ),
+            // Back button (all steps)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+              child: TextButton.icon(
+                icon: const Icon(Icons.arrow_back, size: 18),
+                label: const Text('Zurück'),
+                style: TextButton.styleFrom(foregroundColor: AppTheme.mutedForeground),
+                onPressed: () {
+                  HapticService.light();
+                  if (_currentStep == 0) {
+                    context.go(RoutePaths.welcome);
+                  } else {
+                    _back();
+                  }
+                },
+              ),
+            ),
           ],
         ),
       ),

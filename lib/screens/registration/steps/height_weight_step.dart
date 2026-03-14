@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
+import '../../../config/constants.dart';
 import '../../../widgets/common/bb_scroll_picker.dart';
+import '../../../widgets/common/mascot_image.dart';
 
 class HeightWeightStep extends StatelessWidget {
   final int? height;
@@ -26,6 +28,8 @@ class HeightWeightStep extends StatelessWidget {
       child: Column(
         children: [
           const SizedBox(height: 24),
+          const MascotImage(assetPath: AppConstants.mascotWink, width: 120, height: 120),
+          const SizedBox(height: 16),
           const Text(
             'Größe & Gewicht',
             style: TextStyle(
@@ -35,8 +39,21 @@ class HeightWeightStep extends StatelessWidget {
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 32),
-          Row(
+          const SizedBox(height: 8),
+          const Text(
+            'Diese Angaben helfen uns dabei, deine Verdauung besser zu verstehen.',
+            style: TextStyle(fontSize: 15, color: AppTheme.mutedForeground),
+            textAlign: TextAlign.center,
+          ),
+          const Spacer(),
+          Flexible(
+            child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.beige,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Row(
             children: [
               Expanded(
                 child: Column(
@@ -82,6 +99,8 @@ class HeightWeightStep extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+          ),
           ),
         ],
       ),

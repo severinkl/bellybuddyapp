@@ -62,9 +62,8 @@ class RecipesNotifier extends Notifier<RecipesState> {
           .from('recipes')
           .select()
           .order('title');
-      final recipes = (data as List)
-          .map((e) => Recipe.fromJson(e as Map<String, dynamic>))
-          .toList();
+      final recipes =
+          data.map((e) => Recipe.fromJson(e)).toList();
       state = state.copyWith(
         allRecipes: recipes,
         filtered: recipes,
@@ -86,7 +85,7 @@ class RecipesNotifier extends Notifier<RecipesState> {
           .select('recipe_id')
           .eq('user_id', userId);
       state = state.copyWith(
-        favorites: (data as List).map((e) => e['recipe_id'] as String).toSet(),
+        favorites: data.map((e) => e['recipe_id'] as String).toSet(),
       );
     } catch (e) {
       _log.error('failed to load favorites', e);

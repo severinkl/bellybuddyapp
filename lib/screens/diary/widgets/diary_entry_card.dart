@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/meal_entry.dart';
@@ -9,9 +8,9 @@ import '../../../providers/diary_provider.dart';
 import '../../../services/haptic_service.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/gut_feeling_rating.dart';
-import '../../../utils/signed_url_helper.dart';
 import '../../../widgets/common/bb_card.dart';
 import '../../../widgets/common/mascot_image.dart';
+import 'meal_thumbnail.dart';
 
 String mascotForRating(GutFeelingRatingLevel level) => switch (level) {
       GutFeelingRatingLevel.spiGut => AppConstants.mascotCool,
@@ -166,70 +165,6 @@ class DiaryEntryCard extends StatelessWidget {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class MealThumbnail extends StatefulWidget {
-  final String imageUrl;
-  const MealThumbnail({super.key, required this.imageUrl});
-
-  @override
-  State<MealThumbnail> createState() => _MealThumbnailState();
-}
-
-class _MealThumbnailState extends State<MealThumbnail> {
-  String? _resolvedUrl;
-
-  @override
-  void initState() {
-    super.initState();
-    _resolve();
-  }
-
-  Future<void> _resolve() async {
-    final url = await resolveSignedMealImageUrl(widget.imageUrl);
-    if (mounted) setState(() => _resolvedUrl = url);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_resolvedUrl == null) {
-      return Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: AppTheme.primary.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: const Icon(Icons.restaurant, color: AppTheme.primary, size: 20),
-      );
-    }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
-      child: CachedNetworkImage(
-        imageUrl: _resolvedUrl!,
-        width: 40,
-        height: 40,
-        fit: BoxFit.cover,
-        placeholder: (_, _) => Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: AppTheme.primary.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(10),
-          ),
-        ),
-        errorWidget: (_, _, _) => Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: AppTheme.primary.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: const Icon(Icons.restaurant, color: AppTheme.primary, size: 20),
         ),
       ),
     );

@@ -65,8 +65,7 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
           .from('drinks')
           .select()
           .order('name');
-      final drinks =
-          (data as List).map((e) => Drink.fromDbRow(e)).toList();
+      final drinks = data.map((e) => Drink.fromDbRow(e)).toList();
       state = state.copyWith(
         allDrinks: drinks,
         filteredDrinks: drinks,
@@ -91,7 +90,7 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
           .lt('tracked_at',
               startOfDay.add(const Duration(days: 1)).toIso8601String());
       final total =
-          (data as List).fold<int>(0, (sum, e) => sum + (e['amount_ml'] as int));
+          data.fold<int>(0, (sum, e) => sum + (e['amount_ml'] as int));
       state = state.copyWith(todayTotal: total);
     } catch (e) {
       _log.error('failed to load today total', e);

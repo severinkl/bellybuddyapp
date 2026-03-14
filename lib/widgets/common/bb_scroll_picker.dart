@@ -49,9 +49,20 @@ class _BbScrollPickerState extends State<BbScrollPicker> {
     final height = widget.itemHeight * widget.visibleItems;
     return SizedBox(
       height: height,
-      child: ShaderMask(
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            height: widget.itemHeight,
+            margin: const EdgeInsets.symmetric(horizontal: 16),
+            decoration: BoxDecoration(
+              color: AppTheme.muted.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          ShaderMask(
         shaderCallback: (bounds) {
-          return LinearGradient(
+          return const LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
@@ -97,6 +108,8 @@ class _BbScrollPickerState extends State<BbScrollPicker> {
             },
           ),
         ),
+        ),
+        ],
       ),
     );
   }

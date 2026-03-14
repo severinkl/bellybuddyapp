@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
+import '../../../config/constants.dart';
 import '../../../widgets/common/bb_scroll_picker.dart';
+import '../../../widgets/common/mascot_image.dart';
 
 class BirthYearStep extends StatelessWidget {
   final int? value;
@@ -18,6 +20,8 @@ class BirthYearStep extends StatelessWidget {
       child: Column(
         children: [
           const SizedBox(height: 24),
+          const MascotImage(assetPath: AppConstants.mascotHappy, width: 120, height: 120),
+          const SizedBox(height: 16),
           const Text(
             'Wann wurdest du geboren?',
             style: TextStyle(
@@ -27,11 +31,24 @@ class BirthYearStep extends StatelessWidget {
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 48),
-          BbScrollPicker(
-            items: years,
-            selectedValue: value,
-            onChanged: onChanged,
+          const SizedBox(height: 8),
+          const Text(
+            'Diese Information hilft uns dabei, deine Verdauung besser zu analysieren.',
+            style: TextStyle(fontSize: 15, color: AppTheme.mutedForeground),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 32),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.beige,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: BbScrollPicker(
+              items: years,
+              selectedValue: value,
+              onChanged: onChanged,
+            ),
           ),
         ],
       ),

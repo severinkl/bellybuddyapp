@@ -38,14 +38,7 @@ class AuthService {
     final googleUser = await GoogleSignIn.instance.authenticate();
     final idToken = googleUser.authentication.idToken;
 
-    if (idToken == null) {
-      throw Exception('No ID token received from Google');
-    }
-
-    return await _auth.signInWithIdToken(
-      provider: OAuthProvider.google,
-      idToken: idToken,
-    );
+    return _signInWithIdToken(OAuthProvider.google, idToken, 'Google');
   }
 
   static Future<AuthResponse> signInWithApple() async {
@@ -56,13 +49,19 @@ class AuthService {
       ],
     );
 
-    final idToken = credential.identityToken;
-    if (idToken == null) {
-      throw Exception('No ID token received from Apple');
-    }
+    return _signInWithIdToken(OAuthProvider.apple, credential.identityToken, 'Apple');
+  }
 
+  static Future<AuthResponse> _signInWithIdToken(
+    OAuthProvider provider,
+    String? idToken,
+    String providerName,
+  ) async {
+    if (idToken == null) {
+      throw Exception('No ID token received from $providerName');
+    }
     return await _auth.signInWithIdToken(
-      provider: OAuthProvider.apple,
+      provider: provider,
       idToken: idToken,
     );
   }

@@ -9,7 +9,7 @@ abstract class Recommendation with _$Recommendation {
     required String id,
     @JsonKey(name: 'user_id') String? userId,
     String? summary,
-    List<dynamic>? recommendations,
+    List<Object>? recommendations,
     @JsonKey(name: 'created_at') DateTime? createdAt,
   }) = _Recommendation;
 

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
@@ -8,7 +7,7 @@ import '../../providers/diary_provider.dart';
 import '../../providers/entries_provider.dart';
 import '../../router/route_names.dart';
 import '../../services/haptic_service.dart';
-import '../../widgets/common/press_scale_wrapper.dart';
+import '../../widgets/common/tracker_card.dart';
 import 'widgets/diary_detail_sheets.dart';
 import '../../utils/date_format_utils.dart';
 import 'widgets/diary_entry_card.dart';
@@ -77,17 +76,18 @@ class DiaryScreen extends ConsumerWidget {
                 ),
               ),
             ),
-            _CircleIconButton(
-              icon: Icons.chevron_right,
-              onPressed: isToday
-                  ? null
-                  : () {
-                      HapticService.light();
-                      ref
-                          .read(diaryDateProvider.notifier)
-                          .set(date.add(const Duration(days: 1)));
-                    },
-            ),
+            if (isToday)
+              const SizedBox(width: 44)
+            else
+              _CircleIconButton(
+                icon: Icons.chevron_right,
+                onPressed: () {
+                  HapticService.light();
+                  ref
+                      .read(diaryDateProvider.notifier)
+                      .set(date.add(const Duration(days: 1)));
+                },
+              ),
           ],
         ),
       ),
@@ -134,7 +134,7 @@ class DiaryScreen extends ConsumerWidget {
                             child: Row(
                               children: [
                                 Expanded(
-                                  child: _TrackerCard(
+                                  child: TrackerCard(
                                     svgPath: AppConstants.logoSvg,
                                     label: 'Bauchgefühl',
                                     onTap: () => context
@@ -143,7 +143,7 @@ class DiaryScreen extends ConsumerWidget {
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
-                                  child: _TrackerCard(
+                                  child: TrackerCard(
                                     svgPath: AppConstants.toiletPaperSvg,
                                     label: 'Klo',
                                     onTap: () => context
@@ -216,55 +216,3 @@ class _CircleIconButton extends StatelessWidget {
   }
 }
 
-class _TrackerCard extends StatelessWidget {
-  final String svgPath;
-  final String label;
-  final VoidCallback onTap;
-
-  const _TrackerCard({
-    required this.svgPath,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return PressScaleWrapper(
-      onTap: onTap,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 120),
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: AppTheme.beige,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SvgPicture.asset(
-              svgPath,
-              width: 48,
-              height: 48,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.foreground,
-              ),
-            ),
-            const Text(
-              'Tracker',
-              style: TextStyle(
-                fontSize: 13,
-                color: AppTheme.mutedForeground,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

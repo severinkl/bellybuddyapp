@@ -175,16 +175,49 @@ class EntriesNotifier extends Notifier<EntriesState> {
     await _deleteEntry(table, id);
   }
 
-  // -- Update by raw data (used by diary detail sheets) --
+  // -- Typed update by ID (used by diary detail sheets) --
 
-  Future<void> updateGutFeelingById(String id, Map<String, dynamic> data) =>
-      _updateEntry(_tableFor['gutFeeling']!, id, data);
+  Future<void> updateGutFeelingById(
+    String id, {
+    required int bloating,
+    required int gas,
+    required int cramps,
+    required int fullness,
+    int? stress,
+    int? happiness,
+    int? energy,
+    int? focus,
+    int? bodyFeel,
+  }) =>
+      _updateEntry(_tableFor['gutFeeling']!, id, {
+        'bloating': bloating,
+        'gas': gas,
+        'cramps': cramps,
+        'fullness': fullness,
+        'stress': stress,
+        'happiness': happiness,
+        'energy': energy,
+        'focus': focus,
+        'body_feel': bodyFeel,
+      });
 
-  Future<void> updateToiletById(String id, Map<String, dynamic> data) =>
-      _updateEntry(_tableFor['toilet']!, id, data);
+  Future<void> updateToiletById(
+    String id, {
+    required int stoolType,
+  }) =>
+      _updateEntry(_tableFor['toilet']!, id, {
+        'stool_type': stoolType,
+      });
 
-  Future<void> updateDrinkById(String id, Map<String, dynamic> data) =>
-      _updateEntry(_tableFor['drink']!, id, data);
+  Future<void> updateDrinkById(
+    String id, {
+    required int amountMl,
+    String? notes,
+  }) =>
+      _updateEntry(_tableFor['drink']!, id, {
+        'amount_ml': amountMl,
+        'notes': notes,
+      });
 
   void reset() {
     state = const EntriesState();

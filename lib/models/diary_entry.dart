@@ -6,7 +6,7 @@ class DiaryEntry {
   final DateTime trackedAt;
   final String title;
   final String subtitle;
-  final dynamic data;
+  final Object? data;
 
   const DiaryEntry({
     required this.id,

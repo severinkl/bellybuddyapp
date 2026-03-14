@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
@@ -9,7 +8,7 @@ import '../../providers/entries_provider.dart';
 import '../../providers/ingredient_suggestion_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../router/route_names.dart';
-import '../../widgets/common/press_scale_wrapper.dart';
+import '../../widgets/common/tracker_card.dart';
 import 'widgets/feature_card.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -118,7 +117,7 @@ class _TrackerCards extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: _TrackerCard(
+          child: TrackerCard(
             svgPath: AppConstants.logoSvg,
             label: 'Bauchgefühl',
             onTap: () => context.push(RoutePaths.gutFeelingTracker),
@@ -126,66 +125,13 @@ class _TrackerCards extends StatelessWidget {
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: _TrackerCard(
+          child: TrackerCard(
             svgPath: AppConstants.toiletPaperSvg,
             label: 'Klo',
             onTap: () => context.push(RoutePaths.toiletTracker),
           ),
         ),
       ],
-    );
-  }
-}
-
-class _TrackerCard extends StatelessWidget {
-  final String svgPath;
-  final String label;
-  final VoidCallback onTap;
-
-  const _TrackerCard({
-    required this.svgPath,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return PressScaleWrapper(
-      onTap: onTap,
-      child: Container(
-        constraints: const BoxConstraints(minHeight: 120),
-        padding: const EdgeInsets.all(24),
-        decoration: BoxDecoration(
-          color: AppTheme.beige,
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            SvgPicture.asset(
-              svgPath,
-              width: 48,
-              height: 48,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.foreground,
-              ),
-            ),
-            const Text(
-              'Tracker',
-              style: TextStyle(
-                fontSize: 13,
-                color: AppTheme.mutedForeground,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

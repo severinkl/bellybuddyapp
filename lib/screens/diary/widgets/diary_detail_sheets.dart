@@ -122,28 +122,28 @@ class _DiaryDetailContentState extends State<_DiaryDetailContent> {
       final notifier = widget.parentRef.read(entriesProvider.notifier);
       switch (widget.entry.type) {
         case DiaryEntryType.gutFeeling:
-          await notifier.updateGutFeelingById(id, {
-            'bloating': _bloating,
-            'gas': _gas,
-            'cramps': _cramps,
-            'fullness': _fullness,
-            'stress': _stress,
-            'happiness': _happiness,
-            'energy': _energy,
-            'focus': _focus,
-            'body_feel': _bodyFeel,
-          });
+          await notifier.updateGutFeelingById(id,
+            bloating: _bloating,
+            gas: _gas,
+            cramps: _cramps,
+            fullness: _fullness,
+            stress: _stress,
+            happiness: _happiness,
+            energy: _energy,
+            focus: _focus,
+            bodyFeel: _bodyFeel,
+          );
         case DiaryEntryType.toilet:
-          await notifier.updateToiletById(id, {
-            'stool_type': _stoolType,
-          });
+          await notifier.updateToiletById(id,
+            stoolType: _stoolType,
+          );
         case DiaryEntryType.drink:
-          await notifier.updateDrinkById(id, {
-            'amount_ml': int.tryParse(_amountController.text) ??
+          await notifier.updateDrinkById(id,
+            amountMl: int.tryParse(_amountController.text) ??
                 (widget.entry.data as DrinkEntry).amountMl,
-            'notes':
+            notes:
                 _notesController.text.isEmpty ? null : _notesController.text,
-          });
+          );
         case DiaryEntryType.meal:
           break;
       }

@@ -99,11 +99,16 @@ class IntolerancesStep extends StatelessWidget {
             ),
             textAlign: TextAlign.center,
           ),
+          const SizedBox(height: 8),
+          const Text(
+            'Gib hier ärztlich diagnostizierte Unverträglichkeiten an. Diese Angaben helfen uns bei der personalisierten Analyse deiner Mahlzeiten.',
+            style: TextStyle(fontSize: 15, color: AppTheme.mutedForeground),
+            textAlign: TextAlign.center,
+          ),
           const SizedBox(height: 32),
           BbChipSelector(
             options: _options,
             selected: selected,
-            chipColorBuilder: AppTheme.chipColorForIntolerance,
             onChanged: (newSelected) {
               // Check if a trigger-eligible intolerance was just added
               final added = newSelected.where((s) => !selected.contains(s));

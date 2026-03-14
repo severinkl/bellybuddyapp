@@ -2,10 +2,12 @@ import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../../config/app_theme.dart';
+import '../../../config/constants.dart';
 import '../../../router/route_names.dart';
 import '../../../widgets/common/bb_auth_banner.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/bb_password_hint.dart';
+import '../../../widgets/common/mascot_image.dart';
 
 class AuthStep extends StatefulWidget {
   final bool isLoading;
@@ -65,6 +67,8 @@ class _AuthStepState extends State<AuthStep> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            const SizedBox(height: 16),
+            const MascotImage(assetPath: AppConstants.mascotEnergetic, width: 120, height: 120),
             const SizedBox(height: 16),
             const Text(
               'Konto erstellen',

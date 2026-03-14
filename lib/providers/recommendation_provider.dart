@@ -23,7 +23,7 @@ class RecommendationNotifier extends Notifier<AsyncValue<List<Recommendation>>> 
           .order('created_at', ascending: false);
 
       state = AsyncValue.data(
-        (data as List).map((e) => Recommendation.fromJson(e)).toList(),
+        data.map((e) => Recommendation.fromJson(e)).toList(),
       );
     } catch (e, st) {
       state = AsyncValue.error(e, st);

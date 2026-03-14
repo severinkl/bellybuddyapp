@@ -24,10 +24,9 @@ class IngredientSuggestionNotifier
           .order('created_at', ascending: false);
 
       state = AsyncValue.data(
-        (data as List).map((e) {
-          final ingredientName =
-              (e['ingredients'] as Map<String, dynamic>?)?['name'] as String?;
-          e['ingredient_name'] = ingredientName;
+        data.map((e) {
+          final ingredients = e['ingredients'] as Map<String, dynamic>?;
+          e['ingredient_name'] = ingredients?['name'] as String?;
           return IngredientSuggestion.fromJson(e);
         }).where((s) => s.ingredientId != null).toList(),
       );

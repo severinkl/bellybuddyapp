@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
+import '../../../config/constants.dart';
 import '../../../widgets/common/bb_selection_button.dart';
+import '../../../widgets/common/mascot_image.dart';
 
 class DietStep extends StatelessWidget {
   final String? value;
@@ -21,6 +23,8 @@ class DietStep extends StatelessWidget {
       child: Column(
         children: [
           const SizedBox(height: 24),
+          const MascotImage(assetPath: AppConstants.mascotHappy, width: 120, height: 120),
+          const SizedBox(height: 16),
           const Text(
             'Wie ernährst du dich?',
             style: TextStyle(
@@ -28,6 +32,12 @@ class DietStep extends StatelessWidget {
               fontWeight: FontWeight.w700,
               color: AppTheme.foreground,
             ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Diese Information hilft uns dir geeignete alternative Zutaten und Rezepte vorzuschlagen.',
+            style: TextStyle(fontSize: 15, color: AppTheme.mutedForeground),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 32),
