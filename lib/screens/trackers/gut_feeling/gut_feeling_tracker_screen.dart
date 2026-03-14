@@ -12,6 +12,7 @@ import '../../../utils/save_helper.dart';
 import '../../../widgets/common/bb_success_overlay.dart';
 import 'widgets/bauchgefuehl_tab.dart';
 import 'widgets/mood_tab_selector.dart';
+import 'widgets/pill_button.dart';
 import 'widgets/stimmung_tab.dart';
 
 class GutFeelingTrackerScreen extends ConsumerStatefulWidget {
@@ -149,117 +150,96 @@ class _GutFeelingTrackerScreenState
         ),
         title: const Text('Wie geht es dir?'),
       ),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // Scrollable content
-            SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 128),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Pill tab selector
-                  SlideTransition(
-                    position: _tabSelectorSlide,
-                    child: FadeTransition(
-                      opacity: _tabSelectorFade,
-                      child: MoodTabSelector(
-                        activeTab: _activeTab,
-                        onTabChanged: (tab) {
-                          setState(() => _activeTab = tab);
-                          _entryController.forward(from: 0);
-                        },
-                      ),
+      body: Stack(
+        children: [
+          // Scrollable content
+          SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 128),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Pill tab selector
+                SlideTransition(
+                  position: _tabSelectorSlide,
+                  child: FadeTransition(
+                    opacity: _tabSelectorFade,
+                    child: MoodTabSelector(
+                      activeTab: _activeTab,
+                      onTabChanged: (tab) {
+                        setState(() => _activeTab = tab);
+                        _entryController.forward(from: 0);
+                      },
                     ),
                   ),
-                  const SizedBox(height: 24),
+                ),
+                const SizedBox(height: 24),
 
-                  // Content area with entry animation
-                  SlideTransition(
-                    position: _slidersSlide,
-                    child: FadeTransition(
-                      opacity: _slidersFade,
-                      child: AnimatedSwitcher(
-                        duration: const Duration(milliseconds: 200),
-                        child: _activeTab == 0
-                            ? BauchgefuehlTab(
-                                key: const ValueKey('bauchgefuehl'),
-                                bloating: _bloating,
-                                gas: _gas,
-                                cramps: _cramps,
-                                fullness: _fullness,
-                                onBloatingChanged: (v) =>
-                                    setState(() => _bloating = v),
-                                onGasChanged: (v) =>
-                                    setState(() => _gas = v),
-                                onCrampsChanged: (v) =>
-                                    setState(() => _cramps = v),
-                                onFullnessChanged: (v) =>
-                                    setState(() => _fullness = v),
-                              )
-                            : StimmungTab(
-                                key: const ValueKey('stimmung'),
-                                stress: _stress,
-                                happiness: _happiness,
-                                energy: _energy,
-                                focus: _focus,
-                                bodyFeel: _bodyFeel,
-                                onStressChanged: (v) =>
-                                    setState(() => _stress = v),
-                                onHappinessChanged: (v) =>
-                                    setState(() => _happiness = v),
-                                onEnergyChanged: (v) =>
-                                    setState(() => _energy = v),
-                                onFocusChanged: (v) =>
-                                    setState(() => _focus = v),
-                                onBodyFeelChanged: (v) =>
-                                    setState(() => _bodyFeel = v),
-                              ),
-                      ),
+                // Content area with entry animation
+                SlideTransition(
+                  position: _slidersSlide,
+                  child: FadeTransition(
+                    opacity: _slidersFade,
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      child: _activeTab == 0
+                          ? BauchgefuehlTab(
+                              key: const ValueKey('bauchgefuehl'),
+                              bloating: _bloating,
+                              gas: _gas,
+                              cramps: _cramps,
+                              fullness: _fullness,
+                              onBloatingChanged: (v) =>
+                                  setState(() => _bloating = v),
+                              onGasChanged: (v) =>
+                                  setState(() => _gas = v),
+                              onCrampsChanged: (v) =>
+                                  setState(() => _cramps = v),
+                              onFullnessChanged: (v) =>
+                                  setState(() => _fullness = v),
+                            )
+                          : StimmungTab(
+                              key: const ValueKey('stimmung'),
+                              stress: _stress,
+                              happiness: _happiness,
+                              energy: _energy,
+                              focus: _focus,
+                              bodyFeel: _bodyFeel,
+                              onStressChanged: (v) =>
+                                  setState(() => _stress = v),
+                              onHappinessChanged: (v) =>
+                                  setState(() => _happiness = v),
+                              onEnergyChanged: (v) =>
+                                  setState(() => _energy = v),
+                              onFocusChanged: (v) =>
+                                  setState(() => _focus = v),
+                              onBodyFeelChanged: (v) =>
+                                  setState(() => _bodyFeel = v),
+                            ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
+          ),
 
-            // Fixed bottom button with gradient backdrop
-            Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [
-                      AppTheme.screenBackground.withValues(alpha: 0.0),
-                      AppTheme.screenBackground,
-                    ],
-                    stops: const [0.0, 0.3],
-                  ),
-                ),
-                padding: const EdgeInsets.fromLTRB(16, 32, 16, 32),
-                child: _PillButton(
-                  label: _activeTab == 0 ? 'weiter' : 'speichern',
-                  isLoading: _isSaving,
-                  onPressed: _onNextOrSave,
-                ),
-              ),
-            ),
-          ],
-        ),
+          // Fixed bottom button with gradient backdrop
+          _GradientBottomBar(
+            label: _activeTab == 0 ? 'weiter' : 'speichern',
+            isLoading: _isSaving,
+            onPressed: _onNextOrSave,
+          ),
+        ],
       ),
     );
   }
 }
 
-class _PillButton extends StatelessWidget {
+class _GradientBottomBar extends StatelessWidget {
   final String label;
   final bool isLoading;
   final VoidCallback onPressed;
 
-  const _PillButton({
+  const _GradientBottomBar({
     required this.label,
     required this.isLoading,
     required this.onPressed,
@@ -267,44 +247,27 @@ class _PillButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: isLoading ? null : () {
-        HapticService.light();
-        onPressed();
-      },
+    return Positioned(
+      left: 0,
+      right: 0,
+      bottom: 0,
       child: Container(
-        height: 56,
         decoration: BoxDecoration(
-          color: isLoading
-              ? AppTheme.primary.withValues(alpha: 0.7)
-              : AppTheme.primary,
-          borderRadius: BorderRadius.circular(100),
-          boxShadow: [
-            BoxShadow(
-              color: AppTheme.primary.withValues(alpha: 0.3),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              AppTheme.screenBackground.withValues(alpha: 0.0),
+              AppTheme.screenBackground,
+            ],
+            stops: const [0.0, 0.3],
+          ),
         ),
-        child: Center(
-          child: isLoading
-              ? const SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: AppTheme.primaryForeground,
-                  ),
-                )
-              : Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                    color: AppTheme.primaryForeground,
-                  ),
-                ),
+        padding: const EdgeInsets.fromLTRB(16, 32, 16, 32),
+        child: PillButton(
+          label: label,
+          isLoading: isLoading,
+          onPressed: onPressed,
         ),
       ),
     );

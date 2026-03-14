@@ -10,7 +10,6 @@ class MoodSliderRow extends StatelessWidget {
   final String rightLabel;
   final String leftMascot;
   final String rightMascot;
-  final double mascotScale;
   final BoxFit mascotFit;
 
   const MoodSliderRow({
@@ -21,13 +20,12 @@ class MoodSliderRow extends StatelessWidget {
     required this.rightLabel,
     required this.leftMascot,
     required this.rightMascot,
-    this.mascotScale = 1.0,
     this.mascotFit = BoxFit.contain,
   });
 
   @override
   Widget build(BuildContext context) {
-    final mascotSize = 56.0 * mascotScale;
+    const mascotSize = 56.0;
     final leftActive = value == 1;
     final rightActive = value > 1;
     return Padding(
