@@ -61,6 +61,7 @@ class _EmptyState extends StatelessWidget {
         ),
         child: Container(
           decoration: BoxDecoration(
+            color: AppTheme.card,
             borderRadius: BorderRadius.circular(24),
           ),
           child: Row(

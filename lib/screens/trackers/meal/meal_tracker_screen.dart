@@ -7,7 +7,7 @@ import '../../../providers/meal_tracker_provider.dart';
 import '../../../router/route_names.dart';
 import '../../../utils/save_helper.dart';
 import '../../../widgets/common/bb_button.dart';
-import '../../../widgets/common/date_time_picker_tile.dart';
+import '../../../widgets/common/date_time_chips.dart';
 import '../../../widgets/common/tracker_screen_scaffold.dart';
 import 'widgets/ingredient_search.dart';
 import 'widgets/meal_image_section.dart';
@@ -44,7 +44,42 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     final state = ref.watch(mealTrackerProvider);
 
     return TrackerScreenScaffold(
-      title: _isEditingTitle ? '' : _titleController.text,
+      titleWidget: GestureDetector(
+        onTap: () => setState(() => _isEditingTitle = true),
+        child: _isEditingTitle
+            ? TextField(
+                controller: _titleController,
+                autofocus: true,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    fontSize: AppTheme.fontSizeTitle,
+                    fontWeight: FontWeight.w600),
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                ),
+                onSubmitted: (_) =>
+                    setState(() => _isEditingTitle = false),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(
+                    child: Text(
+                      _titleController.text,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: AppTheme.fontSizeTitle,
+                          fontWeight: FontWeight.w600),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.edit, size: 16),
+                ],
+              ),
+      ),
       showSuccess: state.showSuccess,
       successMessage: 'Mahlzeit gespeichert!',
       successMascotAsset: AppConstants.mascotCool,
@@ -57,66 +92,29 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
   }
 
   Widget _buildBody(MealTrackerState state) {
+    final notifier = ref.read(mealTrackerProvider.notifier);
     final canSave =
         state.ingredients.isNotEmpty && !state.isAnalyzing && !state.isSaving;
 
     return Stack(
       children: [
         SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 24, 24, 180),
+          padding: const EdgeInsets.fromLTRB(24, 8, 24, 180),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // 1. Editable title
-              GestureDetector(
-                onTap: () => setState(() => _isEditingTitle = true),
-                child: _isEditingTitle
-                    ? TextField(
-                        controller: _titleController,
-                        autofocus: true,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                            fontSize: AppTheme.fontSizeTitle, fontWeight: FontWeight.w600),
-                        decoration: const InputDecoration(
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.zero,
-                        ),
-                        onSubmitted: (_) =>
-                            setState(() => _isEditingTitle = false),
-                      )
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Flexible(
-                            child: Text(
-                              _titleController.text,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontSize: AppTheme.fontSizeTitle, fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.edit, size: 16),
-                        ],
-                      ),
-              ),
-              AppConstants.gap16,
-
-              // 2. Date/Time (moved before image)
-              DateTimePickerTile(
+              // 1. Date/Time chips
+              DateTimeChips(
                 value: state.trackedAt,
-                onChanged: (dt) =>
-                    ref.read(mealTrackerProvider.notifier).setTrackedAt(dt),
+                onChanged: notifier.setTrackedAt,
               ),
               AppConstants.gap16,
 
-              // 3. Image capture
+              // 2. Image capture
               MealImageSection(
                 imageBytes: state.imageBytes,
                 isAnalyzing: state.isAnalyzing,
                 onImagePicked: (bytes, name) async {
-                  final notifier = ref.read(mealTrackerProvider.notifier);
                   notifier.setImage(bytes, name);
                   try {
                     await notifier.analyzeImage(bytes, name);
@@ -134,24 +132,20 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
                   }
                 },
                 onClearImage: () {
-                  ref.read(mealTrackerProvider.notifier).clearImage();
+                  notifier.clearImage();
                   _titleController.text = 'Neue Mahlzeit';
                 },
               ),
               AppConstants.gap16,
 
-              // 4. Ingredients
+              // 3. Ingredients
               IngredientSearch(
                 ingredients: state.ingredients,
                 suggestions: state.ingredientSuggestions,
-                onSearch:
-                    ref.read(mealTrackerProvider.notifier).searchIngredients,
-                onAdd: ref.read(mealTrackerProvider.notifier).addIngredient,
-                onRemove:
-                    ref.read(mealTrackerProvider.notifier).removeIngredient,
-                onDeleteIngredient: (id) => ref
-                    .read(mealTrackerProvider.notifier)
-                    .deleteUserIngredient(id),
+                onSearch: notifier.searchIngredients,
+                onAdd: notifier.addIngredient,
+                onRemove: notifier.removeIngredient,
+                onDeleteIngredient: (id) => notifier.deleteUserIngredient(id),
               ),
             ],
           ),
@@ -178,29 +172,17 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // "Getränk dazu tracken" link
-                GestureDetector(
-                  onTap: () => context.push(RoutePaths.drinkTracker),
-                  child: const Padding(
-                    padding: EdgeInsets.only(bottom: 12),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.water_drop_outlined,
-                            size: 18, color: AppTheme.primary),
-                        SizedBox(width: 6),
-                        Text(
-                          'Getränk dazu tracken',
-                          style: TextStyle(
-                            color: AppTheme.primary,
-                            fontSize: AppTheme.fontSizeBody,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
+                // "Getränk tracken" button
+                ElevatedButton.icon(
+                  onPressed: () => context.push(RoutePaths.drinkTracker),
+                  icon: const Icon(Icons.water_drop_outlined),
+                  label: const Text('Getränk tracken'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.info,
+                    foregroundColor: Colors.white,
                   ),
                 ),
+                AppConstants.gap8,
                 // Save button
                 BbButton(
                   label: 'Speichern',

@@ -71,7 +71,7 @@ class DiaryEntryCard extends StatelessWidget {
       DiaryEntryType.meal => Icons.restaurant,
       DiaryEntryType.toilet => Icons.wc,
       DiaryEntryType.gutFeeling => Icons.favorite,
-      DiaryEntryType.drink => Icons.local_drink,
+      DiaryEntryType.drink => Icons.water_drop_outlined,
     };
     return Container(
       width: 40,

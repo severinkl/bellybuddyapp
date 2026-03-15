@@ -6,6 +6,7 @@ import 'bb_success_overlay.dart';
 
 class TrackerScreenScaffold extends StatelessWidget {
   final String title;
+  final Widget? titleWidget;
   final bool showSuccess;
   final String successMessage;
   final String? successSubMessage;
@@ -16,7 +17,8 @@ class TrackerScreenScaffold extends StatelessWidget {
 
   const TrackerScreenScaffold({
     super.key,
-    required this.title,
+    this.title = '',
+    this.titleWidget,
     required this.showSuccess,
     required this.successMessage,
     required this.body,
@@ -46,7 +48,7 @@ class TrackerScreenScaffold extends StatelessWidget {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: Text(title),
+        title: titleWidget ?? Text(title),
       ),
       body: body,
     );

@@ -27,11 +27,13 @@ class IngredientSearch extends StatefulWidget {
 
 class _IngredientSearchState extends State<IngredientSearch> {
   final _controller = TextEditingController();
+  final _focusNode = FocusNode();
   bool _isAdding = false;
 
   @override
   void dispose() {
     _controller.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -66,41 +68,22 @@ class _IngredientSearchState extends State<IngredientSearch> {
           ),
           AppConstants.gap8,
           if (_isAdding) ...[
-            Row(
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    autofocus: true,
-                    decoration: InputDecoration(
-                      hintText: 'Mind. 3 Zeichen...',
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () {
-                          _controller.clear();
-                          widget.onSearch('');
-                          setState(() => _isAdding = false);
-                        },
-                      ),
-                    ),
-                    onChanged: widget.onSearch,
-                    onSubmitted: (_) => _submitIngredient(),
-                  ),
+            TextField(
+              controller: _controller,
+              focusNode: _focusNode,
+              decoration: InputDecoration(
+                hintText: 'Mind. 3 Zeichen...',
+                suffixIcon: IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () {
+                    _controller.clear();
+                    widget.onSearch('');
+                    setState(() => _isAdding = false);
+                  },
                 ),
-                const SizedBox(width: 8),
-                GestureDetector(
-                  onTap: _submitIngredient,
-                  child: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: const BoxDecoration(
-                      color: AppTheme.primary,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.check, color: Colors.white, size: 20),
-                  ),
-                ),
-              ],
+              ),
+              onChanged: widget.onSearch,
+              onSubmitted: (_) => _submitIngredient(),
             ),
             if (filteredSuggestions.isNotEmpty)
               Container(
@@ -116,11 +99,10 @@ class _IngredientSearchState extends State<IngredientSearch> {
                       title: Text(s.name),
                       dense: true,
                       onTap: () {
-                        _controller.text = s.name;
-                        _controller.selection = TextSelection.fromPosition(
-                          TextPosition(offset: s.name.length),
-                        );
+                        widget.onAdd(s.name);
+                        _controller.clear();
                         widget.onSearch('');
+                        setState(() => _isAdding = false);
                       },
                       trailing: s.isOwn
                           ? IconButton(
@@ -149,8 +131,14 @@ class _IngredientSearchState extends State<IngredientSearch> {
               }),
               ActionChip(
                 backgroundColor: AppTheme.primary,
-                label: const Text('+ Hinzufügen'),
-                onPressed: () => setState(() => _isAdding = true),
+                label: const Text('+ Hinzufügen',
+                    style: TextStyle(color: Colors.black)),
+                onPressed: () {
+                  setState(() => _isAdding = true);
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    _focusNode.requestFocus();
+                  });
+                },
               ),
             ],
           ),
