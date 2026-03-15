@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../config/constants.dart';
 import '../../services/haptic_service.dart';
 
 class PressScaleWrapper extends StatefulWidget {
@@ -29,7 +30,7 @@ class _PressScaleWrapperState extends State<PressScaleWrapper>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 100),
+      duration: AppConstants.pressScaleDuration,
     );
     _scale = Tween<double>(begin: 1.0, end: widget.scaleValue).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),

@@ -3,6 +3,7 @@ import '../models/recipe.dart';
 import '../services/recipe_service.dart';
 import '../services/supabase_service.dart';
 import '../utils/logger.dart';
+import '../utils/retry_helper.dart';
 
 class RecipesState {
   final List<Recipe> allRecipes;
@@ -59,7 +60,11 @@ class RecipesNotifier extends Notifier<RecipesState> {
   Future<void> _loadRecipes() async {
     state = state.copyWith(error: null);
     try {
-      final recipes = await RecipeService.fetchAll();
+      final recipes = await retryAsync(
+        RecipeService.fetchAll,
+        log: _log,
+        label: 'loadRecipes',
+      );
       state = state.copyWith(
         allRecipes: recipes,
         filtered: recipes,

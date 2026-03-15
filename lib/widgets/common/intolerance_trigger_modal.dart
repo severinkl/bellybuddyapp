@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
+import '../../config/constants.dart';
 
 /// Trigger options per intolerance type.
 const Map<String, List<String>> intoleranceTriggerOptions = {
@@ -73,7 +74,7 @@ class _IntoleranceTriggerModalState extends State<_IntoleranceTriggerModal> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: AppConstants.paddingLg,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -81,12 +82,12 @@ class _IntoleranceTriggerModalState extends State<_IntoleranceTriggerModal> {
           Text(
             'Wann bemerkst du ${widget.intolerance}?',
             style: const TextStyle(
-              fontSize: 20,
+              fontSize: AppTheme.fontSizeTitleLG,
               fontWeight: FontWeight.w600,
               color: AppTheme.foreground,
             ),
           ),
-          const SizedBox(height: 16),
+          AppConstants.gap16,
           ...widget.options.map((option) {
             final isSelected = _selected.contains(option);
             return CheckboxListTile(
@@ -94,7 +95,7 @@ class _IntoleranceTriggerModalState extends State<_IntoleranceTriggerModal> {
               title: Text(option),
               activeColor: AppTheme.primary,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(AppConstants.radiusMd),
               ),
               onChanged: (value) {
                 setState(() {
@@ -108,7 +109,7 @@ class _IntoleranceTriggerModalState extends State<_IntoleranceTriggerModal> {
               },
             );
           }),
-          const SizedBox(height: 16),
+          AppConstants.gap16,
           ElevatedButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Fertig'),

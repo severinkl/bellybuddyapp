@@ -3,6 +3,7 @@ import '../models/meal_entry.dart';
 import '../models/toilet_entry.dart';
 import '../models/gut_feeling_entry.dart';
 import '../models/drink_entry.dart';
+import '../utils/date_format_utils.dart';
 import '../utils/logger.dart';
 import 'supabase_service.dart';
 
@@ -29,10 +30,8 @@ class EntryQueryService {
     bool ordered = false,
   }) async {
     try {
-      final startOfDay = DateTime(date.year, date.month, date.day);
-      final endOfDay = startOfDay.add(const Duration(days: 1));
-      final start = startOfDay.toIso8601String();
-      final end = endOfDay.toIso8601String();
+      final start = startOfDay(date).toIso8601String();
+      final end = endOfDay(date).toIso8601String();
 
       PostgrestFilterBuilder<PostgrestList> baseQuery(String table, [String columns = '*']) {
         return SupabaseService.client

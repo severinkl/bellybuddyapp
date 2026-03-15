@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
+import '../../config/constants.dart';
 
 class BbCard extends StatelessWidget {
   final Widget child;
@@ -20,10 +21,10 @@ class BbCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final card = Container(
-      padding: padding ?? const EdgeInsets.all(16),
+      padding: padding ?? AppConstants.paddingMd,
       decoration: BoxDecoration(
         color: color ?? AppTheme.card,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppConstants.radiusLg),
         border: showBorder ? Border.all(color: AppTheme.border, width: 0.5) : null,
       ),
       child: child,

@@ -7,10 +7,11 @@ import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/user_profile.dart';
 import '../../../providers/profile_provider.dart';
-import '../../../services/haptic_service.dart';
+import '../../../widgets/common/bb_async_state.dart';
 import '../../../widgets/common/bb_chip_selector.dart';
-import '../../../widgets/common/intolerance_trigger_modal.dart';
 import '../../../widgets/common/settings_section_card.dart';
+import 'diet_selector.dart';
+import 'intolerance_section.dart';
 
 class SettingsProfileScreen extends ConsumerStatefulWidget {
   const SettingsProfileScreen({super.key});
@@ -53,6 +54,20 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
     _weightController.text = profile.weight?.toString() ?? '';
   }
 
+  Future<void> _saveImmediately(UserProfile profile) async {
+    try {
+      await ref.read(profileProvider.notifier).updateProfile(profile);
+      if (mounted) {
+        setState(() => _saved = true);
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) setState(() => _saved = false);
+        });
+      }
+    } catch (e) {
+      _log.error('failed to save profile', e);
+    }
+  }
+
   void _debounceSave(UserProfile profile) {
     _debounce?.cancel();
     _debounce = Timer(AppConstants.debounceDuration, () async {
@@ -70,15 +85,6 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
     });
   }
 
-  List<String> _triggersFor(String intolerance, UserProfile profile) {
-    return switch (intolerance) {
-      'Fruktose' => profile.fructoseTriggers,
-      'Laktose' => profile.lactoseTriggers,
-      'Histamin' => profile.histaminTriggers,
-      _ => [],
-    };
-  }
-
   UserProfile _updateTriggers(
       String intolerance, UserProfile profile, List<String> triggers) {
     return switch (intolerance) {
@@ -89,15 +95,14 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
     };
   }
 
-  static const _dietOptions = ['alles', 'vegetarisch', 'vegan'];
-  static const _dietLabels = {'alles': 'Alles', 'vegetarisch': 'Vegetarisch', 'vegan': 'Vegan'};
-
   @override
   Widget build(BuildContext context) {
     final profileState = ref.watch(profileProvider);
 
     return Scaffold(
+      backgroundColor: AppTheme.screenBackground,
       appBar: AppBar(
+        backgroundColor: AppTheme.screenBackground,
         title: const Text('Mein Profil'),
         actions: [
           if (_saved)
@@ -106,22 +111,27 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
               child: Center(
                 child: Text(
                   'Gespeichert',
-                  style: TextStyle(color: AppTheme.success, fontSize: 14),
+                  style: TextStyle(
+                      color: AppTheme.success,
+                      fontSize: AppTheme.fontSizeBody),
                 ),
               ),
             ),
         ],
       ),
       body: profileState.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Fehler: $e')),
+        loading: () => const BbLoadingState(message: 'Profil laden...'),
+        error: (e, _) => BbErrorState(
+          message: 'Fehler beim Laden des Profils.',
+          onRetry: () => ref.read(profileProvider.notifier).fetchProfile(),
+        ),
         data: (profile) {
           if (profile == null) {
             return const Center(child: Text('Kein Profil gefunden.'));
           }
           _initControllers(profile);
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: AppConstants.paddingLg,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -132,7 +142,6 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Birth year
                       TextField(
                         controller: _birthYearController,
                         keyboardType: TextInputType.number,
@@ -148,13 +157,12 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                         onChanged: (v) {
                           final year = int.tryParse(v);
                           if (year != null && v.length == 4) {
-                            _debounceSave(profile.copyWith(birthYear: year));
+                            _debounceSave(
+                                profile.copyWith(birthYear: year));
                           }
                         },
                       ),
-                      const SizedBox(height: 16),
-
-                      // Gender dropdown
+                      AppConstants.gap16,
                       DropdownButtonFormField<String>(
                         initialValue: profile.gender,
                         decoration: const InputDecoration(
@@ -162,16 +170,19 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                           prefixIcon: Icon(Icons.person_outline),
                         ),
                         items: const [
-                          DropdownMenuItem(value: null, child: Text('Auswählen')),
-                          DropdownMenuItem(value: 'weiblich', child: Text('Weiblich')),
-                          DropdownMenuItem(value: 'männlich', child: Text('Männlich')),
-                          DropdownMenuItem(value: 'andere', child: Text('Andere')),
+                          DropdownMenuItem(
+                              value: null, child: Text('Auswählen')),
+                          DropdownMenuItem(
+                              value: 'weiblich', child: Text('Weiblich')),
+                          DropdownMenuItem(
+                              value: 'männlich', child: Text('Männlich')),
+                          DropdownMenuItem(
+                              value: 'andere', child: Text('Andere')),
                         ],
-                        onChanged: (v) => _debounceSave(profile.copyWith(gender: v)),
+                        onChanged: (v) =>
+                            _debounceSave(profile.copyWith(gender: v)),
                       ),
-                      const SizedBox(height: 16),
-
-                      // Height and weight row
+                      AppConstants.gap16,
                       Row(
                         children: [
                           Expanded(
@@ -184,11 +195,11 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                               ],
                               decoration: const InputDecoration(
                                 labelText: 'Größe (cm)',
-                                prefixIcon: Icon(Icons.straighten),
                               ),
                               onChanged: (v) {
                                 final height = int.tryParse(v);
-                                _debounceSave(profile.copyWith(height: height));
+                                _debounceSave(
+                                    profile.copyWith(height: height));
                               },
                             ),
                           ),
@@ -203,11 +214,11 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                               ],
                               decoration: const InputDecoration(
                                 labelText: 'Gewicht (kg)',
-                                prefixIcon: Icon(Icons.monitor_weight_outlined),
                               ),
                               onChanged: (v) {
                                 final weight = int.tryParse(v);
-                                _debounceSave(profile.copyWith(weight: weight));
+                                _debounceSave(
+                                    profile.copyWith(weight: weight));
                               },
                             ),
                           ),
@@ -216,44 +227,19 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                AppConstants.gap16,
 
                 // Diet section
                 SettingsSectionCard(
                   icon: Icons.restaurant_outlined,
                   title: 'Ernährung',
-                  child: Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: _dietOptions.map((diet) {
-                      final isSelected = (profile.diet ?? 'alles') == diet;
-                      return GestureDetector(
-                        onTap: () {
-                          HapticService.selection();
-                          _debounceSave(profile.copyWith(diet: diet));
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: isSelected ? AppTheme.primary : AppTheme.secondary,
-                            borderRadius: BorderRadius.circular(100),
-                          ),
-                          child: Text(
-                            _dietLabels[diet]!,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500,
-                              color: isSelected
-                                  ? AppTheme.primaryForeground
-                                  : AppTheme.foreground,
-                            ),
-                          ),
-                        ),
-                      );
-                    }).toList(),
+                  child: DietSelector(
+                    currentDiet: profile.diet,
+                    onChanged: (diet) =>
+                        _debounceSave(profile.copyWith(diet: diet)),
                   ),
                 ),
-                const SizedBox(height: 16),
+                AppConstants.gap16,
 
                 // Symptoms section
                 SettingsSectionCard(
@@ -262,71 +248,28 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                   child: BbChipSelector(
                     options: AppConstants.symptomOptions,
                     selected: profile.symptoms,
-                    onChanged: (v) => _debounceSave(profile.copyWith(symptoms: v)),
+                    onChanged: (v) =>
+                        _saveImmediately(profile.copyWith(symptoms: v)),
                   ),
                 ),
-                const SizedBox(height: 16),
+                AppConstants.gap16,
 
                 // Intolerances section
                 SettingsSectionCard(
                   icon: Icons.warning_amber_outlined,
                   title: 'Unverträglichkeiten',
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      BbChipSelector(
-                        options: AppConstants.intoleranceOptions,
-                        selected: profile.intolerances,
-                        chipColorBuilder: AppTheme.chipColorForIntolerance,
-                        onChanged: (v) {
-                          final added = v.where((s) => !profile.intolerances.contains(s));
-                          _debounceSave(profile.copyWith(intolerances: v));
-                          for (final item in added) {
-                            if (triggerIntolerances.contains(item)) {
-                              Future.microtask(() {
-                                if (!context.mounted) return;
-                                showIntoleranceTriggerModal(
-                                  context: context,
-                                  intolerance: item,
-                                  currentTriggers: _triggersFor(item, profile),
-                                  onChanged: (triggers) {
-                                    final updated = _updateTriggers(item, profile, triggers);
-                                    _debounceSave(updated);
-                                  },
-                                );
-                              });
-                            }
-                          }
-                        },
-                      ),
-                      if (profile.intolerances.any((i) => triggerIntolerances.contains(i))) ...[
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: profile.intolerances
-                              .where((i) => triggerIntolerances.contains(i))
-                              .map((i) => ActionChip(
-                                    label: Text('$i Trigger bearbeiten'),
-                                    onPressed: () {
-                                      showIntoleranceTriggerModal(
-                                        context: context,
-                                        intolerance: i,
-                                        currentTriggers: _triggersFor(i, profile),
-                                        onChanged: (triggers) {
-                                          final updated = _updateTriggers(i, profile, triggers);
-                                          _debounceSave(updated);
-                                        },
-                                      );
-                                    },
-                                  ))
-                              .toList(),
-                        ),
-                      ],
-                    ],
+                  child: IntoleranceSection(
+                    profile: profile,
+                    onIntolerancesChanged: (v) =>
+                        _saveImmediately(profile.copyWith(intolerances: v)),
+                    onTriggersChanged: (intolerance, triggers) {
+                      final updated =
+                          _updateTriggers(intolerance, profile, triggers);
+                      _saveImmediately(updated);
+                    },
                   ),
                 ),
-                const SizedBox(height: 32),
+                AppConstants.gap32,
               ],
             ),
           );

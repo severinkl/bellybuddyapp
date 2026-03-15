@@ -55,13 +55,13 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
               children: [
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
+                    padding: AppConstants.paddingLg,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         // Today's total with live preview
                         _buildTodayTotal(state),
-                        const SizedBox(height: 16),
+                        AppConstants.gap16,
 
                         // Date/Time picker — always visible
                         DateTimeChips(
@@ -70,16 +70,16 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
                               .read(drinkTrackerProvider.notifier)
                               .setTrackedAt,
                         ),
-                        const SizedBox(height: 16),
+                        AppConstants.gap16,
 
                         // Autocomplete search
                         const DrinkSearch(),
-                        const SizedBox(height: 16),
+                        AppConstants.gap16,
 
                         // Selected drink chip with deselect
                         if (state.selectedDrink != null) ...[
                           _buildSelectedChip(state),
-                          const SizedBox(height: 16),
+                          AppConstants.gap16,
                         ],
 
                         // Quick drink grid (recent drinks)
@@ -87,11 +87,11 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
 
                         // Size selector — shown when a drink is selected
                         if (state.selectedDrink != null) ...[
-                          const SizedBox(height: 24),
+                          AppConstants.gap24,
                           const DrinkSizeSelector(),
                         ],
 
-                        const SizedBox(height: 24),
+                        AppConstants.gap24,
                       ],
                     ),
                   ),
@@ -121,7 +121,7 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: AppTheme.info.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppConstants.radiusLg),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -131,14 +131,14 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
           const Text(
             'Heute: ',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: AppTheme.fontSizeBody,
               color: AppTheme.mutedForeground,
             ),
           ),
           Text(
             _formatAmount(totalWithPending),
             style: const TextStyle(
-              fontSize: 16,
+              fontSize: AppTheme.fontSizeSubtitle,
               fontWeight: FontWeight.w600,
               color: AppTheme.foreground,
             ),
@@ -148,7 +148,7 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
             Text(
               '(+${_formatAmount(pendingAmount)})',
               style: const TextStyle(
-                fontSize: 14,
+                fontSize: AppTheme.fontSizeBody,
                 fontWeight: FontWeight.w500,
                 color: AppTheme.info,
               ),
@@ -165,7 +165,7 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
         const Text(
           'Ausgewählt:',
           style: TextStyle(
-            fontSize: 14,
+            fontSize: AppTheme.fontSizeBody,
             color: AppTheme.mutedForeground,
           ),
         ),
@@ -174,12 +174,12 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             color: AppTheme.info,
-            borderRadius: BorderRadius.circular(100),
+            borderRadius: BorderRadius.circular(AppConstants.radiusFull),
           ),
           child: Text(
             state.selectedDrink!.name,
             style: const TextStyle(
-              fontSize: 14,
+              fontSize: AppTheme.fontSizeBody,
               fontWeight: FontWeight.w500,
               color: Colors.white,
             ),
@@ -192,7 +192,7 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
           child: const Text(
             '✕',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: AppTheme.fontSizeBody,
               color: AppTheme.mutedForeground,
             ),
           ),

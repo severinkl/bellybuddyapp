@@ -2,6 +2,7 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
+import '../../config/constants.dart';
 import '../../services/haptic_service.dart';
 import 'mascot_image.dart';
 
@@ -45,7 +46,7 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
     // Container: fade only (0.3s)
     _fadeController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: AppConstants.animMedium,
     );
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _fadeController, curve: Curves.easeOut),
@@ -54,7 +55,7 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
     // Mascot: bounce-overshoot scale 0.8 → 1.05 → 1.0 (0.6s)
     _mascotController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: AppConstants.animSlower,
     );
     _mascotScaleAnimation = TweenSequence<double>([
       TweenSequenceItem(
@@ -86,7 +87,7 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
 
     // Start animations in sequence
     _fadeController.forward();
-    Future.delayed(const Duration(milliseconds: 100), () {
+    Future.delayed(AppConstants.pressScaleDuration, () {
       if (mounted) _mascotController.forward();
     });
     Future.delayed(const Duration(milliseconds: 250), () {
@@ -95,7 +96,7 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
 
     // Auto-dismiss only when no mascot and no action (legacy behavior)
     if (widget.action == null && widget.mascotAsset == null) {
-      Future.delayed(const Duration(milliseconds: 1500), () {
+      Future.delayed(AppConstants.successOverlayDuration, () {
         if (mounted) widget.onDismissed();
       });
     }
@@ -164,7 +165,7 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
                       size: 40,
                     ),
                   ),
-                const SizedBox(height: 24),
+                AppConstants.gap24,
 
                 // Message + sub-message with slide-up animation
                 SlideTransition(
@@ -177,18 +178,18 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
                         Text(
                           widget.message,
                           style: TextStyle(
-                            fontSize: 24,
+                            fontSize: AppTheme.fontSizeHeadingLG,
                             fontWeight: FontWeight.w600,
                             color: textColor,
                           ),
                           textAlign: TextAlign.center,
                         ),
                         if (widget.subMessage != null) ...[
-                          const SizedBox(height: 8),
+                          AppConstants.gap8,
                           Text(
                             widget.subMessage!,
                             style: TextStyle(
-                              fontSize: 16,
+                              fontSize: AppTheme.fontSizeSubtitle,
                               color: textColor.withValues(alpha: 0.8),
                             ),
                             textAlign: TextAlign.center,
@@ -201,7 +202,7 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
 
                 // Action button
                 if (widget.action != null) ...[
-                  const SizedBox(height: 24),
+                  AppConstants.gap24,
                   if (hasMascot)
                     _GlassmorphicActionButton(
                       child: widget.action!,
@@ -218,7 +219,7 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
                     child: Text(
                       'Tippen zum Fortfahren',
                       style: TextStyle(
-                        fontSize: 14,
+                        fontSize: AppTheme.fontSizeBody,
                         color: textColor.withValues(alpha: 0.6),
                       ),
                     ),
@@ -253,14 +254,14 @@ class _GlassmorphicActionButton extends StatelessWidget {
     return GestureDetector(
       onTap: () {}, // absorb tap to prevent dismiss
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppConstants.radiusLg),
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppConstants.radiusLg),
               border: Border.all(
                 color: Colors.white.withValues(alpha: 0.2),
               ),
@@ -269,7 +270,7 @@ class _GlassmorphicActionButton extends StatelessWidget {
               style: const TextStyle(
                 color: AppTheme.primaryForeground,
                 fontWeight: FontWeight.w600,
-                fontSize: 16,
+                fontSize: AppTheme.fontSizeSubtitle,
                 decoration: TextDecoration.none,
               ),
               child: IconTheme.merge(

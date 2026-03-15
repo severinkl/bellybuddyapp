@@ -44,7 +44,7 @@ final diaryEntriesProvider = FutureProvider.family<List<DiaryEntry>, DateTime>((
         trackedAt: meal.trackedAt,
         title: meal.title,
         subtitle: '${meal.ingredients.length} Zutaten',
-        data: meal,
+        data: MealDiaryData(meal),
       ));
     }
 
@@ -55,7 +55,7 @@ final diaryEntriesProvider = FutureProvider.family<List<DiaryEntry>, DateTime>((
         trackedAt: toilet.trackedAt,
         title: 'Toilettengang',
         subtitle: AppConstants.stoolTypeDescriptions[toilet.stoolType] ?? 'Normal',
-        data: toilet,
+        data: ToiletDiaryData(toilet),
       ));
     }
 
@@ -67,7 +67,7 @@ final diaryEntriesProvider = FutureProvider.family<List<DiaryEntry>, DateTime>((
         trackedAt: gut.trackedAt,
         title: 'Bauchgefühl',
         subtitle: rating.level.label,
-        data: gut,
+        data: GutFeelingDiaryData(gut),
       ));
     }
 
@@ -78,7 +78,7 @@ final diaryEntriesProvider = FutureProvider.family<List<DiaryEntry>, DateTime>((
         trackedAt: drink.trackedAt,
         title: drink.drinkName,
         subtitle: '${drink.amountMl} ml',
-        data: drink,
+        data: DrinkDiaryData(drink),
       ));
     }
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../config/app_theme.dart';
+import '../../../../config/constants.dart';
 import '../../../../services/haptic_service.dart';
 
 class PillButton extends StatelessWidget {
@@ -27,7 +28,7 @@ class PillButton extends StatelessWidget {
           color: isLoading
               ? AppTheme.primary.withValues(alpha: 0.7)
               : AppTheme.primary,
-          borderRadius: BorderRadius.circular(100),
+          borderRadius: BorderRadius.circular(AppConstants.radiusFull),
           boxShadow: [
             BoxShadow(
               color: AppTheme.primary.withValues(alpha: 0.3),
@@ -49,7 +50,7 @@ class PillButton extends StatelessWidget {
               : Text(
                   label,
                   style: const TextStyle(
-                    fontSize: 18,
+                    fontSize: AppTheme.fontSizeTitle,
                     fontWeight: FontWeight.w500,
                     color: AppTheme.primaryForeground,
                   ),

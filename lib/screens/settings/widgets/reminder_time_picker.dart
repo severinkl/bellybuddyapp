@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
+import '../../../config/constants.dart';
 import '../../../services/haptic_service.dart';
 
 class ReminderTimePicker extends StatefulWidget {
@@ -97,7 +98,7 @@ class _ReminderTimePickerState extends State<ReminderTimePicker> {
 
         // Custom picker
         if (_showCustomPicker) ...[
-          const SizedBox(height: 12),
+          AppConstants.gap12,
           Row(
             children: [
               Expanded(
@@ -135,7 +136,7 @@ class _ReminderTimePickerState extends State<ReminderTimePicker> {
 
         // Custom time chips (removable)
         if (_customTimes.isNotEmpty) ...[
-          const SizedBox(height: 12),
+          AppConstants.gap12,
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -152,11 +153,11 @@ class _ReminderTimePickerState extends State<ReminderTimePicker> {
         ],
 
         // Summary
-        const SizedBox(height: 16),
+        AppConstants.gap16,
         Text(
           _formatSummary(),
           style: const TextStyle(
-            fontSize: 13,
+            fontSize: AppTheme.fontSizeCaptionLG,
             color: AppTheme.mutedForeground,
           ),
         ),
@@ -186,7 +187,7 @@ class _TimePill extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected ? AppTheme.primary : AppTheme.secondary,
-          borderRadius: BorderRadius.circular(100),
+          borderRadius: BorderRadius.circular(AppConstants.radiusFull),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -198,7 +199,7 @@ class _TimePill extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: AppTheme.fontSizeBody,
                 fontWeight: FontWeight.w500,
                 color: isSelected ? AppTheme.primaryForeground : AppTheme.foreground,
               ),

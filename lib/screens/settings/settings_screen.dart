@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../router/route_names.dart';
 import '../../widgets/common/bb_settings_item.dart';
+import '../../config/constants.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -16,7 +17,7 @@ class SettingsScreen extends StatelessWidget {
         title: const Text('Einstellungen'),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: AppConstants.paddingLg,
         child: Column(
           children: [
             BbSettingsItem(
@@ -25,14 +26,14 @@ class SettingsScreen extends StatelessWidget {
               subtitle: 'Persönliche Daten, Ernährung & Symptome',
               onTap: () => context.push(RoutePaths.settingsProfile),
             ),
-            const SizedBox(height: 12),
+            AppConstants.gap12,
             BbSettingsItem(
               icon: Icons.notifications_outlined,
               title: 'Benachrichtigungen',
               subtitle: 'Push-Benachrichtigungen & Erinnerungen',
               onTap: () => context.push(RoutePaths.settingsNotifications),
             ),
-            const SizedBox(height: 12),
+            AppConstants.gap12,
             BbSettingsItem(
               icon: Icons.shield_outlined,
               title: 'Konto & Sicherheit',

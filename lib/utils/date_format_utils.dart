@@ -1,5 +1,35 @@
 import 'package:intl/intl.dart';
 
+/// Returns the start of the given day (midnight).
+DateTime startOfDay(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
+
+/// Returns the start of the next day (exclusive end bound for date queries).
+DateTime endOfDay(DateTime dt) =>
+    DateTime(dt.year, dt.month, dt.day).add(const Duration(days: 1));
+
+/// Returns the ISO-8601 string for 7 days before [now] (defaults to now).
+DateTime last7Days([DateTime? now]) =>
+    (now ?? DateTime.now()).subtract(const Duration(days: 7));
+
+/// Formats a DateTime as a German relative time string (e.g. "vor 5 Min.")
+String formatTimeAgo(DateTime dt) {
+  final diff = DateTime.now().difference(dt);
+  if (diff.inMinutes < 1) return 'gerade eben';
+  if (diff.inMinutes < 60) return 'vor ${diff.inMinutes} Min.';
+  if (diff.inHours < 24) return 'vor ${diff.inHours} Std.';
+  if (diff.inDays == 1) return 'vor 1 Tag';
+  return 'vor ${diff.inDays} Tagen';
+}
+
+/// Formats a 7-day analysis date range string (e.g. "Analysiert: 6. Mär – 13. Mär 2026")
+String formatAnalysisDateRange(DateTime createdAt) {
+  final end = createdAt;
+  final start = end.subtract(const Duration(days: 7));
+  final df = DateFormat('d. MMM', 'de_DE');
+  final yearFmt = DateFormat('yyyy');
+  return 'Analysiert: ${df.format(start)} \u2013 ${df.format(end)} ${yearFmt.format(end)}';
+}
+
 /// Formats a DateTime as "DD.MM.YYYY HH:mm Uhr" (e.g., "13.03.2026 14:30 Uhr")
 String formatDateTimeShort(DateTime dt) {
   return '${dt.day}.${dt.month}.${dt.year} '

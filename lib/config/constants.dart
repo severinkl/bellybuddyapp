@@ -27,7 +27,9 @@ class AppConstants {
   static const double radiusSm = 8.0;
   static const double radiusMd = 12.0;
   static const double radiusLg = 16.0;
+  static const double radiusRound = 20.0;
   static const double radiusXl = 24.0;
+  static const double radiusFull = 100.0;
 
   // Button
   static const double buttonHeight = 56.0;
@@ -40,6 +42,13 @@ class AppConstants {
   static const Duration successOverlayDuration = Duration(milliseconds: 1500);
   static const Duration autoAdvanceDuration = Duration(seconds: 4);
   static const Duration debounceDuration = Duration(milliseconds: 800);
+
+  // Animation durations
+  static const Duration animFast = Duration(milliseconds: 150);
+  static const Duration animNormal = Duration(milliseconds: 200);
+  static const Duration animMedium = Duration(milliseconds: 300);
+  static const Duration animSlow = Duration(milliseconds: 500);
+  static const Duration animSlower = Duration(milliseconds: 600);
 
   // Asset paths
   static const String mascotBasePath = 'assets/images/mascot';
@@ -98,17 +107,10 @@ class AppConstants {
     'Übelkeit', 'Sodbrennen', 'Krämpfe', 'Völlegefühl',
   ];
 
-  // Recipe filter tags
-  static const List<String> recipeFilterTags = [
-    'Vegetarisch', 'Vegan', 'Glutenfrei', 'Laktosefrei',
-  ];
-
   // Drink sizes
   static const List<int> drinkSizes = [250, 330, 500, 1000];
 
-  // Default reminder time
-  static const List<int> defaultReminderTimes = [18];
+  // Gut feeling symptom labels
+  static const List<String> gutFeelingSymptoms = ['Blähbauch', 'Blähungen', 'Krämpfe', 'Völlegefühl'];
 
-  // Default timezone
-  static const String defaultTimezone = 'Europe/Berlin';
 }

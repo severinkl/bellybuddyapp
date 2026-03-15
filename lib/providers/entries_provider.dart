@@ -112,29 +112,11 @@ class EntriesNotifier extends Notifier<EntriesState> {
 
   // -- Drink CRUD --
 
-  /// Inserts a drink entry using a manually constructed map instead of
-  /// [DrinkEntry.toJson] because `drinkName` is excluded from JSON
-  /// serialization (it comes from a join, not the `drink_entries` table).
-  Future<void> addDrinkEntry(DrinkEntry entry) async {
-    final data = {
-      'user_id': SupabaseService.userId,
-      'tracked_at': entry.trackedAt.toIso8601String(),
-      'drink_id': entry.drinkId,
-      'amount_ml': entry.amountMl,
-      'notes': entry.notes,
-    };
-    await SupabaseService.client.from(entryTableFor['drink']!).insert(data);
-  }
+  Future<void> addDrinkEntry(DrinkEntry entry) =>
+      EntryCrudService.insert(entryTableFor['drink']!, entry.toInsertJson());
 
-  Future<void> updateDrinkEntry(DrinkEntry entry) async {
-    final data = {
-      'tracked_at': entry.trackedAt.toIso8601String(),
-      'drink_id': entry.drinkId,
-      'amount_ml': entry.amountMl,
-      'notes': entry.notes,
-    };
-    await SupabaseService.client.from(entryTableFor['drink']!).update(data).eq('id', entry.id);
-  }
+  Future<void> updateDrinkEntry(DrinkEntry entry) =>
+      EntryCrudService.update(entryTableFor['drink']!, entry.id, entry.toInsertJson());
 
   Future<void> deleteDrinkEntry(String id) =>
       EntryCrudService.delete(entryTableFor['drink']!, id);

@@ -1,4 +1,5 @@
 import '../models/recommendation.dart';
+import '../utils/date_format_utils.dart';
 import 'supabase_service.dart';
 
 class RecommendationService {
@@ -13,8 +14,7 @@ class RecommendationService {
 
   /// Fetches recent meals and toilet entries (last 7 days) for AI context.
   static Future<Map<String, dynamic>> fetchRecentContext(String userId) async {
-    final sevenDaysAgo =
-        DateTime.now().subtract(const Duration(days: 7)).toIso8601String();
+    final sevenDaysAgo = last7Days().toIso8601String();
 
     final mealsFuture = SupabaseService.client
         .from('meal_entries')

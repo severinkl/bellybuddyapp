@@ -24,31 +24,31 @@ class HeightWeightStep extends StatelessWidget {
     final weights = List.generate(150, (i) => 30 + i);
 
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: AppConstants.paddingLg,
       child: Column(
         children: [
-          const SizedBox(height: 24),
+          AppConstants.gap24,
           const MascotImage(assetPath: AppConstants.mascotWink, width: 120, height: 120),
-          const SizedBox(height: 16),
+          AppConstants.gap16,
           const Text(
             'Größe & Gewicht',
             style: TextStyle(
-              fontSize: 24,
+              fontSize: AppTheme.fontSizeHeadingLG,
               fontWeight: FontWeight.w700,
               color: AppTheme.foreground,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
+          AppConstants.gap8,
           const Text(
             'Diese Angaben helfen uns dabei, deine Verdauung besser zu verstehen.',
-            style: TextStyle(fontSize: 15, color: AppTheme.mutedForeground),
+            style: TextStyle(fontSize: AppTheme.fontSizeBodyLG, color: AppTheme.mutedForeground),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 24),
+          AppConstants.gap24,
           Expanded(
             child: Container(
-              padding: const EdgeInsets.all(16),
+              padding: AppConstants.paddingMd,
               decoration: BoxDecoration(
                 color: AppTheme.beige,
                 borderRadius: BorderRadius.circular(24),
@@ -61,12 +61,12 @@ class HeightWeightStep extends StatelessWidget {
                         const Text(
                           'Größe',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: AppTheme.fontSizeSubtitle,
                             fontWeight: FontWeight.w500,
                             color: AppTheme.mutedForeground,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        AppConstants.gap8,
                         Expanded(
                           child: BbScrollPicker(
                             items: heights,
@@ -86,12 +86,12 @@ class HeightWeightStep extends StatelessWidget {
                         const Text(
                           'Gewicht',
                           style: TextStyle(
-                            fontSize: 16,
+                            fontSize: AppTheme.fontSizeSubtitle,
                             fontWeight: FontWeight.w500,
                             color: AppTheme.mutedForeground,
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        AppConstants.gap8,
                         Expanded(
                           child: BbScrollPicker(
                             items: weights,

@@ -91,7 +91,7 @@ class _DateTimeChip extends StatelessWidget {
             Text(
               label,
               style: const TextStyle(
-                fontSize: 16,
+                fontSize: AppTheme.fontSizeSubtitle,
                 fontWeight: FontWeight.w500,
                 color: AppTheme.foreground,
               ),

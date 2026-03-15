@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/ingredient_suggestion_group.dart';
+import '../../../config/constants.dart';
 
 class SuggestionDetailModal extends StatelessWidget {
   final IngredientSuggestionGroup group;
@@ -30,7 +31,7 @@ class SuggestionDetailModal extends StatelessWidget {
                     child: Text(
                       group.ingredientName,
                       style: const TextStyle(
-                        fontSize: 20,
+                        fontSize: AppTheme.fontSizeTitleLG,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.foreground,
                       ),
@@ -44,10 +45,10 @@ class SuggestionDetailModal extends StatelessWidget {
               if (group.helptext != null && group.helptext!.isNotEmpty) ...[
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.all(16),
+                  padding: AppConstants.paddingMd,
                   decoration: BoxDecoration(
                     color: AppTheme.info.withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppConstants.radiusMd),
                     border: Border.all(
                       color: AppTheme.info.withValues(alpha: 0.2),
                     ),
@@ -65,7 +66,7 @@ class SuggestionDetailModal extends StatelessWidget {
                         child: Text(
                           group.helptext!,
                           style: const TextStyle(
-                            fontSize: 14,
+                            fontSize: AppTheme.fontSizeBody,
                             color: AppTheme.foreground,
                             height: 1.4,
                           ),
@@ -82,26 +83,26 @@ class SuggestionDetailModal extends StatelessWidget {
                 Text(
                   'Gefunden in ${group.mealCount} ${group.mealCount == 1 ? 'Speise' : 'Speisen'}',
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: AppTheme.fontSizeSubtitle,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.foreground,
                   ),
                 ),
-                const SizedBox(height: 12),
+                AppConstants.gap12,
                 ...group.meals.map((meal) => Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: AppTheme.card,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
                           border: Border.all(color: AppTheme.border, width: 0.5),
                         ),
                         child: Row(
                           children: [
                             if (meal.imageUrl != null) ...[
                               ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
+                                borderRadius: BorderRadius.circular(AppConstants.radiusSm),
                                 child: Image.network(
                                   meal.imageUrl!,
                                   width: 48,
@@ -120,7 +121,7 @@ class SuggestionDetailModal extends StatelessWidget {
                                   Text(
                                     meal.title,
                                     style: const TextStyle(
-                                      fontSize: 14,
+                                      fontSize: AppTheme.fontSizeBody,
                                       fontWeight: FontWeight.w500,
                                       color: AppTheme.foreground,
                                     ),
@@ -129,7 +130,7 @@ class SuggestionDetailModal extends StatelessWidget {
                                   Text(
                                     _formatDate(meal.trackedAt),
                                     style: const TextStyle(
-                                      fontSize: 12,
+                                      fontSize: AppTheme.fontSizeCaption,
                                       color: AppTheme.mutedForeground,
                                     ),
                                   ),
@@ -140,7 +141,7 @@ class SuggestionDetailModal extends StatelessWidget {
                         ),
                       ),
                     )),
-                const SizedBox(height: 12),
+                AppConstants.gap12,
               ],
 
               // Alternatives section
@@ -148,12 +149,12 @@ class SuggestionDetailModal extends StatelessWidget {
                 const Text(
                   'Alternativen',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: AppTheme.fontSizeSubtitle,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.foreground,
                   ),
                 ),
-                const SizedBox(height: 12),
+                AppConstants.gap12,
                 SizedBox(
                   height: 100,
                   child: ListView.separated(
@@ -177,7 +178,7 @@ class SuggestionDetailModal extends StatelessWidget {
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                fontSize: 12,
+                                fontSize: AppTheme.fontSizeCaption,
                                 color: AppTheme.foreground,
                               ),
                             ),
@@ -187,11 +188,11 @@ class SuggestionDetailModal extends StatelessWidget {
                     },
                   ),
                 ),
-                const SizedBox(height: 12),
+                AppConstants.gap12,
               ],
 
               // Close button
-              const SizedBox(height: 8),
+              AppConstants.gap8,
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton(
@@ -212,10 +213,10 @@ class SuggestionDetailModal extends StatelessWidget {
       height: 48,
       decoration: BoxDecoration(
         color: AppTheme.muted,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppConstants.radiusSm),
       ),
       child: const Center(
-        child: Text('\u{1F372}', style: TextStyle(fontSize: 24)),
+        child: Text('\u{1F372}', style: TextStyle(fontSize: AppTheme.fontSizeHeadingLG)),
       ),
     );
   }

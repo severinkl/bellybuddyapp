@@ -40,9 +40,9 @@ class _DrinkSizeSelectorState extends ConsumerState<DrinkSizeSelector> {
       children: [
         const Text(
           'Menge?',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+          style: TextStyle(fontSize: AppTheme.fontSizeSubtitle, fontWeight: FontWeight.w500),
         ),
-        const SizedBox(height: 12),
+        AppConstants.gap12,
         // 4-column grid of preset sizes
         Row(
           children: [
@@ -64,7 +64,7 @@ class _DrinkSizeSelectorState extends ConsumerState<DrinkSizeSelector> {
             ],
           ],
         ),
-        const SizedBox(height: 12),
+        AppConstants.gap12,
         // Custom amount input with separate "ml" suffix
         Row(
           children: [
@@ -79,15 +79,15 @@ class _DrinkSizeSelectorState extends ConsumerState<DrinkSizeSelector> {
                   contentPadding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(100),
+                    borderRadius: BorderRadius.circular(AppConstants.radiusFull),
                     borderSide: BorderSide.none,
                   ),
                   enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(100),
+                    borderRadius: BorderRadius.circular(AppConstants.radiusFull),
                     borderSide: BorderSide.none,
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(100),
+                    borderRadius: BorderRadius.circular(AppConstants.radiusFull),
                     borderSide: BorderSide.none,
                   ),
                 ),
@@ -99,7 +99,7 @@ class _DrinkSizeSelectorState extends ConsumerState<DrinkSizeSelector> {
             const Text(
               'ml',
               style: TextStyle(
-                fontSize: 14,
+                fontSize: AppTheme.fontSizeBody,
                 color: AppTheme.mutedForeground,
               ),
             ),
@@ -126,19 +126,19 @@ class _SizeButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
+        duration: AppConstants.animFast,
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
           color: isSelected
               ? AppTheme.info
               : AppTheme.muted.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
         ),
         alignment: Alignment.center,
         child: Text(
           '$ml ml',
           style: TextStyle(
-            fontSize: 14,
+            fontSize: AppTheme.fontSizeBody,
             fontWeight: FontWeight.w500,
             color:
                 isSelected ? Colors.white : AppTheme.foreground,

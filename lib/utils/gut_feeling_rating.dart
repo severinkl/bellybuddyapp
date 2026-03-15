@@ -1,4 +1,5 @@
 import 'dart:ui';
+import '../config/app_theme.dart';
 import '../models/gut_feeling_entry.dart';
 
 enum GutFeelingRatingLevel {
@@ -25,9 +26,9 @@ class GutFeelingRating {
 
 /// Returns the color for a single gut-feeling value (1-5 scale).
 Color getValueColor(int value) {
-  if (value <= 2) return const Color(0xFF40BF40); // hsl(120, 60%, 50%)
-  if (value <= 3) return const Color(0xFFE6B800); // hsl(45, 80%, 50%)
-  return const Color(0xFFD93636); // hsl(0, 70%, 50%)
+  if (value <= 2) return AppTheme.gutFeelingGood;
+  if (value <= 3) return AppTheme.gutFeelingNeutral;
+  return AppTheme.gutFeelingBad;
 }
 
 /// Calculates the overall gut-feeling rating from an entry.

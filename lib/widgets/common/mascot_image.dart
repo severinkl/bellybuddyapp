@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../config/constants.dart';
 
 class MascotImage extends StatelessWidget {
   final String assetPath;
@@ -32,7 +33,7 @@ class MascotImage extends StatelessWidget {
 
     if (fit == BoxFit.cover) {
       return ClipRRect(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(AppConstants.radiusSm),
         child: image,
       );
     }

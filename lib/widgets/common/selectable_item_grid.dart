@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
+import '../../config/constants.dart';
 import '../../services/haptic_service.dart';
 
 class SelectableItemGrid<T> extends StatelessWidget {
@@ -34,7 +35,7 @@ class SelectableItemGrid<T> extends StatelessWidget {
               color: isSelected
                   ? AppTheme.primary.withValues(alpha: 0.2)
                   : AppTheme.card,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(AppConstants.radiusRound),
               border: Border.all(
                 color: isSelected ? AppTheme.primary : AppTheme.border,
                 width: isSelected ? 2 : 1,

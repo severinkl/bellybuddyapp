@@ -4,6 +4,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../../config/app_theme.dart';
+import '../../../../config/constants.dart';
 
 class MealImageSection extends StatelessWidget {
   final Uint8List? imageBytes;
@@ -120,11 +121,11 @@ class _PickerButton extends StatelessWidget {
             ),
             child: Icon(icon, color: AppTheme.foreground, size: 28),
           ),
-          const SizedBox(height: 8),
+          AppConstants.gap8,
           Text(
             label,
             style: const TextStyle(
-              fontSize: 13,
+              fontSize: AppTheme.fontSizeCaptionLG,
               color: AppTheme.mutedForeground,
             ),
           ),
@@ -191,26 +192,26 @@ class _ImagePreview extends StatelessWidget {
                             horizontal: 32, vertical: 24),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(AppConstants.radiusRound),
                         ),
                         child: const Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             CircularProgressIndicator(
                                 color: AppTheme.primary),
-                            SizedBox(height: 16),
+                            AppConstants.gap16,
                             Text(
                               'Analysiere...',
                               style: TextStyle(
-                                fontSize: 16,
+                                fontSize: AppTheme.fontSizeSubtitle,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
-                            SizedBox(height: 4),
+                            AppConstants.gap4,
                             Text(
                               'KI erkennt Zutaten',
                               style: TextStyle(
-                                fontSize: 13,
+                                fontSize: AppTheme.fontSizeCaptionLG,
                                 color: AppTheme.mutedForeground,
                               ),
                             ),

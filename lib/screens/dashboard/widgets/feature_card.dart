@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
 import '../../../widgets/common/press_scale_wrapper.dart';
+import '../../../config/constants.dart';
 
 class FeatureCard extends StatelessWidget {
   final String imageAsset;
@@ -25,7 +26,7 @@ class FeatureCard extends StatelessWidget {
     return PressScaleWrapper(
       onTap: onTap,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppConstants.radiusLg),
         child: SizedBox(
           height: 128,
           child: Stack(
@@ -56,12 +57,12 @@ class FeatureCard extends StatelessWidget {
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: AppTheme.primary,
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppConstants.radiusMd),
                     ),
                     child: Text(
                       '$badgeCount',
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: AppTheme.fontSizeCaption,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.foreground,
                       ),
@@ -76,7 +77,7 @@ class FeatureCard extends StatelessWidget {
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(AppConstants.radiusRound),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -86,7 +87,7 @@ class FeatureCard extends StatelessWidget {
                       Text(
                         label,
                         style: const TextStyle(
-                          fontSize: 15,
+                          fontSize: AppTheme.fontSizeBodyLG,
                           fontWeight: FontWeight.w500,
                           color: AppTheme.foreground,
                         ),

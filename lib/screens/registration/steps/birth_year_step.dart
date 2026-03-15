@@ -16,31 +16,31 @@ class BirthYearStep extends StatelessWidget {
     final years = List.generate(100, (i) => currentYear - 10 - i);
 
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: AppConstants.paddingLg,
       child: Column(
         children: [
-          const SizedBox(height: 24),
+          AppConstants.gap24,
           const MascotImage(assetPath: AppConstants.mascotHappy, width: 120, height: 120),
-          const SizedBox(height: 16),
+          AppConstants.gap16,
           const Text(
             'Wann wurdest du geboren?',
             style: TextStyle(
-              fontSize: 24,
+              fontSize: AppTheme.fontSizeHeadingLG,
               fontWeight: FontWeight.w700,
               color: AppTheme.foreground,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 8),
+          AppConstants.gap8,
           const Text(
             'Diese Information hilft uns dabei, deine Verdauung besser zu analysieren.',
-            style: TextStyle(fontSize: 15, color: AppTheme.mutedForeground),
+            style: TextStyle(fontSize: AppTheme.fontSizeBodyLG, color: AppTheme.mutedForeground),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 24),
+          AppConstants.gap24,
           Expanded(
             child: Container(
-              padding: const EdgeInsets.all(16),
+              padding: AppConstants.paddingMd,
               decoration: BoxDecoration(
                 color: AppTheme.beige,
                 borderRadius: BorderRadius.circular(24),

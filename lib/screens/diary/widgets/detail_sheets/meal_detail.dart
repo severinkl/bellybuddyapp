@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../config/app_theme.dart';
+import '../../../../config/constants.dart';
 import '../../../../models/meal_entry.dart';
 import '../meal_image.dart';
 
@@ -17,9 +18,9 @@ class MealDetail extends StatelessWidget {
         if (meal.ingredients.isNotEmpty) ...[
           const Text(
             'Zutaten',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            style: TextStyle(fontSize: AppTheme.fontSizeSubtitle, fontWeight: FontWeight.w600),
           ),
-          const SizedBox(height: 8),
+          AppConstants.gap8,
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -28,7 +29,7 @@ class MealDetail extends StatelessWidget {
           ),
         ],
         if (meal.notes != null) ...[
-          const SizedBox(height: 16),
+          AppConstants.gap16,
           Text(meal.notes!,
               style: const TextStyle(color: AppTheme.mutedForeground)),
         ],

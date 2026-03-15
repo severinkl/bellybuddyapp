@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../router/route_names.dart';
+import '../../config/constants.dart';
 import '../../services/haptic_service.dart';
 
 class BbBottomNav extends StatelessWidget {
@@ -155,11 +156,11 @@ class _NavItem extends StatelessWidget {
                   : AppTheme.foreground.withValues(alpha: 0.6),
               size: 32,
             ),
-            const SizedBox(height: 4),
+            AppConstants.gap4,
             Text(
               label,
               style: TextStyle(
-                fontSize: 14,
+                fontSize: AppTheme.fontSizeBody,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
                 color: isActive
                     ? AppTheme.foreground
@@ -200,7 +201,7 @@ class _CenterButton extends StatelessWidget {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Color(0x20000000),
+                      color: AppTheme.shadow,
                       blurRadius: 8,
                       offset: Offset(0, 4),
                     ),
@@ -219,7 +220,7 @@ class _CenterButton extends StatelessWidget {
               child: Text(
                 'Essen tracken',
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: AppTheme.fontSizeBody,
                   fontWeight: FontWeight.w500,
                   color: AppTheme.foreground,
                 ),

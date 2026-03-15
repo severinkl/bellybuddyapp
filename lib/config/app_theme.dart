@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'constants.dart';
 
 class AppTheme {
   AppTheme._();
@@ -32,16 +33,7 @@ class AppTheme {
   static const Color navGradientEnd = Color(0xFFFFD5C1);
 
   // Tracker screen background (light blush tint of gradient)
-  static const Color screenBackground = Color(0xFFFFF0F2);
-
-  // Convenience gradient
-  static const LinearGradient pinkPeachGradient = LinearGradient(
-    colors: [navGradientStart, navGradientEnd],
-    begin: Alignment.centerLeft,
-    end: Alignment.centerRight,
-  );
-  static const Color moodSliderActive = Color(0xFFB5CC47);
-  static const Color moodSliderInactive = Color(0xFFE3E0DC);
+  static const Color screenBackground = Color(0xFFF2D9DD);
 
   // Gut feeling colors
   static const Color gutFeelingGood = Color(0xFF40BF40);
@@ -205,7 +197,7 @@ class AppTheme {
           backgroundColor: secondary,
           selectedColor: primary.withValues(alpha: 0.2),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppConstants.radiusRound),
           ),
           side: BorderSide.none,
           labelStyle: const TextStyle(

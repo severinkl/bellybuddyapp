@@ -67,7 +67,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
         _currentPage = (_currentPage + 1) % _slides.length;
         _pageController.animateToPage(
           _currentPage,
-          duration: const Duration(milliseconds: 500),
+          duration: AppConstants.animSlow,
           curve: Curves.easeInOut,
         );
       },
@@ -106,25 +106,25 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                           width: slide.size,
                           height: slide.size,
                         ),
-                        const SizedBox(height: 32),
+                        AppConstants.gap32,
                         BbCard(
-                          padding: const EdgeInsets.all(24),
+                          padding: AppConstants.paddingLg,
                           child: Column(
                             children: [
                               Text(
                                 slide.title,
                                 style: const TextStyle(
-                                  fontSize: 22,
+                                  fontSize: AppTheme.fontSizeHeading,
                                   fontWeight: FontWeight.w700,
                                   color: AppTheme.foreground,
                                 ),
                                 textAlign: TextAlign.center,
                               ),
-                              const SizedBox(height: 12),
+                              AppConstants.gap12,
                               Text(
                                 slide.description,
                                 style: const TextStyle(
-                                  fontSize: 15,
+                                  fontSize: AppTheme.fontSizeBodyLG,
                                   color: AppTheme.mutedForeground,
                                   height: 1.5,
                                 ),
@@ -144,7 +144,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                 onDotClicked: (index) {
                   _pageController.animateToPage(
                     index,
-                    duration: const Duration(milliseconds: 300),
+                    duration: AppConstants.animMedium,
                     curve: Curves.easeInOut,
                   );
                   _currentPage = index;
@@ -158,17 +158,17 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                   expansionFactor: 3,
                 ),
               ),
-              const SizedBox(height: 24),
+              AppConstants.gap24,
               BbButton(
                 label: 'Registrieren',
                 onPressed: () => context.go(RoutePaths.registration),
               ),
-              const SizedBox(height: 12),
+              AppConstants.gap12,
               TextButton(
                 onPressed: () => context.go(RoutePaths.auth),
                 child: const Text('Zur Anmeldung'),
               ),
-              const SizedBox(height: 24),
+              AppConstants.gap24,
             ],
           ),
         ),

@@ -40,7 +40,7 @@ class ToiletDetail extends StatelessWidget {
                     color: isSelected
                         ? color
                         : color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(AppConstants.radiusSm),
                     border: isSelected
                         ? Border.all(color: color, width: 2)
                         : null,
@@ -51,7 +51,7 @@ class ToiletDetail extends StatelessWidget {
                         '$type',
                         style: TextStyle(
                           fontWeight: FontWeight.w700,
-                          fontSize: 16,
+                          fontSize: AppTheme.fontSizeSubtitle,
                           color: isSelected ? Colors.white : color,
                         ),
                       ),
@@ -59,7 +59,7 @@ class ToiletDetail extends StatelessWidget {
                       Text(
                         AppConstants.stoolTypeDescriptions[type]!,
                         style: TextStyle(
-                          fontSize: 9,
+                          fontSize: AppTheme.fontSizeXS,
                           color: isSelected
                               ? Colors.white
                               : AppTheme.mutedForeground,
@@ -74,10 +74,10 @@ class ToiletDetail extends StatelessWidget {
           }),
         ),
         if (!isEditing) ...[
-          const SizedBox(height: 16),
+          AppConstants.gap16,
           Text(
             'Konsistenz: ${AppConstants.stoolTypeDescriptions[toilet.stoolType] ?? 'Normal'}',
-            style: const TextStyle(fontSize: 16),
+            style: const TextStyle(fontSize: AppTheme.fontSizeSubtitle),
           ),
           Text(
             'Stufe ${toilet.stoolType} von 5',

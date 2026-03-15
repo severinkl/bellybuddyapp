@@ -8,6 +8,7 @@ import '../../router/route_names.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/common/bb_button.dart';
 import '../../widgets/common/bb_auth_banner.dart';
+import '../../config/constants.dart';
 
 enum _AuthView { login, forgotPassword }
 
@@ -111,7 +112,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: AppConstants.paddingLg,
           child: Form(
             key: _formKey,
             child: Column(
@@ -123,24 +124,24 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       ? 'Passwort vergessen?'
                       : 'Willkommen zurück',
                   style: const TextStyle(
-                    fontSize: 28,
+                    fontSize: AppTheme.fontSizeDisplay,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.foreground,
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 8),
+                AppConstants.gap8,
                 Text(
                   _view == _AuthView.forgotPassword
                       ? 'Gib deine E-Mail ein, um dein Passwort zurückzusetzen.'
                       : 'Melde dich bei Belly Buddy an',
                   style: const TextStyle(
-                    fontSize: 15,
+                    fontSize: AppTheme.fontSizeBodyLG,
                     color: AppTheme.mutedForeground,
                   ),
                   textAlign: TextAlign.center,
                 ),
-                const SizedBox(height: 32),
+                AppConstants.gap32,
 
                 if (_error != null)
                   BbAuthBanner(text: _error!, isError: true),
@@ -166,7 +167,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     return null;
                   },
                 ),
-                const SizedBox(height: 16),
+                AppConstants.gap16,
 
                 // Password field (not for forgot password)
                 if (_view != _AuthView.forgotPassword) ...[
@@ -181,7 +182,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       return null;
                     },
                   ),
-                  const SizedBox(height: 8),
+                  AppConstants.gap8,
 
                   // Forgot password link
                   Align(
@@ -196,7 +197,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   ),
                 ],
 
-                const SizedBox(height: 16),
+                AppConstants.gap16,
 
                 // Submit button
                 BbButton(
@@ -210,7 +211,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 ),
 
                 if (_view != _AuthView.forgotPassword) ...[
-                  const SizedBox(height: 24),
+                  AppConstants.gap24,
                   const Row(
                     children: [
                       Expanded(child: Divider(color: AppTheme.border)),
@@ -221,7 +222,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       Expanded(child: Divider(color: AppTheme.border)),
                     ],
                   ),
-                  const SizedBox(height: 24),
+                  AppConstants.gap24,
 
                   // Google sign in
                   BbButton(
@@ -232,7 +233,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
                   // Apple sign in (iOS only)
                   if (Platform.isIOS) ...[
-                    const SizedBox(height: 12),
+                    AppConstants.gap12,
                     BbButton(
                       label: 'Mit Apple fortfahren',
                       isOutlined: true,
@@ -241,7 +242,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   ],
                 ],
 
-                const SizedBox(height: 24),
+                AppConstants.gap24,
 
                 // Toggle or back
                 TextButton(

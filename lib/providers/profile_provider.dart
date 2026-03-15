@@ -4,38 +4,32 @@ import '../services/profile_service.dart';
 import '../services/supabase_service.dart';
 import '../services/auth_service.dart';
 import '../utils/logger.dart';
+import '../utils/retry_helper.dart';
 
 
 /// Profile state notifier
 class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
-  static const _maxRetries = 3;
   static const _log = AppLogger('ProfileProvider');
 
   @override
   AsyncValue<UserProfile?> build() => const AsyncValue.loading();
 
   Future<void> fetchProfile() async {
-    await _fetchWithRetry(0);
-  }
-
-  Future<void> _fetchWithRetry(int attempt) async {
     state = const AsyncValue.loading();
     try {
       final userId = SupabaseService.userId;
-      _log.debug('fetchProfile: userId=$userId (attempt ${attempt + 1}/$_maxRetries)');
       if (userId == null) {
         state = const AsyncValue.data(null);
         return;
       }
 
-      final profile = await ProfileService.fetchByUserId(userId);
+      final profile = await retryAsync(
+        () => ProfileService.fetchByUserId(userId),
+        log: _log,
+        label: 'fetchProfile',
+      );
       state = AsyncValue.data(profile);
     } catch (e, st) {
-      _log.error('fetchProfile (attempt ${attempt + 1}/$_maxRetries)', e);
-      if (attempt < _maxRetries - 1) {
-        await Future.delayed(Duration(seconds: (attempt + 1) * 2));
-        return _fetchWithRetry(attempt + 1);
-      }
       state = AsyncValue.error(e, st);
     }
   }
@@ -66,18 +60,20 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
   }
 
   Future<void> updateProfile(UserProfile profile) async {
-    try {
-      final userId = SupabaseService.userId;
-      if (userId == null) throw Exception('Not authenticated');
+    final previous = state;
+    final userId = SupabaseService.userId;
+    if (userId == null) throw Exception('Not authenticated');
 
+    // Optimistic update — revert on failure
+    state = AsyncValue.data(profile.copyWith(userId: userId));
+
+    try {
       final data = profile.toJson();
       data.remove('user_id');
 
       await ProfileService.update(userId, data);
-
-      state = AsyncValue.data(profile.copyWith(userId: userId));
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
+    } catch (e) {
+      state = previous;
       rethrow;
     }
   }

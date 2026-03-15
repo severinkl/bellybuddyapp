@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
+import '../../config/constants.dart';
 import '../../services/haptic_service.dart';
 
 /// Wraps child content with edge-triggered horizontal swipe navigation.
@@ -100,7 +101,7 @@ class _SwipeablePagesState extends State<SwipeablePages> {
     _startY = null;
     _isHorizontal = null;
 
-    Future.delayed(const Duration(milliseconds: 300), () {
+    Future.delayed(AppConstants.animMedium, () {
       if (mounted) setState(() => _isAnimating = false);
     });
   }
@@ -115,7 +116,7 @@ class _SwipeablePagesState extends State<SwipeablePages> {
         children: [
           AnimatedContainer(
             duration: _isAnimating
-                ? const Duration(milliseconds: 300)
+                ? AppConstants.animMedium
                 : Duration.zero,
             curve: Curves.easeOutCubic,
             transform: Matrix4.translationValues(_translateX * 0.3, 0, 0),
@@ -130,7 +131,7 @@ class _SwipeablePagesState extends State<SwipeablePages> {
               child: Center(
                 child: AnimatedOpacity(
                   opacity: (_translateX / _swipeThreshold).clamp(0.0, 1.0),
-                  duration: const Duration(milliseconds: 150),
+                  duration: AppConstants.animFast,
                   child: Container(
                     width: 32,
                     height: 32,
@@ -139,7 +140,7 @@ class _SwipeablePagesState extends State<SwipeablePages> {
                       shape: BoxShape.circle,
                       boxShadow: const [
                         BoxShadow(
-                          color: Color(0x20000000),
+                          color: AppTheme.shadow,
                           blurRadius: 8,
                         ),
                       ],
@@ -148,7 +149,7 @@ class _SwipeablePagesState extends State<SwipeablePages> {
                       child: Text(
                         '\u2039',
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: AppTheme.fontSizeTitleLG,
                           color: AppTheme.mutedForeground,
                         ),
                       ),
@@ -166,7 +167,7 @@ class _SwipeablePagesState extends State<SwipeablePages> {
               child: Center(
                 child: AnimatedOpacity(
                   opacity: (_translateX.abs() / _swipeThreshold).clamp(0.0, 1.0),
-                  duration: const Duration(milliseconds: 150),
+                  duration: AppConstants.animFast,
                   child: Container(
                     width: 32,
                     height: 32,
@@ -175,7 +176,7 @@ class _SwipeablePagesState extends State<SwipeablePages> {
                       shape: BoxShape.circle,
                       boxShadow: const [
                         BoxShadow(
-                          color: Color(0x20000000),
+                          color: AppTheme.shadow,
                           blurRadius: 8,
                         ),
                       ],
@@ -184,7 +185,7 @@ class _SwipeablePagesState extends State<SwipeablePages> {
                       child: Text(
                         '\u203A',
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: AppTheme.fontSizeTitleLG,
                           color: AppTheme.mutedForeground,
                         ),
                       ),

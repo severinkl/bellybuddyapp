@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../config/app_theme.dart';
+import '../../../../config/constants.dart';
 import '../../../../models/drink_entry.dart';
 
 class DrinkDetail extends StatelessWidget {
@@ -24,30 +25,30 @@ class DrinkDetail extends StatelessWidget {
         children: [
           const Text(
             'Menge (ml)',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            style: TextStyle(fontSize: AppTheme.fontSizeBody, fontWeight: FontWeight.w600),
           ),
-          const SizedBox(height: 8),
+          AppConstants.gap8,
           TextField(
             controller: amountController,
             keyboardType: TextInputType.number,
             decoration: InputDecoration(
               border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(AppConstants.radiusSm)),
               suffixText: 'ml',
             ),
           ),
-          const SizedBox(height: 16),
+          AppConstants.gap16,
           const Text(
             'Notizen',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+            style: TextStyle(fontSize: AppTheme.fontSizeBody, fontWeight: FontWeight.w600),
           ),
-          const SizedBox(height: 8),
+          AppConstants.gap8,
           TextField(
             controller: notesController,
             maxLines: 3,
             decoration: InputDecoration(
               border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  OutlineInputBorder(borderRadius: BorderRadius.circular(AppConstants.radiusSm)),
               hintText: 'Optionale Notizen...',
             ),
           ),
@@ -59,10 +60,10 @@ class DrinkDetail extends StatelessWidget {
       children: [
         Text(
           '${drink.amountMl} ml',
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+          style: const TextStyle(fontSize: AppTheme.fontSizeTitle, fontWeight: FontWeight.w600),
         ),
         if (drink.notes != null) ...[
-          const SizedBox(height: 8),
+          AppConstants.gap8,
           Text(drink.notes!,
               style: const TextStyle(color: AppTheme.mutedForeground)),
         ],

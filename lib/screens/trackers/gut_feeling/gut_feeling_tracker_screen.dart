@@ -60,7 +60,7 @@ class _GutFeelingTrackerScreenState
     _pageController = PageController();
     _entryController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 500),
+      duration: AppConstants.animSlow,
     );
 
     _tabSelectorSlide = Tween<Offset>(
@@ -185,7 +185,7 @@ class _GutFeelingTrackerScreenState
                   ),
                 ),
               ),
-              const SizedBox(height: 24),
+              AppConstants.gap24,
 
               // PageView for smooth tab transitions
               Expanded(

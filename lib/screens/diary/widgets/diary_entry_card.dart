@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
-import '../../../models/meal_entry.dart';
-import '../../../models/gut_feeling_entry.dart';
 import '../../../providers/diary_provider.dart';
 import '../../../services/haptic_service.dart';
 import '../../../utils/date_format_utils.dart';
@@ -39,15 +37,13 @@ class DiaryEntryCard extends StatelessWidget {
       };
 
   Widget get _leadingWidget {
-    if (entry.type == DiaryEntryType.meal) {
-      final meal = entry.data as MealEntry;
+    if (entry.data case MealDiaryData(:final meal)) {
       if (meal.imageUrl != null) {
         return MealThumbnail(imageUrl: meal.imageUrl!);
       }
     }
-    if (entry.type == DiaryEntryType.gutFeeling) {
-      final gut = entry.data as GutFeelingEntry;
-      final rating = calculateGutFeelingRating(gut);
+    if (entry.data case GutFeelingDiaryData(:final gutFeeling)) {
+      final rating = calculateGutFeelingRating(gutFeeling);
       return MascotImage(
         assetPath: mascotForRating(rating.level),
         width: 40,
@@ -122,7 +118,7 @@ class DiaryEntryCard extends StatelessWidget {
           padding: const EdgeInsets.only(right: 20),
           decoration: BoxDecoration(
             color: AppTheme.destructive,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(AppConstants.radiusLg),
           ),
           child: const Icon(Icons.delete, color: Colors.white),
         ),
@@ -140,7 +136,7 @@ class DiaryEntryCard extends StatelessWidget {
                       Text(
                         entry.title,
                         style: const TextStyle(
-                          fontSize: 15,
+                          fontSize: AppTheme.fontSizeBodyLG,
                           fontWeight: FontWeight.w600,
                           color: AppTheme.foreground,
                         ),
@@ -148,7 +144,7 @@ class DiaryEntryCard extends StatelessWidget {
                       Text(
                         entry.subtitle,
                         style: const TextStyle(
-                          fontSize: 13,
+                          fontSize: AppTheme.fontSizeCaptionLG,
                           color: AppTheme.mutedForeground,
                         ),
                       ),
@@ -158,7 +154,7 @@ class DiaryEntryCard extends StatelessWidget {
                 Text(
                   formatTime(entry.trackedAt),
                   style: const TextStyle(
-                    fontSize: 13,
+                    fontSize: AppTheme.fontSizeCaptionLG,
                     color: AppTheme.mutedForeground,
                   ),
                 ),

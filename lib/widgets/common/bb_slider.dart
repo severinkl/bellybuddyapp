@@ -73,7 +73,7 @@ class BbSlider extends StatelessWidget {
                 Text(
                   leftLabel ?? '',
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: AppTheme.fontSizeCaption,
                     color: AppTheme.mutedForeground,
                   ),
                 ),
@@ -81,14 +81,14 @@ class BbSlider extends StatelessWidget {
                   Text(
                     centerLabel!,
                     style: const TextStyle(
-                      fontSize: 12,
+                      fontSize: AppTheme.fontSizeCaption,
                       color: AppTheme.mutedForeground,
                     ),
                   ),
                 Text(
                   rightLabel ?? '',
                   style: const TextStyle(
-                    fontSize: 12,
+                    fontSize: AppTheme.fontSizeCaption,
                     color: AppTheme.mutedForeground,
                   ),
                 ),

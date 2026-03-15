@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../config/app_theme.dart';
+import '../../../../config/constants.dart';
 import '../../../../models/drink.dart';
 import '../../../../providers/drink_tracker_provider.dart';
 import '../../../../services/haptic_service.dart';
@@ -37,7 +38,7 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
     if (_focusNode.hasFocus) {
       _syncOverlay();
     } else {
-      Future.delayed(const Duration(milliseconds: 200), () {
+      Future.delayed(AppConstants.animNormal, () {
         if (mounted && !_focusNode.hasFocus && _overlayController.isShowing) {
           _overlayController.hide();
         }
@@ -88,7 +89,7 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
             child: Material(
               elevation: 8,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(AppConstants.radiusLg),
                 side: const BorderSide(color: AppTheme.border),
               ),
               color: AppTheme.card,
@@ -112,7 +113,7 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
                               Expanded(
                                 child: Text(
                                   drink.name,
-                                  style: const TextStyle(fontSize: 14),
+                                  style: const TextStyle(fontSize: AppTheme.fontSizeBody),
                                 ),
                               ),
                               if (isOwn)
@@ -169,15 +170,15 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
             contentPadding:
                 const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(100),
+              borderRadius: BorderRadius.circular(AppConstants.radiusFull),
               borderSide: BorderSide.none,
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(100),
+              borderRadius: BorderRadius.circular(AppConstants.radiusFull),
               borderSide: BorderSide.none,
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(100),
+              borderRadius: BorderRadius.circular(AppConstants.radiusFull),
               borderSide: BorderSide.none,
             ),
           ),

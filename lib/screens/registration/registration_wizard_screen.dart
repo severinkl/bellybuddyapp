@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../config/app_theme.dart';
+import '../../config/constants.dart';
 import '../../models/user_profile.dart';
 import '../../providers/profile_provider.dart';
 import '../../router/route_names.dart';
@@ -42,16 +43,14 @@ class _RegistrationWizardScreenState
   String? _diet;
   List<String> _symptoms = [];
   List<String> _intolerances = [];
-  List<String> _fructoseTriggers = [];
-  List<String> _lactoseTriggers = [];
-  List<String> _histaminTriggers = [];
+  Map<String, List<String>> _triggers = {};
 
   static const _totalSteps = 7;
 
   void _goToStep(int step) {
     _pageController.animateToPage(
       step,
-      duration: const Duration(milliseconds: 300),
+      duration: AppConstants.animMedium,
       curve: Curves.easeInOut,
     );
     setState(() => _currentStep = step);
@@ -86,9 +85,9 @@ class _RegistrationWizardScreenState
       diet: _diet,
       symptoms: _symptoms,
       intolerances: _intolerances,
-      fructoseTriggers: _fructoseTriggers,
-      lactoseTriggers: _lactoseTriggers,
-      histaminTriggers: _histaminTriggers,
+      fructoseTriggers: _triggers['Fruktose'] ?? [],
+      lactoseTriggers: _triggers['Laktose'] ?? [],
+      histaminTriggers: _triggers['Histamin'] ?? [],
     );
     await ref.read(profileProvider.notifier).createProfile(profile);
   }
@@ -196,15 +195,9 @@ class _RegistrationWizardScreenState
                   IntolerancesStep(
                     selected: _intolerances,
                     onChanged: (v) => setState(() => _intolerances = v),
-                    fructoseTriggers: _fructoseTriggers,
-                    onFructoseTriggersChanged: (v) =>
-                        setState(() => _fructoseTriggers = v),
-                    lactoseTriggers: _lactoseTriggers,
-                    onLactoseTriggersChanged: (v) =>
-                        setState(() => _lactoseTriggers = v),
-                    histaminTriggers: _histaminTriggers,
-                    onHistaminTriggersChanged: (v) =>
-                        setState(() => _histaminTriggers = v),
+                    triggers: _triggers,
+                    onTriggersChanged: (intolerance, t) =>
+                        setState(() => _triggers = {..._triggers, intolerance: t}),
                   ),
                   AuthStep(
                     isLoading: _isSaving,

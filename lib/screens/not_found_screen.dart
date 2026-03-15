@@ -23,25 +23,25 @@ class NotFoundScreen extends StatelessWidget {
                   width: 120,
                   height: 120,
                 ),
-                const SizedBox(height: 24),
+                AppConstants.gap24,
                 const Text(
                   'Seite nicht gefunden',
                   style: TextStyle(
-                    fontSize: 24,
+                    fontSize: AppTheme.fontSizeHeadingLG,
                     fontWeight: FontWeight.w700,
                     color: AppTheme.foreground,
                   ),
                 ),
-                const SizedBox(height: 8),
+                AppConstants.gap8,
                 const Text(
                   'Die angeforderte Seite existiert leider nicht.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    fontSize: 15,
+                    fontSize: AppTheme.fontSizeBodyLG,
                     color: AppTheme.mutedForeground,
                   ),
                 ),
-                const SizedBox(height: 32),
+                AppConstants.gap32,
                 ElevatedButton(
                   onPressed: () => context.go(RoutePaths.dashboard),
                   child: const Text('Zurück zum Dashboard'),

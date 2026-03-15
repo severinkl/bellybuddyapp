@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../../config/app_theme.dart';
+import '../../../../config/constants.dart';
 import '../../../../services/haptic_service.dart';
 
 class MoodTabSelector extends StatelessWidget {
@@ -17,7 +19,7 @@ class MoodTabSelector extends StatelessWidget {
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.6),
-        borderRadius: BorderRadius.circular(100),
+        borderRadius: BorderRadius.circular(AppConstants.radiusFull),
       ),
       child: Row(
         children: [
@@ -39,12 +41,12 @@ class MoodTabSelector extends StatelessWidget {
           }
         },
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
+          duration: AppConstants.animNormal,
           curve: Curves.easeInOut,
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
             color: isActive ? Colors.white : Colors.white.withValues(alpha: 0.0),
-            borderRadius: BorderRadius.circular(100),
+            borderRadius: BorderRadius.circular(AppConstants.radiusFull),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: isActive ? 0.08 : 0.0),
@@ -54,13 +56,13 @@ class MoodTabSelector extends StatelessWidget {
             ],
           ),
           child: AnimatedDefaultTextStyle(
-            duration: const Duration(milliseconds: 200),
+            duration: AppConstants.animNormal,
             style: TextStyle(
-              fontSize: 15,
+              fontSize: AppTheme.fontSizeBodyLG,
               fontWeight: FontWeight.w500,
               color: isActive
-                  ? const Color(0xFF302820)
-                  : const Color(0xFF302820).withValues(alpha: 0.6),
+                  ? AppTheme.foreground
+                  : AppTheme.foreground.withValues(alpha: 0.6),
             ),
             child: Text(label, textAlign: TextAlign.center),
           ),

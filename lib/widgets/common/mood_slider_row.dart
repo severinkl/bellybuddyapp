@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../config/constants.dart';
 import '../../services/haptic_service.dart';
 import 'bb_slider.dart';
 import 'mascot_image.dart';
@@ -143,12 +144,12 @@ class _AnimatedMascotState extends State<_AnimatedMascot>
       builder: (context, child) {
         return AnimatedOpacity(
           opacity: targetOpacity,
-          duration: const Duration(milliseconds: 300),
+          duration: AppConstants.animMedium,
           child: AnimatedScale(
             scale: _bounceController.isAnimating
                 ? _bounceAnimation.value
                 : targetScale,
-            duration: const Duration(milliseconds: 300),
+            duration: AppConstants.animMedium,
             child: child,
           ),
         );

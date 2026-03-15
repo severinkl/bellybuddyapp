@@ -43,7 +43,7 @@ class BbSettingsItem extends StatelessWidget {
                   Text(
                     title,
                     style: const TextStyle(
-                      fontSize: 16,
+                      fontSize: AppTheme.fontSizeSubtitle,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.foreground,
                     ),
@@ -51,7 +51,7 @@ class BbSettingsItem extends StatelessWidget {
                   Text(
                     subtitle,
                     style: const TextStyle(
-                      fontSize: 13,
+                      fontSize: AppTheme.fontSizeCaptionLG,
                       color: AppTheme.mutedForeground,
                     ),
                   ),

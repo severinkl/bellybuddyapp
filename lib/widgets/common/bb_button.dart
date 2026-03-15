@@ -8,6 +8,7 @@ class BbButton extends StatelessWidget {
   final bool isLoading;
   final bool isOutlined;
   final bool isDestructive;
+  final bool isSecondary;
   final IconData? icon;
 
   const BbButton({
@@ -17,6 +18,7 @@ class BbButton extends StatelessWidget {
     this.isLoading = false,
     this.isOutlined = false,
     this.isDestructive = false,
+    this.isSecondary = false,
     this.icon,
   });
 
@@ -68,7 +70,12 @@ class BbButton extends StatelessWidget {
               backgroundColor: AppTheme.destructive,
               foregroundColor: Colors.white,
             )
-          : null,
+          : isSecondary
+              ? ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.secondary,
+                  foregroundColor: AppTheme.secondaryForeground,
+                )
+              : null,
       child: child,
     );
   }

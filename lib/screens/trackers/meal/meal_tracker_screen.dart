@@ -76,7 +76,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
                         autofocus: true,
                         textAlign: TextAlign.center,
                         style: const TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.w600),
+                            fontSize: AppTheme.fontSizeTitle, fontWeight: FontWeight.w600),
                         decoration: const InputDecoration(
                           border: InputBorder.none,
                           contentPadding: EdgeInsets.zero,
@@ -93,7 +93,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                  fontSize: 18, fontWeight: FontWeight.w600),
+                                  fontSize: AppTheme.fontSizeTitle, fontWeight: FontWeight.w600),
                             ),
                           ),
                           const SizedBox(width: 4),
@@ -101,7 +101,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
                         ],
                       ),
               ),
-              const SizedBox(height: 16),
+              AppConstants.gap16,
 
               // 2. Date/Time (moved before image)
               DateTimePickerTile(
@@ -109,7 +109,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
                 onChanged: (dt) =>
                     ref.read(mealTrackerProvider.notifier).setTrackedAt(dt),
               ),
-              const SizedBox(height: 16),
+              AppConstants.gap16,
 
               // 3. Image capture
               MealImageSection(
@@ -138,7 +138,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
                   _titleController.text = 'Neue Mahlzeit';
                 },
               ),
-              const SizedBox(height: 16),
+              AppConstants.gap16,
 
               // 4. Ingredients
               IngredientSearch(
@@ -193,7 +193,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
                           'Getränk dazu tracken',
                           style: TextStyle(
                             color: AppTheme.primary,
-                            fontSize: 14,
+                            fontSize: AppTheme.fontSizeBody,
                             fontWeight: FontWeight.w500,
                           ),
                         ),

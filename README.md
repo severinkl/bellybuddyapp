@@ -15,3 +15,7 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+
+## Design System
+
+`lib/config/app_theme.dart` is the single source of truth for colors and typography. All color values and font sizes are defined as constants in `AppTheme` — widget files reference these constants instead of hardcoding values.

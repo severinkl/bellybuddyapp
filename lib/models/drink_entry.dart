@@ -5,6 +5,8 @@ part 'drink_entry.g.dart';
 
 @freezed
 abstract class DrinkEntry with _$DrinkEntry {
+  const DrinkEntry._();
+
   const factory DrinkEntry({
     required String id,
     @JsonKey(name: 'user_id') String? userId,
@@ -22,6 +24,17 @@ abstract class DrinkEntry with _$DrinkEntry {
 
   factory DrinkEntry.fromJson(Map<String, dynamic> json) =>
       _$DrinkEntryFromJson(json);
+
+  /// Produces a JSON map suitable for inserting into the `drink_entries` table.
+  ///
+  /// Unlike [toJson], this excludes `drinkName` (which comes from a join)
+  /// and includes only the columns that belong to the `drink_entries` table.
+  Map<String, dynamic> toInsertJson() => {
+        'tracked_at': trackedAt.toIso8601String(),
+        'drink_id': drinkId,
+        'amount_ml': amountMl,
+        'notes': notes,
+      };
 
   /// Canonical factory for database rows.
   ///

@@ -4,6 +4,7 @@ import '../models/replacement_ingredient.dart';
 import '../services/ingredient_service.dart';
 import '../services/supabase_service.dart';
 import '../utils/logger.dart';
+import '../utils/retry_helper.dart';
 
 class IngredientSuggestionNotifier
     extends Notifier<AsyncValue<List<IngredientSuggestionGroup>>> {
@@ -22,7 +23,11 @@ class IngredientSuggestionNotifier
         return;
       }
 
-      final data = await IngredientService.fetchSuggestions(userId);
+      final data = await retryAsync(
+        () => IngredientService.fetchSuggestions(userId),
+        log: _log,
+        label: 'fetchSuggestions',
+      );
 
       // Group rows by detected_ingredient_id
       final grouped = <String, _GroupAccumulator>{};

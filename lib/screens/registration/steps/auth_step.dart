@@ -61,34 +61,34 @@ class _AuthStepState extends State<AuthStep> {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: AppConstants.paddingLg,
       child: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SizedBox(height: 16),
+            AppConstants.gap16,
             const MascotImage(assetPath: AppConstants.mascotEnergetic, width: 120, height: 120),
-            const SizedBox(height: 16),
+            AppConstants.gap16,
             const Text(
               'Konto erstellen',
               style: TextStyle(
-                fontSize: 28,
+                fontSize: AppTheme.fontSizeDisplay,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.foreground,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 8),
+            AppConstants.gap8,
             const Text(
               'Erstelle dein Konto, um dein Profil zu speichern.',
               style: TextStyle(
-                fontSize: 15,
+                fontSize: AppTheme.fontSizeBodyLG,
                 color: AppTheme.mutedForeground,
               ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 32),
+            AppConstants.gap32,
 
             if (widget.error != null)
               BbAuthBanner(text: widget.error!, isError: true),
@@ -107,7 +107,7 @@ class _AuthStepState extends State<AuthStep> {
                 return null;
               },
             ),
-            const SizedBox(height: 16),
+            AppConstants.gap16,
 
             TextFormField(
               controller: _passwordController,
@@ -121,7 +121,7 @@ class _AuthStepState extends State<AuthStep> {
                 return null;
               },
             ),
-            const SizedBox(height: 8),
+            AppConstants.gap8,
 
             BbPasswordHint(
               text: 'Mindestens 8 Zeichen',
@@ -139,7 +139,7 @@ class _AuthStepState extends State<AuthStep> {
               text: 'Mindestens eine Zahl',
               isValid: _passwordController.text.contains(RegExp(r'[0-9]')),
             ),
-            const SizedBox(height: 24),
+            AppConstants.gap24,
 
             BbButton(
               label: 'Registrieren',
@@ -147,7 +147,7 @@ class _AuthStepState extends State<AuthStep> {
               onPressed: _isPasswordValid ? _submit : null,
             ),
 
-            const SizedBox(height: 24),
+            AppConstants.gap24,
             const Row(
               children: [
                 Expanded(child: Divider(color: AppTheme.border)),
@@ -158,7 +158,7 @@ class _AuthStepState extends State<AuthStep> {
                 Expanded(child: Divider(color: AppTheme.border)),
               ],
             ),
-            const SizedBox(height: 24),
+            AppConstants.gap24,
 
             BbButton(
               label: 'Mit Google fortfahren',
@@ -167,7 +167,7 @@ class _AuthStepState extends State<AuthStep> {
             ),
 
             if (Platform.isIOS) ...[
-              const SizedBox(height: 12),
+              AppConstants.gap12,
               BbButton(
                 label: 'Mit Apple fortfahren',
                 isOutlined: true,
@@ -175,7 +175,7 @@ class _AuthStepState extends State<AuthStep> {
               ),
             ],
 
-            const SizedBox(height: 24),
+            AppConstants.gap24,
             TextButton(
               onPressed: () => context.go(RoutePaths.auth),
               child: const Text('Bereits registriert? Anmelden'),

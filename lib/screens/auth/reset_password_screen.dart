@@ -4,6 +4,7 @@ import '../../config/app_theme.dart';
 import '../../router/route_names.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/common/bb_button.dart';
+import '../../config/constants.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
   const ResetPasswordScreen({super.key});
@@ -55,7 +56,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       appBar: AppBar(title: const Text('Neues Passwort')),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: AppConstants.paddingLg,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -65,7 +66,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
                     color: AppTheme.destructive.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppConstants.radiusMd),
                   ),
                   child: Text(
                     _error!,
@@ -78,13 +79,13 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
                 obscureText: true,
                 decoration: const InputDecoration(labelText: 'Neues Passwort'),
               ),
-              const SizedBox(height: 16),
+              AppConstants.gap16,
               TextFormField(
                 controller: _confirmController,
                 obscureText: true,
                 decoration: const InputDecoration(labelText: 'Passwort bestätigen'),
               ),
-              const SizedBox(height: 24),
+              AppConstants.gap24,
               BbButton(
                 label: 'Passwort ändern',
                 isLoading: _isLoading,

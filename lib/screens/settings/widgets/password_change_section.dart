@@ -1,0 +1,263 @@
+import 'package:flutter/material.dart';
+import '../../../config/app_theme.dart';
+import '../../../services/auth_service.dart';
+import '../../../services/supabase_service.dart';
+import '../../../widgets/common/bb_button.dart';
+import '../../../widgets/common/bb_password_hint.dart';
+import '../../../config/constants.dart';
+import '../../../widgets/common/settings_section_card.dart';
+
+class PasswordChangeSection extends StatefulWidget {
+  const PasswordChangeSection({super.key});
+
+  @override
+  State<PasswordChangeSection> createState() => _PasswordChangeSectionState();
+}
+
+class _PasswordChangeSectionState extends State<PasswordChangeSection> {
+  final _currentPasswordController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  bool _isChangingPassword = false;
+  bool _expanded = false;
+  bool _showCurrentPassword = false;
+  bool _showNewPassword = false;
+  bool _showConfirmPassword = false;
+
+  @override
+  void dispose() {
+    _currentPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
+  bool get _hasMinLength => _newPasswordController.text.length >= 8;
+  bool get _hasUppercase =>
+      _newPasswordController.text.contains(RegExp(r'[A-Z]'));
+  bool get _hasLowercase =>
+      _newPasswordController.text.contains(RegExp(r'[a-z]'));
+  bool get _hasNumber =>
+      _newPasswordController.text.contains(RegExp(r'[0-9]'));
+  bool get _passwordsMatch =>
+      _newPasswordController.text.isNotEmpty &&
+      _newPasswordController.text == _confirmPasswordController.text;
+  bool get _allRequirementsMet =>
+      _hasMinLength && _hasUppercase && _hasLowercase && _hasNumber;
+  bool get _canSubmitPassword =>
+      _allRequirementsMet &&
+      _passwordsMatch &&
+      _currentPasswordController.text.isNotEmpty;
+
+  Future<void> _changePassword() async {
+    if (!_canSubmitPassword) return;
+    setState(() => _isChangingPassword = true);
+    try {
+      final email = SupabaseService.currentUser?.email;
+      if (email == null) throw Exception('No email found');
+      await AuthService.signInWithEmail(
+          email, _currentPasswordController.text);
+      await AuthService.updatePassword(_newPasswordController.text);
+      _currentPasswordController.clear();
+      _newPasswordController.clear();
+      _confirmPasswordController.clear();
+      if (mounted) {
+        setState(() => _expanded = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Passwort geändert!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text(
+                  'Aktuelles Passwort ist falsch oder ein Fehler ist aufgetreten.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isChangingPassword = false);
+    }
+  }
+
+  Future<void> _forgotPassword() async {
+    final email = SupabaseService.currentUser?.email;
+    if (email == null) return;
+    try {
+      await AuthService.resetPassword(email);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Link zum Zurücksetzen wurde gesendet.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Fehler beim Senden des Links.')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => setState(() => _expanded = !_expanded),
+      child: SettingsSectionCard(
+        icon: Icons.lock_outline,
+        title: 'Passwort ändern',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text(
+                  'Passwort aktualisieren',
+                  style: TextStyle(
+                      fontSize: AppTheme.fontSizeBody,
+                      color: AppTheme.mutedForeground),
+                ),
+                const Spacer(),
+                Icon(
+                  _expanded ? Icons.expand_less : Icons.expand_more,
+                  color: AppTheme.mutedForeground,
+                ),
+              ],
+            ),
+            AnimatedCrossFade(
+              firstChild: const SizedBox.shrink(),
+              secondChild: _buildPasswordFields(),
+              crossFadeState: _expanded
+                  ? CrossFadeState.showSecond
+                  : CrossFadeState.showFirst,
+              duration: const Duration(milliseconds: 250),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPasswordFields() {
+    return GestureDetector(
+      onTap: () {},
+      child: Padding(
+        padding: const EdgeInsets.only(top: 16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              controller: _currentPasswordController,
+              obscureText: !_showCurrentPassword,
+              decoration: InputDecoration(
+                labelText: 'Aktuelles Passwort',
+                prefixIcon: const Icon(Icons.lock_outline),
+                suffixIcon: IconButton(
+                  icon: Icon(_showCurrentPassword
+                      ? Icons.visibility_off
+                      : Icons.visibility),
+                  onPressed: () => setState(
+                      () => _showCurrentPassword = !_showCurrentPassword),
+                ),
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+            AppConstants.gap12,
+            TextField(
+              controller: _newPasswordController,
+              obscureText: !_showNewPassword,
+              decoration: InputDecoration(
+                labelText: 'Neues Passwort',
+                prefixIcon: const Icon(Icons.lock_outline),
+                suffixIcon: IconButton(
+                  icon: Icon(_showNewPassword
+                      ? Icons.visibility_off
+                      : Icons.visibility),
+                  onPressed: () =>
+                      setState(() => _showNewPassword = !_showNewPassword),
+                ),
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+            AppConstants.gap12,
+            BbPasswordHint(
+                text: 'Mindestens 8 Zeichen', isValid: _hasMinLength),
+            BbPasswordHint(
+                text: 'Mindestens 1 Großbuchstabe', isValid: _hasUppercase),
+            BbPasswordHint(
+                text: 'Mindestens 1 Kleinbuchstabe', isValid: _hasLowercase),
+            BbPasswordHint(
+                text: 'Mindestens 1 Zahl', isValid: _hasNumber),
+            AppConstants.gap12,
+            TextField(
+              controller: _confirmPasswordController,
+              obscureText: !_showConfirmPassword,
+              decoration: InputDecoration(
+                labelText: 'Passwort bestätigen',
+                prefixIcon: const Icon(Icons.lock_outline),
+                suffixIcon: IconButton(
+                  icon: Icon(_showConfirmPassword
+                      ? Icons.visibility_off
+                      : Icons.visibility),
+                  onPressed: () => setState(
+                      () => _showConfirmPassword = !_showConfirmPassword),
+                ),
+              ),
+              onChanged: (_) => setState(() {}),
+            ),
+            if (_confirmPasswordController.text.isNotEmpty) ...[
+              AppConstants.gap4,
+              Row(
+                children: [
+                  Icon(
+                    _passwordsMatch ? Icons.check_circle : Icons.cancel,
+                    size: 16,
+                    color: _passwordsMatch
+                        ? AppTheme.success
+                        : AppTheme.destructive,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    _passwordsMatch
+                        ? 'Passwörter stimmen überein'
+                        : 'Passwörter stimmen nicht überein',
+                    style: TextStyle(
+                      fontSize: AppTheme.fontSizeCaptionLG,
+                      color: _passwordsMatch
+                          ? AppTheme.success
+                          : AppTheme.destructive,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            AppConstants.gap8,
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: _forgotPassword,
+                style: TextButton.styleFrom(
+                  padding: EdgeInsets.zero,
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: const Text(
+                  'Passwort vergessen?',
+                  style: TextStyle(fontSize: AppTheme.fontSizeCaptionLG),
+                ),
+              ),
+            ),
+            AppConstants.gap16,
+            BbButton(
+              label: 'Passwort ändern',
+              isLoading: _isChangingPassword,
+              onPressed: _canSubmitPassword ? _changePassword : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

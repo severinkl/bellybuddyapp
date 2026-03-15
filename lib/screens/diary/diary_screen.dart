@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/diary_provider.dart';
+import '../../widgets/common/bb_async_state.dart';
 import '../../providers/entries_provider.dart';
 import '../../router/route_names.dart';
 import '../../services/haptic_service.dart';
@@ -66,7 +67,7 @@ class DiaryScreen extends ConsumerWidget {
                         formatDateWeekday(date),
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
-                          fontSize: 16,
+                          fontSize: AppTheme.fontSizeSubtitle,
                           fontWeight: FontWeight.w600,
                           color: AppTheme.foreground,
                         ),
@@ -98,11 +99,10 @@ class DiaryScreen extends ConsumerWidget {
           children: [
             Expanded(
               child: entriesAsync.when(
-                loading: () => const Center(
-                  child: CircularProgressIndicator(color: AppTheme.primary),
-                ),
-                error: (e, _) => Center(
-                  child: Text('Fehler: $e'),
+                loading: () => const BbLoadingState(
+                    message: 'Einträge laden...'),
+                error: (e, _) => const BbErrorState(
+                  message: 'Fehler beim Laden der Einträge.',
                 ),
                 data: (entries) {
                   if (entries.isEmpty) {
@@ -115,20 +115,20 @@ class DiaryScreen extends ConsumerWidget {
                                 ? 'Noch keine Daten für heute.'
                                 : 'Keine Daten für diesen Tag.',
                             style: const TextStyle(
-                              fontSize: 20,
+                              fontSize: AppTheme.fontSizeTitleLG,
                               color: AppTheme.mutedForeground,
                             ),
                           ),
-                          const SizedBox(height: 4),
+                          AppConstants.gap4,
                           const Text(
                             'Bereit zum Tracken?',
                             style: TextStyle(
-                              fontSize: 24,
+                              fontSize: AppTheme.fontSizeHeadingLG,
                               fontWeight: FontWeight.w600,
                               color: AppTheme.foreground,
                             ),
                           ),
-                          const SizedBox(height: 24),
+                          AppConstants.gap24,
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 32),
                             child: Row(
@@ -158,7 +158,7 @@ class DiaryScreen extends ConsumerWidget {
                     );
                   }
                   return ListView.builder(
-                    padding: const EdgeInsets.all(16),
+                    padding: AppConstants.paddingMd,
                     itemCount: entries.length,
                     itemBuilder: (context, index) {
                       final entry = entries[index];

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../config/app_theme.dart';
 import '../../../../config/constants.dart';
 import '../../../../widgets/common/mood_slider_row.dart';
 
@@ -28,9 +29,9 @@ class StimmungTab extends StatelessWidget {
       children: [
         const Text(
           'Wie ist deine Stimmung?',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+          style: TextStyle(fontSize: AppTheme.fontSizeTitleLG, fontWeight: FontWeight.w500),
         ),
-        const SizedBox(height: 16),
+        AppConstants.gap16,
         MoodSliderRow(
           value: stress,
           onChanged: onStressChanged,

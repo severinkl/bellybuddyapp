@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../services/ingredient_service.dart';
+import '../../../../config/constants.dart';
 
 class IngredientSearch extends StatefulWidget {
   final List<String> ingredients;
@@ -51,19 +52,19 @@ class _IngredientSearchState extends State<IngredientSearch> {
         .toList();
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: AppConstants.paddingMd,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(AppConstants.radiusLg),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
             'Zutaten',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+            style: TextStyle(fontSize: AppTheme.fontSizeSubtitle, fontWeight: FontWeight.w600),
           ),
-          const SizedBox(height: 8),
+          AppConstants.gap8,
           if (_isAdding) ...[
             Row(
               children: [
@@ -106,7 +107,7 @@ class _IngredientSearchState extends State<IngredientSearch> {
                 margin: const EdgeInsets.only(top: 4),
                 decoration: BoxDecoration(
                   color: AppTheme.card,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMd),
                   border: Border.all(color: AppTheme.border),
                 ),
                 child: Column(
@@ -133,7 +134,7 @@ class _IngredientSearchState extends State<IngredientSearch> {
                   }).toList(),
                 ),
               ),
-            const SizedBox(height: 8),
+            AppConstants.gap8,
           ],
           Wrap(
             spacing: 8,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../config/app_theme.dart';
 import '../../../utils/signed_url_helper.dart';
+import '../../../config/constants.dart';
 
 class MealImage extends StatefulWidget {
   final String imageUrl;
@@ -39,7 +40,7 @@ class _MealImageState extends State<MealImage> {
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
           color: AppTheme.muted,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
         ),
         child: const Center(
           child: CircularProgressIndicator(
@@ -55,7 +56,7 @@ class _MealImageState extends State<MealImage> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppConstants.radiusMd),
         child: CachedNetworkImage(
           imageUrl: _resolvedUrl!,
           height: 180,

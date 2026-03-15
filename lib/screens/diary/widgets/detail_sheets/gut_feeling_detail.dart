@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../config/app_theme.dart';
+import '../../../../config/constants.dart';
 import '../../../../models/gut_feeling_entry.dart';
 import '../../../../utils/gut_feeling_rating.dart';
 import 'gut_feeling_edit_state.dart';
@@ -55,14 +56,14 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
                   const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: rating.color.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(20),
+                borderRadius: BorderRadius.circular(AppConstants.radiusRound),
               ),
               child: Text(
                 rating.level.label,
                 style: TextStyle(
                   color: rating.color,
                   fontWeight: FontWeight.w600,
-                  fontSize: 14,
+                  fontSize: AppTheme.fontSizeBody,
                 ),
               ),
             ),
@@ -70,14 +71,14 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
             Text(
               '${displayAvg.toStringAsFixed(1)} / 5.0',
               style: const TextStyle(
-                fontSize: 16,
+                fontSize: AppTheme.fontSizeSubtitle,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.mutedForeground,
               ),
             ),
           ],
         ),
-        const SizedBox(height: 16),
+        AppConstants.gap16,
         // Tab selector
         Row(
           children: [
@@ -86,7 +87,7 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
             _tabButton('Stimmung', 1),
           ],
         ),
-        const SizedBox(height: 16),
+        AppConstants.gap16,
         if (_gutFeelingTab == 0)
           _buildBauchgefuehlTab()
         else
@@ -104,7 +105,7 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
             color: isActive ? AppTheme.primary : Colors.transparent,
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(AppConstants.radiusSm),
             border: Border.all(
               color: isActive ? AppTheme.primary : AppTheme.muted,
             ),
@@ -113,7 +114,7 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
             label,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: AppTheme.fontSizeBody,
               fontWeight: FontWeight.w600,
               color: isActive ? Colors.white : AppTheme.mutedForeground,
             ),
@@ -128,19 +129,19 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
       final es = widget.editState!;
       return Column(
         children: [
-          _editSlider('Blähbauch', es.bloating, es.onBloatingChanged),
-          _editSlider('Blähungen', es.gas, es.onGasChanged),
-          _editSlider('Krämpfe', es.cramps, es.onCrampsChanged),
-          _editSlider('Völlegefühl', es.fullness, es.onFullnessChanged),
+          _editSlider(AppConstants.gutFeelingSymptoms[0], es.bloating, es.onBloatingChanged),
+          _editSlider(AppConstants.gutFeelingSymptoms[1], es.gas, es.onGasChanged),
+          _editSlider(AppConstants.gutFeelingSymptoms[2], es.cramps, es.onCrampsChanged),
+          _editSlider(AppConstants.gutFeelingSymptoms[3], es.fullness, es.onFullnessChanged),
         ],
       );
     }
     return Column(
       children: [
-        _detailRow('Blähbauch', widget.gut.bloating),
-        _detailRow('Blähungen', widget.gut.gas),
-        _detailRow('Krämpfe', widget.gut.cramps),
-        _detailRow('Völlegefühl', widget.gut.fullness),
+        _detailRow(AppConstants.gutFeelingSymptoms[0], widget.gut.bloating),
+        _detailRow(AppConstants.gutFeelingSymptoms[1], widget.gut.gas),
+        _detailRow(AppConstants.gutFeelingSymptoms[2], widget.gut.cramps),
+        _detailRow(AppConstants.gutFeelingSymptoms[3], widget.gut.fullness),
       ],
     );
   }
@@ -196,11 +197,11 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label, style: const TextStyle(fontSize: 15)),
+              Text(label, style: const TextStyle(fontSize: AppTheme.fontSizeBodyLG)),
               Text(
                 '$value / 5',
                 style: TextStyle(
-                  fontSize: 15,
+                  fontSize: AppTheme.fontSizeBodyLG,
                   fontWeight: FontWeight.w600,
                   color: color,
                 ),
@@ -233,11 +234,11 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: 15)),
+          Text(label, style: const TextStyle(fontSize: AppTheme.fontSizeBodyLG)),
           Text(
             '$value / 5',
             style: TextStyle(
-              fontSize: 15,
+              fontSize: AppTheme.fontSizeBodyLG,
               fontWeight: FontWeight.w600,
               color: color,
             ),

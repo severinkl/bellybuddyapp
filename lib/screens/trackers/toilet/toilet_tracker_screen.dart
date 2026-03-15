@@ -54,7 +54,7 @@ class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
       successSubMessage: 'Dein Eintrag wurde erfolgreich erfasst.',
       successMascotAsset: AppConstants.mascotWink,
       body: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: AppConstants.paddingLg,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -63,18 +63,18 @@ class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
               value: _trackedAt,
               onChanged: (dt) => setState(() => _trackedAt = dt),
             ),
-            const SizedBox(height: 32),
+            AppConstants.gap32,
 
             // Konsistenz label
             const Text(
               'Konsistenz?',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: AppTheme.fontSizeTitle,
                 fontWeight: FontWeight.w700,
                 color: AppTheme.foreground,
               ),
             ),
-            const SizedBox(height: 24),
+            AppConstants.gap24,
             BbSlider(
               value: _stoolType,
               min: 1,

@@ -56,29 +56,6 @@ class IntoleranceSection extends StatelessWidget {
             }
           },
         ),
-        if (profile.intolerances
-            .any((i) => triggerIntolerances.contains(i))) ...[
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: profile.intolerances
-                .where((i) => triggerIntolerances.contains(i))
-                .map((i) => ActionChip(
-                      label: Text('$i Trigger bearbeiten'),
-                      onPressed: () {
-                        showIntoleranceTriggerModal(
-                          context: context,
-                          intolerance: i,
-                          currentTriggers: _triggersFor(i),
-                          onChanged: (triggers) =>
-                              onTriggersChanged(i, triggers),
-                        );
-                      },
-                    ))
-                .toList(),
-          ),
-        ],
       ],
     );
   }

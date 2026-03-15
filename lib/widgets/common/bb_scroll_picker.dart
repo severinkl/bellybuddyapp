@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
 import '../../services/haptic_service.dart';
+import '../../config/constants.dart';
 
 class BbScrollPicker extends StatefulWidget {
   final List<int> items;
@@ -56,7 +57,7 @@ class _BbScrollPickerState extends State<BbScrollPicker> {
           margin: const EdgeInsets.symmetric(horizontal: 16),
           decoration: BoxDecoration(
             color: AppTheme.muted.withValues(alpha: 0.6),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(AppConstants.radiusMd),
           ),
         ),
         ShaderMask(

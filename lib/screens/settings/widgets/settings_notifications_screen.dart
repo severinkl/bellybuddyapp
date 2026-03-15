@@ -50,7 +50,7 @@ class _SettingsNotificationsScreenState
           final reminderTimes = profile.reminderTimes;
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
+            padding: AppConstants.paddingLg,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -73,12 +73,12 @@ class _SettingsNotificationsScreenState
                         },
                       ),
                       const Divider(),
-                      const SizedBox(height: 12),
+                      AppConstants.gap12,
                       const Text(
                         'Erinnerungszeiten',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                        style: TextStyle(fontSize: AppTheme.fontSizeBodyLG, fontWeight: FontWeight.w600),
                       ),
-                      const SizedBox(height: 8),
+                      AppConstants.gap8,
                       ReminderTimePicker(
                         selectedTimes: reminderTimes,
                         onChanged: (newTimes) {
@@ -89,7 +89,7 @@ class _SettingsNotificationsScreenState
                           });
                         },
                       ),
-                      const SizedBox(height: 16),
+                      AppConstants.gap16,
                       OutlinedButton(
                         onPressed: () async {
                           try {
@@ -117,7 +117,7 @@ class _SettingsNotificationsScreenState
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                AppConstants.gap16,
 
                 // Timezone section
                 SettingsSectionCard(
@@ -128,9 +128,9 @@ class _SettingsNotificationsScreenState
                     children: [
                       const Text(
                         'Für die Erinnerungen zur richtigen Ortszeit',
-                        style: TextStyle(fontSize: 13, color: AppTheme.mutedForeground),
+                        style: TextStyle(fontSize: AppTheme.fontSizeCaptionLG, color: AppTheme.mutedForeground),
                       ),
-                      const SizedBox(height: 12),
+                      AppConstants.gap12,
                       DropdownButtonFormField<String>(
                         initialValue: profile.timezone ?? 'Europe/Berlin',
                         isExpanded: true,
@@ -155,7 +155,7 @@ class _SettingsNotificationsScreenState
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                AppConstants.gap16,
 
                 // Debug section
                 SettingsSectionCard(
@@ -171,7 +171,7 @@ class _SettingsNotificationsScreenState
                             Text(
                               _debugExpanded ? 'Details ausblenden' : 'Details anzeigen',
                               style: const TextStyle(
-                                fontSize: 14,
+                                fontSize: AppTheme.fontSizeBody,
                                 color: AppTheme.mutedForeground,
                               ),
                             ),
@@ -184,7 +184,7 @@ class _SettingsNotificationsScreenState
                         ),
                       ),
                       if (_debugExpanded) ...[
-                        const SizedBox(height: 12),
+                        AppConstants.gap12,
                         _DebugRow(label: 'Plattform', value: Platform.operatingSystem),
                         _DebugRow(label: 'Push aktiviert', value: _pushEnabled ? 'Ja' : 'Nein'),
                         _DebugRow(label: 'Zeitzone', value: profile.timezone ?? 'Europe/Berlin'),
@@ -197,7 +197,7 @@ class _SettingsNotificationsScreenState
                     ],
                   ),
                 ),
-                const SizedBox(height: 32),
+                AppConstants.gap32,
               ],
             ),
           );
@@ -224,13 +224,13 @@ class _DebugRow extends StatelessWidget {
             width: 120,
             child: Text(
               label,
-              style: const TextStyle(fontSize: 13, color: AppTheme.mutedForeground),
+              style: const TextStyle(fontSize: AppTheme.fontSizeCaptionLG, color: AppTheme.mutedForeground),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+              style: const TextStyle(fontSize: AppTheme.fontSizeCaptionLG, fontFamily: 'monospace'),
             ),
           ),
         ],

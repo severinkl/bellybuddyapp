@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
 import '../../../widgets/common/bb_selection_button.dart';
+import '../../../config/constants.dart';
 
 class SymptomsStep extends StatelessWidget {
   final List<String> selected;
@@ -19,20 +20,20 @@ class SymptomsStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: AppConstants.paddingLg,
       child: Column(
         children: [
-          const SizedBox(height: 24),
+          AppConstants.gap24,
           const Text(
             'Welche Beschwerden nerven dich?',
             style: TextStyle(
-              fontSize: 24,
+              fontSize: AppTheme.fontSizeHeadingLG,
               fontWeight: FontWeight.w700,
               color: AppTheme.foreground,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 32),
+          AppConstants.gap32,
           ..._options.map((option) {
             final isSelected = selected.contains(option);
             return BbSelectionButton(

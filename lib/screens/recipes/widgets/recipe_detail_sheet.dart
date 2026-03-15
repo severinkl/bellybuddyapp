@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/recipe.dart';
+import '../../../config/constants.dart';
 
 class RecipeDetailSheet extends StatelessWidget {
   final Recipe recipe;
@@ -25,7 +26,7 @@ class RecipeDetailSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
+      padding: AppConstants.paddingLg,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -38,19 +39,19 @@ class RecipeDetailSheet extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          AppConstants.gap16,
           Text(
             recipe.title,
-            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+            style: const TextStyle(fontSize: AppTheme.fontSizeHeadingLG, fontWeight: FontWeight.w700),
           ),
           if (recipe.description != null) ...[
-            const SizedBox(height: 8),
+            AppConstants.gap8,
             Text(
               recipe.description!,
               style: const TextStyle(color: AppTheme.mutedForeground),
             ),
           ],
-          const SizedBox(height: 16),
+          AppConstants.gap16,
           Row(
             children: [
               if (recipe.cookTime != null)
@@ -59,22 +60,22 @@ class RecipeDetailSheet extends StatelessWidget {
                 _infoChip(Icons.people, '${recipe.servings} Port.'),
             ],
           ),
-          const SizedBox(height: 24),
-          const Text('Zutaten', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
+          AppConstants.gap24,
+          const Text('Zutaten', style: TextStyle(fontSize: AppTheme.fontSizeTitle, fontWeight: FontWeight.w600)),
+          AppConstants.gap8,
           ...recipe.ingredients.map(
             (i) => Padding(
               padding: const EdgeInsets.only(bottom: 4),
-              child: Text('• $i', style: const TextStyle(fontSize: 15)),
+              child: Text('• $i', style: const TextStyle(fontSize: AppTheme.fontSizeBodyLG)),
             ),
           ),
-          const SizedBox(height: 24),
-          const Text('Zubereitung', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
+          AppConstants.gap24,
+          const Text('Zubereitung', style: TextStyle(fontSize: AppTheme.fontSizeTitle, fontWeight: FontWeight.w600)),
+          AppConstants.gap8,
           ...recipe.instructions.asMap().entries.map(
             (e) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: Text('${e.key + 1}. ${e.value}', style: const TextStyle(fontSize: 15)),
+              child: Text('${e.key + 1}. ${e.value}', style: const TextStyle(fontSize: AppTheme.fontSizeBodyLG)),
             ),
           ),
         ],
@@ -88,14 +89,14 @@ class RecipeDetailSheet extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: AppTheme.secondary,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(AppConstants.radiusRound),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 16, color: AppTheme.mutedForeground),
           const SizedBox(width: 4),
-          Text(label, style: const TextStyle(fontSize: 13, color: AppTheme.foreground)),
+          Text(label, style: const TextStyle(fontSize: AppTheme.fontSizeCaptionLG, color: AppTheme.foreground)),
         ],
       ),
     );

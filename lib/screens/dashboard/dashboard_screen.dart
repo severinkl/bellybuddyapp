@@ -55,14 +55,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   child: _DashboardHeader(),
                 ),
               ),
-              const SliverToBoxAdapter(child: SizedBox(height: 24)),
+              const SliverToBoxAdapter(child: AppConstants.gap24),
               const SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.symmetric(horizontal: 24),
                   child: _TrackerCards(),
                 ),
               ),
-              const SliverToBoxAdapter(child: SizedBox(height: 32)),
+              const SliverToBoxAdapter(child: AppConstants.gap32),
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: _ForYouSection(newCount: newCount),
@@ -159,7 +159,7 @@ class _ForYouSection extends StatelessWidget {
             child: Text(
               'Für dich erstellt',
               style: TextStyle(
-                fontSize: 18,
+                fontSize: AppTheme.fontSizeTitle,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.foreground,
               ),
@@ -189,7 +189,7 @@ class _ForYouSection extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          AppConstants.gap12,
           Row(
             children: [
               Expanded(

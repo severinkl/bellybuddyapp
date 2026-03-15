@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../config/app_theme.dart';
 import 'press_scale_wrapper.dart';
+import '../../config/constants.dart';
 
 class TrackerCard extends StatelessWidget {
   final String svgPath;
@@ -21,10 +22,10 @@ class TrackerCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         constraints: const BoxConstraints(minHeight: 120),
-        padding: const EdgeInsets.all(24),
+        padding: AppConstants.paddingLg,
         decoration: BoxDecoration(
           color: AppTheme.beige,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(AppConstants.radiusLg),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -34,11 +35,11 @@ class TrackerCard extends StatelessWidget {
               width: 48,
               height: 48,
             ),
-            const SizedBox(height: 12),
+            AppConstants.gap12,
             Text(
               label,
               style: const TextStyle(
-                fontSize: 17,
+                fontSize: AppTheme.fontSizeSubtitleLG,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.foreground,
               ),
@@ -46,7 +47,7 @@ class TrackerCard extends StatelessWidget {
             const Text(
               'Tracker',
               style: TextStyle(
-                fontSize: 14,
+                fontSize: AppTheme.fontSizeBody,
                 color: AppTheme.mutedForeground,
               ),
             ),

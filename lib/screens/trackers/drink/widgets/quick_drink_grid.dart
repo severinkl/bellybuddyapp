@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../config/app_theme.dart';
+import '../../../../config/constants.dart';
 import '../../../../providers/drink_tracker_provider.dart';
 import '../../../../services/haptic_service.dart';
 
@@ -20,12 +21,12 @@ class QuickDrinkGrid extends ConsumerWidget {
         const Text(
           'Wähle aus deinen letzten Getränken',
           style: TextStyle(
-            fontSize: 13,
+            fontSize: AppTheme.fontSizeCaptionLG,
             fontWeight: FontWeight.w500,
             color: AppTheme.mutedForeground,
           ),
         ),
-        const SizedBox(height: 8),
+        AppConstants.gap8,
         Wrap(
           spacing: 8,
           runSpacing: 8,
@@ -37,19 +38,19 @@ class QuickDrinkGrid extends ConsumerWidget {
                 ref.read(drinkTrackerProvider.notifier).toggleDrink(drink);
               },
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 150),
+                duration: AppConstants.animFast,
                 padding:
                     const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? AppTheme.info
                       : AppTheme.muted.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(100),
+                  borderRadius: BorderRadius.circular(AppConstants.radiusFull),
                 ),
                 child: Text(
                   drink.name,
                   style: TextStyle(
-                    fontSize: 14,
+                    fontSize: AppTheme.fontSizeBody,
                     fontWeight: FontWeight.w500,
                     color: isSelected
                         ? Colors.white

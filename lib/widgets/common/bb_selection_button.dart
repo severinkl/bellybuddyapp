@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
 import '../../services/haptic_service.dart';
+import '../../config/constants.dart';
 
 class BbSelectionButton extends StatelessWidget {
   final String label;
@@ -41,7 +42,7 @@ class BbSelectionButton extends StatelessWidget {
                 ? const EdgeInsets.symmetric(horizontal: 16, vertical: 16)
                 : null,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppConstants.radiusLg),
             ),
           ),
           child: leading != null
@@ -53,7 +54,7 @@ class BbSelectionButton extends StatelessWidget {
                       child: Text(
                         label,
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: AppTheme.fontSizeSubtitle,
                           fontWeight:
                               isSelected ? FontWeight.w600 : FontWeight.w400,
                           color: AppTheme.foreground,
@@ -65,7 +66,7 @@ class BbSelectionButton extends StatelessWidget {
               : Text(
                   label,
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: AppTheme.fontSizeSubtitle,
                     fontWeight:
                         isSelected ? FontWeight.w600 : FontWeight.w400,
                     color: AppTheme.foreground,

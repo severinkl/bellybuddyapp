@@ -3,6 +3,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 
+
 class SplashScreen extends StatefulWidget {
   final VoidCallback onComplete;
 
@@ -53,7 +54,7 @@ class _SplashScreenState extends State<SplashScreen>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 600),
+      duration: AppConstants.animSlower,
     );
     _scaleAnimation = CurvedAnimation(
       parent: _controller,
@@ -88,7 +89,7 @@ class _SplashScreenState extends State<SplashScreen>
 
     if (!mounted) return;
     setState(() => _fadingOut = true);
-    await Future.delayed(const Duration(milliseconds: 300));
+    await Future.delayed(AppConstants.animMedium);
     if (mounted) widget.onComplete();
   }
 
@@ -102,7 +103,7 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return AnimatedOpacity(
       opacity: _fadingOut ? 0.0 : 1.0,
-      duration: const Duration(milliseconds: 300),
+      duration: AppConstants.animMedium,
       child: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -127,21 +128,21 @@ class _SplashScreenState extends State<SplashScreen>
                     width: 96,
                     height: 96,
                   ),
-                  const SizedBox(height: 16),
+                  AppConstants.gap16,
                   const Text(
                     'Belly Buddy',
                     style: TextStyle(
-                      fontSize: 30,
+                      fontSize: AppTheme.fontSizeDisplayLG,
                       fontWeight: FontWeight.w700,
                       color: AppTheme.foreground,
                       decoration: TextDecoration.none,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  AppConstants.gap8,
                   const Text(
                     'Dein Bauchgefühl verstehen',
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: AppTheme.fontSizeSubtitle,
                       fontWeight: FontWeight.w400,
                       color: AppTheme.mutedForeground,
                       decoration: TextDecoration.none,

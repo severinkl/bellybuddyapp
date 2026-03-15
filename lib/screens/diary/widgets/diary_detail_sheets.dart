@@ -1,10 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/app_theme.dart';
-import '../../../models/meal_entry.dart';
-import '../../../models/toilet_entry.dart';
-import '../../../models/gut_feeling_entry.dart';
-import '../../../models/drink_entry.dart';
 import '../../../providers/diary_provider.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../utils/date_format_utils.dart';
@@ -13,6 +9,7 @@ import 'detail_sheets/toilet_detail.dart';
 import 'detail_sheets/gut_feeling_detail.dart';
 import 'detail_sheets/gut_feeling_edit_state.dart';
 import 'detail_sheets/drink_detail.dart';
+import '../../../config/constants.dart';
 
 void showDiaryDetailSheet(BuildContext context, WidgetRef ref, DiaryEntry entry) {
   showModalBottomSheet(
@@ -90,26 +87,23 @@ class _DiaryDetailContentState extends State<_DiaryDetailContent> {
   }
 
   void _resetEditState() {
-    switch (widget.entry.type) {
-      case DiaryEntryType.gutFeeling:
-        final gut = widget.entry.data as GutFeelingEntry;
-        _bloating = gut.bloating;
-        _gas = gut.gas;
-        _cramps = gut.cramps;
-        _fullness = gut.fullness;
-        _stress = gut.stress;
-        _happiness = gut.happiness;
-        _energy = gut.energy;
-        _focus = gut.focus;
-        _bodyFeel = gut.bodyFeel;
-      case DiaryEntryType.toilet:
-        final toilet = widget.entry.data as ToiletEntry;
+    switch (widget.entry.data) {
+      case GutFeelingDiaryData(:final gutFeeling):
+        _bloating = gutFeeling.bloating;
+        _gas = gutFeeling.gas;
+        _cramps = gutFeeling.cramps;
+        _fullness = gutFeeling.fullness;
+        _stress = gutFeeling.stress;
+        _happiness = gutFeeling.happiness;
+        _energy = gutFeeling.energy;
+        _focus = gutFeeling.focus;
+        _bodyFeel = gutFeeling.bodyFeel;
+      case ToiletDiaryData(:final toilet):
         _stoolType = toilet.stoolType;
-      case DiaryEntryType.drink:
-        final drink = widget.entry.data as DrinkEntry;
+      case DrinkDiaryData(:final drink):
         _amountController.text = drink.amountMl.toString();
         _notesController.text = drink.notes ?? '';
-      case DiaryEntryType.meal:
+      case MealDiaryData():
         break;
     }
   }
@@ -139,9 +133,10 @@ class _DiaryDetailContentState extends State<_DiaryDetailContent> {
             stoolType: _stoolType,
           );
         case DiaryEntryType.drink:
+          final drinkData = widget.entry.data as DrinkDiaryData;
           await notifier.updateDrinkById(id,
             amountMl: int.tryParse(_amountController.text) ??
-                (widget.entry.data as DrinkEntry).amountMl,
+                drinkData.drink.amountMl,
             notes:
                 _notesController.text.isEmpty ? null : _notesController.text,
           );
@@ -162,7 +157,7 @@ class _DiaryDetailContentState extends State<_DiaryDetailContent> {
 
     return SingleChildScrollView(
       controller: widget.scrollController,
-      padding: const EdgeInsets.all(24),
+      padding: AppConstants.paddingLg,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -176,14 +171,14 @@ class _DiaryDetailContentState extends State<_DiaryDetailContent> {
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          AppConstants.gap16,
           Row(
             children: [
               Expanded(
                 child: Text(
                   widget.entry.title,
                   style: const TextStyle(
-                      fontSize: 22, fontWeight: FontWeight.w700),
+                      fontSize: AppTheme.fontSizeHeading, fontWeight: FontWeight.w700),
                 ),
               ),
               if (_canEdit && !_isEditing)
@@ -193,15 +188,15 @@ class _DiaryDetailContentState extends State<_DiaryDetailContent> {
                 ),
             ],
           ),
-          const SizedBox(height: 4),
+          AppConstants.gap4,
           Text(
             formattedDate,
             style: const TextStyle(
-                fontSize: 14, color: AppTheme.mutedForeground),
+                fontSize: AppTheme.fontSizeBody, color: AppTheme.mutedForeground),
           ),
-          const SizedBox(height: 24),
+          AppConstants.gap24,
           _buildTypeSpecificContent(),
-          const SizedBox(height: 24),
+          AppConstants.gap24,
           if (_isEditing) ...[
             Row(
               children: [
@@ -262,19 +257,19 @@ class _DiaryDetailContentState extends State<_DiaryDetailContent> {
   }
 
   Widget _buildTypeSpecificContent() {
-    switch (widget.entry.type) {
-      case DiaryEntryType.meal:
-        return MealDetail(meal: widget.entry.data as MealEntry);
-      case DiaryEntryType.toilet:
+    switch (widget.entry.data) {
+      case MealDiaryData(:final meal):
+        return MealDetail(meal: meal);
+      case ToiletDiaryData(:final toilet):
         return ToiletDetail(
-          toilet: widget.entry.data as ToiletEntry,
+          toilet: toilet,
           isEditing: _isEditing,
           editStoolType: _stoolType,
           onStoolTypeChanged: (v) => setState(() => _stoolType = v),
         );
-      case DiaryEntryType.gutFeeling:
+      case GutFeelingDiaryData(:final gutFeeling):
         return GutFeelingDetail(
-          gut: widget.entry.data as GutFeelingEntry,
+          gut: gutFeeling,
           isEditing: _isEditing,
           editState: _isEditing
               ? GutFeelingEditState(
@@ -299,9 +294,9 @@ class _DiaryDetailContentState extends State<_DiaryDetailContent> {
                 )
               : null,
         );
-      case DiaryEntryType.drink:
+      case DrinkDiaryData(:final drink):
         return DrinkDetail(
-          drink: widget.entry.data as DrinkEntry,
+          drink: drink,
           isEditing: _isEditing,
           amountController: _amountController,
           notesController: _notesController,

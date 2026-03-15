@@ -24,40 +24,32 @@ class SettingsSectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveIconColor = iconColor ?? AppTheme.primary;
+    final effectiveIconColor = iconColor ?? AppTheme.foreground;
     final effectiveTitleColor = titleColor ?? AppTheme.foreground;
 
-    return BbCard(
-      color: cardColor,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 32,
-                height: 32,
-                decoration: BoxDecoration(
-                  color: effectiveIconColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(icon, size: 18, color: effectiveIconColor),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(icon, size: 20, color: effectiveIconColor),
+            const SizedBox(width: 8),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: AppTheme.fontSizeSubtitleLG,
+                fontWeight: FontWeight.w700,
+                color: effectiveTitleColor,
               ),
-              const SizedBox(width: 12),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: effectiveTitleColor,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          child,
-        ],
-      ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 10),
+        BbCard(
+          color: cardColor,
+          child: child,
+        ),
+      ],
     );
   }
 }
