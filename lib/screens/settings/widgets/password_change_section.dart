@@ -5,7 +5,6 @@ import '../../../services/supabase_service.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/bb_password_hint.dart';
 import '../../../config/constants.dart';
-import '../../../widgets/common/settings_section_card.dart';
 
 class PasswordChangeSection extends StatefulWidget {
   const PasswordChangeSection({super.key});
@@ -103,40 +102,41 @@ class _PasswordChangeSectionState extends State<PasswordChangeSection> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => setState(() => _expanded = !_expanded),
-      child: SettingsSectionCard(
-        icon: Icons.lock_outline,
-        title: 'Passwort ändern',
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                const Text(
-                  'Passwort aktualisieren',
-                  style: TextStyle(
-                      fontSize: AppTheme.fontSizeBody,
-                      color: AppTheme.mutedForeground),
-                ),
-                const Spacer(),
-                Icon(
-                  _expanded ? Icons.expand_less : Icons.expand_more,
-                  color: AppTheme.mutedForeground,
-                ),
-              ],
-            ),
-            AnimatedCrossFade(
-              firstChild: const SizedBox.shrink(),
-              secondChild: _buildPasswordFields(),
-              crossFadeState: _expanded
-                  ? CrossFadeState.showSecond
-                  : CrossFadeState.showFirst,
-              duration: const Duration(milliseconds: 250),
-            ),
-          ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Divider(height: 1, color: AppTheme.border),
+        AppConstants.gap12,
+        GestureDetector(
+          onTap: () => setState(() => _expanded = !_expanded),
+          behavior: HitTestBehavior.opaque,
+          child: Row(
+            children: [
+              const Icon(Icons.lock_outline, size: 20, color: AppTheme.mutedForeground),
+              const SizedBox(width: 8),
+              const Text(
+                'Passwort ändern',
+                style: TextStyle(
+                    fontSize: AppTheme.fontSizeBody,
+                    fontWeight: FontWeight.w500),
+              ),
+              const Spacer(),
+              Icon(
+                _expanded ? Icons.expand_less : Icons.expand_more,
+                color: AppTheme.mutedForeground,
+              ),
+            ],
+          ),
         ),
-      ),
+        AnimatedCrossFade(
+          firstChild: const SizedBox.shrink(),
+          secondChild: _buildPasswordFields(),
+          crossFadeState: _expanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 250),
+        ),
+      ],
     );
   }
 

@@ -71,21 +71,20 @@ class _SettingsAccountScreenState extends ConsumerState<SettingsAccountScreen> {
                   _InfoRow(
                       label: 'Anmeldemethode',
                       value: _formatAuthMethod(authMethod)),
+                  if (showPasswordSection) ...[
+                    AppConstants.gap12,
+                    const PasswordChangeSection(),
+                  ],
                 ],
               ),
             ),
             AppConstants.gap16,
 
-            // Password section
-            if (showPasswordSection) ...[
-              const PasswordChangeSection(),
-              AppConstants.gap16,
-            ],
-
             // Sign out
             BbButton(
               label: 'Abmelden',
               isSecondary: true,
+              icon: Icons.logout,
               onPressed: _signOut,
             ),
             AppConstants.gap24,
@@ -109,6 +108,7 @@ class _SettingsAccountScreenState extends ConsumerState<SettingsAccountScreen> {
                     label:
                         _isDeleting ? 'Wird gelöscht...' : 'Konto löschen',
                     isDestructive: true,
+                    icon: Icons.delete_outline,
                     isLoading: _isDeleting,
                     onPressed: _showDeleteDialog,
                   ),
