@@ -100,8 +100,8 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
         quickDrinks: quick,
         isLoading: false,
       );
-    } catch (e) {
-      _log.error('failed to load drinks', e);
+    } catch (e, st) {
+      _log.error('failed to load drinks', e, st);
       state = state.copyWith(isLoading: false);
     }
   }
@@ -109,11 +109,14 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
   Future<void> loadTodayTotal() async {
     try {
       final userId = SupabaseService.userId;
-      if (userId == null) return;
+      if (userId == null) {
+        _log.debug('loadTodayTotal: no user');
+        return;
+      }
       final total = await DrinkService.fetchTodayTotal(userId);
       state = state.copyWith(todayTotal: total);
-    } catch (e) {
-      _log.error('failed to load today total', e);
+    } catch (e, st) {
+      _log.error('failed to load today total', e, st);
     }
   }
 
@@ -122,29 +125,36 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
       state = state.copyWith(suggestions: []);
       return;
     }
-    final words =
-        query.toLowerCase().split(' ').where((w) => w.isNotEmpty).toList();
-    final filtered = state.allDrinks.where((d) {
-      final name = d.name.toLowerCase();
-      return words.every((w) => name.contains(w));
-    }).toList()
-      ..sort((a, b) {
-        final firstWord = words.first;
-        final aName = a.name.toLowerCase();
-        final bName = b.name.toLowerCase();
+    final words = query
+        .toLowerCase()
+        .split(' ')
+        .where((w) => w.isNotEmpty)
+        .toList();
+    final filtered =
+        state.allDrinks.where((d) {
+          final name = d.name.toLowerCase();
+          return words.every((w) => name.contains(w));
+        }).toList()..sort((a, b) {
+          final firstWord = words.first;
+          final aName = a.name.toLowerCase();
+          final bName = b.name.toLowerCase();
 
-        final aStarts = aName.startsWith(firstWord);
-        final bStarts = bName.startsWith(firstWord);
-        if (aStarts && !bStarts) return -1;
-        if (!aStarts && bStarts) return 1;
+          final aStarts = aName.startsWith(firstWord);
+          final bStarts = bName.startsWith(firstWord);
+          if (aStarts && !bStarts) return -1;
+          if (!aStarts && bStarts) return 1;
 
-        final aWordStarts = aName.split(' ').any((w) => w.startsWith(firstWord));
-        final bWordStarts = bName.split(' ').any((w) => w.startsWith(firstWord));
-        if (aWordStarts && !bWordStarts) return -1;
-        if (!aWordStarts && bWordStarts) return 1;
+          final aWordStarts = aName
+              .split(' ')
+              .any((w) => w.startsWith(firstWord));
+          final bWordStarts = bName
+              .split(' ')
+              .any((w) => w.startsWith(firstWord));
+          if (aWordStarts && !bWordStarts) return -1;
+          if (!aWordStarts && bWordStarts) return 1;
 
-        return a.name.compareTo(b.name);
-      });
+          return a.name.compareTo(b.name);
+        });
     state = state.copyWith(suggestions: filtered.take(8).toList());
   }
 
@@ -157,10 +167,7 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
         suggestions: [],
       );
     } else {
-      state = state.copyWith(
-        selectedDrink: drink,
-        suggestions: [],
-      );
+      state = state.copyWith(selectedDrink: drink, suggestions: []);
     }
   }
 
@@ -188,15 +195,30 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
     state = state.copyWith(trackedAt: dt);
   }
 
+  Future<void> createDrink(String name) async {
+    final newDrink = await DrinkService.insertDrink(name);
+    final updatedAll = [...state.allDrinks, newDrink]
+      ..sort((a, b) => a.name.compareTo(b.name));
+    state = state.copyWith(
+      allDrinks: updatedAll,
+      quickDrinks: [newDrink, ...state.quickDrinks],
+      selectedDrink: newDrink,
+      suggestions: [],
+    );
+  }
+
   Future<void> deleteDrink(Drink drink) async {
     try {
       await DrinkService.deleteDrink(drink.id);
-      final updatedAll =
-          state.allDrinks.where((d) => d.id != drink.id).toList();
-      final updatedQuick =
-          state.quickDrinks.where((d) => d.id != drink.id).toList();
-      final updatedSuggestions =
-          state.suggestions.where((d) => d.id != drink.id).toList();
+      final updatedAll = state.allDrinks
+          .where((d) => d.id != drink.id)
+          .toList();
+      final updatedQuick = state.quickDrinks
+          .where((d) => d.id != drink.id)
+          .toList();
+      final updatedSuggestions = state.suggestions
+          .where((d) => d.id != drink.id)
+          .toList();
       state = state.copyWith(
         allDrinks: updatedAll,
         quickDrinks: updatedQuick,
@@ -205,8 +227,8 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
       if (state.selectedDrink?.id == drink.id) {
         clearSelection();
       }
-    } catch (e) {
-      _log.error('failed to delete drink', e);
+    } catch (e, st) {
+      _log.error('failed to delete drink', e, st);
       rethrow;
     }
   }
@@ -234,4 +256,5 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
 
 final drinkTrackerProvider =
     NotifierProvider<DrinkTrackerNotifier, DrinkTrackerState>(
-        DrinkTrackerNotifier.new);
+      DrinkTrackerNotifier.new,
+    );

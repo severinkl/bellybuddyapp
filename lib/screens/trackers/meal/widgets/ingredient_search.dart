@@ -62,86 +62,116 @@ class _IngredientSearchState extends State<IngredientSearch> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Zutaten',
-            style: TextStyle(fontSize: AppTheme.fontSizeSubtitle, fontWeight: FontWeight.w600),
-          ),
-          AppConstants.gap8,
-          if (_isAdding) ...[
-            TextField(
-              controller: _controller,
-              focusNode: _focusNode,
-              decoration: InputDecoration(
-                hintText: 'Mind. 3 Zeichen...',
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () {
-                    _controller.clear();
-                    widget.onSearch('');
-                    setState(() => _isAdding = false);
-                  },
-                ),
-              ),
-              onChanged: widget.onSearch,
-              onSubmitted: (_) => _submitIngredient(),
-            ),
-            if (filteredSuggestions.isNotEmpty)
-              Container(
-                margin: const EdgeInsets.only(top: 4),
-                decoration: BoxDecoration(
-                  color: AppTheme.card,
-                  borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-                  border: Border.all(color: AppTheme.border),
-                ),
-                child: Column(
-                  children: filteredSuggestions.map((s) {
-                    return ListTile(
-                      title: Text(s.name),
-                      dense: true,
-                      onTap: () {
-                        widget.onAdd(s.name);
-                        _controller.clear();
-                        widget.onSearch('');
-                        setState(() => _isAdding = false);
-                      },
-                      trailing: s.isOwn
-                          ? IconButton(
-                              icon: const Icon(Icons.delete_outline,
-                                  size: 20, color: AppTheme.mutedForeground),
-                              onPressed: () =>
-                                  widget.onDeleteIngredient(s.id),
-                            )
-                          : null,
-                    );
-                  }).toList(),
-                ),
-              ),
-            AppConstants.gap8,
-          ],
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
+          // Title row: "Zutaten" + hinzufügen button or inline search field
+          Row(
             children: [
-              ...widget.ingredients.map((ingredient) {
+              const Text(
+                'Zutaten',
+                style: TextStyle(
+                  fontSize: AppTheme.fontSizeSubtitle,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(width: 12),
+              if (_isAdding)
+                Expanded(
+                  child: TextField(
+                    controller: _controller,
+                    focusNode: _focusNode,
+                    style: const TextStyle(
+                      fontSize: AppTheme.fontSizeBody,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Mind. 3 Zeichen...',
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      suffixIcon: GestureDetector(
+                        onTap: () {
+                          _controller.clear();
+                          widget.onSearch('');
+                          setState(() => _isAdding = false);
+                        },
+                        child: const Icon(Icons.close, size: 18),
+                      ),
+                      suffixIconConstraints: const BoxConstraints(
+                        minWidth: 32,
+                        minHeight: 32,
+                      ),
+                    ),
+                    onChanged: widget.onSearch,
+                    onSubmitted: (_) => _submitIngredient(),
+                  ),
+                )
+              else
+                GestureDetector(
+                  onTap: () {
+                    setState(() => _isAdding = true);
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      _focusNode.requestFocus();
+                    });
+                  },
+                  child: const Text(
+                    '+ Hinzufügen',
+                    style: TextStyle(
+                      fontSize: AppTheme.fontSizeBody,
+                      color: AppTheme.primary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          if (_isAdding && filteredSuggestions.isNotEmpty) ...[
+            Container(
+              margin: const EdgeInsets.only(top: 4),
+              decoration: BoxDecoration(
+                color: AppTheme.card,
+                borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+                border: Border.all(color: AppTheme.border),
+              ),
+              child: Column(
+                children: filteredSuggestions.map((s) {
+                  return ListTile(
+                    title: Text(s.name),
+                    dense: true,
+                    onTap: () {
+                      widget.onAdd(s.name);
+                      _controller.clear();
+                      widget.onSearch('');
+                      setState(() => _isAdding = false);
+                    },
+                    trailing: s.isOwn
+                        ? IconButton(
+                            icon: const Icon(
+                              Icons.delete_outline,
+                              size: 20,
+                              color: AppTheme.mutedForeground,
+                            ),
+                            onPressed: () => widget.onDeleteIngredient(s.id),
+                          )
+                        : null,
+                  );
+                }).toList(),
+              ),
+            ),
+          ],
+          if (widget.ingredients.isNotEmpty) ...[
+            AppConstants.gap8,
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: widget.ingredients.map((ingredient) {
                 return Chip(
                   label: Text(ingredient),
                   labelStyle: const TextStyle(color: Colors.black),
                   onDeleted: () => widget.onRemove(ingredient),
                 );
-              }),
-              ActionChip(
-                backgroundColor: AppTheme.primary,
-                label: const Text('+ Hinzufügen',
-                    style: TextStyle(color: Colors.black)),
-                onPressed: () {
-                  setState(() => _isAdding = true);
-                  WidgetsBinding.instance.addPostFrameCallback((_) {
-                    _focusNode.requestFocus();
-                  });
-                },
-              ),
-            ],
-          ),
+              }).toList(),
+            ),
+          ],
         ],
       ),
     );

@@ -46,9 +46,19 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
     }
   }
 
+  bool get _shouldShowCreateOption {
+    final query = _controller.text.trim();
+    if (query.isEmpty) return false;
+    final suggestions = ref.read(drinkTrackerProvider).suggestions;
+    return !suggestions.any(
+      (d) => d.name.toLowerCase() == query.toLowerCase(),
+    );
+  }
+
   void _syncOverlay() {
     final suggestions = ref.read(drinkTrackerProvider).suggestions;
-    if (suggestions.isNotEmpty && _focusNode.hasFocus) {
+    final showCreate = _shouldShowCreateOption;
+    if ((suggestions.isNotEmpty || showCreate) && _focusNode.hasFocus) {
       if (!_overlayController.isShowing) _overlayController.show();
     } else {
       if (_overlayController.isShowing) _overlayController.hide();
@@ -60,6 +70,31 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
     _controller.clear();
     _focusNode.unfocus();
     ref.read(drinkTrackerProvider.notifier).toggleDrink(drink);
+  }
+
+  Future<void> _createDrink() async {
+    final query = _controller.text.trim();
+    if (query.isEmpty) return;
+    HapticService.selection();
+    final messenger = ScaffoldMessenger.of(context);
+    _controller.clear();
+    _focusNode.unfocus();
+    try {
+      await ref.read(drinkTrackerProvider.notifier).createDrink(query);
+      if (mounted) {
+        messenger.showSnackBar(
+          SnackBar(content: Text('„$query" hinzugefügt')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Getränk konnte nicht erstellt werden'),
+          ),
+        );
+      }
+    }
   }
 
   @override
@@ -100,56 +135,98 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: suggestions.map((drink) {
-                      final isOwn = currentUserId != null &&
-                          drink.addedByUserId == currentUserId;
-                      return InkWell(
-                        onTap: () => _selectDrink(drink),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 12),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  drink.name,
-                                  style: const TextStyle(fontSize: AppTheme.fontSizeBody),
-                                ),
-                              ),
-                              if (isOwn)
-                                GestureDetector(
-                                  onTap: () async {
-                                    final messenger =
-                                        ScaffoldMessenger.of(context);
-                                    try {
-                                      await ref
-                                          .read(drinkTrackerProvider.notifier)
-                                          .deleteDrink(drink);
-                                    } catch (_) {
-                                      if (mounted) {
-                                        messenger
-                                            .showSnackBar(const SnackBar(
-                                          content: Text(
-                                              'Getränk konnte nicht gelöscht werden'),
-                                        ));
-                                      }
-                                    }
-                                  },
-                                  child: Padding(
-                                    padding: const EdgeInsets.only(left: 8),
-                                    child: Icon(
-                                      Icons.delete_outline,
-                                      size: 18,
-                                      color: AppTheme.destructive
-                                          .withValues(alpha: 0.6),
+                    children: [
+                      ...suggestions.map((drink) {
+                        final isOwn =
+                            currentUserId != null &&
+                            drink.addedByUserId == currentUserId;
+                        return InkWell(
+                          onTap: () => _selectDrink(drink),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    drink.name,
+                                    style: const TextStyle(
+                                      fontSize: AppTheme.fontSizeBody,
                                     ),
                                   ),
                                 ),
-                            ],
+                                if (isOwn)
+                                  GestureDetector(
+                                    onTap: () async {
+                                      final messenger = ScaffoldMessenger.of(
+                                        context,
+                                      );
+                                      try {
+                                        await ref
+                                            .read(
+                                              drinkTrackerProvider.notifier,
+                                            )
+                                            .deleteDrink(drink);
+                                      } catch (_) {
+                                        if (mounted) {
+                                          messenger.showSnackBar(
+                                            const SnackBar(
+                                              content: Text(
+                                                'Getränk konnte nicht gelöscht werden',
+                                              ),
+                                            ),
+                                          );
+                                        }
+                                      }
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.only(left: 8),
+                                      child: Icon(
+                                        Icons.delete_outline,
+                                        size: 18,
+                                        color: AppTheme.destructive.withValues(
+                                          alpha: 0.6,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }),
+                      if (_shouldShowCreateOption)
+                        InkWell(
+                          onTap: () => _createDrink(),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.add,
+                                  size: 18,
+                                  color: AppTheme.primary,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    '„${_controller.text.trim()}" hinzufügen',
+                                    style: const TextStyle(
+                                      fontSize: AppTheme.fontSizeBody,
+                                      color: AppTheme.primary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
-                      );
-                    }).toList(),
+                    ],
                   ),
                 ),
               ),
@@ -167,8 +244,10 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
             prefixIcon: const Icon(Icons.search, size: 20),
             filled: true,
             fillColor: AppTheme.muted.withValues(alpha: 0.5),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 20,
+              vertical: 14,
+            ),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(AppConstants.radiusFull),
               borderSide: BorderSide.none,
