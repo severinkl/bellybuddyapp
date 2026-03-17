@@ -50,9 +50,7 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
     final query = _controller.text.trim();
     if (query.isEmpty) return false;
     final suggestions = ref.read(drinkTrackerProvider).suggestions;
-    return !suggestions.any(
-      (d) => d.name.toLowerCase() == query.toLowerCase(),
-    );
+    return !suggestions.any((d) => d.name.toLowerCase() == query.toLowerCase());
   }
 
   void _syncOverlay() {
@@ -82,16 +80,12 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
     try {
       await ref.read(drinkTrackerProvider.notifier).createDrink(query);
       if (mounted) {
-        messenger.showSnackBar(
-          SnackBar(content: Text('„$query" hinzugefügt')),
-        );
+        messenger.showSnackBar(SnackBar(content: Text('„$query" hinzugefügt')));
       }
     } catch (_) {
       if (mounted) {
         messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Getränk konnte nicht erstellt werden'),
-          ),
+          const SnackBar(content: Text('Getränk konnte nicht erstellt werden')),
         );
       }
     }
@@ -165,9 +159,7 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
                                       );
                                       try {
                                         await ref
-                                            .read(
-                                              drinkTrackerProvider.notifier,
-                                            )
+                                            .read(drinkTrackerProvider.notifier)
                                             .deleteDrink(drink);
                                       } catch (_) {
                                         if (mounted) {

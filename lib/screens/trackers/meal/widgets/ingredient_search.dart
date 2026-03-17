@@ -78,9 +78,7 @@ class _IngredientSearchState extends State<IngredientSearch> {
                   child: TextField(
                     controller: _controller,
                     focusNode: _focusNode,
-                    style: const TextStyle(
-                      fontSize: AppTheme.fontSizeBody,
-                    ),
+                    style: const TextStyle(fontSize: AppTheme.fontSizeBody),
                     decoration: InputDecoration(
                       hintText: 'Mind. 3 Zeichen...',
                       isDense: true,
