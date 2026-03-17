@@ -32,14 +32,19 @@ Color getValueColor(int value) {
   return AppTheme.gutFeelingBad;
 }
 
-/// Returns a comma-separated string of symptom names where the value > 1.
+/// Returns a comma-separated string of symptom/mood names where the value > 1.
 /// Uses the same labels as the tracker sliders (rightLabel).
-/// If all symptoms are 1/5, returns 'Alles gut'.
+/// If everything is 1/5, returns 'Alles gut'.
 String gutFeelingSubtitle(GutFeelingEntry entry) {
-  final values = [entry.bloating, entry.gas, entry.cramps, entry.fullness];
   final active = <String>[
-    for (var i = 0; i < values.length; i++)
-      if (values[i] > 1) AppConstants.gutFeelingSymptoms[i],
+    for (var i = 0; i < 4; i++)
+      if ([entry.bloating, entry.gas, entry.cramps, entry.fullness][i] > 1)
+        AppConstants.gutFeelingSymptoms[i],
+    if (entry.stress != null && entry.stress! > 1) AppConstants.stimmungLabels[0],
+    if (entry.happiness != null && entry.happiness! > 1) AppConstants.stimmungLabels[1],
+    if (entry.energy != null && entry.energy! > 1) AppConstants.stimmungLabels[2],
+    if (entry.focus != null && entry.focus! > 1) AppConstants.stimmungLabels[3],
+    if (entry.bodyFeel != null && entry.bodyFeel! > 1) AppConstants.stimmungLabels[4],
   ];
   return active.isEmpty ? 'Alles gut' : active.join(', ');
 }
