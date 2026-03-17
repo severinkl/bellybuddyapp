@@ -31,7 +31,9 @@ class _IngredientSuggestionsScreenState
     });
   }
 
-  /// Prefetch all image URLs into the CachedNetworkImage cache.
+  /// Prefetch valid http(s) image URLs into the CachedNetworkImage cache.
+  /// Meal image paths are skipped — they require async signed URL resolution
+  /// which is handled by MealThumbnail at render time.
   void _precacheImages(List<IngredientSuggestionGroup> groups) {
     for (final group in groups) {
       final urls = <String>[
@@ -41,12 +43,11 @@ class _IngredientSuggestionsScreenState
         ...group.replacements
             .where((r) => r.imageUrl != null && r.imageUrl!.isNotEmpty)
             .map((r) => r.imageUrl!),
-        ...group.meals
-            .where((m) => m.imageUrl != null && m.imageUrl!.isNotEmpty)
-            .map((m) => m.imageUrl!),
       ];
       for (final url in urls) {
-        precacheImage(CachedNetworkImageProvider(url), context);
+        if (url.startsWith('https://') || url.startsWith('http://')) {
+          precacheImage(CachedNetworkImageProvider(url), context);
+        }
       }
     }
   }

@@ -4,6 +4,10 @@ import 'package:shimmer/shimmer.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/ingredient_suggestion_group.dart';
 import '../../../config/constants.dart';
+import '../../../utils/signed_url_helper.dart';
+
+bool _isValidImageUrl(String url) =>
+    url.startsWith('https://') || url.startsWith('http://');
 
 class SuggestionDetailModal extends StatelessWidget {
   final IngredientSuggestionGroup group;
@@ -106,32 +110,7 @@ class SuggestionDetailModal extends StatelessWidget {
                       child: Row(
                         children: [
                           if (meal.imageUrl != null) ...[
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(
-                                AppConstants.radiusSm,
-                              ),
-                              child: CachedNetworkImage(
-                                imageUrl: meal.imageUrl!,
-                                width: 48,
-                                height: 48,
-                                fit: BoxFit.cover,
-                                placeholder: (_, _) => Shimmer.fromColors(
-                                  baseColor: AppTheme.muted,
-                                  highlightColor: AppTheme.background,
-                                  child: Container(
-                                    width: 48,
-                                    height: 48,
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.muted,
-                                      borderRadius: BorderRadius.circular(
-                                        AppConstants.radiusSm,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                errorWidget: (_, _, _) => _mealPlaceholder(),
-                              ),
-                            ),
+                            _MealImage(imageUrl: meal.imageUrl!),
                             const SizedBox(width: 12),
                           ],
                           Expanded(
@@ -225,28 +204,88 @@ class SuggestionDetailModal extends StatelessWidget {
     );
   }
 
-  Widget _mealPlaceholder() {
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        color: AppTheme.muted,
-        borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-      ),
-      child: const Center(
-        child: Text(
-          '\u{1F372}',
-          style: TextStyle(fontSize: AppTheme.fontSizeHeadingLG),
-        ),
-      ),
-    );
-  }
-
   String _formatDate(DateTime date) {
     final day = date.day.toString().padLeft(2, '0');
     final month = date.month.toString().padLeft(2, '0');
     final year = date.year;
     return '$day.$month.$year';
+  }
+}
+
+class _MealImage extends StatefulWidget {
+  final String imageUrl;
+
+  const _MealImage({required this.imageUrl});
+
+  @override
+  State<_MealImage> createState() => _MealImageState();
+}
+
+class _MealImageState extends State<_MealImage> {
+  String? _resolvedUrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolve();
+  }
+
+  Future<void> _resolve() async {
+    final url = await resolveSignedMealImageUrl(widget.imageUrl);
+    if (mounted) setState(() => _resolvedUrl = url);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_resolvedUrl == null) {
+      return Shimmer.fromColors(
+        baseColor: AppTheme.muted,
+        highlightColor: AppTheme.background,
+        child: Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: AppTheme.muted,
+            borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+          ),
+        ),
+      );
+    }
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+      child: CachedNetworkImage(
+        imageUrl: _resolvedUrl!,
+        width: 48,
+        height: 48,
+        fit: BoxFit.cover,
+        placeholder: (_, _) => Shimmer.fromColors(
+          baseColor: AppTheme.muted,
+          highlightColor: AppTheme.background,
+          child: Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: AppTheme.muted,
+              borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+            ),
+          ),
+        ),
+        errorWidget: (_, _, _) => Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: AppTheme.muted,
+            borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+          ),
+          child: const Center(
+            child: Text(
+              '\u{1F372}',
+              style: TextStyle(fontSize: AppTheme.fontSizeHeadingLG),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -258,7 +297,7 @@ class _IngredientImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (imageUrl != null && imageUrl!.isNotEmpty) {
+    if (imageUrl != null && _isValidImageUrl(imageUrl!)) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(size / 2),
         child: CachedNetworkImage(
