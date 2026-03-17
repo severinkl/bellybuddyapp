@@ -76,9 +76,13 @@ class DrinkService {
     }
   }
 
-  /// Deletes a user-owned drink.
+  /// Deletes a user-owned drink and all its associated entries.
   static Future<void> deleteDrink(String drinkId) async {
     try {
+      await SupabaseService.client
+          .from('drink_entries')
+          .delete()
+          .eq('drink_id', drinkId);
       await SupabaseService.client.from('drinks').delete().eq('id', drinkId);
     } catch (e, st) {
       _log.error('deleteDrink failed', e, st);
