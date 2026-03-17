@@ -30,9 +30,5 @@ void main() async {
     debugPrint('FlutterError: ${details.exception}');
   };
 
-  runApp(
-    const ProviderScope(
-      child: BellyBuddyApp(),
-    ),
-  );
+  runApp(const ProviderScope(child: BellyBuddyApp()));
 }

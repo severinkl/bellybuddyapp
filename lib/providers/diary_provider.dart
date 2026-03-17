@@ -21,11 +21,15 @@ class _DiaryDateNotifier extends Notifier<DateTime> {
   void set(DateTime date) => state = date;
 }
 
-final diaryDateProvider =
-    NotifierProvider<_DiaryDateNotifier, DateTime>(_DiaryDateNotifier.new);
+final diaryDateProvider = NotifierProvider<_DiaryDateNotifier, DateTime>(
+  _DiaryDateNotifier.new,
+);
 
 /// Fetches and merges all entry types for the selected date
-final diaryEntriesProvider = FutureProvider.family<List<DiaryEntry>, DateTime>((ref, date) async {
+final diaryEntriesProvider = FutureProvider.family<List<DiaryEntry>, DateTime>((
+  ref,
+  date,
+) async {
   final userId = SupabaseService.userId;
   if (userId == null) return [];
 
@@ -38,47 +42,56 @@ final diaryEntriesProvider = FutureProvider.family<List<DiaryEntry>, DateTime>((
     final entries = <DiaryEntry>[];
 
     for (final meal in result.meals) {
-      entries.add(DiaryEntry(
-        id: meal.id,
-        type: DiaryEntryType.meal,
-        trackedAt: meal.trackedAt,
-        title: meal.title,
-        subtitle: '${meal.ingredients.length} Zutaten',
-        data: MealDiaryData(meal),
-      ));
+      entries.add(
+        DiaryEntry(
+          id: meal.id,
+          type: DiaryEntryType.meal,
+          trackedAt: meal.trackedAt,
+          title: meal.title,
+          subtitle: '${meal.ingredients.length} Zutaten',
+          data: MealDiaryData(meal),
+        ),
+      );
     }
 
     for (final toilet in result.toiletEntries) {
-      entries.add(DiaryEntry(
-        id: toilet.id,
-        type: DiaryEntryType.toilet,
-        trackedAt: toilet.trackedAt,
-        title: 'Toilettengang',
-        subtitle: AppConstants.stoolTypeDescriptions[toilet.stoolType] ?? 'Normal',
-        data: ToiletDiaryData(toilet),
-      ));
+      entries.add(
+        DiaryEntry(
+          id: toilet.id,
+          type: DiaryEntryType.toilet,
+          trackedAt: toilet.trackedAt,
+          title: 'Toilettengang',
+          subtitle:
+              AppConstants.stoolTypeDescriptions[toilet.stoolType] ?? 'Normal',
+          data: ToiletDiaryData(toilet),
+        ),
+      );
     }
 
     for (final gut in result.gutFeelings) {
-      entries.add(DiaryEntry(
-        id: gut.id,
-        type: DiaryEntryType.gutFeeling,
-        trackedAt: gut.trackedAt,
-        title: 'Bauchgefühl',
-        subtitle: gutFeelingSubtitle(gut),
-        data: GutFeelingDiaryData(gut),
-      ));
+      entries.add(
+        DiaryEntry(
+          id: gut.id,
+          type: DiaryEntryType.gutFeeling,
+          trackedAt: gut.trackedAt,
+          title: 'Bauchgefühl',
+          subtitle: gutFeelingSubtitle(gut),
+          data: GutFeelingDiaryData(gut),
+        ),
+      );
     }
 
     for (final drink in result.drinks) {
-      entries.add(DiaryEntry(
-        id: drink.id,
-        type: DiaryEntryType.drink,
-        trackedAt: drink.trackedAt,
-        title: drink.drinkName,
-        subtitle: '${drink.amountMl} ml',
-        data: DrinkDiaryData(drink),
-      ));
+      entries.add(
+        DiaryEntry(
+          id: drink.id,
+          type: DiaryEntryType.drink,
+          trackedAt: drink.trackedAt,
+          title: drink.drinkName,
+          subtitle: '${drink.amountMl} ml',
+          data: DrinkDiaryData(drink),
+        ),
+      );
     }
 
     entries.sort((a, b) => b.trackedAt.compareTo(a.trackedAt));

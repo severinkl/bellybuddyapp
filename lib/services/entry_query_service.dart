@@ -33,7 +33,10 @@ class EntryQueryService {
       final start = startOfDay(date).toIso8601String();
       final end = endOfDay(date).toIso8601String();
 
-      PostgrestFilterBuilder<PostgrestList> baseQuery(String table, [String columns = '*']) {
+      PostgrestFilterBuilder<PostgrestList> baseQuery(
+        String table, [
+        String columns = '*',
+      ]) {
         return SupabaseService.client
             .from(table)
             .select(columns)
@@ -47,8 +50,13 @@ class EntryQueryService {
         futures = [
           baseQuery('meal_entries').order('tracked_at', ascending: false),
           baseQuery('toilet_entries').order('tracked_at', ascending: false),
-          baseQuery('gut_feeling_entries').order('tracked_at', ascending: false),
-          baseQuery('drink_entries', '*, drinks(name)').order('tracked_at', ascending: false),
+          baseQuery(
+            'gut_feeling_entries',
+          ).order('tracked_at', ascending: false),
+          baseQuery(
+            'drink_entries',
+            '*, drinks(name)',
+          ).order('tracked_at', ascending: false),
         ];
       } else {
         futures = [
@@ -64,7 +72,9 @@ class EntryQueryService {
       return EntryQueryResult(
         meals: results[0].map((e) => MealEntry.fromJson(e)).toList(),
         toiletEntries: results[1].map((e) => ToiletEntry.fromJson(e)).toList(),
-        gutFeelings: results[2].map((e) => GutFeelingEntry.fromJson(e)).toList(),
+        gutFeelings: results[2]
+            .map((e) => GutFeelingEntry.fromJson(e))
+            .toList(),
         drinks: results[3].map((e) => DrinkEntry.fromDbRow(e)).toList(),
       );
     } catch (e, st) {

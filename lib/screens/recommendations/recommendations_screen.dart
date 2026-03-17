@@ -18,15 +18,15 @@ class RecommendationsScreen extends ConsumerStatefulWidget {
       _RecommendationsScreenState();
 }
 
-class _RecommendationsScreenState
-    extends ConsumerState<RecommendationsScreen> {
+class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
   bool _isGenerating = false;
 
   @override
   void initState() {
     super.initState();
     Future.microtask(
-        () => ref.read(recommendationProvider.notifier).fetchRecommendations());
+      () => ref.read(recommendationProvider.notifier).fetchRecommendations(),
+    );
   }
 
   Future<void> _generate() async {
@@ -40,9 +40,9 @@ class _RecommendationsScreenState
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fehler: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Fehler: $e')));
       }
     } finally {
       if (mounted) setState(() => _isGenerating = false);
@@ -71,7 +71,9 @@ class _RecommendationsScreenState
                     width: 20,
                     height: 20,
                     child: CircularProgressIndicator(
-                        strokeWidth: 2, color: AppTheme.primary),
+                      strokeWidth: 2,
+                      color: AppTheme.primary,
+                    ),
                   )
                 : const Icon(Icons.refresh),
           ),
@@ -128,8 +130,9 @@ class _RecommendationsScreenState
                   'Noch keine Empfehlungen vorhanden.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                      fontSize: AppTheme.fontSizeBodyLG,
-                      color: AppTheme.mutedForeground),
+                    fontSize: AppTheme.fontSizeBodyLG,
+                    color: AppTheme.mutedForeground,
+                  ),
                 ),
               ),
               AppConstants.gap16,
@@ -170,10 +173,12 @@ class _RecommendationsScreenState
         ),
         AppConstants.gap12,
 
-        ...latest.recommendations.map((item) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: RecommendationCard(item: item),
-            )),
+        ...latest.recommendations.map(
+          (item) => Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: RecommendationCard(item: item),
+          ),
+        ),
 
         if (history.isNotEmpty) ...[
           const SizedBox(height: 20),

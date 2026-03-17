@@ -32,10 +32,9 @@ class DateTimePickerTile extends StatelessWidget {
             initialTime: TimeOfDay.fromDateTime(value),
           );
           if (time != null) {
-            onChanged(DateTime(
-              date.year, date.month, date.day,
-              time.hour, time.minute,
-            ));
+            onChanged(
+              DateTime(date.year, date.month, date.day, time.hour, time.minute),
+            );
           }
         }
       },

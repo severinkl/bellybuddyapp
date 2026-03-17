@@ -60,10 +60,14 @@ class SuggestionCard extends StatelessWidget {
                               const SizedBox(width: 8),
                               Container(
                                 padding: const EdgeInsets.symmetric(
-                                    horizontal: 6, vertical: 2),
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
                                   color: AppTheme.primary,
-                                  borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+                                  borderRadius: BorderRadius.circular(
+                                    AppConstants.radiusSm,
+                                  ),
                                 ),
                                 child: const Text(
                                   'Neu',
@@ -115,10 +119,14 @@ class SuggestionCard extends StatelessWidget {
                       final repl = group.replacements[index];
                       return Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: AppTheme.beige,
-                          borderRadius: BorderRadius.circular(AppConstants.radiusRound),
+                          borderRadius: BorderRadius.circular(
+                            AppConstants.radiusRound,
+                          ),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -132,9 +140,11 @@ class SuggestionCard extends StatelessWidget {
                                   height: 24,
                                   fit: BoxFit.cover,
                                   errorBuilder: (c, e, s) => const Text(
-                                      '\u{1F96C}',
-                                      style: TextStyle(
-                                          fontSize: AppTheme.fontSizeBody)),
+                                    '\u{1F96C}',
+                                    style: TextStyle(
+                                      fontSize: AppTheme.fontSizeBody,
+                                    ),
+                                  ),
                                 ),
                               ),
                               const SizedBox(width: 6),
@@ -191,8 +201,10 @@ class _IngredientAvatar extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       child: const Center(
-        child: Text('\u{1F96C}',
-            style: TextStyle(fontSize: AppTheme.fontSizeHeading)),
+        child: Text(
+          '\u{1F96C}',
+          style: TextStyle(fontSize: AppTheme.fontSizeHeading),
+        ),
       ),
     );
   }

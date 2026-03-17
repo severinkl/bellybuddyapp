@@ -76,14 +76,19 @@ class _SettingsNotificationsScreenState
                       AppConstants.gap12,
                       const Text(
                         'Erinnerungszeiten',
-                        style: TextStyle(fontSize: AppTheme.fontSizeBodyLG, fontWeight: FontWeight.w600),
+                        style: TextStyle(
+                          fontSize: AppTheme.fontSizeBodyLG,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                       AppConstants.gap8,
                       ReminderTimePicker(
                         selectedTimes: reminderTimes,
                         onChanged: (newTimes) {
                           _debounceSave(() {
-                            ref.read(profileProvider.notifier).updateProfile(
+                            ref
+                                .read(profileProvider.notifier)
+                                .updateProfile(
                                   profile.copyWith(reminderTimes: newTimes),
                                 );
                           });
@@ -103,7 +108,11 @@ class _SettingsNotificationsScreenState
                             );
                             if (!context.mounted) return;
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Test-Benachrichtigung gesendet!')),
+                              const SnackBar(
+                                content: Text(
+                                  'Test-Benachrichtigung gesendet!',
+                                ),
+                              ),
                             );
                           } catch (e) {
                             if (!context.mounted) return;
@@ -128,27 +137,38 @@ class _SettingsNotificationsScreenState
                     children: [
                       const Text(
                         'Für die Erinnerungen zur richtigen Ortszeit',
-                        style: TextStyle(fontSize: AppTheme.fontSizeCaptionLG, color: AppTheme.mutedForeground),
+                        style: TextStyle(
+                          fontSize: AppTheme.fontSizeCaptionLG,
+                          color: AppTheme.mutedForeground,
+                        ),
                       ),
                       AppConstants.gap12,
                       DropdownButtonFormField<String>(
                         initialValue: profile.timezone ?? 'Europe/Berlin',
                         isExpanded: true,
                         decoration: const InputDecoration(
-                          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
                         ),
                         items: timezoneOptions
-                            .map((tz) => DropdownMenuItem(
-                                  value: tz.value,
-                                  child: Text(tz.label, overflow: TextOverflow.ellipsis),
-                                ))
+                            .map(
+                              (tz) => DropdownMenuItem(
+                                value: tz.value,
+                                child: Text(
+                                  tz.label,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            )
                             .toList(),
                         onChanged: (v) {
                           if (v == null) return;
                           _debounceSave(() {
-                            ref.read(profileProvider.notifier).updateProfile(
-                                  profile.copyWith(timezone: v),
-                                );
+                            ref
+                                .read(profileProvider.notifier)
+                                .updateProfile(profile.copyWith(timezone: v));
                           });
                         },
                       ),
@@ -165,11 +185,14 @@ class _SettingsNotificationsScreenState
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       GestureDetector(
-                        onTap: () => setState(() => _debugExpanded = !_debugExpanded),
+                        onTap: () =>
+                            setState(() => _debugExpanded = !_debugExpanded),
                         child: Row(
                           children: [
                             Text(
-                              _debugExpanded ? 'Details ausblenden' : 'Details anzeigen',
+                              _debugExpanded
+                                  ? 'Details ausblenden'
+                                  : 'Details anzeigen',
                               style: const TextStyle(
                                 fontSize: AppTheme.fontSizeBody,
                                 color: AppTheme.mutedForeground,
@@ -177,7 +200,9 @@ class _SettingsNotificationsScreenState
                             ),
                             const Spacer(),
                             Icon(
-                              _debugExpanded ? Icons.expand_less : Icons.expand_more,
+                              _debugExpanded
+                                  ? Icons.expand_less
+                                  : Icons.expand_more,
                               color: AppTheme.mutedForeground,
                             ),
                           ],
@@ -185,14 +210,28 @@ class _SettingsNotificationsScreenState
                       ),
                       if (_debugExpanded) ...[
                         AppConstants.gap12,
-                        _DebugRow(label: 'Plattform', value: Platform.operatingSystem),
-                        _DebugRow(label: 'Push aktiviert', value: _pushEnabled ? 'Ja' : 'Nein'),
-                        _DebugRow(label: 'Zeitzone', value: profile.timezone ?? 'Europe/Berlin'),
+                        _DebugRow(
+                          label: 'Plattform',
+                          value: Platform.operatingSystem,
+                        ),
+                        _DebugRow(
+                          label: 'Push aktiviert',
+                          value: _pushEnabled ? 'Ja' : 'Nein',
+                        ),
+                        _DebugRow(
+                          label: 'Zeitzone',
+                          value: profile.timezone ?? 'Europe/Berlin',
+                        ),
                         _DebugRow(
                           label: 'Erinnerungen',
-                          value: reminderTimes.map((h) => '${h.toString().padLeft(2, '0')}:00').join(', '),
+                          value: reminderTimes
+                              .map((h) => '${h.toString().padLeft(2, '0')}:00')
+                              .join(', '),
                         ),
-                        _DebugRow(label: 'User ID', value: SupabaseService.userId ?? '—'),
+                        _DebugRow(
+                          label: 'User ID',
+                          value: SupabaseService.userId ?? '—',
+                        ),
                       ],
                     ],
                   ),
@@ -224,13 +263,19 @@ class _DebugRow extends StatelessWidget {
             width: 120,
             child: Text(
               label,
-              style: const TextStyle(fontSize: AppTheme.fontSizeCaptionLG, color: AppTheme.mutedForeground),
+              style: const TextStyle(
+                fontSize: AppTheme.fontSizeCaptionLG,
+                color: AppTheme.mutedForeground,
+              ),
             ),
           ),
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(fontSize: AppTheme.fontSizeCaptionLG, fontFamily: 'monospace'),
+              style: const TextStyle(
+                fontSize: AppTheme.fontSizeCaptionLG,
+                fontFamily: 'monospace',
+              ),
             ),
           ),
         ],

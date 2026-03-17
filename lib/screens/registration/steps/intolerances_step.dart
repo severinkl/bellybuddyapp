@@ -9,7 +9,8 @@ class IntolerancesStep extends StatelessWidget {
   final List<String> selected;
   final ValueChanged<List<String>> onChanged;
   final Map<String, List<String>> triggers;
-  final void Function(String intolerance, List<String> triggers) onTriggersChanged;
+  final void Function(String intolerance, List<String> triggers)
+  onTriggersChanged;
 
   const IntolerancesStep({
     super.key,
@@ -26,7 +27,11 @@ class IntolerancesStep extends StatelessWidget {
       child: Column(
         children: [
           AppConstants.gap24,
-          const MascotImage(assetPath: AppConstants.mascotNervous, width: 120, height: 120),
+          const MascotImage(
+            assetPath: AppConstants.mascotNervous,
+            width: 120,
+            height: 120,
+          ),
           AppConstants.gap16,
           const Text(
             'Wurden dir Unverträglichkeiten diagnostiziert?',
@@ -40,7 +45,10 @@ class IntolerancesStep extends StatelessWidget {
           AppConstants.gap8,
           const Text(
             'Gib hier ärztlich diagnostizierte Unverträglichkeiten an. Diese Angaben helfen uns bei der personalisierten Analyse deiner Mahlzeiten.',
-            style: TextStyle(fontSize: AppTheme.fontSizeBodyLG, color: AppTheme.mutedForeground),
+            style: TextStyle(
+              fontSize: AppTheme.fontSizeBodyLG,
+              color: AppTheme.mutedForeground,
+            ),
             textAlign: TextAlign.center,
           ),
           AppConstants.gap32,

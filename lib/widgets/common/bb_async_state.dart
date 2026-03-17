@@ -20,11 +20,7 @@ class BbLoadingState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          MascotImage(
-            assetPath: mascotAsset,
-            width: 96,
-            height: 96,
-          ),
+          MascotImage(assetPath: mascotAsset, width: 96, height: 96),
           AppConstants.gap16,
           Text(
             message,
@@ -61,11 +57,7 @@ class BbErrorState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          MascotImage(
-            assetPath: mascotAsset,
-            width: 96,
-            height: 96,
-          ),
+          MascotImage(assetPath: mascotAsset, width: 96, height: 96),
           AppConstants.gap16,
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -84,9 +76,7 @@ class BbErrorState extends StatelessWidget {
               onPressed: onRetry,
               icon: const Icon(Icons.refresh, size: 18),
               label: Text(retryLabel),
-              style: ElevatedButton.styleFrom(
-                minimumSize: const Size(200, 48),
-              ),
+              style: ElevatedButton.styleFrom(minimumSize: const Size(200, 48)),
             ),
           ],
         ],

@@ -40,11 +40,15 @@ String gutFeelingSubtitle(GutFeelingEntry entry) {
     for (var i = 0; i < 4; i++)
       if ([entry.bloating, entry.gas, entry.cramps, entry.fullness][i] > 1)
         AppConstants.gutFeelingSymptoms[i],
-    if (entry.stress != null && entry.stress! > 1) AppConstants.stimmungLabels[0],
-    if (entry.happiness != null && entry.happiness! > 1) AppConstants.stimmungLabels[1],
-    if (entry.energy != null && entry.energy! > 1) AppConstants.stimmungLabels[2],
+    if (entry.stress != null && entry.stress! > 1)
+      AppConstants.stimmungLabels[0],
+    if (entry.happiness != null && entry.happiness! > 1)
+      AppConstants.stimmungLabels[1],
+    if (entry.energy != null && entry.energy! > 1)
+      AppConstants.stimmungLabels[2],
     if (entry.focus != null && entry.focus! > 1) AppConstants.stimmungLabels[3],
-    if (entry.bodyFeel != null && entry.bodyFeel! > 1) AppConstants.stimmungLabels[4],
+    if (entry.bodyFeel != null && entry.bodyFeel! > 1)
+      AppConstants.stimmungLabels[4],
   ];
   return active.isEmpty ? 'Alles gut' : active.join(', ');
 }
@@ -53,12 +57,7 @@ String gutFeelingSubtitle(GutFeelingEntry entry) {
 /// Averages all present values (bloating, gas, cramps, fullness +
 /// optional mood values). Lower is better (1 = best, 5 = worst).
 GutFeelingRating calculateGutFeelingRating(GutFeelingEntry entry) {
-  final values = <int>[
-    entry.bloating,
-    entry.gas,
-    entry.cramps,
-    entry.fullness,
-  ];
+  final values = <int>[entry.bloating, entry.gas, entry.cramps, entry.fullness];
 
   if (entry.happiness != null) values.add(entry.happiness!);
   if (entry.energy != null) values.add(entry.energy!);

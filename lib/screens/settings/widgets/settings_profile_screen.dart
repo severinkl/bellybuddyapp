@@ -86,7 +86,10 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
   }
 
   UserProfile _updateTriggers(
-      String intolerance, UserProfile profile, List<String> triggers) {
+    String intolerance,
+    UserProfile profile,
+    List<String> triggers,
+  ) {
     return switch (intolerance) {
       'Fruktose' => profile.copyWith(fructoseTriggers: triggers),
       'Laktose' => profile.copyWith(lactoseTriggers: triggers),
@@ -112,8 +115,9 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                 child: Text(
                   'Gespeichert',
                   style: TextStyle(
-                      color: AppTheme.success,
-                      fontSize: AppTheme.fontSizeBody),
+                    color: AppTheme.success,
+                    fontSize: AppTheme.fontSizeBody,
+                  ),
                 ),
               ),
             ),
@@ -157,8 +161,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                         onChanged: (v) {
                           final year = int.tryParse(v);
                           if (year != null && v.length == 4) {
-                            _debounceSave(
-                                profile.copyWith(birthYear: year));
+                            _debounceSave(profile.copyWith(birthYear: year));
                           }
                         },
                       ),
@@ -171,13 +174,21 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                         ),
                         items: const [
                           DropdownMenuItem(
-                              value: null, child: Text('Auswählen')),
+                            value: null,
+                            child: Text('Auswählen'),
+                          ),
                           DropdownMenuItem(
-                              value: 'weiblich', child: Text('Weiblich')),
+                            value: 'weiblich',
+                            child: Text('Weiblich'),
+                          ),
                           DropdownMenuItem(
-                              value: 'männlich', child: Text('Männlich')),
+                            value: 'männlich',
+                            child: Text('Männlich'),
+                          ),
                           DropdownMenuItem(
-                              value: 'andere', child: Text('Andere')),
+                            value: 'andere',
+                            child: Text('Andere'),
+                          ),
                         ],
                         onChanged: (v) =>
                             _debounceSave(profile.copyWith(gender: v)),
@@ -198,8 +209,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                               ),
                               onChanged: (v) {
                                 final height = int.tryParse(v);
-                                _debounceSave(
-                                    profile.copyWith(height: height));
+                                _debounceSave(profile.copyWith(height: height));
                               },
                             ),
                           ),
@@ -217,8 +227,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                               ),
                               onChanged: (v) {
                                 final weight = int.tryParse(v);
-                                _debounceSave(
-                                    profile.copyWith(weight: weight));
+                                _debounceSave(profile.copyWith(weight: weight));
                               },
                             ),
                           ),
@@ -263,8 +272,11 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                     onIntolerancesChanged: (v) =>
                         _saveImmediately(profile.copyWith(intolerances: v)),
                     onTriggersChanged: (intolerance, triggers) {
-                      final updated =
-                          _updateTriggers(intolerance, profile, triggers);
+                      final updated = _updateTriggers(
+                        intolerance,
+                        profile,
+                        triggers,
+                      );
                       _saveImmediately(updated);
                     },
                   ),

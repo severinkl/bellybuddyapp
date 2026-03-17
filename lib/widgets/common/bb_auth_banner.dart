@@ -6,11 +6,7 @@ class BbAuthBanner extends StatelessWidget {
   final String text;
   final bool isError;
 
-  const BbAuthBanner({
-    super.key,
-    required this.text,
-    this.isError = true,
-  });
+  const BbAuthBanner({super.key, required this.text, this.isError = true});
 
   @override
   Widget build(BuildContext context) {

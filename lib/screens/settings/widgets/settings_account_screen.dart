@@ -69,8 +69,9 @@ class _SettingsAccountScreenState extends ConsumerState<SettingsAccountScreen> {
                   _InfoRow(label: 'E-Mail', value: user?.email ?? '—'),
                   AppConstants.gap8,
                   _InfoRow(
-                      label: 'Anmeldemethode',
-                      value: _formatAuthMethod(authMethod)),
+                    label: 'Anmeldemethode',
+                    value: _formatAuthMethod(authMethod),
+                  ),
                   if (showPasswordSection) ...[
                     AppConstants.gap12,
                     const PasswordChangeSection(),
@@ -105,8 +106,7 @@ class _SettingsAccountScreenState extends ConsumerState<SettingsAccountScreen> {
                   ),
                   AppConstants.gap16,
                   BbButton(
-                    label:
-                        _isDeleting ? 'Wird gelöscht...' : 'Konto löschen',
+                    label: _isDeleting ? 'Wird gelöscht...' : 'Konto löschen',
                     isDestructive: true,
                     icon: Icons.delete_outline,
                     isLoading: _isDeleting,
@@ -133,15 +133,21 @@ class _InfoRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Text(label,
-            style: const TextStyle(
-                fontSize: AppTheme.fontSizeBody,
-                color: AppTheme.mutedForeground)),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: AppTheme.fontSizeBody,
+            color: AppTheme.mutedForeground,
+          ),
+        ),
         const Spacer(),
-        Text(value,
-            style: const TextStyle(
-                fontSize: AppTheme.fontSizeBody,
-                fontWeight: FontWeight.w500)),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: AppTheme.fontSizeBody,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
       ],
     );
   }

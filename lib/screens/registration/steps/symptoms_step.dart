@@ -7,7 +7,11 @@ class SymptomsStep extends StatelessWidget {
   final List<String> selected;
   final ValueChanged<List<String>> onChanged;
 
-  const SymptomsStep({super.key, required this.selected, required this.onChanged});
+  const SymptomsStep({
+    super.key,
+    required this.selected,
+    required this.onChanged,
+  });
 
   static const _options = [
     'Belastender Durchfall',

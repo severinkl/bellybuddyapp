@@ -62,8 +62,8 @@ class _IngredientSuggestionsScreenState
           ),
           Expanded(
             child: state.when(
-              loading: () => const BbLoadingState(
-                  message: 'Vorschläge laden...'),
+              loading: () =>
+                  const BbLoadingState(message: 'Vorschläge laden...'),
               error: (e, _) => BbErrorState(
                 message: 'Fehler beim Laden der Vorschläge.',
                 onRetry: () => ref
@@ -74,10 +74,12 @@ class _IngredientSuggestionsScreenState
                 final filtered = _searchQuery.isEmpty
                     ? groups
                     : groups
-                        .where((g) => g.ingredientName
-                            .toLowerCase()
-                            .contains(_searchQuery.toLowerCase()))
-                        .toList();
+                          .where(
+                            (g) => g.ingredientName.toLowerCase().contains(
+                              _searchQuery.toLowerCase(),
+                            ),
+                          )
+                          .toList();
 
                 if (filtered.isEmpty) {
                   return const Center(
@@ -85,8 +87,7 @@ class _IngredientSuggestionsScreenState
                       padding: AppConstants.paddingLg,
                       child: Text(
                         'Keine Vorschläge vorhanden.',
-                        style:
-                            TextStyle(color: AppTheme.mutedForeground),
+                        style: TextStyle(color: AppTheme.mutedForeground),
                       ),
                     ),
                   );
@@ -96,8 +97,7 @@ class _IngredientSuggestionsScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Padding(
-                      padding:
-                          const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
                       child: Text(
                         '${filtered.length} ${filtered.length == 1 ? 'Vorschlag' : 'Vorschläge'}',
                         style: const TextStyle(
@@ -108,24 +108,19 @@ class _IngredientSuggestionsScreenState
                     ),
                     Expanded(
                       child: ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(
-                            16, 0, 16, 16),
+                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                         itemCount: filtered.length,
                         itemBuilder: (context, index) {
                           final group = filtered[index];
                           return Padding(
-                            padding:
-                                const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.only(bottom: 8),
                             child: SuggestionCard(
                               group: group,
                               onTap: () => _openDetail(group),
                               onDismiss: () {
                                 ref
-                                    .read(
-                                        ingredientSuggestionProvider
-                                            .notifier)
-                                    .dismissSuggestion(
-                                        group.suggestionIds);
+                                    .read(ingredientSuggestionProvider.notifier)
+                                    .dismissSuggestion(group.suggestionIds);
                               },
                             ),
                           );

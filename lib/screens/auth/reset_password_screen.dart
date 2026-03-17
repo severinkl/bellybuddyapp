@@ -83,7 +83,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
               TextFormField(
                 controller: _confirmController,
                 obscureText: true,
-                decoration: const InputDecoration(labelText: 'Passwort bestätigen'),
+                decoration: const InputDecoration(
+                  labelText: 'Passwort bestätigen',
+                ),
               ),
               AppConstants.gap24,
               BbButton(

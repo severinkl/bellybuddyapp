@@ -59,7 +59,8 @@ class MealTrackerState {
       isAnalyzing: isAnalyzing ?? this.isAnalyzing,
       isSaving: isSaving ?? this.isSaving,
       showSuccess: showSuccess ?? this.showSuccess,
-      ingredientSuggestions: ingredientSuggestions ?? this.ingredientSuggestions,
+      ingredientSuggestions:
+          ingredientSuggestions ?? this.ingredientSuggestions,
       ingredientSearchError: ingredientSearchError,
       notes: notes ?? this.notes,
       trackedAt: trackedAt ?? this.trackedAt,
@@ -81,10 +82,7 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
   }
 
   void clearImage() {
-    state = MealTrackerState(
-      trackedAt: state.trackedAt,
-      notes: state.notes,
-    );
+    state = MealTrackerState(trackedAt: state.trackedAt, notes: state.notes);
   }
 
   Future<void> analyzeImage(Uint8List bytes, String filename) async {
@@ -94,9 +92,10 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
       final mimeType = mimeTypeForExtension(ext);
       final base64Data = 'data:$mimeType;base64,${base64Encode(bytes)}';
 
-      final result = await EdgeFunctionService.invoke('analyze-meal', body: {
-        'imageBase64': base64Data,
-      });
+      final result = await EdgeFunctionService.invoke(
+        'analyze-meal',
+        body: {'imageBase64': base64Data},
+      );
 
       state = state.copyWith(
         title: result['title'] as String? ?? state.title,
@@ -119,11 +118,9 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
     state = state.copyWith(ingredientSearchError: null);
     try {
       final results = await IngredientService.search(query);
-      state = state.copyWith(
-        ingredientSuggestions: results,
-      );
-    } catch (e) {
-      _log.error('ingredient search failed', e);
+      state = state.copyWith(ingredientSuggestions: results);
+    } catch (e, st) {
+      _log.error('ingredient search failed', e, st);
       state = state.copyWith(ingredientSearchError: e);
     }
   }
@@ -148,8 +145,9 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
   Future<void> deleteUserIngredient(String id) async {
     await IngredientService.deleteUserIngredient(id);
     state = state.copyWith(
-      ingredientSuggestions:
-          state.ingredientSuggestions.where((s) => s.id != id).toList(),
+      ingredientSuggestions: state.ingredientSuggestions
+          .where((s) => s.id != id)
+          .toList(),
     );
   }
 
@@ -190,4 +188,6 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
 }
 
 final mealTrackerProvider =
-    NotifierProvider<MealTrackerNotifier, MealTrackerState>(MealTrackerNotifier.new);
+    NotifierProvider<MealTrackerNotifier, MealTrackerState>(
+      MealTrackerNotifier.new,
+    );

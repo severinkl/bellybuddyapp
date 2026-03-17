@@ -23,7 +23,8 @@ class _ReminderTimePickerState extends State<ReminderTimePicker> {
   int? _customHour;
 
   List<int> get _customTimes =>
-      widget.selectedTimes.where((h) => !_presetHours.contains(h)).toList()..sort();
+      widget.selectedTimes.where((h) => !_presetHours.contains(h)).toList()
+        ..sort();
 
   void _toggleHour(int hour) {
     HapticService.selection();
@@ -64,7 +65,9 @@ class _ReminderTimePickerState extends State<ReminderTimePicker> {
     if (sorted.length == 1) {
       return 'Erinnerung um ${sorted.first.toString().padLeft(2, '0')}:00 Uhr';
     }
-    final times = sorted.map((h) => '${h.toString().padLeft(2, '0')}:00').join(', ');
+    final times = sorted
+        .map((h) => '${h.toString().padLeft(2, '0')}:00')
+        .join(', ');
     return '${sorted.length} Erinnerungen: $times';
   }
 
@@ -91,7 +94,8 @@ class _ReminderTimePickerState extends State<ReminderTimePicker> {
               label: 'Andere',
               isSelected: _showCustomPicker,
               icon: Icons.add,
-              onTap: () => setState(() => _showCustomPicker = !_showCustomPicker),
+              onTap: () =>
+                  setState(() => _showCustomPicker = !_showCustomPicker),
             ),
           ],
         ),
@@ -106,14 +110,19 @@ class _ReminderTimePickerState extends State<ReminderTimePicker> {
                   initialValue: _customHour,
                   decoration: const InputDecoration(
                     hintText: 'Uhrzeit wählen',
-                    contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                   ),
                   items: List.generate(24, (i) => i)
                       .where((h) => !widget.selectedTimes.contains(h))
-                      .map((h) => DropdownMenuItem(
-                            value: h,
-                            child: Text('${h.toString().padLeft(2, '0')}:00'),
-                          ))
+                      .map(
+                        (h) => DropdownMenuItem(
+                          value: h,
+                          child: Text('${h.toString().padLeft(2, '0')}:00'),
+                        ),
+                      )
                       .toList(),
                   onChanged: (v) => setState(() => _customHour = v),
                 ),
@@ -146,7 +155,9 @@ class _ReminderTimePickerState extends State<ReminderTimePicker> {
                 deleteIcon: const Icon(Icons.close, size: 16),
                 onDeleted: () => _removeCustomHour(hour),
                 backgroundColor: AppTheme.primary.withValues(alpha: 0.15),
-                side: BorderSide(color: AppTheme.primary.withValues(alpha: 0.3)),
+                side: BorderSide(
+                  color: AppTheme.primary.withValues(alpha: 0.3),
+                ),
               );
             }).toList(),
           ),
@@ -193,7 +204,13 @@ class _TimePill extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             if (icon != null) ...[
-              Icon(icon, size: 16, color: isSelected ? AppTheme.primaryForeground : AppTheme.foreground),
+              Icon(
+                icon,
+                size: 16,
+                color: isSelected
+                    ? AppTheme.primaryForeground
+                    : AppTheme.foreground,
+              ),
               const SizedBox(width: 4),
             ],
             Text(
@@ -201,7 +218,9 @@ class _TimePill extends StatelessWidget {
               style: TextStyle(
                 fontSize: AppTheme.fontSizeBody,
                 fontWeight: FontWeight.w500,
-                color: isSelected ? AppTheme.primaryForeground : AppTheme.foreground,
+                color: isSelected
+                    ? AppTheme.primaryForeground
+                    : AppTheme.foreground,
               ),
             ),
           ],

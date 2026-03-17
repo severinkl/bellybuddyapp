@@ -27,11 +27,11 @@ class BbButton extends StatelessWidget {
     final effectiveOnPressed = isLoading
         ? null
         : onPressed != null
-            ? () {
-                HapticService.light();
-                onPressed!();
-              }
-            : null;
+        ? () {
+            HapticService.light();
+            onPressed!();
+          }
+        : null;
 
     final child = isLoading
         ? const SizedBox(
@@ -40,15 +40,15 @@ class BbButton extends StatelessWidget {
             child: CircularProgressIndicator(strokeWidth: 2),
           )
         : icon != null
-            ? Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(icon, size: 20),
-                  const SizedBox(width: 8),
-                  Text(label),
-                ],
-              )
-            : Text(label);
+        ? Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 20),
+              const SizedBox(width: 8),
+              Text(label),
+            ],
+          )
+        : Text(label);
 
     if (isOutlined) {
       return OutlinedButton(
@@ -71,11 +71,11 @@ class BbButton extends StatelessWidget {
               foregroundColor: Colors.white,
             )
           : isSecondary
-              ? ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.secondary,
-                  foregroundColor: AppTheme.secondaryForeground,
-                )
-              : null,
+          ? ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.secondary,
+              foregroundColor: AppTheme.secondaryForeground,
+            )
+          : null,
       child: child,
     );
   }

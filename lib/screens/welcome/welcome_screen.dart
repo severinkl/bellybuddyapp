@@ -61,17 +61,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   }
 
   void _startTimer() {
-    _autoAdvanceTimer = Timer.periodic(
-      const Duration(seconds: 5),
-      (_) {
-        _currentPage = (_currentPage + 1) % _slides.length;
-        _pageController.animateToPage(
-          _currentPage,
-          duration: AppConstants.animSlow,
-          curve: Curves.easeInOut,
-        );
-      },
-    );
+    _autoAdvanceTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      _currentPage = (_currentPage + 1) % _slides.length;
+      _pageController.animateToPage(
+        _currentPage,
+        duration: AppConstants.animSlow,
+        curve: Curves.easeInOut,
+      );
+    });
   }
 
   void _resetTimer() {

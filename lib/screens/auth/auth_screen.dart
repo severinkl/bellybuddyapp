@@ -143,8 +143,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 ),
                 AppConstants.gap32,
 
-                if (_error != null)
-                  BbAuthBanner(text: _error!, isError: true),
+                if (_error != null) BbAuthBanner(text: _error!, isError: true),
 
                 if (_resetSent && _view == _AuthView.forgotPassword)
                   const BbAuthBanner(
@@ -162,7 +161,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     hintText: 'deine@email.de',
                   ),
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'E-Mail ist erforderlich';
+                    if (v == null || v.trim().isEmpty)
+                      return 'E-Mail ist erforderlich';
                     if (!v.contains('@')) return 'Ungültige E-Mail';
                     return null;
                   },
@@ -174,11 +174,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   TextFormField(
                     controller: _passwordController,
                     obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Passwort',
-                    ),
+                    decoration: const InputDecoration(labelText: 'Passwort'),
                     validator: (v) {
-                      if (v == null || v.isEmpty) return 'Passwort ist erforderlich';
+                      if (v == null || v.isEmpty)
+                        return 'Passwort ist erforderlich';
                       return null;
                     },
                   ),
@@ -217,7 +216,10 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                       Expanded(child: Divider(color: AppTheme.border)),
                       Padding(
                         padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Text('oder', style: TextStyle(color: AppTheme.mutedForeground)),
+                        child: Text(
+                          'oder',
+                          style: TextStyle(color: AppTheme.mutedForeground),
+                        ),
                       ),
                       Expanded(child: Divider(color: AppTheme.border)),
                     ],

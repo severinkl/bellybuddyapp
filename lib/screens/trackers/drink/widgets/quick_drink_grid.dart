@@ -10,10 +10,12 @@ class QuickDrinkGrid extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final quickDrinks =
-        ref.watch(drinkTrackerProvider.select((s) => s.quickDrinks));
-    final selectedDrink =
-        ref.watch(drinkTrackerProvider.select((s) => s.selectedDrink));
+    final quickDrinks = ref.watch(
+      drinkTrackerProvider.select((s) => s.quickDrinks),
+    );
+    final selectedDrink = ref.watch(
+      drinkTrackerProvider.select((s) => s.selectedDrink),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -39,8 +41,10 @@ class QuickDrinkGrid extends ConsumerWidget {
               },
               child: AnimatedContainer(
                 duration: AppConstants.animFast,
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: isSelected
                       ? AppTheme.info
@@ -52,9 +56,7 @@ class QuickDrinkGrid extends ConsumerWidget {
                   style: TextStyle(
                     fontSize: AppTheme.fontSizeBody,
                     fontWeight: FontWeight.w500,
-                    color: isSelected
-                        ? Colors.white
-                        : AppTheme.foreground,
+                    color: isSelected ? Colors.white : AppTheme.foreground,
                   ),
                 ),
               ),

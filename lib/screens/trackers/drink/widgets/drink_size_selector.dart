@@ -23,10 +23,12 @@ class _DrinkSizeSelectorState extends ConsumerState<DrinkSizeSelector> {
 
   @override
   Widget build(BuildContext context) {
-    final selectedAmount =
-        ref.watch(drinkTrackerProvider.select((s) => s.selectedAmount));
-    final customAmount =
-        ref.watch(drinkTrackerProvider.select((s) => s.customAmount));
+    final selectedAmount = ref.watch(
+      drinkTrackerProvider.select((s) => s.selectedAmount),
+    );
+    final customAmount = ref.watch(
+      drinkTrackerProvider.select((s) => s.customAmount),
+    );
 
     // Sync text controller when provider clears customAmount (e.g. preset tapped)
     ref.listen(drinkTrackerProvider.select((s) => s.customAmount), (_, next) {
@@ -40,7 +42,10 @@ class _DrinkSizeSelectorState extends ConsumerState<DrinkSizeSelector> {
       children: [
         const Text(
           'Menge?',
-          style: TextStyle(fontSize: AppTheme.fontSizeSubtitle, fontWeight: FontWeight.w500),
+          style: TextStyle(
+            fontSize: AppTheme.fontSizeSubtitle,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         AppConstants.gap12,
         // 4-column grid of preset sizes
@@ -51,7 +56,8 @@ class _DrinkSizeSelectorState extends ConsumerState<DrinkSizeSelector> {
               Expanded(
                 child: _SizeButton(
                   ml: AppConstants.drinkSizes[i],
-                  isSelected: selectedAmount == AppConstants.drinkSizes[i] &&
+                  isSelected:
+                      selectedAmount == AppConstants.drinkSizes[i] &&
                       customAmount.isEmpty,
                   onTap: () {
                     HapticService.selection();
@@ -76,23 +82,32 @@ class _DrinkSizeSelectorState extends ConsumerState<DrinkSizeSelector> {
                   hintText: 'Andere Menge',
                   filled: true,
                   fillColor: AppTheme.muted.withValues(alpha: 0.5),
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 14,
+                  ),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+                    borderRadius: BorderRadius.circular(
+                      AppConstants.radiusFull,
+                    ),
                     borderSide: BorderSide.none,
                   ),
                   enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+                    borderRadius: BorderRadius.circular(
+                      AppConstants.radiusFull,
+                    ),
                     borderSide: BorderSide.none,
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+                    borderRadius: BorderRadius.circular(
+                      AppConstants.radiusFull,
+                    ),
                     borderSide: BorderSide.none,
                   ),
                 ),
-                onChanged:
-                    ref.read(drinkTrackerProvider.notifier).setCustomAmount,
+                onChanged: ref
+                    .read(drinkTrackerProvider.notifier)
+                    .setCustomAmount,
               ),
             ),
             const SizedBox(width: 8),
@@ -140,8 +155,7 @@ class _SizeButton extends StatelessWidget {
           style: TextStyle(
             fontSize: AppTheme.fontSizeBody,
             fontWeight: FontWeight.w500,
-            color:
-                isSelected ? Colors.white : AppTheme.foreground,
+            color: isSelected ? Colors.white : AppTheme.foreground,
           ),
         ),
       ),

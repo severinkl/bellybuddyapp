@@ -8,10 +8,7 @@ import '../../services/haptic_service.dart';
 class BbBottomNav extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
 
-  const BbBottomNav({
-    super.key,
-    required this.navigationShell,
-  });
+  const BbBottomNav({super.key, required this.navigationShell});
 
   @override
   Widget build(BuildContext context) {

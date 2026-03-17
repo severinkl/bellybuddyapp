@@ -6,7 +6,6 @@ import '../services/auth_service.dart';
 import '../utils/logger.dart';
 import '../utils/retry_helper.dart';
 
-
 /// Profile state notifier
 class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
   static const _log = AppLogger('ProfileProvider');
@@ -40,10 +39,9 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
       if (userId == null) throw Exception('Not authenticated');
 
       final authMethod = AuthService.detectAuthMethod();
-      final data = profile.copyWith(
-        userId: userId,
-        authMethod: authMethod,
-      ).toJson();
+      final data = profile
+          .copyWith(userId: userId, authMethod: authMethod)
+          .toJson();
       data['user_id'] = userId;
       // Remove null values to let DB defaults apply
       data.removeWhere((key, value) => value == null);
@@ -84,7 +82,9 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
 }
 
 final profileProvider =
-    NotifierProvider<ProfileNotifier, AsyncValue<UserProfile?>>(ProfileNotifier.new);
+    NotifierProvider<ProfileNotifier, AsyncValue<UserProfile?>>(
+      ProfileNotifier.new,
+    );
 
 /// Whether a profile row exists (regardless of completeness)
 final hasProfileProvider = Provider<bool>((ref) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../config/app_theme.dart';
+import '../../../config/constants.dart';
 import '../../../utils/signed_url_helper.dart';
 
 class MealThumbnail extends StatefulWidget {
@@ -29,38 +30,42 @@ class _MealThumbnailState extends State<MealThumbnail> {
   Widget build(BuildContext context) {
     if (_resolvedUrl == null) {
       return Container(
-        width: 40,
-        height: 40,
+        width: AppConstants.iconBadgeSm,
+        height: AppConstants.iconBadgeSm,
         decoration: BoxDecoration(
           color: AppTheme.primary.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppConstants.radiusIcon),
         ),
         child: const Icon(Icons.restaurant, color: AppTheme.primary, size: 20),
       );
     }
     return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(AppConstants.radiusIcon),
       child: CachedNetworkImage(
         imageUrl: _resolvedUrl!,
-        width: 40,
-        height: 40,
+        width: AppConstants.iconBadgeSm,
+        height: AppConstants.iconBadgeSm,
         fit: BoxFit.cover,
         placeholder: (_, _) => Container(
-          width: 40,
-          height: 40,
+          width: AppConstants.iconBadgeSm,
+          height: AppConstants.iconBadgeSm,
           decoration: BoxDecoration(
             color: AppTheme.primary.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(AppConstants.radiusIcon),
           ),
         ),
         errorWidget: (_, _, _) => Container(
-          width: 40,
-          height: 40,
+          width: AppConstants.iconBadgeSm,
+          height: AppConstants.iconBadgeSm,
           decoration: BoxDecoration(
             color: AppTheme.primary.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(AppConstants.radiusIcon),
           ),
-          child: const Icon(Icons.restaurant, color: AppTheme.primary, size: 20),
+          child: const Icon(
+            Icons.restaurant,
+            color: AppTheme.primary,
+            size: 20,
+          ),
         ),
       ),
     );

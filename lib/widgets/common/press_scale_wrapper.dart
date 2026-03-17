@@ -32,9 +32,10 @@ class _PressScaleWrapperState extends State<PressScaleWrapper>
       vsync: this,
       duration: AppConstants.pressScaleDuration,
     );
-    _scale = Tween<double>(begin: 1.0, end: widget.scaleValue).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _scale = Tween<double>(
+      begin: 1.0,
+      end: widget.scaleValue,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -53,10 +54,7 @@ class _PressScaleWrapperState extends State<PressScaleWrapper>
         widget.onTap?.call();
       },
       onTapCancel: () => _controller.reverse(),
-      child: ScaleTransition(
-        scale: _scale,
-        child: widget.child,
-      ),
+      child: ScaleTransition(scale: _scale, child: widget.child),
     );
   }
 }

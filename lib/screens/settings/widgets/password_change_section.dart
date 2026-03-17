@@ -36,8 +36,7 @@ class _PasswordChangeSectionState extends State<PasswordChangeSection> {
       _newPasswordController.text.contains(RegExp(r'[A-Z]'));
   bool get _hasLowercase =>
       _newPasswordController.text.contains(RegExp(r'[a-z]'));
-  bool get _hasNumber =>
-      _newPasswordController.text.contains(RegExp(r'[0-9]'));
+  bool get _hasNumber => _newPasswordController.text.contains(RegExp(r'[0-9]'));
   bool get _passwordsMatch =>
       _newPasswordController.text.isNotEmpty &&
       _newPasswordController.text == _confirmPasswordController.text;
@@ -54,24 +53,25 @@ class _PasswordChangeSectionState extends State<PasswordChangeSection> {
     try {
       final email = SupabaseService.currentUser?.email;
       if (email == null) throw Exception('No email found');
-      await AuthService.signInWithEmail(
-          email, _currentPasswordController.text);
+      await AuthService.signInWithEmail(email, _currentPasswordController.text);
       await AuthService.updatePassword(_newPasswordController.text);
       _currentPasswordController.clear();
       _newPasswordController.clear();
       _confirmPasswordController.clear();
       if (mounted) {
         setState(() => _expanded = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Passwort geändert!')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Passwort geändert!')));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text(
-                  'Aktuelles Passwort ist falsch oder ein Fehler ist aufgetreten.')),
+            content: Text(
+              'Aktuelles Passwort ist falsch oder ein Fehler ist aufgetreten.',
+            ),
+          ),
         );
       }
     } finally {
@@ -87,14 +87,14 @@ class _PasswordChangeSectionState extends State<PasswordChangeSection> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Link zum Zurücksetzen wurde gesendet.')),
+            content: Text('Link zum Zurücksetzen wurde gesendet.'),
+          ),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-              content: Text('Fehler beim Senden des Links.')),
+          const SnackBar(content: Text('Fehler beim Senden des Links.')),
         );
       }
     }
@@ -112,13 +112,18 @@ class _PasswordChangeSectionState extends State<PasswordChangeSection> {
           behavior: HitTestBehavior.opaque,
           child: Row(
             children: [
-              const Icon(Icons.lock_outline, size: 20, color: AppTheme.mutedForeground),
+              const Icon(
+                Icons.lock_outline,
+                size: 20,
+                color: AppTheme.mutedForeground,
+              ),
               const SizedBox(width: 8),
               const Text(
                 'Passwort ändern',
                 style: TextStyle(
-                    fontSize: AppTheme.fontSizeBody,
-                    fontWeight: FontWeight.w500),
+                  fontSize: AppTheme.fontSizeBody,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
               const Spacer(),
               Icon(
@@ -155,11 +160,14 @@ class _PasswordChangeSectionState extends State<PasswordChangeSection> {
                 labelText: 'Aktuelles Passwort',
                 prefixIcon: const Icon(Icons.lock_outline),
                 suffixIcon: IconButton(
-                  icon: Icon(_showCurrentPassword
-                      ? Icons.visibility_off
-                      : Icons.visibility),
+                  icon: Icon(
+                    _showCurrentPassword
+                        ? Icons.visibility_off
+                        : Icons.visibility,
+                  ),
                   onPressed: () => setState(
-                      () => _showCurrentPassword = !_showCurrentPassword),
+                    () => _showCurrentPassword = !_showCurrentPassword,
+                  ),
                 ),
               ),
               onChanged: (_) => setState(() {}),
@@ -172,9 +180,9 @@ class _PasswordChangeSectionState extends State<PasswordChangeSection> {
                 labelText: 'Neues Passwort',
                 prefixIcon: const Icon(Icons.lock_outline),
                 suffixIcon: IconButton(
-                  icon: Icon(_showNewPassword
-                      ? Icons.visibility_off
-                      : Icons.visibility),
+                  icon: Icon(
+                    _showNewPassword ? Icons.visibility_off : Icons.visibility,
+                  ),
                   onPressed: () =>
                       setState(() => _showNewPassword = !_showNewPassword),
                 ),
@@ -183,13 +191,18 @@ class _PasswordChangeSectionState extends State<PasswordChangeSection> {
             ),
             AppConstants.gap12,
             BbPasswordHint(
-                text: 'Mindestens 8 Zeichen', isValid: _hasMinLength),
+              text: 'Mindestens 8 Zeichen',
+              isValid: _hasMinLength,
+            ),
             BbPasswordHint(
-                text: 'Mindestens 1 Großbuchstabe', isValid: _hasUppercase),
+              text: 'Mindestens 1 Großbuchstabe',
+              isValid: _hasUppercase,
+            ),
             BbPasswordHint(
-                text: 'Mindestens 1 Kleinbuchstabe', isValid: _hasLowercase),
-            BbPasswordHint(
-                text: 'Mindestens 1 Zahl', isValid: _hasNumber),
+              text: 'Mindestens 1 Kleinbuchstabe',
+              isValid: _hasLowercase,
+            ),
+            BbPasswordHint(text: 'Mindestens 1 Zahl', isValid: _hasNumber),
             AppConstants.gap12,
             TextField(
               controller: _confirmPasswordController,
@@ -198,11 +211,14 @@ class _PasswordChangeSectionState extends State<PasswordChangeSection> {
                 labelText: 'Passwort bestätigen',
                 prefixIcon: const Icon(Icons.lock_outline),
                 suffixIcon: IconButton(
-                  icon: Icon(_showConfirmPassword
-                      ? Icons.visibility_off
-                      : Icons.visibility),
+                  icon: Icon(
+                    _showConfirmPassword
+                        ? Icons.visibility_off
+                        : Icons.visibility,
+                  ),
                   onPressed: () => setState(
-                      () => _showConfirmPassword = !_showConfirmPassword),
+                    () => _showConfirmPassword = !_showConfirmPassword,
+                  ),
                 ),
               ),
               onChanged: (_) => setState(() {}),

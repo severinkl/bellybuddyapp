@@ -43,7 +43,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       final isAuthenticated = ref.read(isAuthenticatedProvider);
       final path = state.matchedLocation;
 
-      final isAuthRoute = path == RoutePaths.welcome ||
+      final isAuthRoute =
+          path == RoutePaths.welcome ||
           path == RoutePaths.auth ||
           path == RoutePaths.resetPassword;
 

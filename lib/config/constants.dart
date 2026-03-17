@@ -23,13 +23,23 @@ class AppConstants {
   static const paddingMd = EdgeInsets.all(16);
   static const paddingLg = EdgeInsets.all(24);
 
+  // Icon badge sizes
+  static const double iconBadgeSm = 40.0;
+  static const double iconBadgeMd = 44.0;
+  static const double iconBadgeLg = 48.0;
+
   // Border radius
+  static const double radiusXs = 4.0;
   static const double radiusSm = 8.0;
+  static const double radiusIcon = 10.0;
   static const double radiusMd = 12.0;
   static const double radiusLg = 16.0;
   static const double radiusRound = 20.0;
   static const double radiusXl = 24.0;
   static const double radiusFull = 100.0;
+
+  // Image sizes
+  static const double mealImageHeight = 180.0;
 
   // Button
   static const double buttonHeight = 56.0;
@@ -70,9 +80,12 @@ class AppConstants {
   static const String mascotStressed = '$mascotBasePath/mascot-stressed.png';
   static const String mascotInLove = '$mascotBasePath/mascot-in-love.png';
   static const String mascotZen = '$mascotBasePath/mascot-zen.png';
-  static const String mascotBloatingStomach = '$mascotBasePath/mascot-bloating-stomach.png';
-  static const String mascotHappyStomach = '$mascotBasePath/mascot-happy-stomach.png';
-  static const String mascotFlatulance = '$mascotBasePath/mascot-flatulance.png';
+  static const String mascotBloatingStomach =
+      '$mascotBasePath/mascot-bloating-stomach.png';
+  static const String mascotHappyStomach =
+      '$mascotBasePath/mascot-happy-stomach.png';
+  static const String mascotFlatulance =
+      '$mascotBasePath/mascot-flatulance.png';
   static const String mascotCramp = '$mascotBasePath/mascot-cramp.png';
   static const String mascotNoCramp = '$mascotBasePath/mascot-no-cramp.png';
   static const String mascotFullness = '$mascotBasePath/mascot-fullness.png';
@@ -80,7 +93,8 @@ class AppConstants {
   // Other images
   static const String susiPhone = '$imagesBasePath/susi-phone.png';
   static const String fuerDichCard = '$imagesBasePath/fuer-dich-card.png';
-  static const String alternativenCard = '$imagesBasePath/alternativen-card.jpg';
+  static const String alternativenCard =
+      '$imagesBasePath/alternativen-card.jpg';
   static const String rezepteCard = '$imagesBasePath/rezepte-card.jpg';
   static const String logoSvg = '$imagesBasePath/logo.svg';
   static const String toiletPaperIcon = '$iconsBasePath/toilet-paper-icon.png';
@@ -97,21 +111,39 @@ class AppConstants {
 
   // Intolerance options (used in registration + settings)
   static const List<String> intoleranceOptions = [
-    'Laktose', 'Gluten', 'Fruktose', 'Histamin', 'Sorbit',
-    'Nüsse', 'Eier', 'Soja', 'Weizen',
+    'Laktose',
+    'Gluten',
+    'Fruktose',
+    'Histamin',
+    'Sorbit',
+    'Nüsse',
+    'Eier',
+    'Soja',
+    'Weizen',
   ];
 
   // Symptom options (used in registration + settings)
   static const List<String> symptomOptions = [
-    'Blähungen', 'Bauchschmerzen', 'Durchfall', 'Verstopfung',
-    'Übelkeit', 'Sodbrennen', 'Krämpfe', 'Völlegefühl',
+    'Blähungen',
+    'Bauchschmerzen',
+    'Durchfall',
+    'Verstopfung',
+    'Übelkeit',
+    'Sodbrennen',
+    'Krämpfe',
+    'Völlegefühl',
   ];
 
   // Drink sizes
   static const List<int> drinkSizes = [250, 330, 500, 1000];
 
   // Gut feeling symptom labels
-  static const List<String> gutFeelingSymptoms = ['Blähbauch', 'Blähungen', 'Krämpfe', 'Völlegefühl'];
+  static const List<String> gutFeelingSymptoms = [
+    'Blähbauch',
+    'Blähungen',
+    'Krämpfe',
+    'Völlegefühl',
+  ];
 
   // Stimmung (mood) labels
   static const List<String> stimmungLabels = [
@@ -121,5 +153,4 @@ class AppConstants {
     'unkonzentriert',
     'unwohl',
   ];
-
 }

@@ -20,11 +20,11 @@ class RecommendationItem {
       );
 
   Map<String, dynamic> toJson() => {
-        'type': type,
-        'ingredient': ingredient,
-        'reason': reason,
-        if (alternative != null) 'alternative': alternative,
-      };
+    'type': type,
+    'ingredient': ingredient,
+    'reason': reason,
+    if (alternative != null) 'alternative': alternative,
+  };
 
   bool get isSubstitute => type == 'substitute';
   bool get isTry => type == 'try';

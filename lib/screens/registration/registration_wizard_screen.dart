@@ -58,8 +58,8 @@ class _RegistrationWizardScreenState
 
   bool get _canAdvance {
     return switch (_currentStep) {
-      1 => _gender != null,  // Gender is mandatory
-      3 => _diet != null,    // Diet is mandatory
+      1 => _gender != null, // Gender is mandatory
+      3 => _diet != null, // Diet is mandatory
       _ => true,
     };
   }
@@ -93,7 +93,10 @@ class _RegistrationWizardScreenState
   }
 
   Future<void> _handleEmailSignUp(String email, String password) async {
-    setState(() { _isSaving = true; _authError = null; });
+    setState(() {
+      _isSaving = true;
+      _authError = null;
+    });
     try {
       await AuthService.signUpWithEmail(email, password);
       await _createProfile();
@@ -101,7 +104,8 @@ class _RegistrationWizardScreenState
     } catch (e) {
       _log.error('email sign-up failed', e);
       if (mounted) {
-        final message = (e is AuthApiException && e.code == 'user_already_exists')
+        final message =
+            (e is AuthApiException && e.code == 'user_already_exists')
             ? 'Diese E-Mail ist bereits registriert. Bitte melde dich an.'
             : 'Registrierung fehlgeschlagen.';
         setState(() => _authError = message);
@@ -112,28 +116,36 @@ class _RegistrationWizardScreenState
   }
 
   Future<void> _handleGoogleSignUp() async {
-    setState(() { _isSaving = true; _authError = null; });
+    setState(() {
+      _isSaving = true;
+      _authError = null;
+    });
     try {
       await AuthService.signInWithGoogle();
       await _createProfile();
       if (mounted) context.go(RoutePaths.dashboard);
     } catch (e) {
       _log.error('google sign-up failed', e);
-      if (mounted) setState(() => _authError = 'Google-Anmeldung fehlgeschlagen.');
+      if (mounted)
+        setState(() => _authError = 'Google-Anmeldung fehlgeschlagen.');
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
   }
 
   Future<void> _handleAppleSignUp() async {
-    setState(() { _isSaving = true; _authError = null; });
+    setState(() {
+      _isSaving = true;
+      _authError = null;
+    });
     try {
       await AuthService.signInWithApple();
       await _createProfile();
       if (mounted) context.go(RoutePaths.dashboard);
     } catch (e) {
       _log.error('apple sign-up failed', e);
-      if (mounted) setState(() => _authError = 'Apple-Anmeldung fehlgeschlagen.');
+      if (mounted)
+        setState(() => _authError = 'Apple-Anmeldung fehlgeschlagen.');
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -155,7 +167,7 @@ class _RegistrationWizardScreenState
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(AppConstants.radiusXs),
                 child: LinearProgressIndicator(
                   value: (_currentStep + 1) / _totalSteps,
                   backgroundColor: AppTheme.muted,
@@ -196,8 +208,9 @@ class _RegistrationWizardScreenState
                     selected: _intolerances,
                     onChanged: (v) => setState(() => _intolerances = v),
                     triggers: _triggers,
-                    onTriggersChanged: (intolerance, t) =>
-                        setState(() => _triggers = {..._triggers, intolerance: t}),
+                    onTriggersChanged: (intolerance, t) => setState(
+                      () => _triggers = {..._triggers, intolerance: t},
+                    ),
                   ),
                   AuthStep(
                     isLoading: _isSaving,
@@ -225,7 +238,9 @@ class _RegistrationWizardScreenState
               child: TextButton.icon(
                 icon: const Icon(Icons.arrow_back, size: 18),
                 label: const Text('Zurück'),
-                style: TextButton.styleFrom(foregroundColor: AppTheme.mutedForeground),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppTheme.mutedForeground,
+                ),
                 onPressed: () {
                   HapticService.light();
                   if (_currentStep == 0) {

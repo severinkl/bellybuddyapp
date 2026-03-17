@@ -6,6 +6,7 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/entries_provider.dart';
 import '../../providers/ingredient_suggestion_provider.dart';
+import '../../widgets/common/circle_icon_button.dart';
 import '../../providers/profile_provider.dart';
 import '../../router/route_names.dart';
 import '../../widgets/common/tracker_card.dart';
@@ -35,9 +36,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final newCount = ref.watch(ingredientSuggestionProvider).whenOrNull(
-          data: (groups) => groups.where((g) => g.isNew).length,
-        ) ??
+    final newCount =
+        ref
+            .watch(ingredientSuggestionProvider)
+            .whenOrNull(
+              data: (groups) => groups.where((g) => g.isNew).length,
+            ) ??
         0;
 
     return Scaffold(
@@ -83,28 +87,10 @@ class _DashboardHeader extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        GestureDetector(
-          onTap: () => context.push(RoutePaths.settings),
-          child: Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: AppTheme.beige,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.06),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: const Icon(
-              Icons.settings,
-              color: AppTheme.foreground,
-              size: 20,
-            ),
-          ),
+        CircleIconButton(
+          icon: Icons.settings,
+          size: AppConstants.iconBadgeLg,
+          onPressed: () => context.push(RoutePaths.settings),
         ),
       ],
     );

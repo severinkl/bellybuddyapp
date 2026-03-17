@@ -30,11 +30,7 @@ class TrackerCard extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            SvgPicture.asset(
-              svgPath,
-              width: 48,
-              height: 48,
-            ),
+            SvgPicture.asset(svgPath, width: 48, height: 48),
             AppConstants.gap12,
             Text(
               label,

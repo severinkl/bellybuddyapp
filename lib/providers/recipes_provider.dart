@@ -136,5 +136,6 @@ class RecipesNotifier extends Notifier<RecipesState> {
   }
 }
 
-final recipesProvider =
-    NotifierProvider<RecipesNotifier, RecipesState>(RecipesNotifier.new);
+final recipesProvider = NotifierProvider<RecipesNotifier, RecipesState>(
+  RecipesNotifier.new,
+);

@@ -68,7 +68,11 @@ class _AuthStepState extends State<AuthStep> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             AppConstants.gap16,
-            const MascotImage(assetPath: AppConstants.mascotEnergetic, width: 120, height: 120),
+            const MascotImage(
+              assetPath: AppConstants.mascotEnergetic,
+              width: 120,
+              height: 120,
+            ),
             AppConstants.gap16,
             const Text(
               'Konto erstellen',
@@ -102,7 +106,8 @@ class _AuthStepState extends State<AuthStep> {
                 hintText: 'deine@email.de',
               ),
               validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'E-Mail ist erforderlich';
+                if (v == null || v.trim().isEmpty)
+                  return 'E-Mail ist erforderlich';
                 if (!v.contains('@')) return 'Ungültige E-Mail';
                 return null;
               },
@@ -112,9 +117,7 @@ class _AuthStepState extends State<AuthStep> {
             TextFormField(
               controller: _passwordController,
               obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'Passwort',
-              ),
+              decoration: const InputDecoration(labelText: 'Passwort'),
               onChanged: (_) => setState(() {}),
               validator: (v) {
                 if (v == null || v.isEmpty) return 'Passwort ist erforderlich';
@@ -153,7 +156,10 @@ class _AuthStepState extends State<AuthStep> {
                 Expanded(child: Divider(color: AppTheme.border)),
                 Padding(
                   padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: Text('oder', style: TextStyle(color: AppTheme.mutedForeground)),
+                  child: Text(
+                    'oder',
+                    style: TextStyle(color: AppTheme.mutedForeground),
+                  ),
                 ),
                 Expanded(child: Divider(color: AppTheme.border)),
               ],

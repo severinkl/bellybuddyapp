@@ -11,11 +11,11 @@ import '../../../widgets/common/mascot_image.dart';
 import 'meal_thumbnail.dart';
 
 String mascotForRating(GutFeelingRatingLevel level) => switch (level) {
-      GutFeelingRatingLevel.spiGut => AppConstants.mascotCool,
-      GutFeelingRatingLevel.gut => AppConstants.mascotEnergetic,
-      GutFeelingRatingLevel.durchschnittlich => AppConstants.mascotHappy,
-      GutFeelingRatingLevel.schlecht => AppConstants.mascotSad,
-    };
+  GutFeelingRatingLevel.spiGut => AppConstants.mascotCool,
+  GutFeelingRatingLevel.gut => AppConstants.mascotEnergetic,
+  GutFeelingRatingLevel.durchschnittlich => AppConstants.mascotHappy,
+  GutFeelingRatingLevel.schlecht => AppConstants.mascotSad,
+};
 
 class DiaryEntryCard extends StatelessWidget {
   final DiaryEntry entry;
@@ -30,11 +30,11 @@ class DiaryEntryCard extends StatelessWidget {
   });
 
   Color get _color => switch (entry.type) {
-        DiaryEntryType.meal => AppTheme.primary,
-        DiaryEntryType.toilet => AppTheme.info,
-        DiaryEntryType.gutFeeling => AppTheme.warning,
-        DiaryEntryType.drink => AppTheme.success,
-      };
+    DiaryEntryType.meal => AppTheme.primary,
+    DiaryEntryType.toilet => AppTheme.info,
+    DiaryEntryType.gutFeeling => AppTheme.warning,
+    DiaryEntryType.drink => AppTheme.success,
+  };
 
   Widget get _leadingWidget {
     if (entry.data case MealDiaryData(:final meal)) {
@@ -46,17 +46,17 @@ class DiaryEntryCard extends StatelessWidget {
       final rating = calculateGutFeelingRating(gutFeeling);
       return MascotImage(
         assetPath: mascotForRating(rating.level),
-        width: 40,
-        height: 40,
+        width: AppConstants.iconBadgeSm,
+        height: AppConstants.iconBadgeSm,
       );
     }
     if (entry.type == DiaryEntryType.toilet) {
       return Container(
-        width: 40,
-        height: 40,
+        width: AppConstants.iconBadgeSm,
+        height: AppConstants.iconBadgeSm,
         decoration: BoxDecoration(
           color: _color.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(AppConstants.radiusIcon),
         ),
         child: Center(
           child: SvgPicture.asset(
@@ -74,11 +74,11 @@ class DiaryEntryCard extends StatelessWidget {
       DiaryEntryType.drink => Icons.water_drop_outlined,
     };
     return Container(
-      width: 40,
-      height: 40,
+      width: AppConstants.iconBadgeSm,
+      height: AppConstants.iconBadgeSm,
       decoration: BoxDecoration(
         color: _color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(AppConstants.radiusIcon),
       ),
       child: Icon(icon, color: _color, size: 20),
     );
@@ -97,7 +97,9 @@ class DiaryEntryCard extends StatelessWidget {
             context: context,
             builder: (context) => AlertDialog(
               title: const Text('Eintrag löschen?'),
-              content: const Text('Möchtest du diesen Eintrag wirklich löschen?'),
+              content: const Text(
+                'Möchtest du diesen Eintrag wirklich löschen?',
+              ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
@@ -105,7 +107,9 @@ class DiaryEntryCard extends StatelessWidget {
                 ),
                 TextButton(
                   onPressed: () => Navigator.pop(context, true),
-                  style: TextButton.styleFrom(foregroundColor: AppTheme.destructive),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.destructive,
+                  ),
                   child: const Text('Löschen'),
                 ),
               ],

@@ -82,128 +82,121 @@ class AppTheme {
     return stoolColors[type - 1];
   }
 
-
   static ThemeData get theme => ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.light,
-        scaffoldBackgroundColor: background,
-        colorScheme: const ColorScheme.light(
-          primary: primary,
-          onPrimary: primaryForeground,
-          secondary: secondary,
-          onSecondary: secondaryForeground,
-          surface: card,
-          onSurface: foreground,
-          error: destructive,
-          onError: Colors.white,
-          outline: border,
+    useMaterial3: true,
+    brightness: Brightness.light,
+    scaffoldBackgroundColor: background,
+    colorScheme: const ColorScheme.light(
+      primary: primary,
+      onPrimary: primaryForeground,
+      secondary: secondary,
+      onSecondary: secondaryForeground,
+      surface: card,
+      onSurface: foreground,
+      error: destructive,
+      onError: Colors.white,
+      outline: border,
+    ),
+    fontFamily: '.SF Pro Text',
+    appBarTheme: const AppBarTheme(
+      backgroundColor: background,
+      foregroundColor: foreground,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      centerTitle: true,
+      titleTextStyle: TextStyle(
+        color: foreground,
+        fontSize: fontSizeTitle,
+        fontWeight: FontWeight.w600,
+      ),
+    ),
+    cardTheme: CardThemeData(
+      color: card,
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: border, width: 0.5),
+      ),
+      margin: EdgeInsets.zero,
+    ),
+    elevatedButtonTheme: ElevatedButtonThemeData(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: primary,
+        foregroundColor: primaryForeground,
+        minimumSize: const Size(double.infinity, 56),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        textStyle: const TextStyle(
+          fontSize: fontSizeSubtitle,
+          fontWeight: FontWeight.w500,
         ),
-        fontFamily: '.SF Pro Text',
-        appBarTheme: const AppBarTheme(
-          backgroundColor: background,
-          foregroundColor: foreground,
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          centerTitle: true,
-          titleTextStyle: TextStyle(
-            color: foreground,
-            fontSize: fontSizeTitle,
-            fontWeight: FontWeight.w600,
-          ),
+        elevation: 0,
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: OutlinedButton.styleFrom(
+        foregroundColor: foreground,
+        minimumSize: const Size(double.infinity, 56),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        side: const BorderSide(color: border),
+        textStyle: const TextStyle(
+          fontSize: fontSizeSubtitle,
+          fontWeight: FontWeight.w500,
         ),
-        cardTheme: CardThemeData(
-          color: card,
-          elevation: 0,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-            side: const BorderSide(color: border, width: 0.5),
-          ),
-          margin: EdgeInsets.zero,
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: TextButton.styleFrom(
+        foregroundColor: primary,
+        textStyle: const TextStyle(
+          fontSize: fontSizeSubtitle,
+          fontWeight: FontWeight.w500,
         ),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: primary,
-            foregroundColor: primaryForeground,
-            minimumSize: const Size(double.infinity, 56),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            textStyle: const TextStyle(
-              fontSize: fontSizeSubtitle,
-              fontWeight: FontWeight.w500,
-            ),
-            elevation: 0,
-          ),
-        ),
-        outlinedButtonTheme: OutlinedButtonThemeData(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: foreground,
-            minimumSize: const Size(double.infinity, 56),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            side: const BorderSide(color: border),
-            textStyle: const TextStyle(
-              fontSize: fontSizeSubtitle,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        textButtonTheme: TextButtonThemeData(
-          style: TextButton.styleFrom(
-            foregroundColor: primary,
-            textStyle: const TextStyle(
-              fontSize: fontSizeSubtitle,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: card,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: border),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: border),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: ring, width: 2),
-          ),
-          errorBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: destructive),
-          ),
-          hintStyle: const TextStyle(color: mutedForeground),
-        ),
-        snackBarTheme: SnackBarThemeData(
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
-        bottomSheetTheme: const BottomSheetThemeData(
-          backgroundColor: background,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          showDragHandle: true,
-        ),
-        chipTheme: ChipThemeData(
-          backgroundColor: secondary,
-          selectedColor: primary.withValues(alpha: 0.2),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppConstants.radiusRound),
-          ),
-          side: BorderSide.none,
-          labelStyle: const TextStyle(
-            fontSize: fontSizeBody,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      );
+      ),
+    ),
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: card,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: border),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: ring, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: destructive),
+      ),
+      hintStyle: const TextStyle(color: mutedForeground),
+    ),
+    snackBarTheme: SnackBarThemeData(
+      behavior: SnackBarBehavior.floating,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    ),
+    bottomSheetTheme: const BottomSheetThemeData(
+      backgroundColor: background,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      showDragHandle: true,
+    ),
+    chipTheme: ChipThemeData(
+      backgroundColor: secondary,
+      selectedColor: primary.withValues(alpha: 0.2),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusRound),
+      ),
+      side: BorderSide.none,
+      labelStyle: const TextStyle(
+        fontSize: fontSizeBody,
+        fontWeight: FontWeight.w500,
+      ),
+    ),
+  );
 }

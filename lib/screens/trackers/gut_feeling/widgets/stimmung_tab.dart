@@ -5,8 +5,11 @@ import '../../../../widgets/common/mood_slider_row.dart';
 
 class StimmungTab extends StatelessWidget {
   final int stress, happiness, energy, focus, bodyFeel;
-  final ValueChanged<int> onStressChanged, onHappinessChanged, onEnergyChanged,
-      onFocusChanged, onBodyFeelChanged;
+  final ValueChanged<int> onStressChanged,
+      onHappinessChanged,
+      onEnergyChanged,
+      onFocusChanged,
+      onBodyFeelChanged;
 
   const StimmungTab({
     super.key,
@@ -29,7 +32,10 @@ class StimmungTab extends StatelessWidget {
       children: [
         const Text(
           'Wie ist deine Stimmung?',
-          style: TextStyle(fontSize: AppTheme.fontSizeTitleLG, fontWeight: FontWeight.w500),
+          style: TextStyle(
+            fontSize: AppTheme.fontSizeTitleLG,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         AppConstants.gap16,
         MoodSliderRow(

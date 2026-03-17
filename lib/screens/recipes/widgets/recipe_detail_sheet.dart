@@ -32,7 +32,8 @@ class RecipeDetailSheet extends StatelessWidget {
         children: [
           Center(
             child: Container(
-              width: 40, height: 4,
+              width: 40,
+              height: 4,
               decoration: BoxDecoration(
                 color: AppTheme.muted,
                 borderRadius: BorderRadius.circular(2),
@@ -42,7 +43,10 @@ class RecipeDetailSheet extends StatelessWidget {
           AppConstants.gap16,
           Text(
             recipe.title,
-            style: const TextStyle(fontSize: AppTheme.fontSizeHeadingLG, fontWeight: FontWeight.w700),
+            style: const TextStyle(
+              fontSize: AppTheme.fontSizeHeadingLG,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           if (recipe.description != null) ...[
             AppConstants.gap8,
@@ -61,21 +65,39 @@ class RecipeDetailSheet extends StatelessWidget {
             ],
           ),
           AppConstants.gap24,
-          const Text('Zutaten', style: TextStyle(fontSize: AppTheme.fontSizeTitle, fontWeight: FontWeight.w600)),
+          const Text(
+            'Zutaten',
+            style: TextStyle(
+              fontSize: AppTheme.fontSizeTitle,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           AppConstants.gap8,
           ...recipe.ingredients.map(
             (i) => Padding(
               padding: const EdgeInsets.only(bottom: 4),
-              child: Text('• $i', style: const TextStyle(fontSize: AppTheme.fontSizeBodyLG)),
+              child: Text(
+                '• $i',
+                style: const TextStyle(fontSize: AppTheme.fontSizeBodyLG),
+              ),
             ),
           ),
           AppConstants.gap24,
-          const Text('Zubereitung', style: TextStyle(fontSize: AppTheme.fontSizeTitle, fontWeight: FontWeight.w600)),
+          const Text(
+            'Zubereitung',
+            style: TextStyle(
+              fontSize: AppTheme.fontSizeTitle,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           AppConstants.gap8,
           ...recipe.instructions.asMap().entries.map(
             (e) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: Text('${e.key + 1}. ${e.value}', style: const TextStyle(fontSize: AppTheme.fontSizeBodyLG)),
+              child: Text(
+                '${e.key + 1}. ${e.value}',
+                style: const TextStyle(fontSize: AppTheme.fontSizeBodyLG),
+              ),
             ),
           ),
         ],
@@ -96,7 +118,13 @@ class RecipeDetailSheet extends StatelessWidget {
         children: [
           Icon(icon, size: 16, color: AppTheme.mutedForeground),
           const SizedBox(width: 4),
-          Text(label, style: const TextStyle(fontSize: AppTheme.fontSizeCaptionLG, color: AppTheme.foreground)),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: AppTheme.fontSizeCaptionLG,
+              color: AppTheme.foreground,
+            ),
+          ),
         ],
       ),
     );

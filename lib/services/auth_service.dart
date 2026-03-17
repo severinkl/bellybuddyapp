@@ -2,27 +2,46 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io' show Platform;
+import '../utils/logger.dart';
 import 'supabase_service.dart';
 import 'edge_function_service.dart';
 
 class AuthService {
+  static const _log = AppLogger('AuthService');
   static GoTrueClient get _auth => SupabaseService.auth;
 
   static Stream<AuthState> get onAuthStateChange => _auth.onAuthStateChange;
 
-  static Future<AuthResponse> signInWithEmail(String email, String password) async {
-    return await _auth.signInWithPassword(email: email, password: password);
+  static Future<AuthResponse> signInWithEmail(
+    String email,
+    String password,
+  ) async {
+    try {
+      return await _auth.signInWithPassword(email: email, password: password);
+    } catch (e, st) {
+      _log.error('signInWithEmail failed', e, st);
+      rethrow;
+    }
   }
 
-  static Future<AuthResponse> signUpWithEmail(String email, String password) async {
-    final response = await _auth.signUp(email: email, password: password);
-    // Fire and forget welcome email
-    if (response.user != null) {
-      EdgeFunctionService.invoke('send-welcome-email', body: {
-        'email': email,
-      }).ignore();
+  static Future<AuthResponse> signUpWithEmail(
+    String email,
+    String password,
+  ) async {
+    try {
+      final response = await _auth.signUp(email: email, password: password);
+      // Fire and forget welcome email
+      if (response.user != null) {
+        EdgeFunctionService.invoke(
+          'send-welcome-email',
+          body: {'email': email},
+        ).ignore();
+      }
+      return response;
+    } catch (e, st) {
+      _log.error('signUpWithEmail failed', e, st);
+      rethrow;
     }
-    return response;
   }
 
   static bool _googleInitialized = false;
@@ -50,7 +69,11 @@ class AuthService {
       ],
     );
 
-    return _signInWithIdToken(OAuthProvider.apple, credential.identityToken, 'Apple');
+    return _signInWithIdToken(
+      OAuthProvider.apple,
+      credential.identityToken,
+      'Apple',
+    );
   }
 
   static Future<AuthResponse> _signInWithIdToken(
@@ -61,29 +84,47 @@ class AuthService {
     if (idToken == null) {
       throw Exception('No ID token received from $providerName');
     }
-    return await _auth.signInWithIdToken(
-      provider: provider,
-      idToken: idToken,
-    );
+    return await _auth.signInWithIdToken(provider: provider, idToken: idToken);
   }
 
   static Future<void> signOut() async {
-    await _auth.signOut();
+    try {
+      await _auth.signOut();
+    } catch (e, st) {
+      _log.error('signOut failed', e, st);
+      rethrow;
+    }
   }
 
   static Future<void> resetPassword(String email) async {
-    await EdgeFunctionService.invoke('send-password-reset', body: {
-      'email': email,
-    });
+    try {
+      await EdgeFunctionService.invoke(
+        'send-password-reset',
+        body: {'email': email},
+      );
+    } catch (e, st) {
+      _log.error('resetPassword failed', e, st);
+      rethrow;
+    }
   }
 
   static Future<UserResponse> updatePassword(String newPassword) async {
-    return await _auth.updateUser(UserAttributes(password: newPassword));
+    try {
+      return await _auth.updateUser(UserAttributes(password: newPassword));
+    } catch (e, st) {
+      _log.error('updatePassword failed', e, st);
+      rethrow;
+    }
   }
 
   static Future<void> deleteAccount() async {
-    await EdgeFunctionService.invoke('delete-account');
-    await signOut();
+    try {
+      await EdgeFunctionService.invoke('delete-account');
+      await signOut();
+    } catch (e, st) {
+      _log.error('deleteAccount failed', e, st);
+      rethrow;
+    }
   }
 
   /// Detect auth method from session metadata

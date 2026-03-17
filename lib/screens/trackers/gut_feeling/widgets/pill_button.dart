@@ -18,10 +18,12 @@ class PillButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: isLoading ? null : () {
-        HapticService.light();
-        onPressed();
-      },
+      onTap: isLoading
+          ? null
+          : () {
+              HapticService.light();
+              onPressed();
+            },
       child: Container(
         height: 56,
         decoration: BoxDecoration(

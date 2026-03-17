@@ -18,7 +18,9 @@ abstract class Recommendation with _$Recommendation {
     required String id,
     @JsonKey(name: 'user_id') String? userId,
     String? summary,
-    @JsonKey(fromJson: _parseItems) @Default([]) List<RecommendationItem> recommendations,
+    @JsonKey(fromJson: _parseItems)
+    @Default([])
+    List<RecommendationItem> recommendations,
     @JsonKey(name: 'created_at') DateTime? createdAt,
   }) = _Recommendation;
 

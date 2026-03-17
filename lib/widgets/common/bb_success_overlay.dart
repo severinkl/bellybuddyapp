@@ -48,9 +48,10 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
       vsync: this,
       duration: AppConstants.animMedium,
     );
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _fadeController, curve: Curves.easeOut),
-    );
+    _fadeAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeOut));
 
     // Mascot: bounce-overshoot scale 0.8 → 1.05 → 1.0 (0.6s)
     _mascotController = AnimationController(
@@ -59,13 +60,17 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
     );
     _mascotScaleAnimation = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween(begin: 0.8, end: 1.05)
-            .chain(CurveTween(curve: Curves.easeOut)),
+        tween: Tween(
+          begin: 0.8,
+          end: 1.05,
+        ).chain(CurveTween(curve: Curves.easeOut)),
         weight: 60,
       ),
       TweenSequenceItem(
-        tween: Tween(begin: 1.05, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeInOut)),
+        tween: Tween(
+          begin: 1.05,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
         weight: 40,
       ),
     ]).animate(_mascotController);
@@ -75,15 +80,14 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-    _textOpacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _textController, curve: Curves.easeOut),
-    );
+    _textOpacityAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _textController, curve: Curves.easeOut));
     _textSlideAnimation = Tween<Offset>(
       begin: const Offset(0.0, 0.5), // ~20px down
       end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _textController, curve: Curves.easeOut),
-    );
+    ).animate(CurvedAnimation(parent: _textController, curve: Curves.easeOut));
 
     // Start animations in sequence
     _fadeController.forward();
@@ -116,16 +120,14 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
     final bgColor = hasMascot
         ? AppTheme.primary.withValues(alpha: 0.95)
         : AppTheme.background.withValues(alpha: 0.95);
-    final textColor =
-        hasMascot ? AppTheme.primaryForeground : AppTheme.foreground;
+    final textColor = hasMascot
+        ? AppTheme.primaryForeground
+        : AppTheme.foreground;
 
     Widget content = AnimatedBuilder(
       animation: _fadeController,
       builder: (context, child) {
-        return Opacity(
-          opacity: _fadeAnimation.value,
-          child: child,
-        );
+        return Opacity(opacity: _fadeAnimation.value, child: child);
       },
       child: Container(
         color: bgColor,
@@ -204,9 +206,7 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
                 if (widget.action != null) ...[
                   AppConstants.gap24,
                   if (hasMascot)
-                    _GlassmorphicActionButton(
-                      child: widget.action!,
-                    )
+                    _GlassmorphicActionButton(child: widget.action!)
                   else
                     widget.action!,
                 ],
@@ -233,10 +233,7 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
     );
 
     if (hasMascot) {
-      content = GestureDetector(
-        onTap: widget.onDismissed,
-        child: content,
-      );
+      content = GestureDetector(onTap: widget.onDismissed, child: content);
     }
 
     return content;
@@ -262,9 +259,7 @@ class _GlassmorphicActionButton extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.2),
-              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
             ),
             child: DefaultTextStyle.merge(
               style: const TextStyle(

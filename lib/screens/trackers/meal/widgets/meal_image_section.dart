@@ -23,7 +23,10 @@ class MealImageSection extends StatelessWidget {
   Future<void> _pickImage(BuildContext context, ImageSource source) async {
     final picker = ImagePicker();
     final file = await picker.pickImage(
-        source: source, maxWidth: 1024, imageQuality: 85);
+      source: source,
+      maxWidth: 1024,
+      imageQuality: 85,
+    );
     if (file == null) return;
     final bytes = await file.readAsBytes();
     await onImagePicked(bytes, file.name);
@@ -116,10 +119,7 @@ class _PickerButton extends StatelessWidget {
           Container(
             width: 64,
             height: 64,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
             child: Icon(icon, color: AppTheme.foreground, size: 28),
           ),
           AppConstants.gap8,
@@ -164,8 +164,8 @@ class _ImagePreview extends StatelessWidget {
               child: GestureDetector(
                 onTap: onClearImage,
                 child: Container(
-                  width: 40,
-                  height: 40,
+                  width: AppConstants.iconBadgeSm,
+                  height: AppConstants.iconBadgeSm,
                   decoration: BoxDecoration(
                     color: AppTheme.card,
                     shape: BoxShape.circle,
@@ -190,16 +190,19 @@ class _ImagePreview extends StatelessWidget {
                     child: Center(
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 32, vertical: 24),
+                          horizontal: 32,
+                          vertical: 24,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white,
-                          borderRadius: BorderRadius.circular(AppConstants.radiusRound),
+                          borderRadius: BorderRadius.circular(
+                            AppConstants.radiusRound,
+                          ),
                         ),
                         child: const Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            CircularProgressIndicator(
-                                color: AppTheme.primary),
+                            CircularProgressIndicator(color: AppTheme.primary),
                             AppConstants.gap16,
                             Text(
                               'Analysiere...',

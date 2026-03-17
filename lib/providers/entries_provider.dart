@@ -55,7 +55,10 @@ class EntriesNotifier extends Notifier<EntriesState> {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final userId = SupabaseService.userId;
-      if (userId == null) return;
+      if (userId == null) {
+        _log.debug('loadEntries: no user');
+        return;
+      }
 
       final result = await EntryQueryService.fetchEntriesForDateRange(
         userId: userId,
@@ -93,8 +96,11 @@ class EntriesNotifier extends Notifier<EntriesState> {
   Future<void> addToiletEntry(ToiletEntry entry) =>
       EntryCrudService.insert(entryTableFor['toilet']!, entry.toJson());
 
-  Future<void> updateToiletEntry(ToiletEntry entry) =>
-      EntryCrudService.update(entryTableFor['toilet']!, entry.id, entry.toJson());
+  Future<void> updateToiletEntry(ToiletEntry entry) => EntryCrudService.update(
+    entryTableFor['toilet']!,
+    entry.id,
+    entry.toJson(),
+  );
 
   Future<void> deleteToiletEntry(String id) =>
       EntryCrudService.delete(entryTableFor['toilet']!, id);
@@ -105,7 +111,11 @@ class EntriesNotifier extends Notifier<EntriesState> {
       EntryCrudService.insert(entryTableFor['gutFeeling']!, entry.toJson());
 
   Future<void> updateGutFeeling(GutFeelingEntry entry) =>
-      EntryCrudService.update(entryTableFor['gutFeeling']!, entry.id, entry.toJson());
+      EntryCrudService.update(
+        entryTableFor['gutFeeling']!,
+        entry.id,
+        entry.toJson(),
+      );
 
   Future<void> deleteGutFeeling(String id) =>
       EntryCrudService.delete(entryTableFor['gutFeeling']!, id);
@@ -115,8 +125,11 @@ class EntriesNotifier extends Notifier<EntriesState> {
   Future<void> addDrinkEntry(DrinkEntry entry) =>
       EntryCrudService.insert(entryTableFor['drink']!, entry.toInsertJson());
 
-  Future<void> updateDrinkEntry(DrinkEntry entry) =>
-      EntryCrudService.update(entryTableFor['drink']!, entry.id, entry.toInsertJson());
+  Future<void> updateDrinkEntry(DrinkEntry entry) => EntryCrudService.update(
+    entryTableFor['drink']!,
+    entry.id,
+    entry.toInsertJson(),
+  );
 
   Future<void> deleteDrinkEntry(String id) =>
       EntryCrudService.delete(entryTableFor['drink']!, id);
@@ -139,23 +152,19 @@ class EntriesNotifier extends Notifier<EntriesState> {
     int? energy,
     int? focus,
     int? bodyFeel,
-  }) =>
-      EntryCrudService.update(entryTableFor['gutFeeling']!, id, {
-        'bloating': bloating,
-        'gas': gas,
-        'cramps': cramps,
-        'fullness': fullness,
-        'stress': stress,
-        'happiness': happiness,
-        'energy': energy,
-        'focus': focus,
-        'body_feel': bodyFeel,
-      });
+  }) => EntryCrudService.update(entryTableFor['gutFeeling']!, id, {
+    'bloating': bloating,
+    'gas': gas,
+    'cramps': cramps,
+    'fullness': fullness,
+    'stress': stress,
+    'happiness': happiness,
+    'energy': energy,
+    'focus': focus,
+    'body_feel': bodyFeel,
+  });
 
-  Future<void> updateToiletById(
-    String id, {
-    required int stoolType,
-  }) =>
+  Future<void> updateToiletById(String id, {required int stoolType}) =>
       EntryCrudService.update(entryTableFor['toilet']!, id, {
         'stool_type': stoolType,
       });
@@ -164,16 +173,16 @@ class EntriesNotifier extends Notifier<EntriesState> {
     String id, {
     required int amountMl,
     String? notes,
-  }) =>
-      EntryCrudService.update(entryTableFor['drink']!, id, {
-        'amount_ml': amountMl,
-        'notes': notes,
-      });
+  }) => EntryCrudService.update(entryTableFor['drink']!, id, {
+    'amount_ml': amountMl,
+    'notes': notes,
+  });
 
   void reset() {
     state = const EntriesState();
   }
 }
 
-final entriesProvider =
-    NotifierProvider<EntriesNotifier, EntriesState>(EntriesNotifier.new);
+final entriesProvider = NotifierProvider<EntriesNotifier, EntriesState>(
+  EntriesNotifier.new,
+);

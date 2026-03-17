@@ -59,9 +59,7 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      supportedLocales: const [
-        Locale('de', 'DE'),
-      ],
+      supportedLocales: const [Locale('de', 'DE')],
       locale: const Locale('de', 'DE'),
       builder: (context, child) {
         return Stack(

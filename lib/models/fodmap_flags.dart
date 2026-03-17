@@ -19,7 +19,8 @@ abstract class FodmapFlags with _$FodmapFlags {
   factory FodmapFlags.fromJson(Map<String, dynamic> json) =>
       _$FodmapFlagsFromJson(json);
 
-  bool get hasAny => fructans || gos || lactose || fructose || sorbitol || mannitol;
+  bool get hasAny =>
+      fructans || gos || lactose || fructose || sorbitol || mannitol;
 
   List<String> get warnings {
     final result = <String>[];

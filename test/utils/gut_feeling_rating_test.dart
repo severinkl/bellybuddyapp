@@ -64,8 +64,15 @@ void main() {
     test('includes mood values when present', () {
       final rating = calculateGutFeelingRating(
         makeEntry(
-          bloating: 1, gas: 1, cramps: 1, fullness: 1,
-          stress: 5, happiness: 5, energy: 5, focus: 5, bodyFeel: 5,
+          bloating: 1,
+          gas: 1,
+          cramps: 1,
+          fullness: 1,
+          stress: 5,
+          happiness: 5,
+          energy: 5,
+          focus: 5,
+          bodyFeel: 5,
         ),
       );
       // (4*1 + 5*5) / 9 = 29/9 ≈ 3.22
@@ -74,12 +81,37 @@ void main() {
     });
 
     test('ignores null mood values', () {
-      final rating = calculateGutFeelingRating(
-        makeEntry(stress: 5),
-      );
+      final rating = calculateGutFeelingRating(makeEntry(stress: 5));
       // (4*1 + 5) / 5 = 9/5 = 1.8
       expect(rating.avg, closeTo(1.8, 0.01));
       expect(rating.level, GutFeelingRatingLevel.gut);
+    });
+  });
+
+  group('gutFeelingSubtitle', () {
+    test('all 1s returns Alles gut', () {
+      final entry = makeEntry();
+      expect(gutFeelingSubtitle(entry), 'Alles gut');
+    });
+
+    test('single physical symptom > 1', () {
+      final entry = makeEntry(bloating: 3);
+      expect(gutFeelingSubtitle(entry), 'Blähbauch');
+    });
+
+    test('multiple symptoms', () {
+      final entry = makeEntry(bloating: 2, cramps: 4);
+      expect(gutFeelingSubtitle(entry), 'Blähbauch, Krämpfe');
+    });
+
+    test('mood values > 1 included', () {
+      final entry = makeEntry(stress: 3, happiness: 4);
+      expect(gutFeelingSubtitle(entry), 'gestresst, traurig');
+    });
+
+    test('mood values null excluded', () {
+      final entry = makeEntry(stress: null, happiness: null);
+      expect(gutFeelingSubtitle(entry), 'Alles gut');
     });
   });
 

@@ -25,7 +25,11 @@ class EntryCrudService {
     }
   }
 
-  static Future<void> update(String table, String id, Map<String, dynamic> data) async {
+  static Future<void> update(
+    String table,
+    String id,
+    Map<String, dynamic> data,
+  ) async {
     data.remove('id');
     data.remove('user_id');
     data.remove('created_at');

@@ -22,10 +22,7 @@ class MoodTabSelector extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppConstants.radiusFull),
       ),
       child: Row(
-        children: [
-          _buildTab(0, 'Bauchgefühl'),
-          _buildTab(1, 'Stimmung'),
-        ],
+        children: [_buildTab(0, 'Bauchgefühl'), _buildTab(1, 'Stimmung')],
       ),
     );
   }
@@ -45,7 +42,9 @@ class MoodTabSelector extends StatelessWidget {
           curve: Curves.easeInOut,
           padding: const EdgeInsets.symmetric(vertical: 10),
           decoration: BoxDecoration(
-            color: isActive ? Colors.white : Colors.white.withValues(alpha: 0.0),
+            color: isActive
+                ? Colors.white
+                : Colors.white.withValues(alpha: 0.0),
             borderRadius: BorderRadius.circular(AppConstants.radiusFull),
             boxShadow: [
               BoxShadow(

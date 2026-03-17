@@ -89,58 +89,63 @@ class SuggestionDetailModal extends StatelessWidget {
                   ),
                 ),
                 AppConstants.gap12,
-                ...group.meals.map((meal) => Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: AppTheme.card,
-                          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-                          border: Border.all(color: AppTheme.border, width: 0.5),
+                ...group.meals.map(
+                  (meal) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: AppTheme.card,
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.radiusMd,
                         ),
-                        child: Row(
-                          children: [
-                            if (meal.imageUrl != null) ...[
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-                                child: Image.network(
-                                  meal.imageUrl!,
-                                  width: 48,
-                                  height: 48,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (c, e, s) =>
-                                      _mealPlaceholder(),
-                                ),
+                        border: Border.all(color: AppTheme.border, width: 0.5),
+                      ),
+                      child: Row(
+                        children: [
+                          if (meal.imageUrl != null) ...[
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(
+                                AppConstants.radiusSm,
                               ),
-                              const SizedBox(width: 12),
-                            ],
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    meal.title,
-                                    style: const TextStyle(
-                                      fontSize: AppTheme.fontSizeBody,
-                                      fontWeight: FontWeight.w500,
-                                      color: AppTheme.foreground,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    _formatDate(meal.trackedAt),
-                                    style: const TextStyle(
-                                      fontSize: AppTheme.fontSizeCaption,
-                                      color: AppTheme.mutedForeground,
-                                    ),
-                                  ),
-                                ],
+                              child: Image.network(
+                                meal.imageUrl!,
+                                width: 48,
+                                height: 48,
+                                fit: BoxFit.cover,
+                                errorBuilder: (c, e, s) => _mealPlaceholder(),
                               ),
                             ),
+                            const SizedBox(width: 12),
                           ],
-                        ),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  meal.title,
+                                  style: const TextStyle(
+                                    fontSize: AppTheme.fontSizeBody,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppTheme.foreground,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _formatDate(meal.trackedAt),
+                                  style: const TextStyle(
+                                    fontSize: AppTheme.fontSizeCaption,
+                                    color: AppTheme.mutedForeground,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                    )),
+                    ),
+                  ),
+                ),
                 AppConstants.gap12,
               ],
 
@@ -167,10 +172,7 @@ class SuggestionDetailModal extends StatelessWidget {
                         width: 80,
                         child: Column(
                           children: [
-                            _IngredientImage(
-                              imageUrl: repl.imageUrl,
-                              size: 56,
-                            ),
+                            _IngredientImage(imageUrl: repl.imageUrl, size: 56),
                             const SizedBox(height: 6),
                             Text(
                               repl.name,
@@ -216,7 +218,10 @@ class SuggestionDetailModal extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppConstants.radiusSm),
       ),
       child: const Center(
-        child: Text('\u{1F372}', style: TextStyle(fontSize: AppTheme.fontSizeHeadingLG)),
+        child: Text(
+          '\u{1F372}',
+          style: TextStyle(fontSize: AppTheme.fontSizeHeadingLG),
+        ),
       ),
     );
   }
@@ -261,10 +266,7 @@ class _IngredientImage extends StatelessWidget {
         shape: BoxShape.circle,
       ),
       child: Center(
-        child: Text(
-          '\u{1F96C}',
-          style: TextStyle(fontSize: size * 0.45),
-        ),
+        child: Text('\u{1F96C}', style: TextStyle(fontSize: size * 0.45)),
       ),
     );
   }

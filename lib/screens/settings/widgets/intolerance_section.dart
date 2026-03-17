@@ -9,7 +9,7 @@ class IntoleranceSection extends StatelessWidget {
   final UserProfile profile;
   final ValueChanged<List<String>> onIntolerancesChanged;
   final void Function(String intolerance, List<String> triggers)
-      onTriggersChanged;
+  onTriggersChanged;
 
   const IntoleranceSection({
     super.key,
@@ -37,8 +37,7 @@ class IntoleranceSection extends StatelessWidget {
           selected: profile.intolerances,
 
           onChanged: (v) {
-            final added =
-                v.where((s) => !profile.intolerances.contains(s));
+            final added = v.where((s) => !profile.intolerances.contains(s));
             onIntolerancesChanged(v);
             for (final item in added) {
               if (triggerIntolerances.contains(item)) {
@@ -48,8 +47,7 @@ class IntoleranceSection extends StatelessWidget {
                     context: context,
                     intolerance: item,
                     currentTriggers: _triggersFor(item),
-                    onChanged: (triggers) =>
-                        onTriggersChanged(item, triggers),
+                    onChanged: (triggers) => onTriggersChanged(item, triggers),
                   );
                 });
               }

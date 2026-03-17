@@ -23,15 +23,19 @@ class DrinkDetail extends StatelessWidget {
         children: [
           const Text(
             'Menge (ml)',
-            style: TextStyle(fontSize: AppTheme.fontSizeBody, fontWeight: FontWeight.w600),
+            style: TextStyle(
+              fontSize: AppTheme.fontSizeBody,
+              fontWeight: FontWeight.w600,
+            ),
           ),
           AppConstants.gap8,
           TextField(
             controller: amountController,
             keyboardType: TextInputType.number,
             decoration: InputDecoration(
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(AppConstants.radiusSm)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+              ),
               suffixText: 'ml',
             ),
           ),
@@ -43,12 +47,17 @@ class DrinkDetail extends StatelessWidget {
       children: [
         Text(
           '${drink.amountMl} ml',
-          style: const TextStyle(fontSize: AppTheme.fontSizeTitle, fontWeight: FontWeight.w600),
+          style: const TextStyle(
+            fontSize: AppTheme.fontSizeTitle,
+            fontWeight: FontWeight.w600,
+          ),
         ),
         if (drink.notes != null) ...[
           AppConstants.gap8,
-          Text(drink.notes!,
-              style: const TextStyle(color: AppTheme.mutedForeground)),
+          Text(
+            drink.notes!,
+            style: const TextStyle(color: AppTheme.mutedForeground),
+          ),
         ],
       ],
     );

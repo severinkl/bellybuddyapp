@@ -32,10 +32,7 @@ class FeatureCard extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              Image.asset(
-                imageAsset,
-                fit: BoxFit.cover,
-              ),
+              Image.asset(imageAsset, fit: BoxFit.cover),
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -53,11 +50,15 @@ class FeatureCard extends StatelessWidget {
                   top: 8,
                   right: 8,
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
                       color: AppTheme.primary,
-                      borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.radiusMd,
+                      ),
                     ),
                     child: Text(
                       '$badgeCount',
@@ -73,11 +74,15 @@ class FeatureCard extends StatelessWidget {
                 bottom: 10,
                 left: 10,
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.9),
-                    borderRadius: BorderRadius.circular(AppConstants.radiusRound),
+                    borderRadius: BorderRadius.circular(
+                      AppConstants.radiusRound,
+                    ),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,

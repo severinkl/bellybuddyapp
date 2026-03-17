@@ -30,8 +30,11 @@ class _RecommendationHistoryState extends State<RecommendationHistory> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             child: Row(
               children: [
-                const Icon(Icons.history,
-                    size: 20, color: AppTheme.mutedForeground),
+                const Icon(
+                  Icons.history,
+                  size: 20,
+                  color: AppTheme.mutedForeground,
+                ),
                 const SizedBox(width: 8),
                 const Text(
                   'Verlauf',
@@ -43,11 +46,15 @@ class _RecommendationHistoryState extends State<RecommendationHistory> {
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: AppTheme.muted,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(
+                      AppConstants.radiusIcon,
+                    ),
                   ),
                   child: Text(
                     '${widget.history.length}',
@@ -119,16 +126,19 @@ class _RecommendationHistoryState extends State<RecommendationHistory> {
                 maxLines: isExpanded ? null : 2,
                 overflow: isExpanded ? null : TextOverflow.ellipsis,
                 style: const TextStyle(
-                    fontSize: AppTheme.fontSizeBody,
-                    color: AppTheme.foreground),
+                  fontSize: AppTheme.fontSizeBody,
+                  color: AppTheme.foreground,
+                ),
               ),
             ],
             if (isExpanded && rec.recommendations.isNotEmpty) ...[
               const SizedBox(height: 10),
-              ...rec.recommendations.map((item) => Padding(
-                    padding: const EdgeInsets.only(bottom: 6),
-                    child: RecommendationCard(item: item, compact: true),
-                  )),
+              ...rec.recommendations.map(
+                (item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: RecommendationCard(item: item, compact: true),
+                ),
+              ),
             ],
           ],
         ),

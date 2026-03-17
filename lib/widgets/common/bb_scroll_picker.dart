@@ -10,6 +10,7 @@ class BbScrollPicker extends StatefulWidget {
   final String Function(int)? labelBuilder;
   final double itemHeight;
   final int visibleItems;
+
   /// When true, the picker fills its parent height instead of using a fixed height.
   final bool expand;
 
@@ -99,8 +100,9 @@ class _BbScrollPickerState extends State<BbScrollPicker> {
                     label,
                     style: TextStyle(
                       fontSize: isSelected ? 20 : 16,
-                      fontWeight:
-                          isSelected ? FontWeight.w600 : FontWeight.w400,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.w400,
                       color: isSelected
                           ? AppTheme.foreground
                           : AppTheme.mutedForeground,

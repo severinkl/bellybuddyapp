@@ -21,10 +21,9 @@ class DateTimeChips extends StatelessWidget {
       locale: const Locale('de'),
     );
     if (date != null && context.mounted) {
-      onChanged(DateTime(
-        date.year, date.month, date.day,
-        value.hour, value.minute,
-      ));
+      onChanged(
+        DateTime(date.year, date.month, date.day, value.hour, value.minute),
+      );
     }
   }
 
@@ -34,10 +33,9 @@ class DateTimeChips extends StatelessWidget {
       initialTime: TimeOfDay.fromDateTime(value),
     );
     if (time != null && context.mounted) {
-      onChanged(DateTime(
-        value.year, value.month, value.day,
-        time.hour, time.minute,
-      ));
+      onChanged(
+        DateTime(value.year, value.month, value.day, time.hour, time.minute),
+      );
     }
   }
 

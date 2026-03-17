@@ -52,8 +52,9 @@ class IngredientSuggestionNotifier
       }
 
       // Batch-fetch replacements and meal details in parallel
-      final allSuggestionIds =
-          grouped.values.expand((a) => a.suggestionIds).toList();
+      final allSuggestionIds = grouped.values
+          .expand((a) => a.suggestionIds)
+          .toList();
       final allMealIds = grouped.values
           .expand((a) => a.mealIds)
           .toSet()
@@ -87,7 +88,9 @@ class IngredientSuggestionNotifier
         if (ingredientId == null) continue;
 
         final replMap = replacementsByIngredient.putIfAbsent(
-            ingredientId, () => {});
+          ingredientId,
+          () => {},
+        );
         final replId = ingredients['id'] as String;
         replMap.putIfAbsent(
           replId,
@@ -112,29 +115,32 @@ class IngredientSuggestionNotifier
       }
 
       // Build groups sorted alphabetically by ingredient name
-      final groups = grouped.values.map((acc) {
-        final meals = acc.mealIds
-            .map((id) => mealsById[id])
-            .whereType<MealDetail>()
-            .toList();
-        final replacements =
-            replacementsByIngredient[acc.ingredientId]?.values.toList() ?? [];
+      final groups =
+          grouped.values.map((acc) {
+            final meals = acc.mealIds
+                .map((id) => mealsById[id])
+                .whereType<MealDetail>()
+                .toList();
+            final replacements =
+                replacementsByIngredient[acc.ingredientId]?.values.toList() ??
+                [];
 
-        return IngredientSuggestionGroup(
-          ingredientId: acc.ingredientId,
-          ingredientName: acc.ingredientName,
-          ingredientImageUrl: acc.ingredientImageUrl,
-          helptext: acc.helptext,
-          mealCount: acc.mealIds.length,
-          isNew: acc.hasUnseen,
-          suggestionIds: acc.suggestionIds,
-          meals: meals,
-          replacements: replacements,
-        );
-      }).toList()
-        ..sort((a, b) =>
-            a.ingredientName.toLowerCase().compareTo(
-                b.ingredientName.toLowerCase()));
+            return IngredientSuggestionGroup(
+              ingredientId: acc.ingredientId,
+              ingredientName: acc.ingredientName,
+              ingredientImageUrl: acc.ingredientImageUrl,
+              helptext: acc.helptext,
+              mealCount: acc.mealIds.length,
+              isNew: acc.hasUnseen,
+              suggestionIds: acc.suggestionIds,
+              meals: meals,
+              replacements: replacements,
+            );
+          }).toList()..sort(
+            (a, b) => a.ingredientName.toLowerCase().compareTo(
+              b.ingredientName.toLowerCase(),
+            ),
+          );
 
       state = AsyncValue.data(groups);
     } catch (e, st) {
@@ -201,7 +207,8 @@ class _GroupAccumulator {
   });
 }
 
-final ingredientSuggestionProvider = NotifierProvider<
-    IngredientSuggestionNotifier,
-    AsyncValue<List<IngredientSuggestionGroup>>>(
-        IngredientSuggestionNotifier.new);
+final ingredientSuggestionProvider =
+    NotifierProvider<
+      IngredientSuggestionNotifier,
+      AsyncValue<List<IngredientSuggestionGroup>>
+    >(IngredientSuggestionNotifier.new);

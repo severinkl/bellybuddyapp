@@ -3,7 +3,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 
-
 class SplashScreen extends StatefulWidget {
   final VoidCallback onComplete;
 
@@ -60,10 +59,7 @@ class _SplashScreenState extends State<SplashScreen>
       parent: _controller,
       curve: Curves.easeOutBack,
     );
-    _fadeAnimation = CurvedAnimation(
-      parent: _controller,
-      curve: Curves.easeIn,
-    );
+    _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
     _controller.forward();
   }
 
@@ -109,10 +105,7 @@ class _SplashScreenState extends State<SplashScreen>
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [
-              AppTheme.card,
-              AppTheme.beige,
-            ],
+            colors: [AppTheme.card, AppTheme.beige],
           ),
         ),
         child: Center(
@@ -123,11 +116,7 @@ class _SplashScreenState extends State<SplashScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  SvgPicture.asset(
-                    AppConstants.logoSvg,
-                    width: 96,
-                    height: 96,
-                  ),
+                  SvgPicture.asset(AppConstants.logoSvg, width: 96, height: 96),
                   AppConstants.gap16,
                   const Text(
                     'Belly Buddy',

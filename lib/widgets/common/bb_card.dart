@@ -25,7 +25,9 @@ class BbCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: color ?? AppTheme.card,
         borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-        border: showBorder ? Border.all(color: AppTheme.border, width: 0.5) : null,
+        border: showBorder
+            ? Border.all(color: AppTheme.border, width: 0.5)
+            : null,
       ),
       child: child,
     );

@@ -33,8 +33,7 @@ class DietSelector extends StatelessWidget {
             onChanged(diet);
           },
           child: Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
             decoration: BoxDecoration(
               color: isSelected ? AppTheme.primary : AppTheme.secondary,
               borderRadius: BorderRadius.circular(AppConstants.radiusFull),

@@ -18,6 +18,5 @@ abstract class Recipe with _$Recipe {
     @JsonKey(name: 'created_at') DateTime? createdAt,
   }) = _Recipe;
 
-  factory Recipe.fromJson(Map<String, dynamic> json) =>
-      _$RecipeFromJson(json);
+  factory Recipe.fromJson(Map<String, dynamic> json) => _$RecipeFromJson(json);
 }

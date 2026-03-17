@@ -40,7 +40,8 @@ class _SwipeablePagesState extends State<SwipeablePages> {
 
     final fromLeft = x < _edgeThreshold && widget.currentIndex > 0;
     final fromRight =
-        x > width - _edgeThreshold && widget.currentIndex < widget.pageCount - 1;
+        x > width - _edgeThreshold &&
+        widget.currentIndex < widget.pageCount - 1;
 
     if (fromLeft || fromRight) {
       _startX = details.localPosition.dx;
@@ -115,9 +116,7 @@ class _SwipeablePagesState extends State<SwipeablePages> {
       child: Stack(
         children: [
           AnimatedContainer(
-            duration: _isAnimating
-                ? AppConstants.animMedium
-                : Duration.zero,
+            duration: _isAnimating ? AppConstants.animMedium : Duration.zero,
             curve: Curves.easeOutCubic,
             transform: Matrix4.translationValues(_translateX * 0.3, 0, 0),
             child: widget.child,
@@ -139,10 +138,7 @@ class _SwipeablePagesState extends State<SwipeablePages> {
                       color: AppTheme.card.withValues(alpha: 0.8),
                       shape: BoxShape.circle,
                       boxShadow: const [
-                        BoxShadow(
-                          color: AppTheme.shadow,
-                          blurRadius: 8,
-                        ),
+                        BoxShadow(color: AppTheme.shadow, blurRadius: 8),
                       ],
                     ),
                     child: const Center(
@@ -166,7 +162,10 @@ class _SwipeablePagesState extends State<SwipeablePages> {
               bottom: 0,
               child: Center(
                 child: AnimatedOpacity(
-                  opacity: (_translateX.abs() / _swipeThreshold).clamp(0.0, 1.0),
+                  opacity: (_translateX.abs() / _swipeThreshold).clamp(
+                    0.0,
+                    1.0,
+                  ),
                   duration: AppConstants.animFast,
                   child: Container(
                     width: 32,
@@ -175,10 +174,7 @@ class _SwipeablePagesState extends State<SwipeablePages> {
                       color: AppTheme.card.withValues(alpha: 0.8),
                       shape: BoxShape.circle,
                       boxShadow: const [
-                        BoxShadow(
-                          color: AppTheme.shadow,
-                          blurRadius: 8,
-                        ),
+                        BoxShadow(color: AppTheme.shadow, blurRadius: 8),
                       ],
                     ),
                     child: const Center(

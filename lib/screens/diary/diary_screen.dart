@@ -5,6 +5,7 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/diary_provider.dart';
 import '../../widgets/common/bb_async_state.dart';
+import '../../widgets/common/circle_icon_button.dart';
 import '../../providers/entries_provider.dart';
 import '../../router/route_names.dart';
 import '../../services/haptic_service.dart';
@@ -29,7 +30,7 @@ class DiaryScreen extends ConsumerWidget {
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _CircleIconButton(
+            CircleIconButton(
               icon: Icons.chevron_left,
               onPressed: () {
                 HapticService.light();
@@ -80,7 +81,7 @@ class DiaryScreen extends ConsumerWidget {
             if (isToday)
               const SizedBox(width: 44)
             else
-              _CircleIconButton(
+              CircleIconButton(
                 icon: Icons.chevron_right,
                 onPressed: () {
                   HapticService.light();
@@ -99,8 +100,8 @@ class DiaryScreen extends ConsumerWidget {
           children: [
             Expanded(
               child: entriesAsync.when(
-                loading: () => const BbLoadingState(
-                    message: 'Einträge laden...'),
+                loading: () =>
+                    const BbLoadingState(message: 'Einträge laden...'),
                 error: (e, _) => const BbErrorState(
                   message: 'Fehler beim Laden der Einträge.',
                 ),
@@ -137,8 +138,9 @@ class DiaryScreen extends ConsumerWidget {
                                   child: TrackerCard(
                                     svgPath: AppConstants.logoSvg,
                                     label: 'Bauchgefühl',
-                                    onTap: () => context
-                                        .push(RoutePaths.gutFeelingTracker),
+                                    onTap: () => context.push(
+                                      RoutePaths.gutFeelingTracker,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(width: 12),
@@ -146,8 +148,8 @@ class DiaryScreen extends ConsumerWidget {
                                   child: TrackerCard(
                                     svgPath: AppConstants.toiletPaperSvg,
                                     label: 'Klo',
-                                    onTap: () => context
-                                        .push(RoutePaths.toiletTracker),
+                                    onTap: () =>
+                                        context.push(RoutePaths.toiletTracker),
                                   ),
                                 ),
                               ],
@@ -186,33 +188,3 @@ class DiaryScreen extends ConsumerWidget {
   bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
 }
-
-class _CircleIconButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback? onPressed;
-
-  const _CircleIconButton({required this.icon, this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onPressed,
-      child: Container(
-        width: 44,
-        height: 44,
-        decoration: const BoxDecoration(
-          color: AppTheme.beige,
-          shape: BoxShape.circle,
-        ),
-        child: Icon(
-          icon,
-          color: onPressed != null
-              ? AppTheme.foreground
-              : AppTheme.mutedForeground,
-          size: 24,
-        ),
-      ),
-    );
-  }
-}
-

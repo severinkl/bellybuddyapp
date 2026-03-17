@@ -18,11 +18,15 @@ class StorageService {
   }) async {
     try {
       final fileName = '$userId/${_uuid.v4()}.$extension';
-      await SupabaseService.storage.from(bucket).uploadBinary(
-        fileName,
-        fileBytes,
-        fileOptions: FileOptions(contentType: mimeTypeForExtension(extension)),
-      );
+      await SupabaseService.storage
+          .from(bucket)
+          .uploadBinary(
+            fileName,
+            fileBytes,
+            fileOptions: FileOptions(
+              contentType: mimeTypeForExtension(extension),
+            ),
+          );
       return fileName;
     } catch (e, st) {
       _log.error('uploadImage failed for bucket=$bucket', e, st);
@@ -47,10 +51,7 @@ class StorageService {
   }
 
   /// Get a public URL for a public bucket image
-  static String getPublicUrl({
-    required String bucket,
-    required String path,
-  }) {
+  static String getPublicUrl({required String bucket, required String path}) {
     return SupabaseService.storage.from(bucket).getPublicUrl(path);
   }
 }

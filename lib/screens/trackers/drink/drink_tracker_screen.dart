@@ -15,8 +15,7 @@ class DrinkTrackerScreen extends ConsumerStatefulWidget {
   const DrinkTrackerScreen({super.key});
 
   @override
-  ConsumerState<DrinkTrackerScreen> createState() =>
-      _DrinkTrackerScreenState();
+  ConsumerState<DrinkTrackerScreen> createState() => _DrinkTrackerScreenState();
 }
 
 class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
@@ -39,7 +38,8 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(drinkTrackerProvider);
-    final canSave = state.selectedDrink != null &&
+    final canSave =
+        state.selectedDrink != null &&
         state.selectedAmount != null &&
         state.selectedAmount! > 0;
 
@@ -50,7 +50,8 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
       successMascotAsset: AppConstants.mascotEnergetic,
       body: state.isLoading
           ? const Center(
-              child: CircularProgressIndicator(color: AppTheme.primary))
+              child: CircularProgressIndicator(color: AppTheme.primary),
+            )
           : Column(
               children: [
                 Expanded(
@@ -187,8 +188,7 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
         ),
         const SizedBox(width: 8),
         GestureDetector(
-          onTap: () =>
-              ref.read(drinkTrackerProvider.notifier).clearSelection(),
+          onTap: () => ref.read(drinkTrackerProvider.notifier).clearSelection(),
           child: const Text(
             '✕',
             style: TextStyle(

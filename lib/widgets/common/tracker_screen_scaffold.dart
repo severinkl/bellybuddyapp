@@ -33,9 +33,11 @@ class TrackerScreenScaffold extends StatelessWidget {
     if (showSuccess) {
       return BbSuccessOverlay(
         message: successMessage,
-        subMessage: successSubMessage ?? 'Dein Eintrag wurde erfolgreich erfasst.',
+        subMessage:
+            successSubMessage ?? 'Dein Eintrag wurde erfolgreich erfasst.',
         mascotAsset: successMascotAsset,
-        onDismissed: onSuccessDismissed ?? () => context.go(RoutePaths.dashboard),
+        onDismissed:
+            onSuccessDismissed ?? () => context.go(RoutePaths.dashboard),
         action: successAction,
       );
     }

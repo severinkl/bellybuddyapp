@@ -26,12 +26,7 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
 
   double _calculateEditAvg() {
     final es = widget.editState!;
-    final values = <int>[
-      es.bloating,
-      es.gas,
-      es.cramps,
-      es.fullness,
-    ];
+    final values = <int>[es.bloating, es.gas, es.cramps, es.fullness];
     if (es.stress != null) values.add(es.stress!);
     if (es.happiness != null) values.add(es.happiness!);
     if (es.energy != null) values.add(es.energy!);
@@ -52,8 +47,7 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
         Row(
           children: [
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
                 color: rating.color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(AppConstants.radiusRound),
@@ -129,10 +123,26 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
       final es = widget.editState!;
       return Column(
         children: [
-          _editSlider(AppConstants.gutFeelingSymptoms[0], es.bloating, es.onBloatingChanged),
-          _editSlider(AppConstants.gutFeelingSymptoms[1], es.gas, es.onGasChanged),
-          _editSlider(AppConstants.gutFeelingSymptoms[2], es.cramps, es.onCrampsChanged),
-          _editSlider(AppConstants.gutFeelingSymptoms[3], es.fullness, es.onFullnessChanged),
+          _editSlider(
+            AppConstants.gutFeelingSymptoms[0],
+            es.bloating,
+            es.onBloatingChanged,
+          ),
+          _editSlider(
+            AppConstants.gutFeelingSymptoms[1],
+            es.gas,
+            es.onGasChanged,
+          ),
+          _editSlider(
+            AppConstants.gutFeelingSymptoms[2],
+            es.cramps,
+            es.onCrampsChanged,
+          ),
+          _editSlider(
+            AppConstants.gutFeelingSymptoms[3],
+            es.fullness,
+            es.onFullnessChanged,
+          ),
         ],
       );
     }
@@ -151,16 +161,36 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
       final es = widget.editState!;
       return Column(
         children: [
-          _editSlider(AppConstants.stimmungLabels[0], es.stress ?? 3, es.onStressChanged),
-          _editSlider(AppConstants.stimmungLabels[1], es.happiness ?? 3, es.onHappinessChanged),
-          _editSlider(AppConstants.stimmungLabels[2], es.energy ?? 3, es.onEnergyChanged),
-          _editSlider(AppConstants.stimmungLabels[3], es.focus ?? 3, es.onFocusChanged),
           _editSlider(
-              AppConstants.stimmungLabels[4], es.bodyFeel ?? 3, es.onBodyFeelChanged),
+            AppConstants.stimmungLabels[0],
+            es.stress ?? 3,
+            es.onStressChanged,
+          ),
+          _editSlider(
+            AppConstants.stimmungLabels[1],
+            es.happiness ?? 3,
+            es.onHappinessChanged,
+          ),
+          _editSlider(
+            AppConstants.stimmungLabels[2],
+            es.energy ?? 3,
+            es.onEnergyChanged,
+          ),
+          _editSlider(
+            AppConstants.stimmungLabels[3],
+            es.focus ?? 3,
+            es.onFocusChanged,
+          ),
+          _editSlider(
+            AppConstants.stimmungLabels[4],
+            es.bodyFeel ?? 3,
+            es.onBodyFeelChanged,
+          ),
         ],
       );
     }
-    final hasAny = widget.gut.stress != null ||
+    final hasAny =
+        widget.gut.stress != null ||
         widget.gut.happiness != null ||
         widget.gut.energy != null ||
         widget.gut.focus != null ||
@@ -197,7 +227,10 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label, style: const TextStyle(fontSize: AppTheme.fontSizeBodyLG)),
+              Text(
+                label,
+                style: const TextStyle(fontSize: AppTheme.fontSizeBodyLG),
+              ),
               Text(
                 '$value / 5',
                 style: TextStyle(
@@ -234,7 +267,10 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: const TextStyle(fontSize: AppTheme.fontSizeBodyLG)),
+          Text(
+            label,
+            style: const TextStyle(fontSize: AppTheme.fontSizeBodyLG),
+          ),
           Text(
             '$value / 5',
             style: TextStyle(

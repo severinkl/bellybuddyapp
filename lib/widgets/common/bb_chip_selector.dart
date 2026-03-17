@@ -39,12 +39,12 @@ class BbChipSelector extends StatelessWidget {
           },
           selectedColor: chipColor,
           labelStyle: TextStyle(
-            color: isSelected ? AppTheme.primaryForeground : AppTheme.foreground,
+            color: isSelected
+                ? AppTheme.primaryForeground
+                : AppTheme.foreground,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
           ),
-          side: BorderSide(
-            color: isSelected ? chipColor : AppTheme.border,
-          ),
+          side: BorderSide(color: isSelected ? chipColor : AppTheme.border),
         );
       }).toList(),
     );

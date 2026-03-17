@@ -37,9 +37,7 @@ class ToiletDetail extends StatelessWidget {
                   margin: EdgeInsets.only(right: i < 4 ? 6 : 0),
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? color
-                        : color.withValues(alpha: 0.1),
+                    color: isSelected ? color : color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppConstants.radiusSm),
                     border: isSelected
                         ? Border.all(color: color, width: 2)

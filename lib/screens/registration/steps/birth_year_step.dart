@@ -20,7 +20,11 @@ class BirthYearStep extends StatelessWidget {
       child: Column(
         children: [
           AppConstants.gap24,
-          const MascotImage(assetPath: AppConstants.mascotHappy, width: 120, height: 120),
+          const MascotImage(
+            assetPath: AppConstants.mascotHappy,
+            width: 120,
+            height: 120,
+          ),
           AppConstants.gap16,
           const Text(
             'Wann wurdest du geboren?',
@@ -34,7 +38,10 @@ class BirthYearStep extends StatelessWidget {
           AppConstants.gap8,
           const Text(
             'Diese Information hilft uns dabei, deine Verdauung besser zu analysieren.',
-            style: TextStyle(fontSize: AppTheme.fontSizeBodyLG, color: AppTheme.mutedForeground),
+            style: TextStyle(
+              fontSize: AppTheme.fontSizeBodyLG,
+              color: AppTheme.mutedForeground,
+            ),
             textAlign: TextAlign.center,
           ),
           AppConstants.gap24,

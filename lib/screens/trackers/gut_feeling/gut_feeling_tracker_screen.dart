@@ -10,6 +10,7 @@ import '../../../router/route_names.dart';
 import '../../../services/haptic_service.dart';
 import '../../../utils/save_helper.dart';
 import '../../../widgets/common/bb_success_overlay.dart';
+import '../../../widgets/common/gradient_bottom_bar.dart';
 import 'widgets/bauchgefuehl_tab.dart';
 import 'widgets/mood_tab_selector.dart';
 import 'widgets/pill_button.dart';
@@ -63,29 +64,33 @@ class _GutFeelingTrackerScreenState
       duration: AppConstants.animSlow,
     );
 
-    _tabSelectorSlide = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _entryController,
-      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-    ));
-    _tabSelectorFade = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(
-      parent: _entryController,
-      curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
-    ));
+    _tabSelectorSlide =
+        Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: _entryController,
+            curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+          ),
+        );
+    _tabSelectorFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(
+        parent: _entryController,
+        curve: const Interval(0.0, 0.5, curve: Curves.easeOut),
+      ),
+    );
 
-    _slidersSlide = Tween<Offset>(
-      begin: const Offset(0, 0.3),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(
-      parent: _entryController,
-      curve: const Interval(0.2, 0.8, curve: Curves.easeOut),
-    ));
-    _slidersFade = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(
-      parent: _entryController,
-      curve: const Interval(0.2, 0.7, curve: Curves.easeOut),
-    ));
+    _slidersSlide = Tween<Offset>(begin: const Offset(0, 0.3), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _entryController,
+            curve: const Interval(0.2, 0.8, curve: Curves.easeOut),
+          ),
+        );
+    _slidersFade = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(
+        parent: _entryController,
+        curve: const Interval(0.2, 0.7, curve: Curves.easeOut),
+      ),
+    );
 
     _entryController.forward();
   }
@@ -211,10 +216,8 @@ class _GutFeelingTrackerScreenState
                             fullness: _fullness,
                             onBloatingChanged: (v) =>
                                 setState(() => _bloating = v),
-                            onGasChanged: (v) =>
-                                setState(() => _gas = v),
-                            onCrampsChanged: (v) =>
-                                setState(() => _cramps = v),
+                            onGasChanged: (v) => setState(() => _gas = v),
+                            onCrampsChanged: (v) => setState(() => _cramps = v),
                             onFullnessChanged: (v) =>
                                 setState(() => _fullness = v),
                           ),
@@ -227,14 +230,11 @@ class _GutFeelingTrackerScreenState
                             energy: _energy,
                             focus: _focus,
                             bodyFeel: _bodyFeel,
-                            onStressChanged: (v) =>
-                                setState(() => _stress = v),
+                            onStressChanged: (v) => setState(() => _stress = v),
                             onHappinessChanged: (v) =>
                                 setState(() => _happiness = v),
-                            onEnergyChanged: (v) =>
-                                setState(() => _energy = v),
-                            onFocusChanged: (v) =>
-                                setState(() => _focus = v),
+                            onEnergyChanged: (v) => setState(() => _energy = v),
+                            onFocusChanged: (v) => setState(() => _focus = v),
                             onBodyFeelChanged: (v) =>
                                 setState(() => _bodyFeel = v),
                           ),
@@ -248,52 +248,14 @@ class _GutFeelingTrackerScreenState
           ),
 
           // Fixed bottom button with gradient backdrop
-          _GradientBottomBar(
-            label: _activeTab == 0 ? 'weiter' : 'speichern',
-            isLoading: _isSaving,
-            onPressed: _onNextOrSave,
+          GradientBottomBar(
+            child: PillButton(
+              label: _activeTab == 0 ? 'weiter' : 'speichern',
+              isLoading: _isSaving,
+              onPressed: _onNextOrSave,
+            ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _GradientBottomBar extends StatelessWidget {
-  final String label;
-  final bool isLoading;
-  final VoidCallback onPressed;
-
-  const _GradientBottomBar({
-    required this.label,
-    required this.isLoading,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      left: 0,
-      right: 0,
-      bottom: 0,
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppTheme.screenBackground.withValues(alpha: 0.0),
-              AppTheme.screenBackground,
-            ],
-            stops: const [0.0, 0.3],
-          ),
-        ),
-        padding: const EdgeInsets.fromLTRB(16, 32, 16, 32),
-        child: PillButton(
-          label: label,
-          isLoading: isLoading,
-          onPressed: onPressed,
-        ),
       ),
     );
   }

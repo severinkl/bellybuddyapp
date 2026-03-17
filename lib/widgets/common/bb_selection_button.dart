@@ -32,8 +32,9 @@ class BbSelectionButton extends StatelessWidget {
             onPressed();
           },
           style: OutlinedButton.styleFrom(
-            backgroundColor:
-                isSelected ? AppTheme.primary.withValues(alpha: 0.1) : null,
+            backgroundColor: isSelected
+                ? AppTheme.primary.withValues(alpha: 0.1)
+                : null,
             side: BorderSide(
               color: isSelected ? AppTheme.primary : AppTheme.border,
               width: isSelected ? 2 : 1,
@@ -55,8 +56,9 @@ class BbSelectionButton extends StatelessWidget {
                         label,
                         style: TextStyle(
                           fontSize: AppTheme.fontSizeSubtitle,
-                          fontWeight:
-                              isSelected ? FontWeight.w600 : FontWeight.w400,
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.w400,
                           color: AppTheme.foreground,
                         ),
                       ),
@@ -67,8 +69,7 @@ class BbSelectionButton extends StatelessWidget {
                   label,
                   style: TextStyle(
                     fontSize: AppTheme.fontSizeSubtitle,
-                    fontWeight:
-                        isSelected ? FontWeight.w600 : FontWeight.w400,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                     color: AppTheme.foreground,
                   ),
                 ),

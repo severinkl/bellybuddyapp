@@ -8,6 +8,7 @@ import '../../../router/route_names.dart';
 import '../../../utils/save_helper.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/date_time_chips.dart';
+import '../../../widgets/common/gradient_bottom_bar.dart';
 import '../../../widgets/common/tracker_screen_scaffold.dart';
 import 'widgets/ingredient_search.dart';
 import 'widgets/meal_image_section.dart';
@@ -33,10 +34,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     final notifier = ref.read(mealTrackerProvider.notifier);
     notifier.setTitle(_titleController.text);
 
-    await saveWithFeedback(
-      context,
-      () => notifier.save(),
-    );
+    await saveWithFeedback(context, () => notifier.save());
   }
 
   @override
@@ -52,14 +50,14 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
                 autofocus: true,
                 textAlign: TextAlign.center,
                 style: const TextStyle(
-                    fontSize: AppTheme.fontSizeTitle,
-                    fontWeight: FontWeight.w600),
+                  fontSize: AppTheme.fontSizeTitle,
+                  fontWeight: FontWeight.w600,
+                ),
                 decoration: const InputDecoration(
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.zero,
                 ),
-                onSubmitted: (_) =>
-                    setState(() => _isEditingTitle = false),
+                onSubmitted: (_) => setState(() => _isEditingTitle = false),
               )
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -71,8 +69,9 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                          fontSize: AppTheme.fontSizeTitle,
-                          fontWeight: FontWeight.w600),
+                        fontSize: AppTheme.fontSizeTitle,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 4),
@@ -126,7 +125,8 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
                     if (mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                            content: Text('Fehler bei der Analyse.')),
+                          content: Text('Fehler bei der Analyse.'),
+                        ),
                       );
                     }
                   }
@@ -152,46 +152,29 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         ),
 
         // Fixed bottom bar
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  AppTheme.screenBackground.withValues(alpha: 0.0),
-                  AppTheme.screenBackground,
-                ],
-                stops: const [0.0, 0.3],
+        GradientBottomBar(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // "Getränk tracken" button
+              OutlinedButton.icon(
+                onPressed: () => context.push(RoutePaths.drinkTracker),
+                icon: const Icon(Icons.water_drop_outlined),
+                label: const Text('Getränk tracken'),
+                style: OutlinedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: AppTheme.info,
+                  side: const BorderSide(color: AppTheme.info),
+                ),
               ),
-            ),
-            padding: const EdgeInsets.fromLTRB(16, 32, 16, 32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // "Getränk tracken" button
-                OutlinedButton.icon(
-                  onPressed: () => context.push(RoutePaths.drinkTracker),
-                  icon: const Icon(Icons.water_drop_outlined),
-                  label: const Text('Getränk tracken'),
-                  style: OutlinedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: AppTheme.info,
-                    side: const BorderSide(color: AppTheme.info),
-                  ),
-                ),
-                AppConstants.gap8,
-                // Save button
-                BbButton(
-                  label: 'Speichern',
-                  isLoading: state.isSaving,
-                  onPressed: canSave ? _save : null,
-                ),
-              ],
-            ),
+              AppConstants.gap8,
+              // Save button
+              BbButton(
+                label: 'Speichern',
+                isLoading: state.isSaving,
+                onPressed: canSave ? _save : null,
+              ),
+            ],
           ),
         ),
       ],

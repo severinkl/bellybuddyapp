@@ -5,7 +5,10 @@ import '../../../../widgets/common/mood_slider_row.dart';
 
 class BauchgefuehlTab extends StatelessWidget {
   final int bloating, gas, cramps, fullness;
-  final ValueChanged<int> onBloatingChanged, onGasChanged, onCrampsChanged, onFullnessChanged;
+  final ValueChanged<int> onBloatingChanged,
+      onGasChanged,
+      onCrampsChanged,
+      onFullnessChanged;
 
   const BauchgefuehlTab({
     super.key,
@@ -26,7 +29,10 @@ class BauchgefuehlTab extends StatelessWidget {
       children: [
         const Text(
           'Wie ist dein Bauchgefühl?',
-          style: TextStyle(fontSize: AppTheme.fontSizeTitleLG, fontWeight: FontWeight.w500),
+          style: TextStyle(
+            fontSize: AppTheme.fontSizeTitleLG,
+            fontWeight: FontWeight.w500,
+          ),
         ),
         AppConstants.gap16,
         MoodSliderRow(

@@ -25,7 +25,9 @@ class _MealImageState extends State<MealImage> {
   Future<void> _resolve() async {
     final url = await resolveSignedMealImageUrl(widget.imageUrl);
     if (url == null) {
-      debugPrint('[MealImage] URL resolution returned null for: ${widget.imageUrl}');
+      debugPrint(
+        '[MealImage] URL resolution returned null for: ${widget.imageUrl}',
+      );
     }
     if (mounted) {
       setState(() {
@@ -39,7 +41,7 @@ class _MealImageState extends State<MealImage> {
   Widget build(BuildContext context) {
     if (_loading) {
       return Container(
-        height: 180,
+        height: AppConstants.mealImageHeight,
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
           color: AppTheme.muted,
@@ -58,14 +60,16 @@ class _MealImageState extends State<MealImage> {
       return Padding(
         padding: const EdgeInsets.only(bottom: 16),
         child: Container(
-          height: 180,
+          height: AppConstants.mealImageHeight,
           decoration: BoxDecoration(
             color: AppTheme.muted,
             borderRadius: BorderRadius.circular(AppConstants.radiusXl),
           ),
           child: const Center(
-            child: Icon(Icons.image_not_supported,
-                color: AppTheme.mutedForeground),
+            child: Icon(
+              Icons.image_not_supported,
+              color: AppTheme.mutedForeground,
+            ),
           ),
         ),
       );
@@ -77,19 +81,21 @@ class _MealImageState extends State<MealImage> {
         borderRadius: BorderRadius.circular(AppConstants.radiusXl),
         child: CachedNetworkImage(
           imageUrl: _resolvedUrl!,
-          height: 180,
+          height: AppConstants.mealImageHeight,
           width: double.infinity,
           fit: BoxFit.cover,
           placeholder: (_, _) => Container(
-            height: 180,
+            height: AppConstants.mealImageHeight,
             color: AppTheme.muted,
           ),
           errorWidget: (_, _, _) => Container(
-            height: 180,
+            height: AppConstants.mealImageHeight,
             color: AppTheme.muted,
             child: const Center(
-              child: Icon(Icons.image_not_supported,
-                  color: AppTheme.mutedForeground),
+              child: Icon(
+                Icons.image_not_supported,
+                color: AppTheme.mutedForeground,
+              ),
             ),
           ),
         ),

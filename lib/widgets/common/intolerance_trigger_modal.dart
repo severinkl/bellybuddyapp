@@ -4,14 +4,8 @@ import '../../config/constants.dart';
 
 /// Trigger options per intolerance type.
 const Map<String, List<String>> intoleranceTriggerOptions = {
-  'Fruktose': [
-    'Nach einem Glas Fruchtsaft',
-    'Nach einer Apfelscheibe',
-  ],
-  'Laktose': [
-    'Nach einem Glas Milch',
-    'Wenn Milch in Teig vorhanden ist',
-  ],
+  'Fruktose': ['Nach einem Glas Fruchtsaft', 'Nach einer Apfelscheibe'],
+  'Laktose': ['Nach einem Glas Milch', 'Wenn Milch in Teig vorhanden ist'],
   'Histamin': [
     'Nach Rotwein',
     'Nach gereiftem Käse',

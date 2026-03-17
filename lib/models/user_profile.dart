@@ -17,9 +17,15 @@ abstract class UserProfile with _$UserProfile {
     @JsonKey(name: 'auth_method') String? authMethod,
     @JsonKey(name: 'reminder_times') @Default([18]) List<int> reminderTimes,
     @Default('Europe/Berlin') String? timezone,
-    @JsonKey(name: 'fructose_triggers') @Default([]) List<String> fructoseTriggers,
-    @JsonKey(name: 'lactose_triggers') @Default([]) List<String> lactoseTriggers,
-    @JsonKey(name: 'histamin_triggers') @Default([]) List<String> histaminTriggers,
+    @JsonKey(name: 'fructose_triggers')
+    @Default([])
+    List<String> fructoseTriggers,
+    @JsonKey(name: 'lactose_triggers')
+    @Default([])
+    List<String> lactoseTriggers,
+    @JsonKey(name: 'histamin_triggers')
+    @Default([])
+    List<String> histaminTriggers,
   }) = _UserProfile;
 
   const UserProfile._();
@@ -28,5 +34,9 @@ abstract class UserProfile with _$UserProfile {
       _$UserProfileFromJson(json);
 
   bool get isComplete =>
-      birthYear != null && gender != null && height != null && weight != null && diet != null;
+      birthYear != null &&
+      gender != null &&
+      height != null &&
+      weight != null &&
+      diet != null;
 }

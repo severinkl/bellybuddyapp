@@ -15,8 +15,9 @@ Future<bool> showDeleteAccountDialog(BuildContext context) async {
     context: context,
     builder: (dialogContext) => StatefulBuilder(
       builder: (context, setDialogState) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppConstants.radiusLg)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppConstants.radiusLg),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -27,15 +28,19 @@ Future<bool> showDeleteAccountDialog(BuildContext context) async {
                 color: AppTheme.destructive.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.warning_amber_rounded,
-                  color: AppTheme.destructive, size: 32),
+              child: const Icon(
+                Icons.warning_amber_rounded,
+                color: AppTheme.destructive,
+                size: 32,
+              ),
             ),
             AppConstants.gap16,
             const Text(
               'Konto löschen',
               style: TextStyle(
-                  fontSize: AppTheme.fontSizeTitle,
-                  fontWeight: FontWeight.w600),
+                fontSize: AppTheme.fontSizeTitle,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             AppConstants.gap12,
             const Text(
@@ -74,8 +79,7 @@ Future<bool> showDeleteAccountDialog(BuildContext context) async {
                     } catch (e) {
                       if (!dialogContext.mounted) return;
                       ScaffoldMessenger.of(dialogContext).showSnackBar(
-                        const SnackBar(
-                            content: Text('Fehler beim Löschen.')),
+                        const SnackBar(content: Text('Fehler beim Löschen.')),
                       );
                     }
                   }
@@ -110,13 +114,14 @@ class _BulletItem extends StatelessWidget {
         children: [
           const Padding(
             padding: EdgeInsets.only(top: 6),
-            child:
-                Icon(Icons.circle, size: 6, color: AppTheme.mutedForeground),
+            child: Icon(Icons.circle, size: 6, color: AppTheme.mutedForeground),
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(text,
-                style: const TextStyle(fontSize: AppTheme.fontSizeBody)),
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: AppTheme.fontSizeBody),
+            ),
           ),
         ],
       ),

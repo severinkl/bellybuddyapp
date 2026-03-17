@@ -12,6 +12,7 @@ abstract class DrinkEntry with _$DrinkEntry {
     @JsonKey(name: 'user_id') String? userId,
     @JsonKey(name: 'tracked_at') required DateTime trackedAt,
     @JsonKey(name: 'drink_id') required String drinkId,
+
     /// Excluded from JSON serialization. Populated only by [fromDbRow]
     /// which reads the joined `drinks(name)` data.
     @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,11 +31,11 @@ abstract class DrinkEntry with _$DrinkEntry {
   /// Unlike [toJson], this excludes `drinkName` (which comes from a join)
   /// and includes only the columns that belong to the `drink_entries` table.
   Map<String, dynamic> toInsertJson() => {
-        'tracked_at': trackedAt.toIso8601String(),
-        'drink_id': drinkId,
-        'amount_ml': amountMl,
-        'notes': notes,
-      };
+    'tracked_at': trackedAt.toIso8601String(),
+    'drink_id': drinkId,
+    'amount_ml': amountMl,
+    'notes': notes,
+  };
 
   /// Canonical factory for database rows.
   ///

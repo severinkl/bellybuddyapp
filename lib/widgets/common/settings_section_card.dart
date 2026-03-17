@@ -45,10 +45,7 @@ class SettingsSectionCard extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 10),
-        BbCard(
-          color: cardColor,
-          child: child,
-        ),
+        BbCard(color: cardColor, child: child),
       ],
     );
   }

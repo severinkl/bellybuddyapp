@@ -29,8 +29,9 @@ class MealDetail extends StatelessWidget {
                 const Text(
                   'Zutaten',
                   style: TextStyle(
-                      fontSize: AppTheme.fontSizeSubtitle,
-                      fontWeight: FontWeight.w600),
+                    fontSize: AppTheme.fontSizeSubtitle,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
                 AppConstants.gap8,
                 Wrap(

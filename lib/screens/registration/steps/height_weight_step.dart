@@ -28,7 +28,11 @@ class HeightWeightStep extends StatelessWidget {
       child: Column(
         children: [
           AppConstants.gap24,
-          const MascotImage(assetPath: AppConstants.mascotWink, width: 120, height: 120),
+          const MascotImage(
+            assetPath: AppConstants.mascotWink,
+            width: 120,
+            height: 120,
+          ),
           AppConstants.gap16,
           const Text(
             'Größe & Gewicht',
@@ -42,7 +46,10 @@ class HeightWeightStep extends StatelessWidget {
           AppConstants.gap8,
           const Text(
             'Diese Angaben helfen uns dabei, deine Verdauung besser zu verstehen.',
-            style: TextStyle(fontSize: AppTheme.fontSizeBodyLG, color: AppTheme.mutedForeground),
+            style: TextStyle(
+              fontSize: AppTheme.fontSizeBodyLG,
+              color: AppTheme.mutedForeground,
+            ),
             textAlign: TextAlign.center,
           ),
           AppConstants.gap24,
