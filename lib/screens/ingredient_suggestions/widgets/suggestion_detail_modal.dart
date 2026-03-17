@@ -1,4 +1,6 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/ingredient_suggestion_group.dart';
 import '../../../config/constants.dart';
@@ -108,12 +110,26 @@ class SuggestionDetailModal extends StatelessWidget {
                               borderRadius: BorderRadius.circular(
                                 AppConstants.radiusSm,
                               ),
-                              child: Image.network(
-                                meal.imageUrl!,
+                              child: CachedNetworkImage(
+                                imageUrl: meal.imageUrl!,
                                 width: 48,
                                 height: 48,
                                 fit: BoxFit.cover,
-                                errorBuilder: (c, e, s) => _mealPlaceholder(),
+                                placeholder: (_, _) => Shimmer.fromColors(
+                                  baseColor: AppTheme.muted,
+                                  highlightColor: AppTheme.background,
+                                  child: Container(
+                                    width: 48,
+                                    height: 48,
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.muted,
+                                      borderRadius: BorderRadius.circular(
+                                        AppConstants.radiusSm,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                errorWidget: (_, _, _) => _mealPlaceholder(),
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -245,12 +261,24 @@ class _IngredientImage extends StatelessWidget {
     if (imageUrl != null && imageUrl!.isNotEmpty) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(size / 2),
-        child: Image.network(
-          imageUrl!,
+        child: CachedNetworkImage(
+          imageUrl: imageUrl!,
           width: size,
           height: size,
           fit: BoxFit.cover,
-          errorBuilder: (c, e, s) => _fallback(),
+          placeholder: (_, _) => Shimmer.fromColors(
+            baseColor: AppTheme.muted,
+            highlightColor: AppTheme.background,
+            child: Container(
+              width: size,
+              height: size,
+              decoration: const BoxDecoration(
+                color: AppTheme.muted,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          errorWidget: (_, _, _) => _fallback(),
         ),
       );
     }

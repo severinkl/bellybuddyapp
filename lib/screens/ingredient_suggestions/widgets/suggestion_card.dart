@@ -1,4 +1,6 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/ingredient_suggestion_group.dart';
 import '../../../widgets/common/bb_card.dart';
@@ -134,12 +136,21 @@ class SuggestionCard extends StatelessWidget {
                             if (repl.imageUrl != null &&
                                 repl.imageUrl!.isNotEmpty) ...[
                               ClipOval(
-                                child: Image.network(
-                                  repl.imageUrl!,
+                                child: CachedNetworkImage(
+                                  imageUrl: repl.imageUrl!,
                                   width: 24,
                                   height: 24,
                                   fit: BoxFit.cover,
-                                  errorBuilder: (c, e, s) => const Text(
+                                  placeholder: (_, _) => Shimmer.fromColors(
+                                    baseColor: AppTheme.muted,
+                                    highlightColor: AppTheme.background,
+                                    child: Container(
+                                      width: 24,
+                                      height: 24,
+                                      color: AppTheme.muted,
+                                    ),
+                                  ),
+                                  errorWidget: (_, _, _) => const Text(
                                     '\u{1F96C}',
                                     style: TextStyle(
                                       fontSize: AppTheme.fontSizeBody,
@@ -180,12 +191,24 @@ class _IngredientAvatar extends StatelessWidget {
   Widget build(BuildContext context) {
     if (imageUrl != null && imageUrl!.isNotEmpty) {
       return ClipOval(
-        child: Image.network(
-          imageUrl!,
+        child: CachedNetworkImage(
+          imageUrl: imageUrl!,
           width: 48,
           height: 48,
           fit: BoxFit.cover,
-          errorBuilder: (c, e, s) => _fallback(),
+          placeholder: (_, _) => Shimmer.fromColors(
+            baseColor: AppTheme.muted,
+            highlightColor: AppTheme.background,
+            child: Container(
+              width: 48,
+              height: 48,
+              decoration: const BoxDecoration(
+                color: AppTheme.muted,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+          errorWidget: (_, _, _) => _fallback(),
         ),
       );
     }

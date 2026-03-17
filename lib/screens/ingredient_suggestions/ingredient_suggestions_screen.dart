@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/app_theme.dart';
@@ -28,6 +29,26 @@ class _IngredientSuggestionsScreenState
       await notifier.fetchSuggestions();
       await notifier.markAllNewAsSeen();
     });
+  }
+
+  /// Prefetch all image URLs into the CachedNetworkImage cache.
+  void _precacheImages(List<IngredientSuggestionGroup> groups) {
+    for (final group in groups) {
+      final urls = <String>[
+        if (group.ingredientImageUrl != null &&
+            group.ingredientImageUrl!.isNotEmpty)
+          group.ingredientImageUrl!,
+        ...group.replacements
+            .where((r) => r.imageUrl != null && r.imageUrl!.isNotEmpty)
+            .map((r) => r.imageUrl!),
+        ...group.meals
+            .where((m) => m.imageUrl != null && m.imageUrl!.isNotEmpty)
+            .map((m) => m.imageUrl!),
+      ];
+      for (final url in urls) {
+        precacheImage(CachedNetworkImageProvider(url), context);
+      }
+    }
   }
 
   void _openDetail(IngredientSuggestionGroup group) {
@@ -71,6 +92,7 @@ class _IngredientSuggestionsScreenState
                     .fetchSuggestions(),
               ),
               data: (groups) {
+                _precacheImages(groups);
                 final filtered = _searchQuery.isEmpty
                     ? groups
                     : groups
