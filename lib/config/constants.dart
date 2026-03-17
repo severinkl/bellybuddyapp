@@ -113,4 +113,13 @@ class AppConstants {
   // Gut feeling symptom labels
   static const List<String> gutFeelingSymptoms = ['Blähbauch', 'Blähungen', 'Krämpfe', 'Völlegefühl'];
 
+  // Stimmung (mood) labels
+  static const List<String> stimmungLabels = [
+    'gestresst',
+    'traurig',
+    'müde',
+    'unkonzentriert',
+    'unwohl',
+  ];
+
 }

@@ -1,5 +1,6 @@
 import 'dart:ui';
 import '../config/app_theme.dart';
+import '../config/constants.dart';
 import '../models/gut_feeling_entry.dart';
 
 enum GutFeelingRatingLevel {
@@ -29,6 +30,18 @@ Color getValueColor(int value) {
   if (value <= 2) return AppTheme.gutFeelingGood;
   if (value <= 3) return AppTheme.gutFeelingNeutral;
   return AppTheme.gutFeelingBad;
+}
+
+/// Returns a comma-separated string of symptom names where the value > 1.
+/// Uses the same labels as the tracker sliders (rightLabel).
+/// If all symptoms are 1/5, returns 'Alles gut'.
+String gutFeelingSubtitle(GutFeelingEntry entry) {
+  final values = [entry.bloating, entry.gas, entry.cramps, entry.fullness];
+  final active = <String>[
+    for (var i = 0; i < values.length; i++)
+      if (values[i] > 1) AppConstants.gutFeelingSymptoms[i],
+  ];
+  return active.isEmpty ? 'Alles gut' : active.join(', ');
 }
 
 /// Calculates the overall gut-feeling rating from an entry.

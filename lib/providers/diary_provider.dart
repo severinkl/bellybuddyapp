@@ -60,13 +60,12 @@ final diaryEntriesProvider = FutureProvider.family<List<DiaryEntry>, DateTime>((
     }
 
     for (final gut in result.gutFeelings) {
-      final rating = calculateGutFeelingRating(gut);
       entries.add(DiaryEntry(
         id: gut.id,
         type: DiaryEntryType.gutFeeling,
         trackedAt: gut.trackedAt,
         title: 'Bauchgefühl',
-        subtitle: rating.level.label,
+        subtitle: gutFeelingSubtitle(gut),
         data: GutFeelingDiaryData(gut),
       ));
     }

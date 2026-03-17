@@ -69,20 +69,17 @@ class _DiaryDetailContentState extends State<_DiaryDetailContent> {
 
   // Drink edit state
   late TextEditingController _amountController;
-  late TextEditingController _notesController;
 
   @override
   void initState() {
     super.initState();
     _amountController = TextEditingController();
-    _notesController = TextEditingController();
     _resetEditState();
   }
 
   @override
   void dispose() {
     _amountController.dispose();
-    _notesController.dispose();
     super.dispose();
   }
 
@@ -102,7 +99,6 @@ class _DiaryDetailContentState extends State<_DiaryDetailContent> {
         _stoolType = toilet.stoolType;
       case DrinkDiaryData(:final drink):
         _amountController.text = drink.amountMl.toString();
-        _notesController.text = drink.notes ?? '';
       case MealDiaryData():
         break;
     }
@@ -137,8 +133,6 @@ class _DiaryDetailContentState extends State<_DiaryDetailContent> {
           await notifier.updateDrinkById(id,
             amountMl: int.tryParse(_amountController.text) ??
                 drinkData.drink.amountMl,
-            notes:
-                _notesController.text.isEmpty ? null : _notesController.text,
           );
         case DiaryEntryType.meal:
           break;
@@ -299,7 +293,6 @@ class _DiaryDetailContentState extends State<_DiaryDetailContent> {
           drink: drink,
           isEditing: _isEditing,
           amountController: _amountController,
-          notesController: _notesController,
         );
     }
   }

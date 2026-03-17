@@ -24,6 +24,9 @@ class _MealImageState extends State<MealImage> {
 
   Future<void> _resolve() async {
     final url = await resolveSignedMealImageUrl(widget.imageUrl);
+    if (url == null) {
+      debugPrint('[MealImage] URL resolution returned null for: ${widget.imageUrl}');
+    }
     if (mounted) {
       setState(() {
         _resolvedUrl = url;
@@ -40,7 +43,7 @@ class _MealImageState extends State<MealImage> {
         margin: const EdgeInsets.only(bottom: 16),
         decoration: BoxDecoration(
           color: AppTheme.muted,
-          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+          borderRadius: BorderRadius.circular(AppConstants.radiusXl),
         ),
         child: const Center(
           child: CircularProgressIndicator(
@@ -51,12 +54,27 @@ class _MealImageState extends State<MealImage> {
       );
     }
 
-    if (_resolvedUrl == null) return const SizedBox.shrink();
+    if (_resolvedUrl == null) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: Container(
+          height: 180,
+          decoration: BoxDecoration(
+            color: AppTheme.muted,
+            borderRadius: BorderRadius.circular(AppConstants.radiusXl),
+          ),
+          child: const Center(
+            child: Icon(Icons.image_not_supported,
+                color: AppTheme.mutedForeground),
+          ),
+        ),
+      );
+    }
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+        borderRadius: BorderRadius.circular(AppConstants.radiusXl),
         child: CachedNetworkImage(
           imageUrl: _resolvedUrl!,
           height: 180,

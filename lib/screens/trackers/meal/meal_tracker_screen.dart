@@ -173,13 +173,14 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 // "Getränk tracken" button
-                ElevatedButton.icon(
+                OutlinedButton.icon(
                   onPressed: () => context.push(RoutePaths.drinkTracker),
                   icon: const Icon(Icons.water_drop_outlined),
                   label: const Text('Getränk tracken'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.info,
-                    foregroundColor: Colors.white,
+                  style: OutlinedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: AppTheme.info,
+                    side: const BorderSide(color: AppTheme.info),
                   ),
                 ),
                 AppConstants.gap8,

@@ -15,24 +15,34 @@ class MealDetail extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         if (meal.imageUrl != null) MealImage(imageUrl: meal.imageUrl!),
-        if (meal.ingredients.isNotEmpty) ...[
-          const Text(
-            'Zutaten',
-            style: TextStyle(fontSize: AppTheme.fontSizeSubtitle, fontWeight: FontWeight.w600),
+        if (meal.ingredients.isNotEmpty)
+          Container(
+            width: double.infinity,
+            padding: AppConstants.paddingMd,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(AppConstants.radiusLg),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Zutaten',
+                  style: TextStyle(
+                      fontSize: AppTheme.fontSizeSubtitle,
+                      fontWeight: FontWeight.w600),
+                ),
+                AppConstants.gap8,
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: meal.ingredients
+                      .map((i) => Chip(label: Text(i)))
+                      .toList(),
+                ),
+              ],
+            ),
           ),
-          AppConstants.gap8,
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children:
-                meal.ingredients.map((i) => Chip(label: Text(i))).toList(),
-          ),
-        ],
-        if (meal.notes != null) ...[
-          AppConstants.gap16,
-          Text(meal.notes!,
-              style: const TextStyle(color: AppTheme.mutedForeground)),
-        ],
       ],
     );
   }

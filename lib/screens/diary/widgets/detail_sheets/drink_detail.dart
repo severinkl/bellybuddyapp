@@ -7,14 +7,12 @@ class DrinkDetail extends StatelessWidget {
   final DrinkEntry drink;
   final bool isEditing;
   final TextEditingController amountController;
-  final TextEditingController notesController;
 
   const DrinkDetail({
     super.key,
     required this.drink,
     required this.isEditing,
     required this.amountController,
-    required this.notesController,
   });
 
   @override
@@ -35,21 +33,6 @@ class DrinkDetail extends StatelessWidget {
               border:
                   OutlineInputBorder(borderRadius: BorderRadius.circular(AppConstants.radiusSm)),
               suffixText: 'ml',
-            ),
-          ),
-          AppConstants.gap16,
-          const Text(
-            'Notizen',
-            style: TextStyle(fontSize: AppTheme.fontSizeBody, fontWeight: FontWeight.w600),
-          ),
-          AppConstants.gap8,
-          TextField(
-            controller: notesController,
-            maxLines: 3,
-            decoration: InputDecoration(
-              border:
-                  OutlineInputBorder(borderRadius: BorderRadius.circular(AppConstants.radiusSm)),
-              hintText: 'Optionale Notizen...',
             ),
           ),
         ],

@@ -12,8 +12,8 @@ import 'meal_thumbnail.dart';
 
 String mascotForRating(GutFeelingRatingLevel level) => switch (level) {
       GutFeelingRatingLevel.spiGut => AppConstants.mascotCool,
-      GutFeelingRatingLevel.gut => AppConstants.mascotHappy,
-      GutFeelingRatingLevel.durchschnittlich => AppConstants.mascotEnergetic,
+      GutFeelingRatingLevel.gut => AppConstants.mascotEnergetic,
+      GutFeelingRatingLevel.durchschnittlich => AppConstants.mascotHappy,
       GutFeelingRatingLevel.schlecht => AppConstants.mascotSad,
     };
 
@@ -143,6 +143,8 @@ class DiaryEntryCard extends StatelessWidget {
                       ),
                       Text(
                         entry.subtitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           fontSize: AppTheme.fontSizeCaptionLG,
                           color: AppTheme.mutedForeground,

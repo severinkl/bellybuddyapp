@@ -151,12 +151,12 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
       final es = widget.editState!;
       return Column(
         children: [
-          _editSlider('Stress', es.stress ?? 3, es.onStressChanged),
-          _editSlider('Glück', es.happiness ?? 3, es.onHappinessChanged),
-          _editSlider('Energie', es.energy ?? 3, es.onEnergyChanged),
-          _editSlider('Fokus', es.focus ?? 3, es.onFocusChanged),
+          _editSlider(AppConstants.stimmungLabels[0], es.stress ?? 3, es.onStressChanged),
+          _editSlider(AppConstants.stimmungLabels[1], es.happiness ?? 3, es.onHappinessChanged),
+          _editSlider(AppConstants.stimmungLabels[2], es.energy ?? 3, es.onEnergyChanged),
+          _editSlider(AppConstants.stimmungLabels[3], es.focus ?? 3, es.onFocusChanged),
           _editSlider(
-              'Körpergefühl', es.bodyFeel ?? 3, es.onBodyFeelChanged),
+              AppConstants.stimmungLabels[4], es.bodyFeel ?? 3, es.onBodyFeelChanged),
         ],
       );
     }
@@ -174,15 +174,15 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
     return Column(
       children: [
         if (widget.gut.stress != null)
-          _detailRow('Stress', widget.gut.stress!),
+          _detailRow(AppConstants.stimmungLabels[0], widget.gut.stress!),
         if (widget.gut.happiness != null)
-          _detailRow('Glück', widget.gut.happiness!),
+          _detailRow(AppConstants.stimmungLabels[1], widget.gut.happiness!),
         if (widget.gut.energy != null)
-          _detailRow('Energie', widget.gut.energy!),
+          _detailRow(AppConstants.stimmungLabels[2], widget.gut.energy!),
         if (widget.gut.focus != null)
-          _detailRow('Fokus', widget.gut.focus!),
+          _detailRow(AppConstants.stimmungLabels[3], widget.gut.focus!),
         if (widget.gut.bodyFeel != null)
-          _detailRow('Körpergefühl', widget.gut.bodyFeel!),
+          _detailRow(AppConstants.stimmungLabels[4], widget.gut.bodyFeel!),
       ],
     );
   }
