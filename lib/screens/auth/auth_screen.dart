@@ -161,8 +161,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     hintText: 'deine@email.de',
                   ),
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty)
+                    if (v == null || v.trim().isEmpty) {
                       return 'E-Mail ist erforderlich';
+                    }
                     if (!v.contains('@')) return 'Ungültige E-Mail';
                     return null;
                   },
@@ -176,8 +177,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     obscureText: true,
                     decoration: const InputDecoration(labelText: 'Passwort'),
                     validator: (v) {
-                      if (v == null || v.isEmpty)
+                      if (v == null || v.isEmpty) {
                         return 'Passwort ist erforderlich';
+                      }
                       return null;
                     },
                   ),

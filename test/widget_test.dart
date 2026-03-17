@@ -1,5 +1,3 @@
-import 'package:flutter_test/flutter_test.dart';
-
 void main() {
   // See test/utils/ for unit tests covering:
   // - mime_utils_test.dart: MIME type mapping

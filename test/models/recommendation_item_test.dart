@@ -35,7 +35,7 @@ void main() {
     });
 
     test('toJson round-trip with alternative', () {
-      final item = RecommendationItem(
+      const item = RecommendationItem(
         type: 'substitute',
         ingredient: 'Weizen',
         reason: 'Gluten',
@@ -50,7 +50,7 @@ void main() {
     });
 
     test('toJson excludes alternative when null', () {
-      final item = RecommendationItem(
+      const item = RecommendationItem(
         type: 'try',
         ingredient: 'Ingwer',
         reason: 'Hilft',
@@ -60,7 +60,7 @@ void main() {
     });
 
     test('isSubstitute true when type is substitute', () {
-      final item = RecommendationItem(
+      const item = RecommendationItem(
         type: 'substitute',
         ingredient: 'a',
         reason: 'b',
@@ -70,7 +70,7 @@ void main() {
     });
 
     test('isTry true when type is try', () {
-      final item = RecommendationItem(
+      const item = RecommendationItem(
         type: 'try',
         ingredient: 'a',
         reason: 'b',
@@ -80,7 +80,7 @@ void main() {
     });
 
     test('unknown type is neither substitute nor try', () {
-      final item = RecommendationItem(
+      const item = RecommendationItem(
         type: 'avoid',
         ingredient: 'a',
         reason: 'b',

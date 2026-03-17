@@ -126,8 +126,9 @@ class _RegistrationWizardScreenState
       if (mounted) context.go(RoutePaths.dashboard);
     } catch (e) {
       _log.error('google sign-up failed', e);
-      if (mounted)
+      if (mounted) {
         setState(() => _authError = 'Google-Anmeldung fehlgeschlagen.');
+      }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
@@ -144,8 +145,9 @@ class _RegistrationWizardScreenState
       if (mounted) context.go(RoutePaths.dashboard);
     } catch (e) {
       _log.error('apple sign-up failed', e);
-      if (mounted)
+      if (mounted) {
         setState(() => _authError = 'Apple-Anmeldung fehlgeschlagen.');
+      }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
