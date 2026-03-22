@@ -21,7 +21,7 @@ class DiaryScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final date = ref.watch(diaryDateProvider);
     final entriesAsync = ref.watch(diaryEntriesProvider(date));
-    final isToday = _isSameDay(date, DateTime.now());
+    final isToday = isSameDay(date, DateTime.now());
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -184,7 +184,4 @@ class DiaryScreen extends ConsumerWidget {
       ),
     );
   }
-
-  bool _isSameDay(DateTime a, DateTime b) =>
-      a.year == b.year && a.month == b.month && a.day == b.day;
 }

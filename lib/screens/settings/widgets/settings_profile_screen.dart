@@ -7,6 +7,7 @@ import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/user_profile.dart';
 import '../../../providers/profile_provider.dart';
+import '../../../utils/intolerance_helpers.dart';
 import '../../../widgets/common/bb_async_state.dart';
 import '../../../widgets/common/bb_chip_selector.dart';
 import '../../../widgets/common/settings_section_card.dart';
@@ -83,19 +84,6 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
         _log.error('failed to save profile', e);
       }
     });
-  }
-
-  UserProfile _updateTriggers(
-    String intolerance,
-    UserProfile profile,
-    List<String> triggers,
-  ) {
-    return switch (intolerance) {
-      'Fruktose' => profile.copyWith(fructoseTriggers: triggers),
-      'Laktose' => profile.copyWith(lactoseTriggers: triggers),
-      'Histamin' => profile.copyWith(histaminTriggers: triggers),
-      _ => profile,
-    };
   }
 
   @override
@@ -272,7 +260,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                     onIntolerancesChanged: (v) =>
                         _saveImmediately(profile.copyWith(intolerances: v)),
                     onTriggersChanged: (intolerance, triggers) {
-                      final updated = _updateTriggers(
+                      final updated = IntoleranceHelpers.updateTriggers(
                         intolerance,
                         profile,
                         triggers,

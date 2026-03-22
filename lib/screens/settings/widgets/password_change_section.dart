@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../config/app_theme.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/supabase_service.dart';
+import '../../../utils/password_validator.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/bb_password_hint.dart';
 import '../../../config/constants.dart';
@@ -31,21 +32,16 @@ class _PasswordChangeSectionState extends State<PasswordChangeSection> {
     super.dispose();
   }
 
-  bool get _hasMinLength => _newPasswordController.text.length >= 8;
-  bool get _hasUppercase =>
-      _newPasswordController.text.contains(RegExp(r'[A-Z]'));
-  bool get _hasLowercase =>
-      _newPasswordController.text.contains(RegExp(r'[a-z]'));
-  bool get _hasNumber => _newPasswordController.text.contains(RegExp(r'[0-9]'));
+  PasswordValidation get _validation =>
+      PasswordValidator.validate(_newPasswordController.text);
   bool get _passwordsMatch =>
       _newPasswordController.text.isNotEmpty &&
       _newPasswordController.text == _confirmPasswordController.text;
-  bool get _allRequirementsMet =>
-      _hasMinLength && _hasUppercase && _hasLowercase && _hasNumber;
-  bool get _canSubmitPassword =>
-      _allRequirementsMet &&
-      _passwordsMatch &&
-      _currentPasswordController.text.isNotEmpty;
+  bool get _canSubmitPassword => PasswordValidator.canSubmit(
+    currentPassword: _currentPasswordController.text,
+    newPassword: _newPasswordController.text,
+    confirmPassword: _confirmPasswordController.text,
+  );
 
   Future<void> _changePassword() async {
     if (!_canSubmitPassword) return;
@@ -192,17 +188,20 @@ class _PasswordChangeSectionState extends State<PasswordChangeSection> {
             AppConstants.gap12,
             BbPasswordHint(
               text: 'Mindestens 8 Zeichen',
-              isValid: _hasMinLength,
+              isValid: _validation.hasMinLength,
             ),
             BbPasswordHint(
               text: 'Mindestens 1 Großbuchstabe',
-              isValid: _hasUppercase,
+              isValid: _validation.hasUppercase,
             ),
             BbPasswordHint(
               text: 'Mindestens 1 Kleinbuchstabe',
-              isValid: _hasLowercase,
+              isValid: _validation.hasLowercase,
             ),
-            BbPasswordHint(text: 'Mindestens 1 Zahl', isValid: _hasNumber),
+            BbPasswordHint(
+              text: 'Mindestens 1 Zahl',
+              isValid: _validation.hasNumber,
+            ),
             AppConstants.gap12,
             TextField(
               controller: _confirmPasswordController,

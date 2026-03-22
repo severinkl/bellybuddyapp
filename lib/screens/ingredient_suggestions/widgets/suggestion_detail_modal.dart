@@ -4,10 +4,9 @@ import 'package:shimmer/shimmer.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/ingredient_suggestion_group.dart';
 import '../../../config/constants.dart';
+import '../../../utils/date_format_utils.dart';
 import '../../../utils/signed_url_helper.dart';
-
-bool _isValidImageUrl(String url) =>
-    url.startsWith('https://') || url.startsWith('http://');
+import '../../../utils/url_utils.dart';
 
 class SuggestionDetailModal extends StatelessWidget {
   final IngredientSuggestionGroup group;
@@ -127,7 +126,7 @@ class SuggestionDetailModal extends StatelessWidget {
                                 ),
                                 const SizedBox(height: 2),
                                 Text(
-                                  _formatDate(meal.trackedAt),
+                                  formatDateShort(meal.trackedAt),
                                   style: const TextStyle(
                                     fontSize: AppTheme.fontSizeCaption,
                                     color: AppTheme.mutedForeground,
@@ -202,13 +201,6 @@ class SuggestionDetailModal extends StatelessWidget {
         );
       },
     );
-  }
-
-  String _formatDate(DateTime date) {
-    final day = date.day.toString().padLeft(2, '0');
-    final month = date.month.toString().padLeft(2, '0');
-    final year = date.year;
-    return '$day.$month.$year';
   }
 }
 
@@ -297,7 +289,7 @@ class _IngredientImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (imageUrl != null && _isValidImageUrl(imageUrl!)) {
+    if (imageUrl != null && isValidImageUrl(imageUrl!)) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(size / 2),
         child: CachedNetworkImage(

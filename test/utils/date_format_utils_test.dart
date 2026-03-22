@@ -135,4 +135,37 @@ void main() {
       expect(formatDateWeekday(dt), 'Montag 09.03.2026');
     });
   });
+
+  group('formatDateShort', () {
+    test('formats as dd.MM.yyyy', () {
+      final dt = DateTime(2026, 3, 13);
+      expect(formatDateShort(dt), '13.03.2026');
+    });
+
+    test('zero-pads day and month', () {
+      final dt = DateTime(2026, 1, 5);
+      expect(formatDateShort(dt), '05.01.2026');
+    });
+  });
+
+  group('isSameDay', () {
+    test('same day returns true', () {
+      expect(isSameDay(DateTime(2026, 3, 13), DateTime(2026, 3, 13)), true);
+    });
+
+    test('different day returns false', () {
+      expect(isSameDay(DateTime(2026, 3, 13), DateTime(2026, 3, 14)), false);
+    });
+
+    test('same day different time returns true', () {
+      expect(
+        isSameDay(DateTime(2026, 3, 13, 8, 0), DateTime(2026, 3, 13, 22, 30)),
+        true,
+      );
+    });
+
+    test('different month returns false', () {
+      expect(isSameDay(DateTime(2026, 3, 13), DateTime(2026, 4, 13)), false);
+    });
+  });
 }

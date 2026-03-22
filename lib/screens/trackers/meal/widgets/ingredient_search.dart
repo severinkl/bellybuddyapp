@@ -31,6 +31,16 @@ class _IngredientSearchState extends State<IngredientSearch> {
   bool _isAdding = false;
 
   @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(() {
+      if (!_focusNode.hasFocus && _isAdding) {
+        _submitIngredient();
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     _focusNode.dispose();

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../providers/drink_tracker_provider.dart';
+import '../../../utils/drink_helpers.dart';
 import '../../../utils/save_helper.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/date_time_chips.dart';
@@ -25,14 +26,6 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
     final notifier = ref.read(drinkTrackerProvider.notifier);
     notifier.loadDrinks();
     notifier.loadTodayTotal();
-  }
-
-  String _formatAmount(int ml) {
-    if (ml >= 1000) {
-      final liters = (ml / 1000).toStringAsFixed(1);
-      return '${liters.replaceAll('.0', '')} L';
-    }
-    return '$ml ml';
   }
 
   @override
@@ -137,7 +130,7 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
             ),
           ),
           Text(
-            _formatAmount(totalWithPending),
+            DrinkHelpers.formatAmount(totalWithPending),
             style: const TextStyle(
               fontSize: AppTheme.fontSizeSubtitle,
               fontWeight: FontWeight.w600,
@@ -147,7 +140,7 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
           if (pendingAmount > 0) ...[
             const SizedBox(width: 4),
             Text(
-              '(+${_formatAmount(pendingAmount)})',
+              '(+${DrinkHelpers.formatAmount(pendingAmount)})',
               style: const TextStyle(
                 fontSize: AppTheme.fontSizeBody,
                 fontWeight: FontWeight.w500,

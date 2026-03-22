@@ -58,3 +58,12 @@ String formatDateTimeFull(DateTime dt) {
 String formatDateWeekday(DateTime dt) {
   return DateFormat('EEEE dd.MM.yyyy', 'de_DE').format(dt);
 }
+
+/// Formats a DateTime as "dd.MM.yyyy" (e.g., "13.03.2026")
+String formatDateShort(DateTime dt) {
+  return DateFormat('dd.MM.yyyy', 'de_DE').format(dt);
+}
+
+/// Returns true if [a] and [b] fall on the same calendar day.
+bool isSameDay(DateTime a, DateTime b) =>
+    a.year == b.year && a.month == b.month && a.day == b.day;

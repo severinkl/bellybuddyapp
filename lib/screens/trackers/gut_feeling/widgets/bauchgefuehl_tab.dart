@@ -38,6 +38,7 @@ class BauchgefuehlTab extends StatelessWidget {
         MoodSliderRow(
           value: bloating,
           onChanged: onBloatingChanged,
+          leftLabel: 'garnicht',
           rightLabel: AppConstants.gutFeelingSymptoms[0],
           leftMascot: AppConstants.mascotHappyStomach,
           rightMascot: AppConstants.mascotBloatingStomach,
@@ -46,6 +47,7 @@ class BauchgefuehlTab extends StatelessWidget {
         MoodSliderRow(
           value: gas,
           onChanged: onGasChanged,
+          leftLabel: 'garnicht',
           rightLabel: AppConstants.gutFeelingSymptoms[1],
           leftMascot: AppConstants.mascotZen,
           rightMascot: AppConstants.mascotFlatulance,
@@ -54,6 +56,7 @@ class BauchgefuehlTab extends StatelessWidget {
         MoodSliderRow(
           value: cramps,
           onChanged: onCrampsChanged,
+          leftLabel: 'garnicht',
           rightLabel: AppConstants.gutFeelingSymptoms[2],
           leftMascot: AppConstants.mascotNoCramp,
           rightMascot: AppConstants.mascotCramp,
@@ -62,6 +65,7 @@ class BauchgefuehlTab extends StatelessWidget {
         MoodSliderRow(
           value: fullness,
           onChanged: onFullnessChanged,
+          leftLabel: 'garnicht',
           rightLabel: AppConstants.gutFeelingSymptoms[3],
           leftMascot: AppConstants.mascotInLove,
           rightMascot: AppConstants.mascotFullness,

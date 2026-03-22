@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -8,7 +7,7 @@ import '../services/ingredient_service.dart';
 import '../services/storage_service.dart';
 import '../services/supabase_service.dart';
 import '../utils/logger.dart';
-import '../utils/mime_utils.dart';
+import '../utils/meal_helpers.dart';
 import 'entries_provider.dart';
 
 class MealTrackerState {
@@ -88,9 +87,7 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
   Future<void> analyzeImage(Uint8List bytes, String filename) async {
     state = state.copyWith(isAnalyzing: true);
     try {
-      final ext = filename.split('.').last.toLowerCase();
-      final mimeType = mimeTypeForExtension(ext);
-      final base64Data = 'data:$mimeType;base64,${base64Encode(bytes)}';
+      final base64Data = MealHelpers.buildImageBase64(bytes, filename);
 
       final result = await EdgeFunctionService.invoke(
         'analyze-meal',

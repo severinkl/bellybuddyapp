@@ -53,19 +53,44 @@ String gutFeelingSubtitle(GutFeelingEntry entry) {
   return active.isEmpty ? 'Alles gut' : active.join(', ');
 }
 
+/// Computes the average of gut-feeling values from raw ints.
+/// [bloating], [gas], [cramps], [fullness] are required; mood values
+/// are optional and included when non-null.
+double gutFeelingAverage({
+  required int bloating,
+  required int gas,
+  required int cramps,
+  required int fullness,
+  int? stress,
+  int? happiness,
+  int? energy,
+  int? focus,
+  int? bodyFeel,
+}) {
+  final values = <int>[bloating, gas, cramps, fullness];
+  if (stress != null) values.add(stress);
+  if (happiness != null) values.add(happiness);
+  if (energy != null) values.add(energy);
+  if (focus != null) values.add(focus);
+  if (bodyFeel != null) values.add(bodyFeel);
+  return values.reduce((a, b) => a + b) / values.length;
+}
+
 /// Calculates the overall gut-feeling rating from an entry.
 /// Averages all present values (bloating, gas, cramps, fullness +
 /// optional mood values). Lower is better (1 = best, 5 = worst).
 GutFeelingRating calculateGutFeelingRating(GutFeelingEntry entry) {
-  final values = <int>[entry.bloating, entry.gas, entry.cramps, entry.fullness];
-
-  if (entry.happiness != null) values.add(entry.happiness!);
-  if (entry.energy != null) values.add(entry.energy!);
-  if (entry.focus != null) values.add(entry.focus!);
-  if (entry.bodyFeel != null) values.add(entry.bodyFeel!);
-  if (entry.stress != null) values.add(entry.stress!);
-
-  final avg = values.reduce((a, b) => a + b) / values.length;
+  final avg = gutFeelingAverage(
+    bloating: entry.bloating,
+    gas: entry.gas,
+    cramps: entry.cramps,
+    fullness: entry.fullness,
+    stress: entry.stress,
+    happiness: entry.happiness,
+    energy: entry.energy,
+    focus: entry.focus,
+    bodyFeel: entry.bodyFeel,
+  );
 
   final GutFeelingRatingLevel level;
   if (avg <= 1.5) {

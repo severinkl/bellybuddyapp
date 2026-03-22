@@ -4,6 +4,7 @@ import '../models/drink.dart';
 import '../models/drink_entry.dart';
 import '../services/drink_service.dart';
 import '../services/supabase_service.dart';
+import '../utils/drink_helpers.dart';
 import '../utils/logger.dart';
 import 'entries_provider.dart';
 
@@ -80,20 +81,13 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
 
       // Build quick drinks from recent entries
       final userId = SupabaseService.userId;
-      List<Drink> quick = [];
+      List<Drink> quick;
       if (userId != null) {
         final recentIds = await DrinkService.fetchRecentDrinkIds(userId);
-        final wasserDrink = drinks
-            .where((d) => d.name.toLowerCase() == 'wasser')
-            .firstOrNull;
-        if (wasserDrink != null) quick.add(wasserDrink);
-        for (final id in recentIds) {
-          if (id == wasserDrink?.id) continue;
-          final drink = drinks.where((d) => d.id == id).firstOrNull;
-          if (drink != null) quick.add(drink);
-        }
+        quick = DrinkHelpers.buildQuickDrinks(drinks, recentIds);
+      } else {
+        quick = drinks.take(11).toList();
       }
-      if (quick.isEmpty) quick = drinks.take(11).toList();
 
       state = state.copyWith(
         allDrinks: drinks,
@@ -121,41 +115,8 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
   }
 
   void searchDrinks(String query) {
-    if (query.trim().isEmpty) {
-      state = state.copyWith(suggestions: []);
-      return;
-    }
-    final words = query
-        .toLowerCase()
-        .split(' ')
-        .where((w) => w.isNotEmpty)
-        .toList();
-    final filtered =
-        state.allDrinks.where((d) {
-          final name = d.name.toLowerCase();
-          return words.every((w) => name.contains(w));
-        }).toList()..sort((a, b) {
-          final firstWord = words.first;
-          final aName = a.name.toLowerCase();
-          final bName = b.name.toLowerCase();
-
-          final aStarts = aName.startsWith(firstWord);
-          final bStarts = bName.startsWith(firstWord);
-          if (aStarts && !bStarts) return -1;
-          if (!aStarts && bStarts) return 1;
-
-          final aWordStarts = aName
-              .split(' ')
-              .any((w) => w.startsWith(firstWord));
-          final bWordStarts = bName
-              .split(' ')
-              .any((w) => w.startsWith(firstWord));
-          if (aWordStarts && !bWordStarts) return -1;
-          if (!aWordStarts && bWordStarts) return 1;
-
-          return a.name.compareTo(b.name);
-        });
-    state = state.copyWith(suggestions: filtered.take(8).toList());
+    final results = DrinkHelpers.search(query, state.allDrinks);
+    state = state.copyWith(suggestions: results);
   }
 
   void toggleDrink(Drink drink) {
@@ -184,10 +145,9 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
   }
 
   void setCustomAmount(String value) {
-    final parsed = int.tryParse(value);
     state = state.copyWith(
       customAmount: value,
-      selectedAmount: (parsed != null && parsed > 0) ? parsed : null,
+      selectedAmount: DrinkHelpers.parseAmount(value),
     );
   }
 
