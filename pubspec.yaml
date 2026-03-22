@@ -24,9 +24,6 @@ dependencies:
   # Environment
   flutter_dotenv: ^6.0.0
 
-  # Local storage
-  shared_preferences: ^2.5.3
-
   # Models
   freezed_annotation: ^3.1.0
   json_annotation: ^4.9.0
