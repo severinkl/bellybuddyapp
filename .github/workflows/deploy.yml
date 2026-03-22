@@ -3,6 +3,7 @@ name: Deploy
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 concurrency:
   group: deploy-${{ github.ref }}
@@ -10,7 +11,7 @@ concurrency:
 
 jobs:
   deploy-android:
-    name: Deploy Android → Google Play
+    name: Build Android AAB
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -46,12 +47,11 @@ jobs:
 
       - name: Create key.properties
         run: |
-          cat > android/key.properties <<EOL
-          storePassword=${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          keyPassword=${{ secrets.ANDROID_KEY_PASSWORD }}
-          keyAlias=${{ secrets.ANDROID_KEY_ALIAS }}
-          storeFile=upload-keystore.jks
-          EOL
+          printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=%s\nstoreFile=upload-keystore.jks\n' \
+            "${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+            "${{ secrets.ANDROID_KEY_PASSWORD }}" \
+            "${{ secrets.ANDROID_KEY_ALIAS }}" \
+            > android/key.properties
 
       - name: Decode keystore
         run: echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > android/app/upload-keystore.jks
@@ -59,14 +59,22 @@ jobs:
       - name: Build AAB
         run: flutter build appbundle --release --build-number=${{ github.run_number }}
 
-      - name: Upload to Google Play (Internal)
-        uses: r0adkll/upload-google-play@v1
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
         with:
-          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
-          packageName: com.bellybuddy.belly_buddy
-          releaseFiles: build/app/outputs/bundle/release/app-release.aab
-          track: internal
-          status: completed
+          name: android-release-aab
+          path: build/app/outputs/bundle/release/app-release.aab
+          retention-days: 30
+
+      # TODO: Uncomment when Google Play API access is available
+      # - name: Upload to Google Play (Internal)
+      #   uses: r0adkll/upload-google-play@v1
+      #   with:
+      #     serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+      #     packageName: com.bellybuddy.belly_buddy
+      #     releaseFiles: build/app/outputs/bundle/release/app-release.aab
+      #     track: internal
+      #     status: completed
 
   deploy-ios:
     name: Deploy iOS → TestFlight
