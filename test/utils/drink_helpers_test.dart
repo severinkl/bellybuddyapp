@@ -3,8 +3,7 @@ import 'package:belly_buddy/utils/drink_helpers.dart';
 import 'package:belly_buddy/models/drink.dart';
 
 void main() {
-  Drink makeDrink(String id, String name) =>
-      Drink(id: id, name: name);
+  Drink makeDrink(String id, String name) => Drink(id: id, name: name);
 
   final wasser = makeDrink('w', 'Wasser');
   final kaffee = makeDrink('k', 'Kaffee');
@@ -77,10 +76,7 @@ void main() {
     });
 
     test('prefix matches ranked higher', () {
-      final drinks = [
-        makeDrink('1', 'Eiskaffee'),
-        makeDrink('2', 'Kaffee'),
-      ];
+      final drinks = [makeDrink('1', 'Eiskaffee'), makeDrink('2', 'Kaffee')];
       final result = DrinkHelpers.search('kaffee', drinks);
       expect(result.first.name, 'Kaffee');
     });

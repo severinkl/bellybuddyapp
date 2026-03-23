@@ -126,11 +126,19 @@ void main() {
         replacementsData: [
           {
             'suggestion_id': 's1',
-            'ingredients': {'id': 'r1', 'name': 'Hafermilch', 'image_url': null},
+            'ingredients': {
+              'id': 'r1',
+              'name': 'Hafermilch',
+              'image_url': null,
+            },
           },
           {
             'suggestion_id': 's2',
-            'ingredients': {'id': 'r1', 'name': 'Hafermilch', 'image_url': null},
+            'ingredients': {
+              'id': 'r1',
+              'name': 'Hafermilch',
+              'image_url': null,
+            },
           },
         ],
         mealsData: [],
