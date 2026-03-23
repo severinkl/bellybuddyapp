@@ -84,17 +84,16 @@ chmod +x .git/hooks/pre-commit
 
 ## CI/CD
 
-### CI — every push & PR ([`.github/workflows/ci.yml`](.github/workflows/ci.yml))
+### CI — feature branches & PRs ([`.github/workflows/ci.yml`](.github/workflows/ci.yml))
 
-Runs three parallel jobs:
+Runs two parallel jobs:
 
 1. **Format & Analyze** — `dart format` + `flutter analyze`
 2. **Unit Tests** — `flutter test`
-3. **Build** — Android APK debug (only after 1 + 2 pass)
 
 ### Deploy — push to main ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml))
 
-Runs after format + test checks pass:
+Runs format + test checks, then deploys in parallel:
 
 - **Android** — Signed AAB → Google Play Internal Testing
 - **iOS** — Signed IPA → TestFlight
