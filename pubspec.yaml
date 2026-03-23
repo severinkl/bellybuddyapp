@@ -65,9 +65,9 @@ flutter_launcher_icons:
   android: true
   ios: true
   remove_alpha_ios: true
-  image_path: "assets/images/mascot/mascot-happy.png"
+  image_path: "assets/images/app-icon.png"
   adaptive_icon_background: "#000000"
-  adaptive_icon_foreground: "assets/images/mascot/mascot-happy.png"
+  adaptive_icon_foreground: "assets/images/app-icon.png"
 
 flutter_native_splash:
   color: "#F9F7F4"
