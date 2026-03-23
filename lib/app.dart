@@ -47,6 +47,7 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
   ];
 
   bool _precached = false;
+  bool _showSplash = true;
 
   @override
   void initState() {
@@ -69,13 +70,17 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
   }
 
   Future<void> _precacheAndRemoveSplash() async {
+    // Remove native splash once Flutter is rendering
+    FlutterNativeSplash.remove();
+
     await Future.wait([
-      Future.delayed(const Duration(milliseconds: 500)),
+      Future.delayed(const Duration(milliseconds: 1000)),
       ..._imagesToPreload.map((path) {
         return precacheImage(AssetImage(path), context).catchError((_) {});
       }),
     ]);
-    FlutterNativeSplash.remove();
+
+    if (mounted) setState(() => _showSplash = false);
   }
 
   @override
@@ -106,6 +111,53 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
       ],
       supportedLocales: const [Locale('de', 'DE')],
       locale: const Locale('de', 'DE'),
+      builder: (context, child) {
+        return Stack(
+          children: [
+            child!,
+            if (_showSplash)
+              AnimatedOpacity(
+                opacity: _showSplash ? 1.0 : 0.0,
+                duration: AppConstants.animMedium,
+                child: Container(
+                  color: AppTheme.card,
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Image.asset(
+                          AppConstants.mascotHappy,
+                          width: 120,
+                          height: 120,
+                        ),
+                        AppConstants.gap16,
+                        const Text(
+                          'Belly Buddy',
+                          style: TextStyle(
+                            fontSize: AppTheme.fontSizeDisplayLG,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.foreground,
+                            decoration: TextDecoration.none,
+                          ),
+                        ),
+                        AppConstants.gap8,
+                        const Text(
+                          'Dein Bauchgefühl verstehen',
+                          style: TextStyle(
+                            fontSize: AppTheme.fontSizeSubtitle,
+                            fontWeight: FontWeight.w400,
+                            color: AppTheme.mutedForeground,
+                            decoration: TextDecoration.none,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }
