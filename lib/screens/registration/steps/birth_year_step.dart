@@ -50,7 +50,7 @@ class BirthYearStep extends StatelessWidget {
               padding: AppConstants.paddingMd,
               decoration: BoxDecoration(
                 color: AppTheme.beige,
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(AppConstants.radiusXl),
               ),
               child: BbScrollPicker(
                 items: years,

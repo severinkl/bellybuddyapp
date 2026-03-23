@@ -32,11 +32,11 @@ class RecipeDetailSheet extends StatelessWidget {
         children: [
           Center(
             child: Container(
-              width: 40,
-              height: 4,
+              width: AppConstants.dragHandleWidth,
+              height: AppConstants.spacingXs,
               decoration: BoxDecoration(
                 color: AppTheme.muted,
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: BorderRadius.circular(AppConstants.spacing2),
               ),
             ),
           ),
@@ -75,7 +75,7 @@ class RecipeDetailSheet extends StatelessWidget {
           AppConstants.gap8,
           ...recipe.ingredients.map(
             (i) => Padding(
-              padding: const EdgeInsets.only(bottom: 4),
+              padding: const EdgeInsets.only(bottom: AppConstants.spacingXs),
               child: Text(
                 '• $i',
                 style: const TextStyle(fontSize: AppTheme.fontSizeBodyLG),
@@ -93,7 +93,7 @@ class RecipeDetailSheet extends StatelessWidget {
           AppConstants.gap8,
           ...recipe.instructions.asMap().entries.map(
             (e) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
+              padding: const EdgeInsets.only(bottom: AppConstants.spacingSm),
               child: Text(
                 '${e.key + 1}. ${e.value}',
                 style: const TextStyle(fontSize: AppTheme.fontSizeBodyLG),
@@ -107,8 +107,11 @@ class RecipeDetailSheet extends StatelessWidget {
 
   Widget _infoChip(IconData icon, String label) {
     return Container(
-      margin: const EdgeInsets.only(right: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      margin: const EdgeInsets.only(right: AppConstants.spacing12),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.spacing12,
+        vertical: AppConstants.spacing6,
+      ),
       decoration: BoxDecoration(
         color: AppTheme.secondary,
         borderRadius: BorderRadius.circular(AppConstants.radiusRound),
@@ -117,7 +120,7 @@ class RecipeDetailSheet extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 16, color: AppTheme.mutedForeground),
-          const SizedBox(width: 4),
+          const SizedBox(width: AppConstants.spacingXs),
           Text(
             label,
             style: const TextStyle(

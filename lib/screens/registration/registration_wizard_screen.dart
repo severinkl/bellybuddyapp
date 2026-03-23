@@ -167,7 +167,12 @@ class _RegistrationWizardScreenState
           children: [
             // Progress indicator
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              padding: const EdgeInsets.fromLTRB(
+                AppConstants.spacingMd,
+                AppConstants.spacingMd,
+                AppConstants.spacingMd,
+                AppConstants.spacingSm,
+              ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(AppConstants.radiusXs),
                 child: LinearProgressIndicator(
@@ -227,7 +232,9 @@ class _RegistrationWizardScreenState
             // Next button (not on last step)
             if (_currentStep < _totalSteps - 1)
               Padding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.spacingLg,
+                ),
                 child: BbButton(
                   label: 'Weiter',
                   icon: Icons.arrow_forward,
@@ -236,7 +243,12 @@ class _RegistrationWizardScreenState
               ),
             // Back button (all steps)
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
+              padding: const EdgeInsets.fromLTRB(
+                AppConstants.spacingLg,
+                AppConstants.spacingSm,
+                AppConstants.spacingLg,
+                AppConstants.spacingLg,
+              ),
               child: TextButton.icon(
                 icon: const Icon(Icons.arrow_back, size: 18),
                 label: const Text('Zurück'),

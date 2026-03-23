@@ -25,6 +25,9 @@ class AppTheme {
   static const Color input = Color(0xFFE3DFDA);
   static const Color ring = Color(0xFFB5CC47);
 
+  // Brand colors
+  static const Color googleBlue = Color(0xFF4285F4);
+
   // Chip colors
   static const Color chipDefault = Color(0xFFAABF52);
 

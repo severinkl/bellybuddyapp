@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../config/app_theme.dart';
+import '../../config/constants.dart';
 
 class DateTimeChips extends StatelessWidget {
   const DateTimeChips({
@@ -50,7 +51,7 @@ class DateTimeChips extends StatelessWidget {
             icon: Icons.calendar_today_outlined,
             onTap: () => _pickDate(context),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppConstants.spacingSm),
           _DateTimeChip(
             label: DateFormat('HH:mm').format(value),
             icon: Icons.access_time_outlined,
@@ -78,10 +79,13 @@ class _DateTimeChip extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppConstants.spacingMd,
+          vertical: AppConstants.spacing10,
+        ),
         decoration: BoxDecoration(
           color: AppTheme.background,
-          borderRadius: BorderRadius.circular(24),
+          borderRadius: BorderRadius.circular(AppConstants.radiusXl),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -94,7 +98,7 @@ class _DateTimeChip extends StatelessWidget {
                 color: AppTheme.foreground,
               ),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: AppConstants.spacingSm),
             Icon(icon, size: 18, color: AppTheme.mutedForeground),
           ],
         ),

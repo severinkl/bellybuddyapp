@@ -57,7 +57,7 @@ class _EmptyState extends StatelessWidget {
       child: CustomPaint(
         painter: _DashedBorderPainter(
           color: AppTheme.border,
-          borderRadius: 24,
+          borderRadius: AppConstants.radiusXl,
           dashWidth: 8,
           dashGap: 5,
           strokeWidth: 2,
@@ -65,7 +65,7 @@ class _EmptyState extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             color: AppTheme.card,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(AppConstants.radiusXl),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -79,7 +79,9 @@ class _EmptyState extends StatelessWidget {
               Container(
                 width: 1,
                 height: 48,
-                margin: const EdgeInsets.symmetric(horizontal: 24),
+                margin: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.spacingLg,
+                ),
                 color: AppTheme.border,
               ),
               _PickerButton(
@@ -190,8 +192,8 @@ class _ImagePreview extends StatelessWidget {
                     child: Center(
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
-                          vertical: 24,
+                          horizontal: AppConstants.spacingXl,
+                          vertical: AppConstants.spacingLg,
                         ),
                         decoration: BoxDecoration(
                           color: Colors.white,

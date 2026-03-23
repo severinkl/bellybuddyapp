@@ -175,7 +175,12 @@ class _GutFeelingTrackerScreenState
             children: [
               // Pill tab selector (fixed, not scrollable)
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                padding: const EdgeInsets.fromLTRB(
+                  AppConstants.spacingMd,
+                  AppConstants.spacingSm,
+                  AppConstants.spacingMd,
+                  0,
+                ),
                 child: SlideTransition(
                   position: _tabSelectorSlide,
                   child: FadeTransition(
@@ -209,7 +214,12 @@ class _GutFeelingTrackerScreenState
                       },
                       children: [
                         SingleChildScrollView(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 128),
+                          padding: const EdgeInsets.fromLTRB(
+                            AppConstants.spacingMd,
+                            0,
+                            AppConstants.spacingMd,
+                            128,
+                          ),
                           child: BauchgefuehlTab(
                             bloating: _bloating,
                             gas: _gas,
@@ -224,7 +234,12 @@ class _GutFeelingTrackerScreenState
                           ),
                         ),
                         SingleChildScrollView(
-                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 128),
+                          padding: const EdgeInsets.fromLTRB(
+                            AppConstants.spacingMd,
+                            0,
+                            AppConstants.spacingMd,
+                            128,
+                          ),
                           child: StimmungTab(
                             stress: _stress,
                             happiness: _happiness,

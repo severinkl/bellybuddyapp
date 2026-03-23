@@ -30,7 +30,7 @@ class MoodSliderRow extends StatelessWidget {
     final leftActive = value == 1;
     final rightActive = value > 1;
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(vertical: AppConstants.spacing12),
       child: Row(
         children: [
           GestureDetector(
@@ -45,7 +45,7 @@ class MoodSliderRow extends StatelessWidget {
               fit: mascotFit,
             ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: AppConstants.spacing6),
           Expanded(
             child: BbSlider(
               value: value,
@@ -55,7 +55,7 @@ class MoodSliderRow extends StatelessWidget {
               leftLabel: leftLabel,
             ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: AppConstants.spacing6),
           GestureDetector(
             onTap: () {
               HapticService.selection();
