@@ -47,9 +47,6 @@ dependencies:
   cupertino_icons: ^1.0.8
   flutter_native_splash: ^2.4.7
 
-dependency_overrides:
-  path_provider_foundation: 2.4.3
-
 dev_dependencies:
   flutter_test:
     sdk: flutter
