@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'config/app_theme.dart';
+import 'config/constants.dart';
 import 'providers/auth_provider.dart';
 import 'providers/profile_provider.dart';
 import 'router/app_router.dart';
-import 'screens/splash/splash_screen.dart';
 import 'services/supabase_service.dart';
 import 'utils/logger.dart';
 
@@ -18,19 +19,63 @@ class BellyBuddyApp extends ConsumerStatefulWidget {
 
 class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
   static const _log = AppLogger('BellyBuddy');
-  bool _showSplash = true;
+
+  static const _imagesToPreload = [
+    AppConstants.mascotHappy,
+    AppConstants.mascotCool,
+    AppConstants.mascotProfessor,
+    AppConstants.mascotWink,
+    AppConstants.mascotEnergetic,
+    AppConstants.mascotNervous,
+    AppConstants.mascotClueless,
+    AppConstants.mascotSad,
+    AppConstants.mascotBored,
+    AppConstants.mascotClear,
+    AppConstants.mascotUnfocused,
+    AppConstants.mascotStressed,
+    AppConstants.mascotInLove,
+    AppConstants.mascotZen,
+    AppConstants.mascotBloatingStomach,
+    AppConstants.mascotHappyStomach,
+    AppConstants.mascotFlatulance,
+    AppConstants.mascotCramp,
+    AppConstants.mascotNoCramp,
+    AppConstants.mascotFullness,
+    AppConstants.susiPhone,
+    AppConstants.fuerDichCard,
+    AppConstants.toiletPaperIcon,
+  ];
+
+  bool _precached = false;
 
   @override
   void initState() {
     super.initState();
-    // Initial profile fetch for already-authenticated users.
-    // This handles the case where currentUser is already available synchronously.
     if (SupabaseService.isAuthenticated) {
       _log.debug('authenticated on start, user=${SupabaseService.userId}');
       Future.microtask(() => ref.read(profileProvider.notifier).fetchProfile());
     } else {
       _log.debug('no authenticated user on start');
     }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_precached) {
+      _precached = true;
+      _precacheAndRemoveSplash();
+    }
+  }
+
+  Future<void> _precacheAndRemoveSplash() async {
+    await Future.wait([
+      Future.delayed(const Duration(milliseconds: 500)),
+      ..._imagesToPreload.map((path) {
+        return precacheImage(AssetImage(path), context).catchError((_) {});
+      }),
+    ]);
+    FlutterNativeSplash.remove();
   }
 
   @override
@@ -61,19 +106,6 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
       ],
       supportedLocales: const [Locale('de', 'DE')],
       locale: const Locale('de', 'DE'),
-      builder: (context, child) {
-        return Stack(
-          children: [
-            child!,
-            if (_showSplash)
-              SplashScreen(
-                onComplete: () {
-                  if (mounted) setState(() => _showSplash = false);
-                },
-              ),
-          ],
-        );
-      },
     );
   }
 }
