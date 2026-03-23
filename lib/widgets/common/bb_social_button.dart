@@ -44,10 +44,11 @@ class BbSocialButton extends StatelessWidget {
     return BbSocialButton(
       key: key,
       label: 'Mit Apple fortfahren',
-      icon: const Icon(Icons.apple, color: Colors.white, size: 22),
+      icon: const Icon(Icons.apple, color: AppTheme.foreground, size: 22),
       onPressed: onPressed,
-      backgroundColor: Colors.black,
-      textColor: Colors.white,
+      backgroundColor: Colors.white,
+      textColor: AppTheme.foreground,
+      borderColor: AppTheme.border,
     );
   }
 
