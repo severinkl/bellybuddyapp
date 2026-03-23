@@ -10,7 +10,7 @@ import 'package:belly_buddy/services/entry_query_service.dart';
 void main() {
   group('DiaryHelpers.buildEntries', () {
     test('empty result returns empty list', () {
-      final result = EntryQueryResult(
+      const result = EntryQueryResult(
         meals: [],
         toiletEntries: [],
         gutFeelings: [],

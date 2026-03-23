@@ -3,7 +3,7 @@ import 'package:belly_buddy/utils/intolerance_helpers.dart';
 import 'package:belly_buddy/models/user_profile.dart';
 
 void main() {
-  final profile = UserProfile(
+  const profile = UserProfile(
     fructoseTriggers: ['Apfel', 'Birne'],
     lactoseTriggers: ['Milch'],
     histaminTriggers: ['Tomate', 'Spinat'],
