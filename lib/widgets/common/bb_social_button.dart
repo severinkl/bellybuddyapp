@@ -28,9 +28,9 @@ class BbSocialButton extends StatelessWidget {
       icon: const Text(
         'G',
         style: TextStyle(
-          fontSize: 20,
+          fontSize: AppTheme.fontSizeTitleLG,
           fontWeight: FontWeight.w700,
-          color: Color(0xFF4285F4),
+          color: AppTheme.googleBlue,
         ),
       ),
       onPressed: onPressed,
@@ -76,7 +76,7 @@ class BbSocialButton extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             icon,
-            const SizedBox(width: 12),
+            const SizedBox(width: AppConstants.spacing12),
             Text(
               label,
               style: TextStyle(

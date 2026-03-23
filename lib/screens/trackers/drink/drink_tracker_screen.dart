@@ -92,7 +92,12 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
                 ),
                 // Fixed bottom save button
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+                  padding: const EdgeInsets.fromLTRB(
+                    AppConstants.spacingLg,
+                    0,
+                    AppConstants.spacingLg,
+                    AppConstants.spacingLg,
+                  ),
                   child: SafeArea(
                     top: false,
                     child: BbButton(
@@ -112,7 +117,10 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
     final totalWithPending = state.todayTotal + pendingAmount;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.spacingMd,
+        vertical: AppConstants.spacing12,
+      ),
       decoration: BoxDecoration(
         color: AppTheme.info.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(AppConstants.radiusLg),
@@ -121,7 +129,7 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Icon(Icons.water_drop, color: AppTheme.info, size: 20),
-          const SizedBox(width: 8),
+          const SizedBox(width: AppConstants.spacingSm),
           const Text(
             'Heute: ',
             style: TextStyle(
@@ -138,7 +146,7 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
             ),
           ),
           if (pendingAmount > 0) ...[
-            const SizedBox(width: 4),
+            const SizedBox(width: AppConstants.spacingXs),
             Text(
               '(+${DrinkHelpers.formatAmount(pendingAmount)})',
               style: const TextStyle(
@@ -163,9 +171,12 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
             color: AppTheme.mutedForeground,
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: AppConstants.spacingSm),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppConstants.spacing14,
+            vertical: AppConstants.spacingSm,
+          ),
           decoration: BoxDecoration(
             color: AppTheme.info,
             borderRadius: BorderRadius.circular(AppConstants.radiusFull),
@@ -179,7 +190,7 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
             ),
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: AppConstants.spacingSm),
         GestureDetector(
           onTap: () => ref.read(drinkTrackerProvider.notifier).clearSelection(),
           child: const Text(

@@ -59,7 +59,7 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(Icons.auto_awesome, size: 20),
-            SizedBox(width: 8),
+            SizedBox(width: AppConstants.spacingSm),
             Text('Empfehlungen'),
           ],
         ),
@@ -125,7 +125,9 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
               ),
               AppConstants.gap16,
               const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 32),
+                padding: EdgeInsets.symmetric(
+                  horizontal: AppConstants.spacingXl,
+                ),
                 child: Text(
                   'Noch keine Empfehlungen vorhanden.',
                   textAlign: TextAlign.center,
@@ -161,7 +163,7 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
       padding: AppConstants.paddingMd,
       children: [
         RecommendationSummaryCard(recommendation: latest),
-        const SizedBox(height: 20),
+        AppConstants.gap20,
 
         const Text(
           'Empfehlungen',
@@ -175,13 +177,13 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
 
         ...latest.recommendations.map(
           (item) => Padding(
-            padding: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.only(bottom: AppConstants.spacing10),
             child: RecommendationCard(item: item),
           ),
         ),
 
         if (history.isNotEmpty) ...[
-          const SizedBox(height: 20),
+          AppConstants.gap20,
           RecommendationHistory(history: history),
         ],
 

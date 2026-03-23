@@ -58,7 +58,7 @@ class HeightWeightStep extends StatelessWidget {
               padding: AppConstants.paddingMd,
               decoration: BoxDecoration(
                 color: AppTheme.beige,
-                borderRadius: BorderRadius.circular(24),
+                borderRadius: BorderRadius.circular(AppConstants.radiusXl),
               ),
               child: Row(
                 children: [

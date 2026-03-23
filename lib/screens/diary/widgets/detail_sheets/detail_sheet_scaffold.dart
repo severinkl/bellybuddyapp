@@ -43,11 +43,11 @@ class DetailSheetScaffold extends StatelessWidget {
         children: [
           Center(
             child: Container(
-              width: AppConstants.iconBadgeSm,
-              height: 4,
+              width: AppConstants.dragHandleWidth,
+              height: AppConstants.spacingXs,
               decoration: BoxDecoration(
                 color: AppTheme.muted,
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: BorderRadius.circular(AppConstants.spacing2),
               ),
             ),
           ),
@@ -90,7 +90,7 @@ class DetailSheetScaffold extends StatelessWidget {
                     child: const Text('Abbrechen'),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: AppConstants.spacing12),
                 Expanded(
                   child: ElevatedButton(
                     onPressed: saving ? null : onSavePressed,

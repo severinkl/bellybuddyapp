@@ -23,8 +23,8 @@ class DietSelector extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: AppConstants.spacingSm,
+      runSpacing: AppConstants.spacingSm,
       children: _options.map((diet) {
         final isSelected = (currentDiet ?? 'alles') == diet;
         return GestureDetector(
@@ -33,7 +33,10 @@ class DietSelector extends StatelessWidget {
             onChanged(diet);
           },
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppConstants.spacing20,
+              vertical: AppConstants.spacing10,
+            ),
             decoration: BoxDecoration(
               color: isSelected ? AppTheme.primary : AppTheme.secondary,
               borderRadius: BorderRadius.circular(AppConstants.radiusFull),

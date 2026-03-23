@@ -58,7 +58,9 @@ class _IngredientSuggestionsScreenState
       isScrollControlled: true,
       backgroundColor: AppTheme.background,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppConstants.radiusXl),
+        ),
       ),
       builder: (_) => SuggestionDetailModal(group: group),
     );
@@ -73,7 +75,12 @@ class _IngredientSuggestionsScreenState
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+            padding: const EdgeInsets.fromLTRB(
+              AppConstants.spacingMd,
+              AppConstants.spacingSm,
+              AppConstants.spacingMd,
+              AppConstants.spacingSm,
+            ),
             child: TextField(
               decoration: const InputDecoration(
                 hintText: 'Suchen...',
@@ -120,7 +127,12 @@ class _IngredientSuggestionsScreenState
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                      padding: const EdgeInsets.fromLTRB(
+                        AppConstants.spacingMd,
+                        AppConstants.spacingXs,
+                        AppConstants.spacingMd,
+                        AppConstants.spacingSm,
+                      ),
                       child: Text(
                         '${filtered.length} ${filtered.length == 1 ? 'Vorschlag' : 'Vorschläge'}',
                         style: const TextStyle(
@@ -131,12 +143,19 @@ class _IngredientSuggestionsScreenState
                     ),
                     Expanded(
                       child: ListView.builder(
-                        padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                        padding: const EdgeInsets.fromLTRB(
+                          AppConstants.spacingMd,
+                          0,
+                          AppConstants.spacingMd,
+                          AppConstants.spacingMd,
+                        ),
                         itemCount: filtered.length,
                         itemBuilder: (context, index) {
                           final group = filtered[index];
                           return Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.only(
+                              bottom: AppConstants.spacingSm,
+                            ),
                             child: SuggestionCard(
                               group: group,
                               onTap: () => _openDetail(group),
