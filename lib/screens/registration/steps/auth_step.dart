@@ -116,24 +116,25 @@ class _AuthStepState extends State<AuthStep> {
                 return null;
               },
             ),
-            AppConstants.gap8,
-
-            BbPasswordHint(
-              text: 'Mindestens 8 Zeichen',
-              isValid: _validation.hasMinLength,
-            ),
-            BbPasswordHint(
-              text: 'Mindestens ein Großbuchstabe',
-              isValid: _validation.hasUppercase,
-            ),
-            BbPasswordHint(
-              text: 'Mindestens ein Kleinbuchstabe',
-              isValid: _validation.hasLowercase,
-            ),
-            BbPasswordHint(
-              text: 'Mindestens eine Zahl',
-              isValid: _validation.hasNumber,
-            ),
+            if (_passwordController.text.isNotEmpty) ...[
+              AppConstants.gap8,
+              BbPasswordHint(
+                text: 'Mindestens 8 Zeichen',
+                isValid: _validation.hasMinLength,
+              ),
+              BbPasswordHint(
+                text: 'Mindestens ein Großbuchstabe',
+                isValid: _validation.hasUppercase,
+              ),
+              BbPasswordHint(
+                text: 'Mindestens ein Kleinbuchstabe',
+                isValid: _validation.hasLowercase,
+              ),
+              BbPasswordHint(
+                text: 'Mindestens eine Zahl',
+                isValid: _validation.hasNumber,
+              ),
+            ],
             AppConstants.gap24,
 
             BbButton(
