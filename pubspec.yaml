@@ -59,6 +59,7 @@ dev_dependencies:
   json_serializable: ^6.9.4
   build_runner: ^2.4.15
   flutter_launcher_icons: ^0.14.4
+  flutter_native_splash: ^2.4.7
 
 flutter_launcher_icons:
   android: true
@@ -67,6 +68,13 @@ flutter_launcher_icons:
   image_path: "assets/images/mascot/mascot-happy.png"
   adaptive_icon_background: "#000000"
   adaptive_icon_foreground: "assets/images/mascot/mascot-happy.png"
+
+flutter_native_splash:
+  color: "#F9F7F4"
+  image: assets/images/mascot/mascot-happy.png
+  android_12:
+    color: "#F9F7F4"
+    image: assets/images/mascot/mascot-happy.png
 
 flutter:
   uses-material-design: true
