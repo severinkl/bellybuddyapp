@@ -58,6 +58,15 @@ dev_dependencies:
   freezed: ^3.2.5
   json_serializable: ^6.9.4
   build_runner: ^2.4.15
+  flutter_launcher_icons: ^0.14.4
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  image_path: "assets/images/mascot/mascot-happy.png"
+  adaptive_icon_background: "#000000"
+  adaptive_icon_foreground: "assets/images/mascot/mascot-happy.png"
 
 flutter:
   uses-material-design: true
