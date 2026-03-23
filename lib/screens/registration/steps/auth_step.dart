@@ -126,24 +126,24 @@ class _AuthStepState extends State<AuthStep> {
               },
             ),
             AppConstants.gap8,
-            if(_passwordController.text.isNotEmpty)...[
-                     BbPasswordHint(
-              text: 'Mindestens 8 Zeichen',
-              isValid: _passwordController.text.length >= 8,
-            ),
-            BbPasswordHint(
-              text: 'Mindestens ein Großbuchstabe',
-              isValid: _passwordController.text.contains(RegExp(r'[A-Z]')),
-            ),
-            BbPasswordHint(
-              text: 'Mindestens ein Kleinbuchstabe',
-              isValid: _passwordController.text.contains(RegExp(r'[a-z]')),
-            ),
-            BbPasswordHint(
-              text: 'Mindestens eine Zahl',
-              isValid: _passwordController.text.contains(RegExp(r'[0-9]')),
-            ),
-            AppConstants.gap24,
+            if (_passwordController.text.isNotEmpty) ...[
+              BbPasswordHint(
+                text: 'Mindestens 8 Zeichen',
+                isValid: _passwordController.text.length >= 8,
+              ),
+              BbPasswordHint(
+                text: 'Mindestens ein Großbuchstabe',
+                isValid: _passwordController.text.contains(RegExp(r'[A-Z]')),
+              ),
+              BbPasswordHint(
+                text: 'Mindestens ein Kleinbuchstabe',
+                isValid: _passwordController.text.contains(RegExp(r'[a-z]')),
+              ),
+              BbPasswordHint(
+                text: 'Mindestens eine Zahl',
+                isValid: _passwordController.text.contains(RegExp(r'[0-9]')),
+              ),
+              AppConstants.gap24,
             ],
             BbButton(
               label: 'Registrieren',
