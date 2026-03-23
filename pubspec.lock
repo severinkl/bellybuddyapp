@@ -822,7 +822,7 @@ packages:
     source: hosted
     version: "2.2.22"
   path_provider_foundation:
-    dependency: "direct overridden"
+    dependency: transitive
     description:
       name: path_provider_foundation
       sha256: efaec349ddfc181528345c56f8eda9d6cccd71c177511b132c6a0ddaefaa2738
