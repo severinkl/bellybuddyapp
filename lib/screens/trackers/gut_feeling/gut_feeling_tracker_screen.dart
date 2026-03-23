@@ -152,6 +152,7 @@ class _GutFeelingTrackerScreenState
     if (_showSuccess) {
       return BbSuccessOverlay(
         message: 'Eintrag gespeichert!',
+        subMessage: 'Dein Eintrag wurde erfolgreich erfasst.',
         mascotAsset: AppConstants.mascotHappy,
         onDismissed: () => context.go(RoutePaths.dashboard),
       );

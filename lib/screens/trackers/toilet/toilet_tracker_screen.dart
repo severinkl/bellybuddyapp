@@ -51,7 +51,6 @@ class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
       title: 'Am Klo 💩 gewesen?',
       showSuccess: _showSuccess,
       successMessage: 'Toilettengang gespeichert!',
-      successSubMessage: 'Dein Eintrag wurde erfolgreich erfasst.',
       successMascotAsset: AppConstants.mascotWink,
       body: Padding(
         padding: AppConstants.paddingLg,
