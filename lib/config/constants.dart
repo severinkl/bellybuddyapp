@@ -51,6 +51,9 @@ class AppConstants {
   // Drag handle
   static const double dragHandleWidth = 40.0;
 
+  // Scroll clearance (space below content to clear fixed bottom bars)
+  static const double bottomBarClearance = 128.0;
+
   // Image sizes
   static const double mealImageHeight = 180.0;
 

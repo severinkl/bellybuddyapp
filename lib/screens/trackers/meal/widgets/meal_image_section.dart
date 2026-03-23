@@ -154,15 +154,15 @@ class _ImagePreview extends StatelessWidget {
     return AspectRatio(
       aspectRatio: 4 / 3,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(AppConstants.radiusXl),
         child: Stack(
           fit: StackFit.expand,
           children: [
             Image.memory(imageBytes, fit: BoxFit.cover),
             // X button
             Positioned(
-              top: 12,
-              right: 12,
+              top: AppConstants.spacing12,
+              right: AppConstants.spacing12,
               child: GestureDetector(
                 onTap: onClearImage,
                 child: Container(

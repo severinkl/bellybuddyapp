@@ -218,7 +218,7 @@ class _GutFeelingTrackerScreenState
                             AppConstants.spacingMd,
                             0,
                             AppConstants.spacingMd,
-                            128,
+                            AppConstants.bottomBarClearance,
                           ),
                           child: BauchgefuehlTab(
                             bloating: _bloating,
@@ -238,7 +238,7 @@ class _GutFeelingTrackerScreenState
                             AppConstants.spacingMd,
                             0,
                             AppConstants.spacingMd,
-                            128,
+                            AppConstants.bottomBarClearance,
                           ),
                           child: StimmungTab(
                             stress: _stress,
