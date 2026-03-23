@@ -126,8 +126,8 @@ class _AuthStepState extends State<AuthStep> {
               },
             ),
             AppConstants.gap8,
-
-            BbPasswordHint(
+            if(_passwordController.text.isNotEmpty)...[
+                     BbPasswordHint(
               text: 'Mindestens 8 Zeichen',
               isValid: _passwordController.text.length >= 8,
             ),
@@ -144,7 +144,7 @@ class _AuthStepState extends State<AuthStep> {
               isValid: _passwordController.text.contains(RegExp(r'[0-9]')),
             ),
             AppConstants.gap24,
-
+            ],
             BbButton(
               label: 'Registrieren',
               isLoading: widget.isLoading,
