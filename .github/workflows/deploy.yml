@@ -10,8 +10,49 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  quality:
+    name: Format & Analyze
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Create .env
+        run: cp .env.example .env
+      - run: flutter pub get
+      - name: Code generation
+        run: dart run build_runner build --delete-conflicting-outputs
+      - name: Check formatting
+        run: |
+          find lib test -name '*.dart' \
+            ! -name '*.freezed.dart' \
+            ! -name '*.g.dart' \
+            -print0 | xargs -0 dart format --set-exit-if-changed
+      - run: flutter analyze
+
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+      - name: Create .env
+        run: cp .env.example .env
+      - run: flutter pub get
+      - name: Code generation
+        run: dart run build_runner build --delete-conflicting-outputs
+      - run: flutter test
+
   deploy-android:
     name: Build Android AAB
+    needs: [quality, test]
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -78,6 +119,7 @@ jobs:
 
   deploy-ios:
     name: Deploy iOS → TestFlight
+    needs: [quality, test]
     runs-on: macos-latest
     timeout-minutes: 45
 
