@@ -41,17 +41,6 @@ class DetailSheetScaffold extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Center(
-            child: Container(
-              width: AppConstants.dragHandleWidth,
-              height: AppConstants.spacingXs,
-              decoration: BoxDecoration(
-                color: AppTheme.muted,
-                borderRadius: BorderRadius.circular(AppConstants.spacing2),
-              ),
-            ),
-          ),
-          AppConstants.gap16,
           Row(
             children: [
               Expanded(
