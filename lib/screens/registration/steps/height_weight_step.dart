@@ -86,7 +86,7 @@ class HeightWeightStep extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(width: 24),
+                  const SizedBox(width: AppConstants.spacingLg),
                   Expanded(
                     child: Column(
                       children: [
