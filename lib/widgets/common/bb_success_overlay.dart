@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
@@ -208,7 +206,7 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
                 if (widget.action != null) ...[
                   AppConstants.gap24,
                   if (hasMascot)
-                    _GlassmorphicActionButton(child: widget.action!)
+                    _PillActionButton(child: widget.action!)
                   else
                     widget.action!,
                 ],
@@ -238,47 +236,36 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
       content = GestureDetector(onTap: widget.onDismissed, child: content);
     }
 
-    return content;
+    return Material(type: MaterialType.transparency, child: content);
   }
 }
 
-/// Glassmorphic pill button wrapper — absorbs taps to prevent dismiss.
-class _GlassmorphicActionButton extends StatelessWidget {
+/// Pill-shaped action button — absorbs taps to prevent dismiss.
+class _PillActionButton extends StatelessWidget {
   final Widget child;
 
-  const _GlassmorphicActionButton({required this.child});
+  const _PillActionButton({required this.child});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {}, // absorb tap to prevent dismiss
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppConstants.spacingLg,
-              vertical: AppConstants.spacing14,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
-            ),
-            child: DefaultTextStyle.merge(
-              style: const TextStyle(
-                color: AppTheme.primaryForeground,
-                fontWeight: FontWeight.w600,
-                fontSize: AppTheme.fontSizeSubtitle,
-                decoration: TextDecoration.none,
-              ),
-              child: IconTheme.merge(
-                data: const IconThemeData(color: AppTheme.primaryForeground),
-                child: child,
-              ),
-            ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppConstants.spacingLg,
+          vertical: AppConstants.spacing12,
+        ),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.85),
+          borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+        ),
+        child: DefaultTextStyle.merge(
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: AppTheme.fontSizeBody,
+            decoration: TextDecoration.none,
           ),
+          child: child,
         ),
       ),
     );

@@ -84,7 +84,14 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
       successMascotAsset: AppConstants.mascotCool,
       successAction: GestureDetector(
         onTap: () => context.push(RoutePaths.drinkTracker),
-        child: const Text('Getränk hinzufügen'),
+        child: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.water_drop, size: 18, color: AppTheme.info),
+            SizedBox(width: AppConstants.spacingSm),
+            Text('Getränk hinzufügen', style: TextStyle(color: AppTheme.info)),
+          ],
+        ),
       ),
       body: _buildBody(state),
     );
