@@ -5,9 +5,7 @@ import '../../../config/app_theme.dart';
 import '../../../models/ingredient_suggestion_group.dart';
 import '../../../widgets/common/bb_card.dart';
 import '../../../config/constants.dart';
-
-bool _isValidImageUrl(String url) =>
-    url.startsWith('https://') || url.startsWith('http://');
+import '../../../utils/url_utils.dart';
 
 class SuggestionCard extends StatelessWidget {
   final IngredientSuggestionGroup group;
@@ -137,7 +135,7 @@ class SuggestionCard extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             if (repl.imageUrl != null &&
-                                _isValidImageUrl(repl.imageUrl!)) ...[
+                                isValidImageUrl(repl.imageUrl!)) ...[
                               ClipOval(
                                 child: CachedNetworkImage(
                                   imageUrl: repl.imageUrl!,
@@ -192,7 +190,7 @@ class _IngredientAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (imageUrl != null && _isValidImageUrl(imageUrl!)) {
+    if (imageUrl != null && isValidImageUrl(imageUrl!)) {
       return ClipOval(
         child: CachedNetworkImage(
           imageUrl: imageUrl!,

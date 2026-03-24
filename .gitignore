@@ -44,6 +44,11 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+# Release signing
+android/key.properties
+*.jks
+*.keystore
+
 # Environment variables
 .env
 .env.*
@@ -52,3 +57,6 @@ app.*.map.json
 # Generated files
 *.freezed.dart
 *.g.dart
+
+# Git worktrees
+.worktrees/

@@ -1,9 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../config/constants.dart';
 import '../models/diary_entry.dart';
 import '../services/entry_query_service.dart';
 import '../services/supabase_service.dart';
-import '../utils/gut_feeling_rating.dart';
+import '../utils/diary_helpers.dart';
 import '../utils/logger.dart';
 
 export '../models/diary_entry.dart';
@@ -39,63 +38,7 @@ final diaryEntriesProvider = FutureProvider.family<List<DiaryEntry>, DateTime>((
       date: date,
     );
 
-    final entries = <DiaryEntry>[];
-
-    for (final meal in result.meals) {
-      entries.add(
-        DiaryEntry(
-          id: meal.id,
-          type: DiaryEntryType.meal,
-          trackedAt: meal.trackedAt,
-          title: meal.title,
-          subtitle: '${meal.ingredients.length} Zutaten',
-          data: MealDiaryData(meal),
-        ),
-      );
-    }
-
-    for (final toilet in result.toiletEntries) {
-      entries.add(
-        DiaryEntry(
-          id: toilet.id,
-          type: DiaryEntryType.toilet,
-          trackedAt: toilet.trackedAt,
-          title: 'Toilettengang',
-          subtitle:
-              AppConstants.stoolTypeDescriptions[toilet.stoolType] ?? 'Normal',
-          data: ToiletDiaryData(toilet),
-        ),
-      );
-    }
-
-    for (final gut in result.gutFeelings) {
-      entries.add(
-        DiaryEntry(
-          id: gut.id,
-          type: DiaryEntryType.gutFeeling,
-          trackedAt: gut.trackedAt,
-          title: 'Bauchgefühl',
-          subtitle: gutFeelingSubtitle(gut),
-          data: GutFeelingDiaryData(gut),
-        ),
-      );
-    }
-
-    for (final drink in result.drinks) {
-      entries.add(
-        DiaryEntry(
-          id: drink.id,
-          type: DiaryEntryType.drink,
-          trackedAt: drink.trackedAt,
-          title: drink.drinkName,
-          subtitle: '${drink.amountMl} ml',
-          data: DrinkDiaryData(drink),
-        ),
-      );
-    }
-
-    entries.sort((a, b) => b.trackedAt.compareTo(a.trackedAt));
-    return entries;
+    return DiaryHelpers.buildEntries(result);
   } catch (e, st) {
     _log.error('failed to load diary entries for $date', e, st);
     rethrow;

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
@@ -19,7 +20,6 @@ class _SplashScreenState extends State<SplashScreen>
   late final Animation<double> _fadeAnimation;
   bool _fadingOut = false;
 
-  // All mascot images to precache
   static const _imagesToPreload = [
     AppConstants.mascotHappy,
     AppConstants.mascotCool,
@@ -60,6 +60,9 @@ class _SplashScreenState extends State<SplashScreen>
       curve: Curves.easeOutBack,
     );
     _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
+
+    // Remove native splash and start animation
+    FlutterNativeSplash.remove();
     _controller.forward();
   }
 
@@ -75,7 +78,6 @@ class _SplashScreenState extends State<SplashScreen>
   Future<void> _preloadAndWait() async {
     final minDelay = Future.delayed(const Duration(milliseconds: 1000));
 
-    // Precache all images (don't block on errors)
     await Future.wait([
       minDelay,
       ..._imagesToPreload.map((path) {

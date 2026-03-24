@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../config/constants.dart';
 import '../../../models/user_profile.dart';
+import '../../../utils/intolerance_helpers.dart';
 import '../../../widgets/common/bb_chip_selector.dart';
 import '../../../widgets/common/intolerance_trigger_modal.dart';
 
@@ -18,15 +19,6 @@ class IntoleranceSection extends StatelessWidget {
     required this.onTriggersChanged,
   });
 
-  List<String> _triggersFor(String intolerance) {
-    return switch (intolerance) {
-      'Fruktose' => profile.fructoseTriggers,
-      'Laktose' => profile.lactoseTriggers,
-      'Histamin' => profile.histaminTriggers,
-      _ => [],
-    };
-  }
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -35,7 +27,6 @@ class IntoleranceSection extends StatelessWidget {
         BbChipSelector(
           options: AppConstants.intoleranceOptions,
           selected: profile.intolerances,
-
           onChanged: (v) {
             final added = v.where((s) => !profile.intolerances.contains(s));
             onIntolerancesChanged(v);
@@ -46,7 +37,10 @@ class IntoleranceSection extends StatelessWidget {
                   showIntoleranceTriggerModal(
                     context: context,
                     intolerance: item,
-                    currentTriggers: _triggersFor(item),
+                    currentTriggers: IntoleranceHelpers.triggersFor(
+                      item,
+                      profile,
+                    ),
                     onChanged: (triggers) => onTriggersChanged(item, triggers),
                   );
                 });

@@ -36,7 +36,7 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
     ),
     (
       asset: AppConstants.mascotProfessor,
-      size: 224.0,
+      size: 192.0,
       title: 'Unverträglichkeiten erkennen',
       description:
           'Wir analysieren deine Mahlzeiten und helfen dir dabei, problematische Inhaltsstoffe zu identifizieren.',
@@ -80,22 +80,22 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            children: [
-              Expanded(
-                child: PageView.builder(
-                  controller: _pageController,
-                  itemCount: _slides.length,
-                  onPageChanged: (index) {
-                    _currentPage = index;
-                    _resetTimer();
-                    HapticService.selection();
-                  },
-                  itemBuilder: (context, index) {
-                    final slide = _slides[index];
-                    return Column(
+        child: Column(
+          children: [
+            Expanded(
+              child: PageView.builder(
+                controller: _pageController,
+                itemCount: _slides.length,
+                onPageChanged: (index) {
+                  _currentPage = index;
+                  _resetTimer();
+                  HapticService.selection();
+                },
+                itemBuilder: (context, index) {
+                  final slide = _slides[index];
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         MascotImage(
@@ -131,43 +131,46 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
                           ),
                         ),
                       ],
-                    );
-                  },
-                ),
-              ),
-              SmoothPageIndicator(
-                controller: _pageController,
-                count: _slides.length,
-                onDotClicked: (index) {
-                  _pageController.animateToPage(
-                    index,
-                    duration: AppConstants.animMedium,
-                    curve: Curves.easeInOut,
+                    ),
                   );
-                  _currentPage = index;
-                  _resetTimer();
                 },
-                effect: const ExpandingDotsEffect(
-                  activeDotColor: AppTheme.primary,
-                  dotColor: AppTheme.muted,
-                  dotHeight: 8,
-                  dotWidth: 8,
-                  expansionFactor: 3,
-                ),
               ),
-              AppConstants.gap24,
-              BbButton(
+            ),
+            SmoothPageIndicator(
+              controller: _pageController,
+              count: _slides.length,
+              onDotClicked: (index) {
+                _pageController.animateToPage(
+                  index,
+                  duration: AppConstants.animMedium,
+                  curve: Curves.easeInOut,
+                );
+                _currentPage = index;
+                _resetTimer();
+              },
+              effect: const ExpandingDotsEffect(
+                activeDotColor: AppTheme.primary,
+                dotColor: AppTheme.muted,
+                dotHeight: 8,
+                dotWidth: 8,
+                expansionFactor: 3,
+              ),
+            ),
+            AppConstants.gap24,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              child: BbButton(
                 label: 'Registrieren',
                 onPressed: () => context.go(RoutePaths.registration),
               ),
-              AppConstants.gap12,
-              TextButton(
-                onPressed: () => context.go(RoutePaths.auth),
-                child: const Text('Zur Anmeldung'),
-              ),
-              AppConstants.gap24,
-            ],
-          ),
+            ),
+            AppConstants.gap12,
+            TextButton(
+              onPressed: () => context.go(RoutePaths.auth),
+              child: const Text('Zur Anmeldung'),
+            ),
+            AppConstants.gap24,
+          ],
         ),
       ),
     );

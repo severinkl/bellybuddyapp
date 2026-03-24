@@ -8,6 +8,8 @@ import '../../router/route_names.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/common/bb_button.dart';
 import '../../widgets/common/bb_auth_banner.dart';
+import '../../widgets/common/bb_password_field.dart';
+import '../../widgets/common/bb_social_button.dart';
 import '../../config/constants.dart';
 
 enum _AuthView { login, forgotPassword }
@@ -172,10 +174,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
                 // Password field (not for forgot password)
                 if (_view != _AuthView.forgotPassword) ...[
-                  TextFormField(
+                  BbPasswordField(
                     controller: _passwordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(labelText: 'Passwort'),
                     validator: (v) {
                       if (v == null || v.isEmpty) {
                         return 'Passwort ist erforderlich';
@@ -228,19 +228,13 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   ),
                   AppConstants.gap24,
 
-                  // Google sign in
-                  BbButton(
-                    label: 'Mit Google fortfahren',
-                    isOutlined: true,
+                  BbSocialButton.google(
                     onPressed: _isLoading ? null : _handleGoogleSignIn,
                   ),
 
-                  // Apple sign in (iOS only)
                   if (Platform.isIOS) ...[
                     AppConstants.gap12,
-                    BbButton(
-                      label: 'Mit Apple fortfahren',
-                      isOutlined: true,
+                    BbSocialButton.apple(
                       onPressed: _isLoading ? null : _handleAppleSignIn,
                     ),
                   ],

@@ -1,0 +1,23 @@
+#!/bin/sh
+# Pre-commit hook: format check + lint
+
+echo "Running dart format check..."
+find lib test -name '*.dart' \
+  ! -name '*.freezed.dart' \
+  ! -name '*.g.dart' \
+  -print0 | xargs -0 dart format --set-exit-if-changed
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "❌ Format check failed. Run 'dart format lib/ test/' to fix."
+  exit 1
+fi
+
+echo "Running flutter analyze..."
+flutter analyze
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "❌ Lint check failed. Fix the issues above before committing."
+  exit 1
+fi
+
+echo "✅ All checks passed."

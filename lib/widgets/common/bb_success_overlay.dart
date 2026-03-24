@@ -133,7 +133,9 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
         color: bgColor,
         child: Center(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppConstants.spacingXl,
+            ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -213,7 +215,7 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
 
                 // Tap hint
                 if (hasMascot) ...[
-                  const SizedBox(height: 48),
+                  const SizedBox(height: AppConstants.spacingXxl),
                   FadeTransition(
                     opacity: _textOpacityAnimation,
                     child: Text(
@@ -255,7 +257,10 @@ class _GlassmorphicActionButton extends StatelessWidget {
         child: BackdropFilter(
           filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppConstants.spacingLg,
+              vertical: AppConstants.spacing14,
+            ),
             decoration: BoxDecoration(
               color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(AppConstants.radiusLg),

@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'dart:math';
+
+import 'package:crypto/crypto.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -44,21 +48,45 @@ class AuthService {
     }
   }
 
-  static bool _googleInitialized = false;
+  static String _generateNonce([int length = 32]) {
+    const chars =
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    final random = Random.secure();
+    return List.generate(
+      length,
+      (_) => chars[random.nextInt(chars.length)],
+    ).join();
+  }
 
   static Future<AuthResponse> signInWithGoogle() async {
-    // FIXME(config): Set Google OAuth web client ID from Supabase dashboard
-    const webClientId = '';
+    const webClientId =
+        '920554558032-3ca7aekg9ucfmek8cgrmtbmq86fsqjut.apps.googleusercontent.com';
+    const iosClientId =
+        '920554558032-m2curfdn4m6rd346okvaust9ngf3s2ht.apps.googleusercontent.com';
 
-    if (!_googleInitialized) {
-      await GoogleSignIn.instance.initialize(serverClientId: webClientId);
-      _googleInitialized = true;
-    }
+    // Generate nonce — pass hashed to Google, raw to Supabase
+    final rawNonce = _generateNonce();
+    final hashedNonce = sha256.convert(utf8.encode(rawNonce)).toString();
+
+    // Must re-initialize each time to set a fresh nonce
+    await GoogleSignIn.instance.initialize(
+      clientId: iosClientId,
+      serverClientId: webClientId,
+      nonce: hashedNonce,
+    );
 
     final googleUser = await GoogleSignIn.instance.authenticate();
     final idToken = googleUser.authentication.idToken;
 
-    return _signInWithIdToken(OAuthProvider.google, idToken, 'Google');
+    if (idToken == null) {
+      throw Exception('No ID token received from Google');
+    }
+
+    return await _auth.signInWithIdToken(
+      provider: OAuthProvider.google,
+      idToken: idToken,
+      nonce: rawNonce,
+    );
   }
 
   static Future<AuthResponse> signInWithApple() async {

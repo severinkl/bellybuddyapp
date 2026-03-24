@@ -72,12 +72,28 @@ lib/
 
 `lib/config/app_theme.dart` is the single source of truth for colors and typography. All color values and font sizes are defined as constants in `AppTheme` — widget files reference these constants instead of hardcoding values.
 
-## CI
+## Pre-commit Hook
 
-Runs on push to `main` and pull requests ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)):
+A pre-commit hook runs `dart format` and `flutter analyze` before each commit to catch issues locally:
 
-1. Code generation (`build_runner`)
-2. Format check (`dart format`)
-3. Static analysis (`flutter analyze`)
-4. Tests (`flutter test`)
-5. Debug APK build
+```bash
+# Install the hook (one-time setup)
+cp scripts/pre-commit .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
+## CI/CD
+
+### CI — feature branches & PRs ([`.github/workflows/ci.yml`](.github/workflows/ci.yml))
+
+Runs two parallel jobs:
+
+1. **Format & Analyze** — `dart format` + `flutter analyze`
+2. **Unit Tests** — `flutter test`
+
+### Deploy — push to main ([`.github/workflows/deploy.yml`](.github/workflows/deploy.yml))
+
+Runs format + test checks, then deploys in parallel:
+
+- **Android** — Signed AAB → Google Play Internal Testing
+- **iOS** — Signed IPA → TestFlight

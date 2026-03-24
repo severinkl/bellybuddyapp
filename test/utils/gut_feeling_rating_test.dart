@@ -115,6 +115,53 @@ void main() {
     });
   });
 
+  group('gutFeelingAverage', () {
+    test('all 1s returns 1.0', () {
+      expect(
+        gutFeelingAverage(bloating: 1, gas: 1, cramps: 1, fullness: 1),
+        1.0,
+      );
+    });
+
+    test('all 5s returns 5.0', () {
+      expect(
+        gutFeelingAverage(bloating: 5, gas: 5, cramps: 5, fullness: 5),
+        5.0,
+      );
+    });
+
+    test('includes only non-null mood values', () {
+      final avg = gutFeelingAverage(
+        bloating: 1,
+        gas: 1,
+        cramps: 1,
+        fullness: 1,
+        stress: 5,
+      );
+      // (4*1 + 5) / 5 = 1.8
+      expect(avg, closeTo(1.8, 0.01));
+    });
+
+    test('matches calculateGutFeelingRating avg for same input', () {
+      final entry = makeEntry(
+        bloating: 2,
+        gas: 3,
+        cramps: 1,
+        fullness: 4,
+        stress: 3,
+      );
+      final rating = calculateGutFeelingRating(entry);
+      final avg = gutFeelingAverage(
+        bloating: 2,
+        gas: 3,
+        cramps: 1,
+        fullness: 4,
+        stress: 3,
+      );
+      expect(avg, rating.avg);
+    });
+  });
+
   group('getValueColor', () {
     test('low values return green', () {
       expect(getValueColor(1), const Color(0xFF40BF40));

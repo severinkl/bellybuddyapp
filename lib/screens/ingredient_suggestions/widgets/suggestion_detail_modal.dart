@@ -4,10 +4,9 @@ import 'package:shimmer/shimmer.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/ingredient_suggestion_group.dart';
 import '../../../config/constants.dart';
+import '../../../utils/date_format_utils.dart';
 import '../../../utils/signed_url_helper.dart';
-
-bool _isValidImageUrl(String url) =>
-    url.startsWith('https://') || url.startsWith('http://');
+import '../../../utils/url_utils.dart';
 
 class SuggestionDetailModal extends StatelessWidget {
   final IngredientSuggestionGroup group;
@@ -24,7 +23,12 @@ class SuggestionDetailModal extends StatelessWidget {
       builder: (context, scrollController) {
         return SingleChildScrollView(
           controller: scrollController,
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          padding: const EdgeInsets.fromLTRB(
+            AppConstants.spacingLg,
+            0,
+            AppConstants.spacingLg,
+            AppConstants.spacingLg,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -32,7 +36,7 @@ class SuggestionDetailModal extends StatelessWidget {
               Row(
                 children: [
                   _IngredientImage(imageUrl: group.ingredientImageUrl),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: AppConstants.spacingMd),
                   Expanded(
                     child: Text(
                       group.ingredientName,
@@ -45,7 +49,7 @@ class SuggestionDetailModal extends StatelessWidget {
                   ),
                 ],
               ),
-              const SizedBox(height: 20),
+              AppConstants.gap20,
 
               // Helptext info box
               if (group.helptext != null && group.helptext!.isNotEmpty) ...[
@@ -67,7 +71,7 @@ class SuggestionDetailModal extends StatelessWidget {
                         size: 20,
                         color: AppTheme.info,
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: AppConstants.spacing12),
                       Expanded(
                         child: Text(
                           group.helptext!,
@@ -81,7 +85,7 @@ class SuggestionDetailModal extends StatelessWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 20),
+                AppConstants.gap20,
               ],
 
               // Meals section
@@ -97,9 +101,11 @@ class SuggestionDetailModal extends StatelessWidget {
                 AppConstants.gap12,
                 ...group.meals.map(
                   (meal) => Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.only(
+                      bottom: AppConstants.spacingSm,
+                    ),
                     child: Container(
-                      padding: const EdgeInsets.all(12),
+                      padding: const EdgeInsets.all(AppConstants.spacing12),
                       decoration: BoxDecoration(
                         color: AppTheme.card,
                         borderRadius: BorderRadius.circular(
@@ -111,7 +117,7 @@ class SuggestionDetailModal extends StatelessWidget {
                         children: [
                           if (meal.imageUrl != null) ...[
                             _MealImage(imageUrl: meal.imageUrl!),
-                            const SizedBox(width: 12),
+                            const SizedBox(width: AppConstants.spacing12),
                           ],
                           Expanded(
                             child: Column(
@@ -125,9 +131,9 @@ class SuggestionDetailModal extends StatelessWidget {
                                     color: AppTheme.foreground,
                                   ),
                                 ),
-                                const SizedBox(height: 2),
+                                const SizedBox(height: AppConstants.spacing2),
                                 Text(
-                                  _formatDate(meal.trackedAt),
+                                  formatDateShort(meal.trackedAt),
                                   style: const TextStyle(
                                     fontSize: AppTheme.fontSizeCaption,
                                     color: AppTheme.mutedForeground,
@@ -160,7 +166,8 @@ class SuggestionDetailModal extends StatelessWidget {
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
                     itemCount: group.replacements.length,
-                    separatorBuilder: (c, i) => const SizedBox(width: 12),
+                    separatorBuilder: (c, i) =>
+                        const SizedBox(width: AppConstants.spacing12),
                     itemBuilder: (context, index) {
                       final repl = group.replacements[index];
                       return SizedBox(
@@ -168,7 +175,7 @@ class SuggestionDetailModal extends StatelessWidget {
                         child: Column(
                           children: [
                             _IngredientImage(imageUrl: repl.imageUrl, size: 56),
-                            const SizedBox(height: 6),
+                            AppConstants.gap6,
                             Text(
                               repl.name,
                               textAlign: TextAlign.center,
@@ -202,13 +209,6 @@ class SuggestionDetailModal extends StatelessWidget {
         );
       },
     );
-  }
-
-  String _formatDate(DateTime date) {
-    final day = date.day.toString().padLeft(2, '0');
-    final month = date.month.toString().padLeft(2, '0');
-    final year = date.year;
-    return '$day.$month.$year';
   }
 }
 
@@ -297,7 +297,7 @@ class _IngredientImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (imageUrl != null && _isValidImageUrl(imageUrl!)) {
+    if (imageUrl != null && isValidImageUrl(imageUrl!)) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(size / 2),
         child: CachedNetworkImage(

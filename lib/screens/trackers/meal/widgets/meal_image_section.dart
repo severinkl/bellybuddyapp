@@ -57,7 +57,7 @@ class _EmptyState extends StatelessWidget {
       child: CustomPaint(
         painter: _DashedBorderPainter(
           color: AppTheme.border,
-          borderRadius: 24,
+          borderRadius: AppConstants.radiusXl,
           dashWidth: 8,
           dashGap: 5,
           strokeWidth: 2,
@@ -65,7 +65,7 @@ class _EmptyState extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             color: AppTheme.card,
-            borderRadius: BorderRadius.circular(24),
+            borderRadius: BorderRadius.circular(AppConstants.radiusXl),
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -79,7 +79,9 @@ class _EmptyState extends StatelessWidget {
               Container(
                 width: 1,
                 height: 48,
-                margin: const EdgeInsets.symmetric(horizontal: 24),
+                margin: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.spacingLg,
+                ),
                 color: AppTheme.border,
               ),
               _PickerButton(
@@ -152,15 +154,15 @@ class _ImagePreview extends StatelessWidget {
     return AspectRatio(
       aspectRatio: 4 / 3,
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(AppConstants.radiusXl),
         child: Stack(
           fit: StackFit.expand,
           children: [
             Image.memory(imageBytes, fit: BoxFit.cover),
             // X button
             Positioned(
-              top: 12,
-              right: 12,
+              top: AppConstants.spacing12,
+              right: AppConstants.spacing12,
               child: GestureDetector(
                 onTap: onClearImage,
                 child: Container(
@@ -190,8 +192,8 @@ class _ImagePreview extends StatelessWidget {
                     child: Center(
                       child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
-                          vertical: 24,
+                          horizontal: AppConstants.spacingXl,
+                          vertical: AppConstants.spacingLg,
                         ),
                         decoration: BoxDecoration(
                           color: Colors.white,

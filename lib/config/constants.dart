@@ -4,17 +4,27 @@ class AppConstants {
   AppConstants._();
 
   // Spacing
+  static const double spacing2 = 2.0;
   static const double spacingXs = 4.0;
+  static const double spacing6 = 6.0;
   static const double spacingSm = 8.0;
+  static const double spacing10 = 10.0;
+  static const double spacing12 = 12.0;
+  static const double spacing14 = 14.0;
   static const double spacingMd = 16.0;
+  static const double spacing20 = 20.0;
   static const double spacingLg = 24.0;
   static const double spacingXl = 32.0;
+  static const double spacingXxl = 48.0;
 
   // Spacing widgets
   static const gap4 = SizedBox(height: 4);
+  static const gap6 = SizedBox(height: 6);
   static const gap8 = SizedBox(height: 8);
+  static const gap10 = SizedBox(height: 10);
   static const gap12 = SizedBox(height: 12);
   static const gap16 = SizedBox(height: 16);
+  static const gap20 = SizedBox(height: 20);
   static const gap24 = SizedBox(height: 24);
   static const gap32 = SizedBox(height: 32);
 
@@ -37,6 +47,12 @@ class AppConstants {
   static const double radiusRound = 20.0;
   static const double radiusXl = 24.0;
   static const double radiusFull = 100.0;
+
+  // Drag handle
+  static const double dragHandleWidth = 40.0;
+
+  // Scroll clearance (space below content to clear fixed bottom bars)
+  static const double bottomBarClearance = 128.0;
 
   // Image sizes
   static const double mealImageHeight = 180.0;

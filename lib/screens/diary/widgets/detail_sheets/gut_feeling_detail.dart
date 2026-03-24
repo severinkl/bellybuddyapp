@@ -26,13 +26,17 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
 
   double _calculateEditAvg() {
     final es = widget.editState!;
-    final values = <int>[es.bloating, es.gas, es.cramps, es.fullness];
-    if (es.stress != null) values.add(es.stress!);
-    if (es.happiness != null) values.add(es.happiness!);
-    if (es.energy != null) values.add(es.energy!);
-    if (es.focus != null) values.add(es.focus!);
-    if (es.bodyFeel != null) values.add(es.bodyFeel!);
-    return values.reduce((a, b) => a + b) / values.length;
+    return gutFeelingAverage(
+      bloating: es.bloating,
+      gas: es.gas,
+      cramps: es.cramps,
+      fullness: es.fullness,
+      stress: es.stress,
+      happiness: es.happiness,
+      energy: es.energy,
+      focus: es.focus,
+      bodyFeel: es.bodyFeel,
+    );
   }
 
   @override

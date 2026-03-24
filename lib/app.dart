@@ -23,8 +23,6 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
   @override
   void initState() {
     super.initState();
-    // Initial profile fetch for already-authenticated users.
-    // This handles the case where currentUser is already available synchronously.
     if (SupabaseService.isAuthenticated) {
       _log.debug('authenticated on start, user=${SupabaseService.userId}');
       Future.microtask(() => ref.read(profileProvider.notifier).fetchProfile());
@@ -37,9 +35,6 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
   Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
 
-    // Reactively fetch/reset profile when auth state changes.
-    // This handles: (a) session restored asynchronously after initState,
-    // (b) login from auth screen, (c) logout.
     ref.listen<bool>(isAuthenticatedProvider, (prev, next) {
       _log.debug('auth changed $prev → $next');
       if (next) {

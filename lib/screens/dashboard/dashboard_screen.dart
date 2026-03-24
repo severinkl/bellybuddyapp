@@ -55,21 +55,33 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             slivers: [
               const SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(24, 24, 24, 0),
+                  padding: EdgeInsets.fromLTRB(
+                    AppConstants.spacingLg,
+                    AppConstants.spacingLg,
+                    AppConstants.spacingLg,
+                    0,
+                  ),
                   child: _DashboardHeader(),
                 ),
               ),
               const SliverToBoxAdapter(child: AppConstants.gap24),
               const SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 24),
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppConstants.spacing12,
+                  ),
                   child: _TrackerCards(),
                 ),
               ),
               const SliverToBoxAdapter(child: AppConstants.gap32),
               SliverFillRemaining(
                 hasScrollBody: false,
-                child: _ForYouSection(newCount: newCount),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppConstants.spacing12,
+                  ),
+                  child: _ForYouSection(newCount: newCount),
+                ),
               ),
             ],
           ),
@@ -111,7 +123,7 @@ class _TrackerCards extends StatelessWidget {
             onTap: () => context.push(RoutePaths.gutFeelingTracker),
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: AppConstants.spacing12),
         Expanded(
           child: TrackerCard(
             svgPath: AppConstants.toiletPaperSvg,
@@ -132,16 +144,26 @@ class _ForYouSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 16),
+      padding: const EdgeInsets.fromLTRB(
+        AppConstants.spacingMd,
+        AppConstants.spacing20,
+        AppConstants.spacingMd,
+        AppConstants.spacingMd,
+      ),
       decoration: const BoxDecoration(
         color: AppTheme.beige,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppConstants.radiusXl),
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Padding(
-            padding: EdgeInsets.only(left: 4, bottom: 16),
+            padding: EdgeInsets.only(
+              left: AppConstants.spacingXs,
+              bottom: AppConstants.spacingMd,
+            ),
             child: Text(
               'Für dich erstellt',
               style: TextStyle(
@@ -162,7 +184,7 @@ class _ForYouSection extends StatelessWidget {
                   onTap: () => context.push(RoutePaths.recommendations),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppConstants.spacing12),
               Expanded(
                 child: FeatureCard(
                   imageAsset: AppConstants.alternativenCard,
@@ -187,7 +209,7 @@ class _ForYouSection extends StatelessWidget {
                   onTap: () => context.push(RoutePaths.recipes),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppConstants.spacing12),
               Expanded(
                 child: FeatureCard(
                   imageAsset: AppConstants.susiPhone,

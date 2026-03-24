@@ -5,9 +5,11 @@ import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../router/route_names.dart';
 import '../../../widgets/common/bb_auth_banner.dart';
+import '../../../utils/password_validator.dart';
 import '../../../widgets/common/bb_button.dart';
+import '../../../widgets/common/bb_password_field.dart';
 import '../../../widgets/common/bb_password_hint.dart';
-import '../../../widgets/common/mascot_image.dart';
+import '../../../widgets/common/bb_social_button.dart';
 
 class AuthStep extends StatefulWidget {
   final bool isLoading;
@@ -41,13 +43,10 @@ class _AuthStepState extends State<AuthStep> {
     super.dispose();
   }
 
-  bool get _isPasswordValid {
-    final p = _passwordController.text;
-    return p.length >= 8 &&
-        p.contains(RegExp(r'[A-Z]')) &&
-        p.contains(RegExp(r'[a-z]')) &&
-        p.contains(RegExp(r'[0-9]'));
-  }
+  PasswordValidation get _validation =>
+      PasswordValidator.validate(_passwordController.text);
+
+  bool get _isPasswordValid => _validation.allMet;
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
@@ -67,12 +66,6 @@ class _AuthStepState extends State<AuthStep> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            AppConstants.gap16,
-            const MascotImage(
-              assetPath: AppConstants.mascotEnergetic,
-              width: 120,
-              height: 120,
-            ),
             AppConstants.gap16,
             const Text(
               'Konto erstellen',
@@ -115,36 +108,35 @@ class _AuthStepState extends State<AuthStep> {
             ),
             AppConstants.gap16,
 
-            TextFormField(
+            BbPasswordField(
               controller: _passwordController,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'Passwort'),
               onChanged: (_) => setState(() {}),
               validator: (v) {
                 if (v == null || v.isEmpty) return 'Passwort ist erforderlich';
                 return null;
               },
             ),
-            AppConstants.gap8,
             if (_passwordController.text.isNotEmpty) ...[
+              AppConstants.gap8,
               BbPasswordHint(
                 text: 'Mindestens 8 Zeichen',
-                isValid: _passwordController.text.length >= 8,
+                isValid: _validation.hasMinLength,
               ),
               BbPasswordHint(
                 text: 'Mindestens ein Großbuchstabe',
-                isValid: _passwordController.text.contains(RegExp(r'[A-Z]')),
+                isValid: _validation.hasUppercase,
               ),
               BbPasswordHint(
                 text: 'Mindestens ein Kleinbuchstabe',
-                isValid: _passwordController.text.contains(RegExp(r'[a-z]')),
+                isValid: _validation.hasLowercase,
               ),
               BbPasswordHint(
                 text: 'Mindestens eine Zahl',
-                isValid: _passwordController.text.contains(RegExp(r'[0-9]')),
+                isValid: _validation.hasNumber,
               ),
-              AppConstants.gap24,
             ],
+            AppConstants.gap24,
+
             BbButton(
               label: 'Registrieren',
               isLoading: widget.isLoading,
@@ -167,17 +159,13 @@ class _AuthStepState extends State<AuthStep> {
             ),
             AppConstants.gap24,
 
-            BbButton(
-              label: 'Mit Google fortfahren',
-              isOutlined: true,
+            BbSocialButton.google(
               onPressed: widget.isLoading ? null : widget.onGoogleSignUp,
             ),
 
             if (Platform.isIOS) ...[
               AppConstants.gap12,
-              BbButton(
-                label: 'Mit Apple fortfahren',
-                isOutlined: true,
+              BbSocialButton.apple(
                 onPressed: widget.isLoading ? null : widget.onAppleSignUp,
               ),
             ],
