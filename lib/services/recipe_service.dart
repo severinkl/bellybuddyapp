@@ -1,16 +1,19 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/recipe.dart';
+import '../providers/core_providers.dart';
 import '../utils/logger.dart';
-import 'supabase_service.dart';
 
 class RecipeService {
+  final SupabaseClient _client;
+
+  RecipeService(this._client);
+
   static const _log = AppLogger('RecipeService');
 
-  static Future<List<Recipe>> fetchAll() async {
+  Future<List<Recipe>> fetchAll() async {
     try {
-      final data = await SupabaseService.client
-          .from('recipes')
-          .select()
-          .order('title');
+      final data = await _client.from('recipes').select().order('title');
       return data.map((e) => Recipe.fromJson(e)).toList();
     } catch (e, st) {
       _log.error('fetchAll failed', e, st);
@@ -18,9 +21,9 @@ class RecipeService {
     }
   }
 
-  static Future<Set<String>> fetchFavoriteIds(String userId) async {
+  Future<Set<String>> fetchFavoriteIds(String userId) async {
     try {
-      final data = await SupabaseService.client
+      final data = await _client
           .from('user_favorite_recipes')
           .select('recipe_id')
           .eq('user_id', userId);
@@ -31,9 +34,9 @@ class RecipeService {
     }
   }
 
-  static Future<void> addFavorite(String userId, String recipeId) async {
+  Future<void> addFavorite(String userId, String recipeId) async {
     try {
-      await SupabaseService.client.from('user_favorite_recipes').insert({
+      await _client.from('user_favorite_recipes').insert({
         'user_id': userId,
         'recipe_id': recipeId,
       });
@@ -43,9 +46,9 @@ class RecipeService {
     }
   }
 
-  static Future<void> removeFavorite(String userId, String recipeId) async {
+  Future<void> removeFavorite(String userId, String recipeId) async {
     try {
-      await SupabaseService.client
+      await _client
           .from('user_favorite_recipes')
           .delete()
           .eq('user_id', userId)
@@ -56,3 +59,7 @@ class RecipeService {
     }
   }
 }
+
+final recipeServiceProvider = Provider<RecipeService>(
+  (ref) => RecipeService(ref.watch(supabaseClientProvider)),
+);

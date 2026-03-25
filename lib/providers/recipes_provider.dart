@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recipe.dart';
+import '../providers/core_providers.dart';
 import '../services/recipe_service.dart';
-import '../services/supabase_service.dart';
 import '../utils/logger.dart';
 import '../utils/retry_helper.dart';
 
@@ -60,8 +60,9 @@ class RecipesNotifier extends Notifier<RecipesState> {
   Future<void> _loadRecipes() async {
     state = state.copyWith(error: null);
     try {
+      final recipeService = ref.read(recipeServiceProvider);
       final recipes = await retryAsync(
-        RecipeService.fetchAll,
+        recipeService.fetchAll,
         log: _log,
         label: 'loadRecipes',
       );
@@ -78,10 +79,12 @@ class RecipesNotifier extends Notifier<RecipesState> {
   }
 
   Future<void> _loadFavorites() async {
-    final userId = SupabaseService.userId;
+    final userId = ref.read(currentUserIdProvider);
     if (userId == null) return;
     try {
-      final favorites = await RecipeService.fetchFavoriteIds(userId);
+      final favorites = await ref
+          .read(recipeServiceProvider)
+          .fetchFavoriteIds(userId);
       state = state.copyWith(favorites: favorites);
     } catch (e) {
       _log.error('failed to load favorites', e);
@@ -89,15 +92,16 @@ class RecipesNotifier extends Notifier<RecipesState> {
   }
 
   Future<void> toggleFavorite(String recipeId) async {
-    final userId = SupabaseService.userId;
+    final userId = ref.read(currentUserIdProvider);
     if (userId == null) return;
     final newFavorites = Set<String>.from(state.favorites);
+    final recipeService = ref.read(recipeServiceProvider);
     try {
       if (newFavorites.contains(recipeId)) {
-        await RecipeService.removeFavorite(userId, recipeId);
+        await recipeService.removeFavorite(userId, recipeId);
         newFavorites.remove(recipeId);
       } else {
-        await RecipeService.addFavorite(userId, recipeId);
+        await recipeService.addFavorite(userId, recipeId);
         newFavorites.add(recipeId);
       }
       state = state.copyWith(favorites: newFavorites);

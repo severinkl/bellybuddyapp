@@ -1,17 +1,20 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/drink.dart';
+import '../providers/core_providers.dart';
 import '../utils/date_format_utils.dart';
 import '../utils/logger.dart';
-import 'supabase_service.dart';
 
 class DrinkService {
+  final SupabaseClient _client;
+
+  DrinkService(this._client);
+
   static const _log = AppLogger('DrinkService');
 
-  static Future<List<Drink>> fetchAll() async {
+  Future<List<Drink>> fetchAll() async {
     try {
-      final data = await SupabaseService.client
-          .from('drinks')
-          .select()
-          .order('name');
+      final data = await _client.from('drinks').select().order('name');
       return data.map((e) => Drink.fromDbRow(e)).toList();
     } catch (e, st) {
       _log.error('fetchAll failed', e, st);
@@ -19,10 +22,10 @@ class DrinkService {
     }
   }
 
-  static Future<int> fetchTodayTotal(String userId) async {
+  Future<int> fetchTodayTotal(String userId) async {
     try {
       final now = DateTime.now();
-      final data = await SupabaseService.client
+      final data = await _client
           .from('drink_entries')
           .select('amount_ml')
           .eq('user_id', userId)
@@ -36,9 +39,9 @@ class DrinkService {
   }
 
   /// Fetches deduplicated recent drink IDs ordered by most recent first.
-  static Future<List<String>> fetchRecentDrinkIds(String userId) async {
+  Future<List<String>> fetchRecentDrinkIds(String userId) async {
     try {
-      final data = await SupabaseService.client
+      final data = await _client
           .from('drink_entries')
           .select('drink_id')
           .eq('user_id', userId)
@@ -57,10 +60,9 @@ class DrinkService {
   }
 
   /// Inserts a new user-owned drink and returns the created record.
-  static Future<Drink> insertDrink(String name) async {
+  Future<Drink> insertDrink(String name, {required String userId}) async {
     try {
-      final userId = SupabaseService.userId;
-      final data = await SupabaseService.client
+      final data = await _client
           .from('drinks')
           .insert({
             'name': name,
@@ -77,16 +79,17 @@ class DrinkService {
   }
 
   /// Deletes a user-owned drink and all its associated entries.
-  static Future<void> deleteDrink(String drinkId) async {
+  Future<void> deleteDrink(String drinkId) async {
     try {
-      await SupabaseService.client
-          .from('drink_entries')
-          .delete()
-          .eq('drink_id', drinkId);
-      await SupabaseService.client.from('drinks').delete().eq('id', drinkId);
+      await _client.from('drink_entries').delete().eq('drink_id', drinkId);
+      await _client.from('drinks').delete().eq('id', drinkId);
     } catch (e, st) {
       _log.error('deleteDrink failed', e, st);
       rethrow;
     }
   }
 }
+
+final drinkServiceProvider = Provider<DrinkService>(
+  (ref) => DrinkService(ref.watch(supabaseClientProvider)),
+);

@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recommendation.dart';
+import '../providers/core_providers.dart';
 import '../providers/profile_provider.dart';
 import '../services/edge_function_service.dart';
 import '../services/recommendation_service.dart';
-import '../services/supabase_service.dart';
 import '../utils/logger.dart';
 import '../utils/retry_helper.dart';
 
@@ -17,7 +17,7 @@ class RecommendationNotifier
   Future<void> fetchRecommendations() async {
     state = const AsyncValue.loading();
     try {
-      final userId = SupabaseService.userId;
+      final userId = ref.read(currentUserIdProvider);
       if (userId == null) {
         _log.debug('fetchRecommendations: no user');
         state = const AsyncValue.data([]);
@@ -25,7 +25,7 @@ class RecommendationNotifier
       }
 
       final recommendations = await retryAsync(
-        () => RecommendationService.fetchByUserId(userId),
+        () => ref.read(recommendationServiceProvider).fetchByUserId(userId),
       );
       state = AsyncValue.data(recommendations);
     } catch (e, st) {
@@ -36,7 +36,7 @@ class RecommendationNotifier
   Future<void> refreshRecommendations() async {
     state = const AsyncValue.loading();
     try {
-      final userId = SupabaseService.userId;
+      final userId = ref.read(currentUserIdProvider);
       if (userId == null) {
         _log.debug('refreshRecommendations: no user');
         state = const AsyncValue.data([]);
@@ -45,7 +45,8 @@ class RecommendationNotifier
 
       // Gather user context from profile
       final profile = ref.read(profileProvider).whenOrNull(data: (p) => p);
-      final context = await RecommendationService.fetchRecentContext(userId);
+      final recommendationService = ref.read(recommendationServiceProvider);
+      final context = await recommendationService.fetchRecentContext(userId);
 
       final body = <String, dynamic>{
         if (profile != null) ...{
@@ -60,7 +61,7 @@ class RecommendationNotifier
           .read(edgeFunctionServiceProvider)
           .invoke('diet-recommendations', body: body);
       // Re-fetch to get the newly saved recommendation from DB
-      final recommendations = await RecommendationService.fetchByUserId(userId);
+      final recommendations = await recommendationService.fetchByUserId(userId);
       state = AsyncValue.data(recommendations);
     } catch (e, st) {
       state = AsyncValue.error(e, st);

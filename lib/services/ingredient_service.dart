@@ -1,5 +1,7 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../providers/core_providers.dart';
 import '../utils/logger.dart';
-import 'supabase_service.dart';
 
 class IngredientSuggestion {
   final String id;
@@ -14,15 +16,19 @@ class IngredientSuggestion {
 }
 
 class IngredientService {
+  final SupabaseClient _client;
+
+  IngredientService(this._client);
+
   static const _log = AppLogger('IngredientService');
 
-  static Future<List<IngredientSuggestion>> search(
+  Future<List<IngredientSuggestion>> search(
     String query, {
     int limit = 10,
+    required String? userId,
   }) async {
     try {
-      final userId = SupabaseService.userId;
-      final data = await SupabaseService.client
+      final data = await _client
           .from('ingredients')
           .select('id, name, added_by_user_id')
           .ilike('name', '%$query%')
@@ -42,17 +48,16 @@ class IngredientService {
     }
   }
 
-  static Future<void> insertIfNew(String name) async {
+  Future<void> insertIfNew(String name, {required String? userId}) async {
     try {
-      final userId = SupabaseService.userId;
       if (userId == null) return;
-      final existing = await SupabaseService.client
+      final existing = await _client
           .from('ingredients')
           .select('id')
           .ilike('name', name)
           .limit(1);
       if (existing.isNotEmpty) return;
-      await SupabaseService.client.from('ingredients').insert({
+      await _client.from('ingredients').insert({
         'name': name,
         'added_via': 'user',
         'added_by_user_id': userId,
@@ -63,20 +68,18 @@ class IngredientService {
     }
   }
 
-  static Future<void> deleteUserIngredient(String id) async {
+  Future<void> deleteUserIngredient(String id) async {
     try {
-      await SupabaseService.client.from('ingredients').delete().eq('id', id);
+      await _client.from('ingredients').delete().eq('id', id);
     } catch (e, st) {
       _log.error('deleteUserIngredient failed', e, st);
       rethrow;
     }
   }
 
-  static Future<List<Map<String, dynamic>>> fetchSuggestions(
-    String userId,
-  ) async {
+  Future<List<Map<String, dynamic>>> fetchSuggestions(String userId) async {
     try {
-      return await SupabaseService.client
+      return await _client
           .from('ingredient_suggestions')
           .select(
             'id, detected_ingredient_id, helptext, meal_id, seen_at, dismissed_at, '
@@ -90,12 +93,12 @@ class IngredientService {
     }
   }
 
-  static Future<List<Map<String, dynamic>>> fetchReplacements(
+  Future<List<Map<String, dynamic>>> fetchReplacements(
     List<String> suggestionIds,
   ) async {
     if (suggestionIds.isEmpty) return [];
     try {
-      return await SupabaseService.client
+      return await _client
           .from('ingredient_suggestion_replacements')
           .select('suggestion_id, ingredients(id, name, image_url)')
           .inFilter('suggestion_id', suggestionIds);
@@ -105,12 +108,12 @@ class IngredientService {
     }
   }
 
-  static Future<List<Map<String, dynamic>>> fetchMealDetails(
+  Future<List<Map<String, dynamic>>> fetchMealDetails(
     List<String> mealIds,
   ) async {
     if (mealIds.isEmpty) return [];
     try {
-      return await SupabaseService.client
+      return await _client
           .from('meal_entries')
           .select('id, title, tracked_at, image_url')
           .inFilter('id', mealIds);
@@ -120,10 +123,10 @@ class IngredientService {
     }
   }
 
-  static Future<void> markAllSeen(List<String> ids) async {
+  Future<void> markAllSeen(List<String> ids) async {
     if (ids.isEmpty) return;
     try {
-      await SupabaseService.client
+      await _client
           .from('ingredient_suggestions')
           .update({'seen_at': DateTime.now().toIso8601String()})
           .inFilter('id', ids);
@@ -133,10 +136,10 @@ class IngredientService {
     }
   }
 
-  static Future<void> dismissSuggestions(List<String> ids) async {
+  Future<void> dismissSuggestions(List<String> ids) async {
     if (ids.isEmpty) return;
     try {
-      await SupabaseService.client
+      await _client
           .from('ingredient_suggestions')
           .update({'dismissed_at': DateTime.now().toIso8601String()})
           .inFilter('id', ids);
@@ -146,9 +149,9 @@ class IngredientService {
     }
   }
 
-  static Future<int> fetchNewCount(String userId) async {
+  Future<int> fetchNewCount(String userId) async {
     try {
-      final data = await SupabaseService.client
+      final data = await _client
           .from('ingredient_suggestions')
           .select('id')
           .eq('user_id', userId)
@@ -161,3 +164,7 @@ class IngredientService {
     }
   }
 }
+
+final ingredientServiceProvider = Provider<IngredientService>(
+  (ref) => IngredientService(ref.watch(supabaseClientProvider)),
+);

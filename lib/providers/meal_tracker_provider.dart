@@ -113,7 +113,10 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
     }
     state = state.copyWith(ingredientSearchError: null);
     try {
-      final results = await IngredientService.search(query);
+      final userId = ref.read(currentUserIdProvider);
+      final results = await ref
+          .read(ingredientServiceProvider)
+          .search(query, userId: userId);
       state = state.copyWith(ingredientSuggestions: results);
     } catch (e, st) {
       _log.error('ingredient search failed', e, st);
@@ -129,7 +132,11 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
       ingredientSuggestions: [],
     );
     // Write new ingredient to DB (fire-and-forget)
-    IngredientService.insertIfNew(trimmed).ignore();
+    final userId = ref.read(currentUserIdProvider);
+    ref
+        .read(ingredientServiceProvider)
+        .insertIfNew(trimmed, userId: userId)
+        .ignore();
   }
 
   void removeIngredient(String name) {
@@ -139,7 +146,7 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
   }
 
   Future<void> deleteUserIngredient(String id) async {
-    await IngredientService.deleteUserIngredient(id);
+    await ref.read(ingredientServiceProvider).deleteUserIngredient(id);
     state = state.copyWith(
       ingredientSuggestions: state.ingredientSuggestions
           .where((s) => s.id != id)

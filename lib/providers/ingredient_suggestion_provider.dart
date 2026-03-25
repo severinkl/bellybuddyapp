@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/ingredient_suggestion_group.dart';
+import '../providers/core_providers.dart';
 import '../services/ingredient_service.dart';
-import '../services/supabase_service.dart';
 import '../utils/logger.dart';
 import '../utils/retry_helper.dart';
 import '../utils/suggestion_helpers.dart';
@@ -17,14 +17,16 @@ class IngredientSuggestionNotifier
   Future<void> fetchSuggestions() async {
     state = const AsyncValue.loading();
     try {
-      final userId = SupabaseService.userId;
+      final userId = ref.read(currentUserIdProvider);
       if (userId == null) {
         state = const AsyncValue.data([]);
         return;
       }
 
+      final ingredientService = ref.read(ingredientServiceProvider);
+
       final data = await retryAsync(
-        () => IngredientService.fetchSuggestions(userId),
+        () => ingredientService.fetchSuggestions(userId),
         log: _log,
         label: 'fetchSuggestions',
       );
@@ -40,8 +42,8 @@ class IngredientSuggestionNotifier
       }
 
       final results = await Future.wait([
-        IngredientService.fetchReplacements(allSuggestionIds),
-        IngredientService.fetchMealDetails(allMealIds.toList()),
+        ingredientService.fetchReplacements(allSuggestionIds),
+        ingredientService.fetchMealDetails(allMealIds.toList()),
       ]);
 
       final groups = SuggestionHelpers.buildGroups(
@@ -68,7 +70,7 @@ class IngredientSuggestionNotifier
     if (unseenIds.isEmpty) return;
 
     try {
-      await IngredientService.markAllSeen(unseenIds);
+      await ref.read(ingredientServiceProvider).markAllSeen(unseenIds);
       state = AsyncValue.data(
         groups.map((g) => g.isNew ? g.copyWith(isNew: false) : g).toList(),
       );
@@ -79,7 +81,7 @@ class IngredientSuggestionNotifier
 
   Future<void> dismissSuggestion(List<String> ids) async {
     try {
-      await IngredientService.dismissSuggestions(ids);
+      await ref.read(ingredientServiceProvider).dismissSuggestions(ids);
       final idsSet = ids.toSet();
       state = state.whenData(
         (groups) =>
