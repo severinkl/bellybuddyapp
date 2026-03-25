@@ -48,6 +48,9 @@ class AppConstants {
   static const double radiusXl = 24.0;
   static const double radiusFull = 100.0;
 
+  // Debug label width
+  static const double debugLabelWidth = 120.0;
+
   // Drag handle
   static const double dragHandleWidth = 40.0;
 
@@ -56,6 +59,9 @@ class AppConstants {
 
   // Image sizes
   static const double mealImageHeight = 180.0;
+
+  // Icon sizes
+  static const double iconSizeSm = 18.0;
 
   // Button
   static const double buttonHeight = 56.0;
