@@ -126,6 +126,25 @@ SettlableFilterBuilder mockSelectRows(
 SettlableMapNullable settleMaybeSingle(PostgrestMap? value) =>
     SettlableMapNullable(Future.value(value));
 
+/// A [MockPostgrestMapTransformBuilder] wrapper that properly resolves as a
+/// [Future<PostgrestMap>] when awaited (e.g. after `.single()`).
+class SettlableMap extends MockPostgrestMapTransformBuilder {
+  SettlableMap(this._future);
+
+  final Future<PostgrestMap> _future;
+
+  @override
+  Future<R> then<R>(
+    FutureOr<R> Function(PostgrestMap value) onValue, {
+    Function? onError,
+  }) {
+    return _future.then(onValue, onError: onError);
+  }
+}
+
+/// Creates a settled [SettlableMap] that resolves with [value] when awaited.
+SettlableMap settleMap(PostgrestMap value) => SettlableMap(Future.value(value));
+
 /// Sets up `client.storage.from(bucket)` chain.
 MockStorageFileApi mockStorage(
   MockSupabaseClient client, {
