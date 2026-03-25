@@ -108,6 +108,9 @@ jobs:
       - name: Create env.json
         run: cp env.example.json env.json
 
+      - name: Create GoogleService-Info.plist
+        run: cp ios/Runner/GoogleService-Info.example.plist ios/Runner/GoogleService-Info.plist
+
       - run: flutter pub get
 
       - name: Code generation
