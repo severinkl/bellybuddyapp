@@ -1,6 +1,8 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user_profile.dart';
 import '../services/local_notification_service.dart';
+import '../services/push_notification_service.dart';
 import '../utils/logger.dart';
 
 /// Abstract interface for scheduling/cancelling local notifications.
@@ -91,6 +93,23 @@ class NotificationRepository {
   }
 
   Future<void> cancelAll() => _scheduler.cancelAll();
+
+  Stream<RemoteMessage> get onForegroundMessage =>
+      PushNotificationService.onForegroundMessage;
+
+  Stream<RemoteMessage> get onMessageOpenedApp =>
+      PushNotificationService.onMessageOpenedApp;
+
+  Future<RemoteMessage?> getInitialMessage() =>
+      PushNotificationService.getInitialMessage();
+
+  String? extractRoute(RemoteMessage message) =>
+      PushNotificationService.extractRoute(message);
+
+  Future<bool> requestPermission() =>
+      PushNotificationService.requestPermission();
+
+  Future<void> clearToken() => PushNotificationService.clearToken();
 }
 
 final notificationRepositoryProvider = Provider<NotificationRepository>(

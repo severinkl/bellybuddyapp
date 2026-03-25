@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:belly_buddy/models/drink.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/recipe.dart';
@@ -215,4 +216,16 @@ class FakeNotificationRepository implements NotificationRepository {
   Future<void> syncNotifications(UserProfile profile) async => syncCount++;
   @override
   Future<void> cancelAll() async {}
+  @override
+  Stream<RemoteMessage> get onForegroundMessage => const Stream.empty();
+  @override
+  Stream<RemoteMessage> get onMessageOpenedApp => const Stream.empty();
+  @override
+  Future<RemoteMessage?> getInitialMessage() async => null;
+  @override
+  String? extractRoute(RemoteMessage message) => null;
+  @override
+  Future<bool> requestPermission() async => true;
+  @override
+  Future<void> clearToken() async {}
 }

@@ -1,3 +1,4 @@
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
@@ -185,6 +186,26 @@ void main() {
       await repo.cancelAll();
 
       verify(() => scheduler.cancelAll()).called(1);
+    });
+  });
+
+  group('push notification delegation', () {
+    test('onForegroundMessage returns a Stream<RemoteMessage>', () {
+      expect(repo.onForegroundMessage, isA<Stream<RemoteMessage>>());
+    });
+
+    test('onMessageOpenedApp returns a Stream<RemoteMessage>', () {
+      expect(repo.onMessageOpenedApp, isA<Stream<RemoteMessage>>());
+    });
+
+    test('extractRoute returns null when data has no route key', () {
+      const message = RemoteMessage(data: {});
+      expect(repo.extractRoute(message), isNull);
+    });
+
+    test('extractRoute returns route string from message data', () {
+      const message = RemoteMessage(data: {'route': '/diary'});
+      expect(repo.extractRoute(message), '/diary');
     });
   });
 }
