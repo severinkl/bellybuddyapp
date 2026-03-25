@@ -2,8 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recommendation.dart';
 import '../providers/core_providers.dart';
 import '../providers/profile_provider.dart';
-import '../services/edge_function_service.dart';
-import '../services/recommendation_service.dart';
+import '../repositories/recommendation_repository.dart';
 import '../utils/logger.dart';
 import '../utils/retry_helper.dart';
 
@@ -25,7 +24,7 @@ class RecommendationNotifier
       }
 
       final recommendations = await retryAsync(
-        () => ref.read(recommendationServiceProvider).fetchByUserId(userId),
+        () => ref.read(recommendationRepositoryProvider).fetchByUserId(userId),
       );
       state = AsyncValue.data(recommendations);
     } catch (e, st) {
@@ -43,25 +42,10 @@ class RecommendationNotifier
         return;
       }
 
-      // Gather user context from profile
       final profile = ref.read(profileProvider).whenOrNull(data: (p) => p);
-      final recommendationService = ref.read(recommendationServiceProvider);
-      final context = await recommendationService.fetchRecentContext(userId);
-
-      final body = <String, dynamic>{
-        if (profile != null) ...{
-          'symptoms': profile.symptoms,
-          'intolerances': profile.intolerances,
-          'diet': profile.diet,
-        },
-        ...context,
-      };
-
-      await ref
-          .read(edgeFunctionServiceProvider)
-          .invoke('diet-recommendations', body: body);
-      // Re-fetch to get the newly saved recommendation from DB
-      final recommendations = await recommendationService.fetchByUserId(userId);
+      final recommendations = await ref
+          .read(recommendationRepositoryProvider)
+          .refreshRecommendations(userId, profile);
       state = AsyncValue.data(recommendations);
     } catch (e, st) {
       state = AsyncValue.error(e, st);

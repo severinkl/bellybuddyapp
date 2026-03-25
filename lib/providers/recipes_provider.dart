@@ -1,9 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recipe.dart';
 import '../providers/core_providers.dart';
-import '../services/recipe_service.dart';
+import '../repositories/recipe_repository.dart';
 import '../utils/logger.dart';
-import '../utils/retry_helper.dart';
 
 class RecipesState {
   final List<Recipe> allRecipes;
@@ -60,12 +59,8 @@ class RecipesNotifier extends Notifier<RecipesState> {
   Future<void> _loadRecipes() async {
     state = state.copyWith(error: null);
     try {
-      final recipeService = ref.read(recipeServiceProvider);
-      final recipes = await retryAsync(
-        recipeService.fetchAll,
-        log: _log,
-        label: 'loadRecipes',
-      );
+      final repo = ref.read(recipeRepositoryProvider);
+      final recipes = await repo.fetchAll();
       state = state.copyWith(
         allRecipes: recipes,
         filtered: recipes,
@@ -83,7 +78,7 @@ class RecipesNotifier extends Notifier<RecipesState> {
     if (userId == null) return;
     try {
       final favorites = await ref
-          .read(recipeServiceProvider)
+          .read(recipeRepositoryProvider)
           .fetchFavoriteIds(userId);
       state = state.copyWith(favorites: favorites);
     } catch (e) {
@@ -95,13 +90,13 @@ class RecipesNotifier extends Notifier<RecipesState> {
     final userId = ref.read(currentUserIdProvider);
     if (userId == null) return;
     final newFavorites = Set<String>.from(state.favorites);
-    final recipeService = ref.read(recipeServiceProvider);
+    final repo = ref.read(recipeRepositoryProvider);
     try {
       if (newFavorites.contains(recipeId)) {
-        await recipeService.removeFavorite(userId, recipeId);
+        await repo.removeFavorite(userId, recipeId);
         newFavorites.remove(recipeId);
       } else {
-        await recipeService.addFavorite(userId, recipeId);
+        await repo.addFavorite(userId, recipeId);
         newFavorites.add(recipeId);
       }
       state = state.copyWith(favorites: newFavorites);
