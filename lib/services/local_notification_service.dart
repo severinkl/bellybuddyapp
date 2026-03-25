@@ -92,6 +92,9 @@ class LocalNotificationService {
       ),
     );
 
+    // Request permission on init so local notifications work immediately
+    await requestPermission();
+
     _log.debug('initialized');
   }
 
@@ -157,7 +160,7 @@ class LocalNotificationService {
           ),
           iOS: const DarwinNotificationDetails(),
         ),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         uiLocalNotificationDateInterpretation:
             UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
@@ -195,7 +198,7 @@ class LocalNotificationService {
         ),
         iOS: const DarwinNotificationDetails(),
       ),
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
@@ -217,6 +220,27 @@ class LocalNotificationService {
   static Future<void> cancelDailySummary() async {
     await _plugin.cancel(_dailySummaryId);
     _log.debug('cancelled daily summary');
+  }
+
+  /// Show a test notification immediately (for debugging).
+  static Future<void> showTestNotification() async {
+    await _plugin.show(
+      9999,
+      'Belly Buddy',
+      'Test-Benachrichtigung funktioniert!',
+      NotificationDetails(
+        android: AndroidNotificationDetails(
+          _reminderChannel.id,
+          _reminderChannel.name,
+          channelDescription: _reminderChannel.description,
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: const DarwinNotificationDetails(),
+      ),
+      payload: '/dashboard',
+    );
+    _log.debug('showed test notification');
   }
 
   /// Cancel all notifications.
