@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../../../config/app_theme.dart';
-import '../../../../services/ingredient_service.dart';
+import '../../../../models/ingredient_search_result.dart';
 import '../../../../config/constants.dart';
 
 class IngredientSearch extends StatefulWidget {
   final List<String> ingredients;
-  final List<IngredientSuggestion> suggestions;
+  final List<IngredientSearchResult> suggestions;
   final ValueChanged<String> onSearch;
   final ValueChanged<String> onAdd;
   final ValueChanged<String> onRemove;

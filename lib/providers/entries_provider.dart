@@ -5,7 +5,6 @@ import '../models/gut_feeling_entry.dart';
 import '../models/drink_entry.dart';
 import '../providers/core_providers.dart';
 import '../repositories/entry_repository.dart';
-import '../services/entry_crud_service.dart';
 import '../utils/logger.dart';
 
 /// State holding all entries for a given date range

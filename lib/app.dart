@@ -10,7 +10,6 @@ import 'providers/notification_provider.dart';
 import 'providers/profile_provider.dart';
 import 'router/app_router.dart';
 import 'screens/splash/splash_screen.dart';
-import 'providers/core_providers.dart';
 import 'repositories/notification_repository.dart';
 import 'utils/logger.dart';
 

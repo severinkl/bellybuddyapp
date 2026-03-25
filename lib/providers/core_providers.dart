@@ -1,14 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+// Re-export currentUserIdProvider so existing imports from core_providers
+// continue to work. The provider is defined in auth_provider.dart where
+// it can reactively derive from currentUserProvider.
+export 'auth_provider.dart' show currentUserIdProvider;
+
 /// Core Supabase client — single source for all services
 final supabaseClientProvider = Provider<SupabaseClient>(
   (ref) => Supabase.instance.client,
-);
-
-/// Current authenticated user's ID (nullable).
-/// For auth-reactive providers (currentUserProvider, isAuthenticatedProvider),
-/// see auth_provider.dart — those watch the auth state stream.
-final currentUserIdProvider = Provider<String?>(
-  (ref) => Supabase.instance.client.auth.currentUser?.id,
 );

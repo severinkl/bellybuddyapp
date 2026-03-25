@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:belly_buddy/screens/settings/widgets/settings_account_screen.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
-import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/repositories/auth_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 

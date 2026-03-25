@@ -14,6 +14,11 @@ final currentUserProvider = Provider<User?>((ref) {
       ref.read(authRepositoryProvider).currentUser;
 });
 
+/// Current user ID (nullable) — reactive, derived from currentUserProvider
+final currentUserIdProvider = Provider<String?>((ref) {
+  return ref.watch(currentUserProvider)?.id;
+});
+
 /// Whether user is authenticated — reactive
 final isAuthenticatedProvider = Provider<bool>((ref) {
   final authState = ref.watch(authStateProvider);

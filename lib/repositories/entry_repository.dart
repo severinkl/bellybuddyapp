@@ -2,6 +2,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/entry_crud_service.dart';
 import '../services/entry_query_service.dart';
 
+/// Table name for each entry type
+const entryTableFor = {
+  'meal': 'meal_entries',
+  'toilet': 'toilet_entries',
+  'gutFeeling': 'gut_feeling_entries',
+  'drink': 'drink_entries',
+};
+
 class EntryRepository {
   final EntryCrudService _crudService;
   final EntryQueryService _queryService;

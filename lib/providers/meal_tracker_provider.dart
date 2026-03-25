@@ -5,7 +5,7 @@ import '../models/meal_entry.dart';
 import '../providers/core_providers.dart';
 import '../repositories/ingredient_repository.dart';
 import '../repositories/meal_media_repository.dart';
-import '../services/ingredient_service.dart';
+import '../models/ingredient_search_result.dart';
 import '../utils/logger.dart';
 import 'entries_provider.dart';
 
@@ -17,7 +17,7 @@ class MealTrackerState {
   final bool isAnalyzing;
   final bool isSaving;
   final bool showSuccess;
-  final List<IngredientSuggestion> ingredientSuggestions;
+  final List<IngredientSearchResult> ingredientSuggestions;
   final Object? ingredientSearchError;
   final String? notes;
   final DateTime trackedAt;
@@ -44,7 +44,7 @@ class MealTrackerState {
     bool? isAnalyzing,
     bool? isSaving,
     bool? showSuccess,
-    List<IngredientSuggestion>? ingredientSuggestions,
+    List<IngredientSearchResult>? ingredientSuggestions,
     Object? ingredientSearchError,
     String? notes,
     DateTime? trackedAt,
