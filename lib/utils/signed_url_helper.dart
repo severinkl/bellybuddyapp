@@ -1,6 +1,3 @@
-import 'package:supabase_flutter/supabase_flutter.dart';
-import '../utils/logger.dart';
-
 /// Extracts a storage file path from various Supabase URL formats.
 /// If the input is already a path (no http), returns it as-is.
 String extractStoragePath(String urlOrPath, String bucket) {
@@ -22,23 +19,4 @@ String extractStoragePath(String urlOrPath, String bucket) {
   if (otherMatch != null) return otherMatch.group(1)!;
 
   return urlOrPath;
-}
-
-/// Resolves a meal image URL/path to a signed URL.
-/// Falls back to the original URL on failure.
-Future<String?> resolveSignedMealImageUrl(String? urlOrPath) async {
-  if (urlOrPath == null || urlOrPath.isEmpty) return null;
-
-  // Already a signed URL
-  if (urlOrPath.contains('token=')) return urlOrPath;
-
-  try {
-    final path = extractStoragePath(urlOrPath, 'meal-images');
-    return await Supabase.instance.client.storage
-        .from('meal-images')
-        .createSignedUrl(path, 3600);
-  } catch (e) {
-    const AppLogger('SignedUrlHelper').error('failed to resolve URL', e);
-    return urlOrPath;
-  }
 }

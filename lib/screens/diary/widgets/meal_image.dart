@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../config/app_theme.dart';
-import '../../../utils/signed_url_helper.dart';
 import '../../../config/constants.dart';
+import '../../../repositories/meal_media_repository.dart';
 
-class MealImage extends StatefulWidget {
+class MealImage extends ConsumerStatefulWidget {
   final String imageUrl;
   const MealImage({super.key, required this.imageUrl});
 
   @override
-  State<MealImage> createState() => _MealImageState();
+  ConsumerState<MealImage> createState() => _MealImageState();
 }
 
-class _MealImageState extends State<MealImage> {
+class _MealImageState extends ConsumerState<MealImage> {
   String? _resolvedUrl;
   bool _loading = true;
 
@@ -23,7 +24,9 @@ class _MealImageState extends State<MealImage> {
   }
 
   Future<void> _resolve() async {
-    final url = await resolveSignedMealImageUrl(widget.imageUrl);
+    final url = await ref
+        .read(mealMediaRepositoryProvider)
+        .resolveSignedUrl(widget.imageUrl);
     if (url == null) {
       debugPrint(
         '[MealImage] URL resolution returned null for: ${widget.imageUrl}',

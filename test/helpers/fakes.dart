@@ -206,6 +206,8 @@ class FakeMealMediaRepository implements MealMediaRepository {
   };
   @override
   void triggerSuggestionRefresh() {}
+  @override
+  Future<String?> resolveSignedUrl(String? urlOrPath) async => urlOrPath;
 }
 
 // -- FakeNotificationRepository --

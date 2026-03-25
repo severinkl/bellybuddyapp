@@ -99,6 +99,72 @@ void main() {
     });
   });
 
+  group('resolveSignedUrl', () {
+    test('returns null for null input', () async {
+      final result = await repo.resolveSignedUrl(null);
+      expect(result, isNull);
+    });
+
+    test('returns null for empty string', () async {
+      final result = await repo.resolveSignedUrl('');
+      expect(result, isNull);
+    });
+
+    test('returns already-signed URL as-is without calling storage', () async {
+      const signedUrl =
+          'https://example.com/storage/v1/object/sign/meal-images/path.jpg?token=abc';
+      final result = await repo.resolveSignedUrl(signedUrl);
+      expect(result, equals(signedUrl));
+      verifyNever(
+        () => storageService.getSignedUrl(
+          bucket: any(named: 'bucket'),
+          path: any(named: 'path'),
+        ),
+      );
+    });
+
+    test(
+      'delegates to storageService.getSignedUrl with correct bucket and path',
+      () async {
+        const publicUrl =
+            'https://example.com/storage/v1/object/public/meal-images/user/photo.jpg';
+        const signedUrl = 'https://example.com/signed?token=xyz';
+
+        when(
+          () => storageService.getSignedUrl(
+            bucket: any(named: 'bucket'),
+            path: any(named: 'path'),
+          ),
+        ).thenAnswer((_) async => signedUrl);
+
+        final result = await repo.resolveSignedUrl(publicUrl);
+
+        expect(result, equals(signedUrl));
+        verify(
+          () => storageService.getSignedUrl(
+            bucket: 'meal-images',
+            path: 'user/photo.jpg',
+          ),
+        ).called(1);
+      },
+    );
+
+    test('returns original URL on storage service error', () async {
+      const url =
+          'https://example.com/storage/v1/object/public/meal-images/x.jpg';
+
+      when(
+        () => storageService.getSignedUrl(
+          bucket: any(named: 'bucket'),
+          path: any(named: 'path'),
+        ),
+      ).thenThrow(Exception('storage error'));
+
+      final result = await repo.resolveSignedUrl(url);
+      expect(result, equals(url));
+    });
+  });
+
   group('triggerSuggestionRefresh', () {
     test(
       'invokes refresh-ingredient-suggestions edge function fire-and-forget',

@@ -5,6 +5,7 @@ import '../services/edge_function_service.dart';
 import '../services/storage_service.dart';
 import '../utils/logger.dart';
 import '../utils/meal_helpers.dart';
+import '../utils/signed_url_helper.dart';
 
 class MealMediaRepository {
   final StorageService _storageService;
@@ -45,6 +46,24 @@ class MealMediaRepository {
   /// Fire-and-forget call to trigger ingredient suggestion refresh.
   void triggerSuggestionRefresh() {
     _edgeFunctionService.invoke('refresh-ingredient-suggestions').ignore();
+  }
+
+  /// Resolves a meal image URL or storage path to a fresh signed URL.
+  /// Returns null for null/empty input, returns as-is if already signed,
+  /// and falls back to the original value on error.
+  Future<String?> resolveSignedUrl(String? urlOrPath) async {
+    if (urlOrPath == null || urlOrPath.isEmpty) return null;
+    if (urlOrPath.contains('token=')) return urlOrPath;
+
+    try {
+      final path = extractStoragePath(urlOrPath, 'meal-images');
+      return await _storageService.getSignedUrl(
+        bucket: 'meal-images',
+        path: path,
+      );
+    } catch (e) {
+      return urlOrPath;
+    }
   }
 }
 
