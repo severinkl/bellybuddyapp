@@ -98,7 +98,7 @@ class _RegistrationWizardScreenState
       _authError = null;
     });
     try {
-      await AuthService.signUpWithEmail(email, password);
+      await ref.read(authServiceProvider).signUpWithEmail(email, password);
       await _createProfile();
       if (mounted) context.go(RoutePaths.dashboard);
     } catch (e) {
@@ -121,7 +121,7 @@ class _RegistrationWizardScreenState
       _authError = null;
     });
     try {
-      await AuthService.signInWithGoogle();
+      await ref.read(authServiceProvider).signInWithGoogle();
       await _createProfile();
       if (mounted) context.go(RoutePaths.dashboard);
     } catch (e) {
@@ -140,7 +140,7 @@ class _RegistrationWizardScreenState
       _authError = null;
     });
     try {
-      await AuthService.signInWithApple();
+      await ref.read(authServiceProvider).signInWithApple();
       await _createProfile();
       if (mounted) context.go(RoutePaths.dashboard);
     } catch (e) {

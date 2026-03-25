@@ -23,7 +23,7 @@ class _SettingsAccountScreenState extends ConsumerState<SettingsAccountScreen> {
   bool _isDeleting = false;
 
   Future<void> _signOut() async {
-    await AuthService.signOut();
+    await ref.read(authServiceProvider).signOut();
     if (mounted) context.go(RoutePaths.auth);
   }
 
@@ -46,7 +46,7 @@ class _SettingsAccountScreenState extends ConsumerState<SettingsAccountScreen> {
   @override
   Widget build(BuildContext context) {
     final user = SupabaseService.currentUser;
-    final authMethod = AuthService.detectAuthMethod();
+    final authMethod = ref.read(authServiceProvider).detectAuthMethod();
     final showPasswordSection = authMethod == 'email' || authMethod == null;
 
     return Scaffold(

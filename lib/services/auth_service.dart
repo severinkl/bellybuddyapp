@@ -2,27 +2,29 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:crypto/crypto.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io' show Platform;
 import '../config/oauth_config.dart';
+import '../providers/core_providers.dart';
 import '../utils/logger.dart';
 import 'edge_function_service.dart';
-import 'supabase_service.dart';
 
 class AuthService {
+  AuthService(this._auth, this._edgeFunctions);
+
+  final GoTrueClient _auth;
+  final EdgeFunctionService _edgeFunctions;
+
   static const _log = AppLogger('AuthService');
-  static GoTrueClient get _auth => SupabaseService.auth;
-  static EdgeFunctionService get _edgeFunctions =>
-      EdgeFunctionService(SupabaseService.client);
 
-  static Stream<AuthState> get onAuthStateChange => _auth.onAuthStateChange;
+  Stream<AuthState> get onAuthStateChange => _auth.onAuthStateChange;
 
-  static Future<AuthResponse> signInWithEmail(
-    String email,
-    String password,
-  ) async {
+  Session? get currentSession => _auth.currentSession;
+
+  Future<AuthResponse> signInWithEmail(String email, String password) async {
     try {
       return await _auth.signInWithPassword(email: email, password: password);
     } catch (e, st) {
@@ -31,10 +33,7 @@ class AuthService {
     }
   }
 
-  static Future<AuthResponse> signUpWithEmail(
-    String email,
-    String password,
-  ) async {
+  Future<AuthResponse> signUpWithEmail(String email, String password) async {
     try {
       final response = await _auth.signUp(email: email, password: password);
       // Fire and forget welcome email
@@ -60,7 +59,7 @@ class AuthService {
     ).join();
   }
 
-  static Future<AuthResponse> signInWithGoogle() async {
+  Future<AuthResponse> signInWithGoogle() async {
     const webClientId = OAuthConfig.googleWebClientId;
     const iosClientId = OAuthConfig.googleIosClientId;
 
@@ -89,7 +88,7 @@ class AuthService {
     );
   }
 
-  static Future<AuthResponse> signInWithApple() async {
+  Future<AuthResponse> signInWithApple() async {
     final credential = await SignInWithApple.getAppleIDCredential(
       scopes: [
         AppleIDAuthorizationScopes.email,
@@ -104,7 +103,7 @@ class AuthService {
     );
   }
 
-  static Future<AuthResponse> _signInWithIdToken(
+  Future<AuthResponse> _signInWithIdToken(
     OAuthProvider provider,
     String? idToken,
     String providerName,
@@ -115,7 +114,7 @@ class AuthService {
     return await _auth.signInWithIdToken(provider: provider, idToken: idToken);
   }
 
-  static Future<void> signOut() async {
+  Future<void> signOut() async {
     try {
       await _auth.signOut();
     } catch (e, st) {
@@ -124,7 +123,7 @@ class AuthService {
     }
   }
 
-  static Future<void> resetPassword(String email) async {
+  Future<void> resetPassword(String email) async {
     try {
       await _edgeFunctions.invoke(
         'send-password-reset',
@@ -136,7 +135,7 @@ class AuthService {
     }
   }
 
-  static Future<UserResponse> updatePassword(String newPassword) async {
+  Future<UserResponse> updatePassword(String newPassword) async {
     try {
       return await _auth.updateUser(UserAttributes(password: newPassword));
     } catch (e, st) {
@@ -145,7 +144,7 @@ class AuthService {
     }
   }
 
-  static Future<void> deleteAccount() async {
+  Future<void> deleteAccount() async {
     try {
       await _edgeFunctions.invoke('delete-account');
       await signOut();
@@ -156,8 +155,8 @@ class AuthService {
   }
 
   /// Detect auth method from session metadata
-  static String? detectAuthMethod() {
-    final session = SupabaseService.currentSession;
+  String? detectAuthMethod() {
+    final session = _auth.currentSession;
     if (session == null) return null;
 
     final provider = session.user.appMetadata['provider'] as String?;
@@ -175,3 +174,10 @@ class AuthService {
 
   static bool get isAppleSignInAvailable => Platform.isIOS;
 }
+
+final authServiceProvider = Provider<AuthService>(
+  (ref) => AuthService(
+    ref.watch(supabaseClientProvider).auth,
+    ref.watch(edgeFunctionServiceProvider),
+  ),
+);

@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user_profile.dart';
+import '../services/auth_service.dart';
 import '../services/profile_service.dart';
 import '../services/supabase_service.dart';
-import '../services/auth_service.dart';
 import '../utils/logger.dart';
 import '../utils/retry_helper.dart';
 
@@ -38,7 +38,7 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
       final userId = SupabaseService.userId;
       if (userId == null) throw Exception('Not authenticated');
 
-      final authMethod = AuthService.detectAuthMethod();
+      final authMethod = ref.read(authServiceProvider).detectAuthMethod();
       final data = profile
           .copyWith(userId: userId, authMethod: authMethod)
           .toJson();

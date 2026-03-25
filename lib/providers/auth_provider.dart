@@ -5,7 +5,7 @@ import '../services/supabase_service.dart';
 
 /// Stream of auth state changes
 final authStateProvider = StreamProvider<AuthState>((ref) {
-  return AuthService.onAuthStateChange;
+  return ref.watch(authServiceProvider).onAuthStateChange;
 });
 
 /// Current user (nullable)

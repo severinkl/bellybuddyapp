@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../config/app_theme.dart';
 import '../../../router/route_names.dart';
@@ -73,7 +74,9 @@ Future<bool> showDeleteAccountDialog(BuildContext context) async {
                 ? () async {
                     Navigator.pop(context);
                     try {
-                      await AuthService.deleteAccount();
+                      await ProviderScope.containerOf(
+                        context,
+                      ).read(authServiceProvider).deleteAccount();
                       if (!dialogContext.mounted) return;
                       dialogContext.go(RoutePaths.auth);
                     } catch (e) {
