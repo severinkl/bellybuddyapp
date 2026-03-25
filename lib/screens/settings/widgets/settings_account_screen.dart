@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../config/app_theme.dart';
 import '../../../providers/auth_provider.dart';
-import '../../../providers/core_providers.dart';
+
 import '../../../router/route_names.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/settings_section_card.dart';
@@ -45,7 +45,7 @@ class _SettingsAccountScreenState extends ConsumerState<SettingsAccountScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = ref.read(supabaseClientProvider).auth.currentUser;
+    final user = ref.watch(currentUserProvider);
     final authMethod = ref
         .read(authNotifierProvider.notifier)
         .detectAuthMethod();
