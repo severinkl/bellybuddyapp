@@ -4,7 +4,6 @@ import '../providers/core_providers.dart';
 import '../providers/profile_provider.dart';
 import '../repositories/recommendation_repository.dart';
 import '../utils/logger.dart';
-import '../utils/retry_helper.dart';
 
 class RecommendationNotifier
     extends Notifier<AsyncValue<List<Recommendation>>> {
@@ -23,9 +22,9 @@ class RecommendationNotifier
         return;
       }
 
-      final recommendations = await retryAsync(
-        () => ref.read(recommendationRepositoryProvider).fetchByUserId(userId),
-      );
+      final recommendations = await ref
+          .read(recommendationRepositoryProvider)
+          .fetchByUserId(userId);
       state = AsyncValue.data(recommendations);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
