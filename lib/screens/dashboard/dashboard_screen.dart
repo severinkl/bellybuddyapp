@@ -68,7 +68,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               const SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.symmetric(
-                    horizontal: AppConstants.spacingLg,
+                    horizontal: AppConstants.spacing12,
                   ),
                   child: _TrackerCards(),
                 ),
@@ -76,7 +76,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               const SliverToBoxAdapter(child: AppConstants.gap32),
               SliverFillRemaining(
                 hasScrollBody: false,
-                child: _ForYouSection(newCount: newCount),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppConstants.spacing12,
+                  ),
+                  child: _ForYouSection(newCount: newCount),
+                ),
               ),
             ],
           ),

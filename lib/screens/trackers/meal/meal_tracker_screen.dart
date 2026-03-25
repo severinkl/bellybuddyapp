@@ -74,7 +74,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 4),
+                  const SizedBox(width: AppConstants.spacingXs),
                   const Icon(Icons.edit, size: 16),
                 ],
               ),
@@ -109,7 +109,12 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     return Stack(
       children: [
         SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(24, 8, 24, 180),
+          padding: const EdgeInsets.fromLTRB(
+            AppConstants.spacingLg,
+            AppConstants.spacingSm,
+            AppConstants.spacingLg,
+            180,
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

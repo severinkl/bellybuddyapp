@@ -257,6 +257,8 @@ class _RegistrationWizardScreenState
                 ),
                 onPressed: () {
                   HapticService.light();
+                  FocusManager.instance.primaryFocus?.unfocus();
+
                   if (_currentStep == 0) {
                     context.go(RoutePaths.welcome);
                   } else {
