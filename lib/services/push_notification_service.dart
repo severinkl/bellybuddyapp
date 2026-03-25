@@ -2,10 +2,10 @@ import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../utils/logger.dart';
 import 'profile_service.dart';
-import 'supabase_service.dart';
 
 class PushNotificationService {
   static const _log = AppLogger('PushNotificationService');
@@ -90,11 +90,12 @@ class PushNotificationService {
 
   /// Save FCM token to the user's profile in Supabase.
   static Future<void> _saveToken(String token) async {
-    final userId = SupabaseService.userId;
+    final client = Supabase.instance.client;
+    final userId = client.auth.currentUser?.id;
     if (userId == null) return;
 
     try {
-      await ProfileService.update(userId, {'fcm_token': token});
+      await ProfileService(client).update(userId, {'fcm_token': token});
       _log.debug('saved FCM token');
     } catch (e) {
       _log.error('failed to save FCM token', e);
@@ -103,11 +104,12 @@ class PushNotificationService {
 
   /// Clear FCM token from the user's profile (on sign-out).
   static Future<void> clearToken() async {
-    final userId = SupabaseService.userId;
+    final client = Supabase.instance.client;
+    final userId = client.auth.currentUser?.id;
     if (userId == null) return;
 
     try {
-      await ProfileService.update(userId, {'fcm_token': null});
+      await ProfileService(client).update(userId, {'fcm_token': null});
       _log.debug('cleared FCM token');
     } catch (e) {
       _log.error('failed to clear FCM token', e);

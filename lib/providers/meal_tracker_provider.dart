@@ -4,8 +4,8 @@ import 'package:uuid/uuid.dart';
 import '../models/meal_entry.dart';
 import '../services/edge_function_service.dart';
 import '../services/ingredient_service.dart';
+import '../providers/core_providers.dart';
 import '../services/storage_service.dart';
-import '../services/supabase_service.dart';
 import '../utils/logger.dart';
 import '../utils/meal_helpers.dart';
 import 'entries_provider.dart';
@@ -153,12 +153,14 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
       String? imageUrl;
       if (state.imageBytes != null && state.imageFileName != null) {
         final ext = state.imageFileName!.split('.').last;
-        imageUrl = await StorageService.uploadImage(
-          bucket: 'meal-images',
-          userId: SupabaseService.userId!,
-          fileBytes: state.imageBytes!,
-          extension: ext,
-        );
+        imageUrl = await ref
+            .read(storageServiceProvider)
+            .uploadImage(
+              bucket: 'meal-images',
+              userId: ref.read(currentUserIdProvider)!,
+              fileBytes: state.imageBytes!,
+              extension: ext,
+            );
       }
 
       final meal = MealEntry(

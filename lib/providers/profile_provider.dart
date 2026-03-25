@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user_profile.dart';
+import '../providers/core_providers.dart';
 import '../services/auth_service.dart';
 import '../services/profile_service.dart';
-import '../services/supabase_service.dart';
 import '../utils/logger.dart';
 import '../utils/retry_helper.dart';
 
@@ -16,14 +16,14 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
   Future<void> fetchProfile() async {
     state = const AsyncValue.loading();
     try {
-      final userId = SupabaseService.userId;
+      final userId = ref.read(currentUserIdProvider);
       if (userId == null) {
         state = const AsyncValue.data(null);
         return;
       }
 
       final profile = await retryAsync(
-        () => ProfileService.fetchByUserId(userId),
+        () => ref.read(profileServiceProvider).fetchByUserId(userId),
         log: _log,
         label: 'fetchProfile',
       );
@@ -35,7 +35,7 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
 
   Future<void> createProfile(UserProfile profile) async {
     try {
-      final userId = SupabaseService.userId;
+      final userId = ref.read(currentUserIdProvider);
       if (userId == null) throw Exception('Not authenticated');
 
       final authMethod = ref.read(authServiceProvider).detectAuthMethod();
@@ -47,7 +47,7 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
       data.removeWhere((key, value) => value == null);
 
       _log.debug('creating profile for $userId');
-      await ProfileService.upsert(data);
+      await ref.read(profileServiceProvider).upsert(data);
       // Fetch the full profile from DB (includes DB-generated fields like id, created_at)
       await fetchProfile();
     } catch (e, st) {
@@ -59,7 +59,7 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
 
   Future<void> updateProfile(UserProfile profile) async {
     final previous = state;
-    final userId = SupabaseService.userId;
+    final userId = ref.read(currentUserIdProvider);
     if (userId == null) throw Exception('Not authenticated');
 
     // Optimistic update — revert on failure
@@ -69,7 +69,7 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
       final data = profile.toJson();
       data.remove('user_id');
 
-      await ProfileService.update(userId, data);
+      await ref.read(profileServiceProvider).update(userId, data);
     } catch (e) {
       state = previous;
       rethrow;
