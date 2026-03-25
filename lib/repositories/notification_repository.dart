@@ -3,8 +3,62 @@ import '../models/user_profile.dart';
 import '../services/local_notification_service.dart';
 import '../utils/logger.dart';
 
+/// Abstract interface for scheduling/cancelling local notifications.
+/// Inject this into [NotificationRepository] to enable testability.
+abstract class NotificationScheduler {
+  Future<void> scheduleReminders({
+    required List<String> reminderTimes,
+    required String timezone,
+  });
+
+  Future<void> cancelReminders();
+
+  Future<void> scheduleDailySummary({
+    required String dailySummaryTime,
+    required String timezone,
+  });
+
+  Future<void> cancelDailySummary();
+
+  Future<void> cancelAll();
+}
+
+/// Production implementation that delegates to [LocalNotificationService].
+class LocalNotificationScheduler implements NotificationScheduler {
+  @override
+  Future<void> scheduleReminders({
+    required List<String> reminderTimes,
+    required String timezone,
+  }) => LocalNotificationService.scheduleReminders(
+    reminderTimes: reminderTimes,
+    timezone: timezone,
+  );
+
+  @override
+  Future<void> cancelReminders() => LocalNotificationService.cancelReminders();
+
+  @override
+  Future<void> scheduleDailySummary({
+    required String dailySummaryTime,
+    required String timezone,
+  }) => LocalNotificationService.scheduleDailySummary(
+    dailySummaryTime: dailySummaryTime,
+    timezone: timezone,
+  );
+
+  @override
+  Future<void> cancelDailySummary() =>
+      LocalNotificationService.cancelDailySummary();
+
+  @override
+  Future<void> cancelAll() => LocalNotificationService.cancelAll();
+}
+
 class NotificationRepository {
+  final NotificationScheduler _scheduler;
   static const _log = AppLogger('NotificationRepository');
+
+  NotificationRepository(this._scheduler);
 
   /// Schedules or cancels local notifications based on the user's profile
   /// settings.
@@ -12,21 +66,21 @@ class NotificationRepository {
     final timezone = profile.timezone ?? 'Europe/Berlin';
 
     if (profile.remindersEnabled && profile.reminderTimes.isNotEmpty) {
-      await LocalNotificationService.scheduleReminders(
+      await _scheduler.scheduleReminders(
         reminderTimes: profile.reminderTimes,
         timezone: timezone,
       );
     } else {
-      await LocalNotificationService.cancelReminders();
+      await _scheduler.cancelReminders();
     }
 
     if (profile.dailySummaryEnabled) {
-      await LocalNotificationService.scheduleDailySummary(
+      await _scheduler.scheduleDailySummary(
         dailySummaryTime: profile.dailySummaryTime,
         timezone: timezone,
       );
     } else {
-      await LocalNotificationService.cancelDailySummary();
+      await _scheduler.cancelDailySummary();
     }
 
     _log.debug(
@@ -36,9 +90,9 @@ class NotificationRepository {
     );
   }
 
-  Future<void> cancelAll() => LocalNotificationService.cancelAll();
+  Future<void> cancelAll() => _scheduler.cancelAll();
 }
 
 final notificationRepositoryProvider = Provider<NotificationRepository>(
-  (ref) => NotificationRepository(),
+  (ref) => NotificationRepository(LocalNotificationScheduler()),
 );

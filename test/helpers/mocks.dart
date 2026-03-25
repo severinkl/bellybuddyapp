@@ -88,3 +88,5 @@ class MockMealMediaRepository extends Mock implements MealMediaRepository {}
 
 class MockNotificationRepository extends Mock
     implements NotificationRepository {}
+
+class MockNotificationScheduler extends Mock implements NotificationScheduler {}
