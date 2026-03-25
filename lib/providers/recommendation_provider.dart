@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recommendation.dart';
 import '../providers/profile_provider.dart';
+import '../services/edge_function_service.dart';
 import '../services/recommendation_service.dart';
 import '../services/supabase_service.dart';
-import '../services/edge_function_service.dart';
 import '../utils/logger.dart';
 import '../utils/retry_helper.dart';
 
@@ -56,7 +56,9 @@ class RecommendationNotifier
         ...context,
       };
 
-      await EdgeFunctionService.invoke('diet-recommendations', body: body);
+      await ref
+          .read(edgeFunctionServiceProvider)
+          .invoke('diet-recommendations', body: body);
       // Re-fetch to get the newly saved recommendation from DB
       final recommendations = await RecommendationService.fetchByUserId(userId);
       state = AsyncValue.data(recommendations);

@@ -8,12 +8,14 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io' show Platform;
 import '../config/oauth_config.dart';
 import '../utils/logger.dart';
-import 'supabase_service.dart';
 import 'edge_function_service.dart';
+import 'supabase_service.dart';
 
 class AuthService {
   static const _log = AppLogger('AuthService');
   static GoTrueClient get _auth => SupabaseService.auth;
+  static EdgeFunctionService get _edgeFunctions =>
+      EdgeFunctionService(SupabaseService.client);
 
   static Stream<AuthState> get onAuthStateChange => _auth.onAuthStateChange;
 
@@ -37,10 +39,9 @@ class AuthService {
       final response = await _auth.signUp(email: email, password: password);
       // Fire and forget welcome email
       if (response.user != null) {
-        EdgeFunctionService.invoke(
-          'send-welcome-email',
-          body: {'email': email},
-        ).ignore();
+        _edgeFunctions
+            .invoke('send-welcome-email', body: {'email': email})
+            .ignore();
       }
       return response;
     } catch (e, st) {
@@ -125,7 +126,7 @@ class AuthService {
 
   static Future<void> resetPassword(String email) async {
     try {
-      await EdgeFunctionService.invoke(
+      await _edgeFunctions.invoke(
         'send-password-reset',
         body: {'email': email},
       );
@@ -146,7 +147,7 @@ class AuthService {
 
   static Future<void> deleteAccount() async {
     try {
-      await EdgeFunctionService.invoke('delete-account');
+      await _edgeFunctions.invoke('delete-account');
       await signOut();
     } catch (e, st) {
       _log.error('deleteAccount failed', e, st);

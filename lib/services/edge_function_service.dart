@@ -1,18 +1,21 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../providers/core_providers.dart';
 import '../utils/logger.dart';
-import 'supabase_service.dart';
 
 class EdgeFunctionService {
+  EdgeFunctionService(this._client);
+
+  final SupabaseClient _client;
   static const _log = AppLogger('EdgeFunctionService');
 
-  static Future<Map<String, dynamic>> invoke(
+  Future<Map<String, dynamic>> invoke(
     String functionName, {
     Map<String, dynamic>? body,
   }) async {
     try {
-      final response = await SupabaseService.client.functions.invoke(
-        functionName,
-        body: body,
-      );
+      final response = await _client.functions.invoke(functionName, body: body);
       if (response.data is Map<String, dynamic>) {
         return response.data as Map<String, dynamic>;
       }
@@ -23,3 +26,7 @@ class EdgeFunctionService {
     }
   }
 }
+
+final edgeFunctionServiceProvider = Provider<EdgeFunctionService>(
+  (ref) => EdgeFunctionService(ref.watch(supabaseClientProvider)),
+);

@@ -89,10 +89,9 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
     try {
       final base64Data = MealHelpers.buildImageBase64(bytes, filename);
 
-      final result = await EdgeFunctionService.invoke(
-        'analyze-meal',
-        body: {'imageBase64': base64Data},
-      );
+      final result = await ref
+          .read(edgeFunctionServiceProvider)
+          .invoke('analyze-meal', body: {'imageBase64': base64Data});
 
       state = state.copyWith(
         title: result['title'] as String? ?? state.title,
@@ -174,7 +173,10 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
       await ref.read(entriesProvider.notifier).addMeal(meal);
 
       // Fire and forget
-      EdgeFunctionService.invoke('refresh-ingredient-suggestions').ignore();
+      ref
+          .read(edgeFunctionServiceProvider)
+          .invoke('refresh-ingredient-suggestions')
+          .ignore();
 
       state = state.copyWith(isSaving: false, showSuccess: true);
     } catch (e) {
