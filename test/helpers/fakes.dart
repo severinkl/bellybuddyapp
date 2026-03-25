@@ -139,11 +139,11 @@ class FakeDrinkRepository implements DrinkRepository {
 // -- FakeIngredientRepository --
 class FakeIngredientRepository implements IngredientRepository {
   @override
-  Future<List<IngredientSuggestion>> search(
+  Future<List<IngredientSearchResult>> search(
     String query, {
     required String? userId,
     int limit = 10,
-  }) async => [testIngredientSuggestion(name: query)];
+  }) async => [testIngredientSearchResult(name: query)];
   @override
   Future<void> insertIfNew(String name, {required String? userId}) async {}
   @override

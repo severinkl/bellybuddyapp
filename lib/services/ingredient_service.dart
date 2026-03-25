@@ -1,19 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/ingredient_search_result.dart';
 import '../providers/core_providers.dart';
 import '../utils/logger.dart';
 
-class IngredientSuggestion {
-  final String id;
-  final String name;
-  final bool isOwn;
-
-  const IngredientSuggestion({
-    required this.id,
-    required this.name,
-    required this.isOwn,
-  });
-}
+export '../models/ingredient_search_result.dart';
 
 class IngredientService {
   final SupabaseClient _client;
@@ -22,7 +13,7 @@ class IngredientService {
 
   static const _log = AppLogger('IngredientService');
 
-  Future<List<IngredientSuggestion>> search(
+  Future<List<IngredientSearchResult>> search(
     String query, {
     int limit = 10,
     required String? userId,
@@ -35,7 +26,7 @@ class IngredientService {
           .limit(limit);
       return data
           .map(
-            (e) => IngredientSuggestion(
+            (e) => IngredientSearchResult(
               id: e['id'] as String,
               name: e['name'] as String,
               isOwn: e['added_by_user_id'] == userId,

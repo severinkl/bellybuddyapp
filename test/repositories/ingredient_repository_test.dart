@@ -20,8 +20,8 @@ void main() {
       'delegates to ingredientService.search with userId and limit',
       () async {
         final suggestions = [
-          testIngredientSuggestion(name: 'Zwiebel'),
-          testIngredientSuggestion(id: 'ing-2', name: 'Zucchini'),
+          testIngredientSearchResult(name: 'Zwiebel'),
+          testIngredientSearchResult(id: 'ing-2', name: 'Zucchini'),
         ];
         when(
           () => ingredientService.search(

@@ -11,7 +11,7 @@ class IngredientRepository {
 
   IngredientRepository(this._ingredientService);
 
-  Future<List<IngredientSuggestion>> search(
+  Future<List<IngredientSearchResult>> search(
     String query, {
     int limit = 10,
     required String? userId,

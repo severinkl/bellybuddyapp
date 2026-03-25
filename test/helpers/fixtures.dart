@@ -10,7 +10,7 @@ import 'package:belly_buddy/models/recommendation_item.dart';
 import 'package:belly_buddy/models/toilet_entry.dart';
 import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/services/entry_query_service.dart';
-import 'package:belly_buddy/services/ingredient_service.dart';
+import 'package:belly_buddy/models/ingredient_search_result.dart';
 
 const testUserId = 'test-user-id';
 
@@ -142,11 +142,11 @@ EntryQueryResult testEntryQueryResult({
   drinks: drinks ?? [testDrinkEntry()],
 );
 
-IngredientSuggestion testIngredientSuggestion({
+IngredientSearchResult testIngredientSearchResult({
   String? id,
   String? name,
   bool isOwn = false,
-}) => IngredientSuggestion(
+}) => IngredientSearchResult(
   id: id ?? 'ing-1',
   name: name ?? 'Zwiebel',
   isOwn: isOwn,

@@ -3,14 +3,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/core_providers.dart';
 import '../utils/logger.dart';
 
-/// Table name for each entry type
-const entryTableFor = {
-  'meal': 'meal_entries',
-  'toilet': 'toilet_entries',
-  'gutFeeling': 'gut_feeling_entries',
-  'drink': 'drink_entries',
-};
-
 /// Low-level CRUD operations for diary entry tables.
 class EntryCrudService {
   static const _log = AppLogger('EntryCrudService');
@@ -61,10 +53,10 @@ class EntryCrudService {
 
   Future<void> deleteByType(String type, String id) async {
     final table = switch (type) {
-      'meal' => entryTableFor['meal']!,
-      'toilet' => entryTableFor['toilet']!,
-      'gutFeeling' => entryTableFor['gutFeeling']!,
-      'drink' => entryTableFor['drink']!,
+      'meal' => 'meal_entries',
+      'toilet' => 'toilet_entries',
+      'gutFeeling' => 'gut_feeling_entries',
+      'drink' => 'drink_entries',
       _ => throw ArgumentError('Unknown entry type: $type'),
     };
     await delete(table, id);

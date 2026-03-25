@@ -9,7 +9,7 @@ import 'package:belly_buddy/providers/meal_tracker_provider.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/repositories/meal_media_repository.dart';
-import 'package:belly_buddy/services/ingredient_service.dart';
+import 'package:belly_buddy/models/ingredient_search_result.dart';
 
 import '../helpers/fixtures.dart';
 import '../helpers/mocks.dart';
@@ -127,7 +127,11 @@ void main() {
         () => mockIngredientRepo.search(any(), userId: any(named: 'userId')),
       ).thenAnswer(
         (_) async => [
-          const IngredientSuggestion(id: 'i-1', name: 'Zwiebel', isOwn: false),
+          const IngredientSearchResult(
+            id: 'i-1',
+            name: 'Zwiebel',
+            isOwn: false,
+          ),
         ],
       );
 
