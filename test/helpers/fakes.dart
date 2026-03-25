@@ -56,6 +56,10 @@ class FakeAuthRepository implements AuthRepository {
   Future<void> deleteAccount() async {}
   @override
   String? detectAuthMethod() => 'email';
+  @override
+  User? get currentUser => null;
+  @override
+  bool get isAuthenticated => signedIn;
 }
 
 // -- FakeProfileRepository --

@@ -11,7 +11,7 @@ final authStateProvider = StreamProvider<AuthState>((ref) {
 final currentUserProvider = Provider<User?>((ref) {
   final authState = ref.watch(authStateProvider);
   return authState.whenOrNull(data: (state) => state.session?.user) ??
-      Supabase.instance.client.auth.currentUser;
+      ref.read(authRepositoryProvider).currentUser;
 });
 
 /// Whether user is authenticated — reactive
@@ -19,7 +19,7 @@ final isAuthenticatedProvider = Provider<bool>((ref) {
   final authState = ref.watch(authStateProvider);
   return authState.when(
     data: (state) => state.session != null,
-    loading: () => Supabase.instance.client.auth.currentUser != null,
+    loading: () => ref.read(authRepositoryProvider).isAuthenticated,
     error: (_, stackTrace) => false,
   );
 });

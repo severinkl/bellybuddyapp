@@ -24,6 +24,8 @@ class AuthService {
 
   Session? get currentSession => _auth.currentSession;
 
+  User? get currentUser => _auth.currentUser;
+
   Future<AuthResponse> signInWithEmail(String email, String password) async {
     try {
       return await _auth.signInWithPassword(email: email, password: password);

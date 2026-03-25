@@ -8,6 +8,9 @@ class AuthRepository {
 
   Stream<AuthState> get onAuthStateChange => _authService.onAuthStateChange;
 
+  User? get currentUser => _authService.currentUser;
+  bool get isAuthenticated => _authService.currentUser != null;
+
   Future<AuthResponse> signInWithEmail(String email, String password) =>
       _authService.signInWithEmail(email, password);
 
