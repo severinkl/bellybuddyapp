@@ -1,10 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user_profile.dart';
 import '../providers/core_providers.dart';
-import '../services/auth_service.dart';
-import '../services/profile_service.dart';
+import '../repositories/profile_repository.dart';
 import '../utils/logger.dart';
-import '../utils/retry_helper.dart';
 
 /// Profile state notifier
 class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
@@ -22,11 +20,9 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
         return;
       }
 
-      final profile = await retryAsync(
-        () => ref.read(profileServiceProvider).fetchByUserId(userId),
-        log: _log,
-        label: 'fetchProfile',
-      );
+      final profile = await ref
+          .read(profileRepositoryProvider)
+          .getProfile(userId);
       state = AsyncValue.data(profile);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -38,16 +34,8 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
       final userId = ref.read(currentUserIdProvider);
       if (userId == null) throw Exception('Not authenticated');
 
-      final authMethod = ref.read(authServiceProvider).detectAuthMethod();
-      final data = profile
-          .copyWith(userId: userId, authMethod: authMethod)
-          .toJson();
-      data['user_id'] = userId;
-      // Remove null values to let DB defaults apply
-      data.removeWhere((key, value) => value == null);
-
       _log.debug('creating profile for $userId');
-      await ref.read(profileServiceProvider).upsert(data);
+      await ref.read(profileRepositoryProvider).createProfile(userId, profile);
       // Fetch the full profile from DB (includes DB-generated fields like id, created_at)
       await fetchProfile();
     } catch (e, st) {
@@ -66,10 +54,7 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
     state = AsyncValue.data(profile.copyWith(userId: userId));
 
     try {
-      final data = profile.toJson();
-      data.remove('user_id');
-
-      await ref.read(profileServiceProvider).update(userId, data);
+      await ref.read(profileRepositoryProvider).updateProfile(userId, profile);
     } catch (e) {
       state = previous;
       rethrow;

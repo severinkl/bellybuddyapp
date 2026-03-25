@@ -4,8 +4,8 @@ import '../models/toilet_entry.dart';
 import '../models/gut_feeling_entry.dart';
 import '../models/drink_entry.dart';
 import '../providers/core_providers.dart';
+import '../repositories/entry_repository.dart';
 import '../services/entry_crud_service.dart';
-import '../services/entry_query_service.dart';
 import '../utils/logger.dart';
 
 /// State holding all entries for a given date range
@@ -61,8 +61,8 @@ class EntriesNotifier extends Notifier<EntriesState> {
       }
 
       final result = await ref
-          .read(entryQueryServiceProvider)
-          .fetchEntriesForDateRange(userId: userId, date: date, ordered: true);
+          .read(entryRepositoryProvider)
+          .fetchForDate(userId: userId, date: date, ordered: true);
 
       state = state.copyWith(
         meals: result.meals,
@@ -83,70 +83,80 @@ class EntriesNotifier extends Notifier<EntriesState> {
   Future<void> addMeal(MealEntry meal) {
     final userId = ref.read(currentUserIdProvider)!;
     return ref
-        .read(entryCrudServiceProvider)
-        .insert(entryTableFor['meal']!, meal.toJson(), userId: userId);
+        .read(entryRepositoryProvider)
+        .insertEntry(entryTableFor['meal']!, meal.toJson(), userId: userId);
   }
 
   Future<void> updateMeal(MealEntry meal) => ref
-      .read(entryCrudServiceProvider)
-      .update(entryTableFor['meal']!, meal.id, meal.toJson());
+      .read(entryRepositoryProvider)
+      .updateEntry(entryTableFor['meal']!, meal.id, meal.toJson());
 
   Future<void> deleteMeal(String id) =>
-      ref.read(entryCrudServiceProvider).delete(entryTableFor['meal']!, id);
+      ref.read(entryRepositoryProvider).deleteEntry(entryTableFor['meal']!, id);
 
   // -- Toilet CRUD --
 
   Future<void> addToiletEntry(ToiletEntry entry) {
     final userId = ref.read(currentUserIdProvider)!;
     return ref
-        .read(entryCrudServiceProvider)
-        .insert(entryTableFor['toilet']!, entry.toJson(), userId: userId);
+        .read(entryRepositoryProvider)
+        .insertEntry(entryTableFor['toilet']!, entry.toJson(), userId: userId);
   }
 
   Future<void> updateToiletEntry(ToiletEntry entry) => ref
-      .read(entryCrudServiceProvider)
-      .update(entryTableFor['toilet']!, entry.id, entry.toJson());
+      .read(entryRepositoryProvider)
+      .updateEntry(entryTableFor['toilet']!, entry.id, entry.toJson());
 
-  Future<void> deleteToiletEntry(String id) =>
-      ref.read(entryCrudServiceProvider).delete(entryTableFor['toilet']!, id);
+  Future<void> deleteToiletEntry(String id) => ref
+      .read(entryRepositoryProvider)
+      .deleteEntry(entryTableFor['toilet']!, id);
 
   // -- Gut feeling CRUD --
 
   Future<void> addGutFeeling(GutFeelingEntry entry) {
     final userId = ref.read(currentUserIdProvider)!;
     return ref
-        .read(entryCrudServiceProvider)
-        .insert(entryTableFor['gutFeeling']!, entry.toJson(), userId: userId);
+        .read(entryRepositoryProvider)
+        .insertEntry(
+          entryTableFor['gutFeeling']!,
+          entry.toJson(),
+          userId: userId,
+        );
   }
 
   Future<void> updateGutFeeling(GutFeelingEntry entry) => ref
-      .read(entryCrudServiceProvider)
-      .update(entryTableFor['gutFeeling']!, entry.id, entry.toJson());
+      .read(entryRepositoryProvider)
+      .updateEntry(entryTableFor['gutFeeling']!, entry.id, entry.toJson());
 
   Future<void> deleteGutFeeling(String id) => ref
-      .read(entryCrudServiceProvider)
-      .delete(entryTableFor['gutFeeling']!, id);
+      .read(entryRepositoryProvider)
+      .deleteEntry(entryTableFor['gutFeeling']!, id);
 
   // -- Drink CRUD --
 
   Future<void> addDrinkEntry(DrinkEntry entry) {
     final userId = ref.read(currentUserIdProvider)!;
     return ref
-        .read(entryCrudServiceProvider)
-        .insert(entryTableFor['drink']!, entry.toInsertJson(), userId: userId);
+        .read(entryRepositoryProvider)
+        .insertEntry(
+          entryTableFor['drink']!,
+          entry.toInsertJson(),
+          userId: userId,
+        );
   }
 
   Future<void> updateDrinkEntry(DrinkEntry entry) => ref
-      .read(entryCrudServiceProvider)
-      .update(entryTableFor['drink']!, entry.id, entry.toInsertJson());
+      .read(entryRepositoryProvider)
+      .updateEntry(entryTableFor['drink']!, entry.id, entry.toInsertJson());
 
-  Future<void> deleteDrinkEntry(String id) =>
-      ref.read(entryCrudServiceProvider).delete(entryTableFor['drink']!, id);
+  Future<void> deleteDrinkEntry(String id) => ref
+      .read(entryRepositoryProvider)
+      .deleteEntry(entryTableFor['drink']!, id);
 
   // -- Generic delete by type (used by diary) --
 
   Future<void> deleteByType(String type, String id) =>
-      ref.read(entryCrudServiceProvider).deleteByType(type, id);
+      ref.read(entryRepositoryProvider).deleteByType(type, id);
 
   // -- Typed update by ID (used by diary detail sheets) --
 
@@ -162,8 +172,8 @@ class EntriesNotifier extends Notifier<EntriesState> {
     int? focus,
     int? bodyFeel,
   }) => ref
-      .read(entryCrudServiceProvider)
-      .update(entryTableFor['gutFeeling']!, id, {
+      .read(entryRepositoryProvider)
+      .updateEntry(entryTableFor['gutFeeling']!, id, {
         'bloating': bloating,
         'gas': gas,
         'cramps': cramps,
@@ -176,17 +186,18 @@ class EntriesNotifier extends Notifier<EntriesState> {
       });
 
   Future<void> updateToiletById(String id, {required int stoolType}) => ref
-      .read(entryCrudServiceProvider)
-      .update(entryTableFor['toilet']!, id, {'stool_type': stoolType});
+      .read(entryRepositoryProvider)
+      .updateEntry(entryTableFor['toilet']!, id, {'stool_type': stoolType});
 
   Future<void> updateDrinkById(
     String id, {
     required int amountMl,
     String? notes,
-  }) => ref.read(entryCrudServiceProvider).update(entryTableFor['drink']!, id, {
-    'amount_ml': amountMl,
-    'notes': notes,
-  });
+  }) => ref.read(entryRepositoryProvider).updateEntry(
+    entryTableFor['drink']!,
+    id,
+    {'amount_ml': amountMl, 'notes': notes},
+  );
 
   void reset() {
     state = const EntriesState();

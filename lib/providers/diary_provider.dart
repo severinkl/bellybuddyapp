@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/diary_entry.dart';
 import '../providers/core_providers.dart';
-import '../services/entry_query_service.dart';
+import '../repositories/entry_repository.dart';
 import '../utils/diary_helpers.dart';
 import '../utils/logger.dart';
 
@@ -34,8 +34,8 @@ final diaryEntriesProvider = FutureProvider.family<List<DiaryEntry>, DateTime>((
 
   try {
     final result = await ref
-        .read(entryQueryServiceProvider)
-        .fetchEntriesForDateRange(userId: userId, date: date);
+        .read(entryRepositoryProvider)
+        .fetchForDate(userId: userId, date: date);
 
     return DiaryHelpers.buildEntries(result);
   } catch (e, st) {
