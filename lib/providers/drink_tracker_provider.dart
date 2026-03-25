@@ -3,7 +3,7 @@ import 'package:uuid/uuid.dart';
 import '../models/drink.dart';
 import '../models/drink_entry.dart';
 import '../providers/core_providers.dart';
-import '../services/drink_service.dart';
+import '../repositories/drink_repository.dart';
 import '../utils/drink_helpers.dart';
 import '../utils/logger.dart';
 import 'entries_provider.dart';
@@ -77,14 +77,14 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
 
   Future<void> loadDrinks() async {
     try {
-      final drinkService = ref.read(drinkServiceProvider);
-      final drinks = await drinkService.fetchAll();
+      final drinkRepo = ref.read(drinkRepositoryProvider);
+      final drinks = await drinkRepo.fetchAll();
 
       // Build quick drinks from recent entries
       final userId = ref.read(currentUserIdProvider);
       List<Drink> quick;
       if (userId != null) {
-        final recentIds = await drinkService.fetchRecentDrinkIds(userId);
+        final recentIds = await drinkRepo.fetchRecentDrinkIds(userId);
         quick = DrinkHelpers.buildQuickDrinks(drinks, recentIds);
       } else {
         quick = drinks.take(11).toList();
@@ -109,7 +109,7 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
         return;
       }
       final total = await ref
-          .read(drinkServiceProvider)
+          .read(drinkRepositoryProvider)
           .fetchTodayTotal(userId);
       state = state.copyWith(todayTotal: total);
     } catch (e, st) {
@@ -162,7 +162,7 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
     final userId = ref.read(currentUserIdProvider);
     if (userId == null) return;
     final newDrink = await ref
-        .read(drinkServiceProvider)
+        .read(drinkRepositoryProvider)
         .insertDrink(name, userId: userId);
     final updatedAll = [...state.allDrinks, newDrink]
       ..sort((a, b) => a.name.compareTo(b.name));
@@ -176,7 +176,7 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
 
   Future<void> deleteDrink(Drink drink) async {
     try {
-      await ref.read(drinkServiceProvider).deleteDrink(drink.id);
+      await ref.read(drinkRepositoryProvider).deleteDrink(drink.id);
       final updatedAll = state.allDrinks
           .where((d) => d.id != drink.id)
           .toList();

@@ -2,12 +2,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/meal_entry.dart';
-import '../services/edge_function_service.dart';
-import '../services/ingredient_service.dart';
 import '../providers/core_providers.dart';
-import '../services/storage_service.dart';
+import '../repositories/ingredient_repository.dart';
+import '../repositories/meal_media_repository.dart';
+import '../services/ingredient_service.dart';
 import '../utils/logger.dart';
-import '../utils/meal_helpers.dart';
 import 'entries_provider.dart';
 
 class MealTrackerState {
@@ -87,11 +86,9 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
   Future<void> analyzeImage(Uint8List bytes, String filename) async {
     state = state.copyWith(isAnalyzing: true);
     try {
-      final base64Data = MealHelpers.buildImageBase64(bytes, filename);
-
       final result = await ref
-          .read(edgeFunctionServiceProvider)
-          .invoke('analyze-meal', body: {'imageBase64': base64Data});
+          .read(mealMediaRepositoryProvider)
+          .analyzeMealImage(bytes, filename);
 
       state = state.copyWith(
         title: result['title'] as String? ?? state.title,
@@ -115,7 +112,7 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
     try {
       final userId = ref.read(currentUserIdProvider);
       final results = await ref
-          .read(ingredientServiceProvider)
+          .read(ingredientRepositoryProvider)
           .search(query, userId: userId);
       state = state.copyWith(ingredientSuggestions: results);
     } catch (e, st) {
@@ -134,7 +131,7 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
     // Write new ingredient to DB (fire-and-forget)
     final userId = ref.read(currentUserIdProvider);
     ref
-        .read(ingredientServiceProvider)
+        .read(ingredientRepositoryProvider)
         .insertIfNew(trimmed, userId: userId)
         .ignore();
   }
@@ -146,7 +143,7 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
   }
 
   Future<void> deleteUserIngredient(String id) async {
-    await ref.read(ingredientServiceProvider).deleteUserIngredient(id);
+    await ref.read(ingredientRepositoryProvider).deleteUserIngredient(id);
     state = state.copyWith(
       ingredientSuggestions: state.ingredientSuggestions
           .where((s) => s.id != id)
@@ -161,9 +158,8 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
       if (state.imageBytes != null && state.imageFileName != null) {
         final ext = state.imageFileName!.split('.').last;
         imageUrl = await ref
-            .read(storageServiceProvider)
-            .uploadImage(
-              bucket: 'meal-images',
+            .read(mealMediaRepositoryProvider)
+            .uploadMealImage(
               userId: ref.read(currentUserIdProvider)!,
               fileBytes: state.imageBytes!,
               extension: ext,
@@ -182,10 +178,7 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
       await ref.read(entriesProvider.notifier).addMeal(meal);
 
       // Fire and forget
-      ref
-          .read(edgeFunctionServiceProvider)
-          .invoke('refresh-ingredient-suggestions')
-          .ignore();
+      ref.read(mealMediaRepositoryProvider).triggerSuggestionRefresh();
 
       state = state.copyWith(isSaving: false, showSuccess: true);
     } catch (e) {
