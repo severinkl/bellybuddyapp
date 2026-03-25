@@ -4,8 +4,8 @@ import '../../../../config/app_theme.dart';
 import '../../../../config/constants.dart';
 import '../../../../models/drink.dart';
 import '../../../../providers/drink_tracker_provider.dart';
+import '../../../../providers/core_providers.dart';
 import '../../../../services/haptic_service.dart';
-import '../../../../services/supabase_service.dart';
 
 class DrinkSearch extends ConsumerStatefulWidget {
   const DrinkSearch({super.key});
@@ -107,7 +107,7 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
       controller: _overlayController,
       overlayChildBuilder: (_) {
         final suggestions = ref.read(drinkTrackerProvider).suggestions;
-        final currentUserId = SupabaseService.userId;
+        final currentUserId = ref.read(currentUserIdProvider);
         return CompositedTransformFollower(
           link: _layerLink,
           targetAnchor: Alignment.bottomLeft,

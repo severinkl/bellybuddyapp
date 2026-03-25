@@ -7,8 +7,8 @@ import '../../../config/constants.dart';
 import '../../../config/timezone_options.dart';
 import '../../../models/user_profile.dart';
 import '../../../providers/profile_provider.dart';
+import '../../../providers/core_providers.dart';
 import '../../../services/push_notification_service.dart';
-import '../../../services/supabase_service.dart';
 import '../../../widgets/common/settings_section_card.dart';
 import 'reminder_time_picker.dart';
 
@@ -347,7 +347,7 @@ class _SettingsNotificationsScreenState
                         ),
                         _DebugRow(
                           label: 'User ID',
-                          value: SupabaseService.userId ?? '—',
+                          value: ref.read(currentUserIdProvider) ?? '—',
                         ),
                       ],
                     ],

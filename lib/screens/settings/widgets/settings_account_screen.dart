@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../config/app_theme.dart';
+import '../../../providers/core_providers.dart';
 import '../../../router/route_names.dart';
 import '../../../services/auth_service.dart';
-import '../../../services/supabase_service.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/settings_section_card.dart';
 import 'delete_account_dialog.dart';
@@ -45,7 +45,7 @@ class _SettingsAccountScreenState extends ConsumerState<SettingsAccountScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final user = SupabaseService.currentUser;
+    final user = ref.read(supabaseClientProvider).auth.currentUser;
     final authMethod = ref.watch(authServiceProvider).detectAuthMethod();
     final showPasswordSection = authMethod == 'email' || authMethod == null;
 

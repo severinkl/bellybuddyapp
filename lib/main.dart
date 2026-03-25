@@ -9,7 +9,9 @@ import 'app.dart';
 import 'config/supabase_config.dart';
 import 'utils/logger.dart';
 import 'firebase_options.dart';
+import 'providers/core_providers.dart';
 import 'services/notification_service.dart';
+import 'services/profile_service.dart';
 import 'router/app_router.dart';
 
 void main() async {
@@ -45,6 +47,8 @@ void main() async {
         container.read(routerProvider).go(route);
       }
     },
+    profileService: container.read(profileServiceProvider),
+    getUserId: () => container.read(currentUserIdProvider),
   );
 
   // Global error handler

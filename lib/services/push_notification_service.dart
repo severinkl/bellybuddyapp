@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:io' show Platform;
 
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../utils/logger.dart';
 import 'profile_service.dart';
@@ -11,6 +10,9 @@ class PushNotificationService {
   static const _log = AppLogger('PushNotificationService');
   static final _messaging = FirebaseMessaging.instance;
   static StreamSubscription<String>? _tokenRefreshSub;
+
+  static ProfileService? _profileService;
+  static String? Function()? _getUserId;
 
   /// Stream of foreground messages for the UI layer to listen to.
   static Stream<RemoteMessage> get onForegroundMessage =>
@@ -21,7 +23,13 @@ class PushNotificationService {
       FirebaseMessaging.onMessageOpenedApp;
 
   /// Initialize FCM: listen for token refresh.
-  static Future<void> initialize() async {
+  static Future<void> initialize({
+    required ProfileService profileService,
+    required String? Function() getUserId,
+  }) async {
+    _profileService = profileService;
+    _getUserId = getUserId;
+
     _tokenRefreshSub?.cancel();
     _tokenRefreshSub = _messaging.onTokenRefresh.listen(
       _saveToken,
@@ -90,12 +98,13 @@ class PushNotificationService {
 
   /// Save FCM token to the user's profile in Supabase.
   static Future<void> _saveToken(String token) async {
-    final client = Supabase.instance.client;
-    final userId = client.auth.currentUser?.id;
+    final userId = _getUserId?.call();
     if (userId == null) return;
+    final profileService = _profileService;
+    if (profileService == null) return;
 
     try {
-      await ProfileService(client).update(userId, {'fcm_token': token});
+      await profileService.update(userId, {'fcm_token': token});
       _log.debug('saved FCM token');
     } catch (e) {
       _log.error('failed to save FCM token', e);
@@ -104,12 +113,13 @@ class PushNotificationService {
 
   /// Clear FCM token from the user's profile (on sign-out).
   static Future<void> clearToken() async {
-    final client = Supabase.instance.client;
-    final userId = client.auth.currentUser?.id;
+    final userId = _getUserId?.call();
     if (userId == null) return;
+    final profileService = _profileService;
+    if (profileService == null) return;
 
     try {
-      await ProfileService(client).update(userId, {'fcm_token': null});
+      await profileService.update(userId, {'fcm_token': null});
       _log.debug('cleared FCM token');
     } catch (e) {
       _log.error('failed to clear FCM token', e);

@@ -10,9 +10,9 @@ import 'providers/notification_provider.dart';
 import 'providers/profile_provider.dart';
 import 'router/app_router.dart';
 import 'screens/splash/splash_screen.dart';
+import 'providers/core_providers.dart';
 import 'services/local_notification_service.dart';
 import 'services/push_notification_service.dart';
-import 'services/supabase_service.dart';
 import 'utils/logger.dart';
 
 class BellyBuddyApp extends ConsumerStatefulWidget {
@@ -31,8 +31,9 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
   @override
   void initState() {
     super.initState();
-    if (SupabaseService.isAuthenticated) {
-      _log.debug('authenticated on start, user=${SupabaseService.userId}');
+    final userId = ref.read(currentUserIdProvider);
+    if (userId != null) {
+      _log.debug('authenticated on start, user=$userId');
       Future.microtask(() => ref.read(profileProvider.notifier).fetchProfile());
     } else {
       _log.debug('no authenticated user on start');

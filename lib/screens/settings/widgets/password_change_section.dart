@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/app_theme.dart';
+import '../../../providers/core_providers.dart';
 import '../../../services/auth_service.dart';
-import '../../../services/supabase_service.dart';
 import '../../../utils/password_validator.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/bb_password_hint.dart';
@@ -49,7 +49,7 @@ class _PasswordChangeSectionState extends ConsumerState<PasswordChangeSection> {
     if (!_canSubmitPassword) return;
     setState(() => _isChangingPassword = true);
     try {
-      final email = SupabaseService.currentUser?.email;
+      final email = ref.read(supabaseClientProvider).auth.currentUser?.email;
       if (email == null) throw Exception('No email found');
       final authService = ref.read(authServiceProvider);
       await authService.signInWithEmail(email, _currentPasswordController.text);
@@ -79,7 +79,7 @@ class _PasswordChangeSectionState extends ConsumerState<PasswordChangeSection> {
   }
 
   Future<void> _forgotPassword() async {
-    final email = SupabaseService.currentUser?.email;
+    final email = ref.read(supabaseClientProvider).auth.currentUser?.email;
     if (email == null) return;
     try {
       await ref.read(authServiceProvider).resetPassword(email);
