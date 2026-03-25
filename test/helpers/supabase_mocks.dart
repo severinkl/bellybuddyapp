@@ -1,17 +1,57 @@
+import 'dart:async';
+
 import 'package:mocktail/mocktail.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'mocks.dart';
 
+/// A [MockPostgrestFilterBuilder] wrapper that properly resolves as a
+/// [Future<PostgrestList>] when awaited (or used with [Future.wait]).
+///
+/// The [then] method is forwarded to a real [Future] so that type-specific
+/// invocations from Dart's async machinery always work.
+class SettlableFilterBuilder extends MockPostgrestFilterBuilder {
+  SettlableFilterBuilder(this._future);
+
+  final Future<PostgrestList> _future;
+
+  @override
+  Future<R> then<R>(
+    FutureOr<R> Function(PostgrestList value) onValue, {
+    Function? onError,
+  }) {
+    return _future.then(onValue, onError: onError);
+  }
+}
+
+/// A [MockPostgrestMapNullableTransformBuilder] wrapper that properly resolves
+/// as a [Future<PostgrestMap?>] when awaited (or used with [Future.wait]).
+class SettlableMapNullable extends MockPostgrestMapNullableTransformBuilder {
+  SettlableMapNullable(this._future);
+
+  final Future<PostgrestMap?> _future;
+
+  @override
+  Future<R> then<R>(
+    FutureOr<R> Function(PostgrestMap? value) onValue, {
+    Function? onError,
+  }) {
+    return _future.then(onValue, onError: onError);
+  }
+}
+
 /// Sets up a mock chain for `client.from(table).select(columns)`.
 /// Returns the filter builder for further `.eq()`, `.gte()` etc. chaining.
+/// The returned builder is NOT yet settled (no rows); call [settleFilter] to
+/// assign a resolved Future.
 MockPostgrestFilterBuilder mockSelect(
   MockSupabaseClient client, {
   required String table,
 }) {
   final queryBuilder = MockSupabaseQueryBuilder();
   final filterBuilder = MockPostgrestFilterBuilder();
-  when(() => client.from(table)).thenReturn(queryBuilder);
-  when(() => queryBuilder.select(any())).thenReturn(filterBuilder);
+  when(() => client.from(table)).thenAnswer((_) => queryBuilder);
+  when(() => queryBuilder.select(any())).thenAnswer((_) => filterBuilder);
   return filterBuilder;
 }
 
@@ -22,8 +62,8 @@ MockPostgrestFilterBuilder mockInsert(
 }) {
   final queryBuilder = MockSupabaseQueryBuilder();
   final filterBuilder = MockPostgrestFilterBuilder();
-  when(() => client.from(table)).thenReturn(queryBuilder);
-  when(() => queryBuilder.insert(any())).thenReturn(filterBuilder);
+  when(() => client.from(table)).thenAnswer((_) => queryBuilder);
+  when(() => queryBuilder.insert(any())).thenAnswer((_) => filterBuilder);
   return filterBuilder;
 }
 
@@ -34,8 +74,8 @@ MockPostgrestFilterBuilder mockUpdate(
 }) {
   final queryBuilder = MockSupabaseQueryBuilder();
   final filterBuilder = MockPostgrestFilterBuilder();
-  when(() => client.from(table)).thenReturn(queryBuilder);
-  when(() => queryBuilder.update(any())).thenReturn(filterBuilder);
+  when(() => client.from(table)).thenAnswer((_) => queryBuilder);
+  when(() => queryBuilder.update(any())).thenAnswer((_) => filterBuilder);
   return filterBuilder;
 }
 
@@ -46,8 +86,8 @@ MockPostgrestFilterBuilder mockDelete(
 }) {
   final queryBuilder = MockSupabaseQueryBuilder();
   final filterBuilder = MockPostgrestFilterBuilder();
-  when(() => client.from(table)).thenReturn(queryBuilder);
-  when(() => queryBuilder.delete()).thenReturn(filterBuilder);
+  when(() => client.from(table)).thenAnswer((_) => queryBuilder);
+  when(() => queryBuilder.delete()).thenAnswer((_) => filterBuilder);
   return filterBuilder;
 }
 
@@ -58,12 +98,33 @@ MockPostgrestFilterBuilder mockUpsert(
 }) {
   final queryBuilder = MockSupabaseQueryBuilder();
   final filterBuilder = MockPostgrestFilterBuilder();
-  when(() => client.from(table)).thenReturn(queryBuilder);
+  when(() => client.from(table)).thenAnswer((_) => queryBuilder);
   when(
     () => queryBuilder.upsert(any(), onConflict: any(named: 'onConflict')),
-  ).thenReturn(filterBuilder);
+  ).thenAnswer((_) => filterBuilder);
   return filterBuilder;
 }
+
+/// Sets up a select mock chain that resolves with [rows] when awaited.
+///
+/// Use this instead of [mockSelect] + manual [then] stubbing in tests that
+/// need [Future.wait] to work correctly (e.g. [EntryQueryService]).
+SettlableFilterBuilder mockSelectRows(
+  MockSupabaseClient client, {
+  required String table,
+  required List<Map<String, dynamic>> rows,
+}) {
+  final queryBuilder = MockSupabaseQueryBuilder();
+  final filterBuilder = SettlableFilterBuilder(Future.value(rows));
+  when(() => client.from(table)).thenAnswer((_) => queryBuilder);
+  when(() => queryBuilder.select(any())).thenAnswer((_) => filterBuilder);
+  return filterBuilder;
+}
+
+/// Creates a settled [MockPostgrestMapNullableTransformBuilder] that resolves
+/// with [value] when awaited. Useful for [ProfileService.fetchByUserId].
+SettlableMapNullable settleMaybeSingle(PostgrestMap? value) =>
+    SettlableMapNullable(Future.value(value));
 
 /// Sets up `client.storage.from(bucket)` chain.
 MockStorageFileApi mockStorage(

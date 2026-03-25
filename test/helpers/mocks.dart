@@ -41,6 +41,9 @@ class MockPostgrestFilterBuilder extends Mock
 class MockPostgrestTransformBuilder extends Mock
     implements PostgrestTransformBuilder<PostgrestList> {}
 
+class MockPostgrestMapNullableTransformBuilder extends Mock
+    implements PostgrestTransformBuilder<PostgrestMap?> {}
+
 // -- Service mocks --
 class MockProfileService extends Mock implements ProfileService {}
 
