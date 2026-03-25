@@ -67,9 +67,11 @@ class AuthService {
     final rawNonce = _generateNonce();
     final hashedNonce = sha256.convert(utf8.encode(rawNonce)).toString();
 
-    // Must re-initialize each time to set a fresh nonce
+    // Must re-initialize each time to set a fresh nonce.
+    // clientId is only needed on iOS — on Android, the native client ID
+    // comes from google-services.json automatically.
     await GoogleSignIn.instance.initialize(
-      clientId: iosClientId,
+      clientId: Platform.isIOS ? iosClientId : null,
       serverClientId: webClientId,
       nonce: hashedNonce,
     );
