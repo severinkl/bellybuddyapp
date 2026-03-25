@@ -3,9 +3,9 @@ import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../services/haptic_service.dart';
 
-class ReminderTimePicker extends StatefulWidget {
-  final List<int> selectedTimes;
-  final ValueChanged<List<int>> onChanged;
+class ReminderTimePicker extends StatelessWidget {
+  final List<String> selectedTimes;
+  final ValueChanged<List<String>> onChanged;
 
   const ReminderTimePicker({
     super.key,
@@ -13,62 +13,71 @@ class ReminderTimePicker extends StatefulWidget {
     required this.onChanged,
   });
 
-  @override
-  State<ReminderTimePicker> createState() => _ReminderTimePickerState();
-}
+  Future<void> _addTime(BuildContext context) async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: const TimeOfDay(hour: 12, minute: 0),
+      helpText: 'Erinnerungszeit wählen',
+      cancelText: 'Abbrechen',
+      confirmText: 'Hinzufügen',
+    );
+    if (picked == null) return;
 
-class _ReminderTimePickerState extends State<ReminderTimePicker> {
-  static const _presetHours = [7, 9, 12, 15, 18, 20, 21];
-  bool _showCustomPicker = false;
-  int? _customHour;
+    final formatted = _formatTimeOfDay(picked);
+    if (selectedTimes.contains(formatted)) return;
 
-  List<int> get _customTimes =>
-      widget.selectedTimes.where((h) => !_presetHours.contains(h)).toList()
-        ..sort();
-
-  void _toggleHour(int hour) {
     HapticService.selection();
-    final newTimes = List<int>.from(widget.selectedTimes);
-    if (newTimes.contains(hour)) {
-      if (newTimes.length <= 1) return; // enforce min 1
-      newTimes.remove(hour);
-    } else {
-      newTimes.add(hour);
-    }
+    final newTimes = List<String>.from(selectedTimes)..add(formatted);
     newTimes.sort();
-    widget.onChanged(newTimes);
+    onChanged(newTimes);
   }
 
-  void _addCustomHour() {
-    if (_customHour == null) return;
-    if (widget.selectedTimes.contains(_customHour)) return;
+  Future<void> _editTime(BuildContext context, int index) async {
+    final current = _parseTimeOfDay(selectedTimes[index]);
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: current,
+      helpText: 'Erinnerungszeit ändern',
+      cancelText: 'Abbrechen',
+      confirmText: 'Speichern',
+    );
+    if (picked == null) return;
+
+    final formatted = _formatTimeOfDay(picked);
+    if (formatted == selectedTimes[index]) return;
+    if (selectedTimes.contains(formatted)) return;
+
     HapticService.selection();
-    final newTimes = List<int>.from(widget.selectedTimes)..add(_customHour!);
+    final newTimes = List<String>.from(selectedTimes);
+    newTimes[index] = formatted;
     newTimes.sort();
-    widget.onChanged(newTimes);
-    setState(() {
-      _customHour = null;
-      _showCustomPicker = false;
-    });
+    onChanged(newTimes);
   }
 
-  void _removeCustomHour(int hour) {
-    if (widget.selectedTimes.length <= 1) return;
+  void _removeTime(int index) {
+    if (selectedTimes.length <= 1) return;
     HapticService.selection();
-    final newTimes = List<int>.from(widget.selectedTimes)..remove(hour);
-    newTimes.sort();
-    widget.onChanged(newTimes);
+    final newTimes = List<String>.from(selectedTimes)..removeAt(index);
+    onChanged(newTimes);
+  }
+
+  static String _formatTimeOfDay(TimeOfDay time) {
+    final h = time.hour.toString().padLeft(2, '0');
+    final m = time.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  }
+
+  static TimeOfDay _parseTimeOfDay(String time) {
+    final parts = time.split(':');
+    return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
   }
 
   String _formatSummary() {
-    final sorted = List<int>.from(widget.selectedTimes)..sort();
+    final sorted = List<String>.from(selectedTimes)..sort();
     if (sorted.length == 1) {
-      return 'Erinnerung um ${sorted.first.toString().padLeft(2, '0')}:00 Uhr';
+      return 'Erinnerung um ${sorted.first} Uhr';
     }
-    final times = sorted
-        .map((h) => '${h.toString().padLeft(2, '0')}:00')
-        .join(', ');
-    return '${sorted.length} Erinnerungen: $times';
+    return '${sorted.length} Erinnerungen: ${sorted.join(', ')}';
   }
 
   @override
@@ -76,94 +85,85 @@ class _ReminderTimePickerState extends State<ReminderTimePicker> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Preset chips
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: AppConstants.spacingSm,
+          runSpacing: AppConstants.spacingSm,
           children: [
-            ..._presetHours.map((hour) {
-              final isSelected = widget.selectedTimes.contains(hour);
-              return _TimePill(
-                label: '${hour.toString().padLeft(2, '0')}:00',
-                isSelected: isSelected,
-                onTap: () => _toggleHour(hour),
-              );
-            }),
-            // "+ Andere" button
-            _TimePill(
-              label: 'Andere',
-              isSelected: _showCustomPicker,
-              icon: Icons.add,
-              onTap: () =>
-                  setState(() => _showCustomPicker = !_showCustomPicker),
+            for (var i = 0; i < selectedTimes.length; i++)
+              Dismissible(
+                key: ValueKey(selectedTimes[i]),
+                direction: selectedTimes.length > 1
+                    ? DismissDirection.horizontal
+                    : DismissDirection.none,
+                onDismissed: (_) => _removeTime(i),
+                background: Container(
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppTheme.destructive,
+                    borderRadius: BorderRadius.circular(
+                      AppConstants.radiusFull,
+                    ),
+                  ),
+                  child: const Icon(Icons.delete, color: Colors.white),
+                ),
+                child: GestureDetector(
+                  onTap: () => _editTime(context, i),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppConstants.spacing14,
+                      vertical: AppConstants.spacingSm,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primary,
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.radiusFull,
+                      ),
+                    ),
+                    child: Text(
+                      selectedTimes[i],
+                      style: const TextStyle(
+                        fontSize: AppTheme.fontSizeBody,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.primaryForeground,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            GestureDetector(
+              onTap: () => _addTime(context),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.spacing14,
+                  vertical: AppConstants.spacingSm,
+                ),
+                decoration: BoxDecoration(
+                  color: AppTheme.secondary,
+                  borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+                ),
+                child: const Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.add,
+                      size: AppConstants.spacingMd,
+                      color: AppTheme.foreground,
+                    ),
+                    SizedBox(width: AppConstants.spacingXs),
+                    Text(
+                      'Hinzufügen',
+                      style: TextStyle(
+                        fontSize: AppTheme.fontSizeBody,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.foreground,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ],
         ),
-
-        // Custom picker
-        if (_showCustomPicker) ...[
-          AppConstants.gap12,
-          Row(
-            children: [
-              Expanded(
-                child: DropdownButtonFormField<int>(
-                  initialValue: _customHour,
-                  decoration: const InputDecoration(
-                    hintText: 'Uhrzeit wählen',
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 12,
-                    ),
-                  ),
-                  items: List.generate(24, (i) => i)
-                      .where((h) => !widget.selectedTimes.contains(h))
-                      .map(
-                        (h) => DropdownMenuItem(
-                          value: h,
-                          child: Text('${h.toString().padLeft(2, '0')}:00'),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (v) => setState(() => _customHour = v),
-                ),
-              ),
-              const SizedBox(width: 12),
-              SizedBox(
-                height: 48,
-                child: ElevatedButton(
-                  onPressed: _customHour != null ? _addCustomHour : null,
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: Size.zero,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                  ),
-                  child: const Text('Hinzufügen'),
-                ),
-              ),
-            ],
-          ),
-        ],
-
-        // Custom time chips (removable)
-        if (_customTimes.isNotEmpty) ...[
-          AppConstants.gap12,
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: _customTimes.map((hour) {
-              return Chip(
-                label: Text('${hour.toString().padLeft(2, '0')}:00'),
-                deleteIcon: const Icon(Icons.close, size: 16),
-                onDeleted: () => _removeCustomHour(hour),
-                backgroundColor: AppTheme.primary.withValues(alpha: 0.15),
-                side: BorderSide(
-                  color: AppTheme.primary.withValues(alpha: 0.3),
-                ),
-              );
-            }).toList(),
-          ),
-        ],
-
-        // Summary
         AppConstants.gap16,
         Text(
           _formatSummary(),
@@ -173,59 +173,6 @@ class _ReminderTimePickerState extends State<ReminderTimePicker> {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _TimePill extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-  final IconData? icon;
-
-  const _TimePill({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-    this.icon,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primary : AppTheme.secondary,
-          borderRadius: BorderRadius.circular(AppConstants.radiusFull),
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (icon != null) ...[
-              Icon(
-                icon,
-                size: 16,
-                color: isSelected
-                    ? AppTheme.primaryForeground
-                    : AppTheme.foreground,
-              ),
-              const SizedBox(width: 4),
-            ],
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: AppTheme.fontSizeBody,
-                fontWeight: FontWeight.w500,
-                color: isSelected
-                    ? AppTheme.primaryForeground
-                    : AppTheme.foreground,
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 }

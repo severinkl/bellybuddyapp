@@ -5,8 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../config/timezone_options.dart';
+import '../../../models/user_profile.dart';
 import '../../../providers/profile_provider.dart';
-import '../../../services/edge_function_service.dart';
+import '../../../services/push_notification_service.dart';
 import '../../../services/supabase_service.dart';
 import '../../../widgets/common/settings_section_card.dart';
 import 'reminder_time_picker.dart';
@@ -22,7 +23,6 @@ class SettingsNotificationsScreen extends ConsumerStatefulWidget {
 class _SettingsNotificationsScreenState
     extends ConsumerState<SettingsNotificationsScreen> {
   Timer? _debounce;
-  bool _pushEnabled = true;
   bool _debugExpanded = false;
 
   @override
@@ -36,6 +36,48 @@ class _SettingsNotificationsScreenState
     _debounce = Timer(AppConstants.debounceDuration, doSave);
   }
 
+  Future<void> _togglePush(bool value, UserProfile profile) async {
+    if (value) {
+      final granted = await PushNotificationService.requestPermission();
+      if (!granted) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Benachrichtigungen sind in den Systemeinstellungen deaktiviert.',
+            ),
+          ),
+        );
+        return;
+      }
+    }
+    ref
+        .read(profileProvider.notifier)
+        .updateProfile(profile.copyWith(pushEnabled: value));
+  }
+
+  Future<void> _pickDailySummaryTime(UserProfile profile) async {
+    final current = _parseTime(profile.dailySummaryTime);
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: current,
+      helpText: 'Zusammenfassung-Uhrzeit wählen',
+      cancelText: 'Abbrechen',
+      confirmText: 'Speichern',
+    );
+    if (picked == null) return;
+    final formatted =
+        '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+    ref
+        .read(profileProvider.notifier)
+        .updateProfile(profile.copyWith(dailySummaryTime: formatted));
+  }
+
+  TimeOfDay _parseTime(String time) {
+    final parts = time.split(':');
+    return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+  }
+
   @override
   Widget build(BuildContext context) {
     final profileState = ref.watch(profileProvider);
@@ -46,83 +88,129 @@ class _SettingsNotificationsScreenState
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Fehler: $e')),
         data: (profile) {
-          if (profile == null) return const Center(child: Text('Kein Profil.'));
-          final reminderTimes = profile.reminderTimes;
+          if (profile == null) {
+            return const Center(child: Text('Kein Profil.'));
+          }
 
           return SingleChildScrollView(
             padding: AppConstants.paddingLg,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Push + reminder section
+                // Reminders section
                 SettingsSectionCard(
-                  icon: Icons.notifications_outlined,
-                  title: 'Benachrichtigungen',
+                  icon: Icons.alarm_outlined,
+                  title: 'Erinnerungen',
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       SwitchListTile(
-                        title: const Text('Push-Benachrichtigungen'),
-                        subtitle: const Text('Erinnerungen und Updates'),
-                        value: _pushEnabled,
+                        title: const Text('Erinnerungen'),
+                        subtitle: const Text(
+                          'Tägliche Erinnerungen zum Tracken',
+                        ),
+                        value: profile.remindersEnabled,
                         activeThumbColor: AppTheme.primary,
                         contentPadding: EdgeInsets.zero,
                         onChanged: (v) {
-                          setState(() => _pushEnabled = v);
-                          // FIXME(feature): Implement OneSignal opt-in/out toggle
+                          ref
+                              .read(profileProvider.notifier)
+                              .updateProfile(
+                                profile.copyWith(remindersEnabled: v),
+                              );
                         },
                       ),
-                      const Divider(),
-                      AppConstants.gap12,
-                      const Text(
-                        'Erinnerungszeiten',
-                        style: TextStyle(
-                          fontSize: AppTheme.fontSizeBodyLG,
-                          fontWeight: FontWeight.w600,
+                      if (profile.remindersEnabled) ...[
+                        const Divider(),
+                        AppConstants.gap12,
+                        const Text(
+                          'Erinnerungszeiten',
+                          style: TextStyle(
+                            fontSize: AppTheme.fontSizeBodyLG,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
-                      ),
-                      AppConstants.gap8,
-                      ReminderTimePicker(
-                        selectedTimes: reminderTimes,
-                        onChanged: (newTimes) {
-                          _debounceSave(() {
-                            ref
-                                .read(profileProvider.notifier)
-                                .updateProfile(
-                                  profile.copyWith(reminderTimes: newTimes),
-                                );
-                          });
+                        AppConstants.gap8,
+                        ReminderTimePicker(
+                          selectedTimes: profile.reminderTimes,
+                          onChanged: (newTimes) {
+                            _debounceSave(() {
+                              ref
+                                  .read(profileProvider.notifier)
+                                  .updateProfile(
+                                    profile.copyWith(reminderTimes: newTimes),
+                                  );
+                            });
+                          },
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                AppConstants.gap16,
+
+                // Daily summary section
+                SettingsSectionCard(
+                  icon: Icons.self_improvement_outlined,
+                  title: 'Tägliche Zusammenfassung',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SwitchListTile(
+                        title: const Text('Tägliche Zusammenfassung'),
+                        subtitle: const Text(
+                          'Abendliche Bauchgefühl-Erinnerung',
+                        ),
+                        value: profile.dailySummaryEnabled,
+                        activeThumbColor: AppTheme.primary,
+                        contentPadding: EdgeInsets.zero,
+                        onChanged: (v) {
+                          ref
+                              .read(profileProvider.notifier)
+                              .updateProfile(
+                                profile.copyWith(dailySummaryEnabled: v),
+                              );
                         },
                       ),
-                      AppConstants.gap16,
-                      OutlinedButton(
-                        onPressed: () async {
-                          try {
-                            await EdgeFunctionService.invoke(
-                              'send-push-notification',
-                              body: {
-                                'title': 'Test',
-                                'body': 'Test-Benachrichtigung von Belly Buddy',
-                                'userId': SupabaseService.userId,
-                              },
-                            );
-                            if (!context.mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Test-Benachrichtigung gesendet!',
+                      if (profile.dailySummaryEnabled) ...[
+                        const Divider(),
+                        AppConstants.gap12,
+                        Row(
+                          children: [
+                            const Text(
+                              'Uhrzeit',
+                              style: TextStyle(
+                                fontSize: AppTheme.fontSizeBodyLG,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const Spacer(),
+                            GestureDetector(
+                              onTap: () => _pickDailySummaryTime(profile),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: AppConstants.spacing14,
+                                  vertical: AppConstants.spacingSm,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primary,
+                                  borderRadius: BorderRadius.circular(
+                                    AppConstants.radiusFull,
+                                  ),
+                                ),
+                                child: Text(
+                                  profile.dailySummaryTime,
+                                  style: const TextStyle(
+                                    fontSize: AppTheme.fontSizeBody,
+                                    fontWeight: FontWeight.w500,
+                                    color: AppTheme.primaryForeground,
+                                  ),
                                 ),
                               ),
-                            );
-                          } catch (e) {
-                            if (!context.mounted) return;
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Fehler: $e')),
-                            );
-                          }
-                        },
-                        child: const Text('Test-Benachrichtigung senden'),
-                      ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -148,8 +236,8 @@ class _SettingsNotificationsScreenState
                         isExpanded: true,
                         decoration: const InputDecoration(
                           contentPadding: EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 12,
+                            horizontal: AppConstants.spacingMd,
+                            vertical: AppConstants.spacing12,
                           ),
                         ),
                         items: timezoneOptions
@@ -173,6 +261,21 @@ class _SettingsNotificationsScreenState
                         },
                       ),
                     ],
+                  ),
+                ),
+                AppConstants.gap16,
+
+                // Push notifications section
+                SettingsSectionCard(
+                  icon: Icons.notifications_outlined,
+                  title: 'Push-Benachrichtigungen',
+                  child: SwitchListTile(
+                    title: const Text('Push-Benachrichtigungen'),
+                    subtitle: const Text('Empfehlungen & Warnungen'),
+                    value: profile.pushEnabled,
+                    activeThumbColor: AppTheme.primary,
+                    contentPadding: EdgeInsets.zero,
+                    onChanged: (v) => _togglePush(v, profile),
                   ),
                 ),
                 AppConstants.gap16,
@@ -215,18 +318,32 @@ class _SettingsNotificationsScreenState
                           value: Platform.operatingSystem,
                         ),
                         _DebugRow(
-                          label: 'Push aktiviert',
-                          value: _pushEnabled ? 'Ja' : 'Nein',
+                          label: 'Erinnerungen',
+                          value: profile.remindersEnabled ? 'Ja' : 'Nein',
+                        ),
+                        _DebugRow(
+                          label: 'Zusammenfassung',
+                          value: profile.dailySummaryEnabled ? 'Ja' : 'Nein',
+                        ),
+                        _DebugRow(
+                          label: 'Push',
+                          value: profile.pushEnabled ? 'Ja' : 'Nein',
                         ),
                         _DebugRow(
                           label: 'Zeitzone',
                           value: profile.timezone ?? 'Europe/Berlin',
                         ),
                         _DebugRow(
-                          label: 'Erinnerungen',
-                          value: reminderTimes
-                              .map((h) => '${h.toString().padLeft(2, '0')}:00')
-                              .join(', '),
+                          label: 'Zeiten',
+                          value: profile.reminderTimes.join(', '),
+                        ),
+                        _DebugRow(
+                          label: 'Zusammenfassung',
+                          value: profile.dailySummaryTime,
+                        ),
+                        _DebugRow(
+                          label: 'FCM Token',
+                          value: profile.fcmToken ?? '—',
                         ),
                         _DebugRow(
                           label: 'User ID',
@@ -255,12 +372,12 @@ class _DebugRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: AppConstants.spacing6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 120,
+            width: AppConstants.debugLabelWidth,
             child: Text(
               label,
               style: const TextStyle(

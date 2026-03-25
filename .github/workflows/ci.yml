@@ -24,8 +24,8 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Create .env
-        run: cp .env.example .env
+      - name: Create env.json
+        run: cp env.example.json env.json
 
       - run: flutter pub get
 
@@ -54,13 +54,13 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Create .env
-        run: cp .env.example .env
+      - name: Create env.json
+        run: cp env.example.json env.json
 
       - run: flutter pub get
 
       - name: Code generation
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - run: flutter test
+      - run: flutter test --dart-define-from-file=env.json
 

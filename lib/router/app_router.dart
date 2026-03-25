@@ -17,8 +17,14 @@ class _RouterRefreshNotifier extends ChangeNotifier {
 
 const _log = AppLogger('Router');
 
+final navigatorKeyProvider = Provider<GlobalKey<NavigatorState>>((ref) {
+  return GlobalKey<NavigatorState>();
+});
+
 final routerProvider = Provider<GoRouter>((ref) {
+  final navigatorKey = ref.read(navigatorKeyProvider);
   return GoRouter(
+    navigatorKey: navigatorKey,
     initialLocation: RoutePaths.welcome,
     refreshListenable: _RouterRefreshNotifier(ref),
     errorBuilder: (context, state) => const NotFoundScreen(),

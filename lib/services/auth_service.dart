@@ -6,6 +6,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io' show Platform;
+import '../config/oauth_config.dart';
 import '../utils/logger.dart';
 import 'supabase_service.dart';
 import 'edge_function_service.dart';
@@ -59,10 +60,8 @@ class AuthService {
   }
 
   static Future<AuthResponse> signInWithGoogle() async {
-    const webClientId =
-        '920554558032-3ca7aekg9ucfmek8cgrmtbmq86fsqjut.apps.googleusercontent.com';
-    const iosClientId =
-        '920554558032-m2curfdn4m6rd346okvaust9ngf3s2ht.apps.googleusercontent.com';
+    const webClientId = OAuthConfig.googleWebClientId;
+    const iosClientId = OAuthConfig.googleIosClientId;
 
     // Generate nonce — pass hashed to Google, raw to Supabase
     final rawNonce = _generateNonce();

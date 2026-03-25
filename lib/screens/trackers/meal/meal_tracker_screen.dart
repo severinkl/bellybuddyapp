@@ -87,7 +87,11 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         child: const Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.water_drop, size: 18, color: AppTheme.info),
+            Icon(
+              Icons.water_drop,
+              size: AppConstants.iconSizeSm,
+              color: AppTheme.info,
+            ),
             SizedBox(width: AppConstants.spacingSm),
             Text('Getränk hinzufügen', style: TextStyle(color: AppTheme.info)),
           ],

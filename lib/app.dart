@@ -1,11 +1,17 @@
+import 'dart:async';
+
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'config/app_theme.dart';
 import 'providers/auth_provider.dart';
+import 'providers/notification_provider.dart';
 import 'providers/profile_provider.dart';
 import 'router/app_router.dart';
 import 'screens/splash/splash_screen.dart';
+import 'services/local_notification_service.dart';
+import 'services/push_notification_service.dart';
 import 'services/supabase_service.dart';
 import 'utils/logger.dart';
 
@@ -19,6 +25,8 @@ class BellyBuddyApp extends ConsumerStatefulWidget {
 class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
   static const _log = AppLogger('BellyBuddy');
   bool _showSplash = true;
+  StreamSubscription<RemoteMessage>? _foregroundSub;
+  StreamSubscription<RemoteMessage>? _openedAppSub;
 
   @override
   void initState() {
@@ -29,11 +37,67 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
     } else {
       _log.debug('no authenticated user on start');
     }
+
+    // Handle push notification taps from background state
+    _openedAppSub = PushNotificationService.onMessageOpenedApp.listen((msg) {
+      final route = PushNotificationService.extractRoute(msg);
+      if (route != null) {
+        ref.read(routerProvider).go(route);
+      }
+    });
+
+    // Listen for foreground push messages → show snackbar
+    _foregroundSub = PushNotificationService.onForegroundMessage.listen((msg) {
+      final title = msg.notification?.title;
+      final body = msg.notification?.body;
+      final route = PushNotificationService.extractRoute(msg);
+
+      if (title != null || body != null) {
+        final context = ref.read(navigatorKeyProvider).currentContext;
+        if (context != null) {
+          // ignore: use_build_context_synchronously
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(body ?? title ?? ''),
+              action: route != null
+                  ? SnackBarAction(
+                      label: 'Anzeigen',
+                      onPressed: () => ref.read(routerProvider).go(route),
+                    )
+                  : null,
+            ),
+          );
+        }
+      }
+    });
+
+    // Handle initial message (app opened from terminated state via notification)
+    PushNotificationService.getInitialMessage().then((msg) {
+      if (msg != null) {
+        final route = PushNotificationService.extractRoute(msg);
+        if (route != null) {
+          // Delay to ensure router is ready
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (mounted) ref.read(routerProvider).go(route);
+          });
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _foregroundSub?.cancel();
+    _openedAppSub?.cancel();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
+
+    // Activate notification sync provider
+    ref.watch(notificationSyncProvider);
 
     ref.listen<bool>(isAuthenticatedProvider, (prev, next) {
       _log.debug('auth changed $prev → $next');
@@ -41,6 +105,8 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
         ref.read(profileProvider.notifier).fetchProfile();
       } else {
         ref.read(profileProvider.notifier).reset();
+        LocalNotificationService.cancelAll();
+        PushNotificationService.clearToken();
       }
     });
 

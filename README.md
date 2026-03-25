@@ -37,22 +37,42 @@ Dein Bauchgefühl Tracker — a digestive health tracking app for people with fo
 # Install dependencies
 flutter pub get
 
-# Create env file and fill in your Supabase credentials
-cp .env.example .env
+# Create env file and fill in your credentials
+cp env.example.json env.json
+# Edit env.json with real values (Supabase, Firebase, Google OAuth)
+
+# Copy native Firebase config files (obtain from Firebase Console or team)
+cp android/app/google-services.example.json android/app/google-services.json
+cp ios/Runner/GoogleService-Info.example.plist ios/Runner/GoogleService-Info.plist
+# Edit both with real Firebase values
 
 # Run code generation (required before build/test)
 dart run build_runner build --delete-conflicting-outputs
 
 # Run the app
-flutter run
+flutter run --dart-define-from-file=env.json
 ```
 
+> **Note:** All `flutter run`, `flutter build`, and `flutter test` commands require `--dart-define-from-file=env.json`. Add it to your IDE run configuration to avoid forgetting.
+
 ### Environment Variables
+
+Configured in `env.json` (gitignored). See `env.example.json` for the template.
 
 | Variable | Description |
 |---|---|
 | `SUPABASE_URL` | Your Supabase project URL |
 | `SUPABASE_ANON_KEY` | Your Supabase anonymous key |
+| `GOOGLE_WEB_CLIENT_ID` | Google OAuth web client ID |
+| `GOOGLE_IOS_CLIENT_ID` | Google OAuth iOS client ID |
+| `FIREBASE_ANDROID_API_KEY` | Firebase API key (Android) |
+| `FIREBASE_ANDROID_APP_ID` | Firebase app ID (Android) |
+| `FIREBASE_IOS_API_KEY` | Firebase API key (iOS) |
+| `FIREBASE_IOS_APP_ID` | Firebase app ID (iOS) |
+| `FIREBASE_MESSAGING_SENDER_ID` | Firebase Cloud Messaging sender ID |
+| `FIREBASE_PROJECT_ID` | Firebase project ID |
+| `FIREBASE_STORAGE_BUCKET` | Firebase storage bucket |
+| `FIREBASE_IOS_BUNDLE_ID` | iOS bundle identifier |
 
 ## Project Structure
 
