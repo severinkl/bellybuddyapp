@@ -46,7 +46,7 @@ class _SettingsAccountScreenState extends ConsumerState<SettingsAccountScreen> {
   @override
   Widget build(BuildContext context) {
     final user = SupabaseService.currentUser;
-    final authMethod = ref.read(authServiceProvider).detectAuthMethod();
+    final authMethod = ref.watch(authServiceProvider).detectAuthMethod();
     final showPasswordSection = authMethod == 'email' || authMethod == null;
 
     return Scaffold(
