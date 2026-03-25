@@ -48,7 +48,10 @@ class RecipesNotifier extends Notifier<RecipesState> {
   static const _log = AppLogger('RecipesProvider');
   @override
   RecipesState build() {
-    _loadAll();
+    // Defer to a microtask so that the initial state is fully initialised
+    // before any async state mutations occur. This is required for testability
+    // (Riverpod disallows reading `state` synchronously inside build()).
+    Future.microtask(_loadAll);
     return const RecipesState();
   }
 
