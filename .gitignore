@@ -50,9 +50,12 @@ android/key.properties
 *.keystore
 
 # Environment variables
-.env
-.env.*
-!.env.example
+env.json
+
+# Native Firebase config (injected via CI secrets)
+android/app/google-services.json
+ios/Runner/GoogleService-Info.plist
+firebase.json
 
 # Generated files
 *.freezed.dart
