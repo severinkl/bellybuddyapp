@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/app_theme.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../providers/core_providers.dart';
-import '../../../services/auth_service.dart';
 import '../../../utils/password_validator.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/bb_password_hint.dart';
@@ -51,9 +51,9 @@ class _PasswordChangeSectionState extends ConsumerState<PasswordChangeSection> {
     try {
       final email = ref.read(supabaseClientProvider).auth.currentUser?.email;
       if (email == null) throw Exception('No email found');
-      final authService = ref.read(authServiceProvider);
-      await authService.signInWithEmail(email, _currentPasswordController.text);
-      await authService.updatePassword(_newPasswordController.text);
+      final notifier = ref.read(authNotifierProvider.notifier);
+      await notifier.signInWithEmail(email, _currentPasswordController.text);
+      await notifier.updatePassword(_newPasswordController.text);
       _currentPasswordController.clear();
       _newPasswordController.clear();
       _confirmPasswordController.clear();
@@ -82,7 +82,7 @@ class _PasswordChangeSectionState extends ConsumerState<PasswordChangeSection> {
     final email = ref.read(supabaseClientProvider).auth.currentUser?.email;
     if (email == null) return;
     try {
-      await ref.read(authServiceProvider).resetPassword(email);
+      await ref.read(authNotifierProvider.notifier).resetPassword(email);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

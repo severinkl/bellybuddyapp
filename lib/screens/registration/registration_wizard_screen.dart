@@ -5,9 +5,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../models/user_profile.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../router/route_names.dart';
-import '../../services/auth_service.dart';
 import '../../services/haptic_service.dart';
 import '../../utils/logger.dart';
 import '../../widgets/common/bb_button.dart';
@@ -98,7 +98,9 @@ class _RegistrationWizardScreenState
       _authError = null;
     });
     try {
-      await ref.read(authServiceProvider).signUpWithEmail(email, password);
+      await ref
+          .read(authNotifierProvider.notifier)
+          .signUpWithEmail(email, password);
       await _createProfile();
       if (mounted) context.go(RoutePaths.dashboard);
     } catch (e) {
@@ -121,7 +123,7 @@ class _RegistrationWizardScreenState
       _authError = null;
     });
     try {
-      await ref.read(authServiceProvider).signInWithGoogle();
+      await ref.read(authNotifierProvider.notifier).signInWithGoogle();
       await _createProfile();
       if (mounted) context.go(RoutePaths.dashboard);
     } catch (e) {
@@ -140,7 +142,7 @@ class _RegistrationWizardScreenState
       _authError = null;
     });
     try {
-      await ref.read(authServiceProvider).signInWithApple();
+      await ref.read(authNotifierProvider.notifier).signInWithApple();
       await _createProfile();
       if (mounted) context.go(RoutePaths.dashboard);
     } catch (e) {

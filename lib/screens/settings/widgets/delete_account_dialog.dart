@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../config/app_theme.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../router/route_names.dart';
-import '../../../services/auth_service.dart';
 import '../../../config/constants.dart';
 
 /// Shows a confirmation dialog for account deletion.
@@ -76,7 +76,7 @@ Future<bool> showDeleteAccountDialog(BuildContext context) async {
                     try {
                       await ProviderScope.containerOf(
                         context,
-                      ).read(authServiceProvider).deleteAccount();
+                      ).read(authNotifierProvider.notifier).deleteAccount();
                       if (!dialogContext.mounted) return;
                       dialogContext.go(RoutePaths.auth);
                     } catch (e) {

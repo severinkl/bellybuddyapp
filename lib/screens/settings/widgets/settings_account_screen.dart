@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../config/app_theme.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../providers/core_providers.dart';
 import '../../../router/route_names.dart';
-import '../../../services/auth_service.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/settings_section_card.dart';
 import 'delete_account_dialog.dart';
@@ -23,7 +23,7 @@ class _SettingsAccountScreenState extends ConsumerState<SettingsAccountScreen> {
   bool _isDeleting = false;
 
   Future<void> _signOut() async {
-    await ref.read(authServiceProvider).signOut();
+    await ref.read(authNotifierProvider.notifier).signOut();
     if (mounted) context.go(RoutePaths.auth);
   }
 
@@ -46,7 +46,9 @@ class _SettingsAccountScreenState extends ConsumerState<SettingsAccountScreen> {
   @override
   Widget build(BuildContext context) {
     final user = ref.read(supabaseClientProvider).auth.currentUser;
-    final authMethod = ref.watch(authServiceProvider).detectAuthMethod();
+    final authMethod = ref
+        .read(authNotifierProvider.notifier)
+        .detectAuthMethod();
     final showPasswordSection = authMethod == 'email' || authMethod == null;
 
     return Scaffold(
