@@ -1,11 +1,12 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/meal_entry.dart';
 import '../models/toilet_entry.dart';
 import '../models/gut_feeling_entry.dart';
 import '../models/drink_entry.dart';
+import '../providers/core_providers.dart';
 import '../utils/date_format_utils.dart';
 import '../utils/logger.dart';
-import 'supabase_service.dart';
 
 class EntryQueryResult {
   final List<MealEntry> meals;
@@ -24,7 +25,10 @@ class EntryQueryResult {
 class EntryQueryService {
   static const _log = AppLogger('EntryQueryService');
 
-  static Future<EntryQueryResult> fetchEntriesForDateRange({
+  final SupabaseClient _client;
+  EntryQueryService(this._client);
+
+  Future<EntryQueryResult> fetchEntriesForDateRange({
     required String userId,
     required DateTime date,
     bool ordered = false,
@@ -37,7 +41,7 @@ class EntryQueryService {
         String table, [
         String columns = '*',
       ]) {
-        return SupabaseService.client
+        return _client
             .from(table)
             .select(columns)
             .eq('user_id', userId)
@@ -83,3 +87,7 @@ class EntryQueryService {
     }
   }
 }
+
+final entryQueryServiceProvider = Provider<EntryQueryService>(
+  (ref) => EntryQueryService(ref.watch(supabaseClientProvider)),
+);

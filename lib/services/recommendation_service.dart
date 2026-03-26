@@ -1,14 +1,20 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/recommendation.dart';
+import '../providers/core_providers.dart';
 import '../utils/date_format_utils.dart';
 import '../utils/logger.dart';
-import 'supabase_service.dart';
 
 class RecommendationService {
+  final SupabaseClient _client;
+
+  RecommendationService(this._client);
+
   static const _log = AppLogger('RecommendationService');
 
-  static Future<List<Recommendation>> fetchByUserId(String userId) async {
+  Future<List<Recommendation>> fetchByUserId(String userId) async {
     try {
-      final data = await SupabaseService.client
+      final data = await _client
           .from('recommendations')
           .select()
           .eq('user_id', userId)
@@ -21,11 +27,11 @@ class RecommendationService {
   }
 
   /// Fetches recent meals and toilet entries (last 7 days) for AI context.
-  static Future<Map<String, dynamic>> fetchRecentContext(String userId) async {
+  Future<Map<String, dynamic>> fetchRecentContext(String userId) async {
     try {
       final sevenDaysAgo = last7Days().toIso8601String();
 
-      final mealsFuture = SupabaseService.client
+      final mealsFuture = _client
           .from('meal_entries')
           .select('title, ingredients')
           .eq('user_id', userId)
@@ -33,7 +39,7 @@ class RecommendationService {
           .order('created_at', ascending: false)
           .limit(20);
 
-      final toiletFuture = SupabaseService.client
+      final toiletFuture = _client
           .from('toilet_entries')
           .select('stool_type')
           .eq('user_id', userId)
@@ -50,3 +56,7 @@ class RecommendationService {
     }
   }
 }
+
+final recommendationServiceProvider = Provider<RecommendationService>(
+  (ref) => RecommendationService(ref.watch(supabaseClientProvider)),
+);

@@ -14,7 +14,7 @@ jobs:
   quality:
     name: Format & Analyze
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
 
     steps:
       - uses: actions/checkout@v4
@@ -41,8 +41,34 @@ jobs:
 
       - run: flutter analyze
 
-  test:
+  unit-tests:
     name: Unit Tests
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Create env.json
+        run: cp env.example.json env.json
+
+      - run: flutter pub get
+
+      - name: Code generation
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Run unit tests
+        run: flutter test test/models/ test/utils/ test/services/ test/repositories/ test/providers/ --dart-define-from-file=env.json
+
+  widget-tests:
+    name: Widget Tests
+    needs: unit-tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -62,5 +88,38 @@ jobs:
       - name: Code generation
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - run: flutter test --dart-define-from-file=env.json
+      - name: Run widget tests
+        run: flutter test test/screens/ test/widgets/ --dart-define-from-file=env.json
 
+  integration-tests:
+    name: Integration Tests
+    needs: widget-tests
+    runs-on: macos-latest
+    timeout-minutes: 30
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Create env.json
+        run: cp env.example.json env.json
+
+      - name: Create GoogleService-Info.plist
+        run: cp ios/Runner/GoogleService-Info.example.plist ios/Runner/GoogleService-Info.plist
+
+      - run: flutter pub get
+
+      - name: Code generation
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - uses: futureware-tech/simulator-action@v3
+        with:
+          model: 'iPhone 16'
+
+      - name: Run integration tests
+        run: flutter test integration_test/ --dart-define-from-file=env.json

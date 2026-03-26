@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
+import '../../providers/auth_provider.dart';
 import '../../router/route_names.dart';
-import '../../services/auth_service.dart';
 import '../../widgets/common/bb_button.dart';
 import '../../config/constants.dart';
 
-class ResetPasswordScreen extends StatefulWidget {
+class ResetPasswordScreen extends ConsumerStatefulWidget {
   const ResetPasswordScreen({super.key});
 
   @override
-  State<ResetPasswordScreen> createState() => _ResetPasswordScreenState();
+  ConsumerState<ResetPasswordScreen> createState() =>
+      _ResetPasswordScreenState();
 }
 
-class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
+class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   final _passwordController = TextEditingController();
   final _confirmController = TextEditingController();
   bool _isLoading = false;
@@ -41,7 +43,9 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
       _error = null;
     });
     try {
-      await AuthService.updatePassword(_passwordController.text);
+      await ref
+          .read(authNotifierProvider.notifier)
+          .updatePassword(_passwordController.text);
       if (mounted) context.go(RoutePaths.dashboard);
     } catch (e) {
       setState(() => _error = 'Fehler beim Ändern des Passworts.');

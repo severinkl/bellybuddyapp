@@ -2,8 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/drink.dart';
 import '../models/drink_entry.dart';
-import '../services/drink_service.dart';
-import '../services/supabase_service.dart';
+import '../providers/core_providers.dart';
+import '../repositories/drink_repository.dart';
 import '../utils/drink_helpers.dart';
 import '../utils/logger.dart';
 import 'entries_provider.dart';
@@ -77,13 +77,14 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
 
   Future<void> loadDrinks() async {
     try {
-      final drinks = await DrinkService.fetchAll();
+      final drinkRepo = ref.read(drinkRepositoryProvider);
+      final drinks = await drinkRepo.fetchAll();
 
       // Build quick drinks from recent entries
-      final userId = SupabaseService.userId;
+      final userId = ref.read(currentUserIdProvider);
       List<Drink> quick;
       if (userId != null) {
-        final recentIds = await DrinkService.fetchRecentDrinkIds(userId);
+        final recentIds = await drinkRepo.fetchRecentDrinkIds(userId);
         quick = DrinkHelpers.buildQuickDrinks(drinks, recentIds);
       } else {
         quick = drinks.take(11).toList();
@@ -102,12 +103,14 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
 
   Future<void> loadTodayTotal() async {
     try {
-      final userId = SupabaseService.userId;
+      final userId = ref.read(currentUserIdProvider);
       if (userId == null) {
         _log.debug('loadTodayTotal: no user');
         return;
       }
-      final total = await DrinkService.fetchTodayTotal(userId);
+      final total = await ref
+          .read(drinkRepositoryProvider)
+          .fetchTodayTotal(userId);
       state = state.copyWith(todayTotal: total);
     } catch (e, st) {
       _log.error('failed to load today total', e, st);
@@ -156,7 +159,11 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
   }
 
   Future<void> createDrink(String name) async {
-    final newDrink = await DrinkService.insertDrink(name);
+    final userId = ref.read(currentUserIdProvider);
+    if (userId == null) return;
+    final newDrink = await ref
+        .read(drinkRepositoryProvider)
+        .insertDrink(name, userId: userId);
     final updatedAll = [...state.allDrinks, newDrink]
       ..sort((a, b) => a.name.compareTo(b.name));
     state = state.copyWith(
@@ -169,7 +176,7 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
 
   Future<void> deleteDrink(Drink drink) async {
     try {
-      await DrinkService.deleteDrink(drink.id);
+      await ref.read(drinkRepositoryProvider).deleteDrink(drink.id);
       final updatedAll = state.allDrinks
           .where((d) => d.id != drink.id)
           .toList();

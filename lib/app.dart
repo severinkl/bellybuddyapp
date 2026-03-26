@@ -10,9 +10,7 @@ import 'providers/notification_provider.dart';
 import 'providers/profile_provider.dart';
 import 'router/app_router.dart';
 import 'screens/splash/splash_screen.dart';
-import 'services/local_notification_service.dart';
-import 'services/push_notification_service.dart';
-import 'services/supabase_service.dart';
+import 'repositories/notification_repository.dart';
 import 'utils/logger.dart';
 
 class BellyBuddyApp extends ConsumerStatefulWidget {
@@ -31,26 +29,29 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
   @override
   void initState() {
     super.initState();
-    if (SupabaseService.isAuthenticated) {
-      _log.debug('authenticated on start, user=${SupabaseService.userId}');
+    final userId = ref.read(currentUserIdProvider);
+    if (userId != null) {
+      _log.debug('authenticated on start, user=$userId');
       Future.microtask(() => ref.read(profileProvider.notifier).fetchProfile());
     } else {
       _log.debug('no authenticated user on start');
     }
 
+    final notificationRepo = ref.read(notificationRepositoryProvider);
+
     // Handle push notification taps from background state
-    _openedAppSub = PushNotificationService.onMessageOpenedApp.listen((msg) {
-      final route = PushNotificationService.extractRoute(msg);
+    _openedAppSub = notificationRepo.onMessageOpenedApp.listen((msg) {
+      final route = notificationRepo.extractRoute(msg);
       if (route != null) {
         ref.read(routerProvider).go(route);
       }
     });
 
     // Listen for foreground push messages → show snackbar
-    _foregroundSub = PushNotificationService.onForegroundMessage.listen((msg) {
+    _foregroundSub = notificationRepo.onForegroundMessage.listen((msg) {
       final title = msg.notification?.title;
       final body = msg.notification?.body;
-      final route = PushNotificationService.extractRoute(msg);
+      final route = notificationRepo.extractRoute(msg);
 
       if (title != null || body != null) {
         final context = ref.read(navigatorKeyProvider).currentContext;
@@ -72,9 +73,9 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
     });
 
     // Handle initial message (app opened from terminated state via notification)
-    PushNotificationService.getInitialMessage().then((msg) {
+    notificationRepo.getInitialMessage().then((msg) {
       if (msg != null) {
-        final route = PushNotificationService.extractRoute(msg);
+        final route = notificationRepo.extractRoute(msg);
         if (route != null) {
           // Delay to ensure router is ready
           Future.delayed(const Duration(milliseconds: 500), () {
@@ -105,8 +106,8 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
         ref.read(profileProvider.notifier).fetchProfile();
       } else {
         ref.read(profileProvider.notifier).reset();
-        LocalNotificationService.cancelAll();
-        PushNotificationService.clearToken();
+        ref.read(notificationRepositoryProvider).cancelAll();
+        ref.read(notificationRepositoryProvider).clearToken();
       }
     });
 

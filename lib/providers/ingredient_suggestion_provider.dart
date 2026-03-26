@@ -1,10 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/ingredient_suggestion_group.dart';
-import '../services/ingredient_service.dart';
-import '../services/supabase_service.dart';
+import '../providers/core_providers.dart';
+import '../repositories/ingredient_repository.dart';
 import '../utils/logger.dart';
-import '../utils/retry_helper.dart';
-import '../utils/suggestion_helpers.dart';
 
 class IngredientSuggestionNotifier
     extends Notifier<AsyncValue<List<IngredientSuggestionGroup>>> {
@@ -17,39 +15,14 @@ class IngredientSuggestionNotifier
   Future<void> fetchSuggestions() async {
     state = const AsyncValue.loading();
     try {
-      final userId = SupabaseService.userId;
+      final userId = ref.read(currentUserIdProvider);
       if (userId == null) {
         state = const AsyncValue.data([]);
         return;
       }
 
-      final data = await retryAsync(
-        () => IngredientService.fetchSuggestions(userId),
-        log: _log,
-        label: 'fetchSuggestions',
-      );
-
-      // Extract all suggestion/meal IDs for batch fetching
-      final allSuggestionIds = <String>[];
-      final allMealIds = <String>{};
-      for (final row in data) {
-        final id = row['id'] as String?;
-        if (id != null) allSuggestionIds.add(id);
-        final mealId = row['meal_id'] as String?;
-        if (mealId != null) allMealIds.add(mealId);
-      }
-
-      final results = await Future.wait([
-        IngredientService.fetchReplacements(allSuggestionIds),
-        IngredientService.fetchMealDetails(allMealIds.toList()),
-      ]);
-
-      final groups = SuggestionHelpers.buildGroups(
-        suggestionData: data,
-        replacementsData: results[0],
-        mealsData: results[1],
-      );
-
+      final repo = ref.read(ingredientRepositoryProvider);
+      final groups = await repo.fetchSuggestionGroups(userId);
       state = AsyncValue.data(groups);
     } catch (e, st) {
       _log.error('fetchSuggestions failed', e, st);
@@ -68,7 +41,7 @@ class IngredientSuggestionNotifier
     if (unseenIds.isEmpty) return;
 
     try {
-      await IngredientService.markAllSeen(unseenIds);
+      await ref.read(ingredientRepositoryProvider).markAllSeen(unseenIds);
       state = AsyncValue.data(
         groups.map((g) => g.isNew ? g.copyWith(isNew: false) : g).toList(),
       );
@@ -79,7 +52,7 @@ class IngredientSuggestionNotifier
 
   Future<void> dismissSuggestion(List<String> ids) async {
     try {
-      await IngredientService.dismissSuggestions(ids);
+      await ref.read(ingredientRepositoryProvider).dismissSuggestions(ids);
       final idsSet = ids.toSet();
       state = state.whenData(
         (groups) =>

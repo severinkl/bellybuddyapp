@@ -1,10 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user_profile.dart';
-import '../services/profile_service.dart';
-import '../services/supabase_service.dart';
-import '../services/auth_service.dart';
+import '../providers/core_providers.dart';
+import '../repositories/profile_repository.dart';
 import '../utils/logger.dart';
-import '../utils/retry_helper.dart';
 
 /// Profile state notifier
 class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
@@ -16,17 +14,15 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
   Future<void> fetchProfile() async {
     state = const AsyncValue.loading();
     try {
-      final userId = SupabaseService.userId;
+      final userId = ref.read(currentUserIdProvider);
       if (userId == null) {
         state = const AsyncValue.data(null);
         return;
       }
 
-      final profile = await retryAsync(
-        () => ProfileService.fetchByUserId(userId),
-        log: _log,
-        label: 'fetchProfile',
-      );
+      final profile = await ref
+          .read(profileRepositoryProvider)
+          .getProfile(userId);
       state = AsyncValue.data(profile);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -35,19 +31,11 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
 
   Future<void> createProfile(UserProfile profile) async {
     try {
-      final userId = SupabaseService.userId;
+      final userId = ref.read(currentUserIdProvider);
       if (userId == null) throw Exception('Not authenticated');
 
-      final authMethod = AuthService.detectAuthMethod();
-      final data = profile
-          .copyWith(userId: userId, authMethod: authMethod)
-          .toJson();
-      data['user_id'] = userId;
-      // Remove null values to let DB defaults apply
-      data.removeWhere((key, value) => value == null);
-
       _log.debug('creating profile for $userId');
-      await ProfileService.upsert(data);
+      await ref.read(profileRepositoryProvider).createProfile(userId, profile);
       // Fetch the full profile from DB (includes DB-generated fields like id, created_at)
       await fetchProfile();
     } catch (e, st) {
@@ -59,17 +47,14 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
 
   Future<void> updateProfile(UserProfile profile) async {
     final previous = state;
-    final userId = SupabaseService.userId;
+    final userId = ref.read(currentUserIdProvider);
     if (userId == null) throw Exception('Not authenticated');
 
     // Optimistic update — revert on failure
     state = AsyncValue.data(profile.copyWith(userId: userId));
 
     try {
-      final data = profile.toJson();
-      data.remove('user_id');
-
-      await ProfileService.update(userId, data);
+      await ref.read(profileRepositoryProvider).updateProfile(userId, profile);
     } catch (e) {
       state = previous;
       rethrow;

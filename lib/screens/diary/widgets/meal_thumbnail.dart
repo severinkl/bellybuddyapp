@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
-import '../../../utils/signed_url_helper.dart';
+import '../../../repositories/meal_media_repository.dart';
 
-class MealThumbnail extends StatefulWidget {
+class MealThumbnail extends ConsumerStatefulWidget {
   final String imageUrl;
   const MealThumbnail({super.key, required this.imageUrl});
 
   @override
-  State<MealThumbnail> createState() => _MealThumbnailState();
+  ConsumerState<MealThumbnail> createState() => _MealThumbnailState();
 }
 
-class _MealThumbnailState extends State<MealThumbnail> {
+class _MealThumbnailState extends ConsumerState<MealThumbnail> {
   String? _resolvedUrl;
 
   @override
@@ -22,7 +23,9 @@ class _MealThumbnailState extends State<MealThumbnail> {
   }
 
   Future<void> _resolve() async {
-    final url = await resolveSignedMealImageUrl(widget.imageUrl);
+    final url = await ref
+        .read(mealMediaRepositoryProvider)
+        .resolveSignedUrl(widget.imageUrl);
     if (mounted) setState(() => _resolvedUrl = url);
   }
 

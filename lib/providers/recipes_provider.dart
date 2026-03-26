@@ -1,9 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recipe.dart';
-import '../services/recipe_service.dart';
-import '../services/supabase_service.dart';
+import '../providers/core_providers.dart';
+import '../repositories/recipe_repository.dart';
 import '../utils/logger.dart';
-import '../utils/retry_helper.dart';
 
 class RecipesState {
   final List<Recipe> allRecipes;
@@ -49,7 +48,10 @@ class RecipesNotifier extends Notifier<RecipesState> {
   static const _log = AppLogger('RecipesProvider');
   @override
   RecipesState build() {
-    _loadAll();
+    // Defer to a microtask so that the initial state is fully initialised
+    // before any async state mutations occur. This is required for testability
+    // (Riverpod disallows reading `state` synchronously inside build()).
+    Future.microtask(_loadAll);
     return const RecipesState();
   }
 
@@ -60,11 +62,8 @@ class RecipesNotifier extends Notifier<RecipesState> {
   Future<void> _loadRecipes() async {
     state = state.copyWith(error: null);
     try {
-      final recipes = await retryAsync(
-        RecipeService.fetchAll,
-        log: _log,
-        label: 'loadRecipes',
-      );
+      final repo = ref.read(recipeRepositoryProvider);
+      final recipes = await repo.fetchAll();
       state = state.copyWith(
         allRecipes: recipes,
         filtered: recipes,
@@ -78,10 +77,12 @@ class RecipesNotifier extends Notifier<RecipesState> {
   }
 
   Future<void> _loadFavorites() async {
-    final userId = SupabaseService.userId;
+    final userId = ref.read(currentUserIdProvider);
     if (userId == null) return;
     try {
-      final favorites = await RecipeService.fetchFavoriteIds(userId);
+      final favorites = await ref
+          .read(recipeRepositoryProvider)
+          .fetchFavoriteIds(userId);
       state = state.copyWith(favorites: favorites);
     } catch (e) {
       _log.error('failed to load favorites', e);
@@ -89,15 +90,16 @@ class RecipesNotifier extends Notifier<RecipesState> {
   }
 
   Future<void> toggleFavorite(String recipeId) async {
-    final userId = SupabaseService.userId;
+    final userId = ref.read(currentUserIdProvider);
     if (userId == null) return;
     final newFavorites = Set<String>.from(state.favorites);
+    final repo = ref.read(recipeRepositoryProvider);
     try {
       if (newFavorites.contains(recipeId)) {
-        await RecipeService.removeFavorite(userId, recipeId);
+        await repo.removeFavorite(userId, recipeId);
         newFavorites.remove(recipeId);
       } else {
-        await RecipeService.addFavorite(userId, recipeId);
+        await repo.addFavorite(userId, recipeId);
         newFavorites.add(recipeId);
       }
       state = state.copyWith(favorites: newFavorites);

@@ -1,20 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/app_theme.dart';
-import '../../../services/auth_service.dart';
-import '../../../services/supabase_service.dart';
+import '../../../providers/auth_provider.dart';
+
 import '../../../utils/password_validator.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/bb_password_hint.dart';
 import '../../../config/constants.dart';
 
-class PasswordChangeSection extends StatefulWidget {
+class PasswordChangeSection extends ConsumerStatefulWidget {
   const PasswordChangeSection({super.key});
 
   @override
-  State<PasswordChangeSection> createState() => _PasswordChangeSectionState();
+  ConsumerState<PasswordChangeSection> createState() =>
+      _PasswordChangeSectionState();
 }
 
-class _PasswordChangeSectionState extends State<PasswordChangeSection> {
+class _PasswordChangeSectionState extends ConsumerState<PasswordChangeSection> {
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -47,10 +49,11 @@ class _PasswordChangeSectionState extends State<PasswordChangeSection> {
     if (!_canSubmitPassword) return;
     setState(() => _isChangingPassword = true);
     try {
-      final email = SupabaseService.currentUser?.email;
+      final email = ref.read(currentUserProvider)?.email;
       if (email == null) throw Exception('No email found');
-      await AuthService.signInWithEmail(email, _currentPasswordController.text);
-      await AuthService.updatePassword(_newPasswordController.text);
+      final notifier = ref.read(authNotifierProvider.notifier);
+      await notifier.signInWithEmail(email, _currentPasswordController.text);
+      await notifier.updatePassword(_newPasswordController.text);
       _currentPasswordController.clear();
       _newPasswordController.clear();
       _confirmPasswordController.clear();
@@ -76,10 +79,10 @@ class _PasswordChangeSectionState extends State<PasswordChangeSection> {
   }
 
   Future<void> _forgotPassword() async {
-    final email = SupabaseService.currentUser?.email;
+    final email = ref.read(currentUserProvider)?.email;
     if (email == null) return;
     try {
-      await AuthService.resetPassword(email);
+      await ref.read(authNotifierProvider.notifier).resetPassword(email);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(

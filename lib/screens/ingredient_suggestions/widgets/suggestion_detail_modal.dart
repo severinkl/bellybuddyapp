@@ -1,11 +1,12 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/ingredient_suggestion_group.dart';
 import '../../../config/constants.dart';
+import '../../../repositories/meal_media_repository.dart';
 import '../../../utils/date_format_utils.dart';
-import '../../../utils/signed_url_helper.dart';
 import '../../../utils/url_utils.dart';
 
 class SuggestionDetailModal extends StatelessWidget {
@@ -212,16 +213,16 @@ class SuggestionDetailModal extends StatelessWidget {
   }
 }
 
-class _MealImage extends StatefulWidget {
+class _MealImage extends ConsumerStatefulWidget {
   final String imageUrl;
 
   const _MealImage({required this.imageUrl});
 
   @override
-  State<_MealImage> createState() => _MealImageState();
+  ConsumerState<_MealImage> createState() => _MealImageState();
 }
 
-class _MealImageState extends State<_MealImage> {
+class _MealImageState extends ConsumerState<_MealImage> {
   String? _resolvedUrl;
 
   @override
@@ -231,7 +232,9 @@ class _MealImageState extends State<_MealImage> {
   }
 
   Future<void> _resolve() async {
-    final url = await resolveSignedMealImageUrl(widget.imageUrl);
+    final url = await ref
+        .read(mealMediaRepositoryProvider)
+        .resolveSignedUrl(widget.imageUrl);
     if (mounted) setState(() => _resolvedUrl = url);
   }
 

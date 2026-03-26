@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../router/route_names.dart';
-import '../../services/auth_service.dart';
 import '../../widgets/common/bb_button.dart';
 import '../../widgets/common/bb_auth_banner.dart';
 import '../../widgets/common/bb_password_field.dart';
@@ -51,10 +51,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       _error = null;
     });
     try {
-      await AuthService.signInWithEmail(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
+      await ref
+          .read(authNotifierProvider.notifier)
+          .signInWithEmail(
+            _emailController.text.trim(),
+            _passwordController.text,
+          );
       await _navigateAfterAuth();
     } catch (e) {
       setState(() => _error = 'E-Mail oder Passwort ist falsch.');
@@ -69,7 +71,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       _error = null;
     });
     try {
-      await AuthService.signInWithGoogle();
+      await ref.read(authNotifierProvider.notifier).signInWithGoogle();
       await _navigateAfterAuth();
     } catch (e) {
       setState(() => _error = 'Google-Anmeldung fehlgeschlagen.');
@@ -84,7 +86,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       _error = null;
     });
     try {
-      await AuthService.signInWithApple();
+      await ref.read(authNotifierProvider.notifier).signInWithApple();
       await _navigateAfterAuth();
     } catch (e) {
       setState(() => _error = 'Apple-Anmeldung fehlgeschlagen.');
@@ -100,7 +102,9 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       _error = null;
     });
     try {
-      await AuthService.resetPassword(_emailController.text.trim());
+      await ref
+          .read(authNotifierProvider.notifier)
+          .resetPassword(_emailController.text.trim());
       setState(() => _resetSent = true);
     } catch (e) {
       setState(() => _error = 'Fehler beim Zurücksetzen.');
