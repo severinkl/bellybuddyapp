@@ -43,8 +43,8 @@ class LocalNotificationService {
     required void Function(String? route) onNotificationTap,
   }) async {
     tz.initializeTimeZones();
-    final currentTz = await FlutterTimezone.getLocalTimezone();
-    tz.setLocalLocation(tz.getLocation(currentTz));
+    final tzInfo = await FlutterTimezone.getLocalTimezone();
+    tz.setLocalLocation(tz.getLocation(tzInfo.identifier));
 
     const androidSettings = AndroidInitializationSettings(
       '@mipmap/ic_launcher',
@@ -60,7 +60,7 @@ class LocalNotificationService {
     );
 
     await _plugin.initialize(
-      settings,
+      settings: settings,
       onDidReceiveNotificationResponse: (response) {
         final route = response.payload;
         _log.debug('notification tapped, route=$route');
@@ -133,7 +133,7 @@ class LocalNotificationService {
   }) async {
     // Cancel existing reminders
     for (var i = 0; i < 100; i++) {
-      await _plugin.cancel(_reminderIdBase + i);
+      await _plugin.cancel(id: _reminderIdBase + i);
     }
 
     final location = tz.getLocation(timezone);
@@ -146,11 +146,11 @@ class LocalNotificationService {
       final body = _reminderMessages[_random.nextInt(_reminderMessages.length)];
 
       await _plugin.zonedSchedule(
-        _reminderIdBase + i,
-        'Belly Buddy',
-        body,
-        _nextInstanceOfTime(hour, minute, location),
-        NotificationDetails(
+        id: _reminderIdBase + i,
+        title: 'Belly Buddy',
+        body: body,
+        scheduledDate: _nextInstanceOfTime(hour, minute, location),
+        notificationDetails: NotificationDetails(
           android: AndroidNotificationDetails(
             _reminderChannel.id,
             _reminderChannel.name,
@@ -161,8 +161,6 @@ class LocalNotificationService {
           iOS: const DarwinNotificationDetails(),
         ),
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
         matchDateTimeComponents: DateTimeComponents.time,
         payload: '/dashboard',
       );
@@ -176,7 +174,7 @@ class LocalNotificationService {
     required String dailySummaryTime,
     required String timezone,
   }) async {
-    await _plugin.cancel(_dailySummaryId);
+    await _plugin.cancel(id: _dailySummaryId);
 
     final parts = dailySummaryTime.split(':');
     final hour = int.parse(parts[0]);
@@ -184,11 +182,11 @@ class LocalNotificationService {
     final location = tz.getLocation(timezone);
 
     await _plugin.zonedSchedule(
-      _dailySummaryId,
-      'Belly Buddy',
-      'Wie war dein Bauchgefühl heute?',
-      _nextInstanceOfTime(hour, minute, location),
-      NotificationDetails(
+      id: _dailySummaryId,
+      title: 'Belly Buddy',
+      body: 'Wie war dein Bauchgefühl heute?',
+      scheduledDate: _nextInstanceOfTime(hour, minute, location),
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           _dailySummaryChannel.id,
           _dailySummaryChannel.name,
@@ -199,8 +197,6 @@ class LocalNotificationService {
         iOS: const DarwinNotificationDetails(),
       ),
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          UILocalNotificationDateInterpretation.absoluteTime,
       matchDateTimeComponents: DateTimeComponents.time,
       payload: '/gut-feeling-tracker',
     );
@@ -211,24 +207,24 @@ class LocalNotificationService {
   /// Cancel all logging reminders.
   static Future<void> cancelReminders() async {
     for (var i = 0; i < 100; i++) {
-      await _plugin.cancel(_reminderIdBase + i);
+      await _plugin.cancel(id: _reminderIdBase + i);
     }
     _log.debug('cancelled all reminders');
   }
 
   /// Cancel daily summary.
   static Future<void> cancelDailySummary() async {
-    await _plugin.cancel(_dailySummaryId);
+    await _plugin.cancel(id: _dailySummaryId);
     _log.debug('cancelled daily summary');
   }
 
   /// Show a test notification immediately (for debugging).
   static Future<void> showTestNotification() async {
     await _plugin.show(
-      9999,
-      'Belly Buddy',
-      'Test-Benachrichtigung funktioniert!',
-      NotificationDetails(
+      id: 9999,
+      title: 'Belly Buddy',
+      body: 'Test-Benachrichtigung funktioniert!',
+      notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
           _reminderChannel.id,
           _reminderChannel.name,
