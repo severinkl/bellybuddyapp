@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/gut_feeling_entry.dart';
+import '../../../providers/diary_provider.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../router/route_names.dart';
 import '../../../services/haptic_service.dart';
@@ -123,6 +124,13 @@ class _GutFeelingTrackerScreenState
     );
     if (mounted) {
       if (success) {
+        // Invalidate diary cache so it refetches with the new entry
+        final date = DateTime(
+          _trackedAt.year,
+          _trackedAt.month,
+          _trackedAt.day,
+        );
+        ref.invalidate(diaryEntriesProvider(date));
         setState(() => _showSuccess = true);
       } else {
         setState(() => _isSaving = false);

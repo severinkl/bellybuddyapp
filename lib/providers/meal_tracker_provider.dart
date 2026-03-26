@@ -7,6 +7,7 @@ import '../repositories/ingredient_repository.dart';
 import '../repositories/meal_media_repository.dart';
 import '../models/ingredient_search_result.dart';
 import '../utils/logger.dart';
+import 'diary_provider.dart';
 import 'entries_provider.dart';
 
 class MealTrackerState {
@@ -176,6 +177,14 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
       );
 
       await ref.read(entriesProvider.notifier).addMeal(meal);
+
+      // Invalidate diary cache so it refetches with the new entry
+      final date = DateTime(
+        state.trackedAt.year,
+        state.trackedAt.month,
+        state.trackedAt.day,
+      );
+      ref.invalidate(diaryEntriesProvider(date));
 
       // Fire and forget
       ref.read(mealMediaRepositoryProvider).triggerSuggestionRefresh();

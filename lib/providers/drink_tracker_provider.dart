@@ -6,6 +6,7 @@ import '../providers/core_providers.dart';
 import '../repositories/drink_repository.dart';
 import '../utils/drink_helpers.dart';
 import '../utils/logger.dart';
+import 'diary_provider.dart';
 import 'entries_provider.dart';
 
 class DrinkTrackerState {
@@ -213,6 +214,15 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
       );
       await ref.read(entriesProvider.notifier).addDrinkEntry(entry);
       await loadTodayTotal();
+
+      // Invalidate diary cache so it refetches with the new entry
+      final date = DateTime(
+        state.trackedAt.year,
+        state.trackedAt.month,
+        state.trackedAt.day,
+      );
+      ref.invalidate(diaryEntriesProvider(date));
+
       state = state.copyWith(isSaving: false, showSuccess: true);
     } catch (e) {
       state = state.copyWith(isSaving: false);

@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/toilet_entry.dart';
+import '../../../providers/diary_provider.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../utils/save_helper.dart';
 import '../../../widgets/common/bb_button.dart';
@@ -38,6 +39,13 @@ class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
     );
     if (mounted) {
       if (success) {
+        // Invalidate diary cache so it refetches with the new entry
+        final date = DateTime(
+          _trackedAt.year,
+          _trackedAt.month,
+          _trackedAt.day,
+        );
+        ref.invalidate(diaryEntriesProvider(date));
         setState(() => _showSuccess = true);
       } else {
         setState(() => _isSaving = false);
