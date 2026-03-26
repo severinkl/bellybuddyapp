@@ -65,10 +65,6 @@ class AuthService {
     const webClientId = OAuthConfig.googleWebClientId;
     const iosClientId = OAuthConfig.googleIosClientId;
 
-    _log.debug(
-      'Google SSO: webClientId=${webClientId.substring(0, 20)}..., iosClientId=${iosClientId.substring(0, 20)}...',
-    );
-
     // Generate nonce — pass hashed to Google, raw to Supabase
     final rawNonce = _generateNonce();
     final hashedNonce = sha256.convert(utf8.encode(rawNonce)).toString();

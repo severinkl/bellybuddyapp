@@ -64,25 +64,18 @@ void main() {
     expect(find.byType(BellyBuddyApp), findsOneWidget);
   });
 
-  testWidgets(
-    'unauthenticated user (null userId) sees welcome screen',
-    // TODO: FlutterNativeSplash.remove() crashes in integration test environment
-    skip: true,
-    (tester) async {
-      final unauthFakeAuth = FakeAuthRepository()..signedIn = false;
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            ...buildOverrides(userId: null),
-            authRepositoryProvider.overrideWithValue(unauthFakeAuth),
-          ],
-          child: const BellyBuddyApp(),
-        ),
-      );
-      for (var i = 0; i < 20; i++) {
-        await tester.pump(const Duration(milliseconds: 500));
-      }
-      expect(find.text('Registrieren'), findsOneWidget);
-    },
-  );
+  testWidgets('unauthenticated user (null userId) sees welcome screen', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: buildOverrides(userId: null),
+        child: const BellyBuddyApp(),
+      ),
+    );
+    await tester.pump(const Duration(seconds: 3));
+
+    // Unauthenticated user should be redirected to the welcome screen
+    expect(find.textContaining('Verstehe dein Bauchgefühl'), findsOneWidget);
+  });
 }
