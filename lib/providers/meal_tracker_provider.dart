@@ -72,6 +72,9 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
   @override
   MealTrackerState build() => MealTrackerState(trackedAt: DateTime.now());
 
+  /// Reset to fresh state — call when opening the tracker screen
+  void reset() => state = MealTrackerState(trackedAt: DateTime.now());
+
   void setTitle(String title) => state = state.copyWith(title: title);
   void setNotes(String? notes) => state = state.copyWith(notes: notes);
   void setTrackedAt(DateTime dt) => state = state.copyWith(trackedAt: dt);

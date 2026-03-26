@@ -24,8 +24,14 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
   void initState() {
     super.initState();
     final notifier = ref.read(drinkTrackerProvider.notifier);
-    notifier.loadDrinks();
-    notifier.loadTodayTotal();
+    // Reset stale state from previous visit, then reload.
+    // Deferred to avoid state change during widget tree construction.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      notifier.reset();
+      notifier.loadDrinks();
+      notifier.loadTodayTotal();
+    });
   }
 
   @override

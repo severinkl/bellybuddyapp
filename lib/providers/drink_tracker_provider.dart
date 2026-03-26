@@ -76,6 +76,9 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
   @override
   DrinkTrackerState build() => DrinkTrackerState(trackedAt: DateTime.now());
 
+  /// Reset to fresh state — call when opening the tracker screen
+  void reset() => state = DrinkTrackerState(trackedAt: DateTime.now());
+
   Future<void> loadDrinks() async {
     try {
       final drinkRepo = ref.read(drinkRepositoryProvider);

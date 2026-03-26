@@ -25,6 +25,16 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
   bool _isEditingTitle = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Reset stale state from previous visit (showSuccess persists).
+    // Deferred to avoid state change during widget tree construction.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.read(mealTrackerProvider.notifier).reset();
+    });
+  }
+
+  @override
   void dispose() {
     _titleController.dispose();
     super.dispose();
