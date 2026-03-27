@@ -37,22 +37,23 @@ void main() async {
   // Create provider container so we can access navigator key for notification deep links
   final container = ProviderContainer();
 
+  const log = AppLogger('Main');
+
   // Initialize notifications with deep-link callback
   await NotificationService.initialize(
     onNotificationTap: (route) {
       if (route == null) return;
-      final navKey = container.read(navigatorKeyProvider);
-      final context = navKey.currentContext;
-      if (context != null) {
+      log.debug('notification tapped, navigating to $route');
+      // Delay briefly to ensure router is ready after app launch
+      Future.delayed(const Duration(milliseconds: 300), () {
         container.read(routerProvider).go(route);
-      }
+      });
     },
     profileService: container.read(profileServiceProvider),
     getUserId: () => container.read(currentUserIdProvider),
   );
 
   // Global error handler
-  const log = AppLogger('Main');
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
     log.error('FlutterError', details.exception, details.stack);
