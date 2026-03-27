@@ -233,5 +233,7 @@ class FakeNotificationRepository implements NotificationRepository {
   @override
   Future<bool> requestPermission() async => true;
   @override
+  Future<bool> requestAllPermissions() async => true;
+  @override
   Future<void> clearToken() async {}
 }
