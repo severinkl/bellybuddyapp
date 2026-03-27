@@ -159,7 +159,7 @@ class LocalNotificationService {
         ),
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         matchDateTimeComponents: DateTimeComponents.time,
-        payload: '/dashboard',
+        payload: '/meal-tracker',
       );
     }
 
