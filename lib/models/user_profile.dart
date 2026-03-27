@@ -39,9 +39,6 @@ abstract class UserProfile with _$UserProfile {
     @Default('20:00')
     String dailySummaryTime,
     @JsonKey(name: 'fcm_token') String? fcmToken,
-    @JsonKey(name: 'notification_modal_shown')
-    @Default(false)
-    bool notificationModalShown,
     @JsonKey(name: 'last_inactivity_nudge') DateTime? lastInactivityNudge,
   }) = _UserProfile;
 
