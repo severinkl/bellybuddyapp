@@ -68,24 +68,25 @@ void main() {
       expect(find.text('Erinnerungen'), findsAtLeast(1));
     });
 
-    testWidgets('renders Tägliche Zusammenfassung row', (tester) async {
+    testWidgets('renders Mahlzeiten and Bauchgefühl toggles', (tester) async {
       await tester.pumpWithProviders(
         const SettingsNotificationsScreen(),
         overrides: _overrides(),
       );
       await tester.pump();
 
-      expect(find.text('Tägliche Zusammenfassung'), findsAtLeast(1));
+      expect(find.text('Mahlzeiten'), findsOneWidget);
+      expect(find.text('Bauchgefühl'), findsOneWidget);
     });
 
-    testWidgets('renders Empfehlungen & Tipps row', (tester) async {
+    testWidgets('renders Empfehlungen & Tipps section', (tester) async {
       await tester.pumpWithProviders(
         const SettingsNotificationsScreen(),
         overrides: _overrides(),
       );
       await tester.pump();
 
-      expect(find.text('Empfehlungen & Tipps'), findsOneWidget);
+      expect(find.text('Empfehlungen & Tipps'), findsAtLeast(1));
     });
 
     testWidgets('renders SwitchListTiles for all toggles', (tester) async {

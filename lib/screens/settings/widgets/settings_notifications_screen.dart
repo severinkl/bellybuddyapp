@@ -71,27 +71,6 @@ class _SettingsNotificationsScreenState
         profile.pushEnabled;
   }
 
-  Future<void> _pickDailySummaryTime(UserProfile profile) async {
-    final parts = profile.dailySummaryTime.split(':');
-    final current = TimeOfDay(
-      hour: int.parse(parts[0]),
-      minute: int.parse(parts[1]),
-    );
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: current,
-      helpText: 'Uhrzeit wählen',
-      cancelText: 'Abbrechen',
-      confirmText: 'Speichern',
-    );
-    if (picked == null || !mounted) return;
-    final formatted =
-        '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
-    ref
-        .read(profileProvider.notifier)
-        .updateProfile(profile.copyWith(dailySummaryTime: formatted));
-  }
-
   @override
   Widget build(BuildContext context) {
     final profileState = ref.watch(profileProvider);
@@ -120,7 +99,6 @@ class _SettingsNotificationsScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Master permission
                 SettingsSectionCard(
                   icon: Icons.notifications_outlined,
                   title: 'Benachrichtigungen',
@@ -154,7 +132,6 @@ class _SettingsNotificationsScreenState
                 ),
                 AppConstants.gap16,
 
-                // Gated sections
                 IgnorePointer(
                   ignoring: !allowed,
                   child: AnimatedOpacity(
@@ -163,15 +140,16 @@ class _SettingsNotificationsScreenState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Erinnerungen
+                        // Erinnerungen — merged section for both reminder types
                         SettingsSectionCard(
                           icon: Icons.alarm_outlined,
                           title: 'Erinnerungen',
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Mahlzeiten-Erinnerungen
                               SwitchListTile(
-                                title: const Text('Erinnerungen'),
+                                title: const Text('Mahlzeiten'),
                                 value: profile.remindersEnabled,
                                 activeThumbColor: AppTheme.primary,
                                 contentPadding: EdgeInsets.zero,
@@ -182,6 +160,13 @@ class _SettingsNotificationsScreenState
                                         profile.copyWith(remindersEnabled: v),
                                       );
                                 },
+                              ),
+                              const Text(
+                                'Erinnert dich daran, deine Mahlzeiten zu tracken.',
+                                style: TextStyle(
+                                  fontSize: AppTheme.fontSizeCaptionLG,
+                                  color: AppTheme.mutedForeground,
+                                ),
                               ),
                               if (profile.remindersEnabled) ...[
                                 AppConstants.gap8,
@@ -200,20 +185,11 @@ class _SettingsNotificationsScreenState
                                   },
                                 ),
                               ],
-                            ],
-                          ),
-                        ),
-                        AppConstants.gap16,
+                              AppConstants.gap16,
 
-                        // Tägliche Zusammenfassung
-                        SettingsSectionCard(
-                          icon: Icons.self_improvement_outlined,
-                          title: 'Tägliche Zusammenfassung',
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
+                              // Bauchgefühl-Erinnerungen
                               SwitchListTile(
-                                title: const Text('Tägliche Zusammenfassung'),
+                                title: const Text('Bauchgefühl'),
                                 value: profile.dailySummaryEnabled,
                                 activeThumbColor: AppTheme.primary,
                                 contentPadding: EdgeInsets.zero,
@@ -227,43 +203,29 @@ class _SettingsNotificationsScreenState
                                       );
                                 },
                               ),
+                              const Text(
+                                'Erinnert dich daran, dein Bauchgefühl einzutragen.',
+                                style: TextStyle(
+                                  fontSize: AppTheme.fontSizeCaptionLG,
+                                  color: AppTheme.mutedForeground,
+                                ),
+                              ),
                               if (profile.dailySummaryEnabled) ...[
                                 AppConstants.gap8,
-                                Row(
-                                  children: [
-                                    const Text(
-                                      'Uhrzeit',
-                                      style: TextStyle(
-                                        fontSize: AppTheme.fontSizeBodyLG,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const Spacer(),
-                                    GestureDetector(
-                                      onTap: () =>
-                                          _pickDailySummaryTime(profile),
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: AppConstants.spacing14,
-                                          vertical: AppConstants.spacingSm,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: AppTheme.primary,
-                                          borderRadius: BorderRadius.circular(
-                                            AppConstants.radiusFull,
-                                          ),
-                                        ),
-                                        child: Text(
-                                          profile.dailySummaryTime,
-                                          style: const TextStyle(
-                                            fontSize: AppTheme.fontSizeBody,
-                                            fontWeight: FontWeight.w500,
-                                            color: AppTheme.primaryForeground,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                ReminderTimePicker(
+                                  selectedTimes: [profile.dailySummaryTime],
+                                  onChanged: (newTimes) {
+                                    if (newTimes.isEmpty) return;
+                                    _debounceSave(() {
+                                      ref
+                                          .read(profileProvider.notifier)
+                                          .updateProfile(
+                                            profile.copyWith(
+                                              dailySummaryTime: newTimes.first,
+                                            ),
+                                          );
+                                    });
+                                  },
                                 ),
                               ],
                             ],
