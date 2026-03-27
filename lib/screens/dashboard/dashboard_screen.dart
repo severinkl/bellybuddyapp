@@ -41,13 +41,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   Future<void> _maybeShowNotificationModal() async {
     final prefs = await SharedPreferences.getInstance();
-    if (prefs.getBool('notification_modal_shown') ?? false) return;
+    if (prefs.getBool(AppConstants.keyNotificationModalShown) ?? false) return;
     if (!mounted) return;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      showNotificationOptInDialog(context);
-    });
+    showNotificationOptInDialog(context);
   }
 
   @override

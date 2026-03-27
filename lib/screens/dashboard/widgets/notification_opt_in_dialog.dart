@@ -5,6 +5,7 @@ import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../repositories/notification_repository.dart';
+import '../../../utils/logger.dart';
 import '../../../widgets/common/mascot_image.dart';
 
 /// Shows the one-time notification opt-in dialog.
@@ -28,6 +29,7 @@ class _NotificationOptInDialog extends ConsumerStatefulWidget {
 
 class _NotificationOptInDialogState
     extends ConsumerState<_NotificationOptInDialog> {
+  static const _log = AppLogger('NotificationOptIn');
   bool _loading = false;
 
   Future<void> _activate() async {
@@ -66,7 +68,8 @@ class _NotificationOptInDialogState
           ),
         );
       }
-    } catch (_) {
+    } catch (e) {
+      _log.error('failed to activate notifications', e);
       if (mounted) {
         setState(() => _loading = false);
       }
@@ -99,8 +102,8 @@ class _NotificationOptInDialogState
           ),
           const MascotImage(
             assetPath: AppConstants.mascotHappy,
-            width: 96,
-            height: 96,
+            width: AppConstants.mascotSizeMd,
+            height: AppConstants.mascotSizeMd,
           ),
           AppConstants.gap16,
           const Text(

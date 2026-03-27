@@ -11,47 +11,31 @@ import 'config/supabase_config.dart';
 import 'utils/logger.dart';
 import 'firebase_options.dart';
 import 'providers/core_providers.dart';
+import 'providers/pending_route_provider.dart';
 import 'services/notification_service.dart';
 import 'services/profile_service.dart';
 import 'router/app_router.dart';
-
-/// Route to navigate to after the app is fully built (set when app is
-/// launched by tapping a notification while terminated).
-String? _pendingNotificationRoute;
-
-/// Consume the pending notification route (returns it once, then clears).
-String? consumePendingNotificationRoute() {
-  final route = _pendingNotificationRoute;
-  _pendingNotificationRoute = null;
-  return route;
-}
 
 void main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   _validateEnv();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
-  // Portrait only
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
 
-  // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // Initialize Supabase
   await Supabase.initialize(
     url: SupabaseConfig.url,
     anonKey: SupabaseConfig.anonKey,
   );
 
-  // Create provider container so we can access navigator key for notification deep links
   final container = ProviderContainer();
-
   const log = AppLogger('Main');
 
-  // Initialize notifications with deep-link callback
   await NotificationService.initialize(
     onNotificationTap: (route) {
       if (route == null) return;
@@ -66,11 +50,13 @@ void main() async {
   final launchDetails = await FlutterLocalNotificationsPlugin()
       .getNotificationAppLaunchDetails();
   if (launchDetails?.didNotificationLaunchApp == true) {
-    _pendingNotificationRoute = launchDetails!.notificationResponse?.payload;
-    log.debug('app launched from notification → $_pendingNotificationRoute');
+    final route = launchDetails!.notificationResponse?.payload;
+    if (route != null) {
+      container.read(pendingRouteProvider.notifier).set(route);
+      log.debug('app launched from notification → $route');
+    }
   }
 
-  // Global error handler
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
     log.error('FlutterError', details.exception, details.stack);

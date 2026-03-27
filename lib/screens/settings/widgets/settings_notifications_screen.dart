@@ -6,6 +6,7 @@ import '../../../config/constants.dart';
 import '../../../models/user_profile.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../repositories/notification_repository.dart';
+import '../../../utils/logger.dart';
 import '../../../widgets/common/bb_async_state.dart';
 import '../../../widgets/common/bb_card.dart';
 import '../../../widgets/common/settings_section_card.dart';
@@ -21,6 +22,7 @@ class SettingsNotificationsScreen extends ConsumerStatefulWidget {
 
 class _SettingsNotificationsScreenState
     extends ConsumerState<SettingsNotificationsScreen> {
+  static const _log = AppLogger('NotificationSettings');
   Timer? _debounce;
   bool? _permissionGranted;
   bool _isRequestingPermission = false;
@@ -36,7 +38,7 @@ class _SettingsNotificationsScreenState
     _debounce = Timer(AppConstants.debounceDuration, doSave);
   }
 
-  Future<void> _toggleMasterPermission(bool value) async {
+  Future<void> _toggleMasterPermission(bool value, UserProfile profile) async {
     if (value) {
       setState(() => _isRequestingPermission = true);
       try {
@@ -48,7 +50,17 @@ class _SettingsNotificationsScreenState
           _permissionGranted = granted;
           _isRequestingPermission = false;
         });
-        if (!granted) {
+        if (granted) {
+          // Enable default notifications when permission is first granted
+          ref
+              .read(profileProvider.notifier)
+              .updateProfile(
+                profile.copyWith(
+                  remindersEnabled: true,
+                  dailySummaryEnabled: true,
+                ),
+              );
+        } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
@@ -57,10 +69,21 @@ class _SettingsNotificationsScreenState
             ),
           );
         }
-      } catch (_) {
+      } catch (e) {
+        _log.error('failed to request permission', e);
         if (mounted) setState(() => _isRequestingPermission = false);
       }
     } else {
+      // Disable all notifications and persist
+      ref
+          .read(profileProvider.notifier)
+          .updateProfile(
+            profile.copyWith(
+              remindersEnabled: false,
+              dailySummaryEnabled: false,
+              pushEnabled: false,
+            ),
+          );
       setState(() => _permissionGranted = false);
     }
   }
@@ -126,11 +149,10 @@ class _SettingsNotificationsScreenState
                           value: allowed,
                           activeThumbColor: AppTheme.primary,
                           contentPadding: EdgeInsets.zero,
-                          onChanged: _toggleMasterPermission,
+                          onChanged: (v) => _toggleMasterPermission(v, profile),
                         ),
                 ),
                 AppConstants.gap16,
-
                 IgnorePointer(
                   ignoring: !allowed,
                   child: AnimatedOpacity(
@@ -185,10 +207,9 @@ class _SettingsNotificationsScreenState
                               AppConstants.gap8,
                               const Divider(
                                 color: AppTheme.border,
-                                thickness: 0.5,
+                                thickness: AppConstants.dividerThickness,
                               ),
                               AppConstants.gap8,
-
                               SwitchListTile(
                                 title: const Text('Bauchgefühl'),
                                 value: profile.dailySummaryEnabled,
@@ -233,7 +254,6 @@ class _SettingsNotificationsScreenState
                           ),
                         ),
                         AppConstants.gap16,
-
                         SettingsSectionCard(
                           icon: Icons.lightbulb_outline,
                           title: 'Empfehlungen & Tipps',
