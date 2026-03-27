@@ -110,8 +110,8 @@ class _SettingsNotificationsScreenState
                           child: Row(
                             children: [
                               SizedBox(
-                                width: 20,
-                                height: 20,
+                                width: AppConstants.spinnerSize,
+                                height: AppConstants.spinnerSize,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
                                   color: AppTheme.primary,
@@ -140,14 +140,12 @@ class _SettingsNotificationsScreenState
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Erinnerungen — merged section for both reminder types
                         SettingsSectionCard(
                           icon: Icons.alarm_outlined,
                           title: 'Erinnerungen',
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Mahlzeiten-Erinnerungen
                               SwitchListTile(
                                 title: const Text('Mahlzeiten'),
                                 value: profile.remindersEnabled,
@@ -187,7 +185,6 @@ class _SettingsNotificationsScreenState
                               ],
                               AppConstants.gap16,
 
-                              // Bauchgefühl-Erinnerungen
                               SwitchListTile(
                                 title: const Text('Bauchgefühl'),
                                 value: profile.dailySummaryEnabled,
@@ -233,7 +230,6 @@ class _SettingsNotificationsScreenState
                         ),
                         AppConstants.gap16,
 
-                        // Empfehlungen & Tipps
                         SettingsSectionCard(
                           icon: Icons.lightbulb_outline,
                           title: 'Empfehlungen & Tipps',

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../providers/profile_provider.dart';
@@ -30,26 +31,26 @@ class _NotificationOptInDialogState
   bool _loading = false;
 
   Future<void> _activate() async {
+    final profile = ref.read(profileProvider).whenOrNull(data: (p) => p);
+    if (profile == null) {
+      if (mounted) Navigator.pop(context, false);
+      return;
+    }
+
     setState(() => _loading = true);
 
     final granted = await ref
         .read(notificationRepositoryProvider)
         .requestAllPermissions();
 
-    final profile = ref.read(profileProvider).whenOrNull(data: (p) => p);
-    if (profile != null) {
-      final updated = profile.copyWith(
-        pushEnabled: granted,
-        notificationModalShown: true,
-      );
-      await ref.read(profileProvider.notifier).updateProfile(updated);
+    if (!mounted) return;
 
-      if (granted) {
-        await ref
-            .read(notificationRepositoryProvider)
-            .syncNotifications(updated);
-      }
-    }
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('notification_modal_shown', true);
+
+    await ref
+        .read(profileProvider.notifier)
+        .updateProfile(profile.copyWith(pushEnabled: granted));
 
     if (!mounted) return;
 
@@ -68,14 +69,10 @@ class _NotificationOptInDialogState
   }
 
   Future<void> _dismiss() async {
-    final profile = ref.read(profileProvider).whenOrNull(data: (p) => p);
-    if (profile != null) {
-      await ref
-          .read(profileProvider.notifier)
-          .updateProfile(profile.copyWith(notificationModalShown: true));
-    }
-    if (!mounted) return;
     Navigator.pop(context, false);
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('notification_modal_shown', true);
   }
 
   @override
@@ -133,8 +130,8 @@ class _NotificationOptInDialogState
               ),
               child: _loading
                   ? const SizedBox(
-                      width: 20,
-                      height: 20,
+                      width: AppConstants.spinnerSize,
+                      height: AppConstants.spinnerSize,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
                         color: Colors.white,

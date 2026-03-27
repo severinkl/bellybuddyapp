@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
@@ -38,10 +39,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     ]);
   }
 
-  void _maybeShowNotificationModal() {
-    final profile = ref.read(profileProvider).whenOrNull(data: (p) => p);
-    if (profile == null) return;
-    if (profile.notificationModalShown) return;
+  Future<void> _maybeShowNotificationModal() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool('notification_modal_shown') ?? false) return;
     if (!mounted) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {

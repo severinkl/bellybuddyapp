@@ -63,6 +63,9 @@ class AppConstants {
   // Opacity
   static const double disabledOpacity = 0.4;
 
+  // Spinner
+  static const double spinnerSize = 20.0;
+
   // Icon sizes
   static const double iconSizeSm = 18.0;
 

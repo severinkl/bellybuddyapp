@@ -113,14 +113,8 @@ class NotificationRepository {
   /// Request both local and push notification permissions.
   /// Returns true if the OS permission was granted.
   Future<bool> requestAllPermissions() async {
-    // Request local notification permission first (grants OS-level permission)
     final granted = await LocalNotificationService.requestPermission();
-
-    // Then request Firebase push permission (on iOS: already granted, just gets token)
-    if (granted) {
-      await PushNotificationService.requestPermission();
-    }
-
+    if (granted) await PushNotificationService.requestPermission();
     return granted;
   }
 
