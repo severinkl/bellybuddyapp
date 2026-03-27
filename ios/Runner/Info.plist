@@ -39,6 +39,10 @@
 	<false/>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>BellyBuddy benötigt Zugriff auf die Kamera, um Mahlzeiten zu fotografieren.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>BellyBuddy benötigt Zugriff auf die Fotogalerie, um Bilder von Mahlzeiten auszuwählen.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
