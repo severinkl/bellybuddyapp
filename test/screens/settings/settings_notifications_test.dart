@@ -75,7 +75,7 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text('Tägliche Zusammenfassung'), findsOneWidget);
+      expect(find.text('Tägliche Zusammenfassung'), findsAtLeast(1));
     });
 
     testWidgets('renders Empfehlungen & Tipps row', (tester) async {
