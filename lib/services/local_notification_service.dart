@@ -34,7 +34,7 @@ class LocalNotificationService {
   static const _reminderMessages = [
     'Zeit zum Eintragen! Was hast du gegessen?',
     'Vergiss nicht, deine Mahlzeiten zu tracken!',
-    'Wie geht es deinem Bauch? Trag es ein!',
+    'Was hast du heute gegessen? Trag es ein!',
     'Erinnerung: Halte dein Essens-Tagebuch aktuell.',
   ];
 
