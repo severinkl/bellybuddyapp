@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
@@ -11,6 +12,7 @@ import '../../providers/profile_provider.dart';
 import '../../router/route_names.dart';
 import '../../widgets/common/tracker_card.dart';
 import 'widgets/feature_card.dart';
+import 'widgets/notification_opt_in_dialog.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -23,7 +25,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(_loadData);
+    Future.microtask(() async {
+      await _loadData();
+      _maybeShowNotificationModal();
+    });
   }
 
   Future<void> _loadData() async {
@@ -32,6 +37,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       ref.read(entriesProvider.notifier).loadEntries(DateTime.now()),
       ref.read(ingredientSuggestionProvider.notifier).fetchSuggestions(),
     ]);
+  }
+
+  Future<void> _maybeShowNotificationModal() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.getBool(AppConstants.keyNotificationModalShown) ?? false) return;
+    if (!mounted) return;
+    showNotificationOptInDialog(context);
   }
 
   @override

@@ -34,7 +34,7 @@ class LocalNotificationService {
   static const _reminderMessages = [
     'Zeit zum Eintragen! Was hast du gegessen?',
     'Vergiss nicht, deine Mahlzeiten zu tracken!',
-    'Wie geht es deinem Bauch? Trag es ein!',
+    'Was hast du heute gegessen? Trag es ein!',
     'Erinnerung: Halte dein Essens-Tagebuch aktuell.',
   ];
 
@@ -91,9 +91,6 @@ class LocalNotificationService {
         importance: _dailySummaryChannel.importance,
       ),
     );
-
-    // Request permission on init so local notifications work immediately
-    await requestPermission();
 
     _log.debug('initialized');
   }
@@ -162,7 +159,7 @@ class LocalNotificationService {
         ),
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         matchDateTimeComponents: DateTimeComponents.time,
-        payload: '/dashboard',
+        payload: '/meal-tracker',
       );
     }
 

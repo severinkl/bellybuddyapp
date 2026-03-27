@@ -10,6 +10,7 @@ import 'providers/notification_provider.dart';
 import 'providers/profile_provider.dart';
 import 'router/app_router.dart';
 import 'screens/splash/splash_screen.dart';
+import 'providers/pending_route_provider.dart';
 import 'repositories/notification_repository.dart';
 import 'utils/logger.dart';
 
@@ -35,6 +36,14 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
       Future.microtask(() => ref.read(profileProvider.notifier).fetchProfile());
     } else {
       _log.debug('no authenticated user on start');
+    }
+
+    // Navigate to route from local notification that launched the app
+    final pendingRoute = ref.read(pendingRouteProvider.notifier).consume();
+    if (pendingRoute != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) ref.read(routerProvider).go(pendingRoute);
+      });
     }
 
     final notificationRepo = ref.read(notificationRepositoryProvider);

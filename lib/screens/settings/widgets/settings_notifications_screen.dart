@@ -1,14 +1,14 @@
 import 'dart:async';
-import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
-import '../../../config/timezone_options.dart';
 import '../../../models/user_profile.dart';
 import '../../../providers/profile_provider.dart';
-import '../../../providers/core_providers.dart';
 import '../../../repositories/notification_repository.dart';
+import '../../../utils/logger.dart';
+import '../../../widgets/common/bb_async_state.dart';
+import '../../../widgets/common/bb_card.dart';
 import '../../../widgets/common/settings_section_card.dart';
 import 'reminder_time_picker.dart';
 
@@ -22,8 +22,10 @@ class SettingsNotificationsScreen extends ConsumerStatefulWidget {
 
 class _SettingsNotificationsScreenState
     extends ConsumerState<SettingsNotificationsScreen> {
+  static const _log = AppLogger('NotificationSettings');
   Timer? _debounce;
-  bool _debugExpanded = false;
+  bool? _permissionGranted;
+  bool _isRequestingPermission = false;
 
   @override
   void dispose() {
@@ -36,48 +38,61 @@ class _SettingsNotificationsScreenState
     _debounce = Timer(AppConstants.debounceDuration, doSave);
   }
 
-  Future<void> _togglePush(bool value, UserProfile profile) async {
+  Future<void> _toggleMasterPermission(bool value, UserProfile profile) async {
     if (value) {
-      final granted = await ref
-          .read(notificationRepositoryProvider)
-          .requestPermission();
-      if (!granted) {
+      setState(() => _isRequestingPermission = true);
+      try {
+        final granted = await ref
+            .read(notificationRepositoryProvider)
+            .requestPermission();
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Benachrichtigungen sind in den Systemeinstellungen deaktiviert.',
+        setState(() {
+          _permissionGranted = granted;
+          _isRequestingPermission = false;
+        });
+        if (granted) {
+          // Enable default notifications when permission is first granted
+          ref
+              .read(profileProvider.notifier)
+              .updateProfile(
+                profile.copyWith(
+                  remindersEnabled: true,
+                  dailySummaryEnabled: true,
+                ),
+              );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Benachrichtigungen sind in den Systemeinstellungen deaktiviert.',
+              ),
             ),
-          ),
-        );
-        return;
+          );
+        }
+      } catch (e) {
+        _log.error('failed to request permission', e);
+        if (mounted) setState(() => _isRequestingPermission = false);
       }
+    } else {
+      // Disable all notifications and persist
+      ref
+          .read(profileProvider.notifier)
+          .updateProfile(
+            profile.copyWith(
+              remindersEnabled: false,
+              dailySummaryEnabled: false,
+              pushEnabled: false,
+            ),
+          );
+      setState(() => _permissionGranted = false);
     }
-    ref
-        .read(profileProvider.notifier)
-        .updateProfile(profile.copyWith(pushEnabled: value));
   }
 
-  Future<void> _pickDailySummaryTime(UserProfile profile) async {
-    final current = _parseTime(profile.dailySummaryTime);
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: current,
-      helpText: 'Zusammenfassung-Uhrzeit wählen',
-      cancelText: 'Abbrechen',
-      confirmText: 'Speichern',
-    );
-    if (picked == null) return;
-    final formatted =
-        '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
-    ref
-        .read(profileProvider.notifier)
-        .updateProfile(profile.copyWith(dailySummaryTime: formatted));
-  }
-
-  TimeOfDay _parseTime(String time) {
-    final parts = time.split(':');
-    return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
+  bool _isAllowed(UserProfile profile) {
+    if (_permissionGranted != null) return _permissionGranted!;
+    return profile.remindersEnabled ||
+        profile.dailySummaryEnabled ||
+        profile.pushEnabled;
   }
 
   @override
@@ -85,274 +100,191 @@ class _SettingsNotificationsScreenState
     final profileState = ref.watch(profileProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Benachrichtigungen')),
+      backgroundColor: AppTheme.screenBackground,
+      appBar: AppBar(
+        backgroundColor: AppTheme.screenBackground,
+        title: const Text('Benachrichtigungen'),
+      ),
       body: profileState.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Fehler: $e')),
+        loading: () => const BbLoadingState(),
+        error: (e, _) => BbErrorState(
+          message: 'Fehler beim Laden der Einstellungen.',
+          onRetry: () => ref.read(profileProvider.notifier).fetchProfile(),
+        ),
         data: (profile) {
           if (profile == null) {
             return const Center(child: Text('Kein Profil.'));
           }
+
+          final allowed = _isAllowed(profile);
 
           return SingleChildScrollView(
             padding: AppConstants.paddingLg,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Reminders section
-                SettingsSectionCard(
-                  icon: Icons.alarm_outlined,
-                  title: 'Erinnerungen',
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SwitchListTile(
-                        title: const Text('Erinnerungen'),
-                        subtitle: const Text(
-                          'Tägliche Erinnerungen zum Tracken',
-                        ),
-                        value: profile.remindersEnabled,
-                        activeThumbColor: AppTheme.primary,
-                        contentPadding: EdgeInsets.zero,
-                        onChanged: (v) {
-                          ref
-                              .read(profileProvider.notifier)
-                              .updateProfile(
-                                profile.copyWith(remindersEnabled: v),
-                              );
-                        },
-                      ),
-                      if (profile.remindersEnabled) ...[
-                        const Divider(),
-                        AppConstants.gap12,
-                        const Text(
-                          'Erinnerungszeiten',
-                          style: TextStyle(
-                            fontSize: AppTheme.fontSizeBodyLG,
-                            fontWeight: FontWeight.w600,
+                BbCard(
+                  child: _isRequestingPermission
+                      ? const Padding(
+                          padding: EdgeInsets.symmetric(
+                            vertical: AppConstants.spacingMd,
                           ),
-                        ),
-                        AppConstants.gap8,
-                        ReminderTimePicker(
-                          selectedTimes: profile.reminderTimes,
-                          onChanged: (newTimes) {
-                            _debounceSave(() {
-                              ref
-                                  .read(profileProvider.notifier)
-                                  .updateProfile(
-                                    profile.copyWith(reminderTimes: newTimes),
-                                  );
-                            });
-                          },
-                        ),
-                      ],
-                    ],
-                  ),
-                ),
-                AppConstants.gap16,
-
-                // Daily summary section
-                SettingsSectionCard(
-                  icon: Icons.self_improvement_outlined,
-                  title: 'Tägliche Zusammenfassung',
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SwitchListTile(
-                        title: const Text('Tägliche Zusammenfassung'),
-                        subtitle: const Text(
-                          'Abendliche Bauchgefühl-Erinnerung',
-                        ),
-                        value: profile.dailySummaryEnabled,
-                        activeThumbColor: AppTheme.primary,
-                        contentPadding: EdgeInsets.zero,
-                        onChanged: (v) {
-                          ref
-                              .read(profileProvider.notifier)
-                              .updateProfile(
-                                profile.copyWith(dailySummaryEnabled: v),
-                              );
-                        },
-                      ),
-                      if (profile.dailySummaryEnabled) ...[
-                        const Divider(),
-                        AppConstants.gap12,
-                        Row(
-                          children: [
-                            const Text(
-                              'Uhrzeit',
-                              style: TextStyle(
-                                fontSize: AppTheme.fontSizeBodyLG,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            const Spacer(),
-                            GestureDetector(
-                              onTap: () => _pickDailySummaryTime(profile),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: AppConstants.spacing14,
-                                  vertical: AppConstants.spacingSm,
-                                ),
-                                decoration: BoxDecoration(
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: AppConstants.spinnerSize,
+                                height: AppConstants.spinnerSize,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
                                   color: AppTheme.primary,
-                                  borderRadius: BorderRadius.circular(
-                                    AppConstants.radiusFull,
-                                  ),
-                                ),
-                                child: Text(
-                                  profile.dailySummaryTime,
-                                  style: const TextStyle(
-                                    fontSize: AppTheme.fontSizeBody,
-                                    fontWeight: FontWeight.w500,
-                                    color: AppTheme.primaryForeground,
-                                  ),
                                 ),
                               ),
-                            ),
-                          ],
+                              SizedBox(width: AppConstants.spacingSm),
+                              Text('Benachrichtigungen werden aktiviert...'),
+                            ],
+                          ),
+                        )
+                      : SwitchListTile(
+                          title: const Text('Benachrichtigungen erlauben'),
+                          value: allowed,
+                          activeThumbColor: AppTheme.primary,
+                          contentPadding: EdgeInsets.zero,
+                          onChanged: (v) => _toggleMasterPermission(v, profile),
                         ),
-                      ],
-                    ],
-                  ),
                 ),
                 AppConstants.gap16,
-
-                // Timezone section
-                SettingsSectionCard(
-                  icon: Icons.public,
-                  title: 'Zeitzone',
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Für die Erinnerungen zur richtigen Ortszeit',
-                        style: TextStyle(
-                          fontSize: AppTheme.fontSizeCaptionLG,
-                          color: AppTheme.mutedForeground,
-                        ),
-                      ),
-                      AppConstants.gap12,
-                      DropdownButtonFormField<String>(
-                        initialValue: profile.timezone ?? 'Europe/Berlin',
-                        isExpanded: true,
-                        decoration: const InputDecoration(
-                          contentPadding: EdgeInsets.symmetric(
-                            horizontal: AppConstants.spacingMd,
-                            vertical: AppConstants.spacing12,
+                IgnorePointer(
+                  ignoring: !allowed,
+                  child: AnimatedOpacity(
+                    opacity: allowed ? 1.0 : AppConstants.disabledOpacity,
+                    duration: AppConstants.animFast,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SettingsSectionCard(
+                          icon: Icons.alarm_outlined,
+                          title: 'Erinnerungen',
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SwitchListTile(
+                                title: const Text('Mahlzeiten'),
+                                value: profile.remindersEnabled,
+                                activeThumbColor: AppTheme.primary,
+                                contentPadding: EdgeInsets.zero,
+                                onChanged: (v) {
+                                  ref
+                                      .read(profileProvider.notifier)
+                                      .updateProfile(
+                                        profile.copyWith(remindersEnabled: v),
+                                      );
+                                },
+                              ),
+                              const Text(
+                                'Erinnert dich daran, deine Mahlzeiten zu tracken.',
+                                style: TextStyle(
+                                  fontSize: AppTheme.fontSizeCaptionLG,
+                                  color: AppTheme.mutedForeground,
+                                ),
+                              ),
+                              if (profile.remindersEnabled) ...[
+                                AppConstants.gap8,
+                                ReminderTimePicker(
+                                  selectedTimes: profile.reminderTimes,
+                                  onChanged: (newTimes) {
+                                    _debounceSave(() {
+                                      ref
+                                          .read(profileProvider.notifier)
+                                          .updateProfile(
+                                            profile.copyWith(
+                                              reminderTimes: newTimes,
+                                            ),
+                                          );
+                                    });
+                                  },
+                                ),
+                              ],
+                              AppConstants.gap8,
+                              const Divider(
+                                color: AppTheme.border,
+                                thickness: AppConstants.dividerThickness,
+                              ),
+                              AppConstants.gap8,
+                              SwitchListTile(
+                                title: const Text('Bauchgefühl'),
+                                value: profile.dailySummaryEnabled,
+                                activeThumbColor: AppTheme.primary,
+                                contentPadding: EdgeInsets.zero,
+                                onChanged: (v) {
+                                  ref
+                                      .read(profileProvider.notifier)
+                                      .updateProfile(
+                                        profile.copyWith(
+                                          dailySummaryEnabled: v,
+                                        ),
+                                      );
+                                },
+                              ),
+                              const Text(
+                                'Erinnert dich daran, dein Bauchgefühl einzutragen.',
+                                style: TextStyle(
+                                  fontSize: AppTheme.fontSizeCaptionLG,
+                                  color: AppTheme.mutedForeground,
+                                ),
+                              ),
+                              if (profile.dailySummaryEnabled) ...[
+                                AppConstants.gap8,
+                                ReminderTimePicker(
+                                  selectedTimes: [profile.dailySummaryTime],
+                                  onChanged: (newTimes) {
+                                    if (newTimes.isEmpty) return;
+                                    _debounceSave(() {
+                                      ref
+                                          .read(profileProvider.notifier)
+                                          .updateProfile(
+                                            profile.copyWith(
+                                              dailySummaryTime: newTimes.first,
+                                            ),
+                                          );
+                                    });
+                                  },
+                                ),
+                              ],
+                            ],
                           ),
                         ),
-                        items: timezoneOptions
-                            .map(
-                              (tz) => DropdownMenuItem(
-                                value: tz.value,
-                                child: Text(
-                                  tz.label,
-                                  overflow: TextOverflow.ellipsis,
+                        AppConstants.gap16,
+                        SettingsSectionCard(
+                          icon: Icons.lightbulb_outline,
+                          title: 'Empfehlungen & Tipps',
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SwitchListTile(
+                                title: const Text('Empfehlungen & Tipps'),
+                                value: profile.pushEnabled,
+                                activeThumbColor: AppTheme.primary,
+                                contentPadding: EdgeInsets.zero,
+                                onChanged: (v) {
+                                  ref
+                                      .read(profileProvider.notifier)
+                                      .updateProfile(
+                                        profile.copyWith(pushEnabled: v),
+                                      );
+                                },
+                              ),
+                              const Text(
+                                'Wir benachrichtigen dich, wenn Belly Buddy deine Daten analysiert hat und neue Tipps für dich bereit sind.',
+                                style: TextStyle(
+                                  fontSize: AppTheme.fontSizeCaptionLG,
+                                  color: AppTheme.mutedForeground,
                                 ),
                               ),
-                            )
-                            .toList(),
-                        onChanged: (v) {
-                          if (v == null) return;
-                          _debounceSave(() {
-                            ref
-                                .read(profileProvider.notifier)
-                                .updateProfile(profile.copyWith(timezone: v));
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                AppConstants.gap16,
-
-                // Push notifications section
-                SettingsSectionCard(
-                  icon: Icons.notifications_outlined,
-                  title: 'Push-Benachrichtigungen',
-                  child: SwitchListTile(
-                    title: const Text('Push-Benachrichtigungen'),
-                    subtitle: const Text('Empfehlungen & Warnungen'),
-                    value: profile.pushEnabled,
-                    activeThumbColor: AppTheme.primary,
-                    contentPadding: EdgeInsets.zero,
-                    onChanged: (v) => _togglePush(v, profile),
-                  ),
-                ),
-                AppConstants.gap16,
-
-                // Debug section
-                SettingsSectionCard(
-                  icon: Icons.bug_report_outlined,
-                  title: 'Debug-Info',
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      GestureDetector(
-                        onTap: () =>
-                            setState(() => _debugExpanded = !_debugExpanded),
-                        child: Row(
-                          children: [
-                            Text(
-                              _debugExpanded
-                                  ? 'Details ausblenden'
-                                  : 'Details anzeigen',
-                              style: const TextStyle(
-                                fontSize: AppTheme.fontSizeBody,
-                                color: AppTheme.mutedForeground,
-                              ),
-                            ),
-                            const Spacer(),
-                            Icon(
-                              _debugExpanded
-                                  ? Icons.expand_less
-                                  : Icons.expand_more,
-                              color: AppTheme.mutedForeground,
-                            ),
-                          ],
-                        ),
-                      ),
-                      if (_debugExpanded) ...[
-                        AppConstants.gap12,
-                        _DebugRow(
-                          label: 'Plattform',
-                          value: Platform.operatingSystem,
-                        ),
-                        _DebugRow(
-                          label: 'Erinnerungen',
-                          value: profile.remindersEnabled ? 'Ja' : 'Nein',
-                        ),
-                        _DebugRow(
-                          label: 'Zusammenfassung',
-                          value: profile.dailySummaryEnabled ? 'Ja' : 'Nein',
-                        ),
-                        _DebugRow(
-                          label: 'Push',
-                          value: profile.pushEnabled ? 'Ja' : 'Nein',
-                        ),
-                        _DebugRow(
-                          label: 'Zeitzone',
-                          value: profile.timezone ?? 'Europe/Berlin',
-                        ),
-                        _DebugRow(
-                          label: 'Zeiten',
-                          value: profile.reminderTimes.join(', '),
-                        ),
-                        _DebugRow(
-                          label: 'Zusammenfassung',
-                          value: profile.dailySummaryTime,
-                        ),
-                        _DebugRow(
-                          label: 'FCM Token',
-                          value: profile.fcmToken ?? '—',
-                        ),
-                        _DebugRow(
-                          label: 'User ID',
-                          value: ref.read(currentUserIdProvider) ?? '—',
+                            ],
+                          ),
                         ),
                       ],
-                    ],
+                    ),
                   ),
                 ),
                 AppConstants.gap32,
@@ -360,44 +292,6 @@ class _SettingsNotificationsScreenState
             ),
           );
         },
-      ),
-    );
-  }
-}
-
-class _DebugRow extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _DebugRow({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppConstants.spacing6),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: AppConstants.debugLabelWidth,
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: AppTheme.fontSizeCaptionLG,
-                color: AppTheme.mutedForeground,
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: AppTheme.fontSizeCaptionLG,
-                fontFamily: 'monospace',
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -72,14 +72,6 @@ class ReminderTimePicker extends StatelessWidget {
     return TimeOfDay(hour: int.parse(parts[0]), minute: int.parse(parts[1]));
   }
 
-  String _formatSummary() {
-    final sorted = List<String>.from(selectedTimes)..sort();
-    if (sorted.length == 1) {
-      return 'Erinnerung um ${sorted.first} Uhr';
-    }
-    return '${sorted.length} Erinnerungen: ${sorted.join(', ')}';
-  }
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -163,14 +155,6 @@ class ReminderTimePicker extends StatelessWidget {
               ),
             ),
           ],
-        ),
-        AppConstants.gap16,
-        Text(
-          _formatSummary(),
-          style: const TextStyle(
-            fontSize: AppTheme.fontSizeCaptionLG,
-            color: AppTheme.mutedForeground,
-          ),
         ),
       ],
     );

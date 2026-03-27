@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'config/firebase_config.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,6 +11,7 @@ import 'config/supabase_config.dart';
 import 'utils/logger.dart';
 import 'firebase_options.dart';
 import 'providers/core_providers.dart';
+import 'providers/pending_route_provider.dart';
 import 'services/notification_service.dart';
 import 'services/profile_service.dart';
 import 'router/app_router.dart';
@@ -19,40 +21,42 @@ void main() async {
   _validateEnv();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
-  // Portrait only
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
 
-  // Initialize Firebase
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // Initialize Supabase
   await Supabase.initialize(
     url: SupabaseConfig.url,
     anonKey: SupabaseConfig.anonKey,
   );
 
-  // Create provider container so we can access navigator key for notification deep links
   final container = ProviderContainer();
+  const log = AppLogger('Main');
 
-  // Initialize notifications with deep-link callback
   await NotificationService.initialize(
     onNotificationTap: (route) {
       if (route == null) return;
-      final navKey = container.read(navigatorKeyProvider);
-      final context = navKey.currentContext;
-      if (context != null) {
-        container.read(routerProvider).go(route);
-      }
+      log.debug('notification tapped → $route');
+      container.read(routerProvider).go(route);
     },
     profileService: container.read(profileServiceProvider),
     getUserId: () => container.read(currentUserIdProvider),
   );
 
-  // Global error handler
-  const log = AppLogger('Main');
+  // Check if app was launched by tapping a local notification (terminated state)
+  final launchDetails = await FlutterLocalNotificationsPlugin()
+      .getNotificationAppLaunchDetails();
+  if (launchDetails?.didNotificationLaunchApp == true) {
+    final route = launchDetails!.notificationResponse?.payload;
+    if (route != null) {
+      container.read(pendingRouteProvider.notifier).set(route);
+      log.debug('app launched from notification → $route');
+    }
+  }
+
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
     log.error('FlutterError', details.exception, details.stack);
