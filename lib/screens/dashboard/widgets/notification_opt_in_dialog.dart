@@ -39,46 +39,45 @@ class _NotificationOptInDialogState
 
     setState(() => _loading = true);
 
-    final granted = await ref
-        .read(notificationRepositoryProvider)
-        .requestAllPermissions();
+    try {
+      final granted = await ref
+          .read(notificationRepositoryProvider)
+          .requestAllPermissions();
 
-    if (!mounted) return;
+      if (!mounted) return;
 
-    final updated = profile.copyWith(pushEnabled: granted);
-    final prefsFuture = SharedPreferences.getInstance().then(
-      (p) => p.setBool(AppConstants.keyNotificationModalShown, true),
-    );
-    final profileFuture = ref
-        .read(profileProvider.notifier)
-        .updateProfile(updated);
-    await Future.wait([prefsFuture, profileFuture]);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(AppConstants.keyNotificationModalShown, true);
+      await ref
+          .read(profileProvider.notifier)
+          .updateProfile(profile.copyWith(pushEnabled: granted));
 
-    if (granted) {
-      await ref.read(notificationRepositoryProvider).syncNotifications(updated);
-    }
+      if (!mounted) return;
 
-    if (!mounted) return;
+      final messenger = ScaffoldMessenger.of(context);
+      Navigator.pop(context, granted);
 
-    final messenger = ScaffoldMessenger.of(context);
-    Navigator.pop(context, granted);
-
-    if (!granted) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Du kannst Benachrichtigungen jederzeit in den Einstellungen aktivieren.',
+      if (!granted) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Du kannst Benachrichtigungen jederzeit in den Einstellungen aktivieren.',
+            ),
           ),
-        ),
-      );
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 
   Future<void> _dismiss() async {
-    Navigator.pop(context, false);
-
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(AppConstants.keyNotificationModalShown, true);
+    if (!mounted) return;
+    Navigator.pop(context, false);
   }
 
   @override
