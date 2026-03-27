@@ -184,7 +184,6 @@ class _SettingsNotificationsScreenState
                                 },
                               ),
                               if (profile.remindersEnabled) ...[
-                                const Divider(),
                                 AppConstants.gap8,
                                 ReminderTimePicker(
                                   selectedTimes: profile.reminderTimes,
@@ -229,7 +228,6 @@ class _SettingsNotificationsScreenState
                                 },
                               ),
                               if (profile.dailySummaryEnabled) ...[
-                                const Divider(),
                                 AppConstants.gap8,
                                 Row(
                                   children: [
