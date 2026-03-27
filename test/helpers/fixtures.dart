@@ -29,7 +29,6 @@ UserProfile testUserProfile({
   bool dailySummaryEnabled = true,
   String dailySummaryTime = '20:00',
   bool pushEnabled = false,
-  bool notificationModalShown = false,
   String? timezone,
 }) => UserProfile(
   userId: userId ?? testUserId,
@@ -46,7 +45,6 @@ UserProfile testUserProfile({
   dailySummaryEnabled: dailySummaryEnabled,
   dailySummaryTime: dailySummaryTime,
   pushEnabled: pushEnabled,
-  notificationModalShown: notificationModalShown,
   timezone: timezone ?? 'Europe/Berlin',
 );
 
