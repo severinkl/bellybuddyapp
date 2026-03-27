@@ -66,6 +66,9 @@ class AppConstants {
   // Spinner
   static const double spinnerSize = 20.0;
 
+  // SharedPreferences keys
+  static const String keyNotificationModalShown = 'notification_modal_shown';
+
   // Icon sizes
   static const double iconSizeSm = 18.0;
 
