@@ -45,12 +45,18 @@ class _NotificationOptInDialogState
 
     if (!mounted) return;
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('notification_modal_shown', true);
-
-    await ref
+    final updated = profile.copyWith(pushEnabled: granted);
+    final prefsFuture = SharedPreferences.getInstance().then(
+      (p) => p.setBool(AppConstants.keyNotificationModalShown, true),
+    );
+    final profileFuture = ref
         .read(profileProvider.notifier)
-        .updateProfile(profile.copyWith(pushEnabled: granted));
+        .updateProfile(updated);
+    await Future.wait([prefsFuture, profileFuture]);
+
+    if (granted) {
+      await ref.read(notificationRepositoryProvider).syncNotifications(updated);
+    }
 
     if (!mounted) return;
 
@@ -72,7 +78,7 @@ class _NotificationOptInDialogState
     Navigator.pop(context, false);
 
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('notification_modal_shown', true);
+    await prefs.setBool(AppConstants.keyNotificationModalShown, true);
   }
 
   @override

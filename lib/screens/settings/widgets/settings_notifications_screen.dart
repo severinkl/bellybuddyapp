@@ -183,7 +183,12 @@ class _SettingsNotificationsScreenState
                                   },
                                 ),
                               ],
-                              AppConstants.gap16,
+                              AppConstants.gap8,
+                              const Divider(
+                                color: AppTheme.border,
+                                thickness: 0.5,
+                              ),
+                              AppConstants.gap8,
 
                               SwitchListTile(
                                 title: const Text('Bauchgefühl'),
