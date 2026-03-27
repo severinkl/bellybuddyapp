@@ -92,9 +92,6 @@ class LocalNotificationService {
       ),
     );
 
-    // Request permission on init so local notifications work immediately
-    await requestPermission();
-
     _log.debug('initialized');
   }
 
