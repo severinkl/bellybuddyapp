@@ -7,6 +7,7 @@ import '../../../models/user_profile.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../repositories/notification_repository.dart';
 import '../../../widgets/common/bb_async_state.dart';
+import '../../../widgets/common/bb_card.dart';
 import '../../../widgets/common/settings_section_card.dart';
 import 'reminder_time_picker.dart';
 
@@ -99,9 +100,7 @@ class _SettingsNotificationsScreenState
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                SettingsSectionCard(
-                  icon: Icons.notifications_outlined,
-                  title: 'Benachrichtigungen',
+                BbCard(
                   child: _isRequestingPermission
                       ? const Padding(
                           padding: EdgeInsets.symmetric(
