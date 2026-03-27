@@ -39,6 +39,10 @@ class _NotificationOptInDialogState
       return;
     }
 
+    // Capture navigator before async gaps — widget may unmount during OS dialog
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
     setState(() => _loading = true);
 
     try {
@@ -46,18 +50,13 @@ class _NotificationOptInDialogState
           .read(notificationRepositoryProvider)
           .requestAllPermissions();
 
-      if (!mounted) return;
-
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(AppConstants.keyNotificationModalShown, true);
       await ref
           .read(profileProvider.notifier)
           .updateProfile(profile.copyWith(pushEnabled: granted));
 
-      if (!mounted) return;
-
-      final messenger = ScaffoldMessenger.of(context);
-      Navigator.pop(context, granted);
+      navigator.pop(granted);
 
       if (!granted) {
         messenger.showSnackBar(
