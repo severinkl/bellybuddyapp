@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'config/firebase_config.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +14,17 @@ import 'providers/core_providers.dart';
 import 'services/notification_service.dart';
 import 'services/profile_service.dart';
 import 'router/app_router.dart';
+
+/// Route to navigate to after the app is fully built (set when app is
+/// launched by tapping a notification while terminated).
+String? _pendingNotificationRoute;
+
+/// Consume the pending notification route (returns it once, then clears).
+String? consumePendingNotificationRoute() {
+  final route = _pendingNotificationRoute;
+  _pendingNotificationRoute = null;
+  return route;
+}
 
 void main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -43,15 +55,20 @@ void main() async {
   await NotificationService.initialize(
     onNotificationTap: (route) {
       if (route == null) return;
-      log.debug('notification tapped, navigating to $route');
-      // Delay briefly to ensure router is ready after app launch
-      Future.delayed(const Duration(milliseconds: 300), () {
-        container.read(routerProvider).go(route);
-      });
+      log.debug('notification tapped → $route');
+      container.read(routerProvider).go(route);
     },
     profileService: container.read(profileServiceProvider),
     getUserId: () => container.read(currentUserIdProvider),
   );
+
+  // Check if app was launched by tapping a local notification (terminated state)
+  final launchDetails = await FlutterLocalNotificationsPlugin()
+      .getNotificationAppLaunchDetails();
+  if (launchDetails?.didNotificationLaunchApp == true) {
+    _pendingNotificationRoute = launchDetails!.notificationResponse?.payload;
+    log.debug('app launched from notification → $_pendingNotificationRoute');
+  }
 
   // Global error handler
   FlutterError.onError = (details) {
