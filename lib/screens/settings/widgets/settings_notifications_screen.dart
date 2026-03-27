@@ -26,6 +26,7 @@ class _SettingsNotificationsScreenState
   /// Tracks whether the user has granted notification permission this session.
   /// `null` means not yet determined — derived from profile on first build.
   bool? _permissionGranted;
+  bool _isRequestingPermission = false;
 
   @override
   void dispose() {
@@ -40,18 +41,27 @@ class _SettingsNotificationsScreenState
 
   Future<void> _toggleMasterPermission(bool value) async {
     if (value) {
-      final granted = await ref
-          .read(notificationRepositoryProvider)
-          .requestPermission();
-      setState(() => _permissionGranted = granted);
-      if (!granted && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Benachrichtigungen sind in den Systemeinstellungen deaktiviert.',
+      setState(() => _isRequestingPermission = true);
+      try {
+        final granted = await ref
+            .read(notificationRepositoryProvider)
+            .requestPermission();
+        if (!mounted) return;
+        setState(() {
+          _permissionGranted = granted;
+          _isRequestingPermission = false;
+        });
+        if (!granted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Benachrichtigungen sind in den Systemeinstellungen deaktiviert.',
+              ),
             ),
-          ),
-        );
+          );
+        }
+      } catch (_) {
+        if (mounted) setState(() => _isRequestingPermission = false);
       }
     } else {
       setState(() => _permissionGranted = false);
@@ -114,13 +124,33 @@ class _SettingsNotificationsScreenState
                 SettingsSectionCard(
                   icon: Icons.notifications_outlined,
                   title: 'Benachrichtigungen',
-                  child: _buildToggle(
-                    title: 'Benachrichtigungen erlauben',
-                    subtitle:
-                        'Erlaube Benachrichtigungen, um Erinnerungen zu erhalten.',
-                    value: allowed,
-                    onChanged: _toggleMasterPermission,
-                  ),
+                  child: _isRequestingPermission
+                      ? const Padding(
+                          padding: EdgeInsets.symmetric(
+                            vertical: AppConstants.spacingMd,
+                          ),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: AppTheme.primary,
+                                ),
+                              ),
+                              SizedBox(width: AppConstants.spacingSm),
+                              Text('Benachrichtigungen werden aktiviert...'),
+                            ],
+                          ),
+                        )
+                      : _buildToggle(
+                          title: 'Benachrichtigungen erlauben',
+                          subtitle:
+                              'Erlaube Benachrichtigungen, um Erinnerungen zu erhalten.',
+                          value: allowed,
+                          onChanged: _toggleMasterPermission,
+                        ),
                 ),
                 AppConstants.gap16,
                 IgnorePointer(
