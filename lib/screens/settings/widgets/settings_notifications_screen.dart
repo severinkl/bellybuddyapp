@@ -275,18 +275,30 @@ class _SettingsNotificationsScreenState
                         SettingsSectionCard(
                           icon: Icons.lightbulb_outline,
                           title: 'Empfehlungen & Tipps',
-                          child: SwitchListTile(
-                            title: const Text('Push-Benachrichtigungen'),
-                            value: profile.pushEnabled,
-                            activeThumbColor: AppTheme.primary,
-                            contentPadding: EdgeInsets.zero,
-                            onChanged: (v) {
-                              ref
-                                  .read(profileProvider.notifier)
-                                  .updateProfile(
-                                    profile.copyWith(pushEnabled: v),
-                                  );
-                            },
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SwitchListTile(
+                                title: const Text('Empfehlungen & Tipps'),
+                                value: profile.pushEnabled,
+                                activeThumbColor: AppTheme.primary,
+                                contentPadding: EdgeInsets.zero,
+                                onChanged: (v) {
+                                  ref
+                                      .read(profileProvider.notifier)
+                                      .updateProfile(
+                                        profile.copyWith(pushEnabled: v),
+                                      );
+                                },
+                              ),
+                              const Text(
+                                'Wir benachrichtigen dich, wenn Belly Buddy deine Daten analysiert hat und neue Tipps für dich bereit sind.',
+                                style: TextStyle(
+                                  fontSize: AppTheme.fontSizeCaptionLG,
+                                  color: AppTheme.mutedForeground,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
