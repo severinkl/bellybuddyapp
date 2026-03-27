@@ -11,6 +11,7 @@ import '../../providers/profile_provider.dart';
 import '../../router/route_names.dart';
 import '../../widgets/common/tracker_card.dart';
 import 'widgets/feature_card.dart';
+import 'widgets/notification_opt_in_dialog.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -23,7 +24,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(_loadData);
+    Future.microtask(() async {
+      await _loadData();
+      _maybeShowNotificationModal();
+    });
   }
 
   Future<void> _loadData() async {
@@ -32,6 +36,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       ref.read(entriesProvider.notifier).loadEntries(DateTime.now()),
       ref.read(ingredientSuggestionProvider.notifier).fetchSuggestions(),
     ]);
+  }
+
+  void _maybeShowNotificationModal() {
+    final profile = ref.read(profileProvider).whenOrNull(data: (p) => p);
+    if (profile == null) return;
+    if (profile.notificationModalShown) return;
+    if (!mounted) return;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      showNotificationOptInDialog(context);
+    });
   }
 
   @override
