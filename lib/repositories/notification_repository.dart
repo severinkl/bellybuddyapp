@@ -1,5 +1,6 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:timezone/timezone.dart' as tz;
 import '../models/user_profile.dart';
 import '../services/local_notification_service.dart';
 import '../services/push_notification_service.dart';
@@ -63,9 +64,9 @@ class NotificationRepository {
   NotificationRepository(this._scheduler);
 
   /// Schedules or cancels local notifications based on the user's profile
-  /// settings.
+  /// settings. Uses the device timezone (set during initialization).
   Future<void> syncNotifications(UserProfile profile) async {
-    final timezone = profile.timezone ?? 'Europe/Berlin';
+    final timezone = tz.local.name;
 
     if (profile.remindersEnabled && profile.reminderTimes.isNotEmpty) {
       await _scheduler.scheduleReminders(

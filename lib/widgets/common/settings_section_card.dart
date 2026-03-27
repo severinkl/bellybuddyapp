@@ -29,7 +29,7 @@ class SettingsSectionCard extends StatelessWidget {
     final effectiveTitleColor = titleColor ?? AppTheme.foreground;
 
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
           children: [

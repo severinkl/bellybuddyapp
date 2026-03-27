@@ -1,6 +1,8 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:timezone/data/latest_all.dart' as tz;
+import 'package:timezone/timezone.dart' as tz_lib;
 
 import 'package:belly_buddy/repositories/notification_repository.dart';
 
@@ -13,6 +15,8 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(<String>[]);
+    tz.initializeTimeZones();
+    tz_lib.setLocalLocation(tz_lib.getLocation('Europe/Berlin'));
   });
 
   setUp(() {
@@ -130,32 +134,7 @@ void main() {
       );
     });
 
-    test('uses profile timezone when set', () async {
-      final profile = testUserProfile(
-        remindersEnabled: true,
-        reminderTimes: ['09:00'],
-        dailySummaryEnabled: true,
-        dailySummaryTime: '21:00',
-        timezone: 'America/New_York',
-      );
-
-      await repo.syncNotifications(profile);
-
-      verify(
-        () => scheduler.scheduleReminders(
-          reminderTimes: any(named: 'reminderTimes'),
-          timezone: 'America/New_York',
-        ),
-      ).called(1);
-      verify(
-        () => scheduler.scheduleDailySummary(
-          dailySummaryTime: any(named: 'dailySummaryTime'),
-          timezone: 'America/New_York',
-        ),
-      ).called(1);
-    });
-
-    test('defaults to Europe/Berlin when timezone is null', () async {
+    test('uses device timezone (ignores profile timezone)', () async {
       final profile = testUserProfile(
         remindersEnabled: true,
         reminderTimes: ['09:00'],

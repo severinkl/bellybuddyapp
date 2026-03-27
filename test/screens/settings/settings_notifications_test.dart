@@ -7,6 +7,7 @@ import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/screens/settings/widgets/settings_notifications_screen.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
+import 'package:belly_buddy/repositories/notification_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 
 import '../../helpers/fakes.dart';
@@ -27,6 +28,9 @@ List<Override> _overrides() {
   final fakeRepo = FakeProfileRepository()..seedProfile(profile);
   return [
     profileRepositoryProvider.overrideWithValue(fakeRepo),
+    notificationRepositoryProvider.overrideWithValue(
+      FakeNotificationRepository(),
+    ),
     currentUserIdProvider.overrideWithValue('test-user'),
     profileProvider.overrideWith(() => _SeededProfileNotifier(profile)),
   ];
@@ -41,10 +45,20 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text('Benachrichtigungen'), findsOneWidget);
+      expect(find.text('Benachrichtigungen'), findsAtLeast(1));
     });
 
-    testWidgets('renders Erinnerungen section', (tester) async {
+    testWidgets('renders master permission toggle', (tester) async {
+      await tester.pumpWithProviders(
+        const SettingsNotificationsScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pump();
+
+      expect(find.text('Benachrichtigungen erlauben'), findsOneWidget);
+    });
+
+    testWidgets('renders Erinnerungen row', (tester) async {
       await tester.pumpWithProviders(
         const SettingsNotificationsScreen(),
         overrides: _overrides(),
@@ -54,24 +68,35 @@ void main() {
       expect(find.text('Erinnerungen'), findsAtLeast(1));
     });
 
-    testWidgets('renders Push-Benachrichtigungen section', (tester) async {
+    testWidgets('renders Tägliche Zusammenfassung row', (tester) async {
       await tester.pumpWithProviders(
         const SettingsNotificationsScreen(),
         overrides: _overrides(),
       );
       await tester.pump();
 
-      expect(find.text('Push-Benachrichtigungen'), findsAtLeast(1));
+      expect(find.text('Tägliche Zusammenfassung'), findsOneWidget);
     });
 
-    testWidgets('renders SwitchListTile for reminders', (tester) async {
+    testWidgets('renders Empfehlungen & Tipps row', (tester) async {
       await tester.pumpWithProviders(
         const SettingsNotificationsScreen(),
         overrides: _overrides(),
       );
       await tester.pump();
 
-      expect(find.byType(SwitchListTile), findsAtLeast(1));
+      expect(find.text('Empfehlungen & Tipps'), findsOneWidget);
+    });
+
+    testWidgets('renders SwitchListTiles for all toggles', (tester) async {
+      await tester.pumpWithProviders(
+        const SettingsNotificationsScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pump();
+
+      // Master toggle + 3 notification toggles = 4
+      expect(find.byType(SwitchListTile), findsNWidgets(4));
     });
   });
 }
