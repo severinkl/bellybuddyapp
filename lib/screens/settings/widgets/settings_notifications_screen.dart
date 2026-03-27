@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
+import '../../../models/user_profile.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../repositories/notification_repository.dart';
+import '../../../widgets/common/bb_async_state.dart';
 import '../../../widgets/common/bb_card.dart';
 import '../../../widgets/common/settings_section_card.dart';
 import 'reminder_time_picker.dart';
@@ -20,7 +22,10 @@ class SettingsNotificationsScreen extends ConsumerStatefulWidget {
 class _SettingsNotificationsScreenState
     extends ConsumerState<SettingsNotificationsScreen> {
   Timer? _debounce;
-  bool _notificationsAllowed = false;
+
+  /// Tracks whether the user has granted notification permission this session.
+  /// `null` means not yet determined — derived from profile on first build.
+  bool? _permissionGranted;
 
   @override
   void dispose() {
@@ -38,7 +43,7 @@ class _SettingsNotificationsScreenState
       final granted = await ref
           .read(notificationRepositoryProvider)
           .requestPermission();
-      setState(() => _notificationsAllowed = granted);
+      setState(() => _permissionGranted = granted);
       if (!granted && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -49,26 +54,33 @@ class _SettingsNotificationsScreenState
         );
       }
     } else {
-      setState(() => _notificationsAllowed = false);
+      setState(() => _permissionGranted = false);
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    // Check if notifications were previously enabled (any notification toggle is on)
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final profile = ref.read(profileProvider).whenOrNull(data: (p) => p);
-      if (profile != null) {
-        final hasAnyEnabled =
-            profile.remindersEnabled ||
-            profile.dailySummaryEnabled ||
-            profile.pushEnabled;
-        if (hasAnyEnabled) {
-          setState(() => _notificationsAllowed = true);
-        }
-      }
-    });
+  bool _isAllowed(UserProfile profile) {
+    // If user has explicitly toggled this session, use that.
+    if (_permissionGranted != null) return _permissionGranted!;
+    // Otherwise derive from profile: if any notification is on, assume allowed.
+    return profile.remindersEnabled ||
+        profile.dailySummaryEnabled ||
+        profile.pushEnabled;
+  }
+
+  SwitchListTile _buildToggle({
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+  }) {
+    return SwitchListTile(
+      title: Text(title),
+      subtitle: Text(subtitle),
+      value: value,
+      activeThumbColor: AppTheme.primary,
+      contentPadding: EdgeInsets.zero,
+      onChanged: onChanged,
+    );
   }
 
   @override
@@ -82,53 +94,47 @@ class _SettingsNotificationsScreenState
         title: const Text('Benachrichtigungen'),
       ),
       body: profileState.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Fehler: $e')),
+        loading: () => const BbLoadingState(),
+        error: (e, _) => BbErrorState(
+          message: 'Fehler beim Laden der Einstellungen.',
+          onRetry: () => ref.read(profileProvider.notifier).fetchProfile(),
+        ),
         data: (profile) {
           if (profile == null) {
             return const Center(child: Text('Kein Profil.'));
           }
+
+          final allowed = _isAllowed(profile);
 
           return SingleChildScrollView(
             padding: AppConstants.paddingLg,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Master permission banner
                 SettingsSectionCard(
                   icon: Icons.notifications_outlined,
                   title: 'Benachrichtigungen',
-                  child: SwitchListTile(
-                    title: const Text('Benachrichtigungen erlauben'),
-                    subtitle: const Text(
-                      'Erlaube Benachrichtigungen, um Erinnerungen zu erhalten.',
-                    ),
-                    value: _notificationsAllowed,
-                    activeThumbColor: AppTheme.primary,
-                    contentPadding: EdgeInsets.zero,
+                  child: _buildToggle(
+                    title: 'Benachrichtigungen erlauben',
+                    subtitle:
+                        'Erlaube Benachrichtigungen, um Erinnerungen zu erhalten.',
+                    value: allowed,
                     onChanged: _toggleMasterPermission,
                   ),
                 ),
                 AppConstants.gap16,
-
-                // Notification settings card — greyed out when permission not granted
                 IgnorePointer(
-                  ignoring: !_notificationsAllowed,
+                  ignoring: !allowed,
                   child: AnimatedOpacity(
-                    opacity: _notificationsAllowed ? 1.0 : 0.4,
+                    opacity: allowed ? 1.0 : AppConstants.disabledOpacity,
                     duration: AppConstants.animFast,
                     child: BbCard(
                       child: Column(
                         children: [
-                          // Row 1: Erinnerungen
-                          SwitchListTile(
-                            title: const Text('Erinnerungen'),
-                            subtitle: const Text(
-                              'Tägliche Erinnerungen zum Tracken',
-                            ),
+                          _buildToggle(
+                            title: 'Erinnerungen',
+                            subtitle: 'Tägliche Erinnerungen zum Tracken',
                             value: profile.remindersEnabled,
-                            activeThumbColor: AppTheme.primary,
-                            contentPadding: EdgeInsets.zero,
                             onChanged: (v) {
                               ref
                                   .read(profileProvider.notifier)
@@ -154,18 +160,11 @@ class _SettingsNotificationsScreenState
                               },
                             ),
                           ],
-
                           const Divider(),
-
-                          // Row 2: Tägliche Zusammenfassung
-                          SwitchListTile(
-                            title: const Text('Tägliche Zusammenfassung'),
-                            subtitle: const Text(
-                              'Abends dein Bauchgefühl-Rückblick',
-                            ),
+                          _buildToggle(
+                            title: 'Tägliche Zusammenfassung',
+                            subtitle: 'Abends dein Bauchgefühl-Rückblick',
                             value: profile.dailySummaryEnabled,
-                            activeThumbColor: AppTheme.primary,
-                            contentPadding: EdgeInsets.zero,
                             onChanged: (v) {
                               ref
                                   .read(profileProvider.notifier)
@@ -174,16 +173,11 @@ class _SettingsNotificationsScreenState
                                   );
                             },
                           ),
-
                           const Divider(),
-
-                          // Row 3: Empfehlungen & Tipps (Push)
-                          SwitchListTile(
-                            title: const Text('Empfehlungen & Tipps'),
-                            subtitle: const Text('Push-Benachrichtigungen'),
+                          _buildToggle(
+                            title: 'Empfehlungen & Tipps',
+                            subtitle: 'Push-Benachrichtigungen',
                             value: profile.pushEnabled,
-                            activeThumbColor: AppTheme.primary,
-                            contentPadding: EdgeInsets.zero,
                             onChanged: (v) {
                               ref
                                   .read(profileProvider.notifier)

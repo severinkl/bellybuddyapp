@@ -60,6 +60,9 @@ class AppConstants {
   // Image sizes
   static const double mealImageHeight = 180.0;
 
+  // Opacity
+  static const double disabledOpacity = 0.4;
+
   // Icon sizes
   static const double iconSizeSm = 18.0;
 
