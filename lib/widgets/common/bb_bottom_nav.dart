@@ -7,6 +7,9 @@ import '../../services/haptic_service.dart';
 
 class BbBottomNav extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
+  static const navHomeKey = Key('bottom_nav_home');
+  static const navDiaryKey = Key('bottom_nav_diary');
+  static const centerButtonKey = Key('bottom_nav_center_button');
 
   const BbBottomNav({super.key, required this.navigationShell});
 
@@ -44,6 +47,7 @@ class BbBottomNav extends StatelessWidget {
                 children: [
                   // Home
                   _NavItem(
+                    tapKey: navHomeKey,
                     icon: Icons.home_outlined,
                     activeIcon: Icons.home,
                     label: 'Home',
@@ -55,6 +59,7 @@ class BbBottomNav extends StatelessWidget {
                   ),
                   // Central meal tracker button
                   _CenterButton(
+                    tapKey: centerButtonKey,
                     onTap: () {
                       HapticService.light();
                       context.push(RoutePaths.mealTracker);
@@ -62,6 +67,7 @@ class BbBottomNav extends StatelessWidget {
                   ),
                   // Diary
                   _NavItem(
+                    tapKey: navDiaryKey,
                     icon: Icons.menu_book_outlined,
                     activeIcon: Icons.menu_book,
                     label: 'Tagebuch',
@@ -122,6 +128,7 @@ class _WavePainter extends CustomPainter {
 }
 
 class _NavItem extends StatelessWidget {
+  final Key? tapKey;
   final IconData icon;
   final IconData activeIcon;
   final String label;
@@ -129,6 +136,7 @@ class _NavItem extends StatelessWidget {
   final VoidCallback onTap;
 
   const _NavItem({
+    this.tapKey,
     required this.icon,
     required this.activeIcon,
     required this.label,
@@ -139,6 +147,7 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      key: tapKey,
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
       child: SizedBox(
@@ -173,12 +182,14 @@ class _NavItem extends StatelessWidget {
 
 class _CenterButton extends StatelessWidget {
   final VoidCallback onTap;
+  final Key tapKey;
 
-  const _CenterButton({required this.onTap});
+  const _CenterButton({required this.onTap, required this.tapKey});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      key: tapKey,
       onTap: onTap,
       child: SizedBox(
         width: 80,

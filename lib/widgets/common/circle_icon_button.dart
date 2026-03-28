@@ -3,6 +3,7 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 
 class CircleIconButton extends StatelessWidget {
+  final Key? tapKey;
   final IconData icon;
   final double size;
   final Color? backgroundColor;
@@ -10,6 +11,7 @@ class CircleIconButton extends StatelessWidget {
 
   const CircleIconButton({
     super.key,
+    this.tapKey,
     required this.icon,
     this.size = AppConstants.iconBadgeMd,
     this.backgroundColor,
@@ -19,6 +21,7 @@ class CircleIconButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
+      key: tapKey,
       onTap: onPressed,
       child: Container(
         width: size,

@@ -11,6 +11,7 @@ class IntolerancesStep extends StatelessWidget {
   final Map<String, List<String>> triggers;
   final void Function(String intolerance, List<String> triggers)
   onTriggersChanged;
+  static const intolerancesTitleKey = Key('intolerances_title');
 
   const IntolerancesStep({
     super.key,
@@ -35,6 +36,7 @@ class IntolerancesStep extends StatelessWidget {
             ),
             AppConstants.gap16,
             const Text(
+              key: intolerancesTitleKey,
               'Wurden dir Unverträglichkeiten diagnostiziert?',
               style: TextStyle(
                 fontSize: AppTheme.fontSizeHeadingLG,

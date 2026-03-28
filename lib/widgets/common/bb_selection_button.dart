@@ -9,6 +9,7 @@ class BbSelectionButton extends StatelessWidget {
   final VoidCallback onPressed;
   final Widget? leading;
   final double? height;
+  final Key? selectionKey;
 
   const BbSelectionButton({
     super.key,
@@ -17,6 +18,7 @@ class BbSelectionButton extends StatelessWidget {
     required this.onPressed,
     this.leading,
     this.height,
+    this.selectionKey,
   });
 
   @override
@@ -27,6 +29,7 @@ class BbSelectionButton extends StatelessWidget {
         width: double.infinity,
         height: height,
         child: OutlinedButton(
+          key: selectionKey,
           onPressed: () {
             HapticService.selection();
             onPressed();

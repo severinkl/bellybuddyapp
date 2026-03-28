@@ -7,7 +7,19 @@ import '../../config/constants.dart';
 class SplashScreen extends StatefulWidget {
   final VoidCallback onComplete;
 
-  const SplashScreen({super.key, required this.onComplete});
+  final Duration minDelay;
+  final Duration animationDuration;
+  final Duration fadeOutDuration;
+  final bool preloadImages;
+
+  const SplashScreen({
+    super.key,
+    required this.onComplete,
+    this.minDelay = const Duration(milliseconds: 1000),
+    this.animationDuration = AppConstants.animSlower,
+    this.fadeOutDuration = AppConstants.animMedium,
+    this.preloadImages = true,
+  });
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
@@ -51,19 +63,25 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
+
     _controller = AnimationController(
       vsync: this,
-      duration: AppConstants.animSlower,
+      duration: widget.animationDuration,
     );
+
     _scaleAnimation = CurvedAnimation(
       parent: _controller,
       curve: Curves.easeOutBack,
     );
     _fadeAnimation = CurvedAnimation(parent: _controller, curve: Curves.easeIn);
-
     // Remove native splash and start animation
     FlutterNativeSplash.remove();
-    _controller.forward();
+
+    if (widget.animationDuration == Duration.zero) {
+      _controller.value = 1.0;
+    } else {
+      _controller.forward();
+    }
   }
 
   @override
@@ -76,19 +94,31 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   Future<void> _preloadAndWait() async {
-    final minDelay = Future.delayed(const Duration(milliseconds: 1000));
+    final futures = <Future<void>>[Future.delayed(widget.minDelay)];
 
-    await Future.wait([
-      minDelay,
-      ..._imagesToPreload.map((path) {
-        return precacheImage(AssetImage(path), context).catchError((_) {});
-      }),
-    ]);
+    if (widget.preloadImages) {
+      futures.addAll(
+        _imagesToPreload.map(
+          (path) => precacheImage(AssetImage(path), context).catchError((_) {}),
+        ),
+      );
+    }
+
+    await Future.wait(futures);
 
     if (!mounted) return;
+
+    if (widget.fadeOutDuration == Duration.zero) {
+      widget.onComplete();
+      return;
+    }
+
     setState(() => _fadingOut = true);
-    await Future.delayed(AppConstants.animMedium);
-    if (mounted) widget.onComplete();
+    await Future.delayed(widget.fadeOutDuration);
+
+    if (mounted) {
+      widget.onComplete();
+    }
   }
 
   @override
@@ -101,7 +131,7 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return AnimatedOpacity(
       opacity: _fadingOut ? 0.0 : 1.0,
-      duration: AppConstants.animMedium,
+      duration: widget.fadeOutDuration,
       child: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(

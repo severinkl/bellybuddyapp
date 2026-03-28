@@ -1,4 +1,9 @@
 // ignore_for_file: invalid_use_of_internal_member
+import 'package:belly_buddy/config/splash_screen_config.dart';
+import 'package:belly_buddy/providers/splash_screen_provider.dart';
+import 'package:belly_buddy/screens/screens.dart';
+import 'package:belly_buddy/screens/trackers/drink/drink_tracker_screen.dart';
+import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:integration_test/integration_test.dart';
@@ -15,7 +20,6 @@ import 'package:belly_buddy/repositories/notification_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/repositories/recipe_repository.dart';
 import 'package:belly_buddy/repositories/recommendation_repository.dart';
-import 'package:belly_buddy/screens/trackers/drink/drink_tracker_screen.dart';
 
 import '../test/helpers/fakes.dart';
 import '../test/helpers/fixtures.dart';
@@ -39,6 +43,7 @@ List<Override> _buildOverrides() => [
   notificationRepositoryProvider.overrideWithValue(
     FakeNotificationRepository(),
   ),
+  splashConfigProvider.overrideWithValue(SplashConfig.test),
 ];
 
 void main() {
@@ -52,33 +57,41 @@ void main() {
 
   testWidgets('can open drink tracker', (tester) async {
     await tester.pumpWidget(
-      ProviderScope(
-        overrides: _buildOverrides(),
-        child: const BellyBuddyApp(),
-      ),
+      ProviderScope(overrides: _buildOverrides(), child: const BellyBuddyApp()),
     );
-    await tester.pump(const Duration(seconds: 3));
 
-    // App boots without errors — drink tracker can be opened from dashboard
-    expect(find.byType(BellyBuddyApp), findsOneWidget);
+    await tester.pumpAndSettle();
+
+    // should find the drink tracker button on the dashboard and tap it
+    final drinkTrackerButton = find.byKey(BbBottomNav.centerButtonKey);
+    expect(drinkTrackerButton, findsOneWidget);
+    await tester.tap(drinkTrackerButton);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(MealTrackerScreen.drinkTrackerButtonKey), findsOneWidget);
   });
 
   testWidgets('drink tracker shows drink options when open', (tester) async {
     await tester.pumpWidget(
-      ProviderScope(
-        overrides: _buildOverrides(),
-        child: const BellyBuddyApp(),
-      ),
+      ProviderScope(overrides: _buildOverrides(), child: const BellyBuddyApp()),
     );
-    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
 
-    final drinkTrackerFinder = find.byType(DrinkTrackerScreen);
-    if (drinkTrackerFinder.evaluate().isNotEmpty) {
-      // The title text from DrinkTrackerScreen
-      expect(find.textContaining('getrunken'), findsOneWidget);
-    } else {
-      // Screen not yet navigated to — verify healthy app state
-      expect(find.byType(BellyBuddyApp), findsOneWidget);
-    }
+    // should find the drink tracker button on the dashboard and tap it
+    final centerButtonKey = find.byKey(BbBottomNav.centerButtonKey);
+    expect(centerButtonKey, findsOneWidget);
+    await tester.tap(centerButtonKey);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(MealTrackerScreen.drinkTrackerButtonKey), findsOneWidget);
+
+    final drinkTrackerButtonKey = find.byKey(
+      MealTrackerScreen.drinkTrackerButtonKey,
+    );
+    expect(drinkTrackerButtonKey, findsOneWidget);
+    await tester.tap(drinkTrackerButtonKey);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DrinkTrackerScreen), findsOneWidget);
   });
 }

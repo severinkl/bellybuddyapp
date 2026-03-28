@@ -14,6 +14,9 @@ import '../../widgets/common/mascot_image.dart';
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
 
+  static const registrationButtonKey = Key('welcome_registration_button');
+  static const signInButtonKey = Key('welcome_sign_in_button');
+
   @override
   State<WelcomeScreen> createState() => _WelcomeScreenState();
 }
@@ -160,12 +163,14 @@ class _WelcomeScreenState extends State<WelcomeScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: BbButton(
+                key: WelcomeScreen.registrationButtonKey,
                 label: 'Registrieren',
                 onPressed: () => context.go(RoutePaths.registration),
               ),
             ),
             AppConstants.gap12,
             TextButton(
+              key: WelcomeScreen.signInButtonKey,
               onPressed: () => context.go(RoutePaths.auth),
               child: const Text('Zur Anmeldung'),
             ),

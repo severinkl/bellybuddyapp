@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:belly_buddy/providers/splash_screen_provider.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -122,6 +123,8 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
       }
     });
 
+    final splashConfig = ref.watch(splashConfigProvider);
+
     return MaterialApp.router(
       title: 'Belly Buddy',
       debugShowCheckedModeBanner: false,
@@ -143,6 +146,10 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
                 onComplete: () {
                   if (mounted) setState(() => _showSplash = false);
                 },
+                minDelay: splashConfig.minDelay,
+                animationDuration: splashConfig.animationDuration,
+                fadeOutDuration: splashConfig.fadeOutDuration,
+                preloadImages: splashConfig.preloadImages,
               ),
           ],
         );

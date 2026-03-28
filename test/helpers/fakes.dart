@@ -28,11 +28,17 @@ class FakeAuthRepository implements AuthRepository {
   @override
   Stream<AuthState> get onAuthStateChange => const Stream.empty();
   @override
-  Future<AuthResponse> signInWithEmail(String email, String password) async =>
-      AuthResponse(session: null, user: null);
+  Future<AuthResponse> signInWithEmail(String email, String password) async {
+    signedIn = true;
+    return AuthResponse(session: null, user: null);
+  }
+
   @override
-  Future<AuthResponse> signUpWithEmail(String email, String password) async =>
-      AuthResponse(session: null, user: null);
+  Future<AuthResponse> signUpWithEmail(String email, String password) async {
+    signedIn = true;
+    return AuthResponse(session: null, user: null);
+  }
+
   @override
   Future<AuthResponse> signInWithGoogle() async =>
       AuthResponse(session: null, user: null);

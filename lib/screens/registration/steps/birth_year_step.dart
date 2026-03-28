@@ -7,6 +7,7 @@ import '../../../widgets/common/mascot_image.dart';
 class BirthYearStep extends StatelessWidget {
   final int? value;
   final ValueChanged<int> onChanged;
+  static const birthYearTitleKey = Key('birth_year_title');
 
   const BirthYearStep({super.key, this.value, required this.onChanged});
 
@@ -27,6 +28,7 @@ class BirthYearStep extends StatelessWidget {
           ),
           AppConstants.gap16,
           const Text(
+            key: birthYearTitleKey,
             'Wann wurdest du geboren?',
             style: TextStyle(
               fontSize: AppTheme.fontSizeHeadingLG,
