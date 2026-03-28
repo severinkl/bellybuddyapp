@@ -7,13 +7,15 @@ import '../../../widgets/common/mascot_image.dart';
 class DietStep extends StatelessWidget {
   final String? value;
   final ValueChanged<String> onChanged;
+  static const dietTitleKey = Key('diet_title');
+  static const dietAllesKey = Key('diet_alles');
 
   const DietStep({super.key, this.value, required this.onChanged});
 
   static const _options = [
-    ('alles', 'Alles'),
-    ('vegetarisch', 'Vegetarisch'),
-    ('vegan', 'Vegan'),
+    ('alles', 'Alles', 'diet_alles'),
+    ('vegetarisch', 'Vegetarisch', 'diet_vegetarisch'),
+    ('vegan', 'Vegan', 'diet_vegan'),
   ];
 
   @override
@@ -30,6 +32,7 @@ class DietStep extends StatelessWidget {
           ),
           AppConstants.gap16,
           const Text(
+            key: dietTitleKey,
             'Wie ernährst du dich?',
             style: TextStyle(
               fontSize: AppTheme.fontSizeHeadingLG,
@@ -50,6 +53,7 @@ class DietStep extends StatelessWidget {
           AppConstants.gap32,
           ..._options.map((option) {
             return BbSelectionButton(
+              selectionKey: Key(option.$3),
               label: option.$2,
               isSelected: value == option.$1,
               onPressed: () => onChanged(option.$1),

@@ -5,6 +5,7 @@ import '../../router/route_names.dart';
 import 'bb_success_overlay.dart';
 
 class TrackerScreenScaffold extends StatelessWidget {
+  final Key? trackerKey;
   final String title;
   final Widget? titleWidget;
   final bool showSuccess;
@@ -17,6 +18,7 @@ class TrackerScreenScaffold extends StatelessWidget {
 
   const TrackerScreenScaffold({
     super.key,
+    this.trackerKey,
     this.title = '',
     this.titleWidget,
     required this.showSuccess,
@@ -43,6 +45,7 @@ class TrackerScreenScaffold extends StatelessWidget {
     }
 
     return Scaffold(
+      key: trackerKey,
       backgroundColor: AppTheme.screenBackground,
       appBar: AppBar(
         backgroundColor: AppTheme.screenBackground,

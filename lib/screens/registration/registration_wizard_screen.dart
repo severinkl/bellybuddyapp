@@ -22,6 +22,8 @@ import 'steps/intolerances_step.dart';
 class RegistrationWizardScreen extends ConsumerStatefulWidget {
   const RegistrationWizardScreen({super.key});
 
+  static const nextButtonKey = Key('registration_next_button');
+
   @override
   ConsumerState<RegistrationWizardScreen> createState() =>
       _RegistrationWizardScreenState();
@@ -238,6 +240,7 @@ class _RegistrationWizardScreenState
                   horizontal: AppConstants.spacingLg,
                 ),
                 child: BbButton(
+                  tapKey: RegistrationWizardScreen.nextButtonKey,
                   label: 'Weiter',
                   icon: Icons.arrow_forward,
                   onPressed: _canAdvance ? _next : null,

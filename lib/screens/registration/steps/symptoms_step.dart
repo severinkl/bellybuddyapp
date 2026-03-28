@@ -6,6 +6,7 @@ import '../../../config/constants.dart';
 class SymptomsStep extends StatelessWidget {
   final List<String> selected;
   final ValueChanged<List<String>> onChanged;
+  static const symptomsTitleKey = Key('symptoms_title');
 
   const SymptomsStep({
     super.key,
@@ -29,6 +30,7 @@ class SymptomsStep extends StatelessWidget {
         children: [
           AppConstants.gap24,
           const Text(
+            key: symptomsTitleKey,
             'Welche Beschwerden nerven dich?',
             style: TextStyle(
               fontSize: AppTheme.fontSizeHeadingLG,

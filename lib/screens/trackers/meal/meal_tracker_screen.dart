@@ -15,6 +15,8 @@ import 'widgets/meal_image_section.dart';
 
 class MealTrackerScreen extends ConsumerStatefulWidget {
   const MealTrackerScreen({super.key});
+  static const drinkTrackerButtonKey = Key('drink_tracker_button');
+  static const mealTrackerTitleKey = Key('meal_tracker_title');
 
   @override
   ConsumerState<MealTrackerScreen> createState() => _MealTrackerScreenState();
@@ -75,6 +77,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
                 children: [
                   Flexible(
                     child: Text(
+                      key: MealTrackerScreen.mealTrackerTitleKey,
                       _titleController.text,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -184,6 +187,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
             children: [
               // "Getränk tracken" button
               OutlinedButton.icon(
+                key: MealTrackerScreen.drinkTrackerButtonKey,
                 onPressed: () => context.push(RoutePaths.drinkTracker),
                 icon: const Icon(Icons.water_drop_outlined),
                 label: const Text('Getränk tracken'),

@@ -17,6 +17,7 @@ class AuthStep extends StatefulWidget {
   final Future<void> Function(String email, String password) onEmailSignUp;
   final Future<void> Function() onGoogleSignUp;
   final Future<void> Function() onAppleSignUp;
+  static const emailFieldKey = Key('auth_email_field');
 
   const AuthStep({
     super.key,
@@ -91,6 +92,7 @@ class _AuthStepState extends State<AuthStep> {
               BbAuthBanner(text: widget.error!, isError: true),
 
             TextFormField(
+              key: AuthStep.emailFieldKey,
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
               autocorrect: false,
