@@ -2,7 +2,6 @@
 import 'package:belly_buddy/config/splash_screen_config.dart';
 import 'package:belly_buddy/providers/splash_screen_provider.dart';
 import 'package:belly_buddy/screens/screens.dart';
-import 'package:belly_buddy/screens/trackers/drink/drink_tracker_screen.dart';
 import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -11,15 +10,7 @@ import 'package:riverpod/src/internals.dart' show Override;
 
 import 'package:belly_buddy/app.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
-import 'package:belly_buddy/repositories/auth_repository.dart';
-import 'package:belly_buddy/repositories/drink_repository.dart';
-import 'package:belly_buddy/repositories/entry_repository.dart';
-import 'package:belly_buddy/repositories/ingredient_repository.dart';
-import 'package:belly_buddy/repositories/meal_media_repository.dart';
-import 'package:belly_buddy/repositories/notification_repository.dart';
-import 'package:belly_buddy/repositories/profile_repository.dart';
-import 'package:belly_buddy/repositories/recipe_repository.dart';
-import 'package:belly_buddy/repositories/recommendation_repository.dart';
+import 'package:belly_buddy/repositories/repositories.dart';
 
 import '../test/helpers/fakes.dart';
 import '../test/helpers/fixtures.dart';

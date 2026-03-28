@@ -10,15 +10,8 @@ import 'package:riverpod/src/internals.dart' show Override;
 
 import 'package:belly_buddy/app.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
-import 'package:belly_buddy/repositories/auth_repository.dart';
-import 'package:belly_buddy/repositories/drink_repository.dart';
-import 'package:belly_buddy/repositories/entry_repository.dart';
-import 'package:belly_buddy/repositories/ingredient_repository.dart';
-import 'package:belly_buddy/repositories/meal_media_repository.dart';
-import 'package:belly_buddy/repositories/notification_repository.dart';
-import 'package:belly_buddy/repositories/profile_repository.dart';
-import 'package:belly_buddy/repositories/recipe_repository.dart';
-import 'package:belly_buddy/repositories/recommendation_repository.dart';
+import 'package:belly_buddy/repositories/repositories.dart';
+
 import 'package:belly_buddy/screens/diary/diary_screen.dart';
 
 import '../test/helpers/fakes.dart';
