@@ -1,55 +1,17 @@
-import 'package:belly_buddy/config/splash_screen_config.dart';
-import 'package:belly_buddy/providers/splash_screen_provider.dart';
 import 'package:belly_buddy/screens/welcome/welcome_screen.dart';
 import 'package:belly_buddy/screens/auth/auth_screen.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:riverpod/src/internals.dart' show Override;
-import 'package:belly_buddy/app.dart';
-import 'package:belly_buddy/providers/core_providers.dart';
-import 'package:belly_buddy/repositories/repositories.dart';
 
-import '../test/helpers/fakes.dart';
-import '../test/helpers/fixtures.dart';
+import 'helpers/test_app.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  List<Override> buildOverrides({
-    String? userId,
-    bool authenticated = true,
-  }) => [
-    currentUserIdProvider.overrideWithValue(userId),
-    authRepositoryProvider.overrideWithValue(
-      FakeAuthRepository()..signedIn = authenticated,
-    ),
-    profileRepositoryProvider.overrideWithValue(
-      FakeProfileRepository()..seedProfile(testUserProfile()),
-    ),
-    entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
-    drinkRepositoryProvider.overrideWithValue(FakeDrinkRepository()),
-    ingredientRepositoryProvider.overrideWithValue(FakeIngredientRepository()),
-    recipeRepositoryProvider.overrideWithValue(FakeRecipeRepository()),
-    recommendationRepositoryProvider.overrideWithValue(
-      FakeRecommendationRepository(),
-    ),
-    mealMediaRepositoryProvider.overrideWithValue(FakeMealMediaRepository()),
-    notificationRepositoryProvider.overrideWithValue(
-      FakeNotificationRepository(),
-    ),
-    splashConfigProvider.overrideWithValue(SplashConfig.test),
-  ];
-
   testWidgets('unauthenticated user (null userId) sees welcome screen', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: buildOverrides(userId: null, authenticated: false),
-        child: const BellyBuddyApp(),
-      ),
-    );
+    await tester.pumpWidget(buildTestApp(userId: null, authenticated: false));
 
     await tester.pumpAndSettle();
 
@@ -60,12 +22,7 @@ void main() {
   testWidgets(
     'unauthenticated user can navigate to auth screen and submit credentials',
     (tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: buildOverrides(userId: null, authenticated: false),
-          child: const BellyBuddyApp(),
-        ),
-      );
+      await tester.pumpWidget(buildTestApp(userId: null, authenticated: false));
 
       await tester.pumpAndSettle();
 

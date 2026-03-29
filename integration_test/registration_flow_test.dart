@@ -1,76 +1,19 @@
-import 'package:belly_buddy/config/splash_screen_config.dart';
-import 'package:belly_buddy/providers/splash_screen_provider.dart';
 import 'package:belly_buddy/screens/registration/registration_wizard_screen.dart';
-import 'package:belly_buddy/screens/registration/steps/auth_step.dart';
-import 'package:belly_buddy/screens/registration/steps/birth_year_step.dart';
-import 'package:belly_buddy/screens/registration/steps/diet_step.dart';
-import 'package:belly_buddy/screens/registration/steps/gender_step.dart';
-import 'package:belly_buddy/screens/registration/steps/height_weight_step.dart';
-import 'package:belly_buddy/screens/registration/steps/intolerances_step.dart';
-import 'package:belly_buddy/screens/registration/steps/symptoms_step.dart';
+import 'package:belly_buddy/screens/registration/steps/steps.dart';
 import 'package:belly_buddy/screens/welcome/welcome_screen.dart';
 import 'package:belly_buddy/widgets/common/bb_password_field.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:integration_test/integration_test.dart';
-// ignore: invalid_use_of_internal_member
-import 'package:riverpod/src/internals.dart' show Override;
 
-import 'package:belly_buddy/app.dart';
-import 'package:belly_buddy/providers/core_providers.dart';
-import 'package:belly_buddy/repositories/repositories.dart';
-
-import '../test/helpers/fakes.dart';
-import '../test/helpers/fixtures.dart';
+import 'helpers/test_app.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  late FakeProfileRepository emptyProfileRepo;
-  late FakeEntryRepository fakeEntryRepo;
-
-  setUp(() {
-    // Profile repo with NO seeded profile — simulates new user
-    emptyProfileRepo = FakeProfileRepository();
-    fakeEntryRepo = FakeEntryRepository();
-  });
-
-  List<Override> buildOverrides({
-    required bool hasProfile,
-    bool authenticated = false,
-  }) => [
-    currentUserIdProvider.overrideWithValue(testUserId),
-    authRepositoryProvider.overrideWithValue(
-      FakeAuthRepository()..signedIn = authenticated,
-    ),
-    profileRepositoryProvider.overrideWithValue(
-      hasProfile
-          ? (FakeProfileRepository()..seedProfile(testUserProfile()))
-          : emptyProfileRepo,
-    ),
-    entryRepositoryProvider.overrideWithValue(fakeEntryRepo),
-    drinkRepositoryProvider.overrideWithValue(FakeDrinkRepository()),
-    ingredientRepositoryProvider.overrideWithValue(FakeIngredientRepository()),
-    recipeRepositoryProvider.overrideWithValue(FakeRecipeRepository()),
-    recommendationRepositoryProvider.overrideWithValue(
-      FakeRecommendationRepository(),
-    ),
-    mealMediaRepositoryProvider.overrideWithValue(FakeMealMediaRepository()),
-    notificationRepositoryProvider.overrideWithValue(
-      FakeNotificationRepository(),
-    ),
-    splashConfigProvider.overrideWithValue(SplashConfig.test),
-  ];
-
   testWidgets('new user should see welcome screen and registration button', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: buildOverrides(hasProfile: false),
-        child: const BellyBuddyApp(),
-      ),
-    );
+    await tester.pumpWidget(buildTestApp(userId: null, authenticated: false));
     await tester.pumpAndSettle();
 
     // New user (no profile) should be redirected to the welcome screen
@@ -80,12 +23,8 @@ void main() {
   testWidgets(
     'new user should tap on registration button and go through registration process',
     (tester) async {
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: buildOverrides(hasProfile: false),
-          child: const BellyBuddyApp(),
-        ),
-      );
+      await tester.pumpWidget(buildTestApp(userId: null, authenticated: false));
+
       await tester.pumpAndSettle();
 
       final registrationButton = find.byKey(
