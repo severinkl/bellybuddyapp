@@ -1,4 +1,4 @@
-import 'dart:typed_data';
+import 'dart:async';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:belly_buddy/models/drink.dart';
@@ -22,50 +22,145 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'fixtures.dart';
 
 // -- FakeAuthRepository --
+import 'package:flutter/foundation.dart';
+
 class FakeAuthRepository implements AuthRepository {
-  bool signedIn = true;
+  FakeAuthRepository({
+    this.signedIn = true,
+    this.onSignedIn,
+    this.onSignedOut,
+  }) {
+    if (signedIn) {
+      _currentUser = _buildUser();
+      _currentSession = _buildSession();
+    }
+  }
+
+  bool signedIn;
+  void Function(User user)? onSignedIn;
+  VoidCallback? onSignedOut;
+
+  final _authStateController = StreamController<AuthState>.broadcast();
+
+  User? _currentUser;
+  Session? _currentSession;
+
+  Map<String, dynamic> _buildUserJson() => {
+    'id': testUserId,
+    'app_metadata': <String, dynamic>{},
+    'user_metadata': <String, dynamic>{},
+    'aud': 'authenticated',
+    'created_at': DateTime.now().toIso8601String(),
+  };
+
+  User? _buildUser() {
+    return User.fromJson(_buildUserJson());
+  }
+
+  Session? _buildSession() {
+    return Session.fromJson({
+      'access_token': 'fake-access-token',
+      'refresh_token': 'fake-refresh-token',
+      'token_type': 'bearer',
+      'expires_in': 3600,
+      'expires_at':
+          DateTime.now().add(const Duration(hours: 1)).millisecondsSinceEpoch ~/
+          1000,
+      'user': _buildUserJson(),
+    });
+  }
 
   @override
-  Stream<AuthState> get onAuthStateChange => const Stream.empty();
+  Stream<AuthState> get onAuthStateChange => _authStateController.stream;
+
   @override
   Future<AuthResponse> signInWithEmail(String email, String password) async {
     signedIn = true;
-    return AuthResponse(session: null, user: null);
+    _currentUser = _buildUser();
+    _currentSession = _buildSession();
+
+    onSignedIn?.call(_currentUser!);
+    _authStateController.add(
+      AuthState(AuthChangeEvent.signedIn, _currentSession),
+    );
+
+    return AuthResponse(session: _currentSession, user: _currentUser);
   }
 
   @override
   Future<AuthResponse> signUpWithEmail(String email, String password) async {
     signedIn = true;
-    return AuthResponse(session: null, user: null);
+    _currentUser = _buildUser();
+    _currentSession = _buildSession();
+
+    onSignedIn?.call(_currentUser!);
+    _authStateController.add(
+      AuthState(AuthChangeEvent.signedIn, _currentSession),
+    );
+
+    return AuthResponse(session: _currentSession, user: _currentUser);
   }
 
   @override
-  Future<AuthResponse> signInWithGoogle() async =>
-      AuthResponse(session: null, user: null);
+  Future<AuthResponse> signInWithGoogle() async {
+    signedIn = true;
+    _currentUser = _buildUser();
+    _currentSession = _buildSession();
+
+    onSignedIn?.call(_currentUser!);
+    _authStateController.add(
+      AuthState(AuthChangeEvent.signedIn, _currentSession),
+    );
+
+    return AuthResponse(session: _currentSession, user: _currentUser);
+  }
+
   @override
-  Future<AuthResponse> signInWithApple() async =>
-      AuthResponse(session: null, user: null);
+  Future<AuthResponse> signInWithApple() async {
+    signedIn = true;
+    _currentUser = _buildUser();
+    _currentSession = _buildSession();
+
+    onSignedIn?.call(_currentUser!);
+    _authStateController.add(
+      AuthState(AuthChangeEvent.signedIn, _currentSession),
+    );
+
+    return AuthResponse(session: _currentSession, user: _currentUser);
+  }
+
   @override
-  Future<void> signOut() async => signedIn = false;
+  Future<void> signOut() async {
+    signedIn = false;
+    _currentUser = null;
+    _currentSession = null;
+
+    onSignedOut?.call();
+    _authStateController.add(const AuthState(AuthChangeEvent.signedOut, null));
+  }
+
   @override
   Future<void> resetPassword(String email) async {}
+
   @override
   Future<UserResponse> updatePassword(String newPassword) async =>
-      UserResponse.fromJson({
-        'id': testUserId,
-        'app_metadata': <String, dynamic>{},
-        'user_metadata': <String, dynamic>{},
-        'aud': 'authenticated',
-        'created_at': DateTime.now().toIso8601String(),
-      });
+      UserResponse.fromJson(_buildUserJson());
+
   @override
   Future<void> deleteAccount() async {}
+
   @override
   String? detectAuthMethod() => 'email';
+
   @override
-  User? get currentUser => null;
+  User? get currentUser => _currentUser;
+
   @override
   bool get isAuthenticated => signedIn;
+
+  void dispose() {
+    _authStateController.close();
+  }
 }
 
 // -- FakeProfileRepository --

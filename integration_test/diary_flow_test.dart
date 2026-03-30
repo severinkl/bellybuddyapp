@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:belly_buddy/screens/diary/diary_screen.dart';
 
-import '../test/helpers/fixtures.dart';
 import 'helpers/test_app.dart';
 
 void main() {
@@ -15,9 +14,7 @@ void main() {
   });
 
   testWidgets('diary tab shows entries for the selected date', (tester) async {
-    await tester.pumpWidget(
-      buildTestApp(userId: testUserId, authenticated: true),
-    );
+    await tester.pumpWidget(buildTestApp());
     await tester.pumpAndSettle();
 
     final diaryNavItem = find.byKey(BbBottomNav.navDiaryKey);
@@ -46,9 +43,7 @@ void main() {
   testWidgets('diary date navigation changes the displayed date', (
     tester,
   ) async {
-    await tester.pumpWidget(
-      buildTestApp(userId: testUserId, authenticated: true),
-    );
+    await tester.pumpWidget(buildTestApp());
     await tester.pumpAndSettle();
 
     final diaryNavItem = find.byKey(BbBottomNav.navDiaryKey);

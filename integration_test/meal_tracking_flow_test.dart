@@ -3,7 +3,6 @@ import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
-import '../test/helpers/fixtures.dart';
 import 'helpers/test_app.dart';
 
 void main() {
@@ -16,9 +15,7 @@ void main() {
   testWidgets(
     'can navigate to meal tracker from dashboard and should see the title',
     (tester) async {
-      await tester.pumpWidget(
-        buildTestApp(userId: testUserId, authenticated: true),
-      );
+      await tester.pumpWidget(buildTestApp());
       await tester.pumpAndSettle();
 
       // should find the meal tracker button on the dashboard and tap it

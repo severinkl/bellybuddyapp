@@ -13,7 +13,9 @@ void main() {
   testWidgets('new user should see welcome screen and registration button', (
     tester,
   ) async {
-    await tester.pumpWidget(buildTestApp(userId: null, authenticated: false));
+    await tester.pumpWidget(
+      buildTestApp(authenticated: false, seedProfile: false, dynamicAuth: true),
+    );
     await tester.pumpAndSettle();
 
     // New user (no profile) should be redirected to the welcome screen
@@ -23,7 +25,13 @@ void main() {
   testWidgets(
     'new user should tap on registration button and go through registration process',
     (tester) async {
-      await tester.pumpWidget(buildTestApp(userId: null, authenticated: false));
+      await tester.pumpWidget(
+        buildTestApp(
+          authenticated: false,
+          seedProfile: false,
+          dynamicAuth: true,
+        ),
+      );
 
       await tester.pumpAndSettle();
 
