@@ -13,9 +13,15 @@ import '../helpers/riverpod_helpers.dart';
 
 void main() {
   late MockProfileRepository mockRepo;
+  late MockSupabaseClient mockSupabase;
+  late MockGoTrueClient mockAuth;
 
   setUp(() {
     mockRepo = MockProfileRepository();
+    mockSupabase = MockSupabaseClient();
+    mockAuth = MockGoTrueClient();
+    when(() => mockSupabase.auth).thenReturn(mockAuth);
+    when(() => mockAuth.currentUser).thenReturn(null);
     registerFallbackValue(testUserProfile());
   });
 
@@ -24,6 +30,7 @@ void main() {
         overrides: [
           profileRepositoryProvider.overrideWithValue(mockRepo),
           currentUserIdProvider.overrideWithValue(userId),
+          supabaseClientProvider.overrideWithValue(mockSupabase),
         ],
       );
 

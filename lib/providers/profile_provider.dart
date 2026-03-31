@@ -7,14 +7,24 @@ import '../utils/logger.dart';
 /// Profile state notifier
 class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
   static const _log = AppLogger('ProfileProvider');
+  bool _busy = false;
 
   @override
   AsyncValue<UserProfile?> build() => const AsyncValue.loading();
 
+  /// Falls back to the Supabase session if the reactive provider has no value yet.
+  String? _resolveUserId() =>
+      ref.read(currentUserIdProvider) ??
+      ref.read(supabaseClientProvider).auth.currentUser?.id;
+
   Future<void> fetchProfile() async {
+    if (_busy) {
+      _log.debug('fetchProfile skipped — busy');
+      return;
+    }
     state = const AsyncValue.loading();
     try {
-      final userId = ref.read(currentUserIdProvider);
+      final userId = _resolveUserId();
       if (userId == null) {
         state = const AsyncValue.data(null);
         return;
@@ -30,24 +40,27 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
   }
 
   Future<void> createProfile(UserProfile profile) async {
+    _busy = true;
     try {
-      final userId = ref.read(currentUserIdProvider);
+      final userId = _resolveUserId();
       if (userId == null) throw Exception('Not authenticated');
 
       _log.debug('creating profile for $userId');
       await ref.read(profileRepositoryProvider).createProfile(userId, profile);
-      // Fetch the full profile from DB (includes DB-generated fields like id, created_at)
+      _busy = false;
       await fetchProfile();
     } catch (e, st) {
       _log.error('createProfile', e);
       state = AsyncValue.error(e, st);
       rethrow;
+    } finally {
+      _busy = false;
     }
   }
 
   Future<void> updateProfile(UserProfile profile) async {
     final previous = state;
-    final userId = ref.read(currentUserIdProvider);
+    final userId = _resolveUserId();
     if (userId == null) throw Exception('Not authenticated');
 
     // Optimistic update — revert on failure

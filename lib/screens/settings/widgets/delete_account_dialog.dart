@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../../config/app_theme.dart';
 import '../../../providers/auth_provider.dart';
-import '../../../router/route_names.dart';
 import '../../../config/constants.dart';
 
 /// Shows a confirmation dialog for account deletion.
@@ -72,16 +70,15 @@ Future<bool> showDeleteAccountDialog(BuildContext context) async {
           ElevatedButton(
             onPressed: controller.text == 'LÖSCHEN'
                 ? () async {
+                    final container = ProviderScope.containerOf(context);
+                    final messenger = ScaffoldMessenger.of(dialogContext);
                     Navigator.pop(context);
                     try {
-                      await ProviderScope.containerOf(
-                        context,
-                      ).read(authNotifierProvider.notifier).deleteAccount();
-                      if (!dialogContext.mounted) return;
-                      dialogContext.go(RoutePaths.auth);
+                      await container
+                          .read(authNotifierProvider.notifier)
+                          .deleteAccount();
                     } catch (e) {
-                      if (!dialogContext.mounted) return;
-                      ScaffoldMessenger.of(dialogContext).showSnackBar(
+                      messenger.showSnackBar(
                         const SnackBar(content: Text('Fehler beim Löschen.')),
                       );
                     }
