@@ -95,7 +95,7 @@ jobs:
     name: Integration Tests
     needs: widget-tests
     runs-on: macos-latest
-    timeout-minutes: 90
+    timeout-minutes: 60
     continue-on-error: true
 
     steps:
@@ -117,12 +117,25 @@ jobs:
       - name: Code generation
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - uses: futureware-tech/simulator-action@v3
-        with:
-          model: 'iPhone 16'
+      - name: Boot simulator
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          for runtime, devices in data['devices'].items():
+            for d in devices:
+              if 'iPhone' in d['name'] and d['isAvailable']:
+                print(d['udid'])
+                sys.exit(0)
+          sys.exit(1)
+          ")
+          echo "SIMULATOR_UDID=$UDID" >> $GITHUB_ENV
+          xcrun simctl boot "$UDID" || true
+          # Wait for simulator to be fully ready
+          xcrun simctl bootstatus "$UDID" -b
 
       - name: List available devices
         run: flutter devices
 
       - name: Run integration tests
-        run: flutter test integration_test/ -d iPhone --dart-define-from-file=env.json
+        run: flutter test integration_test/ -d "$SIMULATOR_UDID" --dart-define-from-file=env.json
