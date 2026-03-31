@@ -43,7 +43,6 @@ jobs:
 
   unit-tests:
     name: Unit Tests
-    needs: quality
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
@@ -68,7 +67,6 @@ jobs:
 
   widget-tests:
     name: Widget Tests
-    needs: unit-tests
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -93,7 +91,6 @@ jobs:
 
   integration-tests:
     name: Integration Tests
-    needs: widget-tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
