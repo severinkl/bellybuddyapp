@@ -124,12 +124,4 @@ jobs:
         with:
           api-level: 34
           arch: x86_64
-          script: |
-            for test_file in integration_test/*_test.dart; do
-              echo "Running $test_file..."
-              flutter drive \
-                --driver=test_driver/integration_test.dart \
-                --target="$test_file" \
-                -d emulator-5554 \
-                --dart-define-from-file=env.json
-            done
+          script: for test_file in integration_test/*_test.dart; do echo "Running $test_file..."; flutter drive --driver=test_driver/integration_test.dart --target="$test_file" -d emulator-5554 --dart-define-from-file=env.json; done
