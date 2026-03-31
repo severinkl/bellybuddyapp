@@ -12,9 +12,7 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
   @override
   AsyncValue<UserProfile?> build() => const AsyncValue.loading();
 
-  /// Resolve user ID from the reactive provider first, then fall back to the
-  /// Supabase client directly. After sign-up the auth stream may not have
-  /// propagated yet, but the client already has the session.
+  /// Falls back to the Supabase session if the reactive provider has no value yet.
   String? _resolveUserId() =>
       ref.read(currentUserIdProvider) ??
       ref.read(supabaseClientProvider).auth.currentUser?.id;
@@ -49,14 +47,14 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
 
       _log.debug('creating profile for $userId');
       await ref.read(profileRepositoryProvider).createProfile(userId, profile);
-      // Fetch the full profile from DB (includes DB-generated fields like id, created_at)
       _busy = false;
       await fetchProfile();
     } catch (e, st) {
-      _busy = false;
       _log.error('createProfile', e);
       state = AsyncValue.error(e, st);
       rethrow;
+    } finally {
+      _busy = false;
     }
   }
 
