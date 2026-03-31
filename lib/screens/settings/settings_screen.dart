@@ -56,7 +56,7 @@ class SettingsScreen extends ConsumerWidget {
                 mode: LaunchMode.externalApplication,
               ),
             ),
-            if (userEmail == 'severin.kliegl@gmail.com') ...[
+            if (AppConstants.adminEmails.contains(userEmail)) ...[
               AppConstants.gap12,
               BbSettingsItem(
                 icon: Icons.bug_report_outlined,

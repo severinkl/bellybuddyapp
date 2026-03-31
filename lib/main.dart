@@ -66,8 +66,8 @@ void main() async {
       options.environment = kReleaseMode ? 'production' : 'development';
       options.sendDefaultPii = true;
       options.enableLogs = true;
-      options.tracesSampleRate = 1.0;
-      // ignore: experimental_member_use
+      options.tracesSampleRate = 0.2;
+      // ignore: experimental_member_use — API is stable, pending promotion in Sentry v10
       options.profilesSampleRate = 1.0;
       options.replay.sessionSampleRate = 0.1;
       options.replay.onErrorSampleRate = 1.0;
@@ -88,6 +88,7 @@ void _validateEnv() {
   if (SupabaseConfig.url.isEmpty) missing.add('SUPABASE_URL');
   if (SupabaseConfig.anonKey.isEmpty) missing.add('SUPABASE_ANON_KEY');
   if (FirebaseConfig.projectId.isEmpty) missing.add('FIREBASE_PROJECT_ID');
+  if (kReleaseMode && SentryConfig.dsn.isEmpty) missing.add('SENTRY_DSN');
   if (missing.isNotEmpty) {
     throw StateError(
       'Missing env vars: ${missing.join(', ')}. '
