@@ -94,8 +94,8 @@ jobs:
   integration-tests:
     name: Integration Tests
     needs: widget-tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    runs-on: macos-latest
+    timeout-minutes: 30
 
     steps:
       - uses: actions/checkout@v4
@@ -108,20 +108,37 @@ jobs:
       - name: Create env.json
         run: cp env.example.json env.json
 
+      - name: Create GoogleService-Info.plist
+        run: cp ios/Runner/GoogleService-Info.example.plist ios/Runner/GoogleService-Info.plist
+
       - run: flutter pub get
 
       - name: Code generation
         run: dart run build_runner build --delete-conflicting-outputs
 
-      - name: Install Linux build dependencies
-        run: sudo apt-get update && sudo apt-get install -y libgtk-3-dev xvfb
-
-      - name: Enable Linux desktop for headless testing
-        run: flutter create --platforms=linux .
+      - name: Boot simulator
+        run: |
+          UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          for runtime, devices in data['devices'].items():
+            for d in devices:
+              if 'iPhone' in d['name'] and d['isAvailable']:
+                print(d['udid'])
+                sys.exit(0)
+          sys.exit(1)
+          ")
+          echo "SIMULATOR_UDID=$UDID" >> $GITHUB_ENV
+          xcrun simctl boot "$UDID" || true
+          xcrun simctl bootstatus "$UDID" -b
 
       - name: Run integration tests
         run: |
-          export DISPLAY=:99
-          Xvfb :99 -screen 0 1024x768x24 &
-          sleep 2
-          flutter test integration_test/ -d linux --dart-define-from-file=env.json
+          for test_file in integration_test/*_test.dart; do
+            echo "Running $test_file..."
+            flutter drive \
+              --driver=test_driver/integration_test.dart \
+              --target="$test_file" \
+              -d "$SIMULATOR_UDID" \
+              --dart-define-from-file=env.json
+          done
