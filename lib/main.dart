@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -61,7 +62,8 @@ void main() async {
 
   await SentryFlutter.init(
     (options) {
-      options.dsn = SentryConfig.dsn;
+      options.dsn = kReleaseMode ? SentryConfig.dsn : '';
+      options.environment = kReleaseMode ? 'production' : 'development';
       options.sendDefaultPii = true;
       options.enableLogs = true;
       options.tracesSampleRate = 1.0;
