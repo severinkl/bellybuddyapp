@@ -67,6 +67,10 @@ class AppConstants {
   // Spinner
   static const double spinnerSize = 20.0;
 
+  // External URLs
+  static const String feedbackFormUrl =
+      'https://docs.google.com/forms/d/e/1FAIpQLSfHqqGW_159yd_sUacBZq5aITZwGDikag_lgd8eudHQcelNGA/viewform?usp=dialog';
+
   // SharedPreferences keys
   static const String keyNotificationModalShown = 'notification_modal_shown';
 

@@ -112,6 +112,15 @@ class _DashboardHeader extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         CircleIconButton(
+          icon: Icons.feedback_outlined,
+          size: AppConstants.iconBadgeLg,
+          onPressed: () => launchUrl(
+            Uri.parse(AppConstants.feedbackFormUrl),
+            mode: LaunchMode.externalApplication,
+          ),
+        ),
+        const SizedBox(width: AppConstants.spacingSm),
+        CircleIconButton(
           icon: Icons.settings,
           size: AppConstants.iconBadgeLg,
           onPressed: () => context.push(RoutePaths.settings),

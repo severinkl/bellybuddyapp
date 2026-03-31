@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../router/route_names.dart';
 import '../../widgets/common/bb_settings_item.dart';
@@ -39,6 +40,16 @@ class SettingsScreen extends StatelessWidget {
               title: 'Konto & Sicherheit',
               subtitle: 'Abmelden, Passwort ändern, Konto verwalten',
               onTap: () => context.push(RoutePaths.settingsAccount),
+            ),
+            AppConstants.gap12,
+            BbSettingsItem(
+              icon: Icons.feedback_outlined,
+              title: 'Feedback geben',
+              subtitle: 'Teile uns deine Ideen und Wünsche mit',
+              onTap: () => launchUrl(
+                Uri.parse(AppConstants.feedbackFormUrl),
+                mode: LaunchMode.externalApplication,
+              ),
             ),
           ],
         ),
