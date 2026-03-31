@@ -113,5 +113,8 @@ jobs:
       - name: Code generation
         run: dart run build_runner build --delete-conflicting-outputs
 
+      - name: Enable Linux desktop for headless testing
+        run: flutter create --platforms=linux .
+
       - name: Run integration tests
-        run: flutter test integration_test/ --dart-define-from-file=env.json
+        run: flutter test integration_test/ -d linux --dart-define-from-file=env.json
