@@ -103,6 +103,9 @@ class LocalNotificationService {
         >();
     if (androidPlugin != null) {
       final granted = await androidPlugin.requestNotificationsPermission();
+      _log.debug('POST_NOTIFICATIONS granted=$granted');
+      final exactAlarm = await androidPlugin.requestExactAlarmsPermission();
+      _log.debug('SCHEDULE_EXACT_ALARM granted=$exactAlarm');
       return granted ?? false;
     }
 
@@ -142,25 +145,35 @@ class LocalNotificationService {
 
       final body = _reminderMessages[_random.nextInt(_reminderMessages.length)];
 
-      await _plugin.zonedSchedule(
-        id: _reminderIdBase + i,
-        title: 'Belly Buddy',
-        body: body,
-        scheduledDate: _nextInstanceOfTime(hour, minute, location),
-        notificationDetails: NotificationDetails(
-          android: AndroidNotificationDetails(
-            _reminderChannel.id,
-            _reminderChannel.name,
-            channelDescription: _reminderChannel.description,
-            importance: Importance.high,
-            priority: Priority.high,
-          ),
-          iOS: const DarwinNotificationDetails(),
-        ),
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        matchDateTimeComponents: DateTimeComponents.time,
-        payload: '/meal-tracker',
+      final scheduledDate = _nextInstanceOfTime(hour, minute, location);
+      _log.debug(
+        'scheduling reminder $i: ${reminderTimes[i]} → $scheduledDate '
+        '(now=${tz.TZDateTime.now(location)})',
       );
+      try {
+        await _plugin.zonedSchedule(
+          id: _reminderIdBase + i,
+          title: 'Belly Buddy',
+          body: body,
+          scheduledDate: scheduledDate,
+          notificationDetails: NotificationDetails(
+            android: AndroidNotificationDetails(
+              _reminderChannel.id,
+              _reminderChannel.name,
+              channelDescription: _reminderChannel.description,
+              importance: Importance.high,
+              priority: Priority.high,
+            ),
+            iOS: const DarwinNotificationDetails(),
+          ),
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          matchDateTimeComponents: DateTimeComponents.time,
+          payload: '/meal-tracker',
+        );
+        _log.debug('reminder $i scheduled OK');
+      } catch (e, st) {
+        _log.error('reminder $i FAILED to schedule', e, st);
+      }
     }
 
     _log.debug('scheduled ${reminderTimes.length} reminders for tz=$timezone');
@@ -178,27 +191,42 @@ class LocalNotificationService {
     final minute = int.parse(parts[1]);
     final location = tz.getLocation(timezone);
 
-    await _plugin.zonedSchedule(
-      id: _dailySummaryId,
-      title: 'Belly Buddy',
-      body: 'Wie war dein Bauchgefühl heute?',
-      scheduledDate: _nextInstanceOfTime(hour, minute, location),
-      notificationDetails: NotificationDetails(
-        android: AndroidNotificationDetails(
-          _dailySummaryChannel.id,
-          _dailySummaryChannel.name,
-          channelDescription: _dailySummaryChannel.description,
-          importance: Importance.high,
-          priority: Priority.high,
-        ),
-        iOS: const DarwinNotificationDetails(),
-      ),
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      matchDateTimeComponents: DateTimeComponents.time,
-      payload: '/gut-feeling-tracker',
+    final scheduledDate = _nextInstanceOfTime(hour, minute, location);
+    _log.debug(
+      'scheduling daily summary: $dailySummaryTime → $scheduledDate '
+      '(now=${tz.TZDateTime.now(location)})',
     );
+    try {
+      await _plugin.zonedSchedule(
+        id: _dailySummaryId,
+        title: 'Belly Buddy',
+        body: 'Wie war dein Bauchgefühl heute?',
+        scheduledDate: scheduledDate,
+        notificationDetails: NotificationDetails(
+          android: AndroidNotificationDetails(
+            _dailySummaryChannel.id,
+            _dailySummaryChannel.name,
+            channelDescription: _dailySummaryChannel.description,
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+          iOS: const DarwinNotificationDetails(),
+        ),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        matchDateTimeComponents: DateTimeComponents.time,
+        payload: '/gut-feeling-tracker',
+      );
+      _log.debug('daily summary scheduled OK');
+    } catch (e, st) {
+      _log.error('daily summary FAILED to schedule', e, st);
+    }
 
-    _log.debug('scheduled daily summary at $dailySummaryTime tz=$timezone');
+    // Diagnostic: list all pending notifications
+    final pending = await _plugin.pendingNotificationRequests();
+    _log.debug('pending notifications after sync: ${pending.length}');
+    for (final n in pending) {
+      _log.debug('  pending: id=${n.id} title=${n.title} body=${n.body}');
+    }
   }
 
   /// Cancel all logging reminders.
