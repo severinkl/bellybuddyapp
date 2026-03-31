@@ -7,6 +7,7 @@ import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'app.dart';
+import 'config/sentry_config.dart';
 import 'config/supabase_config.dart';
 import 'utils/logger.dart';
 import 'firebase_options.dart';
@@ -15,6 +16,7 @@ import 'providers/pending_route_provider.dart';
 import 'services/notification_service.dart';
 import 'services/profile_service.dart';
 import 'router/app_router.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 void main() async {
   final widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -57,15 +59,24 @@ void main() async {
     }
   }
 
-  FlutterError.onError = (details) {
-    FlutterError.presentError(details);
-    log.error('FlutterError', details.exception, details.stack);
-  };
-
-  runApp(
-    UncontrolledProviderScope(
-      container: container,
-      child: const BellyBuddyApp(),
+  await SentryFlutter.init(
+    (options) {
+      options.dsn = SentryConfig.dsn;
+      options.sendDefaultPii = true;
+      options.enableLogs = true;
+      options.tracesSampleRate = 1.0;
+      // ignore: experimental_member_use
+      options.profilesSampleRate = 1.0;
+      options.replay.sessionSampleRate = 0.1;
+      options.replay.onErrorSampleRate = 1.0;
+    },
+    appRunner: () => runApp(
+      SentryWidget(
+        child: UncontrolledProviderScope(
+          container: container,
+          child: const BellyBuddyApp(),
+        ),
+      ),
     ),
   );
 }

@@ -63,3 +63,5 @@ firebase.json
 
 # Git worktrees
 .worktrees/
+
+sentry.properties
