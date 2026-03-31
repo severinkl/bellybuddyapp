@@ -121,5 +121,8 @@ jobs:
         with:
           model: 'iPhone 16'
 
+      - name: List available devices
+        run: flutter devices
+
       - name: Run integration tests
-        run: flutter test integration_test/ --dart-define-from-file=env.json
+        run: flutter test integration_test/ -d iPhone --dart-define-from-file=env.json
