@@ -3,6 +3,7 @@ import '../../config/app_theme.dart';
 import '../../services/haptic_service.dart';
 
 class BbButton extends StatelessWidget {
+  final Key? tapKey;
   final String label;
   final VoidCallback? onPressed;
   final bool isLoading;
@@ -14,6 +15,7 @@ class BbButton extends StatelessWidget {
   const BbButton({
     super.key,
     required this.label,
+    this.tapKey,
     this.onPressed,
     this.isLoading = false,
     this.isOutlined = false,
@@ -64,6 +66,7 @@ class BbButton extends StatelessWidget {
     }
 
     return ElevatedButton(
+      key: tapKey,
       onPressed: effectiveOnPressed,
       style: isDestructive
           ? ElevatedButton.styleFrom(

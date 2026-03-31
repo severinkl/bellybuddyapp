@@ -9,6 +9,7 @@ class HeightWeightStep extends StatelessWidget {
   final int? weight;
   final ValueChanged<int> onHeightChanged;
   final ValueChanged<int> onWeightChanged;
+  static const Key heightWeightTitleKey = Key('height_weight_title');
 
   const HeightWeightStep({
     super.key,
@@ -35,6 +36,7 @@ class HeightWeightStep extends StatelessWidget {
           ),
           AppConstants.gap16,
           const Text(
+            key: heightWeightTitleKey,
             'Größe & Gewicht',
             style: TextStyle(
               fontSize: AppTheme.fontSizeHeadingLG,

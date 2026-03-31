@@ -15,6 +15,8 @@ import 'widgets/quick_drink_grid.dart';
 class DrinkTrackerScreen extends ConsumerStatefulWidget {
   const DrinkTrackerScreen({super.key});
 
+  static const trackerKey = Key('drink_tracker_screen');
+
   @override
   ConsumerState<DrinkTrackerScreen> createState() => _DrinkTrackerScreenState();
 }
@@ -43,6 +45,7 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
         state.selectedAmount! > 0;
 
     return TrackerScreenScaffold(
+      trackerKey: DrinkTrackerScreen.trackerKey,
       title: 'Was hast du getrunken? 💧',
       showSuccess: state.showSuccess,
       successMessage: 'Getränk gespeichert!',

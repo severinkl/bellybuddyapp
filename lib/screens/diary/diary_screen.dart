@@ -17,6 +17,10 @@ import 'widgets/diary_entry_card.dart';
 class DiaryScreen extends ConsumerWidget {
   const DiaryScreen({super.key});
 
+  static const displayedDateKey = Key('diary_displayed_date');
+  static const previousDayKey = Key('diary_previous_day');
+  static const nextDayKey = Key('diary_next_day');
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final date = ref.watch(diaryDateProvider);
@@ -31,6 +35,7 @@ class DiaryScreen extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             CircleIconButton(
+              tapKey: DiaryScreen.previousDayKey,
               icon: Icons.chevron_left,
               onPressed: () {
                 HapticService.light();
@@ -65,6 +70,7 @@ class DiaryScreen extends ConsumerWidget {
                     const SizedBox(width: 8),
                     Flexible(
                       child: Text(
+                        key: DiaryScreen.displayedDateKey,
                         formatDateWeekday(date),
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
@@ -82,6 +88,7 @@ class DiaryScreen extends ConsumerWidget {
               const SizedBox(width: 44)
             else
               CircleIconButton(
+                tapKey: DiaryScreen.nextDayKey,
                 icon: Icons.chevron_right,
                 onPressed: () {
                   HapticService.light();

@@ -17,6 +17,10 @@ enum _AuthView { login, forgotPassword }
 class AuthScreen extends ConsumerStatefulWidget {
   const AuthScreen({super.key});
 
+  static const emailFieldKey = Key('auth_email_field');
+  static const passwordFieldKey = Key('auth_password_field');
+  static const submitLoginButtonKey = Key('auth_submit_button');
+
   @override
   ConsumerState<AuthScreen> createState() => _AuthScreenState();
 }
@@ -159,6 +163,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
                 // Email field
                 TextFormField(
+                  key: AuthScreen.emailFieldKey,
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   autocorrect: false,
@@ -179,6 +184,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 // Password field (not for forgot password)
                 if (_view != _AuthView.forgotPassword) ...[
                   BbPasswordField(
+                    key: AuthScreen.passwordFieldKey,
                     controller: _passwordController,
                     validator: (v) {
                       if (v == null || v.isEmpty) {
@@ -206,6 +212,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
                 // Submit button
                 BbButton(
+                  key: AuthScreen.submitLoginButtonKey,
                   label: _view == _AuthView.forgotPassword
                       ? 'Zurücksetzen'
                       : 'Anmelden',

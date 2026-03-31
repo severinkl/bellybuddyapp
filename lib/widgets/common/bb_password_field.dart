@@ -6,6 +6,7 @@ class BbPasswordField extends StatefulWidget {
   final String labelText;
   final String? Function(String?)? validator;
   final ValueChanged<String>? onChanged;
+  static const passwordFieldKey = Key('password_field');
 
   const BbPasswordField({
     super.key,
@@ -25,6 +26,7 @@ class _BbPasswordFieldState extends State<BbPasswordField> {
   @override
   Widget build(BuildContext context) {
     return TextFormField(
+      key: BbPasswordField.passwordFieldKey,
       controller: widget.controller,
       obscureText: _obscure,
       decoration: InputDecoration(
