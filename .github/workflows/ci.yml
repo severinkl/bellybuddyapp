@@ -108,6 +108,9 @@ jobs:
       - name: Create env.json
         run: cp env.example.json env.json
 
+      - name: Create google-services.json
+        run: cp android/app/google-services.example.json android/app/google-services.json
+
       - run: flutter pub get
 
       - name: Code generation
