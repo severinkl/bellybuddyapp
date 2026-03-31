@@ -120,4 +120,8 @@ jobs:
         run: flutter create --platforms=linux .
 
       - name: Run integration tests
-        run: xvfb-run flutter test integration_test/ -d linux --dart-define-from-file=env.json
+        run: |
+          export DISPLAY=:99
+          Xvfb :99 -screen 0 1024x768x24 &
+          sleep 2
+          flutter test integration_test/ -d linux --dart-define-from-file=env.json
