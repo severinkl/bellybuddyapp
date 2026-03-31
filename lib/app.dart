@@ -5,6 +5,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'config/app_theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/notification_provider.dart';
@@ -116,10 +117,13 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
       _log.debug('auth changed $prev → $next');
       if (next) {
         ref.read(profileProvider.notifier).fetchProfile();
+        final userId = ref.read(currentUserIdProvider);
+        Sentry.configureScope((scope) => scope.setUser(SentryUser(id: userId)));
       } else {
         ref.read(profileProvider.notifier).reset();
         ref.read(notificationRepositoryProvider).cancelAll();
         ref.read(notificationRepositoryProvider).clearToken();
+        Sentry.configureScope((scope) => scope.setUser(null));
       }
     });
 

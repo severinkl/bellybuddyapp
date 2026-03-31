@@ -71,6 +71,9 @@ class AppConstants {
   static const String feedbackFormUrl =
       'https://docs.google.com/forms/d/e/1FAIpQLSfHqqGW_159yd_sUacBZq5aITZwGDikag_lgd8eudHQcelNGA/viewform?usp=dialog';
 
+  // Admin
+  static const Set<String> adminEmails = {'severin.kliegl@gmail.com'};
+
   // SharedPreferences keys
   static const String keyNotificationModalShown = 'notification_modal_shown';
 
