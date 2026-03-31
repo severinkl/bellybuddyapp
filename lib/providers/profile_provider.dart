@@ -12,13 +12,21 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
   @override
   AsyncValue<UserProfile?> build() => const AsyncValue.loading();
 
+  /// Resolve user ID from the reactive provider first, then fall back to the
+  /// Supabase client directly. After sign-up the auth stream may not have
+  /// propagated yet, but the client already has the session.
+  String? _resolveUserId() =>
+      ref.read(currentUserIdProvider) ??
+      ref.read(supabaseClientProvider).auth.currentUser?.id;
+
   Future<void> fetchProfile() async {
-    if (_busy) return; // Already creating/fetching — skip duplicate call
+    if (_busy) {
+      _log.debug('fetchProfile skipped — busy');
+      return;
+    }
     state = const AsyncValue.loading();
     try {
-      final userId =
-          ref.read(currentUserIdProvider) ??
-          ref.read(supabaseClientProvider).auth.currentUser?.id;
+      final userId = _resolveUserId();
       if (userId == null) {
         state = const AsyncValue.data(null);
         return;
@@ -36,12 +44,7 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
   Future<void> createProfile(UserProfile profile) async {
     _busy = true;
     try {
-      // Use currentUserIdProvider if available, otherwise fall back to reading
-      // directly from the Supabase client. After sign-up the auth stream may
-      // not have propagated yet, but the client already has the session.
-      final userId =
-          ref.read(currentUserIdProvider) ??
-          ref.read(supabaseClientProvider).auth.currentUser?.id;
+      final userId = _resolveUserId();
       if (userId == null) throw Exception('Not authenticated');
 
       _log.debug('creating profile for $userId');
@@ -59,7 +62,7 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
 
   Future<void> updateProfile(UserProfile profile) async {
     final previous = state;
-    final userId = ref.read(currentUserIdProvider);
+    final userId = _resolveUserId();
     if (userId == null) throw Exception('Not authenticated');
 
     // Optimistic update — revert on failure
