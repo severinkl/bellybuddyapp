@@ -28,6 +28,8 @@ ProviderScope buildTestApp({
   bool authenticated = true,
   bool seedProfile = true,
   bool dynamicAuth = false,
+  bool failEmailSignIn = false,
+  String signInErrorMessage = 'Login failed',
   FakeProfileRepository? profileRepo,
   FakeEntryRepository? entryRepo,
   FakeDrinkRepository? drinkRepo,
@@ -44,11 +46,17 @@ ProviderScope buildTestApp({
   if (dynamicAuth) {
     fakeAuthRepository = FakeAuthRepository(
       signedIn: authenticated,
+      shouldFailEmailSignIn: failEmailSignIn,
+      signInErrorMessage: signInErrorMessage,
       onSignedIn: (_) {},
       onSignedOut: () {},
     );
   } else {
-    fakeAuthRepository = FakeAuthRepository(signedIn: authenticated);
+    fakeAuthRepository = FakeAuthRepository(
+      signedIn: authenticated,
+      shouldFailEmailSignIn: failEmailSignIn,
+      signInErrorMessage: signInErrorMessage,
+    );
   }
 
   return ProviderScope(

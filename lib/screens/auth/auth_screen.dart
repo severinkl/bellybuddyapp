@@ -20,6 +20,7 @@ class AuthScreen extends ConsumerStatefulWidget {
   static const emailFieldKey = Key('auth_email_field');
   static const passwordFieldKey = Key('auth_password_field');
   static const submitLoginButtonKey = Key('auth_submit_button');
+  static const errorMessageKey = Key('auth_error_message');
 
   @override
   ConsumerState<AuthScreen> createState() => _AuthScreenState();
@@ -153,7 +154,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 ),
                 AppConstants.gap32,
 
-                if (_error != null) BbAuthBanner(text: _error!, isError: true),
+                if (_error != null)
+                  BbAuthBanner(
+                    text: _error!,
+                    isError: true,
+                    loginMessageKey: AuthScreen.errorMessageKey,
+                  ),
 
                 if (_resetSent && _view == _AuthView.forgotPassword)
                   const BbAuthBanner(

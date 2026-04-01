@@ -23,6 +23,40 @@ void main() {
     expect(find.byKey(WelcomeScreen.registrationButtonKey), findsOneWidget);
   });
 
+  testWidgets('login shows error message when credentials are invalid', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      buildTestApp(
+        authenticated: false,
+        dynamicAuth: true,
+        failEmailSignIn: true,
+        signInErrorMessage: 'E-mail oder Passwort ist falsh.',
+      ),
+    );
+
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(WelcomeScreen.signInButtonKey));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(AuthScreen.emailFieldKey),
+      'wrong@example.com',
+    );
+    await tester.enterText(
+      find.byKey(AuthScreen.passwordFieldKey),
+      'wrongpassword',
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(AuthScreen.submitLoginButtonKey));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(AuthScreen.errorMessageKey), findsOneWidget);
+    expect(find.byKey(AuthScreen.emailFieldKey), findsOneWidget);
+  });
+
   testWidgets('unauthenticated user can navigate to auth screen and sign in', (
     tester,
   ) async {

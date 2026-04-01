@@ -1,6 +1,7 @@
 import 'package:belly_buddy/screens/registration/registration_wizard_screen.dart';
 import 'package:belly_buddy/screens/registration/steps/steps.dart';
 import 'package:belly_buddy/screens/welcome/welcome_screen.dart';
+import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
 import 'package:belly_buddy/widgets/common/bb_password_field.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -95,6 +96,28 @@ void main() {
       // Step 7: Auth - Verify email/password fields are shown
       expect(find.byKey(AuthStep.emailFieldKey), findsOneWidget);
       expect(find.byKey(BbPasswordField.passwordFieldKey), findsOneWidget);
+
+      // Step 8: Enter email and password, then tap on sign up button
+      await tester.enterText(
+        find.byKey(AuthStep.emailFieldKey),
+        'test@example.com',
+      );
+      await tester.enterText(
+        find.byKey(BbPasswordField.passwordFieldKey),
+        'TestPassword123',
+      );
+
+      await tester.pumpAndSettle();
+
+      final submitButton = find.byKey(AuthStep.submitButtonKey);
+      expect(submitButton, findsOneWidget);
+
+      // Tap on the sign up button
+      await tester.tap(submitButton);
+      await tester.pumpAndSettle(); // Wait for async operations to complete
+
+      // After successful registration, user should be navigated to the main app (bottom nav should be visible)
+      expect(find.byKey(BbBottomNav.centerButtonKey), findsOneWidget);
     },
   );
 }

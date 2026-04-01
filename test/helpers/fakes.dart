@@ -29,6 +29,8 @@ class FakeAuthRepository implements AuthRepository {
     this.signedIn = true,
     this.onSignedIn,
     this.onSignedOut,
+    this.shouldFailEmailSignIn = false,
+    this.signInErrorMessage = 'Login failed',
   }) {
     if (signedIn) {
       _currentUser = _buildUser();
@@ -39,6 +41,8 @@ class FakeAuthRepository implements AuthRepository {
   bool signedIn;
   void Function(User user)? onSignedIn;
   VoidCallback? onSignedOut;
+  bool shouldFailEmailSignIn;
+  String signInErrorMessage;
 
   final _authStateController = StreamController<AuthState>.broadcast();
 
@@ -75,6 +79,9 @@ class FakeAuthRepository implements AuthRepository {
 
   @override
   Future<AuthResponse> signInWithEmail(String email, String password) async {
+    if (shouldFailEmailSignIn) {
+      throw AuthException(signInErrorMessage);
+    }
     signedIn = true;
     _currentUser = _buildUser();
     _currentSession = _buildSession();

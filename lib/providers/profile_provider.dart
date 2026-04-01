@@ -1,3 +1,4 @@
+import 'package:belly_buddy/repositories/auth_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user_profile.dart';
 import '../providers/core_providers.dart';
@@ -12,10 +13,10 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
   @override
   AsyncValue<UserProfile?> build() => const AsyncValue.loading();
 
-  /// Falls back to the Supabase session if the reactive provider has no value yet.
+  /// Falls back to the auth repository if the reactive provider has no value yet.
   String? _resolveUserId() =>
       ref.read(currentUserIdProvider) ??
-      ref.read(supabaseClientProvider).auth.currentUser?.id;
+      ref.read(authRepositoryProvider).currentUser?.id;
 
   Future<void> fetchProfile() async {
     if (_busy) {
