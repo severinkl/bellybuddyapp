@@ -256,7 +256,9 @@ class _RegistrationWizardScreenState
               ),
               child: TextButton.icon(
                 icon: const Icon(Icons.arrow_back, size: 18),
-                label: const Text('Zurück'),
+                label: _currentStep == 0
+                    ? const Text('Zur Anmeldung')
+                    : const Text('Zurück'),
                 style: TextButton.styleFrom(
                   foregroundColor: AppTheme.mutedForeground,
                 ),
@@ -265,7 +267,7 @@ class _RegistrationWizardScreenState
                   FocusManager.instance.primaryFocus?.unfocus();
 
                   if (_currentStep == 0) {
-                    context.go(RoutePaths.welcome);
+                    context.go(RoutePaths.auth);
                   } else {
                     _back();
                   }
