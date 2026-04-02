@@ -1,21 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
-import '../../providers/auth_provider.dart';
 import '../../router/route_names.dart';
 import '../../widgets/common/bb_settings_item.dart';
 import '../../config/constants.dart';
 
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final userEmail = ref.watch(currentUserProvider)?.email;
-
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.screenBackground,
       appBar: AppBar(
@@ -56,22 +51,6 @@ class SettingsScreen extends ConsumerWidget {
                 mode: LaunchMode.externalApplication,
               ),
             ),
-            if (AppConstants.adminEmails.contains(userEmail)) ...[
-              AppConstants.gap12,
-              BbSettingsItem(
-                icon: Icons.bug_report_outlined,
-                title: 'Sentry Test-Error',
-                subtitle: 'Test-Exception an Sentry senden',
-                onTap: () {
-                  Sentry.captureException(
-                    StateError('Test error from settings'),
-                  );
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Test-Error gesendet!')),
-                  );
-                },
-              ),
-            ],
           ],
         ),
       ),
