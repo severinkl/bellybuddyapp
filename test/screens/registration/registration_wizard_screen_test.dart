@@ -38,14 +38,14 @@ void main() {
       expect(find.text('Weiter'), findsOneWidget);
     });
 
-    testWidgets('renders Zurück button', (tester) async {
+    testWidgets('renders Zur Anmeldung button', (tester) async {
       await tester.pumpWithProviders(
         const RegistrationWizardScreen(),
         overrides: _overrides(),
       );
       await tester.pump();
 
-      expect(find.text('Zurück'), findsOneWidget);
+      expect(find.text('Zur Anmeldung'), findsOneWidget);
     });
 
     testWidgets('Weiter button is present and tappable', (tester) async {
