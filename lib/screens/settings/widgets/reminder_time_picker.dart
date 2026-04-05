@@ -111,13 +111,29 @@ class ReminderTimePicker extends StatelessWidget {
                         AppConstants.radiusFull,
                       ),
                     ),
-                    child: Text(
-                      selectedTimes[i],
-                      style: const TextStyle(
-                        fontSize: AppTheme.fontSizeBody,
-                        fontWeight: FontWeight.w500,
-                        color: AppTheme.primaryForeground,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          selectedTimes[i],
+                          style: const TextStyle(
+                            fontSize: AppTheme.fontSizeBody,
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.primaryForeground,
+                          ),
+                        ),
+                        if (selectedTimes.length > 1) ...[
+                          const SizedBox(width: AppConstants.spacingXs),
+                          GestureDetector(
+                            onTap: () => _removeTime(i),
+                            child: const Icon(
+                              Icons.close,
+                              size: 16,
+                              color: AppTheme.primaryForeground,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
                 ),
