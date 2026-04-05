@@ -82,60 +82,46 @@ class ReminderTimePicker extends StatelessWidget {
           runSpacing: AppConstants.spacingSm,
           children: [
             for (var i = 0; i < selectedTimes.length; i++)
-              Dismissible(
-                key: ValueKey(selectedTimes[i]),
-                direction: selectedTimes.length > 1
-                    ? DismissDirection.horizontal
-                    : DismissDirection.none,
-                onDismissed: (_) => _removeTime(i),
-                background: Container(
-                  alignment: Alignment.center,
+              GestureDetector(
+                onTap: () => _editTime(context, i),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppConstants.spacing14,
+                    vertical: AppConstants.spacingSm,
+                  ),
                   decoration: BoxDecoration(
-                    color: AppTheme.destructive,
+                    color: AppTheme.primary,
                     borderRadius: BorderRadius.circular(
                       AppConstants.radiusFull,
                     ),
                   ),
-                  child: const Icon(Icons.delete, color: Colors.white),
-                ),
-                child: GestureDetector(
-                  onTap: () => _editTime(context, i),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppConstants.spacing14,
-                      vertical: AppConstants.spacingSm,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primary,
-                      borderRadius: BorderRadius.circular(
-                        AppConstants.radiusFull,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        selectedTimes[i],
+                        style: const TextStyle(
+                          fontSize: AppTheme.fontSizeBody,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.primaryForeground,
+                        ),
                       ),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          selectedTimes[i],
-                          style: const TextStyle(
-                            fontSize: AppTheme.fontSizeBody,
-                            fontWeight: FontWeight.w500,
+                      if (selectedTimes.length > 1) ...[
+                        const SizedBox(width: AppConstants.spacingXs),
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            HapticService.light();
+                            _removeTime(i);
+                          },
+                          child: const Icon(
+                            Icons.close,
+                            size: AppConstants.iconSizeXs,
                             color: AppTheme.primaryForeground,
                           ),
                         ),
-                        if (selectedTimes.length > 1) ...[
-                          const SizedBox(width: AppConstants.spacingXs),
-                          GestureDetector(
-                            behavior: HitTestBehavior.opaque,
-                            onTap: () => _removeTime(i),
-                            child: const Icon(
-                              Icons.close,
-                              size: AppConstants.iconSizeXs,
-                              color: AppTheme.primaryForeground,
-                            ),
-                          ),
-                        ],
                       ],
-                    ),
+                    ],
                   ),
                 ),
               ),
