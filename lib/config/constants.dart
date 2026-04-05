@@ -75,6 +75,7 @@ class AppConstants {
   static const String keyNotificationModalShown = 'notification_modal_shown';
 
   // Icon sizes
+  static const double iconSizeXs = 16.0;
   static const double iconSizeSm = 18.0;
 
   // Button
