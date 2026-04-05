@@ -110,10 +110,7 @@ class ReminderTimePicker extends StatelessWidget {
                         const SizedBox(width: AppConstants.spacingXs),
                         GestureDetector(
                           behavior: HitTestBehavior.opaque,
-                          onTap: () {
-                            HapticService.light();
-                            _removeTime(i);
-                          },
+                          onTap: () => _removeTime(i),
                           child: const Padding(
                             padding: EdgeInsets.all(AppConstants.spacingXs),
                             child: Icon(
