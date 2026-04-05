@@ -114,10 +114,13 @@ class ReminderTimePicker extends StatelessWidget {
                             HapticService.light();
                             _removeTime(i);
                           },
-                          child: const Icon(
-                            Icons.close,
-                            size: AppConstants.iconSizeXs,
-                            color: AppTheme.primaryForeground,
+                          child: const Padding(
+                            padding: EdgeInsets.all(AppConstants.spacingXs),
+                            child: Icon(
+                              Icons.close,
+                              size: AppConstants.iconSizeXs,
+                              color: AppTheme.primaryForeground,
+                            ),
                           ),
                         ),
                       ],
