@@ -24,111 +24,114 @@ void main() {
     repo = NotificationRepository(scheduler);
 
     when(
-      () => scheduler.scheduleReminders(
-        reminderTimes: any(named: 'reminderTimes'),
+      () => scheduler.scheduleMealReminders(
+        mealReminderTimes: any(named: 'mealReminderTimes'),
         timezone: any(named: 'timezone'),
       ),
     ).thenAnswer((_) async {});
-    when(() => scheduler.cancelReminders()).thenAnswer((_) async {});
+    when(() => scheduler.cancelMealReminders()).thenAnswer((_) async {});
     when(
-      () => scheduler.scheduleDailySummary(
-        dailySummaryTime: any(named: 'dailySummaryTime'),
+      () => scheduler.scheduleMoodReminders(
+        moodReminderTimes: any(named: 'moodReminderTimes'),
         timezone: any(named: 'timezone'),
       ),
     ).thenAnswer((_) async {});
-    when(() => scheduler.cancelDailySummary()).thenAnswer((_) async {});
+    when(() => scheduler.cancelMoodReminders()).thenAnswer((_) async {});
     when(() => scheduler.cancelAll()).thenAnswer((_) async {});
   });
 
   group('syncNotifications', () {
-    test('schedules reminders when enabled and times are not empty', () async {
-      final profile = testUserProfile(
-        remindersEnabled: true,
-        reminderTimes: ['08:00', '12:00'],
-        dailySummaryEnabled: false,
-        timezone: 'Europe/Berlin',
-      );
-
-      await repo.syncNotifications(profile);
-
-      verify(
-        () => scheduler.scheduleReminders(
-          reminderTimes: ['08:00', '12:00'],
+    test(
+      'schedules meal reminders when enabled and times are not empty',
+      () async {
+        final profile = testUserProfile(
+          remindersEnabled: true,
+          mealReminderTimes: ['08:00', '12:00'],
+          dailySummaryEnabled: false,
           timezone: 'Europe/Berlin',
-        ),
-      ).called(1);
-      verifyNever(() => scheduler.cancelReminders());
-    });
+        );
 
-    test('cancels reminders when disabled', () async {
+        await repo.syncNotifications(profile);
+
+        verify(
+          () => scheduler.scheduleMealReminders(
+            mealReminderTimes: ['08:00', '12:00'],
+            timezone: 'Europe/Berlin',
+          ),
+        ).called(1);
+        verifyNever(() => scheduler.cancelMealReminders());
+      },
+    );
+
+    test('cancels meal reminders when disabled', () async {
       final profile = testUserProfile(
         remindersEnabled: false,
-        reminderTimes: ['08:00'],
+        mealReminderTimes: ['08:00'],
         dailySummaryEnabled: false,
       );
 
       await repo.syncNotifications(profile);
 
-      verify(() => scheduler.cancelReminders()).called(1);
+      verify(() => scheduler.cancelMealReminders()).called(1);
       verifyNever(
-        () => scheduler.scheduleReminders(
-          reminderTimes: any(named: 'reminderTimes'),
+        () => scheduler.scheduleMealReminders(
+          mealReminderTimes: any(named: 'mealReminderTimes'),
           timezone: any(named: 'timezone'),
         ),
       );
     });
 
-    test('cancels reminders when times are empty', () async {
+    test('cancels meal reminders when times are empty', () async {
       final profile = testUserProfile(
         remindersEnabled: true,
-        reminderTimes: [],
+        mealReminderTimes: [],
         dailySummaryEnabled: false,
       );
 
       await repo.syncNotifications(profile);
 
-      verify(() => scheduler.cancelReminders()).called(1);
+      verify(() => scheduler.cancelMealReminders()).called(1);
       verifyNever(
-        () => scheduler.scheduleReminders(
-          reminderTimes: any(named: 'reminderTimes'),
+        () => scheduler.scheduleMealReminders(
+          mealReminderTimes: any(named: 'mealReminderTimes'),
           timezone: any(named: 'timezone'),
         ),
       );
     });
 
-    test('schedules daily summary when enabled', () async {
+    test('schedules mood reminders when enabled', () async {
       final profile = testUserProfile(
         remindersEnabled: false,
-        reminderTimes: [],
+        mealReminderTimes: [],
         dailySummaryEnabled: true,
-        dailySummaryTime: '20:00',
+        moodReminderTimes: ['20:00'],
         timezone: 'Europe/Berlin',
       );
 
       await repo.syncNotifications(profile);
 
       verify(
-        () => scheduler.scheduleDailySummary(
-          dailySummaryTime: '20:00',
+        () => scheduler.scheduleMoodReminders(
+          moodReminderTimes: ['20:00'],
           timezone: 'Europe/Berlin',
         ),
       ).called(1);
-      verifyNever(() => scheduler.cancelDailySummary());
+      verifyNever(() => scheduler.cancelMoodReminders());
     });
 
-    test('cancels daily summary when disabled', () async {
+    test('cancels mood reminders when disabled', () async {
       final profile = testUserProfile(
         remindersEnabled: false,
-        reminderTimes: [],
+        mealReminderTimes: [],
         dailySummaryEnabled: false,
       );
 
       await repo.syncNotifications(profile);
 
-      verify(() => scheduler.cancelDailySummary()).called(1);
+      verify(() => scheduler.cancelMoodReminders()).called(1);
       verifyNever(
-        () => scheduler.scheduleDailySummary(
-          dailySummaryTime: any(named: 'dailySummaryTime'),
+        () => scheduler.scheduleMoodReminders(
+          moodReminderTimes: any(named: 'moodReminderTimes'),
           timezone: any(named: 'timezone'),
         ),
       );
@@ -137,23 +140,23 @@ void main() {
     test('uses device timezone (ignores profile timezone)', () async {
       final profile = testUserProfile(
         remindersEnabled: true,
-        reminderTimes: ['09:00'],
+        mealReminderTimes: ['09:00'],
         dailySummaryEnabled: true,
-        dailySummaryTime: '20:00',
+        moodReminderTimes: ['20:00'],
         timezone: null,
       );
 
       await repo.syncNotifications(profile);
 
       verify(
-        () => scheduler.scheduleReminders(
-          reminderTimes: any(named: 'reminderTimes'),
+        () => scheduler.scheduleMealReminders(
+          mealReminderTimes: any(named: 'mealReminderTimes'),
           timezone: 'Europe/Berlin',
         ),
       ).called(1);
       verify(
-        () => scheduler.scheduleDailySummary(
-          dailySummaryTime: any(named: 'dailySummaryTime'),
+        () => scheduler.scheduleMoodReminders(
+          moodReminderTimes: any(named: 'moodReminderTimes'),
           timezone: 'Europe/Berlin',
         ),
       ).called(1);

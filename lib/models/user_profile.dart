@@ -16,10 +16,10 @@ abstract class UserProfile with _$UserProfile {
     @Default([]) List<String> symptoms,
     @Default([]) List<String> intolerances,
     @JsonKey(name: 'auth_method') String? authMethod,
-    @JsonKey(name: 'reminder_times')
+    @JsonKey(name: 'meal_reminder_times')
     @ReminderTimesConverter()
     @Default(['18:00'])
-    List<String> reminderTimes,
+    List<String> mealReminderTimes,
     @Default('Europe/Berlin') String? timezone,
     @JsonKey(name: 'fructose_triggers')
     @Default([])
@@ -35,9 +35,10 @@ abstract class UserProfile with _$UserProfile {
     @Default(true)
     bool dailySummaryEnabled,
     @JsonKey(name: 'push_enabled') @Default(false) bool pushEnabled,
-    @JsonKey(name: 'daily_summary_time')
-    @Default('20:00')
-    String dailySummaryTime,
+    @JsonKey(name: 'mood_reminder_times')
+    @ReminderTimesConverter()
+    @Default(['20:00'])
+    List<String> moodReminderTimes,
     @JsonKey(name: 'fcm_token') String? fcmToken,
     @JsonKey(name: 'last_inactivity_nudge') DateTime? lastInactivityNudge,
   }) = _UserProfile;

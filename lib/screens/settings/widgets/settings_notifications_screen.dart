@@ -190,14 +190,14 @@ class _SettingsNotificationsScreenState
                               if (profile.remindersEnabled) ...[
                                 AppConstants.gap8,
                                 ReminderTimePicker(
-                                  selectedTimes: profile.reminderTimes,
+                                  selectedTimes: profile.mealReminderTimes,
                                   onChanged: (newTimes) {
                                     _debounceSave(() {
                                       ref
                                           .read(profileProvider.notifier)
                                           .updateProfile(
                                             profile.copyWith(
-                                              reminderTimes: newTimes,
+                                              mealReminderTimes: newTimes,
                                             ),
                                           );
                                     });
@@ -235,15 +235,14 @@ class _SettingsNotificationsScreenState
                               if (profile.dailySummaryEnabled) ...[
                                 AppConstants.gap8,
                                 ReminderTimePicker(
-                                  selectedTimes: [profile.dailySummaryTime],
+                                  selectedTimes: profile.moodReminderTimes,
                                   onChanged: (newTimes) {
-                                    if (newTimes.isEmpty) return;
                                     _debounceSave(() {
                                       ref
                                           .read(profileProvider.notifier)
                                           .updateProfile(
                                             profile.copyWith(
-                                              dailySummaryTime: newTimes.first,
+                                              moodReminderTimes: newTimes,
                                             ),
                                           );
                                     });
