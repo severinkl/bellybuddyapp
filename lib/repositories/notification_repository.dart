@@ -9,19 +9,19 @@ import '../utils/logger.dart';
 /// Abstract interface for scheduling/cancelling local notifications.
 /// Inject this into [NotificationRepository] to enable testability.
 abstract class NotificationScheduler {
-  Future<void> scheduleReminders({
-    required List<String> reminderTimes,
+  Future<void> scheduleMealReminders({
+    required List<String> mealReminderTimes,
     required String timezone,
   });
 
-  Future<void> cancelReminders();
+  Future<void> cancelMealReminders();
 
-  Future<void> scheduleDailySummary({
-    required String dailySummaryTime,
+  Future<void> scheduleMoodReminders({
+    required List<String> moodReminderTimes,
     required String timezone,
   });
 
-  Future<void> cancelDailySummary();
+  Future<void> cancelMoodReminders();
 
   Future<void> cancelAll();
 }
@@ -29,29 +29,30 @@ abstract class NotificationScheduler {
 /// Production implementation that delegates to [LocalNotificationService].
 class LocalNotificationScheduler implements NotificationScheduler {
   @override
-  Future<void> scheduleReminders({
-    required List<String> reminderTimes,
+  Future<void> scheduleMealReminders({
+    required List<String> mealReminderTimes,
     required String timezone,
-  }) => LocalNotificationService.scheduleReminders(
-    reminderTimes: reminderTimes,
+  }) => LocalNotificationService.scheduleMealReminders(
+    mealReminderTimes: mealReminderTimes,
     timezone: timezone,
   );
 
   @override
-  Future<void> cancelReminders() => LocalNotificationService.cancelReminders();
+  Future<void> cancelMealReminders() =>
+      LocalNotificationService.cancelMealReminders();
 
   @override
-  Future<void> scheduleDailySummary({
-    required String dailySummaryTime,
+  Future<void> scheduleMoodReminders({
+    required List<String> moodReminderTimes,
     required String timezone,
-  }) => LocalNotificationService.scheduleDailySummary(
-    dailySummaryTime: dailySummaryTime,
+  }) => LocalNotificationService.scheduleMoodReminders(
+    moodReminderTimes: moodReminderTimes,
     timezone: timezone,
   );
 
   @override
-  Future<void> cancelDailySummary() =>
-      LocalNotificationService.cancelDailySummary();
+  Future<void> cancelMoodReminders() =>
+      LocalNotificationService.cancelMoodReminders();
 
   @override
   Future<void> cancelAll() => LocalNotificationService.cancelAll();
@@ -68,22 +69,22 @@ class NotificationRepository {
   Future<void> syncNotifications(UserProfile profile) async {
     final timezone = tz.local.name;
 
-    if (profile.remindersEnabled && profile.reminderTimes.isNotEmpty) {
-      await _scheduler.scheduleReminders(
-        reminderTimes: profile.reminderTimes,
+    if (profile.remindersEnabled && profile.mealReminderTimes.isNotEmpty) {
+      await _scheduler.scheduleMealReminders(
+        mealReminderTimes: profile.mealReminderTimes,
         timezone: timezone,
       );
     } else {
-      await _scheduler.cancelReminders();
+      await _scheduler.cancelMealReminders();
     }
 
-    if (profile.dailySummaryEnabled) {
-      await _scheduler.scheduleDailySummary(
-        dailySummaryTime: profile.dailySummaryTime,
+    if (profile.dailySummaryEnabled && profile.moodReminderTimes.isNotEmpty) {
+      await _scheduler.scheduleMoodReminders(
+        moodReminderTimes: profile.moodReminderTimes,
         timezone: timezone,
       );
     } else {
-      await _scheduler.cancelDailySummary();
+      await _scheduler.cancelMoodReminders();
     }
 
     _log.debug(

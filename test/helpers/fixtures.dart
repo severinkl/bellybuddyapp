@@ -25,9 +25,9 @@ UserProfile testUserProfile({
   List<String>? intolerances,
   String? authMethod,
   bool remindersEnabled = true,
-  List<String>? reminderTimes,
+  List<String>? mealReminderTimes,
   bool dailySummaryEnabled = true,
-  String dailySummaryTime = '20:00',
+  List<String>? moodReminderTimes,
   bool pushEnabled = false,
   String? timezone,
 }) => UserProfile(
@@ -41,9 +41,9 @@ UserProfile testUserProfile({
   intolerances: intolerances ?? [],
   authMethod: authMethod ?? 'email',
   remindersEnabled: remindersEnabled,
-  reminderTimes: reminderTimes ?? ['18:00'],
+  mealReminderTimes: mealReminderTimes ?? ['18:00'],
   dailySummaryEnabled: dailySummaryEnabled,
-  dailySummaryTime: dailySummaryTime,
+  moodReminderTimes: moodReminderTimes ?? ['20:00'],
   pushEnabled: pushEnabled,
   timezone: timezone ?? 'Europe/Berlin',
 );

@@ -43,7 +43,7 @@ void main() {
         'symptoms': ['Blähungen'],
         'intolerances': <String>[],
         'auth_method': 'email',
-        'reminder_times': ['18:00'],
+        'meal_reminder_times': ['18:00'],
         'timezone': 'Europe/Berlin',
         'fructose_triggers': <String>[],
         'lactose_triggers': <String>[],
@@ -51,7 +51,7 @@ void main() {
         'reminders_enabled': true,
         'daily_summary_enabled': true,
         'push_enabled': false,
-        'daily_summary_time': '20:00',
+        'mood_reminder_times': ['20:00'],
         'fcm_token': null,
         'last_inactivity_nudge': null,
       });

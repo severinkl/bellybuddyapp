@@ -8,26 +8,26 @@ void main() {
       expect(profile.remindersEnabled, isTrue);
       expect(profile.dailySummaryEnabled, isTrue);
       expect(profile.pushEnabled, isFalse);
-      expect(profile.dailySummaryTime, '20:00');
+      expect(profile.moodReminderTimes, ['20:00']);
       expect(profile.fcmToken, isNull);
       expect(profile.lastInactivityNudge, isNull);
-      expect(profile.reminderTimes, ['18:00']);
+      expect(profile.mealReminderTimes, ['18:00']);
     });
 
-    test('fromJson with legacy int reminderTimes', () {
+    test('fromJson with legacy int mealReminderTimes', () {
       final json = {
-        'reminder_times': [7, 12, 18],
+        'meal_reminder_times': [7, 12, 18],
       };
       final profile = UserProfile.fromJson(json);
-      expect(profile.reminderTimes, ['07:00', '12:00', '18:00']);
+      expect(profile.mealReminderTimes, ['07:00', '12:00', '18:00']);
     });
 
-    test('fromJson with new string reminderTimes', () {
+    test('fromJson with new string mealReminderTimes', () {
       final json = {
-        'reminder_times': ['07:30', '12:00', '18:30'],
+        'meal_reminder_times': ['07:30', '12:00', '18:30'],
       };
       final profile = UserProfile.fromJson(json);
-      expect(profile.reminderTimes, ['07:30', '12:00', '18:30']);
+      expect(profile.mealReminderTimes, ['07:30', '12:00', '18:30']);
     });
 
     test('fromJson with new fields', () {
@@ -35,14 +35,14 @@ void main() {
         'reminders_enabled': false,
         'daily_summary_enabled': true,
         'push_enabled': true,
-        'daily_summary_time': '21:00',
+        'mood_reminder_times': ['21:00'],
         'fcm_token': 'abc123',
       };
       final profile = UserProfile.fromJson(json);
       expect(profile.remindersEnabled, isFalse);
       expect(profile.dailySummaryEnabled, isTrue);
       expect(profile.pushEnabled, isTrue);
-      expect(profile.dailySummaryTime, '21:00');
+      expect(profile.moodReminderTimes, ['21:00']);
       expect(profile.fcmToken, 'abc123');
     });
   });

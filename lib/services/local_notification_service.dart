@@ -13,25 +13,25 @@ class LocalNotificationService {
   static final _random = Random();
 
   // Notification ID ranges
-  static const _reminderIdBase = 1000;
-  static const _dailySummaryId = 2000;
+  static const _mealReminderIdBase = 1000;
+  static const _moodReminderIdBase = 2000;
 
   // Android channels
-  static const _reminderChannel = AndroidNotificationChannel(
-    'logging_reminders',
-    'Erinnerungen',
-    description: 'Tägliche Erinnerungen zum Tracken',
+  static const _mealReminderChannel = AndroidNotificationChannel(
+    'meal_reminders',
+    'Mahlzeiten-Erinnerungen',
+    description: 'Erinnerungen zum Mahlzeiten tracken',
     importance: Importance.high,
   );
 
-  static const _dailySummaryChannel = AndroidNotificationChannel(
-    'daily_summary',
-    'Tägliche Zusammenfassung',
-    description: 'Abendliche Bauchgefühl-Erinnerung',
+  static const _moodReminderChannel = AndroidNotificationChannel(
+    'mood_reminders',
+    'Bauchgefühl-Erinnerungen',
+    description: 'Erinnerungen zum Bauchgefühl tracken',
     importance: Importance.high,
   );
 
-  static const _reminderMessages = [
+  static const _mealReminderMessages = [
     'Zeit zum Eintragen! Was hast du gegessen?',
     'Vergiss nicht, deine Mahlzeiten zu tracken!',
     'Was hast du heute gegessen? Trag es ein!',
@@ -77,18 +77,18 @@ class LocalNotificationService {
         >();
     await androidPlugin?.createNotificationChannel(
       AndroidNotificationChannel(
-        _reminderChannel.id,
-        _reminderChannel.name,
-        description: _reminderChannel.description,
-        importance: _reminderChannel.importance,
+        _mealReminderChannel.id,
+        _mealReminderChannel.name,
+        description: _mealReminderChannel.description,
+        importance: _mealReminderChannel.importance,
       ),
     );
     await androidPlugin?.createNotificationChannel(
       AndroidNotificationChannel(
-        _dailySummaryChannel.id,
-        _dailySummaryChannel.name,
-        description: _dailySummaryChannel.description,
-        importance: _dailySummaryChannel.importance,
+        _moodReminderChannel.id,
+        _moodReminderChannel.name,
+        description: _moodReminderChannel.description,
+        importance: _moodReminderChannel.importance,
       ),
     );
 
@@ -125,42 +125,41 @@ class LocalNotificationService {
     return false;
   }
 
-  /// Schedule all logging reminders based on user's reminder times.
-  /// Cancels existing reminders first.
-  static Future<void> scheduleReminders({
-    required List<String> reminderTimes,
+  /// Schedule meal reminders. Cancels existing ones first.
+  static Future<void> scheduleMealReminders({
+    required List<String> mealReminderTimes,
     required String timezone,
   }) async {
-    // Cancel existing reminders
     for (var i = 0; i < 100; i++) {
-      await _plugin.cancel(id: _reminderIdBase + i);
+      await _plugin.cancel(id: _mealReminderIdBase + i);
     }
 
     final location = tz.getLocation(timezone);
 
-    for (var i = 0; i < reminderTimes.length && i < 100; i++) {
-      final parts = reminderTimes[i].split(':');
+    for (var i = 0; i < mealReminderTimes.length && i < 100; i++) {
+      final parts = mealReminderTimes[i].split(':');
       final hour = int.parse(parts[0]);
       final minute = int.parse(parts[1]);
 
-      final body = _reminderMessages[_random.nextInt(_reminderMessages.length)];
+      final body =
+          _mealReminderMessages[_random.nextInt(_mealReminderMessages.length)];
 
       final scheduledDate = _nextInstanceOfTime(hour, minute, location);
       _log.debug(
-        'scheduling reminder $i: ${reminderTimes[i]} → $scheduledDate '
+        'scheduling meal reminder $i: ${mealReminderTimes[i]} → $scheduledDate '
         '(now=${tz.TZDateTime.now(location)})',
       );
       try {
         await _plugin.zonedSchedule(
-          id: _reminderIdBase + i,
+          id: _mealReminderIdBase + i,
           title: 'Belly Buddy',
           body: body,
           scheduledDate: scheduledDate,
           notificationDetails: NotificationDetails(
             android: AndroidNotificationDetails(
-              _reminderChannel.id,
-              _reminderChannel.name,
-              channelDescription: _reminderChannel.description,
+              _mealReminderChannel.id,
+              _mealReminderChannel.name,
+              channelDescription: _mealReminderChannel.description,
               importance: Importance.high,
               priority: Priority.high,
             ),
@@ -170,55 +169,62 @@ class LocalNotificationService {
           matchDateTimeComponents: DateTimeComponents.time,
           payload: '/meal-tracker',
         );
-        _log.debug('reminder $i scheduled OK');
+        _log.debug('meal reminder $i scheduled OK');
       } catch (e, st) {
-        _log.error('reminder $i FAILED to schedule', e, st);
+        _log.error('meal reminder $i FAILED to schedule', e, st);
       }
     }
 
-    _log.debug('scheduled ${reminderTimes.length} reminders for tz=$timezone');
+    _log.debug(
+      'scheduled ${mealReminderTimes.length} meal reminders for tz=$timezone',
+    );
   }
 
-  /// Schedule daily summary notification.
-  static Future<void> scheduleDailySummary({
-    required String dailySummaryTime,
+  /// Schedule mood reminders. Cancels existing ones first.
+  static Future<void> scheduleMoodReminders({
+    required List<String> moodReminderTimes,
     required String timezone,
   }) async {
-    await _plugin.cancel(id: _dailySummaryId);
+    for (var i = 0; i < 100; i++) {
+      await _plugin.cancel(id: _moodReminderIdBase + i);
+    }
 
-    final parts = dailySummaryTime.split(':');
-    final hour = int.parse(parts[0]);
-    final minute = int.parse(parts[1]);
     final location = tz.getLocation(timezone);
 
-    final scheduledDate = _nextInstanceOfTime(hour, minute, location);
-    _log.debug(
-      'scheduling daily summary: $dailySummaryTime → $scheduledDate '
-      '(now=${tz.TZDateTime.now(location)})',
-    );
-    try {
-      await _plugin.zonedSchedule(
-        id: _dailySummaryId,
-        title: 'Belly Buddy',
-        body: 'Wie war dein Bauchgefühl heute?',
-        scheduledDate: scheduledDate,
-        notificationDetails: NotificationDetails(
-          android: AndroidNotificationDetails(
-            _dailySummaryChannel.id,
-            _dailySummaryChannel.name,
-            channelDescription: _dailySummaryChannel.description,
-            importance: Importance.high,
-            priority: Priority.high,
-          ),
-          iOS: const DarwinNotificationDetails(),
-        ),
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-        matchDateTimeComponents: DateTimeComponents.time,
-        payload: '/gut-feeling-tracker',
+    for (var i = 0; i < moodReminderTimes.length && i < 100; i++) {
+      final parts = moodReminderTimes[i].split(':');
+      final hour = int.parse(parts[0]);
+      final minute = int.parse(parts[1]);
+
+      final scheduledDate = _nextInstanceOfTime(hour, minute, location);
+      _log.debug(
+        'scheduling mood reminder $i: ${moodReminderTimes[i]} → $scheduledDate '
+        '(now=${tz.TZDateTime.now(location)})',
       );
-      _log.debug('daily summary scheduled OK');
-    } catch (e, st) {
-      _log.error('daily summary FAILED to schedule', e, st);
+      try {
+        await _plugin.zonedSchedule(
+          id: _moodReminderIdBase + i,
+          title: 'Belly Buddy',
+          body: 'Wie war dein Bauchgefühl heute?',
+          scheduledDate: scheduledDate,
+          notificationDetails: NotificationDetails(
+            android: AndroidNotificationDetails(
+              _moodReminderChannel.id,
+              _moodReminderChannel.name,
+              channelDescription: _moodReminderChannel.description,
+              importance: Importance.high,
+              priority: Priority.high,
+            ),
+            iOS: const DarwinNotificationDetails(),
+          ),
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          matchDateTimeComponents: DateTimeComponents.time,
+          payload: '/gut-feeling-tracker',
+        );
+        _log.debug('mood reminder $i scheduled OK');
+      } catch (e, st) {
+        _log.error('mood reminder $i FAILED to schedule', e, st);
+      }
     }
 
     // Diagnostic: list all pending notifications
@@ -229,18 +235,20 @@ class LocalNotificationService {
     }
   }
 
-  /// Cancel all logging reminders.
-  static Future<void> cancelReminders() async {
+  /// Cancel all meal reminders.
+  static Future<void> cancelMealReminders() async {
     for (var i = 0; i < 100; i++) {
-      await _plugin.cancel(id: _reminderIdBase + i);
+      await _plugin.cancel(id: _mealReminderIdBase + i);
     }
-    _log.debug('cancelled all reminders');
+    _log.debug('cancelled all meal reminders');
   }
 
-  /// Cancel daily summary.
-  static Future<void> cancelDailySummary() async {
-    await _plugin.cancel(id: _dailySummaryId);
-    _log.debug('cancelled daily summary');
+  /// Cancel all mood reminders.
+  static Future<void> cancelMoodReminders() async {
+    for (var i = 0; i < 100; i++) {
+      await _plugin.cancel(id: _moodReminderIdBase + i);
+    }
+    _log.debug('cancelled all mood reminders');
   }
 
   /// Show a test notification immediately (for debugging).
@@ -251,9 +259,9 @@ class LocalNotificationService {
       body: 'Test-Benachrichtigung funktioniert!',
       notificationDetails: NotificationDetails(
         android: AndroidNotificationDetails(
-          _reminderChannel.id,
-          _reminderChannel.name,
-          channelDescription: _reminderChannel.description,
+          _mealReminderChannel.id,
+          _mealReminderChannel.name,
+          channelDescription: _mealReminderChannel.description,
           importance: Importance.high,
           priority: Priority.high,
         ),
