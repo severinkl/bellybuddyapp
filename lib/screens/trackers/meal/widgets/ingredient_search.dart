@@ -119,6 +119,13 @@ class _IngredientSearchState extends State<IngredientSearch> {
                     setState(() => _isAdding = true);
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       _focusNode.requestFocus();
+                      Scrollable.ensureVisible(
+                        context,
+                        duration: AppConstants.animMedium,
+                        curve: Curves.easeInOut,
+                        alignmentPolicy:
+                            ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+                      );
                     });
                   },
                   child: const Text(
