@@ -46,7 +46,7 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
 
     return TrackerScreenScaffold(
       trackerKey: DrinkTrackerScreen.trackerKey,
-      title: 'Was hast du getrunken? 💧',
+      title: 'Was hast du getrunken? \u{1F4A7}',
       showSuccess: state.showSuccess,
       successMessage: 'Getränk gespeichert!',
       successMascotAsset: AppConstants.mascotEnergetic,
@@ -203,7 +203,7 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
         GestureDetector(
           onTap: () => ref.read(drinkTrackerProvider.notifier).clearSelection(),
           child: const Text(
-            '✕',
+            '\u{2715}',
             style: TextStyle(
               fontSize: AppTheme.fontSizeBody,
               color: AppTheme.mutedForeground,

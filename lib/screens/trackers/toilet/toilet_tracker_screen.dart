@@ -56,7 +56,7 @@ class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
   @override
   Widget build(BuildContext context) {
     return TrackerScreenScaffold(
-      title: 'Am Klo 💩 gewesen?',
+      title: 'Am Klo \u{1F4A9} gewesen?',
       showSuccess: _showSuccess,
       successMessage: 'Toilettengang gespeichert!',
       successMascotAsset: AppConstants.mascotWink,

@@ -77,7 +77,7 @@ class RecipeDetailSheet extends StatelessWidget {
             (i) => Padding(
               padding: const EdgeInsets.only(bottom: AppConstants.spacingXs),
               child: Text(
-                '• $i',
+                '\u{2022} $i',
                 style: const TextStyle(fontSize: AppTheme.fontSizeBodyLG),
               ),
             ),
