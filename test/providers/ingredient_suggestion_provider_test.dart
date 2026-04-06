@@ -71,7 +71,7 @@ void main() {
   });
 
   group('IngredientSuggestionNotifier.markAllNewAsSeen', () {
-    test('sets isNew = false for all new groups', () async {
+    test('marks seen in DB but keeps isNew in local state', () async {
       final groups = [
         testSuggestionGroup(isNew: true, suggestionIds: ['sug-1']),
         testSuggestionGroup(
@@ -94,8 +94,10 @@ void main() {
           .read(ingredientSuggestionProvider.notifier)
           .markAllNewAsSeen();
 
+      verify(() => mockRepo.markAllSeen(['sug-1'])).called(1);
       final updatedGroups = container.read(ingredientSuggestionProvider).value!;
-      expect(updatedGroups.every((g) => !g.isNew), isTrue);
+      expect(updatedGroups[0].isNew, isTrue);
+      expect(updatedGroups[1].isNew, isFalse);
     });
   });
 

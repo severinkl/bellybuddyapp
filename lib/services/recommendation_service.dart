@@ -26,6 +26,33 @@ class RecommendationService {
     }
   }
 
+  Future<int> countUnseen(String userId) async {
+    try {
+      final result = await _client
+          .from('recommendations')
+          .select()
+          .eq('user_id', userId)
+          .isFilter('seen_at', null)
+          .count(CountOption.exact);
+      return result.count;
+    } catch (e, st) {
+      _log.error('countUnseen failed', e, st);
+      return 0;
+    }
+  }
+
+  Future<void> markAllAsSeen(String userId) async {
+    try {
+      await _client
+          .from('recommendations')
+          .update({'seen_at': DateTime.now().toUtc().toIso8601String()})
+          .eq('user_id', userId)
+          .isFilter('seen_at', null);
+    } catch (e, st) {
+      _log.error('markAllAsSeen failed', e, st);
+    }
+  }
+
   /// Fetches recent meals and toilet entries (last 7 days) for AI context.
   Future<Map<String, dynamic>> fetchRecentContext(String userId) async {
     try {

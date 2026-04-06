@@ -7,6 +7,7 @@ import '../utils/logger.dart';
 class IngredientSuggestionNotifier
     extends Notifier<AsyncValue<List<IngredientSuggestionGroup>>> {
   static const _log = AppLogger('IngredientSuggestions');
+  bool _markedSeenThisSession = false;
 
   @override
   AsyncValue<List<IngredientSuggestionGroup>> build() =>
@@ -42,9 +43,7 @@ class IngredientSuggestionNotifier
 
     try {
       await ref.read(ingredientRepositoryProvider).markAllSeen(unseenIds);
-      state = AsyncValue.data(
-        groups.map((g) => g.isNew ? g.copyWith(isNew: false) : g).toList(),
-      );
+      _markedSeenThisSession = true;
     } catch (e, st) {
       _log.error('markAllNewAsSeen failed', e, st);
     }
@@ -64,6 +63,7 @@ class IngredientSuggestionNotifier
   }
 
   int get newCount {
+    if (_markedSeenThisSession) return 0;
     return state.whenOrNull(
           data: (groups) => groups.where((g) => g.isNew).length,
         ) ??

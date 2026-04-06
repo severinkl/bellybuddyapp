@@ -101,15 +101,21 @@ class _IngredientSuggestionsScreenState
               ),
               data: (groups) {
                 _precacheImages(groups);
-                final filtered = _searchQuery.isEmpty
-                    ? groups
-                    : groups
-                          .where(
-                            (g) => g.ingredientName.toLowerCase().contains(
-                              _searchQuery.toLowerCase(),
-                            ),
-                          )
-                          .toList();
+                final filtered =
+                    (_searchQuery.isEmpty
+                            ? groups
+                            : groups.where(
+                                (g) => g.ingredientName.toLowerCase().contains(
+                                  _searchQuery.toLowerCase(),
+                                ),
+                              ))
+                        .toList()
+                      ..sort((a, b) {
+                        if (a.isNew != b.isNew) return a.isNew ? -1 : 1;
+                        return a.ingredientName.toLowerCase().compareTo(
+                          b.ingredientName.toLowerCase(),
+                        );
+                      });
 
                 if (filtered.isEmpty) {
                   return const Center(

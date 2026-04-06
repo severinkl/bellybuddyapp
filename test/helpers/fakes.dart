@@ -298,6 +298,10 @@ class FakeRecommendationRepository implements RecommendationRepository {
     String userId,
     UserProfile? profile,
   ) async => [testRecommendation(summary: 'Neuer Tipp')];
+  @override
+  Future<int> countUnseen(String userId) async => 0;
+  @override
+  Future<void> markAllAsSeen(String userId) async {}
 }
 
 // -- FakeMealMediaRepository --

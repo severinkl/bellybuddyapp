@@ -16,6 +16,12 @@ class RecommendationRepository {
     this._edgeFunctionService,
   );
 
+  Future<int> countUnseen(String userId) =>
+      _recommendationService.countUnseen(userId);
+
+  Future<void> markAllAsSeen(String userId) =>
+      _recommendationService.markAllAsSeen(userId);
+
   Future<List<Recommendation>> fetchByUserId(String userId) => retryAsync(
     () => _recommendationService.fetchByUserId(userId),
     log: _log,
