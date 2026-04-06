@@ -20,6 +20,8 @@ import 'widgets/stimmung_tab.dart';
 class GutFeelingTrackerScreen extends ConsumerStatefulWidget {
   const GutFeelingTrackerScreen({super.key});
 
+  static const saveButtonKey = Key('gut_feeling_save_button');
+
   @override
   ConsumerState<GutFeelingTrackerScreen> createState() =>
       _GutFeelingTrackerScreenState();
@@ -274,6 +276,7 @@ class _GutFeelingTrackerScreenState
           // Fixed bottom button with gradient backdrop
           GradientBottomBar(
             child: PillButton(
+              key: GutFeelingTrackerScreen.saveButtonKey,
               label: _activeTab == 0 ? 'weiter' : 'speichern',
               isLoading: _isSaving,
               onPressed: _onNextOrSave,

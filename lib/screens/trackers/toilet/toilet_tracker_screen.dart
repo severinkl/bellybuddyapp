@@ -15,6 +15,8 @@ import '../../../widgets/common/tracker_screen_scaffold.dart';
 class ToiletTrackerScreen extends ConsumerStatefulWidget {
   const ToiletTrackerScreen({super.key});
 
+  static const saveButtonKey = Key('toilet_save_button');
+
   @override
   ConsumerState<ToiletTrackerScreen> createState() =>
       _ToiletTrackerScreenState();
@@ -95,6 +97,7 @@ class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
 
             const Spacer(),
             BbButton(
+              tapKey: ToiletTrackerScreen.saveButtonKey,
               label: 'speichern',
               isLoading: _isSaving,
               onPressed: _save,

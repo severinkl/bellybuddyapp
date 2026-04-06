@@ -127,6 +127,7 @@ class _DashboardHeader extends StatelessWidget {
         ),
         const SizedBox(width: AppConstants.spacingSm),
         CircleIconButton(
+          key: const Key('dashboard_settings_button'),
           icon: Icons.settings,
           size: AppConstants.iconBadgeLg,
           onPressed: () => context.push(RoutePaths.settings),
@@ -145,6 +146,7 @@ class _TrackerCards extends StatelessWidget {
       children: [
         Expanded(
           child: TrackerCard(
+            key: const Key('tracker_card_gut_feeling'),
             svgPath: AppConstants.logoSvg,
             label: 'Bauchgefühl',
             onTap: () => context.push(RoutePaths.gutFeelingTracker),
@@ -153,6 +155,7 @@ class _TrackerCards extends StatelessWidget {
         const SizedBox(width: AppConstants.spacing12),
         Expanded(
           child: TrackerCard(
+            key: const Key('tracker_card_toilet'),
             svgPath: AppConstants.toiletPaperSvg,
             label: 'Klo',
             onTap: () => context.push(RoutePaths.toiletTracker),

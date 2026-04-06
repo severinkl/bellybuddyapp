@@ -16,6 +16,7 @@ class DrinkTrackerScreen extends ConsumerStatefulWidget {
   const DrinkTrackerScreen({super.key});
 
   static const trackerKey = Key('drink_tracker_screen');
+  static const saveButtonKey = Key('drink_save_button');
 
   @override
   ConsumerState<DrinkTrackerScreen> createState() => _DrinkTrackerScreenState();
@@ -110,6 +111,7 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
                   child: SafeArea(
                     top: false,
                     child: BbButton(
+                      tapKey: DrinkTrackerScreen.saveButtonKey,
                       label: 'speichern',
                       isLoading: state.isSaving,
                       onPressed: canSave ? _save : null,

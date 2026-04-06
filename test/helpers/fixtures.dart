@@ -33,7 +33,7 @@ UserProfile testUserProfile({
 }) => UserProfile(
   userId: userId ?? testUserId,
   birthYear: birthYear ?? 1990,
-  gender: gender ?? 'male',
+  gender: gender ?? 'männlich',
   height: height ?? 180,
   weight: weight ?? 75,
   diet: diet ?? 'Keine Einschränkungen',

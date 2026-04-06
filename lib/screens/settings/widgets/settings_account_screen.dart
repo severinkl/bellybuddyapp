@@ -14,6 +14,8 @@ import '../../../config/constants.dart';
 class SettingsAccountScreen extends ConsumerStatefulWidget {
   const SettingsAccountScreen({super.key});
 
+  static const signOutButtonKey = Key('settings_sign_out_button');
+
   @override
   ConsumerState<SettingsAccountScreen> createState() =>
       _SettingsAccountScreenState();
@@ -85,6 +87,7 @@ class _SettingsAccountScreenState extends ConsumerState<SettingsAccountScreen> {
 
             // Sign out
             BbButton(
+              tapKey: SettingsAccountScreen.signOutButtonKey,
               label: 'Abmelden',
               isSecondary: true,
               icon: Icons.logout,

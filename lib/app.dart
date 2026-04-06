@@ -43,7 +43,7 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
     // Navigate to route from local notification that launched the app
     final pendingRoute = ref.read(pendingRouteProvider);
     if (pendingRoute != null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.microtask(() {
         if (!mounted) return;
         ref.read(pendingRouteProvider.notifier).consume();
         ref.read(routerProvider).go(pendingRoute);

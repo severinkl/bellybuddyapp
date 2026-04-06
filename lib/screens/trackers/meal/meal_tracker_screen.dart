@@ -17,6 +17,7 @@ class MealTrackerScreen extends ConsumerStatefulWidget {
   const MealTrackerScreen({super.key});
   static const drinkTrackerButtonKey = Key('drink_tracker_button');
   static const mealTrackerTitleKey = Key('meal_tracker_title');
+  static const saveButtonKey = Key('meal_save_button');
 
   @override
   ConsumerState<MealTrackerScreen> createState() => _MealTrackerScreenState();
@@ -200,6 +201,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
               AppConstants.gap8,
               // Save button
               BbButton(
+                tapKey: MealTrackerScreen.saveButtonKey,
                 label: 'Speichern',
                 isLoading: state.isSaving,
                 onPressed: canSave ? _save : null,
