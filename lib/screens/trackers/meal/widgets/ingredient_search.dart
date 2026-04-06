@@ -56,6 +56,18 @@ class _IngredientSearchState extends State<IngredientSearch> {
     setState(() => _isAdding = false);
   }
 
+  void _scrollToField() {
+    if (!mounted) return;
+    final ctx = _focusNode.context;
+    if (ctx != null) {
+      Scrollable.ensureVisible(
+        ctx,
+        duration: AppConstants.animMedium,
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Filter out already-added ingredients
@@ -119,6 +131,9 @@ class _IngredientSearchState extends State<IngredientSearch> {
                     setState(() => _isAdding = true);
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       _focusNode.requestFocus();
+                      // Delay to let the keyboard fully animate in before
+                      // scrolling, otherwise the scroll target is wrong.
+                      Future.delayed(AppConstants.animSlow, _scrollToField);
                     });
                   },
                   child: const Text(
