@@ -24,9 +24,11 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(
-      () => ref.read(recommendationProvider.notifier).fetchRecommendations(),
-    );
+    Future.microtask(() async {
+      final notifier = ref.read(recommendationProvider.notifier);
+      await notifier.fetchRecommendations();
+      await notifier.markAllAsSeen();
+    });
   }
 
   Future<void> _generate() async {

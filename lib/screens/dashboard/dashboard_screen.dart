@@ -7,6 +7,7 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/entries_provider.dart';
 import '../../providers/ingredient_suggestion_provider.dart';
+import '../../providers/recommendation_provider.dart';
 import '../../widgets/common/circle_icon_button.dart';
 import '../../providers/profile_provider.dart';
 import '../../router/route_names.dart';
@@ -48,12 +49,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final newCount =
+    ref.watch(ingredientSuggestionProvider); // rebuild on data changes
+    final newSuggestionCount = ref
+        .read(ingredientSuggestionProvider.notifier)
+        .newCount;
+    final newRecommendationCount =
         ref
-            .watch(ingredientSuggestionProvider)
-            .whenOrNull(
-              data: (groups) => groups.where((g) => g.isNew).length,
-            ) ??
+            .watch(unseenRecommendationCountProvider)
+            .whenOrNull(data: (count) => count) ??
         0;
 
     return Scaffold(
@@ -92,7 +95,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   padding: const EdgeInsets.symmetric(
                     horizontal: AppConstants.spacing12,
                   ),
-                  child: _ForYouSection(newCount: newCount),
+                  child: _ForYouSection(
+                    newSuggestionCount: newSuggestionCount,
+                    newRecommendationCount: newRecommendationCount,
+                  ),
                 ),
               ),
             ],
@@ -158,9 +164,13 @@ class _TrackerCards extends StatelessWidget {
 }
 
 class _ForYouSection extends StatelessWidget {
-  final int newCount;
+  final int newSuggestionCount;
+  final int newRecommendationCount;
 
-  const _ForYouSection({required this.newCount});
+  const _ForYouSection({
+    required this.newSuggestionCount,
+    required this.newRecommendationCount,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -202,6 +212,7 @@ class _ForYouSection extends StatelessWidget {
                   label: 'Für dich',
                   icon: Icons.auto_awesome,
                   iconColor: AppTheme.foreground,
+                  hasNew: newRecommendationCount > 0,
                   onTap: () => context.push(RoutePaths.recommendations),
                 ),
               ),
@@ -212,7 +223,7 @@ class _ForYouSection extends StatelessWidget {
                   label: 'Alternativen',
                   icon: Icons.eco,
                   iconColor: AppTheme.foreground,
-                  badgeCount: newCount,
+                  badgeCount: newSuggestionCount,
                   onTap: () => context.push(RoutePaths.ingredientSuggestions),
                 ),
               ),

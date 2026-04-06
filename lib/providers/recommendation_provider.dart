@@ -31,6 +31,13 @@ class RecommendationNotifier
     }
   }
 
+  Future<void> markAllAsSeen() async {
+    final userId = ref.read(currentUserIdProvider);
+    if (userId == null) return;
+    await ref.read(recommendationRepositoryProvider).markAllAsSeen(userId);
+    ref.invalidate(unseenRecommendationCountProvider);
+  }
+
   Future<void> refreshRecommendations() async {
     state = const AsyncValue.loading();
     try {
@@ -56,3 +63,9 @@ final recommendationProvider =
     NotifierProvider<RecommendationNotifier, AsyncValue<List<Recommendation>>>(
       RecommendationNotifier.new,
     );
+
+final unseenRecommendationCountProvider = FutureProvider<int>((ref) async {
+  final userId = ref.watch(currentUserIdProvider);
+  if (userId == null) return 0;
+  return ref.read(recommendationRepositoryProvider).countUnseen(userId);
+});
