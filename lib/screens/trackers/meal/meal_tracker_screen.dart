@@ -8,7 +8,6 @@ import '../../../router/route_names.dart';
 import '../../../utils/save_helper.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/date_time_chips.dart';
-import '../../../widgets/common/gradient_bottom_bar.dart';
 import '../../../widgets/common/tracker_screen_scaffold.dart';
 import 'widgets/ingredient_search.dart';
 import 'widgets/meal_image_section.dart';
@@ -119,95 +118,76 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     final canSave =
         state.ingredients.isNotEmpty && !state.isAnalyzing && !state.isSaving;
 
-    return Stack(
-      children: [
-        SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(
-            AppConstants.spacingLg,
-            AppConstants.spacingSm,
-            AppConstants.spacingLg,
-            180,
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // 1. Date/Time chips
+          DateTimeChips(
+            value: state.trackedAt,
+            onChanged: notifier.setTrackedAt,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // 1. Date/Time chips
-              DateTimeChips(
-                value: state.trackedAt,
-                onChanged: notifier.setTrackedAt,
-              ),
-              AppConstants.gap16,
+          AppConstants.gap16,
 
-              // 2. Image capture
-              MealImageSection(
-                imageBytes: state.imageBytes,
-                isAnalyzing: state.isAnalyzing,
-                onImagePicked: (bytes, name) async {
-                  notifier.setImage(bytes, name);
-                  try {
-                    await notifier.analyzeImage(bytes, name);
-                    if (mounted) {
-                      final s = ref.read(mealTrackerProvider);
-                      _titleController.text = s.title;
-                    }
-                  } catch (_) {
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Fehler bei der Analyse.'),
-                        ),
-                      );
-                    }
-                  }
-                },
-                onClearImage: () {
-                  notifier.clearImage();
-                  _titleController.text = 'Neue Mahlzeit';
-                },
-              ),
-              AppConstants.gap16,
-
-              // 3. Ingredients
-              IngredientSearch(
-                ingredients: state.ingredients,
-                suggestions: state.ingredientSuggestions,
-                onSearch: notifier.searchIngredients,
-                onAdd: notifier.addIngredient,
-                onRemove: notifier.removeIngredient,
-                onDeleteIngredient: (id) => notifier.deleteUserIngredient(id),
-              ),
-            ],
+          // 2. Image capture
+          MealImageSection(
+            imageBytes: state.imageBytes,
+            isAnalyzing: state.isAnalyzing,
+            onImagePicked: (bytes, name) async {
+              notifier.setImage(bytes, name);
+              try {
+                await notifier.analyzeImage(bytes, name);
+                if (mounted) {
+                  final s = ref.read(mealTrackerProvider);
+                  _titleController.text = s.title;
+                }
+              } catch (_) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Fehler bei der Analyse.')),
+                  );
+                }
+              }
+            },
+            onClearImage: () {
+              notifier.clearImage();
+              _titleController.text = 'Neue Mahlzeit';
+            },
           ),
-        ),
+          AppConstants.gap16,
 
-        // Fixed bottom bar
-        GradientBottomBar(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // "Getränk tracken" button
-              OutlinedButton.icon(
-                key: MealTrackerScreen.drinkTrackerButtonKey,
-                onPressed: () => context.push(RoutePaths.drinkTracker),
-                icon: const Icon(Icons.water_drop_outlined),
-                label: const Text('Getränk tracken'),
-                style: OutlinedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: AppTheme.info,
-                  side: const BorderSide(color: AppTheme.info),
-                ),
-              ),
-              AppConstants.gap8,
-              // Save button
-              BbButton(
-                label: 'Speichern',
-                isLoading: state.isSaving,
-                onPressed: canSave ? _save : null,
-              ),
-            ],
+          // 3. Ingredients
+          IngredientSearch(
+            ingredients: state.ingredients,
+            suggestions: state.ingredientSuggestions,
+            onSearch: notifier.searchIngredients,
+            onAdd: notifier.addIngredient,
+            onRemove: notifier.removeIngredient,
+            onDeleteIngredient: (id) => notifier.deleteUserIngredient(id),
           ),
-        ),
-      ],
+          AppConstants.gap16,
+          // "Getränk tracken" button
+          OutlinedButton.icon(
+            key: MealTrackerScreen.drinkTrackerButtonKey,
+            onPressed: () => context.push(RoutePaths.drinkTracker),
+            icon: const Icon(Icons.water_drop_outlined),
+            label: const Text('Getränk tracken'),
+            style: OutlinedButton.styleFrom(
+              backgroundColor: Colors.white,
+              foregroundColor: AppTheme.info,
+              side: const BorderSide(color: AppTheme.info),
+            ),
+          ),
+          AppConstants.gap8,
+          // Save button
+          BbButton(
+            label: 'Speichern',
+            isLoading: state.isSaving,
+            onPressed: canSave ? _save : null,
+          ),
+        ],
+      ),
     );
   }
 }

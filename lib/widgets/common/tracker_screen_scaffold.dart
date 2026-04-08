@@ -47,6 +47,7 @@ class TrackerScreenScaffold extends StatelessWidget {
     return Scaffold(
       key: trackerKey,
       backgroundColor: AppTheme.screenBackground,
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         backgroundColor: AppTheme.screenBackground,
         leading: IconButton(
