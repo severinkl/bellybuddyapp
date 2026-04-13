@@ -11,6 +11,10 @@ import 'helpers/test_app.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
+  setUpAll(() {
+    suppressLayoutErrors();
+  });
+
   testWidgets('new user should see welcome screen and registration button', (
     tester,
   ) async {
@@ -27,7 +31,6 @@ void main() {
     'new user should tap on registration button and go through registration process',
     (tester) async {
       await setNotificationModalShown();
-      suppressLayoutErrors();
       await tester.pumpWidget(
         buildTestApp(
           authenticated: false,
@@ -116,7 +119,10 @@ void main() {
 
       // Tap on the sign up button
       await tester.tap(submitButton);
-      await tester.pumpAndSettle(); // Wait for async operations to complete
+      await tester.pumpAndSettle();
+      // Extra settling for auth state propagation + profile creation + router redirect
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
 
       // After successful registration, user should be navigated to the main app (bottom nav should be visible)
       expect(find.byKey(BbBottomNav.centerButtonKey), findsOneWidget);

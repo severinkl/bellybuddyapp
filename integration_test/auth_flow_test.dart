@@ -9,9 +9,12 @@ import 'helpers/test_app.dart';
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
+  setUpAll(() {
+    suppressLayoutErrors();
+  });
+
   setUp(() async {
     await setNotificationModalShown();
-    suppressLayoutErrors();
   });
 
   testWidgets('unauthenticated user sees welcome screen', (tester) async {
