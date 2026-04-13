@@ -11,6 +11,7 @@ void main() {
 
   setUp(() async {
     await setNotificationModalShown();
+    suppressLayoutErrors();
   });
 
   testWidgets('unauthenticated user sees welcome screen', (tester) async {

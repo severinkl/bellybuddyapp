@@ -33,6 +33,8 @@ class ProfileRepository {
   Future<void> updateProfile(String userId, UserProfile profile) async {
     final data = profile.toJson();
     data.remove('user_id');
+    // fcm_token is managed separately by PushNotificationService
+    data.remove('fcm_token');
     await _profileService.update(userId, data);
   }
 }

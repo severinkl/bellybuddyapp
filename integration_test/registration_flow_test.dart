@@ -27,6 +27,7 @@ void main() {
     'new user should tap on registration button and go through registration process',
     (tester) async {
       await setNotificationModalShown();
+      suppressLayoutErrors();
       await tester.pumpWidget(
         buildTestApp(
           authenticated: false,

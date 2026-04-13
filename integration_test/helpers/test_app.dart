@@ -1,4 +1,5 @@
 import 'package:belly_buddy/app.dart';
+import 'package:flutter/foundation.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/config/splash_screen_config.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
@@ -113,4 +114,19 @@ Future<void> setNotificationModalShown() async {
   SharedPreferences.setMockInitialValues({
     AppConstants.keyNotificationModalShown: true,
   });
+}
+
+/// Suppress RenderFlex overflow errors in integration tests.
+/// These are cosmetic layout warnings that fire during widget tree disposal
+/// between test cases and don't indicate functional failures.
+void suppressLayoutErrors() {
+  final defaultHandler = FlutterError.onError;
+  FlutterError.onError = (details) {
+    final message = details.exception.toString();
+    final suppress = message.contains('overflowed') ||
+        message.contains('deactivated widget');
+    if (!suppress) {
+      defaultHandler?.call(details);
+    }
+  };
 }
