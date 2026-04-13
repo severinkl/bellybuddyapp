@@ -58,6 +58,7 @@ class _SettingsNotificationsScreenState
                 profile.copyWith(
                   remindersEnabled: true,
                   dailySummaryEnabled: true,
+                  pushEnabled: true,
                 ),
               );
         } else {

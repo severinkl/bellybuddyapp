@@ -8,8 +8,10 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'config/app_theme.dart';
 import 'providers/auth_provider.dart';
+import 'providers/ingredient_suggestion_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/profile_provider.dart';
+import 'providers/recommendation_provider.dart';
 import 'router/app_router.dart';
 import 'screens/splash/splash_screen.dart';
 import 'providers/pending_route_provider.dart';
@@ -54,6 +56,7 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
 
     // Handle push notification taps from background state
     _openedAppSub = notificationRepo.onMessageOpenedApp.listen((msg) {
+      if (!mounted) return;
       final route = notificationRepo.extractRoute(msg);
       if (route != null) {
         ref.read(routerProvider).go(route);
@@ -62,6 +65,7 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
 
     // Listen for foreground push messages → show snackbar
     _foregroundSub = notificationRepo.onForegroundMessage.listen((msg) {
+      if (!mounted) return;
       final title = msg.notification?.title;
       final body = msg.notification?.body;
       final route = notificationRepo.extractRoute(msg);
@@ -73,6 +77,8 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(body ?? title ?? ''),
+              duration: const Duration(seconds: 6),
+              showCloseIcon: true,
               action: route != null
                   ? SnackBarAction(
                       label: 'Anzeigen',
@@ -83,6 +89,10 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
           );
         }
       }
+
+      // Refresh dashboard badge counts
+      ref.invalidate(unseenRecommendationCountProvider);
+      ref.read(ingredientSuggestionProvider.notifier).fetchSuggestions();
     });
 
     // Handle initial message (app opened from terminated state via notification)
