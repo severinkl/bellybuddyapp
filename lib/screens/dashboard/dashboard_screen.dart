@@ -10,10 +10,12 @@ import '../../providers/ingredient_suggestion_provider.dart';
 import '../../providers/recommendation_provider.dart';
 import '../../widgets/common/circle_icon_button.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/tutorial_provider.dart';
 import '../../router/route_names.dart';
 import '../../widgets/common/tracker_card.dart';
 import 'widgets/feature_card.dart';
 import 'widgets/notification_opt_in_dialog.dart';
+import 'widgets/tutorial/show_dashboard_tutorial.dart';
 import 'widgets/tutorial/tutorial_keys.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -29,8 +31,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     super.initState();
     Future.microtask(() async {
       await _loadData();
+      await _maybeShowTutorial();
+      if (!mounted) return;
       _maybeShowNotificationModal();
     });
+  }
+
+  Future<void> _maybeShowTutorial() async {
+    if (!mounted) return;
+    final shouldShow = ref.read(tutorialProvider.notifier).shouldShow();
+    if (!shouldShow) return;
+    await showDashboardTutorial(context);
+    if (!mounted) return;
+    await ref.read(tutorialProvider.notifier).markSeen();
   }
 
   Future<void> _loadData() async {
