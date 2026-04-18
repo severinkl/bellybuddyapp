@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../router/route_names.dart';
 import '../../config/constants.dart';
+import '../../screens/dashboard/widgets/tutorial/tutorial_keys.dart';
 import '../../services/haptic_service.dart';
 
 class BbBottomNav extends StatelessWidget {
@@ -66,16 +67,19 @@ class BbBottomNav extends StatelessWidget {
                     },
                   ),
                   // Diary
-                  _NavItem(
-                    tapKey: navDiaryKey,
-                    icon: Icons.menu_book_outlined,
-                    activeIcon: Icons.menu_book,
-                    label: 'Tagebuch',
-                    isActive: currentIndex == 1,
-                    onTap: () {
-                      HapticService.light();
-                      navigationShell.goBranch(1);
-                    },
+                  KeyedSubtree(
+                    key: TutorialKeys.tagebuch,
+                    child: _NavItem(
+                      tapKey: navDiaryKey,
+                      icon: Icons.menu_book_outlined,
+                      activeIcon: Icons.menu_book,
+                      label: 'Tagebuch',
+                      isActive: currentIndex == 1,
+                      onTap: () {
+                        HapticService.light();
+                        navigationShell.goBranch(1);
+                      },
+                    ),
                   ),
                 ],
               ),
@@ -202,6 +206,7 @@ class _CenterButton extends StatelessWidget {
             Positioned(
               top: -26,
               child: Container(
+                key: TutorialKeys.essenTracken,
                 width: 72,
                 height: 72,
                 decoration: const BoxDecoration(
