@@ -19,8 +19,6 @@ class RecommendationsScreen extends ConsumerStatefulWidget {
 }
 
 class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
-  bool _isGenerating = false;
-
   @override
   void initState() {
     super.initState();
@@ -32,7 +30,6 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
   }
 
   Future<void> _generate() async {
-    setState(() => _isGenerating = true);
     try {
       await ref.read(recommendationProvider.notifier).refreshRecommendations();
       if (mounted) {
@@ -46,8 +43,6 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
           context,
         ).showSnackBar(SnackBar(content: Text('Fehler: $e')));
       }
-    } finally {
-      if (mounted) setState(() => _isGenerating = false);
     }
   }
 
@@ -65,21 +60,6 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
             Text('Empfehlungen'),
           ],
         ),
-        actions: [
-          IconButton(
-            onPressed: _isGenerating ? null : _generate,
-            icon: _isGenerating
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: AppTheme.primary,
-                    ),
-                  )
-                : const Icon(Icons.refresh),
-          ),
-        ],
       ),
       body: RefreshIndicator(
         color: AppTheme.primary,

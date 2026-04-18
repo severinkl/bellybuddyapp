@@ -1,5 +1,4 @@
 // ignore_for_file: invalid_use_of_internal_member
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:belly_buddy/screens/recommendations/recommendations_screen.dart';
@@ -41,16 +40,6 @@ void main() {
 
       // FakeRecommendationRepository returns testRecommendation with this summary
       expect(find.textContaining('Tipp'), findsAtLeast(1));
-    });
-
-    testWidgets('renders refresh button', (tester) async {
-      await tester.pumpWithProviders(
-        const RecommendationsScreen(),
-        overrides: _overrides(),
-      );
-      await tester.pump();
-
-      expect(find.byIcon(Icons.refresh), findsOneWidget);
     });
   });
 }
