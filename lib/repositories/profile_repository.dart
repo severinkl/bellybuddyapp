@@ -37,6 +37,12 @@ class ProfileRepository {
     data.remove('fcm_token');
     await _profileService.update(userId, data);
   }
+
+  Future<void> updateTutorialSeenAt(String userId, DateTime? value) async {
+    await _profileService.update(userId, {
+      'tutorial_seen_at': value?.toIso8601String(),
+    });
+  }
 }
 
 final profileRepositoryProvider = Provider<ProfileRepository>(
