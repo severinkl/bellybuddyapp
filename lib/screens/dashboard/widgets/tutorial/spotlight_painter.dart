@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../../config/app_theme.dart';
+
 /// Paints a semi-transparent dim layer over the whole screen, with a rounded
 /// rectangular cutout around [targetRect]. Used as the backdrop of the
 /// dashboard onboarding overlay.
@@ -11,7 +13,7 @@ class SpotlightPainter extends CustomPainter {
   const SpotlightPainter({
     required this.targetRect,
     required this.targetRadius,
-    this.dimColor = const Color(0x8C000000), // ~55% black
+    this.dimColor = AppTheme.scrim,
   });
 
   @override

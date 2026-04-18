@@ -46,6 +46,9 @@ class AppTheme {
   // Shadow
   static const Color shadow = Color(0x20000000);
 
+  // Scrim (~55% black) — used behind modals/overlays to dim the background
+  static const Color scrim = Color(0x8C000000);
+
   // Font sizes
   static const double fontSizeXS = 9;
   static const double fontSizeSM = 11;
