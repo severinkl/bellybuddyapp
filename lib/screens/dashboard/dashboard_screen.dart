@@ -10,10 +10,13 @@ import '../../providers/ingredient_suggestion_provider.dart';
 import '../../providers/recommendation_provider.dart';
 import '../../widgets/common/circle_icon_button.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/tutorial_provider.dart';
 import '../../router/route_names.dart';
 import '../../widgets/common/tracker_card.dart';
 import 'widgets/feature_card.dart';
 import 'widgets/notification_opt_in_dialog.dart';
+import 'widgets/tutorial/show_dashboard_tutorial.dart';
+import 'widgets/tutorial/tutorial_keys.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -23,13 +26,42 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  // Active tutorial handle; non-null while the overlay is open. Cancelled
+  // in dispose() so the OverlayEntry + its AnimationController don't leak
+  // if the screen is torn down mid-tour (e.g. sign-out).
+  TutorialHandle? _tutorialHandle;
+
   @override
   void initState() {
     super.initState();
+    // Order is load-bearing: _loadData awaits fetchProfile, so by the time
+    // _maybeShowTutorial reads profileProvider.shouldShow() the profile is
+    // guaranteed to be AsyncData (or AsyncError).
     Future.microtask(() async {
       await _loadData();
+      await _maybeShowTutorial();
+      if (!mounted) return;
       _maybeShowNotificationModal();
     });
+  }
+
+  @override
+  void dispose() {
+    _tutorialHandle?.cancel();
+    _tutorialHandle = null;
+    super.dispose();
+  }
+
+  Future<void> _maybeShowTutorial() async {
+    if (!mounted) return;
+    final shouldShow = ref.read(tutorialProvider.notifier).shouldShow();
+    if (!shouldShow) return;
+    final handle = showDashboardTutorial(context);
+    _tutorialHandle = handle;
+    await handle.future;
+    _tutorialHandle = null;
+    if (!mounted) return;
+    await ref.read(tutorialProvider.notifier).markSeen();
   }
 
   Future<void> _loadData() async {
@@ -118,6 +150,7 @@ class _DashboardHeader extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         CircleIconButton(
+          key: TutorialKeys.feedback,
           icon: Icons.feedback_outlined,
           size: AppConstants.iconBadgeLg,
           onPressed: () => launchUrl(
@@ -127,6 +160,7 @@ class _DashboardHeader extends StatelessWidget {
         ),
         const SizedBox(width: AppConstants.spacingSm),
         CircleIconButton(
+          key: TutorialKeys.settings,
           icon: Icons.settings,
           size: AppConstants.iconBadgeLg,
           onPressed: () => context.push(RoutePaths.settings),
@@ -145,6 +179,7 @@ class _TrackerCards extends StatelessWidget {
       children: [
         Expanded(
           child: TrackerCard(
+            key: TutorialKeys.bauchgefuehl,
             svgPath: AppConstants.logoSvg,
             label: 'Bauchgefühl',
             onTap: () => context.push(RoutePaths.gutFeelingTracker),
@@ -153,6 +188,7 @@ class _TrackerCards extends StatelessWidget {
         const SizedBox(width: AppConstants.spacing12),
         Expanded(
           child: TrackerCard(
+            key: TutorialKeys.klo,
             svgPath: AppConstants.toiletPaperSvg,
             label: 'Klo',
             onTap: () => context.push(RoutePaths.toiletTracker),
@@ -208,6 +244,7 @@ class _ForYouSection extends StatelessWidget {
             children: [
               Expanded(
                 child: FeatureCard(
+                  key: TutorialKeys.fuerDich,
                   imageAsset: AppConstants.fuerDichCard,
                   label: 'Für dich',
                   icon: Icons.auto_awesome,
@@ -219,6 +256,7 @@ class _ForYouSection extends StatelessWidget {
               const SizedBox(width: AppConstants.spacing12),
               Expanded(
                 child: FeatureCard(
+                  key: TutorialKeys.alternativen,
                   imageAsset: AppConstants.alternativenCard,
                   label: 'Alternativen',
                   icon: Icons.eco,
@@ -234,6 +272,7 @@ class _ForYouSection extends StatelessWidget {
             children: [
               Expanded(
                 child: FeatureCard(
+                  key: TutorialKeys.rezepte,
                   imageAsset: AppConstants.rezepteCard,
                   label: 'Rezepte',
                   icon: Icons.restaurant_menu,
@@ -244,6 +283,7 @@ class _ForYouSection extends StatelessWidget {
               const SizedBox(width: AppConstants.spacing12),
               Expanded(
                 child: FeatureCard(
+                  key: TutorialKeys.wissen,
                   imageAsset: AppConstants.susiPhone,
                   label: 'Wissen',
                   icon: Icons.menu_book,

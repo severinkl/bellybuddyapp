@@ -14,6 +14,11 @@ import 'package:belly_buddy/models/ingredient_search_result.dart';
 
 const testUserId = 'test-user-id';
 
+/// Default `tutorialSeenAt` for test fixtures — a non-null timestamp so tests
+/// that seed a profile don't accidentally trigger the dashboard onboarding
+/// tour. Tests covering the tour explicitly pass `alreadySeenTutorial: false`.
+final DateTime testTutorialAlreadySeenAt = DateTime.utc(2026, 1, 1);
+
 UserProfile testUserProfile({
   String? userId,
   int? birthYear,
@@ -30,6 +35,8 @@ UserProfile testUserProfile({
   List<String>? moodReminderTimes,
   bool pushEnabled = false,
   String? timezone,
+  DateTime? tutorialSeenAt,
+  bool alreadySeenTutorial = true,
 }) => UserProfile(
   userId: userId ?? testUserId,
   birthYear: birthYear ?? 1990,
@@ -46,6 +53,9 @@ UserProfile testUserProfile({
   moodReminderTimes: moodReminderTimes ?? ['20:00'],
   pushEnabled: pushEnabled,
   timezone: timezone ?? 'Europe/Berlin',
+  tutorialSeenAt:
+      tutorialSeenAt ??
+      (alreadySeenTutorial ? testTutorialAlreadySeenAt : null),
 );
 
 MealEntry testMealEntry({

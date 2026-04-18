@@ -41,6 +41,7 @@ abstract class UserProfile with _$UserProfile {
     List<String> moodReminderTimes,
     @JsonKey(name: 'fcm_token') String? fcmToken,
     @JsonKey(name: 'last_inactivity_nudge') DateTime? lastInactivityNudge,
+    @JsonKey(name: 'tutorial_seen_at') DateTime? tutorialSeenAt,
   }) = _UserProfile;
 
   const UserProfile._();

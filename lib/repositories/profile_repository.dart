@@ -35,7 +35,16 @@ class ProfileRepository {
     data.remove('user_id');
     // fcm_token is managed separately by PushNotificationService
     data.remove('fcm_token');
+    // tutorial_seen_at is managed by TutorialNotifier.markSeen — a stale
+    // UserProfile (captured before markSeen fired) must not overwrite it.
+    data.remove('tutorial_seen_at');
     await _profileService.update(userId, data);
+  }
+
+  Future<void> updateTutorialSeenAt(String userId, DateTime? value) async {
+    await _profileService.update(userId, {
+      'tutorial_seen_at': value?.toIso8601String(),
+    });
   }
 }
 

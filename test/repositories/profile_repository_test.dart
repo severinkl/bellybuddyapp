@@ -155,5 +155,52 @@ void main() {
 
       verify(() => profileService.update('user-abc', any())).called(1);
     });
+
+    test(
+      'strips tutorial_seen_at so stale profile writes cannot overwrite it',
+      () async {
+        final profile = testUserProfile(
+          tutorialSeenAt: DateTime.utc(2026, 1, 1),
+        );
+        when(
+          () => profileService.update(any(), any()),
+        ).thenAnswer((_) async {});
+
+        await repo.updateProfile('user-123', profile);
+
+        final captured =
+            verify(
+                  () => profileService.update('user-123', captureAny()),
+                ).captured.single
+                as Map<String, dynamic>;
+
+        expect(captured.containsKey('tutorial_seen_at'), isFalse);
+      },
+    );
+  });
+
+  group('ProfileRepository.updateTutorialSeenAt', () {
+    test('writes tutorial_seen_at as ISO-8601 string', () async {
+      final ts = DateTime.utc(2026, 4, 18, 12, 0, 0);
+      when(() => profileService.update(any(), any())).thenAnswer((_) async {});
+
+      await repo.updateTutorialSeenAt(testUserId, ts);
+
+      verify(
+        () => profileService.update(testUserId, {
+          'tutorial_seen_at': '2026-04-18T12:00:00.000Z',
+        }),
+      ).called(1);
+    });
+
+    test('writes null to clear the flag', () async {
+      when(() => profileService.update(any(), any())).thenAnswer((_) async {});
+
+      await repo.updateTutorialSeenAt(testUserId, null);
+
+      verify(
+        () => profileService.update(testUserId, {'tutorial_seen_at': null}),
+      ).called(1);
+    });
   });
 }
