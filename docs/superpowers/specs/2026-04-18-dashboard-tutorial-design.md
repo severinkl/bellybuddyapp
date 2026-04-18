@@ -74,7 +74,7 @@ The bold segments in each string are rendered bold via `TextSpan`; the rest is r
 └────────────────────────────────────────────┘
 ```
 
-**Trade-off note:** The existing codebase (`lib/providers/profile_provider.dart`) does not use an explicit Repository layer — providers access Supabase either directly or via thin `lib/services/` classes. The tutorial follows that existing pattern: `tutorialProvider` talks to `profileProvider` rather than introducing a `ProfileRepository`. A dedicated Repository layer may be appropriate later as a cross-cutting refactor, but is out of scope here.
+**Follows existing pattern:** The codebase has a clean Repository + Service layering already (`ProfileNotifier` → `ProfileRepository` → `ProfileService`). The tutorial plugs into that: a new `TutorialNotifier` reads the current `UserProfile` from `profileProvider`, and delegates writes to a new `ProfileRepository.updateTutorialSeenAt(...)` method (keeping tutorial wiring out of `ProfileNotifier` for isolation).
 
 ## Data model
 
@@ -90,26 +90,50 @@ ADD COLUMN tutorial_seen_at TIMESTAMPTZ NULL;
 
 ### Dart model changes
 
-`Profile` (freezed) gains `DateTime? tutorialSeenAt`, JSON key `tutorial_seen_at`. Regenerate with `dart run build_runner build --delete-conflicting-outputs`.
+`UserProfile` (freezed, in `lib/models/user_profile.dart`) gains `DateTime? tutorialSeenAt`, JSON key `tutorial_seen_at`. Regenerate with `dart run build_runner build --delete-conflicting-outputs`.
 
 ## Components
 
-### `tutorialProvider` (Riverpod `AsyncNotifier<TutorialState>`)
+### `TutorialNotifier` (Riverpod `Notifier<void>` — action-only)
 
-State:
+We don't need a separate state stream: the "seen" flag lives on `UserProfile.tutorialSeenAt`. The notifier exists only to encapsulate the write actions.
+
 ```dart
-sealed class TutorialState {
-  const factory TutorialState.unseen() = TutorialUnseen;
-  const factory TutorialState.seen(DateTime at) = TutorialSeen;
+class TutorialNotifier extends Notifier<void> {
+  @override
+  void build() {}
+
+  bool shouldShow() {
+    final profile = ref.read(profileProvider).whenOrNull(data: (p) => p);
+    return profile != null && profile.tutorialSeenAt == null;
+  }
+
+  Future<void> markSeen() async { /* repo.updateTutorialSeenAt(userId, DateTime.now().toUtc()); then refresh profile */ }
+  Future<void> reset()    async { /* repo.updateTutorialSeenAt(userId, null);                     then refresh profile */ }
+}
+
+final tutorialProvider = NotifierProvider<TutorialNotifier, void>(TutorialNotifier.new);
+```
+
+- `shouldShow()` — pure read from `profileProvider`. The dashboard calls this after `_loadData()` completes.
+- `markSeen()` — called on normal finish **and** on "Überspringen". Writes the timestamp via a new `ProfileRepository.updateTutorialSeenAt()` method, then `await ref.read(profileProvider.notifier).fetchProfile()` to refresh the cached profile.
+- `reset()` — same path, writes `null`.
+
+No SharedPreferences cache — the profile is already loaded on dashboard init (`dashboard_screen.dart:35`), so the flag is available without an extra round-trip.
+
+### `ProfileRepository.updateTutorialSeenAt()` (new method)
+
+Extend the existing `lib/repositories/profile_repository.dart`:
+
+```dart
+Future<void> updateTutorialSeenAt(String userId, DateTime? value) async {
+  await _profileService.update(userId, {
+    'tutorial_seen_at': value?.toIso8601String(),
+  });
 }
 ```
 
-Methods:
-- `maybeStart()` — returns `true` if the current profile has `tutorialSeenAt == null`, signaling the dashboard should insert the overlay. Pure query; does not mutate.
-- `markSeen()` — updates `profiles.tutorial_seen_at = now()` for the current user via Supabase, then calls `ref.refresh(profileProvider)`. Called both on normal finish and on "Überspringen".
-- `reset()` — sets `tutorial_seen_at = null`, then refreshes the profile provider.
-
-Reads the existing `profileProvider` as the source of truth. No SharedPreferences cache — the profile is already loaded on dashboard init (`dashboard_screen.dart:35`), so the flag is available without an extra round-trip.
+Uses the existing `ProfileService.update()`. No new `ProfileService` method needed.
 
 ### `DashboardTutorialOverlay` (StatefulWidget, inserted via `Overlay.of(context).insert(...)`)
 
