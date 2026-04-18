@@ -123,5 +123,29 @@ void main() {
 
       expect(finished, isTrue);
     });
+
+    testWidgets('onFinish fires at most once across rapid taps', (
+      tester,
+    ) async {
+      var finishCount = 0;
+      await tester.pumpWithProviders(
+        harness(
+          overlay: DashboardTutorialOverlay(
+            steps: twoSteps(),
+            onFinish: () => finishCount += 1,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Tap Überspringen, then immediately tap background and Überspringen again
+      // before the fade-out completes — the _finished guard must block duplicates.
+      await tester.tap(find.text('Überspringen'));
+      await tester.tapAt(const Offset(5, 5));
+      await tester.tap(find.text('Überspringen'), warnIfMissed: false);
+      await tester.pumpAndSettle();
+
+      expect(finishCount, equals(1));
+    });
   });
 }
