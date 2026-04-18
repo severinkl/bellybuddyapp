@@ -155,6 +155,28 @@ void main() {
 
       verify(() => profileService.update('user-abc', any())).called(1);
     });
+
+    test(
+      'strips tutorial_seen_at so stale profile writes cannot overwrite it',
+      () async {
+        final profile = testUserProfile(
+          tutorialSeenAt: DateTime.utc(2026, 1, 1),
+        );
+        when(
+          () => profileService.update(any(), any()),
+        ).thenAnswer((_) async {});
+
+        await repo.updateProfile('user-123', profile);
+
+        final captured =
+            verify(
+                  () => profileService.update('user-123', captureAny()),
+                ).captured.single
+                as Map<String, dynamic>;
+
+        expect(captured.containsKey('tutorial_seen_at'), isFalse);
+      },
+    );
   });
 
   group('ProfileRepository.updateTutorialSeenAt', () {
