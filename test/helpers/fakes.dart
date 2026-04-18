@@ -173,8 +173,12 @@ class FakeAuthRepository implements AuthRepository {
 // -- FakeProfileRepository --
 class FakeProfileRepository implements ProfileRepository {
   UserProfile? _profile;
+  DateTime? _lastTutorialSeenAt;
+  bool _tutorialUpdateCalled = false;
 
   void seedProfile(UserProfile profile) => _profile = profile;
+  DateTime? get lastTutorialSeenAt => _lastTutorialSeenAt;
+  bool get tutorialUpdateCalled => _tutorialUpdateCalled;
 
   @override
   Future<UserProfile?> getProfile(String userId) async => _profile;
@@ -184,6 +188,12 @@ class FakeProfileRepository implements ProfileRepository {
   @override
   Future<void> updateProfile(String userId, UserProfile profile) async =>
       _profile = profile.copyWith(userId: userId);
+  @override
+  Future<void> updateTutorialSeenAt(String userId, DateTime? value) async {
+    _tutorialUpdateCalled = true;
+    _lastTutorialSeenAt = value;
+    _profile = _profile?.copyWith(tutorialSeenAt: value);
+  }
 }
 
 // -- FakeEntryRepository --
