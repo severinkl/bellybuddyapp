@@ -27,6 +27,11 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  // Last seen-at value observed in a non-loading profile state. Tracked so the
+  // retrigger listener can detect a real data→data transition through the
+  // transient AsyncLoading emitted by fetchProfile.
+  DateTime? _lastKnownTutorialSeenAt;
+
   @override
   void initState() {
     super.initState();
@@ -66,11 +71,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Widget build(BuildContext context) {
     // Retrigger the tutorial when the profile's tutorialSeenAt transitions
     // back to null (e.g. after "Tour neu starten" from Settings pops us back
-    // here). initState only fires once, so this listener covers the replay path.
-    ref.listen<AsyncValue<UserProfile?>>(profileProvider, (prev, next) {
-      final wasSeen = prev?.value?.tutorialSeenAt != null;
-      final nowUnseen = next.value?.tutorialSeenAt == null;
-      if (wasSeen && nowUnseen) {
+    // here). initState only fires once, so this listener covers the replay
+    // path. fetchProfile briefly emits AsyncLoading, so we track the last
+    // known data value to detect the real data→data transition across it.
+    ref.listen<AsyncValue<UserProfile?>>(profileProvider, (_, next) {
+      final profile = next.whenOrNull(data: (p) => p);
+      if (profile == null) return;
+      final previous = _lastKnownTutorialSeenAt;
+      final current = profile.tutorialSeenAt;
+      _lastKnownTutorialSeenAt = current;
+      if (previous != null && current == null) {
         _maybeShowTutorial();
       }
     });
