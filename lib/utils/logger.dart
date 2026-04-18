@@ -11,6 +11,10 @@ class AppLogger {
     if (kDebugMode) debugPrint('$_tag: $message');
   }
 
+  void warn(String message) {
+    if (kDebugMode) debugPrint('$_tag [WARN]: $message');
+  }
+
   void error(String message, [Object? error, StackTrace? stackTrace]) {
     if (kDebugMode) {
       debugPrint('$_tag [ERROR]: $message');

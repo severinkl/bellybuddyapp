@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../config/app_theme.dart';
 import '../../../../config/constants.dart';
+import '../../../../utils/logger.dart';
 import 'connector_line.dart';
 import 'spotlight_painter.dart';
 import 'tooltip_bubble.dart';
@@ -31,6 +32,8 @@ class DashboardTutorialOverlay extends StatefulWidget {
 
 class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
     with SingleTickerProviderStateMixin {
+  static const _log = AppLogger('TutorialOverlay');
+
   int _index = 0;
   Rect? _targetRect;
   bool _finished = false;
@@ -57,7 +60,12 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
     final ctx = step.targetKey.currentContext;
     final box = ctx?.findRenderObject() as RenderBox?;
     if (box == null || !box.attached) {
-      // Target not mounted / attached — skip it so we don't get stuck.
+      // Target not mounted / attached — skip it so we don't get stuck. Log
+      // so a broken key surfaces during development instead of silently
+      // disappearing from the tour.
+      _log.warn(
+        'step $_index (${step.targetKey.toString()}) skipped: no attached RenderBox',
+      );
       _advance();
       return;
     }

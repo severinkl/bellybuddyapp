@@ -40,6 +40,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    // Order is load-bearing: _loadData awaits fetchProfile, so by the time
+    // _maybeShowTutorial reads profileProvider.shouldShow() the profile is
+    // guaranteed to be AsyncData (or AsyncError). The ref.listen hook in
+    // build() then only handles the replay path (tutorialSeenAt going
+    // non-null → null while the dashboard is still mounted).
     Future.microtask(() async {
       await _loadData();
       await _maybeShowTutorial();
