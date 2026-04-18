@@ -77,7 +77,10 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
       _finish();
       return;
     }
-    setState(() => _index += 1);
+    setState(() {
+      _index += 1;
+      _targetRect = null;
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) => _measure());
   }
 
@@ -87,7 +90,10 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
       _finish();
       return;
     }
-    setState(() => _index += 1);
+    setState(() {
+      _index += 1;
+      _targetRect = null;
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) => _measure());
   }
 
@@ -148,9 +154,11 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
                     behavior: HitTestBehavior.opaque,
                     onTap: _finish,
                     child: Container(
+                      constraints: const BoxConstraints(minHeight: 44),
+                      alignment: Alignment.center,
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppConstants.spacingMd,
-                        vertical: AppConstants.spacingSm,
+                        vertical: AppConstants.spacingMd,
                       ),
                       decoration: BoxDecoration(
                         color: AppTheme.background.withValues(alpha: 0.9),
