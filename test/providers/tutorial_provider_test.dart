@@ -34,7 +34,7 @@ void main() {
     test(
       'returns true when profile loaded and tutorialSeenAt is null',
       () async {
-        fakeRepo.seedProfile(testUserProfile(tutorialSeenAt: null));
+        fakeRepo.seedProfile(testUserProfile(alreadySeenTutorial: false));
         final c = makeContainer();
         await c.read(profileProvider.notifier).fetchProfile();
 
@@ -55,7 +55,7 @@ void main() {
 
   group('TutorialNotifier.markSeen', () {
     test('writes a timestamp via the repo and refreshes the profile', () async {
-      fakeRepo.seedProfile(testUserProfile(tutorialSeenAt: null));
+      fakeRepo.seedProfile(testUserProfile(alreadySeenTutorial: false));
       final c = makeContainer();
       await c.read(profileProvider.notifier).fetchProfile();
 

@@ -24,7 +24,6 @@ TextSpan _b(String text) => TextSpan(text: text, style: _boldStyle);
 /// The 10 tutorial steps, in the fixed order shown by the mockups in
 /// `Anleitung Homescreen/` (filenames 1.png–10.png).
 final List<TutorialStep> dashboardTutorialSteps = [
-  // 1 - Bauchgefühl-Tracker (top-left tracker tile)
   TutorialStep(
     targetKey: TutorialKeys.bauchgefuehl,
     targetRadius: AppConstants.radiusLg,
@@ -37,7 +36,6 @@ final List<TutorialStep> dashboardTutorialSteps = [
       ),
     ],
   ),
-  // 2 - Klo-Tracker (top-right tracker tile)
   TutorialStep(
     targetKey: TutorialKeys.klo,
     targetRadius: AppConstants.radiusLg,
@@ -50,7 +48,6 @@ final List<TutorialStep> dashboardTutorialSteps = [
       _t('.'),
     ],
   ),
-  // 3 - Essen tracken (center FAB in bottom nav)
   TutorialStep(
     targetKey: TutorialKeys.essenTracken,
     targetRadius: AppConstants.radiusFull,
@@ -63,7 +60,6 @@ final List<TutorialStep> dashboardTutorialSteps = [
       ),
     ],
   ),
-  // 4 - Für dich (top-left feature card)
   TutorialStep(
     targetKey: TutorialKeys.fuerDich,
     targetRadius: AppConstants.radiusLg,
@@ -76,7 +72,6 @@ final List<TutorialStep> dashboardTutorialSteps = [
       ),
     ],
   ),
-  // 5 - Alternativen (top-right feature card)
   TutorialStep(
     targetKey: TutorialKeys.alternativen,
     targetRadius: AppConstants.radiusLg,
@@ -87,7 +82,6 @@ final List<TutorialStep> dashboardTutorialSteps = [
       _t(' basierend auf deinen Speisen findest du hier.'),
     ],
   ),
-  // 6 - Wissen (bottom-right feature card)
   TutorialStep(
     targetKey: TutorialKeys.wissen,
     targetRadius: AppConstants.radiusLg,
@@ -99,7 +93,6 @@ final List<TutorialStep> dashboardTutorialSteps = [
       _b("Hier geht's zum Blog!"),
     ],
   ),
-  // 7 - Rezepte (bottom-left feature card)
   TutorialStep(
     targetKey: TutorialKeys.rezepte,
     targetRadius: AppConstants.radiusLg,
@@ -110,7 +103,6 @@ final List<TutorialStep> dashboardTutorialSteps = [
       ),
     ],
   ),
-  // 8 - Tagebuch (bottom nav, right)
   TutorialStep(
     targetKey: TutorialKeys.tagebuch,
     targetRadius: AppConstants.radiusMd,
@@ -121,7 +113,6 @@ final List<TutorialStep> dashboardTutorialSteps = [
       _t(' über alle deine erfassten Daten findest du hier.'),
     ],
   ),
-  // 9 - Feedback-Icon (dashboard header, top-right)
   TutorialStep(
     targetKey: TutorialKeys.feedback,
     targetRadius: AppConstants.radiusFull,
@@ -131,7 +122,6 @@ final List<TutorialStep> dashboardTutorialSteps = [
       _t(' kannst du uns hier ganz einfach schicken.'),
     ],
   ),
-  // 10 - Einstellungen / Settings-Gear
   TutorialStep(
     targetKey: TutorialKeys.settings,
     targetRadius: AppConstants.radiusFull,

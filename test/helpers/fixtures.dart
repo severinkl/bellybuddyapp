@@ -14,10 +14,9 @@ import 'package:belly_buddy/models/ingredient_search_result.dart';
 
 const testUserId = 'test-user-id';
 
-/// Sentinel non-null timestamp used as the default `tutorialSeenAt` value,
-/// so tests that seed a profile don't accidentally trigger the dashboard
-/// onboarding tour. Tests covering the tour explicitly pass
-/// `tutorialSeenAt: null`.
+/// Default `tutorialSeenAt` for test fixtures — a non-null timestamp so tests
+/// that seed a profile don't accidentally trigger the dashboard onboarding
+/// tour. Tests covering the tour explicitly pass `alreadySeenTutorial: false`.
 final DateTime testTutorialAlreadySeenAt = DateTime.utc(2026, 1, 1);
 
 UserProfile testUserProfile({
@@ -36,7 +35,8 @@ UserProfile testUserProfile({
   List<String>? moodReminderTimes,
   bool pushEnabled = false,
   String? timezone,
-  Object? tutorialSeenAt = const _TutorialSeenAtDefault(),
+  DateTime? tutorialSeenAt,
+  bool alreadySeenTutorial = true,
 }) => UserProfile(
   userId: userId ?? testUserId,
   birthYear: birthYear ?? 1990,
@@ -53,16 +53,10 @@ UserProfile testUserProfile({
   moodReminderTimes: moodReminderTimes ?? ['20:00'],
   pushEnabled: pushEnabled,
   timezone: timezone ?? 'Europe/Berlin',
-  tutorialSeenAt: tutorialSeenAt is _TutorialSeenAtDefault
-      ? testTutorialAlreadySeenAt
-      : tutorialSeenAt as DateTime?,
+  tutorialSeenAt:
+      tutorialSeenAt ??
+      (alreadySeenTutorial ? testTutorialAlreadySeenAt : null),
 );
-
-/// Sentinel to distinguish "caller omitted `tutorialSeenAt`" from
-/// "caller passed `null` on purpose".
-class _TutorialSeenAtDefault {
-  const _TutorialSeenAtDefault();
-}
 
 MealEntry testMealEntry({
   String? id,

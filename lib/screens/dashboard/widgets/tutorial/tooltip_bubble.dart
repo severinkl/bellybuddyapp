@@ -20,26 +20,24 @@ class TooltipBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ConstrainedBox(
+    return Container(
       constraints: BoxConstraints(maxWidth: maxWidth),
-      child: Container(
-        padding: AppConstants.paddingMd,
-        decoration: BoxDecoration(
-          color: AppTheme.background,
-          borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-          border: Border.all(color: AppTheme.border),
-          boxShadow: const [
-            BoxShadow(
-              color: AppTheme.shadow,
-              blurRadius: 12,
-              offset: Offset(0, 4),
-            ),
-          ],
-        ),
-        child: RichText(
-          textAlign: TextAlign.center,
-          text: TextSpan(children: richText),
-        ),
+      padding: AppConstants.paddingMd,
+      decoration: BoxDecoration(
+        color: AppTheme.background,
+        borderRadius: BorderRadius.circular(AppConstants.radiusLg),
+        border: Border.all(color: AppTheme.border),
+        boxShadow: const [
+          BoxShadow(
+            color: AppTheme.shadow,
+            blurRadius: 12,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: RichText(
+        textAlign: TextAlign.center,
+        text: TextSpan(children: richText),
       ),
     );
   }

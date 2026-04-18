@@ -55,14 +55,10 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
   void _measure() {
     final step = widget.steps[_index];
     final ctx = step.targetKey.currentContext;
-    if (ctx == null) {
-      // Target not yet mounted — skip to next step defensively.
-      _advanceInternal();
-      return;
-    }
-    final box = ctx.findRenderObject() as RenderBox?;
+    final box = ctx?.findRenderObject() as RenderBox?;
     if (box == null || !box.attached) {
-      _advanceInternal();
+      // Target not mounted / attached — skip it so we don't get stuck.
+      _advance();
       return;
     }
     final topLeft = box.localToGlobal(Offset.zero);
@@ -73,19 +69,6 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
 
   void _advance() {
     if (_finished) return;
-    if (_index >= widget.steps.length - 1) {
-      _finish();
-      return;
-    }
-    setState(() {
-      _index += 1;
-      _targetRect = null;
-    });
-    WidgetsBinding.instance.addPostFrameCallback((_) => _measure());
-  }
-
-  void _advanceInternal() {
-    // Used when a target key has no render box — avoids getting stuck.
     if (_index >= widget.steps.length - 1) {
       _finish();
       return;
@@ -198,10 +181,9 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
     final spaceAbove = targetRect.top - safe.top;
     final spaceBelow = screenSize.height - safe.bottom - targetRect.bottom;
     TooltipAnchor anchor = step.preferredAnchor;
-    const minSpaceRequired = 140.0;
-    if (anchor == TooltipAnchor.above && spaceAbove < minSpaceRequired) {
+    if (anchor == TooltipAnchor.above && spaceAbove < _minAnchorSpace) {
       anchor = TooltipAnchor.below;
-    } else if (anchor == TooltipAnchor.below && spaceBelow < minSpaceRequired) {
+    } else if (anchor == TooltipAnchor.below && spaceBelow < _minAnchorSpace) {
       anchor = TooltipAnchor.above;
     }
 
@@ -266,4 +248,8 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
   // actual bubble sizes itself based on its content; the connector just
   // needs a reasonable approximation.
   static const double _estimatedBubbleHeight = 140;
+
+  // Minimum vertical space required on the preferred side before we flip
+  // the bubble anchor to the opposite side of the target.
+  static const double _minAnchorSpace = 140;
 }

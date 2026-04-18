@@ -32,6 +32,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   // transient AsyncLoading emitted by fetchProfile.
   DateTime? _lastKnownTutorialSeenAt;
 
+  // Active tutorial handle; non-null while the overlay is open. Cancelled
+  // in dispose() so the OverlayEntry + its AnimationController don't leak
+  // if the screen is torn down mid-tour (e.g. sign-out).
+  TutorialHandle? _tutorialHandle;
+
   @override
   void initState() {
     super.initState();
@@ -43,11 +48,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     });
   }
 
+  @override
+  void dispose() {
+    _tutorialHandle?.cancel();
+    _tutorialHandle = null;
+    super.dispose();
+  }
+
   Future<void> _maybeShowTutorial() async {
     if (!mounted) return;
     final shouldShow = ref.read(tutorialProvider.notifier).shouldShow();
     if (!shouldShow) return;
-    await showDashboardTutorial(context);
+    final handle = showDashboardTutorial(context);
+    _tutorialHandle = handle;
+    await handle.future;
+    _tutorialHandle = null;
     if (!mounted) return;
     await ref.read(tutorialProvider.notifier).markSeen();
   }
