@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
+import '../../models/user_profile.dart';
 import '../../providers/entries_provider.dart';
 import '../../providers/ingredient_suggestion_provider.dart';
 import '../../providers/recommendation_provider.dart';
@@ -63,6 +64,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Retrigger the tutorial when the profile's tutorialSeenAt transitions
+    // back to null (e.g. after "Tour neu starten" from Settings pops us back
+    // here). initState only fires once, so this listener covers the replay path.
+    ref.listen<AsyncValue<UserProfile?>>(profileProvider, (prev, next) {
+      final wasSeen = prev?.value?.tutorialSeenAt != null;
+      final nowUnseen = next.value?.tutorialSeenAt == null;
+      if (wasSeen && nowUnseen) {
+        _maybeShowTutorial();
+      }
+    });
+
     ref.watch(ingredientSuggestionProvider); // rebuild on data changes
     final newSuggestionCount = ref
         .read(ingredientSuggestionProvider.notifier)
