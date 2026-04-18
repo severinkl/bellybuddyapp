@@ -6,10 +6,13 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/tutorial_provider.dart';
 import '../../router/route_names.dart';
+import '../../utils/logger.dart';
 import '../../widgets/common/bb_settings_item.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
+
+  static const _log = AppLogger('SettingsScreen');
 
   Future<void> _restartTutorial(BuildContext context, WidgetRef ref) async {
     final confirm = await showDialog<bool>(
@@ -34,13 +37,16 @@ class SettingsScreen extends ConsumerWidget {
     if (confirm != true) return;
     if (!context.mounted) return;
 
+    // Pop BEFORE resetting. The Dashboard's retrigger listener fires as soon
+    // as profileProvider delivers the cleared profile, and Overlay.of(...,
+    // rootOverlay: true) would otherwise paint the tutorial on top of the
+    // Settings screen for the frames before the pop animation unwinds.
     final messenger = ScaffoldMessenger.of(context);
-    final router = GoRouter.of(context);
+    GoRouter.of(context).pop();
     try {
       await ref.read(tutorialProvider.notifier).reset();
-      if (!context.mounted) return;
-      router.pop();
-    } catch (_) {
+    } catch (e, st) {
+      _log.error('Tour neu starten: reset failed', e, st);
       messenger.showSnackBar(
         const SnackBar(
           content: Text(

@@ -24,7 +24,10 @@ void main() {
     tester,
   ) async {
     final profileRepo = FakeProfileRepository()
-      ..seedProfile(testUserProfile()); // tutorialSeenAt defaults to null
+      // Explicitly opt in to the fresh-tutorial state — testUserProfile()
+      // otherwise defaults to an already-seen timestamp so unrelated tests
+      // don't trigger the tour.
+      ..seedProfile(testUserProfile(tutorialSeenAt: null));
 
     await tester.pumpWidget(
       buildTestApp(
