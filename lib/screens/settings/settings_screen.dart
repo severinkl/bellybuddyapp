@@ -1,64 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
-import '../../providers/tutorial_provider.dart';
 import '../../router/route_names.dart';
-import '../../utils/logger.dart';
 import '../../widgets/common/bb_settings_item.dart';
 
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
-  static const _log = AppLogger('SettingsScreen');
-
-  Future<void> _restartTutorial(BuildContext context, WidgetRef ref) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Tour neu starten?'),
-        content: const Text(
-          'Möchtest du die Einführung erneut starten? Die Tour wird beim nächsten Öffnen des Dashboards angezeigt.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Abbrechen'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Neu starten'),
-          ),
-        ],
-      ),
-    );
-    if (confirm != true) return;
-    if (!context.mounted) return;
-
-    // Pop BEFORE resetting. The Dashboard's retrigger listener fires as soon
-    // as profileProvider delivers the cleared profile, and Overlay.of(...,
-    // rootOverlay: true) would otherwise paint the tutorial on top of the
-    // Settings screen for the frames before the pop animation unwinds.
-    final messenger = ScaffoldMessenger.of(context);
-    GoRouter.of(context).pop();
-    try {
-      await ref.read(tutorialProvider.notifier).reset();
-    } catch (e, st) {
-      _log.error('Tour neu starten: reset failed', e, st);
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Konnte die Tour nicht zurücksetzen. Bitte versuche es später erneut.',
-          ),
-        ),
-      );
-    }
-  }
-
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppTheme.screenBackground,
       appBar: AppBar(
@@ -98,13 +50,6 @@ class SettingsScreen extends ConsumerWidget {
                 Uri.parse(AppConstants.feedbackFormUrl),
                 mode: LaunchMode.externalApplication,
               ),
-            ),
-            AppConstants.gap12,
-            BbSettingsItem(
-              icon: Icons.replay_outlined,
-              title: 'Tour neu starten',
-              subtitle: 'Zeige die Einführung zum Dashboard erneut',
-              onTap: () => _restartTutorial(context, ref),
             ),
           ],
         ),

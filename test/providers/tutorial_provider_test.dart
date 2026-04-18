@@ -85,20 +85,4 @@ void main() {
       expect(fakeRepo.tutorialUpdateCalled, isFalse);
     });
   });
-
-  group('TutorialNotifier.reset', () {
-    test('writes null via the repo and refreshes the profile', () async {
-      fakeRepo.seedProfile(
-        testUserProfile().copyWith(tutorialSeenAt: DateTime.utc(2026, 4, 1)),
-      );
-      final c = makeContainer();
-      await c.read(profileProvider.notifier).fetchProfile();
-
-      await c.read(tutorialProvider.notifier).reset();
-
-      expect(fakeRepo.tutorialUpdateCalled, isTrue);
-      expect(fakeRepo.lastTutorialSeenAt, isNull);
-      expect(c.read(profileProvider).value?.tutorialSeenAt, isNull);
-    });
-  });
 }

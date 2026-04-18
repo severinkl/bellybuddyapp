@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
-import '../../models/user_profile.dart';
 import '../../providers/entries_provider.dart';
 import '../../providers/ingredient_suggestion_provider.dart';
 import '../../providers/recommendation_provider.dart';
@@ -27,11 +26,6 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
-  // Last seen-at value observed in a non-loading profile state. Tracked so the
-  // retrigger listener can detect a real data→data transition through the
-  // transient AsyncLoading emitted by fetchProfile.
-  DateTime? _lastKnownTutorialSeenAt;
-
   // Active tutorial handle; non-null while the overlay is open. Cancelled
   // in dispose() so the OverlayEntry + its AnimationController don't leak
   // if the screen is torn down mid-tour (e.g. sign-out).
@@ -42,9 +36,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     super.initState();
     // Order is load-bearing: _loadData awaits fetchProfile, so by the time
     // _maybeShowTutorial reads profileProvider.shouldShow() the profile is
-    // guaranteed to be AsyncData (or AsyncError). The ref.listen hook in
-    // build() then only handles the replay path (tutorialSeenAt going
-    // non-null → null while the dashboard is still mounted).
+    // guaranteed to be AsyncData (or AsyncError).
     Future.microtask(() async {
       await _loadData();
       await _maybeShowTutorial();
@@ -89,22 +81,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Retrigger the tutorial when the profile's tutorialSeenAt transitions
-    // back to null (e.g. after "Tour neu starten" from Settings pops us back
-    // here). initState only fires once, so this listener covers the replay
-    // path. fetchProfile briefly emits AsyncLoading, so we track the last
-    // known data value to detect the real data→data transition across it.
-    ref.listen<AsyncValue<UserProfile?>>(profileProvider, (_, next) {
-      final profile = next.whenOrNull(data: (p) => p);
-      if (profile == null) return;
-      final previous = _lastKnownTutorialSeenAt;
-      final current = profile.tutorialSeenAt;
-      _lastKnownTutorialSeenAt = current;
-      if (previous != null && current == null) {
-        _maybeShowTutorial();
-      }
-    });
-
     ref.watch(ingredientSuggestionProvider); // rebuild on data changes
     final newSuggestionCount = ref
         .read(ingredientSuggestionProvider.notifier)

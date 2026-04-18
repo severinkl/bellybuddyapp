@@ -8,8 +8,8 @@ import '../utils/logger.dart';
 /// Action-only notifier for the dashboard onboarding tutorial.
 ///
 /// The "seen" state itself lives on [UserProfile.tutorialSeenAt] and is read
-/// via [profileProvider]. This notifier exists only to expose the mutating
-/// actions ([markSeen], [reset]) and a convenience query ([shouldShow]).
+/// via [profileProvider]. This notifier exposes the mutating action
+/// ([markSeen]) and a convenience query ([shouldShow]).
 class TutorialNotifier extends Notifier<void> {
   static const _log = AppLogger('TutorialProvider');
 
@@ -36,17 +36,6 @@ class TutorialNotifier extends Notifier<void> {
     } catch (e, st) {
       _log.error('markSeen failed', e, st);
     }
-  }
-
-  /// Clears the seen-flag so the tutorial runs again on next dashboard open.
-  /// Used by the "Tour neu starten" button in Settings.
-  Future<void> reset() async {
-    final userId = ref.read(currentUserIdProvider);
-    if (userId == null) return;
-    await ref
-        .read(profileRepositoryProvider)
-        .updateTutorialSeenAt(userId, null);
-    await ref.read(profileProvider.notifier).fetchProfile();
   }
 }
 
