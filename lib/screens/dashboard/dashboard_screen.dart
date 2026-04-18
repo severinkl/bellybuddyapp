@@ -14,6 +14,7 @@ import '../../router/route_names.dart';
 import '../../widgets/common/tracker_card.dart';
 import 'widgets/feature_card.dart';
 import 'widgets/notification_opt_in_dialog.dart';
+import 'widgets/tutorial/tutorial_keys.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -118,6 +119,7 @@ class _DashboardHeader extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
         CircleIconButton(
+          key: TutorialKeys.feedback,
           icon: Icons.feedback_outlined,
           size: AppConstants.iconBadgeLg,
           onPressed: () => launchUrl(
@@ -127,6 +129,7 @@ class _DashboardHeader extends StatelessWidget {
         ),
         const SizedBox(width: AppConstants.spacingSm),
         CircleIconButton(
+          key: TutorialKeys.settings,
           icon: Icons.settings,
           size: AppConstants.iconBadgeLg,
           onPressed: () => context.push(RoutePaths.settings),
@@ -145,6 +148,7 @@ class _TrackerCards extends StatelessWidget {
       children: [
         Expanded(
           child: TrackerCard(
+            key: TutorialKeys.bauchgefuehl,
             svgPath: AppConstants.logoSvg,
             label: 'Bauchgefühl',
             onTap: () => context.push(RoutePaths.gutFeelingTracker),
@@ -153,6 +157,7 @@ class _TrackerCards extends StatelessWidget {
         const SizedBox(width: AppConstants.spacing12),
         Expanded(
           child: TrackerCard(
+            key: TutorialKeys.klo,
             svgPath: AppConstants.toiletPaperSvg,
             label: 'Klo',
             onTap: () => context.push(RoutePaths.toiletTracker),
@@ -208,6 +213,7 @@ class _ForYouSection extends StatelessWidget {
             children: [
               Expanded(
                 child: FeatureCard(
+                  key: TutorialKeys.fuerDich,
                   imageAsset: AppConstants.fuerDichCard,
                   label: 'Für dich',
                   icon: Icons.auto_awesome,
@@ -219,6 +225,7 @@ class _ForYouSection extends StatelessWidget {
               const SizedBox(width: AppConstants.spacing12),
               Expanded(
                 child: FeatureCard(
+                  key: TutorialKeys.alternativen,
                   imageAsset: AppConstants.alternativenCard,
                   label: 'Alternativen',
                   icon: Icons.eco,
@@ -234,6 +241,7 @@ class _ForYouSection extends StatelessWidget {
             children: [
               Expanded(
                 child: FeatureCard(
+                  key: TutorialKeys.rezepte,
                   imageAsset: AppConstants.rezepteCard,
                   label: 'Rezepte',
                   icon: Icons.restaurant_menu,
@@ -244,6 +252,7 @@ class _ForYouSection extends StatelessWidget {
               const SizedBox(width: AppConstants.spacing12),
               Expanded(
                 child: FeatureCard(
+                  key: TutorialKeys.wissen,
                   imageAsset: AppConstants.susiPhone,
                   label: 'Wissen',
                   icon: Icons.menu_book,
