@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../utils/logger.dart';
 
 /// Shows a confirmation dialog for account deletion.
 ///
@@ -26,6 +27,9 @@ class _DeleteAccountDialog extends ConsumerStatefulWidget {
 }
 
 class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
+  static const _log = AppLogger('DeleteAccountDialog');
+  static const _confirmWord = 'LÖSCHEN';
+
   final _controller = TextEditingController();
 
   @override
@@ -34,7 +38,7 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
     super.dispose();
   }
 
-  bool get _canDelete => _controller.text == 'LÖSCHEN';
+  bool get _canDelete => _controller.text == _confirmWord;
 
   Future<void> _confirmDelete() async {
     final navigator = Navigator.of(context);
@@ -42,7 +46,8 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
     navigator.pop(true);
     try {
       await ref.read(authNotifierProvider.notifier).deleteAccount();
-    } catch (_) {
+    } catch (e, st) {
+      _log.error('deleteAccount failed', e, st);
       messenger.showSnackBar(
         const SnackBar(content: Text('Fehler beim Löschen.')),
       );
@@ -60,8 +65,8 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 56,
-            height: 56,
+            width: AppConstants.iconBadgeXl,
+            height: AppConstants.iconBadgeXl,
             decoration: BoxDecoration(
               color: AppTheme.destructive.withValues(alpha: 0.1),
               shape: BoxShape.circle,
@@ -69,7 +74,7 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
             child: const Icon(
               Icons.warning_amber_rounded,
               color: AppTheme.destructive,
-              size: 32,
+              size: AppConstants.spacingXl,
             ),
           ),
           AppConstants.gap16,
@@ -94,7 +99,7 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
           TextField(
             controller: _controller,
             decoration: const InputDecoration(
-              hintText: 'LÖSCHEN eingeben',
+              hintText: '$_confirmWord eingeben',
               labelText: 'Bestätigung',
             ),
             onChanged: (_) => setState(() {}),

@@ -19,6 +19,11 @@ class DashboardTutorialOverlay extends StatefulWidget {
   final List<TutorialStep> steps;
   final VoidCallback onFinish;
 
+  /// Key on the full-screen GestureDetector that advances the tour on tap.
+  /// Exposed so tests can drive "advance" without relying on screen-space
+  /// coordinates (which change with the Überspringen link's position).
+  static const advanceKey = Key('tutorial_overlay_advance');
+
   const DashboardTutorialOverlay({
     super.key,
     required this.steps,
@@ -125,6 +130,7 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
                 // Advance-on-tap layer + dim + cutout painter
                 Positioned.fill(
                   child: GestureDetector(
+                    key: DashboardTutorialOverlay.advanceKey,
                     behavior: HitTestBehavior.opaque,
                     onTap: _advance,
                     child: CustomPaint(

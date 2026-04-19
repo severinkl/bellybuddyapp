@@ -37,6 +37,7 @@ class AppConstants {
   static const double iconBadgeSm = 40.0;
   static const double iconBadgeMd = 44.0;
   static const double iconBadgeLg = 48.0;
+  static const double iconBadgeXl = 56.0;
 
   // Border radius
   static const double radiusXs = 4.0;
