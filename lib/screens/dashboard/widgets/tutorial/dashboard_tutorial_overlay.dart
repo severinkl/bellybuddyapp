@@ -69,9 +69,17 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
       _advance();
       return;
     }
-    final topLeft = box.localToGlobal(Offset.zero);
+    // Transform-aware: MatrixUtils.transformRect respects any ancestor
+    // transform (e.g. PressScaleWrapper's ScaleTransition around the
+    // tracker cards). localToGlobal + size alone silently drops
+    // non-translation transforms and occasionally returned a mis-sized
+    // rect for the first step.
+    final rect = MatrixUtils.transformRect(
+      box.getTransformTo(null),
+      Offset.zero & box.size,
+    );
     setState(() {
-      _targetRect = topLeft & box.size;
+      _targetRect = rect;
     });
   }
 
