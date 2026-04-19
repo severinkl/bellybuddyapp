@@ -37,7 +37,7 @@ Google uses `signInWithIdToken` and always returns a real email claim in the ID 
 | Question | Decision |
 |---|---|
 | Who gets asked? | Only OAuth users whose resulting Supabase email is `null`, empty, or matches `*@privaterelay.appleid.com`. |
-| Required? | Yes, no skip button. Last step of the wizard; user has already invested in the flow. |
+| Required? | Optional. Sharing a real email on this step must remain skippable — Apple's Sign in with Apple policy prohibits requiring it. The step shows a secondary "Überspringen" link next to the primary "Weiter" button; tapping it writes `profiles.email = null` and advances to the dashboard. |
 | Where is it stored? | New `profiles.email` column. `auth.users.email` stays untouched (remains the OAuth result). |
 | Verified? | No. Inline format validation only. |
 
@@ -93,7 +93,7 @@ Step 7: EmailCaptureStep  (conditional)
   - Matches a standard email regex
   - Does **not** end with `@privaterelay.appleid.com` (reject the relay the user might paste in)
 - `BbButton` "Weiter" — `onPressed: null` until validation passes
-- No "Überspringen" / "Später" button (required)
+- Secondary "Überspringen" text button below the primary "Weiter" — always enabled (disabled only while a write is in flight). Tapping it writes `profiles.email = null` and navigates to the dashboard. Required by Apple's Sign in with Apple policy.
 - No "Zurück" button on this step — going back after a successful sign-in would land the user on an auth step mid-session; the back button is hidden for this final step
 
 ## Architecture

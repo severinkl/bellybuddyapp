@@ -19,6 +19,12 @@ class EmailCaptureStep extends StatefulWidget {
   final ValueChanged<String> onChanged;
   final VoidCallback onSubmit;
 
+  /// Called when the user taps the "Überspringen" link. The parent should
+  /// persist the profile with a `null` email. Sharing a real address on
+  /// this step is optional — Apple's Sign in with Apple policy prohibits
+  /// requiring it.
+  final VoidCallback onSkip;
+
   /// Disables the submit button and shows a progress indicator while the
   /// parent is saving. Prevents double-submit during the async createProfile.
   final bool isLoading;
@@ -29,12 +35,14 @@ class EmailCaptureStep extends StatefulWidget {
 
   static const emailFieldKey = Key('email_capture_email_field');
   static const submitButtonKey = Key('email_capture_submit_button');
+  static const skipButtonKey = Key('email_capture_skip_button');
 
   const EmailCaptureStep({
     super.key,
     required this.value,
     required this.onChanged,
     required this.onSubmit,
+    required this.onSkip,
     this.isLoading = false,
     this.error,
   });
@@ -87,9 +95,9 @@ class _EmailCaptureStepState extends State<EmailCaptureStep> {
           ),
           AppConstants.gap16,
           const Text(
-            'Damit wir dir Empfehlungen, Erinnerungen und die tägliche '
-            'Zusammenfassung schicken können, brauchen wir deine echte '
-            'E-Mail-Adresse.',
+            'Falls du möchtest, kannst du uns hier deine echte '
+            'E-Mail-Adresse geben. So können wir dich bei wichtigen '
+            'Mitteilungen erreichen. Dieser Schritt ist optional.',
             style: TextStyle(
               fontSize: AppTheme.fontSizeBody,
               color: AppTheme.mutedForeground,
@@ -134,6 +142,14 @@ class _EmailCaptureStepState extends State<EmailCaptureStep> {
             label: 'Weiter',
             isLoading: widget.isLoading,
             onPressed: _isValid ? widget.onSubmit : null,
+          ),
+          TextButton(
+            key: EmailCaptureStep.skipButtonKey,
+            onPressed: widget.isLoading ? null : widget.onSkip,
+            style: TextButton.styleFrom(
+              foregroundColor: AppTheme.mutedForeground,
+            ),
+            child: const Text('Überspringen'),
           ),
           AppConstants.gap16,
         ],

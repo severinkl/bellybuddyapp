@@ -11,6 +11,7 @@ void main() {
       WidgetTester tester, {
       required void Function(String) onChanged,
       required VoidCallback onSubmit,
+      VoidCallback? onSkip,
       String? initialValue,
     }) async {
       await tester.pumpWithProviders(
@@ -19,6 +20,7 @@ void main() {
             value: initialValue,
             onChanged: onChanged,
             onSubmit: onSubmit,
+            onSkip: onSkip ?? () {},
           ),
         ),
       );
@@ -29,14 +31,32 @@ void main() {
 
     Finder emailField() => find.byKey(EmailCaptureStep.emailFieldKey);
 
-    testWidgets('shows headline and body copy', (tester) async {
+    testWidgets('shows headline, optional body copy, and skip button', (
+      tester,
+    ) async {
       await pumpStep(tester, onChanged: (_) {}, onSubmit: () {});
 
       expect(find.text('Deine E-Mail-Adresse'), findsOneWidget);
       expect(
-        find.textContaining('wir dir Empfehlungen, Erinnerungen'),
+        find.textContaining('Dieser Schritt ist optional'),
         findsOneWidget,
       );
+      expect(find.text('Überspringen'), findsOneWidget);
+    });
+
+    testWidgets('tapping Überspringen fires onSkip', (tester) async {
+      var skipped = false;
+      await pumpStep(
+        tester,
+        onChanged: (_) {},
+        onSubmit: () {},
+        onSkip: () => skipped = true,
+      );
+
+      await tester.tap(find.byKey(EmailCaptureStep.skipButtonKey));
+      await tester.pump();
+
+      expect(skipped, isTrue);
     });
 
     testWidgets('Weiter button disabled when input is empty', (tester) async {

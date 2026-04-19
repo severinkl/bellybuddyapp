@@ -92,7 +92,14 @@ class _RegistrationWizardScreenState
   }
 
   Future<void> _createProfile() async {
+    // If we've reached the capture step, the wizard already judged
+    // authUser.email unusable (null/empty/Apple relay). In that case use
+    // only the typed value — a null here means the user skipped, and we
+    // must NOT silently persist the relay in profiles.email. Otherwise
+    // (OAuth already returned a real email, or email+password) fall back
+    // to the auth-provided address.
     final authUser = ref.read(authRepositoryProvider).currentUser;
+    final email = _showEmailCapture ? _capturedEmail : authUser?.email;
     final profile = UserProfile(
       birthYear: _birthYear,
       gender: _gender,
@@ -104,7 +111,7 @@ class _RegistrationWizardScreenState
       fructoseTriggers: _triggers['Fruktose'] ?? [],
       lactoseTriggers: _triggers['Laktose'] ?? [],
       histaminTriggers: _triggers['Histamin'] ?? [],
-      email: _capturedEmail ?? authUser?.email,
+      email: email,
     );
     await ref.read(profileProvider.notifier).createProfile(profile);
   }
@@ -211,6 +218,17 @@ class _RegistrationWizardScreenState
     }
   }
 
+  Future<void> _handleEmailCaptureSkip() async {
+    // Apple's Sign in with Apple policy prohibits forcing the user to
+    // share a real address; this path creates the profile with a null
+    // email. _createProfile's capture-step branch already passes null
+    // when _capturedEmail is null, so we just clear the field and reuse
+    // the submit flow.
+    if (_isSaving) return;
+    setState(() => _capturedEmail = null);
+    await _handleEmailCaptureSubmit();
+  }
+
   @override
   void dispose() {
     _pageController.dispose();
@@ -295,6 +313,7 @@ class _RegistrationWizardScreenState
                       // button-enabled state via its internal controller.
                       onChanged: (v) => _capturedEmail = v,
                       onSubmit: _handleEmailCaptureSubmit,
+                      onSkip: _handleEmailCaptureSkip,
                     ),
                 ],
               ),
