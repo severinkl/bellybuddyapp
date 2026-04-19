@@ -130,15 +130,23 @@ class _RegistrationWizardScreenState
     } catch (e) {
       _log.error('email sign-up failed', e);
       if (mounted) {
-        final message =
-            (e is AuthApiException && e.code == 'user_already_exists')
-            ? 'Diese E-Mail ist bereits registriert. Bitte melde dich an.'
-            : 'Registrierung fehlgeschlagen.';
-        setState(() => _authError = message);
+        setState(() => _authError = _mapSignUpError(e));
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  String _mapSignUpError(Object e) {
+    if (e is AuthWeakPasswordException) {
+      // e.reasons typically contains 'pwned' / 'length' / 'characters'.
+      return 'Dieses Passwort ist zu unsicher oder wurde in einem '
+          'Datenleck gefunden. Bitte wähle ein anderes.';
+    }
+    if (e is AuthApiException && e.code == 'user_already_exists') {
+      return 'Diese E-Mail ist bereits registriert. Bitte melde dich an.';
+    }
+    return 'Registrierung fehlgeschlagen.';
   }
 
   Future<void> _handleGoogleSignUp() async {

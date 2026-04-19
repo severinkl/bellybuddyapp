@@ -2,6 +2,7 @@ import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthApiException;
 import '../../config/app_theme.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
@@ -112,10 +113,17 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           .resetPassword(_emailController.text.trim());
       setState(() => _resetSent = true);
     } catch (e) {
-      setState(() => _error = 'Fehler beim Zurücksetzen.');
+      setState(() => _error = _mapResetPasswordError(e));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  String _mapResetPasswordError(Object e) {
+    if (e is AuthApiException && e.code == 'over_email_send_rate_limit') {
+      return 'Zu viele Anfragen. Bitte warte einen Moment und versuche es erneut.';
+    }
+    return 'Fehler beim Zurücksetzen.';
   }
 
   @override
