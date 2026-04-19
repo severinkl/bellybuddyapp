@@ -72,6 +72,11 @@ class AppConstants {
   static const String feedbackFormUrl =
       'https://docs.google.com/forms/d/e/1FAIpQLSfHqqGW_159yd_sUacBZq5aITZwGDikag_lgd8eudHQcelNGA/viewform?usp=dialog';
 
+  /// Deep link Supabase opens when the user taps the password-reset email.
+  /// Routed by Lovable back into the app's /reset-password flow.
+  static const String resetPasswordRedirectUrl =
+      'https://belly-buddy-diet-detective.lovable.app/reset-password';
+
   // Apple "Hide My Email" relay address suffix (includes the leading `@`).
   // See the Sign in with Apple docs — this domain is stable since iOS 13.
   static const String appleRelayEmailSuffix = '@privaterelay.appleid.com';
