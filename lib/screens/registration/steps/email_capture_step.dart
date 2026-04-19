@@ -79,66 +79,82 @@ class _EmailCaptureStepState extends State<EmailCaptureStep> {
 
   @override
   Widget build(BuildContext context) {
+    // Upper content scrolls on short screens / when the soft keyboard
+    // opens; the primary + skip buttons stay pinned to the bottom so
+    // they remain reachable. The previous Spacer-based layout
+    // overflowed by a few pixels once the keyboard shrank the viewport
+    // (reported with constraints h=477 on iPhone 17 simulator).
     return Padding(
       padding: AppConstants.paddingLg,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AppConstants.gap24,
-          const Center(
-            child: MascotImage(
-              assetPath: AppConstants.mascotZen,
-              width: 120,
-              height: 120,
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  AppConstants.gap24,
+                  const Center(
+                    child: MascotImage(
+                      assetPath: AppConstants.mascotZen,
+                      width: 120,
+                      height: 120,
+                    ),
+                  ),
+                  AppConstants.gap16,
+                  const Text(
+                    'Deine E-Mail-Adresse',
+                    style: TextStyle(
+                      fontSize: AppTheme.fontSizeHeadingLG,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.foreground,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  AppConstants.gap8,
+                  const Text(
+                    'Falls du möchtest, kannst du uns hier deine echte '
+                    'E-Mail-Adresse geben. So können wir dich bei wichtigen '
+                    'Mitteilungen erreichen. Dieser Schritt ist optional.',
+                    style: TextStyle(
+                      fontSize: AppTheme.fontSizeBodyLG,
+                      color: AppTheme.mutedForeground,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  AppConstants.gap24,
+                  TextFormField(
+                    key: EmailCaptureStep.emailFieldKey,
+                    controller: _controller,
+                    keyboardType: TextInputType.emailAddress,
+                    autofillHints: const [AutofillHints.email],
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    textInputAction: TextInputAction.done,
+                    decoration: const InputDecoration(
+                      labelText: 'E-Mail-Adresse',
+                      hintText: 'du@beispiel.de',
+                    ),
+                    onChanged: (v) {
+                      widget.onChanged(v.trim());
+                      setState(
+                        () {},
+                      ); // rebuild so button enabled state updates
+                    },
+                    onFieldSubmitted: (_) {
+                      if (_isValid && !widget.isLoading) widget.onSubmit();
+                    },
+                  ),
+                  if (widget.error != null) ...[
+                    AppConstants.gap12,
+                    BbAuthBanner(text: widget.error!),
+                  ],
+                ],
+              ),
             ),
           ),
           AppConstants.gap16,
-          const Text(
-            'Deine E-Mail-Adresse',
-            style: TextStyle(
-              fontSize: AppTheme.fontSizeHeadingLG,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.foreground,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          AppConstants.gap8,
-          const Text(
-            'Falls du möchtest, kannst du uns hier deine echte '
-            'E-Mail-Adresse geben. So können wir dich bei wichtigen '
-            'Mitteilungen erreichen. Dieser Schritt ist optional.',
-            style: TextStyle(
-              fontSize: AppTheme.fontSizeBodyLG,
-              color: AppTheme.mutedForeground,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          AppConstants.gap24,
-          TextFormField(
-            key: EmailCaptureStep.emailFieldKey,
-            controller: _controller,
-            keyboardType: TextInputType.emailAddress,
-            autofillHints: const [AutofillHints.email],
-            autocorrect: false,
-            enableSuggestions: false,
-            textInputAction: TextInputAction.done,
-            decoration: const InputDecoration(
-              labelText: 'E-Mail-Adresse',
-              hintText: 'du@beispiel.de',
-            ),
-            onChanged: (v) {
-              widget.onChanged(v.trim());
-              setState(() {}); // rebuild so button enabled state updates
-            },
-            onFieldSubmitted: (_) {
-              if (_isValid && !widget.isLoading) widget.onSubmit();
-            },
-          ),
-          if (widget.error != null) ...[
-            AppConstants.gap12,
-            BbAuthBanner(text: widget.error!),
-          ],
-          const Spacer(),
           BbButton(
             tapKey: EmailCaptureStep.submitButtonKey,
             label: 'Weiter',
