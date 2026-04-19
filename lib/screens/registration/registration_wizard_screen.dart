@@ -188,13 +188,9 @@ class _RegistrationWizardScreenState
   }
 
   Future<void> _handleEmailCaptureSubmit() async {
-    // Re-entry guard: a double-tap during the in-flight network call would
-    // otherwise issue two createProfile requests. The button itself stays
-    // enabled while _isSaving is true because it only gates on _isValid.
+    // Re-entry guard against races between tap registration and the button
+    // disabling itself once isLoading flows to true in the next frame.
     if (_isSaving) return;
-    // Belt-and-braces — the submit button is disabled when _capturedEmail
-    // doesn't pass EmailCaptureStep._isValid, so this branch shouldn't fire.
-    if (_capturedEmail == null || _capturedEmail!.isEmpty) return;
     setState(() {
       _isSaving = true;
       _authError = null;
@@ -293,7 +289,11 @@ class _RegistrationWizardScreenState
                       value: _capturedEmail,
                       isLoading: _isSaving,
                       error: _authError,
-                      onChanged: (v) => setState(() => _capturedEmail = v),
+                      // Plain assignment: the wizard only reads _capturedEmail
+                      // at submit time, so per-keystroke rebuilds of the entire
+                      // wizard tree are pure waste. The step drives its own
+                      // button-enabled state via its internal controller.
+                      onChanged: (v) => _capturedEmail = v,
                       onSubmit: _handleEmailCaptureSubmit,
                     ),
                 ],

@@ -1,6 +1,5 @@
-import 'package:belly_buddy/screens/registration/registration_wizard_screen.dart';
+import 'package:belly_buddy/screens/registration/steps/auth_step.dart';
 import 'package:belly_buddy/screens/registration/steps/email_capture_step.dart';
-import 'package:belly_buddy/screens/registration/steps/steps.dart';
 import 'package:belly_buddy/screens/welcome/welcome_screen.dart';
 import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
 import 'package:belly_buddy/widgets/common/bb_password_field.dart';
@@ -10,48 +9,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
 import '../test/helpers/fakes.dart';
+import '../test/helpers/registration_driver.dart';
 import 'helpers/test_app.dart';
-
-/// Drives the wizard from BirthYear (step 0) up to and including AuthStep
-/// (step 6). Gender (step 1) and Diet (step 3) are gated — the helper picks
-/// a default chip on each before tapping "Weiter".
-Future<void> advanceToAuthStepInRegistration(WidgetTester tester) async {
-  final nextButton = find.byKey(RegistrationWizardScreen.nextButtonKey);
-
-  // Step 1: Birth Year
-  expect(find.byKey(BirthYearStep.birthYearTitleKey), findsOneWidget);
-  await tester.tap(nextButton);
-  await tester.pumpAndSettle();
-
-  // Step 2: Gender (gated) - Select "Männlich"
-  expect(find.byKey(GenderStep.genderTitleKey), findsOneWidget);
-  await tester.tap(find.byKey(GenderStep.genderMaennlichKey));
-  await tester.pumpAndSettle();
-  await tester.tap(nextButton);
-  await tester.pumpAndSettle();
-
-  // Step 3: Height & Weight
-  expect(find.byKey(HeightWeightStep.heightWeightTitleKey), findsOneWidget);
-  await tester.tap(nextButton);
-  await tester.pumpAndSettle();
-
-  // Step 4: Diet (gated) - Select "Alles"
-  expect(find.byKey(DietStep.dietTitleKey), findsOneWidget);
-  await tester.tap(find.byKey(DietStep.dietAllesKey));
-  await tester.pumpAndSettle();
-  await tester.tap(nextButton);
-  await tester.pumpAndSettle();
-
-  // Step 5: Symptoms
-  expect(find.byKey(SymptomsStep.symptomsTitleKey), findsOneWidget);
-  await tester.tap(nextButton);
-  await tester.pumpAndSettle();
-
-  // Step 6: Intolerances
-  expect(find.byKey(IntolerancesStep.intolerancesTitleKey), findsOneWidget);
-  await tester.tap(nextButton);
-  await tester.pumpAndSettle();
-}
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -94,7 +53,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Advance through the 6 pre-auth wizard steps
-      await advanceToAuthStepInRegistration(tester);
+      await advanceToAuthStep(tester);
 
       // Step 7: Auth - Verify email/password fields are shown
       expect(find.byKey(AuthStep.emailFieldKey), findsOneWidget);
@@ -160,7 +119,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Advance through the 6 pre-auth wizard steps.
-      await advanceToAuthStepInRegistration(tester);
+      await advanceToAuthStep(tester);
 
       // Tap Google sign-up (see test-VM note above).
       await tester.tap(

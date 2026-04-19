@@ -4,14 +4,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:belly_buddy/screens/registration/registration_wizard_screen.dart';
 import 'package:belly_buddy/screens/registration/steps/email_capture_step.dart';
-import 'package:belly_buddy/screens/registration/steps/gender_step.dart';
-import 'package:belly_buddy/screens/registration/steps/diet_step.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/repositories/auth_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/widgets/common/bb_social_button.dart';
 
 import '../../helpers/fakes.dart';
+import '../../helpers/registration_driver.dart';
 import '../../helpers/riverpod_helpers.dart';
 
 List<Override> _overrides() => [
@@ -97,41 +96,6 @@ void main() {
           currentUserIdProvider.overrideWithValue(null),
         ],
       );
-      await tester.pumpAndSettle();
-    }
-
-    /// Drives the wizard from BirthYear (step 0) to AuthStep (step 6).
-    /// Gender (step 1) and Diet (step 3) are gated — the helper selects the
-    /// first chip on each before tapping "Weiter".
-    Future<void> advanceToAuthStep(WidgetTester tester) async {
-      final nextButton = find.byKey(RegistrationWizardScreen.nextButtonKey);
-
-      // Step 0 -> 1 (BirthYear -> Gender)
-      await tester.tap(nextButton);
-      await tester.pumpAndSettle();
-
-      // Step 1: Gender is gated — pick Maennlich, then advance.
-      await tester.tap(find.byKey(GenderStep.genderMaennlichKey));
-      await tester.pumpAndSettle();
-      await tester.tap(nextButton);
-      await tester.pumpAndSettle();
-
-      // Step 2 -> 3 (HeightWeight -> Diet)
-      await tester.tap(nextButton);
-      await tester.pumpAndSettle();
-
-      // Step 3: Diet is gated — pick Alles, then advance.
-      await tester.tap(find.byKey(DietStep.dietAllesKey));
-      await tester.pumpAndSettle();
-      await tester.tap(nextButton);
-      await tester.pumpAndSettle();
-
-      // Step 4 -> 5 (Symptoms -> Intolerances)
-      await tester.tap(nextButton);
-      await tester.pumpAndSettle();
-
-      // Step 5 -> 6 (Intolerances -> AuthStep)
-      await tester.tap(nextButton);
       await tester.pumpAndSettle();
     }
 
