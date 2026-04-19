@@ -24,6 +24,11 @@ void main() {
       );
     }
 
+    ElevatedButton submitButton(WidgetTester tester) => tester
+        .widget<ElevatedButton>(find.byKey(EmailCaptureStep.submitButtonKey));
+
+    Finder emailField() => find.byKey(EmailCaptureStep.emailFieldKey);
+
     testWidgets('shows headline and body copy', (tester) async {
       await pumpStep(tester, onChanged: (_) {}, onSubmit: () {});
 
@@ -37,18 +42,16 @@ void main() {
     testWidgets('Weiter button disabled when input is empty', (tester) async {
       await pumpStep(tester, onChanged: (_) {}, onSubmit: () {});
 
-      final button = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
-      expect(button.onPressed, isNull);
+      expect(submitButton(tester).onPressed, isNull);
     });
 
     testWidgets('Weiter button disabled for invalid format', (tester) async {
       await pumpStep(tester, onChanged: (_) {}, onSubmit: () {});
 
-      await tester.enterText(find.byType(TextFormField), 'not-an-email');
+      await tester.enterText(emailField(), 'not-an-email');
       await tester.pump();
 
-      final button = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
-      expect(button.onPressed, isNull);
+      expect(submitButton(tester).onPressed, isNull);
     });
 
     testWidgets('Weiter button disabled for privaterelay.appleid.com', (
@@ -56,21 +59,17 @@ void main() {
     ) async {
       await pumpStep(tester, onChanged: (_) {}, onSubmit: () {});
 
-      await tester.enterText(
-        find.byType(TextFormField),
-        'abc@privaterelay.appleid.com',
-      );
+      await tester.enterText(emailField(), 'abc@privaterelay.appleid.com');
       await tester.pump();
 
-      final button = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
-      expect(button.onPressed, isNull);
+      expect(submitButton(tester).onPressed, isNull);
     });
 
-    testWidgets('onChanged fires with the typed value', (tester) async {
+    testWidgets('onChanged fires with the trimmed typed value', (tester) async {
       String? captured;
       await pumpStep(tester, onChanged: (v) => captured = v, onSubmit: () {});
 
-      await tester.enterText(find.byType(TextFormField), 'user@example.com');
+      await tester.enterText(emailField(), '  user@example.com  ');
       await tester.pump();
 
       expect(captured, equals('user@example.com'));
@@ -86,16 +85,54 @@ void main() {
         onSubmit: () => submitted = true,
       );
 
-      await tester.enterText(find.byType(TextFormField), 'user@example.com');
+      await tester.enterText(emailField(), 'user@example.com');
       await tester.pump();
 
-      final button = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
-      expect(button.onPressed, isNotNull);
+      expect(submitButton(tester).onPressed, isNotNull);
 
-      await tester.tap(find.byType(ElevatedButton));
+      await tester.tap(find.byKey(EmailCaptureStep.submitButtonKey));
       await tester.pump();
 
       expect(submitted, isTrue);
     });
+
+    testWidgets('soft-keyboard Done with valid email fires onSubmit', (
+      tester,
+    ) async {
+      var submitted = false;
+      await pumpStep(
+        tester,
+        onChanged: (_) {},
+        onSubmit: () => submitted = true,
+      );
+
+      await tester.enterText(emailField(), 'user@example.com');
+      await tester.pump();
+
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pump();
+
+      expect(submitted, isTrue);
+    });
+
+    testWidgets(
+      'soft-keyboard Done with invalid email does NOT fire onSubmit',
+      (tester) async {
+        var submitted = false;
+        await pumpStep(
+          tester,
+          onChanged: (_) {},
+          onSubmit: () => submitted = true,
+        );
+
+        await tester.enterText(emailField(), 'not-an-email');
+        await tester.pump();
+
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+        await tester.pump();
+
+        expect(submitted, isFalse);
+      },
+    );
   });
 }

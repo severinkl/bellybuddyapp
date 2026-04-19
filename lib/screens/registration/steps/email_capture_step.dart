@@ -8,6 +8,10 @@ import '../../../config/constants.dart';
 /// presentation: the parent wizard owns the captured value and the submit
 /// behavior.
 class EmailCaptureStep extends StatefulWidget {
+  /// Initial value only — read once in [State.initState]. Later updates
+  /// from the parent are NOT reflected in the field; the parent should
+  /// treat this widget as the source of truth for the typed value and
+  /// drive the parent state from [onChanged].
   final String? value;
   final ValueChanged<String> onChanged;
   final VoidCallback onSubmit;
