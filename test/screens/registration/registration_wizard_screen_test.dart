@@ -152,6 +152,11 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(EmailCaptureStep), findsNothing);
+        // Positive assertion: the skip branch must have reached _createProfile
+        // with the auth user's email. Without this, a silent failure in
+        // _finalizeAfterOAuthSignIn (e.g. GoRouter not found) would also
+        // produce `findsNothing` and pass vacuously.
+        expect(profileRepo.lastWrittenEmail, equals('real@example.com'));
       },
     );
 
@@ -176,6 +181,9 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(EmailCaptureStep), findsOneWidget);
+        // createProfile must NOT have fired yet — the wizard is waiting on
+        // the user to type a real email on the new step.
+        expect(profileRepo.lastWrittenEmail, isNull);
       },
     );
 
@@ -195,6 +203,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(EmailCaptureStep), findsOneWidget);
+        expect(profileRepo.lastWrittenEmail, isNull);
       },
     );
   });
