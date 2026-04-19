@@ -71,6 +71,9 @@ class AppConstants {
   static const String feedbackFormUrl =
       'https://docs.google.com/forms/d/e/1FAIpQLSfHqqGW_159yd_sUacBZq5aITZwGDikag_lgd8eudHQcelNGA/viewform?usp=dialog';
 
+  // Apple "Hide My Email" relay domain suffix — see SignInWithApple docs.
+  static const String appleRelayDomain = '@privaterelay.appleid.com';
+
   // SharedPreferences keys
   static const String keyNotificationModalShown = 'notification_modal_shown';
 

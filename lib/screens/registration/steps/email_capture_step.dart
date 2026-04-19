@@ -50,7 +50,7 @@ class _EmailCaptureStepState extends State<EmailCaptureStep> {
     final text = _controller.text.trim();
     if (text.isEmpty) return false;
     if (!_emailRegex.hasMatch(text)) return false;
-    if (text.endsWith('@privaterelay.appleid.com')) return false;
+    if (text.endsWith(AppConstants.appleRelayDomain)) return false;
     return true;
   }
 

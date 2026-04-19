@@ -12,6 +12,7 @@ import '../../services/haptic_service.dart';
 import '../../utils/logger.dart';
 import '../../widgets/common/bb_button.dart';
 import 'steps/auth_step.dart';
+import 'steps/email_capture_step.dart';
 import 'steps/birth_year_step.dart';
 import 'steps/gender_step.dart';
 import 'steps/height_weight_step.dart';
@@ -47,7 +48,12 @@ class _RegistrationWizardScreenState
   List<String> _intolerances = [];
   Map<String, List<String>> _triggers = {};
 
-  static const _totalSteps = 7;
+  // Dynamic: the 8th step is only present for OAuth sign-ins that didn't
+  // return a usable real email (Apple Hide-My-Email or empty).
+  int get _totalSteps => _showEmailCapture ? 8 : 7;
+
+  bool _showEmailCapture = false;
+  String? _capturedEmail;
 
   void _goToStep(int step) {
     _pageController.animateToPage(
@@ -78,7 +84,14 @@ class _RegistrationWizardScreenState
     _goToStep(_currentStep - 1);
   }
 
+  bool _needsEmailCapture(User? user) {
+    final email = user?.email;
+    if (email == null || email.isEmpty) return true;
+    return email.endsWith(AppConstants.appleRelayDomain);
+  }
+
   Future<void> _createProfile() async {
+    final authUser = Supabase.instance.client.auth.currentUser;
     final profile = UserProfile(
       birthYear: _birthYear,
       gender: _gender,
@@ -90,6 +103,7 @@ class _RegistrationWizardScreenState
       fructoseTriggers: _triggers['Fruktose'] ?? [],
       lactoseTriggers: _triggers['Laktose'] ?? [],
       histaminTriggers: _triggers['Histamin'] ?? [],
+      email: _capturedEmail ?? authUser?.email,
     );
     await ref.read(profileProvider.notifier).createProfile(profile);
   }
@@ -126,8 +140,7 @@ class _RegistrationWizardScreenState
     });
     try {
       await ref.read(authNotifierProvider.notifier).signInWithGoogle();
-      await _createProfile();
-      if (mounted) context.go(RoutePaths.dashboard);
+      await _finalizeAfterOAuthSignIn();
     } catch (e) {
       _log.error('google sign-up failed', e);
       if (mounted) {
@@ -145,12 +158,44 @@ class _RegistrationWizardScreenState
     });
     try {
       await ref.read(authNotifierProvider.notifier).signInWithApple();
-      await _createProfile();
-      if (mounted) context.go(RoutePaths.dashboard);
+      await _finalizeAfterOAuthSignIn();
     } catch (e) {
       _log.error('apple sign-up failed', e);
       if (mounted) {
         setState(() => _authError = 'Apple-Anmeldung fehlgeschlagen.');
+      }
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _finalizeAfterOAuthSignIn() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (_needsEmailCapture(user)) {
+      setState(() => _showEmailCapture = true);
+      _goToStep(7);
+      return;
+    }
+    await _createProfile();
+    if (mounted) context.go(RoutePaths.dashboard);
+  }
+
+  Future<void> _handleEmailCaptureSubmit() async {
+    if (_capturedEmail == null || _capturedEmail!.isEmpty) return;
+    setState(() {
+      _isSaving = true;
+      _authError = null;
+    });
+    try {
+      await _createProfile();
+      if (mounted) context.go(RoutePaths.dashboard);
+    } catch (e) {
+      _log.error('profile create after email capture failed', e);
+      if (mounted) {
+        setState(
+          () =>
+              _authError = 'Speichern fehlgeschlagen. Bitte erneut versuchen.',
+        );
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
@@ -230,11 +275,17 @@ class _RegistrationWizardScreenState
                     onGoogleSignUp: _handleGoogleSignUp,
                     onAppleSignUp: _handleAppleSignUp,
                   ),
+                  if (_showEmailCapture)
+                    EmailCaptureStep(
+                      value: _capturedEmail,
+                      onChanged: (v) => setState(() => _capturedEmail = v),
+                      onSubmit: _handleEmailCaptureSubmit,
+                    ),
                 ],
               ),
             ),
-            // Next button (not on last step)
-            if (_currentStep < _totalSteps - 1)
+            // Next button — only shown on pre-auth pages (not AuthStep, not EmailCaptureStep)
+            if (_currentStep < 6)
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppConstants.spacingLg,
@@ -246,34 +297,35 @@ class _RegistrationWizardScreenState
                   onPressed: _canAdvance ? _next : null,
                 ),
               ),
-            // Back button (all steps)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppConstants.spacingLg,
-                AppConstants.spacingSm,
-                AppConstants.spacingLg,
-                AppConstants.spacingLg,
-              ),
-              child: TextButton.icon(
-                icon: const Icon(Icons.arrow_back, size: 18),
-                label: _currentStep == 0
-                    ? const Text('Zur Anmeldung')
-                    : const Text('Zurück'),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppTheme.mutedForeground,
+            // Back button — shown everywhere except on EmailCaptureStep
+            if (_currentStep < 7)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppConstants.spacingLg,
+                  AppConstants.spacingSm,
+                  AppConstants.spacingLg,
+                  AppConstants.spacingLg,
                 ),
-                onPressed: () {
-                  HapticService.light();
-                  FocusManager.instance.primaryFocus?.unfocus();
+                child: TextButton.icon(
+                  icon: const Icon(Icons.arrow_back, size: 18),
+                  label: _currentStep == 0
+                      ? const Text('Zur Anmeldung')
+                      : const Text('Zurück'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.mutedForeground,
+                  ),
+                  onPressed: () {
+                    HapticService.light();
+                    FocusManager.instance.primaryFocus?.unfocus();
 
-                  if (_currentStep == 0) {
-                    context.go(RoutePaths.auth);
-                  } else {
-                    _back();
-                  }
-                },
+                    if (_currentStep == 0) {
+                      context.go(RoutePaths.auth);
+                    } else {
+                      _back();
+                    }
+                  },
+                ),
               ),
-            ),
           ],
         ),
       ),
