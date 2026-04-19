@@ -139,9 +139,13 @@ class _RegistrationWizardScreenState
 
   String _mapSignUpError(Object e) {
     if (e is AuthWeakPasswordException) {
-      // e.reasons typically contains 'pwned' / 'length' / 'characters'.
-      return 'Dieses Passwort ist zu unsicher oder wurde in einem '
-          'Datenleck gefunden. Bitte wähle ein anderes.';
+      // Only claim the password is in a breach when the backend explicitly
+      // says so — `reasons` may also be `length` / `characters` / etc.
+      if (e.reasons.contains('pwned')) {
+        return 'Dieses Passwort wurde in einem Datenleck gefunden. '
+            'Bitte wähle ein anderes.';
+      }
+      return 'Dieses Passwort ist zu unsicher. Bitte wähle ein stärkeres.';
     }
     if (e is AuthApiException && e.code == 'user_already_exists') {
       return 'Diese E-Mail ist bereits registriert. Bitte melde dich an.';
