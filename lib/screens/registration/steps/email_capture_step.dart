@@ -80,28 +80,38 @@ class _EmailCaptureStepState extends State<EmailCaptureStep> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppConstants.spacingLg),
+      padding: AppConstants.paddingLg,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           AppConstants.gap24,
-          const Text(
-            'Deine E-Mail-Adresse',
-            style: TextStyle(
-              fontSize: AppTheme.fontSizeHeading,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.foreground,
+          const Center(
+            child: MascotImage(
+              assetPath: AppConstants.mascotZen,
+              width: 120,
+              height: 120,
             ),
           ),
           AppConstants.gap16,
+          const Text(
+            'Deine E-Mail-Adresse',
+            style: TextStyle(
+              fontSize: AppTheme.fontSizeHeadingLG,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.foreground,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          AppConstants.gap8,
           const Text(
             'Falls du möchtest, kannst du uns hier deine echte '
             'E-Mail-Adresse geben. So können wir dich bei wichtigen '
             'Mitteilungen erreichen. Dieser Schritt ist optional.',
             style: TextStyle(
-              fontSize: AppTheme.fontSizeBody,
+              fontSize: AppTheme.fontSizeBodyLG,
               color: AppTheme.mutedForeground,
             ),
+            textAlign: TextAlign.center,
           ),
           AppConstants.gap24,
           TextFormField(
@@ -128,14 +138,6 @@ class _EmailCaptureStepState extends State<EmailCaptureStep> {
             AppConstants.gap12,
             BbAuthBanner(text: widget.error!),
           ],
-          const Spacer(),
-          const Center(
-            child: MascotImage(
-              assetPath: AppConstants.mascotWink,
-              width: AppConstants.mascotSizeMd,
-              height: AppConstants.mascotSizeMd,
-            ),
-          ),
           const Spacer(),
           BbButton(
             tapKey: EmailCaptureStep.submitButtonKey,
