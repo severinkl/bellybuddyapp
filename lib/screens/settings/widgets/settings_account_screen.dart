@@ -68,6 +68,11 @@ class _SettingsAccountScreenState extends ConsumerState<SettingsAccountScreen> {
               title: 'Kontoinformationen',
               child: Column(
                 children: [
+                  // TODO(email-capture-followup): prefer profile.email (the
+                  // address captured in the registration wizard's email-
+                  // capture step) over auth.users.email so users who signed
+                  // up with Apple "Hide My Email" see their real address
+                  // here instead of `…@privaterelay.appleid.com`.
                   _InfoRow(label: 'E-Mail', value: user?.email ?? '—'),
                   AppConstants.gap8,
                   _InfoRow(

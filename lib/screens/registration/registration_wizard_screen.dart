@@ -88,7 +88,7 @@ class _RegistrationWizardScreenState
   bool _needsEmailCapture(User? user) {
     final email = user?.email;
     if (email == null || email.isEmpty) return true;
-    return email.endsWith(AppConstants.appleRelayEmailSuffix);
+    return email.toLowerCase().endsWith(AppConstants.appleRelayEmailSuffix);
   }
 
   Future<void> _createProfile() async {

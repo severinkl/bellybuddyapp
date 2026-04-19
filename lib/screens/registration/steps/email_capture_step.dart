@@ -62,7 +62,9 @@ class _EmailCaptureStepState extends State<EmailCaptureStep> {
     final text = _controller.text.trim();
     if (text.isEmpty) return false;
     if (!_emailRegex.hasMatch(text)) return false;
-    if (text.endsWith(AppConstants.appleRelayEmailSuffix)) return false;
+    if (text.toLowerCase().endsWith(AppConstants.appleRelayEmailSuffix)) {
+      return false;
+    }
     return true;
   }
 
