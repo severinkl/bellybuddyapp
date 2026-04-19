@@ -7,6 +7,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:io' show Platform;
+import '../config/constants.dart';
 import '../config/oauth_config.dart';
 import '../providers/core_providers.dart';
 import '../utils/logger.dart';
@@ -127,9 +128,9 @@ class AuthService {
 
   Future<void> resetPassword(String email) async {
     try {
-      await _edgeFunctions.invoke(
-        'send-password-reset',
-        body: {'email': email},
+      await _auth.resetPasswordForEmail(
+        email,
+        redirectTo: AppConstants.resetPasswordRedirectUrl,
       );
     } catch (e, st) {
       _log.error('resetPassword failed', e, st);

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthApiException;
 import '../../../config/app_theme.dart';
 import '../../../providers/auth_provider.dart';
 
@@ -92,11 +93,18 @@ class _PasswordChangeSectionState extends ConsumerState<PasswordChangeSection> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Fehler beim Senden des Links.')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(_mapForgotPasswordError(e))));
       }
     }
+  }
+
+  String _mapForgotPasswordError(Object e) {
+    if (e is AuthApiException && e.code == 'over_email_send_rate_limit') {
+      return 'Zu viele Anfragen. Bitte warte einen Moment und versuche es erneut.';
+    }
+    return 'Fehler beim Senden des Links.';
   }
 
   @override

@@ -140,20 +140,30 @@ void main() {
   });
 
   group('AuthService.resetPassword', () {
-    test('calls edge function send-password-reset with email', () async {
-      when(
-        () => edgeFunctions.invoke(any(), body: any(named: 'body')),
-      ).thenAnswer((_) async => {});
+    test(
+      'calls _auth.resetPasswordForEmail with the Lovable redirect URL',
+      () async {
+        when(
+          () => auth.resetPasswordForEmail(
+            any(),
+            redirectTo: any(named: 'redirectTo'),
+          ),
+        ).thenAnswer((_) async {});
 
-      await service.resetPassword('user@example.com');
+        await service.resetPassword('user@example.com');
 
-      verify(
-        () => edgeFunctions.invoke(
-          'send-password-reset',
-          body: {'email': 'user@example.com'},
-        ),
-      ).called(1);
-    });
+        verify(
+          () => auth.resetPasswordForEmail(
+            'user@example.com',
+            redirectTo:
+                'https://belly-buddy-diet-detective.lovable.app/reset-password',
+          ),
+        ).called(1);
+        verifyNever(
+          () => edgeFunctions.invoke(any(), body: any(named: 'body')),
+        );
+      },
+    );
   });
 
   group('AuthService.updatePassword', () {
