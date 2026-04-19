@@ -16,6 +16,14 @@ class EmailCaptureStep extends StatefulWidget {
   final ValueChanged<String> onChanged;
   final VoidCallback onSubmit;
 
+  /// Disables the submit button and shows a progress indicator while the
+  /// parent is saving. Prevents double-submit during the async createProfile.
+  final bool isLoading;
+
+  /// Error message surfaced below the input (e.g. "save failed"). `null`
+  /// hides the banner.
+  final String? error;
+
   static const emailFieldKey = Key('email_capture_email_field');
   static const submitButtonKey = Key('email_capture_submit_button');
 
@@ -24,6 +32,8 @@ class EmailCaptureStep extends StatefulWidget {
     required this.value,
     required this.onChanged,
     required this.onSubmit,
+    this.isLoading = false,
+    this.error,
   });
 
   @override
@@ -50,7 +60,7 @@ class _EmailCaptureStepState extends State<EmailCaptureStep> {
     final text = _controller.text.trim();
     if (text.isEmpty) return false;
     if (!_emailRegex.hasMatch(text)) return false;
-    if (text.endsWith(AppConstants.appleRelayDomain)) return false;
+    if (text.endsWith(AppConstants.appleRelayEmailSuffix)) return false;
     return true;
   }
 
@@ -98,14 +108,33 @@ class _EmailCaptureStepState extends State<EmailCaptureStep> {
               setState(() {}); // rebuild so button enabled state updates
             },
             onFieldSubmitted: (_) {
-              if (_isValid) widget.onSubmit();
+              if (_isValid && !widget.isLoading) widget.onSubmit();
             },
           ),
+          if (widget.error != null) ...[
+            AppConstants.gap12,
+            Text(
+              widget.error!,
+              style: const TextStyle(
+                fontSize: AppTheme.fontSizeBody,
+                color: AppTheme.destructive,
+              ),
+            ),
+          ],
           const Spacer(),
           ElevatedButton(
             key: EmailCaptureStep.submitButtonKey,
-            onPressed: _isValid ? widget.onSubmit : null,
-            child: const Text('Weiter'),
+            onPressed: (_isValid && !widget.isLoading) ? widget.onSubmit : null,
+            child: widget.isLoading
+                ? const SizedBox(
+                    width: AppConstants.spinnerSize,
+                    height: AppConstants.spinnerSize,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text('Weiter'),
           ),
           AppConstants.gap16,
         ],

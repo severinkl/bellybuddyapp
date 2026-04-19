@@ -87,7 +87,7 @@ class _RegistrationWizardScreenState
   bool _needsEmailCapture(User? user) {
     final email = user?.email;
     if (email == null || email.isEmpty) return true;
-    return email.endsWith(AppConstants.appleRelayDomain);
+    return email.endsWith(AppConstants.appleRelayEmailSuffix);
   }
 
   Future<void> _createProfile() async {
@@ -170,10 +170,16 @@ class _RegistrationWizardScreenState
   }
 
   Future<void> _finalizeAfterOAuthSignIn() async {
+    if (!mounted) return;
     final user = Supabase.instance.client.auth.currentUser;
     if (_needsEmailCapture(user)) {
       setState(() => _showEmailCapture = true);
-      _goToStep(7);
+      // Defer _goToStep until after the rebuild that materialises the 8th
+      // PageView child; animating to an index that doesn't exist yet is
+      // undefined behaviour.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _goToStep(7);
+      });
       return;
     }
     await _createProfile();
@@ -181,6 +187,12 @@ class _RegistrationWizardScreenState
   }
 
   Future<void> _handleEmailCaptureSubmit() async {
+    // Re-entry guard: a double-tap during the in-flight network call would
+    // otherwise issue two createProfile requests. The button itself stays
+    // enabled while _isSaving is true because it only gates on _isValid.
+    if (_isSaving) return;
+    // Belt-and-braces — the submit button is disabled when _capturedEmail
+    // doesn't pass EmailCaptureStep._isValid, so this branch shouldn't fire.
     if (_capturedEmail == null || _capturedEmail!.isEmpty) return;
     setState(() {
       _isSaving = true;
@@ -278,6 +290,8 @@ class _RegistrationWizardScreenState
                   if (_showEmailCapture)
                     EmailCaptureStep(
                       value: _capturedEmail,
+                      isLoading: _isSaving,
+                      error: _authError,
                       onChanged: (v) => setState(() => _capturedEmail = v),
                       onSubmit: _handleEmailCaptureSubmit,
                     ),
