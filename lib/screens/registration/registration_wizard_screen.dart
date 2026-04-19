@@ -7,6 +7,7 @@ import '../../config/constants.dart';
 import '../../models/user_profile.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../repositories/auth_repository.dart';
 import '../../router/route_names.dart';
 import '../../services/haptic_service.dart';
 import '../../utils/logger.dart';
@@ -91,7 +92,7 @@ class _RegistrationWizardScreenState
   }
 
   Future<void> _createProfile() async {
-    final authUser = Supabase.instance.client.auth.currentUser;
+    final authUser = ref.read(authRepositoryProvider).currentUser;
     final profile = UserProfile(
       birthYear: _birthYear,
       gender: _gender,
@@ -171,7 +172,7 @@ class _RegistrationWizardScreenState
 
   Future<void> _finalizeAfterOAuthSignIn() async {
     if (!mounted) return;
-    final user = Supabase.instance.client.auth.currentUser;
+    final user = ref.read(authRepositoryProvider).currentUser;
     if (_needsEmailCapture(user)) {
       setState(() => _showEmailCapture = true);
       // Defer _goToStep until after the rebuild that materialises the 8th
