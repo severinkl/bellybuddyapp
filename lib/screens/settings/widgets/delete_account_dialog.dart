@@ -74,7 +74,7 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
             child: const Icon(
               Icons.warning_amber_rounded,
               color: AppTheme.destructive,
-              size: AppConstants.spacingXl,
+              size: AppConstants.iconSizeLg,
             ),
           ),
           AppConstants.gap16,
