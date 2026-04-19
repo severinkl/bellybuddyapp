@@ -140,7 +140,7 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
                 // "Überspringen" link (must sit above the advance layer)
                 Positioned(
                   top: safe.top + AppConstants.spacingSm,
-                  right: AppConstants.spacingMd,
+                  left: AppConstants.spacingMd,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: _finish,
