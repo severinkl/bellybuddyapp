@@ -76,8 +76,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Tap near top-left where the advance GestureDetector is unobstructed.
-      await tester.tapAt(const Offset(5, 5));
+      await tester.tap(find.byKey(DashboardTutorialOverlay.advanceKey));
       await tester.pumpAndSettle();
 
       expect(find.text('step b', findRichText: true), findsOneWidget);
@@ -96,11 +95,11 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Advance to step b
-      await tester.tapAt(const Offset(5, 5));
+      // step a → step b
+      await tester.tap(find.byKey(DashboardTutorialOverlay.advanceKey));
       await tester.pumpAndSettle();
-      // Advance past last → finish
-      await tester.tapAt(const Offset(5, 5));
+      // step b → finish
+      await tester.tap(find.byKey(DashboardTutorialOverlay.advanceKey));
       await tester.pumpAndSettle();
 
       expect(finished, isTrue);
@@ -141,7 +140,7 @@ void main() {
       // Tap Überspringen, then immediately tap background and Überspringen again
       // before the fade-out completes — the _finished guard must block duplicates.
       await tester.tap(find.text('Überspringen'));
-      await tester.tapAt(const Offset(5, 5));
+      await tester.tap(find.byKey(DashboardTutorialOverlay.advanceKey));
       await tester.tap(find.text('Überspringen'), warnIfMissed: false);
       await tester.pumpAndSettle();
 

@@ -37,6 +37,7 @@ class AppConstants {
   static const double iconBadgeSm = 40.0;
   static const double iconBadgeMd = 44.0;
   static const double iconBadgeLg = 48.0;
+  static const double iconBadgeXl = 56.0;
 
   // Border radius
   static const double radiusXs = 4.0;
@@ -71,12 +72,17 @@ class AppConstants {
   static const String feedbackFormUrl =
       'https://docs.google.com/forms/d/e/1FAIpQLSfHqqGW_159yd_sUacBZq5aITZwGDikag_lgd8eudHQcelNGA/viewform?usp=dialog';
 
+  // Apple "Hide My Email" relay address suffix (includes the leading `@`).
+  // See the Sign in with Apple docs — this domain is stable since iOS 13.
+  static const String appleRelayEmailSuffix = '@privaterelay.appleid.com';
+
   // SharedPreferences keys
   static const String keyNotificationModalShown = 'notification_modal_shown';
 
   // Icon sizes
   static const double iconSizeXs = 16.0;
   static const double iconSizeSm = 18.0;
+  static const double iconSizeLg = 32.0;
 
   // Button
   static const double buttonHeight = 56.0;

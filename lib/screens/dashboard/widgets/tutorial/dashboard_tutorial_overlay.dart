@@ -19,6 +19,11 @@ class DashboardTutorialOverlay extends StatefulWidget {
   final List<TutorialStep> steps;
   final VoidCallback onFinish;
 
+  /// Key on the full-screen GestureDetector that advances the tour on tap.
+  /// Exposed so tests can drive "advance" without relying on screen-space
+  /// coordinates (which change with the Überspringen link's position).
+  static const advanceKey = Key('tutorial_overlay_advance');
+
   const DashboardTutorialOverlay({
     super.key,
     required this.steps,
@@ -69,9 +74,17 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
       _advance();
       return;
     }
-    final topLeft = box.localToGlobal(Offset.zero);
+    // Transform-aware: MatrixUtils.transformRect respects any ancestor
+    // transform (e.g. PressScaleWrapper's ScaleTransition around the
+    // tracker cards). localToGlobal + size alone silently drops
+    // non-translation transforms and occasionally returned a mis-sized
+    // rect for the first step.
+    final rect = MatrixUtils.transformRect(
+      box.getTransformTo(null),
+      Offset.zero & box.size,
+    );
     setState(() {
-      _targetRect = topLeft & box.size;
+      _targetRect = rect;
     });
   }
 
@@ -117,6 +130,7 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
                 // Advance-on-tap layer + dim + cutout painter
                 Positioned.fill(
                   child: GestureDetector(
+                    key: DashboardTutorialOverlay.advanceKey,
                     behavior: HitTestBehavior.opaque,
                     onTap: _advance,
                     child: CustomPaint(
@@ -140,7 +154,7 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
                 // "Überspringen" link (must sit above the advance layer)
                 Positioned(
                   top: safe.top + AppConstants.spacingSm,
-                  right: AppConstants.spacingMd,
+                  left: AppConstants.spacingMd,
                   child: GestureDetector(
                     behavior: HitTestBehavior.opaque,
                     onTap: _finish,

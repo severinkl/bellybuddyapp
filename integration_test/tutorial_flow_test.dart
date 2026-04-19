@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:belly_buddy/screens/dashboard/widgets/tutorial/dashboard_tutorial_overlay.dart';
+
 import '../test/helpers/fakes.dart';
 import '../test/helpers/fixtures.dart';
 
@@ -39,9 +41,10 @@ void main() {
     // Tour is visible on first launch.
     expect(find.text('Überspringen'), findsOneWidget);
 
-    // Advance 10 times by tapping outside the Überspringen link.
+    // Advance 10 times via the overlay's advance gesture — key-based so
+    // the test is independent of where the Überspringen link sits.
     for (var i = 0; i < 10; i++) {
-      await tester.tapAt(const Offset(20, 400));
+      await tester.tap(find.byKey(DashboardTutorialOverlay.advanceKey));
       await tester.pumpAndSettle();
     }
 

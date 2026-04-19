@@ -1,103 +1,128 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/app_theme.dart';
-import '../../../providers/auth_provider.dart';
 import '../../../config/constants.dart';
+import '../../../providers/auth_provider.dart';
+import '../../../utils/logger.dart';
 
 /// Shows a confirmation dialog for account deletion.
 ///
-/// Returns `true` if the account was successfully deleted.
+/// Returns `true` if the user confirmed deletion. The actual delete call
+/// runs inside the dialog — by the time this future resolves the account
+/// is already being torn down and the auth state is flipping.
 Future<bool> showDeleteAccountDialog(BuildContext context) async {
-  final controller = TextEditingController();
-
   final result = await showDialog<bool>(
     context: context,
-    builder: (dialogContext) => StatefulBuilder(
-      builder: (context, setDialogState) => AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: 56,
-              height: 56,
-              decoration: BoxDecoration(
-                color: AppTheme.destructive.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(
-                Icons.warning_amber_rounded,
-                color: AppTheme.destructive,
-                size: 32,
-              ),
+    builder: (_) => const _DeleteAccountDialog(),
+  );
+  return result ?? false;
+}
+
+class _DeleteAccountDialog extends ConsumerStatefulWidget {
+  const _DeleteAccountDialog();
+
+  @override
+  ConsumerState<_DeleteAccountDialog> createState() =>
+      _DeleteAccountDialogState();
+}
+
+class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
+  static const _log = AppLogger('DeleteAccountDialog');
+  static const _confirmWord = 'LÖSCHEN';
+
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  bool get _canDelete => _controller.text == _confirmWord;
+
+  Future<void> _confirmDelete() async {
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    navigator.pop(true);
+    try {
+      await ref.read(authNotifierProvider.notifier).deleteAccount();
+    } catch (e, st) {
+      _log.error('deleteAccount failed', e, st);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Fehler beim Löschen.')),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      scrollable: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(AppConstants.radiusLg),
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: AppConstants.iconBadgeXl,
+            height: AppConstants.iconBadgeXl,
+            decoration: BoxDecoration(
+              color: AppTheme.destructive.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
             ),
-            AppConstants.gap16,
-            const Text(
-              'Konto löschen',
-              style: TextStyle(
-                fontSize: AppTheme.fontSizeTitle,
-                fontWeight: FontWeight.w600,
-              ),
+            child: const Icon(
+              Icons.warning_amber_rounded,
+              color: AppTheme.destructive,
+              size: AppConstants.iconSizeLg,
             ),
-            AppConstants.gap12,
-            const Text(
-              'Diese Aktion kann nicht rückgängig gemacht werden. Folgende Daten werden gelöscht:',
-              style: TextStyle(fontSize: AppTheme.fontSizeBody),
-            ),
-            AppConstants.gap12,
-            const _BulletItem('Alle Ernährungstagebuch-Einträge'),
-            const _BulletItem('Dein Profil und Einstellungen'),
-            const _BulletItem('Alle gespeicherten Rezepte'),
-            const _BulletItem('Dein Benutzerkonto'),
-            AppConstants.gap16,
-            TextField(
-              controller: controller,
-              decoration: const InputDecoration(
-                hintText: 'LÖSCHEN eingeben',
-                labelText: 'Bestätigung',
-              ),
-              onChanged: (_) => setDialogState(() {}),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Abbrechen'),
           ),
-          ElevatedButton(
-            onPressed: controller.text == 'LÖSCHEN'
-                ? () async {
-                    final container = ProviderScope.containerOf(context);
-                    final messenger = ScaffoldMessenger.of(dialogContext);
-                    Navigator.pop(context);
-                    try {
-                      await container
-                          .read(authNotifierProvider.notifier)
-                          .deleteAccount();
-                    } catch (e) {
-                      messenger.showSnackBar(
-                        const SnackBar(content: Text('Fehler beim Löschen.')),
-                      );
-                    }
-                  }
-                : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.destructive,
-              foregroundColor: Colors.white,
-              disabledBackgroundColor: AppTheme.muted,
+          AppConstants.gap16,
+          const Text(
+            'Konto löschen',
+            style: TextStyle(
+              fontSize: AppTheme.fontSizeTitle,
+              fontWeight: FontWeight.w600,
             ),
-            child: const Text('Konto endgültig löschen'),
+          ),
+          AppConstants.gap12,
+          const Text(
+            'Diese Aktion kann nicht rückgängig gemacht werden. Folgende Daten werden gelöscht:',
+            style: TextStyle(fontSize: AppTheme.fontSizeBody),
+          ),
+          AppConstants.gap12,
+          const _BulletItem('Alle Ernährungstagebuch-Einträge'),
+          const _BulletItem('Dein Profil und Einstellungen'),
+          const _BulletItem('Alle gespeicherten Rezepte'),
+          const _BulletItem('Dein Benutzerkonto'),
+          AppConstants.gap16,
+          TextField(
+            controller: _controller,
+            decoration: const InputDecoration(
+              hintText: '$_confirmWord eingeben',
+              labelText: 'Bestätigung',
+            ),
+            onChanged: (_) => setState(() {}),
           ),
         ],
       ),
-    ),
-  );
-
-  controller.dispose();
-  return result ?? false;
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Abbrechen'),
+        ),
+        ElevatedButton(
+          onPressed: _canDelete ? _confirmDelete : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.destructive,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: AppTheme.muted,
+          ),
+          child: const Text('Konto endgültig löschen'),
+        ),
+      ],
+    );
+  }
 }
 
 class _BulletItem extends StatelessWidget {

@@ -31,6 +31,7 @@ class FakeAuthRepository implements AuthRepository {
     this.onSignedOut,
     this.shouldFailEmailSignIn = false,
     this.signInErrorMessage = 'Login failed',
+    this.signInEmail,
   }) {
     if (signedIn) {
       _currentUser = _buildUser();
@@ -44,6 +45,12 @@ class FakeAuthRepository implements AuthRepository {
   bool shouldFailEmailSignIn;
   String signInErrorMessage;
 
+  /// Email the built Supabase [User] reports. Omit / pass null to simulate
+  /// Apple second-sign-in (no email). Pass a real address to simulate
+  /// Google. Pass an `@privaterelay.appleid.com` address to simulate
+  /// Apple's Hide My Email.
+  final String? signInEmail;
+
   final _authStateController = StreamController<AuthState>.broadcast();
 
   User? _currentUser;
@@ -55,6 +62,7 @@ class FakeAuthRepository implements AuthRepository {
     'user_metadata': <String, dynamic>{},
     'aud': 'authenticated',
     'created_at': DateTime.now().toIso8601String(),
+    if (signInEmail != null) 'email': signInEmail,
   };
 
   User? _buildUser() {
@@ -177,6 +185,9 @@ class FakeProfileRepository implements ProfileRepository {
   bool _tutorialUpdateCalled = false;
 
   void seedProfile(UserProfile profile) => _profile = profile;
+
+  /// Email on the most recently created/updated profile, for tests.
+  String? get lastWrittenEmail => _profile?.email;
   DateTime? get lastTutorialSeenAt => _lastTutorialSeenAt;
   bool get tutorialUpdateCalled => _tutorialUpdateCalled;
 
