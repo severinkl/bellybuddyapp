@@ -185,6 +185,9 @@ class FakeProfileRepository implements ProfileRepository {
   bool _tutorialUpdateCalled = false;
 
   void seedProfile(UserProfile profile) => _profile = profile;
+
+  /// Email on the most recently created/updated profile, for tests.
+  String? get lastWrittenEmail => _profile?.email;
   DateTime? get lastTutorialSeenAt => _lastTutorialSeenAt;
   bool get tutorialUpdateCalled => _tutorialUpdateCalled;
 

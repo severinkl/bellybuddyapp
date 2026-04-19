@@ -30,6 +30,7 @@ ProviderScope buildTestApp({
   bool dynamicAuth = false,
   bool failEmailSignIn = false,
   String signInErrorMessage = 'Login failed',
+  String? signInEmail,
   FakeProfileRepository? profileRepo,
   FakeEntryRepository? entryRepo,
   FakeDrinkRepository? drinkRepo,
@@ -48,6 +49,7 @@ ProviderScope buildTestApp({
       signedIn: authenticated,
       shouldFailEmailSignIn: failEmailSignIn,
       signInErrorMessage: signInErrorMessage,
+      signInEmail: signInEmail,
       onSignedIn: (_) {},
       onSignedOut: () {},
     );
@@ -56,6 +58,7 @@ ProviderScope buildTestApp({
       signedIn: authenticated,
       shouldFailEmailSignIn: failEmailSignIn,
       signInErrorMessage: signInErrorMessage,
+      signInEmail: signInEmail,
     );
   }
 
