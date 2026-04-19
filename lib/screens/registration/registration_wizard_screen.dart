@@ -145,7 +145,7 @@ class _RegistrationWizardScreenState
         return 'Dieses Passwort wurde in einem Datenleck gefunden. '
             'Bitte wähle ein anderes.';
       }
-      return 'Dieses Passwort ist zu unsicher. Bitte wähle ein stärkeres.';
+      return 'Das Passwort ist zu unsicher.';
     }
     if (e is AuthApiException && e.code == 'user_already_exists') {
       return 'Diese E-Mail ist bereits registriert. Bitte melde dich an.';
