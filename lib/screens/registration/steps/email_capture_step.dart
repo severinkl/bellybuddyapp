@@ -4,6 +4,7 @@ import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../widgets/common/bb_auth_banner.dart';
 import '../../../widgets/common/bb_button.dart';
+import '../../../widgets/common/mascot_image.dart';
 
 /// Wizard step that asks the user for a real email when OAuth didn't give
 /// us one (Apple second-sign-in) or gave us an Apple relay address. Pure
@@ -119,6 +120,14 @@ class _EmailCaptureStepState extends State<EmailCaptureStep> {
             AppConstants.gap12,
             BbAuthBanner(text: widget.error!),
           ],
+          const Spacer(),
+          const Center(
+            child: MascotImage(
+              assetPath: AppConstants.mascotWink,
+              width: AppConstants.mascotSizeMd,
+              height: AppConstants.mascotSizeMd,
+            ),
+          ),
           const Spacer(),
           BbButton(
             tapKey: EmailCaptureStep.submitButtonKey,
