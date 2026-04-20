@@ -4,7 +4,6 @@ import 'package:riverpod/src/internals.dart' show Override;
 import 'package:belly_buddy/screens/recommendations/recommendations_screen.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/repositories/recommendation_repository.dart';
-import 'package:belly_buddy/repositories/profile_repository.dart';
 
 import '../../helpers/fakes.dart';
 import '../../helpers/riverpod_helpers.dart';
@@ -13,7 +12,6 @@ List<Override> _overrides() => [
   recommendationRepositoryProvider.overrideWithValue(
     FakeRecommendationRepository(),
   ),
-  profileRepositoryProvider.overrideWithValue(FakeProfileRepository()),
   currentUserIdProvider.overrideWithValue('test-user'),
 ];
 
