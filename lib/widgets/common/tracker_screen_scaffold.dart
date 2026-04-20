@@ -52,7 +52,13 @@ class TrackerScreenScaffold extends StatelessWidget {
         backgroundColor: AppTheme.screenBackground,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          // Route through Navigator.maybePop so enclosing PopScope widgets
+          // (e.g. the meal tracker's discard-changes guard) can intercept the
+          // pop. Falls back to go_router's context.pop when no PopScope blocks.
+          onPressed: () async {
+            final didPop = await Navigator.maybePop(context);
+            if (!didPop && context.mounted) context.pop();
+          },
         ),
         title: titleWidget ?? Text(title),
       ),

@@ -300,4 +300,117 @@ void main() {
       },
     );
   });
+
+  group('MealTrackerScreen discard-changes guard', () {
+    List<Override> defaultOverrides(MealEntry meal) => [
+      entriesProviderSeededWith([meal]),
+      entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
+      ingredientRepositoryProvider.overrideWithValue(
+        FakeIngredientRepository(),
+      ),
+      mealMediaRepositoryProvider.overrideWithValue(FakeMealMediaRepository()),
+      currentUserIdProvider.overrideWithValue('user-1'),
+    ];
+
+    testWidgets('back with unsaved changes shows the discard dialog', (
+      tester,
+    ) async {
+      final meal = _seededMeal();
+      await _pumpEditScreen(
+        tester,
+        mealId: 'meal-42',
+        overrides: defaultOverrides(meal),
+      );
+
+      // Dirty the state without touching the title controller (title is only
+      // synced at save-time), so isDirty flips to true.
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MealTrackerScreen)),
+        listen: false,
+      );
+      container.read(mealTrackerProvider.notifier).addIngredient('Speck');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Änderungen verwerfen?'), findsOneWidget);
+      expect(find.text('Deine Änderungen gehen verloren.'), findsOneWidget);
+      expect(find.text('Weiter bearbeiten'), findsOneWidget);
+      expect(find.text('Verwerfen'), findsOneWidget);
+      // Screen still present behind the dialog.
+      expect(find.byType(MealTrackerScreen), findsOneWidget);
+    });
+
+    testWidgets(
+      'tapping "Weiter bearbeiten" closes the dialog and stays on the screen',
+      (tester) async {
+        final meal = _seededMeal();
+        await _pumpEditScreen(
+          tester,
+          mealId: 'meal-42',
+          overrides: defaultOverrides(meal),
+        );
+
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(MealTrackerScreen)),
+          listen: false,
+        );
+        container.read(mealTrackerProvider.notifier).addIngredient('Speck');
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.arrow_back));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Weiter bearbeiten'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Änderungen verwerfen?'), findsNothing);
+        expect(find.byType(MealTrackerScreen), findsOneWidget);
+        expect(find.text('home-sentinel'), findsNothing);
+      },
+    );
+
+    testWidgets('tapping "Verwerfen" pops the screen', (tester) async {
+      final meal = _seededMeal();
+      await _pumpEditScreen(
+        tester,
+        mealId: 'meal-42',
+        overrides: defaultOverrides(meal),
+      );
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MealTrackerScreen)),
+        listen: false,
+      );
+      container.read(mealTrackerProvider.notifier).addIngredient('Speck');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Verwerfen'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Änderungen verwerfen?'), findsNothing);
+      expect(find.byType(MealTrackerScreen), findsNothing);
+      expect(find.text('home-sentinel'), findsOneWidget);
+    });
+
+    testWidgets('back with no unsaved changes pops silently', (tester) async {
+      final meal = _seededMeal();
+      await _pumpEditScreen(
+        tester,
+        mealId: 'meal-42',
+        overrides: defaultOverrides(meal),
+      );
+
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Änderungen verwerfen?'), findsNothing);
+      expect(find.byType(MealTrackerScreen), findsNothing);
+      expect(find.text('home-sentinel'), findsOneWidget);
+    });
+  });
 }

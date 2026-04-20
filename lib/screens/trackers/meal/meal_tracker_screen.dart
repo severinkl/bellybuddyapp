@@ -123,65 +123,100 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     }
 
     final state = ref.watch(mealTrackerProvider);
+    final canPop = widget.mealId == null || !state.isDirty;
 
-    return TrackerScreenScaffold(
-      titleWidget: GestureDetector(
-        onTap: () => setState(() => _isEditingTitle = true),
-        child: _isEditingTitle
-            ? TextField(
-                controller: _titleController,
-                autofocus: true,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: AppTheme.fontSizeTitle,
-                  fontWeight: FontWeight.w600,
-                ),
-                decoration: const InputDecoration(
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.zero,
-                ),
-                onSubmitted: (_) => setState(() => _isEditingTitle = false),
-              )
-            : Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Flexible(
-                    child: Text(
-                      key: MealTrackerScreen.mealTrackerTitleKey,
-                      _titleController.text,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: AppTheme.fontSizeTitle,
-                        fontWeight: FontWeight.w600,
+    return PopScope(
+      canPop: canPop,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final confirmed = await _confirmDiscard(context);
+        if (confirmed == true && context.mounted) {
+          context.pop();
+        }
+      },
+      child: TrackerScreenScaffold(
+        titleWidget: GestureDetector(
+          onTap: () => setState(() => _isEditingTitle = true),
+          child: _isEditingTitle
+              ? TextField(
+                  controller: _titleController,
+                  autofocus: true,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: AppTheme.fontSizeTitle,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  onSubmitted: (_) => setState(() => _isEditingTitle = false),
+                )
+              : Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Flexible(
+                      child: Text(
+                        key: MealTrackerScreen.mealTrackerTitleKey,
+                        _titleController.text,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: AppTheme.fontSizeTitle,
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: AppConstants.spacingXs),
-                  const Icon(Icons.edit, size: 16),
-                ],
-              ),
-      ),
-      showSuccess: state.showSuccess,
-      successMessage: 'Mahlzeit gespeichert!',
-      successMascotAsset: AppConstants.mascotCool,
-      successAction: GestureDetector(
-        onTap: () => context.push(RoutePaths.drinkTracker),
-        child: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.water_drop,
-              size: AppConstants.iconSizeSm,
-              color: AppTheme.info,
-            ),
-            SizedBox(width: AppConstants.spacingSm),
-            Text('Getränk hinzufügen', style: TextStyle(color: AppTheme.info)),
-          ],
+                    const SizedBox(width: AppConstants.spacingXs),
+                    const Icon(Icons.edit, size: 16),
+                  ],
+                ),
         ),
+        showSuccess: state.showSuccess,
+        successMessage: 'Mahlzeit gespeichert!',
+        successMascotAsset: AppConstants.mascotCool,
+        successAction: GestureDetector(
+          onTap: () => context.push(RoutePaths.drinkTracker),
+          child: const Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.water_drop,
+                size: AppConstants.iconSizeSm,
+                color: AppTheme.info,
+              ),
+              SizedBox(width: AppConstants.spacingSm),
+              Text(
+                'Getränk hinzufügen',
+                style: TextStyle(color: AppTheme.info),
+              ),
+            ],
+          ),
+        ),
+        body: _buildBody(state),
       ),
-      body: _buildBody(state),
+    );
+  }
+
+  Future<bool?> _confirmDiscard(BuildContext context) {
+    return showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Änderungen verwerfen?'),
+        content: const Text('Deine Änderungen gehen verloren.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Weiter bearbeiten'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: AppTheme.destructive),
+            child: const Text('Verwerfen'),
+          ),
+        ],
+      ),
     );
   }
 
