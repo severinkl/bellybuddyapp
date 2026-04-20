@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../router/route_names.dart';
 import '../../config/constants.dart';
+import '../../providers/diary_provider.dart';
 import '../../screens/dashboard/widgets/tutorial/tutorial_keys.dart';
 import '../../services/haptic_service.dart';
 
-class BbBottomNav extends StatelessWidget {
+class BbBottomNav extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
   static const navHomeKey = Key('bottom_nav_home');
   static const navDiaryKey = Key('bottom_nav_diary');
@@ -15,7 +17,7 @@ class BbBottomNav extends StatelessWidget {
   const BbBottomNav({super.key, required this.navigationShell});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = navigationShell.currentIndex;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final isDiary = currentIndex == 1;
@@ -77,6 +79,10 @@ class BbBottomNav extends StatelessWidget {
                       isActive: currentIndex == 1,
                       onTap: () {
                         HapticService.light();
+                        final now = DateTime.now();
+                        ref
+                            .read(diaryDateProvider.notifier)
+                            .set(DateTime(now.year, now.month, now.day));
                         navigationShell.goBranch(1);
                       },
                     ),
