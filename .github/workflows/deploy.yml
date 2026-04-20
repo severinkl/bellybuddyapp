@@ -116,7 +116,11 @@ jobs:
           serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: com.bellybuddy.belly_buddy
           releaseFiles: build/app/outputs/bundle/release/app-release.aab
-          track: internal
+          # Use `tracks:` (plural, non-deprecated). The previous `track:`
+          # left the new `tracks:` input at its default of `production`,
+          # so the action failed with "Precondition check failed" while
+          # validating a non-existent production release.
+          tracks: internal
           status: completed
 
   deploy-ios:
