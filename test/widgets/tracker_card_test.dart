@@ -61,5 +61,30 @@ void main() {
       );
       expect(find.byType(SvgPicture), findsOneWidget);
     });
+
+    testWidgets(
+      'long label renders on a single line without overflow on narrow widths',
+      (tester) async {
+        await tester.pumpWithProviders(
+          Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 140,
+                child: TrackerCard(
+                  svgPath: 'assets/images/icons/toilet-paper-3.svg',
+                  label: 'Bauchgefühl',
+                  onTap: () {},
+                ),
+              ),
+            ),
+          ),
+        );
+
+        expect(tester.takeException(), isNull);
+        expect(find.text('Bauchgefühl'), findsOneWidget);
+        final text = tester.widget<Text>(find.text('Bauchgefühl'));
+        expect(text.softWrap, isFalse);
+      },
+    );
   });
 }
