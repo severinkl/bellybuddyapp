@@ -115,8 +115,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.mealTracker,
         name: RouteNames.mealTracker,
-        builder: (context, state) =>
-            MealTrackerScreen(initialDate: state.extra as DateTime?),
+        builder: (context, state) => const MealTrackerScreen(),
       ),
       GoRoute(
         path: RoutePaths.mealTrackerEdit,
@@ -128,27 +127,37 @@ final routerProvider = Provider<GoRouter>((ref) {
           // arrive without `extra`; in that case the screen falls back to
           // looking the meal up by id, which may yield the "not found" state
           // since the diary's entries aren't cached in entriesProvider.
-          final initial = state.extra as MealEntry?;
-          return MealTrackerScreen(mealId: id, initial: initial);
+          final extra = state.extra;
+          return MealTrackerScreen(
+            mealId: id,
+            initial: extra is MealEntry ? extra : null,
+          );
         },
       ),
       GoRoute(
         path: RoutePaths.toiletTracker,
         name: RouteNames.toiletTracker,
-        builder: (context, state) =>
-            ToiletTrackerScreen(initialDate: state.extra as DateTime?),
+        builder: (context, state) {
+          final extra = state.extra;
+          return ToiletTrackerScreen(
+            initialDate: extra is DateTime ? extra : null,
+          );
+        },
       ),
       GoRoute(
         path: RoutePaths.gutFeelingTracker,
         name: RouteNames.gutFeelingTracker,
-        builder: (context, state) =>
-            GutFeelingTrackerScreen(initialDate: state.extra as DateTime?),
+        builder: (context, state) {
+          final extra = state.extra;
+          return GutFeelingTrackerScreen(
+            initialDate: extra is DateTime ? extra : null,
+          );
+        },
       ),
       GoRoute(
         path: RoutePaths.drinkTracker,
         name: RouteNames.drinkTracker,
-        builder: (context, state) =>
-            DrinkTrackerScreen(initialDate: state.extra as DateTime?),
+        builder: (context, state) => const DrinkTrackerScreen(),
       ),
 
       // Settings routes

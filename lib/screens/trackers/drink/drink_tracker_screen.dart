@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../providers/drink_tracker_provider.dart';
-import '../../../utils/date_format_utils.dart';
 import '../../../utils/drink_helpers.dart';
 import '../../../utils/save_helper.dart';
 import '../../../widgets/common/bb_button.dart';
@@ -14,9 +13,7 @@ import 'widgets/drink_size_selector.dart';
 import 'widgets/quick_drink_grid.dart';
 
 class DrinkTrackerScreen extends ConsumerStatefulWidget {
-  const DrinkTrackerScreen({super.key, this.initialDate});
-
-  final DateTime? initialDate;
+  const DrinkTrackerScreen({super.key});
 
   static const trackerKey = Key('drink_tracker_screen');
 
@@ -34,7 +31,6 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       notifier.reset();
-      notifier.setTrackedAt(buildTrackedAt(widget.initialDate));
       notifier.loadDrinks();
       notifier.loadTodayTotal();
     });
