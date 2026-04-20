@@ -241,7 +241,7 @@ class _DiaryBody extends ConsumerWidget {
                             label: 'Bauchgefühl',
                             onTap: () => context.push(
                               RoutePaths.gutFeelingTracker,
-                              extra: ref.read(diaryDateProvider),
+                              extra: date,
                             ),
                           ),
                         ),
@@ -252,7 +252,7 @@ class _DiaryBody extends ConsumerWidget {
                             label: 'Klo',
                             onTap: () => context.push(
                               RoutePaths.toiletTracker,
-                              extra: ref.read(diaryDateProvider),
+                              extra: date,
                             ),
                           ),
                         ),
