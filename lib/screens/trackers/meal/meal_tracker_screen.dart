@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
+import '../../../models/meal_entry.dart';
+import '../../../providers/entries_provider.dart';
 import '../../../providers/meal_tracker_provider.dart';
 import '../../../router/route_names.dart';
 import '../../../utils/save_helper.dart';
@@ -13,9 +15,14 @@ import 'widgets/ingredient_search.dart';
 import 'widgets/meal_image_section.dart';
 
 class MealTrackerScreen extends ConsumerStatefulWidget {
-  const MealTrackerScreen({super.key});
+  const MealTrackerScreen({super.key, this.mealId});
+
+  /// When non-null, the screen renders in edit mode for the meal with this ID.
+  final String? mealId;
+
   static const drinkTrackerButtonKey = Key('drink_tracker_button');
   static const mealTrackerTitleKey = Key('meal_tracker_title');
+  static const mealEditSaveKey = Key('meal_tracker_save_button');
 
   @override
   ConsumerState<MealTrackerScreen> createState() => _MealTrackerScreenState();
@@ -24,15 +31,38 @@ class MealTrackerScreen extends ConsumerStatefulWidget {
 class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
   final _titleController = TextEditingController(text: 'Neue Mahlzeit');
   bool _isEditingTitle = false;
+  bool _mealNotFound = false;
 
   @override
   void initState() {
     super.initState();
-    // Reset stale state from previous visit (showSuccess persists).
     // Deferred to avoid state change during widget tree construction.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) ref.read(mealTrackerProvider.notifier).reset();
+      if (!mounted) return;
+      final notifier = ref.read(mealTrackerProvider.notifier);
+      final editId = widget.mealId;
+      if (editId == null) {
+        // Reset stale state from previous visit (showSuccess persists).
+        notifier.reset();
+        return;
+      }
+      final meal = _lookupMeal(editId);
+      if (meal == null) {
+        // Route hit with a stale or unknown id — show "not found" fallback.
+        notifier.reset();
+        setState(() => _mealNotFound = true);
+        return;
+      }
+      notifier.seed(meal);
+      setState(() => _titleController.text = meal.title);
     });
+  }
+
+  /// Looks up a meal by id in the currently loaded [entriesProvider] state.
+  /// Returns `null` if no matching meal is present.
+  MealEntry? _lookupMeal(String id) {
+    final entries = ref.read(entriesProvider);
+    return entries.meals.where((m) => m.id == id).firstOrNull;
   }
 
   @override
@@ -45,11 +75,40 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     final notifier = ref.read(mealTrackerProvider.notifier);
     notifier.setTitle(_titleController.text);
 
+    // Edit mode with no changes → silent pop. Avoids a pointless network
+    // round-trip and keeps the UX honest.
+    if (widget.mealId != null && !ref.read(mealTrackerProvider).isDirty) {
+      if (mounted) context.pop();
+      return;
+    }
+
     await saveWithFeedback(context, () => notifier.save());
+
+    // Edit mode pops; create mode stays on the success overlay.
+    if (!mounted) return;
+    if (widget.mealId != null) context.pop();
+  }
+
+  bool _canSave(MealTrackerState state) {
+    if (state.isAnalyzing || state.isSaving) return false;
+    if (state.ingredients.isEmpty) return false;
+    return true;
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_mealNotFound) {
+      return Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.pop(),
+          ),
+        ),
+        body: const Center(child: Text('Mahlzeit nicht gefunden')),
+      );
+    }
+
     final state = ref.watch(mealTrackerProvider);
 
     return TrackerScreenScaffold(
@@ -115,8 +174,6 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
 
   Widget _buildBody(MealTrackerState state) {
     final notifier = ref.read(mealTrackerProvider.notifier);
-    final canSave =
-        state.ingredients.isNotEmpty && !state.isAnalyzing && !state.isSaving;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -182,9 +239,10 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
           AppConstants.gap8,
           // Save button
           BbButton(
+            key: MealTrackerScreen.mealEditSaveKey,
             label: 'Speichern',
             isLoading: state.isSaving,
-            onPressed: canSave ? _save : null,
+            onPressed: _canSave(state) ? _save : null,
           ),
         ],
       ),
