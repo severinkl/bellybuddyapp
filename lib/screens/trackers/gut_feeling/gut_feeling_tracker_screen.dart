@@ -7,7 +7,7 @@ import '../../../config/constants.dart';
 import '../../../models/gut_feeling_entry.dart';
 import '../../../providers/diary_provider.dart';
 import '../../../providers/entries_provider.dart';
-import '../../../router/route_names.dart';
+import '../../../router/navigation_extensions.dart';
 import '../../../services/haptic_service.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/save_helper.dart';
@@ -160,7 +160,7 @@ class _GutFeelingTrackerScreenState
         message: 'Eintrag gespeichert!',
         subMessage: 'Dein Eintrag wurde erfolgreich erfasst.',
         mascotAsset: AppConstants.mascotHappy,
-        onDismissed: () => context.go(RoutePaths.dashboard),
+        onDismissed: context.popOrGoDashboard,
       );
     }
 
