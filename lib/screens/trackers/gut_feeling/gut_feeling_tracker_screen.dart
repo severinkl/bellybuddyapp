@@ -7,10 +7,12 @@ import '../../../config/constants.dart';
 import '../../../models/gut_feeling_entry.dart';
 import '../../../providers/diary_provider.dart';
 import '../../../providers/entries_provider.dart';
-import '../../../router/route_names.dart';
+import '../../../router/navigation_extensions.dart';
 import '../../../services/haptic_service.dart';
+import '../../../utils/date_format_utils.dart';
 import '../../../utils/save_helper.dart';
 import '../../../widgets/common/bb_success_overlay.dart';
+import '../../../widgets/common/date_time_chips.dart';
 import '../../../widgets/common/gradient_bottom_bar.dart';
 import 'widgets/bauchgefuehl_tab.dart';
 import 'widgets/mood_tab_selector.dart';
@@ -18,7 +20,9 @@ import 'widgets/pill_button.dart';
 import 'widgets/stimmung_tab.dart';
 
 class GutFeelingTrackerScreen extends ConsumerStatefulWidget {
-  const GutFeelingTrackerScreen({super.key});
+  const GutFeelingTrackerScreen({super.key, this.initialDate});
+
+  final DateTime? initialDate;
 
   @override
   ConsumerState<GutFeelingTrackerScreen> createState() =>
@@ -28,7 +32,7 @@ class GutFeelingTrackerScreen extends ConsumerStatefulWidget {
 class _GutFeelingTrackerScreenState
     extends ConsumerState<GutFeelingTrackerScreen>
     with TickerProviderStateMixin {
-  final DateTime _trackedAt = DateTime.now();
+  late DateTime _trackedAt = buildTrackedAt(widget.initialDate);
   int _activeTab = 0;
   bool _isSaving = false;
   bool _showSuccess = false;
@@ -124,13 +128,7 @@ class _GutFeelingTrackerScreenState
     );
     if (mounted) {
       if (success) {
-        // Invalidate diary cache so it refetches with the new entry
-        final date = DateTime(
-          _trackedAt.year,
-          _trackedAt.month,
-          _trackedAt.day,
-        );
-        ref.invalidate(diaryEntriesProvider(date));
+        ref.invalidate(diaryEntriesProvider(startOfDay(_trackedAt)));
         setState(() => _showSuccess = true);
       } else {
         setState(() => _isSaving = false);
@@ -162,7 +160,7 @@ class _GutFeelingTrackerScreenState
         message: 'Eintrag gespeichert!',
         subMessage: 'Dein Eintrag wurde erfolgreich erfasst.',
         mascotAsset: AppConstants.mascotHappy,
-        onDismissed: () => context.go(RoutePaths.dashboard),
+        onDismissed: context.popOrGoDashboard,
       );
     }
 
@@ -181,6 +179,20 @@ class _GutFeelingTrackerScreenState
         children: [
           Column(
             children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppConstants.spacingMd,
+                  AppConstants.spacingMd,
+                  AppConstants.spacingMd,
+                  0,
+                ),
+                child: DateTimeChips(
+                  value: _trackedAt,
+                  onChanged: (dt) => setState(() => _trackedAt = dt),
+                ),
+              ),
+              AppConstants.gap8,
+
               // Pill tab selector (fixed, not scrollable)
               Padding(
                 padding: const EdgeInsets.fromLTRB(

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
-import '../../router/route_names.dart';
+import '../../router/navigation_extensions.dart';
 import 'bb_success_overlay.dart';
 
 class TrackerScreenScaffold extends StatelessWidget {
@@ -38,8 +38,7 @@ class TrackerScreenScaffold extends StatelessWidget {
         subMessage:
             successSubMessage ?? 'Dein Eintrag wurde erfolgreich erfasst.',
         mascotAsset: successMascotAsset,
-        onDismissed:
-            onSuccessDismissed ?? () => context.go(RoutePaths.dashboard),
+        onDismissed: onSuccessDismissed ?? context.popOrGoDashboard,
         action: successAction,
       );
     }
@@ -52,7 +51,13 @@ class TrackerScreenScaffold extends StatelessWidget {
         backgroundColor: AppTheme.screenBackground,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+          // Route through Navigator.maybePop so enclosing PopScope widgets
+          // (e.g. the meal tracker's discard-changes guard) can intercept the
+          // pop. Falls back to go_router's context.pop when no PopScope blocks.
+          onPressed: () async {
+            final didPop = await Navigator.maybePop(context);
+            if (!didPop && context.mounted) context.pop();
+          },
         ),
         title: titleWidget ?? Text(title),
       ),

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:belly_buddy/models/drink.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
+import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/models/user_profile.dart';
@@ -209,7 +210,22 @@ class FakeProfileRepository implements ProfileRepository {
 
 // -- FakeEntryRepository --
 class FakeEntryRepository implements EntryRepository {
+  FakeEntryRepository({this.throwOnUpdate = false});
+
+  /// When true, [updateEntry] throws on invocation. Used in tests that verify
+  /// the screen stays open and surfaces the error rather than popping.
+  final bool throwOnUpdate;
+
   final List<Map<String, dynamic>> _inserted = [];
+
+  /// Meal payloads that were inserted via [insertEntry], reconstructed as
+  /// [MealEntry]s for easy assertions in tests.
+  final List<MealEntry> addedMeals = [];
+
+  /// Meal payloads that were passed to [updateEntry], reconstructed as
+  /// [MealEntry]s (the id is taken from the `updateEntry` argument and merged
+  /// into the data map before parsing).
+  final List<MealEntry> updatedMeals = [];
 
   List<Map<String, dynamic>> get inserted => _inserted;
   EntryQueryResult _result = testEntryQueryResult();
@@ -227,13 +243,25 @@ class FakeEntryRepository implements EntryRepository {
     String table,
     Map<String, dynamic> data, {
     required String userId,
-  }) async => _inserted.add(data);
+  }) async {
+    _inserted.add(data);
+    if (table == 'meal_entries') {
+      addedMeals.add(MealEntry.fromJson(data));
+    }
+  }
+
   @override
   Future<void> updateEntry(
     String table,
     String id,
     Map<String, dynamic> data,
-  ) async {}
+  ) async {
+    if (throwOnUpdate) throw Exception('fake update failure');
+    if (table == 'meal_entries') {
+      updatedMeals.add(MealEntry.fromJson({...data, 'id': id}));
+    }
+  }
+
   @override
   Future<void> deleteEntry(String table, String id) async {}
   @override
@@ -315,11 +343,6 @@ class FakeRecommendationRepository implements RecommendationRepository {
     testRecommendation(),
   ];
   @override
-  Future<List<Recommendation>> refreshRecommendations(
-    String userId,
-    UserProfile? profile,
-  ) async => [testRecommendation(summary: 'Neuer Tipp')];
-  @override
   Future<int> countUnseen(String userId) async => 0;
   @override
   Future<void> markAllAsSeen(String userId) async {}
@@ -327,12 +350,18 @@ class FakeRecommendationRepository implements RecommendationRepository {
 
 // -- FakeMealMediaRepository --
 class FakeMealMediaRepository implements MealMediaRepository {
+  FakeMealMediaRepository({this.uploadResult = 'test-user/image.jpg'});
+
+  /// URL returned from [uploadMealImage] — override in tests that need to
+  /// assert specific image URLs end-to-end.
+  final String uploadResult;
+
   @override
   Future<String> uploadMealImage({
     required String userId,
     required Uint8List fileBytes,
     required String extension,
-  }) async => 'test-user/image.jpg';
+  }) async => uploadResult;
   @override
   Future<Map<String, dynamic>> analyzeMealImage(
     Uint8List bytes,

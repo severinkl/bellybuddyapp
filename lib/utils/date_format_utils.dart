@@ -7,10 +7,6 @@ DateTime startOfDay(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
 DateTime endOfDay(DateTime dt) =>
     DateTime(dt.year, dt.month, dt.day).add(const Duration(days: 1));
 
-/// Returns the ISO-8601 string for 7 days before [now] (defaults to now).
-DateTime last7Days([DateTime? now]) =>
-    (now ?? DateTime.now()).subtract(const Duration(days: 7));
-
 /// Formats a DateTime as a German relative time string (e.g. "vor 5 Min.")
 String formatTimeAgo(DateTime dt) {
   final diff = DateTime.now().difference(dt);
@@ -67,3 +63,16 @@ String formatDateShort(DateTime dt) {
 /// Returns true if [a] and [b] fall on the same calendar day.
 bool isSameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
+
+/// Returns [initialDate] at the current wall-clock time, or [DateTime.now()] if null.
+DateTime buildTrackedAt(DateTime? initialDate) {
+  if (initialDate == null) return DateTime.now();
+  final now = DateTime.now();
+  return DateTime(
+    initialDate.year,
+    initialDate.month,
+    initialDate.day,
+    now.hour,
+    now.minute,
+  );
+}

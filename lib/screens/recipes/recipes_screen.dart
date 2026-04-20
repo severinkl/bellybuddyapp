@@ -49,7 +49,7 @@ class RecipesScreen extends StatelessWidget {
                     ),
                     AppConstants.gap8,
                     Text(
-                      'Wir arbeiten gerade an einer tollen Sammlung magenfreundlicher Rezepte für dich. Schau bald wieder vorbei!',
+                      'Wir arbeiten gerade an einer tollen Sammlung darmfreundlicher Rezepte für dich. Schau bald wieder vorbei!',
                       style: TextStyle(
                         fontSize: AppTheme.fontSizeBody,
                         color: AppTheme.mutedForeground,

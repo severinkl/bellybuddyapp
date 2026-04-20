@@ -6,6 +6,7 @@ import '../../../config/constants.dart';
 import '../../../models/toilet_entry.dart';
 import '../../../providers/diary_provider.dart';
 import '../../../providers/entries_provider.dart';
+import '../../../utils/date_format_utils.dart';
 import '../../../utils/save_helper.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/bb_slider.dart';
@@ -13,7 +14,9 @@ import '../../../widgets/common/date_time_chips.dart';
 import '../../../widgets/common/tracker_screen_scaffold.dart';
 
 class ToiletTrackerScreen extends ConsumerStatefulWidget {
-  const ToiletTrackerScreen({super.key});
+  const ToiletTrackerScreen({super.key, this.initialDate});
+
+  final DateTime? initialDate;
 
   @override
   ConsumerState<ToiletTrackerScreen> createState() =>
@@ -22,7 +25,7 @@ class ToiletTrackerScreen extends ConsumerStatefulWidget {
 
 class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
   int _stoolType = 3;
-  DateTime _trackedAt = DateTime.now();
+  late DateTime _trackedAt = buildTrackedAt(widget.initialDate);
   bool _isSaving = false;
   bool _showSuccess = false;
 
@@ -39,13 +42,7 @@ class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
     );
     if (mounted) {
       if (success) {
-        // Invalidate diary cache so it refetches with the new entry
-        final date = DateTime(
-          _trackedAt.year,
-          _trackedAt.month,
-          _trackedAt.day,
-        );
-        ref.invalidate(diaryEntriesProvider(date));
+        ref.invalidate(diaryEntriesProvider(startOfDay(_trackedAt)));
         setState(() => _showSuccess = true);
       } else {
         setState(() => _isSaving = false);

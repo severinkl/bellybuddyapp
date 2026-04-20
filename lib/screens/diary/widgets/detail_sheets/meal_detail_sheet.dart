@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../config/constants.dart';
 import '../../../../providers/diary_provider.dart';
 import '../../../../providers/entries_provider.dart';
+import '../../../../router/route_names.dart';
 import 'detail_sheet_scaffold.dart';
 import 'meal_detail.dart';
 
@@ -36,7 +39,29 @@ class MealDetailSheet extends StatelessWidget {
         final date = parentRef.read(diaryDateProvider);
         parentRef.invalidate(diaryEntriesProvider(date));
       },
-      content: MealDetail(meal: data.meal),
+      content: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          MealDetail(meal: data.meal),
+          AppConstants.gap16,
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              icon: const Icon(Icons.edit_outlined),
+              label: const Text('Bearbeiten'),
+              onPressed: () async {
+                await context.push(
+                  RoutePaths.mealTrackerEditFor(data.meal.id),
+                  extra: data.meal,
+                );
+                // Dismiss the sheet on return so the user lands back on the
+                // refreshed diary instead of the now-stale preview on top.
+                if (context.mounted) Navigator.pop(context);
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
