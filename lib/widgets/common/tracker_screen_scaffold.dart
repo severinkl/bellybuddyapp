@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
+import '../../router/route_names.dart';
 import 'bb_success_overlay.dart';
 
 class TrackerScreenScaffold extends StatelessWidget {
@@ -40,8 +41,14 @@ class TrackerScreenScaffold extends StatelessWidget {
         // Default: pop back to whatever shell branch pushed the tracker.
         // Dashboard-launched trackers land on dashboard; diary-launched
         // trackers land on diary (same date, since diaryDateProvider holds
-        // it). Screens that need a different destination override this.
-        onDismissed: onSuccessDismissed ?? () => context.pop(),
+        // it). Push-notification deep-links that target a tracker directly
+        // have no route underneath; fall back to /dashboard then to avoid
+        // the GoError from popping an empty stack.
+        onDismissed:
+            onSuccessDismissed ??
+            () => context.canPop()
+                ? context.pop()
+                : context.go(RoutePaths.dashboard),
         action: successAction,
       );
     }
