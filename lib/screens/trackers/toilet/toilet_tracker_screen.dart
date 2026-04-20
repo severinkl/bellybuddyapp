@@ -13,7 +13,9 @@ import '../../../widgets/common/date_time_chips.dart';
 import '../../../widgets/common/tracker_screen_scaffold.dart';
 
 class ToiletTrackerScreen extends ConsumerStatefulWidget {
-  const ToiletTrackerScreen({super.key});
+  const ToiletTrackerScreen({super.key, this.initialDate});
+
+  final DateTime? initialDate;
 
   @override
   ConsumerState<ToiletTrackerScreen> createState() =>
@@ -22,9 +24,15 @@ class ToiletTrackerScreen extends ConsumerStatefulWidget {
 
 class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
   int _stoolType = 3;
-  DateTime _trackedAt = DateTime.now();
+  late DateTime _trackedAt = _buildInitialDate(widget.initialDate);
   bool _isSaving = false;
   bool _showSuccess = false;
+
+  DateTime _buildInitialDate(DateTime? date) {
+    if (date == null) return DateTime.now();
+    final now = DateTime.now();
+    return DateTime(date.year, date.month, date.day, now.hour, now.minute);
+  }
 
   Future<void> _save() async {
     setState(() => _isSaving = true);

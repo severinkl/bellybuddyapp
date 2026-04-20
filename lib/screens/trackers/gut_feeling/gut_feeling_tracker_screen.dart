@@ -11,6 +11,7 @@ import '../../../router/route_names.dart';
 import '../../../services/haptic_service.dart';
 import '../../../utils/save_helper.dart';
 import '../../../widgets/common/bb_success_overlay.dart';
+import '../../../widgets/common/date_time_chips.dart';
 import '../../../widgets/common/gradient_bottom_bar.dart';
 import 'widgets/bauchgefuehl_tab.dart';
 import 'widgets/mood_tab_selector.dart';
@@ -18,7 +19,9 @@ import 'widgets/pill_button.dart';
 import 'widgets/stimmung_tab.dart';
 
 class GutFeelingTrackerScreen extends ConsumerStatefulWidget {
-  const GutFeelingTrackerScreen({super.key});
+  const GutFeelingTrackerScreen({super.key, this.initialDate});
+
+  final DateTime? initialDate;
 
   @override
   ConsumerState<GutFeelingTrackerScreen> createState() =>
@@ -28,7 +31,7 @@ class GutFeelingTrackerScreen extends ConsumerStatefulWidget {
 class _GutFeelingTrackerScreenState
     extends ConsumerState<GutFeelingTrackerScreen>
     with TickerProviderStateMixin {
-  final DateTime _trackedAt = DateTime.now();
+  late DateTime _trackedAt = _buildInitialDate(widget.initialDate);
   int _activeTab = 0;
   bool _isSaving = false;
   bool _showSuccess = false;
@@ -45,6 +48,12 @@ class _GutFeelingTrackerScreenState
   int _energy = 1;
   int _focus = 1;
   int _bodyFeel = 1;
+
+  DateTime _buildInitialDate(DateTime? date) {
+    if (date == null) return DateTime.now();
+    final now = DateTime.now();
+    return DateTime(date.year, date.month, date.day, now.hour, now.minute);
+  }
 
   // Page controller for smooth tab transitions
   late final PageController _pageController;
@@ -181,6 +190,21 @@ class _GutFeelingTrackerScreenState
         children: [
           Column(
             children: [
+              // Date & Time chips
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppConstants.spacingMd,
+                  AppConstants.spacingMd,
+                  AppConstants.spacingMd,
+                  0,
+                ),
+                child: DateTimeChips(
+                  value: _trackedAt,
+                  onChanged: (dt) => setState(() => _trackedAt = dt),
+                ),
+              ),
+              AppConstants.gap8,
+
               // Pill tab selector (fixed, not scrollable)
               Padding(
                 padding: const EdgeInsets.fromLTRB(
