@@ -26,7 +26,10 @@ void main() {
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: onChildTap,
-                child: const ColoredBox(color: Color(0xFFEEEEEE)),
+                child: const ColoredBox(
+                  key: Key('swiper_child_sentinel'),
+                  color: Color(0xFFEEEEEE),
+                ),
               ),
             ),
           ),
@@ -152,11 +155,7 @@ void main() {
         onChildTap: () => childTaps += 1,
       );
 
-      await tester.tap(
-        find.byWidgetPredicate(
-          (w) => w is ColoredBox && w.color == const Color(0xFFEEEEEE),
-        ),
-      );
+      await tester.tap(find.byKey(const Key('swiper_child_sentinel')));
       await tester.pumpAndSettle();
 
       expect(childTaps, equals(1));

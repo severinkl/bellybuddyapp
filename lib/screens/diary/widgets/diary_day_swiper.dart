@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../../../config/constants.dart';
-import '../../../services/haptic_service.dart';
 
 /// Horizontal-swipe day-switcher for the Diary body.
 ///
@@ -11,6 +10,10 @@ import '../../../services/haptic_service.dart';
 /// horizontally past [_swipeThreshold]. Uses `HitTestBehavior.translucent`
 /// so inner widgets (e.g. `Dismissible` on diary entry cards) still win
 /// the gesture arena on their own hit rect.
+///
+/// Uses `onHorizontalDrag*` (backed by `HorizontalDragGestureRecognizer`),
+/// which matches what `Dismissible` on entry cards uses, so the gesture-
+/// arena resolution is symmetric between the two.
 class DiaryDaySwiper extends StatefulWidget {
   final Widget child;
   final bool canSwipeBack;
@@ -31,16 +34,11 @@ class DiaryDaySwiper extends StatefulWidget {
   State<DiaryDaySwiper> createState() => _DiaryDaySwiperState();
 }
 
-class _DiaryDaySwiperState extends State<DiaryDaySwiper>
-    with SingleTickerProviderStateMixin {
+class _DiaryDaySwiperState extends State<DiaryDaySwiper> {
   static const double _swipeThreshold = 80.0;
   static const double _boundaryResistance = 0.3;
-  static const double _directionDecisionThreshold = 10.0;
 
   double _dragDx = 0;
-  double? _startX;
-  double? _startY;
-  bool? _isHorizontal;
   bool _isAnimating = false;
   Timer? _settleTimer;
 
@@ -50,62 +48,33 @@ class _DiaryDaySwiperState extends State<DiaryDaySwiper>
     super.dispose();
   }
 
-  void _onPanStart(DragStartDetails details) {
-    _startX = details.localPosition.dx;
-    _startY = details.localPosition.dy;
-    _isHorizontal = null;
-    _isAnimating = false;
+  void _onHorizontalDragStart(DragStartDetails details) {
     _dragDx = 0;
+    _isAnimating = false;
   }
 
-  void _onPanUpdate(DragUpdateDetails details) {
-    if (_startX == null || _startY == null) return;
+  void _onHorizontalDragUpdate(DragUpdateDetails details) {
+    final delta = details.primaryDelta ?? 0;
+    var nextDx = _dragDx + delta;
 
-    final dx = details.localPosition.dx - _startX!;
-    final dy = details.localPosition.dy - _startY!;
-
-    if (_isHorizontal == null &&
-        (dx.abs() > _directionDecisionThreshold ||
-            dy.abs() > _directionDecisionThreshold)) {
-      _isHorizontal = dx.abs() > dy.abs();
-    }
-
-    if (_isHorizontal != true) return;
-
-    // Boundary resistance: when dragging toward a bound we can't cross,
-    // dampen the translation so the content rubber-bands instead of
-    // moving freely.
-    double constrained = dx;
-    final hitsBackBound = dx > 0 && !widget.canSwipeBack;
-    final hitsForwardBound = dx < 0 && !widget.canSwipeForward;
+    // Rubber-band when dragging past an unreachable bound.
+    final hitsBackBound = nextDx > 0 && !widget.canSwipeBack;
+    final hitsForwardBound = nextDx < 0 && !widget.canSwipeForward;
     if (hitsBackBound || hitsForwardBound) {
-      constrained = dx * _boundaryResistance;
+      // Apply resistance incrementally so it feels smooth.
+      nextDx = _dragDx + delta * _boundaryResistance;
     }
-
-    setState(() => _dragDx = constrained);
+    setState(() => _dragDx = nextDx);
   }
 
-  void _onPanEnd(DragEndDetails details) {
-    final wasHorizontal = _isHorizontal == true;
-    _startX = null;
-    _startY = null;
-    _isHorizontal = null;
-
-    if (!wasHorizontal) {
-      setState(() => _dragDx = 0);
-      return;
-    }
-
+  void _onHorizontalDragEnd(DragEndDetails details) {
     setState(() => _isAnimating = true);
 
     if (_dragDx <= -_swipeThreshold && widget.canSwipeForward) {
-      HapticService.light();
       widget.onNext();
     } else if (_dragDx >= _swipeThreshold && widget.canSwipeBack) {
-      HapticService.light();
       widget.onPrevious();
     }
-
     setState(() => _dragDx = 0);
 
     // Reset the animating flag after the translate animation would
@@ -121,9 +90,9 @@ class _DiaryDaySwiperState extends State<DiaryDaySwiper>
   Widget build(BuildContext context) {
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
-      onPanStart: _onPanStart,
-      onPanUpdate: _onPanUpdate,
-      onPanEnd: _onPanEnd,
+      onHorizontalDragStart: _onHorizontalDragStart,
+      onHorizontalDragUpdate: _onHorizontalDragUpdate,
+      onHorizontalDragEnd: _onHorizontalDragEnd,
       child: AnimatedContainer(
         duration: _isAnimating ? AppConstants.animNormal : Duration.zero,
         curve: Curves.easeOutCubic,
