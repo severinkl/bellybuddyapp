@@ -23,6 +23,18 @@ class _MealImageState extends ConsumerState<MealImage> {
     _resolve();
   }
 
+  @override
+  void didUpdateWidget(covariant MealImage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.imageUrl != widget.imageUrl) {
+      setState(() {
+        _resolvedUrl = null;
+        _loading = true;
+      });
+      _resolve();
+    }
+  }
+
   Future<void> _resolve() async {
     final url = await ref
         .read(mealMediaRepositoryProvider)

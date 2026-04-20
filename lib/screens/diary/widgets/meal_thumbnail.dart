@@ -22,6 +22,18 @@ class _MealThumbnailState extends ConsumerState<MealThumbnail> {
     _resolve();
   }
 
+  @override
+  void didUpdateWidget(covariant MealThumbnail oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Re-resolve when the underlying meal's image path changes (e.g. the
+    // user replaced the photo via edit). Without this the ListView keeps
+    // the original signed URL for this slot.
+    if (oldWidget.imageUrl != widget.imageUrl) {
+      setState(() => _resolvedUrl = null);
+      _resolve();
+    }
+  }
+
   Future<void> _resolve() async {
     final url = await ref
         .read(mealMediaRepositoryProvider)
