@@ -10,6 +10,8 @@ import 'widgets/recommendation_card.dart';
 import 'widgets/recommendation_history.dart';
 import 'widgets/recommendation_summary_card.dart';
 
+const emptyStateRefreshKey = Key('recommendations_empty_refresh_button');
+
 class RecommendationsScreen extends ConsumerStatefulWidget {
   const RecommendationsScreen({super.key});
 
@@ -76,17 +78,17 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
     return ListView(
       children: [
         SizedBox(height: MediaQuery.of(context).size.height * 0.2),
-        const Center(
+        Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              MascotImage(
+              const MascotImage(
                 assetPath: AppConstants.mascotHappy,
                 width: 96,
                 height: 96,
               ),
               AppConstants.gap16,
-              Padding(
+              const Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: AppConstants.spacingXl,
                 ),
@@ -98,6 +100,17 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
                     color: AppTheme.mutedForeground,
                   ),
                 ),
+              ),
+              AppConstants.gap16,
+              // DB re-read only; the server is solely responsible for
+              // generation, so this button never triggers the edge function.
+              TextButton.icon(
+                key: emptyStateRefreshKey,
+                onPressed: () => ref
+                    .read(recommendationProvider.notifier)
+                    .fetchRecommendations(),
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Aktualisieren'),
               ),
             ],
           ),

@@ -7,10 +7,6 @@ DateTime startOfDay(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
 DateTime endOfDay(DateTime dt) =>
     DateTime(dt.year, dt.month, dt.day).add(const Duration(days: 1));
 
-/// Returns the ISO-8601 string for 7 days before [now] (defaults to now).
-DateTime last7Days([DateTime? now]) =>
-    (now ?? DateTime.now()).subtract(const Duration(days: 7));
-
 /// Formats a DateTime as a German relative time string (e.g. "vor 5 Min.")
 String formatTimeAgo(DateTime dt) {
   final diff = DateTime.now().difference(dt);
