@@ -7,7 +7,6 @@ import 'package:belly_buddy/providers/diary_provider.dart';
 import 'package:belly_buddy/screens/diary/diary_screen.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
-import 'package:belly_buddy/screens/diary/widgets/diary_day_swiper.dart';
 import 'package:belly_buddy/utils/date_format_utils.dart';
 
 import '../../helpers/fakes.dart';
@@ -52,7 +51,6 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // FakeEntryRepository returns testMealEntry (title: Testmahlzeit)
       expect(find.text('Testmahlzeit'), findsOneWidget);
     });
 
@@ -66,7 +64,7 @@ void main() {
       expect(find.text('Noch keine Daten für heute.'), findsOneWidget);
     });
 
-    testWidgets('renders navigation arrows', (tester) async {
+    testWidgets('renders navigation chevrons', (tester) async {
       await tester.pumpWithProviders(
         const DiaryScreen(),
         overrides: _overrides(),
@@ -77,7 +75,7 @@ void main() {
     });
 
     testWidgets(
-      'left-swiping the body when already on today does NOT advance the date',
+      'swiping the PageView left when already on today does NOT advance the date',
       (tester) async {
         final container = createContainer(overrides: _emptyOverrides());
         addTearDown(container.dispose);
@@ -92,20 +90,20 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        await tester.drag(find.byType(DiaryDaySwiper), const Offset(-200, 0));
+        await tester.drag(find.byType(PageView), const Offset(-400, 0));
         await tester.pumpAndSettle();
 
         final after = container.read(diaryDateProvider);
         expect(
           isSameDay(after, today),
           isTrue,
-          reason: 'canSwipeForward is false on today; state must stay put',
+          reason: 'today is the last page; PageView has no forward neighbor',
         );
       },
     );
 
     testWidgets(
-      'left-swiping the body advances to the next day when not on today',
+      'swiping the PageView left advances to the next day when not on today',
       (tester) async {
         final container = createContainer(overrides: _emptyOverrides());
         addTearDown(container.dispose);
@@ -120,7 +118,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        await tester.drag(find.byType(DiaryDaySwiper), const Offset(-200, 0));
+        await tester.drag(find.byType(PageView), const Offset(-400, 0));
         await tester.pumpAndSettle();
 
         final after = container.read(diaryDateProvider);
@@ -129,7 +127,7 @@ void main() {
       },
     );
 
-    testWidgets('right-swiping the body retreats to the previous day', (
+    testWidgets('swiping the PageView right retreats to the previous day', (
       tester,
     ) async {
       final container = createContainer(overrides: _emptyOverrides());
@@ -145,11 +143,35 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      await tester.drag(find.byType(DiaryDaySwiper), const Offset(200, 0));
+      await tester.fling(find.byType(PageView), const Offset(600, 0), 1000);
       await tester.pumpAndSettle();
 
       final after = container.read(diaryDateProvider);
       final expected = today.subtract(const Duration(days: 1));
+      expect(isSameDay(after, expected), isTrue);
+    });
+
+    testWidgets('tapping the next-day chevron animates the PageView forward', (
+      tester,
+    ) async {
+      final container = createContainer(overrides: _emptyOverrides());
+      addTearDown(container.dispose);
+      final twoDaysAgo = DateTime.now().subtract(const Duration(days: 2));
+      container.read(diaryDateProvider.notifier).set(twoDaysAgo);
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(home: DiaryScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(DiaryScreen.nextDayKey));
+      await tester.pumpAndSettle();
+
+      final after = container.read(diaryDateProvider);
+      final expected = twoDaysAgo.add(const Duration(days: 1));
       expect(isSameDay(after, expected), isTrue);
     });
   });

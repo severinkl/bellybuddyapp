@@ -1,5 +1,5 @@
+import 'package:belly_buddy/utils/date_format_utils.dart';
 import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:belly_buddy/screens/diary/diary_screen.dart';
@@ -57,11 +57,11 @@ void main() {
 
     expect(find.byType(DiaryScreen), findsOneWidget);
 
-    final displayedDateFinder = find.byKey(DiaryScreen.displayedDateKey);
-    expect(displayedDateFinder, findsOneWidget);
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
 
-    final dateBefore = tester.widget<Text>(displayedDateFinder).data;
-    expect(dateBefore, isNotNull);
+    expect(find.text(formatDateWeekday(today)), findsWidgets);
 
     final prevDayFinder = find.byKey(DiaryScreen.previousDayKey);
     expect(prevDayFinder, findsOneWidget);
@@ -73,9 +73,6 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(DiaryScreen), findsOneWidget);
-
-    final dateAfter = tester.widget<Text>(displayedDateFinder).data;
-    expect(dateAfter, isNotNull);
-    expect(dateAfter, isNot(equals(dateBefore)));
+    expect(find.text(formatDateWeekday(yesterday)), findsWidgets);
   });
 }
