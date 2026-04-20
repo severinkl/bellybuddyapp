@@ -5,6 +5,7 @@ import '../../config/app_theme.dart';
 import '../../router/route_names.dart';
 import '../../config/constants.dart';
 import '../../providers/diary_provider.dart';
+import '../../utils/date_format_utils.dart';
 import '../../screens/dashboard/widgets/tutorial/tutorial_keys.dart';
 import '../../services/haptic_service.dart';
 
@@ -79,10 +80,9 @@ class BbBottomNav extends ConsumerWidget {
                       isActive: currentIndex == 1,
                       onTap: () {
                         HapticService.light();
-                        final now = DateTime.now();
                         ref
                             .read(diaryDateProvider.notifier)
-                            .set(DateTime(now.year, now.month, now.day));
+                            .set(startOfDay(DateTime.now()));
                         navigationShell.goBranch(1);
                       },
                     ),

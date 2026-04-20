@@ -185,7 +185,6 @@ class _GutFeelingTrackerScreenState
         children: [
           Column(
             children: [
-              // Date & Time chips
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AppConstants.spacingMd,

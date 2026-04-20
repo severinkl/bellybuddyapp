@@ -68,12 +68,7 @@ String formatDateShort(DateTime dt) {
 bool isSameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
 
-/// Builds an initial tracked-at value for tracker screens.
-///
-/// When [initialDate] is null (new entry from the home screen), returns
-/// [DateTime.now()].  When a date is provided (entry opened from a past diary
-/// day), keeps that calendar date but uses the current clock time so the entry
-/// feels "just logged" rather than defaulting to midnight.
+/// Returns [initialDate] at the current wall-clock time, or [DateTime.now()] if null.
 DateTime buildTrackedAt(DateTime? initialDate) {
   if (initialDate == null) return DateTime.now();
   final now = DateTime.now();
