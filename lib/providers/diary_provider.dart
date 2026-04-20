@@ -17,7 +17,10 @@ class _DiaryDateNotifier extends Notifier<DateTime> {
     return DateTime(now.year, now.month, now.day);
   }
 
-  void set(DateTime date) => state = date;
+  void set(DateTime date) {
+    if (state == date) return;
+    state = date;
+  }
 }
 
 final diaryDateProvider = NotifierProvider<_DiaryDateNotifier, DateTime>(
