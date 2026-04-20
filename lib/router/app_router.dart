@@ -40,6 +40,11 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       _log.debug('redirect: path=$path auth=$isAuthenticated');
 
+      // The upgrade-required screen is a hard gate that must always win over
+      // auth routing: the splash applies it before auth state settles, and
+      // once shown the user cannot leave until they update.
+      if (path == RoutePaths.upgradeRequired) return null;
+
       if (!isAuthenticated) {
         // Allow unauthenticated users on welcome, auth, registration, reset-password
         if (isAuthRoute || path == RoutePaths.registration) return null;
@@ -186,6 +191,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.recipes,
         name: RouteNames.recipes,
         builder: (context, state) => const RecipesScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.upgradeRequired,
+        name: RouteNames.upgradeRequired,
+        builder: (_, _) => const UpgradeRequiredScreen(),
       ),
     ],
   );

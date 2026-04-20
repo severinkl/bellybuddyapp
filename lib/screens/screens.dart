@@ -15,4 +15,5 @@ export 'trackers/drink/drink_tracker_screen.dart';
 export 'trackers/gut_feeling/gut_feeling_tracker_screen.dart';
 export 'trackers/meal/meal_tracker_screen.dart';
 export 'trackers/toilet/toilet_tracker_screen.dart';
+export 'upgrade/upgrade_required_screen.dart';
 export 'welcome/welcome_screen.dart';
