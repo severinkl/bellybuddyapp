@@ -84,6 +84,17 @@ class AppConstants {
   // SharedPreferences keys
   static const String keyNotificationModalShown = 'notification_modal_shown';
 
+  /// App Store numeric ID for Belly Buddy. Update once the app is published.
+  static const String iosAppStoreId =
+      '0000000000'; // TODO: replace with real ID before shipping
+
+  /// Builds the App Store URL for the current app.
+  static String appStoreUrl() => 'https://apps.apple.com/app/id$iosAppStoreId';
+
+  /// Builds the Play Store URL for the given Android package name.
+  static String playStoreUrl(String packageName) =>
+      'https://play.google.com/store/apps/details?id=$packageName';
+
   // Icon sizes
   static const double iconSizeXs = 16.0;
   static const double iconSizeSm = 18.0;
