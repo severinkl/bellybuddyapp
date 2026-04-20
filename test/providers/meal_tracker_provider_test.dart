@@ -319,11 +319,29 @@ void main() {
         final container = makeEditContainer();
         addTearDown(container.dispose);
 
-        // Read the original-date provider first so invalidation has something to
-        // invalidate.
-        final originalDate = DateTime(2026, 4, 10);
-        final originalRead = container.read(diaryEntriesProvider(originalDate));
-        expect(originalRead, isA<AsyncValue<List<DiaryEntry>>>());
+        final originalDay = DateTime(2026, 4, 10);
+        final newDay = DateTime(2026, 4, 15);
+
+        // Eagerly read both providers so they materialize; count listener fires
+        // to detect invalidation (an invalidate causes a refetch, which fires
+        // the listener with a new AsyncValue).
+        var originalFires = 0;
+        var newDayFires = 0;
+        container.listen<AsyncValue<List<DiaryEntry>>>(
+          diaryEntriesProvider(originalDay),
+          (_, _) => originalFires++,
+          fireImmediately: true,
+        );
+        container.listen<AsyncValue<List<DiaryEntry>>>(
+          diaryEntriesProvider(newDay),
+          (_, _) => newDayFires++,
+          fireImmediately: true,
+        );
+        // Wait for the initial async resolution to flush through both.
+        await container.read(diaryEntriesProvider(originalDay).future);
+        await container.read(diaryEntriesProvider(newDay).future);
+        final beforeOriginal = originalFires;
+        final beforeNewDay = newDayFires;
 
         final notifier = container.read(mealTrackerProvider.notifier);
         notifier.seed(existing);
@@ -331,20 +349,38 @@ void main() {
 
         await notifier.save();
 
-        // Both dates' providers should have been re-read (invalidation implies a
-        // refresh on next read).
-        final originalDay = DateTime(2026, 4, 10);
-        final newDay = DateTime(2026, 4, 15);
+        // Give Riverpod a tick to propagate the invalidation.
+        await container.read(diaryEntriesProvider(originalDay).future);
+        await container.read(diaryEntriesProvider(newDay).future);
+
         expect(
-          container.read(diaryEntriesProvider(originalDay)),
-          isA<AsyncValue<List<DiaryEntry>>>(),
+          originalFires,
+          greaterThan(beforeOriginal),
+          reason: 'old day invalidated',
         );
         expect(
-          container.read(diaryEntriesProvider(newDay)),
-          isA<AsyncValue<List<DiaryEntry>>>(),
+          newDayFires,
+          greaterThan(beforeNewDay),
+          reason: 'new day invalidated',
         );
       },
     );
+
+    test('isDirty ignores ingredient reorder (set semantics)', () {
+      final container = makeEditContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(mealTrackerProvider.notifier);
+      notifier.seed(existing); // ['Nudeln', 'Tomatensoße', 'Hackfleisch']
+      // Remove then re-add in a different order.
+      notifier.removeIngredient('Nudeln');
+      notifier.addIngredient('Nudeln');
+      expect(
+        container.read(mealTrackerProvider).isDirty,
+        isFalse,
+        reason: 'same ingredients in a different order must not flag dirty',
+      );
+    });
 
     test(
       'save in create mode still calls addMeal (regression check)',

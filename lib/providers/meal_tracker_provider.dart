@@ -55,13 +55,10 @@ class MealTrackerState {
         imageUrl != s.imageUrl; // cleared or swapped the image
   }
 
-  static bool _listEq(List<String> a, List<String> b) {
-    if (a.length != b.length) return false;
-    for (var i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) return false;
-    }
-    return true;
-  }
+  // Ingredient order is not user-meaningful (chips render in insertion order but
+  // mean the same meal regardless), so dirty-tracking uses set equality.
+  static bool _listEq(List<String> a, List<String> b) =>
+      a.length == b.length && a.toSet().containsAll(b);
 
   MealTrackerState copyWith({
     MealEntry? seed,
@@ -127,7 +124,14 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
   void setTrackedAt(DateTime dt) => state = state.copyWith(trackedAt: dt);
 
   void setImage(Uint8List bytes, String fileName) {
-    state = state.copyWith(imageBytes: bytes, imageFileName: fileName);
+    // Clear the remote URL so UI reading state.imageUrl doesn't render the
+    // stale seed image under the new local preview. save() re-derives the
+    // URL from the upload.
+    state = state.copyWith(
+      imageBytes: bytes,
+      imageFileName: fileName,
+      clearImageUrl: true,
+    );
   }
 
   void clearImage() {
