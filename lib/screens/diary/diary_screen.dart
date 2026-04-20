@@ -61,6 +61,7 @@ class _DiaryScreenState extends ConsumerState<DiaryScreen> {
     final date = ref.watch(diaryDateProvider);
     final currentIndex = _indexFor(date);
     final isToday = isSameDay(date, _today);
+    final isFirstDay = currentIndex <= 0;
 
     ref.listen<DateTime>(diaryDateProvider, (_, next) {
       if (!_controller.hasClients) return;
@@ -84,16 +85,19 @@ class _DiaryScreenState extends ConsumerState<DiaryScreen> {
         title: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            CircleIconButton(
-              tapKey: DiaryScreen.previousDayKey,
-              icon: Icons.chevron_left,
-              onPressed: () {
-                HapticService.light();
-                ref
-                    .read(diaryDateProvider.notifier)
-                    .set(_dateAt(currentIndex - 1));
-              },
-            ),
+            if (isFirstDay)
+              const SizedBox(width: 44)
+            else
+              CircleIconButton(
+                tapKey: DiaryScreen.previousDayKey,
+                icon: Icons.chevron_left,
+                onPressed: () {
+                  HapticService.light();
+                  ref
+                      .read(diaryDateProvider.notifier)
+                      .set(_dateAt(currentIndex - 1));
+                },
+              ),
             if (isToday)
               const SizedBox(width: 44)
             else

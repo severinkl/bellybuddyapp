@@ -154,6 +154,24 @@ void main() {
       expect(isSameDay(after, expected), isTrue);
     });
 
+    testWidgets('hides the previous-day chevron on the first available day', (
+      tester,
+    ) async {
+      final container = createContainer(overrides: _emptyOverrides());
+      addTearDown(container.dispose);
+      container.read(diaryDateProvider.notifier).set(DateTime(2020, 1, 1));
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(home: DiaryScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(DiaryScreen.previousDayKey), findsNothing);
+    });
+
     testWidgets('tapping the next-day chevron animates the PageView forward', (
       tester,
     ) async {
