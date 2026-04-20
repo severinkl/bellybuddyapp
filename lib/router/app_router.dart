@@ -187,6 +187,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: RouteNames.recipes,
         builder: (context, state) => const RecipesScreen(),
       ),
+      GoRoute(
+        path: RoutePaths.upgradeRequired,
+        name: RouteNames.upgradeRequired,
+        builder: (_, _) => const UpgradeRequiredScreen(),
+      ),
     ],
   );
 });

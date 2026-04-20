@@ -19,6 +19,7 @@ class RouteNames {
   static const String recommendations = 'recommendations';
   static const String ingredientSuggestions = 'ingredient-suggestions';
   static const String recipes = 'recipes';
+  static const String upgradeRequired = 'upgrade-required';
 }
 
 class RoutePaths {
@@ -43,4 +44,5 @@ class RoutePaths {
   static const String recommendations = '/recommendations';
   static const String ingredientSuggestions = '/ingredient-suggestions';
   static const String recipes = '/recipes';
+  static const String upgradeRequired = '/upgrade-required';
 }
