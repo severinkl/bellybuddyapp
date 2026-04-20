@@ -32,12 +32,16 @@ class TrackerCard extends StatelessWidget {
           children: [
             SvgPicture.asset(svgPath, width: 48, height: 48),
             AppConstants.gap12,
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: AppTheme.fontSizeSubtitleLG,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.foreground,
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(
+                label,
+                softWrap: false,
+                style: const TextStyle(
+                  fontSize: AppTheme.fontSizeSubtitleLG,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.foreground,
+                ),
               ),
             ),
             const Text(
