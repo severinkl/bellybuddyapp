@@ -120,5 +120,20 @@ void main() {
 
       expect(container.read(diaryDateProvider), equals(newDate));
     });
+
+    test('set() with the current date does not notify listeners', () {
+      // Load-bearing: the bottom-nav diary tap calls .set(today)
+      // unconditionally, relying on this guard to avoid invalidating diary
+      // entries when the user is already on today.
+      final container = makeContainer();
+      final initial = container.read(diaryDateProvider);
+
+      var notifications = 0;
+      container.listen(diaryDateProvider, (_, _) => notifications++);
+
+      container.read(diaryDateProvider.notifier).set(initial);
+
+      expect(notifications, equals(0));
+    });
   });
 }

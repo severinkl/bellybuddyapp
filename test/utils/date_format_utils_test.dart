@@ -183,12 +183,15 @@ void main() {
       final initialDate = DateTime(2020, 1, 5, 23, 59, 45, 123);
       final before = DateTime.now();
       final result = buildTrackedAt(initialDate);
+      final after = DateTime.now();
 
       expect(result.year, 2020);
       expect(result.month, 1);
       expect(result.day, 5);
-      expect(result.hour, before.hour);
-      expect(result.minute, before.minute);
+      // Guard against the internal DateTime.now() crossing a minute (and,
+      // rarely, hour) boundary between `before` and `after`.
+      expect([before.hour, after.hour], contains(result.hour));
+      expect([before.minute, after.minute], contains(result.minute));
       expect(result.second, 0);
       expect(result.millisecond, 0);
     });
