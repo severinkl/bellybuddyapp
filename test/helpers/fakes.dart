@@ -210,6 +210,12 @@ class FakeProfileRepository implements ProfileRepository {
 
 // -- FakeEntryRepository --
 class FakeEntryRepository implements EntryRepository {
+  FakeEntryRepository({this.throwOnUpdate = false});
+
+  /// When true, [updateEntry] throws on invocation. Used in tests that verify
+  /// the screen stays open and surfaces the error rather than popping.
+  final bool throwOnUpdate;
+
   final List<Map<String, dynamic>> _inserted = [];
 
   /// Meal payloads that were inserted via [insertEntry], reconstructed as
@@ -250,6 +256,7 @@ class FakeEntryRepository implements EntryRepository {
     String id,
     Map<String, dynamic> data,
   ) async {
+    if (throwOnUpdate) throw Exception('fake update failure');
     if (table == 'meal_entries') {
       updatedMeals.add(MealEntry.fromJson({...data, 'id': id}));
     }

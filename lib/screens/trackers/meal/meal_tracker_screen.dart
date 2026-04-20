@@ -36,25 +36,26 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
   @override
   void initState() {
     super.initState();
-    // Deferred to avoid state change during widget tree construction.
+    // Deferred to a post-frame callback: Riverpod explicitly rejects provider
+    // state changes during widget life-cycles (initState / build / dispose /
+    // didChangeDependencies). The cost is a 1-frame flash of the default
+    // ("Neue Mahlzeit" + empty ingredients) before the seeded data paints.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final notifier = ref.read(mealTrackerProvider.notifier);
       final editId = widget.mealId;
       if (editId == null) {
-        // Reset stale state from previous visit (showSuccess persists).
         notifier.reset();
         return;
       }
       final meal = _lookupMeal(editId);
       if (meal == null) {
-        // Route hit with a stale or unknown id — show "not found" fallback.
         notifier.reset();
         setState(() => _mealNotFound = true);
         return;
       }
       notifier.seed(meal);
-      setState(() => _titleController.text = meal.title);
+      _titleController.text = meal.title;
     });
   }
 
@@ -82,11 +83,14 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
       return;
     }
 
-    await saveWithFeedback(context, () => notifier.save());
+    final ok = await saveWithFeedback(context, () => notifier.save());
 
-    // Edit mode pops; create mode stays on the success overlay.
+    // Edit mode: pop only on success — saveWithFeedback already surfaced the
+    // error SnackBar on failure, and keeping the screen lets the user retry.
+    // Create mode stays on the success overlay regardless (failure leaves the
+    // user on the form, same behavior as before).
     if (!mounted) return;
-    if (widget.mealId != null) context.pop();
+    if (widget.mealId != null && ok) context.pop();
   }
 
   bool _canSave(MealTrackerState state) {
@@ -104,8 +108,17 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.pop(),
           ),
+          title: const Text('Mahlzeit'),
         ),
-        body: const Center(child: Text('Mahlzeit nicht gefunden')),
+        body: const Center(
+          child: Text(
+            'Mahlzeit nicht gefunden',
+            style: TextStyle(
+              fontSize: AppTheme.fontSizeBody,
+              color: AppTheme.mutedForeground,
+            ),
+          ),
+        ),
       );
     }
 

@@ -1,6 +1,7 @@
 // ignore_for_file: invalid_use_of_internal_member
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
+import 'package:belly_buddy/providers/meal_tracker_provider.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/repositories/meal_media_repository.dart';
@@ -185,6 +186,96 @@ void main() {
         expect(find.text('home-sentinel'), findsOneWidget);
       },
     );
+
+    testWidgets(
+      'save after an ingredient change persists the new list and pops',
+      (tester) async {
+        final meal = _seededMeal();
+        final fakeEntries = FakeEntryRepository();
+
+        await _pumpEditScreen(
+          tester,
+          mealId: 'meal-42',
+          overrides: [
+            entriesProviderSeededWith([meal]),
+            entryRepositoryProvider.overrideWithValue(fakeEntries),
+            ingredientRepositoryProvider.overrideWithValue(
+              FakeIngredientRepository(),
+            ),
+            mealMediaRepositoryProvider.overrideWithValue(
+              FakeMealMediaRepository(),
+            ),
+            currentUserIdProvider.overrideWithValue('user-1'),
+          ],
+        );
+
+        // IngredientSearch has a search-field; adding bypasses search by
+        // calling the notifier directly via the container — simpler than
+        // driving the autocomplete UI in this test.
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(MealTrackerScreen)),
+          listen: false,
+        );
+        container.read(mealTrackerProvider.notifier).addIngredient('Parmesan');
+        await tester.pumpAndSettle();
+
+        await tester.ensureVisible(
+          find.byKey(MealTrackerScreen.mealEditSaveKey),
+        );
+        await tester.tap(find.byKey(MealTrackerScreen.mealEditSaveKey));
+        await tester.pumpAndSettle();
+
+        expect(fakeEntries.updatedMeals, hasLength(1));
+        final saved = fakeEntries.updatedMeals.single;
+        expect(saved.id, 'meal-42');
+        expect(
+          saved.ingredients,
+          containsAll(['Nudeln', 'Tomatensoße', 'Parmesan']),
+        );
+        expect(fakeEntries.addedMeals, isEmpty);
+        expect(find.text('home-sentinel'), findsOneWidget);
+      },
+    );
+
+    testWidgets('edit-mode save stays on screen when updateMeal fails', (
+      tester,
+    ) async {
+      final meal = _seededMeal();
+      final failingEntries = FakeEntryRepository(throwOnUpdate: true);
+
+      await _pumpEditScreen(
+        tester,
+        mealId: 'meal-42',
+        overrides: [
+          entriesProviderSeededWith([meal]),
+          entryRepositoryProvider.overrideWithValue(failingEntries),
+          ingredientRepositoryProvider.overrideWithValue(
+            FakeIngredientRepository(),
+          ),
+          mealMediaRepositoryProvider.overrideWithValue(
+            FakeMealMediaRepository(),
+          ),
+          currentUserIdProvider.overrideWithValue('user-1'),
+        ],
+      );
+
+      // Force a dirty state so save attempts a write.
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MealTrackerScreen)),
+        listen: false,
+      );
+      container.read(mealTrackerProvider.notifier).addIngredient('Parmesan');
+      await tester.pumpAndSettle();
+
+      await tester.ensureVisible(find.byKey(MealTrackerScreen.mealEditSaveKey));
+      await tester.tap(find.byKey(MealTrackerScreen.mealEditSaveKey));
+      await tester.pumpAndSettle();
+
+      // Error SnackBar surfaced, screen did NOT pop.
+      expect(find.text('Fehler beim Speichern.'), findsOneWidget);
+      expect(find.byType(MealTrackerScreen), findsOneWidget);
+      expect(find.text('home-sentinel'), findsNothing);
+    });
 
     testWidgets(
       'unknown mealId renders the "Mahlzeit nicht gefunden" fallback',
