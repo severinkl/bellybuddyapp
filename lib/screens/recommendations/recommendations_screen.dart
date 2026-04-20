@@ -29,23 +29,6 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
     });
   }
 
-  Future<void> _generate() async {
-    try {
-      await ref.read(recommendationProvider.notifier).refreshRecommendations();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Neue Empfehlungen erstellt')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Fehler: $e')));
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(recommendationProvider);
@@ -61,17 +44,13 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
           ],
         ),
       ),
-      body: RefreshIndicator(
-        color: AppTheme.primary,
-        onRefresh: _generate,
-        child: state.when(
-          loading: () => _buildLoadingState(),
-          error: (e, _) => _buildErrorState(e),
-          data: (recommendations) {
-            if (recommendations.isEmpty) return _buildEmptyState();
-            return _buildDataState(recommendations);
-          },
-        ),
+      body: state.when(
+        loading: () => _buildLoadingState(),
+        error: (e, _) => _buildErrorState(e),
+        data: (recommendations) {
+          if (recommendations.isEmpty) return _buildEmptyState();
+          return _buildDataState(recommendations);
+        },
       ),
     );
   }
@@ -86,7 +65,8 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
         SizedBox(height: MediaQuery.of(context).size.height * 0.2),
         BbErrorState(
           message: 'Fehler beim Laden der Empfehlungen.',
-          onRetry: _generate,
+          onRetry: () =>
+              ref.read(recommendationProvider.notifier).fetchRecommendations(),
         ),
       ],
     );
@@ -96,36 +76,27 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
     return ListView(
       children: [
         SizedBox(height: MediaQuery.of(context).size.height * 0.2),
-        Center(
+        const Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const MascotImage(
+              MascotImage(
                 assetPath: AppConstants.mascotHappy,
                 width: 96,
                 height: 96,
               ),
               AppConstants.gap16,
-              const Padding(
+              Padding(
                 padding: EdgeInsets.symmetric(
                   horizontal: AppConstants.spacingXl,
                 ),
                 child: Text(
-                  'Noch keine Empfehlungen vorhanden.',
+                  'Noch keine Empfehlungen — sobald Belly Buddy deine Daten analysiert hat, siehst du sie hier.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: AppTheme.fontSizeBodyLG,
                     color: AppTheme.mutedForeground,
                   ),
-                ),
-              ),
-              AppConstants.gap16,
-              ElevatedButton.icon(
-                onPressed: _generate,
-                icon: const Icon(Icons.auto_awesome, size: 18),
-                label: const Text('Empfehlungen erstellen'),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(220, 48),
                 ),
               ),
             ],
