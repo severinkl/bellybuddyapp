@@ -67,3 +67,16 @@ String formatDateShort(DateTime dt) {
 /// Returns true if [a] and [b] fall on the same calendar day.
 bool isSameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
+
+/// Returns [initialDate] at the current wall-clock time, or [DateTime.now()] if null.
+DateTime buildTrackedAt(DateTime? initialDate) {
+  if (initialDate == null) return DateTime.now();
+  final now = DateTime.now();
+  return DateTime(
+    initialDate.year,
+    initialDate.month,
+    initialDate.day,
+    now.hour,
+    now.minute,
+  );
+}

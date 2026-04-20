@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../router/route_names.dart';
 import '../../config/constants.dart';
+import '../../providers/diary_provider.dart';
+import '../../utils/date_format_utils.dart';
 import '../../screens/dashboard/widgets/tutorial/tutorial_keys.dart';
 import '../../services/haptic_service.dart';
 
-class BbBottomNav extends StatelessWidget {
+class BbBottomNav extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
   static const navHomeKey = Key('bottom_nav_home');
   static const navDiaryKey = Key('bottom_nav_diary');
@@ -15,7 +18,7 @@ class BbBottomNav extends StatelessWidget {
   const BbBottomNav({super.key, required this.navigationShell});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = navigationShell.currentIndex;
     final bottomPadding = MediaQuery.of(context).padding.bottom;
     final isDiary = currentIndex == 1;
@@ -63,7 +66,13 @@ class BbBottomNav extends StatelessWidget {
                     tapKey: centerButtonKey,
                     onTap: () {
                       HapticService.light();
-                      context.push(RoutePaths.mealTracker);
+                      // When launched from the diary tab, carry the currently
+                      // viewed day into the meal tracker so the entry lands on
+                      // the same calendar day the user is browsing.
+                      context.push(
+                        RoutePaths.mealTracker,
+                        extra: isDiary ? ref.read(diaryDateProvider) : null,
+                      );
                     },
                   ),
                   // Diary
@@ -77,6 +86,9 @@ class BbBottomNav extends StatelessWidget {
                       isActive: currentIndex == 1,
                       onTap: () {
                         HapticService.light();
+                        ref
+                            .read(diaryDateProvider.notifier)
+                            .set(startOfDay(DateTime.now()));
                         navigationShell.goBranch(1);
                       },
                     ),

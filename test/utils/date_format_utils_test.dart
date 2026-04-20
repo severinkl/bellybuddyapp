@@ -168,4 +168,32 @@ void main() {
       expect(isSameDay(DateTime(2026, 3, 13), DateTime(2026, 4, 13)), false);
     });
   });
+
+  group('buildTrackedAt', () {
+    test('null returns a value within the current now() window', () {
+      final before = DateTime.now();
+      final result = buildTrackedAt(null);
+      final after = DateTime.now();
+
+      expect(result.isAtSameMomentAs(before) || result.isAfter(before), isTrue);
+      expect(result.isAtSameMomentAs(after) || result.isBefore(after), isTrue);
+    });
+
+    test('non-null: date from initialDate, h:m from now, s/ms zeroed', () {
+      final initialDate = DateTime(2020, 1, 5, 23, 59, 45, 123);
+      final before = DateTime.now();
+      final result = buildTrackedAt(initialDate);
+      final after = DateTime.now();
+
+      expect(result.year, 2020);
+      expect(result.month, 1);
+      expect(result.day, 5);
+      // Guard against the internal DateTime.now() crossing a minute (and,
+      // rarely, hour) boundary between `before` and `after`.
+      expect([before.hour, after.hour], contains(result.hour));
+      expect([before.minute, after.minute], contains(result.minute));
+      expect(result.second, 0);
+      expect(result.millisecond, 0);
+    });
+  });
 }
