@@ -7,6 +7,7 @@ class RouteNames {
   static const String registration = 'registration';
   static const String dashboard = 'dashboard';
   static const String mealTracker = 'meal-tracker';
+  static const String mealTrackerEdit = 'meal-tracker-edit';
   static const String toiletTracker = 'toilet-tracker';
   static const String gutFeelingTracker = 'gut-feeling-tracker';
   static const String drinkTracker = 'drink-tracker';
@@ -29,6 +30,8 @@ class RoutePaths {
   static const String registration = '/registration';
   static const String dashboard = '/dashboard';
   static const String mealTracker = '/meal-tracker';
+  static const String mealTrackerEdit = '/meal-tracker/:id';
+  static String mealTrackerEditFor(String id) => '/meal-tracker/$id';
   static const String toiletTracker = '/toilet-tracker';
   static const String gutFeelingTracker = '/gut-feeling-tracker';
   static const String drinkTracker = '/drink-tracker';

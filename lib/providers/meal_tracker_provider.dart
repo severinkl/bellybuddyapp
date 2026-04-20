@@ -11,6 +11,8 @@ import 'diary_provider.dart';
 import 'entries_provider.dart';
 
 class MealTrackerState {
+  final MealEntry? seed; // null = create; non-null = edit
+  final String? imageUrl; // existing remote URL (edit mode seed)
   final String title;
   final List<String> ingredients;
   final Uint8List? imageBytes;
@@ -24,6 +26,8 @@ class MealTrackerState {
   final DateTime trackedAt;
 
   MealTrackerState({
+    this.seed,
+    this.imageUrl,
     this.title = 'Neue Mahlzeit',
     this.ingredients = const [],
     this.imageBytes,
@@ -37,7 +41,28 @@ class MealTrackerState {
     DateTime? trackedAt,
   }) : trackedAt = trackedAt ?? DateTime.now();
 
+  /// True only in edit mode when any seeded field has been modified.
+  /// In create mode ([seed] is null) this always returns false — dirty
+  /// tracking is only meaningful when we have a baseline to compare against.
+  bool get isDirty {
+    final s = seed;
+    if (s == null) return false;
+    return title != s.title ||
+        !_listEq(ingredients, s.ingredients) ||
+        notes != s.notes ||
+        trackedAt != s.trackedAt ||
+        imageBytes != null || // picked a new image
+        imageUrl != s.imageUrl; // cleared or swapped the image
+  }
+
+  // Ingredient order is not user-meaningful (chips render in insertion order but
+  // mean the same meal regardless), so dirty-tracking uses set equality.
+  static bool _listEq(List<String> a, List<String> b) =>
+      a.length == b.length && a.toSet().containsAll(b);
+
   MealTrackerState copyWith({
+    MealEntry? seed,
+    String? imageUrl,
     String? title,
     List<String>? ingredients,
     Uint8List? imageBytes,
@@ -49,12 +74,19 @@ class MealTrackerState {
     Object? ingredientSearchError,
     String? notes,
     DateTime? trackedAt,
+    bool clearImageUrl =
+        false, // explicit clear (since ?? can't distinguish null)
+    bool clearImageBytes = false,
   }) {
     return MealTrackerState(
+      seed: seed ?? this.seed,
+      imageUrl: clearImageUrl ? null : (imageUrl ?? this.imageUrl),
       title: title ?? this.title,
       ingredients: ingredients ?? this.ingredients,
-      imageBytes: imageBytes ?? this.imageBytes,
-      imageFileName: imageFileName ?? this.imageFileName,
+      imageBytes: clearImageBytes ? null : (imageBytes ?? this.imageBytes),
+      imageFileName: clearImageBytes
+          ? null
+          : (imageFileName ?? this.imageFileName),
       isAnalyzing: isAnalyzing ?? this.isAnalyzing,
       isSaving: isSaving ?? this.isSaving,
       showSuccess: showSuccess ?? this.showSuccess,
@@ -75,16 +107,35 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
   /// Reset to fresh state — call when opening the tracker screen
   void reset() => state = MealTrackerState(trackedAt: DateTime.now());
 
+  /// Seed the state from an existing meal for edit mode.
+  void seed(MealEntry meal) {
+    state = MealTrackerState(
+      seed: meal,
+      title: meal.title,
+      ingredients: List<String>.from(meal.ingredients),
+      imageUrl: meal.imageUrl,
+      notes: meal.notes,
+      trackedAt: meal.trackedAt,
+    );
+  }
+
   void setTitle(String title) => state = state.copyWith(title: title);
   void setNotes(String? notes) => state = state.copyWith(notes: notes);
   void setTrackedAt(DateTime dt) => state = state.copyWith(trackedAt: dt);
 
   void setImage(Uint8List bytes, String fileName) {
-    state = state.copyWith(imageBytes: bytes, imageFileName: fileName);
+    // Clear the remote URL so UI reading state.imageUrl doesn't render the
+    // stale seed image under the new local preview. save() re-derives the
+    // URL from the upload.
+    state = state.copyWith(
+      imageBytes: bytes,
+      imageFileName: fileName,
+      clearImageUrl: true,
+    );
   }
 
   void clearImage() {
-    state = MealTrackerState(trackedAt: state.trackedAt, notes: state.notes);
+    state = state.copyWith(clearImageBytes: true, clearImageUrl: true);
   }
 
   Future<void> analyzeImage(Uint8List bytes, String filename) async {
@@ -158,10 +209,12 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
   Future<void> save() async {
     state = state.copyWith(isSaving: true);
     try {
-      String? imageUrl;
+      final existingSeed = state.seed;
+
+      String? resolvedImageUrl = state.imageUrl;
       if (state.imageBytes != null && state.imageFileName != null) {
         final ext = state.imageFileName!.split('.').last;
-        imageUrl = await ref
+        resolvedImageUrl = await ref
             .read(mealMediaRepositoryProvider)
             .uploadMealImage(
               userId: ref.read(currentUserIdProvider)!,
@@ -171,28 +224,45 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
       }
 
       final meal = MealEntry(
-        id: const Uuid().v4(),
+        id: existingSeed?.id ?? const Uuid().v4(),
         trackedAt: state.trackedAt,
         title: state.title,
         ingredients: state.ingredients,
-        imageUrl: imageUrl,
+        imageUrl: resolvedImageUrl,
         notes: state.notes,
       );
 
-      await ref.read(entriesProvider.notifier).addMeal(meal);
+      if (existingSeed == null) {
+        await ref.read(entriesProvider.notifier).addMeal(meal);
+      } else {
+        await ref.read(entriesProvider.notifier).updateMeal(meal);
+      }
 
-      // Invalidate diary cache so it refetches with the new entry
-      final date = DateTime(
+      // Invalidate affected diary days (new date always; old date too if it moved).
+      final newDay = DateTime(
         state.trackedAt.year,
         state.trackedAt.month,
         state.trackedAt.day,
       );
-      ref.invalidate(diaryEntriesProvider(date));
+      ref.invalidate(diaryEntriesProvider(newDay));
+      if (existingSeed != null) {
+        final oldDay = DateTime(
+          existingSeed.trackedAt.year,
+          existingSeed.trackedAt.month,
+          existingSeed.trackedAt.day,
+        );
+        if (oldDay != newDay) ref.invalidate(diaryEntriesProvider(oldDay));
+      }
 
       // Fire and forget
       ref.read(mealMediaRepositoryProvider).triggerSuggestionRefresh();
 
-      state = state.copyWith(isSaving: false, showSuccess: true);
+      // showSuccess is the create-mode "nice job" screen. Edit mode pops
+      // instead — the screen listens to isSaving transitions and pops.
+      state = state.copyWith(
+        isSaving: false,
+        showSuccess: existingSeed == null,
+      );
     } catch (e) {
       state = state.copyWith(isSaving: false);
       rethrow;

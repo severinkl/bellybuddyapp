@@ -4,13 +4,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
+import 'package:belly_buddy/providers/diary_provider.dart';
 import 'package:belly_buddy/providers/meal_tracker_provider.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/repositories/meal_media_repository.dart';
 import 'package:belly_buddy/models/ingredient_search_result.dart';
 
+import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
 import '../helpers/mocks.dart';
 import '../helpers/riverpod_helpers.dart';
@@ -181,6 +184,219 @@ void main() {
         hasLength(1),
       );
     });
+  });
+
+  group('edit mode', () {
+    final existing = MealEntry(
+      id: 'meal-42',
+      trackedAt: DateTime(2026, 4, 10, 12, 30),
+      title: 'Pasta Bolognese',
+      ingredients: const ['Nudeln', 'Tomatensoße', 'Hackfleisch'],
+      imageUrl: 'https://cdn.example/old.jpg',
+      notes: 'Mit extra Parmesan',
+    );
+
+    ProviderContainer makeEditContainer({
+      FakeEntryRepository? entries,
+      FakeMealMediaRepository? media,
+      FakeIngredientRepository? ingredients,
+    }) {
+      return createContainer(
+        overrides: [
+          entryRepositoryProvider.overrideWithValue(
+            entries ?? FakeEntryRepository(),
+          ),
+          mealMediaRepositoryProvider.overrideWithValue(
+            media ?? FakeMealMediaRepository(),
+          ),
+          ingredientRepositoryProvider.overrideWithValue(
+            ingredients ?? FakeIngredientRepository(),
+          ),
+          currentUserIdProvider.overrideWithValue('user-1'),
+        ],
+      );
+    }
+
+    test('seed(meal) copies all fields into state', () {
+      final container = makeEditContainer();
+      addTearDown(container.dispose);
+
+      container.read(mealTrackerProvider.notifier).seed(existing);
+      final s = container.read(mealTrackerProvider);
+
+      expect(s.seed, existing);
+      expect(s.title, 'Pasta Bolognese');
+      expect(s.ingredients, ['Nudeln', 'Tomatensoße', 'Hackfleisch']);
+      expect(s.imageUrl, 'https://cdn.example/old.jpg');
+      expect(s.notes, 'Mit extra Parmesan');
+      expect(s.trackedAt, DateTime(2026, 4, 10, 12, 30));
+      expect(s.isDirty, isFalse);
+    });
+
+    test('isDirty flips to true after any seeded field changes', () {
+      final container = makeEditContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(mealTrackerProvider.notifier);
+      notifier.seed(existing);
+      expect(container.read(mealTrackerProvider).isDirty, isFalse);
+
+      notifier.setTitle('Pasta Carbonara');
+      expect(container.read(mealTrackerProvider).isDirty, isTrue);
+    });
+
+    test(
+      'isDirty stays false if user toggles a field back to the seed value',
+      () {
+        final container = makeEditContainer();
+        addTearDown(container.dispose);
+
+        final notifier = container.read(mealTrackerProvider.notifier);
+        notifier.seed(existing);
+        notifier.setTitle('Etwas Anderes');
+        notifier.setTitle('Pasta Bolognese');
+
+        expect(container.read(mealTrackerProvider).isDirty, isFalse);
+      },
+    );
+
+    test(
+      'save in edit mode calls updateMeal with seed.id and current form state',
+      () async {
+        final fakeEntries = FakeEntryRepository();
+        final container = makeEditContainer(entries: fakeEntries);
+        addTearDown(container.dispose);
+
+        final notifier = container.read(mealTrackerProvider.notifier);
+        notifier.seed(existing);
+        notifier.setTitle('Pasta Carbonara');
+        notifier.addIngredient('Speck');
+
+        await notifier.save();
+
+        expect(fakeEntries.updatedMeals, hasLength(1));
+        final saved = fakeEntries.updatedMeals.single;
+        expect(saved.id, 'meal-42');
+        expect(saved.title, 'Pasta Carbonara');
+        expect(saved.ingredients, contains('Speck'));
+        expect(
+          saved.imageUrl,
+          'https://cdn.example/old.jpg',
+          reason: 'no new bytes picked → keep seed imageUrl',
+        );
+        expect(
+          fakeEntries.addedMeals,
+          isEmpty,
+          reason: 'edit mode must not call addMeal',
+        );
+      },
+    );
+
+    test('save in edit mode uploads new bytes and uses the new URL', () async {
+      final fakeEntries = FakeEntryRepository();
+      final fakeMedia = FakeMealMediaRepository(
+        uploadResult: 'https://cdn.example/new.jpg',
+      );
+      final container = makeEditContainer(
+        entries: fakeEntries,
+        media: fakeMedia,
+      );
+      addTearDown(container.dispose);
+
+      final notifier = container.read(mealTrackerProvider.notifier);
+      notifier.seed(existing);
+      notifier.setImage(Uint8List.fromList([1, 2, 3]), 'new.jpg');
+
+      await notifier.save();
+
+      final saved = fakeEntries.updatedMeals.single;
+      expect(saved.imageUrl, 'https://cdn.example/new.jpg');
+    });
+
+    test(
+      'save in edit mode invalidates both the old and new diary dates when the day changes',
+      () async {
+        final container = makeEditContainer();
+        addTearDown(container.dispose);
+
+        final originalDay = DateTime(2026, 4, 10);
+        final newDay = DateTime(2026, 4, 15);
+
+        // Eagerly read both providers so they materialize; count listener fires
+        // to detect invalidation (an invalidate causes a refetch, which fires
+        // the listener with a new AsyncValue).
+        var originalFires = 0;
+        var newDayFires = 0;
+        container.listen<AsyncValue<List<DiaryEntry>>>(
+          diaryEntriesProvider(originalDay),
+          (_, _) => originalFires++,
+          fireImmediately: true,
+        );
+        container.listen<AsyncValue<List<DiaryEntry>>>(
+          diaryEntriesProvider(newDay),
+          (_, _) => newDayFires++,
+          fireImmediately: true,
+        );
+        // Wait for the initial async resolution to flush through both.
+        await container.read(diaryEntriesProvider(originalDay).future);
+        await container.read(diaryEntriesProvider(newDay).future);
+        final beforeOriginal = originalFires;
+        final beforeNewDay = newDayFires;
+
+        final notifier = container.read(mealTrackerProvider.notifier);
+        notifier.seed(existing);
+        notifier.setTrackedAt(DateTime(2026, 4, 15, 9, 0));
+
+        await notifier.save();
+
+        // Give Riverpod a tick to propagate the invalidation.
+        await container.read(diaryEntriesProvider(originalDay).future);
+        await container.read(diaryEntriesProvider(newDay).future);
+
+        expect(
+          originalFires,
+          greaterThan(beforeOriginal),
+          reason: 'old day invalidated',
+        );
+        expect(
+          newDayFires,
+          greaterThan(beforeNewDay),
+          reason: 'new day invalidated',
+        );
+      },
+    );
+
+    test('isDirty ignores ingredient reorder (set semantics)', () {
+      final container = makeEditContainer();
+      addTearDown(container.dispose);
+
+      final notifier = container.read(mealTrackerProvider.notifier);
+      notifier.seed(existing); // ['Nudeln', 'Tomatensoße', 'Hackfleisch']
+      // Remove then re-add in a different order.
+      notifier.removeIngredient('Nudeln');
+      notifier.addIngredient('Nudeln');
+      expect(
+        container.read(mealTrackerProvider).isDirty,
+        isFalse,
+        reason: 'same ingredients in a different order must not flag dirty',
+      );
+    });
+
+    test(
+      'save in create mode still calls addMeal (regression check)',
+      () async {
+        final fakeEntries = FakeEntryRepository();
+        final container = makeEditContainer(entries: fakeEntries);
+        addTearDown(container.dispose);
+
+        final notifier = container.read(mealTrackerProvider.notifier);
+        notifier.addIngredient('Brot');
+        await notifier.save();
+
+        expect(fakeEntries.addedMeals, hasLength(1));
+        expect(fakeEntries.updatedMeals, isEmpty);
+      },
+    );
   });
 
   group('MealTrackerNotifier.save', () {
