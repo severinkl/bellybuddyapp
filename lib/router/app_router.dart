@@ -115,7 +115,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.mealTracker,
         name: RouteNames.mealTracker,
-        builder: (context, state) => const MealTrackerScreen(),
+        builder: (context, state) {
+          final extra = state.extra;
+          return MealTrackerScreen(
+            initialDate: extra is DateTime ? extra : null,
+          );
+        },
       ),
       GoRoute(
         path: RoutePaths.mealTrackerEdit,

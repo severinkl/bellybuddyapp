@@ -7,6 +7,7 @@ import '../../../models/meal_entry.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../providers/meal_tracker_provider.dart';
 import '../../../router/route_names.dart';
+import '../../../utils/date_format_utils.dart';
 import '../../../utils/save_helper.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/date_time_chips.dart';
@@ -15,7 +16,12 @@ import 'widgets/ingredient_search.dart';
 import 'widgets/meal_image_section.dart';
 
 class MealTrackerScreen extends ConsumerStatefulWidget {
-  const MealTrackerScreen({super.key, this.mealId, this.initial});
+  const MealTrackerScreen({
+    super.key,
+    this.mealId,
+    this.initial,
+    this.initialDate,
+  });
 
   /// When non-null, the screen renders in edit mode for the meal with this ID.
   final String? mealId;
@@ -25,6 +31,12 @@ class MealTrackerScreen extends ConsumerStatefulWidget {
   /// `MealEntry` as GoRouter `extra`, avoiding a provider lookup that would
   /// miss because the diary uses `diaryEntriesProvider`, not `entriesProvider`.
   final MealEntry? initial;
+
+  /// When non-null and in create mode, pre-fills the tracked-at date to this
+  /// day at the current wall-clock time. Passed by the bottom-nav `+` button
+  /// when the user triggers the tracker from the diary tab. Ignored in edit
+  /// mode (the meal's stored trackedAt wins).
+  final DateTime? initialDate;
 
   static const drinkTrackerButtonKey = Key('drink_tracker_button');
   static const mealTrackerTitleKey = Key('meal_tracker_title');
@@ -57,6 +69,9 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
       final notifier = ref.read(mealTrackerProvider.notifier);
       if (widget.mealId == null) {
         notifier.reset();
+        if (widget.initialDate != null) {
+          notifier.setTrackedAt(buildTrackedAt(widget.initialDate));
+        }
         return;
       }
       // Prefer the meal handed to us via GoRouter `extra`; fall back to the

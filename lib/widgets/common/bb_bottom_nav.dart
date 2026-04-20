@@ -66,7 +66,13 @@ class BbBottomNav extends ConsumerWidget {
                     tapKey: centerButtonKey,
                     onTap: () {
                       HapticService.light();
-                      context.push(RoutePaths.mealTracker);
+                      // When launched from the diary tab, carry the currently
+                      // viewed day into the meal tracker so the entry lands on
+                      // the same calendar day the user is browsing.
+                      context.push(
+                        RoutePaths.mealTracker,
+                        extra: isDiary ? ref.read(diaryDateProvider) : null,
+                      );
                     },
                   ),
                   // Diary
