@@ -34,10 +34,8 @@ class _DiaryScreenState extends ConsumerState<DiaryScreen> {
   // ±1h across DST boundaries. Over a multi-year span this rounds to the
   // wrong calendar day. Use DateTime(y, m, d+n) for additions and round
   // hour-differences for the inverse.
-  int _indexFor(DateTime date) {
-    final d = DateTime(date.year, date.month, date.day);
-    return (d.difference(_firstDate).inHours / 24).round();
-  }
+  int _indexFor(DateTime date) =>
+      (startOfDay(date).difference(_firstDate).inHours / 24).round();
 
   DateTime _dateAt(int index) =>
       DateTime(_firstDate.year, _firstDate.month, _firstDate.day + index);
@@ -45,8 +43,7 @@ class _DiaryScreenState extends ConsumerState<DiaryScreen> {
   @override
   void initState() {
     super.initState();
-    final now = DateTime.now();
-    _today = DateTime(now.year, now.month, now.day);
+    _today = startOfDay(DateTime.now());
     _pageCount = _indexFor(_today) + 1;
     _controller = PageController(
       initialPage: _indexFor(ref.read(diaryDateProvider)),
@@ -120,26 +117,18 @@ class _DiaryScreenState extends ConsumerState<DiaryScreen> {
           HapticService.light();
           ref.read(diaryDateProvider.notifier).set(_dateAt(index));
         },
-        itemBuilder: (context, index) => _DiaryPage(
-          date: _dateAt(index),
-          today: _today,
-          firstDate: _firstDate,
-        ),
+        itemBuilder: (context, index) =>
+            _DiaryPage(date: _dateAt(index), today: _today),
       ),
     );
   }
 }
 
 class _DiaryPage extends ConsumerWidget {
-  const _DiaryPage({
-    required this.date,
-    required this.today,
-    required this.firstDate,
-  });
+  const _DiaryPage({required this.date, required this.today});
 
   final DateTime date;
   final DateTime today;
-  final DateTime firstDate;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -155,7 +144,7 @@ class _DiaryPage extends ConsumerWidget {
               final picked = await showDatePicker(
                 context: context,
                 initialDate: date,
-                firstDate: firstDate,
+                firstDate: _DiaryScreenState._firstDate,
                 lastDate: today,
                 locale: const Locale('de', 'DE'),
               );
