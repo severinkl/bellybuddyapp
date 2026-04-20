@@ -10,6 +10,7 @@ import '../../providers/entries_provider.dart';
 import '../../router/route_names.dart';
 import '../../services/haptic_service.dart';
 import '../../widgets/common/tracker_card.dart';
+import 'widgets/diary_day_swiper.dart';
 import 'widgets/diary_detail_sheets.dart';
 import '../../utils/date_format_utils.dart';
 import 'widgets/diary_entry_card.dart';
@@ -24,7 +25,6 @@ class DiaryScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final date = ref.watch(diaryDateProvider);
-    final entriesAsync = ref.watch(diaryEntriesProvider(date));
     final isToday = isSameDay(date, DateTime.now());
 
     return Scaffold(
@@ -100,94 +100,123 @@ class DiaryScreen extends ConsumerWidget {
           ],
         ),
       ),
-      body: RefreshIndicator(
-        color: AppTheme.primary,
-        onRefresh: () async => ref.invalidate(diaryEntriesProvider(date)),
-        child: Column(
-          children: [
-            Expanded(
-              child: entriesAsync.when(
-                loading: () =>
-                    const BbLoadingState(message: 'Einträge laden...'),
-                error: (e, _) => const BbErrorState(
-                  message: 'Fehler beim Laden der Einträge.',
-                ),
-                data: (entries) {
-                  if (entries.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            isToday
-                                ? 'Noch keine Daten für heute.'
-                                : 'Keine Daten für diesen Tag.',
-                            style: const TextStyle(
-                              fontSize: AppTheme.fontSizeTitleLG,
-                              color: AppTheme.mutedForeground,
-                            ),
-                          ),
-                          AppConstants.gap4,
-                          const Text(
-                            'Bereit zum Tracken?',
-                            style: TextStyle(
-                              fontSize: AppTheme.fontSizeHeadingLG,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.foreground,
-                            ),
-                          ),
-                          AppConstants.gap24,
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 32),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: TrackerCard(
-                                    svgPath: AppConstants.logoSvg,
-                                    label: 'Bauchgefühl',
-                                    onTap: () => context.push(
-                                      RoutePaths.gutFeelingTracker,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: TrackerCard(
-                                    svgPath: AppConstants.toiletPaperSvg,
-                                    label: 'Klo',
-                                    onTap: () =>
-                                        context.push(RoutePaths.toiletTracker),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                  return ListView.builder(
-                    padding: AppConstants.paddingMd,
-                    itemCount: entries.length,
-                    itemBuilder: (context, index) {
-                      final entry = entries[index];
-                      return DiaryEntryCard(
-                        entry: entry,
-                        onTap: () => showDiaryDetailSheet(context, ref, entry),
-                        onDismissed: () async {
-                          await ref
-                              .read(entriesProvider.notifier)
-                              .deleteByType(entry.type.name, entry.id);
-                          ref.invalidate(diaryEntriesProvider(date));
-                        },
-                      );
-                    },
-                  );
-                },
+      body: DiaryDaySwiper(
+        canSwipeBack: date.isAfter(DateTime(2020, 1, 1)),
+        canSwipeForward: !isSameDay(date, DateTime.now()),
+        onPrevious: () {
+          HapticService.light();
+          ref
+              .read(diaryDateProvider.notifier)
+              .set(date.subtract(const Duration(days: 1)));
+        },
+        onNext: () {
+          HapticService.light();
+          ref
+              .read(diaryDateProvider.notifier)
+              .set(date.add(const Duration(days: 1)));
+        },
+        child: _DiaryBody(date: date),
+      ),
+    );
+  }
+}
+
+class _DiaryBody extends ConsumerWidget {
+  const _DiaryBody({required this.date});
+
+  final DateTime date;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final entriesAsync = ref.watch(diaryEntriesProvider(date));
+    final isToday = isSameDay(date, DateTime.now());
+
+    return RefreshIndicator(
+      color: AppTheme.primary,
+      onRefresh: () async => ref.invalidate(diaryEntriesProvider(date)),
+      child: Column(
+        children: [
+          Expanded(
+            child: entriesAsync.when(
+              loading: () => const BbLoadingState(message: 'Einträge laden...'),
+              error: (e, _) => const BbErrorState(
+                message: 'Fehler beim Laden der Einträge.',
               ),
+              data: (entries) {
+                if (entries.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          isToday
+                              ? 'Noch keine Daten für heute.'
+                              : 'Keine Daten für diesen Tag.',
+                          style: const TextStyle(
+                            fontSize: AppTheme.fontSizeTitleLG,
+                            color: AppTheme.mutedForeground,
+                          ),
+                        ),
+                        AppConstants.gap4,
+                        const Text(
+                          'Bereit zum Tracken?',
+                          style: TextStyle(
+                            fontSize: AppTheme.fontSizeHeadingLG,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.foreground,
+                          ),
+                        ),
+                        AppConstants.gap24,
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: TrackerCard(
+                                  svgPath: AppConstants.logoSvg,
+                                  label: 'Bauchgefühl',
+                                  onTap: () => context.push(
+                                    RoutePaths.gutFeelingTracker,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: TrackerCard(
+                                  svgPath: AppConstants.toiletPaperSvg,
+                                  label: 'Klo',
+                                  onTap: () =>
+                                      context.push(RoutePaths.toiletTracker),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                return ListView.builder(
+                  padding: AppConstants.paddingMd,
+                  itemCount: entries.length,
+                  itemBuilder: (context, index) {
+                    final entry = entries[index];
+                    return DiaryEntryCard(
+                      entry: entry,
+                      onTap: () => showDiaryDetailSheet(context, ref, entry),
+                      onDismissed: () async {
+                        await ref
+                            .read(entriesProvider.notifier)
+                            .deleteByType(entry.type.name, entry.id);
+                        ref.invalidate(diaryEntriesProvider(date));
+                      },
+                    );
+                  },
+                );
+              },
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
