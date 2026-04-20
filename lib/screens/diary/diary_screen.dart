@@ -28,6 +28,7 @@ class _DiaryScreenState extends ConsumerState<DiaryScreen> {
   static final DateTime _firstDate = DateTime(2020, 1, 1);
   late final PageController _controller;
   late final DateTime _today;
+  late final int _pageCount;
 
   // DST-safe calendar math: Duration(days: n) is n*86400s, which drifts by
   // ±1h across DST boundaries. Over a multi-year span this rounds to the
@@ -46,6 +47,7 @@ class _DiaryScreenState extends ConsumerState<DiaryScreen> {
     super.initState();
     final now = DateTime.now();
     _today = DateTime(now.year, now.month, now.day);
+    _pageCount = _indexFor(_today) + 1;
     _controller = PageController(
       initialPage: _indexFor(ref.read(diaryDateProvider)),
     );
@@ -60,8 +62,8 @@ class _DiaryScreenState extends ConsumerState<DiaryScreen> {
   @override
   Widget build(BuildContext context) {
     final date = ref.watch(diaryDateProvider);
+    final currentIndex = _indexFor(date);
     final isToday = isSameDay(date, _today);
-    final pageCount = _indexFor(_today) + 1;
 
     ref.listen<DateTime>(diaryDateProvider, (_, next) {
       if (!_controller.hasClients) return;
@@ -92,7 +94,7 @@ class _DiaryScreenState extends ConsumerState<DiaryScreen> {
                 HapticService.light();
                 ref
                     .read(diaryDateProvider.notifier)
-                    .set(date.subtract(const Duration(days: 1)));
+                    .set(_dateAt(currentIndex - 1));
               },
             ),
             if (isToday)
@@ -105,7 +107,7 @@ class _DiaryScreenState extends ConsumerState<DiaryScreen> {
                   HapticService.light();
                   ref
                       .read(diaryDateProvider.notifier)
-                      .set(date.add(const Duration(days: 1)));
+                      .set(_dateAt(currentIndex + 1));
                 },
               ),
           ],
@@ -113,40 +115,48 @@ class _DiaryScreenState extends ConsumerState<DiaryScreen> {
       ),
       body: PageView.builder(
         controller: _controller,
-        itemCount: pageCount,
+        itemCount: _pageCount,
         onPageChanged: (index) {
           HapticService.light();
           ref.read(diaryDateProvider.notifier).set(_dateAt(index));
         },
-        itemBuilder: (context, index) => _DiaryPage(date: _dateAt(index)),
+        itemBuilder: (context, index) => _DiaryPage(
+          date: _dateAt(index),
+          today: _today,
+          firstDate: _firstDate,
+        ),
       ),
     );
   }
 }
 
 class _DiaryPage extends ConsumerWidget {
-  const _DiaryPage({required this.date});
+  const _DiaryPage({
+    required this.date,
+    required this.today,
+    required this.firstDate,
+  });
 
   final DateTime date;
+  final DateTime today;
+  final DateTime firstDate;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(
-            AppConstants.spacingMd,
-            AppConstants.spacingSm,
-            AppConstants.spacingMd,
-            AppConstants.spacingSm,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppConstants.spacingMd,
+            vertical: AppConstants.spacingSm,
           ),
           child: GestureDetector(
             onTap: () async {
               final picked = await showDatePicker(
                 context: context,
                 initialDate: date,
-                firstDate: DateTime(2020),
-                lastDate: DateTime.now(),
+                firstDate: firstDate,
+                lastDate: today,
                 locale: const Locale('de', 'DE'),
               );
               if (picked != null) {
@@ -162,7 +172,7 @@ class _DiaryPage extends ConsumerWidget {
                   size: 18,
                   color: AppTheme.mutedForeground,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: AppConstants.spacingSm),
                 Flexible(
                   child: Text(
                     formatDateWeekday(date),
@@ -178,21 +188,23 @@ class _DiaryPage extends ConsumerWidget {
             ),
           ),
         ),
-        Expanded(child: _DiaryBody(date: date)),
+        Expanded(
+          child: _DiaryBody(date: date, isToday: isSameDay(date, today)),
+        ),
       ],
     );
   }
 }
 
 class _DiaryBody extends ConsumerWidget {
-  const _DiaryBody({required this.date});
+  const _DiaryBody({required this.date, required this.isToday});
 
   final DateTime date;
+  final bool isToday;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final entriesAsync = ref.watch(diaryEntriesProvider(date));
-    final isToday = isSameDay(date, DateTime.now());
 
     return RefreshIndicator(
       color: AppTheme.primary,

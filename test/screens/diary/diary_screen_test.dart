@@ -143,6 +143,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
+      // Fling rather than drag: at the last page, a 400px drag sits right on
+      // PageView's commit threshold and non-deterministically snaps back. A
+      // 1000 px/s fling crosses the threshold cleanly.
       await tester.fling(find.byType(PageView), const Offset(600, 0), 1000);
       await tester.pumpAndSettle();
 
