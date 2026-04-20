@@ -241,6 +241,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           return RecipeEditorScreen(recipeId: id);
         },
       ),
+      GoRoute(
+        path: RoutePaths.upgradeRequired,
+        name: RouteNames.upgradeRequired,
+        builder: (_, _) => const UpgradeRequiredScreen(),
+      ),
     ],
   );
 });
