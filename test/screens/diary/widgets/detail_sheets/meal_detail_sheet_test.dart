@@ -34,6 +34,7 @@ void main() {
     );
 
     String? pushedPath;
+    Object? pushedExtra;
     final router = GoRouter(
       initialLocation: '/diary',
       routes: [
@@ -54,6 +55,7 @@ void main() {
           path: '/meal-tracker/:id',
           builder: (context, state) {
             pushedPath = state.uri.toString();
+            pushedExtra = state.extra;
             return const Scaffold(body: Text('edit target'));
           },
         ),
@@ -72,5 +74,13 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(pushedPath, '/meal-tracker/meal-42');
+    expect(
+      pushedExtra,
+      same(meal),
+      reason:
+          'extra must carry the MealEntry so the tracker screen can seed '
+          "without an entriesProvider lookup (which the diary's "
+          'diaryEntriesProvider path never populates).',
+    );
   });
 }

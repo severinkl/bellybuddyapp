@@ -49,8 +49,10 @@ class MealDetailSheet extends StatelessWidget {
             child: OutlinedButton.icon(
               icon: const Icon(Icons.edit_outlined),
               label: const Text('Bearbeiten'),
-              onPressed: () =>
-                  context.push(RoutePaths.mealTrackerEditFor(data.meal.id)),
+              onPressed: () => context.push(
+                RoutePaths.mealTrackerEditFor(data.meal.id),
+                extra: data.meal,
+              ),
             ),
           ),
         ],

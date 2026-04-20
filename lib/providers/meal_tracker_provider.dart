@@ -6,6 +6,7 @@ import '../providers/core_providers.dart';
 import '../repositories/ingredient_repository.dart';
 import '../repositories/meal_media_repository.dart';
 import '../models/ingredient_search_result.dart';
+import '../utils/date_format_utils.dart';
 import '../utils/logger.dart';
 import 'diary_provider.dart';
 import 'entries_provider.dart';
@@ -239,19 +240,13 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
       }
 
       // Invalidate affected diary days (new date always; old date too if it moved).
-      final newDay = DateTime(
-        state.trackedAt.year,
-        state.trackedAt.month,
-        state.trackedAt.day,
-      );
+      final newDay = startOfDay(state.trackedAt);
       ref.invalidate(diaryEntriesProvider(newDay));
-      if (existingSeed != null) {
-        final oldDay = DateTime(
-          existingSeed.trackedAt.year,
-          existingSeed.trackedAt.month,
-          existingSeed.trackedAt.day,
+      if (existingSeed != null &&
+          !isSameDay(existingSeed.trackedAt, state.trackedAt)) {
+        ref.invalidate(
+          diaryEntriesProvider(startOfDay(existingSeed.trackedAt)),
         );
-        if (oldDay != newDay) ref.invalidate(diaryEntriesProvider(oldDay));
       }
 
       // Fire and forget

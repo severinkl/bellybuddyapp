@@ -15,10 +15,16 @@ import 'widgets/ingredient_search.dart';
 import 'widgets/meal_image_section.dart';
 
 class MealTrackerScreen extends ConsumerStatefulWidget {
-  const MealTrackerScreen({super.key, this.mealId});
+  const MealTrackerScreen({super.key, this.mealId, this.initial});
 
   /// When non-null, the screen renders in edit mode for the meal with this ID.
   final String? mealId;
+
+  /// Directly-provided meal for edit mode. Preferred over looking up via
+  /// [mealId]: the detail-sheet navigation passes the already-loaded
+  /// `MealEntry` as GoRouter `extra`, avoiding a provider lookup that would
+  /// miss because the diary uses `diaryEntriesProvider`, not `entriesProvider`.
+  final MealEntry? initial;
 
   static const drinkTrackerButtonKey = Key('drink_tracker_button');
   static const mealTrackerTitleKey = Key('meal_tracker_title');
@@ -43,12 +49,13 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       final notifier = ref.read(mealTrackerProvider.notifier);
-      final editId = widget.mealId;
-      if (editId == null) {
+      if (widget.mealId == null) {
         notifier.reset();
         return;
       }
-      final meal = _lookupMeal(editId);
+      // Prefer the meal handed to us via GoRouter `extra`; fall back to the
+      // entriesProvider lookup for deep-link cold-starts where extra is absent.
+      final meal = widget.initial ?? _lookupMeal(widget.mealId!);
       if (meal == null) {
         notifier.reset();
         setState(() => _mealNotFound = true);
