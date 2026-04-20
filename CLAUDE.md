@@ -28,3 +28,19 @@ All visual constants live in `lib/config/app_theme.dart`. Spacing, radii, and re
 - **Backend**: Supabase (auth, database, storage). Services in `lib/services/` wrap Supabase calls.
 - **Routing**: GoRouter with route paths defined in `lib/router/`.
 - **Logging**: Use `AppLogger` from `lib/utils/logger.dart` — never use bare `print()`.
+
+## Release versioning
+
+Releases are cut automatically on every merge to `main` via `.github/workflows/release.yml` (semantic-release). The bump is derived from the commit messages merged in that PR:
+
+- `fix:` → patch
+- `feat:` → minor
+- `feat!:` or a commit body containing `BREAKING CHANGE:` → major
+
+Non-conventional commit messages are silently ignored by the analyzer — a merge to `main` composed entirely of such commits produces no bump and no release. Use conventional-commit prefixes (`feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`) for every commit.
+
+The release workflow tags `v<version>` and commits the bumped `pubspec.yaml` back to `main`. The deploy workflow (`deploy.yml`) triggers on those tag pushes — never directly on `push: main`.
+
+### One-off migration (already done)
+
+Before `release.yml` ran for the first time, a baseline tag `v1.0.0` was pushed on `main` so semantic-release had a reference point.
