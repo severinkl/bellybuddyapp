@@ -239,8 +239,10 @@ class _DiaryBody extends ConsumerWidget {
                           child: TrackerCard(
                             svgPath: AppConstants.logoSvg,
                             label: 'Bauchgefühl',
-                            onTap: () =>
-                                context.push(RoutePaths.gutFeelingTracker),
+                            onTap: () => context.push(
+                              RoutePaths.gutFeelingTracker,
+                              extra: ref.read(diaryDateProvider),
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -248,7 +250,10 @@ class _DiaryBody extends ConsumerWidget {
                           child: TrackerCard(
                             svgPath: AppConstants.toiletPaperSvg,
                             label: 'Klo',
-                            onTap: () => context.push(RoutePaths.toiletTracker),
+                            onTap: () => context.push(
+                              RoutePaths.toiletTracker,
+                              extra: ref.read(diaryDateProvider),
+                            ),
                           ),
                         ),
                       ],

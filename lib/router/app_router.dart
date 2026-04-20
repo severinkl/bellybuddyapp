@@ -115,7 +115,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.mealTracker,
         name: RouteNames.mealTracker,
-        builder: (context, state) => const MealTrackerScreen(),
+        builder: (context, state) =>
+            MealTrackerScreen(initialDate: state.extra as DateTime?),
       ),
       GoRoute(
         path: RoutePaths.mealTrackerEdit,
@@ -134,17 +135,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.toiletTracker,
         name: RouteNames.toiletTracker,
-        builder: (context, state) => const ToiletTrackerScreen(),
+        builder: (context, state) =>
+            ToiletTrackerScreen(initialDate: state.extra as DateTime?),
       ),
       GoRoute(
         path: RoutePaths.gutFeelingTracker,
         name: RouteNames.gutFeelingTracker,
-        builder: (context, state) => const GutFeelingTrackerScreen(),
+        builder: (context, state) =>
+            GutFeelingTrackerScreen(initialDate: state.extra as DateTime?),
       ),
       GoRoute(
         path: RoutePaths.drinkTracker,
         name: RouteNames.drinkTracker,
-        builder: (context, state) => const DrinkTrackerScreen(),
+        builder: (context, state) =>
+            DrinkTrackerScreen(initialDate: state.extra as DateTime?),
       ),
 
       // Settings routes
