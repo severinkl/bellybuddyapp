@@ -128,13 +128,7 @@ class _GutFeelingTrackerScreenState
     );
     if (mounted) {
       if (success) {
-        // Invalidate diary cache so it refetches with the new entry
-        final date = DateTime(
-          _trackedAt.year,
-          _trackedAt.month,
-          _trackedAt.day,
-        );
-        ref.invalidate(diaryEntriesProvider(date));
+        ref.invalidate(diaryEntriesProvider(startOfDay(_trackedAt)));
         setState(() => _showSuccess = true);
       } else {
         setState(() => _isSaving = false);
