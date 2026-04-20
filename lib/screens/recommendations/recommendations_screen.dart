@@ -10,10 +10,12 @@ import 'widgets/recommendation_card.dart';
 import 'widgets/recommendation_history.dart';
 import 'widgets/recommendation_summary_card.dart';
 
-const emptyStateRefreshKey = Key('recommendations_empty_refresh_button');
-
 class RecommendationsScreen extends ConsumerStatefulWidget {
   const RecommendationsScreen({super.key});
+
+  static const emptyStateRefreshKey = Key(
+    'recommendations_empty_refresh_button',
+  );
 
   @override
   ConsumerState<RecommendationsScreen> createState() =>
@@ -102,14 +104,12 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
                 ),
               ),
               AppConstants.gap16,
-              // DB re-read only; the server is solely responsible for
-              // generation, so this button never triggers the edge function.
               TextButton.icon(
-                key: emptyStateRefreshKey,
+                key: RecommendationsScreen.emptyStateRefreshKey,
                 onPressed: () => ref
                     .read(recommendationProvider.notifier)
                     .fetchRecommendations(),
-                icon: const Icon(Icons.refresh, size: 18),
+                icon: const Icon(Icons.refresh, size: AppConstants.iconSizeSm),
                 label: const Text('Aktualisieren'),
               ),
             ],

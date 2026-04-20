@@ -65,15 +65,11 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pump(const Duration(milliseconds: 100));
 
-        // Error state is showing; tap the retry button.
         await tester.tap(find.text('Erneut versuchen'));
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pump(const Duration(milliseconds: 100));
 
-        // fetchByUserId was called twice (initial + retry).
-        // No method other than fetchByUserId / markAllAsSeen exists on the
-        // repository anymore, so "no regenerate" is also structurally true,
-        // but we assert the call count to pin the retry wiring.
+        // Pins the retry wiring: fetch on initial mount + fetch on retry.
         expect(callCount, equals(2));
         expect(find.textContaining('Tipp'), findsAtLeast(1));
       },
@@ -96,7 +92,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pump(const Duration(milliseconds: 100));
 
-      await tester.tap(find.byKey(emptyStateRefreshKey));
+      await tester.tap(find.byKey(RecommendationsScreen.emptyStateRefreshKey));
       await tester.pump(const Duration(milliseconds: 100));
 
       // Initial mount fires one fetch; tap fires a second.
