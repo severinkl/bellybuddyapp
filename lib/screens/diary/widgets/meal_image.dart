@@ -26,13 +26,9 @@ class _MealImageState extends ConsumerState<MealImage> {
   @override
   void didUpdateWidget(covariant MealImage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.imageUrl != widget.imageUrl) {
-      setState(() {
-        _resolvedUrl = null;
-        _loading = true;
-      });
-      _resolve();
-    }
+    // Keep the old resolved URL during re-resolution so the image doesn't
+    // flash back to the spinner while the new signed URL is being fetched.
+    if (oldWidget.imageUrl != widget.imageUrl) _resolve();
   }
 
   Future<void> _resolve() async {

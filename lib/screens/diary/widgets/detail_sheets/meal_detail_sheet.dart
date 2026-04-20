@@ -56,7 +56,7 @@ class MealDetailSheet extends StatelessWidget {
                 );
                 // Dismiss the sheet on return so the user lands back on the
                 // refreshed diary instead of the now-stale preview on top.
-                if (context.mounted) Navigator.of(context).pop();
+                if (context.mounted) Navigator.pop(context);
               },
             ),
           ),

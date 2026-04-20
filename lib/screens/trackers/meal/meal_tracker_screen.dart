@@ -42,6 +42,12 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
   @override
   void initState() {
     super.initState();
+    assert(
+      widget.initial == null ||
+          widget.mealId == null ||
+          widget.initial!.id == widget.mealId,
+      'initial.id must match mealId when both are provided',
+    );
     // Deferred to a post-frame callback: Riverpod explicitly rejects provider
     // state changes during widget life-cycles (initState / build / dispose /
     // didChangeDependencies). The cost is a 1-frame flash of the default

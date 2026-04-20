@@ -127,9 +127,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           // arrive without `extra`; in that case the screen falls back to
           // looking the meal up by id, which may yield the "not found" state
           // since the diary's entries aren't cached in entriesProvider.
-          final initial = state.extra is MealEntry
-              ? state.extra as MealEntry
-              : null;
+          final initial = state.extra as MealEntry?;
           return MealTrackerScreen(mealId: id, initial: initial);
         },
       ),

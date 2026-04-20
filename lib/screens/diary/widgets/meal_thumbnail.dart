@@ -28,8 +28,10 @@ class _MealThumbnailState extends ConsumerState<MealThumbnail> {
     // Re-resolve when the underlying meal's image path changes (e.g. the
     // user replaced the photo via edit). Without this the ListView keeps
     // the original signed URL for this slot.
+    //
+    // We keep the old resolved URL until the new one lands so the UI doesn't
+    // flash back to the placeholder mid-list.
     if (oldWidget.imageUrl != widget.imageUrl) {
-      setState(() => _resolvedUrl = null);
       _resolve();
     }
   }
