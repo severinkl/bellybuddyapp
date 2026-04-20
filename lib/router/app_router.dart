@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../models/meal_entry.dart';
 import '../providers/auth_provider.dart';
 import '../utils/logger.dart';
 import '../screens/screens.dart';
@@ -121,7 +122,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: RouteNames.mealTrackerEdit,
         builder: (context, state) {
           final id = state.pathParameters['id']!;
-          return MealTrackerScreen(mealId: id);
+          // The detail sheet passes the full MealEntry via `extra` so we can
+          // seed the form without a provider lookup. Deep links (cold start)
+          // arrive without `extra`; in that case the screen falls back to
+          // looking the meal up by id, which may yield the "not found" state
+          // since the diary's entries aren't cached in entriesProvider.
+          final initial = state.extra as MealEntry?;
+          return MealTrackerScreen(mealId: id, initial: initial);
         },
       ),
       GoRoute(

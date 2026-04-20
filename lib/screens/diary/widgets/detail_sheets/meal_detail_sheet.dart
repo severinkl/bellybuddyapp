@@ -49,8 +49,15 @@ class MealDetailSheet extends StatelessWidget {
             child: OutlinedButton.icon(
               icon: const Icon(Icons.edit_outlined),
               label: const Text('Bearbeiten'),
-              onPressed: () =>
-                  context.push(RoutePaths.mealTrackerEditFor(data.meal.id)),
+              onPressed: () async {
+                await context.push(
+                  RoutePaths.mealTrackerEditFor(data.meal.id),
+                  extra: data.meal,
+                );
+                // Dismiss the sheet on return so the user lands back on the
+                // refreshed diary instead of the now-stale preview on top.
+                if (context.mounted) Navigator.pop(context);
+              },
             ),
           ),
         ],
