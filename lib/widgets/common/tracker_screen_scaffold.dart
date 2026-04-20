@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
-import '../../router/route_names.dart';
 import 'bb_success_overlay.dart';
 
 class TrackerScreenScaffold extends StatelessWidget {
@@ -38,8 +37,11 @@ class TrackerScreenScaffold extends StatelessWidget {
         subMessage:
             successSubMessage ?? 'Dein Eintrag wurde erfolgreich erfasst.',
         mascotAsset: successMascotAsset,
-        onDismissed:
-            onSuccessDismissed ?? () => context.go(RoutePaths.dashboard),
+        // Default: pop back to whatever shell branch pushed the tracker.
+        // Dashboard-launched trackers land on dashboard; diary-launched
+        // trackers land on diary (same date, since diaryDateProvider holds
+        // it). Screens that need a different destination override this.
+        onDismissed: onSuccessDismissed ?? () => context.pop(),
         action: successAction,
       );
     }
