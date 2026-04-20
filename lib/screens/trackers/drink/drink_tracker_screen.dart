@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../providers/drink_tracker_provider.dart';
+import '../../../utils/date_format_utils.dart';
 import '../../../utils/drink_helpers.dart';
 import '../../../utils/save_helper.dart';
 import '../../../widgets/common/bb_button.dart';
@@ -24,12 +25,6 @@ class DrinkTrackerScreen extends ConsumerStatefulWidget {
 }
 
 class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
-  DateTime _buildInitialDate(DateTime? date) {
-    if (date == null) return DateTime.now();
-    final now = DateTime.now();
-    return DateTime(date.year, date.month, date.day, now.hour, now.minute);
-  }
-
   @override
   void initState() {
     super.initState();
@@ -39,7 +34,7 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       notifier.reset();
-      notifier.setTrackedAt(_buildInitialDate(widget.initialDate));
+      notifier.setTrackedAt(buildTrackedAt(widget.initialDate));
       notifier.loadDrinks();
       notifier.loadTodayTotal();
     });

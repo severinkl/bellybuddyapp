@@ -7,6 +7,7 @@ import '../../../models/meal_entry.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../providers/meal_tracker_provider.dart';
 import '../../../router/route_names.dart';
+import '../../../utils/date_format_utils.dart';
 import '../../../utils/save_helper.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/date_time_chips.dart';
@@ -48,12 +49,6 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
   bool _isEditingTitle = false;
   bool _mealNotFound = false;
 
-  DateTime _buildInitialDate(DateTime? date) {
-    if (date == null) return DateTime.now();
-    final now = DateTime.now();
-    return DateTime(date.year, date.month, date.day, now.hour, now.minute);
-  }
-
   @override
   void initState() {
     super.initState();
@@ -72,7 +67,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
       final notifier = ref.read(mealTrackerProvider.notifier);
       if (widget.mealId == null) {
         notifier.reset();
-        notifier.setTrackedAt(_buildInitialDate(widget.initialDate));
+        notifier.setTrackedAt(buildTrackedAt(widget.initialDate));
         return;
       }
       // Prefer the meal handed to us via GoRouter `extra`; fall back to the

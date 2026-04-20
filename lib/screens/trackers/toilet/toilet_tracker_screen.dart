@@ -6,6 +6,7 @@ import '../../../config/constants.dart';
 import '../../../models/toilet_entry.dart';
 import '../../../providers/diary_provider.dart';
 import '../../../providers/entries_provider.dart';
+import '../../../utils/date_format_utils.dart';
 import '../../../utils/save_helper.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/bb_slider.dart';
@@ -24,15 +25,9 @@ class ToiletTrackerScreen extends ConsumerStatefulWidget {
 
 class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
   int _stoolType = 3;
-  late DateTime _trackedAt = _buildInitialDate(widget.initialDate);
+  late DateTime _trackedAt = buildTrackedAt(widget.initialDate);
   bool _isSaving = false;
   bool _showSuccess = false;
-
-  DateTime _buildInitialDate(DateTime? date) {
-    if (date == null) return DateTime.now();
-    final now = DateTime.now();
-    return DateTime(date.year, date.month, date.day, now.hour, now.minute);
-  }
 
   Future<void> _save() async {
     setState(() => _isSaving = true);

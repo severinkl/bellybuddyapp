@@ -9,6 +9,7 @@ import '../../../providers/diary_provider.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../router/route_names.dart';
 import '../../../services/haptic_service.dart';
+import '../../../utils/date_format_utils.dart';
 import '../../../utils/save_helper.dart';
 import '../../../widgets/common/bb_success_overlay.dart';
 import '../../../widgets/common/date_time_chips.dart';
@@ -31,7 +32,7 @@ class GutFeelingTrackerScreen extends ConsumerStatefulWidget {
 class _GutFeelingTrackerScreenState
     extends ConsumerState<GutFeelingTrackerScreen>
     with TickerProviderStateMixin {
-  late DateTime _trackedAt = _buildInitialDate(widget.initialDate);
+  late DateTime _trackedAt = buildTrackedAt(widget.initialDate);
   int _activeTab = 0;
   bool _isSaving = false;
   bool _showSuccess = false;
@@ -48,12 +49,6 @@ class _GutFeelingTrackerScreenState
   int _energy = 1;
   int _focus = 1;
   int _bodyFeel = 1;
-
-  DateTime _buildInitialDate(DateTime? date) {
-    if (date == null) return DateTime.now();
-    final now = DateTime.now();
-    return DateTime(date.year, date.month, date.day, now.hour, now.minute);
-  }
 
   // Page controller for smooth tab transitions
   late final PageController _pageController;
