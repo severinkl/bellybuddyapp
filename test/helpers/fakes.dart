@@ -343,11 +343,6 @@ class FakeRecommendationRepository implements RecommendationRepository {
     testRecommendation(),
   ];
   @override
-  Future<List<Recommendation>> refreshRecommendations(
-    String userId,
-    UserProfile? profile,
-  ) async => [testRecommendation(summary: 'Neuer Tipp')];
-  @override
   Future<int> countUnseen(String userId) async => 0;
   @override
   Future<void> markAllAsSeen(String userId) async {}

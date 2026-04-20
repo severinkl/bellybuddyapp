@@ -13,6 +13,10 @@ import 'widgets/recommendation_summary_card.dart';
 class RecommendationsScreen extends ConsumerStatefulWidget {
   const RecommendationsScreen({super.key});
 
+  static const emptyStateRefreshKey = Key(
+    'recommendations_empty_refresh_button',
+  );
+
   @override
   ConsumerState<RecommendationsScreen> createState() =>
       _RecommendationsScreenState();
@@ -27,23 +31,6 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
       await notifier.fetchRecommendations();
       await notifier.markAllAsSeen();
     });
-  }
-
-  Future<void> _generate() async {
-    try {
-      await ref.read(recommendationProvider.notifier).refreshRecommendations();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Neue Empfehlungen erstellt')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Fehler: $e')));
-      }
-    }
   }
 
   @override
@@ -61,17 +48,13 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
           ],
         ),
       ),
-      body: RefreshIndicator(
-        color: AppTheme.primary,
-        onRefresh: _generate,
-        child: state.when(
-          loading: () => _buildLoadingState(),
-          error: (e, _) => _buildErrorState(e),
-          data: (recommendations) {
-            if (recommendations.isEmpty) return _buildEmptyState();
-            return _buildDataState(recommendations);
-          },
-        ),
+      body: state.when(
+        loading: () => _buildLoadingState(),
+        error: (e, _) => _buildErrorState(e),
+        data: (recommendations) {
+          if (recommendations.isEmpty) return _buildEmptyState();
+          return _buildDataState(recommendations);
+        },
       ),
     );
   }
@@ -86,7 +69,8 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
         SizedBox(height: MediaQuery.of(context).size.height * 0.2),
         BbErrorState(
           message: 'Fehler beim Laden der Empfehlungen.',
-          onRetry: _generate,
+          onRetry: () =>
+              ref.read(recommendationProvider.notifier).fetchRecommendations(),
         ),
       ],
     );
@@ -111,7 +95,7 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
                   horizontal: AppConstants.spacingXl,
                 ),
                 child: Text(
-                  'Noch keine Empfehlungen vorhanden.',
+                  'Noch keine Empfehlungen — sobald Belly Buddy deine Daten analysiert hat, siehst du sie hier.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: AppTheme.fontSizeBodyLG,
@@ -120,13 +104,13 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
                 ),
               ),
               AppConstants.gap16,
-              ElevatedButton.icon(
-                onPressed: _generate,
-                icon: const Icon(Icons.auto_awesome, size: 18),
-                label: const Text('Empfehlungen erstellen'),
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(220, 48),
-                ),
+              TextButton.icon(
+                key: RecommendationsScreen.emptyStateRefreshKey,
+                onPressed: () => ref
+                    .read(recommendationProvider.notifier)
+                    .fetchRecommendations(),
+                icon: const Icon(Icons.refresh, size: AppConstants.iconSizeSm),
+                label: const Text('Aktualisieren'),
               ),
             ],
           ),

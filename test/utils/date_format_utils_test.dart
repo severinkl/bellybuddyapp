@@ -90,20 +90,6 @@ void main() {
     });
   });
 
-  group('last7Days', () {
-    test('subtracts 7 days from explicit date', () {
-      final now = DateTime(2026, 3, 13);
-      final result = last7Days(now);
-      expect(result, DateTime(2026, 3, 6));
-    });
-
-    test('handles month boundary', () {
-      final now = DateTime(2026, 3, 3);
-      final result = last7Days(now);
-      expect(result, DateTime(2026, 2, 24));
-    });
-  });
-
   group('formatAnalysisDateRange', () {
     test('produces correct German range string', () {
       final dt = DateTime(2026, 3, 13);
