@@ -8,7 +8,9 @@ import '../../config/constants.dart';
 import '../../providers/entries_provider.dart';
 import '../../providers/ingredient_suggestion_provider.dart';
 import '../../providers/recommendation_provider.dart';
+import '../../providers/upgrade_gate_provider.dart';
 import '../../widgets/common/circle_icon_button.dart';
+import '../../widgets/common/upgrade_available_dialog.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/tutorial_provider.dart';
 import '../../router/route_names.dart';
@@ -42,6 +44,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       await _maybeShowTutorial();
       if (!mounted) return;
       _maybeShowNotificationModal();
+    });
+    // Show the soft-nudge dialog on the dashboard's first frame if the
+    // splash decided the installed app is below `latest_version`. One-shot:
+    // reset the flag immediately so a rebuild / hot-reload doesn't re-trigger.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (ref.read(softNudgePendingProvider)) {
+        ref.read(softNudgePendingProvider.notifier).set(false);
+        showUpgradeAvailableDialog(context);
+      }
     });
   }
 
