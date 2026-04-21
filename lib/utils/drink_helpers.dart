@@ -22,7 +22,7 @@ abstract final class DrinkHelpers {
   }
 
   /// Maximum number of suggestions returned by [search].
-  static const searchResultLimit = 20;
+  static const searchResultLimit = 30;
 
   /// Multi-word search with prefix-weighted ranking.
   /// Returns at most [searchResultLimit] results.
