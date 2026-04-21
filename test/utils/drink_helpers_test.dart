@@ -69,10 +69,13 @@ void main() {
       expect(result.first.name, 'Orangensaft');
     });
 
-    test('results capped at 8', () {
-      final manyDrinks = List.generate(20, (i) => makeDrink('$i', 'Drink $i'));
+    test('results capped at searchResultLimit', () {
+      final manyDrinks = List.generate(
+        DrinkHelpers.searchResultLimit + 5,
+        (i) => makeDrink('$i', 'Drink $i'),
+      );
       final result = DrinkHelpers.search('Drink', manyDrinks);
-      expect(result.length, 8);
+      expect(result.length, DrinkHelpers.searchResultLimit);
     });
 
     test('prefix matches ranked higher', () {
