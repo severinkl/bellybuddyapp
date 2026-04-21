@@ -21,8 +21,11 @@ abstract final class DrinkHelpers {
     return quick;
   }
 
+  /// Maximum number of suggestions returned by [search].
+  static const searchResultLimit = 30;
+
   /// Multi-word search with prefix-weighted ranking.
-  /// Returns at most 8 results.
+  /// Returns at most [searchResultLimit] results.
   static List<Drink> search(String query, List<Drink> allDrinks) {
     if (query.trim().isEmpty) return [];
     final words = query
@@ -55,7 +58,7 @@ abstract final class DrinkHelpers {
 
           return a.name.compareTo(b.name);
         });
-    return filtered.take(8).toList();
+    return filtered.take(searchResultLimit).toList();
   }
 
   /// Parses a custom amount string into a positive int, or null.
