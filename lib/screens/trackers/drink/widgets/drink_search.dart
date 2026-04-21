@@ -41,10 +41,9 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
     if (mounted) setState(() {});
   }
 
-  bool get _shouldShowCreateOption {
+  bool _shouldShowCreateOption(List<Drink> suggestions) {
     final query = _controller.text.trim();
     if (query.isEmpty) return false;
-    final suggestions = ref.read(drinkTrackerProvider).suggestions;
     return !suggestions.any((d) => d.name.toLowerCase() == query.toLowerCase());
   }
 
@@ -95,7 +94,7 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
       drinkTrackerProvider.select((s) => s.suggestions),
     );
     final currentUserId = ref.watch(currentUserIdProvider);
-    final showCreate = _shouldShowCreateOption;
+    final showCreate = _shouldShowCreateOption(suggestions);
     final showSuggestions =
         _focusNode.hasFocus && (suggestions.isNotEmpty || showCreate);
 
@@ -127,11 +126,7 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
               borderSide: BorderSide.none,
             ),
           ),
-          onChanged: (q) {
-            ref.read(drinkTrackerProvider.notifier).searchDrinks(q);
-            // Rebuild so the "create" option re-evaluates against the query.
-            if (mounted) setState(() {});
-          },
+          onChanged: ref.read(drinkTrackerProvider.notifier).searchDrinks,
         ),
         if (showSuggestions)
           Container(
