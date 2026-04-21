@@ -2,16 +2,18 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:belly_buddy/screens/trackers/drink/drink_tracker_screen.dart';
+import 'package:belly_buddy/screens/trackers/drink/widgets/drink_search.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/repositories/drink_repository.dart';
 
 import '../../../helpers/fakes.dart';
+import '../../../helpers/fixtures.dart';
 import '../../../helpers/riverpod_helpers.dart';
 
-List<Override> _overrides() => [
+List<Override> _overrides({FakeDrinkRepository? drinkRepo}) => [
   entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
-  drinkRepositoryProvider.overrideWithValue(FakeDrinkRepository()),
+  drinkRepositoryProvider.overrideWithValue(drinkRepo ?? FakeDrinkRepository()),
   currentUserIdProvider.overrideWithValue('test-user'),
 ];
 
@@ -58,5 +60,53 @@ void main() {
       // FakeDrinkRepository seeds with 'Wasser' drink
       expect(find.text('Wasser'), findsOneWidget);
     });
+
+    testWidgets(
+      'drag inside the suggestion list does not collapse the dropdown',
+      (tester) async {
+        // The whole point of switching DrinkSearch from OverlayPortal to an
+        // inline Column: a user scrolling through tea varieties must not
+        // make the menu disappear. Pin that invariant here so a future
+        // reintroduction of the overlay fails loudly.
+        final repo = FakeDrinkRepository()
+          ..seedDrinks([
+            testDrink(id: 'tee-1', name: 'Schwarzer Tee'),
+            testDrink(id: 'tee-2', name: 'Grüner Tee'),
+            testDrink(id: 'tee-3', name: 'Kräutertee'),
+            testDrink(id: 'tee-4', name: 'Rooibos Tee'),
+            testDrink(id: 'kaffee', name: 'Kaffee'),
+          ]);
+
+        await tester.pumpWithProviders(
+          const DrinkTrackerScreen(),
+          overrides: _overrides(drinkRepo: repo),
+        );
+        await tester.pump(const Duration(milliseconds: 200));
+
+        // Focus the search field and type a query that matches multiple
+        // teas so the suggestion list renders with several items.
+        await tester.tap(find.byKey(DrinkSearch.searchFieldKey));
+        await tester.enterText(find.byKey(DrinkSearch.searchFieldKey), 'Tee');
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.byKey(DrinkSearch.suggestionsKey), findsOneWidget);
+        final insideDropdown = find.descendant(
+          of: find.byKey(DrinkSearch.suggestionsKey),
+          matching: find.text('Schwarzer Tee'),
+        );
+        expect(insideDropdown, findsOneWidget);
+
+        // Simulate the reported bug: the user drags inside the dropdown
+        // trying to scroll. Must not collapse the list.
+        await tester.drag(
+          find.byKey(DrinkSearch.suggestionsKey),
+          const Offset(0, -100),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.byKey(DrinkSearch.suggestionsKey), findsOneWidget);
+        expect(insideDropdown, findsOneWidget);
+      },
+    );
   });
 }
