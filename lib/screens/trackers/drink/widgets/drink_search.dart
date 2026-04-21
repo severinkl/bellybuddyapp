@@ -14,6 +14,8 @@ import '../../../../services/haptic_service.dart';
 class DrinkSearch extends ConsumerStatefulWidget {
   const DrinkSearch({super.key});
 
+  static const suggestionsKey = Key('drink_search_suggestions');
+
   @override
   ConsumerState<DrinkSearch> createState() => _DrinkSearchState();
 }
@@ -104,6 +106,11 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
         TextField(
           controller: _controller,
           focusNode: _focusNode,
+          // The inline suggestion list replaces the old onTapOutside-to-
+          // dismiss path. Expose an explicit keyboard submit so the user
+          // can collapse the dropdown without selecting an item.
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _focusNode.unfocus(),
           decoration: InputDecoration(
             hintText: 'Getränk suchen...',
             prefixIcon: const Icon(Icons.search, size: 20),
@@ -130,12 +137,15 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
         ),
         if (showSuggestions)
           Container(
-            margin: const EdgeInsets.only(top: 4),
+            key: DrinkSearch.suggestionsKey,
+            margin: const EdgeInsets.only(top: AppConstants.spacingXs),
             decoration: BoxDecoration(
               color: AppTheme.card,
               borderRadius: BorderRadius.circular(AppConstants.radiusMd),
               border: Border.all(color: AppTheme.border),
             ),
+            // Clip so ListTile ripples stay inside the rounded corners.
+            clipBehavior: Clip.antiAlias,
             child: Column(
               children: [
                 ...suggestions.map((drink) {
@@ -151,10 +161,12 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
                     onTap: () => _selectDrink(drink),
                     trailing: isOwn
                         ? IconButton(
-                            icon: const Icon(
+                            icon: Icon(
                               Icons.delete_outline,
-                              size: 18,
-                              color: AppTheme.mutedForeground,
+                              size: AppConstants.iconSizeSm,
+                              color: AppTheme.destructive.withValues(
+                                alpha: 0.6,
+                              ),
                             ),
                             onPressed: () => _deleteDrink(drink),
                           )
@@ -166,7 +178,7 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
                     dense: true,
                     leading: const Icon(
                       Icons.add,
-                      size: 18,
+                      size: AppConstants.iconSizeSm,
                       color: AppTheme.primary,
                     ),
                     title: Text(
