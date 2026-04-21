@@ -130,9 +130,8 @@ void main() {
       expect(captured.containsKey('auth_method'), isFalse);
     });
 
-    test(
-      'omits meal_reminder_times so the DB default applies for new users',
-      () async {
+    for (final field in ['meal_reminder_times', 'mood_reminder_times']) {
+      test('omits $field so the DB default applies for new users', () async {
         final profile = testUserProfile();
         when(() => authService.detectAuthMethod()).thenReturn('email');
         when(() => profileService.upsert(any())).thenAnswer((_) async {});
@@ -143,26 +142,9 @@ void main() {
             verify(() => profileService.upsert(captureAny())).captured.single
                 as Map<String, dynamic>;
 
-        expect(captured.containsKey('meal_reminder_times'), isFalse);
-      },
-    );
-
-    test(
-      'omits mood_reminder_times so the DB default applies for new users',
-      () async {
-        final profile = testUserProfile();
-        when(() => authService.detectAuthMethod()).thenReturn('email');
-        when(() => profileService.upsert(any())).thenAnswer((_) async {});
-
-        await repo.createProfile('user-123', profile);
-
-        final captured =
-            verify(() => profileService.upsert(captureAny())).captured.single
-                as Map<String, dynamic>;
-
-        expect(captured.containsKey('mood_reminder_times'), isFalse);
-      },
-    );
+        expect(captured.containsKey(field), isFalse);
+      });
+    }
   });
 
   group('updateProfile', () {
