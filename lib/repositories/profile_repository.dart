@@ -26,6 +26,11 @@ class ProfileRepository {
         .copyWith(userId: userId, authMethod: authMethod)
         .toJson();
     data['user_id'] = userId;
+    // Let Postgres apply the column DEFAULTs for reminder times. The Freezed
+    // model has defaults too, but they don't match the DB defaults, and
+    // sending an explicit value suppresses the DB DEFAULT.
+    data.remove('meal_reminder_times');
+    data.remove('mood_reminder_times');
     data.removeWhere((key, value) => value == null);
     await _profileService.upsert(data);
   }
