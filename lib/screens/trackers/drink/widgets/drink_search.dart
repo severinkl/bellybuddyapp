@@ -14,6 +14,7 @@ import '../../../../services/haptic_service.dart';
 class DrinkSearch extends ConsumerStatefulWidget {
   const DrinkSearch({super.key});
 
+  static const searchFieldKey = Key('drink_search_field');
   static const suggestionsKey = Key('drink_search_suggestions');
 
   @override
@@ -104,6 +105,7 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         TextField(
+          key: DrinkSearch.searchFieldKey,
           controller: _controller,
           focusNode: _focusNode,
           // The inline suggestion list replaces the old onTapOutside-to-

@@ -1,5 +1,4 @@
 // ignore_for_file: invalid_use_of_internal_member
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:belly_buddy/screens/trackers/drink/drink_tracker_screen.dart';
@@ -86,8 +85,8 @@ void main() {
 
         // Focus the search field and type a query that matches multiple
         // teas so the suggestion list renders with several items.
-        await tester.tap(find.byType(TextField));
-        await tester.enterText(find.byType(TextField), 'Tee');
+        await tester.tap(find.byKey(DrinkSearch.searchFieldKey));
+        await tester.enterText(find.byKey(DrinkSearch.searchFieldKey), 'Tee');
         await tester.pump(const Duration(milliseconds: 100));
 
         expect(find.byKey(DrinkSearch.suggestionsKey), findsOneWidget);
