@@ -3,11 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../models/recommendation.dart';
+import '../../providers/recommendation_index_provider.dart';
 import '../../providers/recommendation_provider.dart';
+import '../../services/haptic_service.dart';
+import '../../utils/date_format_utils.dart';
 import '../../widgets/common/bb_async_state.dart';
+import '../../widgets/common/circle_icon_button.dart';
 import '../../widgets/common/mascot_image.dart';
 import 'widgets/recommendation_card.dart';
-import 'widgets/recommendation_history.dart';
 import 'widgets/recommendation_summary_card.dart';
 
 class RecommendationsScreen extends ConsumerStatefulWidget {
@@ -16,6 +19,8 @@ class RecommendationsScreen extends ConsumerStatefulWidget {
   static const emptyStateRefreshKey = Key(
     'recommendations_empty_refresh_button',
   );
+  static const previousRecommendationKey = Key('recommendations_previous');
+  static const nextRecommendationKey = Key('recommendations_next');
 
   @override
   ConsumerState<RecommendationsScreen> createState() =>
@@ -23,9 +28,17 @@ class RecommendationsScreen extends ConsumerStatefulWidget {
 }
 
 class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
+  late final PageController _controller;
+
+  /// The id of the latest recommendation the controller is currently anchored
+  /// to. When a refresh brings a new latest in at index 0, this changes and
+  /// we re-anchor the controller to the new `length - 1`.
+  String? _anchoredLatestId;
+
   @override
   void initState() {
     super.initState();
+    _controller = PageController();
     Future.microtask(() async {
       final notifier = ref.read(recommendationProvider.notifier);
       await notifier.fetchRecommendations();
@@ -34,8 +47,44 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
   }
 
   @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  /// Seed / re-seed the controller + index notifier when the data resolves
+  /// or when a new latest recommendation arrives.
+  void _maybeAnchor(List<Recommendation> list) {
+    if (list.isEmpty) return;
+    final latestId = list.first.id;
+    if (latestId == _anchoredLatestId) return;
+    _anchoredLatestId = latestId;
+
+    final targetPage = list.length - 1;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (_controller.hasClients) {
+        _controller.jumpToPage(targetPage);
+      }
+      ref.read(recommendationIndexProvider.notifier).set(targetPage);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final state = ref.watch(recommendationProvider);
+
+    ref.listen<int>(recommendationIndexProvider, (_, next) {
+      if (!_controller.hasClients) return;
+      final current = (_controller.page ?? _controller.initialPage.toDouble())
+          .round();
+      if (current == next) return;
+      _controller.animateToPage(
+        next,
+        duration: AppConstants.animNormal,
+        curve: Curves.easeOut,
+      );
+    });
 
     return Scaffold(
       appBar: AppBar(
@@ -49,30 +98,25 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
         ),
       ),
       body: state.when(
-        loading: () => _buildLoadingState(),
-        error: (e, _) => _buildErrorState(e),
+        loading: () =>
+            const BbLoadingState(message: 'Analysiere deine Daten...'),
+        error: (e, _) => ListView(
+          children: [
+            SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+            BbErrorState(
+              message: 'Fehler beim Laden der Empfehlungen.',
+              onRetry: () => ref
+                  .read(recommendationProvider.notifier)
+                  .fetchRecommendations(),
+            ),
+          ],
+        ),
         data: (recommendations) {
           if (recommendations.isEmpty) return _buildEmptyState();
-          return _buildDataState(recommendations);
+          _maybeAnchor(recommendations);
+          return _buildSwipeLayout(recommendations);
         },
       ),
-    );
-  }
-
-  Widget _buildLoadingState() {
-    return const BbLoadingState(message: 'Analysiere deine Daten...');
-  }
-
-  Widget _buildErrorState(Object error) {
-    return ListView(
-      children: [
-        SizedBox(height: MediaQuery.of(context).size.height * 0.2),
-        BbErrorState(
-          message: 'Fehler beim Laden der Empfehlungen.',
-          onRetry: () =>
-              ref.read(recommendationProvider.notifier).fetchRecommendations(),
-        ),
-      ],
     );
   }
 
@@ -119,18 +163,105 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
     );
   }
 
-  Widget _buildDataState(List<Recommendation> recommendations) {
-    final latest = recommendations.first;
-    final history = recommendations.length > 1
-        ? recommendations.sublist(1)
-        : <Recommendation>[];
+  Widget _buildSwipeLayout(List<Recommendation> recommendations) {
+    final currentIndex = ref.watch(recommendationIndexProvider);
+    final isOldest = currentIndex == 0;
+    final isLatest = currentIndex == recommendations.length - 1;
+    const chevronSlotWidth = 44.0;
 
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppConstants.spacingMd,
+            vertical: AppConstants.spacingSm,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              if (isOldest)
+                const SizedBox(width: chevronSlotWidth)
+              else
+                CircleIconButton(
+                  tapKey: RecommendationsScreen.previousRecommendationKey,
+                  icon: Icons.chevron_left,
+                  onPressed: () {
+                    HapticService.light();
+                    ref
+                        .read(recommendationIndexProvider.notifier)
+                        .set(currentIndex - 1);
+                  },
+                ),
+              Text(
+                '${currentIndex + 1} von ${recommendations.length} Empfehlungen',
+                style: const TextStyle(
+                  fontSize: AppTheme.fontSizeBody,
+                  color: AppTheme.mutedForeground,
+                ),
+              ),
+              if (isLatest)
+                const SizedBox(width: chevronSlotWidth)
+              else
+                CircleIconButton(
+                  tapKey: RecommendationsScreen.nextRecommendationKey,
+                  icon: Icons.chevron_right,
+                  onPressed: () {
+                    HapticService.light();
+                    ref
+                        .read(recommendationIndexProvider.notifier)
+                        .set(currentIndex + 1);
+                  },
+                ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: PageView.builder(
+            controller: _controller,
+            itemCount: recommendations.length,
+            onPageChanged: (index) {
+              HapticService.light();
+              ref.read(recommendationIndexProvider.notifier).set(index);
+            },
+            itemBuilder: (context, pageIndex) {
+              // pageIndex 0 = oldest; pageIndex length-1 = latest.
+              // Our list from the provider is newest-first, so convert:
+              final listIndex = (recommendations.length - 1) - pageIndex;
+              return _RecommendationPage(
+                recommendation: recommendations[listIndex],
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _RecommendationPage extends StatelessWidget {
+  const _RecommendationPage({required this.recommendation});
+
+  final Recommendation recommendation;
+
+  @override
+  Widget build(BuildContext context) {
+    final createdAt = recommendation.createdAt;
     return ListView(
       padding: AppConstants.paddingMd,
       children: [
-        RecommendationSummaryCard(recommendation: latest),
+        if (createdAt != null) ...[
+          Text(
+            formatDateWeekday(createdAt),
+            style: const TextStyle(
+              fontSize: AppTheme.fontSizeBody,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.mutedForeground,
+            ),
+          ),
+          AppConstants.gap12,
+        ],
+        RecommendationSummaryCard(recommendation: recommendation),
         AppConstants.gap20,
-
         const Text(
           'Empfehlungen',
           style: TextStyle(
@@ -140,19 +271,12 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
           ),
         ),
         AppConstants.gap12,
-
-        ...latest.recommendations.map(
+        ...recommendation.recommendations.map(
           (item) => Padding(
             padding: const EdgeInsets.only(bottom: AppConstants.spacing10),
             child: RecommendationCard(item: item),
           ),
         ),
-
-        if (history.isNotEmpty) ...[
-          AppConstants.gap20,
-          RecommendationHistory(history: history),
-        ],
-
         AppConstants.gap24,
       ],
     );
