@@ -7,6 +7,7 @@ import '../../providers/recommendation_index_provider.dart';
 import '../../providers/recommendation_provider.dart';
 import '../../services/haptic_service.dart';
 import '../../utils/date_format_utils.dart';
+import '../../utils/page_controller_utils.dart';
 import '../../widgets/common/bb_async_state.dart';
 import '../../widgets/common/circle_icon_button.dart';
 import '../../widgets/common/mascot_image.dart';
@@ -28,17 +29,23 @@ class RecommendationsScreen extends ConsumerStatefulWidget {
 }
 
 class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
-  late final PageController _controller;
+  /// Constructed lazily on first data-resolve with the correct `initialPage`,
+  /// so the first frame paints the latest recommendation — no one-frame
+  /// flash to page 0.
+  PageController? _controller;
 
   /// The id of the latest recommendation the controller is currently anchored
   /// to. When a refresh brings a new latest in at index 0, this changes and
-  /// we re-anchor the controller to the new `length - 1`.
+  /// we decide whether to re-anchor (see [_maybeAnchor]).
   String? _anchoredLatestId;
+
+  /// The list length at the time of the last anchor. Used to detect whether
+  /// the user was sitting on the previous latest when a new one arrives.
+  int? _anchoredLength;
 
   @override
   void initState() {
     super.initState();
-    _controller = PageController();
     Future.microtask(() async {
       final notifier = ref.read(recommendationProvider.notifier);
       await notifier.fetchRecommendations();
@@ -48,25 +55,58 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
-  /// Seed / re-seed the controller + index notifier when the data resolves
-  /// or when a new latest recommendation arrives.
+  /// Seed the controller on first data-resolve, or decide how to react when
+  /// a new latest recommendation arrives via refresh:
+  ///
+  /// - First anchor: construct `PageController(initialPage: length - 1)` so
+  ///   the PageView paints the latest on its very first frame.
+  /// - Refresh with a new latest AND the user was sitting on the previous
+  ///   latest: jump to the new latest (they clearly wanted to see newest).
+  /// - Refresh with a new latest while the user is reading an older page:
+  ///   don't move the controller. Our `listIndex = (length - 1) - pageIndex`
+  ///   mapping means the user's current pageIndex now points to the same
+  ///   recommendation they were reading (shifted one slot down the list).
   void _maybeAnchor(List<Recommendation> list) {
     if (list.isEmpty) return;
     final latestId = list.first.id;
     if (latestId == _anchoredLatestId) return;
-    _anchoredLatestId = latestId;
 
+    final isFirstAnchor = _anchoredLatestId == null;
+    final previousLength = _anchoredLength;
     final targetPage = list.length - 1;
+
+    _anchoredLatestId = latestId;
+    _anchoredLength = list.length;
+
+    if (isFirstAnchor) {
+      _controller = PageController(initialPage: targetPage);
+      // onPageChanged does not fire for the initial page, so seed the
+      // notifier explicitly (deferred because Riverpod rejects writes
+      // during build).
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ref.read(recommendationIndexProvider.notifier).set(targetPage);
+      });
+      return;
+    }
+
+    final controller = _controller;
+    if (controller == null) return;
+    final wasAtPreviousLatest =
+        controller.hasClients &&
+        (controller.page ?? controller.initialPage.toDouble()).round() ==
+            (previousLength ?? 0) - 1;
+    if (!wasAtPreviousLatest) return;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      if (_controller.hasClients) {
-        _controller.jumpToPage(targetPage);
-      }
-      ref.read(recommendationIndexProvider.notifier).set(targetPage);
+      // jumpToPage fires onPageChanged which writes the notifier — no
+      // explicit .set() needed.
+      _controller?.jumpToPage(targetPage);
     });
   }
 
@@ -75,14 +115,12 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
     final state = ref.watch(recommendationProvider);
 
     ref.listen<int>(recommendationIndexProvider, (_, next) {
-      if (!_controller.hasClients) return;
-      final current = (_controller.page ?? _controller.initialPage.toDouble())
-          .round();
-      if (current == next) return;
-      _controller.animateToPage(
+      final controller = _controller;
+      if (controller == null) return;
+      animatePageControllerTo(
+        controller,
         next,
         duration: AppConstants.animNormal,
-        curve: Curves.easeOut,
       );
     });
 
@@ -114,7 +152,16 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
         data: (recommendations) {
           if (recommendations.isEmpty) return _buildEmptyState();
           _maybeAnchor(recommendations);
-          return _buildSwipeLayout(recommendations);
+          final controller = _controller;
+          if (controller == null) {
+            // Shouldn't happen — _maybeAnchor constructs on the first
+            // non-empty resolve — but fall back gracefully.
+            return const BbLoadingState(message: 'Analysiere deine Daten...');
+          }
+          return _SwipeLayout(
+            recommendations: recommendations,
+            controller: controller,
+          );
         },
       ),
     );
@@ -162,13 +209,6 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
       ],
     );
   }
-
-  Widget _buildSwipeLayout(List<Recommendation> recommendations) {
-    return _SwipeLayout(
-      recommendations: recommendations,
-      controller: _controller,
-    );
-  }
 }
 
 /// Separate widget so `ref.watch(recommendationIndexProvider)` rebuilds only
@@ -184,7 +224,6 @@ class _SwipeLayout extends ConsumerWidget {
     final currentIndex = ref.watch(recommendationIndexProvider);
     final isOldest = currentIndex == 0;
     final isLatest = currentIndex == recommendations.length - 1;
-    const chevronSlotWidth = 44.0;
 
     return Column(
       children: [
@@ -197,7 +236,7 @@ class _SwipeLayout extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               if (isOldest)
-                const SizedBox(width: chevronSlotWidth)
+                const SizedBox(width: AppConstants.iconBadgeMd)
               else
                 CircleIconButton(
                   tapKey: RecommendationsScreen.previousRecommendationKey,
@@ -217,7 +256,7 @@ class _SwipeLayout extends ConsumerWidget {
                 ),
               ),
               if (isLatest)
-                const SizedBox(width: chevronSlotWidth)
+                const SizedBox(width: AppConstants.iconBadgeMd)
               else
                 CircleIconButton(
                   tapKey: RecommendationsScreen.nextRecommendationKey,
