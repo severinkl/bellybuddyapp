@@ -28,7 +28,9 @@ class ProfileRepository {
     data['user_id'] = userId;
     // Let Postgres apply the column DEFAULTs for reminder times. The Freezed
     // model has defaults too, but they don't match the DB defaults, and
-    // sending an explicit value suppresses the DB DEFAULT.
+    // sending an explicit value suppresses the DB DEFAULT. This strips
+    // unconditionally — if registration ever collects user-picked times,
+    // guard the removes or those inputs will be dropped silently.
     data.remove('meal_reminder_times');
     data.remove('mood_reminder_times');
     data.removeWhere((key, value) => value == null);
