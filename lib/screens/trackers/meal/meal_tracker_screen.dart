@@ -14,6 +14,7 @@ import '../../../widgets/common/date_time_chips.dart';
 import '../../../widgets/common/tracker_screen_scaffold.dart';
 import 'widgets/ingredient_search.dart';
 import 'widgets/meal_image_section.dart';
+import 'widgets/meal_title_sheet.dart';
 
 class MealTrackerScreen extends ConsumerStatefulWidget {
   const MealTrackerScreen({
@@ -47,7 +48,7 @@ class MealTrackerScreen extends ConsumerStatefulWidget {
 }
 
 class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
-  final _titleController = TextEditingController(text: 'Neue Mahlzeit');
+  final _titleController = TextEditingController(text: kDefaultMealTitle);
   bool _isEditingTitle = false;
   bool _mealNotFound = false;
 
@@ -109,6 +110,24 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     if (widget.mealId != null && !ref.read(mealTrackerProvider).isDirty) {
       if (mounted) context.pop();
       return;
+    }
+
+    // If the user never named the meal, interrupt save with a prompt so the
+    // entry is identifiable in the diary. Dismissing the sheet cancels save
+    // entirely; "Ohne Namen speichern" proceeds with the default title.
+    if (_titleController.text.trim() == kDefaultMealTitle) {
+      final outcome = await showMealTitleSheet(context);
+      if (!mounted) return;
+      switch (outcome) {
+        case null:
+          return; // dismissed — abort save
+        case MealTitleEntered(title: final t):
+          _titleController.text = t;
+          notifier.setTitle(t);
+        case MealTitleSkipped():
+          // fall through with the default title already in state
+          break;
+      }
     }
 
     final ok = await saveWithFeedback(context, () => notifier.save());
@@ -285,7 +304,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
             },
             onClearImage: () {
               notifier.clearImage();
-              _titleController.text = 'Neue Mahlzeit';
+              _titleController.text = kDefaultMealTitle;
             },
           ),
           AppConstants.gap16,
