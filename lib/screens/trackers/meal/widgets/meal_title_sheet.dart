@@ -3,6 +3,12 @@ import 'package:flutter/material.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../config/constants.dart';
 
+/// Public keys for the sheet's interactive elements. Exposed so test code
+/// can target them without duplicating the string literal.
+const mealTitleSheetFieldKey = Key('meal_title_sheet_field');
+const mealTitleSheetSubmitKey = Key('meal_title_sheet_submit');
+const mealTitleSheetSkipKey = Key('meal_title_sheet_skip');
+
 /// Result of [showMealTitleSheet].
 ///
 /// `null` from the future means the user dismissed the sheet — the caller
@@ -41,10 +47,6 @@ Future<MealTitleSheetOutcome?> showMealTitleSheet(BuildContext context) {
 
 class _MealTitleSheet extends StatefulWidget {
   const _MealTitleSheet();
-
-  static const titleFieldKey = Key('meal_title_sheet_field');
-  static const submitKey = Key('meal_title_sheet_submit');
-  static const skipKey = Key('meal_title_sheet_skip');
 
   @override
   State<_MealTitleSheet> createState() => _MealTitleSheetState();
@@ -112,7 +114,7 @@ class _MealTitleSheetState extends State<_MealTitleSheet> {
           ),
           AppConstants.gap16,
           TextField(
-            key: _MealTitleSheet.titleFieldKey,
+            key: mealTitleSheetFieldKey,
             controller: _controller,
             autofocus: true,
             textInputAction: TextInputAction.done,
@@ -123,18 +125,18 @@ class _MealTitleSheetState extends State<_MealTitleSheet> {
           ),
           AppConstants.gap16,
           FilledButton(
-            key: _MealTitleSheet.submitKey,
+            key: mealTitleSheetSubmitKey,
             onPressed: _canSubmit ? _submit : null,
             child: const Text('Speichern'),
           ),
           AppConstants.gap8,
           TextButton(
-            key: _MealTitleSheet.skipKey,
+            key: mealTitleSheetSkipKey,
             onPressed: _skip,
             style: TextButton.styleFrom(
               foregroundColor: AppTheme.mutedForeground,
             ),
-            child: const Text('Ohne Name speichern'),
+            child: const Text('Ohne Namen speichern'),
           ),
         ],
       ),

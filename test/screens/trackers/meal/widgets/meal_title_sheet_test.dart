@@ -50,17 +50,39 @@ void main() {
       final future = await _openSheet(tester);
 
       await tester.enterText(
-        find.byKey(const Key('meal_title_sheet_field')),
+        find.byKey(mealTitleSheetFieldKey),
         '  Pasta mit Tomaten  ',
       );
       await tester.pump();
 
-      await tester.tap(find.byKey(const Key('meal_title_sheet_submit')));
+      await tester.tap(find.byKey(mealTitleSheetSubmitKey));
       await _waitForNavPop(tester);
 
       final result = await future;
       expect(result, isA<MealTitleEntered>());
       expect((result as MealTitleEntered).title, 'Pasta mit Tomaten');
+    });
+
+    testWidgets('keyboard Done (onSubmitted) also returns MealTitleEntered', (
+      tester,
+    ) async {
+      final future = await _openSheet(tester);
+
+      await tester.enterText(
+        find.byKey(mealTitleSheetFieldKey),
+        'Haferflocken mit Beeren',
+      );
+      await tester.pump();
+
+      // Simulate the soft-keyboard "Done" action — hits the TextField's
+      // onSubmitted, which should dispatch the same path as tapping the
+      // primary button.
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await _waitForNavPop(tester);
+
+      final result = await future;
+      expect(result, isA<MealTitleEntered>());
+      expect((result as MealTitleEntered).title, 'Haferflocken mit Beeren');
     });
 
     testWidgets('primary is disabled until the field has non-whitespace text', (
@@ -69,37 +91,34 @@ void main() {
       await _openSheet(tester);
 
       final initial = tester.widget<FilledButton>(
-        find.byKey(const Key('meal_title_sheet_submit')),
+        find.byKey(mealTitleSheetSubmitKey),
       );
       expect(initial.onPressed, isNull);
 
-      await tester.enterText(
-        find.byKey(const Key('meal_title_sheet_field')),
-        '   ',
-      );
+      await tester.enterText(find.byKey(mealTitleSheetFieldKey), '   ');
       await tester.pump();
       final stillDisabled = tester.widget<FilledButton>(
-        find.byKey(const Key('meal_title_sheet_submit')),
+        find.byKey(mealTitleSheetSubmitKey),
       );
       expect(stillDisabled.onPressed, isNull);
 
       await tester.enterText(
-        find.byKey(const Key('meal_title_sheet_field')),
+        find.byKey(mealTitleSheetFieldKey),
         'Haferflocken',
       );
       await tester.pump();
       final enabled = tester.widget<FilledButton>(
-        find.byKey(const Key('meal_title_sheet_submit')),
+        find.byKey(mealTitleSheetSubmitKey),
       );
       expect(enabled.onPressed, isNotNull);
     });
 
-    testWidgets('"Ohne Name speichern" returns MealTitleSkipped', (
+    testWidgets('"Ohne Namen speichern" returns MealTitleSkipped', (
       tester,
     ) async {
       final future = await _openSheet(tester);
 
-      await tester.tap(find.byKey(const Key('meal_title_sheet_skip')));
+      await tester.tap(find.byKey(mealTitleSheetSkipKey));
       await _waitForNavPop(tester);
 
       final result = await future;
