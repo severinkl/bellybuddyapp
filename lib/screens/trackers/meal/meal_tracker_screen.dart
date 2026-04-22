@@ -114,7 +114,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
 
     // If the user never named the meal, interrupt save with a prompt so the
     // entry is identifiable in the diary. Dismissing the sheet cancels save
-    // entirely; "Trotzdem speichern" proceeds with the default title.
+    // entirely; "Ohne Name speichern" proceeds with the default title.
     if (_titleController.text.trim() == kDefaultMealTitle) {
       final outcome = await showMealTitleSheet(context);
       if (!mounted) return;

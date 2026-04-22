@@ -134,7 +134,7 @@ class _MealTitleSheetState extends State<_MealTitleSheet> {
             style: TextButton.styleFrom(
               foregroundColor: AppTheme.mutedForeground,
             ),
-            child: const Text('Trotzdem speichern'),
+            child: const Text('Ohne Name speichern'),
           ),
         ],
       ),

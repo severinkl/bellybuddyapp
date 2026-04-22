@@ -94,7 +94,7 @@ void main() {
       expect(enabled.onPressed, isNotNull);
     });
 
-    testWidgets('"Trotzdem speichern" returns MealTitleSkipped', (
+    testWidgets('"Ohne Name speichern" returns MealTitleSkipped', (
       tester,
     ) async {
       final future = await _openSheet(tester);
