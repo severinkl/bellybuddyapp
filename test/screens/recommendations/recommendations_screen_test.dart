@@ -261,6 +261,56 @@ void main() {
     );
 
     testWidgets(
+      'every entry lands on the latest — cached data does not force a loading flicker',
+      (tester) async {
+        // Regression: fetchRecommendations used to flip state to loading even
+        // when cached data was present. That dismounted the PageView, so the
+        // anchor scheduled in the parent's first build lost its target, and
+        // the user ended up on page 0 (oldest) instead of the latest. With
+        // the provider keeping cached data visible during re-fetch, the
+        // PageView stays mounted throughout and the anchor lands.
+        final mock = MockRecommendationRepository();
+        final recs = [_rec('3'), _rec('2'), _rec('1')];
+        when(() => mock.fetchByUserId(any())).thenAnswer((_) async => recs);
+        when(() => mock.markAllAsSeen(any())).thenAnswer((_) async {});
+
+        final container = createContainer(
+          overrides: [
+            recommendationRepositoryProvider.overrideWithValue(mock),
+            currentUserIdProvider.overrideWithValue('test-user'),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        // Warm the cache as if the screen had been entered before.
+        await container
+            .read(recommendationProvider.notifier)
+            .fetchRecommendations();
+        // Leave the global index where a previous session left it — oldest.
+        container.read(recommendationIndexProvider.notifier).set(0);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(home: RecommendationsScreen()),
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Empfehlungen (3 von 3)'),
+          findsOneWidget,
+          reason:
+              'Every screen entry must land on the newest recommendation. '
+              'If this fails, the provider is flipping to loading during a '
+              're-fetch and dismounting the PageView, breaking the anchor.',
+        );
+      },
+    );
+
+    testWidgets(
       'refresh with a new latest while reading an older page keeps the user put',
       (tester) async {
         // Exercises the anchor logic's no-yank branch (_maybeAnchor with
