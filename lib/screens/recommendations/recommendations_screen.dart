@@ -29,10 +29,14 @@ class RecommendationsScreen extends ConsumerStatefulWidget {
 }
 
 class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
-  /// Constructed lazily on first data-resolve with the correct `initialPage`,
-  /// so the first frame paints the latest recommendation — no one-frame
-  /// flash to page 0.
-  PageController? _controller;
+  /// Eagerly constructed in initState (before the PageView mounts) so the
+  /// scroll position attaches cleanly on first layout. Creating a
+  /// `PageController` during the parent's build and handing it to a
+  /// same-build PageView leaves the scroll position in a transitional
+  /// state that blocks gesture input until a programmatic page change
+  /// forces a re-settle — which presents as "swipe doesn't work until I
+  /// tap a chevron once" at cold start.
+  late final PageController _controller;
 
   /// The id of the latest recommendation the controller is currently anchored
   /// to. When a refresh brings a new latest in at index 0, this changes and
@@ -46,6 +50,7 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
   @override
   void initState() {
     super.initState();
+    _controller = PageController();
     Future.microtask(() async {
       final notifier = ref.read(recommendationProvider.notifier);
       await notifier.fetchRecommendations();
@@ -55,21 +60,16 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
 
   @override
   void dispose() {
-    _controller?.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
-  /// Seed the controller on first data-resolve, or decide how to react when
-  /// a new latest recommendation arrives via refresh:
-  ///
-  /// - First anchor: construct `PageController(initialPage: length - 1)` so
-  ///   the PageView paints the latest on its very first frame.
-  /// - Refresh with a new latest AND the user was sitting on the previous
-  ///   latest: jump to the new latest (they clearly wanted to see newest).
-  /// - Refresh with a new latest while the user is reading an older page:
-  ///   don't move the controller. Our `listIndex = (length - 1) - pageIndex`
-  ///   mapping means the user's current pageIndex now points to the same
-  ///   recommendation they were reading (shifted one slot down the list).
+  /// On first data-resolve, jump the controller to the latest and seed the
+  /// notifier. On refresh with a new latest, only jump if the user was
+  /// sitting on the previous latest — otherwise leave them on the page
+  /// they were reading (the `listIndex = (length-1) - pageIndex` mapping
+  /// means the page they're looking at now shows the same recommendation,
+  /// just shifted one slot deeper into the list).
   void _maybeAnchor(List<Recommendation> list) {
     if (list.isEmpty) return;
     final latestId = list.first.id;
@@ -82,31 +82,22 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
     _anchoredLatestId = latestId;
     _anchoredLength = list.length;
 
-    if (isFirstAnchor) {
-      _controller = PageController(initialPage: targetPage);
-      // onPageChanged does not fire for the initial page, so seed the
-      // notifier explicitly (deferred because Riverpod rejects writes
-      // during build).
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        ref.read(recommendationIndexProvider.notifier).set(targetPage);
-      });
-      return;
-    }
-
-    final controller = _controller;
-    if (controller == null) return;
-    final wasAtPreviousLatest =
-        controller.hasClients &&
-        (controller.page ?? controller.initialPage.toDouble()).round() ==
-            (previousLength ?? 0) - 1;
-    if (!wasAtPreviousLatest) return;
+    final shouldJump =
+        isFirstAnchor ||
+        (_controller.hasClients &&
+            (_controller.page ?? _controller.initialPage.toDouble()).round() ==
+                (previousLength ?? 0) - 1);
+    if (!shouldJump) return;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      // jumpToPage fires onPageChanged which writes the notifier — no
-      // explicit .set() needed.
-      _controller?.jumpToPage(targetPage);
+      if (_controller.hasClients) {
+        _controller.jumpToPage(targetPage);
+        // jumpToPage fires onPageChanged → notifier gets written.
+      } else {
+        // Controller didn't attach in time (unusual). Seed directly.
+        ref.read(recommendationIndexProvider.notifier).set(targetPage);
+      }
     });
   }
 
@@ -115,10 +106,8 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
     final state = ref.watch(recommendationProvider);
 
     ref.listen<int>(recommendationIndexProvider, (_, next) {
-      final controller = _controller;
-      if (controller == null) return;
       animatePageControllerTo(
-        controller,
+        _controller,
         next,
         duration: AppConstants.animNormal,
       );
@@ -152,15 +141,9 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
         data: (recommendations) {
           if (recommendations.isEmpty) return _buildEmptyState();
           _maybeAnchor(recommendations);
-          final controller = _controller;
-          if (controller == null) {
-            // Shouldn't happen — _maybeAnchor constructs on the first
-            // non-empty resolve — but fall back gracefully.
-            return const BbLoadingState(message: 'Analysiere deine Daten...');
-          }
           return _SwipeLayout(
             recommendations: recommendations,
-            controller: controller,
+            controller: _controller,
           );
         },
       ),
