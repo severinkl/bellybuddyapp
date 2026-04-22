@@ -164,6 +164,23 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
   }
 
   Widget _buildSwipeLayout(List<Recommendation> recommendations) {
+    return _SwipeLayout(
+      recommendations: recommendations,
+      controller: _controller,
+    );
+  }
+}
+
+/// Separate widget so `ref.watch(recommendationIndexProvider)` rebuilds only
+/// this subtree on page change — not the whole screen (AppBar + state.when).
+class _SwipeLayout extends ConsumerWidget {
+  const _SwipeLayout({required this.recommendations, required this.controller});
+
+  final List<Recommendation> recommendations;
+  final PageController controller;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = ref.watch(recommendationIndexProvider);
     final isOldest = currentIndex == 0;
     final isLatest = currentIndex == recommendations.length - 1;
@@ -217,7 +234,7 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
         ),
         Expanded(
           child: PageView.builder(
-            controller: _controller,
+            controller: controller,
             itemCount: recommendations.length,
             onPageChanged: (index) {
               HapticService.light();
@@ -238,47 +255,52 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
   }
 }
 
-class _RecommendationPage extends StatelessWidget {
+class _RecommendationPage extends ConsumerWidget {
   const _RecommendationPage({required this.recommendation});
 
   final Recommendation recommendation;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final createdAt = recommendation.createdAt;
-    return ListView(
-      padding: AppConstants.paddingMd,
-      children: [
-        if (createdAt != null) ...[
-          Text(
-            formatDateWeekday(createdAt),
-            style: const TextStyle(
-              fontSize: AppTheme.fontSizeBody,
-              fontWeight: FontWeight.w500,
-              color: AppTheme.mutedForeground,
+    return RefreshIndicator(
+      color: AppTheme.primary,
+      onRefresh: () =>
+          ref.read(recommendationProvider.notifier).fetchRecommendations(),
+      child: ListView(
+        padding: AppConstants.paddingMd,
+        children: [
+          if (createdAt != null) ...[
+            Text(
+              formatDateWeekday(createdAt),
+              style: const TextStyle(
+                fontSize: AppTheme.fontSizeBody,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.mutedForeground,
+              ),
+            ),
+            AppConstants.gap12,
+          ],
+          RecommendationSummaryCard(recommendation: recommendation),
+          AppConstants.gap20,
+          const Text(
+            'Empfehlungen',
+            style: TextStyle(
+              fontSize: AppTheme.fontSizeTitle,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.foreground,
             ),
           ),
           AppConstants.gap12,
+          ...recommendation.recommendations.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: AppConstants.spacing10),
+              child: RecommendationCard(item: item),
+            ),
+          ),
+          AppConstants.gap24,
         ],
-        RecommendationSummaryCard(recommendation: recommendation),
-        AppConstants.gap20,
-        const Text(
-          'Empfehlungen',
-          style: TextStyle(
-            fontSize: AppTheme.fontSizeTitle,
-            fontWeight: FontWeight.w600,
-            color: AppTheme.foreground,
-          ),
-        ),
-        AppConstants.gap12,
-        ...recommendation.recommendations.map(
-          (item) => Padding(
-            padding: const EdgeInsets.only(bottom: AppConstants.spacing10),
-            child: RecommendationCard(item: item),
-          ),
-        ),
-        AppConstants.gap24,
-      ],
+      ),
     );
   }
 }
