@@ -8,6 +8,7 @@ import '../../providers/entries_provider.dart';
 import '../../router/route_names.dart';
 import '../../services/haptic_service.dart';
 import '../../utils/date_format_utils.dart';
+import '../../utils/page_controller_utils.dart';
 import '../../widgets/common/bb_async_state.dart';
 import '../../widgets/common/circle_icon_button.dart';
 import '../../widgets/common/tracker_card.dart';
@@ -64,15 +65,10 @@ class _DiaryScreenState extends ConsumerState<DiaryScreen> {
     final isFirstDay = currentIndex <= 0;
 
     ref.listen<DateTime>(diaryDateProvider, (_, next) {
-      if (!_controller.hasClients) return;
-      final target = _indexFor(next);
-      final current = (_controller.page ?? _controller.initialPage.toDouble())
-          .round();
-      if (current == target) return;
-      _controller.animateToPage(
-        target,
+      animatePageControllerTo(
+        _controller,
+        _indexFor(next),
         duration: AppConstants.animNormal,
-        curve: Curves.easeOut,
       );
     });
 
@@ -86,7 +82,7 @@ class _DiaryScreenState extends ConsumerState<DiaryScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             if (isFirstDay)
-              const SizedBox(width: 44)
+              const SizedBox(width: AppConstants.iconBadgeMd)
             else
               CircleIconButton(
                 tapKey: DiaryScreen.previousDayKey,
@@ -99,7 +95,7 @@ class _DiaryScreenState extends ConsumerState<DiaryScreen> {
                 },
               ),
             if (isToday)
-              const SizedBox(width: 44)
+              const SizedBox(width: AppConstants.iconBadgeMd)
             else
               CircleIconButton(
                 tapKey: DiaryScreen.nextDayKey,
