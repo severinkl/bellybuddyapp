@@ -120,7 +120,7 @@ void main() {
           find.byKey(RecommendationsScreen.nextRecommendationKey),
           findsNothing,
         );
-        expect(find.text('(1 von 1)'), findsOneWidget);
+        expect(find.text('Empfehlungen (1 von 1)'), findsOneWidget);
       },
     );
 
@@ -135,7 +135,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
 
-      expect(find.text('(3 von 3)'), findsOneWidget);
+      expect(find.text('Empfehlungen (3 von 3)'), findsOneWidget);
       expect(
         find.byKey(RecommendationsScreen.nextRecommendationKey),
         findsNothing,
@@ -162,7 +162,7 @@ void main() {
         await tester.fling(find.byType(PageView), const Offset(600, 0), 1000);
         await tester.pumpAndSettle();
 
-        expect(find.text('(2 von 3)'), findsOneWidget);
+        expect(find.text('Empfehlungen (2 von 3)'), findsOneWidget);
       },
     );
 
@@ -182,7 +182,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('(2 von 3)'), findsOneWidget);
+        expect(find.text('Empfehlungen (2 von 3)'), findsOneWidget);
       },
     );
 
@@ -222,7 +222,7 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('(3 von 3)'), findsOneWidget);
+        expect(find.text('Empfehlungen (3 von 3)'), findsOneWidget);
       },
     );
 
@@ -242,14 +242,14 @@ void main() {
         await tester.pumpAndSettle();
 
         // Precondition: we're on the latest, no chevron tap yet.
-        expect(find.text('(3 von 3)'), findsOneWidget);
+        expect(find.text('Empfehlungen (3 von 3)'), findsOneWidget);
 
         // Swipe rightward (positive X) — goes to older (pageIndex - 1).
         await tester.fling(find.byType(PageView), const Offset(600, 0), 1000);
         await tester.pumpAndSettle();
 
         expect(
-          find.text('(2 von 3)'),
+          find.text('Empfehlungen (2 von 3)'),
           findsOneWidget,
           reason:
               'First swipe at cold start must advance the PageView. '
@@ -299,7 +299,7 @@ void main() {
         // Move to the oldest (page 0, listIndex 2 = recommendation '1').
         container.read(recommendationIndexProvider.notifier).set(0);
         await tester.pumpAndSettle();
-        expect(find.text('(1 von 3)'), findsOneWidget);
+        expect(find.text('Empfehlungen (1 von 3)'), findsOneWidget);
 
         // Trigger a refresh that returns a new latest '4' prepended.
         await container
@@ -311,7 +311,7 @@ void main() {
         // list is still the oldest ('1'). Indicator reflects "1 von 4":
         // the page they were on is preserved, only the total grew.
         expect(
-          find.text('(1 von 4)'),
+          find.text('Empfehlungen (1 von 4)'),
           findsOneWidget,
           reason:
               'User was on the oldest when the refresh landed; the '

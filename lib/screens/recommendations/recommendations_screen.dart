@@ -124,16 +124,7 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
     });
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.auto_awesome, size: 20),
-            SizedBox(width: AppConstants.spacingSm),
-            Text('Empfehlungen'),
-          ],
-        ),
-      ),
+      appBar: AppBar(title: const _RecommendationsTitle()),
       body: state.when(
         loading: () =>
             const BbLoadingState(message: 'Analysiere deine Daten...'),
@@ -204,6 +195,34 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
   }
 }
 
+/// AppBar title — watches both providers so the position updates as the
+/// user swipes. Kept as its own ConsumerWidget so page changes rebuild just
+/// the title, not the whole outer Scaffold.
+class _RecommendationsTitle extends ConsumerWidget {
+  const _RecommendationsTitle();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final total = ref
+        .watch(recommendationProvider)
+        .maybeWhen(data: (recs) => recs.length, orElse: () => 0);
+    final currentIndex = ref.watch(recommendationIndexProvider);
+
+    final text = total > 0
+        ? 'Empfehlungen (${currentIndex + 1} von $total)'
+        : 'Empfehlungen';
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const Icon(Icons.auto_awesome, size: 20),
+        const SizedBox(width: AppConstants.spacingSm),
+        Flexible(child: Text(text, overflow: TextOverflow.ellipsis)),
+      ],
+    );
+  }
+}
+
 /// Separate widget so `ref.watch(recommendationIndexProvider)` rebuilds only
 /// this subtree on page change — not the whole screen (AppBar + state.when).
 class _SwipeLayout extends ConsumerWidget {
@@ -221,13 +240,7 @@ class _SwipeLayout extends ConsumerWidget {
     // newest-first list index the provider returns.
     final listIndex = (recommendations.length - 1) - currentIndex;
     final safeIndex = listIndex.clamp(0, recommendations.length - 1);
-    final current = recommendations[safeIndex];
-    final dateLabel = current.createdAt == null
-        ? null
-        : formatDateWeekday(current.createdAt!);
-    final headerText = dateLabel == null
-        ? '(${currentIndex + 1} von ${recommendations.length})'
-        : '$dateLabel (${currentIndex + 1} von ${recommendations.length})';
+    final createdAt = recommendations[safeIndex].createdAt;
 
     return Column(
       children: [
@@ -252,18 +265,19 @@ class _SwipeLayout extends ConsumerWidget {
                         .set(currentIndex - 1);
                   },
                 ),
-              Flexible(
-                child: Text(
-                  headerText,
-                  textAlign: TextAlign.center,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: AppTheme.fontSizeBody,
-                    fontWeight: FontWeight.w500,
-                    color: AppTheme.foreground,
+              if (createdAt != null)
+                Flexible(
+                  child: Text(
+                    formatDateWeekday(createdAt),
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: AppTheme.fontSizeBody,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.foreground,
+                    ),
                   ),
                 ),
-              ),
               if (isLatest)
                 const SizedBox(width: AppConstants.iconBadgeMd)
               else
