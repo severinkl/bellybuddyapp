@@ -12,13 +12,7 @@ class RecommendationNotifier
   AsyncValue<List<Recommendation>> build() => const AsyncValue.loading();
 
   Future<void> fetchRecommendations() async {
-    // Only flip to loading when we have no cached data. On re-entry / refresh
-    // we keep the previous list visible so the PageView doesn't dismount —
-    // remounting resets scroll position to initialPage 0 and the "open
-    // on newest" anchor loses its target.
-    if (!state.hasValue) {
-      state = const AsyncValue.loading();
-    }
+    state = const AsyncValue.loading();
     try {
       final userId = ref.read(currentUserIdProvider);
       if (userId == null) {
