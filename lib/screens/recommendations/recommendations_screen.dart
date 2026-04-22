@@ -217,6 +217,17 @@ class _SwipeLayout extends ConsumerWidget {
     final currentIndex = ref.watch(recommendationIndexProvider);
     final isOldest = currentIndex == 0;
     final isLatest = currentIndex == recommendations.length - 1;
+    // pageIndex 0 = oldest; pageIndex length-1 = latest. Convert to the
+    // newest-first list index the provider returns.
+    final listIndex = (recommendations.length - 1) - currentIndex;
+    final safeIndex = listIndex.clamp(0, recommendations.length - 1);
+    final current = recommendations[safeIndex];
+    final dateLabel = current.createdAt == null
+        ? null
+        : formatDateWeekday(current.createdAt!);
+    final headerText = dateLabel == null
+        ? '(${currentIndex + 1} von ${recommendations.length})'
+        : '$dateLabel (${currentIndex + 1} von ${recommendations.length})';
 
     return Column(
       children: [
@@ -241,11 +252,16 @@ class _SwipeLayout extends ConsumerWidget {
                         .set(currentIndex - 1);
                   },
                 ),
-              Text(
-                '${currentIndex + 1} von ${recommendations.length} Empfehlungen',
-                style: const TextStyle(
-                  fontSize: AppTheme.fontSizeBody,
-                  color: AppTheme.mutedForeground,
+              Flexible(
+                child: Text(
+                  headerText,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: AppTheme.fontSizeBody,
+                    fontWeight: FontWeight.w500,
+                    color: AppTheme.foreground,
+                  ),
                 ),
               ),
               if (isLatest)
@@ -294,7 +310,6 @@ class _RecommendationPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final createdAt = recommendation.createdAt;
     return RefreshIndicator(
       color: AppTheme.primary,
       onRefresh: () =>
@@ -302,17 +317,6 @@ class _RecommendationPage extends ConsumerWidget {
       child: ListView(
         padding: AppConstants.paddingMd,
         children: [
-          if (createdAt != null) ...[
-            Text(
-              formatDateWeekday(createdAt),
-              style: const TextStyle(
-                fontSize: AppTheme.fontSizeBody,
-                fontWeight: FontWeight.w500,
-                color: AppTheme.mutedForeground,
-              ),
-            ),
-            AppConstants.gap12,
-          ],
           RecommendationSummaryCard(recommendation: recommendation),
           AppConstants.gap20,
           const Text(
