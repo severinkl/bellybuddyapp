@@ -92,8 +92,18 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       if (_controller.hasClients) {
-        _controller.jumpToPage(targetPage);
-        // jumpToPage fires onPageChanged → notifier gets written.
+        // `animateToPage` (not `jumpToPage`) — jumpToPage leaves the
+        // PageView's scroll physics in a half-initialised state at cold
+        // start, where gesture input is not routed until a subsequent
+        // animateToPage call forces a re-settle. Symptom: swipe does
+        // nothing until the user taps a chevron once. Keep the duration
+        // short so the settle is imperceptible but real.
+        _controller.animateToPage(
+          targetPage,
+          duration: const Duration(milliseconds: 50),
+          curve: Curves.easeOut,
+        );
+        // animateToPage fires onPageChanged → notifier gets written.
       } else {
         // Controller didn't attach in time (unusual). Seed directly.
         ref.read(recommendationIndexProvider.notifier).set(targetPage);

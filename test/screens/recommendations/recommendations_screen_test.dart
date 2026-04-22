@@ -10,6 +10,7 @@ import 'package:riverpod/src/internals.dart' show Override;
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/recommendation_index_provider.dart';
+import 'package:belly_buddy/providers/recommendation_provider.dart';
 import 'package:belly_buddy/repositories/recommendation_repository.dart';
 import 'package:belly_buddy/screens/recommendations/recommendations_screen.dart';
 import 'package:belly_buddy/widgets/common/bb_async_state.dart';
@@ -222,6 +223,100 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('3 von 3 Empfehlungen'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'cold-start swipe input works before any chevron tap (regression)',
+      (tester) async {
+        // Regression test for the bug fixed in efc1efc: after a prior
+        // refactor, at cold start the PageView's scroll physics were
+        // left in a half-initialised state and the first swipe did
+        // nothing until the user tapped a chevron to force a re-settle.
+        await tester.pumpWithProviders(
+          const RecommendationsScreen(),
+          overrides: _overridesFor([_rec('3'), _rec('2'), _rec('1')]),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pumpAndSettle();
+
+        // Precondition: we're on the latest, no chevron tap yet.
+        expect(find.text('3 von 3 Empfehlungen'), findsOneWidget);
+
+        // Swipe rightward (positive X) — goes to older (pageIndex - 1).
+        await tester.fling(find.byType(PageView), const Offset(600, 0), 1000);
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('2 von 3 Empfehlungen'),
+          findsOneWidget,
+          reason:
+              'First swipe at cold start must advance the PageView. '
+              "If this fails, we've regressed to the pre-efc1efc bug "
+              'where the scroll position needed a programmatic '
+              'animateToPage to become gesture-responsive.',
+        );
+      },
+    );
+
+    testWidgets(
+      'refresh with a new latest while reading an older page keeps the user put',
+      (tester) async {
+        // Exercises the anchor logic's no-yank branch (_maybeAnchor with
+        // wasAtPreviousLatest == false): when a fresh recommendation
+        // arrives via refresh, the reader shouldn't be teleported off
+        // the entry they're currently on.
+        final initial = [_rec('3'), _rec('2'), _rec('1')];
+        final afterRefresh = [_rec('4'), _rec('3'), _rec('2'), _rec('1')];
+
+        final mock = MockRecommendationRepository();
+        var callCount = 0;
+        when(() => mock.fetchByUserId(any())).thenAnswer((_) async {
+          callCount++;
+          return callCount == 1 ? initial : afterRefresh;
+        });
+        when(() => mock.markAllAsSeen(any())).thenAnswer((_) async {});
+
+        final container = createContainer(
+          overrides: [
+            recommendationRepositoryProvider.overrideWithValue(mock),
+            currentUserIdProvider.overrideWithValue('test-user'),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(home: RecommendationsScreen()),
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pumpAndSettle();
+
+        // Move to the oldest (page 0, listIndex 2 = recommendation '1').
+        container.read(recommendationIndexProvider.notifier).set(0);
+        await tester.pumpAndSettle();
+        expect(find.text('1 von 3 Empfehlungen'), findsOneWidget);
+
+        // Trigger a refresh that returns a new latest '4' prepended.
+        await container
+            .read(recommendationProvider.notifier)
+            .fetchRecommendations();
+        await tester.pumpAndSettle();
+
+        // User stays on the same PAGE index (0) — which in the new 4-item
+        // list is still the oldest ('1'). Indicator reflects "1 von 4":
+        // the page they were on is preserved, only the total grew.
+        expect(
+          find.text('1 von 4 Empfehlungen'),
+          findsOneWidget,
+          reason:
+              'User was on the oldest when the refresh landed; the '
+              'anchor logic must not jumpToPage and yank them away.',
+        );
       },
     );
   });
