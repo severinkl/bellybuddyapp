@@ -11,6 +11,11 @@ import '../utils/logger.dart';
 import 'diary_provider.dart';
 import 'entries_provider.dart';
 
+/// Placeholder title written to state when the user hasn't given the meal
+/// a name. Save-time code checks against this sentinel to decide whether
+/// to prompt the user before persisting.
+const kDefaultMealTitle = 'Neue Mahlzeit';
+
 class MealTrackerState {
   final MealEntry? seed; // null = create; non-null = edit
   final String? imageUrl; // existing remote URL (edit mode seed)
@@ -29,7 +34,7 @@ class MealTrackerState {
   MealTrackerState({
     this.seed,
     this.imageUrl,
-    this.title = 'Neue Mahlzeit',
+    this.title = kDefaultMealTitle,
     this.ingredients = const [],
     this.imageBytes,
     this.imageFileName,
