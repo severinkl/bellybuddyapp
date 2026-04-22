@@ -5,9 +5,9 @@ import '../../../../config/constants.dart';
 
 /// Public keys for the sheet's interactive elements. Exposed so test code
 /// can target them without duplicating the string literal.
-const mealTitleSheetFieldKey = Key('meal_title_sheet_field');
-const mealTitleSheetSubmitKey = Key('meal_title_sheet_submit');
-const mealTitleSheetSkipKey = Key('meal_title_sheet_skip');
+const kMealTitleSheetFieldKey = Key('meal_title_sheet_field');
+const kMealTitleSheetSubmitKey = Key('meal_title_sheet_submit');
+const kMealTitleSheetSkipKey = Key('meal_title_sheet_skip');
 
 /// Result of [showMealTitleSheet].
 ///
@@ -114,7 +114,7 @@ class _MealTitleSheetState extends State<_MealTitleSheet> {
           ),
           AppConstants.gap16,
           TextField(
-            key: mealTitleSheetFieldKey,
+            key: kMealTitleSheetFieldKey,
             controller: _controller,
             autofocus: true,
             textInputAction: TextInputAction.done,
@@ -125,13 +125,13 @@ class _MealTitleSheetState extends State<_MealTitleSheet> {
           ),
           AppConstants.gap16,
           FilledButton(
-            key: mealTitleSheetSubmitKey,
+            key: kMealTitleSheetSubmitKey,
             onPressed: _canSubmit ? _submit : null,
             child: const Text('Speichern'),
           ),
           AppConstants.gap8,
           TextButton(
-            key: mealTitleSheetSkipKey,
+            key: kMealTitleSheetSkipKey,
             onPressed: _skip,
             style: TextButton.styleFrom(
               foregroundColor: AppTheme.mutedForeground,

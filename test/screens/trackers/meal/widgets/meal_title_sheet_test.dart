@@ -50,12 +50,12 @@ void main() {
       final future = await _openSheet(tester);
 
       await tester.enterText(
-        find.byKey(mealTitleSheetFieldKey),
+        find.byKey(kMealTitleSheetFieldKey),
         '  Pasta mit Tomaten  ',
       );
       await tester.pump();
 
-      await tester.tap(find.byKey(mealTitleSheetSubmitKey));
+      await tester.tap(find.byKey(kMealTitleSheetSubmitKey));
       await _waitForNavPop(tester);
 
       final result = await future;
@@ -69,7 +69,7 @@ void main() {
       final future = await _openSheet(tester);
 
       await tester.enterText(
-        find.byKey(mealTitleSheetFieldKey),
+        find.byKey(kMealTitleSheetFieldKey),
         'Haferflocken mit Beeren',
       );
       await tester.pump();
@@ -91,24 +91,24 @@ void main() {
       await _openSheet(tester);
 
       final initial = tester.widget<FilledButton>(
-        find.byKey(mealTitleSheetSubmitKey),
+        find.byKey(kMealTitleSheetSubmitKey),
       );
       expect(initial.onPressed, isNull);
 
-      await tester.enterText(find.byKey(mealTitleSheetFieldKey), '   ');
+      await tester.enterText(find.byKey(kMealTitleSheetFieldKey), '   ');
       await tester.pump();
       final stillDisabled = tester.widget<FilledButton>(
-        find.byKey(mealTitleSheetSubmitKey),
+        find.byKey(kMealTitleSheetSubmitKey),
       );
       expect(stillDisabled.onPressed, isNull);
 
       await tester.enterText(
-        find.byKey(mealTitleSheetFieldKey),
+        find.byKey(kMealTitleSheetFieldKey),
         'Haferflocken',
       );
       await tester.pump();
       final enabled = tester.widget<FilledButton>(
-        find.byKey(mealTitleSheetSubmitKey),
+        find.byKey(kMealTitleSheetSubmitKey),
       );
       expect(enabled.onPressed, isNotNull);
     });
@@ -118,7 +118,7 @@ void main() {
     ) async {
       final future = await _openSheet(tester);
 
-      await tester.tap(find.byKey(mealTitleSheetSkipKey));
+      await tester.tap(find.byKey(kMealTitleSheetSkipKey));
       await _waitForNavPop(tester);
 
       final result = await future;
