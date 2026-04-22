@@ -251,27 +251,6 @@ class LocalNotificationService {
     _log.debug('cancelled all mood reminders');
   }
 
-  /// Show a test notification immediately (for debugging).
-  static Future<void> showTestNotification() async {
-    await _plugin.show(
-      id: 9999,
-      title: 'Belly Buddy',
-      body: 'Test-Benachrichtigung funktioniert!',
-      notificationDetails: NotificationDetails(
-        android: AndroidNotificationDetails(
-          _mealReminderChannel.id,
-          _mealReminderChannel.name,
-          channelDescription: _mealReminderChannel.description,
-          importance: Importance.high,
-          priority: Priority.high,
-        ),
-        iOS: const DarwinNotificationDetails(),
-      ),
-      payload: '/dashboard',
-    );
-    _log.debug('showed test notification');
-  }
-
   /// Cancel all notifications.
   static Future<void> cancelAll() async {
     await _plugin.cancelAll();
