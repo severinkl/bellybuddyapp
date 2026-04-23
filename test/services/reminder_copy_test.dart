@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:belly_buddy/services/reminder_copy.dart';
@@ -14,6 +16,28 @@ void main() {
       expect(timeSlotForHour(17), TimeSlot.evening);
       expect(timeSlotForHour(22), TimeSlot.evening);
       expect(timeSlotForHour(23), TimeSlot.evening);
+    });
+  });
+
+  group('ReminderCopy.pickMealBody', () {
+    test('morning hour returns a line from the morning meal pool', () {
+      final body = ReminderCopy.pickMealBody(7, Random(42));
+      expect(ReminderCopy.mealPools[TimeSlot.morning]!, contains(body));
+    });
+
+    test('midday hour returns a line from the midday meal pool', () {
+      final body = ReminderCopy.pickMealBody(13, Random(42));
+      expect(ReminderCopy.mealPools[TimeSlot.midday]!, contains(body));
+    });
+
+    test('evening hour returns a line from the evening meal pool', () {
+      final body = ReminderCopy.pickMealBody(20, Random(42));
+      expect(ReminderCopy.mealPools[TimeSlot.evening]!, contains(body));
+    });
+
+    test('night hour (23) draws from the evening meal pool', () {
+      final body = ReminderCopy.pickMealBody(23, Random(42));
+      expect(ReminderCopy.mealPools[TimeSlot.evening]!, contains(body));
     });
   });
 }
