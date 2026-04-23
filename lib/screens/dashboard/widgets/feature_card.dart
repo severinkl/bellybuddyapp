@@ -3,6 +3,11 @@ import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../widgets/common/press_scale_wrapper.dart';
 
+const _kPulseDuration = Duration(milliseconds: 700);
+const _kPulseScaleMax = 1.08;
+const _kPulseHaloSpread = 6.0;
+const _kPulseHaloOpacity = 0.55;
+
 class FeatureCard extends StatefulWidget {
   final String imageAsset;
   final String label;
@@ -31,10 +36,6 @@ class FeatureCard extends StatefulWidget {
 
 class _FeatureCardState extends State<FeatureCard>
     with SingleTickerProviderStateMixin {
-  static const _pulseDuration = Duration(milliseconds: 700);
-  static const _pulseScaleMax = 1.08;
-  static const _pulseHaloSpread = 6.0;
-  static const _pulseHaloOpacity = 0.55;
   static const _borderWidth = 3.0;
 
   late final AnimationController _controller;
@@ -43,7 +44,7 @@ class _FeatureCardState extends State<FeatureCard>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: _pulseDuration);
+    _controller = AnimationController(vsync: this, duration: _kPulseDuration);
   }
 
   @override
@@ -213,17 +214,17 @@ class _Badge extends StatelessWidget {
       builder: (context, child) {
         final t = Curves.easeInOut.transform(controller!.value);
         return Transform.scale(
-          scale: 1.0 + (_FeatureCardState._pulseScaleMax - 1.0) * t,
+          scale: 1.0 + (_kPulseScaleMax - 1.0) * t,
           child: DecoratedBox(
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(AppConstants.radiusMd),
               boxShadow: [
                 BoxShadow(
                   color: AppTheme.primary.withValues(
-                    alpha: _FeatureCardState._pulseHaloOpacity * (1 - t),
+                    alpha: _kPulseHaloOpacity * (1 - t),
                   ),
                   blurRadius: 0,
-                  spreadRadius: _FeatureCardState._pulseHaloSpread * t,
+                  spreadRadius: _kPulseHaloSpread * t,
                 ),
               ],
             ),
