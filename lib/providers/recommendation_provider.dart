@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/dislike_category.dart';
 import '../models/recommendation.dart';
 import '../providers/core_providers.dart';
 import '../repositories/recommendation_repository.dart';
@@ -41,6 +42,87 @@ class RecommendationNotifier
     if (userId == null) return;
     await ref.read(recommendationRepositoryProvider).markAllAsSeen(userId);
     ref.invalidate(unseenRecommendationCountProvider);
+  }
+
+  Future<void> setRecommendationState({
+    required String id,
+    required RecommendationState state,
+    DislikeCategory? category,
+    String? comment,
+  }) async {
+    final previous = this.state;
+    final currentList = previous.value;
+    if (currentList == null) return;
+
+    // Optimistic update.
+    final List<Recommendation> next;
+    if (state == RecommendationState.hidden) {
+      next = currentList.where((r) => r.id != id).toList();
+    } else {
+      next = currentList
+          .map(
+            (r) => r.id == id
+                ? r.copyWith(
+                    state: state,
+                    dislikeCategory: category?.dbValue,
+                    dislikeComment: comment,
+                    ratedAt: DateTime.now(),
+                  )
+                : r,
+          )
+          .toList();
+    }
+    this.state = AsyncValue.data(next);
+
+    try {
+      await ref
+          .read(recommendationRepositoryProvider)
+          .updateFeedback(
+            id: id,
+            state: state,
+            dislikeCategory: category,
+            dislikeComment: comment,
+          );
+    } catch (e, st) {
+      _log.error('setRecommendationState failed for id=$id', e, st);
+      this.state = previous;
+      rethrow;
+    }
+  }
+
+  Future<void> setDislikeComment({required String id, String? comment}) async {
+    final previous = state;
+    final currentList = previous.value;
+    if (currentList == null) return;
+
+    final target = currentList.where((r) => r.id == id).firstOrNull;
+    if (target == null) return;
+
+    final next = currentList
+        .map(
+          (r) => r.id == id
+              ? r.copyWith(dislikeComment: comment, ratedAt: DateTime.now())
+              : r,
+        )
+        .toList();
+    state = AsyncValue.data(next);
+
+    try {
+      await ref
+          .read(recommendationRepositoryProvider)
+          .updateFeedback(
+            id: id,
+            state: target.state,
+            dislikeCategory: DislikeCategory.fromDbValue(
+              target.dislikeCategory,
+            ),
+            dislikeComment: comment,
+          );
+    } catch (e, st) {
+      _log.error('setDislikeComment failed for id=$id', e, st);
+      state = previous;
+      rethrow;
+    }
   }
 }
 
