@@ -62,4 +62,36 @@ void main() {
       expect(ReminderCopy.moodPools[TimeSlot.evening]!, contains(body));
     });
   });
+
+  group('pool integrity', () {
+    test('every meal pool is non-empty', () {
+      for (final entry in ReminderCopy.mealPools.entries) {
+        expect(
+          entry.value,
+          isNotEmpty,
+          reason: 'meal pool for ${entry.key} is empty',
+        );
+      }
+    });
+
+    test('every mood pool is non-empty', () {
+      for (final entry in ReminderCopy.moodPools.entries) {
+        expect(
+          entry.value,
+          isNotEmpty,
+          reason: 'mood pool for ${entry.key} is empty',
+        );
+      }
+    });
+
+    test('no meal line appears in more than one slot', () {
+      final all = ReminderCopy.mealPools.values.expand((p) => p).toList();
+      expect(all.toSet().length, all.length);
+    });
+
+    test('no mood line appears in more than one slot', () {
+      final all = ReminderCopy.moodPools.values.expand((p) => p).toList();
+      expect(all.toSet().length, all.length);
+    });
+  });
 }
