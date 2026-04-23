@@ -1,0 +1,220 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../config/app_theme.dart';
+import '../../../config/constants.dart';
+import '../../../models/dislike_category.dart';
+import '../../../models/recommendation.dart';
+import '../../../providers/recommendation_provider.dart';
+
+/// Opens the "Warum nicht hilfreich?" bottom sheet for the given
+/// recommendation. Callers do not await the returned Future unless they
+/// want to know when the user dismisses the sheet — all data is persisted
+/// before the sheet closes.
+Future<void> showRecommendationDislikeSheet(
+  BuildContext context,
+  Recommendation recommendation,
+) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    showDragHandle: false,
+    backgroundColor: AppTheme.card,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (_) => RecommendationDislikeSheet(recommendation: recommendation),
+  );
+}
+
+class RecommendationDislikeSheet extends ConsumerStatefulWidget {
+  const RecommendationDislikeSheet({super.key, required this.recommendation});
+
+  final Recommendation recommendation;
+
+  @override
+  ConsumerState<RecommendationDislikeSheet> createState() =>
+      _RecommendationDislikeSheetState();
+}
+
+class _RecommendationDislikeSheetState
+    extends ConsumerState<RecommendationDislikeSheet> {
+  late final TextEditingController _commentController;
+  Timer? _commentDebounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _commentController = TextEditingController(
+      text: widget.recommendation.dislikeComment ?? '',
+    );
+  }
+
+  @override
+  void dispose() {
+    _commentDebounce?.cancel();
+    _commentController.dispose();
+    super.dispose();
+  }
+
+  void _showSaveError() {
+    final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Konnte nicht gespeichert werden.')),
+    );
+  }
+
+  Future<void> _selectCategory(DislikeCategory category) async {
+    try {
+      await ref
+          .read(recommendationProvider.notifier)
+          .setRecommendationState(
+            id: widget.recommendation.id,
+            state: RecommendationState.disliked,
+            category: category,
+            comment: _commentController.text.isEmpty
+                ? null
+                : _commentController.text,
+          );
+    } catch (_) {
+      if (!mounted) return;
+      _showSaveError();
+    }
+  }
+
+  void _onCommentChanged(String value) {
+    _commentDebounce?.cancel();
+    _commentDebounce = Timer(AppConstants.debounceDuration, () async {
+      if (!mounted) return;
+      try {
+        await ref
+            .read(recommendationProvider.notifier)
+            .setDislikeComment(
+              id: widget.recommendation.id,
+              comment: value.isEmpty ? null : value,
+            );
+      } catch (_) {
+        if (!mounted) return;
+        _showSaveError();
+      }
+    });
+  }
+
+  Future<void> _hide() async {
+    try {
+      await ref
+          .read(recommendationProvider.notifier)
+          .setRecommendationState(
+            id: widget.recommendation.id,
+            state: RecommendationState.hidden,
+          );
+      if (!mounted) return;
+      Navigator.of(context).pop();
+    } catch (_) {
+      if (!mounted) return;
+      _showSaveError();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = DislikeCategory.fromDbValue(
+      widget.recommendation.dislikeCategory,
+    );
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppConstants.spacingMd,
+        AppConstants.spacingSm,
+        AppConstants.spacingMd,
+        MediaQuery.viewInsetsOf(context).bottom + AppConstants.spacingMd,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppTheme.border,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          AppConstants.gap12,
+          const Text(
+            'Was hat dir nicht gefallen?',
+            style: TextStyle(
+              fontSize: AppTheme.fontSizeSubtitle,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.foreground,
+            ),
+          ),
+          AppConstants.gap4,
+          const Text(
+            'Deine Antwort hilft uns, bessere Tipps zu finden.',
+            style: TextStyle(
+              fontSize: AppTheme.fontSizeBody,
+              color: AppTheme.mutedForeground,
+            ),
+          ),
+          AppConstants.gap12,
+          Wrap(
+            spacing: AppConstants.spacingSm,
+            runSpacing: AppConstants.spacingSm,
+            children: [
+              for (final c in DislikeCategory.values)
+                ChoiceChip(
+                  label: Text(c.label),
+                  selected: selected == c,
+                  selectedColor: AppTheme.destructive,
+                  labelStyle: TextStyle(
+                    color: selected == c ? Colors.white : AppTheme.foreground,
+                    fontSize: AppTheme.fontSizeBody,
+                  ),
+                  onSelected: (_) => _selectCategory(c),
+                ),
+            ],
+          ),
+          AppConstants.gap12,
+          TextField(
+            controller: _commentController,
+            onChanged: _onCommentChanged,
+            minLines: 2,
+            maxLines: null,
+            decoration: const InputDecoration(
+              labelText: 'Noch etwas? (optional)',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          AppConstants.gap16,
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              TextButton(
+                onPressed: _hide,
+                style: TextButton.styleFrom(
+                  foregroundColor: AppTheme.destructive,
+                ),
+                child: const Text('Empfehlung ausblenden'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppTheme.foreground,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Fertig'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
