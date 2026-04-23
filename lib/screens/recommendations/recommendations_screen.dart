@@ -209,25 +209,39 @@ class _RecommendationsTitle extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final total = ref
+    final recs = ref
         .watch(recommendationProvider)
-        .maybeWhen(data: (recs) => recs.length, orElse: () => 0);
+        .maybeWhen(data: (r) => r, orElse: () => const <Recommendation>[]);
+    if (recs.isEmpty) {
+      return const Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.auto_awesome, size: AppConstants.iconSizeSm),
+          SizedBox(width: AppConstants.spacingSm),
+          Text('Empfehlungen', overflow: TextOverflow.ellipsis),
+        ],
+      );
+    }
+
     final rawIndex = ref.watch(recommendationIndexProvider);
     // Clamp against the current list length: when the user hides the
     // currently-viewed recommendation, the list shrinks below the raw
     // index for a frame before the post-frame animateToPage + onPageChanged
-    // cycle brings the notifier back in range. Without this clamp the
-    // header briefly renders "3 von 2" or similar.
-    final displayIndex = total == 0 ? 0 : rawIndex.clamp(0, total - 1);
-
-    final text = total > 0
-        ? 'Empfehlungen (${displayIndex + 1} von $total)'
+    // cycle brings the notifier back in range.
+    final total = recs.length;
+    final displayIndex = rawIndex.clamp(0, total - 1);
+    // pageIndex 0 = oldest; pageIndex total-1 = latest. The list is
+    // newest-first, so convert to the matching list index.
+    final listIndex = (total - 1) - displayIndex;
+    final createdAt = recs[listIndex].createdAt;
+    final text = createdAt != null
+        ? formatDateWeekday(createdAt)
         : 'Empfehlungen';
 
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        const Icon(Icons.auto_awesome, size: 20),
+        const Icon(Icons.auto_awesome, size: AppConstants.iconSizeSm),
         const SizedBox(width: AppConstants.spacingSm),
         Flexible(child: Text(text, overflow: TextOverflow.ellipsis)),
       ],

@@ -15,6 +15,7 @@ import 'package:belly_buddy/providers/recommendation_index_provider.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
 import 'package:belly_buddy/repositories/recommendation_repository.dart';
 import 'package:belly_buddy/screens/recommendations/recommendations_screen.dart';
+import 'package:belly_buddy/utils/date_format_utils.dart';
 import 'package:belly_buddy/widgets/common/bb_async_state.dart';
 
 import '../../helpers/fixtures.dart';
@@ -33,8 +34,8 @@ List<Override> _overridesFor(List<Recommendation> recommendations) {
   ];
 }
 
-Recommendation _rec(String id, {String? summary}) =>
-    testRecommendation(id: id, summary: summary ?? 'Tipp $id');
+Recommendation _rec(String id, {String? summary, DateTime? at}) =>
+    testRecommendation(id: id, summary: summary ?? 'Tipp $id', createdAt: at);
 
 void main() {
   setUpAll(() {
@@ -109,6 +110,7 @@ void main() {
     testWidgets(
       'single-recommendation list renders one page with both chevrons hidden',
       (tester) async {
+        // Single rec with no createdAt → title falls back to 'Empfehlungen'.
         await tester.pumpWithProviders(
           const RecommendationsScreen(),
           overrides: _overridesFor([_rec('1')]),
@@ -126,22 +128,32 @@ void main() {
           find.byKey(RecommendationsScreen.nextRecommendationKey),
           findsNothing,
         );
-        expect(find.text('Empfehlungen (1 von 1)'), findsOneWidget);
+        // No createdAt → AppBar falls back to 'Empfehlungen' (also appears as a
+        // section heading inside the page body, so findsAtLeast(1)).
+        expect(find.text('Empfehlungen'), findsAtLeast(1));
+        expect(find.textContaining('Empfehlungen ('), findsNothing);
       },
     );
 
     testWidgets('multi-recommendation initial page is the latest (rightmost)', (
       tester,
     ) async {
+      final recs = [
+        _rec('3', at: DateTime(2026, 4, 22)), // newest-first (latest)
+        _rec('2', at: DateTime(2026, 4, 21)),
+        _rec('1', at: DateTime(2026, 4, 20)), // oldest
+      ];
       await tester.pumpWithProviders(
         const RecommendationsScreen(),
-        overrides: _overridesFor([_rec('3'), _rec('2'), _rec('1')]),
+        overrides: _overridesFor(recs),
       );
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
 
-      expect(find.text('Empfehlungen (3 von 3)'), findsOneWidget);
+      // Initial page is the latest (pageIndex = total-1 = 2, listIndex = 0 → recs[0]).
+      // Date appears in AppBar title and also in the inline _SwipeLayout row (Task 5 removes it).
+      expect(find.text(formatDateWeekday(recs[0].createdAt!)), findsAtLeast(1));
       expect(
         find.byKey(RecommendationsScreen.nextRecommendationKey),
         findsNothing,
@@ -155,9 +167,14 @@ void main() {
     testWidgets(
       'swiping rightward on the PageView retreats to an older recommendation',
       (tester) async {
+        final recs = [
+          _rec('3', at: DateTime(2026, 4, 22)),
+          _rec('2', at: DateTime(2026, 4, 21)),
+          _rec('1', at: DateTime(2026, 4, 20)),
+        ];
         await tester.pumpWithProviders(
           const RecommendationsScreen(),
-          overrides: _overridesFor([_rec('3'), _rec('2'), _rec('1')]),
+          overrides: _overridesFor(recs),
         );
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pump(const Duration(milliseconds: 100));
@@ -168,16 +185,26 @@ void main() {
         await tester.fling(find.byType(PageView), const Offset(600, 0), 1000);
         await tester.pumpAndSettle();
 
-        expect(find.text('Empfehlungen (2 von 3)'), findsOneWidget);
+        // After fling: pageIndex=1, listIndex=(3-1)-1=1 → recs[1].
+        // Date appears in AppBar title and inline _SwipeLayout row (Task 5 removes it).
+        expect(
+          find.text(formatDateWeekday(recs[1].createdAt!)),
+          findsAtLeast(1),
+        );
       },
     );
 
     testWidgets(
       'tapping the previous chevron advances to the older recommendation',
       (tester) async {
+        final recs = [
+          _rec('3', at: DateTime(2026, 4, 22)),
+          _rec('2', at: DateTime(2026, 4, 21)),
+          _rec('1', at: DateTime(2026, 4, 20)),
+        ];
         await tester.pumpWithProviders(
           const RecommendationsScreen(),
-          overrides: _overridesFor([_rec('3'), _rec('2'), _rec('1')]),
+          overrides: _overridesFor(recs),
         );
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pump(const Duration(milliseconds: 100));
@@ -188,49 +215,56 @@ void main() {
         );
         await tester.pumpAndSettle();
 
-        expect(find.text('Empfehlungen (2 von 3)'), findsOneWidget);
+        // After tap previous: pageIndex=1, listIndex=1 → recs[1].
+        // Date appears in AppBar title and inline _SwipeLayout row (Task 5 removes it).
+        expect(
+          find.text(formatDateWeekday(recs[1].createdAt!)),
+          findsAtLeast(1),
+        );
       },
     );
 
-    testWidgets(
-      'tapping the next chevron advances to the newer recommendation',
-      (tester) async {
-        final mock = MockRecommendationRepository();
-        when(
-          () => mock.fetchByUserId(any()),
-        ).thenAnswer((_) async => [_rec('3'), _rec('2'), _rec('1')]);
-        when(() => mock.markAllAsSeen(any())).thenAnswer((_) async {});
+    testWidgets('tapping the next chevron advances to the newer recommendation', (
+      tester,
+    ) async {
+      final recs = [
+        _rec('3', at: DateTime(2026, 4, 22)),
+        _rec('2', at: DateTime(2026, 4, 21)),
+        _rec('1', at: DateTime(2026, 4, 20)),
+      ];
+      final mock = MockRecommendationRepository();
+      when(() => mock.fetchByUserId(any())).thenAnswer((_) async => recs);
+      when(() => mock.markAllAsSeen(any())).thenAnswer((_) async {});
 
-        final container = createContainer(
-          overrides: [
-            recommendationRepositoryProvider.overrideWithValue(mock),
-            currentUserIdProvider.overrideWithValue('test-user'),
-          ],
-        );
-        addTearDown(container.dispose);
+      final container = createContainer(
+        overrides: [
+          recommendationRepositoryProvider.overrideWithValue(mock),
+          currentUserIdProvider.overrideWithValue('test-user'),
+        ],
+      );
+      addTearDown(container.dispose);
 
-        await tester.pumpWidget(
-          UncontrolledProviderScope(
-            container: container,
-            child: const MaterialApp(home: RecommendationsScreen()),
-          ),
-        );
-        await tester.pump(const Duration(milliseconds: 100));
-        await tester.pump(const Duration(milliseconds: 100));
-        await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(home: RecommendationsScreen()),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
-        // Seed the index to the middle page so both chevrons are visible.
-        container.read(recommendationIndexProvider.notifier).set(1);
-        await tester.pumpAndSettle();
+      // Seed the index to the middle page so both chevrons are visible.
+      container.read(recommendationIndexProvider.notifier).set(1);
+      await tester.pumpAndSettle();
 
-        await tester.tap(
-          find.byKey(RecommendationsScreen.nextRecommendationKey),
-        );
-        await tester.pumpAndSettle();
+      await tester.tap(find.byKey(RecommendationsScreen.nextRecommendationKey));
+      await tester.pumpAndSettle();
 
-        expect(find.text('Empfehlungen (3 von 3)'), findsOneWidget);
-      },
-    );
+      // After tap next from pageIndex=1: pageIndex=2, listIndex=0 → recs[0] (latest).
+      // Date appears in AppBar title and inline _SwipeLayout row (Task 5 removes it).
+      expect(find.text(formatDateWeekday(recs[0].createdAt!)), findsAtLeast(1));
+    });
 
     testWidgets(
       'cold-start swipe input works before any chevron tap (regression)',
@@ -239,24 +273,33 @@ void main() {
         // refactor, at cold start the PageView's scroll physics were
         // left in a half-initialised state and the first swipe did
         // nothing until the user tapped a chevron to force a re-settle.
+        final recs = [
+          _rec('3', at: DateTime(2026, 4, 22)),
+          _rec('2', at: DateTime(2026, 4, 21)),
+          _rec('1', at: DateTime(2026, 4, 20)),
+        ];
         await tester.pumpWithProviders(
           const RecommendationsScreen(),
-          overrides: _overridesFor([_rec('3'), _rec('2'), _rec('1')]),
+          overrides: _overridesFor(recs),
         );
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pumpAndSettle();
 
-        // Precondition: we're on the latest, no chevron tap yet.
-        expect(find.text('Empfehlungen (3 von 3)'), findsOneWidget);
+        // Precondition: we're on the latest (pageIndex=2, listIndex=0 → recs[0]).
+        // Date appears in AppBar title and inline _SwipeLayout row (Task 5 removes it).
+        expect(
+          find.text(formatDateWeekday(recs[0].createdAt!)),
+          findsAtLeast(1),
+        );
 
         // Swipe rightward (positive X) — goes to older (pageIndex - 1).
         await tester.fling(find.byType(PageView), const Offset(600, 0), 1000);
         await tester.pumpAndSettle();
 
         expect(
-          find.text('Empfehlungen (2 von 3)'),
-          findsOneWidget,
+          find.text(formatDateWeekday(recs[1].createdAt!)),
+          findsAtLeast(1),
           reason:
               'First swipe at cold start must advance the PageView. '
               "If this fails, we've regressed to the pre-efc1efc bug "
@@ -275,8 +318,12 @@ void main() {
         // the user ended up on page 0 (oldest) instead of the latest. With
         // the provider keeping cached data visible during re-fetch, the
         // PageView stays mounted throughout and the anchor lands.
+        final recs = [
+          _rec('3', at: DateTime(2026, 4, 22)),
+          _rec('2', at: DateTime(2026, 4, 21)),
+          _rec('1', at: DateTime(2026, 4, 20)),
+        ];
         final mock = MockRecommendationRepository();
-        final recs = [_rec('3'), _rec('2'), _rec('1')];
         when(() => mock.fetchByUserId(any())).thenAnswer((_) async => recs);
         when(() => mock.markAllAsSeen(any())).thenAnswer((_) async {});
 
@@ -306,8 +353,8 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(
-          find.text('Empfehlungen (3 von 3)'),
-          findsOneWidget,
+          find.text(formatDateWeekday(recs[0].createdAt!)),
+          findsAtLeast(1),
           reason:
               'Every screen entry must land on the newest recommendation. '
               'If this fails, the provider is flipping to loading during a '
@@ -337,8 +384,17 @@ void main() {
         // wasAtPreviousLatest == false): when a fresh recommendation
         // arrives via refresh, the reader shouldn't be teleported off
         // the entry they're currently on.
-        final initial = [_rec('3'), _rec('2'), _rec('1')];
-        final afterRefresh = [_rec('4'), _rec('3'), _rec('2'), _rec('1')];
+        final initial = [
+          _rec('3', at: DateTime(2026, 4, 22)),
+          _rec('2', at: DateTime(2026, 4, 21)),
+          _rec('1', at: DateTime(2026, 4, 20)),
+        ];
+        final afterRefresh = [
+          _rec('4', at: DateTime(2026, 4, 23)),
+          _rec('3', at: DateTime(2026, 4, 22)),
+          _rec('2', at: DateTime(2026, 4, 21)),
+          _rec('1', at: DateTime(2026, 4, 20)),
+        ];
 
         final mock = MockRecommendationRepository();
         var callCount = 0;
@@ -366,10 +422,15 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pumpAndSettle();
 
-        // Move to the oldest (page 0, listIndex 2 = recommendation '1').
+        // Move to the oldest (page 0, listIndex 2 → initial[2] = rec '1').
         container.read(recommendationIndexProvider.notifier).set(0);
         await tester.pumpAndSettle();
-        expect(find.text('Empfehlungen (1 von 3)'), findsOneWidget);
+        // On oldest in initial list: pageIndex=0, listIndex=(3-1)-0=2 → initial[2].
+        // Date appears in AppBar title and inline _SwipeLayout row (Task 5 removes it).
+        expect(
+          find.text(formatDateWeekday(initial[2].createdAt!)),
+          findsAtLeast(1),
+        );
 
         // Trigger a refresh that returns a new latest '4' prepended.
         await container
@@ -378,11 +439,11 @@ void main() {
         await tester.pumpAndSettle();
 
         // User stays on the same PAGE index (0) — which in the new 4-item
-        // list is still the oldest ('1'). Indicator reflects "1 von 4":
-        // the page they were on is preserved, only the total grew.
+        // list is still the oldest ('1'). Title shows that same rec's date.
+        // pageIndex=0, listIndex=(4-1)-0=3 → afterRefresh[3] = rec '1'.
         expect(
-          find.text('Empfehlungen (1 von 4)'),
-          findsOneWidget,
+          find.text(formatDateWeekday(afterRefresh[3].createdAt!)),
+          findsAtLeast(1),
           reason:
               'User was on the oldest when the refresh landed; the '
               'anchor logic must not jumpToPage and yank them away.',
@@ -482,8 +543,8 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
         await tester.pumpAndSettle();
 
-        // Precondition: on the latest (index 2), header shows "3 von 3".
-        expect(find.text('Empfehlungen (3 von 3)'), findsOneWidget);
+        // Index provider confirms we're at 2 (the latest).
+        expect(container.read(recommendationIndexProvider), 2);
 
         // Simulate the user tapping "Empfehlung ausblenden" in the sheet.
         // This is what the sheet's `_hide()` method calls.
@@ -492,11 +553,56 @@ void main() {
             .setRecommendationState(id: '3', state: RecommendationState.hidden);
         await tester.pumpAndSettle();
 
-        // Header must NOT show "3 von 2" — the clamp brings it to the
-        // new latest.
-        expect(find.text('Empfehlungen (3 von 2)'), findsNothing);
-        expect(find.text('Empfehlungen (2 von 2)'), findsOneWidget);
+        // Index must have been clamped from 2 to the new max (1).
+        // (The post-frame callback in _SwipeLayout writes back the clamped value.)
+        expect(container.read(recommendationIndexProvider), 1);
       },
     );
+
+    testWidgets('AppBar title shows the current recommendation\'s date', (
+      tester,
+    ) async {
+      final rec = testRecommendation(
+        id: '1',
+        createdAt: DateTime(2026, 4, 22, 10, 30),
+      );
+      final repo = MockRecommendationRepository();
+      when(() => repo.fetchByUserId(any())).thenAnswer((_) async => [rec]);
+      when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+
+      await tester.pumpWithProviders(
+        const RecommendationsScreen(),
+        overrides: [
+          recommendationRepositoryProvider.overrideWithValue(repo),
+          currentUserIdProvider.overrideWithValue('u'),
+        ],
+      );
+      await tester.pumpAndSettle();
+
+      // The date appears in the AppBar title (and also in the inline _SwipeLayout
+      // row — Task 5 will remove that). At least one is in the AppBar.
+      expect(find.text(formatDateWeekday(rec.createdAt!)), findsAtLeast(1));
+      // The old "Empfehlungen (X von Y)" counter text is gone.
+      expect(find.textContaining('Empfehlungen ('), findsNothing);
+    });
+
+    testWidgets('AppBar title falls back to "Empfehlungen" on empty list', (
+      tester,
+    ) async {
+      final repo = MockRecommendationRepository();
+      when(() => repo.fetchByUserId(any())).thenAnswer((_) async => []);
+      when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+
+      await tester.pumpWithProviders(
+        const RecommendationsScreen(),
+        overrides: [
+          recommendationRepositoryProvider.overrideWithValue(repo),
+          currentUserIdProvider.overrideWithValue('u'),
+        ],
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Empfehlungen'), findsOneWidget);
+    });
   });
 }

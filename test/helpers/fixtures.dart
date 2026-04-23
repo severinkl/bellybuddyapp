@@ -134,10 +134,12 @@ Recommendation testRecommendation({
   String? id,
   String? summary,
   List<RecommendationItem>? recommendations,
+  DateTime? createdAt,
 }) => Recommendation(
   id: id ?? 'rec-1',
   summary: summary ?? 'Tipp: Mehr Wasser trinken.',
   recommendations: recommendations ?? [],
+  createdAt: createdAt,
 );
 
 EntryQueryResult testEntryQueryResult({
