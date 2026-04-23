@@ -55,10 +55,10 @@ String formatDateWeekday(DateTime dt) {
   return DateFormat('EEEE dd.MM.yyyy', 'de_DE').format(dt);
 }
 
-/// Formats a DateTime as "EE, dd.MM." in German locale for compact
-/// contexts like AppBar titles (e.g., "Fr., 13.03.").
+/// Formats a DateTime as "EEEE, dd.MM" in German locale for compact
+/// contexts like AppBar titles (e.g., "Montag, 15.04").
 String formatDateWeekdayShort(DateTime dt) {
-  return DateFormat('EE, dd.MM.', 'de_DE').format(dt);
+  return DateFormat('EEEE, dd.MM', 'de_DE').format(dt);
 }
 
 /// Formats a DateTime as "dd.MM.yyyy" (e.g., "13.03.2026")
