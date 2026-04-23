@@ -269,5 +269,42 @@ void main() {
         expect(updated.dislikeComment, 'hallo');
       },
     );
+
+    test('no-ops when comment is unchanged (no repo call)', () async {
+      final seeded = testRecommendation(id: 'rec-1').copyWith(
+        state: RecommendationState.disliked,
+        dislikeCategory: 'not_relevant',
+        dislikeComment: 'hallo',
+      );
+      when(
+        () => mockRepo.fetchByUserId(any()),
+      ).thenAnswer((_) async => [seeded]);
+      when(
+        () => mockRepo.updateFeedback(
+          id: any(named: 'id'),
+          state: any(named: 'state'),
+          dislikeCategory: any(named: 'dislikeCategory'),
+          dislikeComment: any(named: 'dislikeComment'),
+        ),
+      ).thenAnswer((_) async {});
+
+      final container = makeContainer();
+      await container
+          .read(recommendationProvider.notifier)
+          .fetchRecommendations();
+
+      await container
+          .read(recommendationProvider.notifier)
+          .setDislikeComment(id: 'rec-1', comment: 'hallo');
+
+      verifyNever(
+        () => mockRepo.updateFeedback(
+          id: any(named: 'id'),
+          state: any(named: 'state'),
+          dislikeCategory: any(named: 'dislikeCategory'),
+          dislikeComment: any(named: 'dislikeComment'),
+        ),
+      );
+    });
   });
 }

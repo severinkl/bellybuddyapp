@@ -74,6 +74,10 @@ class AppConstants {
   // Spinner
   static const double spinnerSize = 20.0;
 
+  // Recommendation dislike comment — cap to keep DB rows sane; the label
+  // counter doubles as a visible limit so the user isn't surprised.
+  static const int dislikeCommentMaxLength = 1000;
+
   // External URLs
   static const String feedbackFormUrl =
       'https://docs.google.com/forms/d/e/1FAIpQLSfHqqGW_159yd_sUacBZq5aITZwGDikag_lgd8eudHQcelNGA/viewform?usp=dialog';

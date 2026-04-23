@@ -204,6 +204,7 @@ class _RecommendationDislikeSheetState
             onChanged: _onCommentChanged,
             minLines: 2,
             maxLines: null,
+            maxLength: AppConstants.dislikeCommentMaxLength,
             decoration: const InputDecoration(
               labelText: 'Noch etwas? (optional)',
               border: OutlineInputBorder(),

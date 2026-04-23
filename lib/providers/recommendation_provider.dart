@@ -68,7 +68,7 @@ class RecommendationNotifier
                     state: state,
                     dislikeCategory: category?.dbValue,
                     dislikeComment: comment,
-                    ratedAt: DateTime.now(),
+                    ratedAt: DateTime.now().toUtc(),
                   )
                 : r,
           )
@@ -106,7 +106,10 @@ class RecommendationNotifier
     final next = currentList
         .map(
           (r) => r.id == id
-              ? r.copyWith(dislikeComment: comment, ratedAt: DateTime.now())
+              ? r.copyWith(
+                  dislikeComment: comment,
+                  ratedAt: DateTime.now().toUtc(),
+                )
               : r,
         )
         .toList();
