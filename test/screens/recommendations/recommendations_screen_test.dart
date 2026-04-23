@@ -112,7 +112,7 @@ void main() {
     });
 
     testWidgets(
-      'single-recommendation list renders one page with both chevrons hidden',
+      'single-recommendation list renders one page with both chevrons disabled',
       (tester) async {
         // Single rec with no createdAt → title falls back to 'Empfehlungen'.
         await tester.pumpWithProviders(
@@ -124,16 +124,26 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(PageView), findsOneWidget);
-        expect(
-          find.byKey(RecommendationsScreen.previousRecommendationKey),
-          findsNothing,
-        );
-        expect(
-          find.byKey(RecommendationsScreen.nextRecommendationKey),
-          findsNothing,
-        );
-        // No createdAt → AppBar falls back to 'Empfehlungen'.
+        // With a single recommendation both AppBar IconButtons are present
+        // but disabled (onPressed: null) — they are rendered, not hidden.
         final appBar = find.byType(AppBar);
+        final prevBtn = tester.widget<IconButton>(
+          find.descendant(
+            of: appBar,
+            matching: find.byKey(
+              RecommendationsScreen.previousRecommendationKey,
+            ),
+          ),
+        );
+        expect(prevBtn.onPressed, isNull);
+        final nextBtn = tester.widget<IconButton>(
+          find.descendant(
+            of: appBar,
+            matching: find.byKey(RecommendationsScreen.nextRecommendationKey),
+          ),
+        );
+        expect(nextBtn.onPressed, isNull);
+        // No createdAt → AppBar falls back to 'Empfehlungen'.
         expect(
           find.descendant(of: appBar, matching: find.text('Empfehlungen')),
           findsOneWidget,
@@ -159,16 +169,25 @@ void main() {
       await tester.pumpAndSettle();
 
       // Initial page is the latest (pageIndex = total-1 = 2, listIndex = 0 → recs[0]).
-      // Date appears in AppBar title and also in the inline _SwipeLayout row (Task 5 removes it).
+      // Date appears in AppBar title only (inline row removed in Task 5).
       expect(find.text(formatDateWeekday(recs[0].createdAt!)), findsAtLeast(1));
-      expect(
-        find.byKey(RecommendationsScreen.nextRecommendationKey),
-        findsNothing,
+      // At the latest page, the next button is present but disabled.
+      final appBar = find.byType(AppBar);
+      final nextBtn = tester.widget<IconButton>(
+        find.descendant(
+          of: appBar,
+          matching: find.byKey(RecommendationsScreen.nextRecommendationKey),
+        ),
       );
-      expect(
-        find.byKey(RecommendationsScreen.previousRecommendationKey),
-        findsOneWidget,
+      expect(nextBtn.onPressed, isNull);
+      // Prev button is enabled (there are older pages).
+      final prevBtn = tester.widget<IconButton>(
+        find.descendant(
+          of: appBar,
+          matching: find.byKey(RecommendationsScreen.previousRecommendationKey),
+        ),
       );
+      expect(prevBtn.onPressed, isNotNull);
     });
 
     testWidgets(
@@ -596,6 +615,48 @@ void main() {
       );
       // The old "Empfehlungen (X von Y)" counter text is gone.
       expect(find.textContaining('Empfehlungen ('), findsNothing);
+    });
+
+    testWidgets('chevron actions live in the AppBar, not the body', (
+      tester,
+    ) async {
+      final recs = [
+        _rec('1', createdAt: DateTime(2026, 4, 20)),
+        _rec('2', createdAt: DateTime(2026, 4, 21)),
+        _rec('3', createdAt: DateTime(2026, 4, 22)),
+      ];
+      final repo = MockRecommendationRepository();
+      when(() => repo.fetchByUserId(any())).thenAnswer((_) async => recs);
+      when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+
+      await tester.pumpWithProviders(
+        const RecommendationsScreen(),
+        overrides: [
+          recommendationRepositoryProvider.overrideWithValue(repo),
+          currentUserIdProvider.overrideWithValue('u'),
+        ],
+      );
+      await tester.pumpAndSettle();
+
+      // Both prev/next buttons render inside the AppBar.
+      final appBar = find.byType(AppBar);
+      expect(
+        find.descendant(
+          of: appBar,
+          matching: find.byKey(RecommendationsScreen.previousRecommendationKey),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: appBar,
+          matching: find.byKey(RecommendationsScreen.nextRecommendationKey),
+        ),
+        findsOneWidget,
+      );
+      // The body no longer has an inline chevron row — the only chevron_right
+      // icon in the tree is the AppBar action.
+      expect(find.byIcon(Icons.chevron_right), findsOneWidget);
     });
 
     testWidgets('AppBar title falls back to "Empfehlungen" on empty list', (

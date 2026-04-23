@@ -10,7 +10,6 @@ import '../../services/haptic_service.dart';
 import '../../utils/date_format_utils.dart';
 import '../../utils/page_controller_utils.dart';
 import '../../widgets/common/bb_async_state.dart';
-import '../../widgets/common/circle_icon_button.dart';
 import '../../widgets/common/mascot_image.dart';
 import 'widgets/recommendation_card.dart';
 import 'widgets/recommendation_feedback_view.dart';
@@ -130,6 +129,11 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
         leading: const _DashboardBackButton(),
         leadingWidth: AppConstants.appBarLeadingLabelled,
         title: const _RecommendationsTitle(),
+        actions: const [
+          _PrevRecommendationAction(),
+          _NextRecommendationAction(),
+          SizedBox(width: AppConstants.spacingXs),
+        ],
       ),
       body: state.when(
         loading: () =>
@@ -249,6 +253,64 @@ class _RecommendationsTitle extends ConsumerWidget {
   }
 }
 
+class _PrevRecommendationAction extends ConsumerWidget {
+  const _PrevRecommendationAction();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final recs = ref
+        .watch(recommendationProvider)
+        .maybeWhen(data: (r) => r, orElse: () => const <Recommendation>[]);
+    if (recs.isEmpty) {
+      return const SizedBox(width: AppConstants.iconBadgeMd);
+    }
+    final rawIndex = ref.watch(recommendationIndexProvider);
+    final currentIndex = rawIndex.clamp(0, recs.length - 1);
+    final isOldest = currentIndex == 0;
+    return IconButton(
+      key: RecommendationsScreen.previousRecommendationKey,
+      icon: const Icon(Icons.chevron_left),
+      onPressed: isOldest
+          ? null
+          : () {
+              HapticService.light();
+              ref
+                  .read(recommendationIndexProvider.notifier)
+                  .set(currentIndex - 1);
+            },
+    );
+  }
+}
+
+class _NextRecommendationAction extends ConsumerWidget {
+  const _NextRecommendationAction();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final recs = ref
+        .watch(recommendationProvider)
+        .maybeWhen(data: (r) => r, orElse: () => const <Recommendation>[]);
+    if (recs.isEmpty) {
+      return const SizedBox(width: AppConstants.iconBadgeMd);
+    }
+    final rawIndex = ref.watch(recommendationIndexProvider);
+    final currentIndex = rawIndex.clamp(0, recs.length - 1);
+    final isLatest = currentIndex == recs.length - 1;
+    return IconButton(
+      key: RecommendationsScreen.nextRecommendationKey,
+      icon: const Icon(Icons.chevron_right),
+      onPressed: isLatest
+          ? null
+          : () {
+              HapticService.light();
+              ref
+                  .read(recommendationIndexProvider.notifier)
+                  .set(currentIndex + 1);
+            },
+    );
+  }
+}
+
 /// Separate widget so `ref.watch(recommendationIndexProvider)` rebuilds only
 /// this subtree on page change — not the whole screen (AppBar + state.when).
 class _SwipeLayout extends ConsumerWidget {
@@ -264,13 +326,6 @@ class _SwipeLayout extends ConsumerWidget {
     // recommendation, the list shrunk and the notifier's raw value may
     // point past the new end. See `_RecommendationsTitle` for the rationale.
     final currentIndex = rawIndex.clamp(0, recommendations.length - 1);
-    final isOldest = currentIndex == 0;
-    final isLatest = currentIndex == recommendations.length - 1;
-    // pageIndex 0 = oldest; pageIndex length-1 = latest. Convert to the
-    // newest-first list index the provider returns.
-    final listIndex = (recommendations.length - 1) - currentIndex;
-    final safeIndex = listIndex.clamp(0, recommendations.length - 1);
-    final createdAt = recommendations[safeIndex].createdAt;
 
     // If the raw notifier value was out of bounds, schedule a write-back so
     // the controller's ref.listen animates the PageView to a valid page on
@@ -284,77 +339,19 @@ class _SwipeLayout extends ConsumerWidget {
       });
     }
 
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppConstants.spacingMd,
-            vertical: AppConstants.spacingSm,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              if (isOldest)
-                const SizedBox(width: AppConstants.iconBadgeMd)
-              else
-                CircleIconButton(
-                  tapKey: RecommendationsScreen.previousRecommendationKey,
-                  icon: Icons.chevron_left,
-                  onPressed: () {
-                    HapticService.light();
-                    ref
-                        .read(recommendationIndexProvider.notifier)
-                        .set(currentIndex - 1);
-                  },
-                ),
-              if (createdAt != null)
-                Flexible(
-                  child: Text(
-                    formatDateWeekday(createdAt),
-                    textAlign: TextAlign.center,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: AppTheme.fontSizeBody,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.foreground,
-                    ),
-                  ),
-                ),
-              if (isLatest)
-                const SizedBox(width: AppConstants.iconBadgeMd)
-              else
-                CircleIconButton(
-                  tapKey: RecommendationsScreen.nextRecommendationKey,
-                  icon: Icons.chevron_right,
-                  onPressed: () {
-                    HapticService.light();
-                    ref
-                        .read(recommendationIndexProvider.notifier)
-                        .set(currentIndex + 1);
-                  },
-                ),
-            ],
-          ),
-        ),
-        Expanded(
-          child: PageView.builder(
-            controller: controller,
-            itemCount: recommendations.length,
-            onPageChanged: (index) {
-              HapticService.light();
-              ref.read(recommendationIndexProvider.notifier).set(index);
-            },
-            itemBuilder: (context, pageIndex) {
-              // pageIndex 0 = oldest; pageIndex length-1 = latest.
-              // Our list from the provider is newest-first, so convert:
-              final listIndex = (recommendations.length - 1) - pageIndex;
-              return _RecommendationPage(
-                recommendation: recommendations[listIndex],
-              );
-            },
-          ),
-        ),
-      ],
+    return PageView.builder(
+      controller: controller,
+      itemCount: recommendations.length,
+      onPageChanged: (index) {
+        HapticService.light();
+        ref.read(recommendationIndexProvider.notifier).set(index);
+      },
+      itemBuilder: (context, pageIndex) {
+        // pageIndex 0 = oldest; pageIndex length-1 = latest.
+        // Our list from the provider is newest-first, so convert.
+        final listIndex = (recommendations.length - 1) - pageIndex;
+        return _RecommendationPage(recommendation: recommendations[listIndex]);
+      },
     );
   }
 }
