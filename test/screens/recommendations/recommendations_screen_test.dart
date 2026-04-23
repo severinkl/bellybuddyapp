@@ -320,8 +320,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('War diese Empfehlung hilfreich?'), findsOneWidget);
-      expect(find.byIcon(Icons.thumb_up_outlined), findsOneWidget);
-      expect(find.byIcon(Icons.thumb_down_outlined), findsOneWidget);
+      expect(find.text('Hilfreich'), findsOneWidget);
+      expect(find.text('Nicht hilfreich'), findsOneWidget);
     });
 
     testWidgets(

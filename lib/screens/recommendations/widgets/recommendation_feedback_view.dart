@@ -1,108 +1,61 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
-import '../../../models/dislike_category.dart';
 import '../../../models/recommendation.dart';
 import '../../../providers/recommendation_provider.dart';
+import 'recommendation_dislike_sheet.dart';
 
-/// Feedback component shown at the end of a recommendation page. Renders one
-/// of three sub-views depending on the recommendation's [RecommendationState]:
-///
-/// - [RecommendationState.unrated]: heading + thumbs (up / down).
-/// - [RecommendationState.liked]: filled thumb-up + "Danke!".
-/// - [RecommendationState.disliked]: category chips + comment field +
-///   "Diese Empfehlung ausblenden" button.
-///
-/// Hidden recommendations are filtered out upstream, so [RecommendationState
-/// .hidden] collapses to an empty box.
-class RecommendationFeedbackView extends ConsumerStatefulWidget {
+/// Feedback row shown at the bottom of a single recommendation page. Two
+/// segmented pills ("Hilfreich" / "Nicht hilfreich"); tapping the latter
+/// opens the [RecommendationDislikeSheet] for the category + comment flow.
+/// Hidden state is unreachable here (hidden recommendations are filtered
+/// upstream in the repository).
+class RecommendationFeedbackView extends ConsumerWidget {
   const RecommendationFeedbackView({super.key, required this.recommendation});
 
   final Recommendation recommendation;
 
-  @override
-  ConsumerState<RecommendationFeedbackView> createState() =>
-      _RecommendationFeedbackViewState();
-}
-
-class _RecommendationFeedbackViewState
-    extends ConsumerState<RecommendationFeedbackView> {
-  late final TextEditingController _commentController;
-  Timer? _commentDebounce;
-
-  @override
-  void initState() {
-    super.initState();
-    _commentController = TextEditingController(
-      text: widget.recommendation.dislikeComment ?? '',
-    );
-  }
-
-  @override
-  void didUpdateWidget(covariant RecommendationFeedbackView oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    // Resync the text controller when the underlying recommendation's comment
-    // changes (e.g. if the server state arrived after an optimistic update).
-    final serverComment = widget.recommendation.dislikeComment ?? '';
-    if (serverComment != _commentController.text &&
-        oldWidget.recommendation.dislikeComment !=
-            widget.recommendation.dislikeComment) {
-      _commentController.text = serverComment;
-    }
-  }
-
-  @override
-  void dispose() {
-    _commentDebounce?.cancel();
-    _commentController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _setState(
-    RecommendationState target, {
-    DislikeCategory? category,
-    String? comment,
-  }) async {
+  Future<void> _setLiked(BuildContext context, WidgetRef ref) async {
     try {
       await ref
           .read(recommendationProvider.notifier)
           .setRecommendationState(
-            id: widget.recommendation.id,
-            state: target,
-            category: category,
-            comment: comment,
+            id: recommendation.id,
+            state: RecommendationState.liked,
           );
     } catch (_) {
-      if (!mounted) return;
-      _showSaveError();
+      if (!context.mounted) return;
+      _showSaveError(context);
     }
   }
 
-  void _onCommentChanged(String value) {
-    _commentDebounce?.cancel();
-    _commentDebounce = Timer(AppConstants.debounceDuration, () async {
-      if (!mounted) return;
+  Future<void> _setDislikedAndOpenSheet(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    if (recommendation.state != RecommendationState.disliked) {
       try {
         await ref
             .read(recommendationProvider.notifier)
-            .setDislikeComment(
-              id: widget.recommendation.id,
-              comment: value.isEmpty ? null : value,
+            .setRecommendationState(
+              id: recommendation.id,
+              state: RecommendationState.disliked,
+              // Preserve any existing category/comment from an earlier session.
+              category: null,
+              comment: recommendation.dislikeComment,
             );
       } catch (_) {
-        if (!mounted) return;
-        _showSaveError();
+        if (!context.mounted) return;
+        _showSaveError(context);
+        return;
       }
-    });
+    }
+    if (!context.mounted) return;
+    await showRecommendationDislikeSheet(context, recommendation);
   }
 
-  void _showSaveError() {
-    // Hide any still-visible save-error snack before showing a new one so
-    // rapid failures (e.g. offline + typing a comment) don't stack.
+  void _showSaveError(BuildContext context) {
     final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
     messenger.showSnackBar(
       const SnackBar(content: Text('Konnte nicht gespeichert werden.')),
@@ -110,18 +63,8 @@ class _RecommendationFeedbackViewState
   }
 
   @override
-  Widget build(BuildContext context) {
-    final state = widget.recommendation.state;
-    return switch (state) {
-      RecommendationState.unrated ||
-      RecommendationState.liked => _buildRatedOrUnrated(state),
-      RecommendationState.disliked => _buildDisliked(),
-      RecommendationState.hidden => const SizedBox.shrink(),
-    };
-  }
-
-  Widget _buildRatedOrUnrated(RecommendationState state) {
-    final isLiked = state == RecommendationState.liked;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = recommendation.state;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppConstants.spacingMd),
       child: Column(
@@ -132,111 +75,127 @@ class _RecommendationFeedbackViewState
             style: TextStyle(
               fontSize: AppTheme.fontSizeBody,
               fontWeight: FontWeight.w600,
-              color: AppTheme.foreground,
+              color: AppTheme.mutedForeground,
             ),
           ),
           AppConstants.gap8,
           Row(
             children: [
-              IconButton(
-                icon: Icon(isLiked ? Icons.thumb_up : Icons.thumb_up_outlined),
-                color: isLiked ? AppTheme.primary : AppTheme.foreground,
-                onPressed: () => _setState(RecommendationState.liked),
-              ),
-              IconButton(
-                icon: const Icon(Icons.thumb_down_outlined),
-                color: AppTheme.foreground,
-                onPressed: () => _setState(RecommendationState.disliked),
-              ),
-              const Spacer(),
-              if (isLiked)
-                const Text(
-                  'Danke!',
-                  style: TextStyle(
-                    fontSize: AppTheme.fontSizeBody,
-                    color: AppTheme.mutedForeground,
-                  ),
+              Expanded(
+                child: _FeedbackPill(
+                  icon: '👍',
+                  label: 'Hilfreich',
+                  selected: state == RecommendationState.liked,
+                  selectedColor: AppTheme.primary,
+                  onTap: () => _setLiked(context, ref),
                 ),
+              ),
+              const SizedBox(width: AppConstants.spacingSm),
+              Expanded(
+                child: _FeedbackPill(
+                  icon: '👎',
+                  label: 'Nicht hilfreich',
+                  selected: state == RecommendationState.disliked,
+                  selectedColor: AppTheme.destructive,
+                  onTap: () => _setDislikedAndOpenSheet(context, ref),
+                ),
+              ),
             ],
           ),
+          if (state == RecommendationState.liked) ...[
+            AppConstants.gap8,
+            const Text(
+              '✓ Danke für dein Feedback',
+              style: TextStyle(
+                fontSize: AppTheme.fontSizeCaptionLG,
+                color: AppTheme.primary,
+              ),
+            ),
+          ] else if (state == RecommendationState.disliked) ...[
+            AppConstants.gap8,
+            Row(
+              children: [
+                const Text(
+                  '✓ Wird berücksichtigt',
+                  style: TextStyle(
+                    fontSize: AppTheme.fontSizeCaptionLG,
+                    color: AppTheme.destructive,
+                  ),
+                ),
+                const SizedBox(width: AppConstants.spacingSm),
+                TextButton(
+                  onPressed: () =>
+                      showRecommendationDislikeSheet(context, recommendation),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(0, 0),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    foregroundColor: AppTheme.foreground,
+                  ),
+                  child: const Text(
+                    'Bearbeiten',
+                    style: TextStyle(
+                      fontSize: AppTheme.fontSizeCaptionLG,
+                      decoration: TextDecoration.underline,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
   }
+}
 
-  Widget _buildDisliked() {
-    final selectedCategory = DislikeCategory.fromDbValue(
-      widget.recommendation.dislikeCategory,
-    );
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppConstants.spacingMd),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text(
-            'Schade! Warum nicht?',
-            style: TextStyle(
-              fontSize: AppTheme.fontSizeBody,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.foreground,
-            ),
+class _FeedbackPill extends StatelessWidget {
+  const _FeedbackPill({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.selectedColor,
+    required this.onTap,
+  });
+
+  final String icon;
+  final String label;
+  final bool selected;
+  final Color selectedColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: AnimatedContainer(
+        duration: AppConstants.animFast,
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: selected ? selectedColor : AppTheme.card,
+          border: Border.all(
+            color: selected ? selectedColor : AppTheme.border,
+            width: 1.5,
           ),
-          AppConstants.gap8,
-          Row(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.thumb_up_outlined),
-                color: AppTheme.foreground,
-                onPressed: () => _setState(RecommendationState.liked),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(icon, style: const TextStyle(fontSize: 16)),
+            const SizedBox(width: AppConstants.spacingSm),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: AppTheme.fontSizeBody,
+                fontWeight: FontWeight.w600,
+                color: selected ? Colors.white : AppTheme.foreground,
               ),
-              IconButton(
-                icon: const Icon(Icons.thumb_down),
-                color: AppTheme.destructive,
-                onPressed: () => _setState(RecommendationState.unrated),
-              ),
-            ],
-          ),
-          AppConstants.gap8,
-          Wrap(
-            spacing: AppConstants.spacingSm,
-            runSpacing: AppConstants.spacingSm,
-            children: [
-              for (final c in DislikeCategory.values)
-                ChoiceChip(
-                  label: Text(c.label),
-                  selected: selectedCategory == c,
-                  onSelected: (_) => _setState(
-                    RecommendationState.disliked,
-                    category: c,
-                    comment: _commentController.text.isEmpty
-                        ? null
-                        : _commentController.text,
-                  ),
-                ),
-            ],
-          ),
-          AppConstants.gap12,
-          TextField(
-            controller: _commentController,
-            onChanged: _onCommentChanged,
-            maxLines: null,
-            decoration: const InputDecoration(
-              labelText: 'Noch etwas? (optional)',
-              border: OutlineInputBorder(),
             ),
-          ),
-          AppConstants.gap8,
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton(
-              style: TextButton.styleFrom(
-                foregroundColor: AppTheme.destructive,
-              ),
-              onPressed: () => _setState(RecommendationState.hidden),
-              child: const Text('Diese Empfehlung ausblenden'),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
