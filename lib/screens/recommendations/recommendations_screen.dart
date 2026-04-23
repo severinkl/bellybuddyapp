@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../models/recommendation.dart';
@@ -125,7 +126,11 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
     });
 
     return Scaffold(
-      appBar: AppBar(title: const _RecommendationsTitle()),
+      appBar: AppBar(
+        leading: const _DashboardBackButton(),
+        leadingWidth: 128,
+        title: const _RecommendationsTitle(),
+      ),
       body: state.when(
         loading: () =>
             const BbLoadingState(message: 'Analysiere deine Daten...'),
@@ -336,6 +341,37 @@ class _SwipeLayout extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _DashboardBackButton extends StatelessWidget {
+  const _DashboardBackButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: AppConstants.spacingXs),
+      child: TextButton.icon(
+        onPressed: () => context.pop(),
+        style: TextButton.styleFrom(
+          foregroundColor: AppTheme.foreground,
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppConstants.spacingSm,
+          ),
+        ),
+        icon: const Icon(
+          Icons.arrow_back_ios_new,
+          size: AppConstants.iconSizeSm,
+        ),
+        label: const Text(
+          'Dashboard',
+          style: TextStyle(
+            fontSize: AppTheme.fontSizeBody,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ),
     );
   }
 }

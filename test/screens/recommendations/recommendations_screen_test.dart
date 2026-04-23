@@ -2,8 +2,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 
@@ -387,6 +389,65 @@ void main() {
         );
       },
     );
+
+    testWidgets('AppBar leading renders "Dashboard" button that pops', (
+      tester,
+    ) async {
+      final repo = MockRecommendationRepository();
+      when(
+        () => repo.fetchByUserId(any()),
+      ).thenAnswer((_) async => [testRecommendation(id: '1')]);
+      when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+
+      // Build a 2-route GoRouter so context.pop() has a real navigator stack
+      // to pop back to. The sentinel home screen lets us assert that the pop
+      // actually happened.
+      final router = GoRouter(
+        initialLocation: '/home',
+        routes: [
+          GoRoute(
+            path: '/home',
+            builder: (_, _) => const Scaffold(body: Text('home-sentinel')),
+          ),
+          GoRoute(
+            path: '/recommendations',
+            builder: (_, _) => const RecommendationsScreen(),
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            recommendationRepositoryProvider.overrideWithValue(repo),
+            currentUserIdProvider.overrideWithValue('u'),
+          ],
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: const [Locale('de', 'DE')],
+            locale: const Locale('de', 'DE'),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Navigate to the recommendations screen so there is something to pop.
+      router.push('/recommendations');
+      await tester.pumpAndSettle();
+
+      expect(find.widgetWithText(TextButton, 'Dashboard'), findsOneWidget);
+
+      await tester.tap(find.text('Dashboard'));
+      await tester.pumpAndSettle();
+
+      // After the pop the sentinel home screen is visible again.
+      expect(find.text('home-sentinel'), findsOneWidget);
+    });
 
     testWidgets(
       'hiding the currently-viewed recommendation clamps the header to a valid position',
