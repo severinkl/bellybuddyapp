@@ -46,7 +46,7 @@ void main() {
   });
 
   group('FeatureCard pulse', () {
-    testWidgets('pulse=true: badge pill has a non-unit Transform.scale', (
+    testWidgets('hasNew=true: badge pill has a non-unit Transform.scale', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -57,7 +57,6 @@ void main() {
             icon: Icons.auto_awesome,
             iconColor: Colors.black,
             hasNew: true,
-            pulse: true,
             onTap: () {},
           ),
         ),
@@ -73,29 +72,29 @@ void main() {
       expect(badge, findsWidgets);
     });
 
-    testWidgets('pulse=false: no AnimationController; badge is static', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        _wrap(
-          FeatureCard(
-            imageAsset: 'assets/images/fuer-dich-card.png',
-            label: 'Tipps',
-            icon: Icons.auto_awesome,
-            iconColor: Colors.black,
-            hasNew: true,
-            pulse: false,
-            onTap: () {},
+    testWidgets(
+      'numeric badge (hasNew=false, badgeCount>0) is static — no repeating animation',
+      (tester) async {
+        await tester.pumpWidget(
+          _wrap(
+            FeatureCard(
+              imageAsset: 'assets/images/alternativen-card.jpg',
+              label: 'Alternativen',
+              icon: Icons.eco,
+              iconColor: Colors.black,
+              badgeCount: 3,
+              onTap: () {},
+            ),
           ),
-        ),
-      );
-      // No pending animation frames → pumpAndSettle returns instantly.
-      await tester.pumpAndSettle();
-      expect(find.text('ungelesen'), findsOneWidget);
-    });
+        );
+        // No pending animation frames → pumpAndSettle returns instantly.
+        await tester.pumpAndSettle();
+        expect(find.text('3'), findsOneWidget);
+      },
+    );
 
     testWidgets(
-      'MediaQuery.disableAnimations: badge is static even if pulse=true',
+      'MediaQuery.disableAnimations: badge is static even when hasNew',
       (tester) async {
         await tester.pumpWidget(
           MaterialApp(
@@ -113,7 +112,6 @@ void main() {
                     icon: Icons.auto_awesome,
                     iconColor: Colors.black,
                     hasNew: true,
-                    pulse: true,
                     onTap: () {},
                   ),
                 ),

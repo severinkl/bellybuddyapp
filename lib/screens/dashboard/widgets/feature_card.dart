@@ -15,7 +15,6 @@ class FeatureCard extends StatefulWidget {
   final Color iconColor;
   final int badgeCount;
   final bool hasNew;
-  final bool pulse;
   final VoidCallback onTap;
 
   const FeatureCard({
@@ -26,7 +25,6 @@ class FeatureCard extends StatefulWidget {
     required this.iconColor,
     this.badgeCount = 0,
     this.hasNew = false,
-    this.pulse = false,
     required this.onTap,
   });
 
@@ -59,12 +57,12 @@ class _FeatureCardState extends State<FeatureCard>
     _syncAnimation();
   }
 
-  /// Starts or stops the pulse based on [widget.pulse] and the current
+  /// Starts or stops the pulse based on [widget.hasNew] and the current
   /// `MediaQuery.disableAnimations` flag. Guarded by [_isAnimating] so a
   /// rebuild with unchanged effective state is a no-op.
   void _syncAnimation() {
     final reduceMotion = MediaQuery.of(context).disableAnimations;
-    final shouldAnimate = widget.pulse && !reduceMotion;
+    final shouldAnimate = widget.hasNew && !reduceMotion;
     if (shouldAnimate == _isAnimating) return;
     _isAnimating = shouldAnimate;
     if (shouldAnimate) {
@@ -102,7 +100,7 @@ class _FeatureCardState extends State<FeatureCard>
                 : AppConstants.radiusLg,
           ),
           child: SizedBox(
-            height: 128,
+            height: AppConstants.featureCardHeight,
             child: Stack(
               fit: StackFit.expand,
               children: [

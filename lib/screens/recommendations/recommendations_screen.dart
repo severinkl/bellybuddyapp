@@ -130,8 +130,8 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
         leadingWidth: AppConstants.appBarLeadingLabelled,
         title: const _RecommendationsTitle(),
         actions: const [
-          _PrevRecommendationAction(),
-          _NextRecommendationAction(),
+          _ChevronAction(_ChevronDirection.previous),
+          _ChevronAction(_ChevronDirection.next),
           SizedBox(width: AppConstants.spacingXs),
         ],
       ),
@@ -216,31 +216,21 @@ class _RecommendationsTitle extends ConsumerWidget {
     final recs = ref
         .watch(recommendationProvider)
         .maybeWhen(data: (r) => r, orElse: () => const <Recommendation>[]);
-    if (recs.isEmpty) {
-      return const Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(Icons.auto_awesome, size: AppConstants.iconSizeSm),
-          SizedBox(width: AppConstants.spacingSm),
-          Text('Empfehlungen', overflow: TextOverflow.ellipsis),
-        ],
-      );
-    }
 
-    final rawIndex = ref.watch(recommendationIndexProvider);
-    // Clamp against the current list length: when the user hides the
-    // currently-viewed recommendation, the list shrinks below the raw
-    // index for a frame before the post-frame animateToPage + onPageChanged
-    // cycle brings the notifier back in range.
-    final total = recs.length;
-    final displayIndex = rawIndex.clamp(0, total - 1);
-    // pageIndex 0 = oldest; pageIndex total-1 = latest. The list is
-    // newest-first, so convert to the matching list index.
-    final listIndex = (total - 1) - displayIndex;
-    final createdAt = recs[listIndex].createdAt;
-    final text = createdAt != null
-        ? formatDateWeekday(createdAt)
-        : 'Empfehlungen';
+    String text = 'Empfehlungen';
+    if (recs.isNotEmpty) {
+      final rawIndex = ref.watch(recommendationIndexProvider);
+      // Clamp against the current list length: when the user hides the
+      // currently-viewed recommendation, the list shrinks below the raw
+      // index for a frame before the post-frame animateToPage +
+      // onPageChanged cycle brings the notifier back in range.
+      final displayIndex = rawIndex.clamp(0, recs.length - 1);
+      // pageIndex 0 = oldest; pageIndex total-1 = latest. The list is
+      // newest-first, so convert to the matching list index.
+      final listIndex = (recs.length - 1) - displayIndex;
+      final createdAt = recs[listIndex].createdAt;
+      if (createdAt != null) text = formatDateWeekday(createdAt);
+    }
 
     return Row(
       mainAxisSize: MainAxisSize.min,
@@ -253,8 +243,12 @@ class _RecommendationsTitle extends ConsumerWidget {
   }
 }
 
-class _PrevRecommendationAction extends ConsumerWidget {
-  const _PrevRecommendationAction();
+enum _ChevronDirection { previous, next }
+
+class _ChevronAction extends ConsumerWidget {
+  const _ChevronAction(this.direction);
+
+  final _ChevronDirection direction;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -266,46 +260,22 @@ class _PrevRecommendationAction extends ConsumerWidget {
     }
     final rawIndex = ref.watch(recommendationIndexProvider);
     final currentIndex = rawIndex.clamp(0, recs.length - 1);
-    final isOldest = currentIndex == 0;
+    final isPrev = direction == _ChevronDirection.previous;
+    final disabled = isPrev
+        ? currentIndex == 0
+        : currentIndex == recs.length - 1;
     return IconButton(
-      key: RecommendationsScreen.previousRecommendationKey,
-      icon: const Icon(Icons.chevron_left),
-      onPressed: isOldest
+      key: isPrev
+          ? RecommendationsScreen.previousRecommendationKey
+          : RecommendationsScreen.nextRecommendationKey,
+      icon: Icon(isPrev ? Icons.chevron_left : Icons.chevron_right),
+      onPressed: disabled
           ? null
           : () {
               HapticService.light();
               ref
                   .read(recommendationIndexProvider.notifier)
-                  .set(currentIndex - 1);
-            },
-    );
-  }
-}
-
-class _NextRecommendationAction extends ConsumerWidget {
-  const _NextRecommendationAction();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final recs = ref
-        .watch(recommendationProvider)
-        .maybeWhen(data: (r) => r, orElse: () => const <Recommendation>[]);
-    if (recs.isEmpty) {
-      return const SizedBox(width: AppConstants.iconBadgeMd);
-    }
-    final rawIndex = ref.watch(recommendationIndexProvider);
-    final currentIndex = rawIndex.clamp(0, recs.length - 1);
-    final isLatest = currentIndex == recs.length - 1;
-    return IconButton(
-      key: RecommendationsScreen.nextRecommendationKey,
-      icon: const Icon(Icons.chevron_right),
-      onPressed: isLatest
-          ? null
-          : () {
-              HapticService.light();
-              ref
-                  .read(recommendationIndexProvider.notifier)
-                  .set(currentIndex + 1);
+                  .set(currentIndex + (isPrev ? -1 : 1));
             },
     );
   }
