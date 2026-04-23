@@ -14,6 +14,18 @@
 
 ---
 
+## Scope reduction (2026-04-24)
+
+Tasks 6–11 below (the `custom_lint` sub-package, root wiring, CI step,
+and commit 3) were implemented in subagent-driven execution, then
+reverted before merge after discovering that `custom_lint 0.8.1` pins
+`analyzer ^8.0.0` while `freezed 3.2.5` requires `analyzer >=9.0.0`
+— the constraint ranges do not overlap. The shipped PR contains only
+Tasks 1–5 (call-site fix + regression test + helper unit test). See
+the matching note at the top of the spec for the full reasoning.
+
+---
+
 ## Task 1: Add the failing regression widget test
 
 **Why first:** TDD — the test pins what "fixed" means. Must fail before any code change, pass after. If the test passes on `develop`, we've written the wrong test.

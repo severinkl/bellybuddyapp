@@ -3,6 +3,23 @@
 **Date:** 2026-04-23
 **Related:** Sentry issue `39a1efcd6a344b1382ae5eec48590925` — `GoError: There is nothing to pop`.
 
+## Scope reduction (2026-04-24)
+
+Sections 3–5 of the original scope below — the `custom_lint` sub-package,
+root wiring, and CI step — were implemented in subagent-driven execution,
+then reverted before merge. Reason: `custom_lint 0.8.1` pins
+`analyzer ^8.0.0`, while the project's `freezed 3.2.5` requires
+`analyzer >=9.0.0 <11.0.0`. The ranges do not overlap, so `custom_lint`
+cannot be a root dev-dependency without downgrading `freezed` (large
+blast radius) or forking upstream.
+
+The shipped PR contains only the call-site fix and the regression widget
+test (sections 1–2 and Testing §A). An audit after the revert confirmed
+no additional raw-pop sites exist in `lib/`. Prevention against future
+regressions is deferred — revisit when upstream `custom_lint` supports
+`analyzer >=9`, or adopt a simpler CI-level grep check if the risk of
+silent regression becomes material.
+
 ## Summary
 
 Replace the 7 raw `context.pop()` call sites in `lib/` with the existing
