@@ -250,6 +250,7 @@ class _ForYouSection extends StatelessWidget {
                   icon: Icons.auto_awesome,
                   iconColor: AppTheme.foreground,
                   hasNew: newRecommendationCount > 0,
+                  pulse: newRecommendationCount > 0,
                   onTap: () => context.push(RoutePaths.recommendations),
                 ),
               ),
