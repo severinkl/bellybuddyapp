@@ -212,7 +212,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // After fling: pageIndex=1, listIndex=(3-1)-1=1 → recs[1].
-        // Date appears in AppBar title and inline _SwipeLayout row (Task 5 removes it).
+        // Date appears in AppBar title only.
         expect(
           find.text(formatDateWeekday(recs[1].createdAt!)),
           findsAtLeast(1),
@@ -242,7 +242,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // After tap previous: pageIndex=1, listIndex=1 → recs[1].
-        // Date appears in AppBar title and inline _SwipeLayout row (Task 5 removes it).
+        // Date appears in AppBar title only.
         expect(
           find.text(formatDateWeekday(recs[1].createdAt!)),
           findsAtLeast(1),
@@ -288,7 +288,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // After tap next from pageIndex=1: pageIndex=2, listIndex=0 → recs[0] (latest).
-      // Date appears in AppBar title and inline _SwipeLayout row (Task 5 removes it).
+      // Date appears in AppBar title only.
       expect(find.text(formatDateWeekday(recs[0].createdAt!)), findsAtLeast(1));
     });
 
@@ -313,7 +313,7 @@ void main() {
         await tester.pumpAndSettle();
 
         // Precondition: we're on the latest (pageIndex=2, listIndex=0 → recs[0]).
-        // Date appears in AppBar title and inline _SwipeLayout row (Task 5 removes it).
+        // Date appears in AppBar title only.
         expect(
           find.text(formatDateWeekday(recs[0].createdAt!)),
           findsAtLeast(1),
@@ -452,7 +452,7 @@ void main() {
         container.read(recommendationIndexProvider.notifier).set(0);
         await tester.pumpAndSettle();
         // On oldest in initial list: pageIndex=0, listIndex=(3-1)-0=2 → initial[2].
-        // Date appears in AppBar title and inline _SwipeLayout row (Task 5 removes it).
+        // Date appears in AppBar title only.
         expect(
           find.text(formatDateWeekday(initial[2].createdAt!)),
           findsAtLeast(1),
@@ -656,7 +656,13 @@ void main() {
       );
       // The body no longer has an inline chevron row — the only chevron_right
       // icon in the tree is the AppBar action.
-      expect(find.byIcon(Icons.chevron_right), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(AppBar),
+          matching: find.byIcon(Icons.chevron_right),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('AppBar title falls back to "Empfehlungen" on empty list', (
