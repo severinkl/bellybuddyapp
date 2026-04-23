@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../models/recommendation.dart';
 import '../../providers/recommendation_index_provider.dart';
 import '../../providers/recommendation_provider.dart';
+import '../../router/navigation_extensions.dart';
 import '../../services/haptic_service.dart';
 import '../../utils/date_format_utils.dart';
 import '../../utils/page_controller_utils.dart';
@@ -336,7 +336,7 @@ class _DashboardBackButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: IconButton(
-        onPressed: () => context.pop(),
+        onPressed: () => context.popOrGoDashboard(),
         icon: const Icon(Icons.arrow_back_ios_new),
         iconSize: AppConstants.iconSizeSm,
         tooltip: 'Zurück',

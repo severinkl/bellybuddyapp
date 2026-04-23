@@ -6,6 +6,7 @@ import '../../../config/constants.dart';
 import '../../../models/meal_entry.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../providers/meal_tracker_provider.dart';
+import '../../../router/navigation_extensions.dart';
 import '../../../router/route_names.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/save_helper.dart';
@@ -108,7 +109,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     // Edit mode with no changes → silent pop. Avoids a pointless network
     // round-trip and keeps the UX honest.
     if (widget.mealId != null && !ref.read(mealTrackerProvider).isDirty) {
-      if (mounted) context.pop();
+      if (mounted) context.popOrGoDashboard();
       return;
     }
 
@@ -137,7 +138,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     // Create mode stays on the success overlay regardless (failure leaves the
     // user on the form, same behavior as before).
     if (!mounted) return;
-    if (widget.mealId != null && ok) context.pop();
+    if (widget.mealId != null && ok) context.popOrGoDashboard();
   }
 
   bool _canSave(MealTrackerState state) {
@@ -153,7 +154,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         appBar: AppBar(
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.pop(),
+            onPressed: () => context.popOrGoDashboard(),
           ),
           title: const Text('Mahlzeit'),
         ),
@@ -178,7 +179,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         if (didPop) return;
         final confirmed = await _confirmDiscard(context);
         if (confirmed == true && context.mounted) {
-          context.pop();
+          context.popOrGoDashboard();
         }
       },
       child: TrackerScreenScaffold(
