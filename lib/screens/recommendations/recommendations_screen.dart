@@ -254,9 +254,7 @@ class _ChevronAction extends ConsumerWidget {
         .watch(recommendationProvider)
         .maybeWhen(data: (r) => r, orElse: () => const <Recommendation>[]);
     if (recs.isEmpty) {
-      // No recs → no navigation to offer. Collapse the action slot so the
-      // AppBar title centers in the full available width on the empty
-      // state rather than showing a dead 44 px placeholder.
+      // No recs — collapse the action slot so the AppBar title can center.
       return const SizedBox.shrink();
     }
     final rawIndex = ref.watch(recommendationIndexProvider);
