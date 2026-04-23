@@ -170,7 +170,10 @@ void main() {
 
       // Initial page is the latest (pageIndex = total-1 = 2, listIndex = 0 → recs[0]).
       // Date appears in AppBar title only (inline row removed in Task 5).
-      expect(find.text(formatDateWeekday(recs[0].createdAt!)), findsAtLeast(1));
+      expect(
+        find.text(formatDateWeekdayShort(recs[0].createdAt!)),
+        findsAtLeast(1),
+      );
       // At the latest page, the next button is present but disabled.
       final appBar = find.byType(AppBar);
       final nextBtn = tester.widget<IconButton>(
@@ -214,7 +217,7 @@ void main() {
         // After fling: pageIndex=1, listIndex=(3-1)-1=1 → recs[1].
         // Date appears in AppBar title only.
         expect(
-          find.text(formatDateWeekday(recs[1].createdAt!)),
+          find.text(formatDateWeekdayShort(recs[1].createdAt!)),
           findsAtLeast(1),
         );
       },
@@ -244,7 +247,7 @@ void main() {
         // After tap previous: pageIndex=1, listIndex=1 → recs[1].
         // Date appears in AppBar title only.
         expect(
-          find.text(formatDateWeekday(recs[1].createdAt!)),
+          find.text(formatDateWeekdayShort(recs[1].createdAt!)),
           findsAtLeast(1),
         );
       },
@@ -289,7 +292,10 @@ void main() {
 
       // After tap next from pageIndex=1: pageIndex=2, listIndex=0 → recs[0] (latest).
       // Date appears in AppBar title only.
-      expect(find.text(formatDateWeekday(recs[0].createdAt!)), findsAtLeast(1));
+      expect(
+        find.text(formatDateWeekdayShort(recs[0].createdAt!)),
+        findsAtLeast(1),
+      );
     });
 
     testWidgets(
@@ -315,7 +321,7 @@ void main() {
         // Precondition: we're on the latest (pageIndex=2, listIndex=0 → recs[0]).
         // Date appears in AppBar title only.
         expect(
-          find.text(formatDateWeekday(recs[0].createdAt!)),
+          find.text(formatDateWeekdayShort(recs[0].createdAt!)),
           findsAtLeast(1),
         );
 
@@ -324,7 +330,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(
-          find.text(formatDateWeekday(recs[1].createdAt!)),
+          find.text(formatDateWeekdayShort(recs[1].createdAt!)),
           findsAtLeast(1),
           reason:
               'First swipe at cold start must advance the PageView. '
@@ -379,7 +385,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(
-          find.text(formatDateWeekday(recs[0].createdAt!)),
+          find.text(formatDateWeekdayShort(recs[0].createdAt!)),
           findsAtLeast(1),
           reason:
               'Every screen entry must land on the newest recommendation. '
@@ -454,7 +460,7 @@ void main() {
         // On oldest in initial list: pageIndex=0, listIndex=(3-1)-0=2 → initial[2].
         // Date appears in AppBar title only.
         expect(
-          find.text(formatDateWeekday(initial[2].createdAt!)),
+          find.text(formatDateWeekdayShort(initial[2].createdAt!)),
           findsAtLeast(1),
         );
 
@@ -468,7 +474,7 @@ void main() {
         // list is still the oldest ('1'). Title shows that same rec's date.
         // pageIndex=0, listIndex=(4-1)-0=3 → afterRefresh[3] = rec '1'.
         expect(
-          find.text(formatDateWeekday(afterRefresh[3].createdAt!)),
+          find.text(formatDateWeekdayShort(afterRefresh[3].createdAt!)),
           findsAtLeast(1),
           reason:
               'User was on the oldest when the refresh landed; the '
@@ -617,7 +623,7 @@ void main() {
       expect(
         find.descendant(
           of: appBar,
-          matching: find.text(formatDateWeekday(rec.createdAt!)),
+          matching: find.text(formatDateWeekdayShort(rec.createdAt!)),
         ),
         findsOneWidget,
       );

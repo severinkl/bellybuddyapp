@@ -234,7 +234,7 @@ class _RecommendationsTitle extends ConsumerWidget {
       // newest-first, so convert to the matching list index.
       final listIndex = (recs.length - 1) - displayIndex;
       final createdAt = recs[listIndex].createdAt;
-      if (createdAt != null) text = formatDateWeekday(createdAt);
+      if (createdAt != null) text = formatDateWeekdayShort(createdAt);
     }
 
     return Text(text, overflow: TextOverflow.ellipsis);
@@ -254,7 +254,8 @@ class _ChevronAction extends ConsumerWidget {
         .watch(recommendationProvider)
         .maybeWhen(data: (r) => r, orElse: () => const <Recommendation>[]);
     if (recs.isEmpty) {
-      return const SizedBox(width: AppConstants.iconBadgeMd);
+      // No recs — collapse the action slot so the AppBar title can center.
+      return const SizedBox.shrink();
     }
     final rawIndex = ref.watch(recommendationIndexProvider);
     final currentIndex = rawIndex.clamp(0, recs.length - 1);
