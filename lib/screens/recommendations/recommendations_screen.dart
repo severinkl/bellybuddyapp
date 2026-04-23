@@ -128,7 +128,7 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: const _DashboardBackButton(),
-        leadingWidth: 128,
+        leadingWidth: AppConstants.appBarLeadingLabelled,
         title: const _RecommendationsTitle(),
       ),
       body: state.when(

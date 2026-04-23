@@ -2,13 +2,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 
+import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/recommendation_index_provider.dart';
@@ -424,13 +424,7 @@ void main() {
           ],
           child: MaterialApp.router(
             routerConfig: router,
-            localizationsDelegates: const [
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: const [Locale('de', 'DE')],
-            locale: const Locale('de', 'DE'),
+            theme: AppTheme.theme,
           ),
         ),
       );

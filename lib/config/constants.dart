@@ -61,6 +61,11 @@ class AppConstants {
   // Scroll clearance (space below content to clear fixed bottom bars)
   static const double bottomBarClearance = 128.0;
 
+  // AppBar leading width for a labelled back button (e.g. "‹ Dashboard").
+  // Wide enough to hold an iOS-style arrow + the German label without
+  // truncating on iPhone SE.
+  static const double appBarLeadingLabelled = 128.0;
+
   // Image sizes
   static const double mealImageHeight = 180.0;
   static const double mascotSizeMd = 96.0;
