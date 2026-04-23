@@ -310,6 +310,20 @@ void main() {
       },
     );
 
+    testWidgets('each page renders RecommendationFeedbackView', (tester) async {
+      await tester.pumpWithProviders(
+        const RecommendationsScreen(),
+        overrides: _overridesFor([_rec('1')]),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
+
+      expect(find.text('War diese Empfehlung hilfreich?'), findsOneWidget);
+      expect(find.byIcon(Icons.thumb_up_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.thumb_down_outlined), findsOneWidget);
+    });
+
     testWidgets(
       'refresh with a new latest while reading an older page keeps the user put',
       (tester) async {

@@ -12,6 +12,7 @@ import '../../widgets/common/bb_async_state.dart';
 import '../../widgets/common/circle_icon_button.dart';
 import '../../widgets/common/mascot_image.dart';
 import 'widgets/recommendation_card.dart';
+import 'widgets/recommendation_feedback_view.dart';
 import 'widgets/recommendation_summary_card.dart';
 
 class RecommendationsScreen extends ConsumerStatefulWidget {
@@ -348,6 +349,8 @@ class _RecommendationPage extends ConsumerWidget {
               child: RecommendationCard(item: item),
             ),
           ),
+          AppConstants.gap16,
+          RecommendationFeedbackView(recommendation: recommendation),
           AppConstants.gap24,
         ],
       ),
