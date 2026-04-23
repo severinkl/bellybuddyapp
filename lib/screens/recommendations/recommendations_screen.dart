@@ -12,6 +12,7 @@ import '../../widgets/common/bb_async_state.dart';
 import '../../widgets/common/circle_icon_button.dart';
 import '../../widgets/common/mascot_image.dart';
 import 'widgets/recommendation_card.dart';
+import 'widgets/recommendation_feedback_view.dart';
 import 'widgets/recommendation_summary_card.dart';
 
 class RecommendationsScreen extends ConsumerStatefulWidget {
@@ -206,10 +207,16 @@ class _RecommendationsTitle extends ConsumerWidget {
     final total = ref
         .watch(recommendationProvider)
         .maybeWhen(data: (recs) => recs.length, orElse: () => 0);
-    final currentIndex = ref.watch(recommendationIndexProvider);
+    final rawIndex = ref.watch(recommendationIndexProvider);
+    // Clamp against the current list length: when the user hides the
+    // currently-viewed recommendation, the list shrinks below the raw
+    // index for a frame before the post-frame animateToPage + onPageChanged
+    // cycle brings the notifier back in range. Without this clamp the
+    // header briefly renders "3 von 2" or similar.
+    final displayIndex = total == 0 ? 0 : rawIndex.clamp(0, total - 1);
 
     final text = total > 0
-        ? 'Empfehlungen (${currentIndex + 1} von $total)'
+        ? 'Empfehlungen (${displayIndex + 1} von $total)'
         : 'Empfehlungen';
 
     return Row(
@@ -233,7 +240,11 @@ class _SwipeLayout extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentIndex = ref.watch(recommendationIndexProvider);
+    final rawIndex = ref.watch(recommendationIndexProvider);
+    // Clamp against the list: if the user just hid the currently-viewed
+    // recommendation, the list shrunk and the notifier's raw value may
+    // point past the new end. See `_RecommendationsTitle` for the rationale.
+    final currentIndex = rawIndex.clamp(0, recommendations.length - 1);
     final isOldest = currentIndex == 0;
     final isLatest = currentIndex == recommendations.length - 1;
     // pageIndex 0 = oldest; pageIndex length-1 = latest. Convert to the
@@ -241,6 +252,18 @@ class _SwipeLayout extends ConsumerWidget {
     final listIndex = (recommendations.length - 1) - currentIndex;
     final safeIndex = listIndex.clamp(0, recommendations.length - 1);
     final createdAt = recommendations[safeIndex].createdAt;
+
+    // If the raw notifier value was out of bounds, schedule a write-back so
+    // the controller's ref.listen animates the PageView to a valid page on
+    // the next frame. Avoids a stuck "controller at page N but list only
+    // has N items" after a hide. Idempotent: the next rebuild sees
+    // rawIndex == currentIndex and skips scheduling a second callback.
+    if (rawIndex != currentIndex) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        ref.read(recommendationIndexProvider.notifier).set(currentIndex);
+      });
+    }
 
     return Column(
       children: [
@@ -348,6 +371,8 @@ class _RecommendationPage extends ConsumerWidget {
               child: RecommendationCard(item: item),
             ),
           ),
+          AppConstants.gap16,
+          RecommendationFeedbackView(recommendation: recommendation),
           AppConstants.gap24,
         ],
       ),

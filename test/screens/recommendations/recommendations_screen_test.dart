@@ -35,6 +35,10 @@ Recommendation _rec(String id, {String? summary}) =>
     testRecommendation(id: id, summary: summary ?? 'Tipp $id');
 
 void main() {
+  setUpAll(() {
+    registerFallbackValue(RecommendationState.unrated);
+  });
+
   group('RecommendationsScreen', () {
     testWidgets('loading state renders BbLoadingState', (tester) async {
       // Pump with a provider in AsyncValue.loading. We override the
@@ -310,6 +314,20 @@ void main() {
       },
     );
 
+    testWidgets('each page renders RecommendationFeedbackView', (tester) async {
+      await tester.pumpWithProviders(
+        const RecommendationsScreen(),
+        overrides: _overridesFor([_rec('1')]),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
+
+      expect(find.text('War diese Empfehlung hilfreich?'), findsOneWidget);
+      expect(find.text('Hilfreich'), findsOneWidget);
+      expect(find.text('Nicht hilfreich'), findsOneWidget);
+    });
+
     testWidgets(
       'refresh with a new latest while reading an older page keeps the user put',
       (tester) async {
@@ -367,6 +385,62 @@ void main() {
               'User was on the oldest when the refresh landed; the '
               'anchor logic must not jumpToPage and yank them away.',
         );
+      },
+    );
+
+    testWidgets(
+      'hiding the currently-viewed recommendation clamps the header to a valid position',
+      (tester) async {
+        // Regression: after `setRecommendationState(hidden)` removed the
+        // currently-viewed rec from the list, the AppBar briefly rendered
+        // "Empfehlungen (3 von 2)" because the index notifier still pointed
+        // at the old rightmost page. The fix clamps the display index
+        // against the live list length.
+        final repo = MockRecommendationRepository();
+        when(
+          () => repo.fetchByUserId(any()),
+        ).thenAnswer((_) async => [_rec('3'), _rec('2'), _rec('1')]);
+        when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+        when(
+          () => repo.updateFeedback(
+            id: any(named: 'id'),
+            state: any(named: 'state'),
+            dislikeComment: any(named: 'dislikeComment'),
+          ),
+        ).thenAnswer((_) async {});
+
+        final container = createContainer(
+          overrides: [
+            recommendationRepositoryProvider.overrideWithValue(repo),
+            currentUserIdProvider.overrideWithValue('test-user'),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(home: RecommendationsScreen()),
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pumpAndSettle();
+
+        // Precondition: on the latest (index 2), header shows "3 von 3".
+        expect(find.text('Empfehlungen (3 von 3)'), findsOneWidget);
+
+        // Simulate the user tapping "Empfehlung ausblenden" in the sheet.
+        // This is what the sheet's `_hide()` method calls.
+        await container
+            .read(recommendationProvider.notifier)
+            .setRecommendationState(id: '3', state: RecommendationState.hidden);
+        await tester.pumpAndSettle();
+
+        // Header must NOT show "3 von 2" — the clamp brings it to the
+        // new latest.
+        expect(find.text('Empfehlungen (3 von 2)'), findsNothing);
+        expect(find.text('Empfehlungen (2 von 2)'), findsOneWidget);
       },
     );
   });

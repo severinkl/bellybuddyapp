@@ -21,6 +21,23 @@ class RecommendationRepository {
     log: _log,
     label: 'fetchByUserId',
   );
+
+  Future<void> updateFeedback({
+    required String id,
+    required RecommendationState state,
+    String? dislikeComment,
+  }) async {
+    try {
+      await _recommendationService.updateFeedback(
+        id: id,
+        state: state,
+        dislikeComment: dislikeComment,
+      );
+    } catch (e, st) {
+      _log.error('updateFeedback failed for id=$id', e, st);
+      rethrow;
+    }
+  }
 }
 
 final recommendationRepositoryProvider = Provider<RecommendationRepository>(
