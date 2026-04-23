@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/dislike_category.dart';
 import '../models/recommendation.dart';
 import '../providers/core_providers.dart';
 import '../utils/logger.dart';
@@ -17,6 +18,7 @@ class RecommendationService {
           .from('recommendations')
           .select()
           .eq('user_id', userId)
+          .neq('state', 'hidden')
           .order('created_at', ascending: false);
       return data.map((e) => Recommendation.fromJson(e)).toList();
     } catch (e, st) {
@@ -49,6 +51,30 @@ class RecommendationService {
           .isFilter('seen_at', null);
     } catch (e, st) {
       _log.error('markAllAsSeen failed', e, st);
+    }
+  }
+
+  Future<void> updateFeedback({
+    required String id,
+    required RecommendationState state,
+    DislikeCategory? dislikeCategory,
+    String? dislikeComment,
+  }) async {
+    final payload = <String, dynamic>{
+      'state': state.dbValue,
+      'rated_at': DateTime.now().toUtc().toIso8601String(),
+    };
+    if (dislikeCategory != null) {
+      payload['dislike_category'] = dislikeCategory.dbValue;
+    }
+    if (dislikeComment != null) {
+      payload['dislike_comment'] = dislikeComment;
+    }
+    try {
+      await _client.from('recommendations').update(payload).eq('id', id);
+    } catch (e, st) {
+      _log.error('updateFeedback failed for id=$id', e, st);
+      rethrow;
     }
   }
 }

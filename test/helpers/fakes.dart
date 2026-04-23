@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:belly_buddy/models/dislike_category.dart';
 import 'package:belly_buddy/models/drink.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
@@ -346,6 +347,13 @@ class FakeRecommendationRepository implements RecommendationRepository {
   Future<int> countUnseen(String userId) async => 0;
   @override
   Future<void> markAllAsSeen(String userId) async {}
+  @override
+  Future<void> updateFeedback({
+    required String id,
+    required RecommendationState state,
+    DislikeCategory? dislikeCategory,
+    String? dislikeComment,
+  }) async {}
 }
 
 // -- FakeMealMediaRepository --
