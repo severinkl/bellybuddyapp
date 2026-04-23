@@ -89,50 +89,52 @@ The `?? _moodPools[TimeSlot.evening]!` on `pickMoodBody` handles the midday case
 
 All 5 existing lines are retagged into specific slots rather than dropped — they still read well, just now bucketed.
 
+Each body is prefixed with a single leading emoji chosen to match the message. Titles (`'Belly Buddy'`) are untouched.
+
 ### Meal — morning [05–10] (5 new)
 
-- "Frühstück schon drin? Trag's ein."
-- "Was hat dein Bauch zum Frühstück bekommen?"
-- "Morgenmuffel-Frühstück: Kaffee zählt nicht als Mahlzeit."
-- "Erster Bissen des Tages — notiert?"
-- "Frühstück oder Luft? Sag's."
+- "🥐 Frühstück schon drin? Trag's ein."
+- "🍳 Was hat dein Bauch zum Frühstück bekommen?"
+- "☕ Morgenmuffel-Frühstück: Kaffee zählt nicht als Mahlzeit."
+- "🥄 Erster Bissen des Tages — notiert?"
+- "💨 Frühstück oder Luft? Sag's."
 
 ### Meal — midday [11–16] (5 new + 2 retagged)
 
-- "Mittagspause — was lag auf dem Teller?"
-- "Was hat dein Bauch zu Mittag bekommen?"
-- "Snack oder richtige Mahlzeit? Beides eintragen."
-- "Mittag im Logbuch? Sonst vergisst du's."
-- "Zwischendurch gefuttert? Kurz notieren."
-- "Zeit zum Eintragen! Was hast du gegessen?" *(retagged)*
-- "Erinnerung: Halte dein Essens-Tagebuch aktuell." *(retagged)*
+- "🍽️ Mittagspause — was lag auf dem Teller?"
+- "🥗 Was hat dein Bauch zu Mittag bekommen?"
+- "🍪 Snack oder richtige Mahlzeit? Beides eintragen."
+- "📓 Mittag im Logbuch? Sonst vergisst du's."
+- "🍴 Zwischendurch gefuttert? Kurz notieren."
+- "✍️ Zeit zum Eintragen! Was hast du gegessen?" *(retagged)*
+- "📖 Erinnerung: Halte dein Essens-Tagebuch aktuell." *(retagged)*
 
 ### Meal — evening [17–22] (5 new + 2 retagged)
 
-- "Abendessen notieren — bevor der Tag vorbei ist."
-- "Was hat's heute Abend gegeben?"
-- "Abendbrot, Pizza oder Resteverwertung? Trag's ein."
-- "Letzte Mahlzeit des Tages im Kasten?"
-- "Was hat dein Bauch heute Abend abbekommen?"
-- "Vergiss nicht, deine Mahlzeiten zu tracken!" *(retagged)*
-- "Was hast du heute gegessen? Trag es ein!" *(retagged)*
+- "🌙 Abendessen notieren — bevor der Tag vorbei ist."
+- "🍲 Was hat's heute Abend gegeben?"
+- "🍕 Abendbrot, Pizza oder Resteverwertung? Trag's ein."
+- "🌆 Letzte Mahlzeit des Tages im Kasten?"
+- "🍽️ Was hat dein Bauch heute Abend abbekommen?"
+- "📝 Vergiss nicht, deine Mahlzeiten zu tracken!" *(retagged)*
+- "🥘 Was hast du heute gegessen? Trag es ein!" *(retagged)*
 
 ### Mood — morning [05–10] (5 new)
 
-- "Morgenmuffel oder Bauch-Muffel?"
-- "Brummt's, zwickt's, oder ist alles chill?"
-- "Wie hat dein Bauch geschlafen?"
-- "Grummelt's schon? Sag's."
-- "Bauch-Report zur Morgenlage."
+- "😴 Morgenmuffel oder Bauch-Muffel?"
+- "🤔 Brummt's, zwickt's, oder ist alles chill?"
+- "🛏️ Wie hat dein Bauch geschlafen?"
+- "🌅 Grummelt's schon? Sag's."
+- "📋 Bauch-Report zur Morgenlage."
 
 ### Mood — evening [17–22] (5 new + 1 retagged)
 
-- "Tagesende: wie geht's dem Bauch?"
-- "Abend-Check — was hat dein Bauch heute mitgemacht?"
-- "Blähungs-Bilanz des Tages?"
-- "Bauch-Fazit fürs Logbuch."
-- "Zwickt, brummt, oder tiptop? Eintragen!"
-- "Wie war dein Bauchgefühl heute?" *(retagged)*
+- "🌙 Tagesende: wie geht's dem Bauch?"
+- "🌆 Abend-Check — was hat dein Bauch heute mitgemacht?"
+- "💨 Blähungs-Bilanz des Tages?"
+- "📖 Bauch-Fazit fürs Logbuch."
+- "✅ Zwickt, brummt, oder tiptop? Eintragen!"
+- "🤷 Wie war dein Bauchgefühl heute?" *(retagged)*
 
 **Pool sizes:** meal 5/7/7, mood 5/–/6. Total: 30 variants.
 
