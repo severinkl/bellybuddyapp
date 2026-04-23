@@ -78,15 +78,13 @@ class _RecommendationFeedbackViewState
           );
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Konnte nicht gespeichert werden.')),
-      );
+      _showSaveError();
     }
   }
 
   void _onCommentChanged(String value) {
     _commentDebounce?.cancel();
-    _commentDebounce = Timer(const Duration(seconds: 1), () async {
+    _commentDebounce = Timer(AppConstants.debounceDuration, () async {
       if (!mounted) return;
       try {
         await ref
@@ -97,11 +95,18 @@ class _RecommendationFeedbackViewState
             );
       } catch (_) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Konnte nicht gespeichert werden.')),
-        );
+        _showSaveError();
       }
     });
+  }
+
+  void _showSaveError() {
+    // Hide any still-visible save-error snack before showing a new one so
+    // rapid failures (e.g. offline + typing a comment) don't stack.
+    final messenger = ScaffoldMessenger.of(context)..hideCurrentSnackBar();
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Konnte nicht gespeichert werden.')),
+    );
   }
 
   @override

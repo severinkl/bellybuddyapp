@@ -173,7 +173,7 @@ void main() {
           () => repo.updateFeedback(
             id: 'r1',
             state: RecommendationState.disliked,
-            dislikeCategory: DislikeCategory.notRelevant,
+            dislikeCategory: DislikeCategory.notRelevant.dbValue,
             dislikeComment: null,
           ),
         ).called(1);

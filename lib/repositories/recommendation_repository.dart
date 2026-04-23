@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/dislike_category.dart';
 import '../models/recommendation.dart';
 import '../services/recommendation_service.dart';
 import '../utils/logger.dart';
@@ -18,13 +17,7 @@ class RecommendationRepository {
       _recommendationService.markAllAsSeen(userId);
 
   Future<List<Recommendation>> fetchByUserId(String userId) => retryAsync(
-    () async {
-      final rows = await _recommendationService.fetchByUserId(userId);
-      // Defense-in-depth: the service applies `.neq('state', 'hidden')` at
-      // the SQL layer, but we also drop any hidden rows that slip through so
-      // disliked-then-hidden recommendations never surface.
-      return rows.where((r) => r.state != RecommendationState.hidden).toList();
-    },
+    () => _recommendationService.fetchByUserId(userId),
     log: _log,
     label: 'fetchByUserId',
   );
@@ -32,7 +25,7 @@ class RecommendationRepository {
   Future<void> updateFeedback({
     required String id,
     required RecommendationState state,
-    DislikeCategory? dislikeCategory,
+    String? dislikeCategory,
     String? dislikeComment,
   }) async {
     try {

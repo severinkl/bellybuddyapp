@@ -151,7 +151,7 @@ void main() {
         () => mockRepo.updateFeedback(
           id: 'rec-1',
           state: RecommendationState.disliked,
-          dislikeCategory: DislikeCategory.notRelevant,
+          dislikeCategory: DislikeCategory.notRelevant.dbValue,
           dislikeComment: 'Text',
         ),
       ).called(1);
@@ -255,7 +255,7 @@ void main() {
           () => mockRepo.updateFeedback(
             id: 'rec-1',
             state: RecommendationState.disliked,
-            dislikeCategory: DislikeCategory.notRelevant,
+            dislikeCategory: DislikeCategory.notRelevant.dbValue,
             dislikeComment: 'hallo',
           ),
         ).called(1);

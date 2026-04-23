@@ -54,7 +54,9 @@ class RecommendationNotifier
     final currentList = previous.value;
     if (currentList == null) return;
 
-    // Optimistic update.
+    // Optimistic update. When the user transitions off disliked (e.g. to
+    // liked), category + comment are null — the service call below writes
+    // those as explicit nulls so the server row matches.
     final List<Recommendation> next;
     if (state == RecommendationState.hidden) {
       next = currentList.where((r) => r.id != id).toList();
@@ -80,7 +82,7 @@ class RecommendationNotifier
           .updateFeedback(
             id: id,
             state: state,
-            dislikeCategory: category,
+            dislikeCategory: category?.dbValue,
             dislikeComment: comment,
           );
     } catch (e, st) {
@@ -97,6 +99,9 @@ class RecommendationNotifier
 
     final target = currentList.where((r) => r.id == id).firstOrNull;
     if (target == null) return;
+    // Early-return on no-op so repeated debounce firings with an unchanged
+    // comment don't fire needless network writes or list rebuilds.
+    if (target.dislikeComment == comment) return;
 
     final next = currentList
         .map(
@@ -113,9 +118,10 @@ class RecommendationNotifier
           .updateFeedback(
             id: id,
             state: target.state,
-            dislikeCategory: DislikeCategory.fromDbValue(
-              target.dislikeCategory,
-            ),
+            // Pass the raw string straight through so unknown/legacy
+            // category values survive a comment-only save instead of being
+            // silently nulled by a round-trip through the enum parser.
+            dislikeCategory: target.dislikeCategory,
             dislikeComment: comment,
           );
     } catch (e, st) {

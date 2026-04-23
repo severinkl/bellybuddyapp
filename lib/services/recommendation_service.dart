@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../models/dislike_category.dart';
 import '../models/recommendation.dart';
 import '../providers/core_providers.dart';
 import '../utils/logger.dart';
@@ -54,24 +53,27 @@ class RecommendationService {
     }
   }
 
+  /// Writes the four feedback columns unconditionally — including explicit
+  /// nulls — so transitions like `disliked` → `liked` clear the category and
+  /// comment on the server. The caller is responsible for passing valid
+  /// `dislikeCategory` strings (the client enum `DislikeCategory.dbValue`
+  /// is the source of truth).
   Future<void> updateFeedback({
     required String id,
     required RecommendationState state,
-    DislikeCategory? dislikeCategory,
+    String? dislikeCategory,
     String? dislikeComment,
   }) async {
-    final payload = <String, dynamic>{
-      'state': state.dbValue,
-      'rated_at': DateTime.now().toUtc().toIso8601String(),
-    };
-    if (dislikeCategory != null) {
-      payload['dislike_category'] = dislikeCategory.dbValue;
-    }
-    if (dislikeComment != null) {
-      payload['dislike_comment'] = dislikeComment;
-    }
     try {
-      await _client.from('recommendations').update(payload).eq('id', id);
+      await _client
+          .from('recommendations')
+          .update({
+            'state': state.dbValue,
+            'dislike_category': dislikeCategory,
+            'dislike_comment': dislikeComment,
+            'rated_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('id', id);
     } catch (e, st) {
       _log.error('updateFeedback failed for id=$id', e, st);
       rethrow;

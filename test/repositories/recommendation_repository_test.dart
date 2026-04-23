@@ -34,21 +34,6 @@ void main() {
       expect(result, equals(recs));
       verify(() => recommendationService.fetchByUserId(testUserId)).called(1);
     });
-
-    test('excludes rows with state = hidden', () async {
-      final visible = testRecommendation(id: 'rec-visible');
-      final hidden = testRecommendation(
-        id: 'rec-hidden',
-      ).copyWith(state: RecommendationState.hidden);
-      when(
-        () => recommendationService.fetchByUserId(any()),
-      ).thenAnswer((_) async => [visible, hidden]);
-
-      final result = await repo.fetchByUserId(testUserId);
-
-      expect(result.map((r) => r.id), ['rec-visible']);
-      expect(result.any((r) => r.state == RecommendationState.hidden), isFalse);
-    });
   });
 
   group('updateFeedback', () {
@@ -69,7 +54,7 @@ void main() {
         await repo.updateFeedback(
           id: 'rec-1',
           state: RecommendationState.disliked,
-          dislikeCategory: DislikeCategory.notRelevant,
+          dislikeCategory: DislikeCategory.notRelevant.dbValue,
           dislikeComment: 'Nein',
         );
 
@@ -77,7 +62,7 @@ void main() {
           () => recommendationService.updateFeedback(
             id: 'rec-1',
             state: RecommendationState.disliked,
-            dislikeCategory: DislikeCategory.notRelevant,
+            dislikeCategory: DislikeCategory.notRelevant.dbValue,
             dislikeComment: 'Nein',
           ),
         ).called(1);

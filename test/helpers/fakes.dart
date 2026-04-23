@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:belly_buddy/models/dislike_category.dart';
 import 'package:belly_buddy/models/drink.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
@@ -351,7 +350,7 @@ class FakeRecommendationRepository implements RecommendationRepository {
   Future<void> updateFeedback({
     required String id,
     required RecommendationState state,
-    DislikeCategory? dislikeCategory,
+    String? dislikeCategory,
     String? dislikeComment,
   }) async {}
 }
