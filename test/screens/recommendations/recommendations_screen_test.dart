@@ -34,8 +34,12 @@ List<Override> _overridesFor(List<Recommendation> recommendations) {
   ];
 }
 
-Recommendation _rec(String id, {String? summary, DateTime? at}) =>
-    testRecommendation(id: id, summary: summary ?? 'Tipp $id', createdAt: at);
+Recommendation _rec(String id, {String? summary, DateTime? createdAt}) =>
+    testRecommendation(
+      id: id,
+      summary: summary ?? 'Tipp $id',
+      createdAt: createdAt,
+    );
 
 void main() {
   setUpAll(() {
@@ -128,9 +132,12 @@ void main() {
           find.byKey(RecommendationsScreen.nextRecommendationKey),
           findsNothing,
         );
-        // No createdAt → AppBar falls back to 'Empfehlungen' (also appears as a
-        // section heading inside the page body, so findsAtLeast(1)).
-        expect(find.text('Empfehlungen'), findsAtLeast(1));
+        // No createdAt → AppBar falls back to 'Empfehlungen'.
+        final appBar = find.byType(AppBar);
+        expect(
+          find.descendant(of: appBar, matching: find.text('Empfehlungen')),
+          findsOneWidget,
+        );
         expect(find.textContaining('Empfehlungen ('), findsNothing);
       },
     );
@@ -139,9 +146,9 @@ void main() {
       tester,
     ) async {
       final recs = [
-        _rec('3', at: DateTime(2026, 4, 22)), // newest-first (latest)
-        _rec('2', at: DateTime(2026, 4, 21)),
-        _rec('1', at: DateTime(2026, 4, 20)), // oldest
+        _rec('3', createdAt: DateTime(2026, 4, 22)), // newest-first (latest)
+        _rec('2', createdAt: DateTime(2026, 4, 21)),
+        _rec('1', createdAt: DateTime(2026, 4, 20)), // oldest
       ];
       await tester.pumpWithProviders(
         const RecommendationsScreen(),
@@ -168,9 +175,9 @@ void main() {
       'swiping rightward on the PageView retreats to an older recommendation',
       (tester) async {
         final recs = [
-          _rec('3', at: DateTime(2026, 4, 22)),
-          _rec('2', at: DateTime(2026, 4, 21)),
-          _rec('1', at: DateTime(2026, 4, 20)),
+          _rec('3', createdAt: DateTime(2026, 4, 22)),
+          _rec('2', createdAt: DateTime(2026, 4, 21)),
+          _rec('1', createdAt: DateTime(2026, 4, 20)),
         ];
         await tester.pumpWithProviders(
           const RecommendationsScreen(),
@@ -198,9 +205,9 @@ void main() {
       'tapping the previous chevron advances to the older recommendation',
       (tester) async {
         final recs = [
-          _rec('3', at: DateTime(2026, 4, 22)),
-          _rec('2', at: DateTime(2026, 4, 21)),
-          _rec('1', at: DateTime(2026, 4, 20)),
+          _rec('3', createdAt: DateTime(2026, 4, 22)),
+          _rec('2', createdAt: DateTime(2026, 4, 21)),
+          _rec('1', createdAt: DateTime(2026, 4, 20)),
         ];
         await tester.pumpWithProviders(
           const RecommendationsScreen(),
@@ -228,9 +235,9 @@ void main() {
       tester,
     ) async {
       final recs = [
-        _rec('3', at: DateTime(2026, 4, 22)),
-        _rec('2', at: DateTime(2026, 4, 21)),
-        _rec('1', at: DateTime(2026, 4, 20)),
+        _rec('3', createdAt: DateTime(2026, 4, 22)),
+        _rec('2', createdAt: DateTime(2026, 4, 21)),
+        _rec('1', createdAt: DateTime(2026, 4, 20)),
       ];
       final mock = MockRecommendationRepository();
       when(() => mock.fetchByUserId(any())).thenAnswer((_) async => recs);
@@ -274,9 +281,9 @@ void main() {
         // left in a half-initialised state and the first swipe did
         // nothing until the user tapped a chevron to force a re-settle.
         final recs = [
-          _rec('3', at: DateTime(2026, 4, 22)),
-          _rec('2', at: DateTime(2026, 4, 21)),
-          _rec('1', at: DateTime(2026, 4, 20)),
+          _rec('3', createdAt: DateTime(2026, 4, 22)),
+          _rec('2', createdAt: DateTime(2026, 4, 21)),
+          _rec('1', createdAt: DateTime(2026, 4, 20)),
         ];
         await tester.pumpWithProviders(
           const RecommendationsScreen(),
@@ -319,9 +326,9 @@ void main() {
         // the provider keeping cached data visible during re-fetch, the
         // PageView stays mounted throughout and the anchor lands.
         final recs = [
-          _rec('3', at: DateTime(2026, 4, 22)),
-          _rec('2', at: DateTime(2026, 4, 21)),
-          _rec('1', at: DateTime(2026, 4, 20)),
+          _rec('3', createdAt: DateTime(2026, 4, 22)),
+          _rec('2', createdAt: DateTime(2026, 4, 21)),
+          _rec('1', createdAt: DateTime(2026, 4, 20)),
         ];
         final mock = MockRecommendationRepository();
         when(() => mock.fetchByUserId(any())).thenAnswer((_) async => recs);
@@ -385,15 +392,15 @@ void main() {
         // arrives via refresh, the reader shouldn't be teleported off
         // the entry they're currently on.
         final initial = [
-          _rec('3', at: DateTime(2026, 4, 22)),
-          _rec('2', at: DateTime(2026, 4, 21)),
-          _rec('1', at: DateTime(2026, 4, 20)),
+          _rec('3', createdAt: DateTime(2026, 4, 22)),
+          _rec('2', createdAt: DateTime(2026, 4, 21)),
+          _rec('1', createdAt: DateTime(2026, 4, 20)),
         ];
         final afterRefresh = [
-          _rec('4', at: DateTime(2026, 4, 23)),
-          _rec('3', at: DateTime(2026, 4, 22)),
-          _rec('2', at: DateTime(2026, 4, 21)),
-          _rec('1', at: DateTime(2026, 4, 20)),
+          _rec('4', createdAt: DateTime(2026, 4, 23)),
+          _rec('3', createdAt: DateTime(2026, 4, 22)),
+          _rec('2', createdAt: DateTime(2026, 4, 21)),
+          _rec('1', createdAt: DateTime(2026, 4, 20)),
         ];
 
         final mock = MockRecommendationRepository();
@@ -579,9 +586,14 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // The date appears in the AppBar title (and also in the inline _SwipeLayout
-      // row — Task 5 will remove that). At least one is in the AppBar.
-      expect(find.text(formatDateWeekday(rec.createdAt!)), findsAtLeast(1));
+      final appBar = find.byType(AppBar);
+      expect(
+        find.descendant(
+          of: appBar,
+          matching: find.text(formatDateWeekday(rec.createdAt!)),
+        ),
+        findsOneWidget,
+      );
       // The old "Empfehlungen (X von Y)" counter text is gone.
       expect(find.textContaining('Empfehlungen ('), findsNothing);
     });
@@ -602,7 +614,11 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Empfehlungen'), findsOneWidget);
+      final appBar = find.byType(AppBar);
+      expect(
+        find.descendant(of: appBar, matching: find.text('Empfehlungen')),
+        findsOneWidget,
+      );
     });
   });
 }
