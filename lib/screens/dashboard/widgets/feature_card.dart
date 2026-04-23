@@ -78,7 +78,7 @@ class FeatureCard extends StatelessWidget {
                         ),
                       ),
                       child: Text(
-                        hasNew ? 'Neu' : '$badgeCount',
+                        hasNew ? 'ungelesen' : '$badgeCount',
                         style: const TextStyle(
                           fontSize: AppTheme.fontSizeCaption,
                           fontWeight: FontWeight.w600,
