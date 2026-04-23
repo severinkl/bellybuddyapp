@@ -175,6 +175,70 @@ void main() {
       ).called(1);
     });
 
+    testWidgets(
+      'dismissing mid-debounce flushes the pending comment fire-and-forget',
+      (tester) async {
+        final repo = MockRecommendationRepository();
+        final rec = testRecommendation(
+          id: 'r1',
+        ).copyWith(state: RecommendationState.disliked);
+        when(() => repo.fetchByUserId(any())).thenAnswer((_) async => [rec]);
+        when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+        when(
+          () => repo.updateFeedback(
+            id: any(named: 'id'),
+            state: any(named: 'state'),
+            dislikeComment: any(named: 'dislikeComment'),
+          ),
+        ).thenAnswer((_) async {});
+
+        final container = createContainer(
+          overrides: [
+            recommendationRepositoryProvider.overrideWithValue(repo),
+            currentUserIdProvider.overrideWithValue('test-user'),
+          ],
+        );
+        addTearDown(container.dispose);
+        await container
+            .read(recommendationProvider.notifier)
+            .fetchRecommendations();
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              home: Builder(
+                builder: (ctx) => Scaffold(
+                  body: Center(
+                    child: ElevatedButton(
+                      onPressed: () => showRecommendationDislikeSheet(ctx, rec),
+                      child: const Text('open'),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('open'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextField), 'halb fertig');
+        // Tap Fertig BEFORE the 800ms debounce elapses. The dispose-flush
+        // should write the typed value exactly once.
+        await tester.tap(find.text('Fertig'));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => repo.updateFeedback(
+            id: 'r1',
+            state: RecommendationState.disliked,
+            dislikeComment: 'halb fertig',
+          ),
+        ).called(1);
+      },
+    );
+
     testWidgets('pre-fills the textarea with any existing comment', (
       tester,
     ) async {

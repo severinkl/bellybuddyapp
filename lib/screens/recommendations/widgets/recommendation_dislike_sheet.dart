@@ -42,6 +42,9 @@ class RecommendationDislikeSheet extends ConsumerStatefulWidget {
 class _RecommendationDislikeSheetState
     extends ConsumerState<RecommendationDislikeSheet> {
   late final TextEditingController _commentController;
+  // Cached so dispose() can flush without touching ref — which some Riverpod
+  // versions assert against after the widget is unmounted.
+  late final RecommendationNotifier _notifier;
   Timer? _commentDebounce;
 
   @override
@@ -50,6 +53,7 @@ class _RecommendationDislikeSheetState
     _commentController = TextEditingController(
       text: widget.recommendation.dislikeComment ?? '',
     );
+    _notifier = ref.read(recommendationProvider.notifier);
   }
 
   @override
@@ -62,13 +66,17 @@ class _RecommendationDislikeSheetState
     _commentDebounce?.cancel();
     if (hadPendingWrite) {
       final value = _commentController.text;
+      final id = widget.recommendation.id;
+      // Defer into a microtask so the notifier's synchronous `state = …`
+      // doesn't fire while we're still inside the widget's dispose pass —
+      // Riverpod asserts against modifying a provider during build/dispose.
       unawaited(
-        ref
-            .read(recommendationProvider.notifier)
-            .setDislikeComment(
-              id: widget.recommendation.id,
-              comment: value.isEmpty ? null : value,
-            ),
+        Future.microtask(
+          () => _notifier.setDislikeComment(
+            id: id,
+            comment: value.isEmpty ? null : value,
+          ),
+        ),
       );
     }
     _commentController.dispose();
@@ -87,12 +95,10 @@ class _RecommendationDislikeSheetState
     _commentDebounce = Timer(AppConstants.debounceDuration, () async {
       if (!mounted) return;
       try {
-        await ref
-            .read(recommendationProvider.notifier)
-            .setDislikeComment(
-              id: widget.recommendation.id,
-              comment: value.isEmpty ? null : value,
-            );
+        await _notifier.setDislikeComment(
+          id: widget.recommendation.id,
+          comment: value.isEmpty ? null : value,
+        );
       } catch (_) {
         if (!mounted) return;
         _showSaveError();
@@ -102,12 +108,10 @@ class _RecommendationDislikeSheetState
 
   Future<void> _hide() async {
     try {
-      await ref
-          .read(recommendationProvider.notifier)
-          .setRecommendationState(
-            id: widget.recommendation.id,
-            state: RecommendationState.hidden,
-          );
+      await _notifier.setRecommendationState(
+        id: widget.recommendation.id,
+        state: RecommendationState.hidden,
+      );
       if (!mounted) return;
       Navigator.of(context).pop();
     } catch (_) {
