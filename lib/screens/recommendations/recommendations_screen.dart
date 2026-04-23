@@ -256,7 +256,8 @@ class _SwipeLayout extends ConsumerWidget {
     // If the raw notifier value was out of bounds, schedule a write-back so
     // the controller's ref.listen animates the PageView to a valid page on
     // the next frame. Avoids a stuck "controller at page N but list only
-    // has N items" after a hide.
+    // has N items" after a hide. Idempotent: the next rebuild sees
+    // rawIndex == currentIndex and skips scheduling a second callback.
     if (rawIndex != currentIndex) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!context.mounted) return;

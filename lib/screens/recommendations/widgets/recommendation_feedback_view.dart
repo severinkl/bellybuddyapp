@@ -41,7 +41,9 @@ class RecommendationFeedbackView extends ConsumerWidget {
             .setRecommendationState(
               id: recommendation.id,
               state: RecommendationState.disliked,
-              // Preserve any existing category/comment from an earlier session.
+              // Clear category on (re)entry — the user is about to pick one
+              // in the sheet. Keep any prior comment so the sheet's TextField
+              // shows what they wrote last time.
               category: null,
               comment: recommendation.dislikeComment,
             );
@@ -168,23 +170,26 @@ class _FeedbackPill extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(AppConstants.radiusPill),
       child: AnimatedContainer(
         duration: AppConstants.animFast,
         curve: Curves.easeOut,
-        padding: const EdgeInsets.symmetric(vertical: 12),
+        padding: const EdgeInsets.symmetric(vertical: AppConstants.spacing12),
         decoration: BoxDecoration(
           color: selected ? selectedColor : AppTheme.card,
           border: Border.all(
             color: selected ? selectedColor : AppTheme.border,
-            width: 1.5,
+            width: AppConstants.borderWidthMd,
           ),
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(AppConstants.radiusPill),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Text(icon, style: const TextStyle(fontSize: 16)),
+            Text(
+              icon,
+              style: const TextStyle(fontSize: AppTheme.fontSizeSubtitle),
+            ),
             const SizedBox(width: AppConstants.spacingSm),
             Text(
               label,

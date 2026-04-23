@@ -22,7 +22,9 @@ Future<void> showRecommendationDislikeSheet(
     showDragHandle: false,
     backgroundColor: AppTheme.card,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(AppConstants.radiusXl),
+      ),
     ),
     builder: (_) => RecommendationDislikeSheet(recommendation: recommendation),
   );
@@ -53,7 +55,23 @@ class _RecommendationDislikeSheetState
 
   @override
   void dispose() {
+    // If the user dismisses the sheet mid-debounce (fast Fertig-tap,
+    // swipe-down), flush the pending comment fire-and-forget so ~800ms of
+    // typing isn't silently discarded. We can't show a SnackBar post-dispose;
+    // transient errors surface on the next read of the provider state.
+    final hadPendingWrite = _commentDebounce?.isActive ?? false;
     _commentDebounce?.cancel();
+    if (hadPendingWrite) {
+      final value = _commentController.text;
+      unawaited(
+        ref
+            .read(recommendationProvider.notifier)
+            .setDislikeComment(
+              id: widget.recommendation.id,
+              comment: value.isEmpty ? null : value,
+            ),
+      );
+    }
     _commentController.dispose();
     super.dispose();
   }
@@ -135,11 +153,13 @@ class _RecommendationDislikeSheetState
         children: [
           Center(
             child: Container(
-              width: 40,
-              height: 4,
+              width: AppConstants.dragHandleWidth,
+              height: AppConstants.dragHandleHeight,
               decoration: BoxDecoration(
                 color: AppTheme.border,
-                borderRadius: BorderRadius.circular(2),
+                borderRadius: BorderRadius.circular(
+                  AppConstants.dragHandleRadius,
+                ),
               ),
             ),
           ),
@@ -206,7 +226,7 @@ class _RecommendationDislikeSheetState
                   backgroundColor: AppTheme.foreground,
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(AppConstants.radiusMd),
                   ),
                 ),
                 child: const Text('Fertig'),

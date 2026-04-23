@@ -44,13 +44,19 @@ class AppConstants {
   static const double radiusSm = 8.0;
   static const double radiusIcon = 10.0;
   static const double radiusMd = 12.0;
+  static const double radiusPill = 14.0;
   static const double radiusLg = 16.0;
   static const double radiusRound = 20.0;
   static const double radiusXl = 24.0;
   static const double radiusFull = 100.0;
 
+  // Border widths
+  static const double borderWidthMd = 1.5;
+
   // Drag handle
   static const double dragHandleWidth = 40.0;
+  static const double dragHandleHeight = 4.0;
+  static const double dragHandleRadius = 2.0;
 
   // Scroll clearance (space below content to clear fixed bottom bars)
   static const double bottomBarClearance = 128.0;
