@@ -40,4 +40,26 @@ void main() {
       expect(ReminderCopy.mealPools[TimeSlot.evening]!, contains(body));
     });
   });
+
+  group('ReminderCopy.pickMoodBody', () {
+    test('morning hour returns a line from the morning mood pool', () {
+      final body = ReminderCopy.pickMoodBody(7, Random(42));
+      expect(ReminderCopy.moodPools[TimeSlot.morning]!, contains(body));
+    });
+
+    test('evening hour returns a line from the evening mood pool', () {
+      final body = ReminderCopy.pickMoodBody(20, Random(42));
+      expect(ReminderCopy.moodPools[TimeSlot.evening]!, contains(body));
+    });
+
+    test('midday hour falls back to the evening mood pool', () {
+      final body = ReminderCopy.pickMoodBody(13, Random(42));
+      expect(ReminderCopy.moodPools[TimeSlot.evening]!, contains(body));
+    });
+
+    test('night hour (23) draws from the evening mood pool', () {
+      final body = ReminderCopy.pickMoodBody(23, Random(42));
+      expect(ReminderCopy.moodPools[TimeSlot.evening]!, contains(body));
+    });
+  });
 }

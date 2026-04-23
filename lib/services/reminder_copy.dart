@@ -44,4 +44,28 @@ class ReminderCopy {
     final pool = mealPools[timeSlotForHour(hour)]!;
     return pool[random.nextInt(pool.length)];
   }
+
+  static const moodPools = <TimeSlot, List<String>>{
+    TimeSlot.morning: [
+      'Morgenmuffel oder Bauch-Muffel?',
+      "Brummt's, zwickt's, oder ist alles chill?",
+      'Wie hat dein Bauch geschlafen?',
+      "Grummelt's schon? Sag's.",
+      'Bauch-Report zur Morgenlage.',
+    ],
+    TimeSlot.evening: [
+      "Tagesende: wie geht's dem Bauch?",
+      'Abend-Check — was hat dein Bauch heute mitgemacht?',
+      'Blähungs-Bilanz des Tages?',
+      'Bauch-Fazit fürs Logbuch.',
+      'Zwickt, brummt, oder tiptop? Eintragen!',
+      'Wie war dein Bauchgefühl heute?',
+    ],
+  };
+
+  static String pickMoodBody(int hour, Random random) {
+    final slot = timeSlotForHour(hour);
+    final pool = moodPools[slot] ?? moodPools[TimeSlot.evening]!;
+    return pool[random.nextInt(pool.length)];
+  }
 }
