@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../models/recommendation.dart';
@@ -9,7 +10,6 @@ import '../../services/haptic_service.dart';
 import '../../utils/date_format_utils.dart';
 import '../../utils/page_controller_utils.dart';
 import '../../widgets/common/bb_async_state.dart';
-import '../../widgets/common/circle_icon_button.dart';
 import '../../widgets/common/mascot_image.dart';
 import 'widgets/recommendation_card.dart';
 import 'widgets/recommendation_feedback_view.dart';
@@ -74,7 +74,13 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
   void _maybeAnchor(List<Recommendation> list) {
     if (list.isEmpty) return;
     final latestId = list.first.id;
-    if (latestId == _anchoredLatestId) return;
+    if (latestId == _anchoredLatestId) {
+      // Same latest, but a non-latest may have been hidden — keep the
+      // recorded length in sync so the next re-anchor sees the right
+      // previousLength when the user's page position is compared below.
+      _anchoredLength = list.length;
+      return;
+    }
 
     final isFirstAnchor = _anchoredLatestId == null;
     final previousLength = _anchoredLength;
@@ -125,7 +131,15 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
     });
 
     return Scaffold(
-      appBar: AppBar(title: const _RecommendationsTitle()),
+      appBar: AppBar(
+        leading: const _DashboardBackButton(),
+        title: const _RecommendationsTitle(),
+        actions: const [
+          _ChevronAction(_ChevronDirection.previous),
+          _ChevronAction(_ChevronDirection.next),
+          SizedBox(width: AppConstants.spacingXs),
+        ],
+      ),
       body: state.when(
         loading: () =>
             const BbLoadingState(message: 'Analysiere deine Daten...'),
@@ -204,28 +218,64 @@ class _RecommendationsTitle extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final total = ref
+    final recs = ref
         .watch(recommendationProvider)
-        .maybeWhen(data: (recs) => recs.length, orElse: () => 0);
+        .maybeWhen(data: (r) => r, orElse: () => const <Recommendation>[]);
+
+    String text = 'Empfehlungen';
+    if (recs.isNotEmpty) {
+      final rawIndex = ref.watch(recommendationIndexProvider);
+      // Clamp against the current list length: when the user hides the
+      // currently-viewed recommendation, the list shrinks below the raw
+      // index for a frame before the post-frame animateToPage +
+      // onPageChanged cycle brings the notifier back in range.
+      final displayIndex = rawIndex.clamp(0, recs.length - 1);
+      // pageIndex 0 = oldest; pageIndex total-1 = latest. The list is
+      // newest-first, so convert to the matching list index.
+      final listIndex = (recs.length - 1) - displayIndex;
+      final createdAt = recs[listIndex].createdAt;
+      if (createdAt != null) text = formatDateWeekday(createdAt);
+    }
+
+    return Text(text, overflow: TextOverflow.ellipsis);
+  }
+}
+
+enum _ChevronDirection { previous, next }
+
+class _ChevronAction extends ConsumerWidget {
+  const _ChevronAction(this.direction);
+
+  final _ChevronDirection direction;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final recs = ref
+        .watch(recommendationProvider)
+        .maybeWhen(data: (r) => r, orElse: () => const <Recommendation>[]);
+    if (recs.isEmpty) {
+      return const SizedBox(width: AppConstants.iconBadgeMd);
+    }
     final rawIndex = ref.watch(recommendationIndexProvider);
-    // Clamp against the current list length: when the user hides the
-    // currently-viewed recommendation, the list shrinks below the raw
-    // index for a frame before the post-frame animateToPage + onPageChanged
-    // cycle brings the notifier back in range. Without this clamp the
-    // header briefly renders "3 von 2" or similar.
-    final displayIndex = total == 0 ? 0 : rawIndex.clamp(0, total - 1);
-
-    final text = total > 0
-        ? 'Empfehlungen (${displayIndex + 1} von $total)'
-        : 'Empfehlungen';
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(Icons.auto_awesome, size: 20),
-        const SizedBox(width: AppConstants.spacingSm),
-        Flexible(child: Text(text, overflow: TextOverflow.ellipsis)),
-      ],
+    final currentIndex = rawIndex.clamp(0, recs.length - 1);
+    final isPrev = direction == _ChevronDirection.previous;
+    final disabled = isPrev
+        ? currentIndex == 0
+        : currentIndex == recs.length - 1;
+    return IconButton(
+      key: isPrev
+          ? RecommendationsScreen.previousRecommendationKey
+          : RecommendationsScreen.nextRecommendationKey,
+      icon: Icon(isPrev ? Icons.chevron_left : Icons.chevron_right),
+      tooltip: isPrev ? 'Vorherige' : 'Nächste',
+      onPressed: disabled
+          ? null
+          : () {
+              HapticService.light();
+              ref
+                  .read(recommendationIndexProvider.notifier)
+                  .set(currentIndex + (isPrev ? -1 : 1));
+            },
     );
   }
 }
@@ -245,13 +295,6 @@ class _SwipeLayout extends ConsumerWidget {
     // recommendation, the list shrunk and the notifier's raw value may
     // point past the new end. See `_RecommendationsTitle` for the rationale.
     final currentIndex = rawIndex.clamp(0, recommendations.length - 1);
-    final isOldest = currentIndex == 0;
-    final isLatest = currentIndex == recommendations.length - 1;
-    // pageIndex 0 = oldest; pageIndex length-1 = latest. Convert to the
-    // newest-first list index the provider returns.
-    final listIndex = (recommendations.length - 1) - currentIndex;
-    final safeIndex = listIndex.clamp(0, recommendations.length - 1);
-    final createdAt = recommendations[safeIndex].createdAt;
 
     // If the raw notifier value was out of bounds, schedule a write-back so
     // the controller's ref.listen animates the PageView to a valid page on
@@ -265,77 +308,42 @@ class _SwipeLayout extends ConsumerWidget {
       });
     }
 
-    return Column(
-      children: [
-        Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppConstants.spacingMd,
-            vertical: AppConstants.spacingSm,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              if (isOldest)
-                const SizedBox(width: AppConstants.iconBadgeMd)
-              else
-                CircleIconButton(
-                  tapKey: RecommendationsScreen.previousRecommendationKey,
-                  icon: Icons.chevron_left,
-                  onPressed: () {
-                    HapticService.light();
-                    ref
-                        .read(recommendationIndexProvider.notifier)
-                        .set(currentIndex - 1);
-                  },
-                ),
-              if (createdAt != null)
-                Flexible(
-                  child: Text(
-                    formatDateWeekday(createdAt),
-                    textAlign: TextAlign.center,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: AppTheme.fontSizeBody,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.foreground,
-                    ),
-                  ),
-                ),
-              if (isLatest)
-                const SizedBox(width: AppConstants.iconBadgeMd)
-              else
-                CircleIconButton(
-                  tapKey: RecommendationsScreen.nextRecommendationKey,
-                  icon: Icons.chevron_right,
-                  onPressed: () {
-                    HapticService.light();
-                    ref
-                        .read(recommendationIndexProvider.notifier)
-                        .set(currentIndex + 1);
-                  },
-                ),
-            ],
-          ),
+    return PageView.builder(
+      controller: controller,
+      itemCount: recommendations.length,
+      onPageChanged: (index) {
+        HapticService.light();
+        ref.read(recommendationIndexProvider.notifier).set(index);
+      },
+      itemBuilder: (context, pageIndex) {
+        // pageIndex 0 = oldest; pageIndex length-1 = latest.
+        // Our list from the provider is newest-first, so convert.
+        final listIndex = (recommendations.length - 1) - pageIndex;
+        return _RecommendationPage(recommendation: recommendations[listIndex]);
+      },
+    );
+  }
+}
+
+/// Leading back button: icon-only inside a subtle tonal pill.
+/// The pill surface is what distinguishes this from the bare chevron
+/// `IconButton`s in the AppBar actions slot.
+class _DashboardBackButton extends StatelessWidget {
+  const _DashboardBackButton();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: IconButton(
+        onPressed: () => context.pop(),
+        icon: const Icon(Icons.arrow_back_ios_new),
+        iconSize: AppConstants.iconSizeSm,
+        tooltip: 'Zurück',
+        style: IconButton.styleFrom(
+          backgroundColor: AppTheme.muted,
+          foregroundColor: AppTheme.foreground,
         ),
-        Expanded(
-          child: PageView.builder(
-            controller: controller,
-            itemCount: recommendations.length,
-            onPageChanged: (index) {
-              HapticService.light();
-              ref.read(recommendationIndexProvider.notifier).set(index);
-            },
-            itemBuilder: (context, pageIndex) {
-              // pageIndex 0 = oldest; pageIndex length-1 = latest.
-              // Our list from the provider is newest-first, so convert:
-              final listIndex = (recommendations.length - 1) - pageIndex;
-              return _RecommendationPage(
-                recommendation: recommendations[listIndex],
-              );
-            },
-          ),
-        ),
-      ],
+      ),
     );
   }
 }

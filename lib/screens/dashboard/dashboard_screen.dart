@@ -246,7 +246,7 @@ class _ForYouSection extends StatelessWidget {
                 child: FeatureCard(
                   key: TutorialKeys.fuerDich,
                   imageAsset: AppConstants.fuerDichCard,
-                  label: 'Für dich',
+                  label: 'Tipps',
                   icon: Icons.auto_awesome,
                   iconColor: AppTheme.foreground,
                   hasNew: newRecommendationCount > 0,
