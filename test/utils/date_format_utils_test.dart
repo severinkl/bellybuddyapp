@@ -122,6 +122,19 @@ void main() {
     });
   });
 
+  group('formatDateWeekdayShort', () {
+    test('formats with abbreviated weekday and dd.MM.', () {
+      // 2026-03-13 is a Friday
+      final dt = DateTime(2026, 3, 13);
+      expect(formatDateWeekdayShort(dt), 'Fr., 13.03.');
+    });
+
+    test('zero-pads day and month', () {
+      final dt = DateTime(2026, 1, 5);
+      expect(formatDateWeekdayShort(dt), 'Mo., 05.01.');
+    });
+  });
+
   group('formatDateShort', () {
     test('formats as dd.MM.yyyy', () {
       final dt = DateTime(2026, 3, 13);
