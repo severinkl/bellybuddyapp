@@ -41,10 +41,8 @@ class RecommendationFeedbackView extends ConsumerWidget {
             .setRecommendationState(
               id: recommendation.id,
               state: RecommendationState.disliked,
-              // Clear category on (re)entry — the user is about to pick one
-              // in the sheet. Keep any prior comment so the sheet's TextField
-              // shows what they wrote last time.
-              category: null,
+              // Keep any prior comment so the sheet's TextField shows what
+              // they wrote last time.
               comment: recommendation.dislikeComment,
             );
       } catch (_) {
@@ -77,6 +75,14 @@ class RecommendationFeedbackView extends ConsumerWidget {
             style: TextStyle(
               fontSize: AppTheme.fontSizeBody,
               fontWeight: FontWeight.w600,
+              color: AppTheme.mutedForeground,
+            ),
+          ),
+          AppConstants.gap4,
+          const Text(
+            'Hilft Belly Buddy, zukünftige Empfehlungen für dich anzupassen.',
+            style: TextStyle(
+              fontSize: AppTheme.fontSizeCaptionLG,
               color: AppTheme.mutedForeground,
             ),
           ),

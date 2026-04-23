@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
-import '../../../models/dislike_category.dart';
 import '../../../models/recommendation.dart';
 import '../../../providers/recommendation_provider.dart';
 
@@ -83,24 +82,6 @@ class _RecommendationDislikeSheetState
     );
   }
 
-  Future<void> _selectCategory(DislikeCategory category) async {
-    try {
-      await ref
-          .read(recommendationProvider.notifier)
-          .setRecommendationState(
-            id: widget.recommendation.id,
-            state: RecommendationState.disliked,
-            category: category,
-            comment: _commentController.text.isEmpty
-                ? null
-                : _commentController.text,
-          );
-    } catch (_) {
-      if (!mounted) return;
-      _showSaveError();
-    }
-  }
-
   void _onCommentChanged(String value) {
     _commentDebounce?.cancel();
     _commentDebounce = Timer(AppConstants.debounceDuration, () async {
@@ -137,9 +118,6 @@ class _RecommendationDislikeSheetState
 
   @override
   Widget build(BuildContext context) {
-    final selected = DislikeCategory.fromDbValue(
-      widget.recommendation.dislikeCategory,
-    );
     return Padding(
       padding: EdgeInsets.fromLTRB(
         AppConstants.spacingMd,
@@ -181,24 +159,6 @@ class _RecommendationDislikeSheetState
             ),
           ),
           AppConstants.gap12,
-          Wrap(
-            spacing: AppConstants.spacingSm,
-            runSpacing: AppConstants.spacingSm,
-            children: [
-              for (final c in DislikeCategory.values)
-                ChoiceChip(
-                  label: Text(c.label),
-                  selected: selected == c,
-                  selectedColor: AppTheme.destructive,
-                  labelStyle: TextStyle(
-                    color: selected == c ? Colors.white : AppTheme.foreground,
-                    fontSize: AppTheme.fontSizeBody,
-                  ),
-                  onSelected: (_) => _selectCategory(c),
-                ),
-            ],
-          ),
-          AppConstants.gap12,
           TextField(
             controller: _commentController,
             onChanged: _onCommentChanged,
@@ -206,7 +166,7 @@ class _RecommendationDislikeSheetState
             maxLines: null,
             maxLength: AppConstants.dislikeCommentMaxLength,
             decoration: const InputDecoration(
-              labelText: 'Noch etwas? (optional)',
+              labelText: 'Erzähl uns warum ... (optional)',
               border: OutlineInputBorder(),
             ),
           ),

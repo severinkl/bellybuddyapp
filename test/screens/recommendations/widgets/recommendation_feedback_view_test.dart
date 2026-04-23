@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 
-import 'package:belly_buddy/models/dislike_category.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
@@ -71,7 +70,6 @@ void main() {
         () => repo.updateFeedback(
           id: any(named: 'id'),
           state: any(named: 'state'),
-          dislikeCategory: any(named: 'dislikeCategory'),
           dislikeComment: any(named: 'dislikeComment'),
         ),
       ).thenAnswer((_) async {});
@@ -111,7 +109,6 @@ void main() {
         () => repo.updateFeedback(
           id: 'r1',
           state: RecommendationState.liked,
-          dislikeCategory: null,
           dislikeComment: null,
         ),
       ).called(1);
@@ -148,7 +145,6 @@ void main() {
         () => repo.updateFeedback(
           id: any(named: 'id'),
           state: any(named: 'state'),
-          dislikeCategory: any(named: 'dislikeCategory'),
           dislikeComment: any(named: 'dislikeComment'),
         ),
       ).thenAnswer((_) async {});
@@ -190,7 +186,6 @@ void main() {
         () => repo.updateFeedback(
           id: 'r1',
           state: RecommendationState.disliked,
-          dislikeCategory: null,
           dislikeComment: null,
         ),
       ).called(1);
@@ -199,10 +194,9 @@ void main() {
     testWidgets(
       'disliked: renders hint + Bearbeiten; tapping Bearbeiten re-opens the sheet',
       (tester) async {
-        final rec = testRecommendation(id: 'r1').copyWith(
-          state: RecommendationState.disliked,
-          dislikeCategory: DislikeCategory.notRelevant.dbValue,
-        );
+        final rec = testRecommendation(
+          id: 'r1',
+        ).copyWith(state: RecommendationState.disliked);
         await _pump(
           tester,
           rec: rec,
@@ -233,7 +227,6 @@ void main() {
         () => repo.updateFeedback(
           id: any(named: 'id'),
           state: any(named: 'state'),
-          dislikeCategory: any(named: 'dislikeCategory'),
           dislikeComment: any(named: 'dislikeComment'),
         ),
       ).thenThrow(Exception('boom'));

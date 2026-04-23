@@ -350,7 +350,6 @@ class FakeRecommendationRepository implements RecommendationRepository {
   Future<void> updateFeedback({
     required String id,
     required RecommendationState state,
-    String? dislikeCategory,
     String? dislikeComment,
   }) async {}
 }

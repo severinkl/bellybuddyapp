@@ -55,7 +55,6 @@ void main() {
         'created_at': '2026-04-22T12:00:00Z',
       });
       expect(rec.state, RecommendationState.unrated);
-      expect(rec.dislikeCategory, isNull);
       expect(rec.dislikeComment, isNull);
       expect(rec.ratedAt, isNull);
     });
@@ -78,18 +77,16 @@ void main() {
       }
     });
 
-    test('parses dislike_category, dislike_comment, rated_at', () {
+    test('parses dislike_comment and rated_at', () {
       final rec = Recommendation.fromJson({
         'id': 'rec-1',
         'user_id': 'user-1',
         'summary': '',
         'recommendations': [],
         'state': 'disliked',
-        'dislike_category': 'not_relevant',
         'dislike_comment': 'Kein Kommentar',
         'rated_at': '2026-04-22T13:00:00Z',
       });
-      expect(rec.dislikeCategory, 'not_relevant');
       expect(rec.dislikeComment, 'Kein Kommentar');
       expect(rec.ratedAt, DateTime.utc(2026, 4, 22, 13));
     });

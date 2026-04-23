@@ -53,15 +53,12 @@ class RecommendationService {
     }
   }
 
-  /// Writes the four feedback columns unconditionally — including explicit
-  /// nulls — so transitions like `disliked` → `liked` clear the category and
-  /// comment on the server. The caller is responsible for passing valid
-  /// `dislikeCategory` strings (the client enum `DislikeCategory.dbValue`
-  /// is the source of truth).
+  /// Writes the three feedback columns unconditionally — including explicit
+  /// nulls for `dislike_comment` — so transitions like `disliked` → `liked`
+  /// clear the comment on the server.
   Future<void> updateFeedback({
     required String id,
     required RecommendationState state,
-    String? dislikeCategory,
     String? dislikeComment,
   }) async {
     try {
@@ -69,7 +66,6 @@ class RecommendationService {
           .from('recommendations')
           .update({
             'state': state.dbValue,
-            'dislike_category': dislikeCategory,
             'dislike_comment': dislikeComment,
             'rated_at': DateTime.now().toUtc().toIso8601String(),
           })

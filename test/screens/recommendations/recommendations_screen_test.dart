@@ -405,7 +405,6 @@ void main() {
           () => repo.updateFeedback(
             id: any(named: 'id'),
             state: any(named: 'state'),
-            dislikeCategory: any(named: 'dislikeCategory'),
             dislikeComment: any(named: 'dislikeComment'),
           ),
         ).thenAnswer((_) async {});

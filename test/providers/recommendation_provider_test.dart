@@ -2,7 +2,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-import 'package:belly_buddy/models/dislike_category.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
@@ -17,7 +16,6 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(RecommendationState.unrated);
-    registerFallbackValue(DislikeCategory.notRelevant);
   });
 
   setUp(() {
@@ -94,7 +92,6 @@ void main() {
         () => mockRepo.updateFeedback(
           id: any(named: 'id'),
           state: any(named: 'state'),
-          dislikeCategory: any(named: 'dislikeCategory'),
           dislikeComment: any(named: 'dislikeComment'),
         ),
       ).thenAnswer((_) async {});
@@ -110,7 +107,6 @@ void main() {
         () => mockRepo.updateFeedback(
           id: 'rec-1',
           state: RecommendationState.liked,
-          dislikeCategory: null,
           dislikeComment: null,
         ),
       ).called(1);
@@ -127,13 +123,12 @@ void main() {
       );
     });
 
-    test('disliked + category + comment → repo receives all three', () async {
+    test('disliked + comment → repo receives both', () async {
       final container = await seeded([rec1, rec2]);
       when(
         () => mockRepo.updateFeedback(
           id: any(named: 'id'),
           state: any(named: 'state'),
-          dislikeCategory: any(named: 'dislikeCategory'),
           dislikeComment: any(named: 'dislikeComment'),
         ),
       ).thenAnswer((_) async {});
@@ -143,7 +138,6 @@ void main() {
           .setRecommendationState(
             id: 'rec-1',
             state: RecommendationState.disliked,
-            category: DislikeCategory.notRelevant,
             comment: 'Text',
           );
 
@@ -151,7 +145,6 @@ void main() {
         () => mockRepo.updateFeedback(
           id: 'rec-1',
           state: RecommendationState.disliked,
-          dislikeCategory: DislikeCategory.notRelevant.dbValue,
           dislikeComment: 'Text',
         ),
       ).called(1);
@@ -161,7 +154,6 @@ void main() {
           .value!
           .firstWhere((r) => r.id == 'rec-1');
       expect(updated.state, RecommendationState.disliked);
-      expect(updated.dislikeCategory, 'not_relevant');
       expect(updated.dislikeComment, 'Text');
     });
 
@@ -171,7 +163,6 @@ void main() {
         () => mockRepo.updateFeedback(
           id: any(named: 'id'),
           state: any(named: 'state'),
-          dislikeCategory: any(named: 'dislikeCategory'),
           dislikeComment: any(named: 'dislikeComment'),
         ),
       ).thenAnswer((_) async {});
@@ -197,7 +188,6 @@ void main() {
           () => mockRepo.updateFeedback(
             id: any(named: 'id'),
             state: any(named: 'state'),
-            dislikeCategory: any(named: 'dislikeCategory'),
             dislikeComment: any(named: 'dislikeComment'),
           ),
         ).thenThrow(Exception('boom'));
@@ -224,12 +214,11 @@ void main() {
 
   group('RecommendationNotifier.setDislikeComment', () {
     test(
-      'updates only the comment locally and calls repo with current state + category',
+      'updates only the comment locally and calls repo with current state',
       () async {
-        final seeded = testRecommendation(id: 'rec-1').copyWith(
-          state: RecommendationState.disliked,
-          dislikeCategory: 'not_relevant',
-        );
+        final seeded = testRecommendation(
+          id: 'rec-1',
+        ).copyWith(state: RecommendationState.disliked);
         when(
           () => mockRepo.fetchByUserId(any()),
         ).thenAnswer((_) async => [seeded]);
@@ -237,7 +226,6 @@ void main() {
           () => mockRepo.updateFeedback(
             id: any(named: 'id'),
             state: any(named: 'state'),
-            dislikeCategory: any(named: 'dislikeCategory'),
             dislikeComment: any(named: 'dislikeComment'),
           ),
         ).thenAnswer((_) async {});
@@ -255,7 +243,6 @@ void main() {
           () => mockRepo.updateFeedback(
             id: 'rec-1',
             state: RecommendationState.disliked,
-            dislikeCategory: DislikeCategory.notRelevant.dbValue,
             dislikeComment: 'hallo',
           ),
         ).called(1);
@@ -265,17 +252,14 @@ void main() {
             .value!
             .firstWhere((r) => r.id == 'rec-1');
         expect(updated.state, RecommendationState.disliked);
-        expect(updated.dislikeCategory, 'not_relevant');
         expect(updated.dislikeComment, 'hallo');
       },
     );
 
     test('no-ops when comment is unchanged (no repo call)', () async {
-      final seeded = testRecommendation(id: 'rec-1').copyWith(
-        state: RecommendationState.disliked,
-        dislikeCategory: 'not_relevant',
-        dislikeComment: 'hallo',
-      );
+      final seeded = testRecommendation(
+        id: 'rec-1',
+      ).copyWith(state: RecommendationState.disliked, dislikeComment: 'hallo');
       when(
         () => mockRepo.fetchByUserId(any()),
       ).thenAnswer((_) async => [seeded]);
@@ -283,7 +267,6 @@ void main() {
         () => mockRepo.updateFeedback(
           id: any(named: 'id'),
           state: any(named: 'state'),
-          dislikeCategory: any(named: 'dislikeCategory'),
           dislikeComment: any(named: 'dislikeComment'),
         ),
       ).thenAnswer((_) async {});
@@ -301,7 +284,6 @@ void main() {
         () => mockRepo.updateFeedback(
           id: any(named: 'id'),
           state: any(named: 'state'),
-          dislikeCategory: any(named: 'dislikeCategory'),
           dislikeComment: any(named: 'dislikeComment'),
         ),
       );

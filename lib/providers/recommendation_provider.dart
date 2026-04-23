@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/dislike_category.dart';
 import '../models/recommendation.dart';
 import '../providers/core_providers.dart';
 import '../repositories/recommendation_repository.dart';
@@ -47,7 +46,6 @@ class RecommendationNotifier
   Future<void> setRecommendationState({
     required String id,
     required RecommendationState state,
-    DislikeCategory? category,
     String? comment,
   }) async {
     final previous = this.state;
@@ -55,8 +53,8 @@ class RecommendationNotifier
     if (currentList == null) return;
 
     // Optimistic update. When the user transitions off disliked (e.g. to
-    // liked), category + comment are null — the service call below writes
-    // those as explicit nulls so the server row matches.
+    // liked), comment is null — the service call below writes that as an
+    // explicit null so the server row matches.
     final List<Recommendation> next;
     if (state == RecommendationState.hidden) {
       next = currentList.where((r) => r.id != id).toList();
@@ -66,7 +64,6 @@ class RecommendationNotifier
             (r) => r.id == id
                 ? r.copyWith(
                     state: state,
-                    dislikeCategory: category?.dbValue,
                     dislikeComment: comment,
                     ratedAt: DateTime.now().toUtc(),
                   )
@@ -79,12 +76,7 @@ class RecommendationNotifier
     try {
       await ref
           .read(recommendationRepositoryProvider)
-          .updateFeedback(
-            id: id,
-            state: state,
-            dislikeCategory: category?.dbValue,
-            dislikeComment: comment,
-          );
+          .updateFeedback(id: id, state: state, dislikeComment: comment);
     } catch (e, st) {
       _log.error('setRecommendationState failed for id=$id', e, st);
       this.state = previous;
@@ -118,15 +110,7 @@ class RecommendationNotifier
     try {
       await ref
           .read(recommendationRepositoryProvider)
-          .updateFeedback(
-            id: id,
-            state: target.state,
-            // Pass the raw string straight through so unknown/legacy
-            // category values survive a comment-only save instead of being
-            // silently nulled by a round-trip through the enum parser.
-            dislikeCategory: target.dislikeCategory,
-            dislikeComment: comment,
-          );
+          .updateFeedback(id: id, state: target.state, dislikeComment: comment);
     } catch (e, st) {
       _log.error('setDislikeComment failed for id=$id', e, st);
       state = previous;

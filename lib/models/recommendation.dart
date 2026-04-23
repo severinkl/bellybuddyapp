@@ -50,7 +50,6 @@ abstract class Recommendation with _$Recommendation {
     @JsonKey(fromJson: _stateFromJson, toJson: _stateToJson)
     @Default(RecommendationState.unrated)
     RecommendationState state,
-    @JsonKey(name: 'dislike_category') String? dislikeCategory,
     @JsonKey(name: 'dislike_comment') String? dislikeComment,
     @JsonKey(name: 'rated_at') DateTime? ratedAt,
   }) = _Recommendation;

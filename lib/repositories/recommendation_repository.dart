@@ -25,14 +25,12 @@ class RecommendationRepository {
   Future<void> updateFeedback({
     required String id,
     required RecommendationState state,
-    String? dislikeCategory,
     String? dislikeComment,
   }) async {
     try {
       await _recommendationService.updateFeedback(
         id: id,
         state: state,
-        dislikeCategory: dislikeCategory,
         dislikeComment: dislikeComment,
       );
     } catch (e, st) {
