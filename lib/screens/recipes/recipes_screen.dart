@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
+import '../../router/navigation_extensions.dart';
 import '../../widgets/common/mascot_image.dart';
 
 class RecipesScreen extends StatelessWidget {
@@ -16,7 +16,7 @@ class RecipesScreen extends StatelessWidget {
         title: const Text('Rezepte'),
         leading: IconButton(
           icon: const Icon(Icons.close),
-          onPressed: () => context.pop(),
+          onPressed: () => context.popOrGoDashboard(),
         ),
       ),
       body: Center(

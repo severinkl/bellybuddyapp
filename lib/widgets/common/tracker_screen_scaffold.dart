@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../router/navigation_extensions.dart';
 import 'bb_success_overlay.dart';
@@ -56,7 +55,7 @@ class TrackerScreenScaffold extends StatelessWidget {
           // pop. Falls back to go_router's context.pop when no PopScope blocks.
           onPressed: () async {
             final didPop = await Navigator.maybePop(context);
-            if (!didPop && context.mounted) context.pop();
+            if (!didPop && context.mounted) context.popOrGoDashboard();
           },
         ),
         title: titleWidget ?? Text(title),
