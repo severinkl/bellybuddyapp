@@ -17,6 +17,7 @@ class RecommendationService {
           .from('recommendations')
           .select()
           .eq('user_id', userId)
+          .neq('state', 'hidden')
           .order('created_at', ascending: false);
       return data.map((e) => Recommendation.fromJson(e)).toList();
     } catch (e, st) {
@@ -49,6 +50,29 @@ class RecommendationService {
           .isFilter('seen_at', null);
     } catch (e, st) {
       _log.error('markAllAsSeen failed', e, st);
+    }
+  }
+
+  /// Writes the three feedback columns unconditionally — including explicit
+  /// nulls for `dislike_comment` — so transitions like `disliked` → `liked`
+  /// clear the comment on the server.
+  Future<void> updateFeedback({
+    required String id,
+    required RecommendationState state,
+    String? dislikeComment,
+  }) async {
+    try {
+      await _client
+          .from('recommendations')
+          .update({
+            'state': state.dbValue,
+            'dislike_comment': dislikeComment,
+            'rated_at': DateTime.now().toUtc().toIso8601String(),
+          })
+          .eq('id', id);
+    } catch (e, st) {
+      _log.error('updateFeedback failed for id=$id', e, st);
+      rethrow;
     }
   }
 }

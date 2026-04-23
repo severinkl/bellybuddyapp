@@ -39,6 +39,7 @@ void main() {
         ],
       );
       when(() => fb.eq(any(), any())).thenAnswer((_) => fb);
+      when(() => fb.neq(any(), any())).thenAnswer((_) => fb);
       when(
         () => fb.order(any(), ascending: any(named: 'ascending')),
       ).thenAnswer((_) => fb);
@@ -53,6 +54,7 @@ void main() {
     test('returns empty list when no recommendations exist', () async {
       final fb = mockSelectRows(client, table: 'recommendations', rows: []);
       when(() => fb.eq(any(), any())).thenAnswer((_) => fb);
+      when(() => fb.neq(any(), any())).thenAnswer((_) => fb);
       when(
         () => fb.order(any(), ascending: any(named: 'ascending')),
       ).thenAnswer((_) => fb);
@@ -65,6 +67,7 @@ void main() {
     test('orders by created_at descending', () async {
       final fb = mockSelectRows(client, table: 'recommendations', rows: []);
       when(() => fb.eq(any(), any())).thenAnswer((_) => fb);
+      when(() => fb.neq(any(), any())).thenAnswer((_) => fb);
       when(
         () => fb.order(any(), ascending: any(named: 'ascending')),
       ).thenAnswer((_) => fb);
@@ -77,6 +80,7 @@ void main() {
     test('filters by user_id', () async {
       final fb = mockSelectRows(client, table: 'recommendations', rows: []);
       when(() => fb.eq(any(), any())).thenAnswer((_) => fb);
+      when(() => fb.neq(any(), any())).thenAnswer((_) => fb);
       when(
         () => fb.order(any(), ascending: any(named: 'ascending')),
       ).thenAnswer((_) => fb);

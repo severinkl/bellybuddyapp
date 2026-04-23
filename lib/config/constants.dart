@@ -44,13 +44,19 @@ class AppConstants {
   static const double radiusSm = 8.0;
   static const double radiusIcon = 10.0;
   static const double radiusMd = 12.0;
+  static const double radiusPill = 14.0;
   static const double radiusLg = 16.0;
   static const double radiusRound = 20.0;
   static const double radiusXl = 24.0;
   static const double radiusFull = 100.0;
 
+  // Border widths
+  static const double borderWidthMd = 1.5;
+
   // Drag handle
   static const double dragHandleWidth = 40.0;
+  static const double dragHandleHeight = 4.0;
+  static const double dragHandleRadius = 2.0;
 
   // Scroll clearance (space below content to clear fixed bottom bars)
   static const double bottomBarClearance = 128.0;
@@ -58,6 +64,7 @@ class AppConstants {
   // Image sizes
   static const double mealImageHeight = 180.0;
   static const double mascotSizeMd = 96.0;
+  static const double featureCardHeight = 128.0;
 
   // Divider
   static const double dividerThickness = 0.5;
@@ -67,6 +74,10 @@ class AppConstants {
 
   // Spinner
   static const double spinnerSize = 20.0;
+
+  // Recommendation dislike comment — cap to keep DB rows sane; the label
+  // counter doubles as a visible limit so the user isn't surprised.
+  static const int dislikeCommentMaxLength = 1000;
 
   // External URLs
   static const String feedbackFormUrl =

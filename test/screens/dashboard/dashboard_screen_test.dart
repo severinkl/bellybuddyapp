@@ -19,14 +19,14 @@ List<Override> _overrides() => [
 
 void main() {
   group('DashboardScreen', () {
-    testWidgets('renders feature card Für dich', (tester) async {
+    testWidgets('renders feature card Tipps', (tester) async {
       await tester.pumpWithProviders(
         const DashboardScreen(),
         overrides: _overrides(),
       );
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('Für dich'), findsOneWidget);
+      expect(find.text('Tipps'), findsOneWidget);
     });
 
     testWidgets('renders feature card Alternativen', (tester) async {

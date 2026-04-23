@@ -6,6 +6,7 @@ import '../../../config/constants.dart';
 import '../../../models/meal_entry.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../providers/meal_tracker_provider.dart';
+import '../../../router/navigation_extensions.dart';
 import '../../../router/route_names.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/save_helper.dart';
@@ -14,6 +15,7 @@ import '../../../widgets/common/date_time_chips.dart';
 import '../../../widgets/common/tracker_screen_scaffold.dart';
 import 'widgets/ingredient_search.dart';
 import 'widgets/meal_image_section.dart';
+import 'widgets/meal_title_sheet.dart';
 
 class MealTrackerScreen extends ConsumerStatefulWidget {
   const MealTrackerScreen({
@@ -47,7 +49,7 @@ class MealTrackerScreen extends ConsumerStatefulWidget {
 }
 
 class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
-  final _titleController = TextEditingController(text: 'Neue Mahlzeit');
+  final _titleController = TextEditingController(text: kDefaultMealTitle);
   bool _isEditingTitle = false;
   bool _mealNotFound = false;
 
@@ -107,8 +109,26 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     // Edit mode with no changes → silent pop. Avoids a pointless network
     // round-trip and keeps the UX honest.
     if (widget.mealId != null && !ref.read(mealTrackerProvider).isDirty) {
-      if (mounted) context.pop();
+      if (mounted) context.popOrGoDashboard();
       return;
+    }
+
+    // If the user never named the meal, interrupt save with a prompt so the
+    // entry is identifiable in the diary. Dismissing the sheet cancels save
+    // entirely; "Ohne Namen speichern" proceeds with the default title.
+    if (_titleController.text.trim() == kDefaultMealTitle) {
+      final outcome = await showMealTitleSheet(context);
+      if (!mounted) return;
+      switch (outcome) {
+        case null:
+          return; // dismissed — abort save
+        case MealTitleEntered(title: final t):
+          _titleController.text = t;
+          notifier.setTitle(t);
+        case MealTitleSkipped():
+          // fall through with the default title already in state
+          break;
+      }
     }
 
     final ok = await saveWithFeedback(context, () => notifier.save());
@@ -118,7 +138,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     // Create mode stays on the success overlay regardless (failure leaves the
     // user on the form, same behavior as before).
     if (!mounted) return;
-    if (widget.mealId != null && ok) context.pop();
+    if (widget.mealId != null && ok) context.popOrGoDashboard();
   }
 
   bool _canSave(MealTrackerState state) {
@@ -134,7 +154,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         appBar: AppBar(
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.pop(),
+            onPressed: () => context.popOrGoDashboard(),
           ),
           title: const Text('Mahlzeit'),
         ),
@@ -159,7 +179,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         if (didPop) return;
         final confirmed = await _confirmDiscard(context);
         if (confirmed == true && context.mounted) {
-          context.pop();
+          context.popOrGoDashboard();
         }
       },
       child: TrackerScreenScaffold(
@@ -285,7 +305,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
             },
             onClearImage: () {
               notifier.clearImage();
-              _titleController.text = 'Neue Mahlzeit';
+              _titleController.text = kDefaultMealTitle;
             },
           ),
           AppConstants.gap16,

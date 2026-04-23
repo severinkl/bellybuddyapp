@@ -346,6 +346,12 @@ class FakeRecommendationRepository implements RecommendationRepository {
   Future<int> countUnseen(String userId) async => 0;
   @override
   Future<void> markAllAsSeen(String userId) async {}
+  @override
+  Future<void> updateFeedback({
+    required String id,
+    required RecommendationState state,
+    String? dislikeComment,
+  }) async {}
 }
 
 // -- FakeMealMediaRepository --

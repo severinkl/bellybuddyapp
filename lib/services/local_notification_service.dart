@@ -6,6 +6,7 @@ import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_timezone/flutter_timezone.dart';
 
 import '../utils/logger.dart';
+import 'reminder_copy.dart';
 
 class LocalNotificationService {
   static const _log = AppLogger('LocalNotificationService');
@@ -30,13 +31,6 @@ class LocalNotificationService {
     description: 'Erinnerungen zum Bauchgefühl tracken',
     importance: Importance.high,
   );
-
-  static const _mealReminderMessages = [
-    'Zeit zum Eintragen! Was hast du gegessen?',
-    'Vergiss nicht, deine Mahlzeiten zu tracken!',
-    'Was hast du heute gegessen? Trag es ein!',
-    'Erinnerung: Halte dein Essens-Tagebuch aktuell.',
-  ];
 
   /// Initialize the local notification plugin and timezone data.
   static Future<void> initialize({
@@ -141,8 +135,7 @@ class LocalNotificationService {
       final hour = int.parse(parts[0]);
       final minute = int.parse(parts[1]);
 
-      final body =
-          _mealReminderMessages[_random.nextInt(_mealReminderMessages.length)];
+      final body = ReminderCopy.pickMealBody(hour, _random);
 
       final scheduledDate = _nextInstanceOfTime(hour, minute, location);
       _log.debug(
@@ -197,6 +190,7 @@ class LocalNotificationService {
       final minute = int.parse(parts[1]);
 
       final scheduledDate = _nextInstanceOfTime(hour, minute, location);
+      final body = ReminderCopy.pickMoodBody(hour, _random);
       _log.debug(
         'scheduling mood reminder $i: ${moodReminderTimes[i]} → $scheduledDate '
         '(now=${tz.TZDateTime.now(location)})',
@@ -205,7 +199,7 @@ class LocalNotificationService {
         await _plugin.zonedSchedule(
           id: _moodReminderIdBase + i,
           title: 'Belly Buddy',
-          body: 'Wie war dein Bauchgefühl heute?',
+          body: body,
           scheduledDate: scheduledDate,
           notificationDetails: NotificationDetails(
             android: AndroidNotificationDetails(
@@ -249,27 +243,6 @@ class LocalNotificationService {
       await _plugin.cancel(id: _moodReminderIdBase + i);
     }
     _log.debug('cancelled all mood reminders');
-  }
-
-  /// Show a test notification immediately (for debugging).
-  static Future<void> showTestNotification() async {
-    await _plugin.show(
-      id: 9999,
-      title: 'Belly Buddy',
-      body: 'Test-Benachrichtigung funktioniert!',
-      notificationDetails: NotificationDetails(
-        android: AndroidNotificationDetails(
-          _mealReminderChannel.id,
-          _mealReminderChannel.name,
-          channelDescription: _mealReminderChannel.description,
-          importance: Importance.high,
-          priority: Priority.high,
-        ),
-        iOS: const DarwinNotificationDetails(),
-      ),
-      payload: '/dashboard',
-    );
-    _log.debug('showed test notification');
   }
 
   /// Cancel all notifications.
