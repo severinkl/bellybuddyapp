@@ -74,7 +74,13 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
   void _maybeAnchor(List<Recommendation> list) {
     if (list.isEmpty) return;
     final latestId = list.first.id;
-    if (latestId == _anchoredLatestId) return;
+    if (latestId == _anchoredLatestId) {
+      // Same latest, but a non-latest may have been hidden — keep the
+      // recorded length in sync so the next re-anchor sees the right
+      // previousLength when the user's page position is compared below.
+      _anchoredLength = list.length;
+      return;
+    }
 
     final isFirstAnchor = _anchoredLatestId == null;
     final previousLength = _anchoredLength;
@@ -127,7 +133,6 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
     return Scaffold(
       appBar: AppBar(
         leading: const _DashboardBackButton(),
-        leadingWidth: AppConstants.appBarLeadingLabelled,
         title: const _RecommendationsTitle(),
         actions: const [
           _ChevronAction(_ChevronDirection.previous),
@@ -232,14 +237,7 @@ class _RecommendationsTitle extends ConsumerWidget {
       if (createdAt != null) text = formatDateWeekday(createdAt);
     }
 
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const Icon(Icons.auto_awesome, size: AppConstants.iconSizeSm),
-        const SizedBox(width: AppConstants.spacingSm),
-        Flexible(child: Text(text, overflow: TextOverflow.ellipsis)),
-      ],
-    );
+    return Text(text, overflow: TextOverflow.ellipsis);
   }
 }
 
@@ -269,6 +267,7 @@ class _ChevronAction extends ConsumerWidget {
           ? RecommendationsScreen.previousRecommendationKey
           : RecommendationsScreen.nextRecommendationKey,
       icon: Icon(isPrev ? Icons.chevron_left : Icons.chevron_right),
+      tooltip: isPrev ? 'Vorherige' : 'Nächste',
       onPressed: disabled
           ? null
           : () {
@@ -326,31 +325,23 @@ class _SwipeLayout extends ConsumerWidget {
   }
 }
 
+/// Leading back button: icon-only inside a subtle tonal pill.
+/// The pill surface is what distinguishes this from the bare chevron
+/// `IconButton`s in the AppBar actions slot.
 class _DashboardBackButton extends StatelessWidget {
   const _DashboardBackButton();
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: AppConstants.spacingXs),
-      child: TextButton.icon(
+    return Center(
+      child: IconButton(
         onPressed: () => context.pop(),
-        style: TextButton.styleFrom(
+        icon: const Icon(Icons.arrow_back_ios_new),
+        iconSize: AppConstants.iconSizeSm,
+        tooltip: 'Zurück',
+        style: IconButton.styleFrom(
+          backgroundColor: AppTheme.muted,
           foregroundColor: AppTheme.foreground,
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppConstants.spacingSm,
-          ),
-        ),
-        icon: const Icon(
-          Icons.arrow_back_ios_new,
-          size: AppConstants.iconSizeSm,
-        ),
-        label: const Text(
-          'Dashboard',
-          style: TextStyle(
-            fontSize: AppTheme.fontSizeBody,
-            fontWeight: FontWeight.w500,
-          ),
         ),
       ),
     );

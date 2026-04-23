@@ -26,7 +26,11 @@ class FeatureCard extends StatefulWidget {
     this.badgeCount = 0,
     this.hasNew = false,
     required this.onTap,
-  });
+  }) : assert(
+         !hasNew || badgeCount == 0,
+         'hasNew and badgeCount > 0 are mutually exclusive — the badge would '
+         'silently render "ungelesen" and drop the count.',
+       );
 
   @override
   State<FeatureCard> createState() => _FeatureCardState();

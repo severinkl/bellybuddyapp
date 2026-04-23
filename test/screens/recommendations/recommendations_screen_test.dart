@@ -477,7 +477,7 @@ void main() {
       },
     );
 
-    testWidgets('AppBar leading renders "Dashboard" button that pops', (
+    testWidgets('AppBar leading is a tonal back-icon button that pops', (
       tester,
     ) async {
       final repo = MockRecommendationRepository();
@@ -521,9 +521,17 @@ void main() {
       router.push('/recommendations');
       await tester.pumpAndSettle();
 
-      expect(find.widgetWithText(TextButton, 'Dashboard'), findsOneWidget);
+      // The leading widget is a back-icon IconButton (no text).
+      final appBar = find.byType(AppBar);
+      final backIcon = find.descendant(
+        of: appBar,
+        matching: find.byIcon(Icons.arrow_back_ios_new),
+      );
+      expect(backIcon, findsOneWidget);
+      // The old "Dashboard" label is gone.
+      expect(find.text('Dashboard'), findsNothing);
 
-      await tester.tap(find.text('Dashboard'));
+      await tester.tap(backIcon);
       await tester.pumpAndSettle();
 
       // After the pop the sentinel home screen is visible again.
