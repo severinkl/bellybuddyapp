@@ -8,7 +8,7 @@ on:
 
 jobs:
   verify:
-    name: Check SENTRY_AUTH_TOKEN via sentry-cli
+    name: Check SENTRY_AUTH_TOKEN can upload debug files
     runs-on: ubuntu-latest
     timeout-minutes: 3
 
@@ -16,7 +16,7 @@ jobs:
       - name: Install sentry-cli
         run: curl -sL https://sentry.io/get-cli/ | bash
 
-      - name: sentry-cli info (auth + org access)
+      - name: Check org:ci scope via releases endpoint
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
           SENTRY_ORG: belly-buddy-fz
@@ -26,4 +26,12 @@ jobs:
             echo "::error::SENTRY_AUTH_TOKEN secret is not set."
             exit 1
           fi
+
+          # sentry-cli info confirms the token is signed and recognized.
           sentry-cli info
+
+          # Listing releases exercises the same auth path sentry_dart_plugin
+          # uses for debug-file uploads. An org:ci token passes; a read-only
+          # or mis-scoped token gets a 403 here even though `info` succeeded.
+          sentry-cli releases list --org "$SENTRY_ORG" --project "$SENTRY_PROJECT" > /dev/null
+          echo "Token has org:ci scope on $SENTRY_ORG/$SENTRY_PROJECT."
