@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
+import '../../config/constants.dart';
 
 class GradientBottomBar extends StatelessWidget {
   final Widget child;
@@ -26,7 +27,10 @@ class GradientBottomBar extends StatelessWidget {
               stops: const [0.0, 0.3],
             ),
           ),
-          padding: const EdgeInsets.fromLTRB(16, 32, 16, 32),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppConstants.spacingMd,
+            vertical: AppConstants.spacingXl,
+          ),
           child: child,
         ),
       ),
