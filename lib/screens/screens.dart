@@ -6,6 +6,7 @@ export 'diary/diary_screen.dart';
 export 'ingredient_suggestions/ingredient_suggestions_screen.dart';
 export 'recommendations/recommendations_screen.dart';
 export 'recipes/recipe_detail_screen.dart';
+export 'recipes/recipe_editor_screen.dart';
 export 'recipes/recipes_screen.dart';
 export 'registration/registration_wizard_screen.dart';
 export 'settings/settings_screen.dart';

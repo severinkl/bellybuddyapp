@@ -206,11 +206,24 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const RecipesScreen(),
       ),
       GoRoute(
+        path: RoutePaths.recipeNew,
+        name: RouteNames.recipeNew,
+        builder: (context, state) => const RecipeEditorScreen(),
+      ),
+      GoRoute(
         path: RoutePaths.recipeDetail,
         name: RouteNames.recipeDetail,
         builder: (context, state) {
           final id = state.pathParameters['id']!;
           return RecipeDetailScreen(recipeId: id);
+        },
+      ),
+      GoRoute(
+        path: RoutePaths.recipeEdit,
+        name: RouteNames.recipeEdit,
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return RecipeEditorScreen(recipeId: id);
         },
       ),
     ],
