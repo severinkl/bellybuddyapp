@@ -34,7 +34,7 @@ class _FakeUserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>>
   AsyncValue<List<UserRecipe>> build() => const AsyncValue.data([]);
 
   @override
-  Future<void> fetch() async {}
+  Future<void> fetch({bool force = false}) async {}
 
   @override
   Future<UserRecipe> create({

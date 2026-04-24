@@ -21,7 +21,7 @@ class _StubUserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>>
   AsyncValue<List<UserRecipe>> build() => AsyncValue.data(_recipes);
 
   @override
-  Future<void> fetch() async {
+  Future<void> fetch({bool force = false}) async {
     // already seeded — nothing to do
   }
 

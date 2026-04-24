@@ -20,7 +20,13 @@ class UserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>> {
   @override
   AsyncValue<List<UserRecipe>> build() => const AsyncValue.loading();
 
-  Future<void> fetch() async {
+  /// Fetches the user's recipes. When [force] is false (the default) and the
+  /// provider already has data, the method short-circuits — screens that open
+  /// and call fetch() as a post-frame initializer skip a redundant round-trip
+  /// when the list is already cached. Mutations inside this notifier pass
+  /// [force: true] so the list stays in sync after create/update/delete.
+  Future<void> fetch({bool force = false}) async {
+    if (state.hasValue && !force) return;
     if (!state.hasValue) {
       state = const AsyncValue.loading();
     }
@@ -57,7 +63,7 @@ class UserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>> {
           ingredients: ingredients,
           imageUrl: imageUrl,
         );
-    await fetch();
+    await fetch(force: true);
     return recipe;
   }
 
@@ -75,13 +81,13 @@ class UserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>> {
           ingredients: ingredients,
           imageUrl: imageUrl,
         );
-    await fetch();
+    await fetch(force: true);
     return recipe;
   }
 
   Future<void> delete(String id) async {
     await ref.read(userRecipeRepositoryProvider).delete(id);
-    await fetch();
+    await fetch(force: true);
   }
 }
 
