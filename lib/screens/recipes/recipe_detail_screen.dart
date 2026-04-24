@@ -1,4 +1,3 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +9,7 @@ import '../../providers/user_recipes_provider.dart';
 import '../../router/navigation_extensions.dart';
 import '../../router/route_names.dart';
 import '../../widgets/common/bb_button.dart';
+import '../../widgets/common/signed_path_image.dart';
 
 class RecipeDetailScreen extends ConsumerStatefulWidget {
   const RecipeDetailScreen({super.key, required this.recipeId});
@@ -97,10 +97,7 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
                         ),
                         child: AspectRatio(
                           aspectRatio: 16 / 9,
-                          child: CachedNetworkImage(
-                            imageUrl: recipe.imageUrl!,
-                            fit: BoxFit.cover,
-                          ),
+                          child: SignedPathImage(pathOrUrl: recipe.imageUrl),
                         ),
                       ),
                       AppConstants.gap16,

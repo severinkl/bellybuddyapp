@@ -1,12 +1,12 @@
 import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui';
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../config/constants.dart';
+import '../../../../widgets/common/signed_path_image.dart';
 
 class MealImageSection extends StatelessWidget {
   final Uint8List? imageBytes;
@@ -267,15 +267,14 @@ class _UrlImagePreview extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            CachedNetworkImage(
-              imageUrl: imageUrl,
-              fit: BoxFit.cover,
-              placeholder: (_, _) => Shimmer.fromColors(
+            SignedPathImage(
+              pathOrUrl: imageUrl,
+              placeholder: Shimmer.fromColors(
                 baseColor: AppTheme.muted,
                 highlightColor: AppTheme.background,
                 child: Container(color: AppTheme.muted),
               ),
-              errorWidget: (_, _, _) => Container(color: AppTheme.muted),
+              errorWidget: Container(color: AppTheme.muted),
             ),
             Positioned(
               top: AppConstants.spacing12,

@@ -217,7 +217,7 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
         border: Border.all(color: AppTheme.border),
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
             'Zutaten',

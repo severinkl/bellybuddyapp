@@ -1,9 +1,9 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/user_recipe.dart';
+import '../../../widgets/common/signed_path_image.dart';
 
 class RecipeListTile extends StatelessWidget {
   const RecipeListTile({super.key, required this.recipe, required this.onTap});
@@ -67,24 +67,24 @@ class _Thumbnail extends StatelessWidget {
   Widget build(BuildContext context) {
     const size = AppConstants.iconBadgeXl;
     final radius = BorderRadius.circular(AppConstants.radiusMd);
-    if (imageUrl == null) {
-      return Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(color: AppTheme.muted, borderRadius: radius),
-        child: const Icon(
-          Icons.restaurant_menu_outlined,
-          color: AppTheme.mutedForeground,
-        ),
-      );
-    }
+    final fallback = Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(color: AppTheme.muted, borderRadius: radius),
+      child: const Icon(
+        Icons.restaurant_menu_outlined,
+        color: AppTheme.mutedForeground,
+      ),
+    );
+    if (imageUrl == null) return fallback;
     return ClipRRect(
       borderRadius: radius,
-      child: CachedNetworkImage(
-        imageUrl: imageUrl!,
+      child: SignedPathImage(
+        pathOrUrl: imageUrl,
         width: size,
         height: size,
-        fit: BoxFit.cover,
+        placeholder: fallback,
+        errorWidget: fallback,
       ),
     );
   }
