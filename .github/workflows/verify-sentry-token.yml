@@ -8,45 +8,22 @@ on:
 
 jobs:
   verify:
-    name: Check SENTRY_AUTH_TOKEN + project slug
+    name: Check SENTRY_AUTH_TOKEN via sentry-cli
     runs-on: ubuntu-latest
-    timeout-minutes: 2
+    timeout-minutes: 3
 
     steps:
-      - name: Hit Sentry API with stored token
+      - name: Install sentry-cli
+        run: curl -sL https://sentry.io/get-cli/ | bash
+
+      - name: sentry-cli info (auth + org access)
         env:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: belly-buddy-fz
+          SENTRY_PROJECT: flutter
         run: |
           if [ -z "$SENTRY_AUTH_TOKEN" ]; then
             echo "::error::SENTRY_AUTH_TOKEN secret is not set."
             exit 1
           fi
-
-          http=$(curl -sS -o /tmp/resp.json -w '%{http_code}' \
-            -H "Authorization: Bearer $SENTRY_AUTH_TOKEN" \
-            https://sentry.io/api/0/projects/belly-buddy-fz/flutter/)
-
-          echo "HTTP status: $http"
-          case "$http" in
-            200)
-              echo "Token valid, org=belly-buddy-fz project=flutter reachable."
-              jq -r '"Project: \(.name) (slug=\(.slug), id=\(.id))"' /tmp/resp.json
-              ;;
-            401)
-              echo "::error::Token invalid or expired. Rotate at https://belly-buddy-fz.sentry.io/settings/auth-tokens/"
-              exit 1
-              ;;
-            403)
-              echo "::error::Token lacks required scope. Needs project:releases on belly-buddy-fz/flutter."
-              exit 1
-              ;;
-            404)
-              echo "::error::Project slug wrong. pubspec.yaml has org=belly-buddy-fz project=flutter — check against https://belly-buddy-fz.sentry.io/settings/projects/"
-              exit 1
-              ;;
-            *)
-              echo "::error::Unexpected HTTP $http"
-              cat /tmp/resp.json
-              exit 1
-              ;;
-          esac
+          sentry-cli info
