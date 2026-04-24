@@ -1,30 +1,48 @@
-// ignore_for_file: invalid_use_of_internal_member
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:mocktail/mocktail.dart';
+
+import 'package:belly_buddy/providers/core_providers.dart';
+import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/screens/recipes/recipes_screen.dart';
 
-import '../../helpers/riverpod_helpers.dart';
+import '../../helpers/fixtures.dart';
+import '../../helpers/mocks.dart';
 
 void main() {
-  group('RecipesScreen', () {
-    testWidgets('renders Rezepte app bar title', (tester) async {
-      await tester.pumpWithProviders(const RecipesScreen());
-      await tester.pump();
+  late MockUserRecipeRepository repo;
 
-      expect(find.text('Rezepte'), findsOneWidget);
-    });
+  setUp(() {
+    repo = MockUserRecipeRepository();
+  });
 
-    testWidgets('renders Rezepte kommen bald placeholder', (tester) async {
-      await tester.pumpWithProviders(const RecipesScreen());
-      await tester.pump();
+  Future<void> pumpScreen(WidgetTester tester) async {
+    when(() => repo.fetchForUser(any())).thenAnswer((_) async => []);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userRecipeRepositoryProvider.overrideWithValue(repo),
+          currentUserIdProvider.overrideWithValue(testUserId),
+        ],
+        child: const MaterialApp(home: RecipesScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
 
-      expect(find.text('Rezepte kommen bald!'), findsOneWidget);
-    });
+  testWidgets('defaults to Meine Rezepte tab', (tester) async {
+    await pumpScreen(tester);
+    expect(find.text('Meine Rezepte'), findsOneWidget);
+    expect(find.text('Inspiration'), findsOneWidget);
+    expect(find.text('Noch keine Rezepte'), findsOneWidget); // empty-state body
+  });
 
-    testWidgets('renders informational subtitle text', (tester) async {
-      await tester.pumpWithProviders(const RecipesScreen());
-      await tester.pump();
-
-      expect(find.textContaining('Wir arbeiten gerade'), findsOneWidget);
-    });
+  testWidgets('switches to Inspiration tab on tap', (tester) async {
+    await pumpScreen(tester);
+    await tester.tap(find.text('Inspiration'));
+    await tester.pumpAndSettle();
+    expect(find.text('Rezepte kommen bald!'), findsOneWidget);
+    expect(find.text('Noch keine Rezepte'), findsNothing);
   });
 }
