@@ -1,7 +1,10 @@
 name: Verify Sentry Token
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [feat/sentry-enable-tombstones]
+    paths:
+      - .github/workflows/verify-sentry-token.yml
 
 jobs:
   verify:
