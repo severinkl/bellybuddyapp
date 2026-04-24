@@ -60,7 +60,7 @@ class TrackerScreenScaffold extends StatelessWidget {
         ),
         title: titleWidget ?? Text(title),
       ),
-      body: body,
+      body: SafeArea(top: false, child: body),
     );
   }
 }
