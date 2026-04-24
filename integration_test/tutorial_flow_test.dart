@@ -38,7 +38,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Tour is visible on first launch.
+    // Welcome modal is the first tutorial stage on first launch. Dismiss it
+    // via the CTA so the spotlight tour renders behind it.
+    expect(find.text('Willkommen bei Belly Buddy!'), findsOneWidget);
+    await tester.tap(find.text("Los geht's"));
+    await tester.pumpAndSettle();
+
+    // Tour is visible after the welcome modal is dismissed.
     expect(find.text('Überspringen'), findsOneWidget);
 
     // Advance 10 times via the overlay's advance gesture — key-based so
