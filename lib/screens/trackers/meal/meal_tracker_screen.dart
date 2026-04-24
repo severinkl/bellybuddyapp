@@ -17,6 +17,7 @@ import '../../../widgets/common/tracker_screen_scaffold.dart';
 import 'widgets/ingredient_search.dart';
 import 'widgets/meal_image_section.dart';
 import 'widgets/meal_title_sheet.dart';
+import 'widgets/recipe_selector_sheet.dart';
 
 class MealTrackerScreen extends ConsumerStatefulWidget {
   const MealTrackerScreen({
@@ -71,6 +72,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     // ("Neue Mahlzeit" + empty ingredients) before the seeded data paints.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      ref.read(userRecipesProvider.notifier).fetch();
       final notifier = ref.read(mealTrackerProvider.notifier);
       if (widget.mealId == null) {
         notifier.reset();
@@ -332,6 +334,29 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // 0. Recipe selector (hidden when user has no recipes)
+          Consumer(
+            builder: (context, ref, _) {
+              final async = ref.watch(userRecipesProvider);
+              final hasRecipes = async.value?.isNotEmpty ?? false;
+              if (!hasRecipes) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.only(bottom: AppConstants.spacingMd),
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    final recipe = await showRecipeSelectorSheet(context);
+                    if (recipe == null || !mounted) return;
+                    ref
+                        .read(mealTrackerProvider.notifier)
+                        .prefillFromRecipe(recipe);
+                    _titleController.text = recipe.title;
+                  },
+                  icon: const Icon(Icons.menu_book_outlined),
+                  label: const Text('Aus Rezept auswählen'),
+                ),
+              );
+            },
+          ),
           // 1. Date/Time chips
           DateTimeChips(
             value: state.trackedAt,
