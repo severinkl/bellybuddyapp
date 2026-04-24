@@ -1,12 +1,14 @@
 import 'dart:async';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:belly_buddy/models/drink.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/models/user_profile.dart';
+import 'package:belly_buddy/models/user_recipe.dart';
 import 'package:belly_buddy/repositories/auth_repository.dart';
 import 'package:belly_buddy/repositories/drink_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
@@ -23,8 +25,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'fixtures.dart';
 
 // -- FakeAuthRepository --
-import 'package:flutter/foundation.dart';
-
 class FakeAuthRepository implements AuthRepository {
   FakeAuthRepository({
     this.signedIn = true,
@@ -381,6 +381,25 @@ class FakeMealMediaRepository implements MealMediaRepository {
   @override
   Future<String?> resolveSignedUrl(String? urlOrPath) async => urlOrPath;
 }
+
+// -- testUserRecipe factory --
+
+UserRecipe testUserRecipe({
+  String id = 'rec-1',
+  String userId = 'user-1',
+  String title = 'Curry mit Reis',
+  List<String> ingredients = const ['Reis', 'Curry'],
+  String? imageUrl,
+  DateTime? createdAt,
+}) => UserRecipe(
+  id: id,
+  userId: userId,
+  title: title,
+  ingredients: ingredients,
+  imageUrl: imageUrl,
+  createdAt: createdAt ?? DateTime.utc(2026, 4, 24),
+  updatedAt: createdAt ?? DateTime.utc(2026, 4, 24),
+);
 
 // -- FakeNotificationRepository --
 class FakeNotificationRepository implements NotificationRepository {
