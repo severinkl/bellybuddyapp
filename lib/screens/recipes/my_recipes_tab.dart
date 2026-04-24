@@ -50,7 +50,7 @@ class _MyRecipesTabState extends ConsumerState<MyRecipesTab> {
             final recipe = recipes[i];
             return RecipeListTile(
               recipe: recipe,
-              onTap: () => context.push('${RoutePaths.recipes}/${recipe.id}'),
+              onTap: () => context.push(RoutePaths.recipeDetailFor(recipe.id)),
             );
           },
         );

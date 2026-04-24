@@ -205,6 +205,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: RouteNames.recipes,
         builder: (context, state) => const RecipesScreen(),
       ),
+      GoRoute(
+        path: RoutePaths.recipeDetail,
+        name: RouteNames.recipeDetail,
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return RecipeDetailScreen(recipeId: id);
+        },
+      ),
     ],
   );
 });
