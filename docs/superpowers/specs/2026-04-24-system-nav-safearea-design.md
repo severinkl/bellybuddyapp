@@ -16,7 +16,7 @@ Affected surfaces (user-confirmed via screenshots):
 4. Mood tracker — `speichern` button clipped under nav bar.
 5. Gut-feeling tracker — `weiter` button clipped under nav bar.
 
-Screens 1, 2, 4, 5 all render through `lib/widgets/common/tracker_screen_scaffold.dart`, which places its `body` directly into `Scaffold.body:` with no `SafeArea`. Screen 3 is a `showModalBottomSheet` call that already passes `useSafeArea: true`, but Flutter's implementation of that flag explicitly sets `bottom: false` on its internal `SafeArea` (it covers top/left/right only) — so the sheet's content still needs its own bottom safe-area inset.
+Screens 1 (toilet) and 2 (meal) render through `lib/widgets/common/tracker_screen_scaffold.dart`, which places its `body` directly into `Scaffold.body:` with no `SafeArea`. Screens 4 (mood — `Stimmung` tab) and 5 (gut-feeling — `Bauchgefühl` tab) are both the same screen (`lib/screens/trackers/gut_feeling/gut_feeling_tracker_screen.dart`) with tab-switched content; its bottom button uses the shared `lib/widgets/common/gradient_bottom_bar.dart` helper — a `Positioned(bottom: 0)` stack child — not `TrackerScreenScaffold`. Screen 3 is a `showModalBottomSheet` call that already passes `useSafeArea: true`, but Flutter's implementation of that flag explicitly sets `bottom: false` on its internal `SafeArea` (it covers top/left/right only) — so the sheet's content still needs its own bottom safe-area inset.
 
 ## Goal
 
@@ -24,7 +24,7 @@ Stop the overlap on these five surfaces without opting out of Android 15 edge-to
 
 ## Approach
 
-Two one-line wraps. No new widgets, no shared helper, no global config.
+Three one-line wraps. No new widgets, no shared helper, no global config.
 
 ### Fix 1 — `lib/widgets/common/tracker_screen_scaffold.dart`
 
@@ -60,10 +60,37 @@ The sheet is opened with `useSafeArea: true`, which handles top/left/right. The 
 
 Do not remove `useSafeArea: true` from the `showModalBottomSheet` call — it still does useful work for the non-bottom edges.
 
+### Fix 3 — `lib/widgets/common/gradient_bottom_bar.dart`
+
+The gut-feeling tracker (`lib/screens/trackers/gut_feeling/gut_feeling_tracker_screen.dart`) uses its own `Scaffold` and renders its bottom action button via `GradientBottomBar` — a `Positioned(bottom: 0)` stack child — rather than `TrackerScreenScaffold`. `Positioned(bottom: 0)` places the bar at the absolute bottom edge of the stack, which itself extends edge-to-edge on Android 15, so the button clips into the nav region even after Fix 1.
+
+Wrap the `Container` inside `GradientBottomBar.build` in `SafeArea(top: false, ...)`. The `Positioned` stays outermost (the parent uses `Stack` positioning and must remain). The `SafeArea` sits between `Positioned` and `Container`, pushing the container's content above the nav inset:
+
+```dart
+return Positioned(
+  left: 0,
+  right: 0,
+  bottom: 0,
+  child: SafeArea(
+    top: false,
+    child: Container(
+      // gradient decoration + padding unchanged
+      child: child,
+    ),
+  ),
+);
+```
+
+`top: false` rationale: there is no `AppBar` in the gut-feeling tracker's own `Scaffold`, but the `Positioned` is placed inside a stack that sits within the scaffold body — the status-bar region is already accounted for at the scaffold level, and adding `top: true` here would over-inset. Left/right default to `true`, which is a no-op on portrait phones and correctly handles future landscape orientation.
+
+This single change covers both the `Stimmung` tab (screens 4) and the `Bauchgefühl` tab (screen 5) because they share the same `GradientBottomBar` helper instance.
+
 ## Files touched
 
 - `lib/widgets/common/tracker_screen_scaffold.dart` — one-line change inside the returned `Scaffold`.
 - `lib/screens/recommendations/widgets/recommendation_dislike_sheet.dart` — wrap the state's `build` return in `SafeArea(top: false, ...)`.
+- `lib/widgets/common/gradient_bottom_bar.dart` — wrap the `Container` in `SafeArea(top: false, ...)` so that the gut-feeling tracker's bottom button clears the Android 15 nav region (covers both Stimmung and Bauchgefühl tabs).
+- `lib/screens/trackers/drink/drink_tracker_screen.dart` — remove the now-redundant local `SafeArea(top: false)` around `BbButton`; the enclosing `TrackerScreenScaffold` already applies the wrap, making the inner one a no-op.
 
 ## Out of scope
 
@@ -93,5 +120,7 @@ No change to existing `PopScope` / discard-confirm behavior, no change to tracke
 
 - `TrackerScreenScaffold.build` returns a `Scaffold` whose `body` is `SafeArea(top: false, child: body)`.
 - `_RecommendationDislikeSheetState.build` returns a widget tree whose root (inside the sheet builder) is `SafeArea(top: false, child: ...)`.
+- `GradientBottomBar.build` returns a `Positioned` whose direct child is `SafeArea(top: false, child: Container(...))`.
+- The local `SafeArea(top: false)` in `drink_tracker_screen.dart` is removed; `BbButton` is a direct child of `Padding`.
 - `flutter analyze` clean; `dart format` applied.
 - Manual smoke confirms all five affected screens no longer clip into the nav bar.
