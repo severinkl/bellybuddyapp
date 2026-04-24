@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../config/app_theme.dart';
+import '../../config/constants.dart';
 
 class GradientBottomBar extends StatelessWidget {
   final Widget child;
@@ -12,20 +13,26 @@ class GradientBottomBar extends StatelessWidget {
       left: 0,
       right: 0,
       bottom: 0,
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppTheme.screenBackground.withValues(alpha: 0.0),
-              AppTheme.screenBackground,
-            ],
-            stops: const [0.0, 0.3],
+      child: SafeArea(
+        top: false,
+        child: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [
+                AppTheme.screenBackground.withValues(alpha: 0.0),
+                AppTheme.screenBackground,
+              ],
+              stops: const [0.0, 0.3],
+            ),
           ),
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppConstants.spacingMd,
+            vertical: AppConstants.spacingXl,
+          ),
+          child: child,
         ),
-        padding: const EdgeInsets.fromLTRB(16, 32, 16, 32),
-        child: child,
       ),
     );
   }

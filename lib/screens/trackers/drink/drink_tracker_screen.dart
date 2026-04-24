@@ -107,13 +107,10 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
                     AppConstants.spacingLg,
                     AppConstants.spacingLg,
                   ),
-                  child: SafeArea(
-                    top: false,
-                    child: BbButton(
-                      label: 'speichern',
-                      isLoading: state.isSaving,
-                      onPressed: canSave ? _save : null,
-                    ),
+                  child: BbButton(
+                    label: 'speichern',
+                    isLoading: state.isSaving,
+                    onPressed: canSave ? _save : null,
                   ),
                 ),
               ],

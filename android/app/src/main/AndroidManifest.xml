@@ -31,6 +31,11 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <!-- Sentry: enable tombstone collection for richer NDK crash reports.
+             Effective on Android 12+ (API 31); silently no-ops below. -->
+        <meta-data
+            android:name="io.sentry.tombstone.enable"
+            android:value="true" />
         <receiver android:exported="false"
             android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
         <receiver android:exported="false"
