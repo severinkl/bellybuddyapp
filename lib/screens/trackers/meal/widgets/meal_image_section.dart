@@ -1,14 +1,21 @@
 import 'dart:math';
 import 'dart:typed_data';
 import 'dart:ui';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../config/constants.dart';
 
 class MealImageSection extends StatelessWidget {
   final Uint8List? imageBytes;
   final bool isAnalyzing;
+
+  /// Optional existing remote image URL (edit mode). Shown when [imageBytes]
+  /// is null so the user can see the currently saved image and clear it.
+  final String? initialImageUrl;
+
   final Future<void> Function(Uint8List bytes, String name) onImagePicked;
   final VoidCallback onClearImage;
 
@@ -18,6 +25,7 @@ class MealImageSection extends StatelessWidget {
     required this.isAnalyzing,
     required this.onImagePicked,
     required this.onClearImage,
+    this.initialImageUrl,
   });
 
   Future<void> _pickImage(BuildContext context, ImageSource source) async {
@@ -34,14 +42,20 @@ class MealImageSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (imageBytes == null) {
-      return _EmptyState(onPickImage: _pickImage);
+    if (imageBytes != null) {
+      return _ImagePreview(
+        imageBytes: imageBytes!,
+        isAnalyzing: isAnalyzing,
+        onClearImage: onClearImage,
+      );
     }
-    return _ImagePreview(
-      imageBytes: imageBytes!,
-      isAnalyzing: isAnalyzing,
-      onClearImage: onClearImage,
-    );
+    if (initialImageUrl != null) {
+      return _UrlImagePreview(
+        imageUrl: initialImageUrl!,
+        onClearImage: onClearImage,
+      );
+    }
+    return _EmptyState(onPickImage: _pickImage);
   }
 }
 
@@ -174,11 +188,14 @@ class _ImagePreview extends StatelessWidget {
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 8,
+                        blurRadius: AppConstants.shadowBlurSm,
                       ),
                     ],
                   ),
-                  child: const Icon(Icons.close, size: 20),
+                  child: const Icon(
+                    Icons.close,
+                    size: AppConstants.iconSizeClose,
+                  ),
                 ),
               ),
             ),
@@ -228,6 +245,63 @@ class _ImagePreview extends StatelessWidget {
                   ),
                 ),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _UrlImagePreview extends StatelessWidget {
+  final String imageUrl;
+  final VoidCallback onClearImage;
+
+  const _UrlImagePreview({required this.imageUrl, required this.onClearImage});
+
+  @override
+  Widget build(BuildContext context) {
+    return AspectRatio(
+      aspectRatio: 4 / 3,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppConstants.radiusXl),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            CachedNetworkImage(
+              imageUrl: imageUrl,
+              fit: BoxFit.cover,
+              placeholder: (_, _) => Shimmer.fromColors(
+                baseColor: AppTheme.muted,
+                highlightColor: AppTheme.background,
+                child: Container(color: AppTheme.muted),
+              ),
+              errorWidget: (_, _, _) => Container(color: AppTheme.muted),
+            ),
+            Positioned(
+              top: AppConstants.spacing12,
+              right: AppConstants.spacing12,
+              child: GestureDetector(
+                onTap: onClearImage,
+                child: Container(
+                  width: AppConstants.iconBadgeSm,
+                  height: AppConstants.iconBadgeSm,
+                  decoration: BoxDecoration(
+                    color: AppTheme.card,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: AppConstants.shadowBlurSm,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.close,
+                    size: AppConstants.iconSizeClose,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),

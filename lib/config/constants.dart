@@ -98,7 +98,11 @@ class AppConstants {
   // Icon sizes
   static const double iconSizeXs = 16.0;
   static const double iconSizeSm = 18.0;
+  static const double iconSizeClose = 20.0;
   static const double iconSizeLg = 32.0;
+
+  // Shadow
+  static const double shadowBlurSm = 8.0;
 
   // Button
   static const double buttonHeight = 56.0;

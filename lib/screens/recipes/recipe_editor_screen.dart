@@ -1,10 +1,8 @@
 import 'dart:typed_data';
 
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
@@ -13,6 +11,7 @@ import '../../providers/user_recipes_provider.dart';
 import '../../repositories/meal_media_repository.dart';
 import '../../utils/logger.dart';
 import '../../widgets/common/bb_button.dart';
+import '../trackers/meal/widgets/meal_image_section.dart';
 
 class RecipeEditorScreen extends ConsumerStatefulWidget {
   const RecipeEditorScreen({super.key, this.recipeId});
@@ -69,22 +68,6 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
     _titleController.dispose();
     _ingredientController.dispose();
     super.dispose();
-  }
-
-  Future<void> _pickImage(ImageSource source) async {
-    final picker = ImagePicker();
-    final file = await picker.pickImage(
-      source: source,
-      maxWidth: 1024,
-      imageQuality: 85,
-    );
-    if (file == null) return;
-    final bytes = await file.readAsBytes();
-    setState(() {
-      _imageBytes = bytes;
-      _imageFileName = file.name;
-      _imageUrl = null; // local bytes take precedence
-    });
   }
 
   void _addIngredient() {
@@ -179,7 +162,6 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Title field
                     TextField(
                       controller: _titleController,
                       onChanged: (_) => setState(() {}),
@@ -190,19 +172,28 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
                       style: const TextStyle(fontSize: AppTheme.fontSizeBody),
                     ),
                     AppConstants.gap16,
-
-                    // Image section
-                    _buildImageSection(),
+                    MealImageSection(
+                      imageBytes: _imageBytes,
+                      isAnalyzing: false,
+                      initialImageUrl: _imageUrl,
+                      onImagePicked: (bytes, name) async => setState(() {
+                        _imageBytes = bytes;
+                        _imageFileName = name;
+                        _imageUrl = null;
+                      }),
+                      onClearImage: () => setState(() {
+                        _imageBytes = null;
+                        _imageFileName = null;
+                        _imageUrl = null;
+                      }),
+                    ),
                     AppConstants.gap16,
-
-                    // Ingredient section
                     _buildIngredientSection(),
                   ],
                 ),
               ),
             ),
 
-            // Save button
             Padding(
               padding: AppConstants.paddingMd,
               child: BbButton(
@@ -214,104 +205,6 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildImageSection() {
-    if (_imageBytes != null) {
-      return Stack(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-            child: AspectRatio(
-              aspectRatio: 4 / 3,
-              child: Image.memory(_imageBytes!, fit: BoxFit.cover),
-            ),
-          ),
-          Positioned(
-            top: AppConstants.spacing12,
-            right: AppConstants.spacing12,
-            child: GestureDetector(
-              onTap: () => setState(() {
-                _imageBytes = null;
-                _imageFileName = null;
-              }),
-              child: Container(
-                width: AppConstants.iconBadgeSm,
-                height: AppConstants.iconBadgeSm,
-                decoration: BoxDecoration(
-                  color: AppTheme.card,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 8,
-                    ),
-                  ],
-                ),
-                child: const Icon(Icons.close, size: 20),
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-
-    if (_imageUrl != null) {
-      return Stack(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-            child: AspectRatio(
-              aspectRatio: 4 / 3,
-              child: CachedNetworkImage(
-                imageUrl: _imageUrl!,
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-          Positioned(
-            top: AppConstants.spacing12,
-            right: AppConstants.spacing12,
-            child: GestureDetector(
-              onTap: () => setState(() => _imageUrl = null),
-              child: Container(
-                width: AppConstants.iconBadgeSm,
-                height: AppConstants.iconBadgeSm,
-                decoration: BoxDecoration(
-                  color: AppTheme.card,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.1),
-                      blurRadius: 8,
-                    ),
-                  ],
-                ),
-                child: const Icon(Icons.close, size: 20),
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-
-    // Empty state — pick from camera or gallery
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        OutlinedButton.icon(
-          onPressed: () => _pickImage(ImageSource.camera),
-          icon: const Icon(Icons.camera_alt_outlined),
-          label: const Text('Kamera'),
-        ),
-        const SizedBox(width: AppConstants.spacingMd),
-        OutlinedButton.icon(
-          onPressed: () => _pickImage(ImageSource.gallery),
-          icon: const Icon(Icons.photo_library_outlined),
-          label: const Text('Galerie'),
-        ),
-      ],
     );
   }
 
