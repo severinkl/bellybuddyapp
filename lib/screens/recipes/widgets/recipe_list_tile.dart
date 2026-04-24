@@ -65,7 +65,7 @@ class _Thumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const size = 56.0;
+    const size = AppConstants.iconBadgeXl;
     final radius = BorderRadius.circular(AppConstants.radiusMd);
     if (imageUrl == null) {
       return Container(
