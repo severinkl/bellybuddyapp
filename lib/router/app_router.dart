@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../models/meal_entry.dart';
+import '../models/user_recipe.dart';
 import '../providers/auth_provider.dart';
 import '../utils/logger.dart';
 import '../screens/screens.dart';
@@ -117,9 +118,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: RouteNames.mealTracker,
         builder: (context, state) {
           final extra = state.extra;
-          return MealTrackerScreen(
-            initialDate: extra is DateTime ? extra : null,
-          );
+          if (extra is UserRecipe) {
+            return MealTrackerScreen(initialRecipe: extra);
+          }
+          if (extra is DateTime) {
+            return MealTrackerScreen(initialDate: extra);
+          }
+          return const MealTrackerScreen();
         },
       ),
       GoRoute(

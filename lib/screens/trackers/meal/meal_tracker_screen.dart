@@ -4,12 +4,14 @@ import 'package:go_router/go_router.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/meal_entry.dart';
+import '../../../models/user_recipe.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../providers/meal_tracker_provider.dart';
 import '../../../providers/user_recipes_provider.dart';
 import '../../../router/navigation_extensions.dart';
 import '../../../router/route_names.dart';
 import '../../../utils/date_format_utils.dart';
+import '../../../utils/logger.dart';
 import '../../../utils/save_helper.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/date_time_chips.dart';
@@ -19,12 +21,15 @@ import 'widgets/meal_image_section.dart';
 import 'widgets/meal_title_sheet.dart';
 import 'widgets/recipe_selector_sheet.dart';
 
+const _log = AppLogger('MealTrackerScreen');
+
 class MealTrackerScreen extends ConsumerStatefulWidget {
   const MealTrackerScreen({
     super.key,
     this.mealId,
     this.initial,
     this.initialDate,
+    this.initialRecipe,
   });
 
   /// When non-null, the screen renders in edit mode for the meal with this ID.
@@ -41,6 +46,11 @@ class MealTrackerScreen extends ConsumerStatefulWidget {
   /// when the user triggers the tracker from the diary tab. Ignored in edit
   /// mode (the meal's stored trackedAt wins).
   final DateTime? initialDate;
+
+  /// When non-null and in create mode, pre-fills the tracker with this
+  /// recipe's title, ingredients, and imageUrl. Passed by RecipeDetailScreen
+  /// via GoRouter extra. Ignored in edit mode.
+  final UserRecipe? initialRecipe;
 
   static const drinkTrackerButtonKey = Key('drink_tracker_button');
   static const mealTrackerTitleKey = Key('meal_tracker_title');
@@ -78,6 +88,10 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         notifier.reset();
         if (widget.initialDate != null) {
           notifier.setTrackedAt(buildTrackedAt(widget.initialDate));
+        }
+        if (widget.mealId == null && widget.initialRecipe != null) {
+          notifier.prefillFromRecipe(widget.initialRecipe!);
+          _titleController.text = widget.initialRecipe!.title;
         }
         return;
       }
@@ -296,7 +310,8 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Zu Meine Rezepte hinzugefügt')),
       );
-    } catch (_) {
+    } catch (e, st) {
+      _log.error('save as recipe failed', e, st);
       if (!mounted) return;
       setState(() => _savingAsRecipe = false);
       ScaffoldMessenger.of(
