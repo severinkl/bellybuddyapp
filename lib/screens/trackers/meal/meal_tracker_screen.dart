@@ -6,6 +6,7 @@ import '../../../config/constants.dart';
 import '../../../models/meal_entry.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../providers/meal_tracker_provider.dart';
+import '../../../providers/user_recipes_provider.dart';
 import '../../../router/navigation_extensions.dart';
 import '../../../router/route_names.dart';
 import '../../../utils/date_format_utils.dart';
@@ -52,6 +53,8 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
   final _titleController = TextEditingController(text: kDefaultMealTitle);
   bool _isEditingTitle = false;
   bool _mealNotFound = false;
+  bool _savedAsRecipe = false;
+  bool _savingAsRecipe = false;
 
   @override
   void initState() {
@@ -226,6 +229,29 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         successMascotAsset: AppConstants.mascotCool,
         successActions: [
           GestureDetector(
+            onTap: _savedAsRecipe || _savingAsRecipe
+                ? null
+                : () => _saveAsRecipe(state),
+            child: Opacity(
+              opacity: _savedAsRecipe ? AppConstants.disabledOpacity : 1.0,
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.bookmark_add_outlined,
+                    size: AppConstants.iconSizeSm,
+                    color: AppTheme.foreground,
+                  ),
+                  SizedBox(width: AppConstants.spacingSm),
+                  Text(
+                    'Als Rezept speichern',
+                    style: TextStyle(color: AppTheme.foreground),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          GestureDetector(
             onTap: () => context.push(RoutePaths.drinkTracker),
             child: const Row(
               mainAxisSize: MainAxisSize.min,
@@ -247,6 +273,34 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         body: _buildBody(state),
       ),
     );
+  }
+
+  Future<void> _saveAsRecipe(MealTrackerState state) async {
+    if (_savedAsRecipe || _savingAsRecipe) return;
+    setState(() => _savingAsRecipe = true);
+    try {
+      await ref
+          .read(userRecipesProvider.notifier)
+          .create(
+            title: state.title,
+            ingredients: state.ingredients,
+            imageUrl: state.savedImageUrl,
+          );
+      if (!mounted) return;
+      setState(() {
+        _savedAsRecipe = true;
+        _savingAsRecipe = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Zu Meine Rezepte hinzugefügt')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _savingAsRecipe = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Fehler beim Speichern')));
+    }
   }
 
   Future<bool?> _confirmDiscard(BuildContext context) {

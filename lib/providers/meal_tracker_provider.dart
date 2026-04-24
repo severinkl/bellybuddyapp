@@ -31,6 +31,11 @@ class MealTrackerState {
   final String? notes;
   final DateTime trackedAt;
 
+  /// The resolved image URL of the meal that was just saved (create-mode only).
+  /// Set once [save] completes; null until then. Used by the success overlay to
+  /// offer "Als Rezept speichern" with the correct image.
+  final String? savedImageUrl;
+
   MealTrackerState({
     this.seed,
     this.imageUrl,
@@ -45,6 +50,7 @@ class MealTrackerState {
     this.ingredientSearchError,
     this.notes,
     DateTime? trackedAt,
+    this.savedImageUrl,
   }) : trackedAt = trackedAt ?? DateTime.now();
 
   /// True only in edit mode when any seeded field has been modified.
@@ -83,6 +89,7 @@ class MealTrackerState {
     bool clearImageUrl =
         false, // explicit clear (since ?? can't distinguish null)
     bool clearImageBytes = false,
+    String? savedImageUrl,
   }) {
     return MealTrackerState(
       seed: seed ?? this.seed,
@@ -101,6 +108,7 @@ class MealTrackerState {
       ingredientSearchError: ingredientSearchError,
       notes: notes ?? this.notes,
       trackedAt: trackedAt ?? this.trackedAt,
+      savedImageUrl: savedImageUrl ?? this.savedImageUrl,
     );
   }
 }
@@ -259,9 +267,12 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
 
       // showSuccess is the create-mode "nice job" screen. Edit mode pops
       // instead — the screen listens to isSaving transitions and pops.
+      // savedImageUrl is stored so the success overlay can offer
+      // "Als Rezept speichern" with the correct image.
       state = state.copyWith(
         isSaving: false,
         showSuccess: existingSeed == null,
+        savedImageUrl: existingSeed == null ? resolvedImageUrl : null,
       );
     } catch (e) {
       state = state.copyWith(isSaving: false);
