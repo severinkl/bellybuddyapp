@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
+import '../../../router/route_names.dart';
 import 'recent_meal_picker_sheet.dart';
 
 Future<void> showAddRecipeChooserSheet(BuildContext context) {
@@ -68,7 +69,7 @@ class _AddRecipeChooserSheet extends StatelessWidget {
           title: const Text('Neu erstellen'),
           onTap: () {
             Navigator.of(context).pop();
-            rootContext.push('/recipe/new');
+            rootContext.push(RoutePaths.recipeNew);
           },
         ),
         const SizedBox(height: AppConstants.spacingMd),

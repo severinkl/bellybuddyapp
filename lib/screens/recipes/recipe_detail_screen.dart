@@ -8,6 +8,7 @@ import '../../config/constants.dart';
 import '../../models/user_recipe.dart';
 import '../../providers/user_recipes_provider.dart';
 import '../../router/navigation_extensions.dart';
+import '../../router/route_names.dart';
 import '../../widgets/common/bb_button.dart';
 
 class RecipeDetailScreen extends ConsumerStatefulWidget {
@@ -71,7 +72,7 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_outlined),
-            onPressed: () => context.push('/recipe/${recipe.id}/edit'),
+            onPressed: () => context.push(RoutePaths.recipeEditFor(recipe.id)),
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline),
@@ -140,7 +141,8 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
               padding: AppConstants.paddingMd,
               child: BbButton(
                 label: 'Mahlzeit jetzt tracken',
-                onPressed: () => context.push('/meal-tracker', extra: recipe),
+                onPressed: () =>
+                    context.push(RoutePaths.mealTracker, extra: recipe),
               ),
             ),
           ],

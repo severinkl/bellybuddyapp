@@ -50,4 +50,5 @@ class RoutePaths {
   static const String recipeDetail = '/recipe/:id';
   static const String recipeEdit = '/recipe/:id/edit';
   static String recipeDetailFor(String id) => '/recipe/$id';
+  static String recipeEditFor(String id) => '/recipe/$id/edit';
 }
