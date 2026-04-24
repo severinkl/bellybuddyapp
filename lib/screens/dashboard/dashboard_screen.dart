@@ -17,6 +17,7 @@ import 'widgets/feature_card.dart';
 import 'widgets/notification_opt_in_dialog.dart';
 import 'widgets/tutorial/show_dashboard_tutorial.dart';
 import 'widgets/tutorial/tutorial_keys.dart';
+import 'widgets/welcome_modal.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -56,6 +57,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     if (!mounted) return;
     final shouldShow = ref.read(tutorialProvider.notifier).shouldShow();
     if (!shouldShow) return;
+    // Welcome modal is the first stage of the tutorial. Dismissing it
+    // (tap "Los geht's") falls through to the spotlight tour, and
+    // tutorialSeenAt is only persisted at the end of the spotlight.
+    await showWelcomeModal(context);
+    if (!mounted) return;
     final handle = showDashboardTutorial(context);
     _tutorialHandle = handle;
     await handle.future;
