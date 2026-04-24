@@ -7,6 +7,7 @@ import '../../config/constants.dart';
 import '../../providers/user_recipes_provider.dart';
 import '../../router/route_names.dart';
 import '../../widgets/common/mascot_image.dart';
+import 'widgets/add_recipe_chooser_sheet.dart';
 import 'widgets/recipe_list_tile.dart';
 
 class MyRecipesTab extends ConsumerStatefulWidget {
@@ -96,10 +97,7 @@ class _EmptyState extends StatelessWidget {
             ),
             AppConstants.gap24,
             FilledButton(
-              onPressed: () {
-                // Opens the add-new chooser. Wired in Task 13.
-                // Temporarily a no-op; Phase 5 will wire it.
-              },
+              onPressed: () => showAddRecipeChooserSheet(context),
               child: const Text('Erstes Rezept erstellen'),
             ),
           ],

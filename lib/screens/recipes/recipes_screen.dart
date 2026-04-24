@@ -5,6 +5,7 @@ import '../../config/constants.dart';
 import '../../router/navigation_extensions.dart';
 import '../../widgets/common/mascot_image.dart';
 import 'my_recipes_tab.dart';
+import 'widgets/add_recipe_chooser_sheet.dart';
 
 enum _RecipesView { myRecipes, inspiration }
 
@@ -29,6 +30,14 @@ class _RecipesScreenState extends State<RecipesScreen> {
           icon: const Icon(Icons.close),
           onPressed: () => context.popOrGoDashboard(),
         ),
+        actions: _view == _RecipesView.myRecipes
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  onPressed: () => showAddRecipeChooserSheet(context),
+                ),
+              ]
+            : null,
       ),
       body: Column(
         children: [
