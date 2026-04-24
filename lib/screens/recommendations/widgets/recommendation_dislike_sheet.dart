@@ -122,83 +122,88 @@ class _RecommendationDislikeSheetState
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        AppConstants.spacingMd,
-        AppConstants.spacingSm,
-        AppConstants.spacingMd,
-        MediaQuery.viewInsetsOf(context).bottom + AppConstants.spacingMd,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Center(
-            child: Container(
-              width: AppConstants.dragHandleWidth,
-              height: AppConstants.dragHandleHeight,
-              decoration: BoxDecoration(
-                color: AppTheme.border,
-                borderRadius: BorderRadius.circular(
-                  AppConstants.dragHandleRadius,
-                ),
-              ),
-            ),
-          ),
-          AppConstants.gap12,
-          const Text(
-            'Was hat dir nicht gefallen?',
-            style: TextStyle(
-              fontSize: AppTheme.fontSizeSubtitle,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.foreground,
-            ),
-          ),
-          AppConstants.gap4,
-          const Text(
-            'Deine Antwort hilft uns, bessere Tipps zu finden.',
-            style: TextStyle(
-              fontSize: AppTheme.fontSizeBody,
-              color: AppTheme.mutedForeground,
-            ),
-          ),
-          AppConstants.gap12,
-          TextField(
-            controller: _commentController,
-            onChanged: _onCommentChanged,
-            minLines: 2,
-            maxLines: null,
-            maxLength: AppConstants.dislikeCommentMaxLength,
-            decoration: const InputDecoration(
-              labelText: 'Erzähl uns warum ... (optional)',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          AppConstants.gap16,
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              TextButton(
-                onPressed: _hide,
-                style: TextButton.styleFrom(
-                  foregroundColor: AppTheme.destructive,
-                ),
-                child: const Text('Empfehlung ausblenden'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppTheme.foreground,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          AppConstants.spacingMd,
+          AppConstants.spacingSm,
+          AppConstants.spacingMd,
+          MediaQuery.viewInsetsOf(context).bottom + AppConstants.spacingMd,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Container(
+                width: AppConstants.dragHandleWidth,
+                height: AppConstants.dragHandleHeight,
+                decoration: BoxDecoration(
+                  color: AppTheme.border,
+                  borderRadius: BorderRadius.circular(
+                    AppConstants.dragHandleRadius,
                   ),
                 ),
-                child: const Text('Fertig'),
               ),
-            ],
-          ),
-        ],
+            ),
+            AppConstants.gap12,
+            const Text(
+              'Was hat dir nicht gefallen?',
+              style: TextStyle(
+                fontSize: AppTheme.fontSizeSubtitle,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.foreground,
+              ),
+            ),
+            AppConstants.gap4,
+            const Text(
+              'Deine Antwort hilft uns, bessere Tipps zu finden.',
+              style: TextStyle(
+                fontSize: AppTheme.fontSizeBody,
+                color: AppTheme.mutedForeground,
+              ),
+            ),
+            AppConstants.gap12,
+            TextField(
+              controller: _commentController,
+              onChanged: _onCommentChanged,
+              minLines: 2,
+              maxLines: null,
+              maxLength: AppConstants.dislikeCommentMaxLength,
+              decoration: const InputDecoration(
+                labelText: 'Erzähl uns warum ... (optional)',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            AppConstants.gap16,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                TextButton(
+                  onPressed: _hide,
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppTheme.destructive,
+                  ),
+                  child: const Text('Empfehlung ausblenden'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppTheme.foreground,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.radiusMd,
+                      ),
+                    ),
+                  ),
+                  child: const Text('Fertig'),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
