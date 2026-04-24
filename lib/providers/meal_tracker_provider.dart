@@ -90,6 +90,7 @@ class MealTrackerState {
         false, // explicit clear (since ?? can't distinguish null)
     bool clearImageBytes = false,
     String? savedImageUrl,
+    bool clearSavedImageUrl = false,
   }) {
     return MealTrackerState(
       seed: seed ?? this.seed,
@@ -108,7 +109,9 @@ class MealTrackerState {
       ingredientSearchError: ingredientSearchError,
       notes: notes ?? this.notes,
       trackedAt: trackedAt ?? this.trackedAt,
-      savedImageUrl: savedImageUrl ?? this.savedImageUrl,
+      savedImageUrl: clearSavedImageUrl
+          ? null
+          : (savedImageUrl ?? this.savedImageUrl),
     );
   }
 }
@@ -273,6 +276,7 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
         isSaving: false,
         showSuccess: existingSeed == null,
         savedImageUrl: existingSeed == null ? resolvedImageUrl : null,
+        clearSavedImageUrl: existingSeed != null,
       );
     } catch (e) {
       state = state.copyWith(isSaving: false);
