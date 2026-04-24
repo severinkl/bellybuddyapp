@@ -61,7 +61,7 @@ class _WelcomeModal extends StatelessWidget {
             width: double.infinity,
             height: AppConstants.buttonHeight,
             child: ElevatedButton(
-              onPressed: () => Navigator.of(context).pop(),
+              onPressed: () => Navigator.pop(context),
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primary,
                 foregroundColor: Colors.white,
