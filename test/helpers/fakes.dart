@@ -233,6 +233,12 @@ class FakeEntryRepository implements EntryRepository {
   void seedResult(EntryQueryResult result) => _result = result;
 
   @override
+  Future<List<MealEntry>> fetchRecentMeals({
+    required String userId,
+    int? limit,
+  }) async => _result.meals;
+
+  @override
   Future<EntryQueryResult> fetchForDate({
     required String userId,
     required DateTime date,

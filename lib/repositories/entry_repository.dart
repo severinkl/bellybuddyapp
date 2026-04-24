@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/meal_entry.dart';
 import '../services/entry_crud_service.dart';
 import '../services/entry_query_service.dart';
 
@@ -14,6 +15,11 @@ class EntryRepository {
   final EntryCrudService _crudService;
   final EntryQueryService _queryService;
   EntryRepository(this._crudService, this._queryService);
+
+  Future<List<MealEntry>> fetchRecentMeals({
+    required String userId,
+    int? limit,
+  }) => _queryService.fetchRecentMeals(userId: userId, limit: limit);
 
   Future<EntryQueryResult> fetchForDate({
     required String userId,

@@ -28,6 +28,24 @@ class EntryQueryService {
   final SupabaseClient _client;
   EntryQueryService(this._client);
 
+  Future<List<MealEntry>> fetchRecentMeals({
+    required String userId,
+    int? limit,
+  }) async {
+    try {
+      var query = _client
+          .from('meal_entries')
+          .select()
+          .eq('user_id', userId)
+          .order('tracked_at', ascending: false);
+      final data = limit != null ? await query.limit(limit) : await query;
+      return data.map((e) => MealEntry.fromJson(e)).toList();
+    } catch (e, st) {
+      _log.error('fetchRecentMeals failed', e, st);
+      rethrow;
+    }
+  }
+
   Future<EntryQueryResult> fetchEntriesForDateRange({
     required String userId,
     required DateTime date,
