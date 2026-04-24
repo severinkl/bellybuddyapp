@@ -104,6 +104,15 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
                       ),
                       AppConstants.gap16,
                     ],
+                    Text(
+                      recipe.title,
+                      style: const TextStyle(
+                        fontSize: AppTheme.fontSizeDisplay,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.foreground,
+                      ),
+                    ),
+                    AppConstants.gap16,
                     if (recipe.ingredients.isNotEmpty) ...[
                       const Text(
                         'Zutaten',

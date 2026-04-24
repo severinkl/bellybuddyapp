@@ -46,7 +46,8 @@ void main() {
     );
     await pumpDetail(tester, recipes: [recipe], id: 'rec-1');
 
-    expect(find.text('Linseneintopf'), findsOneWidget);
+    // Title appears in AppBar and in the scrollable body (spec requirement)
+    expect(find.text('Linseneintopf'), findsAtLeastNWidgets(2));
     expect(find.text('Linsen'), findsOneWidget);
     expect(find.text('Mahlzeit jetzt tracken'), findsOneWidget);
   });
