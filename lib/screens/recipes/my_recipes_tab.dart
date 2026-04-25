@@ -8,7 +8,8 @@ import '../../providers/user_recipes_provider.dart';
 import '../../router/route_names.dart';
 import '../../widgets/common/mascot_image.dart';
 import 'widgets/add_recipe_chooser_sheet.dart';
-import 'widgets/recipe_list_tile.dart';
+import 'widgets/recipe_card.dart';
+import 'widgets/recipes_search_field.dart';
 
 class MyRecipesTab extends ConsumerStatefulWidget {
   const MyRecipesTab({super.key});
@@ -42,18 +43,40 @@ class _MyRecipesTabState extends ConsumerState<MyRecipesTab> {
         ),
       ),
       data: (recipes) {
+        // Truly empty (no recipes) → mascot CTA, no search bar.
         if (recipes.isEmpty) return const _EmptyState();
-        return ListView.separated(
-          padding: AppConstants.paddingMd,
-          itemCount: recipes.length,
-          separatorBuilder: (context, index) => AppConstants.gap8,
-          itemBuilder: (context, i) {
-            final recipe = recipes[i];
-            return RecipeListTile(
-              recipe: recipe,
-              onTap: () => context.push(RoutePaths.recipeDetailFor(recipe.id)),
-            );
-          },
+        return Column(
+          children: [
+            const Padding(
+              padding: AppConstants.paddingMd,
+              child: RecipesSearchField(),
+            ),
+            Expanded(
+              child: GridView.builder(
+                padding: const EdgeInsets.fromLTRB(
+                  AppConstants.spacingMd,
+                  0,
+                  AppConstants.spacingMd,
+                  AppConstants.spacingMd,
+                ),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: AppConstants.spacingSm,
+                  mainAxisSpacing: AppConstants.spacingSm,
+                  childAspectRatio: 0.78,
+                ),
+                itemCount: recipes.length,
+                itemBuilder: (context, i) {
+                  final recipe = recipes[i];
+                  return RecipeCard(
+                    recipe: recipe,
+                    onTap: () =>
+                        context.push(RoutePaths.recipeDetailFor(recipe.id)),
+                  );
+                },
+              ),
+            ),
+          ],
         );
       },
     );
