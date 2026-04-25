@@ -9,6 +9,9 @@ class UserRecipeRepository {
   Future<List<UserRecipe>> fetchForUser(String userId) =>
       _service.fetchForUser(userId);
 
+  Future<List<UserRecipe>> searchForUser(String userId, String query) =>
+      _service.searchForUser(userId, query);
+
   Future<UserRecipe> create({
     required String userId,
     required String title,

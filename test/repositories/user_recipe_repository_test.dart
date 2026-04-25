@@ -96,4 +96,18 @@ void main() {
       verify(() => service.delete('rec-1')).called(1);
     });
   });
+
+  group('searchForUser', () {
+    test('delegates to service', () async {
+      final recipes = [testUserRecipe()];
+      when(
+        () => service.searchForUser(any(), any()),
+      ).thenAnswer((_) async => recipes);
+
+      final result = await repo.searchForUser('user-1', 'curry');
+
+      expect(result, recipes);
+      verify(() => service.searchForUser('user-1', 'curry')).called(1);
+    });
+  });
 }
