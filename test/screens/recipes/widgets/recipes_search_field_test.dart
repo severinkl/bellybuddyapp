@@ -55,4 +55,35 @@ void main() {
     await tester.pump();
     expect(find.text('curry'), findsNothing);
   });
+
+  testWidgets('prefills the field from the notifier active query', (
+    tester,
+  ) async {
+    final container = ProviderContainer(
+      overrides: [
+        userRecipeRepositoryProvider.overrideWithValue(repo),
+        currentUserIdProvider.overrideWithValue(testUserId),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    // Seed an active query before the widget mounts.
+    await container.read(userRecipesProvider.notifier).fetch();
+    // Bypass debounce: set _query directly via setQuery with a very short
+    // pump to flush the debounce timer before mounting the widget.
+    container.read(userRecipesProvider.notifier).setQuery('reis');
+    // Advance fake time past the 300 ms debounce so the timer fires.
+    await tester.pump(const Duration(milliseconds: 350));
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: Scaffold(body: RecipesSearchField())),
+      ),
+    );
+    // Single pump is enough — initState already set the controller text.
+    await tester.pump();
+
+    expect(find.text('reis'), findsOneWidget);
+  });
 }

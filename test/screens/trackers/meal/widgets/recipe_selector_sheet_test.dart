@@ -45,6 +45,12 @@ class _StubUserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>>
 
   @override
   void setQuery(String? q) {}
+
+  @override
+  bool get hasActiveQuery => false;
+
+  @override
+  String? get activeQuery => null;
 }
 
 /// Opens the sheet in a test [MaterialApp] wrapped in a [ProviderScope],

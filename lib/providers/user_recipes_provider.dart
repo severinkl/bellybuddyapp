@@ -23,6 +23,13 @@ class UserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>> {
   String? _query;
   Timer? _debounce;
 
+  /// True iff a non-empty search query is active. UI uses this to
+  /// distinguish "no recipes saved" from "search returned nothing".
+  bool get hasActiveQuery => _query != null;
+
+  /// The active search query, or null if no search is active.
+  String? get activeQuery => _query;
+
   @override
   AsyncValue<List<UserRecipe>> build() {
     ref.onDispose(() => _debounce?.cancel());

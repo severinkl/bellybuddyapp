@@ -60,4 +60,39 @@ void main() {
     expect(find.byType(RecipeCard), findsNWidgets(2));
     expect(find.byType(GridView), findsOneWidget);
   });
+
+  testWidgets(
+    'shows search field + Keine Treffer when query yields zero results',
+    (tester) async {
+      final repo = MockUserRecipeRepository();
+      // Initial unfiltered fetch returns 1 recipe so we land in the
+      // "non-empty data + search field" UI.
+      when(
+        () => repo.fetchForUser(any()),
+      ).thenAnswer((_) async => [testUserRecipe()]);
+      // The search returns nothing.
+      when(() => repo.searchForUser(any(), any())).thenAnswer((_) async => []);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            userRecipeRepositoryProvider.overrideWithValue(repo),
+            currentUserIdProvider.overrideWithValue(testUserId),
+          ],
+          child: const MaterialApp(home: Scaffold(body: MyRecipesTab())),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(RecipeCard), findsOneWidget);
+
+      // Type into the search field; provider's debounce → searchForUser.
+      await tester.enterText(find.byType(TextField), 'xyz');
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(RecipesSearchField), findsOneWidget);
+      expect(find.text('Keine Treffer'), findsOneWidget);
+      expect(find.byType(RecipeCard), findsNothing);
+    },
+  );
 }

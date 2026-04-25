@@ -70,6 +70,12 @@ class _FakeUserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>>
 
   @override
   void setQuery(String? q) {}
+
+  @override
+  bool get hasActiveQuery => false;
+
+  @override
+  String? get activeQuery => null;
 }
 
 List<Override> _overrides({bool shouldThrow = false}) {

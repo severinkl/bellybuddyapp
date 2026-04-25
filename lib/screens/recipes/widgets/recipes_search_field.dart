@@ -16,6 +16,13 @@ class _RecipesSearchFieldState extends ConsumerState<RecipesSearchField> {
   final _controller = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    final initial = ref.read(userRecipesProvider.notifier).activeQuery;
+    if (initial != null) _controller.text = initial;
+  }
+
+  @override
   void dispose() {
     _controller.dispose();
     super.dispose();

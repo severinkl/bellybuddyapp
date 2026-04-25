@@ -43,8 +43,10 @@ class _MyRecipesTabState extends ConsumerState<MyRecipesTab> {
         ),
       ),
       data: (recipes) {
-        // Truly empty (no recipes) → mascot CTA, no search bar.
-        if (recipes.isEmpty) return const _EmptyState();
+        final hasActiveQuery = ref
+            .watch(userRecipesProvider.notifier)
+            .hasActiveQuery;
+        if (recipes.isEmpty && !hasActiveQuery) return const _EmptyState();
         return Column(
           children: [
             const Padding(
@@ -52,33 +54,58 @@ class _MyRecipesTabState extends ConsumerState<MyRecipesTab> {
               child: RecipesSearchField(),
             ),
             Expanded(
-              child: GridView.builder(
-                padding: const EdgeInsets.fromLTRB(
-                  AppConstants.spacingMd,
-                  0,
-                  AppConstants.spacingMd,
-                  AppConstants.spacingMd,
-                ),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: AppConstants.spacingSm,
-                  mainAxisSpacing: AppConstants.spacingSm,
-                  childAspectRatio: 0.78,
-                ),
-                itemCount: recipes.length,
-                itemBuilder: (context, i) {
-                  final recipe = recipes[i];
-                  return RecipeCard(
-                    recipe: recipe,
-                    onTap: () =>
-                        context.push(RoutePaths.recipeDetailFor(recipe.id)),
-                  );
-                },
-              ),
+              child: recipes.isEmpty
+                  ? const _EmptySearchResults()
+                  : GridView.builder(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppConstants.spacingMd,
+                        0,
+                        AppConstants.spacingMd,
+                        AppConstants.spacingMd,
+                      ),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: AppConstants.spacingSm,
+                            mainAxisSpacing: AppConstants.spacingSm,
+                            childAspectRatio: 0.78,
+                          ),
+                      itemCount: recipes.length,
+                      itemBuilder: (context, i) {
+                        final recipe = recipes[i];
+                        return RecipeCard(
+                          recipe: recipe,
+                          onTap: () => context.push(
+                            RoutePaths.recipeDetailFor(recipe.id),
+                          ),
+                        );
+                      },
+                    ),
             ),
           ],
         );
       },
+    );
+  }
+}
+
+class _EmptySearchResults extends StatelessWidget {
+  const _EmptySearchResults();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: AppConstants.spacingXl),
+        child: Text(
+          'Keine Treffer',
+          style: TextStyle(
+            fontSize: AppTheme.fontSizeBody,
+            color: AppTheme.mutedForeground,
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ),
     );
   }
 }
