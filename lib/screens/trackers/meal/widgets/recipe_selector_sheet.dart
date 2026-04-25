@@ -5,7 +5,7 @@ import '../../../../config/app_theme.dart';
 import '../../../../config/constants.dart';
 import '../../../../models/user_recipe.dart';
 import '../../../../providers/user_recipes_provider.dart';
-import '../../../recipes/widgets/recipe_list_tile.dart';
+import '../../../../widgets/common/signed_path_image.dart';
 
 /// Opens a modal bottom sheet that lets the user pick one of their saved
 /// recipes. Returns the selected [UserRecipe], or `null` if dismissed.
@@ -97,11 +97,39 @@ class _RecipeSelectorBodyState extends ConsumerState<_RecipeSelectorBody> {
                   height: 1,
                   thickness: AppConstants.dividerThickness,
                 ),
-                itemBuilder: (context, index) {
-                  final recipe = recipes[index];
-                  return RecipeListTile(
-                    recipe: recipe,
-                    onTap: () => Navigator.of(context).pop(recipe),
+                itemBuilder: (context, i) {
+                  final recipe = recipes[i];
+                  final subtitle = recipe.ingredients.take(3).join(' · ');
+                  return ListTile(
+                    leading: SizedBox(
+                      width: AppConstants.iconBadgeXl,
+                      height: AppConstants.iconBadgeXl,
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.radiusMd,
+                        ),
+                        child: SignedPathImage(
+                          pathOrUrl: recipe.imageUrl,
+                          width: AppConstants.iconBadgeXl,
+                          height: AppConstants.iconBadgeXl,
+                          placeholder: Container(color: AppTheme.muted),
+                          errorWidget: Container(color: AppTheme.muted),
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      recipe.title.isEmpty ? 'Ohne Namen' : recipe.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    subtitle: subtitle.isEmpty
+                        ? null
+                        : Text(
+                            subtitle,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                    onTap: () => Navigator.of(context).pop(recipes[i]),
                   );
                 },
               );
