@@ -6,6 +6,7 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/user_recipes_provider.dart';
 import '../../router/route_names.dart';
+import '../../widgets/common/bb_async_state.dart';
 import '../../widgets/common/mascot_image.dart';
 import 'widgets/add_recipe_chooser_sheet.dart';
 import 'widgets/recipe_card.dart';
@@ -32,15 +33,11 @@ class _MyRecipesTabState extends ConsumerState<MyRecipesTab> {
   Widget build(BuildContext context) {
     final async = ref.watch(userRecipesProvider);
     return async.when(
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => const Center(
-        child: Text(
-          'Konnte Rezepte nicht laden',
-          style: TextStyle(
-            fontSize: AppTheme.fontSizeBody,
-            color: AppTheme.mutedForeground,
-          ),
-        ),
+      loading: () => const BbLoadingState(),
+      error: (e, _) => BbErrorState(
+        message: 'Konnte Rezepte nicht laden',
+        onRetry: () =>
+            ref.read(userRecipesProvider.notifier).fetch(force: true),
       ),
       data: (recipes) {
         final hasActiveQuery = ref

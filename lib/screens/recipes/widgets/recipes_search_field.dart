@@ -31,39 +31,35 @@ class _RecipesSearchFieldState extends ConsumerState<RecipesSearchField> {
   void _clear() {
     _controller.clear();
     ref.read(userRecipesProvider.notifier).setQuery(null);
-    setState(() {});
   }
 
   @override
   Widget build(BuildContext context) {
-    final hasText = _controller.text.isNotEmpty;
-    return TextField(
-      controller: _controller,
-      decoration: InputDecoration(
-        hintText: 'Rezept suchen…',
-        prefixIcon: const Icon(Icons.search),
-        suffixIcon: hasText
-            ? IconButton(icon: const Icon(Icons.clear), onPressed: _clear)
-            : null,
-        filled: true,
-        fillColor: AppTheme.card,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppConstants.radiusRound),
-          borderSide: BorderSide.none,
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppConstants.radiusRound),
-          borderSide: BorderSide.none,
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(AppConstants.radiusRound),
-          borderSide: BorderSide.none,
-        ),
-        isDense: true,
-      ),
-      onChanged: (value) {
-        ref.read(userRecipesProvider.notifier).setQuery(value);
-        setState(() {}); // rebuild to show/hide the clear icon
+    final pillBorder = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(AppConstants.radiusRound),
+      borderSide: BorderSide.none,
+    );
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: _controller,
+      builder: (context, value, _) {
+        return TextField(
+          controller: _controller,
+          decoration: InputDecoration(
+            hintText: 'Rezept suchen…',
+            prefixIcon: const Icon(Icons.search),
+            suffixIcon: value.text.isEmpty
+                ? null
+                : IconButton(icon: const Icon(Icons.clear), onPressed: _clear),
+            filled: true,
+            fillColor: AppTheme.card,
+            border: pillBorder,
+            enabledBorder: pillBorder,
+            focusedBorder: pillBorder,
+            isDense: true,
+          ),
+          onChanged: (value) =>
+              ref.read(userRecipesProvider.notifier).setQuery(value),
+        );
       },
     );
   }

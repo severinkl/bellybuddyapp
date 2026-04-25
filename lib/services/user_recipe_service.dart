@@ -103,13 +103,15 @@ class UserRecipeService {
     }
   }
 
+  static final _whitespaceRx = RegExp(r'\s+');
+
   /// Converts a free-form user query into a tsquery string with prefix-match
   /// per token (`token:*`) joined by `&` so multi-word queries narrow.
   /// Exposed for tests; not part of the public API.
   static String buildTsQuery(String query) {
     final tokens = query
         .trim()
-        .split(RegExp(r'\s+'))
+        .split(_whitespaceRx)
         .where((t) => t.isNotEmpty)
         .toList();
     if (tokens.isEmpty) return '';
