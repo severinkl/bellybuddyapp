@@ -21,4 +21,26 @@ void main() {
       expect(service, isNotNull);
     });
   });
+
+  group('UserRecipeService._buildTsQuery (via @visibleForTesting)', () {
+    test('blank query returns empty string', () {
+      expect(UserRecipeService.buildTsQuery(''), '');
+      expect(UserRecipeService.buildTsQuery('   '), '');
+    });
+
+    test('single token gets prefix wildcard', () {
+      expect(UserRecipeService.buildTsQuery('kart'), 'kart:*');
+    });
+
+    test('multi-token query joins with & and prefixes each', () {
+      expect(UserRecipeService.buildTsQuery('curry reis'), 'curry:* & reis:*');
+    });
+
+    test('extra whitespace between tokens is collapsed', () {
+      expect(
+        UserRecipeService.buildTsQuery('  curry   reis  '),
+        'curry:* & reis:*',
+      );
+    });
+  });
 }

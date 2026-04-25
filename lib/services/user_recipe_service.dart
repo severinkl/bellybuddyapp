@@ -10,6 +10,25 @@ class UserRecipeService {
   static const _log = AppLogger('UserRecipeService');
   static const _table = 'user_recipes';
 
+  Future<List<UserRecipe>> searchForUser(String userId, String query) async {
+    final tsQuery = buildTsQuery(query);
+    if (tsQuery.isEmpty) return fetchForUser(userId);
+    try {
+      final data = await _client
+          .from(_table)
+          .select()
+          .eq('user_id', userId)
+          .textSearch('search_tsv', tsQuery, config: 'german')
+          .order('created_at', ascending: false);
+      return (data as List)
+          .map((e) => UserRecipe.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } catch (e, st) {
+      _log.error('searchForUser failed', e, st);
+      rethrow;
+    }
+  }
+
   Future<List<UserRecipe>> fetchForUser(String userId) async {
     try {
       final data = await _client
@@ -82,5 +101,18 @@ class UserRecipeService {
       _log.error('delete failed', e, st);
       rethrow;
     }
+  }
+
+  /// Converts a free-form user query into a tsquery string with prefix-match
+  /// per token (`token:*`) joined by `&` so multi-word queries narrow.
+  /// Exposed for tests; not part of the public API.
+  static String buildTsQuery(String query) {
+    final tokens = query
+        .trim()
+        .split(RegExp(r'\s+'))
+        .where((t) => t.isNotEmpty)
+        .toList();
+    if (tokens.isEmpty) return '';
+    return tokens.map((t) => '$t:*').join(' & ');
   }
 }
