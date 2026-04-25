@@ -93,4 +93,83 @@ void main() {
       verify(() => repo.fetchForUser(testUserId)).called(2);
     });
   });
+
+  group('setQuery + search branch', () {
+    test(
+      'setQuery with a non-empty value triggers searchForUser after debounce',
+      () async {
+        when(() => repo.fetchForUser(any())).thenAnswer((_) async => []);
+        when(
+          () => repo.searchForUser(any(), any()),
+        ).thenAnswer((_) async => [testUserRecipe(title: 'Curry mit Reis')]);
+
+        final container = makeContainer();
+        await container.read(userRecipesProvider.notifier).fetch();
+
+        container.read(userRecipesProvider.notifier).setQuery('curry');
+
+        // Wait past the 300ms debounce.
+        await Future<void>.delayed(const Duration(milliseconds: 350));
+
+        verify(() => repo.searchForUser(testUserId, 'curry')).called(1);
+        expect(
+          container.read(userRecipesProvider).value?.first.title,
+          'Curry mit Reis',
+        );
+      },
+    );
+
+    test('setQuery with empty / whitespace value clears the search', () async {
+      when(() => repo.fetchForUser(any())).thenAnswer((_) async => []);
+
+      final container = makeContainer();
+      await container.read(userRecipesProvider.notifier).fetch();
+      reset(repo);
+      when(() => repo.fetchForUser(any())).thenAnswer((_) async => []);
+
+      container.read(userRecipesProvider.notifier).setQuery('curry');
+      container.read(userRecipesProvider.notifier).setQuery('');
+      await Future<void>.delayed(const Duration(milliseconds: 350));
+
+      // Empty query falls back to fetchForUser, not searchForUser.
+      verify(() => repo.fetchForUser(testUserId)).called(1);
+      verifyNever(() => repo.searchForUser(any(), any()));
+    });
+
+    test('rapid calls only fire the last value (debounce)', () async {
+      when(() => repo.fetchForUser(any())).thenAnswer((_) async => []);
+      when(() => repo.searchForUser(any(), any())).thenAnswer((_) async => []);
+
+      final container = makeContainer();
+      await container.read(userRecipesProvider.notifier).fetch();
+
+      final notifier = container.read(userRecipesProvider.notifier);
+      notifier.setQuery('c');
+      notifier.setQuery('cu');
+      notifier.setQuery('cur');
+      await Future<void>.delayed(const Duration(milliseconds: 350));
+
+      verify(() => repo.searchForUser(testUserId, 'cur')).called(1);
+      verifyNever(() => repo.searchForUser(testUserId, 'c'));
+      verifyNever(() => repo.searchForUser(testUserId, 'cu'));
+    });
+
+    test('identical query is a no-op', () async {
+      when(() => repo.fetchForUser(any())).thenAnswer((_) async => []);
+      when(() => repo.searchForUser(any(), any())).thenAnswer((_) async => []);
+
+      final container = makeContainer();
+      await container.read(userRecipesProvider.notifier).fetch();
+
+      container.read(userRecipesProvider.notifier).setQuery('curry');
+      await Future<void>.delayed(const Duration(milliseconds: 350));
+      reset(repo);
+      when(() => repo.searchForUser(any(), any())).thenAnswer((_) async => []);
+
+      container.read(userRecipesProvider.notifier).setQuery('curry');
+      await Future<void>.delayed(const Duration(milliseconds: 350));
+
+      verifyNever(() => repo.searchForUser(any(), any()));
+    });
+  });
 }

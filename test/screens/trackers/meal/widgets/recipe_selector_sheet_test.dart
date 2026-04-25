@@ -42,6 +42,9 @@ class _StubUserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>>
 
   @override
   Future<void> delete(String id) async => throw UnimplementedError();
+
+  @override
+  void setQuery(String? q) {}
 }
 
 /// Opens the sheet in a test [MaterialApp] wrapped in a [ProviderScope],

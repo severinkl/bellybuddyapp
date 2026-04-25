@@ -67,6 +67,9 @@ class _FakeUserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>>
 
   @override
   Future<void> delete(String id) async {}
+
+  @override
+  void setQuery(String? q) {}
 }
 
 List<Override> _overrides({bool shouldThrow = false}) {
