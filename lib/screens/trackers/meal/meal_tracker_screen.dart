@@ -16,7 +16,7 @@ import '../../../utils/save_helper.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/date_time_chips.dart';
 import '../../../widgets/common/tracker_screen_scaffold.dart';
-import 'widgets/ingredient_search.dart';
+import '../../../widgets/common/ingredient_search.dart';
 import 'widgets/meal_image_section.dart';
 import 'widgets/meal_title_sheet.dart';
 import 'widgets/recipe_selector_sheet.dart';

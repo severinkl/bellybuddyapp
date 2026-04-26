@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../../../config/app_theme.dart';
-import '../../../../models/ingredient_search_result.dart';
-import '../../../../config/constants.dart';
+import '../../config/app_theme.dart';
+import '../../config/constants.dart';
+import '../../models/ingredient_search_result.dart';
 
 class IngredientSearch extends StatefulWidget {
   final List<String> ingredients;
@@ -70,7 +70,6 @@ class _IngredientSearchState extends State<IngredientSearch> {
 
   @override
   Widget build(BuildContext context) {
-    // Filter out already-added ingredients
     final filteredSuggestions = widget.suggestions
         .where((s) => !widget.ingredients.contains(s.name))
         .toList();
@@ -84,7 +83,6 @@ class _IngredientSearchState extends State<IngredientSearch> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title row: "Zutaten" + hinzufügen button or inline search field
           Row(
             children: [
               const Text(
@@ -131,8 +129,6 @@ class _IngredientSearchState extends State<IngredientSearch> {
                     setState(() => _isAdding = true);
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       _focusNode.requestFocus();
-                      // Delay to let the keyboard fully animate in before
-                      // scrolling, otherwise the scroll target is wrong.
                       Future.delayed(AppConstants.animSlow, _scrollToField);
                     });
                   },
