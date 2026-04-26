@@ -26,6 +26,7 @@ void main() {
   Future<void> pumpEditor(
     WidgetTester tester, {
     String? recipeId,
+    MealEntry? initialMeal,
     List<dynamic> recipes = const [],
   }) async {
     when(
@@ -38,7 +39,12 @@ void main() {
           mealMediaRepositoryProvider.overrideWithValue(mediaRepo),
           currentUserIdProvider.overrideWithValue(testUserId),
         ],
-        child: MaterialApp(home: RecipeEditorScreen(recipeId: recipeId)),
+        child: MaterialApp(
+          home: RecipeEditorScreen(
+            recipeId: recipeId,
+            initialMeal: initialMeal,
+          ),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -153,46 +159,13 @@ void main() {
     });
   });
 
-  Future<void> pumpEditorWithMeal(
-    WidgetTester tester, {
-    required MealEntry meal,
-  }) async {
-    when(() => repo.fetchForUser(any())).thenAnswer((_) async => const []);
-    when(
-      () => repo.create(
-        userId: any(named: 'userId'),
-        title: any(named: 'title'),
-        ingredients: any(named: 'ingredients'),
-        imageUrl: any(named: 'imageUrl'),
-      ),
-    ).thenAnswer(
-      (_) async => testUserRecipe(
-        title: meal.title,
-        ingredients: meal.ingredients,
-        imageUrl: meal.imageUrl,
-      ),
-    );
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          userRecipeRepositoryProvider.overrideWithValue(repo),
-          mealMediaRepositoryProvider.overrideWithValue(mediaRepo),
-          currentUserIdProvider.overrideWithValue(testUserId),
-        ],
-        child: MaterialApp(home: RecipeEditorScreen(initialMeal: meal)),
-      ),
-    );
-    await tester.pumpAndSettle();
-  }
-
   group('create mode prefilled from initialMeal', () {
     testWidgets('renders title in display mode (not autofocused)', (
       tester,
     ) async {
       final meal = testMealEntry(title: 'Linseneintopf');
-      await pumpEditorWithMeal(tester, meal: meal);
+      await pumpEditor(tester, initialMeal: meal);
 
-      // Display mode: the title is rendered as Text, not TextField.
       expect(
         find.descendant(
           of: find.byType(EditableAppBarTitle),
@@ -214,7 +187,7 @@ void main() {
         title: 'Linseneintopf',
         ingredients: const ['Linsen', 'Tomaten', 'Zwiebel'],
       );
-      await pumpEditorWithMeal(tester, meal: meal);
+      await pumpEditor(tester, initialMeal: meal);
 
       expect(find.widgetWithText(Chip, 'Linsen'), findsOneWidget);
       expect(find.widgetWithText(Chip, 'Tomaten'), findsOneWidget);
@@ -228,7 +201,21 @@ void main() {
           title: 'Linseneintopf',
           ingredients: const ['Linsen', 'Tomaten'],
         );
-        await pumpEditorWithMeal(tester, meal: meal);
+        when(
+          () => repo.create(
+            userId: any(named: 'userId'),
+            title: any(named: 'title'),
+            ingredients: any(named: 'ingredients'),
+            imageUrl: any(named: 'imageUrl'),
+          ),
+        ).thenAnswer(
+          (_) async => testUserRecipe(
+            title: meal.title,
+            ingredients: meal.ingredients,
+            imageUrl: meal.imageUrl,
+          ),
+        );
+        await pumpEditor(tester, initialMeal: meal);
 
         await tester.tap(find.text('Speichern'));
         await tester.pumpAndSettle();

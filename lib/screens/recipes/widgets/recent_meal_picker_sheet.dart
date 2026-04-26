@@ -74,7 +74,7 @@ class _RecentMealPickerSheetState
     }
   }
 
-  void _openEditorWith(BuildContext context, MealEntry meal) {
+  void _openEditorWith(MealEntry meal) {
     Navigator.of(context).pop();
     context.push(RoutePaths.recipeNew, extra: meal);
   }
@@ -145,7 +145,7 @@ class _RecentMealPickerSheetState
                               color: AppTheme.mutedForeground,
                             ),
                           ),
-                          onTap: () => _openEditorWith(context, meal),
+                          onTap: () => _openEditorWith(meal),
                         );
                       },
                     ),

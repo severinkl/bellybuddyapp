@@ -19,14 +19,17 @@ import '../../widgets/common/ingredient_search.dart';
 import '../trackers/meal/widgets/meal_image_section.dart';
 
 class RecipeEditorScreen extends ConsumerStatefulWidget {
-  const RecipeEditorScreen({super.key, this.recipeId, this.initialMeal});
+  const RecipeEditorScreen({super.key, this.recipeId, this.initialMeal})
+    : assert(
+        recipeId == null || initialMeal == null,
+        'initialMeal is only valid in create mode (recipeId == null).',
+      );
 
   /// Null → create mode. Non-null → edit mode (prefills from provider).
   final String? recipeId;
 
-  /// When non-null and in create mode, pre-fills title/ingredients/image
-  /// from this meal. Passed by the recent-meal picker sheet via GoRouter
-  /// extra. Ignored in edit mode.
+  /// In create mode, pre-fills title, ingredients, and image from this meal.
+  /// Must be null when [recipeId] is non-null (enforced by an assert).
   final MealEntry? initialMeal;
 
   @override

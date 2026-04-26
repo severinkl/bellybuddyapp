@@ -6,24 +6,15 @@ import 'package:go_router/go_router.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
+import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recent_meal_picker_sheet.dart';
 
+import '../../../helpers/fakes.dart';
 import '../../../helpers/fixtures.dart';
 
-class _FakeEntryRepository extends Fake implements EntryRepository {
-  final List<MealEntry> meals;
-  _FakeEntryRepository(this.meals);
-
-  @override
-  Future<List<MealEntry>> fetchRecentMeals({
-    required String userId,
-    int? limit,
-  }) async => meals;
-}
-
-/// Builds a minimal 2-route GoRouter so the sheet's context.push('/recipe/new')
-/// has a destination to navigate to without needing the full app router.
-GoRouter _buildRouter(List<MealEntry> meals) {
+/// Minimal 2-route GoRouter for sheet navigation tests. The sentinel route
+/// reads `state.extra` so tests can assert the meal was forwarded.
+GoRouter _buildRouter() {
   return GoRouter(
     initialLocation: '/home',
     routes: [
@@ -39,7 +30,7 @@ GoRouter _buildRouter(List<MealEntry> meals) {
         ),
       ),
       GoRoute(
-        path: '/recipe/new',
+        path: RoutePaths.recipeNew,
         builder: (_, state) {
           final extra = state.extra as MealEntry?;
           return Scaffold(
@@ -55,13 +46,15 @@ Future<void> pumpSheet(
   WidgetTester tester, {
   required List<MealEntry> meals,
 }) async {
+  final fakeEntries = FakeEntryRepository()
+    ..seedResult(testEntryQueryResult(meals: meals));
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        entryRepositoryProvider.overrideWithValue(_FakeEntryRepository(meals)),
+        entryRepositoryProvider.overrideWithValue(fakeEntries),
         currentUserIdProvider.overrideWithValue(testUserId),
       ],
-      child: MaterialApp.router(routerConfig: _buildRouter(meals)),
+      child: MaterialApp.router(routerConfig: _buildRouter()),
     ),
   );
   await tester.pumpAndSettle();
