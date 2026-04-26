@@ -40,7 +40,12 @@ GoRouter _buildRouter(List<MealEntry> meals) {
       ),
       GoRoute(
         path: '/recipe/new',
-        builder: (_, _) => const Scaffold(body: Text('recipe-new-sentinel')),
+        builder: (_, state) {
+          final extra = state.extra as MealEntry?;
+          return Scaffold(
+            body: Text('recipe-new-sentinel:${extra?.title ?? "no-extra"}'),
+          );
+        },
       ),
     ],
   );
@@ -92,8 +97,12 @@ void main() {
     await tester.tap(find.text('Avocado Toast'));
     await tester.pumpAndSettle();
 
-    // Sheet is dismissed and router pushed /recipe/new.
+    // Sheet is dismissed and router pushed /recipe/new with the meal as extra.
     expect(find.text('Avocado Toast'), findsNothing);
-    expect(find.text('recipe-new-sentinel'), findsOneWidget);
+    expect(
+      find.text('recipe-new-sentinel:Avocado Toast'),
+      findsOneWidget,
+      reason: 'meal must flow through state.extra to /recipe/new',
+    );
   });
 }
