@@ -57,7 +57,11 @@ class _IngredientSearchState extends State<IngredientSearch> {
   }
 
   void _scrollToField() {
-    if (!mounted) return;
+    // Bail if no longer in adding mode — the TextField has unmounted and
+    // _focusNode.context now points at a deactivated element. This can
+    // happen when the user submits the field and Flutter fires the
+    // delayed scroll callback after _isAdding flips back to false.
+    if (!mounted || !_isAdding) return;
     final ctx = _focusNode.context;
     if (ctx != null) {
       Scrollable.ensureVisible(
