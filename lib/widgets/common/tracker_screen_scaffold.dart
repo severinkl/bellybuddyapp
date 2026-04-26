@@ -13,6 +13,7 @@ class TrackerScreenScaffold extends StatelessWidget {
   final String? successMascotAsset;
   final Widget body;
   final List<Widget>? successActions;
+  final Widget? successBottomCallout;
   final VoidCallback? onSuccessDismissed;
 
   const TrackerScreenScaffold({
@@ -26,6 +27,7 @@ class TrackerScreenScaffold extends StatelessWidget {
     this.successSubMessage,
     this.successMascotAsset,
     this.successActions,
+    this.successBottomCallout,
     this.onSuccessDismissed,
   });
 
@@ -39,6 +41,7 @@ class TrackerScreenScaffold extends StatelessWidget {
         mascotAsset: successMascotAsset,
         onDismissed: onSuccessDismissed ?? context.popOrGoDashboard,
         actions: successActions,
+        bottomCallout: successBottomCallout,
       );
     }
 
