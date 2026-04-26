@@ -6,6 +6,7 @@ import '../../router/navigation_extensions.dart';
 import '../../widgets/common/mascot_image.dart';
 import 'my_recipes_tab.dart';
 import 'widgets/add_recipe_chooser_sheet.dart';
+import 'widgets/recipes_tab_toggle.dart';
 
 enum _RecipesView { myRecipes, inspiration }
 
@@ -43,20 +44,10 @@ class _RecipesScreenState extends State<RecipesScreen> {
         children: [
           Padding(
             padding: AppConstants.paddingMd,
-            child: SegmentedButton<_RecipesView>(
-              segments: const [
-                ButtonSegment(
-                  value: _RecipesView.myRecipes,
-                  label: Text('Meine Rezepte'),
-                ),
-                ButtonSegment(
-                  value: _RecipesView.inspiration,
-                  label: Text('Inspiration'),
-                ),
-              ],
-              selected: {_view},
-              onSelectionChanged: (selection) =>
-                  setState(() => _view = selection.first),
+            child: RecipesTabToggle(
+              value: _view.index,
+              segments: const ['Meine Rezepte', 'Inspiration'],
+              onChanged: (i) => setState(() => _view = _RecipesView.values[i]),
             ),
           ),
           Expanded(
