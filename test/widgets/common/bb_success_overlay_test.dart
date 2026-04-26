@@ -74,5 +74,33 @@ void main() {
 
       expect(find.text('Nur eine Aktion'), findsOneWidget);
     });
+
+    testWidgets('renders bottomCallout below actions', (tester) async {
+      await _pumpOverlay(
+        tester,
+        BbSuccessOverlay(
+          message: 'Gespeichert',
+          onDismissed: () {},
+          actions: const [Text('ACTION_ONE')],
+          bottomCallout: const Text('CALLOUT_TEXT'),
+        ),
+      );
+
+      expect(find.text('ACTION_ONE'), findsOneWidget);
+      expect(find.text('CALLOUT_TEXT'), findsOneWidget);
+    });
+
+    testWidgets('renders cleanly without bottomCallout', (tester) async {
+      await _pumpOverlay(
+        tester,
+        BbSuccessOverlay(
+          message: 'Gespeichert',
+          onDismissed: () {},
+          actions: const [Text('ACTION_ONE')],
+        ),
+      );
+
+      expect(find.text('ACTION_ONE'), findsOneWidget);
+    });
   });
 }

@@ -9,6 +9,7 @@ class BbSuccessOverlay extends StatefulWidget {
   final String? subMessage;
   final VoidCallback onDismissed;
   final List<Widget>? actions;
+  final Widget? bottomCallout;
   final String? mascotAsset;
 
   const BbSuccessOverlay({
@@ -17,6 +18,7 @@ class BbSuccessOverlay extends StatefulWidget {
     required this.onDismissed,
     this.subMessage,
     this.actions,
+    this.bottomCallout,
     this.mascotAsset,
   });
 
@@ -218,6 +220,11 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
                         ],
                       ],
                     ),
+                ],
+
+                if (widget.bottomCallout != null) ...[
+                  AppConstants.gap16,
+                  widget.bottomCallout!,
                 ],
 
                 // Tap hint
