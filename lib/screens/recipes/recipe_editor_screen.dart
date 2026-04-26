@@ -228,31 +228,28 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
             ),
           ),
           AppConstants.gap8,
-          Row(
-            children: [
-              Expanded(
-                child: TextField(
-                  controller: _ingredientController,
-                  decoration: const InputDecoration(
-                    hintText: 'Zutat eingeben',
-                    isDense: true,
-                    border: OutlineInputBorder(),
-                    contentPadding: EdgeInsets.symmetric(
-                      horizontal: AppConstants.spacingMd,
-                      vertical: AppConstants.spacingSm,
-                    ),
-                  ),
-                  style: const TextStyle(fontSize: AppTheme.fontSizeBody),
-                  onSubmitted: (_) => _addIngredient(),
-                  textInputAction: TextInputAction.done,
-                ),
+          TextField(
+            controller: _ingredientController,
+            decoration: const InputDecoration(
+              hintText: 'Zutat eingeben',
+              isDense: true,
+              border: OutlineInputBorder(),
+              contentPadding: EdgeInsets.symmetric(
+                horizontal: AppConstants.spacingMd,
+                vertical: AppConstants.spacingSm,
               ),
-              const SizedBox(width: AppConstants.spacingSm),
-              OutlinedButton(
-                onPressed: _addIngredient,
-                child: const Text('Hinzufügen'),
-              ),
-            ],
+            ),
+            style: const TextStyle(fontSize: AppTheme.fontSizeBody),
+            onSubmitted: (_) => _addIngredient(),
+            textInputAction: TextInputAction.done,
+          ),
+          AppConstants.gap8,
+          Align(
+            alignment: Alignment.centerRight,
+            child: OutlinedButton(
+              onPressed: _addIngredient,
+              child: const Text('Hinzufügen'),
+            ),
           ),
           if (_ingredients.isNotEmpty) ...[
             AppConstants.gap8,
