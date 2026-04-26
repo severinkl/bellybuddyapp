@@ -129,6 +129,8 @@ class _IngredientSearchState extends State<IngredientSearch> {
                     setState(() => _isAdding = true);
                     WidgetsBinding.instance.addPostFrameCallback((_) {
                       _focusNode.requestFocus();
+                      // Delay to let the keyboard fully animate in before
+                      // scrolling, otherwise the scroll target is wrong.
                       Future.delayed(AppConstants.animSlow, _scrollToField);
                     });
                   },
