@@ -236,16 +236,10 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     );
   }
 
-  /// True iff the user already owns a recipe whose title matches [title]
-  /// after trimming + lowercasing. Watches userRecipesProvider so the UI
-  /// rebuilds if the recipe list arrives after first paint.
-  bool _hasMatchingRecipe(String title) {
-    final normalized = title.trim().toLowerCase();
-    if (normalized.isEmpty) return false;
-    final recipes = ref.watch(userRecipesProvider).value;
-    if (recipes == null) return false;
-    return recipes.any((r) => r.title.trim().toLowerCase() == normalized);
-  }
+  /// Watches userRecipesProvider so the UI rebuilds if the recipe list
+  /// arrives after first paint, then delegates to [hasMatchingUserRecipe].
+  bool _hasMatchingRecipe(String title) =>
+      hasMatchingUserRecipe(title, ref.watch(userRecipesProvider).value);
 
   Widget _buildSaveAsRecipeBottom(MealTrackerState state) {
     final saved = _savedAsRecipe || _hasMatchingRecipe(state.title);
@@ -424,4 +418,15 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
       },
     );
   }
+}
+
+/// True iff [recipes] contains a recipe whose title matches [title] after
+/// trimming + lowercasing. Returns false for empty/whitespace titles or
+/// when [recipes] is still loading (null). Pure helper for unit testing —
+/// the screen's `_hasMatchingRecipe` watches the provider then delegates here.
+bool hasMatchingUserRecipe(String title, List<UserRecipe>? recipes) {
+  final normalized = title.trim().toLowerCase();
+  if (normalized.isEmpty) return false;
+  if (recipes == null) return false;
+  return recipes.any((r) => r.title.trim().toLowerCase() == normalized);
 }
