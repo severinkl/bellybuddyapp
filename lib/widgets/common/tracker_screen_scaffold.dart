@@ -12,6 +12,7 @@ class TrackerScreenScaffold extends StatelessWidget {
   final String? successSubMessage;
   final String? successMascotAsset;
   final Widget body;
+  final List<Widget>? appBarActions;
   final List<Widget>? successActions;
   final Widget? successBottomCallout;
   final VoidCallback? onSuccessDismissed;
@@ -26,6 +27,7 @@ class TrackerScreenScaffold extends StatelessWidget {
     required this.body,
     this.successSubMessage,
     this.successMascotAsset,
+    this.appBarActions,
     this.successActions,
     this.successBottomCallout,
     this.onSuccessDismissed,
@@ -62,6 +64,7 @@ class TrackerScreenScaffold extends StatelessWidget {
           },
         ),
         title: titleWidget ?? Text(title),
+        actions: appBarActions,
       ),
       body: SafeArea(top: false, child: body),
     );
