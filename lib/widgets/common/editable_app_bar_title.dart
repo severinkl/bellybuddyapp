@@ -5,14 +5,16 @@ import '../../config/constants.dart';
 
 /// AppBar title that flips between a tappable label and an inline TextField.
 ///
-/// Owns its own controller, focus node, and edit-mode flag. Parents pass
-/// the current title and receive a trimmed string via [onChanged] when the
-/// user commits (submit or blur).
+/// Owns its own controller, focus node, and edit-mode flag. [onChanged] fires
+/// on commit (submit / blur) and receives a trimmed string. [onTextChanged]
+/// is optional and fires on every keystroke while editing, receiving the raw
+/// (un-trimmed) value — useful for live-enabling save buttons.
 class EditableAppBarTitle extends StatefulWidget {
   final String initialTitle;
   final String placeholder;
   final bool autofocusOnMount;
   final ValueChanged<String> onChanged;
+  final ValueChanged<String>? onTextChanged;
 
   const EditableAppBarTitle({
     super.key,
@@ -20,6 +22,7 @@ class EditableAppBarTitle extends StatefulWidget {
     required this.placeholder,
     required this.onChanged,
     this.autofocusOnMount = false,
+    this.onTextChanged,
   });
 
   @override
@@ -104,6 +107,7 @@ class _EditableAppBarTitleState extends State<EditableAppBarTitle> {
           contentPadding: EdgeInsets.zero,
           hintText: widget.placeholder,
         ),
+        onChanged: widget.onTextChanged,
         onSubmitted: (_) => _commit(),
       );
     }

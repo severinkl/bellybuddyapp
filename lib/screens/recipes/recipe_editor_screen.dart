@@ -163,6 +163,7 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
           placeholder: 'Rezept benennen',
           autofocusOnMount: !_isEditMode,
           onChanged: (v) => setState(() => _title = v),
+          onTextChanged: (v) => setState(() => _title = v),
         ),
       ),
       body: SafeArea(

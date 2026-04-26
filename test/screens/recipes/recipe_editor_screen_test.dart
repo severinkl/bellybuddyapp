@@ -72,7 +72,6 @@ void main() {
         matching: find.byType(TextField),
       );
       await tester.enterText(appBarTextField, 'Eiersalat');
-      await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pump();
 
       // Tap Speichern (now enabled because _title = 'Eiersalat').
@@ -137,8 +136,6 @@ void main() {
         matching: find.byType(TextField),
       );
       await tester.enterText(appBarTextField, 'Rote Linsensuppe');
-      // Submit to commit the new value before tapping Speichern.
-      await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pump();
 
       await tester.tap(find.text('Speichern'));

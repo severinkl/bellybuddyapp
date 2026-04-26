@@ -101,5 +101,33 @@ void main() {
 
       expect(find.byType(TextField), findsOneWidget);
     });
+
+    testWidgets(
+      'onTextChanged fires per keystroke (raw value, not trimmed) and '
+      'onChanged fires once on submit (trimmed value)',
+      (tester) async {
+        final textChangedValues = <String>[];
+        String? committed;
+        await tester.pumpWidget(
+          _wrap(
+            EditableAppBarTitle(
+              initialTitle: '',
+              placeholder: 'Mahlzeit benennen',
+              onChanged: (v) => committed = v,
+              onTextChanged: textChangedValues.add,
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('Mahlzeit benennen'));
+        await tester.pump();
+        await tester.enterText(find.byType(TextField), '  Pizza  ');
+        expect(textChangedValues.last, equals('  Pizza  '));
+
+        await tester.testTextInput.receiveAction(TextInputAction.done);
+        await tester.pumpAndSettle();
+        expect(committed, equals('Pizza'));
+      },
+    );
   });
 }
