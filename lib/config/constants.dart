@@ -34,6 +34,7 @@ class AppConstants {
   static const paddingLg = EdgeInsets.all(24);
 
   // Icon badge sizes
+  static const double iconBadgeXs = 32.0;
   static const double iconBadgeSm = 40.0;
   static const double iconBadgeMd = 44.0;
   static const double iconBadgeLg = 48.0;
