@@ -19,9 +19,7 @@ class MealImageSection extends StatelessWidget {
   final Future<void> Function(Uint8List bytes, String name) onImagePicked;
   final VoidCallback onClearImage;
 
-  /// When non-null, the empty state renders a third "Rezept" button next to
-  /// Kamera and Galerie. Tapping it should open the recipe picker. When null,
-  /// only the two image-source buttons render.
+  /// When non-null, adds a third "Rezept" button to the empty-state row.
   final VoidCallback? onPickRecipe;
 
   const MealImageSection({

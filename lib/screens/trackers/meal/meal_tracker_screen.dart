@@ -337,26 +337,38 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
             onChanged: notifier.setTrackedAt,
           ),
           AppConstants.gap16,
-          MealImageSection(
-            imageBytes: state.imageBytes,
-            isAnalyzing: state.isAnalyzing,
-            onImagePicked: (bytes, name) async {
-              notifier.setImage(bytes, name);
-              try {
-                await notifier.analyzeImage(bytes, name);
-              } catch (_) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Fehler bei der Analyse.')),
-                  );
-                }
-              }
+          Consumer(
+            builder: (_, ref, _) {
+              // Scoped Consumer so userRecipesProvider's load → data
+              // transition only rebuilds the image section, not the whole
+              // screen. Previously the AppBar button had the same isolation
+              // via its own Consumer.
+              final hasRecipes =
+                  ref.watch(userRecipesProvider).value?.isNotEmpty ?? false;
+              return MealImageSection(
+                imageBytes: state.imageBytes,
+                isAnalyzing: state.isAnalyzing,
+                onImagePicked: (bytes, name) async {
+                  notifier.setImage(bytes, name);
+                  try {
+                    await notifier.analyzeImage(bytes, name);
+                  } catch (_) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Fehler bei der Analyse.'),
+                        ),
+                      );
+                    }
+                  }
+                },
+                onClearImage: () {
+                  notifier.clearImage();
+                  notifier.setTitle(kDefaultMealTitle);
+                },
+                onPickRecipe: hasRecipes ? _openRecipeSelector : null,
+              );
             },
-            onClearImage: () {
-              notifier.clearImage();
-              notifier.setTitle(kDefaultMealTitle);
-            },
-            onPickRecipe: _onPickRecipe(),
           ),
           AppConstants.gap16,
           Consumer(
@@ -403,19 +415,10 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     );
   }
 
-  /// Returns a tap handler that opens the recipe-picker sheet, or null when
-  /// the user has no recipes (so MealImageSection hides its third button).
-  /// Watches userRecipesProvider so the button appears as soon as recipes
-  /// load post-mount.
-  VoidCallback? _onPickRecipe() {
-    final hasRecipes =
-        ref.watch(userRecipesProvider).value?.isNotEmpty ?? false;
-    if (!hasRecipes) return null;
-    return () async {
-      final recipe = await showRecipeSelectorSheet(context);
-      if (recipe == null || !mounted) return;
-      ref.read(mealTrackerProvider.notifier).prefillFromRecipe(recipe);
-    };
+  Future<void> _openRecipeSelector() async {
+    final recipe = await showRecipeSelectorSheet(context);
+    if (recipe == null || !mounted) return;
+    ref.read(mealTrackerProvider.notifier).prefillFromRecipe(recipe);
   }
 }
 
