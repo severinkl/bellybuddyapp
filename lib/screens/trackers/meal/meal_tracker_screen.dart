@@ -289,16 +289,18 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'Speicher diese Mahlzeit als Rezept, um sie später schneller wieder einzutragen.',
-            style: TextStyle(
-              fontSize: AppTheme.fontSizeCaption,
-              color: AppTheme.mutedForeground,
+          if (!saved) ...[
+            const Text(
+              'Speicher diese Mahlzeit als Rezept, um sie später schneller wieder einzutragen.',
+              style: TextStyle(
+                fontSize: AppTheme.fontSizeCaption,
+                color: AppTheme.mutedForeground,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
             ),
-            textAlign: TextAlign.center,
-            maxLines: 2,
-          ),
-          AppConstants.gap8,
+            AppConstants.gap8,
+          ],
           BbButton(
             label: saved ? 'Als Rezept gespeichert' : 'Als Rezept speichern',
             icon: saved ? Icons.check : Icons.bookmark_add_outlined,
