@@ -38,11 +38,7 @@ class _EditableAppBarTitleState extends State<EditableAppBarTitle> {
     _focusNode = FocusNode();
     _isEditing = widget.autofocusOnMount;
 
-    _focusNode.addListener(() {
-      if (!_focusNode.hasFocus && _isEditing) {
-        _commit();
-      }
-    });
+    _focusNode.addListener(_onFocusChange);
 
     if (widget.autofocusOnMount) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -58,7 +54,7 @@ class _EditableAppBarTitleState extends State<EditableAppBarTitle> {
     // External writes (e.g. recipe edit-mode prefill that happens after first
     // build) should reflect in the displayed text without disturbing the
     // user mid-edit.
-    if (!_isEditing && widget.initialTitle != _controller.text) {
+    if (!_isEditing && widget.initialTitle != oldWidget.initialTitle) {
       _controller.text = widget.initialTitle;
     }
   }
@@ -66,8 +62,15 @@ class _EditableAppBarTitleState extends State<EditableAppBarTitle> {
   @override
   void dispose() {
     _controller.dispose();
+    _focusNode.removeListener(_onFocusChange);
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _onFocusChange() {
+    if (!_focusNode.hasFocus && _isEditing) {
+      _commit();
+    }
   }
 
   void _commit() {
@@ -127,7 +130,7 @@ class _EditableAppBarTitleState extends State<EditableAppBarTitle> {
             ),
           ),
           const SizedBox(width: AppConstants.spacingXs),
-          const Icon(Icons.edit, size: 16),
+          const Icon(Icons.edit, size: AppConstants.iconSizeXs),
         ],
       ),
     );
