@@ -113,18 +113,13 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     return entries.meals.where((m) => m.id == id).firstOrNull;
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
-
   Future<void> _save() async {
     // Pull focus off any active TextField so EditableAppBarTitle commits its
     // pending edit (it pushes the value via onChanged on focus-loss). Yield
-    // a frame so the focus-listener callback in EditableAppBarTitle fires
-    // before we read state.
+    // to the microtask queue so the focus-listener callback in
+    // EditableAppBarTitle fires before we read state.
     FocusManager.instance.primaryFocus?.unfocus();
-    await Future<void>.delayed(Duration.zero);
+    await Future<void>.microtask(() {});
     if (!mounted) return;
     final notifier = ref.read(mealTrackerProvider.notifier);
     final state = ref.read(mealTrackerProvider);
