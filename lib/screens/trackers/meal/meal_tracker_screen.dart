@@ -231,6 +231,9 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         successBottomCallout: state.showSuccess
             ? _buildSaveAsRecipeBottom(state)
             : null,
+        onSuccessDismissed: widget.initialRecipe != null
+            ? () => context.go(RoutePaths.dashboard)
+            : null,
         body: _buildBody(state),
       ),
     );
