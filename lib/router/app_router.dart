@@ -213,7 +213,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.recipeNew,
         name: RouteNames.recipeNew,
-        builder: (context, state) => const RecipeEditorScreen(),
+        builder: (context, state) {
+          final extra = state.extra;
+          return RecipeEditorScreen(
+            initialMeal: extra is MealEntry ? extra : null,
+          );
+        },
       ),
       GoRoute(
         path: RoutePaths.recipeDetail,
