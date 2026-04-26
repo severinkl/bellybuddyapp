@@ -292,7 +292,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
             label: 'Als Rezept speichern',
             icon: Icons.bookmark_add_outlined,
             isLoading: _savingAsRecipe,
-            onPressed: _savingAsRecipe ? null : () => _saveAsRecipe(state),
+            onPressed: () => _saveAsRecipe(state),
           ),
         ],
       ),
