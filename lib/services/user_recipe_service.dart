@@ -104,6 +104,12 @@ class UserRecipeService {
   }
 
   static final _whitespaceRx = RegExp(r'\s+');
+  // tsquery's reserved characters — `&`, `|`, `!`, `(`, `)`, `:`, `*`,
+  // `<`, `>` — would otherwise produce a malformed query and surface as
+  // a 400 from PostgREST. Strip everything that isn't a Unicode letter,
+  // digit, or underscore. `\w` is ASCII-only in Dart's RegExp even with
+  // `unicode: true`, which would drop umlauts (Möhren → Mhren).
+  static final _tsqueryStripRx = RegExp(r'[^\p{L}\p{N}_]', unicode: true);
 
   /// Converts a free-form user query into a tsquery string with prefix-match
   /// per token (`token:*`) joined by `&` so multi-word queries narrow.
@@ -112,6 +118,7 @@ class UserRecipeService {
     final tokens = query
         .trim()
         .split(_whitespaceRx)
+        .map((t) => t.replaceAll(_tsqueryStripRx, ''))
         .where((t) => t.isNotEmpty)
         .toList();
     if (tokens.isEmpty) return '';

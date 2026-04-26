@@ -42,5 +42,30 @@ void main() {
         'curry:* & reis:*',
       );
     });
+
+    test('strips tsquery reserved characters from each token', () {
+      // & | ! ( ) : * < > would otherwise break the query and 400 PostgREST.
+      expect(UserRecipeService.buildTsQuery('curry&reis'), 'curryreis:*');
+      expect(UserRecipeService.buildTsQuery('curry|reis'), 'curryreis:*');
+      expect(UserRecipeService.buildTsQuery('curry:foo'), 'curryfoo:*');
+      expect(UserRecipeService.buildTsQuery('(curry)'), 'curry:*');
+      expect(UserRecipeService.buildTsQuery('!curry'), 'curry:*');
+    });
+
+    test('preserves Unicode word characters (German umlauts)', () {
+      expect(UserRecipeService.buildTsQuery('Möhren'), 'Möhren:*');
+      expect(
+        UserRecipeService.buildTsQuery('Müesli Brötchen'),
+        'Müesli:* & Brötchen:*',
+      );
+    });
+
+    test('drops tokens that become empty after stripping', () {
+      expect(
+        UserRecipeService.buildTsQuery('curry &&& reis'),
+        'curry:* & reis:*',
+      );
+      expect(UserRecipeService.buildTsQuery('!!!'), '');
+    });
   });
 }

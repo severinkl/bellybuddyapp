@@ -33,8 +33,27 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(userRecipesProvider);
-    final recipe = async.value
-        ?.where((r) => r.id == widget.recipeId)
+
+    // Show a spinner while the list is loading (deep-link cold-start) so
+    // the screen doesn't briefly flash "Rezept nicht gefunden" before the
+    // fetch resolves.
+    if (!async.hasValue) {
+      return Scaffold(
+        backgroundColor: AppTheme.screenBackground,
+        appBar: AppBar(
+          backgroundColor: AppTheme.screenBackground,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.popOrGoDashboard(),
+          ),
+          title: const Text('Rezept'),
+        ),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final recipe = async.value!
+        .where((r) => r.id == widget.recipeId)
         .firstOrNull;
 
     if (recipe == null) {
