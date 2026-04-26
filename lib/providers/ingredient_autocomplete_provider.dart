@@ -17,9 +17,10 @@ class IngredientAutocompleteState {
   IngredientAutocompleteState copyWith({
     List<IngredientSearchResult>? suggestions,
     Object? searchError,
+    bool clearSearchError = false,
   }) => IngredientAutocompleteState(
     suggestions: suggestions ?? this.suggestions,
-    searchError: searchError,
+    searchError: clearSearchError ? null : (searchError ?? this.searchError),
   );
 }
 
@@ -32,10 +33,10 @@ class IngredientAutocompleteNotifier
 
   Future<void> searchIngredients(String query) async {
     if (query.length < 3) {
-      state = state.copyWith(suggestions: []);
+      state = state.copyWith(suggestions: [], clearSearchError: true);
       return;
     }
-    state = state.copyWith(searchError: null);
+    state = state.copyWith(clearSearchError: true);
     try {
       final userId = ref.read(currentUserIdProvider);
       final results = await ref
@@ -51,11 +52,15 @@ class IngredientAutocompleteNotifier
   Future<void> addIngredient(String name) async {
     final trimmed = name.trim();
     if (trimmed.isEmpty) return;
-    state = state.copyWith(suggestions: []);
+    state = state.copyWith(suggestions: [], clearSearchError: true);
     final userId = ref.read(currentUserIdProvider);
-    await ref
-        .read(ingredientRepositoryProvider)
-        .insertIfNew(trimmed, userId: userId);
+    try {
+      await ref
+          .read(ingredientRepositoryProvider)
+          .insertIfNew(trimmed, userId: userId);
+    } catch (e, st) {
+      _log.error('insertIfNew failed', e, st);
+    }
   }
 
   Future<void> deleteUserIngredient(String id) async {

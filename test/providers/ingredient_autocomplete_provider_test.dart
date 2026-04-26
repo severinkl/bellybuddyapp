@@ -135,4 +135,44 @@ void main() {
       verify(() => mockRepo.deleteUserIngredient('i-1')).called(1);
     });
   });
+
+  group('IngredientAutocompleteState.copyWith', () {
+    test('preserves searchError when copying with only suggestions', () {
+      const state = IngredientAutocompleteState(searchError: 'prev');
+      final next = state.copyWith(suggestions: const []);
+      expect(next.searchError, equals('prev'));
+    });
+
+    test('clearSearchError: true wipes the error', () {
+      const state = IngredientAutocompleteState(searchError: 'prev');
+      final next = state.copyWith(clearSearchError: true);
+      expect(next.searchError, isNull);
+    });
+  });
+
+  group('successful search after error', () {
+    test('clears a prior searchError on the next successful query', () async {
+      when(
+        () => mockRepo.search(any(), userId: any(named: 'userId')),
+      ).thenAnswer(
+        (_) async => const [
+          IngredientSearchResult(id: 'i-1', name: 'Zwiebel', isOwn: false),
+        ],
+      );
+
+      final container = makeContainer();
+      // Simulate a prior error.
+      container.read(ingredientAutocompleteProvider.notifier).state =
+          const IngredientAutocompleteState(searchError: 'old failure');
+
+      await container
+          .read(ingredientAutocompleteProvider.notifier)
+          .searchIngredients('Zwi');
+
+      expect(
+        container.read(ingredientAutocompleteProvider).searchError,
+        isNull,
+      );
+    });
+  });
 }
