@@ -134,7 +134,7 @@ class _EmptyState extends StatelessWidget {
             ),
             AppConstants.gap8,
             const Text(
-              'Speichere Mahlzeiten als Rezepte, um sie schnell wieder einzutragen.',
+              'Speichere wiederkehrende Mahlzeiten als Rezepte, um sie später schneller wieder einzutragen.',
               style: TextStyle(
                 fontSize: AppTheme.fontSizeBody,
                 color: AppTheme.mutedForeground,
