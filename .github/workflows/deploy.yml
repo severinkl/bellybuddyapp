@@ -9,6 +9,9 @@ concurrency:
   group: deploy-${{ github.ref }}
   cancel-in-progress: false
 
+env:
+  FLUTTER_VERSION: 3.41.7
+
 jobs:
   quality:
     name: Format & Analyze
@@ -67,6 +70,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
 
       - name: Cache Gradle
@@ -127,15 +131,22 @@ jobs:
   deploy-ios:
     name: Deploy iOS → TestFlight
     needs: [quality, test]
-    runs-on: macos-latest
+    # macos-26 bundles Xcode 26 (iOS 26 SDK). Required from 2026-04-28
+    # when Apple rejects uploads built with iOS 18 SDK (ITMS-90725).
+    runs-on: macos-26
     timeout-minutes: 45
 
     steps:
       - uses: actions/checkout@v4
 
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
           cache: true
 
       - name: Create env.json
@@ -185,10 +196,17 @@ jobs:
           SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         run: dart run sentry_dart_plugin
 
+      # xcodebuild -exportArchive names the IPA after the archive's primary
+      # bundle CFBundleName. Resolve by glob so renames of the app display name
+      # (e.g. CFBundleName = "Belly Buddy") don't break this step.
+      - name: Resolve IPA path
+        id: ipa
+        run: echo "path=$(ls build/ios/ipa/*.ipa | head -n1)" >> "$GITHUB_OUTPUT"
+
       - name: Upload to TestFlight
         uses: Apple-Actions/upload-testflight-build@v1
         with:
-          app-path: build/ios/ipa/belly_buddy.ipa
+          app-path: ${{ steps.ipa.outputs.path }}
           issuer-id: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           api-key-id: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           api-private-key: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY }}
