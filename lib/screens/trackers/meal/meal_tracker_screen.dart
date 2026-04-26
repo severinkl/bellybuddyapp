@@ -245,29 +245,6 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         successMascotAsset: AppConstants.mascotCool,
         successActions: [
           GestureDetector(
-            onTap: _savedAsRecipe || _savingAsRecipe
-                ? null
-                : () => _saveAsRecipe(state),
-            child: Opacity(
-              opacity: _savedAsRecipe ? AppConstants.disabledOpacity : 1.0,
-              child: const Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.bookmark_add_outlined,
-                    size: AppConstants.iconSizeSm,
-                    color: AppTheme.foreground,
-                  ),
-                  SizedBox(width: AppConstants.spacingSm),
-                  Text(
-                    'Als Rezept speichern',
-                    style: TextStyle(color: AppTheme.foreground),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          GestureDetector(
             onTap: () => context.push(RoutePaths.drinkTracker),
             child: const Row(
               mainAxisSize: MainAxisSize.min,
@@ -286,7 +263,38 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
             ),
           ),
         ],
+        successBottomCallout: _savedAsRecipe
+            ? null
+            : _buildSaveAsRecipeBottom(state),
         body: _buildBody(state),
+      ),
+    );
+  }
+
+  Widget _buildSaveAsRecipeBottom(MealTrackerState state) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppConstants.spacingLg),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Speicher diese Mahlzeit als Rezept und trag sie später mit einem Tipp wieder ein.',
+            style: TextStyle(
+              fontSize: AppTheme.fontSizeCaption,
+              color: AppTheme.mutedForeground,
+            ),
+            textAlign: TextAlign.center,
+            maxLines: 2,
+          ),
+          AppConstants.gap8,
+          BbButton(
+            label: 'Als Rezept speichern',
+            icon: Icons.bookmark_add_outlined,
+            isLoading: _savingAsRecipe,
+            onPressed: _savingAsRecipe ? null : () => _saveAsRecipe(state),
+          ),
+        ],
       ),
     );
   }
