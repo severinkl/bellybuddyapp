@@ -4,13 +4,11 @@ import 'package:uuid/uuid.dart';
 import '../models/meal_entry.dart';
 import '../models/user_recipe.dart';
 import '../providers/core_providers.dart';
-import '../repositories/ingredient_repository.dart';
 import '../repositories/meal_media_repository.dart';
-import '../models/ingredient_search_result.dart';
 import '../utils/date_format_utils.dart';
-import '../utils/logger.dart';
 import 'diary_provider.dart';
 import 'entries_provider.dart';
+import 'ingredient_autocomplete_provider.dart';
 
 /// Placeholder title written to state when the user hasn't given the meal
 /// a name. Save-time code checks against this sentinel to decide whether
@@ -27,8 +25,6 @@ class MealTrackerState {
   final bool isAnalyzing;
   final bool isSaving;
   final bool showSuccess;
-  final List<IngredientSearchResult> ingredientSuggestions;
-  final Object? ingredientSearchError;
   final String? notes;
   final DateTime trackedAt;
 
@@ -47,8 +43,6 @@ class MealTrackerState {
     this.isAnalyzing = false,
     this.isSaving = false,
     this.showSuccess = false,
-    this.ingredientSuggestions = const [],
-    this.ingredientSearchError,
     this.notes,
     DateTime? trackedAt,
     this.savedImageUrl,
@@ -83,8 +77,6 @@ class MealTrackerState {
     bool? isAnalyzing,
     bool? isSaving,
     bool? showSuccess,
-    List<IngredientSearchResult>? ingredientSuggestions,
-    Object? ingredientSearchError,
     String? notes,
     DateTime? trackedAt,
     bool clearImageUrl =
@@ -105,9 +97,6 @@ class MealTrackerState {
       isAnalyzing: isAnalyzing ?? this.isAnalyzing,
       isSaving: isSaving ?? this.isSaving,
       showSuccess: showSuccess ?? this.showSuccess,
-      ingredientSuggestions:
-          ingredientSuggestions ?? this.ingredientSuggestions,
-      ingredientSearchError: ingredientSearchError,
       notes: notes ?? this.notes,
       trackedAt: trackedAt ?? this.trackedAt,
       savedImageUrl: clearSavedImageUrl
@@ -118,7 +107,6 @@ class MealTrackerState {
 }
 
 class MealTrackerNotifier extends Notifier<MealTrackerState> {
-  static const _log = AppLogger('MealTracker');
   @override
   MealTrackerState build() => MealTrackerState(trackedAt: DateTime.now());
 
@@ -191,51 +179,16 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
     }
   }
 
-  Future<void> searchIngredients(String query) async {
-    if (query.length < 3) {
-      state = state.copyWith(ingredientSuggestions: []);
-      return;
-    }
-    state = state.copyWith(ingredientSearchError: null);
-    try {
-      final userId = ref.read(currentUserIdProvider);
-      final results = await ref
-          .read(ingredientRepositoryProvider)
-          .search(query, userId: userId);
-      state = state.copyWith(ingredientSuggestions: results);
-    } catch (e, st) {
-      _log.error('ingredient search failed', e, st);
-      state = state.copyWith(ingredientSearchError: e);
-    }
-  }
-
   void addIngredient(String name) {
     final trimmed = name.trim();
     if (trimmed.isEmpty || state.ingredients.contains(trimmed)) return;
-    state = state.copyWith(
-      ingredients: [...state.ingredients, trimmed],
-      ingredientSuggestions: [],
-    );
-    // Write new ingredient to DB (fire-and-forget)
-    final userId = ref.read(currentUserIdProvider);
-    ref
-        .read(ingredientRepositoryProvider)
-        .insertIfNew(trimmed, userId: userId)
-        .ignore();
+    state = state.copyWith(ingredients: [...state.ingredients, trimmed]);
+    ref.read(ingredientAutocompleteProvider.notifier).addIngredient(trimmed);
   }
 
   void removeIngredient(String name) {
     state = state.copyWith(
       ingredients: state.ingredients.where((i) => i != name).toList(),
-    );
-  }
-
-  Future<void> deleteUserIngredient(String id) async {
-    await ref.read(ingredientRepositoryProvider).deleteUserIngredient(id);
-    state = state.copyWith(
-      ingredientSuggestions: state.ingredientSuggestions
-          .where((s) => s.id != id)
-          .toList(),
     );
   }
 

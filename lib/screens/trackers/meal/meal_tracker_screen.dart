@@ -6,6 +6,7 @@ import '../../../config/constants.dart';
 import '../../../models/meal_entry.dart';
 import '../../../models/user_recipe.dart';
 import '../../../providers/entries_provider.dart';
+import '../../../providers/ingredient_autocomplete_provider.dart';
 import '../../../providers/meal_tracker_provider.dart';
 import '../../../providers/user_recipes_provider.dart';
 import '../../../router/navigation_extensions.dart';
@@ -15,6 +16,7 @@ import '../../../utils/logger.dart';
 import '../../../utils/save_helper.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/date_time_chips.dart';
+import '../../../widgets/common/editable_app_bar_title.dart';
 import '../../../widgets/common/tracker_screen_scaffold.dart';
 import '../../../widgets/common/ingredient_search.dart';
 import 'widgets/meal_image_section.dart';
@@ -61,8 +63,6 @@ class MealTrackerScreen extends ConsumerStatefulWidget {
 }
 
 class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
-  final _titleController = TextEditingController(text: kDefaultMealTitle);
-  bool _isEditingTitle = false;
   bool _mealNotFound = false;
   bool _savedAsRecipe = false;
   bool _savingAsRecipe = false;
@@ -91,7 +91,6 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         }
         if (widget.mealId == null && widget.initialRecipe != null) {
           notifier.prefillFromRecipe(widget.initialRecipe!);
-          _titleController.text = widget.initialRecipe!.title;
         }
         return;
       }
@@ -104,7 +103,6 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         return;
       }
       notifier.seed(meal);
-      _titleController.text = meal.title;
     });
   }
 
@@ -117,17 +115,23 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
 
   @override
   void dispose() {
-    _titleController.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
+    // Pull focus off any active TextField so EditableAppBarTitle commits its
+    // pending edit (it pushes the value via onChanged on focus-loss). Yield
+    // a frame so the focus-listener callback in EditableAppBarTitle fires
+    // before we read state.
+    FocusManager.instance.primaryFocus?.unfocus();
+    await Future<void>.delayed(Duration.zero);
+    if (!mounted) return;
     final notifier = ref.read(mealTrackerProvider.notifier);
-    notifier.setTitle(_titleController.text);
+    final state = ref.read(mealTrackerProvider);
 
     // Edit mode with no changes → silent pop. Avoids a pointless network
     // round-trip and keeps the UX honest.
-    if (widget.mealId != null && !ref.read(mealTrackerProvider).isDirty) {
+    if (widget.mealId != null && !state.isDirty) {
       if (mounted) context.popOrGoDashboard();
       return;
     }
@@ -135,14 +139,13 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     // If the user never named the meal, interrupt save with a prompt so the
     // entry is identifiable in the diary. Dismissing the sheet cancels save
     // entirely; "Ohne Namen speichern" proceeds with the default title.
-    if (_titleController.text.trim() == kDefaultMealTitle) {
+    if (state.title.trim() == kDefaultMealTitle) {
       final outcome = await showMealTitleSheet(context);
       if (!mounted) return;
       switch (outcome) {
         case null:
           return; // dismissed — abort save
         case MealTitleEntered(title: final t):
-          _titleController.text = t;
           notifier.setTitle(t);
         case MealTitleSkipped():
           // fall through with the default title already in state
@@ -202,43 +205,14 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         }
       },
       child: TrackerScreenScaffold(
-        titleWidget: GestureDetector(
-          onTap: () => setState(() => _isEditingTitle = true),
-          child: _isEditingTitle
-              ? TextField(
-                  controller: _titleController,
-                  autofocus: true,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: AppTheme.fontSizeTitle,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  onSubmitted: (_) => setState(() => _isEditingTitle = false),
-                )
-              : Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        key: MealTrackerScreen.mealTrackerTitleKey,
-                        _titleController.text,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: AppTheme.fontSizeTitle,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppConstants.spacingXs),
-                    const Icon(Icons.edit, size: 16),
-                  ],
-                ),
+        titleWidget: EditableAppBarTitle(
+          key: MealTrackerScreen.mealTrackerTitleKey,
+          initialTitle: state.title == kDefaultMealTitle ? '' : state.title,
+          placeholder: kDefaultMealTitle,
+          onChanged: (v) {
+            final notifier = ref.read(mealTrackerProvider.notifier);
+            notifier.setTitle(v.isEmpty ? kDefaultMealTitle : v);
+          },
         ),
         showSuccess: state.showSuccess,
         successMessage: 'Mahlzeit gespeichert!',
@@ -382,10 +356,6 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
               notifier.setImage(bytes, name);
               try {
                 await notifier.analyzeImage(bytes, name);
-                if (mounted) {
-                  final s = ref.read(mealTrackerProvider);
-                  _titleController.text = s.title;
-                }
               } catch (_) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -396,19 +366,28 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
             },
             onClearImage: () {
               notifier.clearImage();
-              _titleController.text = kDefaultMealTitle;
+              notifier.setTitle(kDefaultMealTitle);
             },
           ),
           AppConstants.gap16,
 
           // 3. Ingredients
-          IngredientSearch(
-            ingredients: state.ingredients,
-            suggestions: state.ingredientSuggestions,
-            onSearch: notifier.searchIngredients,
-            onAdd: notifier.addIngredient,
-            onRemove: notifier.removeIngredient,
-            onDeleteIngredient: (id) => notifier.deleteUserIngredient(id),
+          Consumer(
+            builder: (context, ref, _) {
+              final autocomplete = ref.watch(ingredientAutocompleteProvider);
+              final autocompleteNotifier = ref.read(
+                ingredientAutocompleteProvider.notifier,
+              );
+              final trackerNotifier = ref.read(mealTrackerProvider.notifier);
+              return IngredientSearch(
+                ingredients: state.ingredients,
+                suggestions: autocomplete.suggestions,
+                onSearch: autocompleteNotifier.searchIngredients,
+                onAdd: trackerNotifier.addIngredient,
+                onRemove: trackerNotifier.removeIngredient,
+                onDeleteIngredient: autocompleteNotifier.deleteUserIngredient,
+              );
+            },
           ),
           AppConstants.gap16,
           // "Getränk tracken" button
@@ -449,7 +428,6 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
             final recipe = await showRecipeSelectorSheet(context);
             if (recipe == null || !mounted) return;
             ref.read(mealTrackerProvider.notifier).prefillFromRecipe(recipe);
-            _titleController.text = recipe.title;
           },
         );
       },
