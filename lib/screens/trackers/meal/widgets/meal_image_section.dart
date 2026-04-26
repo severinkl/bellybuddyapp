@@ -19,6 +19,11 @@ class MealImageSection extends StatelessWidget {
   final Future<void> Function(Uint8List bytes, String name) onImagePicked;
   final VoidCallback onClearImage;
 
+  /// When non-null, the empty state renders a third "Rezept" button next to
+  /// Kamera and Galerie. Tapping it should open the recipe picker. When null,
+  /// only the two image-source buttons render.
+  final VoidCallback? onPickRecipe;
+
   const MealImageSection({
     super.key,
     required this.imageBytes,
@@ -26,6 +31,7 @@ class MealImageSection extends StatelessWidget {
     required this.onImagePicked,
     required this.onClearImage,
     this.initialImageUrl,
+    this.onPickRecipe,
   });
 
   Future<void> _pickImage(BuildContext context, ImageSource source) async {
@@ -55,14 +61,22 @@ class MealImageSection extends StatelessWidget {
         onClearImage: onClearImage,
       );
     }
-    return _EmptyState(onPickImage: _pickImage);
+    return _EmptyState(onPickImage: _pickImage, onPickRecipe: onPickRecipe);
   }
 }
 
 class _EmptyState extends StatelessWidget {
   final Future<void> Function(BuildContext, ImageSource) onPickImage;
+  final VoidCallback? onPickRecipe;
 
-  const _EmptyState({required this.onPickImage});
+  const _EmptyState({required this.onPickImage, this.onPickRecipe});
+
+  static Widget _divider() => Container(
+    width: 1,
+    height: 48,
+    margin: const EdgeInsets.symmetric(horizontal: AppConstants.spacingLg),
+    color: AppTheme.border,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -90,20 +104,22 @@ class _EmptyState extends StatelessWidget {
                 color: AppTheme.primary,
                 onTap: () => onPickImage(context, ImageSource.camera),
               ),
-              Container(
-                width: 1,
-                height: 48,
-                margin: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.spacingLg,
-                ),
-                color: AppTheme.border,
-              ),
+              _divider(),
               _PickerButton(
                 icon: Icons.photo_library,
                 label: 'Galerie',
                 color: AppTheme.secondary,
                 onTap: () => onPickImage(context, ImageSource.gallery),
               ),
+              if (onPickRecipe != null) ...[
+                _divider(),
+                _PickerButton(
+                  icon: Icons.menu_book_outlined,
+                  label: 'Rezept',
+                  color: AppTheme.info,
+                  onTap: onPickRecipe!,
+                ),
+              ],
             ],
           ),
         ),

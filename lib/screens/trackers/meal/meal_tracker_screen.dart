@@ -207,7 +207,6 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         showSuccess: state.showSuccess,
         successMessage: 'Mahlzeit gespeichert!',
         successMascotAsset: AppConstants.mascotCool,
-        appBarActions: [_buildRecipeSelectorFab()],
         successActions: [
           GestureDetector(
             onTap: () => context.push(RoutePaths.drinkTracker),
@@ -357,6 +356,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
               notifier.clearImage();
               notifier.setTitle(kDefaultMealTitle);
             },
+            onPickRecipe: _onPickRecipe(),
           ),
           AppConstants.gap16,
           Consumer(
@@ -403,23 +403,19 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     );
   }
 
-  Widget _buildRecipeSelectorFab() {
-    return Consumer(
-      builder: (context, ref, _) {
-        final async = ref.watch(userRecipesProvider);
-        final hasRecipes = async.value?.isNotEmpty ?? false;
-        if (!hasRecipes) return const SizedBox.shrink();
-        return IconButton(
-          icon: const Icon(Icons.menu_book_outlined),
-          tooltip: 'Aus Rezept übernehmen',
-          onPressed: () async {
-            final recipe = await showRecipeSelectorSheet(context);
-            if (recipe == null || !mounted) return;
-            ref.read(mealTrackerProvider.notifier).prefillFromRecipe(recipe);
-          },
-        );
-      },
-    );
+  /// Returns a tap handler that opens the recipe-picker sheet, or null when
+  /// the user has no recipes (so MealImageSection hides its third button).
+  /// Watches userRecipesProvider so the button appears as soon as recipes
+  /// load post-mount.
+  VoidCallback? _onPickRecipe() {
+    final hasRecipes =
+        ref.watch(userRecipesProvider).value?.isNotEmpty ?? false;
+    if (!hasRecipes) return null;
+    return () async {
+      final recipe = await showRecipeSelectorSheet(context);
+      if (recipe == null || !mounted) return;
+      ref.read(mealTrackerProvider.notifier).prefillFromRecipe(recipe);
+    };
   }
 }
 
