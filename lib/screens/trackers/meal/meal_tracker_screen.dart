@@ -263,15 +263,25 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
             ),
           ),
         ],
-        successBottomCallout: _savedAsRecipe
-            ? null
-            : _buildSaveAsRecipeBottom(state),
+        successBottomCallout: _buildSaveAsRecipeBottom(state),
         body: _buildBody(state),
       ),
     );
   }
 
+  /// True iff the user already owns a recipe whose title matches [title]
+  /// after trimming + lowercasing. Reads the cached userRecipesProvider
+  /// value; safe to call during build because it never mutates the provider.
+  bool _hasMatchingRecipe(String title) {
+    final normalized = title.trim().toLowerCase();
+    if (normalized.isEmpty) return false;
+    final recipes = ref.read(userRecipesProvider).value;
+    if (recipes == null) return false;
+    return recipes.any((r) => r.title.trim().toLowerCase() == normalized);
+  }
+
   Widget _buildSaveAsRecipeBottom(MealTrackerState state) {
+    final saved = _savedAsRecipe || _hasMatchingRecipe(state.title);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: AppConstants.spacingLg),
       child: Column(
@@ -279,7 +289,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
-            'Speicher diese Mahlzeit als Rezept und trag sie später mit einem Tipp wieder ein.',
+            'Speicher diese Mahlzeit als Rezept, um sie später schneller wieder einzutragen.',
             style: TextStyle(
               fontSize: AppTheme.fontSizeCaption,
               color: AppTheme.mutedForeground,
@@ -289,10 +299,10 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
           ),
           AppConstants.gap8,
           BbButton(
-            label: 'Als Rezept speichern',
-            icon: Icons.bookmark_add_outlined,
+            label: saved ? 'Als Rezept gespeichert' : 'Als Rezept speichern',
+            icon: saved ? Icons.check : Icons.bookmark_add_outlined,
             isLoading: _savingAsRecipe,
-            onPressed: () => _saveAsRecipe(state),
+            onPressed: saved ? null : () => _saveAsRecipe(state),
           ),
         ],
       ),
@@ -315,9 +325,6 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         _savedAsRecipe = true;
         _savingAsRecipe = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Zu Meine Rezepte hinzugefügt')),
-      );
     } catch (e, st) {
       _log.error('save as recipe failed', e, st);
       if (!mounted) return;
