@@ -28,31 +28,45 @@ class IngredientAutocompleteNotifier
     extends Notifier<IngredientAutocompleteState> {
   static const _log = AppLogger('IngredientAutocomplete');
 
+  int _searchSeq = 0;
+
   @override
   IngredientAutocompleteState build() => const IngredientAutocompleteState();
 
   Future<void> searchIngredients(String query) async {
     if (query.length < 3) {
-      state = state.copyWith(suggestions: [], clearSearchError: true);
+      _searchSeq++;
+      _clearSuggestions();
       return;
     }
+    final seq = ++_searchSeq;
     state = state.copyWith(clearSearchError: true);
     try {
       final userId = ref.read(currentUserIdProvider);
       final results = await ref
           .read(ingredientRepositoryProvider)
           .search(query, userId: userId);
+      // Drop stale responses: a slow query for an earlier prefix must not
+      // clobber a fresher query's results.
+      if (seq != _searchSeq) return;
       state = state.copyWith(suggestions: results);
     } catch (e, st) {
+      if (seq != _searchSeq) return;
       _log.error('search failed', e, st);
       state = state.copyWith(searchError: e);
     }
   }
 
+  void _clearSuggestions() {
+    if (state.suggestions.isEmpty && state.searchError == null) return;
+    state = state.copyWith(suggestions: [], clearSearchError: true);
+  }
+
   Future<void> addIngredient(String name) async {
     final trimmed = name.trim();
     if (trimmed.isEmpty) return;
-    state = state.copyWith(suggestions: [], clearSearchError: true);
+    _searchSeq++;
+    _clearSuggestions();
     final userId = ref.read(currentUserIdProvider);
     try {
       await ref

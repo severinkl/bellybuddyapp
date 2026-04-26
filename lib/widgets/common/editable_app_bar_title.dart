@@ -6,24 +6,28 @@ import '../../config/constants.dart';
 /// AppBar title that flips between a tappable label and an inline TextField.
 ///
 /// Owns its own controller, focus node, and edit-mode flag. [onChanged] fires
-/// on commit (submit / blur) and receives a trimmed string. [onTextChanged]
-/// is optional and fires on every keystroke while editing, receiving the raw
-/// (un-trimmed) value — useful for live-enabling save buttons.
+/// on commit (submit / blur) with a trimmed string. [onTextChanged] is
+/// optional and fires per keystroke with the raw value — useful for callers
+/// that need the value before commit (e.g. enabling a save button live).
+/// At least one of the two must be provided.
 class EditableAppBarTitle extends StatefulWidget {
   final String initialTitle;
   final String placeholder;
   final bool autofocusOnMount;
-  final ValueChanged<String> onChanged;
+  final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onTextChanged;
 
   const EditableAppBarTitle({
     super.key,
     required this.initialTitle,
     required this.placeholder,
-    required this.onChanged,
+    this.onChanged,
     this.autofocusOnMount = false,
     this.onTextChanged,
-  });
+  }) : assert(
+         onChanged != null || onTextChanged != null,
+         'Provide onChanged, onTextChanged, or both.',
+       );
 
   @override
   State<EditableAppBarTitle> createState() => _EditableAppBarTitleState();
@@ -78,7 +82,7 @@ class _EditableAppBarTitleState extends State<EditableAppBarTitle> {
 
   void _commit() {
     final value = _controller.text.trim();
-    widget.onChanged(value);
+    widget.onChanged?.call(value);
     if (mounted) setState(() => _isEditing = false);
   }
 

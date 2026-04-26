@@ -181,6 +181,8 @@ void main() {
         matching: find.byType(TextField),
       );
       await tester.enterText(mealField, 'Fen');
+      // Drain the IngredientSearch onSearch debounce (300 ms) before asserting.
+      await tester.pump(const Duration(milliseconds: 350));
       await tester.pumpAndSettle();
 
       // Suggestions render as ListTile rows under the search field. The

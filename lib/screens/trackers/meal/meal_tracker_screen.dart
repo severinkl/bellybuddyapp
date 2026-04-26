@@ -89,7 +89,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         if (widget.initialDate != null) {
           notifier.setTrackedAt(buildTrackedAt(widget.initialDate));
         }
-        if (widget.mealId == null && widget.initialRecipe != null) {
+        if (widget.initialRecipe != null) {
           notifier.prefillFromRecipe(widget.initialRecipe!);
         }
         return;
@@ -114,12 +114,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
   }
 
   Future<void> _save() async {
-    // Pull focus off any active TextField so EditableAppBarTitle commits its
-    // pending edit (it pushes the value via onChanged on focus-loss). Yield
-    // to the microtask queue so the focus-listener callback in
-    // EditableAppBarTitle fires before we read state.
-    FocusManager.instance.primaryFocus?.unfocus();
-    await Future<void>.microtask(() {});
+    await flushFocusBeforeSave();
     if (!mounted) return;
     final notifier = ref.read(mealTrackerProvider.notifier);
     final state = ref.read(mealTrackerProvider);
@@ -233,19 +228,21 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
             ),
           ),
         ],
-        successBottomCallout: _buildSaveAsRecipeBottom(state),
+        successBottomCallout: state.showSuccess
+            ? _buildSaveAsRecipeBottom(state)
+            : null,
         body: _buildBody(state),
       ),
     );
   }
 
   /// True iff the user already owns a recipe whose title matches [title]
-  /// after trimming + lowercasing. Reads the cached userRecipesProvider
-  /// value; safe to call during build because it never mutates the provider.
+  /// after trimming + lowercasing. Watches userRecipesProvider so the UI
+  /// rebuilds if the recipe list arrives after first paint.
   bool _hasMatchingRecipe(String title) {
     final normalized = title.trim().toLowerCase();
     if (normalized.isEmpty) return false;
-    final recipes = ref.read(userRecipesProvider).value;
+    final recipes = ref.watch(userRecipesProvider).value;
     if (recipes == null) return false;
     return recipes.any((r) => r.title.trim().toLowerCase() == normalized);
   }
@@ -332,18 +329,18 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     final notifier = ref.read(mealTrackerProvider.notifier);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.spacingLg,
+        vertical: AppConstants.spacingMd,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 1. Date/Time chips
           DateTimeChips(
             value: state.trackedAt,
             onChanged: notifier.setTrackedAt,
           ),
           AppConstants.gap16,
-
-          // 2. Image capture
           MealImageSection(
             imageBytes: state.imageBytes,
             isAnalyzing: state.isAnalyzing,
@@ -365,17 +362,16 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
             },
           ),
           AppConstants.gap16,
-
-          // 3. Ingredients
           Consumer(
             builder: (context, ref, _) {
+              final ingredients = ref.watch(mealTrackerProvider).ingredients;
               final autocomplete = ref.watch(ingredientAutocompleteProvider);
               final autocompleteNotifier = ref.read(
                 ingredientAutocompleteProvider.notifier,
               );
               final trackerNotifier = ref.read(mealTrackerProvider.notifier);
               return IngredientSearch(
-                ingredients: state.ingredients,
+                ingredients: ingredients,
                 suggestions: autocomplete.suggestions,
                 onSearch: autocompleteNotifier.searchIngredients,
                 onAdd: trackerNotifier.addIngredient,

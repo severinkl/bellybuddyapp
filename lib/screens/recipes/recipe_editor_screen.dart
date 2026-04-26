@@ -11,6 +11,7 @@ import '../../providers/ingredient_autocomplete_provider.dart';
 import '../../providers/user_recipes_provider.dart';
 import '../../repositories/meal_media_repository.dart';
 import '../../utils/logger.dart';
+import '../../utils/save_helper.dart';
 import '../../widgets/common/bb_button.dart';
 import '../../widgets/common/editable_app_bar_title.dart';
 import '../../widgets/common/ingredient_search.dart';
@@ -65,12 +66,7 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
   }
 
   Future<void> _save() async {
-    // Pull focus off any active TextField so EditableAppBarTitle commits its
-    // pending edit (it pushes the value via onChanged on focus-loss). Yield
-    // to the microtask queue so the focus-listener callback in
-    // EditableAppBarTitle fires before we read _title.
-    FocusManager.instance.primaryFocus?.unfocus();
-    await Future<void>.microtask(() {});
+    await flushFocusBeforeSave();
     if (!mounted) return;
 
     final title = _title.trim();
@@ -78,7 +74,6 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
 
     setState(() => _isSaving = true);
     try {
-      // Upload local image bytes if the user picked a new image.
       String? resolvedImageUrl = _imageUrl;
       if (_imageBytes != null) {
         final userId = ref.read(currentUserIdProvider);
@@ -141,7 +136,6 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
           initialTitle: _title,
           placeholder: 'Rezept benennen',
           autofocusOnMount: !_isEditMode,
-          onChanged: (v) => setState(() => _title = v),
           onTextChanged: (v) => setState(() => _title = v),
         ),
       ),
