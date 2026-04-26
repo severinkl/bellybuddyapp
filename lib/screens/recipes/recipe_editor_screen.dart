@@ -7,11 +7,13 @@ import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/core_providers.dart';
+import '../../providers/ingredient_autocomplete_provider.dart';
 import '../../providers/user_recipes_provider.dart';
 import '../../repositories/meal_media_repository.dart';
 import '../../utils/logger.dart';
 import '../../widgets/common/bb_button.dart';
 import '../../widgets/common/editable_app_bar_title.dart';
+import '../../widgets/common/ingredient_search.dart';
 import '../trackers/meal/widgets/meal_image_section.dart';
 
 class RecipeEditorScreen extends ConsumerStatefulWidget {
@@ -28,8 +30,6 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
   static const _log = AppLogger('RecipeEditorScreen');
 
   String _title = '';
-  final _ingredientController = TextEditingController();
-
   List<String> _ingredients = [];
   String? _imageUrl; // existing URL (edit mode)
   Uint8List? _imageBytes; // freshly picked local bytes
@@ -61,27 +61,6 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
       _title = recipe.title;
       _ingredients = List<String>.from(recipe.ingredients);
       _imageUrl = recipe.imageUrl;
-    });
-  }
-
-  @override
-  void dispose() {
-    _ingredientController.dispose();
-    super.dispose();
-  }
-
-  void _addIngredient() {
-    final value = _ingredientController.text.trim();
-    if (value.isEmpty || _ingredients.contains(value)) return;
-    setState(() {
-      _ingredients = [..._ingredients, value];
-      _ingredientController.clear();
-    });
-  }
-
-  void _removeIngredient(String ingredient) {
-    setState(() {
-      _ingredients = _ingredients.where((i) => i != ingredient).toList();
     });
   }
 
@@ -192,7 +171,35 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
                       }),
                     ),
                     AppConstants.gap16,
-                    _buildIngredientSection(),
+                    Consumer(
+                      builder: (context, ref, _) {
+                        final autocomplete = ref.watch(
+                          ingredientAutocompleteProvider,
+                        );
+                        final autocompleteNotifier = ref.read(
+                          ingredientAutocompleteProvider.notifier,
+                        );
+                        return IngredientSearch(
+                          ingredients: _ingredients,
+                          suggestions: autocomplete.suggestions,
+                          onSearch: autocompleteNotifier.searchIngredients,
+                          onAdd: (name) {
+                            if (_ingredients.contains(name)) return;
+                            setState(
+                              () => _ingredients = [..._ingredients, name],
+                            );
+                            autocompleteNotifier.addIngredient(name);
+                          },
+                          onRemove: (name) => setState(() {
+                            _ingredients = _ingredients
+                                .where((i) => i != name)
+                                .toList();
+                          }),
+                          onDeleteIngredient:
+                              autocompleteNotifier.deleteUserIngredient,
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -208,68 +215,6 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildIngredientSection() {
-    return Container(
-      padding: AppConstants.paddingMd,
-      decoration: BoxDecoration(
-        color: AppTheme.card,
-        borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-        border: Border.all(color: AppTheme.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'Zutaten',
-            style: TextStyle(
-              fontSize: AppTheme.fontSizeSubtitle,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.foreground,
-            ),
-          ),
-          AppConstants.gap8,
-          TextField(
-            controller: _ingredientController,
-            decoration: const InputDecoration(
-              hintText: 'Zutat eingeben',
-              isDense: true,
-              border: OutlineInputBorder(),
-              contentPadding: EdgeInsets.symmetric(
-                horizontal: AppConstants.spacingMd,
-                vertical: AppConstants.spacingSm,
-              ),
-            ),
-            style: const TextStyle(fontSize: AppTheme.fontSizeBody),
-            onSubmitted: (_) => _addIngredient(),
-            textInputAction: TextInputAction.done,
-          ),
-          AppConstants.gap8,
-          Align(
-            alignment: Alignment.centerRight,
-            child: OutlinedButton(
-              onPressed: _addIngredient,
-              child: const Text('Hinzufügen'),
-            ),
-          ),
-          if (_ingredients.isNotEmpty) ...[
-            AppConstants.gap8,
-            Wrap(
-              spacing: AppConstants.spacingSm,
-              runSpacing: AppConstants.spacingSm,
-              children: [
-                for (final ingredient in _ingredients)
-                  Chip(
-                    label: Text(ingredient),
-                    onDeleted: () => _removeIngredient(ingredient),
-                  ),
-              ],
-            ),
-          ],
-        ],
       ),
     );
   }
