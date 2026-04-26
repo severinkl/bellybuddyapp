@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/meal_entry.dart';
 import '../../../providers/core_providers.dart';
-import '../../../providers/user_recipes_provider.dart';
 import '../../../repositories/entry_repository.dart';
+import '../../../router/route_names.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/logger.dart';
 
@@ -73,29 +74,9 @@ class _RecentMealPickerSheetState
     }
   }
 
-  Future<void> _saveMeal(BuildContext context, MealEntry meal) async {
+  void _openEditorWith(BuildContext context, MealEntry meal) {
     Navigator.of(context).pop();
-    try {
-      await ref
-          .read(userRecipesProvider.notifier)
-          .create(
-            title: meal.title,
-            ingredients: meal.ingredients,
-            imageUrl: meal.imageUrl,
-          );
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Zu Meine Rezepte hinzugefügt')),
-        );
-      }
-    } catch (e, st) {
-      _log.error('create recipe from meal failed', e, st);
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Fehler beim Speichern')));
-      }
-    }
+    context.push(RoutePaths.recipeNew, extra: meal);
   }
 
   String _subtitle(MealEntry meal) {
@@ -164,7 +145,7 @@ class _RecentMealPickerSheetState
                               color: AppTheme.mutedForeground,
                             ),
                           ),
-                          onTap: () => _saveMeal(context, meal),
+                          onTap: () => _openEditorWith(context, meal),
                         );
                       },
                     ),
