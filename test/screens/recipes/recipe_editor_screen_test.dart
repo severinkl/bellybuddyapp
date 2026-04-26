@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/repositories/meal_media_repository.dart';
@@ -150,5 +151,97 @@ void main() {
         ),
       ).called(1);
     });
+  });
+
+  Future<void> pumpEditorWithMeal(
+    WidgetTester tester, {
+    required MealEntry meal,
+  }) async {
+    when(() => repo.fetchForUser(any())).thenAnswer((_) async => const []);
+    when(
+      () => repo.create(
+        userId: any(named: 'userId'),
+        title: any(named: 'title'),
+        ingredients: any(named: 'ingredients'),
+        imageUrl: any(named: 'imageUrl'),
+      ),
+    ).thenAnswer(
+      (_) async => testUserRecipe(
+        title: meal.title,
+        ingredients: meal.ingredients,
+        imageUrl: meal.imageUrl,
+      ),
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userRecipeRepositoryProvider.overrideWithValue(repo),
+          mealMediaRepositoryProvider.overrideWithValue(mediaRepo),
+          currentUserIdProvider.overrideWithValue(testUserId),
+        ],
+        child: MaterialApp(home: RecipeEditorScreen(initialMeal: meal)),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  group('create mode prefilled from initialMeal', () {
+    testWidgets('renders title in display mode (not autofocused)', (
+      tester,
+    ) async {
+      final meal = testMealEntry(title: 'Linseneintopf');
+      await pumpEditorWithMeal(tester, meal: meal);
+
+      // Display mode: the title is rendered as Text, not TextField.
+      expect(
+        find.descendant(
+          of: find.byType(EditableAppBarTitle),
+          matching: find.text('Linseneintopf'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byType(EditableAppBarTitle),
+          matching: find.byType(TextField),
+        ),
+        findsNothing,
+      );
+    });
+
+    testWidgets('renders a chip per ingredient from the meal', (tester) async {
+      final meal = testMealEntry(
+        title: 'Linseneintopf',
+        ingredients: const ['Linsen', 'Tomaten', 'Zwiebel'],
+      );
+      await pumpEditorWithMeal(tester, meal: meal);
+
+      expect(find.widgetWithText(Chip, 'Linsen'), findsOneWidget);
+      expect(find.widgetWithText(Chip, 'Tomaten'), findsOneWidget);
+      expect(find.widgetWithText(Chip, 'Zwiebel'), findsOneWidget);
+    });
+
+    testWidgets(
+      'tapping Speichern calls repo.create with the prefilled values',
+      (tester) async {
+        final meal = testMealEntry(
+          title: 'Linseneintopf',
+          ingredients: const ['Linsen', 'Tomaten'],
+        );
+        await pumpEditorWithMeal(tester, meal: meal);
+
+        await tester.tap(find.text('Speichern'));
+        await tester.pumpAndSettle();
+
+        verify(
+          () => repo.create(
+            userId: testUserId,
+            title: 'Linseneintopf',
+            ingredients: const ['Linsen', 'Tomaten'],
+            imageUrl: any(named: 'imageUrl'),
+          ),
+        ).called(1);
+      },
+    );
   });
 }

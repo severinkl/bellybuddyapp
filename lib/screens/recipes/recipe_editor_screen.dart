@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
+import '../../models/meal_entry.dart';
 import '../../providers/core_providers.dart';
 import '../../providers/ingredient_autocomplete_provider.dart';
 import '../../providers/user_recipes_provider.dart';
@@ -18,10 +19,15 @@ import '../../widgets/common/ingredient_search.dart';
 import '../trackers/meal/widgets/meal_image_section.dart';
 
 class RecipeEditorScreen extends ConsumerStatefulWidget {
-  const RecipeEditorScreen({super.key, this.recipeId});
+  const RecipeEditorScreen({super.key, this.recipeId, this.initialMeal});
 
   /// Null → create mode. Non-null → edit mode (prefills from provider).
   final String? recipeId;
+
+  /// When non-null and in create mode, pre-fills title/ingredients/image
+  /// from this meal. Passed by the recent-meal picker sheet via GoRouter
+  /// extra. Ignored in edit mode.
+  final MealEntry? initialMeal;
 
   @override
   ConsumerState<RecipeEditorScreen> createState() => _RecipeEditorScreenState();
@@ -50,6 +56,11 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
         if (!mounted) return;
         _prefillFromProvider();
       });
+    } else if (widget.initialMeal != null) {
+      final meal = widget.initialMeal!;
+      _title = meal.title;
+      _ingredients = List<String>.from(meal.ingredients);
+      _imageUrl = meal.imageUrl;
     }
   }
 
@@ -135,7 +146,7 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
         title: EditableAppBarTitle(
           initialTitle: _title,
           placeholder: 'Rezept benennen',
-          autofocusOnMount: !_isEditMode,
+          autofocusOnMount: !_isEditMode && widget.initialMeal == null,
           onTextChanged: (v) => setState(() => _title = v),
         ),
       ),
