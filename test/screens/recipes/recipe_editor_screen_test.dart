@@ -7,6 +7,7 @@ import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/repositories/meal_media_repository.dart';
 import 'package:belly_buddy/screens/recipes/recipe_editor_screen.dart';
+import 'package:belly_buddy/widgets/common/editable_app_bar_title.dart';
 
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
@@ -43,10 +44,10 @@ void main() {
   }
 
   group('create mode', () {
-    testWidgets('shows "Neues Rezept" title and empty form', (tester) async {
+    testWidgets('shows EditableAppBarTitle in create mode', (tester) async {
       await pumpEditor(tester);
 
-      expect(find.text('Neues Rezept'), findsOneWidget);
+      expect(find.byType(EditableAppBarTitle), findsOneWidget);
       expect(find.text('Speichern'), findsOneWidget);
     });
 
@@ -64,11 +65,17 @@ void main() {
 
       await pumpEditor(tester);
 
-      // Enter a title
-      await tester.enterText(find.byType(TextField).first, 'Eiersalat');
+      // In create mode EditableAppBarTitle auto-focuses (mounts in edit mode).
+      // Enter a title via its TextField and submit to commit the value.
+      final appBarTextField = find.descendant(
+        of: find.byType(EditableAppBarTitle),
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(appBarTextField, 'Eiersalat');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pump();
 
-      // Tap Speichern
+      // Tap Speichern (now enabled because _title = 'Eiersalat').
       await tester.tap(find.text('Speichern'));
       await tester.pumpAndSettle();
 
@@ -84,7 +91,9 @@ void main() {
   });
 
   group('edit mode', () {
-    testWidgets('shows "Rezept bearbeiten" and prefills title', (tester) async {
+    testWidgets('shows EditableAppBarTitle prefilled with recipe title', (
+      tester,
+    ) async {
       final recipe = testUserRecipe(
         id: 'rec-1',
         title: 'Linseneintopf',
@@ -92,8 +101,9 @@ void main() {
       );
       await pumpEditor(tester, recipeId: 'rec-1', recipes: [recipe]);
 
-      expect(find.text('Rezept bearbeiten'), findsOneWidget);
-      expect(find.widgetWithText(TextField, 'Linseneintopf'), findsOneWidget);
+      // EditableAppBarTitle in display mode renders the title as a Text widget.
+      expect(find.byType(EditableAppBarTitle), findsOneWidget);
+      expect(find.text('Linseneintopf'), findsOneWidget);
     });
 
     testWidgets('saves updated title, calling repo.update', (tester) async {
@@ -119,11 +129,16 @@ void main() {
 
       await pumpEditor(tester, recipeId: 'rec-1', recipes: [recipe]);
 
-      // Clear and re-enter the title
-      final titleField = find.widgetWithText(TextField, 'Linseneintopf');
-      await tester.tap(titleField);
+      // Tap EditableAppBarTitle to enter edit mode, then update the title.
+      await tester.tap(find.byType(EditableAppBarTitle));
       await tester.pump();
-      await tester.enterText(titleField, 'Rote Linsensuppe');
+      final appBarTextField = find.descendant(
+        of: find.byType(EditableAppBarTitle),
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(appBarTextField, 'Rote Linsensuppe');
+      // Submit to commit the new value before tapping Speichern.
+      await tester.testTextInput.receiveAction(TextInputAction.done);
       await tester.pump();
 
       await tester.tap(find.text('Speichern'));

@@ -11,6 +11,7 @@ import '../../providers/user_recipes_provider.dart';
 import '../../repositories/meal_media_repository.dart';
 import '../../utils/logger.dart';
 import '../../widgets/common/bb_button.dart';
+import '../../widgets/common/editable_app_bar_title.dart';
 import '../trackers/meal/widgets/meal_image_section.dart';
 
 class RecipeEditorScreen extends ConsumerStatefulWidget {
@@ -26,7 +27,7 @@ class RecipeEditorScreen extends ConsumerStatefulWidget {
 class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
   static const _log = AppLogger('RecipeEditorScreen');
 
-  final _titleController = TextEditingController();
+  String _title = '';
   final _ingredientController = TextEditingController();
 
   List<String> _ingredients = [];
@@ -57,7 +58,7 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
     final recipe = recipes.where((r) => r.id == widget.recipeId).firstOrNull;
     if (recipe == null) return;
     setState(() {
-      _titleController.text = recipe.title;
+      _title = recipe.title;
       _ingredients = List<String>.from(recipe.ingredients);
       _imageUrl = recipe.imageUrl;
     });
@@ -65,7 +66,6 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
 
   @override
   void dispose() {
-    _titleController.dispose();
     _ingredientController.dispose();
     super.dispose();
   }
@@ -86,7 +86,15 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
   }
 
   Future<void> _save() async {
-    final title = _titleController.text.trim();
+    // Pull focus off any active TextField so EditableAppBarTitle commits its
+    // pending edit (it pushes the value via onChanged on focus-loss). Yield
+    // to the microtask queue so the focus-listener callback in
+    // EditableAppBarTitle fires before we read _title.
+    FocusManager.instance.primaryFocus?.unfocus();
+    await Future<void>.microtask(() {});
+    if (!mounted) return;
+
+    final title = _title.trim();
     if (title.isEmpty) return;
 
     setState(() => _isSaving = true);
@@ -140,7 +148,7 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final titleEmpty = _titleController.text.trim().isEmpty;
+    final titleEmpty = _title.trim().isEmpty;
 
     return Scaffold(
       backgroundColor: AppTheme.screenBackground,
@@ -150,7 +158,12 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.pop(),
         ),
-        title: Text(_isEditMode ? 'Rezept bearbeiten' : 'Neues Rezept'),
+        title: EditableAppBarTitle(
+          initialTitle: _title,
+          placeholder: 'Rezept benennen',
+          autofocusOnMount: !_isEditMode,
+          onChanged: (v) => setState(() => _title = v),
+        ),
       ),
       body: SafeArea(
         top: false,
@@ -162,16 +175,6 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    TextField(
-                      controller: _titleController,
-                      onChanged: (_) => setState(() {}),
-                      decoration: const InputDecoration(
-                        labelText: 'Titel',
-                        border: OutlineInputBorder(),
-                      ),
-                      style: const TextStyle(fontSize: AppTheme.fontSizeBody),
-                    ),
-                    AppConstants.gap16,
                     MealImageSection(
                       imageBytes: _imageBytes,
                       isAnalyzing: false,
