@@ -1,14 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../../config/app_theme.dart';
 import '../../../../config/constants.dart';
 import '../../../../models/user_recipe.dart';
 import '../../../../providers/user_recipes_provider.dart';
+import '../../../../router/route_names.dart';
+import '../../../../utils/title_color.dart';
 import '../../../../widgets/common/signed_path_image.dart';
+import '../../../recipes/widgets/recipes_search_field.dart';
 
 /// Opens a modal bottom sheet that lets the user pick one of their saved
 /// recipes. Returns the selected [UserRecipe], or `null` if dismissed.
+///
+/// The sheet has a pinned search field at the top (filters via the existing
+/// FTS-backed [userRecipesProvider]) and a "+ Neues Rezept erstellen" footer
+/// row that pops the sheet and pushes [/recipe/new].
 Future<UserRecipe?> showRecipeSelectorSheet(BuildContext context) {
   return showModalBottomSheet<UserRecipe>(
     context: context,
@@ -20,42 +28,87 @@ Future<UserRecipe?> showRecipeSelectorSheet(BuildContext context) {
         top: Radius.circular(AppConstants.radiusXl),
       ),
     ),
-    builder: (_) => FractionallySizedBox(
-      heightFactor: 0.8,
-      child: SafeArea(top: false, child: _RecipeSelectorBody()),
+    builder: (_) => DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      minChildSize: 0.4,
+      maxChildSize: 0.92,
+      expand: false,
+      builder: (_, scrollController) => SafeArea(
+        top: false,
+        child: _RecipeSelectorBody(scrollController: scrollController),
+      ),
     ),
   );
 }
 
 class _RecipeSelectorBody extends ConsumerStatefulWidget {
+  const _RecipeSelectorBody({required this.scrollController});
+
+  final ScrollController scrollController;
+
   @override
   ConsumerState<_RecipeSelectorBody> createState() =>
       _RecipeSelectorBodyState();
 }
 
 class _RecipeSelectorBodyState extends ConsumerState<_RecipeSelectorBody> {
+  late final UserRecipesNotifier _notifier;
+
   @override
   void initState() {
     super.initState();
+    // Capture the notifier so dispose() can clear sheet-scoped search
+    // without touching `ref` after deactivation.
+    _notifier = ref.read(userRecipesProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      ref.read(userRecipesProvider.notifier).fetch();
+      _notifier.fetch();
     });
+  }
+
+  @override
+  void dispose() {
+    // Clear sheet-scoped search so the recipes tab isn't pre-filtered the
+    // next time it mounts. setQuery(null) is idempotent and triggers a
+    // background re-fetch of the unfiltered list.
+    _notifier.setQuery(null);
+    super.dispose();
+  }
+
+  void _openNewRecipe(BuildContext context) {
+    Navigator.of(context).pop();
+    context.push(RoutePaths.recipeNew);
   }
 
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(userRecipesProvider);
+    final hasActiveQuery = ref
+        .watch(userRecipesProvider.notifier)
+        .hasActiveQuery;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        const SizedBox(height: AppConstants.spacingSm),
+        Center(
+          child: Container(
+            width: AppConstants.dragHandleWidth,
+            height: AppConstants.dragHandleHeight,
+            decoration: BoxDecoration(
+              color: AppTheme.muted,
+              borderRadius: BorderRadius.circular(
+                AppConstants.dragHandleRadius,
+              ),
+            ),
+          ),
+        ),
         const Padding(
           padding: EdgeInsets.fromLTRB(
             AppConstants.spacingLg,
             AppConstants.spacingMd,
             AppConstants.spacingLg,
-            AppConstants.spacingMd,
+            AppConstants.spacingSm,
           ),
           child: Text(
             'Rezept auswählen',
@@ -66,7 +119,11 @@ class _RecipeSelectorBodyState extends ConsumerState<_RecipeSelectorBody> {
             ),
           ),
         ),
-        const Divider(height: 1, thickness: AppConstants.dividerThickness),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: AppConstants.spacingMd),
+          child: RecipesSearchField(),
+        ),
+        AppConstants.gap8,
         Expanded(
           child: async.when(
             loading: () => const Center(child: CircularProgressIndicator()),
@@ -81,10 +138,10 @@ class _RecipeSelectorBodyState extends ConsumerState<_RecipeSelectorBody> {
             ),
             data: (recipes) {
               if (recipes.isEmpty) {
-                return const Center(
+                return Center(
                   child: Text(
-                    'Noch keine Rezepte',
-                    style: TextStyle(
+                    hasActiveQuery ? 'Keine Treffer' : 'Noch keine Rezepte',
+                    style: const TextStyle(
                       fontSize: AppTheme.fontSizeBody,
                       color: AppTheme.mutedForeground,
                     ),
@@ -92,51 +149,205 @@ class _RecipeSelectorBodyState extends ConsumerState<_RecipeSelectorBody> {
                 );
               }
               return ListView.separated(
-                itemCount: recipes.length,
-                separatorBuilder: (context, index) => const Divider(
-                  height: 1,
-                  thickness: AppConstants.dividerThickness,
+                controller: widget.scrollController,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.spacingMd,
                 ),
+                itemCount: recipes.length,
+                separatorBuilder: (_, _) => AppConstants.gap8,
                 itemBuilder: (context, i) {
                   final recipe = recipes[i];
-                  final subtitle = recipe.ingredients.take(3).join(' · ');
-                  return ListTile(
-                    leading: SizedBox(
-                      width: AppConstants.iconBadgeXl,
-                      height: AppConstants.iconBadgeXl,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(
-                          AppConstants.radiusMd,
-                        ),
-                        child: SignedPathImage(
-                          pathOrUrl: recipe.imageUrl,
-                          width: AppConstants.iconBadgeXl,
-                          height: AppConstants.iconBadgeXl,
-                          placeholder: Container(color: AppTheme.muted),
-                          errorWidget: Container(color: AppTheme.muted),
-                        ),
-                      ),
-                    ),
-                    title: Text(
-                      recipe.title.isEmpty ? 'Ohne Namen' : recipe.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    subtitle: subtitle.isEmpty
-                        ? null
-                        : Text(
-                            subtitle,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                    onTap: () => Navigator.of(context).pop(recipes[i]),
+                  return _RecipeRowCard(
+                    recipe: recipe,
+                    onTap: () => Navigator.of(context).pop(recipe),
                   );
                 },
               );
             },
           ),
         ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppConstants.spacingMd,
+            AppConstants.spacingSm,
+            AppConstants.spacingMd,
+            AppConstants.spacingMd,
+          ),
+          child: _NewRecipeRow(onTap: () => _openNewRecipe(context)),
+        ),
       ],
+    );
+  }
+}
+
+class _RecipeRowCard extends StatelessWidget {
+  const _RecipeRowCard({required this.recipe, required this.onTap});
+
+  final UserRecipe recipe;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(AppConstants.radiusLg),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: AppConstants.paddingSm,
+          child: Row(
+            children: [
+              _RecipeThumb(recipe: recipe),
+              AppConstants.gap12,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      recipe.title.isEmpty ? 'Ohne Namen' : recipe.title,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: AppTheme.fontSizeBody,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.foreground,
+                      ),
+                    ),
+                    if (recipe.ingredients.isNotEmpty) ...[
+                      AppConstants.gap4,
+                      Wrap(
+                        spacing: AppConstants.spacingXs,
+                        runSpacing: AppConstants.spacingXs,
+                        children: [
+                          for (final ingredient in recipe.ingredients.take(3))
+                            _IngredientChip(label: ingredient),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RecipeThumb extends StatelessWidget {
+  const _RecipeThumb({required this.recipe});
+
+  final UserRecipe recipe;
+
+  @override
+  Widget build(BuildContext context) {
+    if (recipe.imageUrl != null) {
+      return SizedBox(
+        width: AppConstants.iconBadgeXl,
+        height: AppConstants.iconBadgeXl,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+          child: SignedPathImage(
+            pathOrUrl: recipe.imageUrl,
+            width: AppConstants.iconBadgeXl,
+            height: AppConstants.iconBadgeXl,
+            placeholder: Container(color: AppTheme.muted),
+            errorWidget: _placeholder(),
+          ),
+        ),
+      );
+    }
+    return _placeholder();
+  }
+
+  Widget _placeholder() {
+    return Container(
+      width: AppConstants.iconBadgeXl,
+      height: AppConstants.iconBadgeXl,
+      decoration: BoxDecoration(
+        color: pastelForTitle(recipe.title),
+        borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+      ),
+      alignment: Alignment.center,
+      child: Icon(
+        Icons.menu_book_outlined,
+        color: AppTheme.foreground.withValues(alpha: 0.45),
+        size: AppConstants.iconSizeMd,
+      ),
+    );
+  }
+}
+
+class _IngredientChip extends StatelessWidget {
+  const _IngredientChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.spacingSm,
+        vertical: AppConstants.spacing2,
+      ),
+      decoration: BoxDecoration(
+        color: AppTheme.muted,
+        borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: AppTheme.fontSizeCaption,
+          color: AppTheme.mutedForeground,
+        ),
+      ),
+    );
+  }
+}
+
+class _NewRecipeRow extends StatelessWidget {
+  const _NewRecipeRow({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(AppConstants.radiusLg),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: AppConstants.paddingSm,
+          child: Row(
+            children: [
+              Container(
+                width: AppConstants.iconBadgeXl,
+                height: AppConstants.iconBadgeXl,
+                decoration: BoxDecoration(
+                  color: AppTheme.primary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+                ),
+                alignment: Alignment.center,
+                child: const Icon(Icons.add, color: AppTheme.primary),
+              ),
+              AppConstants.gap12,
+              const Text(
+                'Neues Rezept erstellen',
+                style: TextStyle(
+                  fontSize: AppTheme.fontSizeBody,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.primary,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
