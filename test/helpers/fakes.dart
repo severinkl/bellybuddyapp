@@ -18,6 +18,7 @@ import 'package:belly_buddy/repositories/notification_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/repositories/recipe_repository.dart';
 import 'package:belly_buddy/repositories/recommendation_repository.dart';
+import 'package:belly_buddy/repositories/user_recipe_repository.dart';
 import 'package:belly_buddy/services/entry_query_service.dart';
 import 'package:belly_buddy/services/ingredient_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -340,6 +341,74 @@ class FakeRecipeRepository implements RecipeRepository {
   @override
   Future<void> removeFavorite(String userId, String recipeId) async =>
       _favorites = _favorites.where((id) => id != recipeId).toSet();
+}
+
+// -- FakeUserRecipeRepository --
+class FakeUserRecipeRepository implements UserRecipeRepository {
+  FakeUserRecipeRepository({List<UserRecipe>? seed}) : _recipes = [...?seed];
+
+  final List<UserRecipe> _recipes;
+
+  void seedRecipes(List<UserRecipe> recipes) {
+    _recipes
+      ..clear()
+      ..addAll(recipes);
+  }
+
+  @override
+  Future<List<UserRecipe>> fetchForUser(String userId) async =>
+      List.unmodifiable(_recipes);
+
+  @override
+  Future<List<UserRecipe>> searchForUser(String userId, String query) async {
+    final q = query.toLowerCase();
+    return _recipes
+        .where((r) => r.title.toLowerCase().contains(q))
+        .toList(growable: false);
+  }
+
+  @override
+  Future<UserRecipe> create({
+    required String userId,
+    required String title,
+    required List<String> ingredients,
+    String? imageUrl,
+  }) async {
+    final created = testUserRecipe(
+      id: 'rec-${_recipes.length + 1}',
+      userId: userId,
+      title: title,
+      ingredients: ingredients,
+      imageUrl: imageUrl,
+    );
+    _recipes.add(created);
+    return created;
+  }
+
+  @override
+  Future<UserRecipe> update({
+    required String id,
+    required String title,
+    required List<String> ingredients,
+    String? imageUrl,
+  }) async {
+    final i = _recipes.indexWhere((r) => r.id == id);
+    if (i < 0) throw StateError('UserRecipe $id not found');
+    final next = testUserRecipe(
+      id: id,
+      userId: _recipes[i].userId,
+      title: title,
+      ingredients: ingredients,
+      imageUrl: imageUrl,
+    );
+    _recipes[i] = next;
+    return next;
+  }
+
+  @override
+  Future<void> delete(String id) async {
+    _recipes.removeWhere((r) => r.id == id);
+  }
 }
 
 // -- FakeRecommendationRepository --
