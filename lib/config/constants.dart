@@ -100,6 +100,7 @@ class AppConstants {
   static const double iconSizeXs = 16.0;
   static const double iconSizeSm = 18.0;
   static const double iconSizeClose = 20.0;
+  static const double iconSizeMd = 24.0;
   static const double iconSizeLg = 32.0;
 
   // Shadow
