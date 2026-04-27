@@ -199,7 +199,7 @@ class _RecipeRowCard extends StatelessWidget {
           child: Row(
             children: [
               _RecipeThumb(recipe: recipe),
-              AppConstants.gap12,
+              const SizedBox(width: AppConstants.spacing12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -335,7 +335,7 @@ class _NewRecipeRow extends StatelessWidget {
                 alignment: Alignment.center,
                 child: const Icon(Icons.add, color: AppTheme.primary),
               ),
-              AppConstants.gap12,
+              const SizedBox(width: AppConstants.spacing12),
               const Text(
                 'Neues Rezept erstellen',
                 style: TextStyle(
