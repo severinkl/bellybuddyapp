@@ -12,11 +12,9 @@ import '../../../../widgets/common/signed_path_image.dart';
 import '../../../recipes/widgets/recipes_search_field.dart';
 
 /// Opens a modal bottom sheet that lets the user pick one of their saved
-/// recipes. Returns the selected [UserRecipe], or `null` if dismissed.
-///
-/// The sheet has a pinned search field at the top (filters via the existing
-/// FTS-backed [userRecipesProvider]) and a "+ Neues Rezept erstellen" footer
-/// row that pops the sheet and pushes [/recipe/new].
+/// recipes. Resolves with the chosen [UserRecipe], or `null` if dismissed
+/// (including when the user taps "Neues Rezept erstellen" to create a new
+/// one instead).
 Future<UserRecipe?> showRecipeSelectorSheet(BuildContext context) {
   return showModalBottomSheet<UserRecipe>(
     context: context,
@@ -68,9 +66,7 @@ class _RecipeSelectorBodyState extends ConsumerState<_RecipeSelectorBody> {
 
   @override
   void dispose() {
-    // Clear sheet-scoped search so the recipes tab isn't pre-filtered the
-    // next time it mounts. setQuery(null) is idempotent and triggers a
-    // background re-fetch of the unfiltered list.
+    // Clear sheet-scoped search so the recipes tab isn't pre-filtered.
     _notifier.setQuery(null);
     super.dispose();
   }
@@ -83,9 +79,10 @@ class _RecipeSelectorBodyState extends ConsumerState<_RecipeSelectorBody> {
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(userRecipesProvider);
-    final hasActiveQuery = ref
-        .watch(userRecipesProvider.notifier)
-        .hasActiveQuery;
+    // Snapshot — `build` already re-runs whenever the AsyncValue changes
+    // (which happens after every setQuery → fetch round-trip), so a watch
+    // on the notifier instance would only add a redundant subscription.
+    final hasActiveQuery = _notifier.hasActiveQuery;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -188,6 +185,55 @@ class _RecipeRowCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return _SheetRow(
+      onTap: onTap,
+      leading: _RecipeThumb(recipe: recipe),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            recipe.title.isEmpty ? 'Ohne Namen' : recipe.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: AppTheme.fontSizeBody,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.foreground,
+            ),
+          ),
+          if (recipe.ingredients.isNotEmpty) ...[
+            AppConstants.gap4,
+            Wrap(
+              spacing: AppConstants.spacingXs,
+              runSpacing: AppConstants.spacingXs,
+              children: [
+                for (final ingredient in recipe.ingredients.take(3))
+                  _IngredientChip(label: ingredient),
+              ],
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// Shared shell for the sheet's tappable rows: a soft-elevated card with
+/// a leading widget (thumbnail or icon-badge) and arbitrary content.
+class _SheetRow extends StatelessWidget {
+  const _SheetRow({
+    required this.onTap,
+    required this.leading,
+    required this.child,
+  });
+
+  final VoidCallback onTap;
+  final Widget leading;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
     return Material(
       color: AppTheme.background,
       borderRadius: BorderRadius.circular(AppConstants.radiusLg),
@@ -200,37 +246,9 @@ class _RecipeRowCard extends StatelessWidget {
           padding: AppConstants.paddingSm,
           child: Row(
             children: [
-              _RecipeThumb(recipe: recipe),
+              leading,
               const SizedBox(width: AppConstants.spacing12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      recipe.title.isEmpty ? 'Ohne Namen' : recipe.title,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: AppTheme.fontSizeBody,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.foreground,
-                      ),
-                    ),
-                    if (recipe.ingredients.isNotEmpty) ...[
-                      AppConstants.gap4,
-                      Wrap(
-                        spacing: AppConstants.spacingXs,
-                        runSpacing: AppConstants.spacingXs,
-                        children: [
-                          for (final ingredient in recipe.ingredients.take(3))
-                            _IngredientChip(label: ingredient),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
-              ),
+              Expanded(child: child),
             ],
           ),
         ),
@@ -317,39 +335,24 @@ class _NewRecipeRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Material(
-      color: AppTheme.background,
-      borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-      clipBehavior: Clip.antiAlias,
-      elevation: 1,
-      shadowColor: Colors.black.withValues(alpha: 0.08),
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: AppConstants.paddingSm,
-          child: Row(
-            children: [
-              Container(
-                width: AppConstants.iconBadgeXl,
-                height: AppConstants.iconBadgeXl,
-                decoration: BoxDecoration(
-                  color: AppTheme.primary.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-                ),
-                alignment: Alignment.center,
-                child: const Icon(Icons.add, color: AppTheme.primary),
-              ),
-              const SizedBox(width: AppConstants.spacing12),
-              const Text(
-                'Neues Rezept erstellen',
-                style: TextStyle(
-                  fontSize: AppTheme.fontSizeBody,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.primary,
-                ),
-              ),
-            ],
-          ),
+    return _SheetRow(
+      onTap: onTap,
+      leading: Container(
+        width: AppConstants.iconBadgeXl,
+        height: AppConstants.iconBadgeXl,
+        decoration: BoxDecoration(
+          color: AppTheme.primary.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+        ),
+        alignment: Alignment.center,
+        child: const Icon(Icons.add, color: AppTheme.primary),
+      ),
+      child: const Text(
+        'Neues Rezept erstellen',
+        style: TextStyle(
+          fontSize: AppTheme.fontSizeBody,
+          fontWeight: FontWeight.w600,
+          color: AppTheme.primary,
         ),
       ),
     );
