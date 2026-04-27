@@ -189,9 +189,11 @@ class _RecipeRowCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: AppTheme.background,
       borderRadius: BorderRadius.circular(AppConstants.radiusLg),
       clipBehavior: Clip.antiAlias,
+      elevation: 1,
+      shadowColor: Colors.black.withValues(alpha: 0.08),
       child: InkWell(
         onTap: onTap,
         child: Padding(
@@ -316,9 +318,11 @@ class _NewRecipeRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: AppTheme.background,
       borderRadius: BorderRadius.circular(AppConstants.radiusLg),
       clipBehavior: Clip.antiAlias,
+      elevation: 1,
+      shadowColor: Colors.black.withValues(alpha: 0.08),
       child: InkWell(
         onTap: onTap,
         child: Padding(
