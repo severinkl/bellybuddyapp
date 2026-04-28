@@ -27,14 +27,22 @@ Future<UserRecipe?> showRecipeSelectorSheet(BuildContext context) {
         top: Radius.circular(AppConstants.radiusXl),
       ),
     ),
-    builder: (_) => DraggableScrollableSheet(
-      initialChildSize: 0.6,
-      minChildSize: 0.4,
-      maxChildSize: 0.92,
-      expand: false,
-      builder: (_, scrollController) => SafeArea(
-        top: false,
-        child: _RecipeSelectorBody(scrollController: scrollController),
+    builder: (sheetCtx) => Padding(
+      // Push the entire sheet above the soft keyboard. Padding *outside*
+      // DraggableScrollableSheet shrinks its available height (instead of
+      // adding to the body and overflowing the draggable's allocated box).
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.viewInsetsOf(sheetCtx).bottom,
+      ),
+      child: DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.92,
+        expand: false,
+        builder: (_, scrollController) => SafeArea(
+          top: false,
+          child: _RecipeSelectorBody(scrollController: scrollController),
+        ),
       ),
     ),
   );
@@ -85,100 +93,95 @@ class _RecipeSelectorBodyState extends ConsumerState<_RecipeSelectorBody> {
     // on the notifier instance would only add a redundant subscription.
     final hasActiveQuery = _notifier.hasActiveQuery;
 
-    // Pad by the keyboard inset so the sheet's content (list + footer)
-    // sits above the soft keyboard when the user taps the search field.
-    return Padding(
-      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: AppConstants.spacingSm),
-          Center(
-            child: Container(
-              width: AppConstants.dragHandleWidth,
-              height: AppConstants.dragHandleHeight,
-              decoration: BoxDecoration(
-                color: AppTheme.muted,
-                borderRadius: BorderRadius.circular(
-                  AppConstants.dragHandleRadius,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: AppConstants.spacingSm),
+        Center(
+          child: Container(
+            width: AppConstants.dragHandleWidth,
+            height: AppConstants.dragHandleHeight,
+            decoration: BoxDecoration(
+              color: AppTheme.muted,
+              borderRadius: BorderRadius.circular(
+                AppConstants.dragHandleRadius,
+              ),
+            ),
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.fromLTRB(
+            AppConstants.spacingLg,
+            AppConstants.spacingMd,
+            AppConstants.spacingLg,
+            AppConstants.spacingSm,
+          ),
+          child: Text(
+            'Rezept auswählen',
+            style: TextStyle(
+              fontSize: AppTheme.fontSizeTitle,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.foreground,
+            ),
+          ),
+        ),
+        const Padding(
+          padding: EdgeInsets.symmetric(horizontal: AppConstants.spacingMd),
+          child: RecipesSearchField(),
+        ),
+        AppConstants.gap8,
+        Expanded(
+          child: async.when(
+            loading: () => const Center(child: CircularProgressIndicator()),
+            error: (e, st) => const Center(
+              child: Text(
+                'Konnte Rezepte nicht laden',
+                style: TextStyle(
+                  fontSize: AppTheme.fontSizeBody,
+                  color: AppTheme.mutedForeground,
                 ),
               ),
             ),
-          ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppConstants.spacingLg,
-              AppConstants.spacingMd,
-              AppConstants.spacingLg,
-              AppConstants.spacingSm,
-            ),
-            child: Text(
-              'Rezept auswählen',
-              style: TextStyle(
-                fontSize: AppTheme.fontSizeTitle,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.foreground,
-              ),
-            ),
-          ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: AppConstants.spacingMd),
-            child: RecipesSearchField(),
-          ),
-          AppConstants.gap8,
-          Expanded(
-            child: async.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (e, st) => const Center(
-                child: Text(
-                  'Konnte Rezepte nicht laden',
-                  style: TextStyle(
-                    fontSize: AppTheme.fontSizeBody,
-                    color: AppTheme.mutedForeground,
-                  ),
-                ),
-              ),
-              data: (recipes) {
-                if (recipes.isEmpty) {
-                  return Center(
-                    child: Text(
-                      hasActiveQuery ? 'Keine Treffer' : 'Noch keine Rezepte',
-                      style: const TextStyle(
-                        fontSize: AppTheme.fontSizeBody,
-                        color: AppTheme.mutedForeground,
-                      ),
+            data: (recipes) {
+              if (recipes.isEmpty) {
+                return Center(
+                  child: Text(
+                    hasActiveQuery ? 'Keine Treffer' : 'Noch keine Rezepte',
+                    style: const TextStyle(
+                      fontSize: AppTheme.fontSizeBody,
+                      color: AppTheme.mutedForeground,
                     ),
-                  );
-                }
-                return ListView.separated(
-                  controller: widget.scrollController,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppConstants.spacingMd,
                   ),
-                  itemCount: recipes.length,
-                  separatorBuilder: (_, _) => AppConstants.gap8,
-                  itemBuilder: (context, i) {
-                    final recipe = recipes[i];
-                    return _RecipeRowCard(
-                      recipe: recipe,
-                      onTap: () => Navigator.of(context).pop(recipe),
-                    );
-                  },
                 );
-              },
-            ),
+              }
+              return ListView.separated(
+                controller: widget.scrollController,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.spacingMd,
+                ),
+                itemCount: recipes.length,
+                separatorBuilder: (_, _) => AppConstants.gap8,
+                itemBuilder: (context, i) {
+                  final recipe = recipes[i];
+                  return _RecipeRowCard(
+                    recipe: recipe,
+                    onTap: () => Navigator.of(context).pop(recipe),
+                  );
+                },
+              );
+            },
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(
-              AppConstants.spacingMd,
-              AppConstants.spacingSm,
-              AppConstants.spacingMd,
-              AppConstants.spacingMd,
-            ),
-            child: _NewRecipeRow(onTap: () => _openNewRecipe(context)),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppConstants.spacingMd,
+            AppConstants.spacingSm,
+            AppConstants.spacingMd,
+            AppConstants.spacingMd,
           ),
-        ],
-      ),
+          child: _NewRecipeRow(onTap: () => _openNewRecipe(context)),
+        ),
+      ],
     );
   }
 }
