@@ -112,9 +112,9 @@ class _EmptyState extends StatelessWidget {
               if (onPickRecipe != null) ...[
                 _divider(),
                 _PickerButton(
-                  icon: Icons.menu_book_outlined,
+                  icon: Icons.restaurant_menu,
                   label: 'Rezept',
-                  color: AppTheme.info,
+                  color: AppTheme.navGradientStart,
                   onTap: onPickRecipe!,
                 ),
               ],

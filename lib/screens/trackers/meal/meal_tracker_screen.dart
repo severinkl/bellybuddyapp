@@ -347,6 +347,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
                   ref.watch(userRecipesProvider).value?.isNotEmpty ?? false;
               return MealImageSection(
                 imageBytes: state.imageBytes,
+                initialImageUrl: state.imageUrl,
                 isAnalyzing: state.isAnalyzing,
                 onImagePicked: (bytes, name) async {
                   notifier.setImage(bytes, name);
