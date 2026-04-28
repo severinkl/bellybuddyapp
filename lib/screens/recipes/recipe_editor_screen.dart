@@ -11,6 +11,7 @@ import '../../providers/core_providers.dart';
 import '../../providers/ingredient_autocomplete_provider.dart';
 import '../../providers/user_recipes_provider.dart';
 import '../../repositories/meal_media_repository.dart';
+import '../../services/user_recipe_service.dart';
 import '../../utils/logger.dart';
 import '../../utils/save_helper.dart';
 import '../../widgets/common/bb_button.dart';
@@ -120,6 +121,14 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
       }
 
       if (mounted) context.pop();
+    } on DuplicateRecipeTitleException {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Du hast bereits ein Rezept mit diesem Titel.'),
+          ),
+        );
+      }
     } catch (e, st) {
       _log.error('save failed', e, st);
       if (mounted) {

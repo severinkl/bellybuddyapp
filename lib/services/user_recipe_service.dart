@@ -3,6 +3,16 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user_recipe.dart';
 import '../utils/logger.dart';
 
+/// Thrown when the DB rejects an insert/update because another recipe by
+/// the same user already has the same (case- and whitespace-normalised)
+/// title. Maps to Postgres error code `23505` from the
+/// `user_recipes_user_id_title_norm_uniq` index.
+class DuplicateRecipeTitleException implements Exception {
+  const DuplicateRecipeTitleException();
+}
+
+const _pgUniqueViolation = '23505';
+
 class UserRecipeService {
   UserRecipeService(this._client);
 
@@ -63,6 +73,12 @@ class UserRecipeService {
           .select()
           .single();
       return UserRecipe.fromJson(data);
+    } on PostgrestException catch (e, st) {
+      if (e.code == _pgUniqueViolation) {
+        throw const DuplicateRecipeTitleException();
+      }
+      _log.error('create failed', e, st);
+      rethrow;
     } catch (e, st) {
       _log.error('create failed', e, st);
       rethrow;
@@ -88,6 +104,12 @@ class UserRecipeService {
           .select()
           .single();
       return UserRecipe.fromJson(data);
+    } on PostgrestException catch (e, st) {
+      if (e.code == _pgUniqueViolation) {
+        throw const DuplicateRecipeTitleException();
+      }
+      _log.error('update failed', e, st);
+      rethrow;
     } catch (e, st) {
       _log.error('update failed', e, st);
       rethrow;

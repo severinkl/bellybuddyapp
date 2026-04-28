@@ -11,6 +11,7 @@ import '../../../providers/meal_tracker_provider.dart';
 import '../../../providers/user_recipes_provider.dart';
 import '../../../router/navigation_extensions.dart';
 import '../../../router/route_names.dart';
+import '../../../services/user_recipe_service.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/logger.dart';
 import '../../../utils/save_helper.dart';
@@ -290,6 +291,20 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         _savedAsRecipe = true;
         _savingAsRecipe = false;
       });
+    } on DuplicateRecipeTitleException {
+      if (!mounted) return;
+      // Pre-detection in _hasMatchingRecipe usually disables the button
+      // before the user gets here — this branch handles the race where
+      // a duplicate is created from another device or session.
+      setState(() {
+        _savedAsRecipe = true;
+        _savingAsRecipe = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Du hast bereits ein Rezept mit diesem Titel.'),
+        ),
+      );
     } catch (e, st) {
       _log.error('save as recipe failed', e, st);
       if (!mounted) return;

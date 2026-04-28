@@ -8,6 +8,7 @@ import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/repositories/meal_media_repository.dart';
 import 'package:belly_buddy/screens/recipes/recipe_editor_screen.dart';
+import 'package:belly_buddy/services/user_recipe_service.dart';
 import 'package:belly_buddy/widgets/common/editable_app_bar_title.dart';
 
 import '../../helpers/fakes.dart';
@@ -94,6 +95,41 @@ void main() {
         ),
       ).called(1);
     });
+
+    testWidgets(
+      'duplicate-title error surfaces a friendly SnackBar instead of the generic save-failure one',
+      (tester) async {
+        when(
+          () => repo.create(
+            userId: any(named: 'userId'),
+            title: any(named: 'title'),
+            ingredients: any(named: 'ingredients'),
+            imageUrl: any(named: 'imageUrl'),
+          ),
+        ).thenThrow(const DuplicateRecipeTitleException());
+
+        await pumpEditor(tester);
+
+        final appBarTextField = find.descendant(
+          of: find.byType(EditableAppBarTitle),
+          matching: find.byType(TextField),
+        );
+        await tester.enterText(appBarTextField, 'Eiersalat');
+        await tester.pump();
+
+        await tester.tap(find.text('Speichern'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text('Du hast bereits ein Rezept mit diesem Titel.'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('Speichern fehlgeschlagen. Bitte erneut versuchen.'),
+          findsNothing,
+        );
+      },
+    );
   });
 
   group('edit mode', () {
