@@ -85,7 +85,7 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
     if (!mounted) return;
 
     final title = _title.trim();
-    if (title.isEmpty) return;
+    if (title.isEmpty || _ingredients.isEmpty) return;
 
     setState(() => _isSaving = true);
     try {
@@ -146,6 +146,7 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
   @override
   Widget build(BuildContext context) {
     final titleEmpty = _title.trim().isEmpty;
+    final ingredientsEmpty = _ingredients.isEmpty;
 
     return Scaffold(
       backgroundColor: AppTheme.screenBackground,
@@ -227,7 +228,9 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
               child: BbButton(
                 label: 'Speichern',
                 isLoading: _isSaving,
-                onPressed: titleEmpty || _isSaving ? null : _save,
+                onPressed: titleEmpty || ingredientsEmpty || _isSaving
+                    ? null
+                    : _save,
               ),
             ),
           ],

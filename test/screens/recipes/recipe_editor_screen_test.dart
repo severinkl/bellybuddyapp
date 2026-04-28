@@ -71,10 +71,19 @@ void main() {
       ).thenAnswer((_) async => newRecipe);
       when(() => repo.fetchForUser(any())).thenAnswer((_) async => [newRecipe]);
 
-      await pumpEditor(tester);
+      // Seed via initialMeal so the recipe has ingredients (Save is gated
+      // on title + at least one ingredient). Then rename the title via the
+      // AppBar editable title to exercise the create-and-save flow.
+      await pumpEditor(
+        tester,
+        initialMeal: testMealEntry(
+          title: 'Original',
+          ingredients: const ['Eier'],
+        ),
+      );
 
-      // In create mode EditableAppBarTitle auto-focuses (mounts in edit mode).
-      // Enter a title via its TextField and submit to commit the value.
+      await tester.tap(find.byType(EditableAppBarTitle));
+      await tester.pump();
       final appBarTextField = find.descendant(
         of: find.byType(EditableAppBarTitle),
         matching: find.byType(TextField),
@@ -82,7 +91,6 @@ void main() {
       await tester.enterText(appBarTextField, 'Eiersalat');
       await tester.pump();
 
-      // Tap Speichern (now enabled because _title = 'Eiersalat').
       await tester.tap(find.text('Speichern'));
       await tester.pumpAndSettle();
 
@@ -94,6 +102,34 @@ void main() {
           imageUrl: any(named: 'imageUrl'),
         ),
       ).called(1);
+    });
+
+    testWidgets('save button is disabled when no ingredients are added', (
+      tester,
+    ) async {
+      await pumpEditor(tester);
+
+      // Type a title — but don't add an ingredient.
+      final appBarTextField = find.descendant(
+        of: find.byType(EditableAppBarTitle),
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(appBarTextField, 'Eiersalat');
+      await tester.pump();
+
+      // Speichern's BbButton wraps a button; verify onPressed is null by
+      // tapping and confirming repo.create was never invoked.
+      await tester.tap(find.text('Speichern'));
+      await tester.pumpAndSettle();
+
+      verifyNever(
+        () => repo.create(
+          userId: any(named: 'userId'),
+          title: any(named: 'title'),
+          ingredients: any(named: 'ingredients'),
+          imageUrl: any(named: 'imageUrl'),
+        ),
+      );
     });
 
     testWidgets(
@@ -108,8 +144,16 @@ void main() {
           ),
         ).thenThrow(const DuplicateRecipeTitleException());
 
-        await pumpEditor(tester);
+        await pumpEditor(
+          tester,
+          initialMeal: testMealEntry(
+            title: 'Original',
+            ingredients: const ['Eier'],
+          ),
+        );
 
+        await tester.tap(find.byType(EditableAppBarTitle));
+        await tester.pump();
         final appBarTextField = find.descendant(
           of: find.byType(EditableAppBarTitle),
           matching: find.byType(TextField),
