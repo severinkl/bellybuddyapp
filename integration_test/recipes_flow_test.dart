@@ -105,127 +105,124 @@ void main() {
     },
   );
 
-  testWidgets(
-    'create recipe from scratch: chooser → editor → save → grid',
-    (tester) async {
-      final repo = FakeUserRecipeRepository();
-      await tester.pumpWidget(buildTestApp(userRecipeRepo: repo));
-      await tester.pumpAndSettle();
+  testWidgets('create recipe from scratch: chooser → editor → save → grid', (
+    tester,
+  ) async {
+    final repo = FakeUserRecipeRepository();
+    await tester.pumpWidget(buildTestApp(userRecipeRepo: repo));
+    await tester.pumpAndSettle();
 
-      await _openRecipesTab(tester);
-      expect(find.text('Noch keine Rezepte'), findsOneWidget);
+    await _openRecipesTab(tester);
+    expect(find.text('Noch keine Rezepte'), findsOneWidget);
 
-      await tester.tap(find.text('Erstes Rezept erstellen'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Erstes Rezept erstellen'));
+    await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Neu erstellen'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Neu erstellen'));
+    await tester.pumpAndSettle();
 
-      await _enterTitleAndIngredient(
-        tester,
-        title: 'Eiersalat',
-        ingredient: 'Eier',
-      );
+    await _enterTitleAndIngredient(
+      tester,
+      title: 'Eiersalat',
+      ingredient: 'Eier',
+    );
 
-      await tester.tap(find.text('Speichern'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Speichern'));
+    await tester.pumpAndSettle();
 
-      // Back on the recipes grid with the new recipe.
-      expect(find.byType(RecipesScreen), findsOneWidget);
-      expect(find.text('Eiersalat'), findsOneWidget);
+    // Back on the recipes grid with the new recipe.
+    expect(find.byType(RecipesScreen), findsOneWidget);
+    expect(find.text('Eiersalat'), findsOneWidget);
 
-      // Round-trip via the fake repo.
-      final stored = await repo.fetchForUser('test-user-id');
-      expect(stored.map((r) => r.title), contains('Eiersalat'));
-      expect(stored.first.ingredients, contains('Eier'));
-    },
-  );
+    // Round-trip via the fake repo.
+    final stored = await repo.fetchForUser('test-user-id');
+    expect(stored.map((r) => r.title), contains('Eiersalat'));
+    expect(stored.first.ingredients, contains('Eier'));
+  });
 
-  testWidgets(
-    'prefill meal tracker from a recipe → save → land on dashboard',
-    (tester) async {
-      final recipeRepo = FakeUserRecipeRepository(
-        seed: [
-          testUserRecipe(
-            id: 'r1',
-            title: 'Curry mit Reis',
-            ingredients: ['Reis', 'Curry'],
-          ),
-        ],
-      );
-      final entryRepo = FakeEntryRepository();
+  testWidgets('prefill meal tracker from a recipe → save → land on dashboard', (
+    tester,
+  ) async {
+    final recipeRepo = FakeUserRecipeRepository(
+      seed: [
+        testUserRecipe(
+          id: 'r1',
+          title: 'Curry mit Reis',
+          ingredients: ['Reis', 'Curry'],
+        ),
+      ],
+    );
+    final entryRepo = FakeEntryRepository();
 
-      await tester.pumpWidget(
-        buildTestApp(userRecipeRepo: recipeRepo, entryRepo: entryRepo),
-      );
-      await tester.pumpAndSettle();
+    await tester.pumpWidget(
+      buildTestApp(userRecipeRepo: recipeRepo, entryRepo: entryRepo),
+    );
+    await tester.pumpAndSettle();
 
-      await _openMealTracker(tester);
+    await _openMealTracker(tester);
 
-      // Empty-state image card has the third "Rezept" picker button when
-      // userRecipesProvider has resolved with at least one recipe.
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('Rezept'));
-      await tester.pumpAndSettle();
+    // Empty-state image card has the third "Rezept" picker button when
+    // userRecipesProvider has resolved with at least one recipe.
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Rezept'));
+    await tester.pumpAndSettle();
 
-      // Recipe selector sheet — tap the seeded recipe row.
-      await tester.tap(find.text('Curry mit Reis'));
-      await tester.pumpAndSettle();
+    // Recipe selector sheet — tap the seeded recipe row.
+    await tester.tap(find.text('Curry mit Reis'));
+    await tester.pumpAndSettle();
 
-      // Form is prefilled.
-      expect(find.widgetWithText(Chip, 'Reis'), findsOneWidget);
-      expect(find.widgetWithText(Chip, 'Curry'), findsOneWidget);
+    // Form is prefilled.
+    expect(find.widgetWithText(Chip, 'Reis'), findsOneWidget);
+    expect(find.widgetWithText(Chip, 'Curry'), findsOneWidget);
 
-      await tester.tap(find.text('Speichern'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Speichern'));
+    await tester.pumpAndSettle();
 
-      // Success overlay — tap to dismiss. Because initialRecipe != null,
-      // the dismiss handler is context.go(/dashboard).
-      expect(find.byType(BbSuccessOverlay), findsOneWidget);
-      await tester.tap(find.byType(BbSuccessOverlay));
-      await tester.pumpAndSettle();
+    // Success overlay — tap to dismiss. Because initialRecipe != null,
+    // the dismiss handler is context.go(/dashboard).
+    expect(find.byType(BbSuccessOverlay), findsOneWidget);
+    await tester.tap(find.byType(BbSuccessOverlay));
+    await tester.pumpAndSettle();
 
-      expect(find.byType(DashboardScreen), findsOneWidget);
+    expect(find.byType(DashboardScreen), findsOneWidget);
 
-      // Round-trip: the meal landed in the entries repo.
-      expect(entryRepo.addedMeals, hasLength(1));
-      final saved = entryRepo.addedMeals.single;
-      expect(saved.title, 'Curry mit Reis');
-      expect(saved.ingredients, containsAll(['Reis', 'Curry']));
-    },
-  );
+    // Round-trip: the meal landed in the entries repo.
+    expect(entryRepo.addedMeals, hasLength(1));
+    final saved = entryRepo.addedMeals.single;
+    expect(saved.title, 'Curry mit Reis');
+    expect(saved.ingredients, containsAll(['Reis', 'Curry']));
+  });
 
-  testWidgets(
-    'save-as-recipe from the meal tracker success screen',
-    (tester) async {
-      final recipeRepo = FakeUserRecipeRepository();
-      await tester.pumpWidget(buildTestApp(userRecipeRepo: recipeRepo));
-      await tester.pumpAndSettle();
+  testWidgets('save-as-recipe from the meal tracker success screen', (
+    tester,
+  ) async {
+    final recipeRepo = FakeUserRecipeRepository();
+    await tester.pumpWidget(buildTestApp(userRecipeRepo: recipeRepo));
+    await tester.pumpAndSettle();
 
-      await _openMealTracker(tester);
+    await _openMealTracker(tester);
 
-      await _enterTitleAndIngredient(
-        tester,
-        title: 'Pasta Bolognese',
-        ingredient: 'Nudeln',
-      );
+    await _enterTitleAndIngredient(
+      tester,
+      title: 'Pasta Bolognese',
+      ingredient: 'Nudeln',
+    );
 
-      await tester.tap(find.text('Speichern'));
-      await tester.pumpAndSettle();
+    await tester.tap(find.text('Speichern'));
+    await tester.pumpAndSettle();
 
-      // Success overlay shows the "Als Rezept speichern" callout.
-      expect(find.text('Als Rezept speichern'), findsOneWidget);
-      await tester.tap(find.text('Als Rezept speichern'));
-      await tester.pumpAndSettle();
+    // Success overlay shows the "Als Rezept speichern" callout.
+    expect(find.text('Als Rezept speichern'), findsOneWidget);
+    await tester.tap(find.text('Als Rezept speichern'));
+    await tester.pumpAndSettle();
 
-      // Button label flips to "Als Rezept gespeichert" + check icon.
-      expect(find.text('Als Rezept gespeichert'), findsOneWidget);
-      expect(find.byIcon(Icons.check), findsOneWidget);
+    // Button label flips to "Als Rezept gespeichert" + check icon.
+    expect(find.text('Als Rezept gespeichert'), findsOneWidget);
+    expect(find.byIcon(Icons.check), findsOneWidget);
 
-      // Round-trip via the fake repo.
-      final stored = await recipeRepo.fetchForUser('test-user-id');
-      expect(stored.map((r) => r.title), contains('Pasta Bolognese'));
-      expect(stored.first.ingredients, contains('Nudeln'));
-    },
-  );
+    // Round-trip via the fake repo.
+    final stored = await recipeRepo.fetchForUser('test-user-id');
+    expect(stored.map((r) => r.title), contains('Pasta Bolognese'));
+    expect(stored.first.ingredients, contains('Nudeln'));
+  });
 }
