@@ -8,7 +8,8 @@ class BbSuccessOverlay extends StatefulWidget {
   final String message;
   final String? subMessage;
   final VoidCallback onDismissed;
-  final Widget? action;
+  final List<Widget>? actions;
+  final Widget? bottomCallout;
   final String? mascotAsset;
 
   const BbSuccessOverlay({
@@ -16,7 +17,8 @@ class BbSuccessOverlay extends StatefulWidget {
     required this.message,
     required this.onDismissed,
     this.subMessage,
-    this.action,
+    this.actions,
+    this.bottomCallout,
     this.mascotAsset,
   });
 
@@ -96,8 +98,9 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
       if (mounted) _textController.forward();
     });
 
-    // Auto-dismiss only when no mascot and no action (legacy behavior)
-    if (widget.action == null && widget.mascotAsset == null) {
+    // Auto-dismiss only when no mascot and no actions (legacy behavior)
+    final hasActions = widget.actions != null && widget.actions!.isNotEmpty;
+    if (!hasActions && widget.mascotAsset == null) {
       Future.delayed(AppConstants.successOverlayDuration, () {
         if (mounted) widget.onDismissed();
       });
@@ -202,13 +205,26 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
                   ),
                 ),
 
-                // Action button
-                if (widget.action != null) ...[
+                // Action buttons
+                if (widget.actions != null && widget.actions!.isNotEmpty) ...[
                   AppConstants.gap24,
                   if (hasMascot)
-                    _PillActionButton(child: widget.action!)
+                    _PillActionButton(children: widget.actions!)
                   else
-                    widget.action!,
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        for (int i = 0; i < widget.actions!.length; i++) ...[
+                          if (i > 0) AppConstants.gap8,
+                          widget.actions![i],
+                        ],
+                      ],
+                    ),
+                ],
+
+                if (widget.bottomCallout != null) ...[
+                  AppConstants.gap16,
+                  widget.bottomCallout!,
                 ],
 
                 // Tap hint
@@ -240,33 +256,42 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
   }
 }
 
-/// Pill-shaped action button — absorbs taps to prevent dismiss.
+/// Pill-shaped action button container — absorbs taps to prevent dismiss.
+/// Renders each child in its own pill, separated by [AppConstants.gap8].
 class _PillActionButton extends StatelessWidget {
-  final Widget child;
+  final List<Widget> children;
 
-  const _PillActionButton({required this.child});
+  const _PillActionButton({required this.children});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {}, // absorb tap to prevent dismiss
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppConstants.spacingLg,
-          vertical: AppConstants.spacing12,
-        ),
-        decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.85),
-          borderRadius: BorderRadius.circular(AppConstants.radiusFull),
-        ),
-        child: DefaultTextStyle.merge(
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: AppTheme.fontSizeBody,
-            decoration: TextDecoration.none,
-          ),
-          child: child,
-        ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (int i = 0; i < children.length; i++) ...[
+            if (i > 0) AppConstants.gap8,
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppConstants.spacingLg,
+                vertical: AppConstants.spacing12,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.85),
+                borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+              ),
+              child: DefaultTextStyle.merge(
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: AppTheme.fontSizeBody,
+                  decoration: TextDecoration.none,
+                ),
+                child: children[i],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }

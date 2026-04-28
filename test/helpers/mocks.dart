@@ -11,8 +11,10 @@ import 'package:belly_buddy/services/profile_service.dart';
 import 'package:belly_buddy/services/recipe_service.dart';
 import 'package:belly_buddy/services/recommendation_service.dart';
 import 'package:belly_buddy/services/storage_service.dart';
+import 'package:belly_buddy/services/user_recipe_service.dart';
 
 import 'package:belly_buddy/repositories/auth_repository.dart';
+import 'package:belly_buddy/repositories/user_recipe_repository.dart';
 import 'package:belly_buddy/repositories/drink_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
@@ -90,3 +92,9 @@ class MockNotificationRepository extends Mock
     implements NotificationRepository {}
 
 class MockNotificationScheduler extends Mock implements NotificationScheduler {}
+
+// -- UserRecipeService mock --
+class MockUserRecipeService extends Mock implements UserRecipeService {}
+
+// -- UserRecipeRepository mock --
+class MockUserRecipeRepository extends Mock implements UserRecipeRepository {}

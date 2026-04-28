@@ -34,6 +34,7 @@ class AppConstants {
   static const paddingLg = EdgeInsets.all(24);
 
   // Icon badge sizes
+  static const double iconBadgeXs = 32.0;
   static const double iconBadgeSm = 40.0;
   static const double iconBadgeMd = 44.0;
   static const double iconBadgeLg = 48.0;
@@ -98,7 +99,12 @@ class AppConstants {
   // Icon sizes
   static const double iconSizeXs = 16.0;
   static const double iconSizeSm = 18.0;
+  static const double iconSizeClose = 20.0;
+  static const double iconSizeMd = 24.0;
   static const double iconSizeLg = 32.0;
+
+  // Shadow
+  static const double shadowBlurSm = 8.0;
 
   // Button
   static const double buttonHeight = 56.0;

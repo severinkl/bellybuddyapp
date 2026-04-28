@@ -19,6 +19,9 @@ class RouteNames {
   static const String recommendations = 'recommendations';
   static const String ingredientSuggestions = 'ingredient-suggestions';
   static const String recipes = 'recipes';
+  static const String recipeNew = 'recipe_new';
+  static const String recipeDetail = 'recipe_detail';
+  static const String recipeEdit = 'recipe_edit';
 }
 
 class RoutePaths {
@@ -43,4 +46,9 @@ class RoutePaths {
   static const String recommendations = '/recommendations';
   static const String ingredientSuggestions = '/ingredient-suggestions';
   static const String recipes = '/recipes';
+  static const String recipeNew = '/recipe/new';
+  static const String recipeDetail = '/recipe/:id';
+  static const String recipeEdit = '/recipe/:id/edit';
+  static String recipeDetailFor(String id) => '/recipe/$id';
+  static String recipeEditFor(String id) => '/recipe/$id/edit';
 }

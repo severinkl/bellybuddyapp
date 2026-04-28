@@ -1,11 +1,24 @@
 import 'package:flutter/material.dart';
+
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../router/navigation_extensions.dart';
 import '../../widgets/common/mascot_image.dart';
+import 'my_recipes_tab.dart';
+import 'widgets/add_recipe_chooser_sheet.dart';
+import 'widgets/recipes_tab_toggle.dart';
 
-class RecipesScreen extends StatelessWidget {
+enum _RecipesView { myRecipes, inspiration }
+
+class RecipesScreen extends StatefulWidget {
   const RecipesScreen({super.key});
+
+  @override
+  State<RecipesScreen> createState() => _RecipesScreenState();
+}
+
+class _RecipesScreenState extends State<RecipesScreen> {
+  _RecipesView _view = _RecipesView.myRecipes;
 
   @override
   Widget build(BuildContext context) {
@@ -18,50 +31,84 @@ class RecipesScreen extends StatelessWidget {
           icon: const Icon(Icons.close),
           onPressed: () => context.popOrGoDashboard(),
         ),
+        actions: _view == _RecipesView.myRecipes
+            ? [
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  onPressed: () => showAddRecipeChooserSheet(context),
+                ),
+              ]
+            : null,
       ),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 32),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const MascotImage(
-                assetPath: AppConstants.mascotWink,
-                width: 128,
-                height: 128,
-              ),
-              AppConstants.gap24,
-              Container(
-                padding: AppConstants.paddingLg,
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.8),
-                  borderRadius: BorderRadius.circular(AppConstants.radiusRound),
-                ),
-                child: const Column(
-                  children: [
-                    Text(
-                      'Rezepte kommen bald!',
-                      style: TextStyle(
-                        fontSize: AppTheme.fontSizeTitleLG,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.foreground,
-                      ),
-                    ),
-                    AppConstants.gap8,
-                    Text(
-                      'Wir arbeiten gerade an einer tollen Sammlung darmfreundlicher Rezepte für dich. Schau bald wieder vorbei!',
-                      style: TextStyle(
-                        fontSize: AppTheme.fontSizeBody,
-                        color: AppTheme.mutedForeground,
-                        height: 1.5,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            ],
+      body: Column(
+        children: [
+          Padding(
+            padding: AppConstants.paddingMd,
+            child: RecipesTabToggle(
+              value: _view.index,
+              segments: const ['Meine Rezepte', 'Inspiration'],
+              onChanged: (i) => setState(() => _view = _RecipesView.values[i]),
+            ),
           ),
+          Expanded(
+            child: switch (_view) {
+              _RecipesView.myRecipes => const MyRecipesTab(),
+              _RecipesView.inspiration => const _InspirationTab(),
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InspirationTab extends StatelessWidget {
+  const _InspirationTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AppConstants.spacingXl),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const MascotImage(
+              assetPath: AppConstants.mascotWink,
+              width: 128,
+              height: 128,
+            ),
+            AppConstants.gap24,
+            Container(
+              padding: AppConstants.paddingLg,
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.8),
+                borderRadius: BorderRadius.circular(AppConstants.radiusRound),
+              ),
+              child: const Column(
+                children: [
+                  Text(
+                    'Rezepte kommen bald!',
+                    style: TextStyle(
+                      fontSize: AppTheme.fontSizeTitleLG,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.foreground,
+                    ),
+                  ),
+                  AppConstants.gap8,
+                  Text(
+                    'Wir arbeiten gerade an einer tollen Sammlung darmfreundlicher Rezepte für dich. Schau bald wieder vorbei!',
+                    style: TextStyle(
+                      fontSize: AppTheme.fontSizeBody,
+                      color: AppTheme.mutedForeground,
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

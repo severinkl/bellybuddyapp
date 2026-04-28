@@ -3,14 +3,24 @@ import 'dart:typed_data';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:shimmer/shimmer.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../config/constants.dart';
+import '../../../../widgets/common/signed_path_image.dart';
 
 class MealImageSection extends StatelessWidget {
   final Uint8List? imageBytes;
   final bool isAnalyzing;
+
+  /// Optional existing remote image URL (edit mode). Shown when [imageBytes]
+  /// is null so the user can see the currently saved image and clear it.
+  final String? initialImageUrl;
+
   final Future<void> Function(Uint8List bytes, String name) onImagePicked;
   final VoidCallback onClearImage;
+
+  /// When non-null, adds a third "Rezept" button to the empty-state row.
+  final VoidCallback? onPickRecipe;
 
   const MealImageSection({
     super.key,
@@ -18,6 +28,8 @@ class MealImageSection extends StatelessWidget {
     required this.isAnalyzing,
     required this.onImagePicked,
     required this.onClearImage,
+    this.initialImageUrl,
+    this.onPickRecipe,
   });
 
   Future<void> _pickImage(BuildContext context, ImageSource source) async {
@@ -34,21 +46,35 @@ class MealImageSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (imageBytes == null) {
-      return _EmptyState(onPickImage: _pickImage);
+    if (imageBytes != null) {
+      return _ImagePreview(
+        imageBytes: imageBytes!,
+        isAnalyzing: isAnalyzing,
+        onClearImage: onClearImage,
+      );
     }
-    return _ImagePreview(
-      imageBytes: imageBytes!,
-      isAnalyzing: isAnalyzing,
-      onClearImage: onClearImage,
-    );
+    if (initialImageUrl != null) {
+      return _UrlImagePreview(
+        imageUrl: initialImageUrl!,
+        onClearImage: onClearImage,
+      );
+    }
+    return _EmptyState(onPickImage: _pickImage, onPickRecipe: onPickRecipe);
   }
 }
 
 class _EmptyState extends StatelessWidget {
   final Future<void> Function(BuildContext, ImageSource) onPickImage;
+  final VoidCallback? onPickRecipe;
 
-  const _EmptyState({required this.onPickImage});
+  const _EmptyState({required this.onPickImage, this.onPickRecipe});
+
+  static Widget _divider() => Container(
+    width: 1,
+    height: 48,
+    margin: const EdgeInsets.symmetric(horizontal: AppConstants.spacingLg),
+    color: AppTheme.border,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -76,20 +102,22 @@ class _EmptyState extends StatelessWidget {
                 color: AppTheme.primary,
                 onTap: () => onPickImage(context, ImageSource.camera),
               ),
-              Container(
-                width: 1,
-                height: 48,
-                margin: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.spacingLg,
-                ),
-                color: AppTheme.border,
-              ),
+              _divider(),
               _PickerButton(
                 icon: Icons.photo_library,
                 label: 'Galerie',
                 color: AppTheme.secondary,
                 onTap: () => onPickImage(context, ImageSource.gallery),
               ),
+              if (onPickRecipe != null) ...[
+                _divider(),
+                _PickerButton(
+                  icon: Icons.restaurant_menu,
+                  label: 'Rezept',
+                  color: AppTheme.navGradientStart,
+                  onTap: onPickRecipe!,
+                ),
+              ],
             ],
           ),
         ),
@@ -174,11 +202,14 @@ class _ImagePreview extends StatelessWidget {
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: 8,
+                        blurRadius: AppConstants.shadowBlurSm,
                       ),
                     ],
                   ),
-                  child: const Icon(Icons.close, size: 20),
+                  child: const Icon(
+                    Icons.close,
+                    size: AppConstants.iconSizeClose,
+                  ),
                 ),
               ),
             ),
@@ -228,6 +259,62 @@ class _ImagePreview extends StatelessWidget {
                   ),
                 ),
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _UrlImagePreview extends StatelessWidget {
+  final String imageUrl;
+  final VoidCallback onClearImage;
+
+  const _UrlImagePreview({required this.imageUrl, required this.onClearImage});
+
+  @override
+  Widget build(BuildContext context) {
+    return AspectRatio(
+      aspectRatio: 4 / 3,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppConstants.radiusXl),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            SignedPathImage(
+              pathOrUrl: imageUrl,
+              placeholder: Shimmer.fromColors(
+                baseColor: AppTheme.muted,
+                highlightColor: AppTheme.background,
+                child: Container(color: AppTheme.muted),
+              ),
+              errorWidget: Container(color: AppTheme.muted),
+            ),
+            Positioned(
+              top: AppConstants.spacing12,
+              right: AppConstants.spacing12,
+              child: GestureDetector(
+                onTap: onClearImage,
+                child: Container(
+                  width: AppConstants.iconBadgeSm,
+                  height: AppConstants.iconBadgeSm,
+                  decoration: BoxDecoration(
+                    color: AppTheme.card,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.1),
+                        blurRadius: AppConstants.shadowBlurSm,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.close,
+                    size: AppConstants.iconSizeClose,
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),

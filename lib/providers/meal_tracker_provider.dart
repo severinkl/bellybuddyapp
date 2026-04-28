@@ -2,14 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/meal_entry.dart';
+import '../models/user_recipe.dart';
 import '../providers/core_providers.dart';
-import '../repositories/ingredient_repository.dart';
 import '../repositories/meal_media_repository.dart';
-import '../models/ingredient_search_result.dart';
 import '../utils/date_format_utils.dart';
-import '../utils/logger.dart';
 import 'diary_provider.dart';
 import 'entries_provider.dart';
+import 'ingredient_autocomplete_provider.dart';
 
 /// Placeholder title written to state when the user hasn't given the meal
 /// a name. Save-time code checks against this sentinel to decide whether
@@ -26,10 +25,13 @@ class MealTrackerState {
   final bool isAnalyzing;
   final bool isSaving;
   final bool showSuccess;
-  final List<IngredientSearchResult> ingredientSuggestions;
-  final Object? ingredientSearchError;
   final String? notes;
   final DateTime trackedAt;
+
+  /// The resolved image URL of the meal that was just saved (create-mode only).
+  /// Set once [save] completes; null until then. Used by the success overlay to
+  /// offer "Als Rezept speichern" with the correct image.
+  final String? savedImageUrl;
 
   MealTrackerState({
     this.seed,
@@ -41,10 +43,9 @@ class MealTrackerState {
     this.isAnalyzing = false,
     this.isSaving = false,
     this.showSuccess = false,
-    this.ingredientSuggestions = const [],
-    this.ingredientSearchError,
     this.notes,
     DateTime? trackedAt,
+    this.savedImageUrl,
   }) : trackedAt = trackedAt ?? DateTime.now();
 
   /// True only in edit mode when any seeded field has been modified.
@@ -76,13 +77,13 @@ class MealTrackerState {
     bool? isAnalyzing,
     bool? isSaving,
     bool? showSuccess,
-    List<IngredientSearchResult>? ingredientSuggestions,
-    Object? ingredientSearchError,
     String? notes,
     DateTime? trackedAt,
     bool clearImageUrl =
         false, // explicit clear (since ?? can't distinguish null)
     bool clearImageBytes = false,
+    String? savedImageUrl,
+    bool clearSavedImageUrl = false,
   }) {
     return MealTrackerState(
       seed: seed ?? this.seed,
@@ -96,17 +97,16 @@ class MealTrackerState {
       isAnalyzing: isAnalyzing ?? this.isAnalyzing,
       isSaving: isSaving ?? this.isSaving,
       showSuccess: showSuccess ?? this.showSuccess,
-      ingredientSuggestions:
-          ingredientSuggestions ?? this.ingredientSuggestions,
-      ingredientSearchError: ingredientSearchError,
       notes: notes ?? this.notes,
       trackedAt: trackedAt ?? this.trackedAt,
+      savedImageUrl: clearSavedImageUrl
+          ? null
+          : (savedImageUrl ?? this.savedImageUrl),
     );
   }
 }
 
 class MealTrackerNotifier extends Notifier<MealTrackerState> {
-  static const _log = AppLogger('MealTracker');
   @override
   MealTrackerState build() => MealTrackerState(trackedAt: DateTime.now());
 
@@ -122,6 +122,21 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
       imageUrl: meal.imageUrl,
       notes: meal.notes,
       trackedAt: meal.trackedAt,
+    );
+  }
+
+  /// Pre-fills the tracker from a saved recipe (create-mode only).
+  /// Clears any locally-picked image bytes/name so they don't leak into a
+  /// subsequent save; sets the recipe's remote image URL instead.
+  void prefillFromRecipe(UserRecipe recipe) {
+    // Always clear the old imageUrl first so that a recipe with no image
+    // doesn't retain a previously loaded remote URL.
+    state = state.copyWith(
+      title: recipe.title,
+      ingredients: List.of(recipe.ingredients),
+      clearImageUrl: recipe.imageUrl == null,
+      imageUrl: recipe.imageUrl,
+      clearImageBytes: true,
     );
   }
 
@@ -164,51 +179,16 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
     }
   }
 
-  Future<void> searchIngredients(String query) async {
-    if (query.length < 3) {
-      state = state.copyWith(ingredientSuggestions: []);
-      return;
-    }
-    state = state.copyWith(ingredientSearchError: null);
-    try {
-      final userId = ref.read(currentUserIdProvider);
-      final results = await ref
-          .read(ingredientRepositoryProvider)
-          .search(query, userId: userId);
-      state = state.copyWith(ingredientSuggestions: results);
-    } catch (e, st) {
-      _log.error('ingredient search failed', e, st);
-      state = state.copyWith(ingredientSearchError: e);
-    }
-  }
-
   void addIngredient(String name) {
     final trimmed = name.trim();
     if (trimmed.isEmpty || state.ingredients.contains(trimmed)) return;
-    state = state.copyWith(
-      ingredients: [...state.ingredients, trimmed],
-      ingredientSuggestions: [],
-    );
-    // Write new ingredient to DB (fire-and-forget)
-    final userId = ref.read(currentUserIdProvider);
-    ref
-        .read(ingredientRepositoryProvider)
-        .insertIfNew(trimmed, userId: userId)
-        .ignore();
+    state = state.copyWith(ingredients: [...state.ingredients, trimmed]);
+    ref.read(ingredientAutocompleteProvider.notifier).addIngredient(trimmed);
   }
 
   void removeIngredient(String name) {
     state = state.copyWith(
       ingredients: state.ingredients.where((i) => i != name).toList(),
-    );
-  }
-
-  Future<void> deleteUserIngredient(String id) async {
-    await ref.read(ingredientRepositoryProvider).deleteUserIngredient(id);
-    state = state.copyWith(
-      ingredientSuggestions: state.ingredientSuggestions
-          .where((s) => s.id != id)
-          .toList(),
     );
   }
 
@@ -259,9 +239,13 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
 
       // showSuccess is the create-mode "nice job" screen. Edit mode pops
       // instead — the screen listens to isSaving transitions and pops.
+      // savedImageUrl is stored so the success overlay can offer
+      // "Als Rezept speichern" with the correct image.
       state = state.copyWith(
         isSaving: false,
         showSuccess: existingSeed == null,
+        savedImageUrl: existingSeed == null ? resolvedImageUrl : null,
+        clearSavedImageUrl: existingSeed != null,
       );
     } catch (e) {
       state = state.copyWith(isSaving: false);

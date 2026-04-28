@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../models/meal_entry.dart';
+import '../models/user_recipe.dart';
 import '../providers/auth_provider.dart';
 import '../utils/logger.dart';
 import '../screens/screens.dart';
@@ -117,9 +118,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: RouteNames.mealTracker,
         builder: (context, state) {
           final extra = state.extra;
-          return MealTrackerScreen(
-            initialDate: extra is DateTime ? extra : null,
-          );
+          if (extra is UserRecipe) {
+            return MealTrackerScreen(initialRecipe: extra);
+          }
+          if (extra is DateTime) {
+            return MealTrackerScreen(initialDate: extra);
+          }
+          return const MealTrackerScreen();
         },
       ),
       GoRoute(
@@ -204,6 +209,32 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.recipes,
         name: RouteNames.recipes,
         builder: (context, state) => const RecipesScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.recipeNew,
+        name: RouteNames.recipeNew,
+        builder: (context, state) {
+          final extra = state.extra;
+          return RecipeEditorScreen(
+            initialMeal: extra is MealEntry ? extra : null,
+          );
+        },
+      ),
+      GoRoute(
+        path: RoutePaths.recipeDetail,
+        name: RouteNames.recipeDetail,
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return RecipeDetailScreen(recipeId: id);
+        },
+      ),
+      GoRoute(
+        path: RoutePaths.recipeEdit,
+        name: RouteNames.recipeEdit,
+        builder: (context, state) {
+          final id = state.pathParameters['id']!;
+          return RecipeEditorScreen(recipeId: id);
+        },
       ),
     ],
   );
