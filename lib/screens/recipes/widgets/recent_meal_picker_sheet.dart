@@ -8,8 +8,10 @@ import '../../../models/meal_entry.dart';
 import '../../../providers/core_providers.dart';
 import '../../../repositories/entry_repository.dart';
 import '../../../router/route_names.dart';
-import '../../../utils/date_format_utils.dart';
 import '../../../utils/logger.dart';
+import '../../../widgets/common/bb_ingredient_chip.dart';
+import '../../../widgets/common/bb_pastel_thumb.dart';
+import '../../../widgets/common/bb_sheet_row.dart';
 
 Future<void> showRecentMealPickerSheet(BuildContext context) {
   return showModalBottomSheet(
@@ -79,13 +81,6 @@ class _RecentMealPickerSheetState
     context.push(RoutePaths.recipeNew, extra: meal);
   }
 
-  String _subtitle(MealEntry meal) {
-    final date = formatDateTimeShort(meal.trackedAt);
-    if (meal.ingredients.isEmpty) return date;
-    final first3 = meal.ingredients.take(3).join(' · ');
-    return '$date · $first3';
-  }
-
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -132,20 +127,48 @@ class _RecentMealPickerSheetState
                         ),
                       ),
                     )
-                  : ListView.builder(
+                  : ListView.separated(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppConstants.spacingMd,
+                      ),
                       itemCount: _meals!.length,
+                      separatorBuilder: (_, _) => AppConstants.gap8,
                       itemBuilder: (context, i) {
                         final meal = _meals![i];
-                        return ListTile(
-                          title: Text(meal.title),
-                          subtitle: Text(
-                            _subtitle(meal),
-                            style: const TextStyle(
-                              fontSize: AppTheme.fontSizeCaption,
-                              color: AppTheme.mutedForeground,
-                            ),
-                          ),
+                        return BbSheetRow(
                           onTap: () => _openEditorWith(meal),
+                          leading: BbPastelThumb(
+                            title: meal.title,
+                            imageUrl: meal.imageUrl,
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                meal.title,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: AppTheme.fontSizeBody,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.foreground,
+                                ),
+                              ),
+                              if (meal.ingredients.isNotEmpty) ...[
+                                AppConstants.gap4,
+                                Wrap(
+                                  spacing: AppConstants.spacingXs,
+                                  runSpacing: AppConstants.spacingXs,
+                                  children: [
+                                    for (final ingredient
+                                        in meal.ingredients.take(3))
+                                      BbIngredientChip(label: ingredient),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
                         );
                       },
                     ),

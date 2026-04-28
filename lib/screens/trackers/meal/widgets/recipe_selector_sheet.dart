@@ -7,8 +7,9 @@ import '../../../../config/constants.dart';
 import '../../../../models/user_recipe.dart';
 import '../../../../providers/user_recipes_provider.dart';
 import '../../../../router/route_names.dart';
-import '../../../../utils/title_color.dart';
-import '../../../../widgets/common/signed_path_image.dart';
+import '../../../../widgets/common/bb_ingredient_chip.dart';
+import '../../../../widgets/common/bb_pastel_thumb.dart';
+import '../../../../widgets/common/bb_sheet_row.dart';
 import '../../../recipes/widgets/recipes_search_field.dart';
 
 /// Opens a modal bottom sheet that lets the user pick one of their saved
@@ -185,9 +186,9 @@ class _RecipeRowCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _SheetRow(
+    return BbSheetRow(
       onTap: onTap,
-      leading: _RecipeThumb(recipe: recipe),
+      leading: BbPastelThumb(title: recipe.title, imageUrl: recipe.imageUrl),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
@@ -209,120 +210,11 @@ class _RecipeRowCard extends StatelessWidget {
               runSpacing: AppConstants.spacingXs,
               children: [
                 for (final ingredient in recipe.ingredients.take(3))
-                  _IngredientChip(label: ingredient),
+                  BbIngredientChip(label: ingredient),
               ],
             ),
           ],
         ],
-      ),
-    );
-  }
-}
-
-/// Shared shell for the sheet's tappable rows: a soft-elevated card with
-/// a leading widget (thumbnail or icon-badge) and arbitrary content.
-class _SheetRow extends StatelessWidget {
-  const _SheetRow({
-    required this.onTap,
-    required this.leading,
-    required this.child,
-  });
-
-  final VoidCallback onTap;
-  final Widget leading;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppTheme.background,
-      borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-      clipBehavior: Clip.antiAlias,
-      elevation: 1,
-      shadowColor: Colors.black.withValues(alpha: 0.08),
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: AppConstants.paddingSm,
-          child: Row(
-            children: [
-              leading,
-              const SizedBox(width: AppConstants.spacing12),
-              Expanded(child: child),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _RecipeThumb extends StatelessWidget {
-  const _RecipeThumb({required this.recipe});
-
-  final UserRecipe recipe;
-
-  @override
-  Widget build(BuildContext context) {
-    if (recipe.imageUrl != null) {
-      return SizedBox(
-        width: AppConstants.iconBadgeXl,
-        height: AppConstants.iconBadgeXl,
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-          child: SignedPathImage(
-            pathOrUrl: recipe.imageUrl,
-            width: AppConstants.iconBadgeXl,
-            height: AppConstants.iconBadgeXl,
-            placeholder: Container(color: AppTheme.muted),
-            errorWidget: _placeholder(),
-          ),
-        ),
-      );
-    }
-    return _placeholder();
-  }
-
-  Widget _placeholder() {
-    return Container(
-      width: AppConstants.iconBadgeXl,
-      height: AppConstants.iconBadgeXl,
-      decoration: BoxDecoration(
-        color: pastelForTitle(recipe.title),
-        borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-      ),
-      alignment: Alignment.center,
-      child: Icon(
-        Icons.menu_book_outlined,
-        color: AppTheme.foreground.withValues(alpha: 0.45),
-        size: AppConstants.iconSizeMd,
-      ),
-    );
-  }
-}
-
-class _IngredientChip extends StatelessWidget {
-  const _IngredientChip({required this.label});
-
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppConstants.spacingSm,
-        vertical: AppConstants.spacing2,
-      ),
-      decoration: BoxDecoration(
-        color: AppTheme.muted,
-        borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          fontSize: AppTheme.fontSizeCaption,
-          color: AppTheme.mutedForeground,
-        ),
       ),
     );
   }
@@ -335,7 +227,7 @@ class _NewRecipeRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return _SheetRow(
+    return BbSheetRow(
       onTap: onTap,
       leading: Container(
         width: AppConstants.iconBadgeXl,
