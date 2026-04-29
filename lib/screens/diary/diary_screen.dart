@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/diary_provider.dart';
-import '../../providers/entries_provider.dart';
 import '../../router/route_names.dart';
 import '../../services/haptic_service.dart';
 import '../../utils/date_format_utils.dart';
@@ -267,12 +266,6 @@ class _DiaryBody extends ConsumerWidget {
               return DiaryEntryCard(
                 entry: entry,
                 onTap: () => showDiaryDetailSheet(context, ref, entry),
-                onDismissed: () async {
-                  await ref
-                      .read(entriesProvider.notifier)
-                      .deleteByType(entry.type.name, entry.id);
-                  ref.invalidate(diaryEntriesProvider(date));
-                },
               );
             },
           );
