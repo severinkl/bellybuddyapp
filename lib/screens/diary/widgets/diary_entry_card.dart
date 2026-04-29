@@ -80,7 +80,7 @@ class DiaryEntryCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.only(bottom: AppConstants.spacingSm),
       child: GestureDetector(
         onTap: onTap,
         child: BbCard(
