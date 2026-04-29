@@ -8,10 +8,13 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'config/app_theme.dart';
 import 'providers/auth_provider.dart';
+import 'providers/diary_provider.dart';
+import 'providers/entries_provider.dart';
 import 'providers/ingredient_suggestion_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/profile_provider.dart';
 import 'providers/recommendation_provider.dart';
+import 'providers/user_recipes_provider.dart';
 import 'router/app_router.dart';
 import 'screens/splash/splash_screen.dart';
 import 'providers/pending_route_provider.dart';
@@ -133,6 +136,14 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
         ref.read(profileProvider.notifier).reset();
         ref.read(notificationRepositoryProvider).cancelAll();
         ref.read(notificationRepositoryProvider).clearToken();
+        // Drop cached user-scoped data so the next sign-in doesn't see
+        // the previous account's recipes / entries / recommendations.
+        ref.invalidate(userRecipesProvider);
+        ref.invalidate(entriesProvider);
+        ref.invalidate(diaryEntriesProvider);
+        ref.invalidate(recommendationProvider);
+        ref.invalidate(unseenRecommendationCountProvider);
+        ref.invalidate(ingredientSuggestionProvider);
         Sentry.configureScope((scope) => scope.setUser(null));
       }
     });

@@ -3,6 +3,7 @@ import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/config/splash_screen_config.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/splash_screen_provider.dart';
+import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/repositories/repositories.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
@@ -34,6 +35,7 @@ ProviderScope buildTestApp({
   FakeProfileRepository? profileRepo,
   FakeEntryRepository? entryRepo,
   FakeDrinkRepository? drinkRepo,
+  FakeUserRecipeRepository? userRecipeRepo,
 }) {
   final fakeProfileRepo = profileRepo ?? FakeProfileRepository();
   if (seedProfile) {
@@ -99,6 +101,9 @@ ProviderScope buildTestApp({
         FakeIngredientRepository(),
       ),
       recipeRepositoryProvider.overrideWithValue(FakeRecipeRepository()),
+      userRecipeRepositoryProvider.overrideWithValue(
+        userRecipeRepo ?? FakeUserRecipeRepository(),
+      ),
       recommendationRepositoryProvider.overrideWithValue(
         FakeRecommendationRepository(),
       ),

@@ -1,7 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
-import '../../../../config/app_theme.dart';
-import '../../../../models/ingredient_search_result.dart';
-import '../../../../config/constants.dart';
+import '../../config/app_theme.dart';
+import '../../config/constants.dart';
+import '../../models/ingredient_search_result.dart';
 
 class IngredientSearch extends StatefulWidget {
   final List<String> ingredients;
@@ -26,9 +28,12 @@ class IngredientSearch extends StatefulWidget {
 }
 
 class _IngredientSearchState extends State<IngredientSearch> {
+  static const _searchDebounce = Duration(milliseconds: 300);
+
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
   bool _isAdding = false;
+  Timer? _searchDebounceTimer;
 
   @override
   void initState() {
@@ -42,9 +47,20 @@ class _IngredientSearchState extends State<IngredientSearch> {
 
   @override
   void dispose() {
+    _searchDebounceTimer?.cancel();
     _controller.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _onQueryChanged(String value) {
+    _searchDebounceTimer?.cancel();
+    _searchDebounceTimer = Timer(_searchDebounce, () => widget.onSearch(value));
+  }
+
+  void _flushSearch(String value) {
+    _searchDebounceTimer?.cancel();
+    widget.onSearch(value);
   }
 
   void _submitIngredient() {
@@ -52,12 +68,16 @@ class _IngredientSearchState extends State<IngredientSearch> {
     if (value.isEmpty) return;
     widget.onAdd(value);
     _controller.clear();
-    widget.onSearch('');
+    _flushSearch('');
     setState(() => _isAdding = false);
   }
 
   void _scrollToField() {
-    if (!mounted) return;
+    // Bail if no longer in adding mode — the TextField has unmounted and
+    // _focusNode.context now points at a deactivated element. This can
+    // happen when the user submits the field and Flutter fires the
+    // delayed scroll callback after _isAdding flips back to false.
+    if (!mounted || !_isAdding) return;
     final ctx = _focusNode.context;
     if (ctx != null) {
       Scrollable.ensureVisible(
@@ -70,7 +90,6 @@ class _IngredientSearchState extends State<IngredientSearch> {
 
   @override
   Widget build(BuildContext context) {
-    // Filter out already-added ingredients
     final filteredSuggestions = widget.suggestions
         .where((s) => !widget.ingredients.contains(s.name))
         .toList();
@@ -84,7 +103,6 @@ class _IngredientSearchState extends State<IngredientSearch> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title row: "Zutaten" + hinzufügen button or inline search field
           Row(
             children: [
               const Text(
@@ -94,7 +112,7 @@ class _IngredientSearchState extends State<IngredientSearch> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: AppConstants.spacing12),
               if (_isAdding)
                 Expanded(
                   child: TextField(
@@ -105,23 +123,26 @@ class _IngredientSearchState extends State<IngredientSearch> {
                       hintText: 'Mind. 3 Zeichen...',
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
+                        horizontal: AppConstants.spacing12,
+                        vertical: AppConstants.spacingSm,
                       ),
                       suffixIcon: GestureDetector(
                         onTap: () {
                           _controller.clear();
-                          widget.onSearch('');
+                          _flushSearch('');
                           setState(() => _isAdding = false);
                         },
-                        child: const Icon(Icons.close, size: 18),
+                        child: const Icon(
+                          Icons.close,
+                          size: AppConstants.iconSizeSm,
+                        ),
                       ),
                       suffixIconConstraints: const BoxConstraints(
                         minWidth: 32,
                         minHeight: 32,
                       ),
                     ),
-                    onChanged: widget.onSearch,
+                    onChanged: _onQueryChanged,
                     onSubmitted: (_) => _submitIngredient(),
                   ),
                 )
@@ -149,7 +170,7 @@ class _IngredientSearchState extends State<IngredientSearch> {
           ),
           if (_isAdding && filteredSuggestions.isNotEmpty) ...[
             Container(
-              margin: const EdgeInsets.only(top: 4),
+              margin: const EdgeInsets.only(top: AppConstants.spacingXs),
               decoration: BoxDecoration(
                 color: AppTheme.card,
                 borderRadius: BorderRadius.circular(AppConstants.radiusMd),
@@ -163,14 +184,14 @@ class _IngredientSearchState extends State<IngredientSearch> {
                     onTap: () {
                       widget.onAdd(s.name);
                       _controller.clear();
-                      widget.onSearch('');
+                      _flushSearch('');
                       setState(() => _isAdding = false);
                     },
                     trailing: s.isOwn
                         ? IconButton(
                             icon: const Icon(
                               Icons.delete_outline,
-                              size: 20,
+                              size: AppConstants.iconSizeClose,
                               color: AppTheme.mutedForeground,
                             ),
                             onPressed: () => widget.onDeleteIngredient(s.id),
@@ -184,8 +205,8 @@ class _IngredientSearchState extends State<IngredientSearch> {
           if (widget.ingredients.isNotEmpty) ...[
             AppConstants.gap8,
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: AppConstants.spacingSm,
+              runSpacing: AppConstants.spacingSm,
               children: widget.ingredients.map((ingredient) {
                 return Chip(
                   label: Text(ingredient),

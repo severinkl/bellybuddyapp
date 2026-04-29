@@ -11,7 +11,6 @@ import 'package:belly_buddy/providers/meal_tracker_provider.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/repositories/meal_media_repository.dart';
-import 'package:belly_buddy/models/ingredient_search_result.dart';
 
 import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
@@ -109,53 +108,8 @@ void main() {
     });
   });
 
-  group('MealTrackerNotifier.searchIngredients', () {
-    test('returns empty list when query is less than 3 characters', () async {
-      final container = makeContainer();
-      await container
-          .read(mealTrackerProvider.notifier)
-          .searchIngredients('ab');
-
-      expect(
-        container.read(mealTrackerProvider).ingredientSuggestions,
-        isEmpty,
-      );
-      verifyNever(
-        () => mockIngredientRepo.search(any(), userId: any(named: 'userId')),
-      );
-    });
-
-    test('calls repo.search for query of 3+ characters', () async {
-      when(
-        () => mockIngredientRepo.search(any(), userId: any(named: 'userId')),
-      ).thenAnswer(
-        (_) async => [
-          const IngredientSearchResult(
-            id: 'i-1',
-            name: 'Zwiebel',
-            isOwn: false,
-          ),
-        ],
-      );
-
-      final container = makeContainer();
-      await container
-          .read(mealTrackerProvider.notifier)
-          .searchIngredients('Zwi');
-
-      final state = container.read(mealTrackerProvider);
-      expect(state.ingredientSuggestions, hasLength(1));
-      expect(state.ingredientSuggestions.first.name, equals('Zwiebel'));
-    });
-  });
-
   group('MealTrackerNotifier.addIngredient', () {
-    test('adds ingredient to list', () {
-      when(
-        () =>
-            mockIngredientRepo.insertIfNew(any(), userId: any(named: 'userId')),
-      ).thenAnswer((_) async {});
-
+    test('adds ingredient to state.ingredients', () {
       final container = makeContainer();
       container.read(mealTrackerProvider.notifier).addIngredient('Tomate');
 
@@ -166,11 +120,6 @@ void main() {
     });
 
     test('skips duplicate ingredients', () {
-      when(
-        () =>
-            mockIngredientRepo.insertIfNew(any(), userId: any(named: 'userId')),
-      ).thenAnswer((_) async {});
-
       final container = makeContainer();
       final notifier = container.read(mealTrackerProvider.notifier);
       notifier.addIngredient('Tomate');
@@ -183,6 +132,20 @@ void main() {
             .where((i) => i == 'Tomate'),
         hasLength(1),
       );
+    });
+
+    test('delegates DB write to the shared autocomplete provider', () {
+      when(
+        () =>
+            mockIngredientRepo.insertIfNew(any(), userId: any(named: 'userId')),
+      ).thenAnswer((_) async {});
+
+      final container = makeContainer();
+      container.read(mealTrackerProvider.notifier).addIngredient('Tomate');
+
+      verify(
+        () => mockIngredientRepo.insertIfNew('Tomate', userId: testUserId),
+      ).called(1);
     });
   });
 

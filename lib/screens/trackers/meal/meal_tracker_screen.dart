@@ -4,18 +4,27 @@ import 'package:go_router/go_router.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/meal_entry.dart';
+import '../../../models/user_recipe.dart';
 import '../../../providers/entries_provider.dart';
+import '../../../providers/ingredient_autocomplete_provider.dart';
 import '../../../providers/meal_tracker_provider.dart';
+import '../../../providers/user_recipes_provider.dart';
 import '../../../router/navigation_extensions.dart';
 import '../../../router/route_names.dart';
+import '../../../services/user_recipe_service.dart';
 import '../../../utils/date_format_utils.dart';
+import '../../../utils/logger.dart';
 import '../../../utils/save_helper.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/date_time_chips.dart';
+import '../../../widgets/common/editable_app_bar_title.dart';
 import '../../../widgets/common/tracker_screen_scaffold.dart';
-import 'widgets/ingredient_search.dart';
+import '../../../widgets/common/ingredient_search.dart';
 import 'widgets/meal_image_section.dart';
 import 'widgets/meal_title_sheet.dart';
+import 'widgets/recipe_selector_sheet.dart';
+
+const _log = AppLogger('MealTrackerScreen');
 
 class MealTrackerScreen extends ConsumerStatefulWidget {
   const MealTrackerScreen({
@@ -23,6 +32,7 @@ class MealTrackerScreen extends ConsumerStatefulWidget {
     this.mealId,
     this.initial,
     this.initialDate,
+    this.initialRecipe,
   });
 
   /// When non-null, the screen renders in edit mode for the meal with this ID.
@@ -40,6 +50,11 @@ class MealTrackerScreen extends ConsumerStatefulWidget {
   /// mode (the meal's stored trackedAt wins).
   final DateTime? initialDate;
 
+  /// When non-null and in create mode, pre-fills the tracker with this
+  /// recipe's title, ingredients, and imageUrl. Passed by RecipeDetailScreen
+  /// via GoRouter extra. Ignored in edit mode.
+  final UserRecipe? initialRecipe;
+
   static const drinkTrackerButtonKey = Key('drink_tracker_button');
   static const mealTrackerTitleKey = Key('meal_tracker_title');
   static const mealEditSaveKey = Key('meal_tracker_save_button');
@@ -49,9 +64,9 @@ class MealTrackerScreen extends ConsumerStatefulWidget {
 }
 
 class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
-  final _titleController = TextEditingController(text: kDefaultMealTitle);
-  bool _isEditingTitle = false;
   bool _mealNotFound = false;
+  bool _savedAsRecipe = false;
+  bool _savingAsRecipe = false;
 
   @override
   void initState() {
@@ -68,11 +83,15 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     // ("Neue Mahlzeit" + empty ingredients) before the seeded data paints.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      ref.read(userRecipesProvider.notifier).fetch();
       final notifier = ref.read(mealTrackerProvider.notifier);
       if (widget.mealId == null) {
         notifier.reset();
         if (widget.initialDate != null) {
           notifier.setTrackedAt(buildTrackedAt(widget.initialDate));
+        }
+        if (widget.initialRecipe != null) {
+          notifier.prefillFromRecipe(widget.initialRecipe!);
         }
         return;
       }
@@ -85,7 +104,6 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         return;
       }
       notifier.seed(meal);
-      _titleController.text = meal.title;
     });
   }
 
@@ -96,19 +114,15 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     return entries.meals.where((m) => m.id == id).firstOrNull;
   }
 
-  @override
-  void dispose() {
-    _titleController.dispose();
-    super.dispose();
-  }
-
   Future<void> _save() async {
+    await flushFocusBeforeSave();
+    if (!mounted) return;
     final notifier = ref.read(mealTrackerProvider.notifier);
-    notifier.setTitle(_titleController.text);
+    final state = ref.read(mealTrackerProvider);
 
     // Edit mode with no changes → silent pop. Avoids a pointless network
     // round-trip and keeps the UX honest.
-    if (widget.mealId != null && !ref.read(mealTrackerProvider).isDirty) {
+    if (widget.mealId != null && !state.isDirty) {
       if (mounted) context.popOrGoDashboard();
       return;
     }
@@ -116,14 +130,13 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     // If the user never named the meal, interrupt save with a prompt so the
     // entry is identifiable in the diary. Dismissing the sheet cancels save
     // entirely; "Ohne Namen speichern" proceeds with the default title.
-    if (_titleController.text.trim() == kDefaultMealTitle) {
+    if (state.title.trim() == kDefaultMealTitle) {
       final outcome = await showMealTitleSheet(context);
       if (!mounted) return;
       switch (outcome) {
         case null:
           return; // dismissed — abort save
         case MealTitleEntered(title: final t):
-          _titleController.text = t;
           notifier.setTitle(t);
         case MealTitleSkipped():
           // fall through with the default title already in state
@@ -183,68 +196,123 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         }
       },
       child: TrackerScreenScaffold(
-        titleWidget: GestureDetector(
-          onTap: () => setState(() => _isEditingTitle = true),
-          child: _isEditingTitle
-              ? TextField(
-                  controller: _titleController,
-                  autofocus: true,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    fontSize: AppTheme.fontSizeTitle,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  decoration: const InputDecoration(
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                  onSubmitted: (_) => setState(() => _isEditingTitle = false),
-                )
-              : Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        key: MealTrackerScreen.mealTrackerTitleKey,
-                        _titleController.text,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: AppTheme.fontSizeTitle,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppConstants.spacingXs),
-                    const Icon(Icons.edit, size: 16),
-                  ],
-                ),
+        titleWidget: EditableAppBarTitle(
+          key: MealTrackerScreen.mealTrackerTitleKey,
+          initialTitle: state.title == kDefaultMealTitle ? '' : state.title,
+          placeholder: kDefaultMealTitle,
+          onChanged: (v) {
+            final notifier = ref.read(mealTrackerProvider.notifier);
+            notifier.setTitle(v.isEmpty ? kDefaultMealTitle : v);
+          },
         ),
         showSuccess: state.showSuccess,
         successMessage: 'Mahlzeit gespeichert!',
         successMascotAsset: AppConstants.mascotCool,
-        successAction: GestureDetector(
-          onTap: () => context.push(RoutePaths.drinkTracker),
-          child: const Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                Icons.water_drop,
-                size: AppConstants.iconSizeSm,
-                color: AppTheme.info,
-              ),
-              SizedBox(width: AppConstants.spacingSm),
-              Text(
-                'Getränk hinzufügen',
-                style: TextStyle(color: AppTheme.info),
-              ),
-            ],
+        successActions: [
+          GestureDetector(
+            onTap: () => context.push(RoutePaths.drinkTracker),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.water_drop,
+                  size: AppConstants.iconSizeSm,
+                  color: AppTheme.info,
+                ),
+                SizedBox(width: AppConstants.spacingSm),
+                Text(
+                  'Getränk hinzufügen',
+                  style: TextStyle(color: AppTheme.info),
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
+        successBottomCallout: state.showSuccess
+            ? _buildSaveAsRecipeBottom(state)
+            : null,
+        onSuccessDismissed: widget.initialRecipe != null
+            ? () => context.go(RoutePaths.dashboard)
+            : null,
         body: _buildBody(state),
       ),
     );
+  }
+
+  /// Watches userRecipesProvider so the UI rebuilds if the recipe list
+  /// arrives after first paint, then delegates to [hasMatchingUserRecipe].
+  bool _hasMatchingRecipe(String title) =>
+      hasMatchingUserRecipe(title, ref.watch(userRecipesProvider).value);
+
+  Widget _buildSaveAsRecipeBottom(MealTrackerState state) {
+    final saved = _savedAsRecipe || _hasMatchingRecipe(state.title);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppConstants.spacingLg),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (!saved) ...[
+            const Text(
+              'Speicher diese Mahlzeit als Rezept, um sie später schneller wieder einzutragen.',
+              style: TextStyle(
+                fontSize: AppTheme.fontSizeCaption,
+                color: AppTheme.mutedForeground,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 2,
+            ),
+            AppConstants.gap8,
+          ],
+          BbButton(
+            label: saved ? 'Als Rezept gespeichert' : 'Als Rezept speichern',
+            icon: saved ? Icons.check : Icons.bookmark_add_outlined,
+            isLoading: _savingAsRecipe,
+            onPressed: saved ? null : () => _saveAsRecipe(state),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _saveAsRecipe(MealTrackerState state) async {
+    if (_savedAsRecipe || _savingAsRecipe) return;
+    setState(() => _savingAsRecipe = true);
+    try {
+      await ref
+          .read(userRecipesProvider.notifier)
+          .create(
+            title: state.title,
+            ingredients: state.ingredients,
+            imageUrl: state.savedImageUrl,
+          );
+      if (!mounted) return;
+      setState(() {
+        _savedAsRecipe = true;
+        _savingAsRecipe = false;
+      });
+    } on DuplicateRecipeTitleException {
+      if (!mounted) return;
+      // Pre-detection in _hasMatchingRecipe usually disables the button
+      // before the user gets here — this branch handles the race where
+      // a duplicate is created from another device or session.
+      setState(() {
+        _savedAsRecipe = true;
+        _savingAsRecipe = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Du hast bereits ein Rezept mit diesem Titel.'),
+        ),
+      );
+    } catch (e, st) {
+      _log.error('save as recipe failed', e, st);
+      if (!mounted) return;
+      setState(() => _savingAsRecipe = false);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Fehler beim Speichern')));
+    }
   }
 
   Future<bool?> _confirmDiscard(BuildContext context) {
@@ -272,52 +340,70 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     final notifier = ref.read(mealTrackerProvider.notifier);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.spacingLg,
+        vertical: AppConstants.spacingMd,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 1. Date/Time chips
           DateTimeChips(
             value: state.trackedAt,
             onChanged: notifier.setTrackedAt,
           ),
           AppConstants.gap16,
-
-          // 2. Image capture
-          MealImageSection(
-            imageBytes: state.imageBytes,
-            isAnalyzing: state.isAnalyzing,
-            onImagePicked: (bytes, name) async {
-              notifier.setImage(bytes, name);
-              try {
-                await notifier.analyzeImage(bytes, name);
-                if (mounted) {
-                  final s = ref.read(mealTrackerProvider);
-                  _titleController.text = s.title;
-                }
-              } catch (_) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Fehler bei der Analyse.')),
-                  );
-                }
-              }
-            },
-            onClearImage: () {
-              notifier.clearImage();
-              _titleController.text = kDefaultMealTitle;
+          Consumer(
+            builder: (_, ref, _) {
+              // Scoped Consumer so userRecipesProvider's load → data
+              // transition only rebuilds the image section, not the whole
+              // screen. Previously the AppBar button had the same isolation
+              // via its own Consumer.
+              final hasRecipes =
+                  ref.watch(userRecipesProvider).value?.isNotEmpty ?? false;
+              return MealImageSection(
+                imageBytes: state.imageBytes,
+                initialImageUrl: state.imageUrl,
+                isAnalyzing: state.isAnalyzing,
+                onImagePicked: (bytes, name) async {
+                  notifier.setImage(bytes, name);
+                  try {
+                    await notifier.analyzeImage(bytes, name);
+                  } catch (_) {
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Fehler bei der Analyse.'),
+                        ),
+                      );
+                    }
+                  }
+                },
+                onClearImage: () {
+                  notifier.clearImage();
+                  notifier.setTitle(kDefaultMealTitle);
+                },
+                onPickRecipe: hasRecipes ? _openRecipeSelector : null,
+              );
             },
           ),
           AppConstants.gap16,
-
-          // 3. Ingredients
-          IngredientSearch(
-            ingredients: state.ingredients,
-            suggestions: state.ingredientSuggestions,
-            onSearch: notifier.searchIngredients,
-            onAdd: notifier.addIngredient,
-            onRemove: notifier.removeIngredient,
-            onDeleteIngredient: (id) => notifier.deleteUserIngredient(id),
+          Consumer(
+            builder: (context, ref, _) {
+              final ingredients = ref.watch(mealTrackerProvider).ingredients;
+              final autocomplete = ref.watch(ingredientAutocompleteProvider);
+              final autocompleteNotifier = ref.read(
+                ingredientAutocompleteProvider.notifier,
+              );
+              final trackerNotifier = ref.read(mealTrackerProvider.notifier);
+              return IngredientSearch(
+                ingredients: ingredients,
+                suggestions: autocomplete.suggestions,
+                onSearch: autocompleteNotifier.searchIngredients,
+                onAdd: trackerNotifier.addIngredient,
+                onRemove: trackerNotifier.removeIngredient,
+                onDeleteIngredient: autocompleteNotifier.deleteUserIngredient,
+              );
+            },
           ),
           AppConstants.gap16,
           // "Getränk tracken" button
@@ -344,4 +430,21 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
       ),
     );
   }
+
+  Future<void> _openRecipeSelector() async {
+    final recipe = await showRecipeSelectorSheet(context);
+    if (recipe == null || !mounted) return;
+    ref.read(mealTrackerProvider.notifier).prefillFromRecipe(recipe);
+  }
+}
+
+/// True iff [recipes] contains a recipe whose title matches [title] after
+/// trimming + lowercasing. Returns false for empty/whitespace titles or
+/// when [recipes] is still loading (null). Pure helper for unit testing —
+/// the screen's `_hasMatchingRecipe` watches the provider then delegates here.
+bool hasMatchingUserRecipe(String title, List<UserRecipe>? recipes) {
+  final normalized = title.trim().toLowerCase();
+  if (normalized.isEmpty) return false;
+  if (recipes == null) return false;
+  return recipes.any((r) => r.title.trim().toLowerCase() == normalized);
 }

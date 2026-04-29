@@ -98,8 +98,10 @@ final List<TutorialStep> dashboardTutorialSteps = [
     targetRadius: AppConstants.radiusLg,
     preferredAnchor: TooltipAnchor.above,
     richText: [
+      _t('Hier findest du '),
+      _b('deine gespeicherten Rezepte'),
       _t(
-        'Auf deine Bedürfnisse angepasste Rezepte findest du (sehr bald) hier.',
+        '. Speicher Mahlzeiten als Rezept, um sie später schneller wieder einzutragen.',
       ),
     ],
   ),

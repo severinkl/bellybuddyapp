@@ -1,12 +1,14 @@
 import 'dart:async';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:belly_buddy/models/drink.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/models/user_profile.dart';
+import 'package:belly_buddy/models/user_recipe.dart';
 import 'package:belly_buddy/repositories/auth_repository.dart';
 import 'package:belly_buddy/repositories/drink_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
@@ -16,6 +18,7 @@ import 'package:belly_buddy/repositories/notification_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/repositories/recipe_repository.dart';
 import 'package:belly_buddy/repositories/recommendation_repository.dart';
+import 'package:belly_buddy/repositories/user_recipe_repository.dart';
 import 'package:belly_buddy/services/entry_query_service.dart';
 import 'package:belly_buddy/services/ingredient_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -23,8 +26,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'fixtures.dart';
 
 // -- FakeAuthRepository --
-import 'package:flutter/foundation.dart';
-
 class FakeAuthRepository implements AuthRepository {
   FakeAuthRepository({
     this.signedIn = true,
@@ -233,6 +234,12 @@ class FakeEntryRepository implements EntryRepository {
   void seedResult(EntryQueryResult result) => _result = result;
 
   @override
+  Future<List<MealEntry>> fetchRecentMeals({
+    required String userId,
+    int? limit,
+  }) async => _result.meals;
+
+  @override
   Future<EntryQueryResult> fetchForDate({
     required String userId,
     required DateTime date,
@@ -336,6 +343,74 @@ class FakeRecipeRepository implements RecipeRepository {
       _favorites = _favorites.where((id) => id != recipeId).toSet();
 }
 
+// -- FakeUserRecipeRepository --
+class FakeUserRecipeRepository implements UserRecipeRepository {
+  FakeUserRecipeRepository({List<UserRecipe>? seed}) : _recipes = [...?seed];
+
+  final List<UserRecipe> _recipes;
+
+  void seedRecipes(List<UserRecipe> recipes) {
+    _recipes
+      ..clear()
+      ..addAll(recipes);
+  }
+
+  @override
+  Future<List<UserRecipe>> fetchForUser(String userId) async =>
+      List.unmodifiable(_recipes);
+
+  @override
+  Future<List<UserRecipe>> searchForUser(String userId, String query) async {
+    final q = query.toLowerCase();
+    return _recipes
+        .where((r) => r.title.toLowerCase().contains(q))
+        .toList(growable: false);
+  }
+
+  @override
+  Future<UserRecipe> create({
+    required String userId,
+    required String title,
+    required List<String> ingredients,
+    String? imageUrl,
+  }) async {
+    final created = testUserRecipe(
+      id: 'rec-${_recipes.length + 1}',
+      userId: userId,
+      title: title,
+      ingredients: ingredients,
+      imageUrl: imageUrl,
+    );
+    _recipes.add(created);
+    return created;
+  }
+
+  @override
+  Future<UserRecipe> update({
+    required String id,
+    required String title,
+    required List<String> ingredients,
+    String? imageUrl,
+  }) async {
+    final i = _recipes.indexWhere((r) => r.id == id);
+    if (i < 0) throw StateError('UserRecipe $id not found');
+    final next = testUserRecipe(
+      id: id,
+      userId: _recipes[i].userId,
+      title: title,
+      ingredients: ingredients,
+      imageUrl: imageUrl,
+    );
+    _recipes[i] = next;
+    return next;
+  }
+
+  @override
+  Future<void> delete(String id) async {
+    _recipes.removeWhere((r) => r.id == id);
+  }
+}
+
 // -- FakeRecommendationRepository --
 class FakeRecommendationRepository implements RecommendationRepository {
   @override
@@ -381,6 +456,25 @@ class FakeMealMediaRepository implements MealMediaRepository {
   @override
   Future<String?> resolveSignedUrl(String? urlOrPath) async => urlOrPath;
 }
+
+// -- testUserRecipe factory --
+
+UserRecipe testUserRecipe({
+  String id = 'rec-1',
+  String userId = 'user-1',
+  String title = 'Curry mit Reis',
+  List<String> ingredients = const ['Reis', 'Curry'],
+  String? imageUrl,
+  DateTime? createdAt,
+}) => UserRecipe(
+  id: id,
+  userId: userId,
+  title: title,
+  ingredients: ingredients,
+  imageUrl: imageUrl,
+  createdAt: createdAt ?? DateTime.utc(2026, 4, 24),
+  updatedAt: createdAt ?? DateTime.utc(2026, 4, 24),
+);
 
 // -- FakeNotificationRepository --
 class FakeNotificationRepository implements NotificationRepository {
