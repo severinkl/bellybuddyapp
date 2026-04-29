@@ -3,7 +3,6 @@ import 'package:flutter_svg/flutter_svg.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../providers/diary_provider.dart';
-import '../../../services/haptic_service.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/gut_feeling_rating.dart';
 import '../../../widgets/common/bb_card.dart';
@@ -20,14 +19,8 @@ String mascotForRating(GutFeelingRatingLevel level) => switch (level) {
 class DiaryEntryCard extends StatelessWidget {
   final DiaryEntry entry;
   final VoidCallback onTap;
-  final VoidCallback onDismissed;
 
-  const DiaryEntryCard({
-    super.key,
-    required this.entry,
-    required this.onTap,
-    required this.onDismissed,
-  });
+  const DiaryEntryCard({super.key, required this.entry, required this.onTap});
 
   Color get _color => switch (entry.type) {
     DiaryEntryType.meal => AppTheme.primary,
@@ -88,84 +81,45 @@ class DiaryEntryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
-      child: Dismissible(
-        key: Key(entry.id),
-        direction: DismissDirection.endToStart,
-        confirmDismiss: (_) async {
-          HapticService.medium();
-          return await showDialog<bool>(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Eintrag löschen?'),
-              content: const Text(
-                'Möchtest du diesen Eintrag wirklich löschen?',
+      child: GestureDetector(
+        onTap: onTap,
+        child: BbCard(
+          child: Row(
+            children: [
+              _leadingWidget,
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      entry.title,
+                      style: const TextStyle(
+                        fontSize: AppTheme.fontSizeBodyLG,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.foreground,
+                      ),
+                    ),
+                    Text(
+                      entry.subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: AppTheme.fontSizeCaptionLG,
+                        color: AppTheme.mutedForeground,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Abbrechen'),
+              Text(
+                formatTime(entry.trackedAt),
+                style: const TextStyle(
+                  fontSize: AppTheme.fontSizeCaptionLG,
+                  color: AppTheme.mutedForeground,
                 ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  style: TextButton.styleFrom(
-                    foregroundColor: AppTheme.destructive,
-                  ),
-                  child: const Text('Löschen'),
-                ),
-              ],
-            ),
-          );
-        },
-        onDismissed: (_) => onDismissed(),
-        background: Container(
-          alignment: Alignment.centerRight,
-          padding: const EdgeInsets.only(right: 20),
-          decoration: BoxDecoration(
-            color: AppTheme.destructive,
-            borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-          ),
-          child: const Icon(Icons.delete, color: Colors.white),
-        ),
-        child: GestureDetector(
-          onTap: onTap,
-          child: BbCard(
-            child: Row(
-              children: [
-                _leadingWidget,
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        entry.title,
-                        style: const TextStyle(
-                          fontSize: AppTheme.fontSizeBodyLG,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.foreground,
-                        ),
-                      ),
-                      Text(
-                        entry.subtitle,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          fontSize: AppTheme.fontSizeCaptionLG,
-                          color: AppTheme.mutedForeground,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Text(
-                  formatTime(entry.trackedAt),
-                  style: const TextStyle(
-                    fontSize: AppTheme.fontSizeCaptionLG,
-                    color: AppTheme.mutedForeground,
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
