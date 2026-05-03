@@ -170,7 +170,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final extra = state.extra;
           return DrinkTrackerScreen(
-            initialDate: extra is DateTime ? extra : null,
+            initialTrackedAt: extra is DateTime ? extra : null,
           );
         },
       ),

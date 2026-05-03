@@ -64,20 +64,45 @@ void main() {
       expect(find.text('Wasser'), findsOneWidget);
     });
 
-    testWidgets('initialDate seeds trackedAt verbatim', (tester) async {
+    testWidgets('initialTrackedAt seeds trackedAt verbatim', (tester) async {
       final initial = DateTime(2026, 5, 1, 12, 30);
       final container = ProviderContainer.test(overrides: _overrides());
       addTearDown(container.dispose);
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp(home: DrinkTrackerScreen(initialDate: initial)),
+          child: MaterialApp(
+            home: DrinkTrackerScreen(initialTrackedAt: initial),
+          ),
         ),
       );
       await tester.pump(const Duration(milliseconds: 200));
 
       final state = container.read(drinkTrackerProvider);
       expect(state.trackedAt, equals(initial));
+    });
+
+    testWidgets('without initialTrackedAt, trackedAt is "now" after reset', (
+      tester,
+    ) async {
+      final before = DateTime.now();
+      final container = ProviderContainer.test(overrides: _overrides());
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(home: DrinkTrackerScreen()),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+      final after = DateTime.now();
+
+      final trackedAt = container.read(drinkTrackerProvider).trackedAt;
+      expect(
+        !trackedAt.isBefore(before) && !trackedAt.isAfter(after),
+        isTrue,
+        reason: 'no seed → reset() default ("now") must stand',
+      );
     });
 
     testWidgets(
