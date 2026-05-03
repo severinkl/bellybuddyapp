@@ -167,7 +167,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: RoutePaths.drinkTracker,
         name: RouteNames.drinkTracker,
-        builder: (context, state) => const DrinkTrackerScreen(),
+        builder: (context, state) {
+          final extra = state.extra;
+          return DrinkTrackerScreen(
+            initialTrackedAt: extra is DateTime ? extra : null,
+          );
+        },
       ),
 
       // Settings routes
