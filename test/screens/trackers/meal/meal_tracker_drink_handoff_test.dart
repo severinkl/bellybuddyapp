@@ -101,7 +101,7 @@ void main() {
       (tester) async {
         final container = await _pumpMealTracker(tester);
 
-        final fixed = DateTime(2026, 5, 1, 12, 30);
+        final fixed = DateTime(2025, 11, 17, 8, 5);
         final notifier = container.read(mealTrackerProvider.notifier);
         notifier.setTrackedAt(fixed);
         // Force the success card visible without doing a real save.
