@@ -410,10 +410,8 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
           // "Getränk tracken" button
           OutlinedButton.icon(
             key: MealTrackerScreen.drinkTrackerButtonKey,
-            onPressed: () => context.push(
-              RoutePaths.drinkTracker,
-              extra: ref.read(mealTrackerProvider).trackedAt,
-            ),
+            onPressed: () =>
+                context.push(RoutePaths.drinkTracker, extra: state.trackedAt),
             icon: const Icon(Icons.water_drop_outlined),
             label: const Text('Getränk tracken'),
             style: OutlinedButton.styleFrom(

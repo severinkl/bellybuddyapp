@@ -64,11 +64,8 @@ void main() {
       expect(find.text('Wasser'), findsOneWidget);
     });
 
-    testWidgets('initialDate seeds the drink-tracker trackedAt verbatim '
-        '(no buildTrackedAt — full timestamp through)', (tester) async {
+    testWidgets('initialDate seeds trackedAt verbatim', (tester) async {
       final initial = DateTime(2026, 5, 1, 12, 30);
-      // Use UncontrolledProviderScope so we can read provider state after
-      // the post-frame callback fires.
       final container = ProviderContainer.test(overrides: _overrides());
       addTearDown(container.dispose);
       await tester.pumpWidget(
@@ -77,7 +74,6 @@ void main() {
           child: MaterialApp(home: DrinkTrackerScreen(initialDate: initial)),
         ),
       );
-      // Drain the post-frame callback that calls notifier.setTrackedAt.
       await tester.pump(const Duration(milliseconds: 200));
 
       final state = container.read(drinkTrackerProvider);

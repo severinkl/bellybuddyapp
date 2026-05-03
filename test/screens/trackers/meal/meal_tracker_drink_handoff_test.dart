@@ -16,9 +16,6 @@ import 'package:belly_buddy/screens/trackers/meal/meal_tracker_screen.dart';
 
 import '../../../helpers/fakes.dart';
 
-/// Builds a 2-route GoRouter: the meal tracker plus a sentinel
-/// `/drink-tracker` route that reads `state.extra as DateTime?` and renders
-/// it as text. Tests assert on the rendered ISO string.
 GoRouter _buildRouter() {
   return GoRouter(
     initialLocation: '/meal-tracker',
@@ -76,13 +73,10 @@ void main() {
       (tester) async {
         final container = await _pumpMealTracker(tester);
 
-        // Drive the meal-tracker provider to a known timestamp so we can
-        // assert the exact value flows through.
         final fixed = DateTime(2026, 5, 1, 12, 30);
         container.read(mealTrackerProvider.notifier).setTrackedAt(fixed);
         await tester.pumpAndSettle();
 
-        // Scroll the form button into view (it sits below ingredients).
         await tester.ensureVisible(
           find.byKey(MealTrackerScreen.drinkTrackerButtonKey),
         );
@@ -104,7 +98,6 @@ void main() {
         final fixed = DateTime(2025, 11, 17, 8, 5);
         final notifier = container.read(mealTrackerProvider.notifier);
         notifier.setTrackedAt(fixed);
-        // Force the success card visible without doing a real save.
         notifier.markShowSuccess();
         await tester.pumpAndSettle();
 

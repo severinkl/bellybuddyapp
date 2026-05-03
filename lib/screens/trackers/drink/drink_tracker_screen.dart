@@ -15,9 +15,7 @@ import 'widgets/quick_drink_grid.dart';
 class DrinkTrackerScreen extends ConsumerStatefulWidget {
   const DrinkTrackerScreen({super.key, this.initialDate});
 
-  /// When non-null, pre-fills the tracker's `trackedAt` to this exact
-  /// timestamp (date + time, verbatim). Passed by callers like the meal
-  /// tracker so the user's chosen meal time carries through to the drink.
+  /// Pre-fills `trackedAt` if non-null (full timestamp, not just the date).
   final DateTime? initialDate;
 
   static const trackerKey = Key('drink_tracker_screen');
