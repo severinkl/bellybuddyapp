@@ -210,7 +210,8 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         successMascotAsset: AppConstants.mascotCool,
         successActions: [
           GestureDetector(
-            onTap: () => context.push(RoutePaths.drinkTracker),
+            onTap: () =>
+                context.push(RoutePaths.drinkTracker, extra: state.trackedAt),
             child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -409,7 +410,10 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
           // "Getränk tracken" button
           OutlinedButton.icon(
             key: MealTrackerScreen.drinkTrackerButtonKey,
-            onPressed: () => context.push(RoutePaths.drinkTracker),
+            onPressed: () => context.push(
+              RoutePaths.drinkTracker,
+              extra: ref.read(mealTrackerProvider).trackedAt,
+            ),
             icon: const Icon(Icons.water_drop_outlined),
             label: const Text('Getränk tracken'),
             style: OutlinedButton.styleFrom(
