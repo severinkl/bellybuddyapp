@@ -13,7 +13,9 @@ import 'widgets/drink_size_selector.dart';
 import 'widgets/quick_drink_grid.dart';
 
 class DrinkTrackerScreen extends ConsumerStatefulWidget {
-  const DrinkTrackerScreen({super.key});
+  const DrinkTrackerScreen({super.key, this.initialTrackedAt});
+
+  final DateTime? initialTrackedAt;
 
   static const trackerKey = Key('drink_tracker_screen');
 
@@ -31,6 +33,9 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       notifier.reset();
+      if (widget.initialTrackedAt != null) {
+        notifier.setTrackedAt(widget.initialTrackedAt!);
+      }
       notifier.loadDrinks();
       notifier.loadTodayTotal();
     });

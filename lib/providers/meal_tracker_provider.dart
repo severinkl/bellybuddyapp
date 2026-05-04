@@ -144,6 +144,9 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
   void setNotes(String? notes) => state = state.copyWith(notes: notes);
   void setTrackedAt(DateTime dt) => state = state.copyWith(trackedAt: dt);
 
+  @visibleForTesting
+  void markShowSuccess() => state = state.copyWith(showSuccess: true);
+
   void setImage(Uint8List bytes, String fileName) {
     // Clear the remote URL so UI reading state.imageUrl doesn't render the
     // stale seed image under the new local preview. save() re-derives the

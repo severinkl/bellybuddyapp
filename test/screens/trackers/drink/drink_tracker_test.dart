@@ -1,9 +1,12 @@
 // ignore_for_file: invalid_use_of_internal_member
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:belly_buddy/screens/trackers/drink/drink_tracker_screen.dart';
 import 'package:belly_buddy/screens/trackers/drink/widgets/drink_search.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
+import 'package:belly_buddy/providers/drink_tracker_provider.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/repositories/drink_repository.dart';
 
@@ -59,6 +62,47 @@ void main() {
 
       // FakeDrinkRepository seeds with 'Wasser' drink
       expect(find.text('Wasser'), findsOneWidget);
+    });
+
+    testWidgets('initialTrackedAt seeds trackedAt verbatim', (tester) async {
+      final initial = DateTime(2026, 5, 1, 12, 30);
+      final container = ProviderContainer.test(overrides: _overrides());
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            home: DrinkTrackerScreen(initialTrackedAt: initial),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+
+      final state = container.read(drinkTrackerProvider);
+      expect(state.trackedAt, equals(initial));
+    });
+
+    testWidgets('without initialTrackedAt, trackedAt is "now" after reset', (
+      tester,
+    ) async {
+      final before = DateTime.now();
+      final container = ProviderContainer.test(overrides: _overrides());
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(home: DrinkTrackerScreen()),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+      final after = DateTime.now();
+
+      final trackedAt = container.read(drinkTrackerProvider).trackedAt;
+      expect(
+        !trackedAt.isBefore(before) && !trackedAt.isAfter(after),
+        isTrue,
+        reason: 'no seed → reset() default ("now") must stand',
+      );
     });
 
     testWidgets(
