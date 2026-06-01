@@ -82,7 +82,7 @@ class AppConstants {
 
   // External URLs
   static const String feedbackFormUrl =
-      'https://docs.google.com/forms/d/e/1FAIpQLSfHqqGW_159yd_sUacBZq5aITZwGDikag_lgd8eudHQcelNGA/viewform?usp=dialog';
+      'https://us20.list-manage.com/survey?u=526bdf1360ec4bf225504e006&id=d47032793c&attribution=false';
 
   /// Deep link Supabase opens when the user taps the password-reset email.
   /// Routed by Lovable back into the app's /reset-password flow.

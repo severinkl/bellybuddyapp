@@ -14,6 +14,7 @@ import '../../widgets/common/mascot_image.dart';
 import 'widgets/recommendation_card.dart';
 import 'widgets/recommendation_feedback_view.dart';
 import 'widgets/recommendation_summary_card.dart';
+import 'widgets/recommendations_notice_dialog.dart';
 
 class RecommendationsScreen extends ConsumerStatefulWidget {
   const RecommendationsScreen({super.key});
@@ -56,6 +57,16 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
       final notifier = ref.read(recommendationProvider.notifier);
       await notifier.fetchRecommendations();
       await notifier.markAllAsSeen();
+    });
+
+    // Show the "no new recommendations for now" notice once per app session.
+    // The flag lives in memory only, so it resets on cold start. Scheduled
+    // post-frame so the first frame (and the Navigator) is ready.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (ref.read(recommendationsNoticeSeenProvider)) return;
+      ref.read(recommendationsNoticeSeenProvider.notifier).state = true;
+      showRecommendationsNoticeDialog(context);
     });
   }
 

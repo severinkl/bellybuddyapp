@@ -31,6 +31,7 @@ List<Override> _overridesFor(List<Recommendation> recommendations) {
   return [
     recommendationRepositoryProvider.overrideWithValue(mock),
     currentUserIdProvider.overrideWithValue('test-user'),
+    recommendationsNoticeSeenProvider.overrideWith((ref) => true),
   ];
 }
 
@@ -61,6 +62,7 @@ void main() {
         overrides: [
           recommendationRepositoryProvider.overrideWithValue(mock),
           currentUserIdProvider.overrideWithValue('test-user'),
+          recommendationsNoticeSeenProvider.overrideWith((ref) => true),
         ],
       );
       await tester.pump();
@@ -84,6 +86,7 @@ void main() {
         overrides: [
           recommendationRepositoryProvider.overrideWithValue(mock),
           currentUserIdProvider.overrideWithValue('test-user'),
+          recommendationsNoticeSeenProvider.overrideWith((ref) => true),
         ],
       );
       await tester.pump(const Duration(milliseconds: 100));
@@ -269,6 +272,7 @@ void main() {
         overrides: [
           recommendationRepositoryProvider.overrideWithValue(mock),
           currentUserIdProvider.overrideWithValue('test-user'),
+          recommendationsNoticeSeenProvider.overrideWith((ref) => true),
         ],
       );
       addTearDown(container.dispose);
@@ -363,6 +367,7 @@ void main() {
           overrides: [
             recommendationRepositoryProvider.overrideWithValue(mock),
             currentUserIdProvider.overrideWithValue('test-user'),
+            recommendationsNoticeSeenProvider.overrideWith((ref) => true),
           ],
         );
         addTearDown(container.dispose);
@@ -440,6 +445,7 @@ void main() {
           overrides: [
             recommendationRepositoryProvider.overrideWithValue(mock),
             currentUserIdProvider.overrideWithValue('test-user'),
+            recommendationsNoticeSeenProvider.overrideWith((ref) => true),
           ],
         );
         addTearDown(container.dispose);
@@ -514,6 +520,7 @@ void main() {
           overrides: [
             recommendationRepositoryProvider.overrideWithValue(repo),
             currentUserIdProvider.overrideWithValue('u'),
+            recommendationsNoticeSeenProvider.overrideWith((ref) => true),
           ],
           child: MaterialApp.router(
             routerConfig: router,
@@ -569,6 +576,7 @@ void main() {
           overrides: [
             recommendationRepositoryProvider.overrideWithValue(repo),
             currentUserIdProvider.overrideWithValue('test-user'),
+            recommendationsNoticeSeenProvider.overrideWith((ref) => true),
           ],
         );
         addTearDown(container.dispose);
@@ -615,6 +623,7 @@ void main() {
         overrides: [
           recommendationRepositoryProvider.overrideWithValue(repo),
           currentUserIdProvider.overrideWithValue('u'),
+          recommendationsNoticeSeenProvider.overrideWith((ref) => true),
         ],
       );
       await tester.pumpAndSettle();
@@ -648,6 +657,7 @@ void main() {
         overrides: [
           recommendationRepositoryProvider.overrideWithValue(repo),
           currentUserIdProvider.overrideWithValue('u'),
+          recommendationsNoticeSeenProvider.overrideWith((ref) => true),
         ],
       );
       await tester.pumpAndSettle();
@@ -691,6 +701,7 @@ void main() {
         overrides: [
           recommendationRepositoryProvider.overrideWithValue(repo),
           currentUserIdProvider.overrideWithValue('u'),
+          recommendationsNoticeSeenProvider.overrideWith((ref) => true),
         ],
       );
       await tester.pumpAndSettle();
@@ -701,5 +712,53 @@ void main() {
         findsOneWidget,
       );
     });
+
+    testWidgets(
+      'shows the notice dialog on first open and flips the session flag',
+      (tester) async {
+        final mock = MockRecommendationRepository();
+        when(
+          () => mock.fetchByUserId(any()),
+        ).thenAnswer((_) async => [_rec('1')]);
+        when(() => mock.markAllAsSeen(any())).thenAnswer((_) async {});
+
+        final container = createContainer(
+          overrides: [
+            recommendationRepositoryProvider.overrideWithValue(mock),
+            currentUserIdProvider.overrideWithValue('test-user'),
+            // NOTE: notice flag NOT overridden — defaults to false so the
+            // dialog should appear.
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(home: RecommendationsScreen()),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // The notice dialog is shown on first open.
+        expect(find.text('Danke, dass du dabei bist! 💛'), findsOneWidget);
+        // And the session flag has been flipped so it won't show again.
+        expect(container.read(recommendationsNoticeSeenProvider), isTrue);
+      },
+    );
+
+    testWidgets(
+      'does not show the notice dialog when the session flag is already set',
+      (tester) async {
+        await tester.pumpWithProviders(
+          const RecommendationsScreen(),
+          overrides: _overridesFor([_rec('1')]),
+        );
+        await tester.pumpAndSettle();
+
+        // _overridesFor sets the notice flag to true → no dialog.
+        expect(find.text('Danke, dass du dabei bist! 💛'), findsNothing);
+      },
+    );
   });
 }

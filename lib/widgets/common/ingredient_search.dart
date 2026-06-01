@@ -176,29 +176,35 @@ class _IngredientSearchState extends State<IngredientSearch> {
                 borderRadius: BorderRadius.circular(AppConstants.radiusMd),
                 border: Border.all(color: AppTheme.border),
               ),
-              child: Column(
-                children: filteredSuggestions.map((s) {
-                  return ListTile(
-                    title: Text(s.name),
-                    dense: true,
-                    onTap: () {
-                      widget.onAdd(s.name);
-                      _controller.clear();
-                      _flushSearch('');
-                      setState(() => _isAdding = false);
-                    },
-                    trailing: s.isOwn
-                        ? IconButton(
-                            icon: const Icon(
-                              Icons.delete_outline,
-                              size: AppConstants.iconSizeClose,
-                              color: AppTheme.mutedForeground,
-                            ),
-                            onPressed: () => widget.onDeleteIngredient(s.id),
-                          )
-                        : null,
-                  );
-                }).toList(),
+              // Transparent Material so the suggestion ListTiles have a
+              // Material ancestor (Flutter ≥3.42 asserts otherwise); the card
+              // background still shows through.
+              child: Material(
+                type: MaterialType.transparency,
+                child: Column(
+                  children: filteredSuggestions.map((s) {
+                    return ListTile(
+                      title: Text(s.name),
+                      dense: true,
+                      onTap: () {
+                        widget.onAdd(s.name);
+                        _controller.clear();
+                        _flushSearch('');
+                        setState(() => _isAdding = false);
+                      },
+                      trailing: s.isOwn
+                          ? IconButton(
+                              icon: const Icon(
+                                Icons.delete_outline,
+                                size: AppConstants.iconSizeClose,
+                                color: AppTheme.mutedForeground,
+                              ),
+                              onPressed: () => widget.onDeleteIngredient(s.id),
+                            )
+                          : null,
+                    );
+                  }).toList(),
+                ),
               ),
             ),
           ],
