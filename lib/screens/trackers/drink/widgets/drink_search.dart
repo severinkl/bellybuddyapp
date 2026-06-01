@@ -148,51 +148,57 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
             ),
             // Clip so ListTile ripples stay inside the rounded corners.
             clipBehavior: Clip.antiAlias,
-            child: Column(
-              children: [
-                ...suggestions.map((drink) {
-                  final isOwn =
-                      currentUserId != null &&
-                      drink.addedByUserId == currentUserId;
-                  return ListTile(
-                    title: Text(
-                      drink.name,
-                      style: const TextStyle(fontSize: AppTheme.fontSizeBody),
-                    ),
-                    dense: true,
-                    onTap: () => _selectDrink(drink),
-                    trailing: isOwn
-                        ? IconButton(
-                            icon: Icon(
-                              Icons.delete_outline,
-                              size: AppConstants.iconSizeSm,
-                              color: AppTheme.destructive.withValues(
-                                alpha: 0.6,
+            // Transparent Material so the suggestion ListTiles have a Material
+            // ancestor (Flutter ≥3.42 asserts otherwise); the card background
+            // still shows through.
+            child: Material(
+              type: MaterialType.transparency,
+              child: Column(
+                children: [
+                  ...suggestions.map((drink) {
+                    final isOwn =
+                        currentUserId != null &&
+                        drink.addedByUserId == currentUserId;
+                    return ListTile(
+                      title: Text(
+                        drink.name,
+                        style: const TextStyle(fontSize: AppTheme.fontSizeBody),
+                      ),
+                      dense: true,
+                      onTap: () => _selectDrink(drink),
+                      trailing: isOwn
+                          ? IconButton(
+                              icon: Icon(
+                                Icons.delete_outline,
+                                size: AppConstants.iconSizeSm,
+                                color: AppTheme.destructive.withValues(
+                                  alpha: 0.6,
+                                ),
                               ),
-                            ),
-                            onPressed: () => _deleteDrink(drink),
-                          )
-                        : null,
-                  );
-                }),
-                if (showCreate)
-                  ListTile(
-                    dense: true,
-                    leading: const Icon(
-                      Icons.add,
-                      size: AppConstants.iconSizeSm,
-                      color: AppTheme.primary,
-                    ),
-                    title: Text(
-                      '„${_controller.text.trim()}" hinzufügen',
-                      style: const TextStyle(
-                        fontSize: AppTheme.fontSizeBody,
+                              onPressed: () => _deleteDrink(drink),
+                            )
+                          : null,
+                    );
+                  }),
+                  if (showCreate)
+                    ListTile(
+                      dense: true,
+                      leading: const Icon(
+                        Icons.add,
+                        size: AppConstants.iconSizeSm,
                         color: AppTheme.primary,
                       ),
+                      title: Text(
+                        '„${_controller.text.trim()}" hinzufügen',
+                        style: const TextStyle(
+                          fontSize: AppTheme.fontSizeBody,
+                          color: AppTheme.primary,
+                        ),
+                      ),
+                      onTap: _createDrink,
                     ),
-                    onTap: _createDrink,
-                  ),
-              ],
+                ],
+              ),
             ),
           ),
       ],

@@ -29,7 +29,10 @@ class BbCard extends StatelessWidget {
             ? Border.all(color: AppTheme.border, width: 0.5)
             : null,
       ),
-      child: child,
+      // Transparent Material so descendant ListTiles paint ink/selection on a
+      // Material ancestor instead of this bg-colored DecoratedBox. Required by
+      // Flutter ≥3.42's ListTile assertion; transparent keeps the card bg.
+      child: Material(type: MaterialType.transparency, child: child),
     );
 
     if (onTap != null) {
