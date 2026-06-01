@@ -63,8 +63,8 @@ class _RecommendationsNoticeDialog extends StatelessWidget {
             'Danke, dass du Belly Buddy nutzt! Wir werten gerade das Feedback '
             'aus der bisherigen Testphase aus. Deshalb gibt es vorerst keine '
             'neuen Empfehlungen.\n\n'
-            'Dein Feedback hilft uns sehr weiter – teile es gerne über unser '
-            'Formular.',
+            'Teile jetzt dein Feedback – das hilft uns, den Belly Buddy '
+            'weiterzuentwickeln.',
             style: TextStyle(fontSize: AppTheme.fontSizeBody),
             textAlign: TextAlign.center,
           ),
