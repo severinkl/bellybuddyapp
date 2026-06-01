@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/legacy.dart';
 import '../models/recommendation.dart';
 import '../providers/core_providers.dart';
 import '../repositories/recommendation_repository.dart';
@@ -123,6 +124,12 @@ final recommendationProvider =
     NotifierProvider<RecommendationNotifier, AsyncValue<List<Recommendation>>>(
       RecommendationNotifier.new,
     );
+
+/// Whether the "no new recommendations for now" notice has been shown during
+/// this app session. In-memory only — it is never persisted, so the notice
+/// reappears once per app launch (resets on cold start). Set to `true` by
+/// `RecommendationsScreen` the first time the screen is opened in a session.
+final recommendationsNoticeSeenProvider = StateProvider<bool>((ref) => false);
 
 final unseenRecommendationCountProvider = FutureProvider<int>((ref) async {
   final userId = ref.watch(currentUserIdProvider);
