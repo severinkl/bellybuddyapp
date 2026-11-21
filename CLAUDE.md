@@ -25,7 +25,7 @@ All visual constants live in `lib/config/app_theme.dart`. Spacing, radii, and re
 ## Architecture
 
 - **State management**: Riverpod (`flutter_riverpod`) with `AsyncNotifier` pattern.
-- **Backend**: Supabase (auth, database, storage). Services in `lib/services/` wrap Supabase calls.
+- **Backend**: Supabase-compatible stack (GoTrue, PostgREST, storage-api) on Hetzner; server code and schema in the private repo `bellybuddy-core`. Services in `lib/services/` wrap Supabase calls.
 - **Routing**: GoRouter with route paths defined in `lib/router/`.
 - **Logging**: Use `AppLogger` from `lib/utils/logger.dart` — never use bare `print()`.
 

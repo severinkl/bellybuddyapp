@@ -38,14 +38,8 @@ class AuthService {
 
   Future<AuthResponse> signUpWithEmail(String email, String password) async {
     try {
-      final response = await _auth.signUp(email: email, password: password);
-      // Fire and forget welcome email
-      if (response.user != null) {
-        _edgeFunctions
-            .invoke('send-welcome-email', body: {'email': email})
-            .ignore();
-      }
-      return response;
+      // The welcome email is sent server-side; nothing to invoke here.
+      return await _auth.signUp(email: email, password: password);
     } catch (e, st) {
       _log.error('signUpWithEmail failed', e, st);
       rethrow;
