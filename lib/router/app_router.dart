@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../models/meal_entry.dart';
 import '../models/user_recipe.dart';
 import '../providers/auth_provider.dart';
+import '../providers/upgrade_gate_provider.dart';
 import '../utils/logger.dart';
 import '../screens/screens.dart';
 import '../config/app_theme.dart';
@@ -14,6 +15,7 @@ import 'route_names.dart';
 class _RouterRefreshNotifier extends ChangeNotifier {
   _RouterRefreshNotifier(Ref ref) {
     ref.listen(isAuthenticatedProvider, (_, _) => notifyListeners());
+    ref.listen(hardGateActiveProvider, (_, _) => notifyListeners());
   }
 }
 
@@ -41,10 +43,18 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       _log.debug('redirect: path=$path auth=$isAuthenticated');
 
-      // The upgrade-required screen is a hard gate that must always win over
-      // auth routing: the splash applies it before auth state settles, and
-      // once shown the user cannot leave until they update.
-      if (path == RoutePaths.upgradeRequired) return null;
+      // The hard upgrade gate wins over everything else: while it is active
+      // every location (notification taps, pending routes, deep links)
+      // resolves to the upgrade-required screen, so the user cannot leave it
+      // until they update. Without the gate the screen is not reachable.
+      if (ref.read(hardGateActiveProvider)) {
+        return path == RoutePaths.upgradeRequired
+            ? null
+            : RoutePaths.upgradeRequired;
+      }
+      if (path == RoutePaths.upgradeRequired) {
+        return isAuthenticated ? RoutePaths.dashboard : RoutePaths.welcome;
+      }
 
       if (!isAuthenticated) {
         // Allow unauthenticated users on welcome, auth, registration, reset-password

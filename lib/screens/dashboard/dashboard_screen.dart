@@ -46,16 +46,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       if (!mounted) return;
       _maybeShowNotificationModal();
     });
-    // Show the soft-nudge dialog on the dashboard's first frame if the
-    // splash decided the installed app is below `latest_version`. One-shot:
-    // reset the flag immediately so a rebuild / hot-reload doesn't re-trigger.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (ref.read(softNudgePendingProvider)) {
-        ref.read(softNudgePendingProvider.notifier).set(false);
-        showUpgradeAvailableDialog(context, ref);
-      }
-    });
+    // The soft nudge may already be pending when the dashboard mounts (e.g.
+    // the user signed in after the decision resolved). If it resolves later,
+    // the listener in build() picks it up instead.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowSoftNudge());
+  }
+
+  /// Shows the "update available" dialog if a soft nudge is pending. The flag
+  /// is consumed before showing, so the dialog appears at most once.
+  void _maybeShowSoftNudge() {
+    if (!mounted) return;
+    if (!ref.read(softNudgePendingProvider.notifier).consume()) return;
+    showUpgradeAvailableDialog(context, ref);
   }
 
   @override
@@ -99,6 +101,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // The upgrade decision usually resolves after the first frame (the
+    // dashboard renders under the splash), so react when the flag flips.
+    ref.listen<bool>(softNudgePendingProvider, (_, pending) {
+      if (pending) _maybeShowSoftNudge();
+    });
     ref.watch(ingredientSuggestionProvider); // rebuild on data changes
     final newSuggestionCount = ref
         .read(ingredientSuggestionProvider.notifier)

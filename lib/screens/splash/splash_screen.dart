@@ -4,9 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
-import '../../providers/upgrade_gate_provider.dart';
-import '../../router/app_router.dart';
-import '../../router/route_names.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   final VoidCallback onComplete;
@@ -85,28 +82,6 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       _controller.value = 1.0;
     } else {
       _controller.forward();
-    }
-
-    // Run in parallel with _preloadAndWait so the minimum-delay / preload
-    // work and the Supabase config fetch happen concurrently. Any failure
-    // inside upgradeDecisionProvider is swallowed there (fail open) — see
-    // [upgradeDecisionProvider].
-    _awaitUpgradeDecision();
-  }
-
-  Future<void> _awaitUpgradeDecision() async {
-    final decision = await ref.read(upgradeDecisionProvider.future);
-    if (!mounted) return;
-    switch (decision) {
-      case UpgradeDecision.hardGate:
-        // Use the router provider directly — the splash lives inside
-        // `MaterialApp.router`'s builder and can't resolve `GoRouter.of`
-        // via inherited context from that position.
-        ref.read(routerProvider).go(RoutePaths.upgradeRequired);
-      case UpgradeDecision.softNudge:
-        ref.read(softNudgePendingProvider.notifier).set(true);
-      case UpgradeDecision.ok:
-        break;
     }
   }
 

@@ -33,18 +33,60 @@ final upgradeDecisionProvider = FutureProvider<UpgradeDecision>((ref) async {
   }
 });
 
-/// One-shot flag flipped true by the splash when the decision is
-/// [UpgradeDecision.softNudge]. The dashboard reads this on first frame,
-/// shows the dialog, then resets it to false via [SoftNudgePendingNotifier.set].
+/// Sticky flag: true once [upgradeDecisionProvider] resolves to
+/// [UpgradeDecision.hardGate]. It never goes back to false for the life of
+/// the process. The router redirect sends every location to
+/// `/upgrade-required` while it is set, so no navigation (notification
+/// taps, pending routes, deep links) can leave the gate.
+class HardGateActiveNotifier extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void activate() => state = true;
+}
+
+final hardGateActiveProvider = NotifierProvider<HardGateActiveNotifier, bool>(
+  HardGateActiveNotifier.new,
+);
+
+/// One-shot flag set true when the decision is [UpgradeDecision.softNudge].
+/// The dashboard shows the "update available" dialog and clears the flag via
+/// [SoftNudgePendingNotifier.consume], so the dialog appears exactly once.
 class SoftNudgePendingNotifier extends Notifier<bool> {
   @override
   bool build() => false;
 
-  // ignore: avoid_positional_boolean_parameters
-  void set(bool value) => state = value;
+  void markPending() => state = true;
+
+  /// Returns whether a nudge was pending and clears the flag.
+  bool consume() {
+    final pending = state;
+    if (pending) state = false;
+    return pending;
+  }
 }
 
 final softNudgePendingProvider =
     NotifierProvider<SoftNudgePendingNotifier, bool>(
       SoftNudgePendingNotifier.new,
     );
+
+/// Applies [upgradeDecisionProvider] to the gate flags whenever it resolves.
+/// Call from the `build` of the app root (it uses [WidgetRef.listen]), so the
+/// decision is handled even when the `app_config` fetch outlives the splash.
+/// The app root is the decision's first listener, so the listener sees the
+/// loading → data transition and no `fireImmediately` is needed.
+void listenForUpgradeDecision(WidgetRef ref) {
+  ref.listen<AsyncValue<UpgradeDecision>>(upgradeDecisionProvider, (_, next) {
+    switch (next.value) {
+      case UpgradeDecision.hardGate:
+        _log.debug('installed version below minimum, activating hard gate');
+        ref.read(hardGateActiveProvider.notifier).activate();
+      case UpgradeDecision.softNudge:
+        ref.read(softNudgePendingProvider.notifier).markPending();
+      case UpgradeDecision.ok:
+      case null:
+        break;
+    }
+  });
+}

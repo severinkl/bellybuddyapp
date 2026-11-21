@@ -153,4 +153,31 @@ void main() {
       );
     });
   });
+
+  group('gate flags', () {
+    test('hardGateActive starts false and stays true once activated', () {
+      final c = createContainer();
+      addTearDown(c.dispose);
+      expect(c.read(hardGateActiveProvider), isFalse);
+
+      c.read(hardGateActiveProvider.notifier).activate();
+      expect(c.read(hardGateActiveProvider), isTrue);
+
+      c.read(hardGateActiveProvider.notifier).activate();
+      expect(c.read(hardGateActiveProvider), isTrue);
+    });
+
+    test('softNudgePending consume returns true exactly once', () {
+      final c = createContainer();
+      addTearDown(c.dispose);
+      final notifier = c.read(softNudgePendingProvider.notifier);
+
+      expect(notifier.consume(), isFalse);
+      notifier.markPending();
+      expect(c.read(softNudgePendingProvider), isTrue);
+      expect(notifier.consume(), isTrue);
+      expect(c.read(softNudgePendingProvider), isFalse);
+      expect(notifier.consume(), isFalse);
+    });
+  });
 }
