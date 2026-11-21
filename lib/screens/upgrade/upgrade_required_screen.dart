@@ -4,6 +4,7 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../services/app_version_service.dart';
 import '../../widgets/common/bb_button.dart';
+import '../../widgets/common/mascot_image.dart';
 
 class UpgradeRequiredScreen extends ConsumerWidget {
   const UpgradeRequiredScreen({super.key});
@@ -22,7 +23,11 @@ class UpgradeRequiredScreen extends ConsumerWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Image.asset(AppConstants.mascotSad, height: 160),
+                const MascotImage(
+                  assetPath: AppConstants.mascotSad,
+                  width: AppConstants.mascotSizeLg,
+                  height: AppConstants.mascotSizeLg,
+                ),
                 AppConstants.gap24,
                 const Text(
                   'Update erforderlich',
@@ -46,7 +51,8 @@ class UpgradeRequiredScreen extends ConsumerWidget {
                 AppConstants.gap24,
                 BbButton(
                   label: 'Aktualisieren',
-                  onPressed: () => AppVersionService().openStore(),
+                  onPressed: () =>
+                      ref.read(appVersionServiceProvider).openStore(),
                 ),
               ],
             ),

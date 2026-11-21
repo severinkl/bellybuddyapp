@@ -1,3 +1,4 @@
+export 'app_config_repository.dart';
 export 'auth_repository.dart';
 export 'drink_repository.dart';
 export 'entry_repository.dart';

@@ -1,16 +1,12 @@
-// ignore_for_file: invalid_use_of_internal_member
-import 'package:belly_buddy/providers/app_config_provider.dart';
-import 'package:belly_buddy/providers/core_providers.dart';
+import 'package:belly_buddy/repositories/app_config_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:riverpod/src/internals.dart' show Override;
 
 import '../helpers/mocks.dart';
-import '../helpers/riverpod_helpers.dart';
 import '../helpers/supabase_mocks.dart';
 
 void main() {
-  group('appConfigProvider', () {
+  group('AppConfigRepository', () {
     late MockSupabaseClient client;
 
     setUp(() {
@@ -28,12 +24,7 @@ void main() {
       );
       when(() => fb.inFilter(any(), any())).thenAnswer((_) => fb);
 
-      final container = createContainer(
-        overrides: <Override>[supabaseClientProvider.overrideWithValue(client)],
-      );
-      addTearDown(container.dispose);
-
-      final config = await container.read(appConfigProvider.future);
+      final config = await AppConfigRepository(client).fetch();
       expect(config.minimum, '1.2.0');
       expect(config.latest, '1.4.2');
       verify(
@@ -52,13 +43,8 @@ void main() {
       );
       when(() => fb.inFilter(any(), any())).thenAnswer((_) => fb);
 
-      final container = createContainer(
-        overrides: <Override>[supabaseClientProvider.overrideWithValue(client)],
-      );
-      addTearDown(container.dispose);
-
       await expectLater(
-        () => container.read(appConfigProvider.future),
+        () => AppConfigRepository(client).fetch(),
         throwsA(isA<StateError>()),
       );
     });

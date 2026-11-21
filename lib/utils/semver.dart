@@ -13,12 +13,9 @@ int compareSemver(String a, String b) {
 }
 
 List<int> _parts(String v) {
-  final core = v.split(RegExp(r'[+\-]')).first;
-  final segments = core.split('.');
-  return [_toInt(segments, 0), _toInt(segments, 1), _toInt(segments, 2)];
-}
-
-int _toInt(List<String> segs, int i) {
-  if (i >= segs.length) return 0;
-  return int.tryParse(segs[i]) ?? 0;
+  final segments = v.split(RegExp(r'[+\-]')).first.split('.');
+  return List.generate(
+    3,
+    (i) => i < segments.length ? int.tryParse(segments[i]) ?? 0 : 0,
+  );
 }

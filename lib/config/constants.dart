@@ -65,6 +65,7 @@ class AppConstants {
   // Image sizes
   static const double mealImageHeight = 180.0;
   static const double mascotSizeMd = 96.0;
+  static const double mascotSizeLg = 160.0;
   static const double featureCardHeight = 128.0;
 
   // Divider

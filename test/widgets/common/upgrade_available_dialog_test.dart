@@ -9,10 +9,10 @@ void main() {
       ProviderScope(
         child: MaterialApp(
           home: Scaffold(
-            body: Builder(
-              builder: (ctx) => Center(
+            body: Consumer(
+              builder: (ctx, ref, _) => Center(
                 child: ElevatedButton(
-                  onPressed: () => showUpgradeAvailableDialog(ctx),
+                  onPressed: () => showUpgradeAvailableDialog(ctx, ref),
                   child: const Text('open'),
                 ),
               ),

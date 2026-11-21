@@ -1,12 +1,11 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/constants.dart';
 
 /// Wraps package_info_plus + url_launcher for the upgrade-gate flow.
 class AppVersionService {
-  AppVersionService();
-
   Future<String> currentVersion() async {
     final info = await PackageInfo.fromPlatform();
     return info.version;
@@ -25,3 +24,7 @@ class AppVersionService {
     await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
   }
 }
+
+final appVersionServiceProvider = Provider<AppVersionService>(
+  (ref) => AppVersionService(),
+);

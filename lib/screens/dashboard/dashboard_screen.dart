@@ -53,7 +53,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       if (!mounted) return;
       if (ref.read(softNudgePendingProvider)) {
         ref.read(softNudgePendingProvider.notifier).set(false);
-        showUpgradeAvailableDialog(context);
+        showUpgradeAvailableDialog(context, ref);
       }
     });
   }
