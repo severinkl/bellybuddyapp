@@ -1,8 +1,13 @@
 name: Deploy
 
-# Runs on a `v*` tag push (e.g. a tag pushed by hand) and on
-# workflow_dispatch. release.yml dispatches this workflow for every tag it
-# creates, because a tag pushed with GITHUB_TOKEN never triggers `push` here.
+# Deploys are started by workflow_dispatch: release.yml dispatches this
+# workflow for every tag it creates, because a tag pushed with GITHUB_TOKEN
+# never triggers `push` here. Release tags point at the
+# `chore(release): x.y.z [skip ci]` commit, and GitHub skips push-triggered
+# runs for [skip ci] commits, so re-pushing a release tag by hand starts no
+# deploy either. To redeploy a release, run this workflow manually
+# (workflow_dispatch) with the tag as the ref. The `push: tags` trigger only
+# fires for a `v*` tag on a commit without [skip ci].
 on:
   push:
     tags: ['v*']
