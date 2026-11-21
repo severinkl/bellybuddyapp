@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Deterministic light-pastel color derived from a title's hash. Saturation
 /// and lightness are fixed so all returned colors sit in the same visual

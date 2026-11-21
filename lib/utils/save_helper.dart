@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Drops keyboard focus and yields one microtask so any focus-loss
 /// listener (notably EditableAppBarTitle) commits its pending value

@@ -1,10 +1,12 @@
 import 'dart:async';
 
 import 'package:belly_buddy/providers/splash_screen_provider.dart';
+import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_localizations/flutter_localizations.dart'
+    show GlobalWidgetsLocalizations;
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'config/app_theme.dart';
 import 'providers/auth_provider.dart';

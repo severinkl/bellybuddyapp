@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  FLUTTER_VERSION: 3.41.7
+  FLUTTER_VERSION: 3.50.1
 
 jobs:
   quality:
@@ -27,7 +27,7 @@ jobs:
         run: cp env.example.json env.json
       - run: flutter pub get
       - name: Code generation
-        run: dart run build_runner build --delete-conflicting-outputs
+        run: dart run build_runner build
       - name: Check formatting
         run: |
           find lib test -name '*.dart' \
@@ -50,7 +50,7 @@ jobs:
         run: cp env.example.json env.json
       - run: flutter pub get
       - name: Code generation
-        run: dart run build_runner build --delete-conflicting-outputs
+        run: dart run build_runner build
       - run: flutter test --dart-define-from-file=env.json
 
   deploy-android:
@@ -91,7 +91,7 @@ jobs:
       - run: flutter pub get
 
       - name: Code generation
-        run: dart run build_runner build --delete-conflicting-outputs
+        run: dart run build_runner build
 
       - name: Create key.properties
         run: |
@@ -162,7 +162,7 @@ jobs:
       - run: flutter pub get
 
       - name: Code generation
-        run: dart run build_runner build --delete-conflicting-outputs
+        run: dart run build_runner build
 
       - name: Install CocoaPods
         run: cd ios && pod install

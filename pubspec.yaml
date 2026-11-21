@@ -7,67 +7,69 @@ environment:
   sdk: ^3.11.1
 
 dependencies:
-  sentry_flutter: ^9.16.0
+  sentry_flutter: ^10.6.0
   flutter:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
 
   # Supabase
-  supabase_flutter: ^2.8.4
+  supabase_flutter: ^2.18.3
 
   # State management
-  flutter_riverpod: ^3.3.1
+  flutter_riverpod: ^3.5.0
 
   # Routing
-  go_router: ^17.1.0
+  go_router: ^18.1.4
 
   # Models
   freezed_annotation: ^3.1.0
-  json_annotation: ^4.9.0
+  json_annotation: ^4.12.0
 
   # UI
-  smooth_page_indicator: ^2.0.1
-  flutter_svg: ^2.0.17
-  cached_network_image: ^3.4.1
-  shimmer: ^3.0.0
+  smooth_page_indicator: ^3.0.0
+  flutter_svg: ^2.5.0
+  cached_network_image: ^4.0.7
+  shimmer: ^4.0.0
 
   # URL launcher
-  url_launcher: ^6.3.1
+  url_launcher: ^6.3.3
 
   # Functionality
-  image_picker: ^1.1.2
+  image_picker: ^1.2.4
   google_sign_in: ^7.2.0
-  sign_in_with_apple: ^7.0.1
-  intl: ^0.20.2
-  uuid: ^4.5.1
+  sign_in_with_apple: ^8.2.0
+  intl: ^0.20.3
+  uuid: ^4.6.0
 
-  cupertino_icons: ^1.0.8
-  flutter_native_splash: ^2.4.7
-  crypto: ^3.0.7
+  cupertino_icons: ^2.0.0
+  flutter_native_splash: ^2.4.8
+  crypto: ^3.0.8
 
   # Notifications
-  firebase_core: ^4.6.0
-  firebase_messaging: ^16.1.3
-  flutter_local_notifications: ^21.0.0
-  timezone: ^0.11.0
-  flutter_timezone: ^5.0.2
-  shared_preferences: ^2.5.5
+  firebase_core: ^5.2.0
+  firebase_messaging: ^17.1.0
+  flutter_local_notifications: ^23.0.3
+  timezone: ^0.11.2
+  flutter_timezone: ^5.1.1
+  shared_preferences: ^2.5.6
+  material_ui: ^1.11.1
+  cupertino_ui: ^1.1.7
 
 dev_dependencies:
-  sentry_dart_plugin: ^3.2.1
+  sentry_dart_plugin: ^3.6.0
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  mocktail: ^1.0.4
-  riverpod: ^3.2.1
+  mocktail: ^1.0.5
+  riverpod: ^3.5.0
   integration_test:
     sdk: flutter
 
   # Code generation
-  freezed: ^3.2.5
-  json_serializable: ^6.9.4
-  build_runner: ^2.4.15
+  freezed: ^4.0.3
+  json_serializable: ^6.15.2
+  build_runner: ^2.17.1
   flutter_launcher_icons: ^0.14.4
 
 flutter_launcher_icons:

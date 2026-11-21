@@ -39,9 +39,9 @@ void main() {
 
     test('wraps non-Map response in {"data": response}', () async {
       const rawData = 'plain string response';
-      when(
-        () => functions.invoke(any(), body: any(named: 'body')),
-      ).thenAnswer((_) async => FunctionResponse(data: rawData, status: 200));
+      when(() => functions.invoke(any(), body: any(named: 'body'))).thenAnswer(
+        (_) async => const FunctionResponse(data: rawData, status: 200),
+      );
 
       final result = await service.invoke('my-function');
 
