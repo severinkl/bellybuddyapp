@@ -47,7 +47,7 @@ cp ios/Runner/GoogleService-Info.example.plist ios/Runner/GoogleService-Info.pli
 # Edit both with real Firebase values
 
 # Run code generation (required before build/test)
-dart run build_runner build --delete-conflicting-outputs
+dart run build_runner build
 
 # Run the app
 flutter run --dart-define-from-file=env.json

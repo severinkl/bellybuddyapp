@@ -31,6 +31,10 @@ class PushNotificationService {
     _getUserId = getUserId;
 
     _tokenRefreshSub?.cancel();
+    // FCM v17 deprecates token APIs in favor of register()/onRegistered, which
+    // yield a Firebase Installation ID. The backend sends to FCM tokens, so
+    // migrating needs a server-side change too.
+    // ignore: deprecated_member_use
     _tokenRefreshSub = _messaging.onTokenRefresh.listen(
       _saveToken,
       onError: (e) => _log.error('token refresh error', e),
@@ -73,6 +77,7 @@ class PushNotificationService {
       }
 
       try {
+        // ignore: deprecated_member_use — see note in initialize().
         final token = await _messaging.getToken();
         if (token != null) {
           await _saveToken(token);

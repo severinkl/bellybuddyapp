@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import '../../config/constants.dart';
 import '../../services/haptic_service.dart';
 import 'bb_slider.dart';

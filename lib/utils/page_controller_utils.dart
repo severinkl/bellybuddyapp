@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 
 /// Animates [controller] to [target] only if it's attached and not already
 /// there. Safe to call from `ref.listen` callbacks — avoids redundant

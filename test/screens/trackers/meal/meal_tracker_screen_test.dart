@@ -6,8 +6,10 @@ import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/repositories/meal_media_repository.dart';
 import 'package:belly_buddy/screens/trackers/meal/meal_tracker_screen.dart';
-import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:cupertino_ui/cupertino_ui.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:flutter_localizations/flutter_localizations.dart'
+    show GlobalWidgetsLocalizations;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';

@@ -4,7 +4,7 @@ import 'package:belly_buddy/screens/welcome/welcome_screen.dart';
 import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
 import 'package:belly_buddy/widgets/common/bb_password_field.dart';
 import 'package:belly_buddy/widgets/common/bb_social_button.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 

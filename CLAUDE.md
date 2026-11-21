@@ -19,7 +19,7 @@ All visual constants live in `lib/config/app_theme.dart`. Spacing, radii, and re
 
 - **Formatting**: Run `dart format` before committing. CI enforces `dart format --set-exit-if-changed`.
 - **Analysis**: `flutter analyze` must pass with zero issues (info, warning, and error all fail CI).
-- **Code generation**: Freezed/json_serializable models require `dart run build_runner build --delete-conflicting-outputs` after model changes. Generated files (`*.freezed.dart`, `*.g.dart`) are gitignored.
+- **Code generation**: Freezed/json_serializable models require `dart run build_runner build` after model changes. Generated files (`*.freezed.dart`, `*.g.dart`) are gitignored.
 - **Images**: Use `CachedNetworkImage` (not `Image.network`) for all network images. Add shimmer placeholders via the `shimmer` package.
 
 ## Architecture

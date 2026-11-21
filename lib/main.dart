@@ -1,6 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'config/firebase_config.dart';
@@ -33,7 +33,7 @@ void main() async {
 
   await Supabase.initialize(
     url: SupabaseConfig.url,
-    anonKey: SupabaseConfig.anonKey,
+    publishableKey: SupabaseConfig.anonKey,
   );
 
   final container = ProviderContainer();
@@ -65,10 +65,8 @@ void main() async {
       options.dsn = kReleaseMode ? SentryConfig.dsn : '';
       options.environment = kReleaseMode ? 'production' : 'development';
       options.sendDefaultPii = true;
-      options.enableLogs = true;
+      // Sentry v10: logs are always on; SDK profiling was removed.
       options.tracesSampleRate = 0.2;
-      // ignore: experimental_member_use — API is stable, pending promotion in Sentry v10
-      options.profilesSampleRate = 1.0;
       options.replay.sessionSampleRate = 0.1;
       options.replay.onErrorSampleRate = 1.0;
     },
