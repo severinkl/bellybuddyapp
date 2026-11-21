@@ -96,9 +96,12 @@ class AppConstants {
   // SharedPreferences keys
   static const String keyNotificationModalShown = 'notification_modal_shown';
 
-  /// App Store numeric ID for Belly Buddy. Update once the app is published.
-  static const String iosAppStoreId =
-      '0000000000'; // TODO: replace with real ID before shipping
+  /// App Store numeric ID for Belly Buddy, used by the upgrade screen and
+  /// dialog to open the store listing.
+  // TODO: set the real App Store ID. Until then the "Guard against
+  // placeholder App Store ID" step (job `deploy-ios` in
+  // .github/workflows/deploy.yml) fails every iOS release build.
+  static const String iosAppStoreId = '0000000000';
 
   /// Builds the App Store URL for the current app.
   static String appStoreUrl() => 'https://apps.apple.com/app/id$iosAppStoreId';

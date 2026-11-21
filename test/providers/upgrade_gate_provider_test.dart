@@ -2,6 +2,7 @@
 import 'package:belly_buddy/models/app_config.dart';
 import 'package:belly_buddy/providers/app_config_provider.dart';
 import 'package:belly_buddy/providers/upgrade_gate_provider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
@@ -87,6 +88,69 @@ void main() {
       );
       addTearDown(c.dispose);
       expect(await c.read(upgradeDecisionProvider.future), UpgradeDecision.ok);
+    });
+  });
+
+  group('upgradeDecisionProvider failure logging', () {
+    late List<String> logs;
+    late DebugPrintCallback originalDebugPrint;
+
+    setUp(() {
+      logs = <String>[];
+      originalDebugPrint = debugPrint;
+      debugPrint = (String? message, {int? wrapWidth}) {
+        if (message != null) logs.add(message);
+      };
+    });
+
+    tearDown(() => debugPrint = originalDebugPrint);
+
+    test('config fetch failure fails open and logs a warning', () async {
+      final c = createContainer(
+        overrides: <Override>[
+          appConfigProvider.overrideWith(
+            (_) async => throw StateError('app_config unreachable'),
+          ),
+          currentVersionProvider.overrideWith((_) async => '1.0.0'),
+        ],
+      );
+      addTearDown(c.dispose);
+
+      expect(await c.read(upgradeDecisionProvider.future), UpgradeDecision.ok);
+      expect(
+        logs,
+        contains(
+          allOf(
+            startsWith('UpgradeGate [WARN]: '),
+            contains('app_config unreachable'),
+          ),
+        ),
+      );
+    });
+
+    test('version lookup failure fails open and logs a warning', () async {
+      final c = createContainer(
+        overrides: <Override>[
+          appConfigProvider.overrideWith(
+            (_) async => const AppConfig(minimum: '9.0.0', latest: '9.0.0'),
+          ),
+          currentVersionProvider.overrideWith(
+            (_) async => throw StateError('package info unavailable'),
+          ),
+        ],
+      );
+      addTearDown(c.dispose);
+
+      expect(await c.read(upgradeDecisionProvider.future), UpgradeDecision.ok);
+      expect(
+        logs,
+        contains(
+          allOf(
+            startsWith('UpgradeGate [WARN]: '),
+            contains('package info unavailable'),
+          ),
+        ),
+      );
     });
   });
 }

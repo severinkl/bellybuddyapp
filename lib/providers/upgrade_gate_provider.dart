@@ -1,9 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/app_version_service.dart';
+import '../utils/logger.dart';
 import '../utils/semver.dart';
 import 'app_config_provider.dart';
 
 enum UpgradeDecision { ok, softNudge, hardGate }
+
+const _log = AppLogger('UpgradeGate');
 
 /// Installed app semver. Overridable in tests.
 final currentVersionProvider = FutureProvider<String>((_) async {
@@ -11,13 +14,14 @@ final currentVersionProvider = FutureProvider<String>((_) async {
 });
 
 /// Merges [appConfigProvider] and [currentVersionProvider] into a single
-/// decision. On any failure in the config fetch we fail open to keep the
-/// app usable for offline / flaky-network users.
+/// decision. On any failure (version lookup or config fetch) we log a warning
+/// and fail open to keep the app usable for offline / flaky-network users.
 final upgradeDecisionProvider = FutureProvider<UpgradeDecision>((ref) async {
   late final String version;
   try {
     version = await ref.watch(currentVersionProvider.future);
-  } catch (_) {
+  } catch (e) {
+    _log.warn('version lookup failed, failing open: $e');
     return UpgradeDecision.ok;
   }
 
@@ -30,7 +34,8 @@ final upgradeDecisionProvider = FutureProvider<UpgradeDecision>((ref) async {
       return UpgradeDecision.softNudge;
     }
     return UpgradeDecision.ok;
-  } catch (_) {
+  } catch (e) {
+    _log.warn('app_config fetch failed, failing open: $e');
     return UpgradeDecision.ok;
   }
 });

@@ -1,5 +1,8 @@
 name: Deploy
 
+# Runs on a `v*` tag push (e.g. a tag pushed by hand) and on
+# workflow_dispatch. release.yml dispatches this workflow for every tag it
+# creates, because a tag pushed with GITHUB_TOKEN never triggers `push` here.
 on:
   push:
     tags: ['v*']
@@ -142,6 +145,17 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      # The upgrade screen links to the App Store listing; with the placeholder
+      # ID that link is dead and a hard-gated user cannot leave the screen.
+      - name: Guard against placeholder App Store ID
+        run: |
+          id=$(perl -0ne "print \$1 if /iosAppStoreId\s*=\s*'([^']*)'/" lib/config/constants.dart)
+          if [ -z "$id" ] || [ "$id" = "0000000000" ]; then
+            echo "::error file=lib/config/constants.dart::AppConstants.iosAppStoreId is still the placeholder '${id:-<not found>}'. Set the real App Store ID before building an iOS release."
+            exit 1
+          fi
+          echo "iosAppStoreId=$id"
 
       - uses: maxim-lobanov/setup-xcode@v1
         with:

@@ -16,6 +16,7 @@ jobs:
       contents: write
       issues: write
       pull-requests: write
+      actions: write # gh workflow run deploy.yml
     steps:
       - uses: actions/checkout@v4
         with:
@@ -25,6 +26,7 @@ jobs:
         with:
           node-version: 20
       - name: Run semantic-release
+        id: semrel
         uses: cycjimmy/semantic-release-action@v4
         with:
           extra_plugins: |
@@ -32,3 +34,13 @@ jobs:
             @semantic-release/git
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      # A tag pushed with GITHUB_TOKEN does not trigger deploy.yml's `push:
+      # tags` (GitHub suppresses runs for GITHUB_TOKEN events), but
+      # workflow_dispatch is exempt. Dispatching keeps deploy.yml a separate
+      # run, so its run_number (the store build number) keeps increasing.
+      - name: Dispatch deploy for the new tag
+        if: steps.semrel.outputs.new_release_published == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: v${{ steps.semrel.outputs.new_release_version }}
+        run: gh workflow run deploy.yml --repo "$GITHUB_REPOSITORY" --ref "$TAG"
