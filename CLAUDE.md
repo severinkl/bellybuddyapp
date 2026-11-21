@@ -39,8 +39,8 @@ Releases are cut automatically on every merge to `main` via `.github/workflows/r
 
 Non-conventional commit messages are silently ignored by the analyzer — a merge to `main` composed entirely of such commits produces no bump and no release. Use conventional-commit prefixes (`feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`) for every commit.
 
-The release workflow tags `v<version>` and commits the bumped `pubspec.yaml` back to `main`. The deploy workflow (`deploy.yml`) triggers on those tag pushes — never directly on `push: main`.
+The release workflow creates the `v<version>` tag with `GITHUB_TOKEN` and commits the bumped `pubspec.yaml` back to `main` as a `chore(release): x.y.z [skip ci]` commit. A tag pushed with `GITHUB_TOKEN` never triggers `push` workflows, so `release.yml` starts the deploy itself via `gh workflow run` (`workflow_dispatch` on `deploy.yml`). The tag points at the `[skip ci]` commit, so re-pushing it starts no deploy either; to redeploy a release, run `deploy.yml` manually with `workflow_dispatch` and the tag as the ref. Deploys never run directly on `push: main`.
 
-### One-off migration (already done)
+### One-off migration (still to do)
 
-Before `release.yml` ran for the first time, a baseline tag `v1.0.0` was pushed on `main` so semantic-release had a reference point.
+The baseline tag `v1.0.0` has not been created yet. The owner must push it on `main` before the first `release.yml` run so semantic-release has a reference point.
