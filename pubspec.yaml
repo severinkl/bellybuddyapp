@@ -56,6 +56,9 @@ dependencies:
   material_ui: ^1.11.1
   cupertino_ui: ^1.1.7
 
+  # App version info
+  package_info_plus: ^10.2.2
+
 dev_dependencies:
   sentry_dart_plugin: ^3.6.0
   flutter_test:

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../config/constants.dart';
 import '../models/user_profile.dart';
 import '../services/auth_service.dart';
 import '../services/profile_service.dart';
@@ -45,7 +46,23 @@ class ProfileRepository {
     // tutorial_seen_at is managed by TutorialNotifier.markSeen — a stale
     // UserProfile (captured before markSeen fired) must not overwrite it.
     data.remove('tutorial_seen_at');
+    // The health consent is written only by acceptHealthConsent — a stale
+    // UserProfile must neither clear nor forge it.
+    data.remove('health_consent_at');
+    data.remove('privacy_policy_version');
     await _profileService.update(userId, data);
+  }
+
+  /// Records the user's explicit consent (GDPR Art. 9) to the processing of
+  /// their health data under the current privacy policy version. Returns the
+  /// stored timestamp (UTC).
+  Future<DateTime> acceptHealthConsent(String userId, {DateTime? now}) async {
+    final acceptedAt = (now ?? DateTime.now()).toUtc();
+    await _profileService.update(userId, {
+      'health_consent_at': acceptedAt.toIso8601String(),
+      'privacy_policy_version': AppConstants.privacyPolicyVersion,
+    });
+    return acceptedAt;
   }
 
   Future<void> updateTutorialSeenAt(String userId, DateTime? value) async {

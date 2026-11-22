@@ -81,7 +81,7 @@ void main() {
 
   group('AuthService.signUpWithEmail', () {
     test(
-      'delegates to _auth.signUp and fires welcome email when user exists',
+      'delegates to _auth.signUp and does not invoke any edge function',
       () async {
         final user = _makeUser({'provider': 'email'});
         final response = AuthResponse(user: user);
@@ -91,9 +91,6 @@ void main() {
             password: any(named: 'password'),
           ),
         ).thenAnswer((_) async => response);
-        when(
-          () => edgeFunctions.invoke(any(), body: any(named: 'body')),
-        ).thenAnswer((_) async => {});
 
         final result = await service.signUpWithEmail('new@user.com', 'pass123');
 
@@ -101,32 +98,14 @@ void main() {
         verify(
           () => auth.signUp(email: 'new@user.com', password: 'pass123'),
         ).called(1);
-        // Give the fire-and-forget a chance to execute before verifying.
+        // The welcome email is sent server-side; the app must not call any
+        // edge function on sign-up (not even fire-and-forget).
         await Future<void>.delayed(Duration.zero);
-        verify(
-          () => edgeFunctions.invoke(
-            'send-welcome-email',
-            body: {'email': 'new@user.com'},
-          ),
-        ).called(1);
+        verifyNever(
+          () => edgeFunctions.invoke(any(), body: any(named: 'body')),
+        );
       },
     );
-
-    test('skips welcome email when response.user is null', () async {
-      // AuthResponse with no user (e.g. email confirmation pending).
-      final response = AuthResponse();
-      when(
-        () => auth.signUp(
-          email: any(named: 'email'),
-          password: any(named: 'password'),
-        ),
-      ).thenAnswer((_) async => response);
-
-      await service.signUpWithEmail('pending@user.com', 'pass123');
-
-      await Future<void>.delayed(Duration.zero);
-      verifyNever(() => edgeFunctions.invoke(any(), body: any(named: 'body')));
-    });
   });
 
   group('AuthService.signOut', () {
@@ -141,7 +120,7 @@ void main() {
 
   group('AuthService.resetPassword', () {
     test(
-      'calls _auth.resetPasswordForEmail with the Lovable redirect URL',
+      'calls _auth.resetPasswordForEmail with the app reset-password URL',
       () async {
         when(
           () => auth.resetPasswordForEmail(
@@ -155,8 +134,7 @@ void main() {
         verify(
           () => auth.resetPasswordForEmail(
             'user@example.com',
-            redirectTo:
-                'https://belly-buddy-diet-detective.lovable.app/reset-password',
+            redirectTo: 'https://app.bellybuddy.at/reset-password',
           ),
         ).called(1);
         verifyNever(

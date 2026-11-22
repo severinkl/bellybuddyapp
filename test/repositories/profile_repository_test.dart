@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 
 import '../helpers/mocks.dart';
@@ -147,6 +148,33 @@ void main() {
     }
   });
 
+  group('createProfile health consent', () {
+    test(
+      'the insert carries health_consent_at and privacy_policy_version',
+      () async {
+        when(() => authService.detectAuthMethod()).thenReturn('email');
+        when(() => profileService.upsert(any())).thenAnswer((_) async {});
+
+        await repo.createProfile(
+          'user-123',
+          testUserProfile(
+            healthConsentAt: DateTime.utc(2026, 11, 22, 9, 30),
+            privacyPolicyVersion: AppConstants.privacyPolicyVersion,
+          ),
+        );
+
+        final captured =
+            verify(() => profileService.upsert(captureAny())).captured.single
+                as Map<String, dynamic>;
+        expect(captured['health_consent_at'], '2026-11-22T09:30:00.000Z');
+        expect(
+          captured['privacy_policy_version'],
+          AppConstants.privacyPolicyVersion,
+        );
+      },
+    );
+  });
+
   group('updateProfile', () {
     test('delegates to profileService.update without user_id key', () async {
       final profile = testUserProfile(userId: 'user-123');
@@ -193,6 +221,52 @@ void main() {
         expect(captured.containsKey('tutorial_seen_at'), isFalse);
       },
     );
+
+    test('strips the health consent fields so profile edits cannot clear '
+        'or forge the consent', () async {
+      when(() => profileService.update(any(), any())).thenAnswer((_) async {});
+
+      await repo.updateProfile(
+        'user-123',
+        testUserProfile(hasHealthConsent: false),
+      );
+
+      final captured =
+          verify(
+                () => profileService.update('user-123', captureAny()),
+              ).captured.single
+              as Map<String, dynamic>;
+
+      expect(captured.containsKey('health_consent_at'), isFalse);
+      expect(captured.containsKey('privacy_policy_version'), isFalse);
+    });
+  });
+
+  group('ProfileRepository.acceptHealthConsent', () {
+    test('writes the UTC timestamp and the current policy version', () async {
+      when(() => profileService.update(any(), any())).thenAnswer((_) async {});
+
+      final acceptedAt = await repo.acceptHealthConsent(
+        testUserId,
+        now: DateTime.utc(2026, 11, 22, 9, 30),
+      );
+
+      expect(acceptedAt, DateTime.utc(2026, 11, 22, 9, 30));
+      verify(
+        () => profileService.update(testUserId, {
+          'health_consent_at': '2026-11-22T09:30:00.000Z',
+          'privacy_policy_version': AppConstants.privacyPolicyVersion,
+        }),
+      ).called(1);
+    });
+
+    test('converts a local timestamp to UTC', () async {
+      when(() => profileService.update(any(), any())).thenAnswer((_) async {});
+
+      final acceptedAt = await repo.acceptHealthConsent(testUserId);
+
+      expect(acceptedAt.isUtc, isTrue);
+    });
   });
 
   group('ProfileRepository.updateTutorialSeenAt', () {

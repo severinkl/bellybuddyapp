@@ -25,6 +25,22 @@ All visual constants live in `lib/config/app_theme.dart`. Spacing, radii, and re
 ## Architecture
 
 - **State management**: Riverpod (`flutter_riverpod`) with `AsyncNotifier` pattern.
-- **Backend**: Supabase (auth, database, storage). Services in `lib/services/` wrap Supabase calls.
+- **Backend**: Supabase-compatible stack (GoTrue, PostgREST, storage-api) on Hetzner; server code and schema in the private repo `bellybuddy-core`. Services in `lib/services/` wrap Supabase calls.
 - **Routing**: GoRouter with route paths defined in `lib/router/`.
 - **Logging**: Use `AppLogger` from `lib/utils/logger.dart` — never use bare `print()`.
+
+## Release versioning
+
+Releases are cut automatically on every merge to `main` via `.github/workflows/release.yml` (semantic-release). The bump is derived from the commit messages merged in that PR:
+
+- `fix:` → patch
+- `feat:` → minor
+- `feat!:` or a commit body containing `BREAKING CHANGE:` → major
+
+Non-conventional commit messages are silently ignored by the analyzer — a merge to `main` composed entirely of such commits produces no bump and no release. Use conventional-commit prefixes (`feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `chore:`) for every commit.
+
+The release workflow creates the `v<version>` tag with `GITHUB_TOKEN` and commits the bumped `pubspec.yaml` back to `main` as a `chore(release): x.y.z [skip ci]` commit. A tag pushed with `GITHUB_TOKEN` never triggers `push` workflows, so `release.yml` starts the deploy itself via `gh workflow run` (`workflow_dispatch` on `deploy.yml`). The tag points at the `[skip ci]` commit, so re-pushing it starts no deploy either; to redeploy a release, run `deploy.yml` manually with `workflow_dispatch` and the tag as the ref. Deploys never run directly on `push: main`.
+
+### One-off migration (still to do)
+
+The baseline tag `v1.0.0` has not been created yet. The owner must push it on `main` before the first `release.yml` run so semantic-release has a reference point.

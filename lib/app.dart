@@ -16,6 +16,7 @@ import 'providers/ingredient_suggestion_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/profile_provider.dart';
 import 'providers/recommendation_provider.dart';
+import 'providers/upgrade_gate_provider.dart';
 import 'providers/user_recipes_provider.dart';
 import 'router/app_router.dart';
 import 'screens/splash/splash_screen.dart';
@@ -127,6 +128,11 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
 
     // Activate notification sync provider
     ref.watch(notificationSyncProvider);
+
+    // Owns the upgrade decision for the whole app lifetime (not the splash),
+    // so a slow app_config fetch that resolves after the splash is gone still
+    // activates the hard gate or queues the soft nudge.
+    listenForUpgradeDecision(ref);
 
     ref.listen<bool>(isAuthenticatedProvider, (prev, next) {
       _log.debug('auth changed $prev → $next');
