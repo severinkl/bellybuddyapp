@@ -48,6 +48,13 @@ android {
         }
     }
 
+    // On CI (JDK 17), AGP 9.3 lint crashed analysing firebase_core in lintVitalAnalyzeRelease
+    // (NoSuchMethodError in JavaDocParser, a lint bug); CI now uses JDK 21 like Android Studio.
+    // Release-time lint only re-checks what CI covers (flutter analyze, tests), so it stays off.
+    lint {
+        checkReleaseBuilds = false
+    }
+
     buildTypes {
         release {
             signingConfig = if (keystorePropertiesFile.exists()) {
