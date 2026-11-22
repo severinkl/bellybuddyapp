@@ -9,9 +9,11 @@ import 'package:belly_buddy/repositories/auth_repository.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
+import 'package:belly_buddy/router/app_router.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
@@ -174,6 +176,30 @@ void main() {
           reason: path,
         );
       }
+    });
+
+    test('the gated paths are exactly the shell branch roots', () {
+      final container = createContainer(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(
+            FakeAuthRepository(signedIn: false),
+          ),
+          profileRepositoryProvider.overrideWithValue(FakeProfileRepository()),
+          entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
+          buddyRepositoryProvider.overrideWithValue(FakeBuddyRepository()),
+        ],
+      );
+      final router = container.read(routerProvider);
+      addTearDown(router.dispose);
+
+      final shell = router.configuration.routes
+          .whereType<StatefulShellRoute>()
+          .single;
+      final branchRoots = {
+        for (final branch in shell.branches)
+          for (final route in branch.routes.whereType<GoRoute>()) route.path,
+      };
+      expect(branchRoots, buddyOnboardingGatedPaths);
     });
   });
 
