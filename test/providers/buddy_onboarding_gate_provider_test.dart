@@ -127,35 +127,33 @@ void main() {
   });
 
   group('buddyOnboardingRedirect', () {
-    test('required: every other location goes to /buddy-onboarding', () {
-      for (final path in [
-        RoutePaths.dashboard,
-        RoutePaths.diary,
-        RoutePaths.settings,
-        RoutePaths.recommendations,
-        RoutePaths.recipes,
-        RoutePaths.welcome,
-        RoutePaths.auth,
-        RoutePaths.toiletTracker,
-        '/meal-tracker/some-id',
-      ]) {
+    test('required: the shell roots go to /buddy-onboarding', () {
+      for (final path in [RoutePaths.dashboard, RoutePaths.diary]) {
         expect(
-          buddyOnboardingRedirect(required: true, path: path),
+          buddyOnboardingRedirect(isRequired: true, path: path),
           RoutePaths.buddyOnboarding,
           reason: path,
         );
       }
     });
 
-    test('required: the onboarding, the wizard and its trackers stay', () {
+    test('required: everything else stays (pushes from inside the flow, '
+        'the wizard, the onboarding itself)', () {
       for (final path in [
         RoutePaths.buddyOnboarding,
         RoutePaths.registration,
         RoutePaths.mealTracker,
         RoutePaths.drinkTracker,
+        RoutePaths.recipeNew,
+        RoutePaths.settings,
+        RoutePaths.recommendations,
+        RoutePaths.recipes,
+        RoutePaths.welcome,
+        RoutePaths.auth,
+        '/meal-tracker/some-id',
       ]) {
         expect(
-          buddyOnboardingRedirect(required: true, path: path),
+          buddyOnboardingRedirect(isRequired: true, path: path),
           isNull,
           reason: path,
         );
@@ -167,10 +165,11 @@ void main() {
       for (final path in [
         RoutePaths.buddyOnboarding,
         RoutePaths.dashboard,
+        RoutePaths.diary,
         RoutePaths.mealTracker,
       ]) {
         expect(
-          buddyOnboardingRedirect(required: false, path: path),
+          buddyOnboardingRedirect(isRequired: false, path: path),
           isNull,
           reason: path,
         );
@@ -261,6 +260,36 @@ void main() {
 
       expect(container.read(buddyProvider).hasError, isTrue);
       expect(container.read(buddyOnboardingRequiredProvider), isFalse);
+    });
+
+    test('the Buddy is loaded only once the profile is ready', () async {
+      final buddyRepo = FakeBuddyRepository();
+      final container = containerFor(
+        profile: testUserProfile(),
+        buddyRepo: buddyRepo,
+      );
+      // Profile still loading: the gate doesn't touch the Buddy.
+      expect(container.read(buddyOnboardingRequiredProvider), isFalse);
+      await Future<void>.delayed(Duration.zero);
+      expect(buddyRepo.fetchCount, 0);
+
+      await container.read(profileProvider.notifier).fetchProfile();
+      await container.read(buddyProvider.future);
+      expect(buddyRepo.fetchCount, 1);
+      expect(container.read(buddyOnboardingRequiredProvider), isTrue);
+    });
+
+    test('an incomplete profile never loads the Buddy', () async {
+      final buddyRepo = FakeBuddyRepository();
+      final container = containerFor(
+        profile: testUserProfile().copyWith(diet: null),
+        buddyRepo: buddyRepo,
+      );
+      await container.read(profileProvider.notifier).fetchProfile();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(container.read(buddyOnboardingRequiredProvider), isFalse);
+      expect(buddyRepo.fetchCount, 0);
     });
 
     test('false when signed out', () async {

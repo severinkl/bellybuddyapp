@@ -22,8 +22,6 @@ import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/riverpod_helpers.dart';
 
-const _userId = 'test-user';
-
 List<Override> _overrides({
   FakeBuddyRepository? buddyRepo,
   UserProfile? profile,
@@ -36,14 +34,14 @@ List<Override> _overrides({
   entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
   ingredientRepositoryProvider.overrideWithValue(FakeIngredientRepository()),
   buddyRepositoryProvider.overrideWithValue(buddyRepo ?? FakeBuddyRepository()),
-  currentUserIdProvider.overrideWithValue(_userId),
+  currentUserIdProvider.overrideWithValue(testUserId),
   isAuthenticatedProvider.overrideWithValue(true),
 ];
 
 /// A Buddy whose onboarding is done, so the onboarding gate stays off.
 FakeBuddyRepository _onboardedBuddy() => FakeBuddyRepository()
-  ..store[_userId] = BuddyState(
-    userId: _userId,
+  ..store[testUserId] = BuddyState(
+    userId: testUserId,
     onboardingCompletedAt: DateTime(2026, 11, 1),
   );
 
@@ -287,7 +285,8 @@ void main() {
       expect(find.text(_optInTitle), findsOneWidget);
     });
 
-    testWidgets('push already on: no opt-in dialog', (tester) async {
+    testWidgets('push on but the opt-in never offered on this device '
+        '(reinstall): the dialog still asks', (tester) async {
       SharedPreferences.setMockInitialValues({});
       await tester.pumpWithProviders(
         const DashboardScreen(),
@@ -298,7 +297,7 @@ void main() {
       );
       await _settleFirstRun(tester);
 
-      expect(find.text(_optInTitle), findsNothing);
+      expect(find.text(_optInTitle), findsOneWidget);
     });
 
     testWidgets('no tour and no opt-in dialog while the Buddy onboarding '

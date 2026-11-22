@@ -361,6 +361,11 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
   /// Completes the onboarding and grants the gift saver; false on failure.
   Future<bool> _complete() async {
     final buddy = ref.read(buddyProvider.notifier);
+    // Push was already on, so the reminder ask was skipped: the dashboard's
+    // opt-in dialog must not ask either.
+    if (!_steps!.contains(BuddyOnboardingStep.reminder)) {
+      await _markRemindersAsked();
+    }
     try {
       await buddy.completeOnboarding(grantGiftSaver: true);
       return true;

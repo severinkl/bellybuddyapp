@@ -21,51 +21,49 @@ bool needsBuddyOnboarding({
   required bool isAuthenticated,
   required AsyncValue<UserProfile?> profile,
   required AsyncValue<BuddyStatus?> buddy,
-}) {
-  if (!isAuthenticated) return false;
-  if (profile is! AsyncData<UserProfile?> ||
-      buddy is! AsyncData<BuddyStatus?>) {
-    return false;
-  }
-  final user = profile.value;
-  final status = buddy.value;
-  if (user == null || !user.isComplete || needsHealthConsent(user)) {
-    return false;
-  }
-  if (status == null) return false;
-  return !status.hasRow || status.state.onboardingCompletedAt == null;
-}
+}) => isAuthenticated && _profileReady(profile) && _buddyPending(buddy);
 
-/// True while [needsBuddyOnboarding] holds for the signed-in user. The
-/// router redirect sends every location outside
-/// [buddyOnboardingAllowedPaths] to `/buddy-onboarding` while it is set.
-final buddyOnboardingRequiredProvider = Provider<bool>(
-  (ref) => needsBuddyOnboarding(
-    isAuthenticated: ref.watch(isAuthenticatedProvider),
-    profile: ref.watch(profileProvider),
-    buddy: ref.watch(buddyProvider),
-  ),
-);
-
-/// Locations a user who still needs the Buddy onboarding may open: the
-/// onboarding itself, the registration wizard (it hands over to the
-/// onboarding) and the trackers the onboarding's first-meal step pushes.
-const buddyOnboardingAllowedPaths = {
-  RoutePaths.buddyOnboarding,
-  RoutePaths.registration,
-  RoutePaths.mealTracker,
-  RoutePaths.drinkTracker,
+/// The profile is loaded, complete and has a current health consent.
+bool _profileReady(AsyncValue<UserProfile?> profile) => switch (profile) {
+  AsyncData(value: final user?) => user.isComplete && !needsHealthConsent(user),
+  _ => false,
 };
 
-/// The redirect for [path]: `/buddy-onboarding` while the onboarding is
-/// [required] and [path] isn't allowed, otherwise null (stay).
+/// The Buddy is loaded and its onboarding isn't completed.
+bool _buddyPending(AsyncValue<BuddyStatus?> buddy) => switch (buddy) {
+  AsyncData(value: final status?) =>
+    !status.hasRow || status.state.onboardingCompletedAt == null,
+  _ => false,
+};
+
+/// True while [needsBuddyOnboarding] holds for the signed-in user. The
+/// router redirect sends the shell roots ([buddyOnboardingGatedPaths]) to
+/// `/buddy-onboarding` while it is set.
+///
+/// The cheap auth and profile checks come first: the Buddy is only watched
+/// (and so loaded) once it can matter.
+final buddyOnboardingRequiredProvider = Provider<bool>((ref) {
+  if (!ref.watch(isAuthenticatedProvider)) return false;
+  if (!_profileReady(ref.watch(profileProvider))) return false;
+  return _buddyPending(ref.watch(buddyProvider));
+});
+
+/// The locations the Buddy onboarding gate redirects: the shell roots. Every
+/// way back to the app at rest (sign-in, consent, auth routes, tab switches,
+/// leaving the onboarding) goes through one of them, so the gate still
+/// catches the user; pushes from inside the flow (the first-meal step's
+/// trackers and whatever they open) and the wizard are never redirected.
+const buddyOnboardingGatedPaths = {RoutePaths.dashboard, RoutePaths.diary};
+
+/// The redirect for [path]: `/buddy-onboarding` while the onboarding
+/// [isRequired] and [path] is gated, otherwise null (stay).
 ///
 /// Deliberately nothing the other way: the onboarding completes when the
 /// gift opens, before the user has read it, and the screen moves on to the
 /// dashboard by itself.
 String? buddyOnboardingRedirect({
-  required bool required,
+  required bool isRequired,
   required String path,
-}) => required && !buddyOnboardingAllowedPaths.contains(path)
+}) => isRequired && buddyOnboardingGatedPaths.contains(path)
     ? RoutePaths.buddyOnboarding
     : null;

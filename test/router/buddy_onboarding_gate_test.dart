@@ -22,7 +22,7 @@ import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/buddy/buddy_onboarding_screen.dart';
 import 'package:belly_buddy/screens/buddy/widgets/gift_reveal.dart';
 import 'package:belly_buddy/screens/health_consent/health_consent_screen.dart';
-import 'package:belly_buddy/screens/recommendations/recommendations_screen.dart';
+import 'package:belly_buddy/screens/recipes/recipe_editor_screen.dart';
 import 'package:belly_buddy/screens/trackers/drink/drink_tracker_screen.dart';
 import 'package:belly_buddy/screens/trackers/meal/meal_tracker_screen.dart';
 import 'package:belly_buddy/screens/registration/steps/buddy_name_step.dart';
@@ -108,6 +108,15 @@ List<Override> _overrides({
 
 String _currentPath(ProviderContainer container) =>
     container.read(routerProvider).routerDelegate.currentConfiguration.uri.path;
+
+/// The locations of the whole route stack, bottom to top.
+List<String> _matchedLocations(ProviderContainer container) => container
+    .read(routerProvider)
+    .routerDelegate
+    .currentConfiguration
+    .matches
+    .map((m) => m.matchedLocation)
+    .toList();
 
 /// The topmost route's location, including routes pushed on top (the
 /// configuration's uri stays at the base location for those).
@@ -202,7 +211,6 @@ void main() {
       for (final route in [
         RoutePaths.dashboard,
         RoutePaths.diary,
-        RoutePaths.settings,
         RoutePaths.welcome,
       ]) {
         router.go(route);
@@ -307,11 +315,23 @@ void main() {
         expect(find.byType(BuddyOnboardingScreen), findsOneWidget);
       }
 
-      // Anything else pushed on top is still gated.
-      unawaited(router.push<void>(RoutePaths.recommendations));
+      // Whatever the tracker opens on top stays too (the recipe picker's
+      // „new recipe"), with no second onboarding stacked anywhere.
+      unawaited(router.push<void>(RoutePaths.mealTracker));
       await tester.pumpAndSettle();
-      expect(_topPath(container), RoutePaths.buddyOnboarding);
-      expect(find.byType(RecommendationsScreen), findsNothing);
+      unawaited(router.push<void>(RoutePaths.recipeNew));
+      await tester.pumpAndSettle();
+      expect(_topPath(container), RoutePaths.recipeNew);
+      expect(find.byType(RecipeEditorScreen), findsOneWidget);
+      expect(_matchedLocations(container), [
+        RoutePaths.buddyOnboarding,
+        RoutePaths.mealTracker,
+        RoutePaths.recipeNew,
+      ]);
+      expect(
+        find.byType(BuddyOnboardingScreen, skipOffstage: false),
+        findsOneWidget,
+      );
     });
 
     testWidgets('a completed Buddy passes the gate', (tester) async {

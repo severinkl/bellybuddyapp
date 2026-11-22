@@ -118,9 +118,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Future<void> _maybeShowNotificationModal() async {
-    // Push already on (e.g. before the Buddy onboarding, which then skips
-    // its reminder ask): nothing to opt into.
-    if (ref.read(profileProvider).value?.pushEnabled ?? false) return;
     final prefs = await SharedPreferences.getInstance();
     if (prefs.getBool(AppConstants.keyNotificationModalShown) ?? false) return;
     if (!mounted) return;

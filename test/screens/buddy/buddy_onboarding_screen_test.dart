@@ -376,6 +376,21 @@ void main() {
       expect(find.text(_mealTitle), findsOneWidget);
     });
 
+    testWidgets('reminders already on: completing marks the opt-in as '
+        'offered, so the dashboard won\'t ask', (tester) async {
+      await pumpOnboarding(tester, pushEnabled: true);
+      await tapText(tester, '7 Tage');
+      await tapKey(tester, BuddyOnboardingScreen.mealLaterKey);
+      expect(await modalShownPref(), isNull);
+
+      await tapKey(tester, GiftReveal.boxKey);
+      await tester.tap(find.byKey(GiftReveal.boxKey), warnIfMissed: false);
+      await settle(tester);
+
+      expect(find.text(_giftText), findsOneWidget);
+      expect(await modalShownPref(), isTrue);
+    });
+
     testWidgets('a meal logged in the tracker advances after the pop', (
       tester,
     ) async {

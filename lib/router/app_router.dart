@@ -80,12 +80,12 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       // Buddy onboarding gate: a signed-in user with a complete, consented
       // profile whose Buddy onboarding isn't done (users from before the
-      // Buddy, or the app was killed mid-onboarding) is sent to
-      // /buddy-onboarding; the wizard and the onboarding's trackers stay
-      // reachable. No redirect away once it is done: the onboarding
-      // completes when the gift opens and leaves for the dashboard itself.
+      // Buddy, or the app was killed mid-onboarding) is sent from the shell
+      // roots to /buddy-onboarding; pushes from inside the flow stay. No
+      // redirect away once it is done: the onboarding completes when the
+      // gift opens and leaves for the dashboard itself.
       final buddyRedirect = buddyOnboardingRedirect(
-        required: ref.read(buddyOnboardingRequiredProvider),
+        isRequired: ref.read(buddyOnboardingRequiredProvider),
         path: path,
       );
       if (buddyRedirect != null) return buddyRedirect;
