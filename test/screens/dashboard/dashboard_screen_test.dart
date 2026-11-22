@@ -2,11 +2,15 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:riverpod/src/internals.dart' show Override;
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:belly_buddy/config/constants.dart';
+import 'package:belly_buddy/models/buddy_state.dart';
+import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/screens/dashboard/dashboard_screen.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/dashboard_tutorial_steps.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_keys.dart';
-import 'package:belly_buddy/providers/core_providers.dart';
+import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
@@ -15,15 +19,44 @@ import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
 
 import '../../helpers/fakes.dart';
+import '../../helpers/fixtures.dart';
 import '../../helpers/riverpod_helpers.dart';
 
-List<Override> _overrides({FakeBuddyRepository? buddyRepo}) => [
-  profileRepositoryProvider.overrideWithValue(FakeProfileRepository()),
+const _userId = 'test-user';
+
+List<Override> _overrides({
+  FakeBuddyRepository? buddyRepo,
+  UserProfile? profile,
+}) => [
+  profileRepositoryProvider.overrideWithValue(
+    profile == null
+        ? FakeProfileRepository()
+        : (FakeProfileRepository()..seedProfile(profile)),
+  ),
   entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
   ingredientRepositoryProvider.overrideWithValue(FakeIngredientRepository()),
   buddyRepositoryProvider.overrideWithValue(buddyRepo ?? FakeBuddyRepository()),
-  currentUserIdProvider.overrideWithValue('test-user'),
+  currentUserIdProvider.overrideWithValue(_userId),
+  isAuthenticatedProvider.overrideWithValue(true),
 ];
+
+/// A Buddy whose onboarding is done, so the onboarding gate stays off.
+FakeBuddyRepository _onboardedBuddy() => FakeBuddyRepository()
+  ..store[_userId] = BuddyState(
+    userId: _userId,
+    onboardingCompletedAt: DateTime(2026, 11, 1),
+  );
+
+/// Lets the dashboard load and run its first-run prompts.
+Future<void> _settleFirstRun(WidgetTester tester) async {
+  for (var i = 0; i < 10; i++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+}
+
+const _tourSkip = 'Überspringen';
+const _welcomeModalTitle = 'Willkommen bei Belly Buddy!';
+const _optInTitle = 'Bleib auf dem Laufenden!';
 
 void main() {
   group('DashboardScreen', () {
@@ -215,6 +248,73 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(buddyRepo.fetchCount, 1);
+    });
+  });
+
+  group('DashboardScreen first run', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({
+        AppConstants.keyNotificationModalShown: true,
+      });
+    });
+
+    testWidgets('a new user gets the spotlight tour directly, without a '
+        'welcome modal', (tester) async {
+      await tester.pumpWithProviders(
+        const DashboardScreen(),
+        overrides: _overrides(
+          profile: testUserProfile(alreadySeenTutorial: false),
+          buddyRepo: _onboardedBuddy(),
+        ),
+      );
+      await _settleFirstRun(tester);
+
+      expect(find.text(_tourSkip), findsOneWidget);
+      expect(find.text(_welcomeModalTitle), findsNothing);
+    });
+
+    testWidgets('the opt-in dialog asks while push is off', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await tester.pumpWithProviders(
+        const DashboardScreen(),
+        overrides: _overrides(
+          profile: testUserProfile(),
+          buddyRepo: _onboardedBuddy(),
+        ),
+      );
+      await _settleFirstRun(tester);
+
+      expect(find.text(_optInTitle), findsOneWidget);
+    });
+
+    testWidgets('push already on: no opt-in dialog', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await tester.pumpWithProviders(
+        const DashboardScreen(),
+        overrides: _overrides(
+          profile: testUserProfile(pushEnabled: true),
+          buddyRepo: _onboardedBuddy(),
+        ),
+      );
+      await _settleFirstRun(tester);
+
+      expect(find.text(_optInTitle), findsNothing);
+    });
+
+    testWidgets('no tour and no opt-in dialog while the Buddy onboarding '
+        'gate is about to take over', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await tester.pumpWithProviders(
+        const DashboardScreen(),
+        overrides: _overrides(
+          profile: testUserProfile(alreadySeenTutorial: false),
+        ),
+      );
+      await _settleFirstRun(tester);
+
+      expect(find.text(_tourSkip), findsNothing);
+      expect(find.text(_welcomeModalTitle), findsNothing);
+      expect(find.text(_optInTitle), findsNothing);
     });
   });
 }

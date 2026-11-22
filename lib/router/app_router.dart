@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../models/meal_entry.dart';
 import '../models/user_recipe.dart';
 import '../providers/auth_provider.dart';
+import '../providers/buddy_onboarding_gate_provider.dart';
 import '../providers/health_consent_provider.dart';
 import '../providers/upgrade_gate_provider.dart';
 import '../utils/logger.dart';
@@ -18,6 +19,7 @@ class _RouterRefreshNotifier extends ChangeNotifier {
     ref.listen(isAuthenticatedProvider, (_, _) => notifyListeners());
     ref.listen(hardGateActiveProvider, (_, _) => notifyListeners());
     ref.listen(healthConsentRequiredProvider, (_, _) => notifyListeners());
+    ref.listen(buddyOnboardingRequiredProvider, (_, _) => notifyListeners());
   }
 }
 
@@ -75,6 +77,18 @@ final routerProvider = Provider<GoRouter>((ref) {
             : RoutePaths.healthConsent;
       }
       if (path == RoutePaths.healthConsent) return RoutePaths.dashboard;
+
+      // Buddy onboarding gate: a signed-in user with a complete, consented
+      // profile whose Buddy onboarding isn't done (users from before the
+      // Buddy, or the app was killed mid-onboarding) is sent to
+      // /buddy-onboarding; the wizard and the onboarding's trackers stay
+      // reachable. No redirect away once it is done: the onboarding
+      // completes when the gift opens and leaves for the dashboard itself.
+      final buddyRedirect = buddyOnboardingRedirect(
+        required: ref.read(buddyOnboardingRequiredProvider),
+        path: path,
+      );
+      if (buddyRedirect != null) return buddyRedirect;
 
       // Authenticated on auth route → dashboard
       // NOTE: /registration is NOT in isAuthRoute — user stays there to finish

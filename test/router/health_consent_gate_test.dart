@@ -2,6 +2,7 @@
 import 'dart:async';
 
 import 'package:belly_buddy/config/constants.dart';
+import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/health_consent_provider.dart';
@@ -81,10 +82,19 @@ class _SlowProfileRepository extends FakeProfileRepository {
   }
 }
 
+/// Existing users here finished the Buddy onboarding long ago, so its gate
+/// stays out of the way.
+FakeBuddyRepository _onboardedBuddy() => FakeBuddyRepository()
+  ..store[testUserId] = BuddyState(
+    userId: testUserId,
+    onboardingCompletedAt: DateTime(2026, 11, 1),
+  );
+
 List<Override> _overrides({
   required FakeProfileRepository profiles,
   bool signedIn = true,
   UpgradeDecision decision = UpgradeDecision.ok,
+  FakeBuddyRepository? buddies,
 }) => [
   authRepositoryProvider.overrideWithValue(
     FakeAuthRepository(signedIn: signedIn),
@@ -92,7 +102,7 @@ List<Override> _overrides({
   profileRepositoryProvider.overrideWithValue(profiles),
   entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
   ingredientRepositoryProvider.overrideWithValue(FakeIngredientRepository()),
-  buddyRepositoryProvider.overrideWithValue(FakeBuddyRepository()),
+  buddyRepositoryProvider.overrideWithValue(buddies ?? _onboardedBuddy()),
   upgradeDecisionProvider.overrideWith((_) => Future.value(decision)),
 ];
 
@@ -270,7 +280,12 @@ void main() {
       final profiles = FakeProfileRepository();
       final container = await _pumpHost(
         tester,
-        _overrides(signedIn: false, profiles: profiles),
+        _overrides(
+          signedIn: false,
+          profiles: profiles,
+          // A new user: no Buddy yet.
+          buddies: FakeBuddyRepository(),
+        ),
       );
       container.read(routerProvider).go(RoutePaths.registration);
       await tester.pumpAndSettle();

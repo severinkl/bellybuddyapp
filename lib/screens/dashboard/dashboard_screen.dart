@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
+import '../../providers/buddy_onboarding_gate_provider.dart';
 import '../../providers/buddy_provider.dart';
 import '../../providers/entries_provider.dart';
 import '../../providers/ingredient_suggestion_provider.dart';
@@ -22,7 +23,6 @@ import 'widgets/feature_card.dart';
 import 'widgets/notification_opt_in_dialog.dart';
 import 'widgets/tutorial/show_dashboard_tutorial.dart';
 import 'widgets/tutorial/tutorial_keys.dart';
-import 'widgets/welcome_modal.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -47,6 +47,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // guaranteed to be AsyncData (or AsyncError).
     Future.microtask(() async {
       await _loadData();
+      // A pending Buddy onboarding is about to replace the dashboard (router
+      // gate): no first-run prompts underneath it. They run when the
+      // onboarding comes back here.
+      if (!mounted || ref.read(buddyOnboardingRequiredProvider)) return;
       await _maybeShowTutorial();
       if (!mounted) return;
       _maybeShowNotificationModal();
@@ -76,11 +80,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     if (!mounted) return;
     final shouldShow = ref.read(tutorialProvider.notifier).shouldShow();
     if (!shouldShow) return;
-    // Welcome modal is the first stage of the tutorial. Dismissing it
-    // (tap "Los geht's") falls through to the spotlight tour, and
-    // tutorialSeenAt is only persisted at the end of the spotlight.
-    await showWelcomeModal(context);
-    if (!mounted) return;
+    // The Buddy onboarding already welcomed the user: the spotlight tour
+    // starts right away. tutorialSeenAt is persisted at its end.
     final handle = showDashboardTutorial(context);
     _tutorialHandle = handle;
     await handle.future;
@@ -117,6 +118,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   }
 
   Future<void> _maybeShowNotificationModal() async {
+    // Push already on (e.g. before the Buddy onboarding, which then skips
+    // its reminder ask): nothing to opt into.
+    if (ref.read(profileProvider).value?.pushEnabled ?? false) return;
     final prefs = await SharedPreferences.getInstance();
     if (prefs.getBool(AppConstants.keyNotificationModalShown) ?? false) return;
     if (!mounted) return;
