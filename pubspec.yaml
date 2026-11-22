@@ -27,7 +27,6 @@ dependencies:
   json_annotation: ^4.12.0
 
   # UI
-  smooth_page_indicator: ^3.0.0
   flutter_svg: ^2.5.0
   cached_network_image: ^4.0.7
   shimmer: ^4.0.0

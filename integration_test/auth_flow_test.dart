@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
 import 'helpers/test_app.dart';
+import 'helpers/welcome_driver.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -18,9 +19,10 @@ void main() {
       buildTestApp(authenticated: false, dynamicAuth: true),
     );
 
-    await tester.pumpAndSettle();
+    await pumpUntilWelcome(tester);
 
-    expect(find.byKey(WelcomeScreen.registrationButtonKey), findsOneWidget);
+    expect(find.byKey(WelcomeScreen.buddyAreaKey), findsOneWidget);
+    expect(find.byKey(WelcomeScreen.signInButtonKey), findsOneWidget);
   });
 
   testWidgets('login shows error message when credentials are invalid', (
@@ -35,7 +37,7 @@ void main() {
       ),
     );
 
-    await tester.pumpAndSettle();
+    await pumpUntilWelcome(tester);
 
     await tester.tap(find.byKey(WelcomeScreen.signInButtonKey));
     await tester.pumpAndSettle();
@@ -64,10 +66,9 @@ void main() {
       buildTestApp(authenticated: false, dynamicAuth: true),
     );
 
-    await tester.pumpAndSettle();
+    await pumpUntilWelcome(tester);
 
     expect(find.byKey(WelcomeScreen.signInButtonKey), findsOneWidget);
-    expect(find.byKey(WelcomeScreen.registrationButtonKey), findsOneWidget);
 
     await tester.tap(find.byKey(WelcomeScreen.signInButtonKey));
     await tester.pumpAndSettle();

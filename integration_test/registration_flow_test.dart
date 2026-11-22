@@ -12,6 +12,7 @@ import 'package:integration_test/integration_test.dart';
 import '../test/helpers/fakes.dart';
 import '../test/helpers/registration_driver.dart';
 import 'helpers/test_app.dart';
+import 'helpers/welcome_driver.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -22,9 +23,11 @@ void main() {
     await tester.pumpWidget(
       buildTestApp(authenticated: false, seedProfile: false, dynamicAuth: true),
     );
-    await tester.pumpAndSettle();
+    await pumpUntilWelcome(tester);
 
-    // New user (no profile) should be redirected to the welcome screen
+    // New user (no profile) should be redirected to the welcome screen,
+    // whose Buddy offers the registration after his intro.
+    await finishWelcomeStory(tester);
     expect(find.byKey(WelcomeScreen.registrationButtonKey), findsOneWidget);
   });
 
@@ -40,7 +43,8 @@ void main() {
         ),
       );
 
-      await tester.pumpAndSettle();
+      await pumpUntilWelcome(tester);
+      await finishWelcomeStory(tester);
 
       final registrationButton = find.byKey(
         WelcomeScreen.registrationButtonKey,
@@ -117,9 +121,10 @@ void main() {
           profileRepo: profileRepo,
         ),
       );
-      await tester.pumpAndSettle();
+      await pumpUntilWelcome(tester);
 
       // Start registration.
+      await finishWelcomeStory(tester);
       await tester.tap(find.byKey(WelcomeScreen.registrationButtonKey));
       await tester.pumpAndSettle();
 

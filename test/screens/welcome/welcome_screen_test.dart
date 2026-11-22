@@ -1,39 +1,223 @@
-// ignore_for_file: invalid_use_of_internal_member
-import 'package:material_ui/material_ui.dart';
-import 'package:flutter_test/flutter_test.dart';
+import 'package:belly_buddy/config/app_theme.dart';
+import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/welcome/welcome_screen.dart';
+import 'package:belly_buddy/widgets/buddy/buddy.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
 
-import '../../helpers/riverpod_helpers.dart';
+const _line1 = 'Hi! Ich bin dein Bauch-Buddy.';
+const _line2 = 'Ich helfe dir herauszufinden, was deinem Bauch guttut.';
+const _line3 = 'Lass uns uns kennenlernen!';
+const _hint = 'Tippe, um ihn zu wecken';
+const _letsGo = "Los geht's";
+const _signIn = 'Ich habe schon ein Konto';
+
+/// Auto-advance step used by the story tests (the screen paces at 2.5 s).
+const _step = Duration(milliseconds: 2600);
+
+/// Pumps the welcome screen on a phone-sized view inside a router with stub
+/// registration and auth pages. The animated Buddy ticks forever, so tests
+/// use `pump(Duration)` instead of `pumpAndSettle`.
+Future<GoRouter> _pump(WidgetTester tester, {bool calm = false}) async {
+  tester.view.physicalSize = const Size(1170, 2532);
+  tester.view.devicePixelRatio = 3;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+
+  final router = GoRouter(
+    initialLocation: RoutePaths.welcome,
+    routes: [
+      GoRoute(
+        path: RoutePaths.welcome,
+        builder: (_, _) => const WelcomeScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.registration,
+        builder: (_, _) => const Scaffold(body: Text('registration-page')),
+      ),
+      GoRoute(
+        path: RoutePaths.auth,
+        builder: (_, _) => const Scaffold(body: Text('auth-page')),
+      ),
+    ],
+  );
+  addTearDown(router.dispose);
+
+  await tester.pumpWidget(
+    ProviderScope(
+      child: MaterialApp.router(
+        theme: AppTheme.theme,
+        routerConfig: router,
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context).copyWith(disableAnimations: calm),
+          child: child!,
+        ),
+      ),
+    ),
+  );
+  await tester.pump(const Duration(milliseconds: 100));
+  return router;
+}
+
+BuddyController _buddy(WidgetTester tester) =>
+    tester.widget<AnimatedBuddy>(find.byType(AnimatedBuddy)).controller;
+
+String _path(GoRouter router) =>
+    router.routerDelegate.currentConfiguration.uri.path;
+
+/// Lets a page transition finish (the welcome Buddy is gone afterwards).
+Future<void> _settleNavigation(WidgetTester tester) async {
+  for (var i = 0; i < 5; i++) {
+    await tester.pump(const Duration(milliseconds: 200));
+  }
+}
 
 void main() {
   group('WelcomeScreen', () {
-    testWidgets('renders Registrieren button', (tester) async {
-      await tester.pumpWithProviders(const WelcomeScreen());
-      // Use pump with duration; WelcomeScreen has an infinite Timer
-      await tester.pump(const Duration(milliseconds: 100));
+    testWidgets('starts with a sleeping Buddy, the wake hint and the '
+        'sign-in link, but no „Los geht\'s"', (tester) async {
+      await _pump(tester);
 
-      expect(find.text('Registrieren'), findsOneWidget);
+      expect(find.byKey(WelcomeScreen.buddyAreaKey), findsOneWidget);
+      expect(find.byKey(WelcomeScreen.hintKey), findsOneWidget);
+      expect(find.text(_hint), findsOneWidget);
+      expect(find.byKey(WelcomeScreen.registrationButtonKey), findsNothing);
+      expect(find.text(_letsGo), findsNothing);
+      expect(find.byKey(WelcomeScreen.signInButtonKey), findsOneWidget);
+      expect(find.text(_signIn), findsOneWidget);
+
+      final buddy = _buddy(tester);
+      expect(buddy.currentAction, isNull);
+      expect(buddy.bubble, isNull);
+      // Asleep reads as eyes shut: the lids are (nearly) closed.
+      expect(buddy.frame.face.lidTop, greaterThanOrEqualTo(0.9));
     });
 
-    testWidgets('renders Zur Anmeldung button', (tester) async {
-      await tester.pumpWithProviders(const WelcomeScreen());
+    testWidgets('tapping the Buddy area wakes him up', (tester) async {
+      await _pump(tester);
+
+      await tester.tap(find.byKey(WelcomeScreen.buddyAreaKey));
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('Zur Anmeldung'), findsOneWidget);
+      expect(_buddy(tester).currentAction, BuddyAction.wakeUp);
+      await tester.pump(const Duration(seconds: 1));
+      expect(find.byKey(WelcomeScreen.hintKey), findsNothing);
     });
 
-    testWidgets('renders first slide title', (tester) async {
-      await tester.pumpWithProviders(const WelcomeScreen());
+    testWidgets('tapping the hint wakes him up too', (tester) async {
+      await _pump(tester);
+
+      await tester.tap(find.byKey(WelcomeScreen.hintKey));
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('Verstehe dein Bauchgefühl'), findsOneWidget);
+      expect(_buddy(tester).currentAction, BuddyAction.wakeUp);
     });
 
-    testWidgets('renders PageView for slides', (tester) async {
-      await tester.pumpWithProviders(const WelcomeScreen());
-      await tester.pump(const Duration(milliseconds: 100));
+    testWidgets('after waking up he waves and tells the three lines in '
+        'order, then „Los geht\'s" appears', (tester) async {
+      await _pump(tester);
+      await tester.tap(find.byKey(WelcomeScreen.buddyAreaKey));
 
-      expect(find.byType(PageView), findsOneWidget);
+      await tester.pump(_step);
+      expect(find.text(_line1), findsOneWidget);
+      expect(_buddy(tester).currentAction, BuddyAction.wave);
+      expect(find.text(_line2), findsNothing);
+      expect(find.byKey(WelcomeScreen.registrationButtonKey), findsNothing);
+
+      await tester.pump(_step);
+      expect(find.text(_line2), findsOneWidget);
+      expect(find.text(_line3), findsNothing);
+      expect(find.byKey(WelcomeScreen.registrationButtonKey), findsNothing);
+
+      await tester.pump(_step);
+      expect(find.text(_line3), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byKey(WelcomeScreen.registrationButtonKey), findsOneWidget);
+      expect(find.text(_letsGo), findsOneWidget);
+      expect(find.byKey(WelcomeScreen.signInButtonKey), findsOneWidget);
+
+      // The last line stays up next to the button.
+      await tester.pump(const Duration(seconds: 10));
+      expect(find.text(_line3), findsOneWidget);
+      expect(find.byKey(WelcomeScreen.registrationButtonKey), findsOneWidget);
+    });
+
+    testWidgets('tapping the Buddy area advances the lines without waiting', (
+      tester,
+    ) async {
+      await _pump(tester);
+      await tester.tap(find.byKey(WelcomeScreen.buddyAreaKey));
+      await tester.pump(_step);
+      expect(find.text(_line1), findsOneWidget);
+
+      await tester.tap(find.byKey(WelcomeScreen.buddyAreaKey));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.text(_line2), findsOneWidget);
+
+      await tester.tap(find.byKey(WelcomeScreen.buddyAreaKey));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.text(_line3), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byKey(WelcomeScreen.registrationButtonKey), findsOneWidget);
+    });
+
+    testWidgets('„Los geht\'s" opens the registration', (tester) async {
+      final router = await _pump(tester);
+      await tester.tap(find.byKey(WelcomeScreen.buddyAreaKey));
+      for (var i = 0; i < 4; i++) {
+        await tester.pump(_step);
+      }
+
+      await tester.tap(find.byKey(WelcomeScreen.registrationButtonKey));
+      await _settleNavigation(tester);
+
+      expect(_path(router), RoutePaths.registration);
+      expect(find.text('registration-page'), findsOneWidget);
+    });
+
+    testWidgets('„Ich habe schon ein Konto" opens the sign-in right away', (
+      tester,
+    ) async {
+      final router = await _pump(tester);
+
+      await tester.tap(find.byKey(WelcomeScreen.signInButtonKey));
+      await _settleNavigation(tester);
+
+      expect(_path(router), RoutePaths.auth);
+      expect(find.text('auth-page'), findsOneWidget);
+    });
+
+    testWidgets('leaving mid-story cancels the story timers', (tester) async {
+      final router = await _pump(tester);
+      await tester.tap(find.byKey(WelcomeScreen.buddyAreaKey));
+      await tester.pump(_step);
+      expect(find.text(_line1), findsOneWidget);
+
+      await tester.tap(find.byKey(WelcomeScreen.signInButtonKey));
+      await _settleNavigation(tester);
+      await tester.pump(const Duration(seconds: 10));
+
+      expect(_path(router), RoutePaths.auth);
+      expect(find.byType(WelcomeScreen), findsNothing);
+    });
+
+    testWidgets('with reduced motion waking skips straight to the first '
+        'line and the story still reaches „Los geht\'s"', (tester) async {
+      await _pump(tester, calm: true);
+
+      await tester.tap(find.byKey(WelcomeScreen.buddyAreaKey));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.text(_line1), findsOneWidget);
+      expect(_buddy(tester).currentAction, isNot(BuddyAction.wakeUp));
+
+      await tester.pump(_step);
+      expect(find.text(_line2), findsOneWidget);
+      await tester.pump(_step);
+      expect(find.text(_line3), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byKey(WelcomeScreen.registrationButtonKey), findsOneWidget);
     });
   });
 }
