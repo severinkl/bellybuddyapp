@@ -116,7 +116,8 @@ class _RegistrationWizardScreenState
 
   // Dynamic: the email-capture step is only present for OAuth sign-ins that
   // didn't return a usable real email (Apple Hide-My-Email or empty).
-  int get _totalSteps => _showEmailCapture ? 10 : 9;
+  int get _totalSteps =>
+      (_showEmailCapture ? _emailCaptureStep : _authStep) + 1;
 
   bool _showEmailCapture = false;
   String? _capturedEmail;
@@ -137,11 +138,8 @@ class _RegistrationWizardScreenState
   /// The typed name as it will be saved (trimmed).
   String get _name => _buddyName.trim();
 
-  /// Same rule as [BuddyNotifier.setName]: 1–20 characters after trimming.
-  bool get _nameValid {
-    final length = _name.runes.length;
-    return length > 0 && length <= AppConstants.buddyNameMaxLength;
-  }
+  /// Same rule as [BuddyNotifier.setName].
+  bool get _nameValid => AppConstants.isValidBuddyName(_buddyName);
 
   /// Shows [step]; the Buddy introduces it. A [farewell] reaction to the
   /// step being left goes first, and the intro follows after
@@ -156,7 +154,7 @@ class _RegistrationWizardScreenState
 
     final intro = _introFor(step);
     if (farewell == null) {
-      _cancelPendingLines();
+      // Every step has an intro, and reacting cancels the pending lines.
       if (intro != null) _react(intro, hold: _introHold);
       return;
     }
@@ -180,11 +178,7 @@ class _RegistrationWizardScreenState
   /// filled in. Replaces any line still waiting.
   void _react(BuddyLine line, {Duration hold = _reactionHold}) {
     _cancelPendingLines();
-    final mood = line.mood;
-    final action = line.action;
-    if (mood != null) _buddy.mood = mood;
-    if (action != null) _buddy.play(action);
-    _buddy.say(line.pick(_rnd).replaceAll('{name}', _name), duration: hold);
+    _buddy.react(line, name: _name, rnd: _rnd, duration: hold);
   }
 
   void _reactTo(String key) {

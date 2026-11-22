@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
+import '../../config/constants.dart';
 import 'animated_buddy.dart';
 import 'buddy_controller.dart';
 import 'buddy_speech_bubble.dart';
@@ -15,7 +16,7 @@ class BuddyStage extends StatelessWidget {
     required this.controller,
     this.name = 'Buddy',
     this.onPoke,
-    this.bubbleHeight = 72,
+    this.bubbleHeight = AppConstants.buddyBubbleHeight,
   });
 
   final BuddyController controller;
@@ -25,8 +26,6 @@ class BuddyStage extends StatelessWidget {
   /// Height reserved for the bubble; a taller bubble (large text scale) is
   /// scaled down to fit instead of overflowing.
   final double bubbleHeight;
-
-  static const double _bubbleMaxWidth = 280;
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +40,10 @@ class BuddyStage extends StatelessWidget {
               alignment: Alignment.bottomCenter,
               child: BuddySpeechBubble(
                 controller: controller,
-                maxWidth: math.min(_bubbleMaxWidth, constraints.maxWidth),
+                maxWidth: math.min(
+                  AppConstants.buddyBubbleMaxWidth,
+                  constraints.maxWidth,
+                ),
               ),
             ),
           ),

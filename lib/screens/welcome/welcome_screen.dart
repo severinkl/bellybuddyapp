@@ -10,8 +10,6 @@ import '../../config/constants.dart';
 import '../../router/route_names.dart';
 import '../../services/haptic_service.dart';
 import '../../widgets/buddy/buddy.dart';
-import '../../widgets/buddy/buddy_shape_data.dart'
-    show kBuddyHeight, kBuddyWidth;
 import '../../widgets/common/bb_button.dart';
 
 enum _Phase { asleep, waking, talking, ready }
@@ -60,18 +58,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   /// Auto-advance pacing between lines.
   static const _linePace = Duration(milliseconds: 2500);
 
-  /// Lines stay up until the next one replaces them; the last one stays
-  /// next to the button.
-  static const _lineHold = Duration(hours: 1);
-
   static const _hintPulse = Duration(milliseconds: 1400);
-
-  /// Width / height of the box the Buddy fills exactly, including the
-  /// headroom `AnimatedBuddy` keeps for jumps (see `BuddyLayout`).
-  static const _buddyAspect = (kBuddyWidth * 1.12) / (kBuddyHeight * 1.18);
-
-  /// `BuddyStage`'s default bubble slot (two lines at body size).
-  static const double _bubbleHeight = 72;
 
   final _buddy = BuddyController(mood: BuddyMood.asleep);
   late final AnimationController _pulse = AnimationController(
@@ -132,7 +119,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     _buddy
       ..mood = BuddyMood.happy
       ..play(_lineActions[i])
-      ..say(_lines[i], duration: _lineHold);
+      // Up until the next line replaces it; the last one stays next to the
+      // button.
+      ..say(_lines[i], duration: null);
     final last = i == _lines.length - 1;
     setState(() {
       _line = i;
@@ -159,15 +148,18 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   /// the bubble far above his head (the Buddy is drawn bottom-anchored).
   /// The extra headroom keeps the `celebrate` jump clear of the bubble.
   Widget _buildStage(BuildContext context, BoxConstraints c) {
-    if (c.maxHeight <= _bubbleHeight) return const SizedBox.shrink();
+    const bubbleHeight = AppConstants.buddyBubbleHeight;
+    if (c.maxHeight <= bubbleHeight) return const SizedBox.shrink();
+    // kBuddyStageAspect includes the headroom `AnimatedBuddy` keeps for
+    // jumps (see `BuddyLayout`).
     final buddyHeight = math.min(
-      c.maxWidth / _buddyAspect + AppConstants.spacingLg,
-      c.maxHeight - _bubbleHeight,
+      c.maxWidth / kBuddyStageAspect + AppConstants.spacingLg,
+      c.maxHeight - bubbleHeight,
     );
     return Center(
       child: SizedBox(
-        height: buddyHeight + _bubbleHeight,
-        child: BuddyStage(controller: _buddy, bubbleHeight: _bubbleHeight),
+        height: buddyHeight + bubbleHeight,
+        child: BuddyStage(controller: _buddy),
       ),
     );
   }

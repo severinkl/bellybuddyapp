@@ -82,6 +82,10 @@ class BuddyFrame {
   final double hearts;
 }
 
+/// The speech bubble: its text (null when nothing to say) and the id of the
+/// [BuddyController.say] that set it.
+typedef BuddyBubble = ({String? text, int id});
+
 /// Drives the Buddy: call [tick] once per frame (e.g. from a `Ticker`).
 ///
 /// Setters and commands ([mood], [play], [lookAt], [say], [reducedMotion])
@@ -159,6 +163,7 @@ class BuddyController extends ChangeNotifier {
   String? _bubble;
   int _bubbleId = 0;
   double _bubbleUntil = 0;
+  late final _BubbleNotifier _bubbleNotifier = _BubbleNotifier(this);
 
   late BuddyFrame _frame;
   BuddyFrame get frame => _frame;
@@ -189,14 +194,15 @@ class BuddyController extends ChangeNotifier {
     _lookUntil = _t + _secs(hold);
   }
 
-  /// Shows [text] in the speech bubble for [duration].
+  /// Shows [text] in the speech bubble for [duration]; a null [duration]
+  /// keeps it up until the next [say].
   void say(
     String text, {
-    Duration duration = const Duration(milliseconds: 2800),
+    Duration? duration = const Duration(milliseconds: 2800),
   }) {
     _bubble = text;
     _bubbleId++;
-    _bubbleUntil = _t + _secs(duration);
+    _bubbleUntil = duration == null ? double.infinity : _t + _secs(duration);
   }
 
   /// Current speech-bubble text; null when nothing to say.
@@ -204,6 +210,10 @@ class BuddyController extends ChangeNotifier {
 
   /// Increments with every [say], for `AnimatedSwitcher` keys.
   int get bubbleId => _bubbleId;
+
+  /// The current [bubble] and [bubbleId]. Notifies only on the [tick] after
+  /// they changed (a [say] or the bubble expiring), not every frame.
+  ValueListenable<BuddyBubble> get bubbleListenable => _bubbleNotifier;
 
   /// Whether [imagePoint] (Buddy image coords) is on the Buddy.
   bool hitTest(Offset imagePoint) => BuddyShapes.hitPath.contains(imagePoint);
@@ -213,6 +223,7 @@ class BuddyController extends ChangeNotifier {
     final d = dt.isNaN ? 0.0 : dt.clamp(0.0, 0.05);
     _t += d;
     _step(d);
+    _bubbleNotifier.sync();
     notifyListeners();
   }
 
@@ -227,6 +238,7 @@ class BuddyController extends ChangeNotifier {
   @override
   void dispose() {
     _food = null;
+    _bubbleNotifier.dispose();
     super.dispose();
   }
 
@@ -393,6 +405,30 @@ class BuddyController extends ChangeNotifier {
     }
     final b = (t - _blinkStart) / _blinkDuration;
     _blink = (b < 0 || b > 1) ? 0 : (b < 0.4 ? b / 0.4 : 1 - (b - 0.4) / 0.6);
+  }
+}
+
+/// [BuddyController.bubbleListenable]: always reads the controller's current
+/// bubble, and notifies from [sync] when it differs from the last notified
+/// one.
+class _BubbleNotifier extends ChangeNotifier
+    implements ValueListenable<BuddyBubble> {
+  _BubbleNotifier(this._controller);
+
+  final BuddyController _controller;
+  BuddyBubble _notified = (text: null, id: 0);
+
+  static BuddyBubble _read(BuddyController c) =>
+      (text: c._bubble, id: c._bubbleId);
+
+  @override
+  BuddyBubble get value => _read(_controller);
+
+  void sync() {
+    final v = value;
+    if (v == _notified) return;
+    _notified = v;
+    notifyListeners();
   }
 }
 

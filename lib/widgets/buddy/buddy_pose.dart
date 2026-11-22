@@ -241,15 +241,30 @@ class FacePose {
     double? lean,
     double? rumble,
     double? zzz,
-  }) {
-    final o = [
-      lidTop, lidTilt, lidBottom, pupil, heart, smile, open, mouthWidth, //
-      brow, browTilt, blush, nervousFx, sway, breath, breathRate, shake, //
-      hop, hearts, gazeY, lean, rumble, zzz,
-    ];
-    final v = _v;
-    return _from([for (var i = 0; i < v.length; i++) o[i] ?? v[i]]);
-  }
+  }) => FacePose(
+    lidTop: lidTop ?? this.lidTop,
+    lidTilt: lidTilt ?? this.lidTilt,
+    lidBottom: lidBottom ?? this.lidBottom,
+    pupil: pupil ?? this.pupil,
+    heart: heart ?? this.heart,
+    smile: smile ?? this.smile,
+    open: open ?? this.open,
+    mouthWidth: mouthWidth ?? this.mouthWidth,
+    brow: brow ?? this.brow,
+    browTilt: browTilt ?? this.browTilt,
+    blush: blush ?? this.blush,
+    nervousFx: nervousFx ?? this.nervousFx,
+    sway: sway ?? this.sway,
+    breath: breath ?? this.breath,
+    breathRate: breathRate ?? this.breathRate,
+    shake: shake ?? this.shake,
+    hop: hop ?? this.hop,
+    hearts: hearts ?? this.hearts,
+    gazeY: gazeY ?? this.gazeY,
+    lean: lean ?? this.lean,
+    rumble: rumble ?? this.rumble,
+    zzz: zzz ?? this.zzz,
+  );
 
   bool closeTo(FacePose other, {double eps = 1e-3}) {
     final a = _v, b = other._v;

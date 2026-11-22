@@ -47,8 +47,15 @@ Future<bool> enableReminders(WidgetRef ref) async {
   final profiles = ref.read(profileProvider.notifier);
 
   final granted = await notifications.requestAllPermissions();
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.setBool(AppConstants.keyNotificationModalShown, true);
+  await markNotificationOptInOffered();
   await profiles.updateProfile(profile.copyWith(pushEnabled: granted));
   return granted;
+}
+
+/// Remembers that the reminder opt-in was offered
+/// ([AppConstants.keyNotificationModalShown]), so the dashboard's opt-in
+/// dialog doesn't ask (again).
+Future<void> markNotificationOptInOffered() async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setBool(AppConstants.keyNotificationModalShown, true);
 }

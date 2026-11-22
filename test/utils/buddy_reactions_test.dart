@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:belly_buddy/config/buddy_reactions.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/screens/registration/steps/symptoms_step.dart';
+import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -65,5 +66,34 @@ void main() {
     final line = wizardReaction('symptom:none')!;
     expect(line.pick(Random(3)), line.pick(Random(3)));
     expect(line.lines, contains(line.pick(Random(7))));
+  });
+
+  test('react plays the mood and action and says a line with the name', () {
+    final line = wizardReaction('name:confirmed')!;
+    final c = BuddyController()
+      ..react(
+        line,
+        name: 'Bauchi',
+        rnd: Random(1),
+        duration: const Duration(seconds: 1),
+      );
+    expect(c.mood, line.mood);
+    expect(c.currentAction, line.action);
+    expect(
+      line.lines.map((l) => l.replaceAll('{name}', 'Bauchi')),
+      contains(c.bubble),
+    );
+    expect(c.bubble, isNot(contains('{name}')));
+    c.dispose();
+  });
+
+  test('isValidBuddyName: 1 to 20 characters after trimming', () {
+    expect(AppConstants.isValidBuddyName('Bauchi'), isTrue);
+    expect(AppConstants.isValidBuddyName('  Bauchi  '), isTrue);
+    expect(AppConstants.isValidBuddyName('   '), isFalse);
+    expect(AppConstants.isValidBuddyName(''), isFalse);
+    expect(AppConstants.isValidBuddyName('a' * 20), isTrue);
+    expect(AppConstants.isValidBuddyName('a' * 21), isFalse);
+    expect(AppConstants.isValidBuddyName('🍎' * 20), isTrue);
   });
 }

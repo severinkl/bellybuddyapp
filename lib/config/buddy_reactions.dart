@@ -1,10 +1,12 @@
 import 'dart:math';
 
+import '../services/buddy/buddy_copy.dart';
 import '../widgets/buddy/buddy_actions.dart';
+import '../widgets/buddy/buddy_controller.dart';
 import '../widgets/buddy/buddy_pose.dart';
 
 /// A Buddy reaction: optional mood/action plus 1-3 German line variants.
-/// `{name}` is replaced by the Buddy's own name by the caller.
+/// `{name}` is replaced by the Buddy's own name ([BuddyLineReaction.react]).
 class BuddyLine {
   const BuddyLine({this.mood, this.action, required this.lines});
 
@@ -12,7 +14,25 @@ class BuddyLine {
   final BuddyAction? action;
   final List<String> lines;
 
-  String pick(Random rnd) => lines[rnd.nextInt(lines.length)];
+  String pick(Random rnd) => BuddyCopy.pick(lines, rnd);
+}
+
+/// Plays [BuddyLine]s on a Buddy.
+extension BuddyLineReaction on BuddyController {
+  /// Plays [line]: its mood and action, and one of its texts with `{name}`
+  /// filled in, shown for [duration] (null: until the next `say`).
+  void react(
+    BuddyLine line, {
+    required String name,
+    required Random rnd,
+    required Duration? duration,
+  }) {
+    final mood = line.mood;
+    final action = line.action;
+    if (mood != null) this.mood = mood;
+    if (action != null) play(action);
+    say(BuddyCopy.fill(line.pick(rnd), name: name), duration: duration);
+  }
 }
 
 /// Builds a catalog key, e.g. `wizardKey('gender', 'weiblich')`.

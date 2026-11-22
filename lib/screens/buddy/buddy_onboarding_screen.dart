@@ -4,7 +4,6 @@ import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../config/app_theme.dart';
 import '../../config/buddy_reactions.dart';
@@ -83,9 +82,6 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
 
   static const _introLine = 'Hi! Ich bin neu hier — dein Bauch-Buddy.';
   static const _thanksLine = 'Mmmh! Danke!';
-
-  /// The intro greeting stays up until the next line replaces it.
-  static const _lineHold = Duration(hours: 1);
 
   /// Reactions stay long enough to read across a step change.
   static const _reactionHold = Duration(seconds: 4);
@@ -198,7 +194,8 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
         _buddy
           ..mood = BuddyMood.happy
           ..play(BuddyAction.wakeUp)
-          ..say(_introLine, duration: _lineHold);
+          // Up until the next line replaces it.
+          ..say(_introLine, duration: null);
       case BuddyOnboardingStep.firstMeal:
         _buddy.mood = BuddyMood.hungry;
       case BuddyOnboardingStep.name:
@@ -235,10 +232,7 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
     if (_ready(BuddyOnboardingStep.intro)) _advance();
   }
 
-  bool get _nameValid {
-    final length = _name.trim().runes.length;
-    return length > 0 && length <= AppConstants.buddyNameMaxLength;
-  }
+  bool get _nameValid => AppConstants.isValidBuddyName(_name);
 
   Future<void> _confirmName() async {
     if (!_ready(BuddyOnboardingStep.name) || !_nameValid) return;
@@ -265,18 +259,9 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
     }
     _advance();
     final reaction = wizardReaction('name:confirmed');
-    if (reaction != null) _react(reaction, name);
-  }
-
-  void _react(BuddyLine line, String name) {
-    final mood = line.mood;
-    final action = line.action;
-    if (mood != null) _buddy.mood = mood;
-    if (action != null) _buddy.play(action);
-    _buddy.say(
-      line.pick(_rnd).replaceAll('{name}', name),
-      duration: _reactionHold,
-    );
+    if (reaction != null) {
+      _buddy.react(reaction, name: name, rnd: _rnd, duration: _reactionHold);
+    }
   }
 
   void _pickGoal(int goal) {
@@ -315,11 +300,10 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
   }
 
   /// The dashboard's opt-in dialog must not ask again.
-  Future<void> _markRemindersAsked() =>
-      _logErrors('Storing the reminder opt-in flag', () async {
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.setBool(AppConstants.keyNotificationModalShown, true);
-      });
+  Future<void> _markRemindersAsked() => _logErrors(
+    'Storing the reminder opt-in flag',
+    markNotificationOptInOffered,
+  );
 
   Future<void> _logMeal() async {
     if (!_ready(BuddyOnboardingStep.firstMeal)) return;

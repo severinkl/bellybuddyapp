@@ -1,6 +1,5 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../providers/notification_provider.dart';
@@ -68,8 +67,7 @@ class _NotificationOptInDialogState
   }
 
   Future<void> _dismiss() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(AppConstants.keyNotificationModalShown, true);
+    await markNotificationOptInOffered();
     if (!mounted) return;
     Navigator.pop(context, false);
   }

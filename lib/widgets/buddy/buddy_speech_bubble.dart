@@ -6,11 +6,12 @@ import 'buddy_controller.dart';
 
 /// The Buddy's speech bubble: shows [BuddyController.bubble] and pops each
 /// new `say()` in with a scale + fade (instant under reduced motion).
+/// Rebuilds only when the bubble changes, not on every frame.
 class BuddySpeechBubble extends StatelessWidget {
   const BuddySpeechBubble({
     super.key,
     required this.controller,
-    this.maxWidth = 280,
+    this.maxWidth = AppConstants.buddyBubbleMaxWidth,
   });
 
   final BuddyController controller;
@@ -19,10 +20,11 @@ class BuddySpeechBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final calm = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    final bubble = controller.bubbleListenable;
     return ListenableBuilder(
-      listenable: controller,
+      listenable: bubble,
       builder: (context, _) {
-        final text = controller.bubble;
+        final (:text, :id) = bubble.value;
         return AnimatedSwitcher(
           duration: calm || controller.reducedMotion
               ? Duration.zero
@@ -37,11 +39,7 @@ class BuddySpeechBubble extends StatelessWidget {
           ),
           child: text == null
               ? const SizedBox.shrink()
-              : _Bubble(
-                  key: ValueKey(controller.bubbleId),
-                  text: text,
-                  maxWidth: maxWidth,
-                ),
+              : _Bubble(key: ValueKey(id), text: text, maxWidth: maxWidth),
         );
       },
     );

@@ -60,6 +60,11 @@ class AppConstants {
   static const double dragHandleHeight = 4.0;
   static const double dragHandleRadius = 2.0;
 
+  // Buddy speech bubble: the slot above the Buddy (two lines at body size)
+  // and the bubble's widest width
+  static const double buddyBubbleHeight = 72.0;
+  static const double buddyBubbleMaxWidth = 280.0;
+
   // Streak chip / goal sheet
   static const double streakChipPopScale = 1.25;
   static const double streakSheetBuddyHeight = 220.0;
@@ -145,6 +150,13 @@ class AppConstants {
 
   /// Maximum length of the Buddy's name (matches the `buddy_state` check).
   static const int buddyNameMaxLength = 20;
+
+  /// Whether [name] is a valid Buddy name: 1 to [buddyNameMaxLength]
+  /// characters after trimming.
+  static bool isValidBuddyName(String name) {
+    final length = name.trim().runes.length;
+    return length > 0 && length <= buddyNameMaxLength;
+  }
 
   /// App Store numeric ID for Belly Buddy, used by the upgrade screen and
   /// dialog to open the store listing (App Store Connect → App Information →

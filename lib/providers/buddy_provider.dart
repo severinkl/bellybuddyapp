@@ -109,9 +109,7 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
   /// Renames the Buddy (trimmed, 1–20 characters) and creates the row if
   /// missing. Throws [ArgumentError] for an invalid name.
   Future<void> setName(String name) async {
-    final trimmed = name.trim();
-    final length = trimmed.runes.length;
-    if (length < 1 || length > AppConstants.buddyNameMaxLength) {
+    if (!AppConstants.isValidBuddyName(name)) {
       throw ArgumentError.value(
         name,
         'name',
@@ -119,6 +117,7 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
             'lang sein.',
       );
     }
+    final trimmed = name.trim();
     await _mutate('setName', (s) => s.copyWith(name: trimmed));
   }
 

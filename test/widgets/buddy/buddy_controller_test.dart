@@ -262,6 +262,34 @@ void main() {
     expect(c.bubble, 'Na du?');
   });
 
+  test('say with a null duration keeps the bubble until the next say', () {
+    final c = BuddyController()..say('Hallo', duration: null);
+    _run(c, 120);
+    expect(c.bubble, 'Hallo');
+    c.say('Tschüss');
+    _run(c, 3);
+    expect(c.bubble, isNull);
+  });
+
+  test('bubbleListenable notifies on the tick after a change, not every '
+      'frame', () {
+    final c = BuddyController();
+    var notified = 0;
+    c.bubbleListenable.addListener(() => notified++);
+    _run(c, 1);
+    expect(notified, 0);
+
+    c.say('Hallo', duration: const Duration(seconds: 1));
+    expect(notified, 0, reason: 'say itself never notifies');
+    expect(c.bubbleListenable.value, (text: 'Hallo', id: 1));
+    _run(c, 0.5);
+    expect(notified, 1);
+    _run(c, 1);
+    expect(notified, 2, reason: 'the bubble expired');
+    expect(c.bubbleListenable.value, (text: null, id: 1));
+    c.dispose();
+  });
+
   test('lookAt steers the gaze toward the point', () {
     final c = BuddyController()..lookAt(const Offset(467, 2000));
     _run(c, 0.5);

@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import 'buddy/buddy_copy.dart';
+
 enum TimeSlot { morning, midday, evening }
 
 /// Maps a 24-hour clock hour to a [TimeSlot]. Hours 23 and 0–4 wrap into
@@ -79,7 +81,7 @@ class ReminderCopy {
   };
 
   static String _withName(String line, String name) =>
-      line.replaceAll('{name}', name);
+      BuddyCopy.fill(line, name: name);
 
   static String pickMealBody(int hour, Random random, {String? buddyName}) {
     if (buddyName != null) {

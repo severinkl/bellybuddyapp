@@ -53,29 +53,24 @@ class BuddyStepHost extends StatelessWidget {
   /// What the Buddy does while [keyboardOpen].
   final BuddyKeyboardStage keyboardStage;
 
-  double _stageHeight(BuildContext context) {
-    if (keyboardOpen) {
-      return switch (keyboardStage) {
-        BuddyKeyboardStage.compact => AppConstants.buddyWizardCompactSize,
-        BuddyKeyboardStage.hidden => 0,
-      };
-    }
-    final screen = MediaQuery.sizeOf(context).height;
-    return (screen * AppConstants.buddyWizardHeightFactor).clamp(
-      AppConstants.buddyWizardSize,
-      AppConstants.buddyWizardMaxSize,
-    );
-  }
+  double _stageHeight(BuildContext context) => switch (keyboardStage) {
+    _ when !keyboardOpen =>
+      (MediaQuery.sizeOf(context).height * AppConstants.buddyWizardHeightFactor)
+          .clamp(AppConstants.buddyWizardSize, AppConstants.buddyWizardMaxSize),
+    BuddyKeyboardStage.compact => AppConstants.buddyWizardCompactSize,
+    BuddyKeyboardStage.hidden => 0,
+  };
 
   Widget _stage(double height) {
     if (height == 0) return const SizedBox(width: double.infinity);
     return SizedBox(
       height: height,
-      // Same widget either way, so the Buddy keeps its state; the compact
-      // one has no bubble slot.
-      child: keyboardOpen
-          ? BuddyStage(controller: controller, name: name, bubbleHeight: 0)
-          : BuddyStage(controller: controller, name: name),
+      // The compact Buddy has no bubble slot.
+      child: BuddyStage(
+        controller: controller,
+        name: name,
+        bubbleHeight: keyboardOpen ? 0 : AppConstants.buddyBubbleHeight,
+      ),
     );
   }
 

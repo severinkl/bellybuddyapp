@@ -48,7 +48,8 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
 
   bool _introStarted = false;
 
-  bool get _hasMascot =>
+  /// A mascot image or an illustration is shown.
+  bool get _hasHero =>
       widget.mascotAsset != null || widget.illustration != null;
 
   @override
@@ -102,9 +103,10 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _textController, curve: Curves.easeOut));
 
-    // Auto-dismiss only when no mascot and no actions (legacy behavior)
+    // Auto-dismiss only without a hero (mascot or illustration) and actions
+    // (legacy behavior)
     final hasActions = widget.actions != null && widget.actions!.isNotEmpty;
-    if (!hasActions && !_hasMascot) {
+    if (!hasActions && !_hasHero) {
       Future.delayed(AppConstants.successOverlayDuration, () {
         if (mounted) widget.onDismissed();
       });
@@ -145,12 +147,12 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
 
   @override
   Widget build(BuildContext context) {
-    final hasMascot = _hasMascot;
+    final hasHero = _hasHero;
     final illustration = widget.illustration;
-    final bgColor = hasMascot
+    final bgColor = hasHero
         ? AppTheme.primary.withValues(alpha: 0.95)
         : AppTheme.background.withValues(alpha: 0.95);
-    final textColor = hasMascot
+    final textColor = hasHero
         ? AppTheme.primaryForeground
         : AppTheme.foreground;
 
@@ -239,7 +241,7 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
                 // Action buttons
                 if (widget.actions != null && widget.actions!.isNotEmpty) ...[
                   AppConstants.gap24,
-                  if (hasMascot)
+                  if (hasHero)
                     _PillActionButton(children: widget.actions!)
                   else
                     Column(
@@ -259,7 +261,7 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
                 ],
 
                 // Tap hint
-                if (hasMascot) ...[
+                if (hasHero) ...[
                   const SizedBox(height: AppConstants.spacingXxl),
                   FadeTransition(
                     opacity: _textOpacityAnimation,
@@ -279,7 +281,7 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
       ),
     );
 
-    if (hasMascot) {
+    if (hasHero) {
       content = GestureDetector(onTap: widget.onDismissed, child: content);
     }
 
