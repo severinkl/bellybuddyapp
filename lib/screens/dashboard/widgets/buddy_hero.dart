@@ -69,6 +69,10 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// Log events older than this are dropped without a follow-up.
   static const _eventMaxAge = Duration(minutes: 2);
   static const _followUpDelay = Duration(milliseconds: 600);
+
+  /// The follow-up waits at most this long for the Buddy refresh the log
+  /// started, so "Danke! 🔥" sees the new streak on a slow connection.
+  static const _refreshWait = Duration(seconds: 3);
   static const _moodInterval = Duration(minutes: 1);
 
   /// How long a follow-up or announcement line stays up; the next cue waits
@@ -110,6 +114,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   /// A log's follow-up is queued and not said yet.
   bool _followUpPending = false;
+
+  /// The Buddy refresh of the latest log ([BuddyEventsNotifier.lastRefresh]).
+  Future<void>? _logRefresh;
 
   /// Whether the first mood line was said (or replaced by announcements).
   /// Waits for the Buddy status (real name and streak) and visibility.
@@ -287,7 +294,8 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   void _consumeEvent() => _whenVisible(() {
     if (ref.read(buddyEventsProvider) == null) return;
-    final event = ref.read(buddyEventsProvider.notifier).consume();
+    final events = ref.read(buddyEventsProvider.notifier);
+    final event = events.consume();
     if (event == null) return;
     if (_now().difference(event.at) > _eventMaxAge) {
       _noteCountedIfIdle(ref.read(buddyProvider).value);
@@ -296,6 +304,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     if (event.sentiment == LogSentiment.bad) {
       _setOverride(BuddyMood.empathetic);
     }
+    _logRefresh = events.lastRefresh;
     if (!_followUpPending) {
       _followUpPending = true;
       _enqueue(const [_Cue.followUp]);
@@ -311,6 +320,23 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     } catch (e, st) {
       _log.error("Reloading today's entries failed", e, st);
     }
+  }
+
+  /// Says the follow-up once the log's Buddy refresh is done (waiting at
+  /// most [_refreshWait]), then holds the stage.
+  Future<void> _followUpAfterRefresh() async {
+    final refresh = _logRefresh;
+    _logRefresh = null;
+    if (refresh != null) {
+      try {
+        await refresh.timeout(_refreshWait);
+      } on TimeoutException {
+        // Slow backend: go on with what is known.
+      }
+    }
+    if (!mounted) return;
+    _sayFollowUp();
+    _holdStage();
   }
 
   void _sayFollowUp() {
@@ -352,10 +378,10 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     final cue = _playing = _cues.removeFirst();
     switch (cue) {
       case _Cue.followUp:
-        _cueTimer = Timer(_followUpDelay, () {
-          _sayFollowUp();
-          _holdStage();
-        });
+        _cueTimer = Timer(
+          _followUpDelay,
+          () => unawaited(_followUpAfterRefresh()),
+        );
       case _Cue.saverUsed:
         _buddy.play(BuddyAction.hug);
         _say(_saverUsedLine);

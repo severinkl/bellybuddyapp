@@ -33,13 +33,23 @@ class _FakeBuddy extends BuddyNotifier {
   /// Every announcement the hero marked as shown, in order.
   final List<BuddyAnnouncement> shown = [];
   int refreshCalls = 0;
+
+  /// How long [refresh] takes, then it publishes [afterRefresh] (if set):
+  /// a slow backend.
+  Duration refreshDelay = Duration.zero;
+  BuddyStatus? afterRefresh;
   final List<int?> goals = [];
 
   @override
   Future<BuddyStatus?> build() async => _initial();
 
   @override
-  Future<void> refresh() async => refreshCalls++;
+  Future<void> refresh() async {
+    refreshCalls++;
+    if (refreshDelay > Duration.zero) await Future<void>.delayed(refreshDelay);
+    final next = afterRefresh;
+    if (next != null) push(next);
+  }
 
   @override
   Future<void> setStreakGoal(int? goal) async => goals.add(goal);
@@ -458,6 +468,49 @@ void main() {
       expect(controller(tester).bubble, 'Danke! 🔥 5 Tage');
       expect(find.text('Danke! 🔥 5 Tage'), findsOneWidget);
       await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('a slow refresh: the follow-up waits for it and thanks', (
+      tester,
+    ) async {
+      final container = await pumpHero(tester);
+      await advance(tester, const Duration(seconds: 3)); // greeting gone
+      buddy
+        ..refreshDelay = const Duration(milliseconds: 1500)
+        ..afterRefresh = _status(streak: 5, todayCounted: true);
+
+      emit(container, LogSentiment.good);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      await tick(tester);
+      // Still refreshing: nothing said yet.
+      expect(controller(tester).bubble, isNull);
+
+      await tester.pump(const Duration(seconds: 1));
+      await tick(tester);
+      expect(controller(tester).bubble, 'Danke! 🔥 5 Tage');
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('a refresh slower than 3 s: the follow-up goes on without it', (
+      tester,
+    ) async {
+      final container = await pumpHero(tester);
+      await advance(tester, const Duration(seconds: 3)); // greeting gone
+      buddy
+        ..refreshDelay = const Duration(seconds: 10)
+        ..afterRefresh = _status(streak: 5, todayCounted: true);
+
+      emit(container, LogSentiment.good);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      await tester.pump(const Duration(seconds: 3));
+      await tick(tester);
+
+      final c = controller(tester);
+      expect(c.bubble, isNotNull);
+      expect(c.bubble, isNot(startsWith('Danke!')));
+      await tester.pump(const Duration(seconds: 10));
     });
 
     testWidgets('first counted day → „Danke! 🔥 1 Tag"', (tester) async {

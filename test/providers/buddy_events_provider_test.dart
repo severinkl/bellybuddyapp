@@ -82,7 +82,30 @@ void main() {
 
     expect(c.read(buddyEventsProvider), same(event));
     expect(c.read(buddyProvider).value, isNotNull);
+    // The kept refresh completes normally.
+    await c.read(buddyEventsProvider.notifier).lastRefresh;
   });
+
+  test(
+    'emit keeps its refresh; it completes once the Buddy shows the log',
+    () async {
+      final c = makeContainer();
+      expect((await c.read(buddyProvider.future))!.todayCounted, isFalse);
+      final notifier = c.read(buddyEventsProvider.notifier);
+      expect(notifier.lastRefresh, isNull);
+
+      entryRepo.seedActivityDays({DateTime(2026, 11, 22)});
+      notifier.emit(event);
+      final refresh = notifier.lastRefresh;
+      expect(refresh, isNotNull);
+      await refresh;
+
+      expect(c.read(buddyProvider).value!.todayCounted, isTrue);
+      // consume() leaves the refresh for the reaction to wait on.
+      notifier.consume();
+      expect(notifier.lastRefresh, same(refresh));
+    },
+  );
 
   test('emit while signed out only stores the event', () async {
     final c = makeContainer(userId: null);
