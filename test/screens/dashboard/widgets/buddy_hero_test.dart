@@ -232,6 +232,36 @@ void main() {
       expect(chip.todayCounted, isFalse);
     });
 
+    testWidgets('tapping the StreakChip lets the user set a new goal', (
+      tester,
+    ) async {
+      await pumpHero(tester);
+
+      await tester.tap(find.byType(StreakChip));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text('Neues Streak-Ziel'), findsOneWidget);
+      // Streak 4: the next three goals.
+      expect(find.text('7 Tage'), findsOneWidget);
+      expect(find.text('30 Tage'), findsOneWidget);
+
+      await tester.tap(find.text('14 Tage'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Neues Streak-Ziel'), findsNothing);
+      expect(buddy.goals, [14]);
+    });
+
+    testWidgets('no goal left above the streak → the chip is no button', (
+      tester,
+    ) async {
+      buddy = _FakeBuddy(() => _status(streak: 100));
+      await pumpHero(tester);
+
+      expect(tester.widget<StreakChip>(find.byType(StreakChip)).onTap, isNull);
+    });
+
     testWidgets('new user without a Buddy row → chip shows 0 Tage', (
       tester,
     ) async {

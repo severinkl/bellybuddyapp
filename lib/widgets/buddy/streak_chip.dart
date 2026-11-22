@@ -6,17 +6,22 @@ import '../../config/constants.dart';
 /// Compact streak indicator: "🔥 5 Tage" plus an optional "🛡 2" saver count.
 ///
 /// Muted while today is not yet counted; pops when [streak] increases.
+/// With [onTap] it is a button that sets the streak goal.
 class StreakChip extends StatefulWidget {
   const StreakChip({
     super.key,
     required this.streak,
     required this.savers,
     required this.todayCounted,
+    this.onTap,
   });
 
   final int streak;
   final int savers;
   final bool todayCounted;
+
+  /// Opens the streak goal picker.
+  final VoidCallback? onTap;
 
   @override
   State<StreakChip> createState() => _StreakChipState();
@@ -67,26 +72,34 @@ class _StreakChipState extends State<StreakChip>
     ].join(', ');
     final color = muted ? AppTheme.mutedForeground : AppTheme.foreground;
 
+    final onTap = widget.onTap;
     Widget chip = Semantics(
       label: semantics,
+      button: onTap != null,
+      hint: onTap == null ? null : 'Streak-Ziel festlegen',
+      onTap: onTap,
       excludeSemantics: true,
-      child: ScaleTransition(
-        scale: _scale,
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppConstants.spacing12,
-            vertical: AppConstants.spacing6,
-          ),
-          decoration: BoxDecoration(
-            color: muted ? AppTheme.muted : AppTheme.secondary,
-            borderRadius: BorderRadius.circular(AppConstants.radiusFull),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: AppTheme.fontSizeBody,
-              fontWeight: FontWeight.w600,
-              color: color,
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: ScaleTransition(
+          scale: _scale,
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppConstants.spacing12,
+              vertical: AppConstants.spacing6,
+            ),
+            decoration: BoxDecoration(
+              color: muted ? AppTheme.muted : AppTheme.secondary,
+              borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+            ),
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: AppTheme.fontSizeBody,
+                fontWeight: FontWeight.w600,
+                color: color,
+              ),
             ),
           ),
         ),

@@ -80,6 +80,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   static const _streakBrokenLine = 'Neuer Anlauf — ich bin dabei!';
   static const _saverEarnedLine = 'Du hast einen Streak-Saver verdient! 🛡';
   static const _newGoalTitle = "Wir haben's geschafft! Neues Ziel?";
+  static const _changeGoalTitle = 'Neues Streak-Ziel';
 
   late final BuddyController _buddy;
   late final AppLifecycleListener _lifecycle;
@@ -410,6 +411,18 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _nextCue();
   }
 
+  /// The StreakChip's tap: sets or changes the streak goal.
+  Future<void> _changeGoal() async {
+    final streak = ref.read(buddyProvider).value?.streak ?? 0;
+    final goal = await showStreakGoalSheet(
+      context,
+      currentStreak: streak,
+      title: _changeGoalTitle,
+    );
+    if (!mounted || goal == null) return;
+    await _saveGoal(goal);
+  }
+
   Future<void> _saveGoal(int goal) async {
     try {
       await ref.read(buddyProvider.notifier).setStreakGoal(goal);
@@ -446,6 +459,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
                       streak: status.streak,
                       savers: status.state.savers,
                       todayCounted: status.todayCounted,
+                      onTap: streakGoalChoices(status.streak).isEmpty
+                          ? null
+                          : () => unawaited(_changeGoal()),
                     ),
             ),
           ),

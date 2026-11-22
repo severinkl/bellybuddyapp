@@ -89,4 +89,47 @@ void main() {
     await t.pump(const Duration(milliseconds: 150));
     expect(scale(), 1.0);
   });
+
+  testWidgets('without onTap: no button', (t) async {
+    final h = t.ensureSemantics();
+    await t.pumpWidget(
+      _wrap(const StreakChip(streak: 5, savers: 1, todayCounted: true)),
+    );
+    final node = find.semantics.byLabel(RegExp('^Serie: 5 Tage')).evaluate();
+    expect(node.single.label, 'Serie: 5 Tage, 1 Schutz');
+    expect(node.single, isNot(matchesSemantics(isButton: true)));
+    h.dispose();
+  });
+
+  testWidgets('with onTap: a button that sets the streak goal', (t) async {
+    final h = t.ensureSemantics();
+    var taps = 0;
+    await t.pumpWidget(
+      _wrap(
+        StreakChip(
+          streak: 5,
+          savers: 1,
+          todayCounted: false,
+          onTap: () => taps++,
+        ),
+      ),
+    );
+
+    await t.tap(find.byType(StreakChip));
+    expect(taps, 1);
+
+    expect(
+      find.semantics.byLabel(RegExp('^Serie: 5 Tage')).evaluate().single,
+      matchesSemantics(
+        isButton: true,
+        hasTapAction: true,
+        label: 'Serie: 5 Tage, 1 Schutz, Heute noch offen',
+        hint: 'Streak-Ziel festlegen',
+        tooltip: 'Heute noch offen',
+      ),
+    );
+    t.semantics.tap(find.semantics.byLabel(RegExp('^Serie: 5 Tage')));
+    expect(taps, 2);
+    h.dispose();
+  });
 }
