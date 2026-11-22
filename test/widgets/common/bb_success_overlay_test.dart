@@ -6,8 +6,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 Widget _wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
 
-/// Pumps past all staggered animation timers in [BbSuccessOverlay.initState]
-/// (100 ms mascot delay + 250 ms text delay + animation durations ≤ 600 ms).
+/// Pumps past all staggered intro timers of [BbSuccessOverlay] (scheduled on
+/// its first `didChangeDependencies`: 100 ms mascot delay + 250 ms text delay
+/// + animation durations ≤ 600 ms).
 /// Draining to 700 ms leaves no pending timers while still within test bounds.
 Future<void> _pumpOverlay(WidgetTester tester, Widget overlay) async {
   await tester.pumpWidget(_wrap(overlay));

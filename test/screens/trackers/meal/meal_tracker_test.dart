@@ -21,13 +21,23 @@ import 'package:belly_buddy/widgets/common/mascot_image.dart';
 import '../../../helpers/fakes.dart';
 import '../../../helpers/riverpod_helpers.dart';
 
-List<Override> _overrides() => [
-  entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
+List<Override> _overrides({EntryRepository? entries}) => [
+  entryRepositoryProvider.overrideWithValue(entries ?? FakeEntryRepository()),
   ingredientRepositoryProvider.overrideWithValue(FakeIngredientRepository()),
   mealMediaRepositoryProvider.overrideWithValue(FakeMealMediaRepository()),
   buddyRepositoryProvider.overrideWithValue(FakeBuddyRepository()),
   currentUserIdProvider.overrideWithValue('test-user'),
 ];
+
+/// An entry repository whose inserts fail (create-mode save errors).
+class _FailingInsertEntryRepository extends FakeEntryRepository {
+  @override
+  Future<void> insertEntry(
+    String table,
+    Map<String, dynamic> data, {
+    required String userId,
+  }) async => throw Exception('insert failed');
+}
 
 /// A valid 1×1 transparent PNG.
 const _onePixelPng = <int>[
@@ -155,6 +165,77 @@ void main() {
         expect(find.byType(MascotImage), findsNothing);
         expect(find.text('Getränk hinzufügen'), findsOneWidget);
         expect(find.text('Als Rezept speichern'), findsOneWidget);
+      },
+    );
+
+    testWidgets('failed save emits no Buddy event and stays on the form', (
+      tester,
+    ) async {
+      await tester.pumpWithProviders(
+        const MealTrackerScreen(),
+        overrides: _overrides(entries: _FailingInsertEntryRepository()),
+      );
+      await tester.pump();
+      await tester.pump();
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MealTrackerScreen)),
+      );
+      container.read(mealTrackerProvider.notifier)
+        ..addIngredient('Tomate')
+        ..setTitle('Tomatensalat');
+      await tester.pump();
+
+      await tester.ensureVisible(find.byKey(MealTrackerScreen.mealEditSaveKey));
+      await tester.tap(find.byKey(MealTrackerScreen.mealEditSaveKey));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(container.read(buddyEventsProvider), isNull);
+      expect(find.byType(BuddyReactionView), findsNothing);
+      expect(find.text('Fehler beim Speichern.'), findsOneWidget);
+    });
+
+    testWidgets(
+      'success screen fits a 375×667 phone at text scale 1.3 (no vertical '
+      'overflow)',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        tester.view.physicalSize = const Size(750, 1334);
+        tester.view.devicePixelRatio = 2;
+        tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+        // The test font's square glyphs overflow the action pills sideways;
+        // only overflow at the bottom (content taller than the screen)
+        // matters here.
+        final errors = <FlutterErrorDetails>[];
+        final previousOnError = FlutterError.onError;
+        FlutterError.onError = errors.add;
+        try {
+          await tester.pumpWithProviders(
+            const MealTrackerScreen(),
+            overrides: _overrides(),
+          );
+          await tester.pump();
+          await tester.pump();
+          ProviderScope.containerOf(
+              tester.element(find.byType(MealTrackerScreen)),
+            ).read(mealTrackerProvider.notifier)
+            ..setTitle('Tomatensalat')
+            ..markShowSuccess();
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 700));
+        } finally {
+          FlutterError.onError = previousOnError;
+        }
+
+        expect(find.byType(BuddyReactionView), findsOneWidget);
+        final vertical = errors
+            .map((e) => e.exceptionAsString())
+            .where((m) => m.contains('overflowed') && m.contains('bottom'));
+        expect(vertical, isEmpty);
       },
     );
   });

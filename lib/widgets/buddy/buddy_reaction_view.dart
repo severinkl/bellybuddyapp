@@ -36,7 +36,8 @@ class BuddyReactionView extends ConsumerStatefulWidget {
   /// Encoded meal photo (JPEG/PNG/…); only used by the `eat` reaction.
   final Uint8List? foodImageBytes;
 
-  /// Height of the stage: speech-bubble slot plus Buddy.
+  /// Maximum height of the stage (speech-bubble slot plus Buddy); the Buddy
+  /// shrinks when less height is available.
   final double size;
 
   @override
@@ -91,6 +92,7 @@ class _BuddyReactionViewState extends ConsumerState<BuddyReactionView> {
       final codec = await ui.instantiateImageCodec(
         bytes,
         targetWidth: _foodDecodeWidth,
+        allowUpscaling: false,
       );
       try {
         return (await codec.getNextFrame()).image;
@@ -122,8 +124,8 @@ class _BuddyReactionViewState extends ConsumerState<BuddyReactionView> {
   @override
   Widget build(BuildContext context) {
     final name = ref.watch(buddyProvider.select((s) => s.value?.state.name));
-    return SizedBox(
-      height: widget.size,
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: widget.size),
       child: BuddyStage(controller: _controller, name: name ?? _fallbackName),
     );
   }

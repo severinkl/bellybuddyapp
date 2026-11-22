@@ -194,5 +194,35 @@ void main() {
       expect(view.kind, EntryKind.drink);
       expect(find.byType(MascotImage), findsNothing);
     });
+
+    testWidgets('a save that stores nothing emits no Buddy event', (
+      tester,
+    ) async {
+      final container = ProviderContainer.test(overrides: _overrides());
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(home: DrinkTrackerScreen()),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+
+      final notifier = container.read(drinkTrackerProvider.notifier)
+        ..toggleDrink(testDrink())
+        ..selectAmount(250);
+      await tester.pump();
+      await tester.ensureVisible(find.text('speichern'));
+      // Deselect without rebuilding: the enabled button still calls _save,
+      // but save() finds no drink and stores nothing.
+      notifier.clearSelection();
+      await tester.tap(find.text('speichern'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(container.read(drinkTrackerProvider).showSuccess, isFalse);
+      expect(container.read(buddyEventsProvider), isNull);
+      expect(find.byType(BuddyReactionView), findsNothing);
+    });
   });
 }

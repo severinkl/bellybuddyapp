@@ -14,7 +14,9 @@ class BbSuccessOverlay extends StatefulWidget {
 
   /// Shown instead of the mascot image (e.g. an animated Buddy reaction) and
   /// styled like a mascot overlay: tap to dismiss, no auto-dismiss. It brings
-  /// its own animation, so the mascot bounce is not applied to it.
+  /// its own animation, so the mascot bounce is not applied to it. It gets
+  /// the height left over by the text and actions, so it should shrink
+  /// gracefully (e.g. cap its height with a max constraint).
   final Widget? illustration;
 
   const BbSuccessOverlay({
@@ -169,7 +171,7 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
               children: [
                 // Illustration, mascot or checkmark
                 if (illustration != null)
-                  illustration
+                  Flexible(child: illustration)
                 else if (widget.mascotAsset != null)
                   AnimatedBuilder(
                     animation: _mascotController,

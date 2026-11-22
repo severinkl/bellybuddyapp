@@ -27,7 +27,7 @@ List<Override> _overrides() => [
   currentUserIdProvider.overrideWithValue('u1'),
 ];
 
-Future<void> _pumpView(WidgetTester tester, BuddyReactionView view) =>
+Future<void> _pumpView(WidgetTester tester, Widget view) =>
     tester.pumpWithProviders(
       Scaffold(body: Center(child: view)),
       overrides: _overrides(),
@@ -37,7 +37,7 @@ BuddyController _controllerOf(WidgetTester tester) =>
     tester.widget<AnimatedBuddy>(find.byType(AnimatedBuddy)).controller;
 
 /// Lets the real (engine) image decode finish, pumping until the reaction
-/// has started.
+/// has started; fails after ~500 ms of real time.
 Future<void> _awaitReaction(WidgetTester tester) async {
   for (var i = 0; i < 50; i++) {
     if (_controllerOf(tester).currentAction != null) return;
@@ -46,6 +46,7 @@ Future<void> _awaitReaction(WidgetTester tester) async {
     );
     await tester.pump();
   }
+  fail('The reaction did not start: the photo decode never completed.');
 }
 
 /// A tiny PNG rendered by the engine.
@@ -142,6 +143,21 @@ void main() {
       );
     });
 
+    testWidgets('shrinks to the height it is given', (tester) async {
+      await _pumpView(
+        tester,
+        const SizedBox(
+          height: 150,
+          child: BuddyReactionView(
+            kind: EntryKind.drink,
+            sentiment: LogSentiment.good,
+          ),
+        ),
+      );
+
+      expect(tester.getSize(find.byType(BuddyStage)).height, 150);
+    });
+
     testWidgets('names the Buddy after buddyProvider', (tester) async {
       _buddyRepo.store['u1'] = const BuddyState(name: 'Bauchi');
       await _pumpView(
@@ -224,7 +240,7 @@ void main() {
       expect(BuddyCopy.meal, contains(c.bubble));
     });
 
-    testWidgets('a photo decoded after unmount is disposed, never shown', (
+    testWidgets('unmounting before the photo is decoded plays nothing', (
       tester,
     ) async {
       final bytes = await _png(tester);
