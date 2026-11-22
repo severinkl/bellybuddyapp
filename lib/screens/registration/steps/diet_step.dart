@@ -23,7 +23,6 @@ class DietStep extends StatelessWidget {
       padding: AppConstants.paddingLg,
       child: Column(
         children: [
-          AppConstants.gap24,
           const Text(
             key: dietTitleKey,
             'Wie ernährst du dich?',

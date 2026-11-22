@@ -29,7 +29,6 @@ class SymptomsStep extends StatelessWidget {
       padding: AppConstants.paddingLg,
       child: Column(
         children: [
-          AppConstants.gap24,
           const Text(
             key: symptomsTitleKey,
             'Welche Beschwerden nerven dich?',

@@ -77,6 +77,7 @@ class _RegistrationWizardScreenState
 
   /// The Buddy's line when a step appears (catalog keys).
   static const _introKeys = {
+    _nameStep: 'name:intro',
     _consentStep: 'consent:intro',
     _birthYearStep: 'step:birthYear',
     _genderStep: 'step:gender',
@@ -85,6 +86,7 @@ class _RegistrationWizardScreenState
     _symptomsStep: 'step:symptoms',
     _intolerancesStep: 'step:intolerances',
     _authStep: 'auth:intro',
+    _emailCaptureStep: 'emailCapture:intro',
   };
 
   /// How long the Buddy's lines stay; every step also has its own title.
@@ -123,6 +125,13 @@ class _RegistrationWizardScreenState
   void initState() {
     super.initState();
     _buddy = BuddyController();
+    final intro = _introFor(_nameStep);
+    if (intro != null) _react(intro, hold: _introHold);
+  }
+
+  static BuddyLine? _introFor(int step) {
+    final key = _introKeys[step];
+    return key == null ? null : wizardReaction(key);
   }
 
   /// The typed name as it will be saved (trimmed).
@@ -145,8 +154,7 @@ class _RegistrationWizardScreenState
     );
     setState(() => _currentStep = step);
 
-    final introKey = _introKeys[step];
-    final intro = introKey == null ? null : wizardReaction(introKey);
+    final intro = _introFor(step);
     if (farewell == null) {
       _cancelPendingLines();
       if (intro != null) _react(intro, hold: _introHold);
@@ -440,6 +448,8 @@ class _RegistrationWizardScreenState
 
   @override
   Widget build(BuildContext context) {
+    // Read above the Scaffold: its body's MediaQuery has the inset removed.
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -467,6 +477,11 @@ class _RegistrationWizardScreenState
               child: BuddyStepHost(
                 controller: _buddy,
                 name: _nameValid ? _name : 'Buddy',
+                keyboardOpen: keyboardOpen,
+                // The sign-up forms need all the room above the keyboard.
+                keyboardStage: _currentStep >= _authStep
+                    ? BuddyKeyboardStage.hidden
+                    : BuddyKeyboardStage.compact,
                 child: PageView(
                   controller: _pageController,
                   physics: const NeverScrollableScrollPhysics(),

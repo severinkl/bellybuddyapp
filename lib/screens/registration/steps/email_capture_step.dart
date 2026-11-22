@@ -93,7 +93,6 @@ class _EmailCaptureStepState extends State<EmailCaptureStep> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  AppConstants.gap24,
                   const Text(
                     'Deine E-Mail-Adresse',
                     style: TextStyle(

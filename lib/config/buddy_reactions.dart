@@ -21,6 +21,13 @@ String wizardKey(String step, [String? value]) => '$step:${value ?? 'any'}';
 BuddyLine? wizardReaction(String key) => kWizardReactions[key];
 
 const Map<String, BuddyLine> kWizardReactions = {
+  'name:intro': BuddyLine(
+    mood: BuddyMood.happy,
+    lines: [
+      'Ich hab noch keinen Namen. Magst du mir einen geben?',
+      'Du darfst mich taufen! Wie soll ich heißen?',
+    ],
+  ),
   'name:confirmed': BuddyLine(
     mood: BuddyMood.inLove,
     action: BuddyAction.wave,
@@ -39,6 +46,10 @@ const Map<String, BuddyLine> kWizardReactions = {
       'Damit ich mir alles merken kann, brauchst du ein Konto.',
       'Fast geschafft! Ein Konto, und ich merk mir alles.',
     ],
+  ),
+  'emailCapture:intro': BuddyLine(
+    mood: BuddyMood.happy,
+    lines: ['Fast geschafft! Wohin darf ich dir schreiben?'],
   ),
   'birthYear:any': BuddyLine(
     action: BuddyAction.nodYes,

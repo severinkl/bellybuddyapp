@@ -19,7 +19,6 @@ class BirthYearStep extends StatelessWidget {
       padding: AppConstants.paddingLg,
       child: Column(
         children: [
-          AppConstants.gap24,
           const Text(
             key: birthYearTitleKey,
             'Wann wurdest du geboren?',

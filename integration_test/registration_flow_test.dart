@@ -83,10 +83,7 @@ void main() {
       final submitButton = find.byKey(AuthStep.submitButtonKey);
       expect(submitButton, findsOneWidget);
 
-      // Tap on the sign up button. The Buddy above the steps leaves less
-      // room, so with the keyboard open the button may need scrolling.
-      await tester.ensureVisible(submitButton);
-      await tester.pumpAndSettle();
+      // Tap on the sign up button
       await tester.tap(submitButton);
       await tester.pumpAndSettle(); // Wait for async operations to complete
 
@@ -95,8 +92,7 @@ void main() {
       expect(find.byType(HealthConsentScreen), findsNothing);
 
       // After successful registration the Buddy onboarding takes over.
-      // (Saving the typed name is covered by the wizard's widget tests:
-      // this harness's current user id never leaves null after sign-in.)
+      // (Saving the typed name is covered by the wizard's widget tests.)
       expect(find.byType(BuddyOnboardingScreen), findsOneWidget);
     },
   );

@@ -33,16 +33,49 @@ class AuthStep extends StatefulWidget {
   State<AuthStep> createState() => _AuthStepState();
 }
 
-class _AuthStepState extends State<AuthStep> {
+class _AuthStepState extends State<AuthStep> with WidgetsBindingObserver {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  final _submitKey = GlobalKey();
+  bool _passwordFocused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  // While the password field has focus, keep „Registrieren" in view: the
+  // keyboard (opening, or resizing) would otherwise cover it.
+  @override
+  void didChangeMetrics() {
+    if (_passwordFocused) _revealSubmit();
+  }
+
+  void _onPasswordFocus(bool focused) {
+    _passwordFocused = focused;
+    if (focused) _revealSubmit();
+  }
+
+  void _revealSubmit() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final target = _submitKey.currentContext;
+      if (!mounted || !_passwordFocused || target == null) return;
+      Scrollable.ensureVisible(
+        target,
+        duration: AppConstants.animFast,
+        alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+      );
+    });
   }
 
   PasswordValidation get _validation =>
@@ -111,13 +144,24 @@ class _AuthStepState extends State<AuthStep> {
             ),
             AppConstants.gap16,
 
-            BbPasswordField(
-              controller: _passwordController,
-              onChanged: (_) => setState(() {}),
-              validator: (v) {
-                if (v == null || v.isEmpty) return 'Passwort ist erforderlich';
-                return null;
-              },
+            Focus(
+              canRequestFocus: false,
+              skipTraversal: true,
+              onFocusChange: _onPasswordFocus,
+              child: BbPasswordField(
+                controller: _passwordController,
+                onChanged: (_) {
+                  setState(() {});
+                  // The hints above the button grow while typing.
+                  if (_passwordFocused) _revealSubmit();
+                },
+                validator: (v) {
+                  if (v == null || v.isEmpty) {
+                    return 'Passwort ist erforderlich';
+                  }
+                  return null;
+                },
+              ),
             ),
             if (_passwordController.text.isNotEmpty) ...[
               AppConstants.gap8,
@@ -140,11 +184,14 @@ class _AuthStepState extends State<AuthStep> {
             ],
             AppConstants.gap24,
 
-            BbButton(
-              tapKey: AuthStep.submitButtonKey,
-              label: 'Registrieren',
-              isLoading: widget.isLoading,
-              onPressed: _isPasswordValid ? _submit : null,
+            KeyedSubtree(
+              key: _submitKey,
+              child: BbButton(
+                tapKey: AuthStep.submitButtonKey,
+                label: 'Registrieren',
+                isLoading: widget.isLoading,
+                onPressed: _isPasswordValid ? _submit : null,
+              ),
             ),
 
             AppConstants.gap24,

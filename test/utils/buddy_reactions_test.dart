@@ -7,11 +7,13 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   final keys = <String>[
+    'name:intro',
     'name:confirmed',
     'consent:intro',
     'birthYear:any',
     'heightWeight:any',
     'auth:intro',
+    'emailCapture:intro',
     for (final g in ['weiblich', 'männlich', 'andere']) 'gender:$g',
     for (final d in ['alles', 'vegetarisch', 'vegan']) 'diet:$d',
     for (final s in kRegistrationSymptoms) 'symptom:$s',

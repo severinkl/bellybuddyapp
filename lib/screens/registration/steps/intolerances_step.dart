@@ -27,7 +27,6 @@ class IntolerancesStep extends StatelessWidget {
         padding: AppConstants.paddingLg,
         child: Column(
           children: [
-            AppConstants.gap24,
             const Text(
               key: intolerancesTitleKey,
               'Wurden dir Unverträglichkeiten diagnostiziert?',

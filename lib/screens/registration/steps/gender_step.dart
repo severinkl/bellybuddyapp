@@ -25,7 +25,6 @@ class GenderStep extends StatelessWidget {
       padding: AppConstants.paddingLg,
       child: Column(
         children: [
-          AppConstants.gap24,
           const Text(
             key: genderTitleKey,
             'Wie lautet dein biologisches Geschlecht?',

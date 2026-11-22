@@ -48,6 +48,45 @@ void _tallView(WidgetTester tester) {
   addTearDown(tester.view.resetDevicePixelRatio);
 }
 
+/// A phone of [size] logical pixels (device pixel ratio 1).
+void _phone(WidgetTester tester, Size size) {
+  tester.view.physicalSize = size;
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+}
+
+/// Opens a keyboard of [height] (the field must already have focus).
+Future<void> _openKeyboard(WidgetTester tester, double height) async {
+  tester.view.viewInsets = FakeViewPadding(bottom: height);
+  addTearDown(tester.view.resetViewInsets);
+  await tester.pumpAndSettle();
+}
+
+/// Runs [body] while ignoring the horizontal overflow of the social
+/// buttons' and password hints' rows: the test font is much wider than the
+/// app's, so at phone widths those rows overflow in tests only.
+Future<void> _withTestFontRows(Future<void> Function() body) async {
+  final original = FlutterError.onError;
+  FlutterError.onError = (details) {
+    final text = details.toString();
+    final testFontRow =
+        text.contains('overflowed by') &&
+        text.contains('on the right') &&
+        (text.contains('bb_social_button.dart') ||
+            text.contains('bb_password_hint.dart'));
+    if (!testFontRow) original?.call(details);
+  };
+  try {
+    await body();
+  } finally {
+    FlutterError.onError = original;
+  }
+}
+
+double _stageHeight(WidgetTester tester) =>
+    tester.getSize(find.byType(BuddyStage)).height;
+
 Future<void> _pumpWizard(WidgetTester tester) async {
   _tallView(tester);
   await tester.pumpWithProviders(
@@ -303,6 +342,8 @@ void main() {
       expect(find.byType(BuddyStage), findsOneWidget);
       expect(find.byType(AnimatedBuddy), findsOneWidget);
       expect(registrationNextEnabled(tester), isTrue);
+      // He asks for his name right away.
+      expect(_lines('name:intro'), contains(_buddy(tester).bubble));
     });
 
     testWidgets('a blank name disables „Weiter"', (tester) async {
@@ -375,10 +416,7 @@ void main() {
     testWidgets('stays usable with the keyboard open on a small phone', (
       tester,
     ) async {
-      tester.view.physicalSize = const Size(375, 667);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
+      _phone(tester, const Size(375, 667));
       await tester.pumpWithProviders(
         const RegistrationWizardScreen(),
         overrides: _overrides(),
@@ -387,9 +425,7 @@ void main() {
 
       final field = find.byKey(BuddyNameStep.fieldKey);
       await tester.showKeyboard(field);
-      tester.view.viewInsets = const FakeViewPadding(bottom: 260);
-      addTearDown(tester.view.resetViewInsets);
-      await tester.pumpAndSettle();
+      await _openKeyboard(tester, 260);
 
       // No overflow; the field scrolled above the keyboard and „Weiter"
       // is still reachable.
@@ -405,6 +441,98 @@ void main() {
       await tester.tap(next);
       await tester.pumpAndSettle();
       expect(find.byKey(HealthConsentStep.titleKey), findsOneWidget);
+    });
+  });
+
+  group('Stage size', () {
+    testWidgets('the Buddy grows with the screen', (tester) async {
+      _phone(tester, const Size(402, 874));
+      await tester.pumpWithProviders(
+        const RegistrationWizardScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pumpAndSettle();
+
+      expect(_stageHeight(tester), greaterThanOrEqualTo(220));
+      expect(
+        _stageHeight(tester),
+        lessThanOrEqualTo(AppConstants.buddyWizardMaxSize),
+      );
+    });
+
+    testWidgets('a short screen keeps the smallest stage', (tester) async {
+      _phone(tester, const Size(320, 480));
+      await tester.pumpWithProviders(
+        const RegistrationWizardScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pumpAndSettle();
+
+      expect(_stageHeight(tester), AppConstants.buddyWizardSize);
+    });
+
+    testWidgets('with the keyboard open he shrinks to a bubble-less Buddy', (
+      tester,
+    ) async {
+      _phone(tester, const Size(402, 874));
+      await tester.pumpWithProviders(
+        const RegistrationWizardScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.showKeyboard(find.byKey(BuddyNameStep.fieldKey));
+      await _openKeyboard(tester, 336);
+
+      expect(_stageHeight(tester), AppConstants.buddyWizardCompactSize);
+      expect(tester.getSize(find.byType(AnimatedBuddy)).height, greaterThan(0));
+      final bubbleSlot = find.ancestor(
+        of: find.byType(BuddySpeechBubble),
+        matching: find.byType(FittedBox),
+      );
+      expect(tester.getSize(bubbleSlot).height, 0);
+      final field = find.byKey(BuddyNameStep.fieldKey);
+      expect(field.hitTestable(), findsOneWidget);
+      expect(tester.getRect(field).bottom, lessThanOrEqualTo(874 - 336));
+
+      // Closing the keyboard brings the full stage back.
+      tester.view.resetViewInsets();
+      await tester.pumpAndSettle();
+      expect(_stageHeight(tester), greaterThanOrEqualTo(220));
+    });
+  });
+
+  group('Reduced motion', () {
+    testWidgets('the stage resizes instantly and the walk still works', (
+      tester,
+    ) async {
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      _phone(tester, const Size(402, 874));
+      await tester.pumpWithProviders(
+        const RegistrationWizardScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.showKeyboard(find.byKey(BuddyNameStep.fieldKey));
+      tester.view.viewInsets = const FakeViewPadding(bottom: 336);
+      addTearDown(tester.view.resetViewInsets);
+      await tester.pump();
+      expect(_stageHeight(tester), AppConstants.buddyWizardCompactSize);
+
+      tester.view.resetViewInsets();
+      await tester.pump();
+      expect(_stageHeight(tester), greaterThanOrEqualTo(220));
+
+      await confirmRegistrationBuddyName(tester);
+      await acceptRegistrationHealthConsent(tester);
+      await _tapNext(tester);
+      expect(find.byKey(GenderStep.genderTitleKey), findsOneWidget);
+      expect(_lines('step:gender'), contains(_buddy(tester).bubble));
     });
   });
 
@@ -498,6 +626,19 @@ void main() {
 
       expect(find.byKey(BirthYearStep.birthYearTitleKey), findsOneWidget);
       expect(_lines('step:birthYear'), contains(_buddy(tester).bubble));
+    });
+
+    testWidgets('back on the name step he asks for his name again', (
+      tester,
+    ) async {
+      await _pumpWizard(tester);
+      await confirmRegistrationBuddyName(tester);
+
+      await tester.tap(find.text('Zurück'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(BuddyNameStep.titleKey), findsOneWidget);
+      expect(_lines('name:intro'), contains(_buddy(tester).bubble));
     });
 
     testWidgets('choosing „weiblich" gets the catalog line', (tester) async {
@@ -636,6 +777,76 @@ void main() {
   });
 
   group('After sign-up', () {
+    testWidgets('with the keyboard open on the auth step the Buddy steps '
+        'aside and „Registrieren" stays reachable', (tester) async {
+      _phone(tester, const Size(402, 874));
+      await tester.pumpWithProviders(
+        const RegistrationWizardScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pumpAndSettle();
+
+      await _withTestFontRows(() async {
+        await advanceToAuthStep(tester);
+        expect(find.byType(BuddyStage), findsOneWidget);
+
+        await tester.enterText(
+          find.byKey(AuthStep.emailFieldKey),
+          'new@example.com',
+        );
+        await tester.showKeyboard(find.byKey(BbPasswordField.passwordFieldKey));
+        await _openKeyboard(tester, 336);
+
+        expect(find.byType(BuddyStage), findsNothing);
+        final submit = find.byKey(AuthStep.submitButtonKey);
+        expect(submit.hitTestable(), findsOneWidget);
+        expect(tester.getRect(submit).bottom, lessThanOrEqualTo(874 - 336));
+
+        // Typing the password (hints appear above the button) keeps it
+        // there.
+        await tester.enterText(
+          find.byKey(BbPasswordField.passwordFieldKey),
+          'TestPassword123',
+        );
+        await tester.pumpAndSettle();
+        expect(submit.hitTestable(), findsOneWidget);
+        expect(tester.getRect(submit).bottom, lessThanOrEqualTo(874 - 336));
+      });
+    });
+
+    testWidgets('on a small phone „Registrieren" stays above the keyboard '
+        'while the password is typed', (tester) async {
+      _phone(tester, const Size(375, 667));
+      await tester.pumpWithProviders(
+        const RegistrationWizardScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pumpAndSettle();
+
+      await _withTestFontRows(() async {
+        await advanceToAuthStep(tester);
+        await tester.showKeyboard(find.byKey(AuthStep.emailFieldKey));
+        await _openKeyboard(tester, 260);
+        await tester.enterText(
+          find.byKey(AuthStep.emailFieldKey),
+          'new@example.com',
+        );
+
+        // Typing the password grows the hints above the button; it stays
+        // in view above the keyboard.
+        await tester.showKeyboard(find.byKey(BbPasswordField.passwordFieldKey));
+        await tester.enterText(
+          find.byKey(BbPasswordField.passwordFieldKey),
+          'TestPassword123',
+        );
+        await tester.pumpAndSettle();
+
+        final submit = find.byKey(AuthStep.submitButtonKey);
+        expect(submit.hitTestable(), findsOneWidget);
+        expect(tester.getRect(submit).bottom, lessThanOrEqualTo(667 - 260));
+      });
+    });
+
     testWidgets('email sign-up saves the profile and the typed name, then '
         'opens the Buddy onboarding', (tester) async {
       final app = await _pumpRoutedWizard(tester);
@@ -689,6 +900,7 @@ void main() {
       );
       await tester.pumpAndSettle();
       expect(find.byType(EmailCaptureStep), findsOneWidget);
+      expect(_lines('emailCapture:intro'), contains(_buddy(tester).bubble));
       expect(app.buddyName, isNull);
 
       await tester.tap(find.byKey(EmailCaptureStep.skipButtonKey));

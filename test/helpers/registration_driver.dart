@@ -26,8 +26,7 @@ Future<void> advanceToAuthStep(WidgetTester tester) async {
   await tester.pumpAndSettle();
 
   expect(find.byKey(GenderStep.genderTitleKey), findsOneWidget);
-  await tester.tap(find.byKey(GenderStep.genderMaennlichKey));
-  await tester.pumpAndSettle();
+  await _tapVisible(tester, find.byKey(GenderStep.genderMaennlichKey));
   await tester.tap(nextButton);
   await tester.pumpAndSettle();
 
@@ -36,8 +35,7 @@ Future<void> advanceToAuthStep(WidgetTester tester) async {
   await tester.pumpAndSettle();
 
   expect(find.byKey(DietStep.dietTitleKey), findsOneWidget);
-  await tester.tap(find.byKey(DietStep.dietAllesKey));
-  await tester.pumpAndSettle();
+  await _tapVisible(tester, find.byKey(DietStep.dietAllesKey));
   await tester.tap(nextButton);
   await tester.pumpAndSettle();
 
@@ -47,6 +45,14 @@ Future<void> advanceToAuthStep(WidgetTester tester) async {
 
   expect(find.byKey(IntolerancesStep.intolerancesTitleKey), findsOneWidget);
   await tester.tap(nextButton);
+  await tester.pumpAndSettle();
+}
+
+/// Scrolls [finder] into view (small screens) and taps it.
+Future<void> _tapVisible(WidgetTester tester, Finder finder) async {
+  await tester.ensureVisible(finder);
+  await tester.pumpAndSettle();
+  await tester.tap(finder);
   await tester.pumpAndSettle();
 }
 
