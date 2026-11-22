@@ -106,6 +106,7 @@ class AppConstants {
 
   // SharedPreferences keys
   static const String keyNotificationModalShown = 'notification_modal_shown';
+  static const String keyBuddyStatePrefix = 'buddy_state_';
 
   /// App Store numeric ID for Belly Buddy, used by the upgrade screen and
   /// dialog to open the store listing (App Store Connect → App Information →

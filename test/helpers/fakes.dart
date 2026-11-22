@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:belly_buddy/config/constants.dart';
+import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/drink.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
@@ -11,6 +12,7 @@ import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/models/user_recipe.dart';
 import 'package:belly_buddy/repositories/auth_repository.dart';
+import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/drink_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
@@ -521,4 +523,24 @@ class FakeNotificationRepository implements NotificationRepository {
   Future<bool> requestAllPermissions() async => true;
   @override
   Future<void> clearToken() async {}
+}
+
+class FakeBuddyRepository implements BuddyRepository {
+  final Map<String, BuddyState> store = {};
+  int fetchCount = 0;
+  int saveCount = 0;
+  bool throwOnFetch = false;
+
+  @override
+  Future<BuddyState?> fetch(String userId) async {
+    fetchCount++;
+    if (throwOnFetch) throw Exception('fetch failed');
+    return store[userId];
+  }
+
+  @override
+  Future<void> save(String userId, BuddyState state) async {
+    saveCount++;
+    store[userId] = state.copyWith(userId: userId);
+  }
 }
