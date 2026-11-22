@@ -47,9 +47,11 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     BuddyAction.celebrate,
   ];
 
-  /// Zen is the only mood with closed lids (and it doesn't blink), so it
-  /// reads as asleep; `sleepy` has the zzz but half-open, blinking eyes.
-  static const _asleepMood = BuddyMood.zen;
+  /// Into wakeUp, its eyes are open and its blinks done; from here its face
+  /// override covers the lids, so the mood can turn happy underneath. Doing
+  /// it only with the first line would let the zzZ (and shut lids) of the
+  /// fading asleep mood show through the wave.
+  static const _eyesOpen = Duration(milliseconds: 1300);
 
   /// From the tap to the first line: the wakeUp stretch, blinks and hop
   /// have played (its last 0.4 s are just a held smile).
@@ -71,7 +73,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   /// `BuddyStage`'s default bubble slot (two lines at body size).
   static const double _bubbleHeight = 72;
 
-  final _buddy = BuddyController(mood: _asleepMood);
+  final _buddy = BuddyController(mood: BuddyMood.asleep);
   late final AnimationController _pulse = AnimationController(
     vsync: this,
     duration: _hintPulse,
@@ -114,12 +116,15 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       _showLine(0);
       return;
     }
-    // Stay zen while the lids open: wakeUp opens them from the mood's
-    // closed lids; the mood turns happy with the first line.
+    // Stay asleep while the lids open: wakeUp opens them from the mood's
+    // shut lids.
     _buddy.play(BuddyAction.wakeUp);
     setState(() => _phase = _Phase.waking);
     _syncPulse();
-    _timer = Timer(_wakeUpLead, () => _showLine(0));
+    _timer = Timer(_eyesOpen, () {
+      _buddy.mood = BuddyMood.happy;
+      _timer = Timer(_wakeUpLead - _eyesOpen, () => _showLine(0));
+    });
   }
 
   void _showLine(int i) {
@@ -169,7 +174,6 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
 
   @override
   Widget build(BuildContext context) {
-    final asleep = _phase == _Phase.asleep;
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -180,20 +184,16 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
             children: [
               AppConstants.gap24,
               Expanded(
-                child: Semantics(
-                  label: asleep ? 'Buddy schläft' : null,
-                  excludeSemantics: asleep,
-                  child: GestureDetector(
-                    key: WelcomeScreen.buddyAreaKey,
-                    behavior: HitTestBehavior.opaque,
-                    excludeFromSemantics: true,
-                    onTap: _onAreaTap,
-                    // The story owns taps until the button shows; then the
-                    // Buddy can be poked.
-                    child: IgnorePointer(
-                      ignoring: _phase != _Phase.ready,
-                      child: LayoutBuilder(builder: _buildStage),
-                    ),
+                child: GestureDetector(
+                  key: WelcomeScreen.buddyAreaKey,
+                  behavior: HitTestBehavior.opaque,
+                  excludeFromSemantics: true,
+                  onTap: _onAreaTap,
+                  // The story owns taps until the button shows; then the
+                  // Buddy can be poked.
+                  child: IgnorePointer(
+                    ignoring: _phase != _Phase.ready,
+                    child: LayoutBuilder(builder: _buildStage),
                   ),
                 ),
               ),

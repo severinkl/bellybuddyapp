@@ -91,6 +91,11 @@ class BuddyCopy {
       'Ich bin noch müde … *gähn*',
       'Zzz … oh, du bist da! Ich bin schon wach!',
     ],
+    BuddyMood.asleep: [
+      '*schnarch* … zzZ',
+      'Zzz … nur noch fünf Minuten …',
+      'Zzz … ich träum gerade vom Frühstück …',
+    ],
     BuddyMood.empathetic: [
       'Ich bin für dich da.',
       'Ich drück dich ganz fest.',

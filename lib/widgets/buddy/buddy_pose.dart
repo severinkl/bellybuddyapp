@@ -10,6 +10,9 @@ enum BuddyMood {
   energetic,
   hungry,
   sleepy,
+
+  /// Fast asleep: eyes shut, zzZ (e.g. the welcome intro before the tap).
+  asleep,
   empathetic,
 }
 
@@ -22,6 +25,7 @@ String buddyMoodLabel(BuddyMood m) => switch (m) {
   BuddyMood.energetic => 'energiegeladen',
   BuddyMood.hungry => 'hungrig',
   BuddyMood.sleepy => 'verschlafen',
+  BuddyMood.asleep => 'schläft',
   BuddyMood.empathetic => 'mitfühlend',
 };
 
@@ -147,6 +151,17 @@ class FacePose {
       sway: 4,
       breath: 0.03,
       breathRate: 0.18,
+      zzz: 1,
+      gazeY: 0.3,
+    ),
+    BuddyMood.asleep => const FacePose(
+      lidTop: 1,
+      smile: 0.3,
+      mouthWidth: 0.6,
+      blush: 0.15,
+      sway: 3,
+      breath: 0.035,
+      breathRate: 0.15,
       zzz: 1,
       gazeY: 0.3,
     ),

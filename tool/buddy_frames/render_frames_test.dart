@@ -51,7 +51,8 @@ void main() {
 
   /// Mood each action is shown from (its typical context).
   BuddyMood from(BuddyAction a) => switch (a) {
-    BuddyAction.wakeUp || BuddyAction.yawn => BuddyMood.sleepy,
+    BuddyAction.wakeUp => BuddyMood.asleep,
+    BuddyAction.yawn => BuddyMood.sleepy,
     BuddyAction.hug => BuddyMood.empathetic,
     _ => BuddyMood.happy,
   };
@@ -61,7 +62,7 @@ void main() {
     BuddyAction.drink: [0.2, 0.9, 1.6, 2.6],
     BuddyAction.celebrate: [0.15, 0.45, 0.8, 1.2],
     BuddyAction.poke: [0.1, 0.25],
-    BuddyAction.wakeUp: [0.3, 1.1, 1.8],
+    BuddyAction.wakeUp: [0.0, 0.3, 0.7, 1.1, 1.8],
     BuddyAction.yawn: [0.4, 0.9, 1.5],
     BuddyAction.wave: [0.18, 0.53, 1.0],
     BuddyAction.relief: [0.4, 0.9, 1.6],

@@ -9,6 +9,15 @@ void main() {
     }
     expect(buddyMoodLabel(BuddyMood.sleepy), 'verschlafen');
     expect(buddyMoodLabel(BuddyMood.empathetic), 'mitfühlend');
+    expect(buddyMoodLabel(BuddyMood.asleep), 'schläft');
+  });
+
+  test('asleep has shut eyes and zzz; sleepy is drowsy, not asleep', () {
+    final asleep = FacePose.forMood(BuddyMood.asleep);
+    expect(asleep.lidTop, 1.0);
+    expect(asleep.zzz, 1.0);
+    final sleepy = FacePose.forMood(BuddyMood.sleepy);
+    expect(sleepy.lidTop, lessThan(asleep.lidTop));
   });
 
   test('lerp endpoints match for all mood pairs', () {

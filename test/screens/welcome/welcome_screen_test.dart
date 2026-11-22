@@ -91,8 +91,18 @@ void main() {
       final buddy = _buddy(tester);
       expect(buddy.currentAction, isNull);
       expect(buddy.bubble, isNull);
-      // Asleep reads as eyes shut: the lids are (nearly) closed.
-      expect(buddy.frame.face.lidTop, greaterThanOrEqualTo(0.9));
+      // Asleep: eyes shut, zzZ.
+      expect(buddy.mood, BuddyMood.asleep);
+      expect(buddy.frame.face.lidTop, greaterThanOrEqualTo(0.95));
+      expect(buddy.frame.face.zzz, greaterThan(0.9));
+    });
+
+    testWidgets('screen readers hear that the Buddy is asleep', (tester) async {
+      final handle = tester.ensureSemantics();
+      await _pump(tester);
+
+      expect(find.bySemanticsLabel('Buddy, schläft'), findsOneWidget);
+      handle.dispose();
     });
 
     testWidgets('tapping the Buddy area wakes him up', (tester) async {
@@ -104,6 +114,31 @@ void main() {
       expect(_buddy(tester).currentAction, BuddyAction.wakeUp);
       await tester.pump(const Duration(seconds: 1));
       expect(find.byKey(WelcomeScreen.hintKey), findsNothing);
+    });
+
+    testWidgets('waking up opens his eyes and stops the zzZ', (tester) async {
+      await _pump(tester);
+      await tester.tap(find.byKey(WelcomeScreen.buddyAreaKey));
+
+      // 1.6 s of real frames: lids opened, blinks done, hop under way.
+      for (var i = 0; i < 96; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+      }
+
+      final face = _buddy(tester).frame.face;
+      expect(_buddy(tester).currentAction, BuddyAction.wakeUp);
+      expect(face.lidTop, lessThan(0.1));
+      expect(face.zzz, lessThan(0.05));
+
+      // The zzZ must not come back when he starts waving and talking.
+      var maxZzz = 0.0;
+      for (var i = 0; i < 100; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        final z = _buddy(tester).frame.face.zzz;
+        if (z > maxZzz) maxZzz = z;
+      }
+      expect(find.text(_line1), findsOneWidget);
+      expect(maxZzz, lessThan(0.05));
     });
 
     testWidgets('tapping the hint wakes him up too', (tester) async {
