@@ -1,11 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../config/entry_tables.dart';
 import '../models/meal_entry.dart';
 import '../models/toilet_entry.dart';
 import '../models/gut_feeling_entry.dart';
 import '../models/drink_entry.dart';
 import '../providers/core_providers.dart';
-import '../repositories/entry_repository.dart' show entryTableFor;
 import '../utils/date_format_utils.dart';
 import '../utils/logger.dart';
 
@@ -25,6 +25,9 @@ class EntryQueryResult {
 
 class EntryQueryService {
   static const _log = AppLogger('EntryQueryService');
+
+  /// Matches PostgREST's PGRST_DB_MAX_ROWS on the backend.
+  static const trackedAtPageSize = 1000;
 
   final SupabaseClient _client;
   EntryQueryService(this._client);
@@ -115,22 +118,37 @@ class EntryQueryService {
       final sinceIso = since.toUtc().toIso8601String();
       final results = await Future.wait(
         entryTableFor.values.map(
-          (table) => _client
-              .from(table)
-              .select('tracked_at')
-              .eq('user_id', userId)
-              .gte('tracked_at', sinceIso)
-              .then((rows) => rows as List<dynamic>),
+          (t) => _fetchTrackedAtTable(t, userId, sinceIso),
         ),
       );
       return [
         for (final rows in results)
-          for (final row in rows)
-            DateTime.parse((row as Map)['tracked_at'] as String),
+          for (final row in rows) DateTime.parse(row['tracked_at'] as String),
       ];
     } catch (e, st) {
       _log.error('fetchTrackedAtSince failed', e, st);
       rethrow;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> _fetchTrackedAtTable(
+    String table,
+    String userId,
+    String sinceIso,
+  ) async {
+    final all = <Map<String, dynamic>>[];
+    var from = 0;
+    while (true) {
+      final page = await _client
+          .from(table)
+          .select('tracked_at')
+          .eq('user_id', userId)
+          .gte('tracked_at', sinceIso)
+          .order('tracked_at', ascending: false)
+          .range(from, from + trackedAtPageSize - 1);
+      all.addAll(page.cast<Map<String, dynamic>>());
+      if (page.length < trackedAtPageSize) return all;
+      from += trackedAtPageSize;
     }
   }
 }

@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:belly_buddy/services/entry_query_service.dart';
 
@@ -94,6 +97,39 @@ List<MockPostgrestFilterBuilder> _setupAllTables(
   }
 
   return [meal, toilet, gut, drink];
+}
+
+/// Transform builder whose `range` returns successive pages and records the
+/// requested ranges.
+class _PagedTransform extends MockPostgrestTransformBuilder {
+  _PagedTransform(this._pages);
+
+  final List<List<Map<String, dynamic>>> _pages;
+  final ranges = <(int, int)>[];
+
+  @override
+  PostgrestTransformBuilder<PostgrestList> range(
+    int from,
+    int to, {
+    String? referencedTable,
+  }) {
+    ranges.add((from, to));
+    final i = ranges.length - 1;
+    final page = i < _pages.length ? _pages[i] : <Map<String, dynamic>>[];
+    return _SettledTransform(Future.value(page));
+  }
+}
+
+class _SettledTransform extends MockPostgrestTransformBuilder {
+  _SettledTransform(this._future);
+
+  final Future<PostgrestList> _future;
+
+  @override
+  Future<R> then<R>(
+    FutureOr<R> Function(PostgrestList value) onValue, {
+    Function? onError,
+  }) => _future.then(onValue, onError: onError);
 }
 
 void main() {
@@ -237,14 +273,21 @@ void main() {
       for (final t in tables) {
         final qb = MockSupabaseQueryBuilder();
         final f = SettlableFilterBuilder(
-          Future.value([
-            {'tracked_at': '2026-03-25T12:00:00.000Z'},
-          ]),
+          Future.value(<Map<String, dynamic>>[]),
         );
         when(() => client.from(t)).thenAnswer((_) => qb);
         when(() => qb.select(any())).thenAnswer((_) => f);
         when(() => f.eq(any(), any())).thenAnswer((_) => f);
         when(() => f.gte(any(), any())).thenAnswer((_) => f);
+        when(
+          () => f.order(any(), ascending: any(named: 'ascending')),
+        ).thenAnswer(
+          (_) => _PagedTransform([
+            [
+              {'tracked_at': '2026-03-25T12:00:00.000Z'},
+            ],
+          ]),
+        );
         builders[t] = qb;
         filters[t] = f;
       }
@@ -263,6 +306,49 @@ void main() {
           () => filters[t]!.gte('tracked_at', since.toUtc().toIso8601String()),
         ).called(1);
       }
+    });
+
+    test('paginates a table until a short page is returned', () async {
+      final fullPage = List.generate(
+        EntryQueryService.trackedAtPageSize,
+        (_) => {'tracked_at': '2026-03-25T12:00:00.000Z'},
+      );
+      final shortPage = [
+        {'tracked_at': '2026-03-24T12:00:00.000Z'},
+      ];
+      _PagedTransform? meals;
+      for (final t in [
+        'meal_entries',
+        'toilet_entries',
+        'gut_feeling_entries',
+        'drink_entries',
+      ]) {
+        final qb = MockSupabaseQueryBuilder();
+        final f = SettlableFilterBuilder(
+          Future.value(<Map<String, dynamic>>[]),
+        );
+        final paged = _PagedTransform(
+          t == 'meal_entries'
+              ? [fullPage, shortPage]
+              : [<Map<String, dynamic>>[]],
+        );
+        if (t == 'meal_entries') meals = paged;
+        when(() => client.from(t)).thenAnswer((_) => qb);
+        when(() => qb.select(any())).thenAnswer((_) => f);
+        when(() => f.eq(any(), any())).thenAnswer((_) => f);
+        when(() => f.gte(any(), any())).thenAnswer((_) => f);
+        when(
+          () => f.order(any(), ascending: any(named: 'ascending')),
+        ).thenAnswer((_) => paged);
+      }
+
+      final result = await service.fetchTrackedAtSince(
+        userId: testUserId,
+        since: since,
+      );
+
+      expect(result, hasLength(EntryQueryService.trackedAtPageSize + 1));
+      expect(meals!.ranges, [(0, 999), (1000, 1999)]);
     });
 
     test('rethrows exceptions from supabase', () async {

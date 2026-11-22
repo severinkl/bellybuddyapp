@@ -3,13 +3,7 @@ import '../models/meal_entry.dart';
 import '../services/entry_crud_service.dart';
 import '../services/entry_query_service.dart';
 
-/// Table name for each entry type
-const entryTableFor = {
-  'meal': 'meal_entries',
-  'toilet': 'toilet_entries',
-  'gutFeeling': 'gut_feeling_entries',
-  'drink': 'drink_entries',
-};
+export '../config/entry_tables.dart';
 
 class EntryRepository {
   final EntryCrudService _crudService;
@@ -41,8 +35,8 @@ class EntryRepository {
       since: since,
     );
     return {
-      for (final t in instants)
-        DateTime(t.toLocal().year, t.toLocal().month, t.toLocal().day),
+      for (final t in instants.map((i) => i.toLocal()))
+        DateTime(t.year, t.month, t.day),
     };
   }
 
