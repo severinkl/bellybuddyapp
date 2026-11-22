@@ -31,6 +31,21 @@ class EntryRepository {
     ordered: ordered,
   );
 
+  /// Local calendar days (date-only) with at least one entry since [since].
+  Future<Set<DateTime>> fetchActivityDays({
+    required String userId,
+    required DateTime since,
+  }) async {
+    final instants = await _queryService.fetchTrackedAtSince(
+      userId: userId,
+      since: since,
+    );
+    return {
+      for (final t in instants)
+        DateTime(t.toLocal().year, t.toLocal().month, t.toLocal().day),
+    };
+  }
+
   Future<void> insertEntry(
     String table,
     Map<String, dynamic> data, {

@@ -221,4 +221,59 @@ void main() {
       );
     });
   });
+
+  group('EntryQueryService.fetchTrackedAtSince', () {
+    final since = DateTime(2026, 3, 1);
+
+    test('selects tracked_at with user and gte filter on all tables', () async {
+      final tables = [
+        'meal_entries',
+        'toilet_entries',
+        'gut_feeling_entries',
+        'drink_entries',
+      ];
+      final builders = <String, MockSupabaseQueryBuilder>{};
+      final filters = <String, SettlableFilterBuilder>{};
+      for (final t in tables) {
+        final qb = MockSupabaseQueryBuilder();
+        final f = SettlableFilterBuilder(
+          Future.value([
+            {'tracked_at': '2026-03-25T12:00:00.000Z'},
+          ]),
+        );
+        when(() => client.from(t)).thenAnswer((_) => qb);
+        when(() => qb.select(any())).thenAnswer((_) => f);
+        when(() => f.eq(any(), any())).thenAnswer((_) => f);
+        when(() => f.gte(any(), any())).thenAnswer((_) => f);
+        builders[t] = qb;
+        filters[t] = f;
+      }
+
+      final result = await service.fetchTrackedAtSince(
+        userId: testUserId,
+        since: since,
+      );
+
+      expect(result, hasLength(4));
+      expect(result.first, DateTime.parse('2026-03-25T12:00:00.000Z'));
+      for (final t in tables) {
+        verify(() => builders[t]!.select('tracked_at')).called(1);
+        verify(() => filters[t]!.eq('user_id', testUserId)).called(1);
+        verify(
+          () => filters[t]!.gte('tracked_at', since.toUtc().toIso8601String()),
+        ).called(1);
+      }
+    });
+
+    test('rethrows exceptions from supabase', () async {
+      final qb = MockSupabaseQueryBuilder();
+      when(() => client.from(any())).thenAnswer((_) => qb);
+      when(() => qb.select(any())).thenThrow(Exception('db error'));
+
+      await expectLater(
+        service.fetchTrackedAtSince(userId: testUserId, since: since),
+        throwsException,
+      );
+    });
+  });
 }

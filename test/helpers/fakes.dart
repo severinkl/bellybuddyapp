@@ -258,6 +258,25 @@ class FakeEntryRepository implements EntryRepository {
 
   void seedResult(EntryQueryResult result) => _result = result;
 
+  Set<DateTime> _activityDays = {};
+
+  /// Number of [fetchActivityDays] calls.
+  int activityDaysFetchCount = 0;
+
+  void seedActivityDays(Set<DateTime> days) => _activityDays = days;
+
+  @override
+  Future<Set<DateTime>> fetchActivityDays({
+    required String userId,
+    required DateTime since,
+  }) async {
+    activityDaysFetchCount++;
+    final from = DateTime(since.year, since.month, since.day);
+    return _activityDays
+        .where((d) => !DateTime(d.year, d.month, d.day).isBefore(from))
+        .toSet();
+  }
+
   @override
   Future<List<MealEntry>> fetchRecentMeals({
     required String userId,

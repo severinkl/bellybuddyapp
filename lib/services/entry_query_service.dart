@@ -5,6 +5,7 @@ import '../models/toilet_entry.dart';
 import '../models/gut_feeling_entry.dart';
 import '../models/drink_entry.dart';
 import '../providers/core_providers.dart';
+import '../repositories/entry_repository.dart' show entryTableFor;
 import '../utils/date_format_utils.dart';
 import '../utils/logger.dart';
 
@@ -101,6 +102,34 @@ class EntryQueryService {
       );
     } catch (e, st) {
       _log.error('fetchEntriesForDateRange failed for $date', e, st);
+      rethrow;
+    }
+  }
+
+  /// Fetches `tracked_at` of every entry (all four tables) since [since].
+  Future<List<DateTime>> fetchTrackedAtSince({
+    required String userId,
+    required DateTime since,
+  }) async {
+    try {
+      final sinceIso = since.toUtc().toIso8601String();
+      final results = await Future.wait(
+        entryTableFor.values.map(
+          (table) => _client
+              .from(table)
+              .select('tracked_at')
+              .eq('user_id', userId)
+              .gte('tracked_at', sinceIso)
+              .then((rows) => rows as List<dynamic>),
+        ),
+      );
+      return [
+        for (final rows in results)
+          for (final row in rows)
+            DateTime.parse((row as Map)['tracked_at'] as String),
+      ];
+    } catch (e, st) {
+      _log.error('fetchTrackedAtSince failed', e, st);
       rethrow;
     }
   }
