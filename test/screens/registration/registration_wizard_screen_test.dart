@@ -151,6 +151,16 @@ class _FailingBuddyRepository extends FakeBuddyRepository {
   }
 }
 
+/// A Buddy repository whose fetches never answer.
+class _HangingBuddyRepository extends FakeBuddyRepository {
+  @override
+  Future<BuddyState?> fetch(String userId, {bool retry = true}) {
+    fetchCount++;
+    fetchRetries.add(retry);
+    return Completer<BuddyState?>().future;
+  }
+}
+
 /// A Buddy repository whose saves wait for [release].
 class _SlowSaveBuddyRepository extends FakeBuddyRepository {
   final _gate = Completer<void>();
@@ -972,8 +982,8 @@ void main() {
       expect(app.path, RoutePaths.buddyOnboarding);
       expect(find.text('onboarding:afterRegistration'), findsOneWidget);
       expect(app.buddyName, isNull);
-      // One attempt, no retries: a single fetch for the write.
-      expect(buddies.fetchRetries.where((retry) => !retry), hasLength(1));
+      // One attempt each, no retries: the Buddy lookup and the name write.
+      expect(buddies.fetchRetries.where((retry) => !retry), hasLength(2));
 
       buddies.release();
       await tester.pumpAndSettle();
@@ -1023,6 +1033,50 @@ void main() {
       expect(app.path, RoutePaths.buddyOnboarding);
       expect(find.text('onboarding:gate'), findsOneWidget);
       expect(app.buddyName, 'Bubu');
+      expect(buddies.saveCount, 0);
+    });
+
+    testWidgets('the Buddy lookup fails: no name is written, the onboarding '
+        'opens as from the gate', (tester) async {
+      final buddies = FakeBuddyRepository()..throwOnFetch = true;
+      final app = await _pumpRoutedWizard(tester, buddyRepo: buddies);
+
+      await tester.enterText(find.byKey(BuddyNameStep.fieldKey), 'Bauchi');
+      await tester.pump();
+      await advanceToAuthStep(tester);
+      await _signUpWithEmail(tester);
+
+      expect(app.path, RoutePaths.buddyOnboarding);
+      expect(find.text('onboarding:gate'), findsOneWidget);
+      expect(buddies.saveCount, 0);
+      // One attempt for the lookup, no retries.
+      expect(buddies.fetchRetries.where((retry) => !retry), hasLength(1));
+    });
+
+    testWidgets('the Buddy lookup takes longer than 4 s: no name is written, '
+        'the onboarding opens as from the gate', (tester) async {
+      final buddies = _HangingBuddyRepository();
+      final app = await _pumpRoutedWizard(tester, buddyRepo: buddies);
+
+      await advanceToAuthStep(tester);
+      await tester.enterText(
+        find.byKey(AuthStep.emailFieldKey),
+        'new@example.com',
+      );
+      await tester.enterText(
+        find.byKey(BbPasswordField.passwordFieldKey),
+        'TestPassword123',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(AuthStep.submitButtonKey));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 3));
+      expect(app.path, RoutePaths.registration);
+
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+      expect(app.path, RoutePaths.buddyOnboarding);
+      expect(find.text('onboarding:gate'), findsOneWidget);
       expect(buddies.saveCount, 0);
     });
 

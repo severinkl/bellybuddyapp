@@ -485,6 +485,46 @@ void main() {
     });
   });
 
+  group('fetchStoredRow', () {
+    test('reads the row once, without retry, and changes nothing', () async {
+      buddyRepo.store['u1'] = const BuddyState(userId: 'u1', name: 'Bubu');
+      final c = makeContainer();
+
+      final row = await c.read(buddyProvider.notifier).fetchStoredRow();
+
+      expect(row!.name, 'Bubu');
+      expect(buddyRepo.fetchRetries.where((retry) => !retry), hasLength(1));
+      await load(c);
+      expect(buddyRepo.saveCount, 0);
+    });
+
+    test('null without a row; throws when the read fails', () async {
+      final c = makeContainer();
+      final notifier = c.read(buddyProvider.notifier);
+      expect(await notifier.fetchStoredRow(), isNull);
+
+      buddyRepo.throwOnFetch = true;
+      await expectLater(notifier.fetchStoredRow(), throwsException);
+    });
+
+    test("uses the auth repository's user while the user id lags", () async {
+      buddyRepo.store[testUserId] = const BuddyState(name: 'Bubu');
+      final c = createContainer(
+        overrides: [
+          buddyRepositoryProvider.overrideWithValue(buddyRepo),
+          entryRepositoryProvider.overrideWithValue(entryRepo),
+          authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
+          currentUserIdProvider.overrideWithValue(null),
+          buddyTodayProvider.overrideWithValue(() => now),
+        ],
+      );
+
+      final row = await c.read(buddyProvider.notifier).fetchStoredRow();
+
+      expect(row!.name, 'Bubu');
+    });
+  });
+
   group('setStreakGoal', () {
     test('stores and clears the goal', () async {
       buddyRepo.store['u1'] = const BuddyState(userId: 'u1');

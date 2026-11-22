@@ -212,15 +212,30 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
     }
   }
 
+  /// The signed-in user's stored row (null without one): read once without
+  /// retries, evaluating and saving nothing. For a quick "does this account
+  /// already have a Buddy?". Throws when it can't be read.
+  Future<BuddyState?> fetchStoredRow() {
+    final userId = _signedInUserId();
+    if (userId == null) {
+      return Future<BuddyState?>.error(
+        StateError('fetchStoredRow: not signed in'),
+      );
+    }
+    return ref.read(buddyRepositoryProvider).fetch(userId, retry: false);
+  }
+
+  /// Right after sign-up the reactive user id can lag behind the auth
+  /// repository (like ProfileNotifier, fall back to its current user).
+  String? _signedInUserId() =>
+      ref.read(currentUserIdProvider) ??
+      ref.read(authRepositoryProvider).currentUser?.id;
+
   Future<void> _mutate(
     String action,
     BuddyState Function(BuddyState current) change,
   ) {
-    // Right after sign-up the reactive user id can lag behind the auth
-    // repository (like ProfileNotifier, fall back to its current user).
-    final userId =
-        ref.read(currentUserIdProvider) ??
-        ref.read(authRepositoryProvider).currentUser?.id;
+    final userId = _signedInUserId();
     if (userId == null) {
       return Future<void>.error(StateError('$action: not signed in'));
     }

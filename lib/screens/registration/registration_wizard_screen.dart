@@ -8,6 +8,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../config/app_theme.dart';
 import '../../config/buddy_reactions.dart';
 import '../../config/constants.dart';
+import '../../models/buddy_state.dart';
 import '../../models/user_profile.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/buddy_provider.dart';
@@ -56,6 +57,10 @@ class RegistrationWizardScreen extends ConsumerStatefulWidget {
 class _RegistrationWizardScreenState
     extends ConsumerState<RegistrationWizardScreen> {
   static const _log = AppLogger('Registration');
+
+  /// How long the wizard waits to learn whether the account already has a
+  /// Buddy before it moves on.
+  static const _buddyLookupTimeout = Duration(seconds: 4);
   final _pageController = PageController();
   int _currentStep = 0;
   bool _isSaving = false;
@@ -293,43 +298,42 @@ class _RegistrationWizardScreenState
   ///
   /// An account that already has a Buddy (an OAuth sign-in into an existing
   /// account) keeps its name: it goes to the dashboard once its onboarding
-  /// is done, else to the onboarding as the gate shows it. Otherwise the
-  /// typed name is saved in the background (one attempt; a failure is
-  /// logged, not shown) and the onboarding's later writes queue behind it.
+  /// is done, else to the onboarding as the gate shows it. The same when
+  /// that can't be told (one read, at most [_buddyLookupTimeout]): the
+  /// name is never overwritten, and the gate's onboarding asks for one if
+  /// there is no Buddy yet. Otherwise the typed name is saved in the
+  /// background (one attempt; a failure is logged, not shown) and the
+  /// onboarding's later writes queue behind it.
   Future<void> _completeRegistration() async {
     await _createProfile();
     if (!mounted) return;
-    final existing = await _loadBuddy();
+    final buddy = ref.read(buddyProvider.notifier);
+    final BuddyState? row;
+    try {
+      row = await buddy.fetchStoredRow().timeout(_buddyLookupTimeout);
+    } catch (e, st) {
+      _log.error('looking up the Buddy after sign-in failed', e, st);
+      if (mounted) _openOnboardingFromGate();
+      return;
+    }
     if (!mounted) return;
-    if (existing != null && existing.hasRow) {
-      if (existing.state.onboardingCompletedAt != null) {
+    if (row != null) {
+      if (row.onboardingCompletedAt != null) {
         context.go(RoutePaths.dashboard);
       } else {
-        context.go(
-          RoutePaths.buddyOnboarding,
-          extra: BuddyOnboardingEntry.gate,
-        );
+        _openOnboardingFromGate();
       }
       return;
     }
-    unawaited(_saveName(ref.read(buddyProvider.notifier)));
+    unawaited(_saveName(buddy));
     context.go(
       RoutePaths.buddyOnboarding,
       extra: BuddyOnboardingEntry.afterRegistration,
     );
   }
 
-  /// The signed-in user's Buddy, freshly loaded; null while the user id is
-  /// not known yet or when it can't be loaded (logged).
-  Future<BuddyStatus?> _loadBuddy() async {
-    try {
-      await ref.read(buddyProvider.notifier).refresh();
-      return await ref.read(buddyProvider.future);
-    } catch (e, st) {
-      _log.error('loading the Buddy after sign-in failed', e, st);
-      return null;
-    }
-  }
+  void _openOnboardingFromGate() =>
+      context.go(RoutePaths.buddyOnboarding, extra: BuddyOnboardingEntry.gate);
 
   Future<void> _saveName(BuddyNotifier buddy) async {
     try {
