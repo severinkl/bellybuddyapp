@@ -98,7 +98,7 @@ class BuddyCopy {
     ],
   };
 
-  /// Sleepy lines for late evening / night (hour >= 10).
+  /// Sleepy lines for late evening / night (hour < 5 or >= 10).
   static const sleepyNight = [
     'Schon spät … *gähn* Gute Nacht bald?',
     'Mir fallen die Augen zu … *gähn*',

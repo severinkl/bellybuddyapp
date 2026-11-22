@@ -175,6 +175,9 @@ void main() {
       expect(night.any((l) => l.contains('Gute Nacht')), isTrue);
       expect(night.any((l) => l.contains('Guten Morgen')), isFalse);
       expect(night.every((l) => !l.contains('{')), isTrue);
+      expect(lines(at(2)).any((l) => l.contains('Guten Morgen')), isFalse);
+      expect(lines(at(2)).any((l) => l.contains('Gute Nacht')), isTrue);
+      expect(lines(at(5)).any((l) => l.contains('Guten Morgen')), isTrue);
     });
   });
 }
