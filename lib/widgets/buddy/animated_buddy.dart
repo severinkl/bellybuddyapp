@@ -6,7 +6,6 @@ import 'buddy_controller.dart';
 import 'buddy_geometry.dart';
 import 'buddy_painter.dart';
 import 'buddy_pose.dart';
-import 'buddy_shape_data.dart';
 
 /// The animated Buddy at any size. Ticks [controller] every frame while
 /// visible (its ticker is muted inside `TickerMode(enabled: false)`), honours
@@ -113,6 +112,7 @@ class _AnimatedBuddyState extends State<AnimatedBuddy>
           Widget child = RepaintBoundary(
             child: CustomPaint(
               size: size,
+              willChange: true,
               painter: BuddyPainter(widget.controller),
             ),
           );
@@ -133,13 +133,12 @@ class _AnimatedBuddyState extends State<AnimatedBuddy>
   /// Fills bounded constraints; with one unbounded axis, keeps the Buddy's
   /// stage aspect ratio.
   static Size _sizeFor(BoxConstraints c) {
-    const aspect = (kBuddyWidth * 1.12) / (kBuddyHeight * 1.18);
     if (c.hasBoundedWidth && c.hasBoundedHeight) return c.biggest;
     if (c.hasBoundedWidth) {
-      return c.constrain(Size(c.maxWidth, c.maxWidth / aspect));
+      return c.constrain(Size(c.maxWidth, c.maxWidth / kBuddyStageAspect));
     }
     if (c.hasBoundedHeight) {
-      return c.constrain(Size(c.maxHeight * aspect, c.maxHeight));
+      return c.constrain(Size(c.maxHeight * kBuddyStageAspect, c.maxHeight));
     }
     return c.smallest;
   }

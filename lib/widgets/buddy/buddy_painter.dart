@@ -13,7 +13,7 @@ import '../../config/app_theme.dart';
 import 'buddy_controller.dart';
 import 'buddy_geometry.dart';
 import 'buddy_pose.dart';
-import 'buddy_shape_data.dart';
+import 'buddy_shape_data.dart' show kBuddyHeight, kBuddyWidth;
 
 /// Paints the Buddy of [controller] into any size, repainting on every tick.
 class BuddyPainter extends CustomPainter {
@@ -40,8 +40,10 @@ class BuddyPainter extends CustomPainter {
 // Deformation field (image px).
 const Offset _breathCentre = Offset(820, 520);
 const double _breathSigma = 480;
+const double _breathTwoSigmaSq = 2 * _breathSigma * _breathSigma;
 const double _bulgeGain = 0.75;
 const double _bulgeSigma = 115;
+const double _bulgeTwoSigmaSq = 2 * _bulgeSigma * _bulgeSigma;
 
 /// Water swells the gut less than food: it reads as a wave, not a lump.
 const double _waterGain = 0.4;
@@ -73,51 +75,194 @@ const double _waterTrailRadius = 120;
 const Offset _zzzOrigin = Offset(1150, 250);
 const double _zzzLoop = 2.4;
 
+/// The deformation field of one frame (breathing, jelly sway, gulp bulge)
+/// with its per-frame terms hoisted. [apply] leaves the displaced point in
+/// [x]/[y], so deforming a whole outline allocates nothing per point.
+class _Field {
+  _Field(BuddyFrame fr)
+    : _breath = fr.breath,
+      _sway = fr.sway,
+      _swayY = fr.sway * 0.22,
+      _phaseX = fr.t * 1.8,
+      _phaseY = fr.t * 1.4,
+      _hasBulge = fr.bulgePoint != null && fr.bulgeAmt > 0,
+      _gx = fr.bulgePoint?.dx ?? 0,
+      _gy = fr.bulgePoint?.dy ?? 0,
+      _bulgeK = fr.bulgeAmt * (fr.bulgeIsWater ? _waterGain : _bulgeGain);
+
+  final double _breath, _sway, _swayY, _phaseX, _phaseY;
+  final bool _hasBulge;
+  final double _gx, _gy, _bulgeK;
+
+  /// The last displaced point.
+  double x = 0, y = 0;
+
+  @pragma('vm:prefer-inline')
+  void apply(double px, double py) {
+    var dx = 0.0, dy = 0.0;
+    // Breathing: the stomach region swells.
+    final bx = px - _breathCentre.dx, by = py - _breathCentre.dy;
+    final w = math.exp(-(bx * bx + by * by) / _breathTwoSigmaSq);
+    dx += bx * _breath * w;
+    dy += by * _breath * w;
+    // Jelly sway: travelling wave, anchored at the bottom of the tube.
+    final a = ((kBuddyHeight - py) / kBuddyHeight).clamp(0.0, 1.0);
+    final anchor = a * a;
+    dx += _sway * math.sin(_phaseX - py * 0.0032) * anchor;
+    dy += _swayY * math.sin(_phaseY - px * 0.004) * anchor;
+    // Gulp bulge.
+    if (_hasBulge) {
+      final gx = px - _gx, gy = py - _gy;
+      final k = _bulgeK * math.exp(-(gx * gx + gy * gy) / _bulgeTwoSigmaSq);
+      dx += gx * k;
+      dy += gy * k;
+    }
+    x = px + dx;
+    y = py + dy;
+  }
+
+  /// [layer] pushed through the field, as an even-odd [Path].
+  Path deform(BuddyPathData layer) {
+    final ops = layer.ops, pts = layer.pts;
+    final p = Path()..fillType = PathFillType.evenOdd;
+    var j = 0;
+    for (var i = 0; i < ops.length; i++) {
+      switch (ops[i]) {
+        case 0:
+          apply(pts[j], pts[j + 1]);
+          p.moveTo(x, y);
+          j += 2;
+        case 1:
+          apply(pts[j], pts[j + 1]);
+          p.lineTo(x, y);
+          j += 2;
+        case 2:
+          apply(pts[j], pts[j + 1]);
+          final x1 = x, y1 = y;
+          apply(pts[j + 2], pts[j + 3]);
+          final x2 = x, y2 = y;
+          apply(pts[j + 4], pts[j + 5]);
+          p.cubicTo(x1, y1, x2, y2, x, y);
+          j += 6;
+        default:
+          p.close();
+      }
+    }
+    return p;
+  }
+}
+
+/// An eye's frame-independent drawing data.
+class _Eye {
+  _Eye(this.spec)
+    : rect = Rect.fromCenter(
+        center: Offset.zero,
+        width: 2 * spec.rx,
+        height: 2 * spec.ry,
+      ),
+      cos = math.cos(-spec.angleRad),
+      sin = math.sin(-spec.angleRad);
+
+  final BuddyEyeSpec spec;
+
+  /// The eye white in eye-local space.
+  final Rect rect;
+  late final Rect ring = rect.inflate(_eyeRing / 2);
+  late final Path clip = Path()..addOval(rect);
+
+  /// Rotation from screen space into eye-local space.
+  final double cos, sin;
+
+  Offset toLocal(Offset v) =>
+      Offset(v.dx * cos - v.dy * sin, v.dx * sin + v.dy * cos);
+}
+
 /// Paints a single frame in Buddy image space (the canvas is already mapped
 /// by [BuddyLayout]).
 class _FramePainter {
-  _FramePainter(this.canvas, this.fr) : f = fr.face;
+  _FramePainter(this.canvas, this.fr) : f = fr.face, _field = _Field(fr);
 
   final Canvas canvas;
   final BuddyFrame fr;
   final FacePose f;
+  final _Field _field;
 
-  Offset _disp(double x, double y) {
-    var dx = 0.0, dy = 0.0;
-    // Breathing: the stomach region swells.
-    final bx = x - _breathCentre.dx, by = y - _breathCentre.dy;
-    final w = math.exp(
-      -(bx * bx + by * by) / (2 * _breathSigma * _breathSigma),
+  static final List<_Eye> _eyes = [for (final e in kBuddyEyes) _Eye(e)];
+
+  // Constant paints, shared by every frame.
+  static final Paint _shadowPaint = _fill(AppTheme.buddyShadow);
+  static final Paint _whitePaint = _fill(Colors.white);
+  static final Paint _bodyPaint = _fill(AppTheme.buddyBody);
+  static final Paint _outlineFill = _fill(AppTheme.buddyOutline);
+  static final Paint _tonguePaint = _fill(AppTheme.buddyTongue);
+  static final Paint _heartPaint = _fill(AppTheme.buddyHeart);
+  static final Paint _sparklePaint = _fill(AppTheme.buddySparkle);
+  static final Paint _foodPaint = _fill(AppTheme.buddyFood);
+  static final Paint _leafPaint = _fill(AppTheme.buddyFoodLeaf);
+  static final Paint _appleShinePaint = _fill(
+    Colors.white.withValues(alpha: 0.8),
+  );
+  static final Paint _foodImagePaint = Paint()
+    ..filterQuality = FilterQuality.medium;
+  static final Paint _eyeRingPaint = Paint()
+    ..color = AppTheme.buddyOutline
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = _eyeRing;
+  static final Paint _lidEdgePaint = _roundStroke(
+    AppTheme.buddyOutline,
+    _lidEdge,
+  );
+  static final Paint _mouthPaint = _roundStroke(
+    AppTheme.buddyOutline,
+    _mouthStroke,
+  );
+  static final Paint _foodOutlinePaint = _roundStroke(
+    AppTheme.buddyOutline,
+    _foodStroke,
+  );
+  static final Paint _leafOutlinePaint = _roundStroke(
+    AppTheme.buddyOutline,
+    10,
+  );
+
+  /// Unit-size water blob (radius 1, full opacity); drawn scaled, with the
+  /// blob's opacity as the paint's alpha.
+  static final Paint _waterPaint = Paint()
+    ..shader = ui.Gradient.radial(
+      Offset.zero,
+      1,
+      [
+        AppTheme.buddyWater,
+        AppTheme.buddyWater.withValues(alpha: 0.8),
+        AppTheme.buddyWater.withValues(alpha: 0),
+      ],
+      const [0, 0.45, 1],
     );
-    dx += bx * fr.breath * w;
-    dy += by * fr.breath * w;
-    // Jelly sway: travelling wave, anchored at the bottom of the tube.
-    final a = ((kBuddyHeight - y) / kBuddyHeight).clamp(0.0, 1.0);
-    final anchor = a * a;
-    dx += fr.sway * math.sin(fr.t * 1.8 - y * 0.0032) * anchor;
-    dy += fr.sway * 0.22 * math.sin(fr.t * 1.4 - x * 0.004) * anchor;
-    // Gulp bulge.
-    final g = fr.bulgePoint;
-    if (g != null && fr.bulgeAmt > 0) {
-      final gx = x - g.dx, gy = y - g.dy;
-      final k =
-          fr.bulgeAmt *
-          (fr.bulgeIsWater ? _waterGain : _bulgeGain) *
-          math.exp(-(gx * gx + gy * gy) / (2 * _bulgeSigma * _bulgeSigma));
-      dx += gx * k;
-      dy += gy * k;
-    }
-    return Offset(x + dx, y + dy);
-  }
 
-  Offset _d(Offset p) => _disp(p.dx, p.dy);
+  // Paints whose colour (alpha) or width change per draw: set right before
+  // each use via [_alphaFill] / [_alphaStroke].
+  static final Paint _varFill = Paint();
+  static final Paint _varStroke = _roundStroke(AppTheme.buddyOutline, 1);
 
-  Paint _stroke(Color color, double width) => Paint()
+  static Paint _fill(Color color) => Paint()..color = color;
+
+  static Paint _roundStroke(Color color, double width) => Paint()
     ..color = color
     ..style = PaintingStyle.stroke
     ..strokeWidth = width
     ..strokeCap = StrokeCap.round
     ..strokeJoin = StrokeJoin.round;
+
+  Paint _alphaFill(Color color) => _varFill..color = color;
+
+  Paint _alphaStroke(Color color, double width) => _varStroke
+    ..color = color
+    ..strokeWidth = width;
+
+  Offset _d(Offset p) {
+    _field.apply(p.dx, p.dy);
+    return Offset(_field.x, _field.y);
+  }
 
   void paint() {
     // Ground shadow (shrinks while airborne).
@@ -128,7 +273,7 @@ class _FramePainter {
         width: 820 * (1 - air),
         height: 70 * (1 - air),
       ),
-      Paint()..color = AppTheme.buddyShadow,
+      _shadowPaint,
     );
 
     // Hearts in stage space: the mood's rising stream, the action's burst.
@@ -143,20 +288,14 @@ class _FramePainter {
     canvas.scale(fr.sx, fr.sy);
     canvas.translate(-kBuddyWidth / 2, -kBuddyHeight);
 
-    canvas.drawPath(
-      buildBuddyPath(BuddyShapes.silhouette, _disp),
-      Paint()..color = Colors.white,
-    );
-    final fill = buildBuddyPath(BuddyShapes.fill, _disp);
-    canvas.drawPath(fill, Paint()..color = AppTheme.buddyBody);
+    canvas.drawPath(_field.deform(BuddyShapes.silhouette), _whitePaint);
+    final fill = _field.deform(BuddyShapes.fill);
+    canvas.drawPath(fill, _bodyPaint);
     if (fr.bulgeIsWater) _paintWater(fill);
-    canvas.drawPath(
-      buildBuddyPath(BuddyShapes.outline, _disp),
-      Paint()..color = AppTheme.buddyOutline,
-    );
+    canvas.drawPath(_field.deform(BuddyShapes.outline), _outlineFill);
 
     _paintBlush();
-    for (final e in kBuddyEyes) {
+    for (final e in _eyes) {
       _paintEye(e);
     }
     _paintMouth();
@@ -179,14 +318,14 @@ class _FramePainter {
     final g = fr.bulgePoint;
     if (g == null || fr.bulgeAmt <= 0) return;
     final a = (_waterAlpha * fr.bulgeAmt).clamp(0.0, 1.0);
-    final front = _centerlineArcLength(g);
+    final front = centerlineArcLengthAt(g);
     canvas.save();
     canvas.clipPath(fill);
     for (var k = _waterTrailBlobs; k >= 1; k--) {
       final s = front - k * _waterTrailStep;
       if (s < 0) continue;
       _waterBlob(
-        _d(pointAlongCenterline(s / _centerlineLength)),
+        _d(pointAtArcLength(s)),
         _waterTrailRadius,
         a * (1 - k / (_waterTrailBlobs + 1)),
       );
@@ -196,55 +335,44 @@ class _FramePainter {
   }
 
   void _waterBlob(Offset c, double r, double alpha) {
+    canvas.save();
+    canvas.translate(c.dx, c.dy);
+    canvas.scale(r);
     canvas.drawCircle(
-      c,
-      r,
-      Paint()
-        ..shader = ui.Gradient.radial(
-          c,
-          r,
-          [
-            AppTheme.buddyWater.withValues(alpha: alpha),
-            AppTheme.buddyWater.withValues(alpha: alpha * 0.8),
-            AppTheme.buddyWater.withValues(alpha: 0),
-          ],
-          const [0, 0.45, 1],
-        ),
+      Offset.zero,
+      1,
+      _waterPaint..color = Colors.white.withValues(alpha: alpha),
     );
+    canvas.restore();
   }
 
-  void _paintEye(BuddyEyeSpec e) {
+  void _paintEye(_Eye eye) {
+    final e = eye.spec;
     final c = _d(e.center);
     final rx = e.rx, ry = e.ry;
-    final rect = Rect.fromCenter(
-      center: Offset.zero,
-      width: 2 * rx,
-      height: 2 * ry,
-    );
+    final rect = eye.rect;
     canvas.save();
     canvas.translate(c.dx, c.dy);
     canvas.rotate(e.angleRad);
-    canvas.drawOval(rect, Paint()..color = Colors.white);
+    canvas.drawOval(rect, _whitePaint);
 
     canvas.save();
-    canvas.clipPath(Path()..addOval(rect));
+    canvas.clipPath(eye.clip);
 
     // Pupil, gaze rotated into eye-local space.
-    final g = fr.gaze;
-    final cs = math.cos(-e.angleRad), sn = math.sin(-e.angleRad);
-    final gl = Offset(g.dx * cs - g.dy * sn, g.dx * sn + g.dy * cs);
+    final gl = eye.toLocal(fr.gaze);
     final pw = 50 * f.pupil, ph = 74 * f.pupil;
     final po = Offset(gl.dx * (rx - pw * 0.9), gl.dy * (ry - ph * 0.85));
     if (f.heart < 0.99) {
       final k = 1 - f.heart;
       canvas.drawOval(
         Rect.fromCenter(center: po, width: 2 * pw * k, height: 2 * ph * k),
-        Paint()..color = AppTheme.buddyOutline,
+        _outlineFill,
       );
       // Big pupils (hungry, empathetic) get catchlights: pleading/soft eyes.
       final shine = k * ((f.pupil - 1) / _shinePupil).clamp(0.0, 1.0);
       if (shine > 0.01) {
-        _paintCatchlights(po, pw * k, ph * k, e.angleRad, shine);
+        _paintCatchlights(eye, po, pw * k, ph * k, shine);
       }
     }
     if (f.heart > 0.01) {
@@ -253,14 +381,14 @@ class _FramePainter {
       canvas.save();
       canvas.translate(po.dx, po.dy);
       canvas.rotate(-e.angleRad);
-      final heart = _heart(Offset.zero, hs);
-      canvas.drawPath(heart, Paint()..color = AppTheme.buddyHeart);
-      canvas.drawPath(heart, _stroke(AppTheme.buddyOutline, 14));
+      canvas.scale(hs);
+      canvas.drawPath(_unitHeart, _heartPaint);
+      canvas.drawPath(_unitHeart, _alphaStroke(AppTheme.buddyOutline, 14 / hs));
       canvas.restore();
     }
 
-    final lidPaint = Paint()..color = AppTheme.buddyBody;
-    final edge = _stroke(AppTheme.buddyOutline, _lidEdge);
+    final lidPaint = _bodyPaint;
+    final edge = _lidEdgePaint;
 
     // Upper lid (blink / sleepy / sad tilt).
     final lid = math.max(f.lidTop, fr.blink).clamp(0.0, 1.0);
@@ -300,36 +428,21 @@ class _FramePainter {
     }
     canvas.restore(); // clip
 
-    canvas.drawOval(
-      rect.inflate(_eyeRing / 2),
-      Paint()
-        ..color = AppTheme.buddyOutline
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = _eyeRing,
-    );
+    canvas.drawOval(eye.ring, _eyeRingPaint);
     canvas.restore();
   }
 
-  /// Two white highlights in a pupil (eye-local canvas rotated by [angle]),
-  /// lit from the upper left in screen space.
-  void _paintCatchlights(
-    Offset po,
-    double pw,
-    double ph,
-    double angle,
-    double a,
-  ) {
-    final cs = math.cos(-angle), sn = math.sin(-angle);
-    Offset local(Offset v) =>
-        Offset(v.dx * cs - v.dy * sn, v.dx * sn + v.dy * cs);
-    final paint = Paint()..color = Colors.white.withValues(alpha: a);
+  /// Two white highlights in a pupil (in [eye]'s rotated local canvas), lit
+  /// from the upper left in screen space.
+  void _paintCatchlights(_Eye eye, Offset po, double pw, double ph, double a) {
+    final paint = _alphaFill(Colors.white.withValues(alpha: a));
     canvas.drawCircle(
-      po + local(Offset(-0.32 * pw, -0.4 * ph)),
+      po + eye.toLocal(Offset(-0.32 * pw, -0.4 * ph)),
       0.36 * pw * a,
       paint,
     );
     canvas.drawCircle(
-      po + local(Offset(0.34 * pw, 0.3 * ph)),
+      po + eye.toLocal(Offset(0.34 * pw, 0.3 * ph)),
       0.16 * pw * a,
       paint,
     );
@@ -350,7 +463,7 @@ class _FramePainter {
       ..quadraticBezierTo(0, dc, -hw, 0)
       ..close();
     if (o > 0.02) {
-      canvas.drawPath(mp, Paint()..color = AppTheme.buddyOutline);
+      canvas.drawPath(mp, _outlineFill);
       canvas.save();
       canvas.clipPath(mp);
       canvas.drawOval(
@@ -359,17 +472,17 @@ class _FramePainter {
           width: hw * 1.2,
           height: math.max(20, dc * 0.35),
         ),
-        Paint()..color = AppTheme.buddyTongue,
+        _tonguePaint,
       );
       canvas.restore();
     }
-    canvas.drawPath(mp, _stroke(AppTheme.buddyOutline, _mouthStroke));
+    canvas.drawPath(mp, _mouthPaint);
     canvas.restore();
   }
 
   void _paintBrows() {
     if (f.brow < 0.02) return;
-    final paint = _stroke(
+    final paint = _alphaStroke(
       AppTheme.buddyOutline.withValues(alpha: f.brow.clamp(0.0, 1.0)),
       _browStroke,
     );
@@ -393,10 +506,9 @@ class _FramePainter {
 
   void _paintBlush() {
     if (f.blush < 0.02) return;
-    final p = Paint()
-      ..color = AppTheme.buddyBlush.withValues(
-        alpha: 0.55 * f.blush.clamp(0.0, 1.0),
-      );
+    final p = _alphaFill(
+      AppTheme.buddyBlush.withValues(alpha: 0.55 * f.blush.clamp(0.0, 1.0)),
+    );
     for (final c in const [Offset(165, 800), Offset(780, 770)]) {
       canvas.drawOval(
         Rect.fromCenter(center: _d(c), width: 120, height: 64),
@@ -405,61 +517,51 @@ class _FramePainter {
     }
   }
 
+  /// Nervous "sweat" arcs around the body, each with the direction its
+  /// jitter moves it in.
+  static final List<(Path, Offset)> _nervousArcs = [
+    for (final (a0, c, a1, dir) in const [
+      (Offset(1040, -20), Offset(1260, 60), Offset(1300, 320), Offset(1, -1)),
+      (Offset(-40, 420), Offset(-10, 300), Offset(100, 250), Offset(-1, -1)),
+      (Offset(40, 1300), Offset(70, 1520), Offset(280, 1640), Offset(-1, 1)),
+    ])
+      (
+        Path()
+          ..moveTo(a0.dx, a0.dy)
+          ..quadraticBezierTo(c.dx, c.dy, a1.dx, a1.dy),
+        dir,
+      ),
+  ];
+
   void _paintNervous(double a) {
     // The jitter follows `shake`, which reduced motion zeroes.
     final j = math.sin(fr.t * 31) * 6 * f.shake.clamp(0.0, 1.0);
-    final p = _stroke(
+    final p = _alphaStroke(
       AppTheme.buddyOutline.withValues(alpha: a.clamp(0.0, 1.0)),
       40,
     );
-    final arcs = [
-      (
-        const Offset(1040, -20),
-        const Offset(1260, 60),
-        const Offset(1300, 320),
-        Offset(j, -j),
-      ),
-      (
-        const Offset(-40, 420),
-        const Offset(-10, 300),
-        const Offset(100, 250),
-        Offset(-j, -j),
-      ),
-      (
-        const Offset(40, 1300),
-        const Offset(70, 1520),
-        const Offset(280, 1640),
-        Offset(-j, j),
-      ),
-    ];
-    for (final (a0, c, a1, o) in arcs) {
-      canvas.drawPath(
-        Path()
-          ..moveTo(a0.dx + o.dx, a0.dy + o.dy)
-          ..quadraticBezierTo(
-            c.dx + o.dx,
-            c.dy + o.dy,
-            a1.dx + o.dx,
-            a1.dy + o.dy,
-          ),
-        p,
-      );
+    for (final (arc, dir) in _nervousArcs) {
+      canvas.save();
+      canvas.translate(dir.dx * j, dir.dy * j);
+      canvas.drawPath(arc, p);
+      canvas.restore();
     }
   }
 
   /// Two short "grumble" arcs beside the stomach.
+  static final List<Path> _rumbleArcs = [
+    for (final (x, half) in const [(1225.0, 70.0), (1290.0, 105.0)])
+      Path()
+        ..moveTo(x, 430 - half)
+        ..quadraticBezierTo(x + 0.6 * half, 430, x, 430 + half),
+  ];
+
   void _paintRumble(double a) {
     final alpha = (a * math.sin(3 * fr.t).abs()).clamp(0.0, 1.0);
     if (alpha < 0.01) return;
-    final p = _stroke(AppTheme.buddyOutline.withValues(alpha: alpha), 26);
-    for (final (x, half) in const [(1225.0, 70.0), (1290.0, 105.0)]) {
-      const cy = 430.0;
-      canvas.drawPath(
-        Path()
-          ..moveTo(x, cy - half)
-          ..quadraticBezierTo(x + 0.6 * half, cy, x, cy + half),
-        p,
-      );
+    final p = _alphaStroke(AppTheme.buddyOutline.withValues(alpha: alpha), 26);
+    for (final arc in _rumbleArcs) {
+      canvas.drawPath(arc, p);
     }
   }
 
@@ -484,7 +586,7 @@ class _FramePainter {
     final side = math.min(w, h);
     canvas.save();
     canvas.clipPath(Path()..addOval(circle));
-    canvas.drawCircle(Offset.zero, _foodRadius, Paint()..color = Colors.white);
+    canvas.drawCircle(Offset.zero, _foodRadius, _whitePaint);
     if (side > 0) {
       canvas.drawImageRect(
         image,
@@ -494,38 +596,26 @@ class _FramePainter {
           height: side,
         ),
         circle,
-        Paint()..filterQuality = FilterQuality.medium,
+        _foodImagePaint,
       );
     }
     canvas.restore();
-    canvas.drawCircle(
-      Offset.zero,
-      _foodRadius,
-      _stroke(AppTheme.buddyOutline, _foodStroke),
-    );
+    canvas.drawCircle(Offset.zero, _foodRadius, _foodOutlinePaint);
   }
 
   void _paintApple() {
-    final outline = _stroke(AppTheme.buddyOutline, _foodStroke);
+    final outline = _foodOutlinePaint;
     canvas.drawLine(const Offset(0, -70), const Offset(8, -110), outline);
     canvas.save();
     canvas.translate(38, -100);
     canvas.rotate(-0.5);
     final leaf = Rect.fromCenter(center: Offset.zero, width: 70, height: 34);
-    canvas.drawOval(leaf, Paint()..color = AppTheme.buddyFoodLeaf);
-    canvas.drawOval(leaf, _stroke(AppTheme.buddyOutline, 10));
+    canvas.drawOval(leaf, _leafPaint);
+    canvas.drawOval(leaf, _leafOutlinePaint);
     canvas.restore();
-    canvas.drawCircle(
-      Offset.zero,
-      _foodRadius,
-      Paint()..color = AppTheme.buddyFood,
-    );
+    canvas.drawCircle(Offset.zero, _foodRadius, _foodPaint);
     canvas.drawCircle(Offset.zero, _foodRadius, outline);
-    canvas.drawCircle(
-      const Offset(-28, -26),
-      14,
-      Paint()..color = Colors.white.withValues(alpha: 0.8),
-    );
+    canvas.drawCircle(const Offset(-28, -26), 14, _appleShinePaint);
   }
 
   /// Up to three "z" glyphs drifting up from beside the head.
@@ -545,7 +635,10 @@ class _FramePainter {
           ..lineTo(c.dx + half, c.dy - half)
           ..lineTo(c.dx - half, c.dy + half)
           ..lineTo(c.dx + half, c.dy + half),
-        _stroke(AppTheme.buddyOutline.withValues(alpha: alpha), 14 + 10 * p),
+        _alphaStroke(
+          AppTheme.buddyOutline.withValues(alpha: alpha),
+          14 + 10 * p,
+        ),
       );
     }
   }
@@ -553,7 +646,8 @@ class _FramePainter {
   void _paintSparkles(double p) {
     final ease = 1 - math.pow(1 - p, 3).toDouble();
     final size = 70 * math.sin(math.pi * p);
-    final paint = Paint()..color = AppTheme.buddySparkle;
+    // A zero-size star draws nothing (and would need a singular transform).
+    if (!(size > 0)) return;
     for (var i = 0; i < 12; i++) {
       final ang = i * math.pi / 6 + (i.isEven ? 0.15 : -0.1);
       final dist = (i.isEven ? 620 : 480) * ease + 200;
@@ -562,7 +656,8 @@ class _FramePainter {
       canvas.save();
       canvas.translate(c.dx, c.dy);
       canvas.rotate(p * 3 + i);
-      canvas.drawPath(_star(size * (i.isEven ? 1 : 0.7)), paint);
+      canvas.scale(size * (i.isEven ? 1 : 0.7));
+      canvas.drawPath(_unitStar, _sparklePaint);
       canvas.restore();
     }
   }
@@ -580,13 +675,16 @@ class _FramePainter {
       final y = 350 + h2 * 350 - age * 280;
       final fade = math.min(1.0, age / 0.3) * math.min(1.0, (life - age) / 0.6);
       final s = 70 + h2 * 50;
+      canvas.save();
+      canvas.translate(x, y);
+      canvas.scale(s);
       canvas.drawPath(
-        _heart(Offset(x, y), s),
-        Paint()
-          ..color = AppTheme.buddyHeart.withValues(
-            alpha: (a * fade).clamp(0.0, 1.0),
-          ),
+        _unitHeart,
+        _alphaFill(
+          AppTheme.buddyHeart.withValues(alpha: (a * fade).clamp(0.0, 1.0)),
+        ),
       );
+      canvas.restore();
     }
   }
 
@@ -594,8 +692,8 @@ class _FramePainter {
   /// by [a] and bobbing gently.
   void _paintHeartBurst(double a) {
     final k = a.clamp(0.0, 1.0);
-    final outline = _stroke(AppTheme.buddyOutline.withValues(alpha: k), 12);
-    final fill = Paint()..color = AppTheme.buddyHeart.withValues(alpha: k);
+    final outlineColor = AppTheme.buddyOutline.withValues(alpha: k);
+    final fill = _alphaFill(AppTheme.buddyHeart.withValues(alpha: k));
     for (var i = 0; i < _burst.length; i++) {
       final (pos, size) = _burst[i];
       final bob = math.sin(fr.t * 4 + i * 1.7) * 18;
@@ -605,10 +703,10 @@ class _FramePainter {
       canvas.save();
       canvas.translate(c.dx, c.dy);
       canvas.rotate((i.isEven ? -1 : 1) * 0.2);
-      canvas.scale(pop);
-      final heart = _heart(Offset.zero, size);
-      canvas.drawPath(heart, fill);
-      canvas.drawPath(heart, outline);
+      canvas.scale(pop * size);
+      canvas.drawPath(_unitHeart, fill);
+      // The unit heart is scaled by its width: keep the outline 12 px wide.
+      canvas.drawPath(_unitHeart, _alphaStroke(outlineColor, 12 / size));
       canvas.restore();
     }
   }
@@ -627,68 +725,25 @@ class _FramePainter {
     return v - v.floorToDouble();
   }
 
-  static Path _heart(Offset c, double w) {
-    final h = w * 0.9;
+  /// Heart of width 1 centred on the origin; draw it scaled to its width.
+  static final Path _unitHeart = () {
+    const h = 0.9;
     return Path()
-      ..moveTo(c.dx, c.dy + h * 0.45)
-      ..cubicTo(
-        c.dx - w * 0.62,
-        c.dy + h * 0.02,
-        c.dx - w * 0.5,
-        c.dy - h * 0.6,
-        c.dx,
-        c.dy - h * 0.22,
-      )
-      ..cubicTo(
-        c.dx + w * 0.5,
-        c.dy - h * 0.6,
-        c.dx + w * 0.62,
-        c.dy + h * 0.02,
-        c.dx,
-        c.dy + h * 0.45,
-      )
+      ..moveTo(0, h * 0.45)
+      ..cubicTo(-0.62, h * 0.02, -0.5, -h * 0.6, 0, -h * 0.22)
+      ..cubicTo(0.5, -h * 0.6, 0.62, h * 0.02, 0, h * 0.45)
       ..close();
-  }
+  }();
 
-  static Path _star(double r) {
-    final k = r * 0.12;
+  /// Four-point star of radius 1; draw it scaled to its radius.
+  static final Path _unitStar = () {
+    const k = 0.12;
     return Path()
-      ..moveTo(0, -r)
-      ..quadraticBezierTo(k, -k, r, 0)
-      ..quadraticBezierTo(k, k, 0, r)
-      ..quadraticBezierTo(-k, k, -r, 0)
-      ..quadraticBezierTo(-k, -k, 0, -r)
+      ..moveTo(0, -1)
+      ..quadraticBezierTo(k, -k, 1, 0)
+      ..quadraticBezierTo(k, k, 0, 1)
+      ..quadraticBezierTo(-k, k, -1, 0)
+      ..quadraticBezierTo(-k, -k, 0, -1)
       ..close();
-  }
-}
-
-final List<double> _centerlineCum = () {
-  final c = <double>[0];
-  for (var i = 1; i < kBuddyCenterline.length; i++) {
-    c.add(c.last + (kBuddyCenterline[i] - kBuddyCenterline[i - 1]).distance);
-  }
-  return c;
-}();
-
-double get _centerlineLength => _centerlineCum.last;
-
-/// Arc length along the gut centerline of the point nearest to [p].
-double _centerlineArcLength(Offset p) {
-  var best = double.infinity, bestS = 0.0;
-  for (var i = 1; i < kBuddyCenterline.length; i++) {
-    final a = kBuddyCenterline[i - 1], b = kBuddyCenterline[i];
-    final ab = b - a;
-    final len2 = ab.dx * ab.dx + ab.dy * ab.dy;
-    final k = len2 == 0
-        ? 0.0
-        : (((p - a).dx * ab.dx + (p - a).dy * ab.dy) / len2).clamp(0.0, 1.0);
-    final d = (p - (a + ab * k)).distanceSquared;
-    if (d < best) {
-      best = d;
-      bestS =
-          _centerlineCum[i - 1] +
-          k * (_centerlineCum[i] - _centerlineCum[i - 1]);
-    }
-  }
-  return bestS;
+  }();
 }
