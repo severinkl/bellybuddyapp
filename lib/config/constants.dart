@@ -113,6 +113,13 @@ class AppConstants {
   static const String keyNotificationModalShown = 'notification_modal_shown';
   static const String keyBuddyStatePrefix = 'buddy_state_';
 
+  /// Prefix of the Buddy announcement flags
+  /// (`buddy_announced_<kind>_<yyyy-MM-dd>`), so each one shows only once.
+  static const String keyBuddyAnnouncedPrefix = 'buddy_announced_';
+
+  /// Maximum length of the Buddy's name (matches the `buddy_state` check).
+  static const int buddyNameMaxLength = 20;
+
   /// App Store numeric ID for Belly Buddy, used by the upgrade screen and
   /// dialog to open the store listing (App Store Connect → App Information →
   /// Apple ID). The `deploy-ios` job refuses the old placeholder `0000000000`.
