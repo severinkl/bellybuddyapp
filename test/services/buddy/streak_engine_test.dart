@@ -901,6 +901,34 @@ void main() {
       expect(result.changed, isFalse);
     });
 
+    test('a run longer than a year keeps its old saved days while its break '
+        'can still be repaired', () {
+      final saved = DateTime(2025, 11, 1);
+      final window = DateTime(2025, 1, 1);
+      // Run 1.10.2025–19.11.2026 with 1.11.2025 saved; 20.+21.11. missed.
+      final run = span(DateTime(2025, 10, 1), nov(19)).difference({saved});
+      final before = _eval(
+        run,
+        BuddyState(savedDays: [saved], lastMilestone: 413),
+        today: nov(19),
+        windowStart: window,
+      );
+      expect(before.next.savedDays, [saved]);
+
+      final broken = _eval(run, before.next, windowStart: window);
+      expect(broken.streakBroken, isTrue);
+      expect(broken.next.savedDays, [saved]);
+
+      // Backfilling 20.+21.11. repairs the whole run.
+      final repaired = _eval(
+        {...run, nov(20), nov(21), nov(22)},
+        broken.next,
+        windowStart: window,
+      );
+      expect(repaired.streak, before.streak + 3);
+      expect(repaired.next.lastMilestone, 413);
+    });
+
     test('nothing is pruned while the streak reaches the window', () {
       final saved = DateTime(2025, 11, 1);
       final run = span(DateTime(2025, 10, 1), nov(22));

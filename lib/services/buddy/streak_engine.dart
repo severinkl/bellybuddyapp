@@ -119,7 +119,9 @@ class StreakEvaluation {
 /// 5. A reached streak goal is reported ([StreakEvaluation.goalReached]);
 ///    the goal stays set (the UI offers the next one).
 /// 6. Saved days more than 365 days before [today] that the current run
-///    doesn't reach are dropped (never while the window is reached).
+///    doesn't reach are dropped; never while the window is reached or the
+///    streak is broken but still repairable ([StreakEvaluation.brokenAfter]:
+///    backfilling the gap would revive the old run with its saved days).
 ///
 /// With [initialize] (a freshly created `buddy_state` row for an existing
 /// user), `lastMilestone` is set to the current milestone without rewards.
@@ -227,13 +229,13 @@ StreakEvaluation evaluateStreak({
   final goalReached = goal != null && streak >= goal;
 
   // 7. Drop saved days that can no longer matter. A run longer than a year
-  //    keeps the ones it walks through.
+  //    keeps the ones it walks through, also while its break is open.
   var keepFrom = addDays(day0, -_savedDaysRetentionDays);
   if (streak > 0) {
     final runStart = addDays(anchor, 1 - streak);
     if (runStart.isBefore(keepFrom)) keepFrom = runStart;
   }
-  final expired = reachesWindow
+  final expired = reachesWindow || brokenAfter != null
       ? const <DateTime>{}
       : saved.where((day) => day.isBefore(keepFrom)).toSet();
   saved.removeAll(expired);
