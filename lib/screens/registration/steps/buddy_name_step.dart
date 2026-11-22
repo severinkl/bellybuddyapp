@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../config/app_theme.dart';
@@ -10,7 +11,11 @@ import '../../../config/constants.dart';
 /// [value] is only the initial text; later changes come from the field and
 /// are reported through [onChanged]. [onSubmitted] runs on the keyboard's
 /// done action (hosts wire it to their „Weiter").
-class BuddyNameStep extends StatelessWidget {
+///
+/// The length limit and the counter count Unicode code points, like the
+/// database and [AppConstants.isValidBuddyName] (an emoji family is one
+/// visible character but five code points).
+class BuddyNameStep extends StatefulWidget {
   const BuddyNameStep({
     super.key,
     required this.value,
@@ -26,13 +31,46 @@ class BuddyNameStep extends StatelessWidget {
   static const fieldKey = Key('buddy_name_field');
 
   @override
+  State<BuddyNameStep> createState() => _BuddyNameStepState();
+}
+
+class _BuddyNameStepState extends State<BuddyNameStep> {
+  late final TextEditingController _controller = TextEditingController(
+    text: widget.value,
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  /// „n/20" in code points.
+  Widget _counter(
+    BuildContext context, {
+    required int currentLength,
+    required bool isFocused,
+    required int? maxLength,
+  }) => Semantics(
+    container: true,
+    liveRegion: isFocused,
+    child: Text(
+      '${_controller.text.runes.length}/${AppConstants.buddyNameMaxLength}',
+      style: const TextStyle(
+        fontSize: AppTheme.fontSizeCaption,
+        color: AppTheme.mutedForeground,
+      ),
+    ),
+  );
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const Text(
-          key: titleKey,
+          key: BuddyNameStep.titleKey,
           'Wie soll ich heißen?',
           style: TextStyle(
             fontSize: AppTheme.fontSizeHeadingLG,
@@ -43,17 +81,51 @@ class BuddyNameStep extends StatelessWidget {
         ),
         AppConstants.gap16,
         TextFormField(
-          key: fieldKey,
-          initialValue: value,
-          maxLength: AppConstants.buddyNameMaxLength,
+          key: BuddyNameStep.fieldKey,
+          controller: _controller,
+          inputFormatters: const [
+            _CodePointLimitFormatter(AppConstants.buddyNameMaxLength),
+          ],
+          buildCounter: _counter,
           textCapitalization: TextCapitalization.words,
           textInputAction: TextInputAction.done,
           autocorrect: false,
           decoration: const InputDecoration(labelText: 'Name'),
-          onChanged: onChanged,
-          onFieldSubmitted: (_) => onSubmitted?.call(),
+          onChanged: widget.onChanged,
+          onFieldSubmitted: (_) => widget.onSubmitted?.call(),
         ),
       ],
+    );
+  }
+}
+
+/// Caps the text at [max] Unicode code points, cutting only between whole
+/// characters. Typing at the limit keeps the text as it was.
+class _CodePointLimitFormatter extends TextInputFormatter {
+  const _CodePointLimitFormatter(this.max);
+
+  final int max;
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.runes.length <= max) return newValue;
+    if (oldValue.text.runes.length == max && oldValue.selection.isCollapsed) {
+      return oldValue;
+    }
+    final kept = StringBuffer();
+    var count = 0;
+    for (final character in newValue.text.characters) {
+      count += character.runes.length;
+      if (count > max) break;
+      kept.write(character);
+    }
+    final text = kept.toString();
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
     );
   }
 }

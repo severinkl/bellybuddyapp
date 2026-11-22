@@ -65,12 +65,72 @@ void main() {
       expect(submitted, 1);
     });
 
+    String text(WidgetTester tester) => field(tester).controller!.text;
+
+    Finder counter(String value) => find.descendant(
+      of: find.byKey(BuddyNameStep.fieldKey),
+      matching: find.text(value),
+    );
+
     testWidgets('limits the name length and capitalizes words', (tester) async {
       await pumpStep(tester);
 
-      final textField = field(tester);
-      expect(textField.maxLength, AppConstants.buddyNameMaxLength);
-      expect(textField.textCapitalization, TextCapitalization.words);
+      expect(counter('5/20'), findsOneWidget);
+      await tester.enterText(find.byKey(BuddyNameStep.fieldKey), 'a' * 25);
+      await tester.pump();
+
+      expect(text(tester), 'a' * AppConstants.buddyNameMaxLength);
+      expect(counter('20/20'), findsOneWidget);
+      expect(field(tester).textCapitalization, TextCapitalization.words);
+    });
+
+    testWidgets('counts code points like the database, not characters', (
+      tester,
+    ) async {
+      await pumpStep(tester);
+
+      // One visible character, five code points (man, ZWJ, woman, ZWJ, girl).
+      const family = '\u{1F468}\u200D\u{1F469}\u200D\u{1F467}';
+      await tester.enterText(find.byKey(BuddyNameStep.fieldKey), family);
+      await tester.pump();
+      expect(counter('5/20'), findsOneWidget);
+
+      // 25 code points: four whole families fit, the fifth is not split.
+      await tester.enterText(find.byKey(BuddyNameStep.fieldKey), family * 5);
+      await tester.pump();
+      expect(text(tester), family * 4);
+      expect(counter('20/20'), findsOneWidget);
+      expect(AppConstants.isValidBuddyName(text(tester)), isTrue);
+
+      // Apples are one code point each (two UTF-16 units): 20 fit.
+      await tester.enterText(find.byKey(BuddyNameStep.fieldKey), '');
+      await tester.enterText(find.byKey(BuddyNameStep.fieldKey), '🍎' * 25);
+      await tester.pump();
+      expect(text(tester), '🍎' * 20);
+      expect(AppConstants.isValidBuddyName(text(tester)), isTrue);
+    });
+
+    testWidgets('typing at the limit keeps the name', (tester) async {
+      final changes = await pumpStep(tester, value: 'a' * 20);
+      await tester.showKeyboard(find.byKey(BuddyNameStep.fieldKey));
+      tester.testTextInput.updateEditingValue(
+        TextEditingValue(
+          text: 'a' * 20,
+          selection: const TextSelection.collapsed(offset: 10),
+        ),
+      );
+      await tester.pump();
+
+      tester.testTextInput.updateEditingValue(
+        TextEditingValue(
+          text: '${'a' * 10}b${'a' * 10}',
+          selection: const TextSelection.collapsed(offset: 11),
+        ),
+      );
+      await tester.pump();
+
+      expect(text(tester), 'a' * 20);
+      expect(changes, isEmpty);
     });
   });
 }
