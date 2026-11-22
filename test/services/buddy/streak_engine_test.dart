@@ -167,11 +167,12 @@ void main() {
       consumed: [nov(21)],
       saversEarned: 1,
       milestoneReached: 7,
+      // Day 7 of the run is 21.11. (the saved day).
       next: BuddyState(
         savers: 2,
         savedDays: [nov(21)],
         lastMilestone: 7,
-        lastSaverEarnedOn: nov(22),
+        lastSaverEarnedOn: nov(21),
       ),
     ),
     _Case(
@@ -361,13 +362,24 @@ void main() {
 
     // --- Milestones ---
     _Case(
-      '10 consecutive days incl. today → milestone 7 earns a saver',
+      '10 consecutive days incl. today → milestone 7 earns a saver, dated '
+      'the day it was reached',
       activity: span(nov(13), nov(22)),
       streak: 10,
       todayCounted: true,
       saversEarned: 1,
       milestoneReached: 7,
-      next: BuddyState(savers: 1, lastMilestone: 7, lastSaverEarnedOn: nov(22)),
+      next: BuddyState(savers: 1, lastMilestone: 7, lastSaverEarnedOn: nov(19)),
+    ),
+    _Case(
+      'the cooldown counts to the day the milestone was reached, not today',
+      activity: span(nov(13), nov(22)),
+      // 19.11. (day 7) is less than 7 days after 13.11.
+      state: BuddyState(lastSaverEarnedOn: nov(13)),
+      streak: 10,
+      todayCounted: true,
+      milestoneReached: 7,
+      next: BuddyState(lastMilestone: 7, lastSaverEarnedOn: nov(13)),
     ),
     _Case(
       'initialize with a 40-day streak → lastMilestone 35, no rewards',
@@ -395,7 +407,7 @@ void main() {
       next: BuddyState(
         savers: 2,
         lastMilestone: 14,
-        lastSaverEarnedOn: nov(22),
+        lastSaverEarnedOn: nov(21),
       ),
     ),
     _Case(
@@ -409,7 +421,7 @@ void main() {
       next: BuddyState(
         savers: 1,
         lastMilestone: 14,
-        lastSaverEarnedOn: nov(22),
+        lastSaverEarnedOn: nov(21),
       ),
     ),
     _Case(
@@ -807,6 +819,56 @@ void main() {
       expect(day22.next.savers, 2);
       expect(day22.next.lastMilestone, 7);
       expect(day22.next.lastSaverEarnedOn, nov(22));
+    });
+
+    /// Evaluates once on each November day in [from]..[to] (except
+    /// [skipped]) after that day's entries, like a daily user; returns the
+    /// days a saver was earned.
+    List<int> earnedDaily(
+      Set<int> logged, {
+      required BuddyState state,
+      int from = 1,
+      int to = 21,
+      Set<int> skipped = const {},
+    }) {
+      final earned = <int>[];
+      for (var day = from; day <= to; day++) {
+        if (skipped.contains(day)) continue;
+        final result = _eval(
+          {
+            for (final n in logged)
+              if (n <= day) nov(n),
+          },
+          state,
+          today: nov(day),
+          windowStart: DateTime(2026, 7, 1),
+        );
+        if (result.saversEarned > 0) earned.add(day);
+        state = result.next;
+      }
+      return earned;
+    }
+
+    final daily = {for (var d = 1; d <= 21; d++) d};
+
+    test('a daily logger earns a saver at 7 and 14 (stock full at 21)', () {
+      expect(earnedDaily(daily, state: const BuddyState()), [7, 14]);
+    });
+
+    test('day 7 filled by the gift saver, evaluated on day 8 → milestone 14 '
+        'still pays on day 14', () {
+      expect(
+        earnedDaily(daily.difference({7}), state: const BuddyState(savers: 1)),
+        [8, 14],
+      );
+    });
+
+    test('day 7 logged but the app opened only on day 8 → milestone 14 still '
+        'pays', () {
+      expect(earnedDaily(daily, state: const BuddyState(), skipped: {7}), [
+        8,
+        14,
+      ]);
     });
 
     test('initialize never pays and leaves lastSaverEarnedOn unset', () {

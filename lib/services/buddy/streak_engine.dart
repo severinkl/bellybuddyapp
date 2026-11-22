@@ -9,10 +9,12 @@ const int maxStreakSavers = 2;
 /// Every multiple of this many streak days is a milestone worth one saver.
 const int streakMilestoneDays = 7;
 
-/// After a milestone added a saver, the next one pays no earlier than this
-/// many days later. The milestones of one real run are always this far
-/// apart, so this only stops a run that shrinks and grows back (an entry
-/// deleted or moved, then restored) from paying its milestones again.
+/// After a milestone added a saver, the next one pays only if it was
+/// reached at least this many days later (both counted on the day the run
+/// reached the milestone, not the day it was evaluated). The milestones of
+/// one real run are always this far apart, so this only stops a run that
+/// shrinks and grows back (an entry deleted or moved, then restored) from
+/// paying its milestones again.
 const int _saverCooldownDays = streakMilestoneDays;
 
 /// Saved days older than this (and not part of the current run) are
@@ -104,8 +106,9 @@ class StreakEvaluation {
 ///    a run, the streak is reported broken.
 /// 3. Saved days count toward the streak.
 /// 4. A newly reached 7-day milestone adds one saver (stock capped at 2):
-///    at most one per evaluation, and only if the last one was earned at
-///    least 7 days ago (`lastSaverEarnedOn`, set to today when it pays).
+///    at most one per evaluation, and only if it was reached at least 7
+///    days after the milestone that paid last (`lastSaverEarnedOn`: the day
+///    that milestone was reached, also when it was evaluated later).
 ///    After a break, `lastMilestone` is reset to the current run's milestone
 ///    (without reward) only once the break is final, i.e. yesterday is
 ///    counted again (a new run has started). Until then the user can still
@@ -206,10 +209,13 @@ StreakEvaluation evaluateStreak({
       // never earns savers by itself.
       lastMilestone = milestone;
     } else if (milestone > lastMilestone) {
-      if (savers < maxStreakSavers && _saverDue(lastSaverEarnedOn, day0)) {
+      // The run's day [milestone]: evaluated late (the app wasn't opened
+      // that day), the milestone still counts from when it was reached.
+      final reachedOn = addDays(anchor, milestone - streak);
+      if (savers < maxStreakSavers && _saverDue(lastSaverEarnedOn, reachedOn)) {
         savers++;
         saversEarned = 1;
-        lastSaverEarnedOn = day0;
+        lastSaverEarnedOn = reachedOn;
       }
       milestoneReached = milestone;
       lastMilestone = milestone;
@@ -257,11 +263,12 @@ StreakEvaluation evaluateStreak({
   );
 }
 
-/// Whether a milestone may pay a saver on [today]: none was earned yet, or
-/// the last one at least [_saverCooldownDays] days before.
-bool _saverDue(DateTime? lastEarnedOn, DateTime today) =>
+/// Whether a milestone reached on [reachedOn] may pay a saver: none was
+/// earned yet, or the last one for a milestone reached at least
+/// [_saverCooldownDays] days before.
+bool _saverDue(DateTime? lastEarnedOn, DateTime reachedOn) =>
     lastEarnedOn == null ||
-    !addDays(startOfDay(lastEarnedOn), _saverCooldownDays).isAfter(today);
+    !addDays(startOfDay(lastEarnedOn), _saverCooldownDays).isAfter(reachedOn);
 
 /// Number of consecutive counted days walking back from [from].
 int _runLength(DateTime from, bool Function(DateTime) counted) {

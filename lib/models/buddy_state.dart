@@ -53,8 +53,8 @@ abstract class BuddyState with _$BuddyState {
     List<DateTime> savedDays,
     @JsonKey(name: 'last_milestone') @Default(0) int lastMilestone,
 
-    /// The local day a milestone last added a saver; milestones pay at most
-    /// one saver per 7 days (see `evaluateStreak`).
+    /// The local day the run reached the milestone that last added a saver;
+    /// milestones pay at most one saver per 7 days (see `evaluateStreak`).
     @JsonKey(name: 'last_saver_earned_on')
     @DateOnlyConverter()
     DateTime? lastSaverEarnedOn,
