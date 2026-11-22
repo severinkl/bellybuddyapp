@@ -60,6 +60,10 @@ class AppConstants {
   static const double dragHandleHeight = 4.0;
   static const double dragHandleRadius = 2.0;
 
+  // Streak chip / goal sheet
+  static const double streakChipPopScale = 1.25;
+  static const double streakSheetBuddyHeight = 220.0;
+
   // Scroll clearance (space below content to clear fixed bottom bars)
   static const double bottomBarClearance = 128.0;
 
