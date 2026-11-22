@@ -289,21 +289,54 @@ class _RegistrationWizardScreenState
   }
 
   /// Every sign-up path ends here once the user is authenticated: saves the
-  /// profile, then the Buddy's name (a failure is logged, not shown: the
-  /// onboarding goes on), then hands over to the Buddy onboarding.
+  /// profile, then hands over to the Buddy onboarding.
+  ///
+  /// An account that already has a Buddy (an OAuth sign-in into an existing
+  /// account) keeps its name: it goes to the dashboard once its onboarding
+  /// is done, else to the onboarding as the gate shows it. Otherwise the
+  /// typed name is saved in the background (one attempt; a failure is
+  /// logged, not shown) and the onboarding's later writes queue behind it.
   Future<void> _completeRegistration() async {
     await _createProfile();
     if (!mounted) return;
-    try {
-      await ref.read(buddyProvider.notifier).setName(_name);
-    } catch (e, st) {
-      _log.error('saving the Buddy name failed', e, st);
-    }
+    final existing = await _loadBuddy();
     if (!mounted) return;
+    if (existing != null && existing.hasRow) {
+      if (existing.state.onboardingCompletedAt != null) {
+        context.go(RoutePaths.dashboard);
+      } else {
+        context.go(
+          RoutePaths.buddyOnboarding,
+          extra: BuddyOnboardingEntry.gate,
+        );
+      }
+      return;
+    }
+    unawaited(_saveName(ref.read(buddyProvider.notifier)));
     context.go(
       RoutePaths.buddyOnboarding,
       extra: BuddyOnboardingEntry.afterRegistration,
     );
+  }
+
+  /// The signed-in user's Buddy, freshly loaded; null while the user id is
+  /// not known yet or when it can't be loaded (logged).
+  Future<BuddyStatus?> _loadBuddy() async {
+    try {
+      await ref.read(buddyProvider.notifier).refresh();
+      return await ref.read(buddyProvider.future);
+    } catch (e, st) {
+      _log.error('loading the Buddy after sign-in failed', e, st);
+      return null;
+    }
+  }
+
+  Future<void> _saveName(BuddyNotifier buddy) async {
+    try {
+      await buddy.setName(_name);
+    } catch (e, st) {
+      _log.error('saving the Buddy name failed', e, st);
+    }
   }
 
   Future<void> _handleEmailSignUp(String email, String password) async {

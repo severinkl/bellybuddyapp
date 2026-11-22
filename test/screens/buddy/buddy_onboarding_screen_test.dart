@@ -48,7 +48,7 @@ class _CountingBuddy extends BuddyNotifier {
   int completeCalls = 0;
 
   @override
-  Future<void> completeOnboarding({bool grantGiftSaver = true}) {
+  Future<bool> completeOnboarding({bool grantGiftSaver = true}) {
     completeCalls++;
     return super.completeOnboarding(grantGiftSaver: grantGiftSaver);
   }
@@ -130,6 +130,9 @@ const _giftTitle = 'Ein Geschenk für dich!';
 const _giftText =
     'Ein Streak-Saver! Der rettet unseren Streak, falls du mal einen Tag '
     'vergisst.';
+const _giftFullText =
+    'Deine Schutzschilde sind schon voll – du bist bestens gerüstet!';
+const _giftAlreadyText = "Du bist bestens gerüstet – los geht's!";
 const _introLine = 'Hi! Ich bin neu hier — dein Bauch-Buddy.';
 
 void main() {
@@ -481,6 +484,48 @@ void main() {
       expect(find.text(_streakTitle), findsOneWidget);
       await tapText(tester, '7 Tage');
       expect(find.text(_giftTitle), findsOneWidget);
+    });
+
+    testWidgets('gift with a full saver stock: no saver is promised', (
+      tester,
+    ) async {
+      final h = await pumpOnboarding(
+        tester,
+        entry: BuddyOnboardingEntry.gate,
+        pushEnabled: true,
+        existingRow: const BuddyState(userId: testUserId, savers: 2),
+      );
+
+      await tapText(tester, '7 Tage');
+      await tapKey(tester, GiftReveal.boxKey);
+
+      expect(h.stored?.onboardingCompletedAt, isNotNull);
+      expect(h.stored?.savers, 2);
+      expect(find.text(_giftText), findsNothing);
+      expect(find.text(_giftFullText), findsOneWidget);
+      await tapKey(tester, BuddyOnboardingScreen.finishKey);
+      expect(find.text('dashboard-stub'), findsOneWidget);
+    });
+
+    testWidgets('gift when the onboarding was already completed (no new '
+        'saver, stock not full): no saver is promised', (tester) async {
+      final h = await pumpOnboarding(
+        tester,
+        entry: BuddyOnboardingEntry.gate,
+        pushEnabled: true,
+        existingRow: BuddyState(
+          userId: testUserId,
+          onboardingCompletedAt: DateTime.utc(2026, 11, 1),
+        ),
+      );
+
+      await tapText(tester, '7 Tage');
+      await tapKey(tester, GiftReveal.boxKey);
+
+      expect(h.stored?.savers, 0);
+      expect(find.text(_giftText), findsNothing);
+      expect(find.text(_giftFullText), findsNothing);
+      expect(find.text(_giftAlreadyText), findsOneWidget);
     });
 
     testWidgets('no goal left to pick: the streak-goal step is skipped', (

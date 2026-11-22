@@ -158,18 +158,21 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
 
   /// Marks the Buddy onboarding as done and grants the gift saver (capped at
   /// [maxStreakSavers]). Idempotent: once `onboardingCompletedAt` is set,
-  /// nothing changes. Creates the row if missing.
-  Future<void> completeOnboarding({bool grantGiftSaver = true}) {
+  /// nothing changes. Creates the row if missing. Completes with whether a
+  /// saver was actually added (not with a full stock, without
+  /// [grantGiftSaver] or when the onboarding was already completed).
+  Future<bool> completeOnboarding({bool grantGiftSaver = true}) async {
     final now = ref.read(buddyTodayProvider)();
-    return _mutate('completeOnboarding', (s) {
+    var granted = false;
+    await _mutate('completeOnboarding', (s) {
       if (s.onboardingCompletedAt != null) return s;
-      return s.copyWith(
-        onboardingCompletedAt: now,
-        savers: grantGiftSaver
-            ? math.min(maxStreakSavers, s.savers + 1)
-            : s.savers,
-      );
+      final savers = grantGiftSaver
+          ? math.min(maxStreakSavers, s.savers + 1)
+          : s.savers;
+      granted = savers > s.savers;
+      return s.copyWith(onboardingCompletedAt: now, savers: savers);
     });
+    return granted;
   }
 
   /// Records that the UI has played [shown]: drops them from the pending

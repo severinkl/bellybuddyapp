@@ -1,4 +1,6 @@
 // ignore_for_file: invalid_use_of_internal_member
+import 'dart:async';
+
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter_localizations/flutter_localizations.dart'
     show GlobalWidgetsLocalizations;
@@ -146,6 +148,19 @@ class _FailingBuddyRepository extends FakeBuddyRepository {
   Future<void> save(String userId, BuddyState state) async {
     saveCount++;
     throw Exception('save failed');
+  }
+}
+
+/// A Buddy repository whose saves wait for [release].
+class _SlowSaveBuddyRepository extends FakeBuddyRepository {
+  final _gate = Completer<void>();
+
+  void release() => _gate.complete();
+
+  @override
+  Future<void> save(String userId, BuddyState state) async {
+    await _gate.future;
+    return super.save(userId, state);
   }
 }
 
@@ -941,6 +956,74 @@ void main() {
       expect(find.text('onboarding:afterRegistration'), findsOneWidget);
       expect(app.buddyName, 'Bauchi');
       expect(app.profileRepo.lastWrittenEmail, 'user@example.com');
+    });
+
+    testWidgets('the name save does not hold up the onboarding', (
+      tester,
+    ) async {
+      final buddies = _SlowSaveBuddyRepository();
+      final app = await _pumpRoutedWizard(tester, buddyRepo: buddies);
+
+      await tester.enterText(find.byKey(BuddyNameStep.fieldKey), 'Bauchi');
+      await tester.pump();
+      await advanceToAuthStep(tester);
+      await _signUpWithEmail(tester);
+
+      expect(app.path, RoutePaths.buddyOnboarding);
+      expect(find.text('onboarding:afterRegistration'), findsOneWidget);
+      expect(app.buddyName, isNull);
+      // One attempt, no retries: a single fetch for the write.
+      expect(buddies.fetchRetries.where((retry) => !retry), hasLength(1));
+
+      buddies.release();
+      await tester.pumpAndSettle();
+      expect(app.buddyName, 'Bauchi');
+    });
+
+    testWidgets('Google into an account whose Buddy is set up: keeps its '
+        'name, goes to the dashboard', (tester) async {
+      final buddies = FakeBuddyRepository()
+        ..store[testUserId] = BuddyState(
+          userId: testUserId,
+          name: 'Bubu',
+          onboardingCompletedAt: DateTime.utc(2026, 11, 1),
+        );
+      final app = await _pumpRoutedWizard(tester, buddyRepo: buddies);
+
+      await tester.enterText(find.byKey(BuddyNameStep.fieldKey), 'Bauchi');
+      await tester.pump();
+      await advanceToAuthStep(tester);
+      await tester.tap(
+        find.widgetWithText(BbSocialButton, 'Mit Google fortfahren'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(app.path, RoutePaths.dashboard);
+      expect(app.buddyName, 'Bubu');
+      expect(buddies.saveCount, 0);
+    });
+
+    testWidgets('Google into an account whose Buddy onboarding is unfinished: '
+        'keeps its name, opens the onboarding from the gate', (tester) async {
+      final buddies = FakeBuddyRepository()
+        ..store[testUserId] = const BuddyState(
+          userId: testUserId,
+          name: 'Bubu',
+        );
+      final app = await _pumpRoutedWizard(tester, buddyRepo: buddies);
+
+      await tester.enterText(find.byKey(BuddyNameStep.fieldKey), 'Bauchi');
+      await tester.pump();
+      await advanceToAuthStep(tester);
+      await tester.tap(
+        find.widgetWithText(BbSocialButton, 'Mit Google fortfahren'),
+      );
+      await tester.pumpAndSettle();
+
+      expect(app.path, RoutePaths.buddyOnboarding);
+      expect(find.text('onboarding:gate'), findsOneWidget);
+      expect(app.buddyName, 'Bubu');
+      expect(buddies.saveCount, 0);
     });
 
     testWidgets('a failing name save does not block the onboarding', (

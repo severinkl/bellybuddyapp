@@ -15,6 +15,7 @@ import '../../providers/notification_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../router/route_names.dart';
 import '../../services/buddy/buddy_mood_logic.dart';
+import '../../services/buddy/streak_engine.dart' show maxStreakSavers;
 import '../../utils/logger.dart';
 import '../../widgets/buddy/buddy.dart';
 import '../../widgets/common/bb_button.dart';
@@ -83,6 +84,13 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
   static const _introLine = 'Hi! Ich bin neu hier — dein Bauch-Buddy.';
   static const _thanksLine = 'Mmmh! Danke!';
 
+  static const _giftSaverText =
+      'Ein Streak-Saver! Der rettet unseren Streak, falls du mal einen Tag '
+      'vergisst.';
+  static const _giftSaversFullText =
+      'Deine Schutzschilde sind schon voll – du bist bestens gerüstet!';
+  static const _giftNoSaverText = "Du bist bestens gerüstet – los geht's!";
+
   /// Reactions stay long enough to read across a step change.
   static const _reactionHold = Duration(seconds: 4);
 
@@ -94,7 +102,7 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
   final math.Random _rnd = math.Random();
   final ScrollController _scroll = ScrollController();
 
-  /// The Streak-Saver text, scrolled into view once the gift is open.
+  /// The gift's text, scrolled into view once it shows.
   final GlobalKey _giftTextKey = GlobalKey();
 
   /// Fixed once the Buddy and the profile have loaded.
@@ -109,6 +117,10 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
   bool _busy = false;
   bool _giftOpened = false;
   Future<bool>? _completion;
+
+  /// Whether completing the onboarding added the gift saver; null until it
+  /// has completed. The gift's text waits for it.
+  bool? _saverGranted;
   bool _calm = false;
 
   BuddyOnboardingStep get _step => _steps![_index];
@@ -330,7 +342,10 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
       ..mood = BuddyMood.inLove
       ..play(BuddyAction.celebrate);
     _completion = _complete();
-    // Small screens: bring the Streak-Saver text into view.
+  }
+
+  /// Small screens: brings the gift's text into view once it shows.
+  void _revealGiftText() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final text = _giftTextKey.currentContext;
       if (!mounted || text == null) return;
@@ -351,7 +366,11 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
       await _markRemindersAsked();
     }
     try {
-      await buddy.completeOnboarding(grantGiftSaver: true);
+      final granted = await buddy.completeOnboarding(grantGiftSaver: true);
+      if (mounted) {
+        setState(() => _saverGranted = granted);
+        _revealGiftText();
+      }
       return true;
     } catch (e, st) {
       _log.error('Completing the Buddy onboarding failed', e, st);
@@ -502,12 +521,11 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
           const _StepTitle('Ein Geschenk für dich!'),
           AppConstants.gap16,
           Center(child: GiftReveal(onOpened: _onGiftOpened)),
-          if (_giftOpened) ...[
+          if (_giftOpened && _saverGranted != null) ...[
             AppConstants.gap16,
             Text(
               key: _giftTextKey,
-              'Ein Streak-Saver! Der rettet unseren Streak, falls du mal '
-              'einen Tag vergisst.',
+              _giftText(status),
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: AppTheme.fontSizeBodyLG,
@@ -518,6 +536,13 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
         ],
       ),
     };
+  }
+
+  /// The opened gift's text: the Streak-Saver only when one was added.
+  String _giftText(BuddyStatus? status) {
+    if (_saverGranted ?? false) return _giftSaverText;
+    final full = (status?.state.savers ?? 0) >= maxStreakSavers;
+    return full ? _giftSaversFullText : _giftNoSaverText;
   }
 
   /// The step's buttons for the fixed bottom slot; empty when the content

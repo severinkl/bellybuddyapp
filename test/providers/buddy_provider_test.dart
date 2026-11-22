@@ -506,13 +506,13 @@ void main() {
       await load(c);
       final notifier = c.read(buddyProvider.notifier);
 
-      await notifier.completeOnboarding();
+      expect(await notifier.completeOnboarding(), isTrue);
       final completedAt = buddyRepo.store['u1']!.onboardingCompletedAt;
       expect(completedAt, now);
       expect(buddyRepo.store['u1']!.savers, 1);
 
       now = DateTime(2026, 11, 22, 15);
-      await notifier.completeOnboarding();
+      expect(await notifier.completeOnboarding(), isFalse);
       expect(buddyRepo.store['u1']!.savers, 1);
       expect(buddyRepo.store['u1']!.onboardingCompletedAt, completedAt);
 
@@ -539,7 +539,10 @@ void main() {
       final c = makeContainer();
       await load(c);
 
-      await c.read(buddyProvider.notifier).completeOnboarding();
+      expect(
+        await c.read(buddyProvider.notifier).completeOnboarding(),
+        isFalse,
+      );
 
       expect(buddyRepo.store['u1']!.savers, 2);
       expect(buddyRepo.store['u1']!.onboardingCompletedAt, now);
@@ -549,9 +552,12 @@ void main() {
       final c = makeContainer();
       await load(c);
 
-      await c
-          .read(buddyProvider.notifier)
-          .completeOnboarding(grantGiftSaver: false);
+      expect(
+        await c
+            .read(buddyProvider.notifier)
+            .completeOnboarding(grantGiftSaver: false),
+        isFalse,
+      );
 
       expect(buddyRepo.store['u1']!.savers, 0);
       expect(buddyRepo.store['u1']!.onboardingCompletedAt, now);
