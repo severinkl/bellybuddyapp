@@ -126,6 +126,8 @@ BuddyReaction reactionFor(
   }
 }
 
+/// A resting-mood line. Lines quoting the streak („{streak} Tage in Folge")
+/// are only used from a streak of 2 days on.
 String moodLine(
   BuddyMood mood, {
   required String name,
@@ -133,8 +135,13 @@ String moodLine(
   required DateTime now,
   required Random rnd,
 }) {
-  final pool = mood == BuddyMood.sleepy && (now.hour < 5 || now.hour >= 10)
+  final all = mood == BuddyMood.sleepy && (now.hour < 5 || now.hour >= 10)
       ? BuddyCopy.sleepyNight
       : BuddyCopy.mood[mood]!;
+  final withoutStreak = [
+    for (final line in all)
+      if (!line.contains('{streak}')) line,
+  ];
+  final pool = streak >= 2 || withoutStreak.isEmpty ? all : withoutStreak;
   return BuddyCopy.fill(BuddyCopy.pick(pool, rnd), name: name, streak: streak);
 }

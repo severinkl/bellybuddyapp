@@ -21,9 +21,21 @@ const _boldStyle = TextStyle(
 TextSpan _t(String text) => TextSpan(text: text, style: _baseStyle);
 TextSpan _b(String text) => TextSpan(text: text, style: _boldStyle);
 
-/// The 10 tutorial steps, in the fixed order shown by the mockups in
-/// `Anleitung Homescreen/` (filenames 1.png–10.png).
+/// The 11 tutorial steps: the Buddy hero first, then the fixed order shown
+/// by the mockups in `Anleitung Homescreen/` (filenames 1.png–10.png).
 final List<TutorialStep> dashboardTutorialSteps = [
+  TutorialStep(
+    targetKey: TutorialKeys.buddy,
+    targetRadius: AppConstants.radiusLg,
+    preferredAnchor: TooltipAnchor.below,
+    richText: [
+      _t('Das ist dein '),
+      _b('Buddy'),
+      _t('! Jeder Eintrag hält eure 🔥 '),
+      _b('Serie'),
+      _t(' am Leben. Mit „🍎 Füttern“ trackst du direkt eine Mahlzeit.'),
+    ],
+  ),
   TutorialStep(
     targetKey: TutorialKeys.bauchgefuehl,
     targetRadius: AppConstants.radiusLg,

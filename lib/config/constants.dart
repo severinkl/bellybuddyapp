@@ -64,6 +64,9 @@ class AppConstants {
   static const double streakChipPopScale = 1.25;
   static const double streakSheetBuddyHeight = 220.0;
 
+  // Dashboard Buddy hero (streak row, bubble, Buddy, „Füttern" button)
+  static const double buddyHeroHeight = 300.0;
+
   // Buddy reaction on the tracker success screens (bubble slot + Buddy)
   static const double buddyReactionSize = 220.0;
 

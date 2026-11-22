@@ -157,6 +157,27 @@ void main() {
       }
     });
 
+    test('quotes the streak only from 2 days on', () {
+      Set<String> lines(BuddyMood m, int streak) => {
+        for (var i = 0; i < 40; i++)
+          moodLine(
+            m,
+            name: 'Bubu',
+            streak: streak,
+            now: at(14),
+            rnd: Random(i),
+          ),
+      };
+      for (final m in [BuddyMood.happy, BuddyMood.energetic]) {
+        for (final streak in [0, 1]) {
+          final pool = lines(m, streak);
+          expect(pool, isNotEmpty);
+          expect(pool.any((l) => l.contains('$streak Tage')), isFalse);
+        }
+        expect(lines(m, 2).any((l) => l.contains('2 Tage')), isTrue);
+      }
+    });
+
     test('sleepy splits morning and night lines', () {
       Set<String> lines(DateTime now) => {
         for (var i = 0; i < 40; i++)

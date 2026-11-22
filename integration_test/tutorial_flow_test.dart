@@ -10,6 +10,18 @@ import '../test/helpers/fixtures.dart';
 
 import 'helpers/test_app.dart';
 
+/// The dashboard's animated Buddy ticks every frame, so `pumpAndSettle`
+/// never settles there: pump in steps instead.
+Future<void> _pumpFor(
+  WidgetTester tester, [
+  Duration total = const Duration(seconds: 2),
+]) async {
+  const step = Duration(milliseconds: 100);
+  for (var t = Duration.zero; t < total; t += step) {
+    await tester.pump(step);
+  }
+}
+
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -36,22 +48,23 @@ void main() {
         profileRepo: profileRepo,
       ),
     );
-    await tester.pumpAndSettle();
+    await _pumpFor(tester, const Duration(seconds: 5));
 
     // Welcome modal is the first tutorial stage on first launch. Dismiss it
     // via the CTA so the spotlight tour renders behind it.
     expect(find.text('Willkommen bei Belly Buddy!'), findsOneWidget);
     await tester.tap(find.text("Los geht's"));
-    await tester.pumpAndSettle();
+    await _pumpFor(tester);
 
     // Tour is visible after the welcome modal is dismissed.
     expect(find.text('Überspringen'), findsOneWidget);
 
-    // Advance 10 times via the overlay's advance gesture — key-based so
-    // the test is independent of where the Überspringen link sits.
-    for (var i = 0; i < 10; i++) {
+    // Advance 11 times (Buddy + 10 feature steps) via the overlay's advance
+    // gesture — key-based so the test is independent of where the
+    // Überspringen link sits.
+    for (var i = 0; i < 11; i++) {
       await tester.tap(find.byKey(DashboardTutorialOverlay.advanceKey));
-      await tester.pumpAndSettle();
+      await _pumpFor(tester, const Duration(seconds: 1));
     }
 
     // Tour finished → repo written → notification modal appears.
@@ -60,6 +73,6 @@ void main() {
     expect(find.text('Bleib auf dem Laufenden!'), findsOneWidget);
 
     await tester.tap(find.byIcon(Icons.close));
-    await tester.pumpAndSettle();
+    await _pumpFor(tester);
   });
 }
