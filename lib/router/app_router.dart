@@ -280,6 +280,18 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: RouteNames.healthConsent,
         builder: (_, _) => const HealthConsentScreen(),
       ),
+      GoRoute(
+        path: RoutePaths.buddyOnboarding,
+        name: RouteNames.buddyOnboarding,
+        builder: (context, state) {
+          final extra = state.extra;
+          return BuddyOnboardingScreen(
+            entry: extra is BuddyOnboardingEntry
+                ? extra
+                : BuddyOnboardingEntry.gate,
+          );
+        },
+      ),
     ],
   );
 });

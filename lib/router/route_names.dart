@@ -24,6 +24,7 @@ class RouteNames {
   static const String recipeEdit = 'recipe_edit';
   static const String upgradeRequired = 'upgrade-required';
   static const String healthConsent = 'health-consent';
+  static const String buddyOnboarding = 'buddy-onboarding';
 }
 
 class RoutePaths {
@@ -55,4 +56,5 @@ class RoutePaths {
   static String recipeEditFor(String id) => '/recipe/$id/edit';
   static const String upgradeRequired = '/upgrade-required';
   static const String healthConsent = '/health-consent';
+  static const String buddyOnboarding = '/buddy-onboarding';
 }

@@ -1,5 +1,6 @@
 export 'auth_step.dart';
 export 'birth_year_step.dart';
+export 'buddy_name_step.dart';
 export 'diet_step.dart';
 export 'gender_step.dart';
 export 'health_consent_step.dart';

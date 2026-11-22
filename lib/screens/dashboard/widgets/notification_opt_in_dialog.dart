@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
+import '../../../providers/notification_provider.dart';
 import '../../../providers/profile_provider.dart';
-import '../../../repositories/notification_repository.dart';
 import '../../../utils/logger.dart';
 import '../../../widgets/common/mascot_image.dart';
 
@@ -46,15 +46,7 @@ class _NotificationOptInDialogState
     setState(() => _loading = true);
 
     try {
-      final granted = await ref
-          .read(notificationRepositoryProvider)
-          .requestAllPermissions();
-
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(AppConstants.keyNotificationModalShown, true);
-      await ref
-          .read(profileProvider.notifier)
-          .updateProfile(profile.copyWith(pushEnabled: granted));
+      final granted = await enableReminders(ref);
 
       navigator.pop(granted);
 
