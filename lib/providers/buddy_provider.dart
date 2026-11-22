@@ -17,11 +17,14 @@ import 'core_providers.dart';
 /// The Buddy's clock. Day boundaries use its local date; tests override it.
 final buddyTodayProvider = Provider<DateTime Function()>((_) => DateTime.now);
 
-/// One-shot Buddy messages. They stay pending (across refreshes and
-/// restarts) until the dashboard has played them and calls
-/// [BuddyNotifier.markAnnouncementsShown]. Each one is shown at most once
-/// per user and local day (`streakBroken`: once per break, `goalReached`:
-/// once per goal).
+/// One-shot Buddy messages. They stay pending across refreshes until the
+/// dashboard has played them and calls
+/// [BuddyNotifier.markAnnouncementsShown], which sets their flags; each one
+/// is shown at most once per user and local day (`streakBroken`: once per
+/// break, `goalReached`: once per goal). Pending ones live in memory only:
+/// after a restart, `streakBroken` and `goalReached` come again while their
+/// cause still holds, but `saverUsed` and `saverEarned` (produced only by
+/// the evaluation that saved the change) are gone.
 enum BuddyAnnouncement { saverUsed, streakBroken, saverEarned, goalReached }
 
 /// The signed-in user's Buddy after today's streak evaluation.
