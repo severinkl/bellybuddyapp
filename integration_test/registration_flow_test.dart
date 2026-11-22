@@ -1,3 +1,4 @@
+import 'package:belly_buddy/screens/health_consent/health_consent_screen.dart';
 import 'package:belly_buddy/screens/registration/steps/auth_step.dart';
 import 'package:belly_buddy/screens/registration/steps/email_capture_step.dart';
 import 'package:belly_buddy/screens/welcome/welcome_screen.dart';
@@ -11,6 +12,21 @@ import 'package:integration_test/integration_test.dart';
 import '../test/helpers/fakes.dart';
 import '../test/helpers/registration_driver.dart';
 import 'helpers/test_app.dart';
+
+/// A freshly registered profile has no health-data consent, so the router
+/// sends the user to the consent screen first. Ticks the checkbox and
+/// accepts, which continues to the dashboard.
+Future<void> _acceptHealthConsent(WidgetTester tester) async {
+  expect(find.byType(HealthConsentScreen), findsOneWidget);
+  final checkbox = find.byKey(HealthConsentScreen.consentCheckboxKey);
+  await tester.ensureVisible(checkbox);
+  await tester.tap(checkbox);
+  await tester.pump();
+  final accept = find.byKey(HealthConsentScreen.acceptButtonKey);
+  await tester.ensureVisible(accept);
+  await tester.tap(accept);
+  await tester.pumpAndSettle();
+}
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -78,6 +94,8 @@ void main() {
       await tester.tap(submitButton);
       await tester.pumpAndSettle(); // Wait for async operations to complete
 
+      await _acceptHealthConsent(tester);
+
       // After successful registration, user should be navigated to the main app (bottom nav should be visible)
       expect(find.byKey(BbBottomNav.centerButtonKey), findsOneWidget);
     },
@@ -139,6 +157,8 @@ void main() {
       await tester.pump();
       await tester.tap(find.byKey(EmailCaptureStep.submitButtonKey));
       await tester.pumpAndSettle();
+
+      await _acceptHealthConsent(tester);
 
       // Dashboard reached.
       expect(find.byKey(BbBottomNav.navHomeKey), findsOneWidget);

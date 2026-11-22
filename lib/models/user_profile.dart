@@ -43,6 +43,10 @@ abstract class UserProfile with _$UserProfile {
     @JsonKey(name: 'last_inactivity_nudge') DateTime? lastInactivityNudge,
     @JsonKey(name: 'tutorial_seen_at') DateTime? tutorialSeenAt,
     @JsonKey(name: 'email') String? email,
+    // GDPR Art. 9 consent to health-data processing. Written only by
+    // ProfileRepository.acceptHealthConsent, never by profile updates.
+    @JsonKey(name: 'health_consent_at') DateTime? healthConsentAt,
+    @JsonKey(name: 'privacy_policy_version') String? privacyPolicyVersion,
   }) = _UserProfile;
 
   const UserProfile._();

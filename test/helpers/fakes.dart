@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/drink.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
@@ -206,6 +207,28 @@ class FakeProfileRepository implements ProfileRepository {
     _tutorialUpdateCalled = true;
     _lastTutorialSeenAt = value;
     _profile = _profile?.copyWith(tutorialSeenAt: value);
+  }
+
+  /// Number of [acceptHealthConsent] calls, for tests.
+  int acceptHealthConsentCount = 0;
+
+  /// When set, [acceptHealthConsent] throws it instead of writing.
+  Object? acceptHealthConsentError;
+
+  /// The profile as last written, for asserting persisted consent fields.
+  UserProfile? get storedProfile => _profile;
+
+  @override
+  Future<DateTime> acceptHealthConsent(String userId, {DateTime? now}) async {
+    acceptHealthConsentCount++;
+    final error = acceptHealthConsentError;
+    if (error != null) throw error;
+    final acceptedAt = (now ?? DateTime.now()).toUtc();
+    _profile = _profile?.copyWith(
+      healthConsentAt: acceptedAt,
+      privacyPolicyVersion: AppConstants.privacyPolicyVersion,
+    );
+    return acceptedAt;
   }
 }
 

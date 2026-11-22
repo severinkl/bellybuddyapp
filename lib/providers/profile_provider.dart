@@ -1,5 +1,6 @@
 import 'package:belly_buddy/repositories/auth_repository.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../config/constants.dart';
 import '../models/user_profile.dart';
 import '../providers/core_providers.dart';
 import '../repositories/profile_repository.dart';
@@ -72,6 +73,30 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
     } catch (e) {
       state = previous;
       rethrow;
+    }
+  }
+
+  /// Stores the user's health-data consent for the current privacy policy
+  /// version and applies it to the loaded profile, which lifts the consent
+  /// gate. Rethrows on failure so the caller can show an error.
+  Future<void> acceptHealthConsent() async {
+    final userId = _resolveUserId();
+    if (userId == null) throw Exception('Not authenticated');
+
+    _log.debug('recording health consent for $userId');
+    final acceptedAt = await ref
+        .read(profileRepositoryProvider)
+        .acceptHealthConsent(userId);
+    final profile = state.value;
+    if (profile != null) {
+      state = AsyncValue.data(
+        profile.copyWith(
+          healthConsentAt: acceptedAt,
+          privacyPolicyVersion: AppConstants.privacyPolicyVersion,
+        ),
+      );
+    } else {
+      await fetchProfile();
     }
   }
 

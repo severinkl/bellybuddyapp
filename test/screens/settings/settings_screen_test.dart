@@ -33,5 +33,12 @@ void main() {
 
       expect(find.text('Konto & Sicherheit'), findsOneWidget);
     });
+
+    testWidgets('renders Datenschutzerklärung menu item', (tester) async {
+      await tester.pumpWithProviders(const SettingsScreen());
+      await tester.pump();
+
+      expect(find.text('Datenschutzerklärung'), findsOneWidget);
+    });
   });
 }

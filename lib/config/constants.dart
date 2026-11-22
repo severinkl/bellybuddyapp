@@ -90,6 +90,16 @@ class AppConstants {
   static const String resetPasswordRedirectUrl =
       'https://app.bellybuddy.at/reset-password';
 
+  /// Public privacy policy (Datenschutzerklärung) of the Belly Buddy web app.
+  static const String privacyPolicyUrl =
+      'https://app.bellybuddy.at/datenschutz';
+
+  /// Version of the privacy policy the health-data consent refers to. Bump it
+  /// when the policy changes materially: every user whose stored
+  /// `profiles.privacy_policy_version` differs is sent through the consent
+  /// gate again.
+  static const String privacyPolicyVersion = '2026-11-22';
+
   // Apple "Hide My Email" relay address suffix (includes the leading `@`).
   // See the Sign in with Apple docs — this domain is stable since iOS 13.
   static const String appleRelayEmailSuffix = '@privaterelay.appleid.com';

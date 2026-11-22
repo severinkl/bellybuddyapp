@@ -17,7 +17,7 @@ class SettingsScreen extends StatelessWidget {
         backgroundColor: AppTheme.screenBackground,
         title: const Text('Einstellungen'),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: AppConstants.paddingLg,
         child: Column(
           children: [
@@ -40,6 +40,16 @@ class SettingsScreen extends StatelessWidget {
               title: 'Konto & Sicherheit',
               subtitle: 'Abmelden, Passwort ändern, Konto verwalten',
               onTap: () => context.push(RoutePaths.settingsAccount),
+            ),
+            AppConstants.gap12,
+            BbSettingsItem(
+              icon: Icons.privacy_tip_outlined,
+              title: 'Datenschutzerklärung',
+              subtitle: 'Wie wir deine Daten verarbeiten',
+              onTap: () => launchUrl(
+                Uri.parse(AppConstants.privacyPolicyUrl),
+                mode: LaunchMode.externalApplication,
+              ),
             ),
             AppConstants.gap12,
             BbSettingsItem(

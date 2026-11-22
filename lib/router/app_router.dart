@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../models/meal_entry.dart';
 import '../models/user_recipe.dart';
 import '../providers/auth_provider.dart';
+import '../providers/health_consent_provider.dart';
 import '../providers/upgrade_gate_provider.dart';
 import '../utils/logger.dart';
 import '../screens/screens.dart';
@@ -16,6 +17,7 @@ class _RouterRefreshNotifier extends ChangeNotifier {
   _RouterRefreshNotifier(Ref ref) {
     ref.listen(isAuthenticatedProvider, (_, _) => notifyListeners());
     ref.listen(hardGateActiveProvider, (_, _) => notifyListeners());
+    ref.listen(healthConsentRequiredProvider, (_, _) => notifyListeners());
   }
 }
 
@@ -61,6 +63,18 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (isAuthRoute || path == RoutePaths.registration) return null;
         return RoutePaths.welcome;
       }
+
+      // Health-data consent gate (GDPR Art. 9): a signed-in user whose loaded
+      // profile has no consent for the current privacy policy version can
+      // only see the consent screen. It ranks below the upgrade gate and the
+      // signed-out branch above, so sign-in / reset flows stay reachable for
+      // signed-out users; signing out from the consent screen lifts it.
+      if (ref.read(healthConsentRequiredProvider)) {
+        return path == RoutePaths.healthConsent
+            ? null
+            : RoutePaths.healthConsent;
+      }
+      if (path == RoutePaths.healthConsent) return RoutePaths.dashboard;
 
       // Authenticated on auth route → dashboard
       // NOTE: /registration is NOT in isAuthRoute — user stays there to finish
@@ -260,6 +274,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.upgradeRequired,
         name: RouteNames.upgradeRequired,
         builder: (_, _) => const UpgradeRequiredScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.healthConsent,
+        name: RouteNames.healthConsent,
+        builder: (_, _) => const HealthConsentScreen(),
       ),
     ],
   );
