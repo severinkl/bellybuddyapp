@@ -525,7 +525,10 @@ class FakeNotificationRepository implements NotificationRepository {
   int syncCount = 0;
 
   @override
-  Future<void> syncNotifications(UserProfile profile) async => syncCount++;
+  Future<void> syncNotifications(
+    UserProfile profile, {
+    String? buddyName,
+  }) async => syncCount++;
   @override
   Future<void> cancelAll() async {}
   @override

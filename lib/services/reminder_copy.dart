@@ -40,7 +40,52 @@ class ReminderCopy {
     ],
   };
 
-  static String pickMealBody(int hour, Random random) {
+  /// Buddy-voiced meal lines; `{name}` is replaced by the Buddy's name.
+  static const buddyMealPools = <TimeSlot, List<String>>{
+    TimeSlot.morning: [
+      '🥄 {name} wartet aufs Frühstück!',
+      '🥐 {name} hat Frühstückshunger. Was gab es bei dir?',
+      '☕ {name} fragt: Was hast du heute früh gegessen?',
+      '🍳 {name} knurrt der Magen. Trag dein Frühstück ein!',
+    ],
+    TimeSlot.midday: [
+      "🍽️ {name} hat Hunger! Was gab's zu Mittag?",
+      '🥗 {name} würde gern wissen, was auf deinem Teller lag.',
+      '🍴 {name} wartet auf deinen Mittags-Eintrag.',
+      '📓 {name} schaut ins Logbuch: Was hast du gegessen?',
+    ],
+    TimeSlot.evening: [
+      '🌙 {name} möchte wissen, was es heute Abend gab.',
+      '🍲 {name} ist gespannt auf dein Abendessen!',
+      '🌆 {name} fragt: Schon die letzte Mahlzeit eingetragen?',
+      '📝 {name} wartet auf deinen Eintrag zum Abendbrot.',
+    ],
+  };
+
+  /// Buddy-voiced mood lines (morning/evening only; midday uses evening).
+  static const buddyMoodPools = <TimeSlot, List<String>>{
+    TimeSlot.morning: [
+      '🛏️ {name} fragt: Wie hat dein Bauch geschlafen?',
+      '🌅 {name} wünscht guten Morgen. Wie fühlt sich dein Bauch an?',
+      '😴 {name} ist neugierig auf deinen Bauch heute früh.',
+      '🤔 {name} will wissen: Brummt\'s, zwickt\'s oder ist alles chill?',
+    ],
+    TimeSlot.evening: [
+      '🌙 {name} will wissen, wie dein Bauch sich heute anfühlt.',
+      '🌆 {name} fragt: Was hat dein Bauch heute mitgemacht?',
+      '📖 {name} wartet auf dein Bauch-Fazit fürs Logbuch.',
+      '🤷 {name} fragt: Wie war dein Bauchgefühl heute?',
+    ],
+  };
+
+  static String _withName(String line, String name) =>
+      line.replaceAll('{name}', name);
+
+  static String pickMealBody(int hour, Random random, {String? buddyName}) {
+    if (buddyName != null) {
+      final pool = buddyMealPools[timeSlotForHour(hour)]!;
+      return _withName(pool[random.nextInt(pool.length)], buddyName);
+    }
     final pool = mealPools[timeSlotForHour(hour)]!;
     return pool[random.nextInt(pool.length)];
   }
@@ -63,8 +108,12 @@ class ReminderCopy {
     ],
   };
 
-  static String pickMoodBody(int hour, Random random) {
+  static String pickMoodBody(int hour, Random random, {String? buddyName}) {
     final slot = timeSlotForHour(hour);
+    if (buddyName != null) {
+      final pool = buddyMoodPools[slot] ?? buddyMoodPools[TimeSlot.evening]!;
+      return _withName(pool[random.nextInt(pool.length)], buddyName);
+    }
     final pool = moodPools[slot] ?? moodPools[TimeSlot.evening]!;
     return pool[random.nextInt(pool.length)];
   }

@@ -94,4 +94,51 @@ void main() {
       expect(all.toSet().length, all.length);
     });
   });
+
+  group('Buddy pools', () {
+    test('meal: >=4 per slot, name substituted, no placeholders', () {
+      for (final slot in TimeSlot.values) {
+        expect(
+          ReminderCopy.buddyMealPools[slot]!.length,
+          greaterThanOrEqualTo(4),
+        );
+      }
+      for (var hour = 0; hour < 24; hour++) {
+        for (var seed = 0; seed < 20; seed++) {
+          final body = ReminderCopy.pickMealBody(
+            hour,
+            Random(seed),
+            buddyName: 'Pünktchen',
+          );
+          expect(body, contains('Pünktchen'));
+          expect(body, isNot(contains('{')));
+          expect(body, isNot(matches(RegExp(r'\d+ Tage'))));
+        }
+      }
+    });
+
+    test('mood: >=4 per slot, name substituted, midday falls back', () {
+      for (final pool in ReminderCopy.buddyMoodPools.values) {
+        expect(pool.length, greaterThanOrEqualTo(4));
+      }
+      for (var hour = 0; hour < 24; hour++) {
+        for (var seed = 0; seed < 20; seed++) {
+          final body = ReminderCopy.pickMoodBody(
+            hour,
+            Random(seed),
+            buddyName: 'Pünktchen',
+          );
+          expect(body, contains('Pünktchen'));
+          expect(body, isNot(contains('{')));
+        }
+      }
+    });
+
+    test('without a name the classic pools are used', () {
+      final meal = ReminderCopy.pickMealBody(12, Random(1));
+      expect(ReminderCopy.mealPools[TimeSlot.midday], contains(meal));
+      final mood = ReminderCopy.pickMoodBody(8, Random(1));
+      expect(ReminderCopy.moodPools[TimeSlot.morning], contains(mood));
+    });
+  });
 }

@@ -123,6 +123,7 @@ class LocalNotificationService {
   static Future<void> scheduleMealReminders({
     required List<String> mealReminderTimes,
     required String timezone,
+    String? buddyName,
   }) async {
     for (var i = 0; i < 100; i++) {
       await _plugin.cancel(id: _mealReminderIdBase + i);
@@ -135,7 +136,11 @@ class LocalNotificationService {
       final hour = int.parse(parts[0]);
       final minute = int.parse(parts[1]);
 
-      final body = ReminderCopy.pickMealBody(hour, _random);
+      final body = ReminderCopy.pickMealBody(
+        hour,
+        _random,
+        buddyName: buddyName,
+      );
 
       final scheduledDate = _nextInstanceOfTime(hour, minute, location);
       _log.debug(
@@ -177,6 +182,7 @@ class LocalNotificationService {
   static Future<void> scheduleMoodReminders({
     required List<String> moodReminderTimes,
     required String timezone,
+    String? buddyName,
   }) async {
     for (var i = 0; i < 100; i++) {
       await _plugin.cancel(id: _moodReminderIdBase + i);
@@ -190,7 +196,11 @@ class LocalNotificationService {
       final minute = int.parse(parts[1]);
 
       final scheduledDate = _nextInstanceOfTime(hour, minute, location);
-      final body = ReminderCopy.pickMoodBody(hour, _random);
+      final body = ReminderCopy.pickMoodBody(
+        hour,
+        _random,
+        buddyName: buddyName,
+      );
       _log.debug(
         'scheduling mood reminder $i: ${moodReminderTimes[i]} → $scheduledDate '
         '(now=${tz.TZDateTime.now(location)})',
