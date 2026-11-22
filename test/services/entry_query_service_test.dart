@@ -308,6 +308,46 @@ void main() {
       }
     });
 
+    test('with until, also filters lt until on all tables', () async {
+      final until = DateTime(2026, 3, 20);
+      final filters = <SettlableFilterBuilder>[];
+      for (final t in [
+        'meal_entries',
+        'toilet_entries',
+        'gut_feeling_entries',
+        'drink_entries',
+      ]) {
+        final qb = MockSupabaseQueryBuilder();
+        final f = SettlableFilterBuilder(
+          Future.value(<Map<String, dynamic>>[]),
+        );
+        when(() => client.from(t)).thenAnswer((_) => qb);
+        when(() => qb.select(any())).thenAnswer((_) => f);
+        when(() => f.eq(any(), any())).thenAnswer((_) => f);
+        when(() => f.gte(any(), any())).thenAnswer((_) => f);
+        when(() => f.lt(any(), any())).thenAnswer((_) => f);
+        when(
+          () => f.order(any(), ascending: any(named: 'ascending')),
+        ).thenAnswer((_) => _PagedTransform([<Map<String, dynamic>>[]]));
+        filters.add(f);
+      }
+
+      await service.fetchTrackedAtSince(
+        userId: testUserId,
+        since: since,
+        until: until,
+      );
+
+      for (final f in filters) {
+        verify(
+          () => f.gte('tracked_at', since.toUtc().toIso8601String()),
+        ).called(1);
+        verify(
+          () => f.lt('tracked_at', until.toUtc().toIso8601String()),
+        ).called(1);
+      }
+    });
+
     test('paginates a table until a short page is returned', () async {
       final fullPage = List.generate(
         EntryQueryService.trackedAtPageSize,

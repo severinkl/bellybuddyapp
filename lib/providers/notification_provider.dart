@@ -9,16 +9,24 @@ import 'profile_provider.dart';
 
 const _log = AppLogger('NotificationProvider');
 
-/// Schedules/cancels notifications whenever the profile changes.
+/// Schedules/cancels notifications whenever the profile changes. Waits for
+/// the Buddy's first load (data or error), so a cold start syncs once with
+/// the Buddy's name instead of once without and once with it.
 final notificationSyncProvider = Provider<void>((ref) {
   final profileState = ref.watch(profileProvider);
-  // Only a rename (or the row appearing) re-syncs; streak changes do not.
-  final buddyName = ref.watch(
+  // Only the first load settling, a rename (or the row appearing) re-syncs;
+  // streak changes do not.
+  final buddy = ref.watch(
     buddyProvider.select((s) {
       final status = s.value;
-      return status != null && status.hasRow ? status.state.name : null;
+      return (
+        firstLoad: s.isLoading && !s.hasValue && !s.hasError,
+        name: status != null && status.hasRow ? status.state.name : null,
+      );
     }),
   );
+  if (buddy.firstLoad) return;
+  final buddyName = buddy.name;
 
   profileState.whenData((profile) {
     if (profile == null) return;

@@ -73,6 +73,11 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
   /// Queued work never awaits [future] (that would deadlock behind a rebuild).
   Future<void> _tail = Future<void>.value();
 
+  /// A [refresh] queued behind other work and not started yet. Another
+  /// refresh for the same user and build joins it instead of queuing a
+  /// second one: it will fetch the same fresh data.
+  ({Ref ref, String userId, Future<void> done})? _queuedRefresh;
+
   @override
   Future<BuddyStatus?> build() async {
     final userId = ref.watch(currentUserIdProvider);
@@ -93,7 +98,15 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
     final userId = ref.read(currentUserIdProvider);
     if (userId == null) return Future<void>.value();
     final opRef = ref;
-    return _serialized(() async {
+    final queued = _queuedRefresh;
+    if (queued != null &&
+        identical(queued.ref, opRef) &&
+        queued.userId == userId) {
+      return queued.done;
+    }
+    late final Future<void> done;
+    done = _serialized(() async {
+      if (identical(_queuedRefresh?.done, done)) _queuedRefresh = null;
       try {
         _publish(opRef, userId, await _sync(userId));
       } catch (e, st) {
@@ -104,6 +117,8 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
         rethrow;
       }
     });
+    _queuedRefresh = (ref: opRef, userId: userId, done: done);
+    return done;
   }
 
   /// Renames the Buddy (trimmed, 1–20 characters) and creates the row if
@@ -194,7 +209,18 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
     final repo = ref.read(buddyRepositoryProvider);
     final entries = ref.read(entryRepositoryProvider);
     final today = startOfDay(ref.read(buddyTodayProvider)());
-    final row = await repo.fetch(userId);
+    // The first window's activity days load alongside the row.
+    final firstWindow = entries.fetchActivityDays(
+      userId: userId,
+      since: addDays(today, -_initialWindowDays),
+    );
+    final BuddyState? row;
+    try {
+      row = await repo.fetch(userId);
+    } catch (_) {
+      firstWindow.ignore();
+      rethrow;
+    }
     final hasRow = row != null;
     final stored = (row ?? const BuddyState()).copyWith(userId: userId);
 
@@ -203,6 +229,7 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
       userId,
       stored,
       today,
+      firstWindow: firstWindow,
       initialize: !hasRow,
     );
     final next = change == null ? evaluation.next : change(evaluation.next);
@@ -227,26 +254,22 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
     );
   }
 
-  /// Evaluates [state] over a window of activity days that is doubled (always
-  /// from the original [state]) while the streak reaches its start.
+  /// Evaluates [state] over a window of activity days ([firstWindow]: the
+  /// days of the last [_initialWindowDays]) that is doubled (always from the
+  /// original [state]) while the streak reaches its start. Each extension
+  /// fetches only the older days it adds.
   Future<StreakEvaluation> _evaluate(
     EntryRepository entries,
     String userId,
     BuddyState state,
     DateTime today, {
+    required Future<Set<DateTime>> firstWindow,
     required bool initialize,
   }) async {
     var windowDays = _initialWindowDays;
+    var windowStart = addDays(today, -windowDays);
+    var days = await firstWindow;
     while (true) {
-      final windowStart = DateTime(
-        today.year,
-        today.month,
-        today.day - windowDays,
-      );
-      final days = await entries.fetchActivityDays(
-        userId: userId,
-        since: windowStart,
-      );
       final evaluation = evaluateStreak(
         activityDays: days,
         state: state,
@@ -258,6 +281,14 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
         return evaluation;
       }
       windowDays = math.min(windowDays * 2, _maxWindowDays);
+      final olderStart = addDays(today, -windowDays);
+      final older = await entries.fetchActivityDays(
+        userId: userId,
+        since: olderStart,
+        until: windowStart,
+      );
+      days = {...older, ...days};
+      windowStart = olderStart;
     }
   }
 
@@ -280,7 +311,8 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
       final fresh = <BuddyAnnouncement>[];
       for (final MapEntry(key: kind, value: day) in candidates.entries) {
         final key =
-            '${AppConstants.keyBuddyAnnouncedPrefix}${kind.name}_${_dayKey(day)}';
+            '${AppConstants.keyBuddyAnnouncedPrefix}${kind.name}_'
+            '${formatIsoDate(day)}';
         if (prefs.getBool(key) ?? false) continue;
         await prefs.setBool(key, true);
         fresh.add(kind);
@@ -319,12 +351,6 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
         ...fresh.announcements.where((a) => !pending.contains(a)),
       ],
     );
-  }
-
-  static String _dayKey(DateTime day) {
-    final m = day.month.toString().padLeft(2, '0');
-    final d = day.day.toString().padLeft(2, '0');
-    return '${day.year.toString().padLeft(4, '0')}-$m-$d';
   }
 }
 

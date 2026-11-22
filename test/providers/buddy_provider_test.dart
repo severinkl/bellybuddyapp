@@ -166,8 +166,34 @@ void main() {
 
         expect(status.streak, 200);
         expect(entryRepo.activityDaysFetchCount, 2);
+        // The larger window fetches only the days it adds.
+        expect(entryRepo.activityDaysFetches, [
+          (since: DateTime(2026, 11, 22 - 120), until: null),
+          (
+            since: DateTime(2026, 11, 22 - 240),
+            until: DateTime(2026, 11, 22 - 120),
+          ),
+        ]);
       },
     );
+
+    test('refreshes queued behind running work share one fetch', () async {
+      final c = makeContainer();
+      c.listen(buddyProvider, (_, _) {});
+      await load(c);
+      final fetches = buddyRepo.fetchCount;
+      final notifier = c.read(buddyProvider.notifier);
+
+      buddyRepo.gateNext();
+      final running = notifier.refresh();
+      await settle();
+      final queued = notifier.refresh();
+      expect(identical(notifier.refresh(), queued), isTrue);
+      buddyRepo.release();
+      await Future.wait([running, queued]);
+
+      expect(buddyRepo.fetchCount, fetches + 2);
+    });
   });
 
   group('announcements', () {

@@ -7,6 +7,20 @@ DateTime startOfDay(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
 DateTime endOfDay(DateTime dt) =>
     DateTime(dt.year, dt.month, dt.day).add(const Duration(days: 1));
 
+/// The day [days] calendar days after [d]'s date (before it when negative),
+/// at midnight. Calendar arithmetic, so it never drifts across DST switches
+/// the way adding `Duration(days: …)` does.
+DateTime addDays(DateTime d, int days) =>
+    DateTime(d.year, d.month, d.day + days);
+
+/// Formats [d]'s date as ISO 'yyyy-MM-dd' (e.g. a Postgres `date`).
+String formatIsoDate(DateTime d) {
+  final y = d.year.toString().padLeft(4, '0');
+  final m = d.month.toString().padLeft(2, '0');
+  final day = d.day.toString().padLeft(2, '0');
+  return '$y-$m-$day';
+}
+
 /// Formats a DateTime as a German relative time string (e.g. "vor 5 Min.")
 String formatTimeAgo(DateTime dt) {
   final diff = DateTime.now().difference(dt);

@@ -109,16 +109,19 @@ class EntryQueryService {
     }
   }
 
-  /// Fetches `tracked_at` of every entry (all four tables) since [since].
+  /// Fetches `tracked_at` of every entry (all four tables) since [since]
+  /// and, with [until], before [until].
   Future<List<DateTime>> fetchTrackedAtSince({
     required String userId,
     required DateTime since,
+    DateTime? until,
   }) async {
     try {
       final sinceIso = since.toUtc().toIso8601String();
+      final untilIso = until?.toUtc().toIso8601String();
       final results = await Future.wait(
         entryTableFor.values.map(
-          (t) => _fetchTrackedAtTable(t, userId, sinceIso),
+          (t) => _fetchTrackedAtTable(t, userId, sinceIso, untilIso),
         ),
       );
       return [
@@ -135,15 +138,18 @@ class EntryQueryService {
     String table,
     String userId,
     String sinceIso,
+    String? untilIso,
   ) async {
     final all = <Map<String, dynamic>>[];
     var from = 0;
     while (true) {
-      final page = await _client
+      var query = _client
           .from(table)
           .select('tracked_at')
           .eq('user_id', userId)
-          .gte('tracked_at', sinceIso)
+          .gte('tracked_at', sinceIso);
+      if (untilIso != null) query = query.lt('tracked_at', untilIso);
+      final page = await query
           .order('tracked_at', ascending: false)
           .range(from, from + trackedAtPageSize - 1);
       all.addAll(page.cast<Map<String, dynamic>>());

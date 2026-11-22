@@ -117,7 +117,7 @@ StreakEvaluation evaluateStreak({
 }) {
   final day0 = startOfDay(today);
   final window = startOfDay(windowStart);
-  final yesterday = _addDays(day0, -1);
+  final yesterday = addDays(day0, -1);
   final activity = activityDays.map(startOfDay).toSet();
 
   // 1. Refund saved days that have since been backfilled.
@@ -145,7 +145,7 @@ StreakEvaluation evaluateStreak({
     var cursor = yesterday;
     while (!cursor.isBefore(window) && !counted(cursor)) {
       gap.add(cursor);
-      cursor = _addDays(cursor, -1);
+      cursor = addDays(cursor, -1);
     }
     // `cursor` is now the day immediately before the gap.
     if (gap.isNotEmpty && _runLength(cursor, counted) >= _minRunToProtect) {
@@ -164,7 +164,7 @@ StreakEvaluation evaluateStreak({
   final anchor = todayCounted ? day0 : yesterday;
   final streak = _runLength(anchor, counted);
   final reachesWindow =
-      streak > 0 && !_addDays(anchor, 1 - streak).isAfter(window);
+      streak > 0 && !addDays(anchor, 1 - streak).isAfter(window);
   if (reachesWindow) brokenAfter = null;
 
   // 5. Milestones.
@@ -226,13 +226,8 @@ StreakEvaluation evaluateStreak({
 /// Number of consecutive counted days walking back from [from].
 int _runLength(DateTime from, bool Function(DateTime) counted) {
   var length = 0;
-  for (var day = from; counted(day); day = _addDays(day, -1)) {
+  for (var day = from; counted(day); day = addDays(day, -1)) {
     length++;
   }
   return length;
 }
-
-/// Calendar-day arithmetic (never `Duration(hours: 24)`, which drifts across
-/// DST switches).
-DateTime _addDays(DateTime day, int days) =>
-    DateTime(day.year, day.month, day.day + days);

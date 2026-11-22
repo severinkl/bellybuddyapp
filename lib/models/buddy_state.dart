@@ -1,5 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../utils/date_format_utils.dart';
+
 part 'buddy_state.freezed.dart';
 part 'buddy_state.g.dart';
 
@@ -20,11 +22,8 @@ class DateOnlyListConverter
   }).toList();
 
   @override
-  List<dynamic> toJson(List<DateTime> object) => object.map((d) {
-    final m = d.month.toString().padLeft(2, '0');
-    final day = d.day.toString().padLeft(2, '0');
-    return '${d.year.toString().padLeft(4, '0')}-$m-$day';
-  }).toList();
+  List<dynamic> toJson(List<DateTime> object) =>
+      object.map(formatIsoDate).toList();
 }
 
 @freezed

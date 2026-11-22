@@ -7,6 +7,36 @@ void main() {
     await initializeDateFormatting('de_DE', null);
   });
 
+  group('addDays', () {
+    test('steps calendar days, at midnight, across month ends', () {
+      expect(
+        addDays(DateTime(2026, 11, 22, 14, 30), -1),
+        DateTime(2026, 11, 21),
+      );
+      expect(addDays(DateTime(2026, 11, 30), 1), DateTime(2026, 12, 1));
+      expect(addDays(DateTime(2026, 3, 1), -1), DateTime(2026, 2, 28));
+      expect(addDays(DateTime(2026, 11, 22), 0), DateTime(2026, 11, 22));
+    });
+
+    test('lands on the calendar day across DST switches', () {
+      // Spring forward (Europe: 29 Mar 2026) and fall back (25 Oct 2026).
+      final spring = addDays(DateTime(2026, 3, 28), 2);
+      expect((spring.year, spring.month, spring.day), (2026, 3, 30));
+      expect(spring.hour, 0);
+      final fall = addDays(DateTime(2026, 10, 26), -2);
+      expect((fall.year, fall.month, fall.day), (2026, 10, 24));
+      expect(fall.hour, 0);
+    });
+  });
+
+  group('formatIsoDate', () {
+    test('zero-pads to yyyy-MM-dd and ignores the time', () {
+      expect(formatIsoDate(DateTime(2026, 3, 5, 23, 59)), '2026-03-05');
+      expect(formatIsoDate(DateTime(2026, 11, 22)), '2026-11-22');
+      expect(formatIsoDate(DateTime(987, 1, 2)), '0987-01-02');
+    });
+  });
+
   group('formatDateTimeShort', () {
     test('formats date and time with zero-padded hours/minutes', () {
       final dt = DateTime(2026, 3, 13, 9, 5);

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -22,6 +24,21 @@ class _FakeBuddy extends BuddyNotifier {
   Future<BuddyStatus?> build() async => initial;
 
   void emit(BuddyStatus? status) => state = AsyncData(status);
+}
+
+/// A Buddy whose first load waits for [gate], then yields [status] (or
+/// fails with a [StateError] when [fail]).
+class _SlowBuddy extends _FakeBuddy {
+  _SlowBuddy(this.gate, super.initial, {this.fail = false});
+  final Future<void> gate;
+  final bool fail;
+
+  @override
+  Future<BuddyStatus?> build() async {
+    await gate;
+    if (fail) throw StateError('backend down');
+    return initial;
+  }
 }
 
 BuddyStatus _status(String name, {bool hasRow = true}) => BuddyStatus(
@@ -69,7 +86,9 @@ void main() {
 
       final container = makeContainer();
 
-      // Load profile so profileProvider transitions to AsyncData(profile)
+      // Load profile so profileProvider transitions to AsyncData(profile);
+      // the sync also waits for the Buddy's first load.
+      await container.read(buddyProvider.future);
       await container.read(profileProvider.notifier).fetchProfile();
 
       // Reading notificationSyncProvider causes it to react to profileProvider
@@ -114,6 +133,79 @@ void main() {
       verifyNever(() => mockNotificationRepo.syncNotifications(any()));
     });
   });
+  test(
+    'waits for the Buddy\'s first load, then syncs once with its name',
+    () async {
+      final profile = testUserProfile();
+      when(
+        () => mockProfileRepo.getProfile(any()),
+      ).thenAnswer((_) async => profile);
+      when(
+        () => mockNotificationRepo.syncNotifications(
+          any(),
+          buddyName: any(named: 'buddyName'),
+        ),
+      ).thenAnswer((_) async {});
+
+      final release = Completer<void>();
+      final fake = _SlowBuddy(release.future, _status('Pünktchen'));
+      final container = makeContainer(fakeBuddy: fake);
+      container.listen(notificationSyncProvider, (_, _) {});
+      await container.read(profileProvider.notifier).fetchProfile();
+      await Future<void>.delayed(Duration.zero);
+      verifyNever(
+        () => mockNotificationRepo.syncNotifications(
+          any(),
+          buddyName: any(named: 'buddyName'),
+        ),
+      );
+
+      release.complete();
+      await container.read(buddyProvider.future);
+      await Future<void>.delayed(Duration.zero);
+      final names = verify(
+        () => mockNotificationRepo.syncNotifications(
+          profile,
+          buddyName: captureAny(named: 'buddyName'),
+        ),
+      ).captured;
+      expect(names, ['Pünktchen']);
+    },
+  );
+
+  test('a Buddy that fails to load syncs without a name', () async {
+    final profile = testUserProfile();
+    when(
+      () => mockProfileRepo.getProfile(any()),
+    ).thenAnswer((_) async => profile);
+    when(
+      () => mockNotificationRepo.syncNotifications(
+        any(),
+        buddyName: any(named: 'buddyName'),
+      ),
+    ).thenAnswer((_) async {});
+
+    final release = Completer<void>();
+    final fake = _SlowBuddy(release.future, null, fail: true);
+    final container = makeContainer(fakeBuddy: fake);
+    container.listen(notificationSyncProvider, (_, _) {});
+    await container.read(profileProvider.notifier).fetchProfile();
+    await Future<void>.delayed(Duration.zero);
+    verifyNever(
+      () => mockNotificationRepo.syncNotifications(
+        any(),
+        buddyName: any(named: 'buddyName'),
+      ),
+    );
+
+    release.complete();
+    await expectLater(container.read(buddyProvider.future), throwsStateError);
+    await Future<void>.delayed(Duration.zero);
+    verify(
+      () => mockNotificationRepo.syncNotifications(profile, buddyName: null),
+    ).called(1);
+  });
+
   test('passes the Buddy name when a row exists', () async {
     final profile = testUserProfile();
     when(
