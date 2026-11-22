@@ -141,7 +141,12 @@ void main() {
       consumed: [nov(21)],
       saversEarned: 1,
       milestoneReached: 7,
-      next: BuddyState(savers: 1, savedDays: [nov(21)], lastMilestone: 7),
+      next: BuddyState(
+        savers: 1,
+        savedDays: [nov(21)],
+        lastMilestone: 7,
+        lastSaverEarnedOn: nov(22),
+      ),
     ),
     _Case(
       'yesterday missing, today not logged yet → saver fills yesterday, '
@@ -162,7 +167,12 @@ void main() {
       consumed: [nov(21)],
       saversEarned: 1,
       milestoneReached: 7,
-      next: BuddyState(savers: 2, savedDays: [nov(21)], lastMilestone: 7),
+      next: BuddyState(
+        savers: 2,
+        savedDays: [nov(21)],
+        lastMilestone: 7,
+        lastSaverEarnedOn: nov(22),
+      ),
     ),
     _Case(
       'gap of 2 with 2 savers → both days filled, savedDays ascending',
@@ -319,7 +329,7 @@ void main() {
       todayCounted: true,
       saversEarned: 1,
       milestoneReached: 7,
-      next: const BuddyState(savers: 1, lastMilestone: 7),
+      next: BuddyState(savers: 1, lastMilestone: 7, lastSaverEarnedOn: nov(22)),
     ),
     _Case(
       'initialize with a 40-day streak → lastMilestone 35, no rewards',
@@ -344,7 +354,45 @@ void main() {
       todayCounted: true,
       saversEarned: 1,
       milestoneReached: 14,
-      next: const BuddyState(savers: 2, lastMilestone: 14),
+      next: BuddyState(
+        savers: 2,
+        lastMilestone: 14,
+        lastSaverEarnedOn: nov(22),
+      ),
+    ),
+    _Case(
+      'two milestones at once with an empty stock → still only 1 saver '
+      '(one per evaluation)',
+      activity: span(nov(8), nov(22)),
+      streak: 15,
+      todayCounted: true,
+      saversEarned: 1,
+      milestoneReached: 14,
+      next: BuddyState(
+        savers: 1,
+        lastMilestone: 14,
+        lastSaverEarnedOn: nov(22),
+      ),
+    ),
+    _Case(
+      'milestone less than 7 days after the last earned saver → '
+      'milestoneReached, nothing paid',
+      activity: span(nov(16), nov(22)),
+      state: BuddyState(lastSaverEarnedOn: nov(16)),
+      streak: 7,
+      todayCounted: true,
+      milestoneReached: 7,
+      next: BuddyState(lastMilestone: 7, lastSaverEarnedOn: nov(16)),
+    ),
+    _Case(
+      'milestone exactly 7 days after the last earned saver → paid',
+      activity: span(nov(16), nov(22)),
+      state: BuddyState(lastSaverEarnedOn: nov(15)),
+      streak: 7,
+      todayCounted: true,
+      saversEarned: 1,
+      milestoneReached: 7,
+      next: BuddyState(savers: 1, lastMilestone: 7, lastSaverEarnedOn: nov(22)),
     ),
     _Case(
       'milestone at full stock → milestoneReached, 0 savers earned',
@@ -392,7 +440,7 @@ void main() {
       saversEarned: 1,
       milestoneReached: 7,
       goalReached: true,
-      next: const BuddyState(savers: 1, lastMilestone: 7),
+      next: BuddyState(savers: 1, lastMilestone: 7, lastSaverEarnedOn: nov(22)),
     ),
     _Case(
       'goal 14 not reached yet → goal kept',
@@ -402,7 +450,12 @@ void main() {
       todayCounted: true,
       saversEarned: 1,
       milestoneReached: 7,
-      next: const BuddyState(streakGoal: 14, savers: 1, lastMilestone: 7),
+      next: BuddyState(
+        streakGoal: 14,
+        savers: 1,
+        lastMilestone: 7,
+        lastSaverEarnedOn: nov(22),
+      ),
     ),
 
     // --- Window ---
@@ -631,6 +684,90 @@ void main() {
 
       final again = _eval(full, readded.next);
       expect(again.changed, isFalse);
+    });
+
+    test('deleting and re-adding a mid-run day right after a saver was '
+        'earned pays nothing', () {
+      // Run 9.–22.11. (14 days); milestone 14 paid today.
+      final paid = BuddyState(
+        savers: 1,
+        lastMilestone: 14,
+        lastSaverEarnedOn: nov(22),
+      );
+      final full = span(nov(9), nov(22));
+
+      // 17.11. loses its only entry → current run 18.–22. (5 days), final.
+      final deleted = _eval(full.difference({nov(17)}), paid);
+      expect(deleted.streak, 5);
+      expect(deleted.saversEarned, 0);
+      expect(deleted.next.lastMilestone, 0);
+      expect(deleted.next.savers, 1);
+
+      // Entry re-added → milestone 14 crossed again, but within 7 days of
+      // the last earned saver: recorded, not paid.
+      final readded = _eval(full, deleted.next);
+      expect(readded.streak, 14);
+      expect(readded.saversEarned, 0);
+      expect(readded.milestoneReached, 14);
+      expect(readded.next.savers, 1);
+      expect(readded.next.lastMilestone, 14);
+      expect(readded.next.lastSaverEarnedOn, nov(22));
+
+      // Toggling a day again on the following days still pays nothing.
+      var state = readded.next;
+      for (var day = 23; day <= 28; day++) {
+        final run = span(nov(9), nov(day));
+        final cut = _eval(
+          run.difference({nov(day - 5)}),
+          state,
+          today: nov(day),
+        );
+        final back = _eval(run, cut.next, today: nov(day));
+        expect(back.saversEarned, 0, reason: '$day.11.');
+        expect(back.next.savers, 1, reason: '$day.11.');
+        state = back.next;
+      }
+
+      final again = _eval(full, readded.next);
+      expect(again.changed, isFalse);
+    });
+
+    test('a new run after a real break earns milestone 7 a week after the '
+        'last saver', () {
+      final oldRun = span(nov(1), nov(14)); // 15.11. missed
+      // Milestone 14 was paid on 14.11.
+      var state = BuddyState(
+        savers: 1,
+        lastMilestone: 14,
+        lastSaverEarnedOn: nov(14),
+      );
+
+      final day17 = _eval(
+        {...oldRun, ...span(nov(16), nov(17))},
+        state,
+        today: nov(17),
+      );
+      expect(day17.next.lastMilestone, 0);
+      state = day17.next;
+
+      final day22 = _eval({...oldRun, ...span(nov(16), nov(22))}, state);
+      expect(day22.streak, 7);
+      expect(day22.saversEarned, 1);
+      expect(day22.next.savers, 2);
+      expect(day22.next.lastMilestone, 7);
+      expect(day22.next.lastSaverEarnedOn, nov(22));
+    });
+
+    test('initialize never pays and leaves lastSaverEarnedOn unset', () {
+      final result = _eval(
+        span(oct(14), nov(22)),
+        const BuddyState(),
+        initialize: true,
+      );
+      expect(result.saversEarned, 0);
+      expect(result.next.savers, 0);
+      expect(result.next.lastSaverEarnedOn, isNull);
+      expect(result.next.lastMilestone, 35);
     });
 
     test('reachesWindow → re-evaluating the ORIGINAL state with a larger '

@@ -29,11 +29,13 @@ void main() {
           'user_id': 'u1',
           'name': 'Bubu',
           'saved_days': ['2026-11-20'],
+          'last_saver_earned_on': '2026-11-14',
         },
       );
       final s = await repo.fetch('u1');
       expect(s!.name, 'Bubu');
       expect(s.savedDays, [DateTime(2026, 11, 20)]);
+      expect(s.lastSaverEarnedOn, DateTime(2026, 11, 14));
     });
 
     test('save upserts with user_id, no id, UTC onboarding', () async {
@@ -44,6 +46,7 @@ void main() {
           id: 'row-id',
           name: 'Bubu',
           onboardingCompletedAt: DateTime.utc(2026, 11, 1, 10),
+          lastSaverEarnedOn: DateTime(2026, 11, 14),
         ),
       );
       final data =
@@ -53,6 +56,7 @@ void main() {
       expect(data.containsKey('id'), isFalse);
       expect(data['name'], 'Bubu');
       expect(data['onboarding_completed_at'], '2026-11-01T10:00:00.000Z');
+      expect(data['last_saver_earned_on'], '2026-11-14');
     });
   });
 

@@ -244,6 +244,7 @@ void main() {
       expect(status.announcements, [BuddyAnnouncement.saverEarned]);
       expect(buddyRepo.store['u1']!.savers, 1);
       expect(buddyRepo.store['u1']!.lastMilestone, 7);
+      expect(buddyRepo.store['u1']!.lastSaverEarnedOn, nov(22));
     });
 
     test('no saverEarned when the stock is already full', () async {

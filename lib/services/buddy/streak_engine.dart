@@ -9,6 +9,12 @@ const int maxStreakSavers = 2;
 /// Every multiple of this many streak days is a milestone worth one saver.
 const int streakMilestoneDays = 7;
 
+/// After a milestone added a saver, the next one pays no earlier than this
+/// many days later. The milestones of one real run are always this far
+/// apart, so this only stops a run that shrinks and grows back (an entry
+/// deleted or moved, then restored) from paying its milestones again.
+const int _saverCooldownDays = streakMilestoneDays;
+
 /// A run must be at least this long to be "saved" by savers or reported as
 /// broken.
 const int _minRunToProtect = 2;
@@ -44,17 +50,19 @@ class StreakEvaluation {
   /// returned, capped at [maxStreakSavers] (ascending).
   final List<DateTime> refundedDays;
 
-  /// The input state with `savers`, `savedDays`, `lastMilestone` and
-  /// `streakGoal` updated.
+  /// The input state with `savers`, `savedDays`, `lastMilestone`,
+  /// `lastSaverEarnedOn` and `streakGoal` updated.
   final BuddyState next;
 
-  /// Savers actually added to the stock by milestones in this evaluation
-  /// (never more than the cap leaves room for).
+  /// Savers actually added to the stock by a milestone in this evaluation:
+  /// 0 or 1 (0 while the stock is full or within 7 days of the last earned
+  /// saver).
   final int saversEarned;
 
   /// The new milestone (a multiple of [streakMilestoneDays]) when one was
-  /// crossed in this evaluation, also when the stock was already full.
-  /// `null` otherwise and always with `initialize`.
+  /// crossed in this evaluation, also when it paid nothing (stock full,
+  /// saver earned less than 7 days ago). `null` otherwise and always with
+  /// `initialize`.
   final int? milestoneReached;
 
   /// The streak goal was reached; `next.streakGoal` is cleared.
@@ -88,12 +96,16 @@ class StreakEvaluation {
 ///    it and the run before it is at least 2 days long; otherwise, after such
 ///    a run, the streak is reported broken.
 /// 3. Saved days count toward the streak.
-/// 4. Each newly reached 7-day milestone adds a saver (stock capped at 2).
+/// 4. A newly reached 7-day milestone adds one saver (stock capped at 2):
+///    at most one per evaluation, and only if the last one was earned at
+///    least 7 days ago (`lastSaverEarnedOn`, set to today when it pays).
 ///    After a break, `lastMilestone` is reset to the current run's milestone
 ///    (without reward) only once the break is final, i.e. yesterday is
 ///    counted again (a new run has started). Until then the user can still
 ///    repair the streak by backfilling yesterday, and a reset would pay the
-///    old milestones a second time.
+///    old milestones a second time. A run that shrinks and grows back
+///    (an entry deleted, then restored) re-crosses its milestones; the
+///    7-day limit keeps that from paying again.
 /// 5. A reached streak goal is cleared.
 ///
 /// With [initialize] (a freshly created `buddy_state` row for an existing
@@ -170,6 +182,7 @@ StreakEvaluation evaluateStreak({
   // 5. Milestones.
   final milestone = (streak ~/ streakMilestoneDays) * streakMilestoneDays;
   var lastMilestone = state.lastMilestone;
+  var lastSaverEarnedOn = state.lastSaverEarnedOn;
   var saversEarned = 0;
   int? milestoneReached;
   if (initialize) {
@@ -183,12 +196,11 @@ StreakEvaluation evaluateStreak({
       // never earns savers by itself.
       lastMilestone = milestone;
     } else if (milestone > lastMilestone) {
-      final before = savers;
-      savers = math.min(
-        maxStreakSavers,
-        savers + (milestone - lastMilestone) ~/ streakMilestoneDays,
-      );
-      saversEarned = savers - before;
+      if (savers < maxStreakSavers && _saverDue(lastSaverEarnedOn, day0)) {
+        savers++;
+        saversEarned = 1;
+        lastSaverEarnedOn = day0;
+      }
       milestoneReached = milestone;
       lastMilestone = milestone;
     }
@@ -211,6 +223,7 @@ StreakEvaluation evaluateStreak({
       savers: savers,
       savedDays: savedDays,
       lastMilestone: lastMilestone,
+      lastSaverEarnedOn: lastSaverEarnedOn,
       streakGoal: goalReached ? null : goal,
     ),
     saversEarned: saversEarned,
@@ -222,6 +235,12 @@ StreakEvaluation evaluateStreak({
     previous: state,
   );
 }
+
+/// Whether a milestone may pay a saver on [today]: none was earned yet, or
+/// the last one at least [_saverCooldownDays] days before.
+bool _saverDue(DateTime? lastEarnedOn, DateTime today) =>
+    lastEarnedOn == null ||
+    !addDays(startOfDay(lastEarnedOn), _saverCooldownDays).isAfter(today);
 
 /// Number of consecutive counted days walking back from [from].
 int _runLength(DateTime from, bool Function(DateTime) counted) {
