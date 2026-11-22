@@ -17,7 +17,7 @@ Dein Bauchgefühl Tracker — a digestive health tracking app for people with fo
 ## Tech Stack
 
 - **Flutter** (SDK ^3.11.1)
-- **Supabase** — Backend, auth, storage
+- **Supabase-compatible backend** (GoTrue, PostgREST, storage-api) on Hetzner — auth, database, storage; accessed via `supabase_flutter`
 - **Riverpod** — State management
 - **GoRouter** — Navigation
 - **Freezed + json_serializable** — Immutable models with code generation
@@ -29,7 +29,7 @@ Dein Bauchgefühl Tracker — a digestive health tracking app for people with fo
 ### Prerequisites
 
 - Flutter SDK ^3.11.1
-- A Supabase project with the required tables
+- Access to a Belly Buddy backend (production: `https://api.bellybuddy.at`). Server code and database schema live in the private repo `bellybuddy-core`.
 
 ### Setup
 
@@ -61,8 +61,8 @@ Configured in `env.json` (gitignored). See `env.example.json` for the template.
 
 | Variable | Description |
 |---|---|
-| `SUPABASE_URL` | Your Supabase project URL |
-| `SUPABASE_ANON_KEY` | Your Supabase anonymous key |
+| `SUPABASE_URL` | Backend base URL (production: `https://api.bellybuddy.at`) |
+| `SUPABASE_ANON_KEY` | Anonymous (public) API key of the backend |
 | `GOOGLE_WEB_CLIENT_ID` | Google OAuth web client ID |
 | `GOOGLE_IOS_CLIENT_ID` | Google OAuth iOS client ID |
 | `FIREBASE_ANDROID_API_KEY` | Firebase API key (Android) |

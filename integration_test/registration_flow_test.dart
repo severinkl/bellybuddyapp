@@ -1,3 +1,4 @@
+import 'package:belly_buddy/screens/health_consent/health_consent_screen.dart';
 import 'package:belly_buddy/screens/registration/steps/auth_step.dart';
 import 'package:belly_buddy/screens/registration/steps/email_capture_step.dart';
 import 'package:belly_buddy/screens/welcome/welcome_screen.dart';
@@ -78,6 +79,10 @@ void main() {
       await tester.tap(submitButton);
       await tester.pumpAndSettle(); // Wait for async operations to complete
 
+      // The consent given in the wizard is stored with the profile, so the
+      // post-login consent gate does not appear.
+      expect(find.byType(HealthConsentScreen), findsNothing);
+
       // After successful registration, user should be navigated to the main app (bottom nav should be visible)
       expect(find.byKey(BbBottomNav.centerButtonKey), findsOneWidget);
     },
@@ -139,6 +144,10 @@ void main() {
       await tester.pump();
       await tester.tap(find.byKey(EmailCaptureStep.submitButtonKey));
       await tester.pumpAndSettle();
+
+      // The consent given in the wizard is stored with the profile, so the
+      // post-login consent gate does not appear.
+      expect(find.byType(HealthConsentScreen), findsNothing);
 
       // Dashboard reached.
       expect(find.byKey(BbBottomNav.navHomeKey), findsOneWidget);

@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../models/meal_entry.dart';
 import '../models/user_recipe.dart';
 import '../providers/auth_provider.dart';
+import '../providers/health_consent_provider.dart';
+import '../providers/upgrade_gate_provider.dart';
 import '../utils/logger.dart';
 import '../screens/screens.dart';
 import '../config/app_theme.dart';
@@ -14,6 +16,8 @@ import 'route_names.dart';
 class _RouterRefreshNotifier extends ChangeNotifier {
   _RouterRefreshNotifier(Ref ref) {
     ref.listen(isAuthenticatedProvider, (_, _) => notifyListeners());
+    ref.listen(hardGateActiveProvider, (_, _) => notifyListeners());
+    ref.listen(healthConsentRequiredProvider, (_, _) => notifyListeners());
   }
 }
 
@@ -41,11 +45,36 @@ final routerProvider = Provider<GoRouter>((ref) {
 
       _log.debug('redirect: path=$path auth=$isAuthenticated');
 
+      // The hard upgrade gate wins over everything else: while it is active
+      // every location (notification taps, pending routes, deep links)
+      // resolves to the upgrade-required screen, so the user cannot leave it
+      // until they update. Without the gate the screen is not reachable.
+      if (ref.read(hardGateActiveProvider)) {
+        return path == RoutePaths.upgradeRequired
+            ? null
+            : RoutePaths.upgradeRequired;
+      }
+      if (path == RoutePaths.upgradeRequired) {
+        return isAuthenticated ? RoutePaths.dashboard : RoutePaths.welcome;
+      }
+
       if (!isAuthenticated) {
         // Allow unauthenticated users on welcome, auth, registration, reset-password
         if (isAuthRoute || path == RoutePaths.registration) return null;
         return RoutePaths.welcome;
       }
+
+      // Health-data consent gate (GDPR Art. 9): a signed-in user whose loaded
+      // profile has no consent for the current privacy policy version can
+      // only see the consent screen. It ranks below the upgrade gate and the
+      // signed-out branch above, so sign-in / reset flows stay reachable for
+      // signed-out users; signing out from the consent screen lifts it.
+      if (ref.read(healthConsentRequiredProvider)) {
+        return path == RoutePaths.healthConsent
+            ? null
+            : RoutePaths.healthConsent;
+      }
+      if (path == RoutePaths.healthConsent) return RoutePaths.dashboard;
 
       // Authenticated on auth route → dashboard
       // NOTE: /registration is NOT in isAuthRoute — user stays there to finish
@@ -240,6 +269,16 @@ final routerProvider = Provider<GoRouter>((ref) {
           final id = state.pathParameters['id']!;
           return RecipeEditorScreen(recipeId: id);
         },
+      ),
+      GoRoute(
+        path: RoutePaths.upgradeRequired,
+        name: RouteNames.upgradeRequired,
+        builder: (_, _) => const UpgradeRequiredScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.healthConsent,
+        name: RouteNames.healthConsent,
+        builder: (_, _) => const HealthConsentScreen(),
       ),
     ],
   );

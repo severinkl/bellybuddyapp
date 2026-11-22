@@ -2,7 +2,10 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
+import 'package:belly_buddy/config/constants.dart';
+import 'package:belly_buddy/screens/health_consent/widgets/health_consent_content.dart';
 import 'package:belly_buddy/screens/registration/registration_wizard_screen.dart';
+import 'package:belly_buddy/screens/registration/steps/steps.dart';
 import 'package:belly_buddy/screens/registration/steps/email_capture_step.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/repositories/auth_repository.dart';
@@ -67,6 +70,45 @@ void main() {
     });
   });
 
+  group('Health consent step', () {
+    testWidgets('comes first and blocks "Weiter" until the box is ticked', (
+      tester,
+    ) async {
+      await tester.pumpWithProviders(
+        const RegistrationWizardScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(HealthConsentStep.titleKey), findsOneWidget);
+      expect(find.text(HealthConsentContent.consentText), findsOneWidget);
+      expect(find.text('Datenschutzerklärung lesen'), findsOneWidget);
+      expect(registrationNextEnabled(tester), isFalse);
+
+      // Tapping the disabled button does not advance.
+      await tester.tap(find.byKey(RegistrationWizardScreen.nextButtonKey));
+      await tester.pumpAndSettle();
+      expect(find.byKey(HealthConsentStep.titleKey), findsOneWidget);
+      expect(find.byKey(BirthYearStep.birthYearTitleKey), findsNothing);
+
+      // Ticking and unticking toggles the button.
+      final checkbox = find.byKey(HealthConsentContent.checkboxKey);
+      await tester.ensureVisible(checkbox);
+      await tester.tap(checkbox);
+      await tester.pump();
+      expect(registrationNextEnabled(tester), isTrue);
+      await tester.tap(checkbox);
+      await tester.pump();
+      expect(registrationNextEnabled(tester), isFalse);
+
+      await tester.tap(checkbox);
+      await tester.pump();
+      await tester.tap(find.byKey(RegistrationWizardScreen.nextButtonKey));
+      await tester.pumpAndSettle();
+      expect(find.byKey(BirthYearStep.birthYearTitleKey), findsOneWidget);
+    });
+  });
+
   group('OAuth email capture branch', () {
     // All three tests drive sign-in through the Google button. Apple's
     // `BbSocialButton.apple` is only rendered when `Platform.isIOS`, which is
@@ -121,6 +163,12 @@ void main() {
         // _finalizeAfterOAuthSignIn (e.g. GoRouter not found) would also
         // produce `findsNothing` and pass vacuously.
         expect(profileRepo.lastWrittenEmail, equals('real@example.com'));
+
+        // The consent given on the first step is stored with the profile.
+        final stored = profileRepo.storedProfile!;
+        expect(stored.healthConsentAt, isNotNull);
+        expect(stored.healthConsentAt!.isUtc, isTrue);
+        expect(stored.privacyPolicyVersion, AppConstants.privacyPolicyVersion);
       },
     );
 

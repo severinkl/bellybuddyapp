@@ -65,6 +65,7 @@ class AppConstants {
   // Image sizes
   static const double mealImageHeight = 180.0;
   static const double mascotSizeMd = 96.0;
+  static const double mascotSizeLg = 160.0;
   static const double featureCardHeight = 128.0;
 
   // Divider
@@ -84,10 +85,20 @@ class AppConstants {
   static const String feedbackFormUrl =
       'https://us20.list-manage.com/survey?u=526bdf1360ec4bf225504e006&id=d47032793c&attribution=false';
 
-  /// Deep link Supabase opens when the user taps the password-reset email.
-  /// Routed by Lovable back into the app's /reset-password flow.
+  /// Where the password-reset email link lands: the reset-password page of the
+  /// Belly Buddy web app, where the user sets the new password.
   static const String resetPasswordRedirectUrl =
-      'https://belly-buddy-diet-detective.lovable.app/reset-password';
+      'https://app.bellybuddy.at/reset-password';
+
+  /// Public privacy policy (Datenschutzerklärung) of the Belly Buddy web app.
+  static const String privacyPolicyUrl =
+      'https://app.bellybuddy.at/datenschutz';
+
+  /// Version of the privacy policy the health-data consent refers to. Bump it
+  /// when the policy changes materially: every user whose stored
+  /// `profiles.privacy_policy_version` differs is sent through the consent
+  /// gate again.
+  static const String privacyPolicyVersion = '2026-11-22';
 
   // Apple "Hide My Email" relay address suffix (includes the leading `@`).
   // See the Sign in with Apple docs — this domain is stable since iOS 13.
@@ -95,6 +106,18 @@ class AppConstants {
 
   // SharedPreferences keys
   static const String keyNotificationModalShown = 'notification_modal_shown';
+
+  /// App Store numeric ID for Belly Buddy, used by the upgrade screen and
+  /// dialog to open the store listing (App Store Connect → App Information →
+  /// Apple ID). The `deploy-ios` job refuses the old placeholder `0000000000`.
+  static const String iosAppStoreId = '6760981838';
+
+  /// Builds the App Store URL for the current app.
+  static String appStoreUrl() => 'https://apps.apple.com/app/id$iosAppStoreId';
+
+  /// Builds the Play Store URL for the given Android package name.
+  static String playStoreUrl(String packageName) =>
+      'https://play.google.com/store/apps/details?id=$packageName';
 
   // Icon sizes
   static const double iconSizeXs = 16.0;

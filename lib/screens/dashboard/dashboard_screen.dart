@@ -8,7 +8,9 @@ import '../../config/constants.dart';
 import '../../providers/entries_provider.dart';
 import '../../providers/ingredient_suggestion_provider.dart';
 import '../../providers/recommendation_provider.dart';
+import '../../providers/upgrade_gate_provider.dart';
 import '../../widgets/common/circle_icon_button.dart';
+import '../../widgets/common/upgrade_available_dialog.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/tutorial_provider.dart';
 import '../../router/route_names.dart';
@@ -44,6 +46,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       if (!mounted) return;
       _maybeShowNotificationModal();
     });
+    // The soft nudge may already be pending when the dashboard mounts (e.g.
+    // the user signed in after the decision resolved). If it resolves later,
+    // the listener in build() picks it up instead.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowSoftNudge());
+  }
+
+  /// Shows the "update available" dialog if a soft nudge is pending. The flag
+  /// is consumed before showing, so the dialog appears at most once.
+  void _maybeShowSoftNudge() {
+    if (!mounted) return;
+    if (!ref.read(softNudgePendingProvider.notifier).consume()) return;
+    showUpgradeAvailableDialog(context, ref);
   }
 
   @override
@@ -87,6 +101,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // The upgrade decision usually resolves after the first frame (the
+    // dashboard renders under the splash), so react when the flag flips.
+    ref.listen<bool>(softNudgePendingProvider, (_, pending) {
+      if (pending) _maybeShowSoftNudge();
+    });
     ref.watch(ingredientSuggestionProvider); // rebuild on data changes
     final newSuggestionCount = ref
         .read(ingredientSuggestionProvider.notifier)

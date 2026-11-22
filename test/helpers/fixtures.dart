@@ -1,3 +1,4 @@
+import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/drink.dart';
 import 'package:belly_buddy/models/drink_entry.dart';
 import 'package:belly_buddy/models/gut_feeling_entry.dart';
@@ -19,6 +20,12 @@ const testUserId = 'test-user-id';
 /// tour. Tests covering the tour explicitly pass `alreadySeenTutorial: false`.
 final DateTime testTutorialAlreadySeenAt = DateTime.utc(2026, 1, 1);
 
+/// Default `healthConsentAt` for test fixtures — a non-null timestamp with
+/// the current policy version so tests that seed a profile aren't sent
+/// through the health-consent gate. Consent tests pass
+/// `hasHealthConsent: false` or an outdated `privacyPolicyVersion`.
+final DateTime testHealthConsentAt = DateTime.utc(2026, 11, 22);
+
 UserProfile testUserProfile({
   String? userId,
   int? birthYear,
@@ -37,6 +44,9 @@ UserProfile testUserProfile({
   String? timezone,
   DateTime? tutorialSeenAt,
   bool alreadySeenTutorial = true,
+  DateTime? healthConsentAt,
+  String? privacyPolicyVersion,
+  bool hasHealthConsent = true,
 }) => UserProfile(
   userId: userId ?? testUserId,
   birthYear: birthYear ?? 1990,
@@ -56,6 +66,11 @@ UserProfile testUserProfile({
   tutorialSeenAt:
       tutorialSeenAt ??
       (alreadySeenTutorial ? testTutorialAlreadySeenAt : null),
+  healthConsentAt:
+      healthConsentAt ?? (hasHealthConsent ? testHealthConsentAt : null),
+  privacyPolicyVersion:
+      privacyPolicyVersion ??
+      (hasHealthConsent ? AppConstants.privacyPolicyVersion : null),
 );
 
 MealEntry testMealEntry({
