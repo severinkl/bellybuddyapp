@@ -89,10 +89,11 @@ class StreakEvaluation {
 ///    a run, the streak is reported broken.
 /// 3. Saved days count toward the streak.
 /// 4. Each newly reached 7-day milestone adds a saver (stock capped at 2).
-///    `lastMilestone` is only reset after a break once the break is final,
-///    i.e. yesterday is counted again (a new run has started). Until then
-///    the user can still repair the streak by backfilling yesterday, and a
-///    reset would pay the old milestones a second time.
+///    After a break, `lastMilestone` is reset to the current run's milestone
+///    (without reward) only once the break is final, i.e. yesterday is
+///    counted again (a new run has started). Until then the user can still
+///    repair the streak by backfilling yesterday, and a reset would pay the
+///    old milestones a second time.
 /// 5. A reached streak goal is cleared.
 ///
 /// With [initialize] (a freshly created `buddy_state` row for an existing
@@ -102,8 +103,8 @@ class StreakEvaluation {
 /// stops there. If [StreakEvaluation.reachesWindow] is `true` the streak may
 /// be truncated: the caller must fetch a larger window and call this again
 /// with the **original input state** (never chain `next` of the truncated
-/// result). Break side effects (milestone reset, [StreakEvaluation.
-/// streakBroken]) are skipped while the window is reached.
+/// result). Break side effects (milestone reset,
+/// [StreakEvaluation.streakBroken]) are skipped while the window is reached.
 ///
 /// All dates are treated as local calendar days; date arithmetic uses
 /// calendar-day increments so DST switches never skip or double a day.
@@ -176,8 +177,12 @@ StreakEvaluation evaluateStreak({
   } else {
     final breakIsFinal =
         streak < lastMilestone && counted(yesterday) && !reachesWindow;
-    if (breakIsFinal) lastMilestone = 0;
-    if (milestone > lastMilestone) {
+    if (breakIsFinal) {
+      // The current run restarts the milestone count at its own milestone;
+      // nothing is paid here, so shrinking a run (an entry deleted or moved)
+      // never earns savers by itself.
+      lastMilestone = milestone;
+    } else if (milestone > lastMilestone) {
       final before = savers;
       savers = math.min(
         maxStreakSavers,

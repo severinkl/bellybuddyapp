@@ -373,14 +373,13 @@ void main() {
       next: const BuddyState(),
     ),
     _Case(
-      'final break found after the new run passed 7 → its milestone is paid',
+      'final break found after the new run passed 7 → lastMilestone set to '
+      '7, nothing paid',
       activity: {...span(oct(10), nov(10)), ...span(nov(12), nov(22))},
       state: const BuddyState(lastMilestone: 28),
       streak: 11,
       todayCounted: true,
-      saversEarned: 1,
-      milestoneReached: 7,
-      next: const BuddyState(savers: 1, lastMilestone: 7),
+      next: const BuddyState(lastMilestone: 7),
     ),
 
     // --- Goal ---
@@ -606,6 +605,32 @@ void main() {
       expect(day22.milestoneReached, 7);
       expect(day22.next.savers, 1);
       expect(day22.next.lastMilestone, 7);
+    });
+
+    test('deleting and re-adding a mid-run day pays at most the re-crossed '
+        'milestone', () {
+      // Run 8.–22.11. (15 days); milestones 7 and 14 already paid.
+      const paid = BuddyState(lastMilestone: 14);
+      final full = span(nov(8), nov(22));
+
+      // 14.11. loses its only entry → current run 15.–22. (8 days), final.
+      final deleted = _eval(full.difference({nov(14)}), paid);
+      expect(deleted.streak, 8);
+      expect(deleted.saversEarned, 0);
+      expect(deleted.milestoneReached, isNull);
+      expect(deleted.next.savers, 0);
+      expect(deleted.next.lastMilestone, 7);
+
+      // Entry re-added → streak 15 crosses 14 again relative to 7.
+      final readded = _eval(full, deleted.next);
+      expect(readded.streak, 15);
+      expect(readded.saversEarned, 1);
+      expect(readded.milestoneReached, 14);
+      expect(readded.next.savers, 1);
+      expect(readded.next.lastMilestone, 14);
+
+      final again = _eval(full, readded.next);
+      expect(again.changed, isFalse);
     });
 
     test('reachesWindow → re-evaluating the ORIGINAL state with a larger '
