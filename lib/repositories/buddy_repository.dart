@@ -68,6 +68,6 @@ class LocalBuddyRepository implements BuddyRepository {
 
 final buddyRepositoryProvider = Provider<BuddyRepository>(
   (ref) => const bool.fromEnvironment('BUDDY_LOCAL_STATE')
-      ? LocalBuddyRepository()
+      ? const LocalBuddyRepository()
       : SupabaseBuddyRepository(ref.watch(buddyServiceProvider)),
 );

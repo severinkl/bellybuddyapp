@@ -15,7 +15,6 @@ import 'package:belly_buddy/services/storage_service.dart';
 import 'package:belly_buddy/services/user_recipe_service.dart';
 
 import 'package:belly_buddy/repositories/auth_repository.dart';
-import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/user_recipe_repository.dart';
 import 'package:belly_buddy/repositories/drink_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
