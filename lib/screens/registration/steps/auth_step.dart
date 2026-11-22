@@ -1,8 +1,6 @@
 import 'dart:io' show Platform;
-import 'package:flutter/gestures.dart' show TapGestureRecognizer;
 import 'package:material_ui/material_ui.dart';
 import 'package:go_router/go_router.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../router/route_names.dart';
@@ -21,7 +19,6 @@ class AuthStep extends StatefulWidget {
   final Future<void> Function() onAppleSignUp;
   static const emailFieldKey = Key('auth_email_field');
   static const submitButtonKey = Key('auth_submit_button');
-  static const privacyNoticeKey = Key('auth_privacy_notice');
 
   const AuthStep({
     super.key,
@@ -40,17 +37,11 @@ class _AuthStepState extends State<AuthStep> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
-  late final _privacyPolicyTap = TapGestureRecognizer()
-    ..onTap = () => launchUrl(
-      Uri.parse(AppConstants.privacyPolicyUrl),
-      mode: LaunchMode.externalApplication,
-    );
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
-    _privacyPolicyTap.dispose();
     super.dispose();
   }
 
@@ -154,29 +145,6 @@ class _AuthStepState extends State<AuthStep> {
               label: 'Registrieren',
               isLoading: widget.isLoading,
               onPressed: _isPasswordValid ? _submit : null,
-            ),
-            AppConstants.gap12,
-            Text.rich(
-              key: AuthStep.privacyNoticeKey,
-              TextSpan(
-                style: const TextStyle(
-                  fontSize: AppTheme.fontSizeCaption,
-                  color: AppTheme.mutedForeground,
-                ),
-                children: [
-                  const TextSpan(text: 'Mit der Registrierung akzeptierst du '),
-                  TextSpan(
-                    text: 'unsere Datenschutzerklärung',
-                    style: const TextStyle(
-                      color: AppTheme.foreground,
-                      decoration: TextDecoration.underline,
-                    ),
-                    recognizer: _privacyPolicyTap,
-                  ),
-                  const TextSpan(text: '.'),
-                ],
-              ),
-              textAlign: TextAlign.center,
             ),
 
             AppConstants.gap24,

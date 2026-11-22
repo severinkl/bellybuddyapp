@@ -148,6 +148,33 @@ void main() {
     }
   });
 
+  group('createProfile health consent', () {
+    test(
+      'the insert carries health_consent_at and privacy_policy_version',
+      () async {
+        when(() => authService.detectAuthMethod()).thenReturn('email');
+        when(() => profileService.upsert(any())).thenAnswer((_) async {});
+
+        await repo.createProfile(
+          'user-123',
+          testUserProfile(
+            healthConsentAt: DateTime.utc(2026, 11, 22, 9, 30),
+            privacyPolicyVersion: AppConstants.privacyPolicyVersion,
+          ),
+        );
+
+        final captured =
+            verify(() => profileService.upsert(captureAny())).captured.single
+                as Map<String, dynamic>;
+        expect(captured['health_consent_at'], '2026-11-22T09:30:00.000Z');
+        expect(
+          captured['privacy_policy_version'],
+          AppConstants.privacyPolicyVersion,
+        );
+      },
+    );
+  });
+
   group('updateProfile', () {
     test('delegates to profileService.update without user_id key', () async {
       final profile = testUserProfile(userId: 'user-123');

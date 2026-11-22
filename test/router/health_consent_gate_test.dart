@@ -14,7 +14,9 @@ import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/router/app_router.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/health_consent/health_consent_screen.dart';
+import 'package:belly_buddy/screens/registration/steps/auth_step.dart';
 import 'package:belly_buddy/screens/upgrade/upgrade_required_screen.dart';
+import 'package:belly_buddy/widgets/common/bb_password_field.dart';
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_localizations/flutter_localizations.dart'
@@ -26,6 +28,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
+import '../helpers/registration_driver.dart';
 
 /// Pared-down app root: owns the upgrade decision like [BellyBuddyApp] and
 /// loads the profile on start when signed in, without the splash overlay.
@@ -243,6 +246,42 @@ void main() {
       router.go(RoutePaths.healthConsent);
       await tester.pumpAndSettle();
       expect(_currentPath(container), RoutePaths.welcome);
+    });
+
+    testWidgets('a user who just registered is not gated', (tester) async {
+      // The wizard's chip steps need more room than the 800x600 default.
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final profiles = FakeProfileRepository();
+      final container = await _pumpHost(
+        tester,
+        _overrides(signedIn: false, profiles: profiles),
+      );
+      container.read(routerProvider).go(RoutePaths.registration);
+      await tester.pumpAndSettle();
+
+      await advanceToAuthStep(tester);
+      await tester.enterText(
+        find.byKey(AuthStep.emailFieldKey),
+        'new@example.com',
+      );
+      await tester.enterText(
+        find.byKey(BbPasswordField.passwordFieldKey),
+        'TestPassword123',
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(AuthStep.submitButtonKey));
+      await tester.pumpAndSettle();
+
+      final stored = profiles.storedProfile!;
+      expect(stored.healthConsentAt, isNotNull);
+      expect(stored.privacyPolicyVersion, AppConstants.privacyPolicyVersion);
+      expect(container.read(healthConsentRequiredProvider), isFalse);
+      expect(_currentPath(container), RoutePaths.dashboard);
+      expect(find.byType(HealthConsentScreen), findsNothing);
     });
 
     testWidgets('signing out from the consent screen reaches sign-in', (

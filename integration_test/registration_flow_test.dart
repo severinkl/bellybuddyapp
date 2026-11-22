@@ -13,21 +13,6 @@ import '../test/helpers/fakes.dart';
 import '../test/helpers/registration_driver.dart';
 import 'helpers/test_app.dart';
 
-/// A freshly registered profile has no health-data consent, so the router
-/// sends the user to the consent screen first. Ticks the checkbox and
-/// accepts, which continues to the dashboard.
-Future<void> _acceptHealthConsent(WidgetTester tester) async {
-  expect(find.byType(HealthConsentScreen), findsOneWidget);
-  final checkbox = find.byKey(HealthConsentScreen.consentCheckboxKey);
-  await tester.ensureVisible(checkbox);
-  await tester.tap(checkbox);
-  await tester.pump();
-  final accept = find.byKey(HealthConsentScreen.acceptButtonKey);
-  await tester.ensureVisible(accept);
-  await tester.tap(accept);
-  await tester.pumpAndSettle();
-}
-
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -94,7 +79,9 @@ void main() {
       await tester.tap(submitButton);
       await tester.pumpAndSettle(); // Wait for async operations to complete
 
-      await _acceptHealthConsent(tester);
+      // The consent given in the wizard is stored with the profile, so the
+      // post-login consent gate does not appear.
+      expect(find.byType(HealthConsentScreen), findsNothing);
 
       // After successful registration, user should be navigated to the main app (bottom nav should be visible)
       expect(find.byKey(BbBottomNav.centerButtonKey), findsOneWidget);
@@ -158,7 +145,9 @@ void main() {
       await tester.tap(find.byKey(EmailCaptureStep.submitButtonKey));
       await tester.pumpAndSettle();
 
-      await _acceptHealthConsent(tester);
+      // The consent given in the wizard is stored with the profile, so the
+      // post-login consent gate does not appear.
+      expect(find.byType(HealthConsentScreen), findsNothing);
 
       // Dashboard reached.
       expect(find.byKey(BbBottomNav.navHomeKey), findsOneWidget);

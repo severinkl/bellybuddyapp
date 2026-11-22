@@ -16,6 +16,7 @@ import 'steps/auth_step.dart';
 import 'steps/email_capture_step.dart';
 import 'steps/birth_year_step.dart';
 import 'steps/gender_step.dart';
+import 'steps/health_consent_step.dart';
 import 'steps/height_weight_step.dart';
 import 'steps/diet_step.dart';
 import 'steps/symptoms_step.dart';
@@ -39,7 +40,19 @@ class _RegistrationWizardScreenState
   bool _isSaving = false;
   String? _authError;
 
+  // Wizard page indices. The health consent comes first so no health data
+  // is collected before the user has explicitly consented (GDPR Art. 9).
+  static const _consentStep = 0;
+  static const _genderStep = 2;
+  static const _dietStep = 4;
+  static const _authStep = 7;
+  static const _emailCaptureStep = 8;
+
   // Form state
+  bool _healthConsentChecked = false;
+  // Set when the user advances past the consent step with the box ticked;
+  // written to the profile together with the policy version.
+  DateTime? _healthConsentAt;
   int _birthYear = 1985;
   String? _gender;
   int _height = 170;
@@ -49,9 +62,9 @@ class _RegistrationWizardScreenState
   List<String> _intolerances = [];
   Map<String, List<String>> _triggers = {};
 
-  // Dynamic: the 8th step is only present for OAuth sign-ins that didn't
-  // return a usable real email (Apple Hide-My-Email or empty).
-  int get _totalSteps => _showEmailCapture ? 8 : 7;
+  // Dynamic: the email-capture step is only present for OAuth sign-ins that
+  // didn't return a usable real email (Apple Hide-My-Email or empty).
+  int get _totalSteps => _showEmailCapture ? 9 : 8;
 
   bool _showEmailCapture = false;
   String? _capturedEmail;
@@ -67,8 +80,9 @@ class _RegistrationWizardScreenState
 
   bool get _canAdvance {
     return switch (_currentStep) {
-      1 => _gender != null, // Gender is mandatory
-      3 => _diet != null, // Diet is mandatory
+      _consentStep => _healthConsentChecked, // Explicit consent is mandatory
+      _genderStep => _gender != null, // Gender is mandatory
+      _dietStep => _diet != null, // Diet is mandatory
       _ => true,
     };
   }
@@ -76,6 +90,9 @@ class _RegistrationWizardScreenState
   void _next() {
     if (_currentStep < _totalSteps - 1 && _canAdvance) {
       HapticService.light();
+      if (_currentStep == _consentStep) {
+        _healthConsentAt = DateTime.now().toUtc();
+      }
       _goToStep(_currentStep + 1);
     }
   }
@@ -112,6 +129,12 @@ class _RegistrationWizardScreenState
       lactoseTriggers: _triggers['Laktose'] ?? [],
       histaminTriggers: _triggers['Histamin'] ?? [],
       email: email,
+      // Normally always set (the consent step gates the wizard). If it ever
+      // isn't, both stay null and the post-login consent gate asks instead.
+      healthConsentAt: _healthConsentAt,
+      privacyPolicyVersion: _healthConsentAt == null
+          ? null
+          : AppConstants.privacyPolicyVersion,
     );
     await ref.read(profileProvider.notifier).createProfile(profile);
   }
@@ -194,11 +217,11 @@ class _RegistrationWizardScreenState
     final user = ref.read(authRepositoryProvider).currentUser;
     if (_needsEmailCapture(user)) {
       setState(() => _showEmailCapture = true);
-      // Defer _goToStep until after the rebuild that materialises the 8th
-      // PageView child; animating to an index that doesn't exist yet is
-      // undefined behaviour.
+      // Defer _goToStep until after the rebuild that materialises the
+      // email-capture PageView child; animating to an index that doesn't
+      // exist yet is undefined behaviour.
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) _goToStep(7);
+        if (mounted) _goToStep(_emailCaptureStep);
       });
       return;
     }
@@ -277,6 +300,10 @@ class _RegistrationWizardScreenState
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
+                  HealthConsentStep(
+                    checked: _healthConsentChecked,
+                    onChanged: (v) => setState(() => _healthConsentChecked = v),
+                  ),
                   BirthYearStep(
                     value: _birthYear,
                     onChanged: (v) => setState(() => _birthYear = v),
@@ -331,7 +358,7 @@ class _RegistrationWizardScreenState
               ),
             ),
             // Next button — only shown on pre-auth pages (not AuthStep, not EmailCaptureStep)
-            if (_currentStep < 6)
+            if (_currentStep < _authStep)
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppConstants.spacingLg,
@@ -344,7 +371,7 @@ class _RegistrationWizardScreenState
                 ),
               ),
             // Back button — shown everywhere except on EmailCaptureStep
-            if (_currentStep < 7)
+            if (_currentStep < _emailCaptureStep)
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AppConstants.spacingLg,
