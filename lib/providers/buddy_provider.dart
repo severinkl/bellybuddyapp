@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../config/constants.dart';
 import '../models/buddy_state.dart';
+import '../repositories/auth_repository.dart';
 import '../repositories/buddy_repository.dart';
 import '../repositories/entry_repository.dart';
 import '../services/buddy/streak_engine.dart';
@@ -158,7 +159,11 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
     String action,
     BuddyState Function(BuddyState current) change,
   ) {
-    final userId = ref.read(currentUserIdProvider);
+    // Right after sign-up the reactive user id can lag behind the auth
+    // repository (like ProfileNotifier, fall back to its current user).
+    final userId =
+        ref.read(currentUserIdProvider) ??
+        ref.read(authRepositoryProvider).currentUser?.id;
     if (userId == null) {
       return Future<void>.error(StateError('$action: not signed in'));
     }

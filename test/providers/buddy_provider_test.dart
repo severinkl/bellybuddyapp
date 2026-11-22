@@ -7,10 +7,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
+import 'package:belly_buddy/repositories/auth_repository.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 
 import '../helpers/fakes.dart';
+import '../helpers/fixtures.dart';
 import '../helpers/riverpod_helpers.dart';
 
 /// Switchable signed-in user for the user-switch tests.
@@ -268,6 +270,24 @@ void main() {
       await expectLater(notifier.setName('   '), throwsArgumentError);
       await expectLater(notifier.setName('a' * 21), throwsArgumentError);
       expect(buddyRepo.saveCount, 0);
+    });
+
+    test('uses the auth repository\'s user while the user id lags', () async {
+      // Right after sign-up the reactive user id can still be null while the
+      // auth repository already has the new user.
+      final c = createContainer(
+        overrides: [
+          buddyRepositoryProvider.overrideWithValue(buddyRepo),
+          entryRepositoryProvider.overrideWithValue(entryRepo),
+          authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
+          currentUserIdProvider.overrideWithValue(null),
+          buddyTodayProvider.overrideWithValue(() => now),
+        ],
+      );
+
+      await c.read(buddyProvider.notifier).setName('Bauchi');
+
+      expect(buddyRepo.store[testUserId]!.name, 'Bauchi');
     });
 
     test('20 characters are accepted', () async {
