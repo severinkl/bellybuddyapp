@@ -53,6 +53,7 @@ class AppConstants {
 
   // Border widths
   static const double borderWidthMd = 1.5;
+  static const double borderWidthLg = 2.0;
 
   // Drag handle
   static const double dragHandleWidth = 40.0;
