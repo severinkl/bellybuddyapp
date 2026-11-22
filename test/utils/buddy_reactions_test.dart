@@ -47,6 +47,13 @@ void main() {
     }
   });
 
+  test('{name} only appears in name:confirmed', () {
+    for (final e in kWizardReactions.entries) {
+      final has = e.value.lines.any((l) => l.contains('{name}'));
+      expect(has, e.key == 'name:confirmed', reason: e.key);
+    }
+  });
+
   test('wizardKey builds keys', () {
     expect(wizardKey('gender', 'weiblich'), 'gender:weiblich');
     expect(wizardKey('birthYear'), 'birthYear:any');
