@@ -11,11 +11,16 @@ void main() {
     Future<List<String>> pumpStep(
       WidgetTester tester, {
       String value = 'Buddy',
+      VoidCallback? onSubmitted,
     }) async {
       final changes = <String>[];
       await tester.pumpWithProviders(
         Scaffold(
-          body: BuddyNameStep(value: value, onChanged: changes.add),
+          body: BuddyNameStep(
+            value: value,
+            onChanged: changes.add,
+            onSubmitted: onSubmitted,
+          ),
         ),
       );
       return changes;
@@ -48,6 +53,16 @@ void main() {
       await tester.enterText(find.byKey(BuddyNameStep.fieldKey), 'Bauchi');
 
       expect(changes.last, 'Bauchi');
+    });
+
+    testWidgets('the keyboard\'s done action submits', (tester) async {
+      var submitted = 0;
+      await pumpStep(tester, onSubmitted: () => submitted++);
+
+      await tester.showKeyboard(find.byKey(BuddyNameStep.fieldKey));
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+
+      expect(submitted, 1);
     });
 
     testWidgets('limits the name length and capitalizes words', (tester) async {

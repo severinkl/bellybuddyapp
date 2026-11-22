@@ -8,16 +8,19 @@ import '../../../config/constants.dart';
 /// and the „Weiter" button, and validates the name (trimmed, not empty).
 ///
 /// [value] is only the initial text; later changes come from the field and
-/// are reported through [onChanged].
+/// are reported through [onChanged]. [onSubmitted] runs on the keyboard's
+/// done action (hosts wire it to their „Weiter").
 class BuddyNameStep extends StatelessWidget {
   const BuddyNameStep({
     super.key,
     required this.value,
     required this.onChanged,
+    this.onSubmitted,
   });
 
   final String value;
   final ValueChanged<String> onChanged;
+  final VoidCallback? onSubmitted;
 
   static const titleKey = Key('buddy_name_step_title');
   static const fieldKey = Key('buddy_name_field');
@@ -48,6 +51,7 @@ class BuddyNameStep extends StatelessWidget {
           autocorrect: false,
           decoration: const InputDecoration(labelText: 'Name'),
           onChanged: onChanged,
+          onFieldSubmitted: (_) => onSubmitted?.call(),
         ),
       ],
     );

@@ -80,6 +80,29 @@ class _FakeMealTracker extends ConsumerWidget {
             child: const Text('fake-save-meal'),
           ),
           TextButton(
+            onPressed: () {
+              final events = ref.read(buddyEventsProvider.notifier);
+              events.emit(
+                BuddyLogEvent(
+                  EntryKind.meal,
+                  LogSentiment.good,
+                  at: DateTime.now(),
+                ),
+              );
+              // The success screen's „Getränk hinzufügen": the drink event
+              // replaces the meal in the single event slot.
+              events.emit(
+                BuddyLogEvent(
+                  EntryKind.drink,
+                  LogSentiment.good,
+                  at: DateTime.now(),
+                ),
+              );
+              context.pop();
+            },
+            child: const Text('fake-meal-then-drink'),
+          ),
+          TextButton(
             onPressed: () => context.pop(),
             child: const Text('fake-cancel'),
           ),
@@ -201,9 +224,13 @@ void main() {
       BuddyState? existingRow,
       Set<DateTime>? activityDays,
       List<Override> extraOverrides = const [],
+      Size screen = const Size(400, 860),
     }) async {
-      await tester.binding.setSurfaceSize(const Size(400, 860));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+      tester.view
+        ..physicalSize = screen
+        ..devicePixelRatio = 1
+        ..padding = const FakeViewPadding(top: 20);
+      addTearDown(tester.view.reset);
 
       final buddyRepo = FakeBuddyRepository();
       if (existingRow != null) buddyRepo.store[testUserId] = existingRow;
@@ -272,6 +299,22 @@ void main() {
       );
       await settle(tester);
       return _Harness(container, buddyRepo, notifications, buddy);
+    }
+
+    /// [finder] lies fully inside the visible area: the screen minus the
+    /// keyboard ([keyboard] px).
+    void expectOnScreen(
+      WidgetTester tester,
+      Finder finder, {
+      double keyboard = 0,
+    }) {
+      final rect = tester.getRect(finder);
+      final visibleBottom = tester.view.physicalSize.height - keyboard;
+      expect(
+        rect.top >= 0 && rect.bottom <= visibleBottom,
+        isTrue,
+        reason: '$finder at $rect, visible down to $visibleBottom',
+      );
     }
 
     Future<bool?> modalShownPref() async =>
@@ -457,6 +500,99 @@ void main() {
       await tester.binding.handlePopRoute();
       await settle(tester);
       expect(find.text(_streakTitle), findsOneWidget);
+    });
+
+    testWidgets('a meal followed by a drink in the tracker still counts', (
+      tester,
+    ) async {
+      await pumpOnboarding(tester, pushEnabled: true);
+      await tapText(tester, '7 Tage');
+
+      await tapKey(tester, BuddyOnboardingScreen.mealLogKey);
+      await tapText(tester, 'fake-meal-then-drink');
+
+      expect(find.text(_giftTitle), findsOneWidget);
+      expect(find.text('Mmmh! Danke!'), findsOneWidget);
+    });
+
+    testWidgets('the keyboard\'s done action confirms the name', (
+      tester,
+    ) async {
+      final h = await pumpOnboarding(tester, entry: BuddyOnboardingEntry.gate);
+      await tapKey(tester, BuddyOnboardingScreen.introNextKey);
+
+      await tester.enterText(find.byKey(BuddyNameStep.fieldKey), 'Bauchi');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await settle(tester);
+
+      expect(h.stored?.name, 'Bauchi');
+      expect(find.text(_streakTitle), findsOneWidget);
+    });
+
+    group('small phone (375×667): actions visible without scrolling', () {
+      const phone = Size(375, 667);
+
+      testWidgets('streak goal, reminder, first meal and the opened gift', (
+        tester,
+      ) async {
+        await pumpOnboarding(tester, screen: phone);
+
+        for (final goal in ['7 Tage', '14 Tage', '30 Tage']) {
+          expectOnScreen(tester, find.text(goal));
+        }
+        await tester.tap(find.text('7 Tage'));
+        await settle(tester);
+
+        expectOnScreen(
+          tester,
+          find.byKey(BuddyOnboardingScreen.reminderYesKey),
+        );
+        expectOnScreen(
+          tester,
+          find.byKey(BuddyOnboardingScreen.reminderLaterKey),
+        );
+        await tester.tap(find.byKey(BuddyOnboardingScreen.reminderLaterKey));
+        await settle(tester);
+
+        expectOnScreen(tester, find.byKey(BuddyOnboardingScreen.mealLogKey));
+        expectOnScreen(tester, find.byKey(BuddyOnboardingScreen.mealLaterKey));
+        await tester.tap(find.byKey(BuddyOnboardingScreen.mealLaterKey));
+        await settle(tester);
+
+        expectOnScreen(tester, find.byKey(GiftReveal.boxKey));
+        await tester.tap(find.byKey(GiftReveal.boxKey));
+        await settle(tester);
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(tester.takeException(), isNull);
+        expectOnScreen(tester, find.byKey(BuddyOnboardingScreen.finishKey));
+      });
+
+      testWidgets('intro and name, also above the keyboard', (tester) async {
+        await pumpOnboarding(
+          tester,
+          entry: BuddyOnboardingEntry.gate,
+          screen: phone,
+        );
+
+        expectOnScreen(tester, find.byKey(BuddyOnboardingScreen.introNextKey));
+        await tester.tap(find.byKey(BuddyOnboardingScreen.introNextKey));
+        await settle(tester);
+
+        expectOnScreen(tester, find.byKey(BuddyOnboardingScreen.nameNextKey));
+
+        const keyboard = 260.0;
+        await tester.tap(find.byKey(BuddyNameStep.fieldKey));
+        tester.view.viewInsets = const FakeViewPadding(bottom: keyboard);
+        await settle(tester);
+
+        expect(tester.takeException(), isNull);
+        expectOnScreen(
+          tester,
+          find.byKey(BuddyOnboardingScreen.nameNextKey),
+          keyboard: keyboard,
+        );
+      });
     });
 
     testWidgets('reduced motion: the whole walk completes', (tester) async {

@@ -92,18 +92,22 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
 
   /// The stage never takes more than this share of the height (small
   /// screens, open keyboard), so the step content keeps room.
-  static const double _maxStageShare = 0.4;
+  static const double _maxStageShare = 0.33;
 
   final BuddyController _buddy = BuddyController();
   final math.Random _rnd = math.Random();
+  final ScrollController _scroll = ScrollController();
+
+  /// The Streak-Saver text, scrolled into view once the gift is open.
+  final GlobalKey _giftTextKey = GlobalKey();
 
   /// Fixed once the Buddy and the profile have loaded.
   List<BuddyOnboardingStep>? _steps;
   int _index = 0;
   String _name = 'Buddy';
 
-  /// When the current step appeared; a meal logged since then counts.
-  DateTime _stepStartedAt = DateTime.now();
+  /// A meal was logged while the first-meal step showed.
+  bool _mealLogged = false;
 
   /// A step action is running (saving, permission dialog, meal tracker).
   bool _busy = false;
@@ -114,6 +118,20 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
   BuddyOnboardingStep get _step => _steps![_index];
 
   @override
+  void initState() {
+    super.initState();
+    // Listen rather than read the single event slot after the tracker pops:
+    // a drink logged from the meal's success screen replaces the meal there.
+    ref.listenManual(buddyEventsProvider, (_, event) {
+      if (event?.kind == EntryKind.meal &&
+          _steps != null &&
+          _step == BuddyOnboardingStep.firstMeal) {
+        _mealLogged = true;
+      }
+    });
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     _calm = MediaQuery.disableAnimationsOf(context);
@@ -121,6 +139,7 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
 
   @override
   void dispose() {
+    _scroll.dispose();
     _buddy.dispose();
     super.dispose();
   }
@@ -156,6 +175,7 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
 
   void _goTo(int index) {
     setState(() => _index = index);
+    if (_scroll.hasClients) _scroll.jumpTo(0);
     _enter(_steps![index]);
   }
 
@@ -172,7 +192,7 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
 
   /// Sets the Buddy up for [step].
   void _enter(BuddyOnboardingStep step) {
-    _stepStartedAt = DateTime.now();
+    _mealLogged = false;
     switch (step) {
       case BuddyOnboardingStep.intro:
         _buddy
@@ -303,18 +323,11 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
 
   Future<void> _logMeal() async {
     if (!_ready(BuddyOnboardingStep.firstMeal)) return;
-    final since = _stepStartedAt;
     _setBusy(true);
     await context.push<void>(RoutePaths.mealTracker);
     if (!mounted) return;
     _setBusy(false);
-    // Peek only: the event stays for whoever shows it next.
-    final event = ref.read(buddyEventsProvider);
-    final logged =
-        event != null &&
-        event.kind == EntryKind.meal &&
-        !event.at.isBefore(since);
-    if (!logged || _step != BuddyOnboardingStep.firstMeal) return;
+    if (!_mealLogged || _step != BuddyOnboardingStep.firstMeal) return;
     _advance();
     _buddy
       ..mood = BuddyMood.happy
@@ -333,6 +346,16 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
       ..mood = BuddyMood.inLove
       ..play(BuddyAction.celebrate);
     _completion = _complete();
+    // Small screens: bring the Streak-Saver text into view.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final text = _giftTextKey.currentContext;
+      if (!mounted || text == null) return;
+      Scrollable.ensureVisible(
+        text,
+        duration: _calm ? Duration.zero : AppConstants.animMedium,
+        alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+      );
+    });
   }
 
   /// Completes the onboarding and grants the gift saver; false on failure.
@@ -404,7 +427,10 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
       AppConstants.buddyOnboardingStageHeight,
       height * _maxStageShare,
     );
+    final switchDuration = _calm ? Duration.zero : AppConstants.animMedium;
+    final actions = _buildActions(_step);
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AppConstants.gap16,
         _ProgressDots(count: steps.length, index: _index, calm: _calm),
@@ -417,48 +443,54 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
         ),
         Expanded(
           child: SingleChildScrollView(
+            controller: _scroll,
             padding: const EdgeInsets.fromLTRB(
               AppConstants.spacingLg,
               AppConstants.spacingSm,
               AppConstants.spacingLg,
-              AppConstants.spacingLg,
+              AppConstants.spacingMd,
             ),
             child: AnimatedSwitcher(
-              duration: _calm ? Duration.zero : AppConstants.animMedium,
+              duration: switchDuration,
               child: KeyedSubtree(
                 key: ValueKey(_step),
-                child: _buildStep(_step, status),
+                child: _buildContent(_step, status),
               ),
             ),
+          ),
+        ),
+        // The step's actions never scroll away; the Scaffold keeps them
+        // above the keyboard.
+        AnimatedSwitcher(
+          duration: switchDuration,
+          child: KeyedSubtree(
+            key: ValueKey((_step, _giftOpened)),
+            child: actions.isEmpty
+                ? const SizedBox.shrink()
+                : Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppConstants.spacingLg,
+                      AppConstants.spacingSm,
+                      AppConstants.spacingLg,
+                      AppConstants.spacingMd,
+                    ),
+                    child: _StepColumn(children: actions),
+                  ),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildStep(BuddyOnboardingStep step, BuddyStatus? status) {
+  /// What the step shows below the Buddy (scrolls when tight).
+  Widget _buildContent(BuddyOnboardingStep step, BuddyStatus? status) {
     return switch (step) {
-      BuddyOnboardingStep.intro => BbButton(
-        key: BuddyOnboardingScreen.introNextKey,
-        label: 'Weiter',
-        icon: Icons.arrow_forward,
-        onPressed: _introNext,
-      ),
-      BuddyOnboardingStep.name => _StepColumn(
-        children: [
-          BuddyNameStep(
-            value: _name,
-            onChanged: (v) => setState(() => _name = v),
-          ),
-          AppConstants.gap16,
-          BbButton(
-            key: BuddyOnboardingScreen.nameNextKey,
-            label: 'Weiter',
-            icon: Icons.arrow_forward,
-            isLoading: _busy,
-            onPressed: _nameValid ? _confirmName : null,
-          ),
-        ],
+      // The Buddy's greeting is the whole content.
+      BuddyOnboardingStep.intro => const SizedBox.shrink(),
+      BuddyOnboardingStep.name => BuddyNameStep(
+        value: _name,
+        onChanged: (v) => setState(() => _name = v),
+        onSubmitted: _confirmName,
       ),
       BuddyOnboardingStep.streakGoal => _StepColumn(
         children: [
@@ -470,38 +502,11 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
           ),
         ],
       ),
-      BuddyOnboardingStep.reminder => _StepColumn(
-        children: [
-          const _StepTitle('Darf ich dich erinnern, wenn ich Hunger habe?'),
-          AppConstants.gap24,
-          BbButton(
-            key: BuddyOnboardingScreen.reminderYesKey,
-            label: 'Ja, gerne',
-            isLoading: _busy,
-            onPressed: _remindersYes,
-          ),
-          AppConstants.gap8,
-          _LaterButton(
-            key: BuddyOnboardingScreen.reminderLaterKey,
-            onPressed: _busy ? null : _remindersLater,
-          ),
-        ],
+      BuddyOnboardingStep.reminder => const _StepTitle(
+        'Darf ich dich erinnern, wenn ich Hunger habe?',
       ),
-      BuddyOnboardingStep.firstMeal => _StepColumn(
-        children: [
-          const _StepTitle('Ich hab Hunger! Was hast du zuletzt gegessen?'),
-          AppConstants.gap24,
-          BbButton(
-            key: BuddyOnboardingScreen.mealLogKey,
-            label: 'Mahlzeit eintragen',
-            onPressed: _busy ? null : _logMeal,
-          ),
-          AppConstants.gap8,
-          _LaterButton(
-            key: BuddyOnboardingScreen.mealLaterKey,
-            onPressed: _busy ? null : _mealLater,
-          ),
-        ],
+      BuddyOnboardingStep.firstMeal => const _StepTitle(
+        'Ich hab Hunger! Was hast du zuletzt gegessen?',
       ),
       BuddyOnboardingStep.gift => _StepColumn(
         children: [
@@ -510,25 +515,78 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
           Center(child: GiftReveal(onOpened: _onGiftOpened)),
           if (_giftOpened) ...[
             AppConstants.gap16,
-            const Text(
+            Text(
+              key: _giftTextKey,
               'Ein Streak-Saver! Der rettet unseren Streak, falls du mal '
               'einen Tag vergisst.',
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: AppTheme.fontSizeBodyLG,
                 color: AppTheme.foreground,
               ),
             ),
-            AppConstants.gap24,
-            BbButton(
-              key: BuddyOnboardingScreen.finishKey,
-              label: "Los geht's",
-              isLoading: _busy,
-              onPressed: _finish,
-            ),
           ],
         ],
       ),
+    };
+  }
+
+  /// The step's buttons for the fixed bottom slot; empty when the content
+  /// itself is the action (goal cards, the closed gift).
+  List<Widget> _buildActions(BuddyOnboardingStep step) {
+    return switch (step) {
+      BuddyOnboardingStep.intro => [
+        BbButton(
+          key: BuddyOnboardingScreen.introNextKey,
+          label: 'Weiter',
+          icon: Icons.arrow_forward,
+          onPressed: _introNext,
+        ),
+      ],
+      BuddyOnboardingStep.name => [
+        BbButton(
+          key: BuddyOnboardingScreen.nameNextKey,
+          label: 'Weiter',
+          icon: Icons.arrow_forward,
+          isLoading: _busy,
+          onPressed: _nameValid ? _confirmName : null,
+        ),
+      ],
+      BuddyOnboardingStep.streakGoal => const [],
+      BuddyOnboardingStep.reminder => [
+        BbButton(
+          key: BuddyOnboardingScreen.reminderYesKey,
+          label: 'Ja, gerne',
+          isLoading: _busy,
+          onPressed: _remindersYes,
+        ),
+        AppConstants.gap8,
+        _LaterButton(
+          key: BuddyOnboardingScreen.reminderLaterKey,
+          onPressed: _busy ? null : _remindersLater,
+        ),
+      ],
+      BuddyOnboardingStep.firstMeal => [
+        BbButton(
+          key: BuddyOnboardingScreen.mealLogKey,
+          label: 'Mahlzeit eintragen',
+          onPressed: _busy ? null : _logMeal,
+        ),
+        AppConstants.gap8,
+        _LaterButton(
+          key: BuddyOnboardingScreen.mealLaterKey,
+          onPressed: _busy ? null : _mealLater,
+        ),
+      ],
+      BuddyOnboardingStep.gift => [
+        if (_giftOpened)
+          BbButton(
+            key: BuddyOnboardingScreen.finishKey,
+            label: "Los geht's",
+            isLoading: _busy,
+            onPressed: _finish,
+          ),
+      ],
     };
   }
 }
