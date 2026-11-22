@@ -130,9 +130,11 @@ String moodLine(
   BuddyMood mood, {
   required String name,
   required int streak,
+  required DateTime now,
   required Random rnd,
-}) => BuddyCopy.fill(
-  BuddyCopy.pick(BuddyCopy.mood[mood]!, rnd),
-  name: name,
-  streak: streak,
-);
+}) {
+  final pool = mood == BuddyMood.sleepy && now.hour >= 10
+      ? BuddyCopy.sleepyNight
+      : BuddyCopy.mood[mood]!;
+  return BuddyCopy.fill(BuddyCopy.pick(pool, rnd), name: name, streak: streak);
+}

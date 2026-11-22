@@ -144,11 +144,37 @@ void main() {
     test('every mood has a line without leftover placeholders', () {
       for (final m in BuddyMood.values) {
         for (var i = 0; i < 20; i++) {
-          final line = moodLine(m, name: 'Bubu', streak: 4, rnd: Random(i));
+          final line = moodLine(
+            m,
+            name: 'Bubu',
+            streak: 4,
+            now: at(9),
+            rnd: Random(i),
+          );
           expect(line, isNotEmpty);
           expect(line, isNot(contains('{')));
         }
       }
+    });
+
+    test('sleepy splits morning and night lines', () {
+      Set<String> lines(DateTime now) => {
+        for (var i = 0; i < 40; i++)
+          moodLine(
+            BuddyMood.sleepy,
+            name: 'Bubu',
+            streak: 1,
+            now: now,
+            rnd: Random(i),
+          ),
+      };
+      final morning = lines(at(8));
+      final night = lines(at(23));
+      expect(morning.any((l) => l.contains('Guten Morgen')), isTrue);
+      expect(morning.any((l) => l.contains('Gute Nacht')), isFalse);
+      expect(night.any((l) => l.contains('Gute Nacht')), isTrue);
+      expect(night.any((l) => l.contains('Guten Morgen')), isFalse);
+      expect(night.every((l) => !l.contains('{')), isTrue);
     });
   });
 }

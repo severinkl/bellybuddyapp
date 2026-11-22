@@ -29,7 +29,7 @@ class BuddyCopy {
   static const toiletBad = [
     'Oh nein … ich drück dich. Danke, dass du es eingetragen hast.',
     'Das klingt nicht so schön. Ich bin bei dir.',
-    'Kopf hoch, {name} ist da. Gut, dass du es notierst.',
+    'Kopf hoch – ich bin da. Gut, dass du es notierst.',
   ];
 
   static const gutGood = [
@@ -41,7 +41,7 @@ class BuddyCopy {
   static const gutNeutral = [
     'Okay, notiert. Geht ja schon mal!',
     'Danke fürs Eintragen – weiter so!',
-    'Ein Tag wie jeder andere – ich bin trotzdem stolz auf dich.',
+    'Ein ganz normaler Bauchtag – und du hast dran gedacht. Stark!',
   ];
 
   static const gutBad = [
@@ -53,7 +53,7 @@ class BuddyCopy {
   static const Map<BuddyMood, List<String>> mood = {
     BuddyMood.happy: [
       'Mir geht es richtig gut, danke, dass du dich kümmerst!',
-      'Schön, dass du da bist, {name} freut sich!',
+      'Schön, dass du da bist – ich freu mich!',
       'Heute läuft es rund – {streak} Tage in Folge!',
     ],
     BuddyMood.nervous: [
@@ -63,12 +63,12 @@ class BuddyCopy {
     ],
     BuddyMood.sad: [
       'Ich bin ein bisschen traurig heute …',
-      'Ein Eintrag würde mich aufmuntern.',
+      'Ich freu mich über jeden Eintrag, wann immer du magst.',
       'Magst du mir erzählen, wie es dir geht?',
     ],
     BuddyMood.inLove: [
       'Ich hab dich so lieb!',
-      'Du bist die Beste – oder der Beste!',
+      'Du bist mein Lieblingsmensch!',
       'Herzchen im Bauch, überall Herzchen!',
     ],
     BuddyMood.zen: [
@@ -89,7 +89,7 @@ class BuddyCopy {
     BuddyMood.sleepy: [
       'Guten Morgen … *gähn*',
       'Ich bin noch müde … *gähn*',
-      'Zzz … ach, du bist es, {name} ist wach!',
+      'Zzz … oh, du bist da! Ich bin schon wach!',
     ],
     BuddyMood.empathetic: [
       'Ich bin für dich da.',
@@ -97,6 +97,13 @@ class BuddyCopy {
       'Du musst nicht alles allein tragen.',
     ],
   };
+
+  /// Sleepy lines for late evening / night (hour >= 10).
+  static const sleepyNight = [
+    'Schon spät … *gähn* Gute Nacht bald?',
+    'Mir fallen die Augen zu … *gähn*',
+    '{name} meldet sich zum Schlafengehen … *gähn*',
+  ];
 
   static String pick(List<String> pool, Random rnd) =>
       pool[rnd.nextInt(pool.length)];
