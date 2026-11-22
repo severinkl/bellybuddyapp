@@ -31,7 +31,7 @@ void main() {
   });
 
   test('presets are pairwise distinct', () {
-    final v = BuddyMood.values;
+    const v = BuddyMood.values;
     for (var i = 0; i < v.length; i++) {
       for (var j = i + 1; j < v.length; j++) {
         expect(
