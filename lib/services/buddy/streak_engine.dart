@@ -15,6 +15,11 @@ const int streakMilestoneDays = 7;
 /// deleted or moved, then restored) from paying its milestones again.
 const int _saverCooldownDays = streakMilestoneDays;
 
+/// Saved days older than this (and not part of the current run) are
+/// dropped from `savedDays`: the backend caps the list at 400 entries, and
+/// such days no longer affect refunds or the streak.
+const int _savedDaysRetentionDays = 365;
+
 /// A run must be at least this long to be "saved" by savers or reported as
 /// broken.
 const int _minRunToProtect = 2;
@@ -107,6 +112,8 @@ class StreakEvaluation {
 ///    (an entry deleted, then restored) re-crosses its milestones; the
 ///    7-day limit keeps that from paying again.
 /// 5. A reached streak goal is cleared.
+/// 6. Saved days more than 365 days before [today] that the current run
+///    doesn't reach are dropped (never while the window is reached).
 ///
 /// With [initialize] (a freshly created `buddy_state` row for an existing
 /// user), `lastMilestone` is set to the current milestone without rewards.
@@ -210,7 +217,19 @@ StreakEvaluation evaluateStreak({
   final goal = state.streakGoal;
   final goalReached = goal != null && streak >= goal;
 
-  final savedDays = refunded.isEmpty && consumed.isEmpty
+  // 7. Drop saved days that can no longer matter. A run longer than a year
+  //    keeps the ones it walks through.
+  var keepFrom = addDays(day0, -_savedDaysRetentionDays);
+  if (streak > 0) {
+    final runStart = addDays(anchor, 1 - streak);
+    if (runStart.isBefore(keepFrom)) keepFrom = runStart;
+  }
+  final expired = reachesWindow
+      ? const <DateTime>{}
+      : saved.where((day) => day.isBefore(keepFrom)).toSet();
+  saved.removeAll(expired);
+
+  final savedDays = refunded.isEmpty && consumed.isEmpty && expired.isEmpty
       ? state.savedDays
       : (saved.toList()..sort());
 

@@ -321,6 +321,44 @@ void main() {
       todayCounted: true,
     ),
 
+    // --- Pruning (the backend caps saved_days at 400) ---
+    _Case(
+      'saved day more than 365 days ago, outside the current run → dropped',
+      activity: span(nov(20), nov(22)),
+      state: BuddyState(savedDays: [DateTime(2025, 11, 1), nov(10)]),
+      streak: 3,
+      todayCounted: true,
+      next: BuddyState(savedDays: [nov(10)]),
+    ),
+    _Case(
+      'saved day 366 days ago → dropped',
+      activity: span(nov(20), nov(22)),
+      state: BuddyState(savedDays: [DateTime(2025, 11, 21)]),
+      streak: 3,
+      todayCounted: true,
+      next: const BuddyState(),
+    ),
+    _Case(
+      'saved day exactly 365 days ago → kept',
+      activity: span(nov(20), nov(22)),
+      state: BuddyState(savedDays: [DateTime(2025, 11, 22)]),
+      streak: 3,
+      todayCounted: true,
+    ),
+    _Case(
+      'old saved day dropped while a gap is filled → only the new one kept',
+      activity: {...span(nov(16), nov(20)), nov(22)},
+      state: BuddyState(
+        savers: 1,
+        savedDays: [DateTime(2025, 1, 5)],
+        lastMilestone: 7,
+      ),
+      streak: 7,
+      todayCounted: true,
+      consumed: [nov(21)],
+      next: BuddyState(savedDays: [nov(21)], lastMilestone: 7),
+    ),
+
     // --- Milestones ---
     _Case(
       '10 consecutive days incl. today → milestone 7 earns a saver',
@@ -768,6 +806,42 @@ void main() {
       expect(result.next.savers, 0);
       expect(result.next.lastSaverEarnedOn, isNull);
       expect(result.next.lastMilestone, 35);
+    });
+
+    test('a saved day older than a year inside the current run is kept', () {
+      // Run since 1.10.2025 with 1.11.2025 saved: longer than a year.
+      final saved = DateTime(2025, 11, 1);
+      final run = span(DateTime(2025, 10, 1), nov(22));
+      final state = BuddyState(savedDays: [saved], lastMilestone: 413);
+
+      final result = _eval(
+        run.difference({saved}),
+        state,
+        windowStart: DateTime(2025, 6, 1),
+      );
+
+      expect(result.reachesWindow, isFalse);
+      expect(result.streak, run.length);
+      expect(result.next.savedDays, [saved]);
+      expect(result.changed, isFalse);
+    });
+
+    test('nothing is pruned while the streak reaches the window', () {
+      final saved = DateTime(2025, 11, 1);
+      final run = span(DateTime(2025, 10, 1), nov(22));
+      final state = BuddyState(savedDays: [saved], lastMilestone: 413);
+
+      // The default 120-day window truncates the run.
+      final truncated = _eval(
+        run
+            .difference({saved})
+            .where((d) => !d.isBefore(window120(nov(22))))
+            .toSet(),
+        state,
+      );
+
+      expect(truncated.reachesWindow, isTrue);
+      expect(truncated.next.savedDays, [saved]);
     });
 
     test('reachesWindow → re-evaluating the ORIGINAL state with a larger '
