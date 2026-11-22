@@ -38,9 +38,9 @@ class _BlockingBuddyRepository extends FakeBuddyRepository {
   void release() => _gate.complete();
 
   @override
-  Future<BuddyState?> fetch(String userId) async {
+  Future<BuddyState?> fetch(String userId, {bool retry = true}) async {
     await _gate.future;
-    return super.fetch(userId);
+    return super.fetch(userId, retry: retry);
   }
 }
 

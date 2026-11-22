@@ -562,9 +562,13 @@ class FakeBuddyRepository implements BuddyRepository {
   int saveCount = 0;
   bool throwOnFetch = false;
 
+  /// The `retry` argument of every [fetch], in order.
+  final List<bool> fetchRetries = [];
+
   @override
-  Future<BuddyState?> fetch(String userId) async {
+  Future<BuddyState?> fetch(String userId, {bool retry = true}) async {
     fetchCount++;
+    fetchRetries.add(retry);
     if (throwOnFetch) throw Exception('fetch failed');
     return store[userId];
   }

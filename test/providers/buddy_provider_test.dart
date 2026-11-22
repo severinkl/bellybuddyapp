@@ -38,9 +38,9 @@ class _GatedBuddyRepository extends FakeBuddyRepository {
   void release() => _gate?.complete();
 
   @override
-  Future<BuddyState?> fetch(String userId) async {
+  Future<BuddyState?> fetch(String userId, {bool retry = true}) async {
     // Read now, answer late: like a slow request returning old data.
-    final row = await super.fetch(userId);
+    final row = await super.fetch(userId, retry: retry);
     if (_armed) {
       _armed = false;
       await _gate!.future;
@@ -176,6 +176,20 @@ void main() {
         ]);
       },
     );
+
+    test('loads and refreshes retry the read; mutations try once', () async {
+      buddyRepo.store['u1'] = const BuddyState(userId: 'u1');
+      final c = makeContainer();
+      await load(c);
+      final notifier = c.read(buddyProvider.notifier);
+
+      await notifier.refresh();
+      await notifier.setName('Bauchi');
+      await notifier.setStreakGoal(14);
+      await notifier.completeOnboarding();
+
+      expect(buddyRepo.fetchRetries, [true, true, false, false, false]);
+    });
 
     test('refreshes queued behind running work share one fetch', () async {
       final c = makeContainer();

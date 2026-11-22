@@ -22,6 +22,29 @@ void main() {
       expect(await repo.fetch('u1'), isNull);
     });
 
+    test('fetch retries a failing read by default', () async {
+      var calls = 0;
+      when(() => service.fetchByUserId('u1')).thenAnswer((_) async {
+        if (++calls == 1) throw Exception('backend down');
+        return {'user_id': 'u1', 'name': 'Bubu'};
+      });
+
+      // retryAsync waits 2 s before the second attempt.
+      final s = await repo.fetch('u1');
+
+      expect(s!.name, 'Bubu');
+      expect(calls, 2);
+    });
+
+    test('fetch with retry: false fails after one attempt', () async {
+      when(
+        () => service.fetchByUserId('u1'),
+      ).thenAnswer((_) async => throw Exception('backend down'));
+
+      await expectLater(repo.fetch('u1', retry: false), throwsException);
+      verify(() => service.fetchByUserId('u1')).called(1);
+    });
+
     test('fetch parses row', () async {
       when(() => service.fetchByUserId('u1')).thenAnswer(
         (_) async => {

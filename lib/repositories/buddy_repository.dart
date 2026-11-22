@@ -9,7 +9,10 @@ import '../utils/logger.dart';
 import '../utils/retry_helper.dart';
 
 abstract class BuddyRepository {
-  Future<BuddyState?> fetch(String userId);
+  /// The user's row, or null without one. With [retry] (reads) backend
+  /// errors are retried with backoff; mutations pass false so a failing
+  /// write surfaces after one attempt instead of seconds later.
+  Future<BuddyState?> fetch(String userId, {bool retry = true});
   Future<void> save(String userId, BuddyState state);
 }
 
@@ -19,12 +22,11 @@ class SupabaseBuddyRepository implements BuddyRepository {
   SupabaseBuddyRepository(this._service);
 
   @override
-  Future<BuddyState?> fetch(String userId) async {
-    final data = await retryAsync(
-      () => _service.fetchByUserId(userId),
-      log: _log,
-      label: 'fetchBuddyState',
-    );
+  Future<BuddyState?> fetch(String userId, {bool retry = true}) async {
+    Future<Map<String, dynamic>?> load() => _service.fetchByUserId(userId);
+    final data = retry
+        ? await retryAsync(load, log: _log, label: 'fetchBuddyState')
+        : await load();
     if (data == null) return null;
     return BuddyState.fromJson(data);
   }
@@ -49,7 +51,7 @@ class LocalBuddyRepository implements BuddyRepository {
   String _key(String userId) => '${AppConstants.keyBuddyStatePrefix}$userId';
 
   @override
-  Future<BuddyState?> fetch(String userId) async {
+  Future<BuddyState?> fetch(String userId, {bool retry = true}) async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_key(userId));
     if (raw == null) return null;

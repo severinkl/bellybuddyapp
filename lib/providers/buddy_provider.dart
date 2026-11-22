@@ -201,7 +201,8 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
   /// Fetches the row and activity days, evaluates the streak and saves the
   /// result: evaluation changes only for an existing row; with [change] the
   /// changed state, creating the row (initialised at the current milestone,
-  /// no rewards) when missing.
+  /// no rewards) when missing. Reads retry the fetch; a mutation ([change])
+  /// tries once, so a failing write surfaces right away.
   Future<BuddyStatus> _sync(
     String userId, {
     BuddyState Function(BuddyState current)? change,
@@ -216,7 +217,7 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
     );
     final BuddyState? row;
     try {
-      row = await repo.fetch(userId);
+      row = await repo.fetch(userId, retry: change == null);
     } catch (_) {
       firstWindow.ignore();
       rethrow;
