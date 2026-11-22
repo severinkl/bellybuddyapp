@@ -94,6 +94,14 @@ List<Override> _overrides({
   upgradeDecisionProvider.overrideWith((_) => Future.value(decision)),
 ];
 
+/// Signed-out tests start on /welcome, whose hint pulses forever unless
+/// animations are disabled; `pumpAndSettle` needs it steady.
+void _calmWelcome(WidgetTester tester) {
+  tester.platformDispatcher.accessibilityFeaturesTestValue =
+      const FakeAccessibilityFeatures(disableAnimations: true);
+  addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+}
+
 String _currentPath(ProviderContainer container) =>
     container.read(routerProvider).routerDelegate.currentConfiguration.uri.path;
 
@@ -221,6 +229,7 @@ void main() {
     });
 
     testWidgets('signed-out users are not gated', (tester) async {
+      _calmWelcome(tester);
       final container = await _pumpHost(
         tester,
         _overrides(
@@ -254,6 +263,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
+      _calmWelcome(tester);
 
       final profiles = FakeProfileRepository();
       final container = await _pumpHost(

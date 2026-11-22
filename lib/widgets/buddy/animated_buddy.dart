@@ -32,6 +32,13 @@ class AnimatedBuddy extends StatefulWidget {
   /// Whether taps poke / redirect the gaze.
   final bool interactive;
 
+  /// Test seam: while false, newly mounted Buddies render their current
+  /// frame without starting their ticker, so `pumpAndSettle` can settle on
+  /// screens that show one (e.g. the dashboard). Set it in a test directory's
+  /// `flutter_test_config.dart`; never change it in app code.
+  @visibleForTesting
+  static bool tickerEnabled = true;
+
   @override
   State<AnimatedBuddy> createState() => _AnimatedBuddyState();
 }
@@ -46,7 +53,8 @@ class _AnimatedBuddyState extends State<AnimatedBuddy>
   void initState() {
     super.initState();
     _mood = widget.controller.mood;
-    _ticker = createTicker(_onTick)..start();
+    _ticker = createTicker(_onTick);
+    if (AnimatedBuddy.tickerEnabled) _ticker.start();
   }
 
   @override

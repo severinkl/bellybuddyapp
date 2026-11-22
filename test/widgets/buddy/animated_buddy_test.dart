@@ -125,6 +125,27 @@ void main() {
       expect(c.frame.t, t0);
     });
 
+    testWidgets('tickerEnabled = false (test seam) renders without ticking', (
+      tester,
+    ) async {
+      AnimatedBuddy.tickerEnabled = false;
+      addTearDown(() => AnimatedBuddy.tickerEnabled = true);
+      final c = _controller();
+      await _pump(tester, _box(AnimatedBuddy(controller: c)));
+      final t0 = c.frame.t;
+
+      await tester.pumpAndSettle();
+
+      expect(c.frame.t, t0);
+      expect(
+        find.descendant(
+          of: find.byType(AnimatedBuddy),
+          matching: find.byType(CustomPaint),
+        ),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('zero-size constraints render nothing without errors', (
       tester,
     ) async {
