@@ -153,7 +153,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppConstants.spacingLg,
-                    AppConstants.spacingLg,
+                    AppConstants.spacingSm,
                     AppConstants.spacingLg,
                     0,
                   ),

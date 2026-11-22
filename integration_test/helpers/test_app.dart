@@ -5,6 +5,7 @@ import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/splash_screen_provider.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/repositories/repositories.dart';
+import 'package:belly_buddy/widgets/buddy/animated_buddy.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -37,6 +38,10 @@ ProviderScope buildTestApp({
   FakeDrinkRepository? drinkRepo,
   FakeUserRecipeRepository? userRecipeRepo,
 }) {
+  // Animated Buddies (dashboard hero, welcome screen) tick every frame, so
+  // `pumpAndSettle` would never settle: render them without ticking.
+  AnimatedBuddy.tickerEnabled = false;
+
   final fakeProfileRepo = profileRepo ?? FakeProfileRepository();
   if (seedProfile) {
     fakeProfileRepo.seedProfile(testUserProfile());
@@ -111,6 +116,7 @@ ProviderScope buildTestApp({
       notificationRepositoryProvider.overrideWithValue(
         FakeNotificationRepository(),
       ),
+      buddyRepositoryProvider.overrideWithValue(FakeBuddyRepository()),
       splashConfigProvider.overrideWithValue(SplashConfig.test),
     ],
     child: const BellyBuddyApp(),

@@ -42,11 +42,13 @@ _Cue _cueFor(BuddyAnnouncement a) => switch (a) {
 /// tracker.
 ///
 /// The mood follows today's entries (re-derived on every change and every
-/// minute). While visible (`TickerMode` on, i.e. the dashboard is not
-/// covered by another route or tab), the hero picks up a fresh
-/// [BuddyLogEvent] (follow-up line, reloads today's entries) and plays the
-/// Buddy's announcements. Without a Buddy status (loading, error, signed
-/// out) the Buddy still shows, named 'Buddy', without the streak chip.
+/// minute). Everything it says waits until it is visible (`TickerMode` on,
+/// i.e. the dashboard is not under the splash or covered by another route
+/// or tab): the first mood line, the follow-up to a fresh [BuddyLogEvent]
+/// (which also reloads today's entries) and the Buddy's announcements.
+/// Without a Buddy status (loading, error, signed out) the Buddy still
+/// shows, named 'Buddy', without the streak chip. Its height is a share of
+/// the screen height, clamped.
 class BuddyHero extends ConsumerStatefulWidget {
   const BuddyHero({super.key});
 
@@ -94,12 +96,15 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// A log's follow-up is queued and not said yet.
   bool _followUpPending = false;
 
-  /// Whether the first mood line was said (waits for the Buddy status, so
-  /// it uses the real name and streak).
+  /// Whether the first mood line was said (or replaced by announcements).
+  /// Waits for the Buddy status (real name and streak) and visibility.
   bool _greeted = false;
 
   /// `TickerMode` of the hero; null before the first dependency update.
   bool? _visible;
+
+  /// The new-goal sheet is due but the hero was hidden; shown once visible.
+  bool _goalSheetDeferred = false;
 
   /// The local day for which "today counted" was already thanked for or
   /// known before a log, so "Danke! 🔥 …" is said once per day.
@@ -135,6 +140,8 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       _afterFrame(() {
         _consumeEvent();
         _takeAnnouncements();
+        _maybeGreet();
+        if (_goalSheetDeferred) unawaited(_askForNewGoal());
       });
     } else if (_override == BuddyMood.empathetic) {
       // Leaving the dashboard ends this visit's empathy.
@@ -204,10 +211,21 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   /// Says the current mood's line unless something else holds the stage.
   void _sayMoodLine() {
-    if (!_greeted || _visible == false || _cueRunning || _followUpPending) {
+    if (!_greeted || _visible != true || _cueRunning || _followUpPending) {
       return;
     }
     _buddy.say(_moodLine(_buddy.mood));
+  }
+
+  /// The first mood line, once the Buddy status is known and the hero is
+  /// visible. Pending announcements speak first instead.
+  void _maybeGreet() {
+    if (_greeted || _visible != true) return;
+    final buddy = ref.read(buddyProvider);
+    if (buddy.isLoading && !buddy.hasValue) return; // first load running
+    if (buddy.value?.announcements.isNotEmpty ?? false) return;
+    _greeted = true;
+    _sayMoodLine();
   }
 
   // --- Buddy status -----------------------------------------------------------
@@ -216,10 +234,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     if (next.isLoading && !next.hasValue) return; // first load still running
     final status = next.value;
     _noteCountedIfIdle(status);
-    if (!_greeted) {
-      _greeted = true;
-      if (status == null || status.announcements.isEmpty) _sayMoodLine();
-    }
+    _maybeGreet();
     if (status != null && status.announcements.isNotEmpty) {
       _afterFrame(_takeAnnouncements);
     }
@@ -236,17 +251,18 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// Hands the pending announcements to the cue queue and clears them in
   /// [buddyProvider], so each one plays once.
   void _takeAnnouncements() {
-    if (_visible == false) return;
+    if (_visible != true) return;
     final status = ref.read(buddyProvider).value;
     if (status == null || status.announcements.isEmpty) return;
     ref.read(buddyProvider.notifier).clearAnnouncements();
+    _greeted = true; // the announcements greet instead
     _enqueue(status.announcements.map(_cueFor));
   }
 
   // --- Log events -------------------------------------------------------------
 
   void _consumeEvent() {
-    if (_visible == false || ref.read(buddyEventsProvider) == null) return;
+    if (_visible != true || ref.read(buddyEventsProvider) == null) return;
     final event = ref.read(buddyEventsProvider.notifier).consume();
     if (event == null) return;
     if (_now().difference(event.at) > _eventMaxAge) {
@@ -332,7 +348,13 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   }
 
   /// After the goal celebration: offers the next goal, then continues.
+  /// Waits until the hero is visible again if it was hidden meanwhile.
   Future<void> _askForNewGoal() async {
+    if (_visible != true) {
+      _goalSheetDeferred = true;
+      return;
+    }
+    _goalSheetDeferred = false;
     final streak = ref.read(buddyProvider).value?.streak ?? 0;
     int? goal;
     if (streakGoalChoices(streak).isNotEmpty) {
@@ -361,9 +383,15 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   @override
   Widget build(BuildContext context) {
     final status = ref.watch(buddyProvider).value;
+    final height =
+        (MediaQuery.sizeOf(context).height * AppConstants.buddyHeroHeightFactor)
+            .clamp(
+              AppConstants.buddyHeroMinHeight,
+              AppConstants.buddyHeroMaxHeight,
+            );
     return SizedBox(
       width: double.infinity,
-      height: AppConstants.buddyHeroHeight,
+      height: height,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

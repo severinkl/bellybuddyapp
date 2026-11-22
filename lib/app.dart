@@ -173,7 +173,9 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
       builder: (context, child) {
         return Stack(
           children: [
-            child!,
+            // Nothing animates (and the dashboard Buddy says nothing) under
+            // the splash.
+            TickerMode(enabled: !_showSplash, child: child!),
             if (_showSplash)
               SplashScreen(
                 onComplete: () {

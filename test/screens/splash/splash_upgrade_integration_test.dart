@@ -57,7 +57,7 @@ class _SplashTestHostState extends ConsumerState<_SplashTestHost> {
       builder: (context, child) {
         return Stack(
           children: [
-            child!,
+            TickerMode(enabled: !_showSplash, child: child!),
             if (_showSplash)
               SplashScreen(
                 onComplete: () {

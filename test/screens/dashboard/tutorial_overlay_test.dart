@@ -191,5 +191,43 @@ void main() {
       expect(target.bottom, lessThanOrEqualTo(height));
       expect(find.text('step b', findRichText: true), findsOneWidget);
     });
+
+    testWidgets('leaves a fully visible target where it is', (tester) async {
+      final scroll = ScrollController();
+      addTearDown(scroll.dispose);
+      await tester.pumpWithProviders(
+        Scaffold(
+          body: Stack(
+            children: [
+              SingleChildScrollView(
+                controller: scroll,
+                child: Column(
+                  children: [
+                    Container(key: keyA, height: 80, color: Colors.blue),
+                    const SizedBox(height: 300),
+                    Container(key: keyB, height: 80, color: Colors.green),
+                    const SizedBox(height: 1500),
+                  ],
+                ),
+              ),
+              Positioned.fill(
+                child: DashboardTutorialOverlay(
+                  steps: twoSteps(),
+                  onFinish: () {},
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(DashboardTutorialOverlay.advanceKey));
+      await tester.pumpAndSettle();
+
+      // Centring it would scroll; it is already on screen, so nothing moves.
+      expect(scroll.offset, 0);
+      expect(find.text('step b', findRichText: true), findsOneWidget);
+    });
   });
 }

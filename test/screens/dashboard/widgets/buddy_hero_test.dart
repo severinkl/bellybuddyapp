@@ -537,6 +537,90 @@ void main() {
       await tester.pump(const Duration(seconds: 5));
     });
 
+    testWidgets('mounted hidden (e.g. under the splash): greets once shown', (
+      tester,
+    ) async {
+      visible.value = false;
+      await pumpHero(tester);
+      await tester.pump(const Duration(seconds: 1));
+      expect(controller(tester).bubble, isNull);
+
+      visible.value = true;
+      await tester.pump();
+      await tester.pump();
+      await tick(tester);
+
+      final c = controller(tester);
+      expect(BuddyCopy.mood[BuddyMood.hungry], contains(c.bubble));
+    });
+
+    testWidgets('mounted hidden: announcements play once shown, no greeting', (
+      tester,
+    ) async {
+      visible.value = false;
+      buddy = _FakeBuddy(
+        () => _status(announcements: const [BuddyAnnouncement.saverUsed]),
+      );
+      await pumpHero(tester);
+      await tester.pump(const Duration(seconds: 1));
+      expect(controller(tester).bubble, isNull);
+      expect(buddy.clearCalls, 0);
+
+      visible.value = true;
+      await tester.pump();
+      await tester.pump();
+      await tick(tester);
+
+      expect(buddy.clearCalls, 1);
+      expect(controller(tester).bubble, _saverUsedLine);
+      await tester.pump(const Duration(seconds: 5));
+      expect(controller(tester).bubble, _saverUsedLine);
+    });
+
+    testWidgets('goal sheet waits while the hero is hidden', (tester) async {
+      buddy = _FakeBuddy(
+        () => _status(
+          streak: 7,
+          announcements: const [BuddyAnnouncement.goalReached],
+        ),
+      );
+      await pumpHero(tester);
+      visible.value = false;
+      await tester.pump();
+
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text(_goalTitle), findsNothing);
+
+      visible.value = true;
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text(_goalTitle), findsOneWidget);
+
+      await tester.tap(find.text('30 Tage'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(buddy.goals, [30]);
+    });
+
+    testWidgets('height follows the screen (clamped)', (tester) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await pumpHero(tester);
+
+      expect(
+        tester.getSize(find.byType(BuddyHero)).height,
+        moreOrLessEquals(844 * 0.47),
+      );
+      expect(
+        tester.getSize(find.byType(AnimatedBuddy)).height,
+        greaterThanOrEqualTo(200),
+      );
+    });
+
     testWidgets('mood is re-derived every minute', (tester) async {
       now = DateTime(2026, 11, 22, 9, 59);
       await pumpHero(tester);

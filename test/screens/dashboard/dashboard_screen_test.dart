@@ -109,6 +109,37 @@ void main() {
       );
     });
 
+    testWidgets('390×844 phone: a big Buddy, tracker cards above the nav', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(390, 844);
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.padding = const FakeViewPadding(top: 59, bottom: 34);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPadding);
+      await tester.pumpWithProviders(
+        const DashboardScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(
+        tester.getSize(find.byType(AnimatedBuddy)).height,
+        greaterThanOrEqualTo(200),
+      );
+      // The bottom nav (64 + the 34 home-indicator inset) covers the rest.
+      const navTop = 844.0 - 64 - 34;
+      expect(
+        tester.getRect(find.byKey(TutorialKeys.bauchgefuehl)).bottom,
+        lessThanOrEqualTo(navTop),
+      );
+      expect(
+        tester.getRect(find.byKey(TutorialKeys.klo)).bottom,
+        lessThanOrEqualTo(navTop),
+      );
+    });
+
     testWidgets('mounts every dashboard tutorial target incl. the Buddy', (
       tester,
     ) async {
