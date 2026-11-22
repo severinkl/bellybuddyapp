@@ -7,6 +7,7 @@ import '../../../../config/constants.dart';
 import '../../../../models/user_recipe.dart';
 import '../../../../providers/user_recipes_provider.dart';
 import '../../../../router/route_names.dart';
+import '../../../../widgets/common/bb_drag_handle.dart';
 import '../../../../widgets/common/bb_ingredient_chip.dart';
 import '../../../../widgets/common/bb_pastel_thumb.dart';
 import '../../../../widgets/common/bb_sheet_row.dart';
@@ -97,18 +98,7 @@ class _RecipeSelectorBodyState extends ConsumerState<_RecipeSelectorBody> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: AppConstants.spacingSm),
-        Center(
-          child: Container(
-            width: AppConstants.dragHandleWidth,
-            height: AppConstants.dragHandleHeight,
-            decoration: BoxDecoration(
-              color: AppTheme.muted,
-              borderRadius: BorderRadius.circular(
-                AppConstants.dragHandleRadius,
-              ),
-            ),
-          ),
-        ),
+        const BbDragHandle(),
         const Padding(
           padding: EdgeInsets.fromLTRB(
             AppConstants.spacingLg,

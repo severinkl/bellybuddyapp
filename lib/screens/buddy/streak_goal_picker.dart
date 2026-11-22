@@ -4,6 +4,7 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../widgets/buddy/buddy.dart';
 import '../../widgets/common/bb_card.dart';
+import '../../widgets/common/bb_drag_handle.dart';
 
 const List<int> kStreakGoalOptions = [7, 14, 30, 50, 100];
 
@@ -114,18 +115,7 @@ class _StreakGoalSheetState extends State<_StreakGoalSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Center(
-              child: Container(
-                width: AppConstants.dragHandleWidth,
-                height: AppConstants.dragHandleHeight,
-                decoration: BoxDecoration(
-                  color: AppTheme.border,
-                  borderRadius: BorderRadius.circular(
-                    AppConstants.dragHandleRadius,
-                  ),
-                ),
-              ),
-            ),
+            const BbDragHandle(color: AppTheme.border),
             AppConstants.gap16,
             SizedBox(
               height: AppConstants.streakSheetBuddyHeight,
