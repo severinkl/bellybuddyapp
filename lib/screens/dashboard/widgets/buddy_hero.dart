@@ -128,6 +128,12 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// The new-goal sheet is due but the hero was hidden; shown once visible.
   bool _goalSheetDeferred = false;
 
+  /// From a reached goal's celebration until its sheet has closed.
+  bool _goalCelebrating = false;
+
+  /// The StreakChip's goal sheet is open.
+  bool _chipSheetOpen = false;
+
   /// The local day for which "today counted" was already thanked for or
   /// known before a log, so "Danke! 🔥 …" is said once per day.
   DateTime? _countedDay;
@@ -394,6 +400,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
         _say(_saverEarnedLine);
         _holdStage();
       case _Cue.goalReached:
+        _goalCelebrating = true;
         _buddy.play(BuddyAction.celebrate);
         _setOverride(BuddyMood.inLove);
         _cueTimer = Timer(
@@ -424,7 +431,8 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _goalSheetDeferred = false;
     final streak = ref.read(buddyProvider).value?.streak ?? 0;
     int? goal;
-    if (streakGoalChoices(streak).isNotEmpty) {
+    // With the StreakChip's sheet open the user is picking a goal already.
+    if (!_chipSheetOpen && streakGoalChoices(streak).isNotEmpty) {
       goal = await showStreakGoalSheet(
         context,
         currentStreak: streak,
@@ -432,19 +440,29 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       );
       if (!mounted) return;
     }
+    _goalCelebrating = false;
     _setOverride(null);
     if (goal != null) unawaited(_saveGoal(goal));
     _nextCue();
   }
 
-  /// The StreakChip's tap: sets or changes the streak goal.
+  /// The StreakChip's tap: sets or changes the streak goal. Ignored while a
+  /// reached goal is celebrated (its own sheet follows) or the sheet is
+  /// already open, so sheets never stack.
   Future<void> _changeGoal() async {
+    if (_goalCelebrating || _chipSheetOpen) return;
     final streak = ref.read(buddyProvider).value?.streak ?? 0;
-    final goal = await showStreakGoalSheet(
-      context,
-      currentStreak: streak,
-      title: _changeGoalTitle,
-    );
+    _chipSheetOpen = true;
+    final int? goal;
+    try {
+      goal = await showStreakGoalSheet(
+        context,
+        currentStreak: streak,
+        title: _changeGoalTitle,
+      );
+    } finally {
+      _chipSheetOpen = false;
+    }
     if (!mounted || goal == null) return;
     await _saveGoal(goal);
   }

@@ -263,6 +263,77 @@ void main() {
       expect(buddy.goals, [14]);
     });
 
+    testWidgets('a double tap on the StreakChip opens one sheet', (
+      tester,
+    ) async {
+      await pumpHero(tester);
+
+      await tester.tap(find.byType(StreakChip));
+      await tester.tap(find.byType(StreakChip));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Neues Streak-Ziel'), findsOneWidget);
+    });
+
+    testWidgets('the StreakChip is ignored while a reached goal is '
+        'celebrated and its sheet is open', (tester) async {
+      buddy = _FakeBuddy(
+        () => _status(
+          streak: 7,
+          announcements: const [BuddyAnnouncement.goalReached],
+        ),
+      );
+      await pumpHero(tester);
+      await tick(tester);
+
+      // Celebrating: a chip tap opens nothing.
+      await tester.tap(find.byType(StreakChip));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text('Neues Streak-Ziel'), findsNothing);
+
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text(_goalTitle), findsOneWidget);
+      expect(find.text('Neues Streak-Ziel'), findsNothing);
+
+      await tester.tap(find.text('14 Tage'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(buddy.goals, [14]);
+
+      // Done: the chip works again.
+      await tester.tap(find.byType(StreakChip));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text('Neues Streak-Ziel'), findsOneWidget);
+    });
+
+    testWidgets('a goal reached while the StreakChip sheet is open does not '
+        'stack its own sheet on top', (tester) async {
+      buddy = _FakeBuddy(() => _status(streak: 7));
+      await pumpHero(tester);
+      await tester.tap(find.byType(StreakChip));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text('Neues Streak-Ziel'), findsOneWidget);
+
+      buddy.push(
+        _status(
+          streak: 7,
+          announcements: const [BuddyAnnouncement.goalReached],
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text(_goalTitle), findsNothing);
+      expect(find.text('Neues Streak-Ziel'), findsOneWidget);
+      expect(buddy.shown, [BuddyAnnouncement.goalReached]);
+    });
+
     testWidgets('no goal left above the streak → the chip is no button', (
       tester,
     ) async {
