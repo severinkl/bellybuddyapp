@@ -91,6 +91,56 @@ void main() {
     c.play(BuddyAction.eat);
     _run(c, 0.3);
     expect(c.frame.food, isNull);
+
+    // Food is only for eat, and another action drops it.
+    c.play(BuddyAction.drink, food: img);
+    _run(c, 0.3);
+    expect(c.frame.food, isNull);
+    c.play(BuddyAction.eat, food: img);
+    _run(c, 0.1);
+    expect(c.frame.food, same(img));
+    c.play(BuddyAction.poke);
+    c.tick(_step);
+    expect(c.frame.food, isNull);
+  });
+
+  test('replaying mid-action fades the old transform instead of snapping', () {
+    final c = BuddyController()..play(BuddyAction.celebrate);
+    _run(c, 0.45);
+    expect(c.frame.ty, lessThan(-250));
+    var prev = c.frame;
+    c.play(BuddyAction.celebrate);
+    for (final f in _run(c, 2 * _step)) {
+      expect((f.ty - prev.ty).abs(), lessThanOrEqualTo(40));
+      expect((f.sy - prev.sy).abs(), lessThanOrEqualTo(0.05));
+      prev = f;
+    }
+
+    // The carried transform is gone once the fade is over.
+    final d = BuddyController()..play(BuddyAction.eat);
+    _run(d, 3.4);
+    expect(d.frame.ty, lessThan(-40));
+    prev = d.frame;
+    d.play(BuddyAction.think);
+    final after = _run(d, 0.35);
+    for (final f in after) {
+      expect((f.ty - prev.ty).abs(), lessThanOrEqualTo(40));
+      prev = f;
+    }
+    expect(after.last.ty, 0);
+  });
+
+  test('replay under reduced motion stays at rest', () {
+    final c = BuddyController()
+      ..reducedMotion = true
+      ..play(BuddyAction.celebrate);
+    _run(c, 0.45);
+    c.play(BuddyAction.celebrate);
+    for (final f in _run(c, 0.3)) {
+      expect(f.ty, 0);
+      expect(f.sy, 1);
+      expect(f.rot, 0);
+    }
   });
 
   test('play restarts a running action', () {

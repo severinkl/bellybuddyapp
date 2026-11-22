@@ -15,6 +15,11 @@ import 'buddy_pose.dart';
 /// Read-only per-frame snapshot for the painter. Transforms are in Buddy
 /// image space (`tx`/`ty` in image px, `rot` in radians about the bottom
 /// centre).
+///
+/// Painters must take motion from the frame's own fields ([rot], [breath],
+/// [sway], [bulgeAmt], [foodPos]), which already honour reduced motion, and
+/// not from the matching [face] fields (`face.lean`, `face.breath`, …).
+/// [bulgePoint] may be non-null while [bulgeAmt] is 0; draw no bulge then.
 @immutable
 class BuddyFrame {
   const BuddyFrame({
@@ -109,6 +114,10 @@ class BuddyController extends ChangeNotifier {
   static const double _rumbleRotFreq = 45;
   static const double _rumbleSway = 10;
 
+  /// A [play] that interrupts an action fades the old transform out over
+  /// this many seconds (smoothstep) instead of snapping to the new start.
+  static const double _carryFade = 0.3;
+
   /// `think` looks up-left regardless of other gaze targets.
   static const Offset _thinkGaze = Offset(-0.7, -0.8);
 
@@ -134,6 +143,11 @@ class BuddyController extends ChangeNotifier {
   double _actionStart = 0;
   ui.Image? _food;
 
+  /// The action's transform on the last step (incl. any carry), and the
+  /// part of it carried over when [play] interrupts a running action.
+  _Delta _lastAct = _Delta.zero, _carry = _Delta.zero;
+  double _carryStart = 0;
+
   double _breathPhase = 0;
   double _nextBlink = 1.5, _blinkStart = -10, _blink = 0;
   Offset _gaze = const Offset(-0.6, -0.3);
@@ -152,12 +166,18 @@ class BuddyController extends ChangeNotifier {
   /// The running one-shot action, or null once it has finished.
   BuddyAction? get currentAction => _action;
 
-  /// Starts [action] from its beginning, replacing any running action.
-  /// [food] is shown as the falling food of [BuddyAction.eat].
+  /// Starts [action] from its beginning, replacing any running action; the
+  /// interrupted action's body transform fades out instead of snapping.
+  ///
+  /// [food] is shown as the falling food of [BuddyAction.eat] and ignored for
+  /// other actions. The caller owns and disposes the image and must keep it
+  /// alive while the action runs.
   void play(BuddyAction action, {ui.Image? food}) {
     _action = action;
     _actionStart = _t;
-    _food = food;
+    _food = action == BuddyAction.eat ? food : null;
+    _carry = _lastAct;
+    _carryStart = _t;
   }
 
   /// Looks at [imagePoint] (Buddy image coords) for [hold].
@@ -197,6 +217,18 @@ class BuddyController extends ChangeNotifier {
   }
 
   static double _secs(Duration d) => d.inMicroseconds / 1e6;
+
+  /// Smoothstep of [x] clamped to 0..1.
+  static double _smooth(double x) {
+    final c = x.clamp(0.0, 1.0);
+    return c * c * (3 - 2 * c);
+  }
+
+  @override
+  void dispose() {
+    _food = null;
+    super.dispose();
+  }
 
   /// 1 - e^(-rate·dt): frame-rate independent exponential approach factor.
   static double _approach(double rate, double dt) => 1 - math.exp(-dt * rate);
@@ -278,11 +310,16 @@ class BuddyController extends ChangeNotifier {
       }
     }
 
-    tx += s.tx;
-    ty += s.ty;
-    sx *= s.sx;
-    sy *= s.sy;
-    rot += s.rot;
+    final fade = (t - _carryStart) / _carryFade;
+    final act =
+        _Delta(s.tx, s.ty, s.sx - 1, s.sy - 1, s.rot) +
+        _carry * (1 - _smooth(fade));
+    _lastAct = act;
+    tx += act.tx;
+    ty += act.ty;
+    sx *= 1 + act.sx;
+    sy *= 1 + act.sy;
+    rot += act.rot;
 
     _updateGaze(dt, t, face, s);
     _updateBlink(t, face);
@@ -357,4 +394,16 @@ class BuddyController extends ChangeNotifier {
     final b = (t - _blinkStart) / _blinkDuration;
     _blink = (b < 0 || b > 1) ? 0 : (b < 0.4 ? b / 0.4 : 1 - (b - 0.4) / 0.6);
   }
+}
+
+/// Action transform as deltas from rest (`sx`/`sy` relative to 1).
+class _Delta {
+  const _Delta(this.tx, this.ty, this.sx, this.sy, this.rot);
+  static const zero = _Delta(0, 0, 0, 0, 0);
+  final double tx, ty, sx, sy, rot;
+
+  _Delta operator +(_Delta o) =>
+      _Delta(tx + o.tx, ty + o.ty, sx + o.sx, sy + o.sy, rot + o.rot);
+  _Delta operator *(double k) =>
+      _Delta(tx * k, ty * k, sx * k, sy * k, rot * k);
 }
