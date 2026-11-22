@@ -5,16 +5,19 @@ import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/meal_entry.dart';
 import '../../../models/user_recipe.dart';
+import '../../../providers/buddy_events_provider.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../providers/ingredient_autocomplete_provider.dart';
 import '../../../providers/meal_tracker_provider.dart';
 import '../../../providers/user_recipes_provider.dart';
 import '../../../router/navigation_extensions.dart';
 import '../../../router/route_names.dart';
+import '../../../services/buddy/buddy_mood_logic.dart';
 import '../../../services/user_recipe_service.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/logger.dart';
 import '../../../utils/save_helper.dart';
+import '../../../widgets/buddy/buddy_reaction_view.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/date_time_chips.dart';
 import '../../../widgets/common/editable_app_bar_title.dart';
@@ -150,8 +153,18 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     // error SnackBar on failure, and keeping the screen lets the user retry.
     // Create mode stays on the success overlay regardless (failure leaves the
     // user on the form, same behavior as before).
-    if (!mounted) return;
-    if (widget.mealId != null && ok) context.popOrGoDashboard();
+    if (!mounted || !ok) return;
+    if (widget.mealId != null) {
+      context.popOrGoDashboard();
+      return;
+    }
+    // A new log (not an edit): the Buddy reacts on the success screen and
+    // the dashboard picks the event up.
+    ref
+        .read(buddyEventsProvider.notifier)
+        .emit(
+          BuddyLogEvent(EntryKind.meal, LogSentiment.good, at: DateTime.now()),
+        );
   }
 
   bool _canSave(MealTrackerState state) {
@@ -207,7 +220,11 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         ),
         showSuccess: state.showSuccess,
         successMessage: 'Mahlzeit gespeichert!',
-        successMascotAsset: AppConstants.mascotCool,
+        successIllustration: BuddyReactionView(
+          kind: EntryKind.meal,
+          sentiment: LogSentiment.good,
+          foodImageBytes: state.imageBytes,
+        ),
         successActions: [
           GestureDetector(
             onTap: () =>

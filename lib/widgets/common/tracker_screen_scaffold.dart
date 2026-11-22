@@ -11,6 +11,9 @@ class TrackerScreenScaffold extends StatelessWidget {
   final String successMessage;
   final String? successSubMessage;
   final String? successMascotAsset;
+
+  /// Replaces the success mascot (see [BbSuccessOverlay.illustration]).
+  final Widget? successIllustration;
   final Widget body;
   final List<Widget>? appBarActions;
   final List<Widget>? successActions;
@@ -27,6 +30,7 @@ class TrackerScreenScaffold extends StatelessWidget {
     required this.body,
     this.successSubMessage,
     this.successMascotAsset,
+    this.successIllustration,
     this.appBarActions,
     this.successActions,
     this.successBottomCallout,
@@ -41,6 +45,7 @@ class TrackerScreenScaffold extends StatelessWidget {
         subMessage:
             successSubMessage ?? 'Dein Eintrag wurde erfolgreich erfasst.',
         mascotAsset: successMascotAsset,
+        illustration: successIllustration,
         onDismissed: onSuccessDismissed ?? context.popOrGoDashboard,
         actions: successActions,
         bottomCallout: successBottomCallout,

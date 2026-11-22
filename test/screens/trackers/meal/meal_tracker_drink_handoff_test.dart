@@ -10,6 +10,7 @@ import 'package:riverpod/src/internals.dart' show Override;
 
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/meal_tracker_provider.dart';
+import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/repositories/meal_media_repository.dart';
@@ -43,6 +44,7 @@ List<Override> _overrides() => [
   entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
   ingredientRepositoryProvider.overrideWithValue(FakeIngredientRepository()),
   mealMediaRepositoryProvider.overrideWithValue(FakeMealMediaRepository()),
+  buddyRepositoryProvider.overrideWithValue(FakeBuddyRepository()),
   currentUserIdProvider.overrideWithValue('test-user'),
 ];
 
@@ -101,10 +103,13 @@ void main() {
         final notifier = container.read(mealTrackerProvider.notifier);
         notifier.setTrackedAt(fixed);
         notifier.markShowSuccess();
-        await tester.pumpAndSettle();
+        // The success screen's Buddy animates forever: no pumpAndSettle.
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 700));
 
         await tester.tap(find.text('Getränk hinzufügen'));
-        await tester.pumpAndSettle();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
 
         expect(
           find.text('drink-extra:${fixed.toIso8601String()}'),

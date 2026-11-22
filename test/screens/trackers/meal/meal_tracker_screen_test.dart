@@ -1,5 +1,6 @@
 // ignore_for_file: invalid_use_of_internal_member
 import 'package:belly_buddy/models/meal_entry.dart';
+import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/meal_tracker_provider.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
@@ -236,6 +237,8 @@ void main() {
         );
         expect(fakeEntries.addedMeals, isEmpty);
         expect(find.text('home-sentinel'), findsOneWidget);
+        // Edits are not new logs: the Buddy does not react.
+        expect(container.read(buddyEventsProvider), isNull);
       },
     );
 

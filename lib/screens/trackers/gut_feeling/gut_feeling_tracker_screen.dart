@@ -4,12 +4,15 @@ import 'package:uuid/uuid.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/gut_feeling_entry.dart';
+import '../../../providers/buddy_events_provider.dart';
 import '../../../providers/diary_provider.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../router/navigation_extensions.dart';
+import '../../../services/buddy/buddy_mood_logic.dart';
 import '../../../services/haptic_service.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/save_helper.dart';
+import '../../../widgets/buddy/buddy_reaction_view.dart';
 import '../../../widgets/common/bb_success_overlay.dart';
 import '../../../widgets/common/date_time_chips.dart';
 import '../../../widgets/common/gradient_bottom_bar.dart';
@@ -34,7 +37,9 @@ class _GutFeelingTrackerScreenState
   late DateTime _trackedAt = buildTrackedAt(widget.initialDate);
   int _activeTab = 0;
   bool _isSaving = false;
-  bool _showSuccess = false;
+
+  /// Set once the entry is saved; shows the success screen.
+  LogSentiment? _savedSentiment;
 
   // Bauchgefuehl values
   int _bloating = 1;
@@ -128,7 +133,17 @@ class _GutFeelingTrackerScreenState
     if (mounted) {
       if (success) {
         ref.invalidate(diaryEntriesProvider(startOfDay(_trackedAt)));
-        setState(() => _showSuccess = true);
+        final sentiment = sentimentForGutFeeling(entry);
+        ref
+            .read(buddyEventsProvider.notifier)
+            .emit(
+              BuddyLogEvent(
+                EntryKind.gutFeeling,
+                sentiment,
+                at: DateTime.now(),
+              ),
+            );
+        setState(() => _savedSentiment = sentiment);
       } else {
         setState(() => _isSaving = false);
       }
@@ -154,11 +169,15 @@ class _GutFeelingTrackerScreenState
 
   @override
   Widget build(BuildContext context) {
-    if (_showSuccess) {
+    final savedSentiment = _savedSentiment;
+    if (savedSentiment != null) {
       return BbSuccessOverlay(
         message: 'Eintrag gespeichert!',
         subMessage: 'Dein Eintrag wurde erfolgreich erfasst.',
-        mascotAsset: AppConstants.mascotHappy,
+        illustration: BuddyReactionView(
+          kind: EntryKind.gutFeeling,
+          sentiment: savedSentiment,
+        ),
         onDismissed: context.popOrGoDashboard,
       );
     }

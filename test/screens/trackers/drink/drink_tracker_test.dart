@@ -3,12 +3,18 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:belly_buddy/screens/trackers/drink/drink_tracker_screen.dart';
 import 'package:belly_buddy/screens/trackers/drink/widgets/drink_search.dart';
+import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/drink_tracker_provider.dart';
+import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/repositories/drink_repository.dart';
+import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
+import 'package:belly_buddy/widgets/buddy/buddy_reaction_view.dart';
+import 'package:belly_buddy/widgets/common/mascot_image.dart';
 
 import '../../../helpers/fakes.dart';
 import '../../../helpers/fixtures.dart';
@@ -17,6 +23,7 @@ import '../../../helpers/riverpod_helpers.dart';
 List<Override> _overrides({FakeDrinkRepository? drinkRepo}) => [
   entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
   drinkRepositoryProvider.overrideWithValue(drinkRepo ?? FakeDrinkRepository()),
+  buddyRepositoryProvider.overrideWithValue(FakeBuddyRepository()),
   currentUserIdProvider.overrideWithValue('test-user'),
 ];
 
@@ -152,5 +159,40 @@ void main() {
         expect(insideDropdown, findsOneWidget);
       },
     );
+
+    testWidgets('successful save emits a Buddy event and shows the reaction', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer.test(overrides: _overrides());
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(home: DrinkTrackerScreen()),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+
+      container.read(drinkTrackerProvider.notifier)
+        ..toggleDrink(testDrink())
+        ..selectAmount(250);
+      await tester.pump();
+      await tester.ensureVisible(find.text('speichern'));
+      await tester.tap(find.text('speichern'));
+      await tester.pump();
+      // The Buddy animates forever: pump past the overlay intro only.
+      await tester.pump(const Duration(milliseconds: 700));
+
+      final event = container.read(buddyEventsProvider);
+      expect(event?.kind, EntryKind.drink);
+      expect(event?.sentiment, LogSentiment.good);
+      expect(find.text('Getränk gespeichert!'), findsOneWidget);
+      final view = tester.widget<BuddyReactionView>(
+        find.byType(BuddyReactionView),
+      );
+      expect(view.kind, EntryKind.drink);
+      expect(find.byType(MascotImage), findsNothing);
+    });
   });
 }

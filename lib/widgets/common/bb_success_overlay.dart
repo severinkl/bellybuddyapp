@@ -12,6 +12,11 @@ class BbSuccessOverlay extends StatefulWidget {
   final Widget? bottomCallout;
   final String? mascotAsset;
 
+  /// Shown instead of the mascot image (e.g. an animated Buddy reaction) and
+  /// styled like a mascot overlay: tap to dismiss, no auto-dismiss. It brings
+  /// its own animation, so the mascot bounce is not applied to it.
+  final Widget? illustration;
+
   const BbSuccessOverlay({
     super.key,
     required this.message,
@@ -20,6 +25,7 @@ class BbSuccessOverlay extends StatefulWidget {
     this.actions,
     this.bottomCallout,
     this.mascotAsset,
+    this.illustration,
   });
 
   @override
@@ -37,6 +43,11 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
   late final AnimationController _textController;
   late final Animation<double> _textOpacityAnimation;
   late final Animation<Offset> _textSlideAnimation;
+
+  bool _introStarted = false;
+
+  bool get _hasMascot =>
+      widget.mascotAsset != null || widget.illustration != null;
 
   @override
   void initState() {
@@ -89,6 +100,29 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _textController, curve: Curves.easeOut));
 
+    // Auto-dismiss only when no mascot and no actions (legacy behavior)
+    final hasActions = widget.actions != null && widget.actions!.isNotEmpty;
+    if (!hasActions && !_hasMascot) {
+      Future.delayed(AppConstants.successOverlayDuration, () {
+        if (mounted) widget.onDismissed();
+      });
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_introStarted) return;
+    _introStarted = true;
+
+    // Reduced motion: show everything at once, no fade, bounce or slide.
+    if (MediaQuery.maybeDisableAnimationsOf(context) ?? false) {
+      _fadeController.value = 1;
+      _mascotController.value = 1;
+      _textController.value = 1;
+      return;
+    }
+
     // Start animations in sequence
     _fadeController.forward();
     Future.delayed(AppConstants.pressScaleDuration, () {
@@ -97,14 +131,6 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
     Future.delayed(const Duration(milliseconds: 250), () {
       if (mounted) _textController.forward();
     });
-
-    // Auto-dismiss only when no mascot and no actions (legacy behavior)
-    final hasActions = widget.actions != null && widget.actions!.isNotEmpty;
-    if (!hasActions && widget.mascotAsset == null) {
-      Future.delayed(AppConstants.successOverlayDuration, () {
-        if (mounted) widget.onDismissed();
-      });
-    }
   }
 
   @override
@@ -117,7 +143,8 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
 
   @override
   Widget build(BuildContext context) {
-    final hasMascot = widget.mascotAsset != null;
+    final hasMascot = _hasMascot;
+    final illustration = widget.illustration;
     final bgColor = hasMascot
         ? AppTheme.primary.withValues(alpha: 0.95)
         : AppTheme.background.withValues(alpha: 0.95);
@@ -140,8 +167,10 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Mascot or checkmark
-                if (hasMascot)
+                // Illustration, mascot or checkmark
+                if (illustration != null)
+                  illustration
+                else if (widget.mascotAsset != null)
                   AnimatedBuilder(
                     animation: _mascotController,
                     builder: (context, child) {
