@@ -17,9 +17,11 @@ import 'core_providers.dart';
 /// The Buddy's clock. Day boundaries use its local date; tests override it.
 final buddyTodayProvider = Provider<DateTime Function()>((_) => DateTime.now);
 
-/// One-shot Buddy messages. The dashboard plays them, then calls
-/// [BuddyNotifier.clearAnnouncements]. Each one is produced at most once per
-/// local day (`streakBroken`: once per break).
+/// One-shot Buddy messages. They stay pending (across refreshes and
+/// restarts) until the dashboard has played them and calls
+/// [BuddyNotifier.markAnnouncementsShown]. Each one is shown at most once
+/// per user and local day (`streakBroken`: once per break, `goalReached`:
+/// once per goal).
 enum BuddyAnnouncement { saverUsed, streakBroken, saverEarned, goalReached }
 
 /// The signed-in user's Buddy after today's streak evaluation.
@@ -30,6 +32,7 @@ class BuddyStatus {
     required this.streak,
     required this.todayCounted,
     this.announcements = const [],
+    this.announcementKeys = const {},
   });
 
   /// Evaluated state; the defaults while [hasRow] is false.
@@ -49,12 +52,20 @@ class BuddyStatus {
   /// Announcements not yet played, in the order they arose.
   final List<BuddyAnnouncement> announcements;
 
-  BuddyStatus copyWith({List<BuddyAnnouncement>? announcements}) => BuddyStatus(
+  /// The SharedPreferences flag of each pending announcement
+  /// (`<prefix><userId>_<kind>_<yyyy-MM-dd | goal>`), set once it is shown.
+  final Map<BuddyAnnouncement, String> announcementKeys;
+
+  BuddyStatus copyWith({
+    List<BuddyAnnouncement>? announcements,
+    Map<BuddyAnnouncement, String>? announcementKeys,
+  }) => BuddyStatus(
     state: state,
     hasRow: hasRow,
     streak: streak,
     todayCounted: todayCounted,
     announcements: announcements ?? this.announcements,
+    announcementKeys: announcementKeys ?? this.announcementKeys,
   );
 }
 
@@ -77,6 +88,11 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
   /// refresh for the same user and build joins it instead of queuing a
   /// second one: it will fetch the same fresh data.
   ({Ref ref, String userId, Future<void> done})? _queuedRefresh;
+
+  /// Flags of the announcements marked shown in this session. Keeps an
+  /// evaluation that read the flags before they were written from bringing
+  /// them back.
+  final Set<String> _shownKeys = {};
 
   @override
   Future<BuddyStatus?> build() async {
@@ -156,17 +172,41 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
     });
   }
 
-  /// Drops the pending announcements once the UI has played them.
-  void clearAnnouncements() {
+  /// Records that the UI has played [shown]: drops them from the pending
+  /// announcements and sets their flags, so they never come again. Also
+  /// works while the Buddy reloads for the same user. A failing flag write
+  /// is logged (the message may then repeat after a restart).
+  Future<void> markAnnouncementsShown(List<BuddyAnnouncement> shown) async {
     final current = state;
     final status = current.value;
-    if (current.isLoading ||
-        current.hasError ||
-        status == null ||
-        status.announcements.isEmpty) {
+    if (status == null || shown.isEmpty) return;
+    // While another user's Buddy loads, the previous value isn't theirs.
+    if (current.isLoading &&
+        status.state.userId != ref.read(currentUserIdProvider)) {
       return;
     }
-    state = AsyncData(status.copyWith(announcements: const []));
+    final keys = [for (final a in shown) ?status.announcementKeys[a]];
+    _shownKeys.addAll(keys);
+    if (status.announcements.any(shown.contains)) {
+      final rest = status.announcements.where((a) => !shown.contains(a));
+      state = AsyncData(
+        status.copyWith(
+          announcements: rest.toList(),
+          announcementKeys: {
+            for (final a in rest) a: ?status.announcementKeys[a],
+          },
+        ),
+      );
+    }
+    if (keys.isEmpty) return;
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      for (final key in keys) {
+        await prefs.setBool(key, true);
+      }
+    } catch (e, st) {
+      _log.error('Storing the announcement flags failed', e, st);
+    }
   }
 
   Future<void> _mutate(
@@ -246,12 +286,16 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
       }
     }
 
+    final announcements = hasRow
+        ? await _announce(userId, evaluation, today)
+        : const <BuddyAnnouncement, String>{};
     return BuddyStatus(
       state: next,
       hasRow: hasRow || change != null,
       streak: evaluation.streak,
       todayCounted: evaluation.todayCounted,
-      announcements: hasRow ? await _announce(evaluation, today) : const [],
+      announcements: announcements.keys.toList(),
+      announcementKeys: announcements,
     );
   }
 
@@ -293,37 +337,39 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
     }
   }
 
-  /// Announcements for [evaluation] that were not produced before (flags in
-  /// SharedPreferences, one per kind and day; `streakBroken` per break).
-  Future<List<BuddyAnnouncement>> _announce(
+  /// The announcements for [evaluation] whose flag is not set yet, in
+  /// order, each with its flag: one per user, kind and day, `streakBroken`
+  /// per break, `goalReached` per goal. Only [markAnnouncementsShown] sets
+  /// the flags.
+  Future<Map<BuddyAnnouncement, String>> _announce(
+    String userId,
     StreakEvaluation evaluation,
     DateTime today,
   ) async {
-    final candidates = <BuddyAnnouncement, DateTime>{
-      if (evaluation.consumedDays.isNotEmpty)
-        BuddyAnnouncement.saverUsed: today,
-      BuddyAnnouncement.streakBroken: ?evaluation.brokenAfter,
-      if (evaluation.saversEarned > 0) BuddyAnnouncement.saverEarned: today,
-      if (evaluation.goalReached) BuddyAnnouncement.goalReached: today,
+    final day = formatIsoDate(today);
+    final suffixes = <BuddyAnnouncement, String>{
+      if (evaluation.consumedDays.isNotEmpty) BuddyAnnouncement.saverUsed: day,
+      if (evaluation.brokenAfter case final broken?)
+        BuddyAnnouncement.streakBroken: formatIsoDate(broken),
+      if (evaluation.saversEarned > 0) BuddyAnnouncement.saverEarned: day,
+      if (evaluation.goalReached)
+        BuddyAnnouncement.goalReached: '${evaluation.next.streakGoal}',
     };
-    if (candidates.isEmpty) return const [];
+    final keys = {
+      for (final MapEntry(key: kind, value: suffix) in suffixes.entries)
+        kind:
+            '${AppConstants.keyBuddyAnnouncedPrefix}${userId}_${kind.name}_'
+            '$suffix',
+    };
+    if (keys.isEmpty) return keys;
     try {
       final prefs = await SharedPreferences.getInstance();
-      final fresh = <BuddyAnnouncement>[];
-      for (final MapEntry(key: kind, value: day) in candidates.entries) {
-        final key =
-            '${AppConstants.keyBuddyAnnouncedPrefix}${kind.name}_'
-            '${formatIsoDate(day)}';
-        if (prefs.getBool(key) ?? false) continue;
-        await prefs.setBool(key, true);
-        fresh.add(kind);
-      }
-      return fresh;
+      keys.removeWhere((_, key) => prefs.getBool(key) ?? false);
     } catch (e, st) {
       // Better to repeat a message than to lose a one-shot one.
       _log.error('Announcement flags unavailable', e, st);
-      return candidates.keys.toList();
     }
+    return keys;
   }
 
   /// Sets [fresh] as the state unless the user changed meanwhile.
@@ -337,20 +383,22 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
   bool _isCurrent(Ref opRef, String userId) =>
       opRef.mounted && ref.read(currentUserIdProvider) == userId;
 
-  /// [fresh] plus the not yet played announcements of the same user.
+  /// [fresh] plus the not yet played announcements of the same user, minus
+  /// those marked shown meanwhile.
   BuddyStatus _withPending(String userId, BuddyStatus fresh) {
     final current = state.value;
-    if (current == null ||
-        current.state.userId != userId ||
-        current.announcements.isEmpty) {
-      return fresh;
-    }
-    final pending = current.announcements;
+    final pending = current != null && current.state.userId == userId
+        ? current
+        : null;
+    final pendingKinds = pending?.announcements ?? const [];
+    final keys = {...fresh.announcementKeys, ...?pending?.announcementKeys};
+    final announcements = [
+      ...pendingKinds,
+      ...fresh.announcements.where((a) => !pendingKinds.contains(a)),
+    ].where((a) => !_shownKeys.contains(keys[a])).toList();
     return fresh.copyWith(
-      announcements: [
-        ...pending,
-        ...fresh.announcements.where((a) => !pending.contains(a)),
-      ],
+      announcements: announcements,
+      announcementKeys: {for (final a in announcements) a: ?keys[a]},
     );
   }
 }

@@ -145,7 +145,8 @@ class AppConstants {
   static const String keyBuddyStatePrefix = 'buddy_state_';
 
   /// Prefix of the Buddy announcement flags
-  /// (`buddy_announced_<kind>_<yyyy-MM-dd>`), so each one shows only once.
+  /// (`buddy_announced_<userId>_<kind>_<yyyy-MM-dd | goal>`), set once an
+  /// announcement was shown, so each one shows only once.
   static const String keyBuddyAnnouncedPrefix = 'buddy_announced_';
 
   /// Maximum length of the Buddy's name (matches the `buddy_state` check).

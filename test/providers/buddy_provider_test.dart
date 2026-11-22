@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
@@ -210,6 +211,15 @@ void main() {
     });
   });
 
+  Future<Map<String, Object>> flags() async {
+    final prefs = await SharedPreferences.getInstance();
+    return {
+      for (final key in prefs.getKeys())
+        if (key.startsWith(AppConstants.keyBuddyAnnouncedPrefix))
+          key: prefs.get(key)!,
+    };
+  }
+
   group('announcements', () {
     test('second refresh on the same day does not repeat them', () async {
       buddyRepo.store['u1'] = const BuddyState(userId: 'u1', savers: 1);
@@ -223,7 +233,9 @@ void main() {
         BuddyAnnouncement.saverUsed,
       ]);
 
-      c.read(buddyProvider.notifier).clearAnnouncements();
+      await c.read(buddyProvider.notifier).markAnnouncementsShown(const [
+        BuddyAnnouncement.saverUsed,
+      ]);
       expect(c.read(buddyProvider).value!.announcements, isEmpty);
 
       await c.read(buddyProvider.notifier).refresh();
@@ -231,12 +243,15 @@ void main() {
       expect(buddyRepo.saveCount, 1);
     });
 
-    test('streakBroken is announced once per break', () async {
+    test('streakBroken is announced once per break, once shown', () async {
       buddyRepo.store['u1'] = const BuddyState(userId: 'u1');
       entryRepo.seedActivityDays(novDays(15, 19));
 
-      final first = await load(makeContainer());
-      expect(first.announcements, [BuddyAnnouncement.streakBroken]);
+      final c = makeContainer();
+      expect((await load(c)).announcements, [BuddyAnnouncement.streakBroken]);
+      await c.read(buddyProvider.notifier).markAnnouncementsShown(const [
+        BuddyAnnouncement.streakBroken,
+      ]);
 
       // App restart, same day.
       final again = await load(makeContainer());
@@ -246,6 +261,91 @@ void main() {
       now = DateTime(2026, 11, 23, 9);
       final nextDay = await load(makeContainer());
       expect(nextDay.announcements, isEmpty);
+    });
+
+    test('evaluating writes no flags: an announcement not yet shown comes '
+        'back after a restart', () async {
+      buddyRepo.store['u1'] = const BuddyState(userId: 'u1');
+      entryRepo.seedActivityDays(novDays(15, 19));
+
+      expect((await load(makeContainer())).announcements, [
+        BuddyAnnouncement.streakBroken,
+      ]);
+      expect(await flags(), isEmpty);
+
+      // The app was closed before the dashboard played it.
+      expect((await load(makeContainer())).announcements, [
+        BuddyAnnouncement.streakBroken,
+      ]);
+    });
+
+    test('markAnnouncementsShown writes per-user flags and drops only the '
+        'given announcements', () async {
+      // 21.11. is filled by the saver; the streak reaches 7.
+      buddyRepo.store['u1'] = const BuddyState(userId: 'u1', savers: 1);
+      entryRepo.seedActivityDays({...novDays(16, 20), nov(22)});
+      final c = makeContainer();
+      expect((await load(c)).announcements, [
+        BuddyAnnouncement.saverUsed,
+        BuddyAnnouncement.saverEarned,
+      ]);
+
+      await c.read(buddyProvider.notifier).markAnnouncementsShown(const [
+        BuddyAnnouncement.saverUsed,
+      ]);
+
+      expect(c.read(buddyProvider).value!.announcements, [
+        BuddyAnnouncement.saverEarned,
+      ]);
+      expect(await flags(), {'buddy_announced_u1_saverUsed_2026-11-22': true});
+    });
+
+    test('marking during a running refresh: the refresh does not bring it '
+        'back', () async {
+      buddyRepo.store['u1'] = const BuddyState(userId: 'u1');
+      entryRepo.seedActivityDays(novDays(15, 19));
+      final c = makeContainer();
+      await load(c);
+      final notifier = c.read(buddyProvider.notifier);
+
+      buddyRepo.gateNext();
+      final refresh = notifier.refresh();
+      await settle();
+      await notifier.markAnnouncementsShown(const [
+        BuddyAnnouncement.streakBroken,
+      ]);
+      buddyRepo.release();
+      await refresh;
+
+      expect(c.read(buddyProvider).value!.announcements, isEmpty);
+    });
+
+    test('marking while the Buddy reloads (loading with the previous value) '
+        'works', () async {
+      buddyRepo.store['u1'] = const BuddyState(userId: 'u1');
+      entryRepo.seedActivityDays(novDays(15, 19));
+      final c = makeContainer();
+      c.listen(buddyProvider, (_, _) {});
+      await load(c);
+
+      buddyRepo.gateNext();
+      c.invalidate(buddyProvider);
+      await settle();
+      final reloading = c.read(buddyProvider);
+      expect(reloading.isLoading, isTrue);
+      expect(reloading.value!.announcements, [BuddyAnnouncement.streakBroken]);
+
+      await c.read(buddyProvider.notifier).markAnnouncementsShown(const [
+        BuddyAnnouncement.streakBroken,
+      ]);
+      expect(c.read(buddyProvider).value!.announcements, isEmpty);
+
+      buddyRepo.release();
+      final reloaded = await c.read(buddyProvider.future);
+      expect(reloaded!.announcements, isEmpty);
+      expect(await flags(), {
+        'buddy_announced_u1_streakBroken_2026-11-19': true,
+      });
     });
 
     test('saverEarned when a milestone adds a saver', () async {
@@ -272,7 +372,7 @@ void main() {
       expect(buddyRepo.store['u1']!.savers, 2);
     });
 
-    test('goalReached clears the stored goal', () async {
+    test('goalReached keeps the stored goal and comes once per goal', () async {
       buddyRepo.store['u1'] = const BuddyState(
         userId: 'u1',
         savers: 2,
@@ -280,12 +380,34 @@ void main() {
         streakGoal: 7,
       );
       entryRepo.seedActivityDays(novDays(14, 22));
+      final c = makeContainer();
 
-      final status = await load(makeContainer());
-
+      final status = await load(c);
       expect(status.announcements, [BuddyAnnouncement.goalReached]);
-      expect(buddyRepo.store['u1']!.streakGoal, isNull);
-      expect(status.state.streakGoal, isNull);
+      expect(status.state.streakGoal, 7);
+      expect(buddyRepo.store['u1']!.streakGoal, 7);
+      expect(buddyRepo.saveCount, 0);
+
+      final notifier = c.read(buddyProvider.notifier);
+      await notifier.markAnnouncementsShown(const [
+        BuddyAnnouncement.goalReached,
+      ]);
+      expect(await flags(), {'buddy_announced_u1_goalReached_7': true});
+
+      // Still reached, already shown: not again (also not the next day).
+      await notifier.refresh();
+      expect(c.read(buddyProvider).value!.announcements, isEmpty);
+      now = DateTime(2026, 11, 23, 9);
+      entryRepo.seedActivityDays(novDays(14, 23));
+      await notifier.refresh();
+      expect(c.read(buddyProvider).value!.announcements, isEmpty);
+
+      // A new goal that is reached is announced again.
+      await notifier.setStreakGoal(10);
+      await notifier.refresh();
+      expect(c.read(buddyProvider).value!.announcements, [
+        BuddyAnnouncement.goalReached,
+      ]);
     });
   });
 
@@ -510,6 +632,25 @@ void main() {
       c.read(_testUserProvider.notifier).set(null);
       expect(await c.read(buddyProvider.future), isNull);
     });
+
+    test(
+      "one user's shown flags don't hide another user's announcement",
+      () async {
+        buddyRepo.store['u1'] = const BuddyState(userId: 'u1');
+        buddyRepo.store['u2'] = const BuddyState(userId: 'u2');
+        entryRepo.seedActivityDays(novDays(15, 19));
+        final c = makeSwitchable();
+        c.listen(buddyProvider, (_, _) {});
+        expect((await load(c)).announcements, [BuddyAnnouncement.streakBroken]);
+        await c.read(buddyProvider.notifier).markAnnouncementsShown(const [
+          BuddyAnnouncement.streakBroken,
+        ]);
+
+        c.read(_testUserProvider.notifier).set('u2');
+
+        expect((await load(c)).announcements, [BuddyAnnouncement.streakBroken]);
+      },
+    );
 
     test('pending announcements do not leak to the next user', () async {
       buddyRepo.store['u1'] = const BuddyState(userId: 'u1', savers: 1);

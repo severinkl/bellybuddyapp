@@ -470,7 +470,7 @@ void main() {
 
     // --- Goal ---
     _Case(
-      'goal 7 reached → goalReached, goal cleared',
+      'goal 7 reached → goalReached, goal kept (the UI offers the next one)',
       activity: span(nov(16), nov(22)),
       state: const BuddyState(streakGoal: 7),
       streak: 7,
@@ -478,7 +478,20 @@ void main() {
       saversEarned: 1,
       milestoneReached: 7,
       goalReached: true,
-      next: BuddyState(savers: 1, lastMilestone: 7, lastSaverEarnedOn: nov(22)),
+      next: BuddyState(
+        streakGoal: 7,
+        savers: 1,
+        lastMilestone: 7,
+        lastSaverEarnedOn: nov(22),
+      ),
+    ),
+    _Case(
+      'goal passed earlier → goalReached on every evaluation, nothing changes',
+      activity: span(nov(13), nov(22)),
+      state: const BuddyState(streakGoal: 7, savers: 1, lastMilestone: 7),
+      streak: 10,
+      todayCounted: true,
+      goalReached: true,
     ),
     _Case(
       'goal 14 not reached yet → goal kept',

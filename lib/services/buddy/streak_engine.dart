@@ -55,8 +55,8 @@ class StreakEvaluation {
   /// returned, capped at [maxStreakSavers] (ascending).
   final List<DateTime> refundedDays;
 
-  /// The input state with `savers`, `savedDays`, `lastMilestone`,
-  /// `lastSaverEarnedOn` and `streakGoal` updated.
+  /// The input state with `savers`, `savedDays`, `lastMilestone` and
+  /// `lastSaverEarnedOn` updated.
   final BuddyState next;
 
   /// Savers actually added to the stock by a milestone in this evaluation:
@@ -70,7 +70,9 @@ class StreakEvaluation {
   /// `initialize`.
   final int? milestoneReached;
 
-  /// The streak goal was reached; `next.streakGoal` is cleared.
+  /// The streak has reached the goal (`streak >= streakGoal`). The goal
+  /// stays set, so this stays `true` on every evaluation while it holds;
+  /// announce it once per goal.
   final bool goalReached;
 
   /// The gap ending yesterday could not be covered by savers and ended a run
@@ -111,7 +113,8 @@ class StreakEvaluation {
 ///    old milestones a second time. A run that shrinks and grows back
 ///    (an entry deleted, then restored) re-crosses its milestones; the
 ///    7-day limit keeps that from paying again.
-/// 5. A reached streak goal is cleared.
+/// 5. A reached streak goal is reported ([StreakEvaluation.goalReached]);
+///    the goal stays set (the UI offers the next one).
 /// 6. Saved days more than 365 days before [today] that the current run
 ///    doesn't reach are dropped (never while the window is reached).
 ///
@@ -243,7 +246,6 @@ StreakEvaluation evaluateStreak({
       savedDays: savedDays,
       lastMilestone: lastMilestone,
       lastSaverEarnedOn: lastSaverEarnedOn,
-      streakGoal: goalReached ? null : goal,
     ),
     saversEarned: saversEarned,
     milestoneReached: milestoneReached,

@@ -29,7 +29,9 @@ class _FakeBuddy extends BuddyNotifier {
   _FakeBuddy(this._initial);
 
   final FutureOr<BuddyStatus?> Function() _initial;
-  int clearCalls = 0;
+
+  /// Every announcement the hero marked as shown, in order.
+  final List<BuddyAnnouncement> shown = [];
   int refreshCalls = 0;
   final List<int?> goals = [];
 
@@ -43,9 +45,9 @@ class _FakeBuddy extends BuddyNotifier {
   Future<void> setStreakGoal(int? goal) async => goals.add(goal);
 
   @override
-  void clearAnnouncements() {
-    clearCalls++;
-    super.clearAnnouncements();
+  Future<void> markAnnouncementsShown(List<BuddyAnnouncement> announcements) {
+    shown.addAll(announcements);
+    return super.markAnnouncementsShown(announcements);
   }
 
   /// Publishes [status] like a finished refresh.
@@ -273,9 +275,8 @@ void main() {
       );
     });
 
-    testWidgets('saverUsed → hug and the saver line; announcements cleared', (
-      tester,
-    ) async {
+    testWidgets('saverUsed → hug and the saver line; marked shown once it '
+        'has played', (tester) async {
       buddy = _FakeBuddy(
         () => _status(announcements: const [BuddyAnnouncement.saverUsed]),
       );
@@ -286,12 +287,40 @@ void main() {
       expect(c.currentAction, BuddyAction.hug);
       expect(c.bubble, _saverUsedLine);
       expect(find.text(_saverUsedLine), findsOneWidget);
-      expect(buddy.clearCalls, 1);
-      expect(container.read(buddyProvider).value!.announcements, isEmpty);
+      // Still pending while it plays: lost if the app closes now.
+      expect(buddy.shown, isEmpty);
+      expect(container.read(buddyProvider).value!.announcements, [
+        BuddyAnnouncement.saverUsed,
+      ]);
 
       // The announcement holds the stage; nothing else is queued.
+      await tester.pump(const Duration(seconds: 4));
+      expect(buddy.shown, [BuddyAnnouncement.saverUsed]);
+      expect(container.read(buddyProvider).value!.announcements, isEmpty);
       await tester.pump(const Duration(seconds: 5));
-      expect(buddy.clearCalls, 1);
+      expect(buddy.shown, [BuddyAnnouncement.saverUsed]);
+    });
+
+    testWidgets('a status update while an announcement plays does not '
+        'replay it', (tester) async {
+      buddy = _FakeBuddy(
+        () => _status(announcements: const [BuddyAnnouncement.saverUsed]),
+      );
+      await pumpHero(tester);
+      await tick(tester);
+      expect(controller(tester).bubble, _saverUsedLine);
+
+      // A refresh lands mid-line, the announcement still pending.
+      await tester.pump(const Duration(seconds: 2));
+      buddy.push(_status(announcements: const [BuddyAnnouncement.saverUsed]));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tick(tester);
+
+      expect(buddy.shown, [BuddyAnnouncement.saverUsed]);
+      // A replay would be marked again once its line ended.
+      await tester.pump(const Duration(seconds: 5));
+      expect(buddy.shown, [BuddyAnnouncement.saverUsed]);
     });
 
     testWidgets('streakBroken then saverEarned play one after another', (
@@ -310,13 +339,18 @@ void main() {
 
       final c = controller(tester);
       expect(c.bubble, _streakBrokenLine);
+      expect(buddy.shown, isEmpty);
 
       await tester.pump(const Duration(seconds: 4));
       await tick(tester);
       expect(c.bubble, _saverEarnedLine);
       expect(c.currentAction, BuddyAction.celebrate);
-      expect(buddy.clearCalls, 1);
+      expect(buddy.shown, [BuddyAnnouncement.streakBroken]);
       await tester.pump(const Duration(seconds: 5));
+      expect(buddy.shown, [
+        BuddyAnnouncement.streakBroken,
+        BuddyAnnouncement.saverEarned,
+      ]);
     });
 
     testWidgets('goalReached → celebrate in love, then the new-goal sheet', (
@@ -334,12 +368,13 @@ void main() {
       final c = controller(tester);
       expect(c.currentAction, BuddyAction.celebrate);
       expect(c.mood, BuddyMood.inLove);
-      expect(buddy.clearCalls, 1);
+      expect(buddy.shown, isEmpty);
 
       // The sheet opens once the celebration has played.
       await tester.pump(const Duration(seconds: 2));
       await tester.pump(const Duration(milliseconds: 500));
       expect(find.text(_goalTitle), findsOneWidget);
+      expect(buddy.shown, isEmpty);
 
       await tester.tap(find.text('14 Tage'));
       await tester.pump();
@@ -347,6 +382,7 @@ void main() {
 
       expect(find.text(_goalTitle), findsNothing);
       expect(buddy.goals, [14]);
+      expect(buddy.shown, [BuddyAnnouncement.goalReached]);
       expect(c.mood, BuddyMood.hungry);
     });
 
@@ -370,6 +406,7 @@ void main() {
 
       expect(find.text(_goalTitle), findsNothing);
       expect(buddy.goals, isEmpty);
+      expect(buddy.shown, [BuddyAnnouncement.goalReached]);
     });
 
     testWidgets('fresh log that counts today → „Danke! 🔥 N Tage"', (
@@ -525,16 +562,16 @@ void main() {
       buddy.push(_status(announcements: const [BuddyAnnouncement.saverEarned]));
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
-      expect(buddy.clearCalls, 0);
+      expect(buddy.shown, isEmpty);
 
       visible.value = true;
       await tester.pump();
       await tester.pump();
       await tick(tester);
-      expect(buddy.clearCalls, 1);
-      expect(container.read(buddyProvider).value!.announcements, isEmpty);
       expect(controller(tester).bubble, _saverEarnedLine);
       await tester.pump(const Duration(seconds: 5));
+      expect(buddy.shown, [BuddyAnnouncement.saverEarned]);
+      expect(container.read(buddyProvider).value!.announcements, isEmpty);
     });
 
     testWidgets('mounted hidden (e.g. under the splash): greets once shown', (
@@ -564,17 +601,17 @@ void main() {
       await pumpHero(tester);
       await tester.pump(const Duration(seconds: 1));
       expect(controller(tester).bubble, isNull);
-      expect(buddy.clearCalls, 0);
+      expect(buddy.shown, isEmpty);
 
       visible.value = true;
       await tester.pump();
       await tester.pump();
       await tick(tester);
 
-      expect(buddy.clearCalls, 1);
       expect(controller(tester).bubble, _saverUsedLine);
       await tester.pump(const Duration(seconds: 5));
       expect(controller(tester).bubble, _saverUsedLine);
+      expect(buddy.shown, [BuddyAnnouncement.saverUsed]);
     });
 
     testWidgets('goal sheet waits while the hero is hidden', (tester) async {

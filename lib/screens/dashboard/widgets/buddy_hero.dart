@@ -28,14 +28,21 @@ final buddyClockProvider = Provider<DateTime Function()>(
 
 /// Lines the hero plays one after another: the follow-up after a log and
 /// the [BuddyAnnouncement]s.
-enum _Cue { followUp, saverUsed, streakBroken, saverEarned, goalReached }
+enum _Cue {
+  followUp(null),
+  saverUsed(BuddyAnnouncement.saverUsed),
+  streakBroken(BuddyAnnouncement.streakBroken),
+  saverEarned(BuddyAnnouncement.saverEarned),
+  goalReached(BuddyAnnouncement.goalReached);
 
-_Cue _cueFor(BuddyAnnouncement a) => switch (a) {
-  BuddyAnnouncement.saverUsed => _Cue.saverUsed,
-  BuddyAnnouncement.streakBroken => _Cue.streakBroken,
-  BuddyAnnouncement.saverEarned => _Cue.saverEarned,
-  BuddyAnnouncement.goalReached => _Cue.goalReached,
-};
+  const _Cue(this.announcement);
+
+  /// The announcement this cue plays, if any.
+  final BuddyAnnouncement? announcement;
+}
+
+_Cue _cueFor(BuddyAnnouncement a) =>
+    _Cue.values.firstWhere((cue) => cue.announcement == a);
 
 /// The Buddy at the top of the dashboard: streak chip, the animated Buddy
 /// with its speech bubble, and the „🍎 Füttern" shortcut to the meal
@@ -88,6 +95,13 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   final Queue<_Cue> _cues = Queue();
   Timer? _cueTimer;
+
+  /// The cue on stage; its announcement is marked shown when it ends.
+  _Cue? _playing;
+
+  /// Announcements queued or playing, not yet marked shown; they stay
+  /// pending in [buddyProvider] meanwhile and must not be queued twice.
+  final Set<BuddyAnnouncement> _taken = {};
 
   /// From a cue's start until its line has been up long enough (incl. the
   /// goal sheet); mood lines wait meanwhile.
@@ -252,14 +266,20 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _countedDay = startOfDay(_now());
   }
 
-  /// Hands the pending announcements to the cue queue and clears them in
-  /// [buddyProvider], so each one plays once.
+  /// Hands the pending announcements not queued yet to the cue queue. They
+  /// stay pending in [buddyProvider] until played (see [_nextCue]), so one
+  /// cut short (app closed) comes again.
   void _takeAnnouncements() => _whenVisible(() {
     final status = ref.read(buddyProvider).value;
-    if (status == null || status.announcements.isEmpty) return;
-    ref.read(buddyProvider.notifier).clearAnnouncements();
+    if (status == null) return;
+    final fresh = [
+      for (final a in status.announcements)
+        if (!_taken.contains(a)) a,
+    ];
+    if (fresh.isEmpty) return;
+    _taken.addAll(fresh);
     _greeted = true; // the announcements greet instead
-    _enqueue(status.announcements.map(_cueFor));
+    _enqueue(fresh.map(_cueFor));
   });
 
   // --- Log events -------------------------------------------------------------
@@ -318,12 +338,18 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   void _nextCue() {
     _cueTimer?.cancel();
-    if (!mounted || _cues.isEmpty) {
+    if (!mounted) {
+      _cueRunning = false;
+      return;
+    }
+    _markPlayed();
+    if (_cues.isEmpty) {
       _cueRunning = false;
       return;
     }
     _cueRunning = true;
-    switch (_cues.removeFirst()) {
+    final cue = _playing = _cues.removeFirst();
+    switch (cue) {
       case _Cue.followUp:
         _cueTimer = Timer(_followUpDelay, () {
           _sayFollowUp();
@@ -348,6 +374,17 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
           () => unawaited(_askForNewGoal()),
         );
     }
+  }
+
+  /// The cue on stage has ended: its announcement counts as shown.
+  void _markPlayed() {
+    final played = _playing?.announcement;
+    _playing = null;
+    if (played == null) return;
+    _taken.remove(played);
+    unawaited(
+      ref.read(buddyProvider.notifier).markAnnouncementsShown([played]),
+    );
   }
 
   /// After the goal celebration: offers the next goal, then continues.
