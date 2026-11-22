@@ -201,10 +201,8 @@ ActionSample _eat(double t, FacePose f) {
   final x = _Xf();
   FacePose? face;
 
-  if (t < 0.7) {
-    final p = t / 0.7;
-    foodPos = Offset(430, -330 + 330 * p * p);
-    foodScale = 1;
+  if (t < 0.75) {
+    // Mouth open for the incoming food until the gulp face takes over.
     face = f.copyWith(
       open: 0.5,
       mouthWidth: 0.45,
@@ -212,6 +210,11 @@ ActionSample _eat(double t, FacePose f) {
       lidTop: 0,
       lidBottom: 0,
     );
+  }
+  if (t < 0.7) {
+    final p = t / 0.7;
+    foodPos = Offset(430, -330 + 330 * p * p);
+    foodScale = 1;
   } else if (t < 0.95) {
     final p = (t - 0.7) / 0.25;
     foodPos = Offset(430, 20 + 60 * p);
@@ -324,7 +327,7 @@ ActionSample _wakeUp(double t, FacePose f) {
   final FacePose face;
   if (t < 1.0) {
     face = f.copyWith(
-      lidTop: _lerp(1, 0.6, _smooth(t / 1.0)),
+      lidTop: _lerp(f.lidTop, 0.6, _smooth(t / 1.0)),
       lidBottom: 0,
       smile: 0.3,
       open: 0.35 * _bell(t / 1.0),
@@ -356,7 +359,8 @@ ActionSample _wakeUp(double t, FacePose f) {
   return x.build(face: face);
 }
 
-/// Mouth opens wide with a stretch and a lean back, then settles.
+/// Mouth opens into a tall "O" (open > 1) with squeezed eyes, a stretch and
+/// a lean back, then settles.
 ActionSample _yawn(double t, FacePose f) {
   final env = _ramp(t, 0.05, 0.75) * (1 - _ramp(t, 1.1, 1.6));
   final x = _Xf()
@@ -365,10 +369,11 @@ ActionSample _yawn(double t, FacePose f) {
     ..rot = -0.025 * env;
   return x.build(
     face: f.copyWith(
-      open: 0.9 * env,
-      lidTop: 0.5,
-      smile: _lerp(f.smile, 0.2, env),
-      mouthWidth: _lerp(f.mouthWidth, 0.7, env),
+      open: 1.35 * env,
+      lidTop: _lerp(f.lidTop, 0.75, env),
+      lidBottom: _lerp(f.lidBottom, 0.25, env),
+      smile: _lerp(f.smile, 0, env),
+      mouthWidth: _lerp(f.mouthWidth, 0.85, env),
     ),
   );
 }
@@ -382,7 +387,8 @@ ActionSample _wave(double t, FacePose f) {
   return x.build(face: f.copyWith(smile: 1, open: 0.25, lidTop: 0));
 }
 
-/// Exhale: squash down, then a long overshooting stretch-release.
+/// Exhale: squash down, then a long overshooting stretch-release; eyes
+/// closed in relief with a small "puh" mouth.
 ActionSample _relief(double t, FacePose f) {
   final dev = t < 0.5
       ? _smooth(t / 0.5)
@@ -390,9 +396,11 @@ ActionSample _relief(double t, FacePose f) {
   final x = _Xf()..squash(0.1 * dev, 0.6);
   return x.build(
     face: f.copyWith(
-      lidTop: 0.45,
-      smile: 0.7,
-      open: 0.25 * _bell((t - 0.45) / 0.8),
+      lidTop: 0.9,
+      lidBottom: 0,
+      smile: 0.6,
+      open: 0.3 * _bell((t - 0.45) / 0.8),
+      blush: math.max(f.blush, 0.4),
     ),
   );
 }
@@ -416,11 +424,11 @@ ActionSample _hug(double t, FacePose f) {
   );
 }
 
-/// Two quick bobs: squash, pop up 20 px, repeat.
+/// Two quick bobs: squash, pop up 45 px, repeat.
 ActionSample _nodYes(double t, FacePose f) {
   final x = _Xf()
     ..squash(0.03 * (_bell(t / 0.22) + _bell((t - 0.4) / 0.22)), 0.6)
-    ..ty = -20 * (_bell((t - 0.12) / 0.3) + _bell((t - 0.52) / 0.3));
+    ..ty = -45 * (_bell((t - 0.12) / 0.3) + _bell((t - 0.52) / 0.3));
   return x.build(
     face: f.copyWith(lidBottom: 0.35, smile: math.max(f.smile, 0.8)),
   );

@@ -124,6 +124,16 @@ void main() {
       expect(s2.foodScale, closeTo(0.5, 1e-6));
     });
 
+    test('eating face holds until the gulp face (no gap at 0.70-0.75)', () {
+      for (var t = 0.0; t < 3.2; t += 0.01) {
+        expect(sampleAction(BuddyAction.eat, t, _base).face, isNotNull);
+      }
+      expect(
+        sampleAction(BuddyAction.eat, 0.72, _base).face!.open,
+        closeTo(0.5, 1e-9),
+      );
+    });
+
     test('bulge travels the gut', () {
       final s = sampleAction(BuddyAction.eat, 2.0, _base);
       expect(s.bulgePoint, isNotNull);
@@ -199,7 +209,13 @@ void main() {
 
   test('wakeUp: lids open with a stretch, blinks, happy hop', () {
     final sleepy = FacePose.forMood(BuddyMood.sleepy);
-    expect(sampleAction(BuddyAction.wakeUp, 0, sleepy).face!.lidTop, 1);
+    // Lids start from the base pose (no snap) and head for 0.6.
+    expect(
+      sampleAction(BuddyAction.wakeUp, 0, sleepy).face!.lidTop,
+      sleepy.lidTop,
+    );
+    const zen = FacePose(lidTop: 0.92);
+    expect(sampleAction(BuddyAction.wakeUp, 0, zen).face!.lidTop, 0.92);
     final s = sampleAction(BuddyAction.wakeUp, 0.5, sleepy);
     expect(s.sy, closeTo(1.06, 1e-6));
     expect(
@@ -224,14 +240,17 @@ void main() {
     expect(_min(tl.map((x) => x.ty)), lessThan(-30));
   });
 
-  test('yawn: mouth opens to 0.9 with a stretch', () {
+  test('yawn: tall "O" mouth and squeezed eyes with a stretch', () {
     final tl = _timeline(BuddyAction.yawn);
     final opens = tl.where((x) => x.face != null).map((x) => x.face!.open);
-    expect(_max(opens), closeTo(0.9, 1e-3));
+    expect(_max(opens), closeTo(1.35, 1e-3));
     expect(tl[1].face!.open, closeTo(0, 1e-9));
     expect(tl[tl.length - 2].face!.open, closeTo(0, 1e-3));
     expect(_max(tl.map((x) => x.sy)), closeTo(1.05, 1e-3));
-    expect(sampleAction(BuddyAction.yawn, 0.9, _base).face!.lidTop, 0.5);
+    expect(sampleAction(BuddyAction.yawn, 0.9, _base).face!.lidTop, 0.75);
+    // Lids ramp with the envelope from the base pose.
+    final sleepy = FacePose.forMood(BuddyMood.sleepy);
+    expect(sampleAction(BuddyAction.yawn, 0, sleepy).face!.lidTop, 0.6);
   });
 
   test('wave: two lean cycles of ±0.06 with a happy face', () {
@@ -254,8 +273,8 @@ void main() {
     final release = _timeline(BuddyAction.relief).skip(1 + 31).map((x) => x.sy);
     expect(_max(release), greaterThan(1.02));
     final f = sampleAction(BuddyAction.relief, 1.0, _base).face!;
-    expect(f.lidTop, 0.45);
-    expect(f.smile, 0.7);
+    expect(f.lidTop, 0.9);
+    expect(f.smile, 0.6);
   });
 
   test('hug: held squeeze with hearts and blush', () {
@@ -269,9 +288,9 @@ void main() {
     expect(sampleAction(BuddyAction.hug, 0.1, _base).hearts, 0);
   });
 
-  test('nodYes: two bobs of 20 with a 0.97 squash', () {
+  test('nodYes: two bobs of 45 with a 0.97 squash', () {
     final tl = _timeline(BuddyAction.nodYes);
-    expect(_min(tl.map((x) => x.ty)), closeTo(-20, 0.5));
+    expect(_min(tl.map((x) => x.ty)), closeTo(-45, 0.5));
     expect(_min(tl.map((x) => x.sy)), closeTo(0.97, 1e-3));
     var bobs = 0;
     for (var i = 1; i < tl.length; i++) {
