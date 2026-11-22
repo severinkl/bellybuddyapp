@@ -4,7 +4,6 @@ import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../widgets/common/bb_auth_banner.dart';
 import '../../../widgets/common/bb_button.dart';
-import '../../../widgets/common/mascot_image.dart';
 
 /// Wizard step that asks the user for a real email when OAuth didn't give
 /// us one (Apple second-sign-in) or gave us an Apple relay address. Pure
@@ -95,14 +94,6 @@ class _EmailCaptureStepState extends State<EmailCaptureStep> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   AppConstants.gap24,
-                  const Center(
-                    child: MascotImage(
-                      assetPath: AppConstants.mascotZen,
-                      width: 120,
-                      height: 120,
-                    ),
-                  ),
-                  AppConstants.gap16,
                   const Text(
                     'Deine E-Mail-Adresse',
                     style: TextStyle(

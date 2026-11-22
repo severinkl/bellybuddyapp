@@ -3,7 +3,6 @@ import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../widgets/common/bb_chip_selector.dart';
 import '../../../widgets/common/intolerance_trigger_modal.dart';
-import '../../../widgets/common/mascot_image.dart';
 
 class IntolerancesStep extends StatelessWidget {
   final List<String> selected;
@@ -29,12 +28,6 @@ class IntolerancesStep extends StatelessWidget {
         child: Column(
           children: [
             AppConstants.gap24,
-            const MascotImage(
-              assetPath: AppConstants.mascotNervous,
-              width: 120,
-              height: 120,
-            ),
-            AppConstants.gap16,
             const Text(
               key: intolerancesTitleKey,
               'Wurden dir Unverträglichkeiten diagnostiziert?',

@@ -1,13 +1,12 @@
 import 'package:material_ui/material_ui.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
-import '../../../widgets/common/mascot_image.dart';
 import '../../health_consent/widgets/health_consent_content.dart';
 
-/// First registration step: the GDPR Art. 9 consent to health-data
-/// processing, asked before any health data (body data, diet, symptoms,
-/// intolerances) is collected. The wizard keeps "Weiter" disabled until the
-/// checkbox is ticked.
+/// Registration step right after the Buddy's name: the GDPR Art. 9 consent
+/// to health-data processing, asked before any health data (body data, diet,
+/// symptoms, intolerances) is collected. The wizard keeps "Weiter" disabled
+/// until the checkbox is ticked; the Buddy above it says one quiet line.
 class HealthConsentStep extends StatelessWidget {
   final bool checked;
   final ValueChanged<bool> onChanged;
@@ -26,12 +25,6 @@ class HealthConsentStep extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const MascotImage(
-            assetPath: AppConstants.mascotProfessor,
-            width: AppConstants.mascotSizeMd,
-            height: AppConstants.mascotSizeMd,
-          ),
-          AppConstants.gap16,
           const Text(
             key: titleKey,
             'Deine Gesundheitsdaten',

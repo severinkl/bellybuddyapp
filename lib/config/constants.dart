@@ -80,6 +80,12 @@ class AppConstants {
   static const double progressDotActiveWidth = 24.0;
   static const double giftRevealSize = 160.0;
 
+  // Registration wizard: the Buddy stage (bubble slot + Buddy) above every
+  // step, and the least height a step keeps below it (on shorter screens,
+  // e.g. with the keyboard open, the host scrolls instead)
+  static const double buddyWizardSize = 150.0;
+  static const double buddyWizardMinStepHeight = 280.0;
+
   // Scroll clearance (space below content to clear fixed bottom bars)
   static const double bottomBarClearance = 128.0;
 

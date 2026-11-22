@@ -8,6 +8,7 @@ import 'package:belly_buddy/providers/health_consent_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/providers/upgrade_gate_provider.dart';
 import 'package:belly_buddy/repositories/auth_repository.dart';
+import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
@@ -91,6 +92,7 @@ List<Override> _overrides({
   profileRepositoryProvider.overrideWithValue(profiles),
   entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
   ingredientRepositoryProvider.overrideWithValue(FakeIngredientRepository()),
+  buddyRepositoryProvider.overrideWithValue(FakeBuddyRepository()),
   upgradeDecisionProvider.overrideWith((_) => Future.value(decision)),
 ];
 
@@ -290,7 +292,8 @@ void main() {
       expect(stored.healthConsentAt, isNotNull);
       expect(stored.privacyPolicyVersion, AppConstants.privacyPolicyVersion);
       expect(container.read(healthConsentRequiredProvider), isFalse);
-      expect(_currentPath(container), RoutePaths.dashboard);
+      // The wizard hands over to the Buddy onboarding, not the consent gate.
+      expect(_currentPath(container), RoutePaths.buddyOnboarding);
       expect(find.byType(HealthConsentScreen), findsNothing);
     });
 
