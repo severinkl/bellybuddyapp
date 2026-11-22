@@ -7,14 +7,22 @@ import '../../../config/constants.dart';
 import '../../../services/haptic_service.dart';
 
 /// A wrapped gift box. It wiggles now and then until tapped; the tap pops
-/// the lid, bursts sparkles and reveals a „🛡 Streak-Saver" card.
-/// [onOpened] fires once, on the first tap.
+/// the lid, bursts sparkles and reveals a card saying [cardLabel] (e.g.
+/// „🛡 Streak-Saver"). [onOpened] fires once, on the first tap.
 ///
 /// Reduced motion: no wiggle, no sparkles; the box opens instantly.
 class GiftReveal extends StatefulWidget {
-  const GiftReveal({super.key, required this.onOpened});
+  const GiftReveal({
+    super.key,
+    required this.onOpened,
+    required this.cardLabel,
+  });
 
   final VoidCallback onOpened;
+
+  /// What the card says. While null (what the gift holds isn't known yet)
+  /// the opened box shows no card.
+  final String? cardLabel;
 
   static const boxKey = Key('gift_reveal_box');
   static const cardKey = Key('gift_reveal_card');
@@ -113,12 +121,12 @@ class _GiftRevealState extends State<GiftReveal> with TickerProviderStateMixin {
             ),
           ),
         ),
-        if (_opened)
+        if (_opened && widget.cardLabel != null)
           FadeTransition(
             opacity: _card,
             child: ScaleTransition(
               scale: _card,
-              child: const _SaverCard(key: GiftReveal.cardKey),
+              child: _GiftCard(widget.cardLabel!, key: GiftReveal.cardKey),
             ),
           ),
       ],
@@ -126,8 +134,10 @@ class _GiftRevealState extends State<GiftReveal> with TickerProviderStateMixin {
   }
 }
 
-class _SaverCard extends StatelessWidget {
-  const _SaverCard({super.key});
+class _GiftCard extends StatelessWidget {
+  const _GiftCard(this.label, {super.key});
+
+  final String label;
 
   @override
   Widget build(BuildContext context) {
@@ -140,14 +150,14 @@ class _SaverCard extends StatelessWidget {
           width: AppConstants.borderWidthLg,
         ),
       ),
-      child: const Padding(
-        padding: EdgeInsets.symmetric(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
           horizontal: AppConstants.spacingMd,
           vertical: AppConstants.spacingSm,
         ),
         child: Text(
-          '🛡 Streak-Saver',
-          style: TextStyle(
+          label,
+          style: const TextStyle(
             fontSize: AppTheme.fontSizeSubtitle,
             fontWeight: FontWeight.w700,
             color: AppTheme.foreground,

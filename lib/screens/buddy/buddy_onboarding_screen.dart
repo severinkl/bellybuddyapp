@@ -90,6 +90,9 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
   static const _giftSaversFullText =
       'Deine Schutzschilde sind schon voll – du bist bestens gerüstet!';
   static const _giftNoSaverText = "Du bist bestens gerüstet – los geht's!";
+  static const _giftSaverCard = '🛡 Streak-Saver';
+  static const _giftSaversFullCard = '🛡 Schutzschilde voll';
+  static const _giftNoSaverCard = '🛡 Bestens gerüstet';
 
   /// Reactions stay long enough to read across a step change.
   static const _reactionHold = Duration(seconds: 4);
@@ -520,12 +523,17 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
         children: [
           const _StepTitle('Ein Geschenk für dich!'),
           AppConstants.gap16,
-          Center(child: GiftReveal(onOpened: _onGiftOpened)),
+          Center(
+            child: GiftReveal(
+              onOpened: _onGiftOpened,
+              cardLabel: _saverGranted == null ? null : _giftCopy(status).card,
+            ),
+          ),
           if (_giftOpened && _saverGranted != null) ...[
             AppConstants.gap16,
             Text(
               key: _giftTextKey,
-              _giftText(status),
+              _giftCopy(status).text,
               textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: AppTheme.fontSizeBodyLG,
@@ -538,11 +546,16 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
     };
   }
 
-  /// The opened gift's text: the Streak-Saver only when one was added.
-  String _giftText(BuddyStatus? status) {
-    if (_saverGranted ?? false) return _giftSaverText;
+  /// What the opened gift's card and text say: the Streak-Saver only when
+  /// one was added.
+  ({String card, String text}) _giftCopy(BuddyStatus? status) {
+    if (_saverGranted ?? false) {
+      return (card: _giftSaverCard, text: _giftSaverText);
+    }
     final full = (status?.state.savers ?? 0) >= maxStreakSavers;
-    return full ? _giftSaversFullText : _giftNoSaverText;
+    return full
+        ? (card: _giftSaversFullCard, text: _giftSaversFullText)
+        : (card: _giftNoSaverCard, text: _giftNoSaverText);
   }
 
   /// The step's buttons for the fixed bottom slot; empty when the content

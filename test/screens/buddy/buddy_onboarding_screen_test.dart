@@ -351,6 +351,7 @@ void main() {
       expect(h.stored?.savers, 1);
       expect(h.stored?.onboardingCompletedAt, isNotNull);
       expect(find.text(_giftText), findsOneWidget);
+      expect(find.text('🛡 Streak-Saver'), findsOneWidget);
 
       await tapKey(tester, BuddyOnboardingScreen.finishKey);
       expect(find.text('dashboard-stub'), findsOneWidget);
@@ -503,6 +504,9 @@ void main() {
       expect(h.stored?.savers, 2);
       expect(find.text(_giftText), findsNothing);
       expect(find.text(_giftFullText), findsOneWidget);
+      // The card claims no saver either.
+      expect(find.text('🛡 Schutzschilde voll'), findsOneWidget);
+      expect(find.text('🛡 Streak-Saver'), findsNothing);
       await tapKey(tester, BuddyOnboardingScreen.finishKey);
       expect(find.text('dashboard-stub'), findsOneWidget);
     });
@@ -526,6 +530,8 @@ void main() {
       expect(find.text(_giftText), findsNothing);
       expect(find.text(_giftFullText), findsNothing);
       expect(find.text(_giftAlreadyText), findsOneWidget);
+      expect(find.text('🛡 Bestens gerüstet'), findsOneWidget);
+      expect(find.text('🛡 Streak-Saver'), findsNothing);
     });
 
     testWidgets('no goal left to pick: the streak-goal step is skipped', (

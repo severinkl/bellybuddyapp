@@ -6,13 +6,21 @@ import 'package:belly_buddy/screens/buddy/widgets/gift_reveal.dart';
 
 void main() {
   group('GiftReveal', () {
-    Future<List<int>> pumpGift(WidgetTester tester) async {
+    Future<List<int>> pumpGift(
+      WidgetTester tester, {
+      String? cardLabel = '🛡 Streak-Saver',
+    }) async {
       final opened = <int>[];
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.theme,
           home: Scaffold(
-            body: Center(child: GiftReveal(onOpened: () => opened.add(1))),
+            body: Center(
+              child: GiftReveal(
+                onOpened: () => opened.add(1),
+                cardLabel: cardLabel,
+              ),
+            ),
           ),
         ),
       );
@@ -62,6 +70,21 @@ void main() {
       expect(find.textContaining('Streak-Saver'), findsOneWidget);
       // Once open, nothing keeps animating.
       expect(tester.hasRunningAnimations, isFalse);
+    });
+
+    testWidgets('the card waits for its label, then shows it', (tester) async {
+      final opened = await pumpGift(tester, cardLabel: null);
+
+      await tester.tap(find.byKey(GiftReveal.boxKey));
+      await tester.pumpAndSettle();
+      expect(opened, hasLength(1));
+      expect(find.byKey(GiftReveal.cardKey), findsNothing);
+
+      await pumpGift(tester, cardLabel: '🛡 Schutzschilde voll');
+      await tester.pumpAndSettle();
+      expect(find.byKey(GiftReveal.cardKey), findsOneWidget);
+      expect(find.text('🛡 Schutzschilde voll'), findsOneWidget);
+      expect(find.textContaining('Streak-Saver'), findsNothing);
     });
 
     testWidgets('reduced motion: no wiggle, opens instantly', (tester) async {
