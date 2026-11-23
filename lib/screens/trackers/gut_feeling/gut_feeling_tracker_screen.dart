@@ -171,8 +171,11 @@ class _GutFeelingTrackerScreenState
   Widget build(BuildContext context) {
     final savedSentiment = _savedSentiment;
     if (savedSentiment != null) {
+      // After a hard day no celebration: calm, without the „!".
+      final hardDay = savedSentiment == LogSentiment.bad;
       return BbSuccessOverlay(
-        message: 'Eintrag gespeichert!',
+        message: hardDay ? 'Eintrag gespeichert.' : 'Eintrag gespeichert!',
+        calm: hardDay,
         subMessage: 'Ist jetzt in deinem Tagebuch eingetragen.',
         illustration: BuddyReactionView(
           kind: EntryKind.gutFeeling,

@@ -5,14 +5,19 @@ import '../config/app_theme.dart';
 import '../config/constants.dart';
 import '../models/gut_feeling_entry.dart';
 
+/// The four Bauchgefühl levels: sehr gut, gut, mittel, schlecht.
 enum GutFeelingRatingLevel {
-  spiGut('Sehr gut'),
-  gut('Gut'),
-  durchschnittlich('Durchschnittlich'),
-  schlecht('Schlecht');
+  spiGut('Sehr gut', '😊'),
+  gut('Gut', '🙂'),
+  mittel('Mittel', '😐'),
+  schlecht('Schlecht', '😕');
 
   final String label;
-  const GutFeelingRatingLevel(this.label);
+
+  /// A face for how the belly felt: it mirrors the answer, it doesn't judge.
+  final String face;
+
+  const GutFeelingRatingLevel(this.label, this.face);
 }
 
 class GutFeelingRating {
@@ -68,12 +73,12 @@ int gutFeelingScore(GutFeelingEntry entry) => math.max(
 );
 
 /// Maps a gut-feeling value (1-5 scale) to its rating level: a whole score
-/// 1 → „Sehr gut", 2 → „Gut", 3 → „Durchschnittlich", 4-5 → „Schlecht";
+/// 1 → „Sehr gut", 2 → „Gut", 3 → „Mittel", 4-5 → „Schlecht";
 /// a mean of scores falls between them at the half steps.
 GutFeelingRatingLevel gutFeelingLevelFor(num value) {
   if (value <= 1.5) return GutFeelingRatingLevel.spiGut;
   if (value <= 2.5) return GutFeelingRatingLevel.gut;
-  if (value <= 3.5) return GutFeelingRatingLevel.durchschnittlich;
+  if (value <= 3.5) return GutFeelingRatingLevel.mittel;
   return GutFeelingRatingLevel.schlecht;
 }
 

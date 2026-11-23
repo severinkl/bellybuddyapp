@@ -14,6 +14,7 @@ import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 import 'package:belly_buddy/widgets/buddy/buddy_reaction_view.dart';
 import 'package:belly_buddy/widgets/common/bb_button.dart';
+import 'package:belly_buddy/widgets/common/bb_success_overlay.dart';
 import 'package:belly_buddy/widgets/common/mascot_image.dart';
 import 'package:belly_buddy/config/constants.dart';
 
@@ -232,6 +233,24 @@ void main() {
         find.byType(BuddyReactionView),
       );
       expect(view.sentiment, LogSentiment.bad);
+      // No celebration after a hard day: the calm success screen.
+      final overlay = tester.widget<BbSuccessOverlay>(
+        find.byType(BbSuccessOverlay),
+      );
+      expect(overlay.calm, isTrue);
+      expect(overlay.message, isNot(contains('!')));
+    });
+
+    testWidgets('a good day gets the cheerful success screen', (tester) async {
+      final entries = FakeEntryRepository();
+      await pumpTracker(tester, entries);
+
+      await goToStimmungAndSave(tester);
+
+      final overlay = tester.widget<BbSuccessOverlay>(
+        find.byType(BbSuccessOverlay),
+      );
+      expect(overlay.calm, isFalse);
     });
 
     testWidgets('on a phone, the Stimmung rows end above Speichern', (

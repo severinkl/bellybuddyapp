@@ -13,6 +13,7 @@ import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 import 'package:belly_buddy/widgets/buddy/buddy_reaction_view.dart';
+import 'package:belly_buddy/widgets/common/bb_success_overlay.dart';
 import 'package:belly_buddy/widgets/common/mascot_image.dart';
 
 import '../../../helpers/fakes.dart';
@@ -114,6 +115,39 @@ void main() {
       expect(view.kind, EntryKind.toilet);
       expect(view.sentiment, LogSentiment.good);
       expect(find.byType(MascotImage), findsNothing);
+      expect(
+        tester.widget<BbSuccessOverlay>(find.byType(BbSuccessOverlay)).calm,
+        isFalse,
+      );
+    });
+
+    testWidgets('a hard one (sehr hart) gets the calm success screen', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer.test(overrides: _overrides());
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(home: ToiletTrackerScreen()),
+        ),
+      );
+
+      // The slider's far left: 1, „sehr hart".
+      await tester.tapAt(
+        tester.getTopLeft(find.byType(Slider)) + const Offset(24, 24),
+      );
+      await tester.pump();
+      await tester.tap(find.text('Speichern'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 700));
+
+      expect(container.read(buddyEventsProvider)?.sentiment, LogSentiment.bad);
+      expect(find.text('Klo-Eintrag gespeichert.'), findsOneWidget);
+      expect(
+        tester.widget<BbSuccessOverlay>(find.byType(BbSuccessOverlay)).calm,
+        isTrue,
+      );
     });
   });
 }

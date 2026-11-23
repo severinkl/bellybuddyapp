@@ -30,7 +30,7 @@ LogSentiment sentimentForGutFeeling(GutFeelingEntry e) {
     case GutFeelingRatingLevel.spiGut:
     case GutFeelingRatingLevel.gut:
       return LogSentiment.good;
-    case GutFeelingRatingLevel.durchschnittlich:
+    case GutFeelingRatingLevel.mittel:
       return LogSentiment.neutral;
     case GutFeelingRatingLevel.schlecht:
       return LogSentiment.bad;

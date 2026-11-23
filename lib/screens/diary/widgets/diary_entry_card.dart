@@ -12,7 +12,7 @@ import 'meal_thumbnail.dart';
 String mascotForRating(GutFeelingRatingLevel level) => switch (level) {
   GutFeelingRatingLevel.spiGut => AppConstants.mascotCool,
   GutFeelingRatingLevel.gut => AppConstants.mascotEnergetic,
-  GutFeelingRatingLevel.durchschnittlich => AppConstants.mascotHappy,
+  GutFeelingRatingLevel.mittel => AppConstants.mascotHappy,
   GutFeelingRatingLevel.schlecht => AppConstants.mascotSad,
 };
 

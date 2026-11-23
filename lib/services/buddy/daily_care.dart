@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import '../../providers/entries_provider.dart';
 import '../../utils/date_format_utils.dart';
+import '../../utils/gut_feeling_rating.dart';
 
 /// The Buddy's four daily needs, one per tracker; they make up the
 /// dashboard's care ring.
@@ -56,6 +57,7 @@ class DailyCare {
     this.toilets = 0,
     this.lastMealAt,
     this.lastLogAt,
+    this.lastGutFeelingLevel,
   });
 
   static const mealGoal = 3;
@@ -78,6 +80,9 @@ class DailyCare {
 
   /// Local time of today's latest entry of any kind.
   final DateTime? lastLogAt;
+
+  /// How today's latest Bauchgefühl was; null before the first one.
+  final GutFeelingRatingLevel? lastGutFeelingLevel;
 
   /// All of today's entries.
   int get entries => meals + drinks + gutFeelings + toilets;
@@ -102,6 +107,15 @@ class DailyCare {
     ];
     final mealTimes = today(s.meals.map((e) => e.trackedAt));
     final gutFeelingTimes = today(s.gutFeelings.map((e) => e.trackedAt));
+    final todaysGutFeelings = [
+      for (final g in s.gutFeelings)
+        if (isSameDay(g.trackedAt.toLocal(), now)) g,
+    ];
+    final lastGutFeeling = todaysGutFeelings.isEmpty
+        ? null
+        : todaysGutFeelings.reduce(
+            (a, b) => a.trackedAt.isAfter(b.trackedAt) ? a : b,
+          );
     final toiletTimes = today(s.toiletEntries.map((e) => e.trackedAt));
     return DailyCare(
       meals: mealTimes.length,
@@ -116,6 +130,9 @@ class DailyCare {
         ...gutFeelingTimes,
         ...toiletTimes,
       ]),
+      lastGutFeelingLevel: lastGutFeeling == null
+          ? null
+          : calculateGutFeelingRating(lastGutFeeling).level,
     );
   }
 
@@ -128,7 +145,8 @@ class DailyCare {
       other.gutFeelings == gutFeelings &&
       other.toilets == toilets &&
       other.lastMealAt == lastMealAt &&
-      other.lastLogAt == lastLogAt;
+      other.lastLogAt == lastLogAt &&
+      other.lastGutFeelingLevel == lastGutFeelingLevel;
 
   @override
   int get hashCode => Object.hash(
@@ -139,6 +157,7 @@ class DailyCare {
     toilets,
     lastMealAt,
     lastLogAt,
+    lastGutFeelingLevel,
   );
 
   /// The daily goal of [need]; null for Klo (counted, never a target).

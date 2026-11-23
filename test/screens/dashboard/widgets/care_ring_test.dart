@@ -5,6 +5,7 @@ import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
+import 'package:belly_buddy/utils/gut_feeling_rating.dart';
 
 void main() {
   var buddyTapsLog = <int>[];
@@ -80,6 +81,26 @@ void main() {
     expect(find.text('Trinken'), findsOneWidget);
     expect(find.text('Bauchgefühl'), findsOneWidget);
     expect(find.text('Klo'), findsOneWidget);
+  });
+
+  testWidgets('Bauchgefühl shows how today\'s latest entry was, not always '
+      'a smile', (tester) async {
+    final shown = <GutFeelingRatingLevel, String>{};
+    for (final level in GutFeelingRatingLevel.values) {
+      await pump(
+        tester,
+        care: DailyCare(gutFeelings: 1, lastGutFeelingLevel: level),
+      );
+      expect(find.text('${level.face} ✓'), findsOneWidget);
+      shown[level] = level.face;
+      final node = tester.getSemantics(
+        find.byKey(CareRing.needKey(CareNeed.gutFeeling)),
+      );
+      expect(node.value, contains(level.label));
+    }
+    expect(shown.values.toSet(), hasLength(4));
+    expect(shown[GutFeelingRatingLevel.schlecht], isNot('🙂'));
+    expect(shown[GutFeelingRatingLevel.mittel], isNot('🙂'));
   });
 
   testWidgets('nothing logged: open marks for Bauchgefühl and Klo', (

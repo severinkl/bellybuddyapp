@@ -14,6 +14,9 @@ class TrackerScreenScaffold extends StatelessWidget {
 
   /// Replaces the success mascot (see [BbSuccessOverlay.illustration]).
   final Widget? successIllustration;
+
+  /// The calm success screen (see [BbSuccessOverlay.calm]).
+  final bool successCalm;
   final Widget body;
   final List<Widget>? appBarActions;
   final List<Widget>? successActions;
@@ -31,6 +34,7 @@ class TrackerScreenScaffold extends StatelessWidget {
     this.successSubMessage,
     this.successMascotAsset,
     this.successIllustration,
+    this.successCalm = false,
     this.appBarActions,
     this.successActions,
     this.successBottomCallout,
@@ -46,6 +50,7 @@ class TrackerScreenScaffold extends StatelessWidget {
             successSubMessage ?? 'Ist jetzt in deinem Tagebuch eingetragen.',
         mascotAsset: successMascotAsset,
         illustration: successIllustration,
+        calm: successCalm,
         onDismissed: onSuccessDismissed ?? context.popOrGoDashboard,
         actions: successActions,
         bottomCallout: successBottomCallout,

@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
+import 'package:belly_buddy/utils/gut_feeling_rating.dart';
 
 import '../../helpers/fixtures.dart';
 
@@ -30,6 +31,31 @@ void main() {
   });
 
   group('DailyCare.fromEntries', () {
+    test('keeps the level of today\'s latest Bauchgefühl', () {
+      final care = DailyCare.fromEntries(
+        EntriesState(
+          gutFeelings: [
+            testGutFeelingEntry(
+              trackedAt: DateTime(2026, 11, 23, 12),
+              cramps: 5,
+            ),
+            testGutFeelingEntry(
+              trackedAt: DateTime(2026, 11, 23, 8),
+              bloating: 1,
+              fullness: 1,
+            ),
+            testGutFeelingEntry(trackedAt: yesterday, bloating: 1),
+          ],
+        ),
+        now,
+      );
+      expect(care.lastGutFeelingLevel, GutFeelingRatingLevel.schlecht);
+      expect(
+        DailyCare.fromEntries(const EntriesState(), now).lastGutFeelingLevel,
+        isNull,
+      );
+    });
+
     test('counts only today (local) per need', () {
       final care = DailyCare.fromEntries(
         EntriesState(

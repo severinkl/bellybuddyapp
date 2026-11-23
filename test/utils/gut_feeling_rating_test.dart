@@ -56,7 +56,7 @@ void main() {
     test('maps whole scores 1 / 2 / 3 / 4-5', () {
       expect(gutFeelingLevelFor(1), GutFeelingRatingLevel.spiGut);
       expect(gutFeelingLevelFor(2), GutFeelingRatingLevel.gut);
-      expect(gutFeelingLevelFor(3), GutFeelingRatingLevel.durchschnittlich);
+      expect(gutFeelingLevelFor(3), GutFeelingRatingLevel.mittel);
       expect(gutFeelingLevelFor(4), GutFeelingRatingLevel.schlecht);
       expect(gutFeelingLevelFor(5), GutFeelingRatingLevel.schlecht);
     });
@@ -65,7 +65,7 @@ void main() {
       expect(gutFeelingLevelFor(1.5), GutFeelingRatingLevel.spiGut);
       expect(gutFeelingLevelFor(1.51), GutFeelingRatingLevel.gut);
       expect(gutFeelingLevelFor(2.5), GutFeelingRatingLevel.gut);
-      expect(gutFeelingLevelFor(3.5), GutFeelingRatingLevel.durchschnittlich);
+      expect(gutFeelingLevelFor(3.5), GutFeelingRatingLevel.mittel);
       expect(gutFeelingLevelFor(3.51), GutFeelingRatingLevel.schlecht);
     });
   });
@@ -87,10 +87,10 @@ void main() {
       expect(rating.color, AppTheme.gutFeelingBad);
     });
 
-    test('Blähbauch 3 alone is durchschnittlich', () {
+    test('Blähbauch 3 alone is mittel', () {
       final rating = calculateGutFeelingRating(makeEntry(bloating: 3));
       expect(rating.score, 3);
-      expect(rating.level, GutFeelingRatingLevel.durchschnittlich);
+      expect(rating.level, GutFeelingRatingLevel.mittel);
       expect(rating.color, AppTheme.gutFeelingNeutral);
     });
 

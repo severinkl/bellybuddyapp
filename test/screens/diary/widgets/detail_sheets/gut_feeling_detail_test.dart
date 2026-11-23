@@ -88,7 +88,7 @@ void main() {
     ) async {
       await pumpDetail(tester, _gut(bloating: 3));
 
-      expect(find.text('Durchschnittlich'), findsOneWidget);
+      expect(find.text('Mittel'), findsOneWidget);
       expect(find.text('Stärkstes Symptom: 3 von 5'), findsOneWidget);
       expect(find.textContaining('5.0'), findsNothing);
       expect(find.textContaining('5,0'), findsNothing);

@@ -39,6 +39,8 @@ void main() {
     // stay allowed.
     RegExp(r'\b(ge)?[Tt]rack(e|en|st|t|te|ten)\b'),
     RegExp(r'\b[Ee]rfass'),
+    // The four Bauchgefühl levels: sehr gut, gut, mittel, schlecht.
+    RegExp(r'[Dd]urchschnittlich'),
   ];
 
   // Never used outside of copy, so a hit anywhere in code is copy.

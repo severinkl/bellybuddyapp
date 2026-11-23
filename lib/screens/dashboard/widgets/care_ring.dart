@@ -216,15 +216,21 @@ class _NeedBubble extends StatelessWidget {
       '${care.glasses}/${DailyCare.glassGoal}',
       '${care.glasses} von ${DailyCare.glassGoal} Gläsern',
     ),
-    CareNeed.gutFeeling =>
-      care.isMet(CareNeed.gutFeeling)
-          ? ('✓', 'heute eingetragen')
-          : ('–', 'heute noch offen'),
+    CareNeed.gutFeeling => switch (care.lastGutFeelingLevel) {
+      _ when !care.isMet(CareNeed.gutFeeling) => ('–', 'heute noch offen'),
+      null => ('✓', 'heute eingetragen'),
+      final level => ('✓', 'heute eingetragen, zuletzt ${level.label}'),
+    },
     CareNeed.toilet => (
       care.toilets > 0 ? '${care.toilets}×' : '–',
       '${care.toilets} ${care.toilets == 1 ? 'Eintrag' : 'Einträge'} heute',
     ),
   };
+
+  /// Bauchgefühl, once logged, shows how today's latest entry was.
+  String get _emoji => need == CareNeed.gutFeeling
+      ? care.lastGutFeelingLevel?.face ?? need.emoji
+      : need.emoji;
 
   BoxDecoration get _decoration => BoxDecoration(
     color: care.isMet(need) ? AppTheme.primarySoft : AppTheme.background,
@@ -251,7 +257,7 @@ class _NeedBubble extends StatelessWidget {
         FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(
-            '${need.emoji} $count',
+            '$_emoji $count',
             maxLines: 1,
             style: const TextStyle(
               fontSize: AppTheme.fontSizeSubtitle,
