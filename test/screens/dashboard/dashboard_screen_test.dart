@@ -16,6 +16,7 @@ import 'package:belly_buddy/screens/dashboard/widgets/tutorial/dashboard_tutoria
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_keys.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_step.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
+import 'package:belly_buddy/providers/buddy_offers_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/buddy_welcome_provider.dart';
 import 'package:belly_buddy/config/app_theme.dart';
@@ -176,6 +177,14 @@ FakeRecommendationRepository _unseenTips() => FakeRecommendationRepository(
 );
 
 void main() {
+  // No opt-in dialog over Home and no Buddy announcement flags set; a test
+  // that needs other prefs sets its own.
+  setUp(
+    () => SharedPreferences.setMockInitialValues({
+      AppConstants.keyNotificationModalShown: true,
+    }),
+  );
+
   group('DashboardScreen Neue Tipps row', () {
     testWidgets('an unseen tip set shows the row under the insight card', (
       tester,
@@ -199,16 +208,8 @@ void main() {
     testWidgets('tapping it opens the Tipps', (tester) async {
       final router = GoRouter(
         routes: [
-          GoRoute(
-            path: '/',
-            builder: (_, _) => const _AppRoot(),
-            routes: [
-              GoRoute(
-                path: 'recommendations',
-                builder: (_, _) => const Scaffold(body: Text('Tipps')),
-              ),
-            ],
-          ),
+          GoRoute(path: '/', builder: (_, _) => const _AppRoot()),
+          ...stubRoutes([RoutePaths.recommendations]),
         ],
       );
       addTearDown(router.dispose);
@@ -223,12 +224,10 @@ void main() {
       await tester.ensureVisible(find.byKey(TipsRow.rowKey));
       await tester.pump();
       await tester.tap(find.byKey(TipsRow.rowKey));
+      await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(
-        router.routerDelegate.currentConfiguration.last.matchedLocation,
-        RoutePaths.recommendations,
-      );
+      expect(find.text('page:${RoutePaths.recommendations}'), findsOneWidget);
     });
 
     testWidgets('no row when every set is seen', (tester) async {
@@ -677,12 +676,6 @@ void main() {
   });
 
   group('DashboardScreen taps on a phone', () {
-    setUp(() {
-      SharedPreferences.setMockInitialValues({
-        AppConstants.keyNotificationModalShown: true,
-      });
-    });
-
     const trackers = {
       CareNeed.food: RoutePaths.mealTracker,
       CareNeed.drink: RoutePaths.drinkTracker,
@@ -811,12 +804,6 @@ void main() {
   });
 
   group('DashboardScreen shows the signed-in user\'s day', () {
-    setUp(() {
-      SharedPreferences.setMockInitialValues({
-        AppConstants.keyNotificationModalShown: true,
-      });
-    });
-
     final now = DateTime(2026, 11, 23, 14);
     EntryQueryResult lunchToday() => testEntryQueryResult(
       meals: [testMealEntry(trackedAt: DateTime(2026, 11, 23, 12))],
@@ -920,12 +907,6 @@ void main() {
   });
 
   group('DashboardScreen first run', () {
-    setUp(() {
-      SharedPreferences.setMockInitialValues({
-        AppConstants.keyNotificationModalShown: true,
-      });
-    });
-
     testWidgets('a new user gets the spotlight tour directly, without a '
         'welcome modal', (tester) async {
       await tester.pumpWithProviders(
@@ -1023,12 +1004,6 @@ void main() {
   });
 
   group('DashboardScreen tour replay', () {
-    setUp(() {
-      SharedPreferences.setMockInitialValues({
-        AppConstants.keyNotificationModalShown: true,
-      });
-    });
-
     testWidgets('replay from Ich starts the tour on Home once', (tester) async {
       final profileRepo = FakeProfileRepository()
         ..seedProfile(testUserProfile());
@@ -1108,13 +1083,6 @@ void main() {
   });
 
   group('DashboardScreen Buddy offers', () {
-    // The offers read the Buddy's announcement flags; no opt-in dialog.
-    setUp(
-      () => SharedPreferences.setMockInitialValues({
-        AppConstants.keyNotificationModalShown: true,
-      }),
-    );
-
     ProviderContainer containerOf(WidgetTester tester) =>
         ProviderScope.containerOf(tester.element(find.byType(DashboardScreen)));
 
@@ -1165,6 +1133,14 @@ void main() {
             .read(entriesProvider.notifier)
             .deleteByType('gutFeeling', 'gut-1');
         await tester.pump(const Duration(milliseconds: 100));
+        // Locked again (2 gut-feeling entries), the offer is withdrawn.
+        expect(
+          container.read(buddyOffersProvider),
+          gutFeelings == 3
+              ? {BuddyAnnouncement.weeklyTipsOffer: weeklyTipsOfferSuffix}
+              : isEmpty,
+          reason: '$gutFeelings gut-feeling entries',
+        );
       }
 
       expect(entryRepo.insightSourceCalls, 4);

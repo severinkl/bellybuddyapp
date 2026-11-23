@@ -523,14 +523,25 @@ void main() {
       );
     });
 
-    test('signed out: nothing', () async {
-      final c = makeContainer(userId: null);
+    test('signed out: nothing, not even once signed in', () async {
+      final user = SwitchableUserId(null);
+      final c = createContainer(
+        overrides: [
+          buddyRepositoryProvider.overrideWithValue(buddyRepo),
+          entryRepositoryProvider.overrideWithValue(entryRepo),
+          user.override,
+          buddyTodayProvider.overrideWithValue(() => now),
+        ],
+      );
 
       await c
           .read(buddyProvider.notifier)
           .offerAnnouncement(tips, suffix: 'rec-1');
-
       expect(await c.read(buddyProvider.future), isNull);
+
+      user.set(c, 'u1');
+      await load(c);
+      expect(pending(c), isEmpty);
     });
 
     test('waits for the first load', () async {
