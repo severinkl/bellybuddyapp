@@ -120,7 +120,9 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
             style: TextStyle(
               fontSize: AppTheme.fontSizeBody,
               fontWeight: FontWeight.w600,
-              color: isActive ? Colors.white : AppTheme.mutedForeground,
+              color: isActive
+                  ? AppTheme.primaryForeground
+                  : AppTheme.mutedForeground,
             ),
           ),
         ),

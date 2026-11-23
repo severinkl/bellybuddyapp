@@ -173,6 +173,7 @@ class EntriesNotifier extends Notifier<EntriesState> {
       _write(() => _repo.deleteByType(type, id));
 
   // -- Typed update by ID (used by diary detail sheets) --
+  // A non-null [trackedAt] moves the entry to that date and time.
 
   Future<void> updateGutFeelingById(
     String id, {
@@ -185,6 +186,7 @@ class EntriesNotifier extends Notifier<EntriesState> {
     int? energy,
     int? focus,
     int? bodyFeel,
+    DateTime? trackedAt,
   }) => _update('gutFeeling', id, {
     'bloating': bloating,
     'gas': gas,
@@ -195,16 +197,33 @@ class EntriesNotifier extends Notifier<EntriesState> {
     'energy': energy,
     'focus': focus,
     'body_feel': bodyFeel,
+    ..._trackedAtJson(trackedAt),
   });
 
-  Future<void> updateToiletById(String id, {required int stoolType}) =>
-      _update('toilet', id, {'stool_type': stoolType});
+  Future<void> updateToiletById(
+    String id, {
+    required int stoolType,
+    DateTime? trackedAt,
+  }) => _update('toilet', id, {
+    'stool_type': stoolType,
+    ..._trackedAtJson(trackedAt),
+  });
 
   Future<void> updateDrinkById(
     String id, {
     required int amountMl,
     String? notes,
-  }) => _update('drink', id, {'amount_ml': amountMl, 'notes': notes});
+    DateTime? trackedAt,
+  }) => _update('drink', id, {
+    'amount_ml': amountMl,
+    'notes': notes,
+    ..._trackedAtJson(trackedAt),
+  });
+
+  /// `tracked_at` as the entry models write it, or nothing for null.
+  static Map<String, dynamic> _trackedAtJson(DateTime? trackedAt) => {
+    if (trackedAt != null) 'tracked_at': trackedAt.toIso8601String(),
+  };
 
   void reset() {
     _load++;

@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../providers/diary_provider.dart';
 import '../../../../providers/entries_provider.dart';
+import '../../../../utils/save_helper.dart';
 import 'detail_sheet_scaffold.dart';
 import 'gut_feeling_detail.dart';
 import 'gut_feeling_edit_state.dart';
@@ -37,6 +38,7 @@ class _GutFeelingDetailSheetState extends State<GutFeelingDetailSheet> {
   int? _energy;
   int? _focus;
   int? _bodyFeel;
+  late DateTime _trackedAt;
 
   @override
   void initState() {
@@ -55,11 +57,15 @@ class _GutFeelingDetailSheetState extends State<GutFeelingDetailSheet> {
     _energy = gut.energy;
     _focus = gut.focus;
     _bodyFeel = gut.bodyFeel;
+    _trackedAt = gut.trackedAt;
   }
 
   Future<void> _save() async {
     setState(() => _saving = true);
-    try {
+    final movedTo = _trackedAt == widget.data.gutFeeling.trackedAt
+        ? null
+        : _trackedAt;
+    final ok = await saveWithFeedback(context, () async {
       await widget.parentRef
           .read(entriesProvider.notifier)
           .updateGutFeelingById(
@@ -73,12 +79,15 @@ class _GutFeelingDetailSheetState extends State<GutFeelingDetailSheet> {
             energy: _energy,
             focus: _focus,
             bodyFeel: _bodyFeel,
+            trackedAt: movedTo,
           );
-      final date = widget.parentRef.read(diaryDateProvider);
-      widget.parentRef.invalidate(diaryEntriesProvider(date));
-      if (mounted) Navigator.pop(context);
-    } finally {
-      if (mounted) setState(() => _saving = false);
+      refreshDiaryDays(widget.parentRef, movedTo: movedTo);
+    });
+    if (!mounted) return;
+    if (ok) {
+      Navigator.pop(context);
+    } else {
+      setState(() => _saving = false);
     }
   }
 
@@ -86,24 +95,23 @@ class _GutFeelingDetailSheetState extends State<GutFeelingDetailSheet> {
   Widget build(BuildContext context) {
     return DetailSheetScaffold(
       title: widget.entry.title,
-      trackedAt: widget.entry.trackedAt,
+      trackedAt: _trackedAt,
       scrollController: widget.scrollController,
       canEdit: true,
       isEditing: _isEditing,
       saving: _saving,
       onEditPressed: () => setState(() => _isEditing = true),
-      onCancelPressed: () {
+      onCancelPressed: () => setState(() {
         _resetEditState();
-        setState(() => _isEditing = false);
-      },
+        _isEditing = false;
+      }),
       onSavePressed: _save,
-      onDeletePressed: () async {
-        Navigator.pop(context);
+      onTrackedAtChanged: (dt) => setState(() => _trackedAt = dt),
+      onDelete: () async {
         await widget.parentRef
             .read(entriesProvider.notifier)
             .deleteByType(widget.entry.type.name, widget.entry.id);
-        final date = widget.parentRef.read(diaryDateProvider);
-        widget.parentRef.invalidate(diaryEntriesProvider(date));
+        refreshDiaryDays(widget.parentRef);
       },
       content: GutFeelingDetail(
         gut: widget.data.gutFeeling,
