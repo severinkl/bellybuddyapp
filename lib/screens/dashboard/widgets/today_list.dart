@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
+import '../../../providers/buddy_provider.dart';
 import '../../../providers/diary_provider.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../router/route_names.dart';
@@ -12,7 +13,6 @@ import '../../../utils/date_format_utils.dart';
 import '../../../utils/drink_helpers.dart';
 import '../../../utils/gut_feeling_rating.dart';
 import '../../../widgets/common/bb_card.dart';
-import 'buddy_hero.dart';
 
 /// One row of the dashboard's „Heute" list.
 class TodayLogItem {

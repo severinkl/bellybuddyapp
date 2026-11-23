@@ -17,6 +17,14 @@ import 'core_providers.dart';
 /// The Buddy's clock. Day boundaries use its local date; tests override it.
 final buddyTodayProvider = Provider<DateTime Function()>((_) => DateTime.now);
 
+/// The app's clock for what „now" means on screen (the dashboard hero's
+/// mood and day, event age, the day the dashboard loads, the plus sheet's
+/// time and suggestion). Follows the Buddy's clock ([buddyTodayProvider])
+/// unless overridden; tests pin it.
+final buddyClockProvider = Provider<DateTime Function()>(
+  (ref) => ref.watch(buddyTodayProvider),
+);
+
 /// One-shot Buddy messages. They stay pending across refreshes until the
 /// dashboard has played them and calls
 /// [BuddyNotifier.markAnnouncementsShown], which sets their flags; each one

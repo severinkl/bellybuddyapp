@@ -26,13 +26,6 @@ import '../../buddy/streak_goal_picker.dart';
 import 'care_ring.dart';
 import 'streak_sheet.dart';
 
-/// The dashboard's clock (the hero's mood and day, event age, the day the
-/// dashboard loads). Follows the Buddy's clock ([buddyTodayProvider])
-/// unless overridden; tests pin it.
-final buddyClockProvider = Provider<DateTime Function()>(
-  (ref) => ref.watch(buddyTodayProvider),
-);
-
 /// Lines the hero plays one after another: the onboarding's welcome (ahead
 /// of all others), the follow-up after a log and the [BuddyAnnouncement]s.
 enum _Cue {

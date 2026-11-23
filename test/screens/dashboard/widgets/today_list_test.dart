@@ -5,10 +5,10 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:belly_buddy/config/app_theme.dart';
+import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/diary_provider.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/router/route_names.dart';
-import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/today_list.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 

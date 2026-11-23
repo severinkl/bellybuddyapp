@@ -23,8 +23,10 @@ import 'package:belly_buddy/screens/auth/auth_screen.dart';
 import 'package:belly_buddy/screens/buddy/buddy_onboarding_screen.dart';
 import 'package:belly_buddy/screens/dashboard/dashboard_screen.dart';
 import 'package:belly_buddy/screens/diary/diary_screen.dart';
+import 'package:belly_buddy/screens/discover/discover_screen.dart';
 import 'package:belly_buddy/screens/health_consent/health_consent_screen.dart';
 import 'package:belly_buddy/screens/loading_screen.dart';
+import 'package:belly_buddy/screens/me/me_screen.dart';
 import 'package:belly_buddy/screens/recipes/recipe_editor_screen.dart';
 import 'package:belly_buddy/screens/trackers/drink/drink_tracker_screen.dart';
 import 'package:belly_buddy/screens/trackers/meal/meal_tracker_screen.dart';
@@ -196,10 +198,11 @@ Future<void> _pumpFrames(
   }
 }
 
-/// Not a single frame of the dashboard (or the diary) so far.
+/// Not a single frame of any tab (Home, Tagebuch, Entdecken, Ich) so far.
 void _expectNoShell(WidgetTester tester) {
-  expect(find.byType(DashboardScreen, skipOffstage: false), findsNothing);
-  expect(find.byType(DiaryScreen, skipOffstage: false), findsNothing);
+  for (final tab in [DashboardScreen, DiaryScreen, DiscoverScreen, MeScreen]) {
+    expect(find.byType(tab, skipOffstage: false), findsNothing, reason: '$tab');
+  }
 }
 
 /// The auth screen's social buttons need more width than 400 px in the
@@ -406,6 +409,26 @@ void main() {
         find.byType(BuddyOnboardingScreen, skipOffstage: false),
         findsOneWidget,
       );
+    });
+
+    testWidgets('/me and /discover → /buddy-onboarding when required', (
+      tester,
+    ) async {
+      final container = await _pumpHost(
+        tester,
+        profiles: _profilesWith(testUserProfile()),
+        buddies: FakeBuddyRepository(),
+      );
+      expect(_currentPath(container), RoutePaths.buddyOnboarding);
+
+      final router = container.read(routerProvider);
+      for (final route in [RoutePaths.me, RoutePaths.discover]) {
+        router.go(route);
+        await tester.pumpAndSettle();
+        expect(_currentPath(container), RoutePaths.buddyOnboarding);
+        expect(find.byType(BuddyOnboardingScreen), findsOneWidget);
+      }
+      _expectNoShell(tester);
     });
 
     testWidgets('a completed Buddy passes the gate', (tester) async {
@@ -625,6 +648,38 @@ void main() {
       expect(find.byType(DashboardScreen), findsOneWidget);
     });
 
+    testWidgets('discover and me are held on /loading while pending', (
+      tester,
+    ) async {
+      for (final path in [RoutePaths.discover, RoutePaths.me]) {
+        await tester.pumpWidget(const SizedBox.shrink());
+        final buddies = FakeBuddyRepository()
+          ..store[testUserId] = BuddyState(
+            userId: testUserId,
+            onboardingCompletedAt: _completedAt,
+          )
+          ..fetchHold = Completer<void>();
+        final container = await _pumpHost(
+          tester,
+          profiles: _profilesWith(testUserProfile()),
+          buddies: buddies,
+          settle: false,
+        );
+
+        final router = container.read(routerProvider);
+        router.go(path);
+        await _pumpFrames(tester);
+        final held = router.routerDelegate.currentConfiguration.uri;
+        expect(held.path, RoutePaths.loading, reason: path);
+        expect(held.queryParameters['to'], path, reason: path);
+        _expectNoShell(tester);
+
+        buddies.fetchHold!.complete();
+        await tester.pumpAndSettle();
+        expect(_currentPath(container), path);
+      }
+    });
+
     testWidgets('a Buddy that never answers holds the app only briefly '
         '(never blocks it)', (tester) async {
       final buddies = FakeBuddyRepository()..fetchHold = Completer<void>();
@@ -668,5 +723,22 @@ void main() {
       await tester.pumpAndSettle();
       expect(_currentPath(container), RoutePaths.dashboard);
     });
+  });
+
+  test('/recommendations is never gated', () {
+    // A notification tap lands there whatever the gate's state.
+    for (final isRequired in [false, true]) {
+      for (final isPending in [false, true]) {
+        expect(
+          buddyOnboardingRedirect(
+            isRequired: isRequired,
+            isPending: isPending,
+            location: Uri.parse(RoutePaths.recommendations),
+          ),
+          isNull,
+          reason: 'required: $isRequired, pending: $isPending',
+        );
+      }
+    }
   });
 }

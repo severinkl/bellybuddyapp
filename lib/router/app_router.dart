@@ -11,7 +11,6 @@ import '../utils/logger.dart';
 import '../screens/screens.dart';
 import '../config/app_theme.dart';
 import '../widgets/common/bb_bottom_nav.dart';
-import '../widgets/common/swipeable_pages.dart';
 import 'route_names.dart';
 
 class _RouterRefreshNotifier extends ChangeNotifier {
@@ -124,17 +123,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const RegistrationWizardScreen(),
       ),
 
-      // Shell route for bottom nav with swipe navigation
+      // The four tabs (Home · Tagebuch · Entdecken · Ich) under the bottom
+      // bar; the plus in its middle opens the „Eintragen" sheet. No swipe
+      // between tabs: the Tagebuch swipes between days.
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return Scaffold(
-            backgroundColor: AppTheme.beige,
-            body: SwipeablePages(
-              currentIndex: navigationShell.currentIndex,
-              pageCount: 2,
-              onPageChanged: (index) => navigationShell.goBranch(index),
-              child: navigationShell,
-            ),
+            backgroundColor: AppTheme.background,
+            body: navigationShell,
             bottomNavigationBar: BbBottomNav(navigationShell: navigationShell),
           );
         },
@@ -154,6 +150,24 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: RoutePaths.diary,
                 name: RouteNames.diary,
                 builder: (context, state) => const DiaryScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.discover,
+                name: RouteNames.discover,
+                builder: (context, state) => const DiscoverScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.me,
+                name: RouteNames.me,
+                builder: (context, state) => const MeScreen(),
               ),
             ],
           ),
