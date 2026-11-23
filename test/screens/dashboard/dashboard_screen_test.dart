@@ -20,6 +20,7 @@ import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/buddy_welcome_provider.dart';
 import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
+import 'package:belly_buddy/providers/insights_provider.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
@@ -37,11 +38,22 @@ import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/riverpod_helpers.dart';
 
+/// The signed-in user's id, switchable (sign-in as another user).
+class _UserId extends Notifier<String?> {
+  @override
+  String? build() => testUserId;
+
+  void set(String? id) => state = id;
+}
+
+final _userIdProvider = NotifierProvider<_UserId, String?>(_UserId.new);
+
 List<Override> _overrides({
   FakeBuddyRepository? buddyRepo,
   FakeEntryRepository? entryRepo,
   FakeProfileRepository? profileRepo,
   UserProfile? profile,
+  bool switchableUser = false,
 }) => [
   profileRepositoryProvider.overrideWithValue(
     profileRepo ??
@@ -52,7 +64,10 @@ List<Override> _overrides({
   entryRepositoryProvider.overrideWithValue(entryRepo ?? FakeEntryRepository()),
   ingredientRepositoryProvider.overrideWithValue(FakeIngredientRepository()),
   buddyRepositoryProvider.overrideWithValue(buddyRepo ?? FakeBuddyRepository()),
-  currentUserIdProvider.overrideWithValue(testUserId),
+  if (switchableUser)
+    currentUserIdProvider.overrideWith((ref) => ref.watch(_userIdProvider))
+  else
+    currentUserIdProvider.overrideWithValue(testUserId),
   isAuthenticatedProvider.overrideWithValue(true),
 ];
 
@@ -215,6 +230,119 @@ void main() {
       );
       // Loaded once on mount: the dashboard's load joins the card's.
       expect(entryRepo.insightSourceCalls, 1);
+    });
+
+    testWidgets('pull-to-refresh fetches the insights again', (tester) async {
+      final entryRepo = FakeEntryRepository()
+        ..insightSource = insightSourceFor(activeDays: 2, gutFeelings: 1);
+      await tester.pumpWithProviders(
+        const DashboardScreen(),
+        overrides: _overrides(entryRepo: entryRepo),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      entryRepo.insightSource = insightSourceFor(activeDays: 3, gutFeelings: 1);
+
+      await tester.fling(
+        find.byType(RefreshIndicator),
+        const Offset(0, 400),
+        1000,
+      );
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      expect(entryRepo.insightSourceCalls, 2);
+      expect(
+        find.text(
+          'Noch 4 Tage, dann zeig ich dir erste Muster.',
+          skipOffstage: false,
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('deleting the 3rd gut-feeling entry locks the card again, '
+        'without pull-to-refresh', (tester) async {
+      final entryRepo = FakeEntryRepository()
+        ..insightSource = insightSourceFor(activeDays: 7, gutFeelings: 3);
+      await tester.pumpWithProviders(
+        const DashboardScreen(),
+        overrides: _overrides(entryRepo: entryRepo),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(
+        find.text(
+          'Genug Einträge! Deine ersten Muster kommen bald.',
+          skipOffstage: false,
+        ),
+        findsOneWidget,
+      );
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(DashboardScreen)),
+      );
+
+      entryRepo.insightSource = insightSourceFor(activeDays: 7, gutFeelings: 2);
+      await container
+          .read(entriesProvider.notifier)
+          .deleteByType('gutFeeling', 'gut-1');
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(entryRepo.insightSourceCalls, 2);
+      expect(
+        find.text(
+          'Noch 1 Bauchgefühl-Eintrag, dann zeig ich dir erste Muster.',
+          skipOffstage: false,
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('after a user change the card never shows the previous '
+        "user's numbers", (tester) async {
+      final entryRepo = FakeEntryRepository()
+        ..insightSource = insightSourceFor(activeDays: 2, gutFeelings: 1);
+      await tester.pumpWithProviders(
+        const DashboardScreen(),
+        overrides: _overrides(entryRepo: entryRepo, switchableUser: true),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(
+        find.text(
+          'Noch 5 Tage, dann zeig ich dir erste Muster.',
+          skipOffstage: false,
+        ),
+        findsOneWidget,
+      );
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(DashboardScreen)),
+      );
+      final card = find.byKey(InsightCard.cardKey, skipOffstage: false);
+
+      // The next user's insights load: no card meanwhile.
+      entryRepo.holdInsightSource = true;
+      container.read(_userIdProvider.notifier).set('u2');
+      await tester.pump();
+      expect(entryRepo.insightSourceRequests.last.userId, 'u2');
+      expect(card, findsNothing);
+
+      // Their first load fails: still none of the previous user's numbers.
+      entryRepo.heldInsightSources.single.completeError(Exception('offline'));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(card, findsNothing);
+
+      // Loaded later: their own numbers.
+      entryRepo
+        ..holdInsightSource = false
+        ..insightSource = insightSourceFor(activeDays: 1, gutFeelings: 0);
+      await container.read(insightsProvider.notifier).refresh();
+      await tester.pump();
+      expect(
+        find.text(
+          'Noch 6 Tage, dann zeig ich dir erste Muster.',
+          skipOffstage: false,
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('390×844 phone: a big Buddy, the ring and its button above '

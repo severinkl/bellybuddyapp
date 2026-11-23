@@ -241,8 +241,8 @@ final entriesProvider = NotifierProvider<EntriesNotifier, EntriesState>(
 /// the write is done. A failed write leaves it alone; loads never change it.
 ///
 /// Whatever is computed from the user's entries beyond the day
-/// [entriesProvider] holds (the insight progress, the insights) listens to
-/// it to recompute after any write, whoever made it:
+/// [entriesProvider] holds (the insights) listens to it to recompute after
+/// any write, whoever made it:
 ///
 /// ```dart
 /// ref.listen(entriesRevisionProvider, (_, _) => unawaited(refresh()));

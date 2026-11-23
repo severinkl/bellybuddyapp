@@ -305,12 +305,27 @@ class FakeEntryRepository implements EntryRepository {
   /// How often [fetchInsightSource] was called.
   int insightSourceCalls = 0;
 
+  /// The `userId` and `now` of each [fetchInsightSource] call, in order.
+  final insightSourceRequests = <({String userId, DateTime now})>[];
+
+  /// While true, each [fetchInsightSource] call waits for its own completer,
+  /// added to [heldInsightSources], so overlapping fetches can finish in any
+  /// order.
+  bool holdInsightSource = false;
+  final heldInsightSources = <Completer<InsightSource>>[];
+
   @override
   Future<InsightSource> fetchInsightSource({
     required String userId,
     required DateTime now,
   }) async {
     insightSourceCalls++;
+    insightSourceRequests.add((userId: userId, now: now));
+    if (holdInsightSource) {
+      final held = Completer<InsightSource>();
+      heldInsightSources.add(held);
+      return held.future;
+    }
     final error = insightSourceError;
     if (error != null) throw error;
     return insightSource;
