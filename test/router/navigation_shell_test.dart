@@ -5,7 +5,6 @@ import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/providers/diary_provider.dart';
-import 'package:belly_buddy/providers/discover_news_provider.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
 import 'package:belly_buddy/router/app_router.dart';
@@ -20,7 +19,6 @@ import 'package:belly_buddy/screens/diary/diary_screen.dart';
 import 'package:belly_buddy/screens/discover/discover_screen.dart';
 import 'package:belly_buddy/screens/discover/knowledge_screen.dart';
 import 'package:belly_buddy/screens/me/me_screen.dart';
-import 'package:belly_buddy/repositories/recommendation_repository.dart';
 import 'package:belly_buddy/screens/patterns/patterns_screen.dart';
 import 'package:belly_buddy/screens/recommendations/recommendations_screen.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
@@ -55,6 +53,7 @@ Future<ProviderContainer> _pumpShell(
   final container = ProviderContainer.test(
     overrides: [
       ...baseOverrides(
+        tips: tips,
         ingredients: FakeIngredientRepository(groups: groups),
         entries: FakeEntryRepository()
           ..seedResult(
@@ -67,13 +66,8 @@ Future<ProviderContainer> _pumpShell(
           ),
       ),
       buddyTodayProvider.overrideWithValue(() => _now),
-      recommendationRepositoryProvider.overrideWithValue(
-        tips ?? FakeRecommendationRepository(),
-      ),
     ],
   );
-  // The app root keeps the news loaded.
-  container.listen(discoverNewsProvider, (_, _) {});
   await tester.pumpWidget(
     UncontrolledProviderScope(container: container, child: const AppTestHost()),
   );

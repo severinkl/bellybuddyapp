@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/user_profile.dart';
+import 'package:belly_buddy/router/app_router.dart';
 import 'package:belly_buddy/screens/dashboard/dashboard_screen.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
@@ -20,7 +21,6 @@ import 'package:belly_buddy/providers/buddy_offers_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/buddy_welcome_provider.dart';
 import 'package:belly_buddy/config/app_theme.dart';
-import 'package:belly_buddy/providers/discover_news_provider.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/repositories/recommendation_repository.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tips_row.dart';
@@ -29,6 +29,7 @@ import 'package:belly_buddy/providers/tutorial_provider.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
+import 'package:belly_buddy/screens/recommendations/recommendations_screen.dart';
 import 'package:belly_buddy/services/entry_query_service.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/router/route_names.dart';
@@ -159,16 +160,20 @@ const _tourSkip = 'Überspringen';
 const _welcomeModalTitle = 'Willkommen bei Belly Buddy!';
 const _optInTitle = 'Bleib auf dem Laufenden!';
 
-/// Home as in the app, where the root keeps [discoverNewsProvider] alive
-/// and its sign-in load brings the tips.
-class _AppRoot extends ConsumerWidget {
-  const _AppRoot();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(discoverNewsProvider);
-    return const DashboardScreen();
-  }
+/// Home in the app: the real router and shell under [AppTestHost], whose
+/// root keeps the tips loaded (its sign-in load brings [tips]'s sets).
+Future<ProviderContainer> _pumpHome(
+  WidgetTester tester, {
+  FakeRecommendationRepository? tips,
+}) async {
+  final container = ProviderContainer.test(
+    overrides: baseOverrides(tips: tips),
+  );
+  await tester.pumpWidget(
+    UncontrolledProviderScope(container: container, child: const AppTestHost()),
+  );
+  await _settleFirstRun(tester);
+  return container;
 }
 
 /// A tip set that nobody opened yet.
@@ -189,11 +194,7 @@ void main() {
     testWidgets('an unseen tip set shows the row under the insight card', (
       tester,
     ) async {
-      await tester.pumpWithProviders(
-        const _AppRoot(),
-        overrides: _overrides(recommendationRepo: _unseenTips()),
-      );
-      await _settleFirstRun(tester);
+      await _pumpHome(tester, tips: _unseenTips());
 
       expect(find.byKey(TipsRow.rowKey), findsOneWidget);
       expect(find.text('✨ Neue Tipps · Woche 47'), findsOneWidget);
@@ -206,44 +207,39 @@ void main() {
     });
 
     testWidgets('tapping it opens the Tipps', (tester) async {
-      final router = GoRouter(
-        routes: [
-          GoRoute(path: '/', builder: (_, _) => const _AppRoot()),
-          ...stubRoutes([RoutePaths.recommendations]),
-        ],
-      );
-      addTearDown(router.dispose);
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: _overrides(recommendationRepo: _unseenTips()),
-          child: germanRouterApp(router),
-        ),
-      );
-      await _settleFirstRun(tester);
+      // Tall and wide: the row clear of the bar, the Tipps laid out for the
+      // width of a real font.
+      tester.view
+        ..physicalSize = const Size(800, 1200)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final container = await _pumpHome(tester, tips: _unseenTips());
 
-      await tester.ensureVisible(find.byKey(TipsRow.rowKey));
-      await tester.pump();
       await tester.tap(find.byKey(TipsRow.rowKey));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.text('page:${RoutePaths.recommendations}'), findsOneWidget);
+      expect(
+        container
+            .read(routerProvider)
+            .routerDelegate
+            .currentConfiguration
+            .last
+            .matchedLocation,
+        RoutePaths.recommendations,
+      );
+      expect(find.byType(RecommendationsScreen), findsOneWidget);
     });
 
     testWidgets('no row when every set is seen', (tester) async {
-      await tester.pumpWithProviders(const _AppRoot(), overrides: _overrides());
-      await _settleFirstRun(tester);
+      await _pumpHome(tester);
 
       expect(find.byKey(TipsRow.rowKey, skipOffstage: false), findsNothing);
     });
 
     testWidgets('pull-to-refresh brings tips that came since', (tester) async {
       final repo = FakeRecommendationRepository();
-      await tester.pumpWithProviders(
-        const _AppRoot(),
-        overrides: _overrides(recommendationRepo: repo),
-      );
-      await _settleFirstRun(tester);
+      await _pumpHome(tester, tips: repo);
       expect(find.byKey(TipsRow.rowKey, skipOffstage: false), findsNothing);
 
       repo.sets = [testRecommendation(createdAt: DateTime(2026, 11, 16))];
@@ -264,11 +260,7 @@ void main() {
       addTearDown(tester.view.resetDevicePixelRatio);
       tester.platformDispatcher.textScaleFactorTestValue = 1.3;
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-      await tester.pumpWithProviders(
-        const _AppRoot(),
-        overrides: _overrides(recommendationRepo: _unseenTips()),
-      );
-      await _settleFirstRun(tester);
+      await _pumpHome(tester, tips: _unseenTips());
 
       expect(find.byKey(TipsRow.rowKey), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -1087,13 +1079,9 @@ void main() {
         ProviderScope.containerOf(tester.element(find.byType(DashboardScreen)));
 
     testWidgets('an unseen tip set is offered to the Buddy', (tester) async {
-      await tester.pumpWithProviders(
-        const _AppRoot(),
-        overrides: _overrides(recommendationRepo: _unseenTips()),
-      );
-      await _settleFirstRun(tester);
+      final container = await _pumpHome(tester, tips: _unseenTips());
 
-      final status = containerOf(tester).read(buddyProvider).value!;
+      final status = container.read(buddyProvider).value!;
       expect(status.announcements, [BuddyAnnouncement.tipsArrived]);
       expect(
         status.announcementKeys[BuddyAnnouncement.tipsArrived],

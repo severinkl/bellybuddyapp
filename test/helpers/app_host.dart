@@ -8,6 +8,7 @@ import 'package:belly_buddy/config/app_localizations.dart';
 import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
+import 'package:belly_buddy/providers/discover_news_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/providers/upgrade_gate_provider.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
@@ -20,6 +21,7 @@ import 'package:belly_buddy/repositories/knowledge_repository.dart';
 import 'package:belly_buddy/repositories/meal_media_repository.dart';
 import 'package:belly_buddy/repositories/notification_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
+import 'package:belly_buddy/repositories/recommendation_repository.dart';
 import 'package:belly_buddy/router/app_router.dart';
 
 import 'fakes.dart';
@@ -70,13 +72,15 @@ FakeBuddyRepository onboardedBuddyRepository() => FakeBuddyRepository()
 
 /// Every repository the real router's screens reach, faked: signed in
 /// ([auth]), [testUserProfile] ([profiles]), an onboarded Buddy
-/// ([buddies]), no entries ([entries]), and the upgrade [decision].
+/// ([buddies]), no entries ([entries]), one seen tip set ([tips]), and the
+/// upgrade [decision].
 List<Override> baseOverrides({
   FakeAuthRepository? auth,
   FakeProfileRepository? profiles,
   FakeBuddyRepository? buddies,
   FakeEntryRepository? entries,
   FakeIngredientRepository? ingredients,
+  FakeRecommendationRepository? tips,
   UpgradeDecision decision = UpgradeDecision.ok,
 }) => [
   authRepositoryProvider.overrideWithValue(auth ?? FakeAuthRepository()),
@@ -91,6 +95,9 @@ List<Override> baseOverrides({
   ingredientRepositoryProvider.overrideWithValue(
     ingredients ?? FakeIngredientRepository(),
   ),
+  recommendationRepositoryProvider.overrideWithValue(
+    tips ?? FakeRecommendationRepository(),
+  ),
   userRecipeRepositoryProvider.overrideWithValue(FakeUserRecipeRepository()),
   mealMediaRepositoryProvider.overrideWithValue(FakeMealMediaRepository()),
   notificationRepositoryProvider.overrideWithValue(
@@ -102,11 +109,12 @@ List<Override> baseOverrides({
   upgradeDecisionProvider.overrideWith((_) => Future.value(decision)),
 ];
 
-/// Pared-down app root: the real router, owning the upgrade decision like
-/// [BellyBuddyApp] and loading the profile on start when signed in, without
-/// the splash overlay. With [followAuth] it also loads the profile on
-/// sign-in and resets it on sign-out, listening after the router like the
-/// app.
+/// Pared-down app root: the real router, owning the upgrade decision and
+/// keeping the tips and Alternativen loaded ([discoverNewsProvider]) like
+/// [BellyBuddyApp], and loading the profile on start when signed in,
+/// without the splash overlay. With [followAuth] it also loads the profile
+/// on sign-in and resets it on sign-out, listening after the router like
+/// the app.
 class AppTestHost extends ConsumerStatefulWidget {
   const AppTestHost({super.key, this.followAuth = false});
 
@@ -128,6 +136,7 @@ class _AppTestHostState extends ConsumerState<AppTestHost> {
   @override
   Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
+    ref.watch(discoverNewsProvider);
     listenForUpgradeDecision(ref);
     if (widget.followAuth) {
       ref.listen<bool>(isAuthenticatedProvider, (_, signedIn) {
