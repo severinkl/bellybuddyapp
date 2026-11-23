@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
+import '../../providers/recipe_search_provider.dart';
 import '../../providers/user_recipes_provider.dart';
 import '../../router/route_names.dart';
 import '../../widgets/common/bb_async_state.dart';
@@ -20,41 +21,29 @@ class MyRecipesTab extends ConsumerStatefulWidget {
 }
 
 class _MyRecipesTabState extends ConsumerState<MyRecipesTab> {
-  // Captured so dispose() can clear the search without touching `ref`
-  // after deactivation.
-  late final UserRecipesNotifier _notifier;
-
   @override
   void initState() {
     super.initState();
-    _notifier = ref.read(userRecipesProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _notifier.fetch();
+      ref.read(userRecipesProvider.notifier).fetch();
     });
   }
 
   @override
-  void dispose() {
-    // The search belongs to this screen: once it closes, Entdecken's
-    // Meine Rezepte (same provider) shows every recipe again.
-    _notifier.setQuery(null);
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final async = ref.watch(userRecipesProvider);
+    // The search belongs to this screen (auto-disposed with it): Entdecken's
+    // Meine Rezepte never shows its matches.
+    final async = ref.watch(recipeSearchProvider);
     return async.when(
       loading: () => const BbLoadingState(),
       error: (e, _) => BbErrorState(
         message: 'Konnte Rezepte nicht laden',
-        onRetry: () =>
-            ref.read(userRecipesProvider.notifier).fetch(force: true),
+        onRetry: () => ref.read(recipeSearchProvider.notifier).retry(),
       ),
       data: (recipes) {
         final hasActiveQuery = ref
-            .watch(userRecipesProvider.notifier)
+            .read(recipeSearchProvider.notifier)
             .hasActiveQuery;
         if (recipes.isEmpty && !hasActiveQuery) return const _EmptyState();
         return Column(

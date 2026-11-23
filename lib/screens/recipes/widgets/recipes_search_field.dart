@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
-import '../../../providers/user_recipes_provider.dart';
+import '../../../providers/recipe_search_provider.dart';
 
+/// The search of the screen it sits on ([recipeSearchProvider]), kept
+/// alive while the field shows.
 class RecipesSearchField extends ConsumerStatefulWidget {
   const RecipesSearchField({super.key});
 
@@ -18,7 +20,7 @@ class _RecipesSearchFieldState extends ConsumerState<RecipesSearchField> {
   @override
   void initState() {
     super.initState();
-    final initial = ref.read(userRecipesProvider.notifier).activeQuery;
+    final initial = ref.read(recipeSearchProvider.notifier).activeQuery;
     if (initial != null) _controller.text = initial;
   }
 
@@ -30,11 +32,12 @@ class _RecipesSearchFieldState extends ConsumerState<RecipesSearchField> {
 
   void _clear() {
     _controller.clear();
-    ref.read(userRecipesProvider.notifier).setQuery(null);
+    ref.read(recipeSearchProvider.notifier).setQuery(null);
   }
 
   @override
   Widget build(BuildContext context) {
+    final search = ref.watch(recipeSearchProvider.notifier);
     final pillBorder = OutlineInputBorder(
       borderRadius: BorderRadius.circular(AppConstants.radiusRound),
       borderSide: BorderSide.none,
@@ -57,8 +60,7 @@ class _RecipesSearchFieldState extends ConsumerState<RecipesSearchField> {
             focusedBorder: pillBorder,
             isDense: true,
           ),
-          onChanged: (value) =>
-              ref.read(userRecipesProvider.notifier).setQuery(value),
+          onChanged: search.setQuery,
         );
       },
     );

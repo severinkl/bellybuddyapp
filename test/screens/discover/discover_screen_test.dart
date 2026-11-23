@@ -398,9 +398,6 @@ void main() {
 
     await tester.tap(find.byIcon(Icons.close));
     await tester.pumpAndSettle();
-    // The closed screen dropped the search; the reload is debounced.
-    await tester.pump(const Duration(milliseconds: 400));
-    await tester.pumpAndSettle();
 
     expect(find.byType(DiscoverScreen), findsOneWidget);
     expect(find.text('Noch keine Rezepte.'), findsNothing);

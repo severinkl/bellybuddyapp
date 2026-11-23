@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:belly_buddy/providers/core_providers.dart';
+import 'package:belly_buddy/providers/recipe_search_provider.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipes_search_field.dart';
 
@@ -67,11 +68,11 @@ void main() {
     );
     addTearDown(container.dispose);
 
-    // Seed an active query before the widget mounts.
+    // Seed an active query before the widget mounts (a screen keeps the
+    // search alive).
+    container.listen(recipeSearchProvider, (_, _) {});
     await container.read(userRecipesProvider.notifier).fetch();
-    // Bypass debounce: set _query directly via setQuery with a very short
-    // pump to flush the debounce timer before mounting the widget.
-    container.read(userRecipesProvider.notifier).setQuery('reis');
+    container.read(recipeSearchProvider.notifier).setQuery('reis');
     // Advance fake time past the 300 ms debounce so the timer fires.
     await tester.pump(const Duration(milliseconds: 350));
 

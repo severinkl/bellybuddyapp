@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/user_recipe.dart';
@@ -16,38 +14,13 @@ final userRecipeRepositoryProvider = Provider<UserRecipeRepository>((ref) {
   return UserRecipeRepository(ref.watch(userRecipeServiceProvider));
 });
 
+/// The user's recipes, unfiltered. A screen's search is
+/// `recipeSearchProvider`.
 class UserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>> {
   static const _log = AppLogger('UserRecipesNotifier');
-  static const _debounceDuration = Duration(milliseconds: 300);
-
-  String? _query;
-  Timer? _debounce;
-
-  /// True iff a non-empty search query is active. UI uses this to
-  /// distinguish "no recipes saved" from "search returned nothing".
-  bool get hasActiveQuery => _query != null;
-
-  /// The active search query, or null if no search is active.
-  String? get activeQuery => _query;
 
   @override
-  AsyncValue<List<UserRecipe>> build() {
-    ref.onDispose(() => _debounce?.cancel());
-    return const AsyncValue.loading();
-  }
-
-  /// Sets the active search query. Empty / whitespace-only values clear it
-  /// and the next fetch falls back to the unfiltered list. Calls debounce
-  /// for [_debounceDuration]; identical queries are a no-op.
-  void setQuery(String? q) {
-    final next = (q == null || q.trim().isEmpty) ? null : q.trim();
-    if (_query == next) return;
-    _query = next;
-    _debounce?.cancel();
-    _debounce = Timer(_debounceDuration, () {
-      fetch(force: true);
-    });
-  }
+  AsyncValue<List<UserRecipe>> build() => const AsyncValue.loading();
 
   /// Fetches the user's recipes. When [force] is false (the default) and the
   /// provider already has data, the method short-circuits — screens that open
@@ -65,11 +38,9 @@ class UserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>> {
         state = const AsyncValue.data([]);
         return;
       }
-      final repo = ref.read(userRecipeRepositoryProvider);
-      final query = _query;
-      final recipes = (query == null)
-          ? await repo.fetchForUser(userId)
-          : await repo.searchForUser(userId, query);
+      final recipes = await ref
+          .read(userRecipeRepositoryProvider)
+          .fetchForUser(userId);
       state = AsyncValue.data(recipes);
     } catch (e, st) {
       _log.error('fetch failed', e, st);

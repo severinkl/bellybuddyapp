@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:belly_buddy/providers/core_providers.dart';
+import 'package:belly_buddy/providers/recipe_search_provider.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/screens/recipes/my_recipes_tab.dart';
 import 'package:belly_buddy/screens/recipes/recipes_screen.dart';
@@ -67,8 +68,10 @@ void main() {
     await tester.enterText(find.byType(TextField), 'zzz');
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
-    final notifier = container.read(userRecipesProvider.notifier);
-    expect(notifier.activeQuery, 'zzz');
+    expect(container.read(recipeSearchProvider.notifier).activeQuery, 'zzz');
+    expect(find.text('Keine Treffer'), findsOneWidget);
+    // The search never filters the user's recipes.
+    expect(container.read(userRecipesProvider).value, hasLength(1));
 
     await tester.pumpWidget(
       UncontrolledProviderScope(
@@ -76,10 +79,9 @@ void main() {
         child: const MaterialApp(home: SizedBox()),
       ),
     );
-    await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
 
-    expect(notifier.activeQuery, isNull);
+    expect(container.read(recipeSearchProvider.exists), isFalse);
     expect(container.read(userRecipesProvider).value, hasLength(1));
   });
 
