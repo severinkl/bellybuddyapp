@@ -295,6 +295,31 @@ void main() {
       expect(container.read(profileProvider).value!.remindersEnabled, isFalse);
     });
 
+    test('a failure reverts only the switch: a profile write meanwhile '
+        'stays', () async {
+      when(
+        () => mockRepo.getProfile(any()),
+      ).thenAnswer((_) async => testUserProfile());
+      when(() => mockRepo.updateProfile(any(), any())).thenAnswer((_) async {});
+      final write = Completer<void>();
+      when(
+        () => mockRepo.setWeeklyTips(any(), any()),
+      ).thenAnswer((_) => write.future);
+      final container = makeContainer();
+      final notifier = container.read(profileProvider.notifier);
+      await notifier.fetchProfile();
+
+      final switching = notifier.setWeeklyTips(true);
+      final profile = container.read(profileProvider).value!;
+      await notifier.updateProfile(profile.copyWith(remindersEnabled: false));
+      write.completeError(Exception('offline'));
+      await expectLater(switching, throwsException);
+
+      final after = container.read(profileProvider).value!;
+      expect(after.weeklyTipsEnabled, isFalse);
+      expect(after.remindersEnabled, isFalse);
+    });
+
     test('setWeeklyTips without a loaded profile throws StateError', () {
       final container = makeContainer();
       expect(

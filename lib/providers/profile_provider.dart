@@ -108,20 +108,23 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
     }
   }
 
-  /// Switches the weekly tips on or off: optimistic, reverted and rethrown
-  /// on failure (e.g. a backend without the column). Touches nothing else.
+  /// Switches the weekly tips on or off: optimistic, the switch reverted
+  /// and rethrown on failure (e.g. a backend without the column). Touches
+  /// nothing else: a profile write meanwhile stays.
   Future<void> setWeeklyTips(bool enabled) async {
-    final previous = state;
     final profile = state.value;
     final userId = _resolveUserId();
     if (profile == null || userId == null) {
       throw StateError('setWeeklyTips needs a loaded profile');
     }
+    final was = profile.weeklyTipsEnabled;
     state = AsyncValue.data(profile.copyWith(weeklyTipsEnabled: enabled));
     try {
       await ref.read(profileRepositoryProvider).setWeeklyTips(userId, enabled);
     } catch (e) {
-      state = previous;
+      if (state case AsyncData(:final value?)) {
+        state = AsyncValue.data(value.copyWith(weeklyTipsEnabled: was));
+      }
       rethrow;
     }
   }
