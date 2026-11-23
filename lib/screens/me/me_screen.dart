@@ -91,25 +91,12 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     context.go(RoutePaths.dashboard);
   }
 
-  Future<void> _openFeedback() async {
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    var opened = false;
-    try {
-      opened = await widget.openUrl(
-        Uri.parse(AppConstants.feedbackFormUrl),
-        mode: LaunchMode.externalApplication,
-      );
-    } catch (e, st) {
-      _log.error('Opening the feedback form failed', e, st);
-    }
-    if (!opened) {
-      messenger?.showSnackBar(
-        const SnackBar(
-          content: Text('Das Feedback-Formular konnte nicht geöffnet werden.'),
-        ),
-      );
-    }
-  }
+  Future<void> _openFeedback() => openExternalUrl(
+    context,
+    AppConstants.feedbackFormUrl,
+    failureMessage: 'Das Feedback-Formular konnte nicht geöffnet werden.',
+    open: widget.openUrl,
+  );
 
   @override
   Widget build(BuildContext context) {

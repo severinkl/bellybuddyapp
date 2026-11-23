@@ -13,7 +13,6 @@ import '../../providers/recommendation_provider.dart';
 import '../../providers/user_recipes_provider.dart';
 import '../../router/route_names.dart';
 import '../../utils/date_format_utils.dart';
-import '../../utils/logger.dart';
 import '../../utils/url_utils.dart';
 import '../../widgets/common/bb_card.dart';
 import '../recipes/widgets/add_recipe_chooser_sheet.dart';
@@ -47,8 +46,6 @@ class DiscoverScreen extends ConsumerStatefulWidget {
 }
 
 class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
-  static const _log = AppLogger('Discover');
-
   static const _alternativesShown = 3;
   static const _recipesShown = 6;
 
@@ -77,23 +74,12 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     if (mounted) setState(() {});
   }
 
-  Future<void> _openBlog() async {
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    var opened = false;
-    try {
-      opened = await widget.openUrl(
-        Uri.parse(AppConstants.blogUrl),
-        mode: LaunchMode.externalApplication,
-      );
-    } catch (e, st) {
-      _log.error('opening the blog failed', e, st);
-    }
-    if (!opened) {
-      messenger?.showSnackBar(
-        const SnackBar(content: Text('Der Blog konnte nicht geöffnet werden.')),
-      );
-    }
-  }
+  Future<void> _openBlog() => openExternalUrl(
+    context,
+    AppConstants.blogUrl,
+    failureMessage: 'Der Blog konnte nicht geöffnet werden.',
+    open: widget.openUrl,
+  );
 
   @override
   Widget build(BuildContext context) {

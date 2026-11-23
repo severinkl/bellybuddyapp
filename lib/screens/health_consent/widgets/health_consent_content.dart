@@ -1,8 +1,7 @@
 import 'package:material_ui/material_ui.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
-import '../../../utils/logger.dart';
+import '../../../utils/url_utils.dart';
 
 /// The GDPR Art. 9 health-data consent text, the privacy policy link and
 /// (unless [showCheckbox] is false) the explicit-consent checkbox. Shared by
@@ -22,8 +21,6 @@ class HealthConsentContent extends StatelessWidget {
   static const checkboxKey = HealthConsentCheckbox.checkboxKey;
   static const consentText = HealthConsentCheckbox.consentText;
 
-  static const _log = AppLogger('HealthConsentContent');
-
   const HealthConsentContent({
     super.key,
     required this.checked,
@@ -31,27 +28,11 @@ class HealthConsentContent extends StatelessWidget {
     this.showCheckbox = true,
   });
 
-  Future<void> _openPrivacyPolicy(BuildContext context) async {
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    var opened = false;
-    try {
-      opened = await launchUrl(
-        Uri.parse(AppConstants.privacyPolicyUrl),
-        mode: LaunchMode.externalApplication,
-      );
-    } catch (e, st) {
-      _log.error('opening privacy policy failed', e, st);
-    }
-    if (!opened) {
-      messenger?.showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Die Datenschutzerklärung konnte nicht geöffnet werden.',
-          ),
-        ),
-      );
-    }
-  }
+  Future<void> _openPrivacyPolicy(BuildContext context) => openExternalUrl(
+    context,
+    AppConstants.privacyPolicyUrl,
+    failureMessage: 'Die Datenschutzerklärung konnte nicht geöffnet werden.',
+  );
 
   @override
   Widget build(BuildContext context) {
