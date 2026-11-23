@@ -228,6 +228,24 @@ void main() {
       expect(c.read(insightsProvider).value, computeInsights(all, now));
     });
 
+    test('a write that changes nothing in them notifies no one (the UI '
+        'rebuilds nothing)', () async {
+      final c = makeContainer();
+      final heard = <AsyncValue<Insights>>[];
+      c.listen(insightsProvider, (_, next) => heard.add(next));
+      final loaded = await c.read(insightsProvider.future);
+      heard.clear();
+      // Equal entries, fetched anew.
+      entryRepo.insightSource = insightSourceFor(activeDays: 2, gutFeelings: 1);
+
+      await c.read(entriesProvider.notifier).updateMeal(testMealEntry());
+      await settle();
+
+      expect(entryRepo.insightSourceCalls, 2);
+      expect(heard, isEmpty);
+      expect(c.read(insightsProvider).value, loaded);
+    });
+
     test('a Buddy event alone (no write) fetches nothing', () async {
       final c = makeContainer();
       await c.read(insightsProvider.future);
