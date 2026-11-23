@@ -24,7 +24,7 @@ class BirthYearStep extends StatelessWidget {
           const StepFieldLabel(
             key: birthYearTitleKey,
             'Geburtsjahr',
-            helper: 'Hilft uns, deine Verdauung besser zu analysieren.',
+            helper: 'Hilft mir, deine Verdauung besser zu analysieren.',
           ),
           AppConstants.gap16,
           Expanded(

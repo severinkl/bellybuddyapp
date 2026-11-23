@@ -32,7 +32,7 @@ class HeightWeightStep extends StatelessWidget {
           const StepFieldLabel(
             key: heightWeightTitleKey,
             'Größe & Gewicht',
-            helper: 'Hilft uns, deine Verdauung besser zu verstehen.',
+            helper: 'Hilft mir, deine Verdauung besser zu verstehen.',
           ),
           AppConstants.gap16,
           Expanded(
