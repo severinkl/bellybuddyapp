@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/utils/suggestion_helpers.dart';
 
 void main() {
@@ -145,6 +146,54 @@ void main() {
       );
       expect(groups.first.replacements.length, 1);
       expect(groups.first.replacements.first.name, 'Hafermilch');
+    });
+
+    group('the ingredient\'s image', () {
+      List<IngredientSuggestionGroup> build(
+        String? ownImage,
+        List<(String, String?)> replacements,
+      ) => SuggestionHelpers.buildGroups(
+        suggestionData: [
+          {
+            'id': 's1',
+            'detected_ingredient_id': 'ing1',
+            'ingredients': {'name': 'Tofu', 'image_url': ownImage},
+            'meal_id': null,
+            'seen_at': null,
+          },
+        ],
+        replacementsData: [
+          for (final (i, (name, url)) in replacements.indexed)
+            {
+              'suggestion_id': 's1',
+              'ingredients': {'id': 'r$i', 'name': name, 'image_url': url},
+            },
+        ],
+        mealsData: [],
+      );
+
+      test('is its own when it has one', () {
+        final groups = build('https://img/tofu.png', [
+          ('Tofu (fest, natur)', 'https://img/tofu-fest.png'),
+        ]);
+        expect(groups.single.ingredientImageUrl, 'https://img/tofu.png');
+      });
+
+      test('without one, is that of the same food in a variety', () {
+        final groups = build(null, [
+          ('Halloumi', 'https://img/halloumi.png'),
+          ('Tofu (fest, natur)', 'https://img/tofu-fest.png'),
+        ]);
+        expect(groups.single.ingredientImageUrl, 'https://img/tofu-fest.png');
+      });
+
+      test('is never that of another food', () {
+        final groups = build(null, [
+          ('Halloumi', 'https://img/halloumi.png'),
+          ('Tofuwurst', 'https://img/tofuwurst.png'),
+        ]);
+        expect(groups.single.ingredientImageUrl, isNull);
+      });
     });
 
     test('indexes meals by ID', () {

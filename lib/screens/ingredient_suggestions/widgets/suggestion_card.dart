@@ -6,6 +6,7 @@ import '../../../models/ingredient_suggestion_group.dart';
 import '../../../widgets/common/bb_card.dart';
 import '../../../config/constants.dart';
 import '../../../utils/url_utils.dart';
+import 'ingredient_placeholder.dart';
 
 class SuggestionCard extends StatelessWidget {
   final IngredientSuggestionGroup group;
@@ -151,12 +152,8 @@ class SuggestionCard extends StatelessWidget {
                                       color: AppTheme.muted,
                                     ),
                                   ),
-                                  errorWidget: (_, _, _) => const Text(
-                                    '\u{1F96C}',
-                                    style: TextStyle(
-                                      fontSize: AppTheme.fontSizeBody,
-                                    ),
-                                  ),
+                                  errorWidget: (_, _, _) =>
+                                      const IngredientPlaceholder(size: 24),
                                 ),
                               ),
                               const SizedBox(width: 6),
@@ -216,20 +213,5 @@ class _IngredientAvatar extends StatelessWidget {
     return _fallback();
   }
 
-  Widget _fallback() {
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: const BoxDecoration(
-        color: AppTheme.muted,
-        shape: BoxShape.circle,
-      ),
-      child: const Center(
-        child: Text(
-          '\u{1F96C}',
-          style: TextStyle(fontSize: AppTheme.fontSizeHeading),
-        ),
-      ),
-    );
-  }
+  Widget _fallback() => const IngredientPlaceholder(size: 48);
 }

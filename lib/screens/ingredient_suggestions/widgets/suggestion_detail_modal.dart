@@ -8,6 +8,7 @@ import '../../../config/constants.dart';
 import '../../../repositories/meal_media_repository.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/url_utils.dart';
+import 'ingredient_placeholder.dart';
 
 class SuggestionDetailModal extends StatelessWidget {
   final IngredientSuggestionGroup group;
@@ -327,17 +328,5 @@ class _IngredientImage extends StatelessWidget {
     return _fallback();
   }
 
-  Widget _fallback() {
-    return Container(
-      width: size,
-      height: size,
-      decoration: const BoxDecoration(
-        color: AppTheme.muted,
-        shape: BoxShape.circle,
-      ),
-      child: Center(
-        child: Text('\u{1F96C}', style: TextStyle(fontSize: size * 0.45)),
-      ),
-    );
-  }
+  Widget _fallback() => IngredientPlaceholder(size: size);
 }

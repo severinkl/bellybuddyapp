@@ -1,5 +1,6 @@
 import '../models/ingredient_suggestion_group.dart';
 import '../models/replacement_ingredient.dart';
+import 'url_utils.dart';
 
 class _GroupAccumulator {
   final String ingredientId;
@@ -24,6 +25,25 @@ class _GroupAccumulator {
 abstract final class SuggestionHelpers {
   /// A group's name when nothing tells which ingredient it is.
   static const unknownIngredient = 'Unbekannte Zutat';
+
+  /// The picture of ingredient [name]: its own ([own]); without one, that
+  /// of a replacement that is the same food in a variety („Tofu (fest,
+  /// natur)" for „Tofu"); else null (a neutral placeholder shows).
+  static String? ingredientImage(
+    String name,
+    String? own,
+    List<ReplacementIngredient> replacements,
+  ) {
+    if (own != null && isValidImageUrl(own)) return own;
+    final food = name.trim().toLowerCase();
+    for (final r in replacements) {
+      final url = r.imageUrl;
+      if (url == null || !isValidImageUrl(url)) continue;
+      final other = r.name.trim().toLowerCase();
+      if (other == food || other.startsWith('$food (')) return url;
+    }
+    return null;
+  }
 
   /// The ingredient a suggestion's [helptext] is about, when its catalog
   /// row is hidden: the one of [candidates] (its meals' ingredients) the
@@ -158,7 +178,11 @@ abstract final class SuggestionHelpers {
           return IngredientSuggestionGroup(
             ingredientId: acc.ingredientId,
             ingredientName: name,
-            ingredientImageUrl: acc.ingredientImageUrl,
+            ingredientImageUrl: ingredientImage(
+              name,
+              acc.ingredientImageUrl,
+              replacements,
+            ),
             helptext: acc.helptext,
             mealCount: acc.mealIds.length,
             isNew: acc.hasUnseen,
