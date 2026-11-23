@@ -10,6 +10,7 @@ import '../../../config/constants.dart';
 import '../../../providers/buddy_events_provider.dart';
 import '../../../providers/buddy_provider.dart';
 import '../../../providers/buddy_welcome_provider.dart';
+import '../../../providers/daily_care_provider.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../router/tab_navigation.dart';
 import '../../../router/tracker_routes.dart';
@@ -235,11 +236,10 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   // --- Mood -----------------------------------------------------------------
 
-  /// The care of the loaded day, or of [_careAt]'s before the first load.
+  /// The care of the loaded day ([dailyCareProvider]), at [_careAt].
   void _deriveCare() {
     _careAt = _now();
-    final entries = ref.read(entriesProvider);
-    _care = DailyCare.fromEntries(entries, entries.day ?? _careAt);
+    _care = ref.read(dailyCareProvider);
   }
 
   /// Once the loaded day is over by his clock (midnight passed, or the app

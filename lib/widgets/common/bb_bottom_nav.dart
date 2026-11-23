@@ -6,8 +6,8 @@ import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/buddy_provider.dart';
+import '../../providers/daily_care_provider.dart';
 import '../../providers/diary_provider.dart';
-import '../../providers/entries_provider.dart';
 import '../../services/buddy/daily_care.dart';
 import '../../utils/date_format_utils.dart';
 import '../../screens/dashboard/widgets/tutorial/tutorial_keys.dart';
@@ -148,10 +148,7 @@ class BbBottomNav extends ConsumerWidget {
         ? ref.read(diaryDateProvider)
         : now;
     final suggested = isSameDay(day, now)
-        ? nextCareAction(
-            DailyCare.fromEntries(ref.read(entriesProvider), now),
-            now,
-          ).need
+        ? nextCareAction(ref.read(dailyCareProvider), now).need
         : null;
     unawaited(showLogSheet(context, day: day, now: now, suggested: suggested));
   }
