@@ -44,8 +44,8 @@ class EntryRepository {
   }
 
   /// The last [InsightRules.windowDays] local days as of [now], today
-  /// included, with meals reaching 24 h further back (a meal the evening
-  /// before still counts for the first day's entries).
+  /// included, with meals reaching [InsightRules.mealsBefore] further back
+  /// (a meal the evening before still counts for the first day's entries).
   Future<InsightSource> fetchInsightSource({
     required String userId,
     required DateTime now,
@@ -54,7 +54,7 @@ class EntryRepository {
     return _queryService.fetchInsightSource(
       userId: userId,
       since: since,
-      mealsSince: since.subtract(const Duration(hours: 24)),
+      mealsSince: since.subtract(InsightRules.mealsBefore),
     );
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:belly_buddy/models/insight_rules.dart';
 import 'package:belly_buddy/models/insight_source.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 
@@ -176,6 +177,36 @@ void main() {
           userId: 'user-123',
           since: DateTime(2026, 10, 25),
           mealsSince: DateTime(2026, 10, 24),
+        ),
+      ).called(1);
+    });
+
+    test('meals reach back as far as the insights look before an '
+        'entry', () async {
+      when(
+        () => queryService.fetchInsightSource(
+          userId: any(named: 'userId'),
+          since: any(named: 'since'),
+          mealsSince: any(named: 'mealsSince'),
+        ),
+      ).thenAnswer(
+        (_) async => const InsightSource(
+          meals: [],
+          gutFeelings: [],
+          activityInstants: [],
+        ),
+      );
+
+      await repo.fetchInsightSource(
+        userId: 'user-123',
+        now: DateTime(2026, 11, 23, 9, 41),
+      );
+
+      verify(
+        () => queryService.fetchInsightSource(
+          userId: 'user-123',
+          since: DateTime(2026, 10, 25),
+          mealsSince: DateTime(2026, 10, 25).subtract(InsightRules.mealsBefore),
         ),
       ).called(1);
     });
