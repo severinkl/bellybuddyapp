@@ -136,6 +136,13 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// The Buddy refresh of the latest log ([BuddyEventsNotifier.lastRefresh]).
   Future<void>? _logRefresh;
 
+  /// The need of the log the pending follow-up answers.
+  CareNeed? _loggedNeed;
+
+  /// The line he said last; a pool never repeats it right away (a few taps
+  /// in a row each get another line).
+  String? _lastLine;
+
   /// Whether the first mood line was said (or replaced by the welcome or
   /// announcements). Waits for the Buddy status (real name and streak) and
   /// visibility.
@@ -284,18 +291,28 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   void _applyMood() => _buddy.mood = _override ?? _careMood;
 
   /// His resting line: what he needs next by day, else the [mood]'s line
-  /// (empathetic, in love, asleep, or at night).
-  String _moodLine(BuddyMood mood) {
+  /// (empathetic, in love, asleep, or at night); never the line he just
+  /// said. Right after a log of [justLogged], when he would ask for more of
+  /// the same, he thanks for it instead ([BuddyCopy.careAfterLog]).
+  String _moodLine(BuddyMood mood, {CareNeed? justLogged}) {
     final status = ref.read(buddyProvider).value;
     final name = status?.state.name ?? 'Buddy';
     final now = _now();
     final byDay = DayParts.isDay(now);
     const moodOnly = {BuddyMood.empathetic, BuddyMood.inLove, BuddyMood.asleep};
     if (byDay && !moodOnly.contains(mood)) {
-      return BuddyCopy.fill(
-        BuddyCopy.pick(BuddyCopy.care[_careAction]!, _rnd),
-        name: name,
-      );
+      final action = _careAction;
+      final pool =
+          (justLogged != null && justLogged == action.need
+              ? BuddyCopy.careAfterLog[action]
+              : null) ??
+          BuddyCopy.care[action]!;
+      final lines = [for (final l in pool) BuddyCopy.fill(l, name: name)];
+      final fresh = [
+        for (final l in lines)
+          if (l != _lastLine) l,
+      ];
+      return BuddyCopy.pick(fresh.isEmpty ? lines : fresh, _rnd);
     }
     return moodLine(
       mood,
@@ -303,13 +320,21 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       streak: status?.streak ?? 0,
       now: now,
       rnd: _rnd,
+      avoid: _lastLine,
     );
   }
 
   /// Says the current mood's line unless something else holds the stage.
   void _sayMoodLine() {
     if (!_greeted || _cueRunning || _followUpPending) return;
-    _whenVisible(() => _buddy.say(_moodLine(_buddy.mood)));
+    _whenVisible(() => _speak(_moodLine(_buddy.mood)));
+  }
+
+  /// Says [line] (for [duration], else the bubble's default) and remembers
+  /// it as his last.
+  void _speak(String line, {Duration? duration}) {
+    _lastLine = line;
+    duration == null ? _buddy.say(line) : _buddy.say(line, duration: duration);
   }
 
   /// The first mood line, once the Buddy status is known and the hero is
@@ -390,6 +415,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       _setOverride(BuddyMood.empathetic);
     }
     _logRefresh = events.lastRefresh;
+    _loggedNeed = _needOf(event.kind);
     if (!_followUpPending) {
       _followUpPending = true;
       _enqueue(const [_Cue.followUp]);
@@ -431,13 +457,21 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       final days = status.streak == 1 ? 'Tag' : 'Tage';
       _say('Danke! 🔥 ${status.streak} $days');
     } else {
-      _say(_moodLine(_buddy.mood));
+      _say(_moodLine(_buddy.mood, justLogged: _loggedNeed));
     }
+    _loggedNeed = null;
   }
+
+  static CareNeed _needOf(EntryKind kind) => switch (kind) {
+    EntryKind.meal => CareNeed.food,
+    EntryKind.drink => CareNeed.drink,
+    EntryKind.gutFeeling => CareNeed.gutFeeling,
+    EntryKind.toilet => CareNeed.toilet,
+  };
 
   // --- Cue queue --------------------------------------------------------------
 
-  void _say(String line) => _buddy.say(line, duration: _cueLineDuration);
+  void _say(String line) => _speak(line, duration: _cueLineDuration);
 
   void _enqueue(Iterable<_Cue> cues) {
     _cues.addAll(cues);
