@@ -9,6 +9,8 @@ import 'recent_meal_picker_sheet.dart';
 Future<void> showAddRecipeChooserSheet(BuildContext context) {
   return showModalBottomSheet(
     context: context,
+    // Above the bottom bar when opened from Entdecken.
+    useRootNavigator: true,
     useSafeArea: true,
     backgroundColor: AppTheme.card,
     shape: const RoundedRectangleBorder(
