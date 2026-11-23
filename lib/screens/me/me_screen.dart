@@ -98,6 +98,38 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     final status = ref.watch(buddyProvider).value;
     final version = ref.watch(currentVersionProvider).value;
 
+    final rows = [
+      if (status != null)
+        BbSettingsItem(
+          key: MeScreen.streakKey,
+          icon: Icons.local_fire_department_outlined,
+          title: 'Streak & Ziel',
+          subtitle: _streakSubtitle(status),
+          onTap: () => unawaited(_openStreak()),
+        ),
+      BbSettingsItem(
+        key: MeScreen.settingsKey,
+        icon: Icons.settings_outlined,
+        title: 'Einstellungen',
+        subtitle: 'Profil, Benachrichtigungen, Konto',
+        onTap: () => context.push(RoutePaths.settings),
+      ),
+      BbSettingsItem(
+        key: MeScreen.tutorialKey,
+        icon: Icons.replay,
+        title: 'Tutorial wiederholen',
+        subtitle: 'Die Tour durch Home nochmal ansehen',
+        onTap: () => ref.read(tutorialProvider.notifier).replayFrom(context),
+      ),
+      BbSettingsItem(
+        key: MeScreen.feedbackKey,
+        icon: Icons.feedback_outlined,
+        title: 'Feedback geben',
+        subtitle: 'Teile uns deine Ideen und Wünsche mit',
+        onTap: () => unawaited(_openFeedback()),
+      ),
+    ];
+
     return Scaffold(
       backgroundColor: AppTheme.background,
       appBar: AppBar(title: const Text('Ich')),
@@ -118,40 +150,10 @@ class _MeScreenState extends ConsumerState<MeScreen> {
               onStreak: () => unawaited(_openStreak()),
             ),
             AppConstants.gap24,
-            if (status != null) ...[
-              BbSettingsItem(
-                key: MeScreen.streakKey,
-                icon: Icons.local_fire_department_outlined,
-                title: 'Streak & Ziel',
-                subtitle: _streakSubtitle(status),
-                onTap: () => unawaited(_openStreak()),
-              ),
-              AppConstants.gap12,
+            for (final (i, row) in rows.indexed) ...[
+              if (i > 0) AppConstants.gap12,
+              row,
             ],
-            BbSettingsItem(
-              key: MeScreen.settingsKey,
-              icon: Icons.settings_outlined,
-              title: 'Einstellungen',
-              subtitle: 'Profil, Benachrichtigungen, Konto',
-              onTap: () => context.push(RoutePaths.settings),
-            ),
-            AppConstants.gap12,
-            BbSettingsItem(
-              key: MeScreen.tutorialKey,
-              icon: Icons.replay,
-              title: 'Tutorial wiederholen',
-              subtitle: 'Die Tour durch Home nochmal ansehen',
-              onTap: () =>
-                  ref.read(tutorialProvider.notifier).replayFrom(context),
-            ),
-            AppConstants.gap12,
-            BbSettingsItem(
-              key: MeScreen.feedbackKey,
-              icon: Icons.feedback_outlined,
-              title: 'Feedback geben',
-              subtitle: 'Teile uns deine Ideen und Wünsche mit',
-              onTap: () => unawaited(_openFeedback()),
-            ),
             if (version != null) ...[
               AppConstants.gap24,
               Text(
