@@ -305,9 +305,6 @@ class AppConstants {
   // Other images
   static const String susiPhone = '$imagesBasePath/susi-phone.png';
   static const String fuerDichCard = '$imagesBasePath/fuer-dich-card.png';
-  static const String alternativenCard =
-      '$imagesBasePath/alternativen-card.jpg';
-  static const String rezepteCard = '$imagesBasePath/rezepte-card.jpg';
   static const String logoSvg = '$imagesBasePath/logo.svg';
   static const String toiletPaperIcon = '$iconsBasePath/toilet-paper-icon.png';
   static const String toiletPaperSvg = '$iconsBasePath/toilet-paper-3.svg';
