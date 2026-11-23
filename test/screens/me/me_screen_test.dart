@@ -177,26 +177,34 @@ void main() {
     expect(find.text('Bruno'), findsNothing);
   });
 
-  testWidgets('rename rejects empty and too long', (tester) async {
+  testWidgets('rename rejects empty and caps the length', (tester) async {
     final buddy = await pump(tester);
 
     await openRename(tester);
     expect(find.text(_renameError), findsNothing);
     expect(saveButton(tester).onPressed, isNotNull);
 
-    for (final invalid in ['   ', 'a' * 21]) {
-      await tester.enterText(find.byType(TextField), invalid);
-      await tester.pump();
+    // Empty is rejected with the error.
+    await tester.enterText(find.byType(TextField), '   ');
+    await tester.pump();
+    expect(find.text(_renameError), findsOneWidget);
+    expect(saveButton(tester).onPressed, isNull);
 
-      expect(find.text(_renameError), findsOneWidget, reason: invalid);
-      expect(saveButton(tester).onPressed, isNull, reason: invalid);
+    // Neither the button nor the keyboard's done saves it.
+    await tester.tap(find.text('Speichern'));
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+    expect(find.text('Buddy umbenennen'), findsOneWidget);
 
-      // Neither the button nor the keyboard's done saves it.
-      await tester.tap(find.text('Speichern'));
-      await tester.testTextInput.receiveAction(TextInputAction.done);
-      await tester.pumpAndSettle();
-      expect(find.text('Buddy umbenennen'), findsOneWidget);
-    }
+    // Like in the registration, a 21st character is not taken at all.
+    await tester.enterText(find.byType(TextField), 'a' * 21);
+    await tester.pump();
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      'a' * 20,
+    );
+    expect(find.text('20/20'), findsOneWidget);
+    expect(find.text(_renameError), findsNothing);
 
     // 20 characters are fine again.
     await tester.enterText(find.byType(TextField), 'a' * 20);
@@ -209,6 +217,19 @@ void main() {
     expect(find.text('Buddy umbenennen'), findsNothing);
     expect(buddy.names, isEmpty);
     expect(find.text('Bruno'), findsOneWidget);
+  });
+
+  testWidgets('rename counts the characters a person sees', (tester) async {
+    await pump(tester);
+
+    await openRename(tester);
+    const heart = '\u2764\uFE0F';
+    await tester.enterText(find.byType(TextField), 'Kiwi ${heart * 7}');
+    await tester.pump();
+
+    expect(find.text('12/20'), findsOneWidget);
+    expect(find.text(_renameError), findsNothing);
+    expect(saveButton(tester).onPressed, isNotNull);
   });
 
   testWidgets('rename to the same name saves nothing', (tester) async {

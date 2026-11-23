@@ -5,9 +5,10 @@ import '../../health_consent/widgets/health_consent_content.dart';
 
 /// Registration step right after the Buddy's name: the GDPR Art. 9 consent
 /// to health-data processing, asked before any health data (body data, diet,
-/// symptoms, intolerances) is collected. The text scrolls; the checkbox stays
-/// pinned below it, right above the wizard's „Weiter" (disabled until it is
-/// ticked), so it is never hidden below the fold. The Buddy's bubble above
+/// symptoms, intolerances) is collected. The text scrolls; the privacy
+/// policy link and the checkbox stay pinned below it, right above the
+/// wizard's „Weiter" (disabled until it is ticked), so neither is hidden
+/// below the fold. The Buddy's bubble above
 /// says one quiet line; the title stays because this is a legal text.
 class HealthConsentStep extends StatelessWidget {
   final bool checked;
@@ -57,13 +58,17 @@ class HealthConsentStep extends StatelessWidget {
           child: Padding(
             padding: const EdgeInsets.fromLTRB(
               AppConstants.spacingMd,
-              AppConstants.spacingSm,
+              AppConstants.spacingXs,
               AppConstants.spacingLg,
               AppConstants.spacingSm,
             ),
-            child: HealthConsentCheckbox(
-              checked: checked,
-              onChanged: onChanged,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const HealthConsentPrivacyLink(),
+                HealthConsentCheckbox(checked: checked, onChanged: onChanged),
+              ],
             ),
           ),
         ),

@@ -3,11 +3,12 @@ import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../utils/url_utils.dart';
 
-/// The GDPR Art. 9 health-data consent text, the privacy policy link and
-/// (unless [showCheckbox] is false) the explicit-consent checkbox. Shared by
+/// The GDPR Art. 9 health-data consent text and (unless [showCheckbox] is
+/// false) the privacy policy link and the explicit-consent checkbox. Shared by
 /// the post-login [HealthConsentScreen] and the registration wizard's
 /// consent step so both ask for the same consent with the same wording; the
-/// wizard pins the [HealthConsentCheckbox] below the scrolling text instead.
+/// wizard pins the [HealthConsentPrivacyLink] and the [HealthConsentCheckbox]
+/// below the scrolling text instead ([showCheckbox] false).
 class HealthConsentContent extends StatelessWidget {
   /// Whether the consent checkbox is ticked.
   final bool checked;
@@ -15,7 +16,7 @@ class HealthConsentContent extends StatelessWidget {
   /// Called with the new checkbox value; null disables the checkbox.
   final ValueChanged<bool>? onChanged;
 
-  /// Whether the checkbox follows the text.
+  /// Whether the privacy policy link and the checkbox follow the text.
   final bool showCheckbox;
 
   static const checkboxKey = HealthConsentCheckbox.checkboxKey;
@@ -27,12 +28,6 @@ class HealthConsentContent extends StatelessWidget {
     required this.onChanged,
     this.showCheckbox = true,
   });
-
-  Future<void> _openPrivacyPolicy(BuildContext context) => openExternalUrl(
-    context,
-    AppConstants.privacyPolicyUrl,
-    failureMessage: 'Die Datenschutzerklärung konnte nicht geöffnet werden.',
-  );
 
   @override
   Widget build(BuildContext context) {
@@ -70,20 +65,36 @@ class HealthConsentContent extends StatelessWidget {
             color: AppTheme.mutedForeground,
           ),
         ),
-        AppConstants.gap8,
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton.icon(
-            onPressed: () => _openPrivacyPolicy(context),
-            icon: const Icon(Icons.open_in_new, size: AppConstants.iconSizeXs),
-            label: const Text('Datenschutzerklärung lesen'),
-          ),
-        ),
         if (showCheckbox) ...[
+          AppConstants.gap8,
+          const HealthConsentPrivacyLink(),
           AppConstants.gap8,
           HealthConsentCheckbox(checked: checked, onChanged: onChanged),
         ],
       ],
+    );
+  }
+}
+
+/// „Datenschutzerklärung lesen": opens the privacy policy.
+class HealthConsentPrivacyLink extends StatelessWidget {
+  const HealthConsentPrivacyLink({super.key});
+
+  Future<void> _open(BuildContext context) => openExternalUrl(
+    context,
+    AppConstants.privacyPolicyUrl,
+    failureMessage: 'Die Datenschutzerklärung konnte nicht geöffnet werden.',
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton.icon(
+        onPressed: () => _open(context),
+        icon: const Icon(Icons.open_in_new, size: AppConstants.iconSizeXs),
+        label: const Text('Datenschutzerklärung lesen'),
+      ),
     );
   }
 }

@@ -567,8 +567,8 @@ void main() {
       }
     });
 
-    testWidgets('on a 393×852 phone the consent checkbox shows without '
-        'scrolling, above „Weiter"', (tester) async {
+    testWidgets('on a 393×852 phone the consent checkbox and the privacy '
+        'policy show without scrolling, above „Weiter"', (tester) async {
       _phone(tester, const Size(393, 852));
       tester.view.padding = const FakeViewPadding(top: 59, bottom: 34);
       addTearDown(tester.view.resetPadding);
@@ -586,6 +586,15 @@ void main() {
       expect(
         tester.getRect(checkbox).bottom,
         lessThanOrEqualTo(tester.getRect(next).top),
+      );
+      // The privacy policy is right there too, above the checkbox, not
+      // under the scrolling text.
+      final policy = find.text('Datenschutzerklärung lesen');
+      expect(policy, findsOneWidget);
+      expect(policy.hitTestable(), findsOneWidget);
+      expect(
+        tester.getRect(policy).bottom,
+        lessThanOrEqualTo(tester.getRect(checkbox).top),
       );
 
       // Ticking it right there enables „Weiter".
@@ -778,6 +787,60 @@ void main() {
       expect(buddy.mood, _line('gender:weiblich').mood);
     });
 
+    testWidgets('deselecting an intolerance takes back its reaction', (
+      tester,
+    ) async {
+      await _pumpWizard(tester);
+      await _walkTo(tester, IntolerancesStep.intolerancesTitleKey);
+      await tester.pump(RegistrationWizardScreen.buddyFollowUpDelay);
+      await tester.pumpAndSettle();
+      final question = _line('step:intolerances').lines.single;
+      expect(_buddy(tester).bubble, question);
+
+      await tester.tap(find.text('Gluten'));
+      await tester.pumpAndSettle();
+      expect(_lines('intolerance:Gluten'), contains(_buddy(tester).bubble));
+
+      await tester.tap(find.text('Gluten'));
+      await tester.pumpAndSettle();
+      expect(_buddy(tester).bubble, question);
+    });
+
+    testWidgets('deselecting an older pick keeps the newer one\'s reaction', (
+      tester,
+    ) async {
+      await _pumpWizard(tester);
+      await _walkTo(tester, IntolerancesStep.intolerancesTitleKey);
+
+      await tester.tap(find.text('Gluten'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Soja'));
+      await tester.pumpAndSettle();
+      final soja = _buddy(tester).bubble;
+      expect(_lines('intolerance:Soja'), contains(soja));
+
+      await tester.tap(find.text('Gluten'));
+      await tester.pumpAndSettle();
+      expect(_buddy(tester).bubble, soja);
+    });
+
+    testWidgets('deselecting a symptom takes back its reaction', (
+      tester,
+    ) async {
+      await _pumpWizard(tester);
+      await _walkTo(tester, SymptomsStep.symptomsTitleKey);
+      final question = _line('step:symptoms').lines.single;
+      const symptom = 'Nervige Verstopfung';
+
+      await tester.tap(find.text(symptom));
+      await tester.pumpAndSettle();
+      expect(_lines('symptom:$symptom'), contains(_buddy(tester).bubble));
+
+      await tester.tap(find.text(symptom));
+      await tester.pumpAndSettle();
+      expect(_buddy(tester).bubble, question);
+    });
+
     testWidgets('choosing „vegan" makes the Buddy fall in love', (
       tester,
     ) async {
@@ -860,11 +923,11 @@ void main() {
       expect(_lines('intolerance:Gluten'), contains(buddy.bubble));
       expect(buddy.currentAction, BuddyAction.think);
 
-      // Deselecting reacts with nothing; leaving with none selected cheers.
-      final id = buddy.bubbleId;
+      // Deselecting takes the reaction back (he asks again); leaving with
+      // none selected cheers.
       await tester.tap(find.text('Gluten'));
       await tester.pumpAndSettle();
-      expect(buddy.bubbleId, id);
+      expect(buddy.bubble, _line('step:intolerances').lines.single);
 
       await _tapNext(tester);
       expect(find.byType(AuthStep), findsOneWidget);
@@ -902,8 +965,71 @@ void main() {
   });
 
   group('After sign-up', () {
-    testWidgets('with the keyboard open on the auth step the Buddy steps '
-        'aside and „Registrieren" stays reachable', (tester) async {
+    testWidgets('on the auth step the Buddy is compact from the start, '
+        'so opening the keyboard moves nothing', (tester) async {
+      _phone(tester, const Size(402, 874));
+      await tester.pumpWithProviders(
+        const RegistrationWizardScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pumpAndSettle();
+
+      await _withTestFontRows(() async {
+        await advanceToAuthStep(tester);
+        expect(
+          _headerHeight(tester),
+          AppConstants.buddyWizardCompactHeaderHeight,
+        );
+        final email = find.byKey(AuthStep.emailFieldKey);
+        final password = find.byKey(BbPasswordField.passwordFieldKey);
+        final emailTop = tester.getRect(email).top;
+        final passwordTop = tester.getRect(password).top;
+
+        await tester.showKeyboard(email);
+        await _openKeyboard(tester, 336);
+
+        expect(
+          _headerHeight(tester),
+          AppConstants.buddyWizardCompactHeaderHeight,
+        );
+        expect(tester.getRect(email).top, closeTo(emailTop, 0.5));
+        expect(tester.getRect(password).top, closeTo(passwordTop, 0.5));
+        expect(password.hitTestable(), findsOneWidget);
+      });
+    });
+
+    testWidgets('„Ungültige E-Mail" goes away once the address is valid', (
+      tester,
+    ) async {
+      _phone(tester, const Size(402, 874));
+      await tester.pumpWithProviders(
+        const RegistrationWizardScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pumpAndSettle();
+
+      await _withTestFontRows(() async {
+        await advanceToAuthStep(tester);
+        final email = find.byKey(AuthStep.emailFieldKey);
+        await tester.enterText(email, 'abc123');
+        await tester.enterText(
+          find.byKey(BbPasswordField.passwordFieldKey),
+          'TestPassword123',
+        );
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.byKey(AuthStep.submitButtonKey));
+        await tester.tap(find.byKey(AuthStep.submitButtonKey));
+        await tester.pumpAndSettle();
+        expect(find.text('Ungültige E-Mail'), findsOneWidget);
+
+        await tester.enterText(email, 'abc123@example.com');
+        await tester.pump();
+        expect(find.text('Ungültige E-Mail'), findsNothing);
+      });
+    });
+
+    testWidgets('with the keyboard open on the auth step „Registrieren" '
+        'stays reachable', (tester) async {
       _phone(tester, const Size(402, 874));
       await tester.pumpWithProviders(
         const RegistrationWizardScreen(),
@@ -922,7 +1048,7 @@ void main() {
         await tester.showKeyboard(find.byKey(BbPasswordField.passwordFieldKey));
         await _openKeyboard(tester, 336);
 
-        expect(find.byType(AnimatedBuddy), findsNothing);
+        expect(find.byType(AnimatedBuddy), findsOneWidget);
         final submit = find.byKey(AuthStep.submitButtonKey);
         expect(submit.hitTestable(), findsOneWidget);
         expect(tester.getRect(submit).bottom, lessThanOrEqualTo(874 - 336));

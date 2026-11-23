@@ -111,6 +111,9 @@ class _AuthStepState extends State<AuthStep> with WidgetsBindingObserver {
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
               autocorrect: false,
+              // Once „Registrieren" showed an error, it goes away as soon as
+              // the address is fixed.
+              autovalidateMode: AutovalidateMode.onUserInteractionIfError,
               decoration: const InputDecoration(
                 labelText: 'E-Mail',
                 hintText: 'deine@email.de',
