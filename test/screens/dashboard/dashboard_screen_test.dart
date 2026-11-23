@@ -72,6 +72,7 @@ Future<(ProviderContainer, GoRouter)> _pumpTabs(
   WidgetTester tester, {
   required FakeProfileRepository profileRepo,
   required String initialLocation,
+  FakeEntryRepository? entryRepo,
 }) async {
   final router = GoRouter(
     initialLocation: initialLocation,
@@ -104,6 +105,7 @@ Future<(ProviderContainer, GoRouter)> _pumpTabs(
     overrides: _overrides(
       profileRepo: profileRepo,
       buddyRepo: _onboardedBuddy(),
+      entryRepo: entryRepo,
     ),
   );
   await tester.pumpWidget(
@@ -478,6 +480,27 @@ void main() {
       await _go(tester, router, RoutePaths.me);
       await _go(tester, router, RoutePaths.dashboard);
       expect(find.text(_tourSkip), findsNothing);
+    });
+
+    testWidgets('replay works after Home\'s first load failed', (tester) async {
+      final profileRepo = FakeProfileRepository()
+        ..seedProfile(testUserProfile());
+      // Offline: today's entries fail to load.
+      final entryRepo = FakeEntryRepository()
+        ..fetchForDateError = Exception('offline');
+      final (container, router) = await _pumpTabs(
+        tester,
+        profileRepo: profileRepo,
+        entryRepo: entryRepo,
+        initialLocation: RoutePaths.dashboard,
+      );
+      await _go(tester, router, RoutePaths.me);
+
+      container.read(tutorialProvider.notifier).requestReplay();
+      await _go(tester, router, RoutePaths.dashboard);
+
+      expect(find.text(_tourSkip), findsOneWidget);
+      expect(container.read(tutorialProvider), isFalse);
     });
   });
 }

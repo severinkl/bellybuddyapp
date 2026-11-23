@@ -318,12 +318,20 @@ class FakeEntryRepository implements EntryRepository {
     int? limit,
   }) async => _result.meals;
 
+  /// When set, [fetchForDate] throws it (a day that fails to load).
+  Object? fetchForDateError;
+
   @override
   Future<EntryQueryResult> fetchForDate({
     required String userId,
     required DateTime date,
     bool ordered = false,
-  }) async => _result;
+  }) async {
+    final error = fetchForDateError;
+    if (error != null) throw error;
+    return _result;
+  }
+
   @override
   Future<void> insertEntry(
     String table,

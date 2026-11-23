@@ -15,12 +15,16 @@ import '../utils/logger.dart';
 /// The "seen" state lives on [UserProfile.tutorialSeenAt] and is read via
 /// [profileProvider]. The state here is whether a replay is pending (in
 /// memory only): set by [requestReplay], taken once by [consumeReplay];
-/// Home listens to it.
+/// Home listens to it. A request belongs to the signed-in user: it ends
+/// with them (sign-out, another user), taken or not.
 class TutorialNotifier extends Notifier<bool> {
   static const _log = AppLogger('TutorialProvider');
 
   @override
-  bool build() => false;
+  bool build() {
+    ref.watch(currentUserIdProvider);
+    return false;
+  }
 
   /// Whether the overlay should be displayed for the current profile.
   bool shouldShow() {

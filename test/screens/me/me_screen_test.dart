@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:belly_buddy/config/constants.dart';
+import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
 import 'package:belly_buddy/providers/upgrade_gate_provider.dart';
@@ -61,6 +62,7 @@ void main() {
       overrides: [
         buddyProvider.overrideWith(() => buddy),
         buddyClockProvider.overrideWithValue(() => today),
+        currentUserIdProvider.overrideWithValue('u1'),
         currentVersionProvider.overrideWith((_) async => '1.2.3'),
       ],
     );

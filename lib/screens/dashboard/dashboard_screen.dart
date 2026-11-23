@@ -95,15 +95,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     await ref.read(tutorialProvider.notifier).markSeen();
   }
 
+  /// Loads what Home shows. Never throws: a part that fails (offline) is
+  /// logged by its provider and Home shows what it has, so the first-run
+  /// prompts and a replay request still follow; pull to refresh tries again.
   Future<void> _loadData() async {
-    await Future.wait<void>([
-      ref.read(profileProvider.notifier).fetchProfile(),
-      ref
-          .read(entriesProvider.notifier)
-          .loadEntries(ref.read(buddyClockProvider)()),
-      ref.read(buddyProvider.notifier).reload(),
-      ref.read(insightProgressProvider.notifier).refresh(),
-    ]);
+    try {
+      await Future.wait<void>([
+        ref.read(profileProvider.notifier).fetchProfile(),
+        ref
+            .read(entriesProvider.notifier)
+            .loadEntries(ref.read(buddyClockProvider)()),
+        ref.read(buddyProvider.notifier).reload(),
+        ref.read(insightProgressProvider.notifier).refresh(),
+      ]);
+    } catch (_) {
+      // Logged by entriesProvider, the one part that rethrows.
+    }
   }
 
   Future<void> _maybeShowNotificationModal() async {
