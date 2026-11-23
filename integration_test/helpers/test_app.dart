@@ -6,6 +6,7 @@ import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/splash_screen_provider.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/repositories/repositories.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
 import 'package:belly_buddy/widgets/buddy/animated_buddy.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
@@ -44,9 +45,11 @@ ProviderScope buildTestApp({
   FakeUserRecipeRepository? userRecipeRepo,
   FakeBuddyRepository? buddyRepo,
 }) {
-  // Animated Buddies (dashboard hero, welcome screen) tick every frame, so
-  // `pumpAndSettle` would never settle: render them without ticking.
+  // Animated Buddies (dashboard hero, welcome screen) tick every frame and
+  // the care ring's glow pulses forever, so `pumpAndSettle` would never
+  // settle: render them without ticking and the glow without pulsing.
   AnimatedBuddy.tickerEnabled = false;
+  CareRing.pulseEnabled = false;
 
   final fakeProfileRepo = profileRepo ?? FakeProfileRepository();
   if (seedProfile) {
