@@ -174,7 +174,7 @@ class _GutFeelingTrackerScreenState
     if (savedSentiment != null) {
       return BbSuccessOverlay(
         message: 'Eintrag gespeichert!',
-        subMessage: 'Dein Eintrag wurde erfolgreich erfasst.',
+        subMessage: 'Ist jetzt in deinem Tagebuch eingetragen.',
         illustration: BuddyReactionView(
           kind: EntryKind.gutFeeling,
           sentiment: savedSentiment,

@@ -21,14 +21,14 @@ class LocalNotificationService {
   static const _mealReminderChannel = AndroidNotificationChannel(
     'meal_reminders',
     'Mahlzeiten-Erinnerungen',
-    description: 'Erinnerungen zum Mahlzeiten tracken',
+    description: 'Erinnert dich daran, dein Essen einzutragen',
     importance: Importance.high,
   );
 
   static const _moodReminderChannel = AndroidNotificationChannel(
     'mood_reminders',
     'Bauchgefühl-Erinnerungen',
-    description: 'Erinnerungen zum Bauchgefühl tracken',
+    description: 'Erinnert dich daran, dein Bauchgefühl einzutragen',
     importance: Importance.high,
   );
 

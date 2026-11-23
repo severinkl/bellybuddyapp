@@ -34,6 +34,11 @@ void main() {
     RegExp(r'\bEmpfehlung'),
     RegExp(r'\bSpeisen?\b'),
     RegExp(r'^(speichern|weiter)$'),
+    // The verb is „eintragen": no tracken/getrackt, no erfassen/erfasst.
+    // Whole words only, so `tracked_at`, `/meal-tracker` and `trackedAt`
+    // stay allowed.
+    RegExp(r'\b(ge)?[Tt]rack(e|en|st|t|te|ten)\b'),
+    RegExp(r'\b[Ee]rfass'),
   ];
 
   // Never used outside of copy, so a hit anywhere in code is copy.
@@ -115,6 +120,23 @@ void main() {
           "final b = 'eintragen'; // Essen tracken",
         ]),
         ["1: final a = 'Jetzt Essen tracken';"],
+      );
+    });
+
+    test('finds tracken/erfassen as words, not inside identifiers', () {
+      expect(
+        offendersIn([
+          "final a = 'Vergiss nicht, deine Mahlzeiten zu tracken!';",
+          "final b = 'Erinnerungen zum Tracken';",
+          "final c = 'Schon getrackt?';",
+          "final d = 'Dein Eintrag wurde erfasst.';",
+          "final e = 'Erfassung läuft';",
+          "final f = select('id, tracked_at');",
+          "final g = '/meal-tracker';",
+          "final h = {'trackedAt': x};",
+          "final i = 'Dein Eintrag ist eingetragen.';",
+        ]).map((o) => o.split(':').first),
+        ['1', '2', '3', '4', '5'],
       );
     });
 

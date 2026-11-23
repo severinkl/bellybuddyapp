@@ -182,7 +182,7 @@ class _SettingsNotificationsScreenState
                                 },
                               ),
                               const Text(
-                                'Erinnert dich daran, deine Mahlzeiten zu tracken.',
+                                'Erinnert dich daran, dein Essen einzutragen.',
                                 style: TextStyle(
                                   fontSize: AppTheme.fontSizeCaptionLG,
                                   color: AppTheme.mutedForeground,

@@ -43,7 +43,7 @@ class TrackerScreenScaffold extends StatelessWidget {
       return BbSuccessOverlay(
         message: successMessage,
         subMessage:
-            successSubMessage ?? 'Dein Eintrag wurde erfolgreich erfasst.',
+            successSubMessage ?? 'Ist jetzt in deinem Tagebuch eingetragen.',
         mascotAsset: successMascotAsset,
         illustration: successIllustration,
         onDismissed: onSuccessDismissed ?? context.popOrGoDashboard,

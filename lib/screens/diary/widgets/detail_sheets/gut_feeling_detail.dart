@@ -201,7 +201,7 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
         widget.gut.bodyFeel != null;
     if (!hasAny) {
       return const Text(
-        'Keine Stimmungsdaten erfasst',
+        'Keine Stimmungsdaten eingetragen',
         style: TextStyle(color: AppTheme.mutedForeground),
       );
     }

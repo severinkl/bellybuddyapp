@@ -37,7 +37,7 @@ class ReminderCopy {
       "🍕 Abendbrot, Pizza oder Resteverwertung? Trag's ein.",
       '🌆 Letzte Mahlzeit des Tages im Kasten?',
       '🍽️ Was hat dein Bauch heute Abend abbekommen?',
-      '📝 Vergiss nicht, deine Mahlzeiten zu tracken!',
+      '📝 Vergiss nicht, dein Essen einzutragen!',
       '🥘 Was hast du heute gegessen? Trag es ein!',
     ],
   };

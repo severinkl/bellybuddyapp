@@ -105,7 +105,7 @@ class _NotificationOptInDialogState
           ),
           AppConstants.gap12,
           const Text(
-            'Erhalte Erinnerungen zum Tracken, eine tägliche '
+            'Erhalte Erinnerungen zum Eintragen, eine tägliche '
             'Zusammenfassung und persönliche Tipps für '
             'dein Wohlbefinden.',
             style: TextStyle(fontSize: AppTheme.fontSizeBody),
