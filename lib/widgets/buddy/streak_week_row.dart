@@ -21,17 +21,6 @@ class StreakWeekRow extends StatelessWidget {
   /// Today's circle.
   static const todayKey = Key('streak_week_row_today');
 
-  static const _labels = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-  static const _names = [
-    'Montag',
-    'Dienstag',
-    'Mittwoch',
-    'Donnerstag',
-    'Freitag',
-    'Samstag',
-    'Sonntag',
-  ];
-
   /// Days with at least one entry (or a saved day).
   final Set<DateTime> activeDays;
 
@@ -43,12 +32,12 @@ class StreakWeekRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final day0 = startOfDay(today);
-    final monday = addDays(day0, 1 - day0.weekday);
+    final monday = mondayOf(today);
     final active = activeDays.map(startOfDay).toSet();
     final days = [for (var i = 0; i < 7; i++) addDays(monday, i)];
     final activeNames = [
       for (var i = 0; i < 7; i++)
-        if (active.contains(days[i])) _names[i],
+        if (active.contains(days[i])) kWeekdayNames[i],
     ];
     final small = size == StreakWeekRowSize.small;
     return Semantics(
@@ -62,7 +51,7 @@ class StreakWeekRow extends StatelessWidget {
               Expanded(
                 child: _Day(
                   key: days[i] == day0 ? todayKey : null,
-                  label: _labels[i],
+                  label: kWeekdayShortNames[i],
                   active: active.contains(days[i]),
                   isToday: days[i] == day0,
                   small: small,

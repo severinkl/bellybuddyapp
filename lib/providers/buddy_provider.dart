@@ -327,11 +327,11 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
     Set<DateTime> activity,
     List<DateTime> saved,
   ) {
-    final monday = addDays(today, 1 - today.weekday);
-    final counted = {...activity, ...saved}.map(startOfDay);
+    final monday = mondayOf(today);
+    final tomorrow = addDays(today, 1);
     return {
-      for (final day in counted)
-        if (!day.isBefore(monday) && !day.isAfter(today)) day,
+      for (final day in activity.followedBy(saved))
+        if (!day.isBefore(monday) && day.isBefore(tomorrow)) startOfDay(day),
     };
   }
 

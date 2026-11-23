@@ -13,6 +13,25 @@ DateTime endOfDay(DateTime dt) =>
 DateTime addDays(DateTime d, int days) =>
     DateTime(d.year, d.month, d.day + days);
 
+/// The Monday of [d]'s week, at midnight.
+DateTime mondayOf(DateTime d) => addDays(d, 1 - d.weekday);
+
+/// The German weekday names, Monday first (index: `weekday - 1`).
+const kWeekdayNames = [
+  'Montag',
+  'Dienstag',
+  'Mittwoch',
+  'Donnerstag',
+  'Freitag',
+  'Samstag',
+  'Sonntag',
+];
+
+/// Their two-letter short forms, Monday first („Mo" … „So").
+final List<String> kWeekdayShortNames = List.unmodifiable([
+  for (final name in kWeekdayNames) name.substring(0, 2),
+]);
+
 /// Formats [d]'s date as ISO 'yyyy-MM-dd' (e.g. a Postgres `date`).
 String formatIsoDate(DateTime d) {
   final y = d.year.toString().padLeft(4, '0');

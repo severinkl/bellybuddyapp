@@ -4,6 +4,7 @@ import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/user_profile.dart';
 import '../../../services/reminder_copy.dart';
+import '../../../utils/date_format_utils.dart';
 import '../../registration/widgets/step_field_label.dart';
 
 /// The reminder step's explanation before the system dialog: how the Buddy
@@ -156,7 +157,6 @@ class NotificationPreview extends StatelessWidget {
 class ReminderExampleWeek extends StatelessWidget {
   const ReminderExampleWeek({super.key});
 
-  static const _days = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
   static const _without = [true, false, false, true, false, false, true];
   static const _with = [true, true, true, true, true, true, true];
 
@@ -223,7 +223,7 @@ class ReminderExampleWeek extends StatelessWidget {
               ),
               AppConstants.gap8,
               _row(const SizedBox.shrink(), [
-                for (final d in _days)
+                for (final d in kWeekdayShortNames)
                   Text(
                     d,
                     style: const TextStyle(
