@@ -163,7 +163,12 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     ref
         .read(buddyEventsProvider.notifier)
         .emit(
-          BuddyLogEvent(EntryKind.meal, LogSentiment.good, at: DateTime.now()),
+          BuddyLogEvent(
+            EntryKind.meal,
+            LogSentiment.good,
+            at: DateTime.now(),
+            trackedAt: ref.read(mealTrackerProvider).trackedAt,
+          ),
         );
   }
 

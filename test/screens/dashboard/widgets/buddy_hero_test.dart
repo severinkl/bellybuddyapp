@@ -263,7 +263,14 @@ void main() {
 
   void emit(ProviderContainer c, LogSentiment sentiment, {DateTime? at}) => c
       .read(buddyEventsProvider.notifier)
-      .emit(BuddyLogEvent(EntryKind.meal, sentiment, at: at ?? now));
+      .emit(
+        BuddyLogEvent(
+          EntryKind.meal,
+          sentiment,
+          at: at ?? now,
+          trackedAt: at ?? now,
+        ),
+      );
 
   group('BuddyHero', () {
     testWidgets('renders the Buddy in the care ring and the next action', (

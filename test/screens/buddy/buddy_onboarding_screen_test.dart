@@ -75,6 +75,7 @@ class _FakeMealTracker extends ConsumerWidget {
                       EntryKind.meal,
                       LogSentiment.good,
                       at: DateTime.now(),
+                      trackedAt: DateTime.now(),
                     ),
                   );
               context.pop();
@@ -89,6 +90,7 @@ class _FakeMealTracker extends ConsumerWidget {
                   EntryKind.meal,
                   LogSentiment.good,
                   at: DateTime.now(),
+                  trackedAt: DateTime.now(),
                 ),
               );
               // The success screen's „Getränk hinzufügen": the drink event
@@ -98,11 +100,30 @@ class _FakeMealTracker extends ConsumerWidget {
                   EntryKind.drink,
                   LogSentiment.good,
                   at: DateTime.now(),
+                  trackedAt: DateTime.now(),
                 ),
               );
               context.pop();
             },
             child: const Text('fake-meal-then-drink'),
+          ),
+          TextButton(
+            onPressed: () {
+              // Saved now, but backdated to last night.
+              final now = DateTime.now();
+              ref
+                  .read(buddyEventsProvider.notifier)
+                  .emit(
+                    BuddyLogEvent(
+                      EntryKind.meal,
+                      LogSentiment.good,
+                      at: now,
+                      trackedAt: DateTime(now.year, now.month, now.day - 1, 20),
+                    ),
+                  );
+              context.pop();
+            },
+            child: const Text('fake-save-yesterday-meal'),
           ),
           TextButton(
             onPressed: () => context.pop(),
@@ -455,6 +476,7 @@ void main() {
               EntryKind.meal,
               LogSentiment.good,
               at: DateTime.now(),
+              trackedAt: DateTime.now(),
             ),
           );
       await settle(tester);
@@ -467,6 +489,18 @@ void main() {
       // … but today counts, so „Später" leads to the streak moment.
       await tapKey(tester, BuddyOnboardingScreen.mealLaterKey);
       expect(find.text(_bornLine), findsOneWidget);
+    });
+
+    testWidgets('a meal backdated to yesterday does not start today\'s '
+        'streak', (tester) async {
+      await pumpOnboarding(tester, pushEnabled: true);
+
+      await tapKey(tester, BuddyOnboardingScreen.mealLogKey);
+      await tapText(tester, 'fake-save-yesterday-meal');
+
+      // Nothing counts for today: no „Tag 1!", no moment; on to the goal.
+      expect(find.text(_bornLine), findsNothing);
+      expect(find.text(_streakTitle), findsOneWidget);
     });
 
     testWidgets('a meal followed by a drink in the tracker still counts', (

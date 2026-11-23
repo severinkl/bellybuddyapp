@@ -52,7 +52,12 @@ class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
         ref
             .read(buddyEventsProvider.notifier)
             .emit(
-              BuddyLogEvent(EntryKind.toilet, sentiment, at: DateTime.now()),
+              BuddyLogEvent(
+                EntryKind.toilet,
+                sentiment,
+                at: DateTime.now(),
+                trackedAt: entry.trackedAt,
+              ),
             );
         setState(() => _savedSentiment = sentiment);
       } else {

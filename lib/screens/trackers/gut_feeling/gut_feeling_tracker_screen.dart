@@ -141,6 +141,7 @@ class _GutFeelingTrackerScreenState
                 EntryKind.gutFeeling,
                 sentiment,
                 at: DateTime.now(),
+                trackedAt: entry.trackedAt,
               ),
             );
         setState(() => _savedSentiment = sentiment);

@@ -154,8 +154,8 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
   /// step.
   bool _mealLogged = false;
 
-  /// Something was logged for today during the onboarding: today counts,
-  /// even before the Buddy's streak has refreshed.
+  /// Something was logged for today (by the entry's date) during the
+  /// onboarding: today counts, even before the Buddy's streak has refreshed.
   bool _loggedToday = false;
 
   /// A step action is running (saving, permission dialog, meal tracker).
@@ -194,7 +194,9 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
     // a drink logged from the meal's success screen replaces the meal there.
     ref.listenManual(buddyEventsProvider, (_, event) {
       if (event == null) return;
-      if (isSameDay(event.at, _today())) _loggedToday = true;
+      // The entry's own date: a meal backdated to yesterday is no log for
+      // today, however recently it was saved.
+      if (isSameDay(event.trackedAt.toLocal(), _today())) _loggedToday = true;
       if (event.kind == EntryKind.meal &&
           _steps != null &&
           _step == BuddyOnboardingStep.firstMeal) {

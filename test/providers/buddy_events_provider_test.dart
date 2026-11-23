@@ -25,6 +25,7 @@ void main() {
     EntryKind.meal,
     LogSentiment.good,
     at: DateTime(2026, 11, 22, 12),
+    trackedAt: DateTime(2026, 11, 22, 12),
   );
 
   setUp(() {
