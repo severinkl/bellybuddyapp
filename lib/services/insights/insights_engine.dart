@@ -1,0 +1,280 @@
+import '../../models/gut_feeling_entry.dart';
+import '../../models/insight_progress.dart';
+import '../../models/insight_source.dart';
+import '../../models/insights.dart';
+import '../../utils/date_format_utils.dart';
+import '../../utils/gut_feeling_rating.dart';
+
+/// The ingredients that count for a day are those of the meals in the 24 h
+/// before its first entry of the day's class.
+const _windowBefore = Duration(hours: 24);
+
+/// A shown „Fällt mir auf" item was there on at least this many hard days;
+/// a „noch unsicher" one on exactly [_uncertainHard].
+const _minShownHard = 3;
+const _uncertainHard = 2;
+const _maxShown = 5;
+const _maxUncertain = 3;
+
+/// „oft dabei": there on at least this many days of the column (and on at
+/// least half of them); at most [_maxOften] per column.
+const _minOftenCount = 2;
+const _maxOften = 5;
+
+/// Every entry's average is a whole sum of 4 to 9 ratings over their count,
+/// so times 2520 (divisible by every count up to 10) it is a whole number.
+/// A day's mean summed that way and divided once is exact at the level
+/// thresholds, where adding the averages as doubles can land a hair off:
+/// 2, 23/6 and 10/6 make 2.5000000000000004, „Durchschnittlich" instead of
+/// „Gut".
+const _averageScale = 2520;
+
+/// What the last [InsightProgress.windowDays] local days of [source] show,
+/// as of [now].
+///
+/// - The window runs from local midnight 29 days before [now]'s day through
+///   [now]; anything tracked after [now] is ignored.
+/// - A day's class comes from the mean of its gut-feeling entries' averages
+///   (`gutFeelingLevelFor`): hard = „Schlecht", good = „Gut"/„Sehr gut".
+/// - For each good and hard day, the meals in the 24 h before its first
+///   entry of that class (`[anchor − 24 h, anchor)`) say which ingredients
+///   were there. Names match trimmed and case-insensitively, and each
+///   ingredient counts once per day.
+///
+/// Pure: no I/O and no clock.
+Insights computeInsights(InsightSource source, DateTime now) {
+  final start = addDays(
+    startOfDay(now.toLocal()),
+    1 - InsightProgress.windowDays,
+  );
+  bool inWindow(DateTime t) => !t.isBefore(start) && !t.isAfter(now);
+
+  final gutFeelings = [
+    for (final e in source.gutFeelings)
+      if (inWindow(e.trackedAt)) e,
+  ]..sort((a, b) => a.trackedAt.compareTo(b.trackedAt));
+  final entriesByDay = <DateTime, List<GutFeelingEntry>>{};
+  for (final e in gutFeelings) {
+    entriesByDay.putIfAbsent(_localDay(e.trackedAt), () => []).add(e);
+  }
+
+  final calendar = <InsightDay>[];
+  final hardAnchors = <DateTime>[];
+  final goodAnchors = <DateTime>[];
+  for (var i = 0; i < InsightProgress.windowDays; i++) {
+    final day = addDays(start, i);
+    final entries = entriesByDay[day];
+    final dayClass = entries == null ? DayClass.none : _dayClassOf(entries);
+    calendar.add(InsightDay(day: day, dayClass: dayClass));
+    final anchors = switch (dayClass) {
+      DayClass.hard => hardAnchors,
+      DayClass.good => goodAnchors,
+      DayClass.medium || DayClass.none => null,
+    };
+    if (anchors != null) {
+      // The anchor is the day's first entry in the day's class; a mean is
+      // in a class only if at least one of its entries is too.
+      anchors.add(
+        entries!
+            .firstWhere(
+              (e) => _classOf(calculateGutFeelingRating(e).level) == dayClass,
+            )
+            .trackedAt,
+      );
+    }
+  }
+
+  final meals = [
+    for (final m in source.meals)
+      if (!m.trackedAt.isAfter(now)) _Meal.of(m),
+  ];
+  final names = _displayNames(meals);
+  final hardCounts = _daysThere(meals, hardAnchors);
+  final goodCounts = _daysThere(meals, goodAnchors);
+
+  final hardDays = _column(hardCounts, hardAnchors.length, names);
+  final goodDays = _column(goodCounts, goodAnchors.length, names);
+  final noticed = _noticed(
+    hardCounts,
+    goodCounts,
+    hardDays: hardAnchors.length,
+    goodDays: goodAnchors.length,
+    names: names,
+  );
+
+  return Insights(
+    progress: InsightProgress(
+      activeDays: {
+        for (final t in source.activityInstants)
+          if (inWindow(t)) _localDay(t),
+      }.length,
+      gutFeelingEntries: gutFeelings.length,
+    ),
+    calendar: List.unmodifiable(calendar),
+    goodDays: goodDays,
+    hardDays: hardDays,
+    noticed: List.unmodifiable(noticed),
+    pick: _pick(noticed, goodDays),
+  );
+}
+
+/// Home's card: the top shown „Fällt mir auf" item, else the good days when
+/// their column has items, else nothing yet.
+InsightPick _pick(List<Noticed> noticed, DayColumn goodDays) {
+  if (noticed.isNotEmpty && !noticed.first.uncertain) {
+    return NoticedPick(noticed.first);
+  }
+  if (goodDays.shown && goodDays.often.isNotEmpty) {
+    return GoodDaysPick(goodDays);
+  }
+  return const NothingYetPick();
+}
+
+DateTime _localDay(DateTime t) => startOfDay(t.toLocal());
+
+DayClass _classOf(GutFeelingRatingLevel level) => switch (level) {
+  GutFeelingRatingLevel.spiGut || GutFeelingRatingLevel.gut => DayClass.good,
+  GutFeelingRatingLevel.durchschnittlich => DayClass.medium,
+  GutFeelingRatingLevel.schlecht => DayClass.hard,
+};
+
+/// The class of a day with [entries] (at least one), from the mean of their
+/// averages (exact, see [_averageScale]).
+DayClass _dayClassOf(List<GutFeelingEntry> entries) {
+  var scaledSum = 0;
+  for (final e in entries) {
+    scaledSum += (calculateGutFeelingRating(e).avg * _averageScale).round();
+  }
+  final mean = scaledSum / (_averageScale * entries.length);
+  return _classOf(gutFeelingLevelFor(mean));
+}
+
+/// A meal reduced to what the insights match on.
+class _Meal {
+  _Meal(this.trackedAt, this.spellings);
+
+  factory _Meal.of(InsightMeal meal) {
+    final spellings = <String, String>{};
+    for (final raw in meal.ingredients) {
+      final name = raw.trim();
+      if (name.isNotEmpty) {
+        spellings.putIfAbsent(name.toLowerCase(), () => name);
+      }
+    }
+    return _Meal(meal.trackedAt, spellings);
+  }
+
+  final DateTime trackedAt;
+
+  /// The trimmed spelling per ingredient key (trimmed, lower case); one
+  /// entry per key, so a meal never counts an ingredient twice.
+  final Map<String, String> spellings;
+}
+
+/// Per ingredient key, the trimmed spelling from the most recent meal that
+/// lists it (the first such meal on equal times).
+Map<String, String> _displayNames(List<_Meal> meals) {
+  final names = <String, String>{};
+  final namedAt = <String, DateTime>{};
+  for (final meal in meals) {
+    for (final MapEntry(key: key, value: name) in meal.spellings.entries) {
+      final at = namedAt[key];
+      if (at == null || meal.trackedAt.isAfter(at)) {
+        names[key] = name;
+        namedAt[key] = meal.trackedAt;
+      }
+    }
+  }
+  return names;
+}
+
+/// Per ingredient key, on how many of the days with [anchors] any meal in
+/// the window `[anchor − 24 h, anchor)` listed it.
+Map<String, int> _daysThere(List<_Meal> meals, List<DateTime> anchors) {
+  final counts = <String, int>{};
+  for (final anchor in anchors) {
+    final from = anchor.subtract(_windowBefore);
+    final there = {
+      for (final m in meals)
+        if (!m.trackedAt.isBefore(from) && m.trackedAt.isBefore(anchor))
+          ...m.spellings.keys,
+    };
+    for (final key in there) {
+      counts[key] = (counts[key] ?? 0) + 1;
+    }
+  }
+  return counts;
+}
+
+/// The column of [days] days: ingredients there on at least
+/// [_minOftenCount] and at least half of them, by count, then by name.
+DayColumn _column(
+  Map<String, int> counts,
+  int days,
+  Map<String, String> names,
+) {
+  if (days < DayColumn.minDays) return DayColumn(days: days);
+  final often = [
+    for (final e in counts.entries)
+      if (e.value >= _minOftenCount && e.value * 2 >= days) e,
+  ]..sort((a, b) => _higherFirstThenName(a.value, b.value, a.key, b.key));
+  return DayColumn(
+    days: days,
+    often: List.unmodifiable([
+      for (final e in often.take(_maxOften))
+        IngredientCount(names[e.key]!, e.value, of: days),
+    ]),
+  );
+}
+
+/// An ingredient that passes the „Fällt mir auf" rates; [gap] is the
+/// numerator over the denominator all candidates share.
+typedef _Candidate = ({String key, int hard, int good, int gap});
+
+/// „Fällt mir auf", in whole numbers so the thresholds hold exactly:
+/// `rate = hard/H ≥ 0.5` and `gap = rate − (G > 0 ? good/G : 0) ≥ 0.25`.
+/// The gap is kept as its numerator over the denominator shared by every
+/// ingredient (`H·G`, or `H` while `G == 0`), which also sorts it exactly.
+List<Noticed> _noticed(
+  Map<String, int> hardCounts,
+  Map<String, int> goodCounts, {
+  required int hardDays,
+  required int goodDays,
+  required Map<String, String> names,
+}) {
+  if (hardDays < Noticed.minHardDays) return const [];
+  final denominator = goodDays > 0 ? hardDays * goodDays : hardDays;
+  final candidates = <_Candidate>[];
+  for (final MapEntry(key: key, value: hard) in hardCounts.entries) {
+    final good = goodCounts[key] ?? 0;
+    final gap = goodDays > 0 ? hard * goodDays - good * hardDays : hard;
+    if (hard * 2 >= hardDays && gap * 4 >= denominator) {
+      candidates.add((key: key, hard: hard, good: good, gap: gap));
+    }
+  }
+  candidates.sort(
+    (a, b) => a.hard != b.hard
+        ? b.hard - a.hard
+        : _higherFirstThenName(a.gap, b.gap, a.key, b.key),
+  );
+
+  Noticed toNoticed(_Candidate c, {required bool uncertain}) => Noticed(
+    name: names[c.key]!,
+    hard: c.hard,
+    hardDays: hardDays,
+    good: c.good,
+    goodDays: goodDays,
+    uncertain: uncertain,
+  );
+  final shown = candidates.where((c) => c.hard >= _minShownHard);
+  final uncertain = candidates.where((c) => c.hard == _uncertainHard);
+  return [
+    for (final c in shown.take(_maxShown)) toNoticed(c, uncertain: false),
+    for (final c in uncertain.take(_maxUncertain))
+      toNoticed(c, uncertain: true),
+  ];
+}
+
+/// The higher of [a] and [b] first, then by key (the name without case).
+int _higherFirstThenName(int a, int b, String keyA, String keyB) =>
+    a != b ? b - a : keyA.compareTo(keyB);
