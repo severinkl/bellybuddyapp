@@ -15,6 +15,7 @@ import 'package:belly_buddy/models/replacement_ingredient.dart';
 import 'package:belly_buddy/models/user_recipe.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/ingredient_suggestion_provider.dart';
+import 'package:belly_buddy/providers/recommendation_provider.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/repositories/recommendation_repository.dart';
@@ -219,6 +220,43 @@ void main() {
 
     expect(inSection(DiscoverScreen.tipsKey, find.text('Neu')), findsNothing);
     expect(find.text('1 Tipp'), findsOneWidget);
+  });
+
+  testWidgets('a tips push brings the new set to the card, as „Neu"', (
+    tester,
+  ) async {
+    final lastWeek = testRecommendation(
+      id: 'old',
+      summary: 'Ältere Tipps.',
+      recommendations: const [_item],
+      createdAt: DateTime.utc(2026, 11, 9, 10),
+    );
+    await pump(tester, tips: [lastWeek]);
+    expect(find.text('Woche 46'), findsOneWidget);
+    expect(inSection(DiscoverScreen.tipsKey, find.text('Neu')), findsNothing);
+
+    // A new set arrives; the push handler refreshes the unseen count.
+    when(() => recommendations.fetchByUserId(any())).thenAnswer(
+      (_) async => [
+        testRecommendation(
+          id: 'new',
+          summary: 'Diese Woche lief es mit Reis besonders gut.',
+          recommendations: const [_item, _item],
+          createdAt: DateTime.utc(2026, 11, 16, 10),
+        ),
+        lastWeek,
+      ],
+    );
+    when(() => recommendations.countUnseen(any())).thenAnswer((_) async => 1);
+    ProviderScope.containerOf(
+      tester.element(find.byType(DiscoverScreen)),
+    ).invalidate(unseenRecommendationCountProvider);
+    await tester.pumpAndSettle();
+
+    expect(inSection(DiscoverScreen.tipsKey, find.text('Neu')), findsOneWidget);
+    expect(find.text('Woche 47'), findsOneWidget);
+    expect(find.text('2 Tipps'), findsOneWidget);
+    expect(find.text('Woche 46'), findsNothing);
   });
 
   testWidgets('no tips', (tester) async {

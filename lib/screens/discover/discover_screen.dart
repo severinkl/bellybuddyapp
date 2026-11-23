@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -70,6 +72,19 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // More unseen tips than before (a tips push refreshed the count): a new
+    // set arrived, so load it, or „Neu" would mark the previous one.
+    ref.listen<AsyncValue<int>>(unseenRecommendationCountProvider, (
+      previous,
+      next,
+    ) {
+      final before = previous?.value;
+      if (before != null && (next.value ?? 0) > before) {
+        unawaited(
+          ref.read(recommendationProvider.notifier).fetchRecommendations(),
+        );
+      }
+    });
     final tips = ref.watch(recommendationProvider);
     final unseenTips = ref.watch(unseenRecommendationCountProvider).value ?? 0;
     final groups = ref.watch(ingredientSuggestionProvider);
