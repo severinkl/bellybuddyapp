@@ -41,7 +41,11 @@ class BbBottomNav extends ConsumerWidget {
 
     void goBranch(int index) {
       HapticService.light();
-      navigationShell.goBranch(index);
+      // Tapping the tab already shown returns to its first screen.
+      navigationShell.goBranch(
+        index,
+        initialLocation: index == navigationShell.currentIndex,
+      );
     }
 
     return Column(

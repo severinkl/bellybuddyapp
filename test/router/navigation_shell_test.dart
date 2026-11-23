@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:belly_buddy/config/constants.dart';
@@ -14,6 +15,7 @@ import 'package:belly_buddy/screens/dashboard/widgets/tutorial/spotlight_painter
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tooltip_bubble.dart';
 import 'package:belly_buddy/screens/diary/diary_screen.dart';
 import 'package:belly_buddy/screens/discover/discover_screen.dart';
+import 'package:belly_buddy/screens/discover/knowledge_screen.dart';
 import 'package:belly_buddy/screens/me/me_screen.dart';
 import 'package:belly_buddy/screens/patterns/patterns_screen.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
@@ -115,6 +117,41 @@ void main() {
         );
       }
       expect(_inBar(find.text('Essen tracken')), findsNothing);
+    });
+
+    testWidgets('Wissen opens under Entdecken with the bar', (tester) async {
+      final container = await _pumpShell(tester);
+      await _tap(tester, BbBottomNav.navDiscoverKey);
+
+      unawaited(container.read(routerProvider).push(RoutePaths.knowledge));
+      await tester.pumpAndSettle();
+
+      expect(
+        container
+            .read(routerProvider)
+            .routerDelegate
+            .currentConfiguration
+            .last
+            .matchedLocation,
+        RoutePaths.knowledge,
+      );
+      expect(find.byType(KnowledgeScreen), findsOneWidget);
+      expect(find.byType(BbBottomNav), findsOneWidget);
+    });
+
+    testWidgets('tapping Entdecken on Wissen goes back to Entdecken', (
+      tester,
+    ) async {
+      final container = await _pumpShell(tester);
+      await _tap(tester, BbBottomNav.navDiscoverKey);
+      unawaited(container.read(routerProvider).push(RoutePaths.knowledge));
+      await tester.pumpAndSettle();
+
+      await _tap(tester, BbBottomNav.navDiscoverKey);
+
+      expect(_currentPath(container), RoutePaths.discover);
+      expect(find.byType(DiscoverScreen), findsOneWidget);
+      expect(find.byType(KnowledgeScreen), findsNothing);
     });
 
     testWidgets('tabs switch branches', (tester) async {

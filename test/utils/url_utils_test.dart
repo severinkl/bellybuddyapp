@@ -51,6 +51,33 @@ void main() {
       expect(find.byType(SnackBar), findsNothing);
     });
 
+    testWidgets('openExternalUrl passes the mode', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => TextButton(
+                onPressed: () => openExternalUrl(
+                  context,
+                  'https://example.com/page',
+                  failureMessage: 'Geht nicht.',
+                  mode: LaunchMode.inAppBrowserView,
+                  open: (url, {mode = LaunchMode.platformDefault}) async {
+                    modes.add(mode);
+                    return true;
+                  },
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pump();
+      expect(modes, [LaunchMode.inAppBrowserView]);
+    });
+
     testWidgets('a launch that reports false shows the failure message', (
       tester,
     ) async {
