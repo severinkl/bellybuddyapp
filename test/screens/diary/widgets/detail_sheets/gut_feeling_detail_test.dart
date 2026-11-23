@@ -117,6 +117,23 @@ void main() {
       expect(find.text('2 / 5'), findsOneWidget);
       expect(find.text('nicht angegeben'), findsNWidgets(4));
     });
+
+    testWidgets('the edit rows fit the sheet of a 402 pt phone', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(354, 900)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final stored = _gut(cramps: 3);
+      await pumpDetail(tester, stored, editState: _editState(stored));
+      expect(tester.takeException(), isNull);
+
+      await tester.tap(find.text('Stimmung'));
+      await tester.pump();
+      expect(tester.takeException(), isNull);
+      expect(find.text('nicht angegeben'), findsNWidgets(5));
+    });
   });
 
   group('DiaryEntryCard', () {

@@ -241,12 +241,16 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                label,
-                style: const TextStyle(fontSize: AppTheme.fontSizeBodyLG),
+              // The label wraps, so a long one or „nicht angegeben" fits a
+              // narrow sheet and larger text.
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(fontSize: AppTheme.fontSizeBodyLG),
+                ),
               ),
+              const SizedBox(width: AppConstants.spacingSm),
               Text(
                 value == null ? 'nicht angegeben' : '$value / 5',
                 style: TextStyle(
@@ -281,12 +285,14 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: AppTheme.fontSizeBodyLG),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: AppTheme.fontSizeBodyLG),
+            ),
           ),
+          const SizedBox(width: AppConstants.spacingSm),
           Text(
             '$value / 5',
             style: TextStyle(
