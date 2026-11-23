@@ -44,6 +44,14 @@ class InsightsNotifier extends AsyncNotifier<Insights> {
   /// result.
   int _seq = 0;
 
+  /// The ref of the build whose [_refetch] runs; another write or new day
+  /// for it meanwhile only marks [_again].
+  Ref? _refetching;
+
+  /// Something changed after the running [_refetch] fetched: it fetches
+  /// once more.
+  bool _again = false;
+
   @override
   Future<Insights> build() async {
     final userId = ref.watch(currentUserIdProvider);
@@ -85,13 +93,29 @@ class InsightsNotifier extends AsyncNotifier<Insights> {
   /// After an entry write or on a new day: a running load may have fetched
   /// before it, so this waits for that load to apply and then computes
   /// again (fetching only afterwards, an older load never overwrites it).
+  ///
+  /// Coalesced: while this runs, more writes only ask for one more fetch
+  /// after the running one, so a burst of writes fetches at most twice.
   Future<void> _refetch() async {
     final opRef = ref;
-    while (opRef.mounted && state.isLoading) {
-      await _loadDone();
+    if (identical(_refetching, opRef)) {
+      _again = true;
+      return;
     }
-    // A rebuild (another user) meanwhile loads on its own, after this.
-    if (opRef.mounted) await _fetchAndApply();
+    _refetching = opRef;
+    try {
+      do {
+        while (opRef.mounted && state.isLoading) {
+          await _loadDone();
+        }
+        // A rebuild (another user) meanwhile loads on its own, after this.
+        if (!opRef.mounted) return;
+        _again = false;
+        await _fetchAndApply();
+      } while (_again);
+    } finally {
+      if (identical(_refetching, opRef)) _refetching = null;
+    }
   }
 
   Future<void> _loadDone() async {

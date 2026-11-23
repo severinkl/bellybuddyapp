@@ -195,6 +195,39 @@ void main() {
       expect(c.read(insightsProvider).value, computeInsights(after, now));
     });
 
+    test('a burst of writes during a fetch: one more fetch after it, with '
+        'all of them', () async {
+      final c = makeContainer();
+      c.listen(insightsProvider, (_, _) {});
+      await c.read(insightsProvider.future);
+      entryRepo.holdInsightSource = true;
+      final entries = c.read(entriesProvider.notifier);
+      await entries.addGutFeeling(testGutFeelingEntry());
+      await settle();
+      expect(entryRepo.heldInsightSources, hasLength(1));
+
+      // Three more writes while that fetch runs.
+      await entries.addGutFeeling(testGutFeelingEntry());
+      await entries.updateMeal(testMealEntry());
+      await entries.deleteByType('gutFeeling', 'g1');
+      await settle();
+      expect(entryRepo.heldInsightSources, hasLength(1));
+
+      final all = insightSourceFor(activeDays: 4, gutFeelings: 3);
+      entryRepo
+        ..holdInsightSource = false
+        ..insightSource = all;
+      // The running fetch started before the last three writes.
+      entryRepo.heldInsightSources.single.complete(
+        insightSourceFor(activeDays: 3, gutFeelings: 2),
+      );
+      await settle();
+
+      // The load, the first write's fetch and one for the other three.
+      expect(entryRepo.insightSourceCalls, 3);
+      expect(c.read(insightsProvider).value, computeInsights(all, now));
+    });
+
     test('a Buddy event alone (no write) fetches nothing', () async {
       final c = makeContainer();
       await c.read(insightsProvider.future);
