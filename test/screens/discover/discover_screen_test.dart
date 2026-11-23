@@ -20,6 +20,7 @@ import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/repositories/recommendation_repository.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/discover/discover_screen.dart';
+import 'package:belly_buddy/screens/recipes/recipes_screen.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_card.dart';
 
 import '../../helpers/fakes.dart';
@@ -81,6 +82,7 @@ void main() {
     List<IngredientSuggestionGroup> groups = const [],
     List<UserRecipe> myRecipes = const [],
     double textScale = 1,
+    bool realRecipesScreen = false,
   }) async {
     when(
       () => recommendations.fetchByUserId(any()),
@@ -92,6 +94,9 @@ void main() {
       () => ingredients.fetchSuggestionGroups(any()),
     ).thenAnswer((_) async => groups);
     when(() => recipes.fetchForUser(any())).thenAnswer((_) async => myRecipes);
+    when(
+      () => recipes.searchForUser(any(), any()),
+    ).thenAnswer((_) async => const []);
 
     final router = GoRouter(
       initialLocation: RoutePaths.discover,
@@ -100,10 +105,15 @@ void main() {
           path: RoutePaths.discover,
           builder: (_, _) => DiscoverScreen(openUrl: launches.call),
         ),
+        if (realRecipesScreen)
+          GoRoute(
+            path: RoutePaths.recipes,
+            builder: (_, _) => const RecipesScreen(),
+          ),
         for (final path in [
           RoutePaths.recommendations,
           RoutePaths.ingredientSuggestions,
-          RoutePaths.recipes,
+          if (!realRecipesScreen) RoutePaths.recipes,
           RoutePaths.recipeDetail,
         ])
           GoRoute(
@@ -343,6 +353,42 @@ void main() {
       inSection(DiscoverScreen.recipesKey, find.text('Alle ›')),
     );
     expect(find.text('page:${RoutePaths.recipes}'), findsOneWidget);
+  });
+
+  testWidgets('a search on /recipes does not follow back to Entdecken', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      realRecipesScreen: true,
+      myRecipes: [
+        testUserRecipe(id: 'r1', title: 'Curry mit Reis'),
+        testUserRecipe(id: 'r2', title: 'Pasta Bolognese'),
+      ],
+    );
+
+    await tapVisible(
+      tester,
+      inSection(DiscoverScreen.recipesKey, find.text('Alle ›')),
+    );
+    await tester.enterText(find.byType(TextField), 'zzz');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    expect(find.text('Keine Treffer'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.close));
+    await tester.pumpAndSettle();
+    // The closed screen dropped the search; the reload is debounced.
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DiscoverScreen), findsOneWidget);
+    expect(find.text('Noch keine Rezepte.'), findsNothing);
+    expect(find.byType(RecipeCard), findsNWidgets(2));
+    expect(
+      inSection(DiscoverScreen.recipesKey, find.text('Alle ›')),
+      findsOneWidget,
+    );
   });
 
   testWidgets("Meine Rezepte's + opens the chooser", (tester) async {

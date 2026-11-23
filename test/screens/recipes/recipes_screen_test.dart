@@ -8,8 +8,10 @@ import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/screens/recipes/my_recipes_tab.dart';
 import 'package:belly_buddy/screens/recipes/recipes_screen.dart';
 
+import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/mocks.dart';
+import '../../helpers/riverpod_helpers.dart';
 
 void main() {
   late MockUserRecipeRepository repo;
@@ -42,6 +44,43 @@ void main() {
     await pumpScreen(tester);
     expect(find.text('Inspiration'), findsNothing);
     expect(find.text('Rezepte kommen bald!'), findsNothing);
+  });
+
+  testWidgets('closing the screen clears the recipe search', (tester) async {
+    when(
+      () => repo.fetchForUser(any()),
+    ).thenAnswer((_) async => [testUserRecipe()]);
+    when(() => repo.searchForUser(any(), any())).thenAnswer((_) async => []);
+    final container = createContainer(
+      overrides: [
+        userRecipeRepositoryProvider.overrideWithValue(repo),
+        currentUserIdProvider.overrideWithValue(testUserId),
+      ],
+    );
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: RecipesScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'zzz');
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+    final notifier = container.read(userRecipesProvider.notifier);
+    expect(notifier.activeQuery, 'zzz');
+
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: SizedBox()),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pumpAndSettle();
+
+    expect(notifier.activeQuery, isNull);
+    expect(container.read(userRecipesProvider).value, hasLength(1));
   });
 
   testWidgets('the + opens the add-recipe chooser', (tester) async {

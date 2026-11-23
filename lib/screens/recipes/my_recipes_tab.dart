@@ -20,13 +20,26 @@ class MyRecipesTab extends ConsumerStatefulWidget {
 }
 
 class _MyRecipesTabState extends ConsumerState<MyRecipesTab> {
+  // Captured so dispose() can clear the search without touching `ref`
+  // after deactivation.
+  late final UserRecipesNotifier _notifier;
+
   @override
   void initState() {
     super.initState();
+    _notifier = ref.read(userRecipesProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      ref.read(userRecipesProvider.notifier).fetch();
+      _notifier.fetch();
     });
+  }
+
+  @override
+  void dispose() {
+    // The search belongs to this screen: once it closes, Entdecken's
+    // Meine Rezepte (same provider) shows every recipe again.
+    _notifier.setQuery(null);
+    super.dispose();
   }
 
   @override
