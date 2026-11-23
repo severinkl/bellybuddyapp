@@ -80,8 +80,8 @@ void main() {
     });
   });
 
-  group('DrinkService.fetchTodayTotal', () {
-    test('sums amount_ml values for today', () async {
+  group('DrinkService.fetchDayTotal', () {
+    test('sums amount_ml values of the day', () async {
       final fb = mockSelectRows(
         client,
         table: 'drink_entries',
@@ -94,7 +94,10 @@ void main() {
       when(() => fb.gte(any(), any())).thenAnswer((_) => fb);
       when(() => fb.lt(any(), any())).thenAnswer((_) => fb);
 
-      final total = await service.fetchTodayTotal(testUserId);
+      final total = await service.fetchDayTotal(
+        testUserId,
+        DateTime(2026, 11, 22, 15),
+      );
 
       expect(total, 750);
     });
@@ -105,7 +108,10 @@ void main() {
       when(() => fb.gte(any(), any())).thenAnswer((_) => fb);
       when(() => fb.lt(any(), any())).thenAnswer((_) => fb);
 
-      final total = await service.fetchTodayTotal(testUserId);
+      final total = await service.fetchDayTotal(
+        testUserId,
+        DateTime(2026, 11, 22, 15),
+      );
 
       expect(total, 0);
     });
@@ -116,9 +122,25 @@ void main() {
       when(() => fb.gte(any(), any())).thenAnswer((_) => fb);
       when(() => fb.lt(any(), any())).thenAnswer((_) => fb);
 
-      await service.fetchTodayTotal(testUserId);
+      await service.fetchDayTotal(testUserId, DateTime(2026, 11, 22, 15));
 
       verify(() => fb.eq('user_id', testUserId)).called(1);
+    });
+
+    test('reads the given local day, not today', () async {
+      final fb = mockSelectRows(client, table: 'drink_entries', rows: []);
+      when(() => fb.eq(any(), any())).thenAnswer((_) => fb);
+      when(() => fb.gte(any(), any())).thenAnswer((_) => fb);
+      when(() => fb.lt(any(), any())).thenAnswer((_) => fb);
+
+      await service.fetchDayTotal(testUserId, DateTime(2026, 11, 22, 15));
+
+      verify(
+        () => fb.gte('tracked_at', DateTime(2026, 11, 22).toIso8601String()),
+      ).called(1);
+      verify(
+        () => fb.lt('tracked_at', DateTime(2026, 11, 23).toIso8601String()),
+      ).called(1);
     });
   });
 

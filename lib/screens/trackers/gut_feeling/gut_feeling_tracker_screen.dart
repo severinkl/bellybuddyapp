@@ -13,12 +13,11 @@ import '../../../services/haptic_service.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/save_helper.dart';
 import '../../../widgets/buddy/buddy_reaction_view.dart';
+import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/bb_success_overlay.dart';
 import '../../../widgets/common/date_time_chips.dart';
-import '../../../widgets/common/gradient_bottom_bar.dart';
 import 'widgets/bauchgefuehl_tab.dart';
 import 'widgets/mood_tab_selector.dart';
-import 'widgets/pill_button.dart';
 import 'widgets/stimmung_tab.dart';
 
 class GutFeelingTrackerScreen extends ConsumerStatefulWidget {
@@ -47,12 +46,12 @@ class _GutFeelingTrackerScreenState
   int _cramps = 1;
   int _fullness = 1;
 
-  // Stimmung values
-  int _stress = 1;
-  int _happiness = 1;
-  int _energy = 1;
-  int _focus = 1;
-  int _bodyFeel = 1;
+  // Stimmung values: optional, null until the user sets them
+  int? _stress;
+  int? _happiness;
+  int? _energy;
+  int? _focus;
+  int? _bodyFeel;
 
   // Page controller for smooth tab transitions
   late final PageController _pageController;
@@ -194,121 +193,123 @@ class _GutFeelingTrackerScreenState
         ),
         title: const Text('Wie geht es dir?'),
       ),
-      body: Stack(
-        fit: StackFit.expand,
+      body: Column(
         children: [
-          Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppConstants.spacingMd,
-                  AppConstants.spacingMd,
-                  AppConstants.spacingMd,
-                  0,
-                ),
-                child: DateTimeChips(
-                  value: _trackedAt,
-                  onChanged: (dt) => setState(() => _trackedAt = dt),
-                ),
-              ),
-              AppConstants.gap8,
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppConstants.spacingMd,
+              AppConstants.spacingMd,
+              AppConstants.spacingMd,
+              0,
+            ),
+            child: DateTimeChips(
+              value: _trackedAt,
+              onChanged: (dt) => setState(() => _trackedAt = dt),
+            ),
+          ),
+          AppConstants.gap8,
 
-              // Pill tab selector (fixed, not scrollable)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppConstants.spacingMd,
-                  AppConstants.spacingSm,
-                  AppConstants.spacingMd,
-                  0,
-                ),
-                child: SlideTransition(
-                  position: _tabSelectorSlide,
-                  child: FadeTransition(
-                    opacity: _tabSelectorFade,
-                    child: MoodTabSelector(
-                      activeTab: _activeTab,
-                      onTabChanged: (tab) {
-                        HapticService.light();
-                        setState(() => _activeTab = tab);
-                        _animateToTab(tab);
-                      },
-                    ),
-                  ),
+          // Pill tab selector (fixed, not scrollable)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppConstants.spacingMd,
+              AppConstants.spacingSm,
+              AppConstants.spacingMd,
+              0,
+            ),
+            child: SlideTransition(
+              position: _tabSelectorSlide,
+              child: FadeTransition(
+                opacity: _tabSelectorFade,
+                child: MoodTabSelector(
+                  activeTab: _activeTab,
+                  onTabChanged: (tab) {
+                    HapticService.light();
+                    setState(() => _activeTab = tab);
+                    _animateToTab(tab);
+                  },
                 ),
               ),
-              AppConstants.gap24,
+            ),
+          ),
+          AppConstants.gap24,
 
-              // PageView for smooth tab transitions
-              Expanded(
-                child: SlideTransition(
-                  position: _slidersSlide,
-                  child: FadeTransition(
-                    opacity: _slidersFade,
-                    child: PageView(
-                      controller: _pageController,
-                      onPageChanged: (index) {
-                        if (_activeTab != index) {
-                          HapticService.light();
-                          setState(() => _activeTab = index);
-                        }
-                      },
-                      children: [
-                        SingleChildScrollView(
-                          padding: const EdgeInsets.fromLTRB(
-                            AppConstants.spacingMd,
-                            0,
-                            AppConstants.spacingMd,
-                            AppConstants.bottomBarClearance,
-                          ),
-                          child: BauchgefuehlTab(
-                            bloating: _bloating,
-                            gas: _gas,
-                            cramps: _cramps,
-                            fullness: _fullness,
-                            onBloatingChanged: (v) =>
-                                setState(() => _bloating = v),
-                            onGasChanged: (v) => setState(() => _gas = v),
-                            onCrampsChanged: (v) => setState(() => _cramps = v),
-                            onFullnessChanged: (v) =>
-                                setState(() => _fullness = v),
-                          ),
-                        ),
-                        SingleChildScrollView(
-                          padding: const EdgeInsets.fromLTRB(
-                            AppConstants.spacingMd,
-                            0,
-                            AppConstants.spacingMd,
-                            AppConstants.bottomBarClearance,
-                          ),
-                          child: StimmungTab(
-                            stress: _stress,
-                            happiness: _happiness,
-                            energy: _energy,
-                            focus: _focus,
-                            bodyFeel: _bodyFeel,
-                            onStressChanged: (v) => setState(() => _stress = v),
-                            onHappinessChanged: (v) =>
-                                setState(() => _happiness = v),
-                            onEnergyChanged: (v) => setState(() => _energy = v),
-                            onFocusChanged: (v) => setState(() => _focus = v),
-                            onBodyFeelChanged: (v) =>
-                                setState(() => _bodyFeel = v),
-                          ),
-                        ),
-                      ],
+          // PageView for smooth tab transitions
+          Expanded(
+            child: SlideTransition(
+              position: _slidersSlide,
+              child: FadeTransition(
+                opacity: _slidersFade,
+                child: PageView(
+                  controller: _pageController,
+                  onPageChanged: (index) {
+                    if (_activeTab != index) {
+                      HapticService.light();
+                      setState(() => _activeTab = index);
+                    }
+                  },
+                  children: [
+                    SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppConstants.spacingMd,
+                        0,
+                        AppConstants.spacingMd,
+                        AppConstants.spacingMd,
+                      ),
+                      child: BauchgefuehlTab(
+                        bloating: _bloating,
+                        gas: _gas,
+                        cramps: _cramps,
+                        fullness: _fullness,
+                        onBloatingChanged: (v) => setState(() => _bloating = v),
+                        onGasChanged: (v) => setState(() => _gas = v),
+                        onCrampsChanged: (v) => setState(() => _cramps = v),
+                        onFullnessChanged: (v) => setState(() => _fullness = v),
+                      ),
                     ),
-                  ),
+                    SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppConstants.spacingMd,
+                        0,
+                        AppConstants.spacingMd,
+                        AppConstants.spacingMd,
+                      ),
+                      child: StimmungTab(
+                        stress: _stress,
+                        happiness: _happiness,
+                        energy: _energy,
+                        focus: _focus,
+                        bodyFeel: _bodyFeel,
+                        onStressChanged: (v) => setState(() => _stress = v),
+                        onHappinessChanged: (v) =>
+                            setState(() => _happiness = v),
+                        onEnergyChanged: (v) => setState(() => _energy = v),
+                        onFocusChanged: (v) => setState(() => _focus = v),
+                        onBodyFeelChanged: (v) => setState(() => _bodyFeel = v),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-            ],
+            ),
           ),
 
-          // Fixed bottom button with gradient backdrop
-          GradientBottomBar(
-            child: PillButton(
-              label: _activeTab == 0 ? 'Weiter' : 'Speichern',
-              isLoading: _isSaving,
-              onPressed: _onNextOrSave,
+          // Pinned bottom button: the pages end above it, so nothing sits
+          // under it at rest
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppConstants.spacingMd,
+                AppConstants.spacingSm,
+                AppConstants.spacingMd,
+                AppConstants.spacingMd,
+              ),
+              child: BbButton(
+                label: _activeTab == 0 ? 'Weiter' : 'Speichern',
+                isLoading: _isSaving,
+                onPressed: _onNextOrSave,
+              ),
             ),
           ),
         ],

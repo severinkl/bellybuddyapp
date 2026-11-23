@@ -1,12 +1,16 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../config/constants.dart';
 import '../../../../providers/drink_tracker_provider.dart';
 import '../../../../services/haptic_service.dart';
+import '../../../../utils/drink_helpers.dart';
 
 class DrinkSizeSelector extends ConsumerStatefulWidget {
   const DrinkSizeSelector({super.key});
+
+  static const customAmountKey = Key('drink_custom_amount');
 
   @override
   ConsumerState<DrinkSizeSelector> createState() => _DrinkSizeSelectorState();
@@ -76,10 +80,16 @@ class _DrinkSizeSelectorState extends ConsumerState<DrinkSizeSelector> {
           children: [
             Expanded(
               child: TextField(
+                key: DrinkSizeSelector.customAmountKey,
                 controller: _customController,
                 keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(5),
+                ],
                 decoration: InputDecoration(
                   hintText: 'Andere Menge',
+                  errorText: DrinkHelpers.amountError(customAmount),
                   filled: true,
                   fillColor: AppTheme.muted.withValues(alpha: 0.5),
                   contentPadding: const EdgeInsets.symmetric(
@@ -103,6 +113,18 @@ class _DrinkSizeSelectorState extends ConsumerState<DrinkSizeSelector> {
                       AppConstants.radiusFull,
                     ),
                     borderSide: BorderSide.none,
+                  ),
+                  errorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(
+                      AppConstants.radiusFull,
+                    ),
+                    borderSide: const BorderSide(color: AppTheme.destructive),
+                  ),
+                  focusedErrorBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(
+                      AppConstants.radiusFull,
+                    ),
+                    borderSide: const BorderSide(color: AppTheme.destructive),
                   ),
                 ),
                 onChanged: ref

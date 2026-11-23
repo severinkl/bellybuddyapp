@@ -1,4 +1,6 @@
+import 'dart:math' as math;
 import 'dart:ui';
+
 import '../config/app_theme.dart';
 import '../config/constants.dart';
 import '../models/gut_feeling_entry.dart';
@@ -14,12 +16,13 @@ enum GutFeelingRatingLevel {
 }
 
 class GutFeelingRating {
-  final double avg;
+  /// The entry's [gutFeelingScore] (1-5, higher = worse).
+  final int score;
   final GutFeelingRatingLevel level;
   final Color color;
 
   const GutFeelingRating({
-    required this.avg,
+    required this.score,
     required this.level,
     required this.color,
   });
@@ -53,59 +56,37 @@ String gutFeelingSubtitle(GutFeelingEntry entry) {
   return active.isEmpty ? 'Alles gut' : active.join(', ');
 }
 
-/// Computes the average of gut-feeling values from raw ints.
-/// [bloating], [gas], [cramps], [fullness] are required; mood values
-/// are optional and included when non-null.
-double gutFeelingAverage({
-  required int bloating,
-  required int gas,
-  required int cramps,
-  required int fullness,
-  int? stress,
-  int? happiness,
-  int? energy,
-  int? focus,
-  int? bodyFeel,
-}) {
-  final values = <int>[bloating, gas, cramps, fullness];
-  if (stress != null) values.add(stress);
-  if (happiness != null) values.add(happiness);
-  if (energy != null) values.add(energy);
-  if (focus != null) values.add(focus);
-  if (bodyFeel != null) values.add(bodyFeel);
-  return values.reduce((a, b) => a + b) / values.length;
+/// The gut score of [entry]: its worst gut symptom (Blähbauch, Blähungen,
+/// Krämpfe, Völlegefühl), 1 (none) to 5 (strong), higher = worse.
+///
+/// The one source for how an entry's Bauchgefühl is rated (diary, detail,
+/// Buddy reaction, insights). The mood values (stress, happiness, energy,
+/// focus, bodyFeel) never count.
+int gutFeelingScore(GutFeelingEntry entry) => math.max(
+  math.max(entry.bloating, entry.gas),
+  math.max(entry.cramps, entry.fullness),
+);
+
+/// Maps a gut-feeling value (1-5 scale) to its rating level: a whole score
+/// 1 → „Sehr gut", 2 → „Gut", 3 → „Durchschnittlich", 4-5 → „Schlecht";
+/// a mean of scores falls between them at the half steps.
+GutFeelingRatingLevel gutFeelingLevelFor(num value) {
+  if (value <= 1.5) return GutFeelingRatingLevel.spiGut;
+  if (value <= 2.5) return GutFeelingRatingLevel.gut;
+  if (value <= 3.5) return GutFeelingRatingLevel.durchschnittlich;
+  return GutFeelingRatingLevel.schlecht;
 }
 
-/// Calculates the overall gut-feeling rating from an entry.
-/// Averages all present values (bloating, gas, cramps, fullness +
-/// optional mood values). Lower is better (1 = best, 5 = worst).
+/// The overall gut-feeling rating of [entry], from its [gutFeelingScore].
 GutFeelingRating calculateGutFeelingRating(GutFeelingEntry entry) {
-  final avg = gutFeelingAverage(
-    bloating: entry.bloating,
-    gas: entry.gas,
-    cramps: entry.cramps,
-    fullness: entry.fullness,
-    stress: entry.stress,
-    happiness: entry.happiness,
-    energy: entry.energy,
-    focus: entry.focus,
-    bodyFeel: entry.bodyFeel,
-  );
-
-  final GutFeelingRatingLevel level;
-  if (avg <= 1.5) {
-    level = GutFeelingRatingLevel.spiGut;
-  } else if (avg <= 2.5) {
-    level = GutFeelingRatingLevel.gut;
-  } else if (avg <= 3.5) {
-    level = GutFeelingRatingLevel.durchschnittlich;
-  } else {
-    level = GutFeelingRatingLevel.schlecht;
-  }
-
+  final score = gutFeelingScore(entry);
   return GutFeelingRating(
-    avg: avg,
-    level: level,
-    color: getValueColor(avg.round()),
+    score: score,
+    level: gutFeelingLevelFor(score),
+    color: getValueColor(score),
   );
 }
+
+/// What [score] (a [gutFeelingScore]) says, next to the rating level.
+String gutFeelingScoreLabel(int score) =>
+    score <= 1 ? 'Keine Beschwerden' : 'Stärkstes Symptom: $score von 5';

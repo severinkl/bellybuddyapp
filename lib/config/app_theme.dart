@@ -243,7 +243,9 @@ class AppTheme {
         borderRadius: BorderRadius.circular(AppConstants.radiusRound),
       ),
       side: BorderSide.none,
+      // Without a color the label is painted white on the light chip.
       labelStyle: const TextStyle(
+        color: foreground,
         fontSize: fontSizeBody,
         fontWeight: FontWeight.w500,
       ),

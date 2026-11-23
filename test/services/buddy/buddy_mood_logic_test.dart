@@ -47,6 +47,41 @@ void main() {
       expect(sentimentForGutFeeling(_gut(5)), LogSentiment.bad);
     });
 
+    test('gut feeling follows the worst symptom, not the average', () {
+      final hardDay = testGutFeelingEntry(
+        bloating: 1,
+        gas: 1,
+        cramps: 5,
+        fullness: 5,
+      );
+      expect(sentimentForGutFeeling(hardDay), LogSentiment.bad);
+      final reaction = reactionFor(
+        EntryKind.gutFeeling,
+        sentimentForGutFeeling(hardDay),
+        name: 'Bubu',
+        rnd: Random(1),
+      );
+      expect(reaction.action, BuddyAction.hug);
+      expect(reaction.moodAfter, BuddyMood.empathetic);
+
+      expect(
+        sentimentForGutFeeling(
+          testGutFeelingEntry(bloating: 3, gas: 1, cramps: 1, fullness: 1),
+        ),
+        LogSentiment.neutral,
+      );
+    });
+
+    test('a bad mood alone keeps the gut feeling good', () {
+      final calmGut = testGutFeelingEntry(
+        bloating: 1,
+        gas: 1,
+        cramps: 1,
+        fullness: 1,
+      ).copyWith(stress: 5, happiness: 5, energy: 5, focus: 5, bodyFeel: 5);
+      expect(sentimentForGutFeeling(calmGut), LogSentiment.good);
+    });
+
     test('stool types 1-5', () {
       LogSentiment s(int t) =>
           sentimentForToilet(testToiletEntry(stoolType: t));

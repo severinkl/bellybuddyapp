@@ -3,8 +3,10 @@ import '../../../../config/app_theme.dart';
 import '../../../../config/constants.dart';
 import '../../../../widgets/common/mood_slider_row.dart';
 
+/// The optional mood ratings. A null value is one the user hasn't set; it
+/// is saved as null, never as a default.
 class StimmungTab extends StatelessWidget {
-  final int stress, happiness, energy, focus, bodyFeel;
+  final int? stress, happiness, energy, focus, bodyFeel;
   final ValueChanged<int> onStressChanged,
       onHappinessChanged,
       onEnergyChanged,
@@ -35,6 +37,14 @@ class StimmungTab extends StatelessWidget {
           style: TextStyle(
             fontSize: AppTheme.fontSizeTitleLG,
             fontWeight: FontWeight.w500,
+          ),
+        ),
+        AppConstants.gap4,
+        const Text(
+          'Optional – gespeichert wird nur, was du einstellst.',
+          style: TextStyle(
+            fontSize: AppTheme.fontSizeCaptionLG,
+            color: AppTheme.mutedForeground,
           ),
         ),
         AppConstants.gap16,

@@ -67,5 +67,26 @@ void main() {
       await tester.pump();
       expect(changedValue, 1);
     });
+
+    testWidgets('an unset value highlights neither mascot', (tester) async {
+      await tester.pumpWithProviders(
+        Scaffold(
+          body: SizedBox(
+            width: 400,
+            child: MoodSliderRow(
+              value: null,
+              onChanged: (_) {},
+              rightLabel: 'Stark',
+              leftMascot: AppConstants.mascotHappy,
+              rightMascot: AppConstants.mascotSad,
+            ),
+          ),
+        ),
+      );
+      final opacities = tester
+          .widgetList<AnimatedOpacity>(find.byType(AnimatedOpacity))
+          .map((o) => o.opacity);
+      expect(opacities, everyElement(lessThan(1.0)));
+    });
   });
 }

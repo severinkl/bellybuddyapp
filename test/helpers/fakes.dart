@@ -368,13 +368,22 @@ class FakeDrinkRepository implements DrinkRepository {
 
   void seedDrinks(List<Drink> drinks) => _drinks = drinks;
 
+  /// The ids [fetchRecentDrinkIds] returns; null: every seeded drink.
+  List<String>? recentDrinkIds;
+
   @override
   Future<List<Drink>> fetchAll() async => _drinks;
   @override
-  Future<int> fetchTodayTotal(String userId) async => 500;
+  Future<int> fetchDayTotal(String userId, DateTime day) async {
+    dayTotalFetches.add(day);
+    return 500;
+  }
+
+  /// The day of every [fetchDayTotal] call, in order.
+  final List<DateTime> dayTotalFetches = [];
   @override
   Future<List<String>> fetchRecentDrinkIds(String userId) async =>
-      _drinks.map((d) => d.id).toList();
+      recentDrinkIds ?? _drinks.map((d) => d.id).toList();
   @override
   Future<Drink> insertDrink(String name, {required String userId}) async {
     final drink = testDrink(id: 'new-drink', name: name, addedByUserId: userId);

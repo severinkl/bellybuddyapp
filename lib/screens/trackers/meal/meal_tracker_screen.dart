@@ -203,7 +203,11 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     }
 
     final state = ref.watch(mealTrackerProvider);
-    final canPop = widget.mealId == null || !state.isDirty;
+    // A meal started from a recipe and left unchanged has nothing to lose.
+    final recipe = widget.initialRecipe;
+    final canPop =
+        !state.hasUnsavedChanges ||
+        (recipe != null && state.matchesRecipe(recipe));
 
     return PopScope(
       canPop: canPop,
@@ -233,8 +237,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         ),
         successActions: [
           GestureDetector(
-            onTap: () =>
-                context.push(RoutePaths.drinkTracker, extra: state.trackedAt),
+            onTap: () => _logDrinkAfterMeal(state.trackedAt),
             child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -255,12 +258,31 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         successBottomCallout: state.showSuccess
             ? _buildSaveAsRecipeBottom(state)
             : null,
-        onSuccessDismissed: widget.initialRecipe != null
-            ? () => context.go(RoutePaths.dashboard)
-            : null,
+        onSuccessDismissed: _dismissSuccess,
         body: _buildBody(state),
       ),
     );
+  }
+
+  /// Leaves the success screen: to Home after a meal from a recipe,
+  /// otherwise back where the meal was started.
+  void _dismissSuccess() {
+    if (widget.initialRecipe != null) {
+      context.go(RoutePaths.dashboard);
+    } else {
+      context.popOrGoDashboard();
+    }
+  }
+
+  /// „Trinken eintragen" on the success screen. Once the drink is saved
+  /// (the drink tracker closes with true), the meal's success screen is
+  /// done too, so the user lands where they came from.
+  Future<void> _logDrinkAfterMeal(DateTime trackedAt) async {
+    final saved = await context.push<bool>(
+      RoutePaths.drinkTracker,
+      extra: trackedAt,
+    );
+    if (saved == true && mounted) _dismissSuccess();
   }
 
   /// Watches userRecipesProvider so the UI rebuilds if the recipe list
@@ -278,7 +300,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         children: [
           if (!saved) ...[
             const Text(
-              'Speicher diese Mahlzeit als Rezept, um sie später schneller wieder einzutragen.',
+              'Speichere diese Mahlzeit als Rezept, um sie später schneller wieder einzutragen.',
               style: TextStyle(
                 fontSize: AppTheme.fontSizeCaption,
                 color: AppTheme.mutedForeground,
