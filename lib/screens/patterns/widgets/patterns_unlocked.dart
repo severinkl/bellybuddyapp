@@ -2,7 +2,6 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
-import '../../../models/insight_rules.dart';
 import '../../../models/insights.dart';
 import '../../../services/insights/insight_copy.dart';
 import '../../registration/widgets/step_field_label.dart';
@@ -12,7 +11,7 @@ import 'noticed_list.dart';
 
 /// The Muster page once the first patterns unlock: the last 30 days as a
 /// calendar, the good and the hard days with what was often there, and
-/// „Fällt mir auf" (from [InsightRules.minHardDays] hard days on).
+/// „Fällt mir auf" ([Insights.showNoticed]).
 class PatternsUnlocked extends StatelessWidget {
   const PatternsUnlocked({super.key, required this.insights});
 
@@ -27,11 +26,7 @@ class PatternsUnlocked extends StatelessWidget {
           header: true,
           child: Text(
             InsightCopy.calendarHeader(insights.gutFeelingDays),
-            style: const TextStyle(
-              fontSize: AppTheme.fontSizeBody,
-              height: AppTheme.lineHeightSnug,
-              color: AppTheme.mutedForeground,
-            ),
+            style: AppTheme.bodyMutedStyle,
           ),
         ),
         AppConstants.gap12,
@@ -40,7 +35,7 @@ class PatternsUnlocked extends StatelessWidget {
         const StepFieldLabel(InsightCopy.columnsTitle),
         AppConstants.gap8,
         DayColumns(good: insights.goodDays, hard: insights.hardDays),
-        if (insights.hardDays.days >= InsightRules.minHardDays) ...[
+        if (insights.showNoticed) ...[
           AppConstants.gap24,
           const StepFieldLabel(InsightCopy.noticedTitle),
           AppConstants.gap8,

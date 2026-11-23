@@ -116,6 +116,22 @@ class AppTheme {
   /// previews.
   static const double lineHeightSnug = 1.35;
 
+  // Named text styles
+  /// Short body text in lists and cards (a column's items, „Fällt mir
+  /// auf"'s rows).
+  static const TextStyle bodyStyle = TextStyle(
+    fontSize: fontSizeBody,
+    height: lineHeightSnug,
+    color: foreground,
+  );
+
+  /// [bodyStyle], muted: labels, empty states, uncertain rows.
+  static const TextStyle bodyMutedStyle = TextStyle(
+    fontSize: fontSizeBody,
+    height: lineHeightSnug,
+    color: mutedForeground,
+  );
+
   // The streak moment's big count („🔥 1 Tag"): flame and number
   static const double fontSizeStreakFlame = 40;
   static const double fontSizeStreakCount = 56;

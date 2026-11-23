@@ -5,7 +5,6 @@ import 'package:material_ui/material_ui.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/insight_progress.dart';
-import '../../../models/insight_rules.dart';
 import '../../../models/insights.dart';
 import '../../../router/route_names.dart';
 import '../../../services/insights/insight_copy.dart';
@@ -151,20 +150,7 @@ class _Locked extends StatelessWidget {
       title: InsightCopy.learningTitle,
       line: InsightCopy.lockedLine(progress),
       locked: true,
-      below: [
-        AppConstants.gap12,
-        InsightProgressRow(
-          label: InsightCopy.activeDaysLabel,
-          count: progress.activeDays,
-          goal: InsightRules.daysNeeded,
-        ),
-        AppConstants.gap10,
-        InsightProgressRow(
-          label: InsightCopy.gutFeelingEntriesLabel,
-          count: progress.gutFeelingEntries,
-          goal: InsightRules.gutFeelingsNeeded,
-        ),
-      ],
+      below: [AppConstants.gap12, InsightProgressBars(progress)],
     );
   }
 }
@@ -208,11 +194,10 @@ class _Unlocked extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: counts == null
-                  ? const SizedBox.shrink()
-                  : Text(counts, style: _metaStyle),
-            ),
+            if (counts == null)
+              const Spacer()
+            else
+              Expanded(child: Text(counts, style: _metaStyle)),
             const SizedBox(width: AppConstants.spacing10),
             Text(
               InsightCopy.noFinding,

@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:belly_buddy/models/gut_feeling_entry.dart';
 import 'package:belly_buddy/models/insight_progress.dart';
+import 'package:belly_buddy/models/insight_rules.dart';
 import 'package:belly_buddy/models/insight_source.dart';
 import 'package:belly_buddy/models/insights.dart';
 import 'package:belly_buddy/services/insights/insights_engine.dart';
@@ -62,6 +63,18 @@ void main() {
     expect(insights.hardDays.often, isNotEmpty);
     expect(insights.noticed, isNotEmpty);
     expect(insights.pick, isA<NoticedPick>());
+  });
+
+  test('„Fällt mir auf" shows from the minimum of hard days on', () {
+    const minimum = InsightRules.minHardDays;
+    expect(
+      _with(insights, hardDays: const DayColumn(days: minimum)).showNoticed,
+      isTrue,
+    );
+    expect(
+      _with(insights, hardDays: const DayColumn(days: minimum - 1)).showNoticed,
+      isFalse,
+    );
   });
 
   test('computed again from equal entries: equal, with an equal hash code '

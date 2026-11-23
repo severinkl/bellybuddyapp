@@ -5,6 +5,7 @@ import '../../../config/constants.dart';
 import '../../../models/insights.dart';
 import '../../../services/insights/insight_copy.dart';
 import '../../../widgets/common/bb_card.dart';
+import 'day_class_look.dart';
 
 /// „Deine guten und schweren Tage": a card for each, stacked, with what was
 /// often there before them.
@@ -31,20 +32,9 @@ class _ColumnCard extends StatelessWidget {
   final DayColumn column;
   final bool hard;
 
-  static const _textStyle = TextStyle(
-    fontSize: AppTheme.fontSizeBody,
-    height: AppTheme.lineHeightSnug,
-    color: AppTheme.foreground,
-  );
-
-  static const _mutedStyle = TextStyle(
-    fontSize: AppTheme.fontSizeBody,
-    height: AppTheme.lineHeightSnug,
-    color: AppTheme.mutedForeground,
-  );
-
   @override
   Widget build(BuildContext context) {
+    final look = dayClassLook(hard ? DayClass.hard : DayClass.good)!;
     return BbCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -55,13 +45,9 @@ class _ColumnCard extends StatelessWidget {
               // The title says which column it is.
               ExcludeSemantics(
                 child: Icon(
-                  hard
-                      ? Icons.sentiment_dissatisfied
-                      : Icons.sentiment_satisfied_alt,
+                  look.icon,
                   size: AppConstants.iconSizeSm,
-                  color: hard
-                      ? AppTheme.gutFeelingBadIcon
-                      : AppTheme.gutFeelingGoodIcon,
+                  color: look.color,
                 ),
               ),
               Expanded(
@@ -78,17 +64,20 @@ class _ColumnCard extends StatelessWidget {
           ),
           AppConstants.gap8,
           if (!column.shown)
-            Text(InsightCopy.tooFewDays(hard: hard), style: _mutedStyle)
+            Text(
+              InsightCopy.tooFewDays(hard: hard),
+              style: AppTheme.bodyMutedStyle,
+            )
           else if (column.often.isEmpty)
-            const Text(InsightCopy.nothingOften, style: _mutedStyle)
+            const Text(InsightCopy.nothingOften, style: AppTheme.bodyMutedStyle)
           else ...[
-            const Text(InsightCopy.oftenLabel, style: _mutedStyle),
+            const Text(InsightCopy.oftenLabel, style: AppTheme.bodyMutedStyle),
             for (final item in column.often)
               Padding(
                 padding: const EdgeInsets.only(top: AppConstants.spacingXs),
                 child: Text(
                   InsightCopy.oftenRow(item, hard: hard),
-                  style: _textStyle,
+                  style: AppTheme.bodyStyle,
                 ),
               ),
           ],

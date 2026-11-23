@@ -7,6 +7,7 @@ import '../../config/constants.dart';
 import '../../providers/insights_provider.dart';
 import '../../router/route_names.dart';
 import '../../services/insights/insight_copy.dart';
+import '../../widgets/common/bb_async_state.dart';
 import 'widgets/patterns_locked.dart';
 import 'widgets/patterns_unlocked.dart';
 
@@ -14,14 +15,11 @@ import 'widgets/patterns_unlocked.dart';
 /// 30 days of entries show. Locked until the first patterns unlock.
 ///
 /// Shows only [AsyncData]: loading (also while the next user's insights
-/// load) is a spinner, a failure offers a retry. Pull to refresh. Opened
-/// without a page below (a cold start on `/patterns`), back goes Home.
+/// load) is [BbLoadingState], a failure [BbErrorState] with a retry. Pull to
+/// refresh. Opened without a page below (a cold start on `/patterns`), back
+/// goes Home.
 class PatternsScreen extends ConsumerWidget {
   const PatternsScreen({super.key});
-
-  static const title = 'Muster';
-  static const errorText = 'Muster konnten nicht geladen werden.';
-  static const retryLabel = 'Nochmal versuchen';
 
   static const _footerStyle = TextStyle(
     fontSize: AppTheme.fontSizeCaptionLG,
@@ -35,18 +33,11 @@ class PatternsScreen extends ConsumerWidget {
     final body = ref
         .watch(insightsProvider)
         .when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (_, _) => Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text(errorText, textAlign: TextAlign.center),
-                TextButton(
-                  onPressed: notifier.refresh,
-                  child: const Text(retryLabel),
-                ),
-              ],
-            ),
+          loading: () => const BbLoadingState(),
+          error: (_, _) => BbErrorState(
+            message: InsightCopy.loadError,
+            retryLabel: InsightCopy.retry,
+            onRetry: notifier.refresh,
           ),
           data: (insights) => RefreshIndicator(
             onRefresh: notifier.refresh,
@@ -72,7 +63,7 @@ class PatternsScreen extends ConsumerWidget {
       backgroundColor: AppTheme.background,
       appBar: AppBar(
         backgroundColor: AppTheme.background,
-        title: const Text(title),
+        title: const Text(InsightCopy.patternsTitle),
         // Pushed from Home, the default back arrow pops.
         leading: context.canPop()
             ? null

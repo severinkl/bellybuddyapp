@@ -238,8 +238,12 @@ class Insights {
 
   /// „Fällt mir auf": the shown items (at most [InsightRules.maxNoticed]),
   /// then the „noch unsicher" ones (at most [InsightRules.maxUncertain]).
-  /// Empty below [InsightRules.minHardDays] hard days.
+  /// Empty unless [showNoticed].
   final List<Noticed> noticed;
+
+  /// Whether the Muster page shows „Fällt mir auf" (even empty): from
+  /// [InsightRules.minHardDays] hard days on.
+  bool get showNoticed => hardDays.days >= InsightRules.minHardDays;
 
   /// What Home's card shows once [unlocked].
   final InsightPick pick;

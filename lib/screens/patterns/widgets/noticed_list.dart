@@ -14,20 +14,11 @@ class NoticedList extends StatelessWidget {
   /// [Insights.noticed].
   final List<Noticed> noticed;
 
-  static const _style = TextStyle(
-    fontSize: AppTheme.fontSizeBody,
-    height: AppTheme.lineHeightSnug,
-    color: AppTheme.foreground,
-  );
-
   @override
   Widget build(BuildContext context) {
     return BbCard(
       child: noticed.isEmpty
-          ? Text(
-              InsightCopy.nothingYet,
-              style: _style.copyWith(color: AppTheme.mutedForeground),
-            )
+          ? const Text(InsightCopy.nothingYet, style: AppTheme.bodyMutedStyle)
           : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               spacing: AppConstants.spacing12,
@@ -48,9 +39,7 @@ class _NoticedRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final text = Text(
       InsightCopy.noticedRow(noticed),
-      style: noticed.uncertain
-          ? NoticedList._style.copyWith(color: AppTheme.mutedForeground)
-          : NoticedList._style,
+      style: noticed.uncertain ? AppTheme.bodyMutedStyle : AppTheme.bodyStyle,
     );
     if (!noticed.uncertain) return text;
     return MergeSemantics(

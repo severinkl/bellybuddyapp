@@ -2,7 +2,38 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
+import '../../models/insight_progress.dart';
+import '../../models/insight_rules.dart';
+import '../../services/insights/insight_copy.dart';
 import 'bb_progress_bar.dart';
+
+/// Both bars toward the first patterns (Home's card and the Muster page,
+/// while locked): days with entries, then gut-feeling entries.
+class InsightProgressBars extends StatelessWidget {
+  const InsightProgressBars(this.progress, {super.key});
+
+  final InsightProgress progress;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        InsightProgressRow(
+          label: InsightCopy.activeDaysLabel,
+          count: progress.activeDays,
+          goal: InsightRules.daysNeeded,
+        ),
+        AppConstants.gap10,
+        InsightProgressRow(
+          label: InsightCopy.gutFeelingEntriesLabel,
+          count: progress.gutFeelingEntries,
+          goal: InsightRules.gutFeelingsNeeded,
+        ),
+      ],
+    );
+  }
+}
 
 /// „[label] … n von [goal]" over its bar; read as one label.
 class InsightProgressRow extends StatelessWidget {

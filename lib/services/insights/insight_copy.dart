@@ -37,19 +37,17 @@ class InsightCopy {
   static const _soon = 'dann zeig ich dir erste Muster.';
 
   /// The Buddy's line while locked: what is still missing, days first.
+  /// Locked progress only: unlocked, the insights show instead.
   static String lockedLine(InsightProgress p) {
+    assert(!p.unlocked, 'Unlocked progress shows the insights instead.');
     if (p.daysLeft > 0) {
       final days = p.daysLeft == 1 ? 'Tag' : 'Tage';
       return 'Noch ${p.daysLeft} $days, $_soon';
     }
-    if (p.gutFeelingsLeft > 0) {
-      final entries = p.gutFeelingsLeft == 1
-          ? 'Bauchgefühl-Eintrag'
-          : gutFeelingEntriesLabel;
-      return 'Noch ${p.gutFeelingsLeft} $entries, $_soon';
-    }
-    // Unlocked progress shows the insights instead of this line.
-    return 'Genug Einträge! Deine ersten Muster kommen bald.';
+    final entries = p.gutFeelingsLeft == 1
+        ? 'Bauchgefühl-Eintrag'
+        : gutFeelingEntriesLabel;
+    return 'Noch ${p.gutFeelingsLeft} $entries, $_soon';
   }
 
   /// „Zwiebel war an 4 von 5 schweren Tagen dabei." (a shown item was there
@@ -82,6 +80,35 @@ class InsightCopy {
   static String goodDaysSub(DayColumn goodDays) =>
       '${columnTitle(goodDays, hard: false)} in den letzten '
       '${InsightRules.windowDays}';
+
+  // The Muster page.
+
+  /// Its app bar.
+  static const patternsTitle = 'Muster';
+
+  static const loadError = 'Muster konnten nicht geladen werden.';
+  static const retry = 'Nochmal versuchen';
+
+  // The Muster page, while locked.
+
+  static const lockedTitle = 'Ich sammle noch!';
+
+  /// Above the progress bars.
+  static const progressSection = 'Bis zu den ersten Mustern';
+
+  /// Below the progress bars, while gut-feeling entries are missing.
+  static const gutHint =
+      'Trag abends kurz dein Bauchgefühl ein, das hilft mir am meisten.';
+
+  /// Below the progress bars, once only days are missing.
+  static const keepGoingHint =
+      'Trag weiter ein – jeder Tag mit Einträgen zählt.';
+
+  /// Above the blurred sample of what comes.
+  static const previewLabel = 'Das siehst du dann · Beispiel';
+
+  /// The blurred sample, to a screen reader.
+  static const previewSemantics = 'Vorschau mit Beispielwerten';
 
   // The Muster page, once unlocked.
 

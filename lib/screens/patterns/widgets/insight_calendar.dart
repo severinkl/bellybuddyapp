@@ -5,6 +5,7 @@ import '../../../config/constants.dart';
 import '../../../models/insights.dart';
 import '../../../services/insights/insight_copy.dart';
 import '../../../utils/date_format_utils.dart';
+import 'day_class_look.dart';
 
 /// The insights window as a calendar, Monday first: each day with its
 /// number and its class's icon (gut, mittel, schwer; an empty outlined
@@ -64,27 +65,6 @@ class InsightCalendar extends StatelessWidget {
   );
 }
 
-/// A class's icon and colours; `null` for a day without a gut-feeling
-/// entry.
-({IconData icon, Color color, Color fill})? _look(DayClass c) => switch (c) {
-  DayClass.good => (
-    icon: Icons.sentiment_satisfied_alt,
-    color: AppTheme.gutFeelingGoodIcon,
-    fill: AppTheme.gutFeelingGoodSoft,
-  ),
-  DayClass.medium => (
-    icon: Icons.sentiment_neutral,
-    color: AppTheme.gutFeelingNeutralIcon,
-    fill: AppTheme.gutFeelingNeutralSoft,
-  ),
-  DayClass.hard => (
-    icon: Icons.sentiment_dissatisfied,
-    color: AppTheme.gutFeelingBadIcon,
-    fill: AppTheme.gutFeelingBadSoft,
-  ),
-  DayClass.none => null,
-};
-
 /// The outline of a day without a gut-feeling entry.
 final _noneBorder = Border.all(
   color: AppTheme.border,
@@ -99,7 +79,7 @@ class _DayCell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final look = _look(day.dayClass);
+    final look = dayClassLook(day.dayClass);
     return Semantics(
       container: true,
       label: InsightCopy.daySemantics(day),
@@ -153,7 +133,7 @@ class _Legend extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             spacing: AppConstants.spacing6,
             children: [
-              switch (_look(c)) {
+              switch (dayClassLook(c)) {
                 final look? => Icon(
                   look.icon,
                   size: AppConstants.iconSizeXs,

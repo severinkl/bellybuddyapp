@@ -2,8 +2,6 @@ import 'package:belly_buddy/models/gut_feeling_entry.dart';
 import 'package:belly_buddy/models/insight_source.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/insight_card.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_keys.dart';
-import 'package:belly_buddy/screens/patterns/patterns_screen.dart';
-import 'package:belly_buddy/screens/patterns/widgets/patterns_locked.dart';
 import 'package:belly_buddy/services/insights/insight_copy.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -77,12 +75,12 @@ void main() {
     expect(find.text(InsightCopy.learningTitle.toUpperCase()), findsOneWidget);
 
     await _openCard(tester);
-    expect(find.text(PatternsScreen.title), findsWidgets);
-    expect(find.text(PatternsLocked.title), findsOneWidget);
+    expect(find.text(InsightCopy.patternsTitle), findsWidgets);
+    expect(find.text(InsightCopy.lockedTitle), findsOneWidget);
 
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
-    expect(find.text(PatternsLocked.title), findsNothing);
+    expect(find.text(InsightCopy.lockedTitle), findsNothing);
     expect(find.byKey(TutorialKeys.insight), findsOneWidget);
   });
 
@@ -112,7 +110,7 @@ void main() {
       1000,
     );
     await tester.pumpAndSettle();
-    expect(find.text(PatternsScreen.errorText), findsNothing);
+    expect(find.text(InsightCopy.loadError), findsNothing);
     expect(find.text('5 schwere Tage'), findsOneWidget);
   });
 }

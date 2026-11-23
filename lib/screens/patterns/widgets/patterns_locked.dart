@@ -5,7 +5,6 @@ import 'package:material_ui/material_ui.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/insight_progress.dart';
-import '../../../models/insight_rules.dart';
 import '../../../models/insights.dart';
 import '../../../services/insights/insight_copy.dart';
 import '../../../widgets/common/bb_card.dart';
@@ -19,15 +18,6 @@ class PatternsLocked extends StatelessWidget {
   const PatternsLocked({super.key, required this.progress});
 
   final InsightProgress progress;
-
-  static const title = 'Ich sammle noch!';
-  static const sectionLabel = 'Bis zu den ersten Mustern';
-  static const gutHint =
-      'Trag abends kurz dein Bauchgefühl ein, das hilft mir am meisten.';
-  static const keepGoingHint =
-      'Trag weiter ein – jeder Tag mit Einträgen zählt.';
-  static const previewLabel = 'Das siehst du dann · Beispiel';
-  static const previewSemantics = 'Vorschau mit Beispielwerten';
 
   /// Clearly fictional: placeholders, not the user's data.
   static const _sample = Noticed(
@@ -49,7 +39,7 @@ class PatternsLocked extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                title,
+                InsightCopy.lockedTitle,
                 style: TextStyle(
                   fontSize: AppTheme.fontSizeTitle,
                   fontWeight: FontWeight.w700,
@@ -69,22 +59,14 @@ class PatternsLocked extends StatelessWidget {
           ),
         ),
         AppConstants.gap20,
-        const StepFieldLabel(sectionLabel),
+        const StepFieldLabel(InsightCopy.progressSection),
         AppConstants.gap12,
-        InsightProgressRow(
-          label: InsightCopy.activeDaysLabel,
-          count: progress.activeDays,
-          goal: InsightRules.daysNeeded,
-        ),
-        AppConstants.gap10,
-        InsightProgressRow(
-          label: InsightCopy.gutFeelingEntriesLabel,
-          count: progress.gutFeelingEntries,
-          goal: InsightRules.gutFeelingsNeeded,
-        ),
+        InsightProgressBars(progress),
         AppConstants.gap12,
         Text(
-          progress.gutFeelingsLeft > 0 ? gutHint : keepGoingHint,
+          progress.gutFeelingsLeft > 0
+              ? InsightCopy.gutHint
+              : InsightCopy.keepGoingHint,
           style: const TextStyle(
             fontSize: AppTheme.fontSizeBody,
             height: AppTheme.lineHeightBody,
@@ -92,10 +74,10 @@ class PatternsLocked extends StatelessWidget {
           ),
         ),
         AppConstants.gap24,
-        const StepFieldLabel(previewLabel),
+        const StepFieldLabel(InsightCopy.previewLabel),
         AppConstants.gap8,
         Semantics(
-          label: previewSemantics,
+          label: InsightCopy.previewSemantics,
           child: ExcludeSemantics(
             child: ClipRRect(
               borderRadius: BorderRadius.circular(AppConstants.radiusLg),

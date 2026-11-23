@@ -43,6 +43,13 @@ void main() {
         'Noch 1 Bauchgefühl-Eintrag, dann zeig ich dir erste Muster.',
       );
     });
+
+    test('never for unlocked progress (the insights show instead)', () {
+      expect(
+        () => InsightCopy.lockedLine(_progress(7, 3)),
+        throwsAssertionError,
+      );
+    });
   });
 
   group('Fällt mir auf', () {
