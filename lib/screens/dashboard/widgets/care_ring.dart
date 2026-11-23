@@ -1,6 +1,5 @@
 import 'dart:math' as math;
 
-import 'package:flutter/foundation.dart' show listEquals;
 import 'package:material_ui/material_ui.dart';
 
 import '../../../config/app_theme.dart';
@@ -58,14 +57,6 @@ class CareRing extends StatelessWidget {
   final ValueChanged<CareNeed> onNeed;
   final CareNeed? highlight;
 
-  /// Ring quarters clockwise from the top.
-  static const _ringOrder = [
-    CareNeed.drink,
-    CareNeed.gutFeeling,
-    CareNeed.toilet,
-    CareNeed.food,
-  ];
-
   /// The tour's targets among the bubbles.
   static final _tutorialKeys = <CareNeed, GlobalKey>{
     CareNeed.gutFeeling: TutorialKeys.bauchgefuehl,
@@ -98,10 +89,8 @@ class CareRing extends StatelessWidget {
             // The Buddy and the glow next to it repaint every frame; the
             // ring only while its progress animates.
             child: RepaintBoundary(
-              child: TweenAnimationBuilder<List<double>>(
-                tween: _ProgressTween(
-                  end: [for (final n in _ringOrder) care.progress(n)],
-                ),
+              child: TweenAnimationBuilder<_Progress>(
+                tween: _ProgressTween(end: _progressOf(care)),
                 duration: calm ? Duration.zero : AppConstants.animMedium,
                 curve: Curves.easeOut,
                 builder: (_, progress, _) =>
@@ -123,24 +112,35 @@ class CareRing extends StatelessWidget {
   }
 }
 
+/// The ring quarters' progress (0..1), clockwise from the top: Trinken,
+/// Bauchgefühl, Klo, Essen. A record compares by value, so a rebuild with
+/// unchanged progress doesn't start the fill animation again.
+typedef _Progress = (double, double, double, double);
+
+_Progress _progressOf(DailyCare care) => (
+  care.progress(CareNeed.drink),
+  care.progress(CareNeed.gutFeeling),
+  care.progress(CareNeed.toilet),
+  care.progress(CareNeed.food),
+);
+
 /// Lerps the four quarters' progress.
-class _ProgressTween extends Tween<List<double>> {
-  _ProgressTween({required List<double> end}) : super(end: end);
+class _ProgressTween extends Tween<_Progress> {
+  _ProgressTween({required _Progress end}) : super(end: end);
 
   @override
-  List<double> lerp(double t) {
-    final from = begin ?? end!;
-    return [
-      for (var i = 0; i < end!.length; i++) from[i] + (end![i] - from[i]) * t,
-    ];
+  _Progress lerp(double t) {
+    final (a1, a2, a3, a4) = begin ?? end!;
+    final (b1, b2, b3, b4) = end!;
+    double at(double a, double b) => a + (b - a) * t;
+    return (at(a1, b1), at(a2, b2), at(a3, b3), at(a4, b4));
   }
 }
 
 class _RingPainter extends CustomPainter {
   _RingPainter(this.progress);
 
-  /// Per quarter, clockwise from the top: 0..1.
-  final List<double> progress;
+  final _Progress progress;
 
   static const _colors = [
     AppTheme.careWater,
@@ -164,10 +164,12 @@ class _RingPainter extends CustomPainter {
     );
     const gap = AppConstants.careRingGapDegrees * math.pi / 180;
     const sweep = math.pi / 2 - gap;
+    final (p1, p2, p3, p4) = progress;
+    final quarters = [p1, p2, p3, p4];
     for (var i = 0; i < 4; i++) {
       final start = -math.pi / 2 + i * math.pi / 2 + gap / 2;
       canvas.drawArc(rect, start, sweep, false, _paint..color = AppTheme.muted);
-      final p = progress[i].clamp(0.0, 1.0);
+      final p = quarters[i].clamp(0.0, 1.0);
       if (p > 0) {
         canvas.drawArc(
           rect,
@@ -181,7 +183,7 @@ class _RingPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_RingPainter old) => !listEquals(old.progress, progress);
+  bool shouldRepaint(_RingPainter old) => old.progress != progress;
 }
 
 /// A need's corner bubble: its count over its label; filled once met,

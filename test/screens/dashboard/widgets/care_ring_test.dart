@@ -13,6 +13,7 @@ void main() {
     CareNeed? highlight,
     Size size = const Size(393, 852),
     double textScale = 1.0,
+    Duration settle = const Duration(milliseconds: 400),
   }) async {
     final tapped = <CareNeed>[];
     tester.view.physicalSize = size;
@@ -43,7 +44,7 @@ void main() {
         ),
       ),
     );
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(settle);
     return tapped;
   }
 
@@ -102,6 +103,29 @@ void main() {
       ),
     );
     handle.dispose();
+  });
+
+  testWidgets('a rebuild with the same progress does not animate the ring '
+      'again; a change does', (tester) async {
+    await pump(tester, care: const DailyCare(meals: 1, glasses: 2));
+    expect(tester.hasRunningAnimations, isFalse);
+
+    // The hero rebuilds the ring (every minute, on every Buddy status)
+    // with the same care.
+    await pump(
+      tester,
+      care: const DailyCare(meals: 1, glasses: 2),
+      settle: Duration.zero,
+    );
+    expect(tester.hasRunningAnimations, isFalse);
+
+    await pump(
+      tester,
+      care: const DailyCare(meals: 2, glasses: 2),
+      settle: Duration.zero,
+    );
+    expect(tester.hasRunningAnimations, isTrue);
+    await tester.pump(const Duration(milliseconds: 400));
   });
 
   testWidgets('the bubbles sit in the four corners', (tester) async {
