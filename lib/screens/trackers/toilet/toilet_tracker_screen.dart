@@ -72,7 +72,7 @@ class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
     return TrackerScreenScaffold(
       title: 'Am Klo \u{1F4A9} gewesen?',
       showSuccess: savedSentiment != null,
-      successMessage: 'Toilettengang gespeichert!',
+      successMessage: 'Klo-Eintrag gespeichert!',
       successIllustration: savedSentiment == null
           ? null
           : BuddyReactionView(
@@ -114,7 +114,7 @@ class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
 
             const Spacer(),
             BbButton(
-              label: 'speichern',
+              label: 'Speichern',
               isLoading: _isSaving,
               onPressed: _save,
             ),

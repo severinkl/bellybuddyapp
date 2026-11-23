@@ -49,7 +49,7 @@ void main() {
     // Title appears in AppBar and in the scrollable body (spec requirement)
     expect(find.text('Linseneintopf'), findsAtLeastNWidgets(2));
     expect(find.text('Linsen'), findsOneWidget);
-    expect(find.text('Mahlzeit jetzt tracken'), findsOneWidget);
+    expect(find.text('Jetzt als Essen eintragen'), findsOneWidget);
   });
 
   testWidgets('shows not-found when recipe id is missing', (tester) async {

@@ -26,10 +26,10 @@ class ReminderCopy {
       '🍽️ Mittagspause — was lag auf dem Teller?',
       '🥗 Was hat dein Bauch zu Mittag bekommen?',
       '🍪 Snack oder richtige Mahlzeit? Beides eintragen.',
-      "📓 Mittag im Logbuch? Sonst vergisst du's.",
+      "📓 Mittag im Tagebuch? Sonst vergisst du's.",
       '🍴 Zwischendurch gefuttert? Kurz notieren.',
       '✍️ Zeit zum Eintragen! Was hast du gegessen?',
-      '📖 Erinnerung: Halte dein Essens-Tagebuch aktuell.',
+      '📖 Erinnerung: Halte dein Tagebuch aktuell.',
     ],
     TimeSlot.evening: [
       '🌙 Abendessen notieren — bevor der Tag vorbei ist.',
@@ -54,7 +54,7 @@ class ReminderCopy {
       "🍽️ {name} hat Hunger! Was gab's zu Mittag?",
       '🥗 {name} würde gern wissen, was auf deinem Teller lag.',
       '🍴 {name} wartet auf deinen Mittags-Eintrag.',
-      '📓 {name} schaut ins Logbuch: Was hast du gegessen?',
+      '📓 {name} schaut ins Tagebuch: Was hast du gegessen?',
     ],
     TimeSlot.evening: [
       '🌙 {name} möchte wissen, was es heute Abend gab.',
@@ -75,7 +75,7 @@ class ReminderCopy {
     TimeSlot.evening: [
       '🌙 {name} will wissen, wie dein Bauch sich heute anfühlt.',
       '🌆 {name} fragt: Was hat dein Bauch heute mitgemacht?',
-      '📖 {name} wartet auf dein Bauch-Fazit fürs Logbuch.',
+      '📖 {name} wartet auf dein Bauch-Fazit fürs Tagebuch.',
       '🤷 {name} fragt: Wie war dein Bauchgefühl heute?',
     ],
   };
@@ -104,7 +104,7 @@ class ReminderCopy {
       "🌙 Tagesende: wie geht's dem Bauch?",
       '🌆 Abend-Check — was hat dein Bauch heute mitgemacht?',
       '💨 Blähungs-Bilanz des Tages?',
-      '📖 Bauch-Fazit fürs Logbuch.',
+      '📖 Bauch-Fazit fürs Tagebuch.',
       '✅ Zwickt, brummt, oder tiptop? Eintragen!',
       '🤷 Wie war dein Bauchgefühl heute?',
     ],

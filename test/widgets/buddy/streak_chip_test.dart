@@ -77,8 +77,8 @@ void main() {
   testWidgets('without onTap: no button', (t) async {
     final h = t.ensureSemantics();
     await t.pumpWidget(_wrap(const StreakChip(streak: 5, todayCounted: true)));
-    final node = find.semantics.byLabel(RegExp('^Serie: 5 Tage')).evaluate();
-    expect(node.single.label, 'Serie: 5 Tage');
+    final node = find.semantics.byLabel(RegExp('^Streak: 5 Tage')).evaluate();
+    expect(node.single.label, 'Streak: 5 Tage');
     expect(node.single, isNot(matchesSemantics(isButton: true)));
     h.dispose();
   });
@@ -94,16 +94,16 @@ void main() {
     expect(taps, 1);
 
     expect(
-      find.semantics.byLabel(RegExp('^Serie: 5 Tage')).evaluate().single,
+      find.semantics.byLabel(RegExp('^Streak: 5 Tage')).evaluate().single,
       matchesSemantics(
         isButton: true,
         hasTapAction: true,
-        label: 'Serie: 5 Tage, Heute noch offen',
+        label: 'Streak: 5 Tage, Heute noch offen',
         hint: 'Streak-Ziel festlegen',
         tooltip: 'Heute noch offen',
       ),
     );
-    t.semantics.tap(find.semantics.byLabel(RegExp('^Serie: 5 Tage')));
+    t.semantics.tap(find.semantics.byLabel(RegExp('^Streak: 5 Tage')));
     expect(taps, 2);
     h.dispose();
   });

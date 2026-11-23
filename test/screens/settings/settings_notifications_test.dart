@@ -79,14 +79,14 @@ void main() {
       expect(find.text('Bauchgefühl'), findsOneWidget);
     });
 
-    testWidgets('renders Empfehlungen & Tipps section', (tester) async {
+    testWidgets('renders Tipps section', (tester) async {
       await tester.pumpWithProviders(
         const SettingsNotificationsScreen(),
         overrides: _overrides(),
       );
       await tester.pump();
 
-      expect(find.text('Empfehlungen & Tipps'), findsAtLeast(1));
+      expect(find.text('Tipps'), findsAtLeast(1));
     });
 
     testWidgets('renders SwitchListTiles for all toggles', (tester) async {

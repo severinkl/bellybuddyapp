@@ -71,7 +71,7 @@ class RecommendationFeedbackView extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'War diese Empfehlung hilfreich?',
+            'War dieser Tipp hilfreich?',
             style: TextStyle(
               fontSize: AppTheme.fontSizeBody,
               fontWeight: FontWeight.w600,
@@ -80,7 +80,7 @@ class RecommendationFeedbackView extends ConsumerWidget {
           ),
           AppConstants.gap4,
           const Text(
-            'Hilft Belly Buddy, zukünftige Empfehlungen für dich anzupassen.',
+            'Hilft Belly Buddy, zukünftige Tipps für dich anzupassen.',
             style: TextStyle(
               fontSize: AppTheme.fontSizeCaptionLG,
               color: AppTheme.mutedForeground,

@@ -96,7 +96,7 @@ class _FakeMealTracker extends ConsumerWidget {
                   trackedAt: DateTime.now(),
                 ),
               );
-              // The success screen's „Getränk hinzufügen": the drink event
+              // The success screen's „Trinken eintragen": the drink event
               // replaces the meal in the single event slot.
               events.emit(
                 BuddyLogEvent(

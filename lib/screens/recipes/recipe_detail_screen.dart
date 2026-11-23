@@ -156,7 +156,7 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
             Padding(
               padding: AppConstants.paddingMd,
               child: BbButton(
-                label: 'Mahlzeit jetzt tracken',
+                label: 'Jetzt als Essen eintragen',
                 onPressed: () =>
                     context.push(RoutePaths.mealTracker, extra: recipe),
               ),

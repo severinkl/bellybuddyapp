@@ -147,7 +147,7 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
           children: [
             SizedBox(height: MediaQuery.of(context).size.height * 0.2),
             BbErrorState(
-              message: 'Fehler beim Laden der Empfehlungen.',
+              message: 'Fehler beim Laden der Tipps.',
               onRetry: () => ref
                   .read(recommendationProvider.notifier)
                   .fetchRecommendations(),
@@ -185,7 +185,7 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
                   horizontal: AppConstants.spacingXl,
                 ),
                 child: Text(
-                  'Noch keine Empfehlungen — sobald Belly Buddy deine Daten analysiert hat, siehst du sie hier.',
+                  'Noch keine Tipps — sobald Belly Buddy deine Daten analysiert hat, siehst du sie hier.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: AppTheme.fontSizeBodyLG,

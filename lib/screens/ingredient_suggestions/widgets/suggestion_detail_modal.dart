@@ -92,7 +92,7 @@ class SuggestionDetailModal extends StatelessWidget {
               // Meals section
               if (group.meals.isNotEmpty) ...[
                 Text(
-                  'Gefunden in ${group.mealCount} ${group.mealCount == 1 ? 'Speise' : 'Speisen'}',
+                  'Gefunden in ${group.mealCount} ${group.mealCount == 1 ? 'Mahlzeit' : 'Mahlzeiten'}',
                   style: const TextStyle(
                     fontSize: AppTheme.fontSizeSubtitle,
                     fontWeight: FontWeight.w600,

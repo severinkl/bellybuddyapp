@@ -655,7 +655,7 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
       BuddyOnboardingStep.firstMeal => [
         BbButton(
           key: BuddyOnboardingScreen.mealLogKey,
-          label: 'Mahlzeit eintragen',
+          label: 'Essen eintragen',
           onPressed: _busy ? null : _logMeal,
         ),
         AppConstants.gap8,

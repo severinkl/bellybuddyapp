@@ -89,11 +89,11 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('Fehler beim Laden der Empfehlungen.'), findsOneWidget);
+      expect(find.text('Fehler beim Laden der Tipps.'), findsOneWidget);
       expect(find.text('Erneut versuchen'), findsOneWidget);
     });
 
-    testWidgets('empty state shows mascot + "Noch keine Empfehlungen"', (
+    testWidgets('empty state shows mascot + "Noch keine Tipps"', (
       tester,
     ) async {
       await tester.pumpWithProviders(
@@ -103,7 +103,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.textContaining('Noch keine Empfehlungen'), findsOneWidget);
+      expect(find.textContaining('Noch keine Tipps'), findsOneWidget);
       expect(
         find.byKey(RecommendationsScreen.emptyStateRefreshKey),
         findsOneWidget,
@@ -404,7 +404,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
 
-      expect(find.text('War diese Empfehlung hilfreich?'), findsOneWidget);
+      expect(find.text('War dieser Tipp hilfreich?'), findsOneWidget);
       expect(find.text('Hilfreich'), findsOneWidget);
       expect(find.text('Nicht hilfreich'), findsOneWidget);
     });
@@ -586,7 +586,7 @@ void main() {
         // Index provider confirms we're at 2 (the latest).
         expect(container.read(recommendationIndexProvider), 2);
 
-        // Simulate the user tapping "Empfehlung ausblenden" in the sheet.
+        // Simulate the user tapping "Tipp ausblenden" in the sheet.
         // This is what the sheet's `_hide()` method calls.
         await container
             .read(recommendationProvider.notifier)

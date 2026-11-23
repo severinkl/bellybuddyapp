@@ -91,7 +91,7 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
             style: TextStyle(fontSize: AppTheme.fontSizeBody),
           ),
           AppConstants.gap12,
-          const _BulletItem('Alle Ernährungstagebuch-Einträge'),
+          const _BulletItem('Alle Tagebuch-Einträge'),
           const _BulletItem('Dein Profil und Einstellungen'),
           const _BulletItem('Alle gespeicherten Rezepte'),
           const _BulletItem('Dein Benutzerkonto'),

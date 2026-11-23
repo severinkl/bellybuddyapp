@@ -57,7 +57,7 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.text('speichern'), findsOneWidget);
+      expect(find.text('Speichern'), findsOneWidget);
     });
 
     testWidgets('renders quick drink grid after loading', (tester) async {
@@ -181,8 +181,8 @@ void main() {
         ..selectAmount(250)
         ..setTrackedAt(lastNight);
       await tester.pump();
-      await tester.ensureVisible(find.text('speichern'));
-      await tester.tap(find.text('speichern'));
+      await tester.ensureVisible(find.text('Speichern'));
+      await tester.tap(find.text('Speichern'));
       await tester.pump();
       // The Buddy animates forever: pump past the overlay intro only.
       await tester.pump(const Duration(milliseconds: 700));
@@ -216,11 +216,11 @@ void main() {
         ..toggleDrink(testDrink())
         ..selectAmount(250);
       await tester.pump();
-      await tester.ensureVisible(find.text('speichern'));
+      await tester.ensureVisible(find.text('Speichern'));
       // Deselect without rebuilding: the enabled button still calls _save,
       // but save() finds no drink and stores nothing.
       notifier.clearSelection();
-      await tester.tap(find.text('speichern'));
+      await tester.tap(find.text('Speichern'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 

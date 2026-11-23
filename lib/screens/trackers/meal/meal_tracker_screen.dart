@@ -244,7 +244,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
                 ),
                 SizedBox(width: AppConstants.spacingSm),
                 Text(
-                  'Getränk hinzufügen',
+                  'Trinken eintragen',
                   style: TextStyle(color: AppTheme.info),
                 ),
               ],
@@ -429,13 +429,13 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
             },
           ),
           AppConstants.gap16,
-          // "Getränk tracken" button
+          // "Trinken eintragen" button
           OutlinedButton.icon(
             key: MealTrackerScreen.drinkTrackerButtonKey,
             onPressed: () =>
                 context.push(RoutePaths.drinkTracker, extra: state.trackedAt),
             icon: const Icon(Icons.water_drop_outlined),
-            label: const Text('Getränk tracken'),
+            label: const Text('Trinken eintragen'),
             style: OutlinedButton.styleFrom(
               backgroundColor: Colors.white,
               foregroundColor: AppTheme.info,

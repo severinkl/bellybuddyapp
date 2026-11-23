@@ -256,12 +256,12 @@ class _SettingsNotificationsScreenState
                         AppConstants.gap16,
                         SettingsSectionCard(
                           icon: Icons.lightbulb_outline,
-                          title: 'Empfehlungen & Tipps',
+                          title: 'Tipps',
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               SwitchListTile(
-                                title: const Text('Empfehlungen & Tipps'),
+                                title: const Text('Tipps'),
                                 value: profile.pushEnabled,
                                 activeThumbColor: AppTheme.primary,
                                 contentPadding: EdgeInsets.zero,

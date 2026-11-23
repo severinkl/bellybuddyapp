@@ -305,7 +305,7 @@ class _GutFeelingTrackerScreenState
           // Fixed bottom button with gradient backdrop
           GradientBottomBar(
             child: PillButton(
-              label: _activeTab == 0 ? 'weiter' : 'speichern',
+              label: _activeTab == 0 ? 'Weiter' : 'Speichern',
               isLoading: _isSaving,
               onPressed: _onNextOrSave,
             ),

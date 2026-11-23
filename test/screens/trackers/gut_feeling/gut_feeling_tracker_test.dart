@@ -54,7 +54,7 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 50));
 
-      expect(find.text('weiter'), findsOneWidget);
+      expect(find.text('Weiter'), findsOneWidget);
     });
 
     testWidgets('renders PageView with two pages', (tester) async {
@@ -80,12 +80,12 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 50));
 
-      await tester.tap(find.text('weiter'));
+      await tester.tap(find.text('Weiter'));
       // Page slide (350 ms): start, finish, rebuild with the new label.
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 400));
       await tester.pump();
-      await tester.tap(find.text('speichern'));
+      await tester.tap(find.text('Speichern'));
       await tester.pump();
       // The Buddy animates forever: pump past the overlay intro only.
       await tester.pump(const Duration(milliseconds: 700));

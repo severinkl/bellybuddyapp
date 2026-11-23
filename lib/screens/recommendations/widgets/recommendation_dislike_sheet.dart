@@ -185,7 +185,7 @@ class _RecommendationDislikeSheetState
                   style: TextButton.styleFrom(
                     foregroundColor: AppTheme.destructive,
                   ),
-                  child: const Text('Empfehlung ausblenden'),
+                  child: const Text('Tipp ausblenden'),
                 ),
                 FilledButton(
                   onPressed: () => Navigator.of(context).pop(),

@@ -55,7 +55,7 @@ void main() {
       final entries = DiaryHelpers.buildEntries(result);
       expect(entries.length, 1);
       expect(entries.first.type, DiaryEntryType.toilet);
-      expect(entries.first.title, 'Toilettengang');
+      expect(entries.first.title, 'Klo');
     });
 
     test('builds gut feeling entries', () {

@@ -44,7 +44,7 @@ class NotFoundScreen extends StatelessWidget {
                 AppConstants.gap32,
                 ElevatedButton(
                   onPressed: () => context.go(RoutePaths.dashboard),
-                  child: const Text('Zurück zum Dashboard'),
+                  child: const Text('Zurück zu Home'),
                 ),
               ],
             ),

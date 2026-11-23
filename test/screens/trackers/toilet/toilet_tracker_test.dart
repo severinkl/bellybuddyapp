@@ -62,7 +62,7 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text('speichern'), findsOneWidget);
+      expect(find.text('Speichern'), findsOneWidget);
     });
 
     testWidgets('successful save emits a Buddy event and shows the reaction', (
@@ -77,7 +77,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.text('speichern'));
+      await tester.tap(find.text('Speichern'));
       await tester.pump();
       // The Buddy animates forever: pump past the overlay intro only.
       await tester.pump(const Duration(milliseconds: 700));
@@ -86,7 +86,7 @@ void main() {
       expect(event?.kind, EntryKind.toilet);
       // Default stool type 3 ("normal").
       expect(event?.sentiment, LogSentiment.good);
-      expect(find.text('Toilettengang gespeichert!'), findsOneWidget);
+      expect(find.text('Klo-Eintrag gespeichert!'), findsOneWidget);
       final view = tester.widget<BuddyReactionView>(
         find.byType(BuddyReactionView),
       );

@@ -73,7 +73,7 @@ Future<ProviderContainer> _pumpMealTracker(WidgetTester tester) async {
 void main() {
   group('MealTrackerScreen → DrinkTrackerScreen handoff', () {
     testWidgets(
-      'form-button "Getränk tracken" forwards state.trackedAt as extra',
+      'form-button "Trinken eintragen" forwards state.trackedAt as extra',
       (tester) async {
         final container = await _pumpMealTracker(tester);
 
@@ -95,7 +95,7 @@ void main() {
     );
 
     testWidgets(
-      'success-card "Getränk hinzufügen" forwards state.trackedAt as extra',
+      'success-card "Trinken eintragen" forwards state.trackedAt as extra',
       (tester) async {
         final container = await _pumpMealTracker(tester);
 
@@ -107,7 +107,7 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 700));
 
-        await tester.tap(find.text('Getränk hinzufügen'));
+        await tester.tap(find.text('Trinken eintragen'));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 500));
 

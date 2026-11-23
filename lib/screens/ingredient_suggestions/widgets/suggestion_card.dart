@@ -86,7 +86,7 @@ class SuggestionCard extends StatelessWidget {
                         ),
                         AppConstants.gap4,
                         Text(
-                          'gefunden in ${group.mealCount} ${group.mealCount == 1 ? 'Speise' : 'Speisen'}',
+                          'gefunden in ${group.mealCount} ${group.mealCount == 1 ? 'Mahlzeit' : 'Mahlzeiten'}',
                           style: const TextStyle(
                             fontSize: AppTheme.fontSizeCaption,
                             color: AppTheme.mutedForeground,
