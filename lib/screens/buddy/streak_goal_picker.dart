@@ -2,7 +2,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
+import '../../services/haptic_service.dart';
 import '../../widgets/buddy/buddy.dart';
+import '../../widgets/common/bb_button.dart';
 import '../../widgets/common/bb_drag_handle.dart';
 
 const List<int> kStreakGoalOptions = [7, 14, 30, 50, 100];
@@ -41,25 +43,35 @@ int? recommendedStreakGoal(List<int> choices) {
   );
 }
 
-/// The goals above [currentStreak], each with its one-liner and label; the
-/// Buddy's tip ([recommendedStreakGoal]) is ringed and badged.
+/// The goal shown as selected among [choices]: [goal] while it is one of
+/// them, else the Buddy's tip; null without choices.
+int? streakGoalSelection(List<int> choices, int? goal) =>
+    choices.contains(goal) ? goal : recommendedStreakGoal(choices);
+
+/// The goals above [currentStreak] as a single choice, each with its
+/// one-liner and label: [selected] is checked and ringed, the Buddy's tip
+/// ([recommendedStreakGoal]) badged. A tap only selects ([onChanged]); the
+/// caller confirms. Without [onChanged] the rows don't react.
 class StreakGoalPicker extends StatelessWidget {
   const StreakGoalPicker({
     super.key,
     required this.currentStreak,
-    required this.onSelected,
+    required this.selected,
+    required this.onChanged,
   });
 
   /// A goal's row: `streak_goal_<days>`.
   static Key goalKey(int goal) => ValueKey('streak_goal_$goal');
 
   final int currentStreak;
-  final ValueChanged<int> onSelected;
+  final int? selected;
+  final ValueChanged<int>? onChanged;
 
   @override
   Widget build(BuildContext context) {
     final choices = streakGoalChoices(currentStreak);
     final tip = recommendedStreakGoal(choices);
+    final onChanged = this.onChanged;
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -69,7 +81,8 @@ class StreakGoalPicker extends StatelessWidget {
             key: goalKey(goal),
             goal: goal,
             tip: goal == tip,
-            onTap: () => onSelected(goal),
+            selected: goal == selected,
+            onTap: onChanged == null ? null : () => onChanged(goal),
           ),
           if (goal != choices.last) AppConstants.gap8,
         ],
@@ -83,32 +96,41 @@ class _GoalRow extends StatelessWidget {
     super.key,
     required this.goal,
     required this.tip,
+    required this.selected,
     required this.onTap,
   });
 
   final int goal;
   final bool tip;
-  final VoidCallback onTap;
+  final bool selected;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final radius = BorderRadius.circular(AppConstants.radiusPill);
+    final onTap = this.onTap;
     return Semantics(
-      button: true,
+      inMutuallyExclusiveGroup: true,
+      checked: selected,
       child: Material(
-        color: tip ? AppTheme.background : AppTheme.card,
+        color: selected ? AppTheme.primarySoft : AppTheme.card,
         shape: RoundedRectangleBorder(
           borderRadius: radius,
           side: BorderSide(
-            color: tip ? AppTheme.primary : AppTheme.border,
-            width: tip
+            color: selected ? AppTheme.primary : AppTheme.border,
+            width: selected
                 ? AppConstants.borderWidthLg
                 : AppConstants.borderWidthMd,
           ),
         ),
         child: InkWell(
           borderRadius: radius,
-          onTap: onTap,
+          onTap: onTap == null
+              ? null
+              : () {
+                  HapticService.selection();
+                  onTap();
+                },
           child: ConstrainedBox(
             constraints: const BoxConstraints(
               minHeight: AppConstants.streakGoalRowHeight,
@@ -120,6 +142,16 @@ class _GoalRow extends StatelessWidget {
               ),
               child: Row(
                 children: [
+                  Icon(
+                    selected
+                        ? Icons.check_circle
+                        : Icons.radio_button_unchecked,
+                    size: AppConstants.iconSizeMd,
+                    color: selected
+                        ? AppTheme.primary
+                        : AppTheme.mutedForeground,
+                  ),
+                  const SizedBox(width: AppConstants.spacing12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -191,8 +223,61 @@ class _TipBadge extends StatelessWidget {
   );
 }
 
-/// Modal sheet with the Buddy (his bubble asks [title]) and the goal picker.
-/// Returns the chosen goal, or null when dismissed.
+/// The goal list ([StreakGoalPicker]) with „Ziel festlegen" below:
+/// [initialGoal] starts selected while it is still open, else the Buddy's
+/// tip; a tap selects, the button hands the selected goal to [onConfirmed].
+class StreakGoalChooser extends StatefulWidget {
+  const StreakGoalChooser({
+    super.key,
+    required this.currentStreak,
+    required this.onConfirmed,
+    this.initialGoal,
+  });
+
+  static const confirmKey = Key('streak_goal_confirm');
+
+  final int currentStreak;
+  final int? initialGoal;
+  final ValueChanged<int> onConfirmed;
+
+  @override
+  State<StreakGoalChooser> createState() => _StreakGoalChooserState();
+}
+
+class _StreakGoalChooserState extends State<StreakGoalChooser> {
+  late int? _goal = widget.initialGoal;
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = streakGoalSelection(
+      streakGoalChoices(widget.currentStreak),
+      _goal,
+    );
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        StreakGoalPicker(
+          currentStreak: widget.currentStreak,
+          selected: selected,
+          onChanged: (g) => setState(() => _goal = g),
+        ),
+        AppConstants.gap16,
+        BbButton(
+          tapKey: StreakGoalChooser.confirmKey,
+          label: 'Ziel festlegen',
+          onPressed: selected == null
+              ? null
+              : () => widget.onConfirmed(selected),
+        ),
+      ],
+    );
+  }
+}
+
+/// Modal sheet with the Buddy (his bubble asks [title]) and the goal list
+/// to choose from ([StreakGoalChooser]). Returns the chosen goal, or null
+/// when dismissed.
 Future<int?> showStreakGoalSheet(
   BuildContext context, {
   required int currentStreak,
@@ -249,9 +334,9 @@ class _StreakGoalSheetState extends State<_StreakGoalSheet> {
               child: BuddyStage(controller: _buddy),
             ),
             AppConstants.gap16,
-            StreakGoalPicker(
+            StreakGoalChooser(
               currentStreak: widget.currentStreak,
-              onSelected: (g) => Navigator.pop(context, g),
+              onConfirmed: (g) => Navigator.pop(context, g),
             ),
           ],
         ),

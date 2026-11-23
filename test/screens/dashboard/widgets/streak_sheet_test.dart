@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
+import 'package:belly_buddy/screens/buddy/streak_goal_picker.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/streak_sheet.dart';
 import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
 
@@ -23,6 +24,15 @@ void main() {
         todayCounted: true,
         weekDays: {DateTime(2026, 11, 23)},
       );
+
+  /// The goal row for [days] shows as the selected one.
+  bool selected(WidgetTester tester, int days) => find
+      .descendant(
+        of: find.byKey(StreakGoalPicker.goalKey(days)),
+        matching: find.byIcon(Icons.check_circle),
+      )
+      .evaluate()
+      .isNotEmpty;
 
   Future<void> pump(WidgetTester tester, BuddyStatus s) async {
     tester.view.physicalSize = const Size(393, 852);
@@ -69,8 +79,9 @@ void main() {
     expect(find.text('Geschafft! 🎉'), findsOneWidget);
   });
 
-  testWidgets('„Ziel ändern" swaps in the goal list', (tester) async {
-    await pump(tester, status());
+  testWidgets('„Ziel ändern" swaps in the goal list to choose from, the '
+      'current goal selected, with „Ziel festlegen"', (tester) async {
+    await pump(tester, status(goal: 30));
 
     await tester.ensureVisible(find.byKey(StreakSheet.changeGoalKey));
     await tester.tap(find.byKey(StreakSheet.changeGoalKey));
@@ -79,6 +90,16 @@ void main() {
     expect(find.text('Neues Streak-Ziel'), findsOneWidget);
     expect(find.text('7 Tage'), findsOneWidget);
     expect(find.text('Streak-Saver: 1'), findsNothing);
+    expect(selected(tester, 30), isTrue);
+    expect(selected(tester, 14), isFalse);
+    expect(find.byKey(StreakGoalChooser.confirmKey), findsOneWidget);
+
+    // A tap only selects; the list stays.
+    await tester.tap(find.text('7 Tage'));
+    await tester.pump();
+    expect(find.text('Neues Streak-Ziel'), findsOneWidget);
+    expect(selected(tester, 7), isTrue);
+    expect(selected(tester, 30), isFalse);
   });
 
   testWidgets('text scale 1.3 on a small phone: no overflow', (tester) async {

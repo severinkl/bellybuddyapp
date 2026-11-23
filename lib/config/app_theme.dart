@@ -55,7 +55,7 @@ class AppTheme {
   static const Color buddyFoodLeaf = Color(0xFF6E8B2A);
   static const Color buddyShadow = Color(0x140D0D0F);
 
-  // Streak: a day with an entry (week row circle), the tipped goal
+  // Streak: a day with an entry (week row circle), the selected goal
   static const Color primarySoft = Color(0xFFF3F7DF);
 
   // Dashboard care ring: one color per need (Essen, Trinken, Bauchgefühl,

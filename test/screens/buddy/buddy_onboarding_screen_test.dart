@@ -1,4 +1,6 @@
 // ignore_for_file: invalid_use_of_internal_member
+import 'dart:async';
+
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter_localizations/flutter_localizations.dart'
     show GlobalWidgetsLocalizations;
@@ -23,6 +25,7 @@ import 'package:belly_buddy/repositories/notification_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/buddy/buddy_onboarding_screen.dart';
+import 'package:belly_buddy/screens/buddy/streak_goal_picker.dart';
 import 'package:belly_buddy/screens/buddy/widgets/streak_moment.dart';
 import 'package:belly_buddy/screens/registration/steps/steps.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
@@ -263,6 +266,12 @@ void main() {
       await settle(tester);
     }
 
+    /// On the goal step: selects [goal] and confirms with „Ziel festlegen".
+    Future<void> pickGoal(WidgetTester tester, String goal) async {
+      await tapText(tester, goal);
+      await tapKey(tester, BuddyOnboardingScreen.goalConfirmKey);
+    }
+
     Future<_Harness> pumpOnboarding(
       WidgetTester tester, {
       BuddyOnboardingEntry entry = BuddyOnboardingEntry.afterRegistration,
@@ -368,6 +377,84 @@ void main() {
           AppConstants.keyNotificationModalShown,
         );
 
+    /// The goal row for [days] shows as the selected one.
+    bool goalSelected(WidgetTester tester, int days) => find
+        .descendant(
+          of: find.byKey(StreakGoalPicker.goalKey(days)),
+          matching: find.byIcon(Icons.check_circle),
+        )
+        .evaluate()
+        .isNotEmpty;
+
+    testWidgets('the goal step: his tip starts selected; a tap selects '
+        'another goal without leaving the step; „Ziel festlegen" saves it '
+        'and goes on', (tester) async {
+      final h = await pumpOnboarding(tester, entry: BuddyOnboardingEntry.gate);
+      await tapKey(tester, BuddyOnboardingScreen.introNextKey);
+      await tester.enterText(find.byKey(BuddyNameStep.fieldKey), 'Bauchi');
+      await tester.pump();
+      await tapKey(tester, BuddyOnboardingScreen.nameNextKey);
+      await afterReaction(tester);
+      await tapKey(tester, BuddyOnboardingScreen.momentNextKey);
+      expect(find.text(_streakTitle), findsOneWidget);
+
+      expect(goalSelected(tester, 14), isTrue);
+      expect(find.byKey(BuddyOnboardingScreen.goalConfirmKey), findsOneWidget);
+      expect(find.text('Ziel festlegen'), findsOneWidget);
+
+      for (final days in [30, 50]) {
+        await tapText(tester, '$days Tage');
+        expect(find.text(_streakTitle), findsOneWidget, reason: '$days');
+        expect(goalSelected(tester, days), isTrue, reason: '$days');
+        expect(goalSelected(tester, 14), isFalse, reason: '$days');
+      }
+      // His tip keeps its badge.
+      expect(
+        find.descendant(
+          of: find.byKey(StreakGoalPicker.goalKey(14)),
+          matching: find.text('Mein Tipp'),
+        ),
+        findsOneWidget,
+      );
+      expect(h.stored?.streakGoal, isNull);
+
+      await tapKey(tester, BuddyOnboardingScreen.goalConfirmKey);
+      expect(h.stored?.streakGoal, 50);
+      expect(find.text(_reminderTitle), findsOneWidget);
+    });
+
+    testWidgets('the goal as the last step: „Ziel festlegen" shows that it is '
+        'working while the onboarding completes', (tester) async {
+      final h = await pumpOnboarding(tester, pushEnabled: true);
+      await tapKey(tester, BuddyOnboardingScreen.mealLaterKey);
+      expect(find.text(_streakTitle), findsOneWidget);
+
+      await tapText(tester, '30 Tage');
+      h.buddyRepo.saveHold = Completer<void>();
+      await tester.tap(find.byKey(BuddyOnboardingScreen.goalConfirmKey));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('dashboard-stub'), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byKey(BuddyOnboardingScreen.goalConfirmKey),
+          matching: find.byType(CircularProgressIndicator),
+        ),
+        findsOneWidget,
+      );
+      // The choice is made: the goals no longer react.
+      await tester.tap(find.text('7 Tage'), warnIfMissed: false);
+      await tester.pump();
+      expect(goalSelected(tester, 30), isTrue);
+
+      h.buddyRepo.saveHold!.complete();
+      await settle(tester);
+      expect(find.text('dashboard-stub'), findsOneWidget);
+      expect(h.stored?.streakGoal, 30);
+      expect(h.stored?.onboardingCompletedAt, isNotNull);
+    });
+
     testWidgets('after registration: first meal, „Tag 1", goal, reminder '
         'later, then the dashboard with his welcome — no streak saver', (
       tester,
@@ -389,7 +476,7 @@ void main() {
       expect(find.text(_streakTitle), findsOneWidget);
       expect(find.text('Warum ein Ziel?'), findsOneWidget);
       expect(find.text('Mein Tipp'), findsOneWidget);
-      await tapText(tester, '14 Tage');
+      await pickGoal(tester, '14 Tage');
       expect(h.stored?.streakGoal, 14);
 
       // The reminder ask previews his real reminders at the profile times.
@@ -439,7 +526,7 @@ void main() {
         'on and finishes', (tester) async {
       final h = await pumpOnboarding(tester);
       await tapKey(tester, BuddyOnboardingScreen.mealLaterKey);
-      await tapText(tester, '7 Tage');
+      await pickGoal(tester, '7 Tage');
 
       await tapKey(tester, BuddyOnboardingScreen.reminderYesKey);
 
@@ -456,7 +543,7 @@ void main() {
       await tapKey(tester, BuddyOnboardingScreen.mealLaterKey);
       expect(await modalShownPref(), isNull);
 
-      await tapText(tester, '7 Tage');
+      await pickGoal(tester, '7 Tage');
 
       expect(find.text(_reminderTitle), findsNothing);
       expect(find.text('dashboard-stub'), findsOneWidget);
@@ -550,7 +637,7 @@ void main() {
       await tapKey(tester, BuddyOnboardingScreen.momentNextKey);
 
       expect(find.text(_streakTitle), findsOneWidget);
-      await tapText(tester, '14 Tage');
+      await pickGoal(tester, '14 Tage');
       expect(find.text(_reminderTitle), findsOneWidget);
       // The previews use his name.
       expect(
@@ -595,7 +682,7 @@ void main() {
       expect(find.text(_streakTitle), findsOneWidget);
       // 3 days in: 7 is still open, and his tip stays on 14.
       expect(find.text('7 Tage'), findsOneWidget);
-      await tapText(tester, '7 Tage');
+      await pickGoal(tester, '7 Tage');
       expect(find.text('dashboard-stub'), findsOneWidget);
     });
 
@@ -610,7 +697,7 @@ void main() {
       );
 
       await tapKey(tester, BuddyOnboardingScreen.momentNextKey);
-      await tapText(tester, '7 Tage');
+      await pickGoal(tester, '7 Tage');
 
       expect(h.stored?.onboardingCompletedAt, isNotNull);
       expect(h.stored?.savers, 2);
@@ -655,13 +742,13 @@ void main() {
       expect(find.text(_noStreakLine), findsOneWidget);
     });
 
-    testWidgets('completing fails: the step stays and the answer can be '
-        'tapped again', (tester) async {
+    testWidgets('completing fails: the step stays and „Ziel festlegen" can '
+        'be tapped again', (tester) async {
       final h = await pumpOnboarding(tester, pushEnabled: true);
       await tapKey(tester, BuddyOnboardingScreen.mealLaterKey);
       h.buddyRepo.throwOnSave = true;
 
-      await tapText(tester, '7 Tage');
+      await pickGoal(tester, '7 Tage');
       expect(find.text('dashboard-stub'), findsNothing);
       expect(
         find.text('Das hat nicht geklappt. Bitte versuch es noch einmal.'),
@@ -670,8 +757,12 @@ void main() {
       expect(find.text(_streakTitle), findsOneWidget);
 
       h.buddyRepo.throwOnSave = false;
-      await tapText(tester, '7 Tage');
+      // The snackbar covers the bottom of the screen until it is gone.
+      await tester.pump(const Duration(seconds: 5));
+      await settle(tester);
+      await tapKey(tester, BuddyOnboardingScreen.goalConfirmKey);
       expect(find.text('dashboard-stub'), findsOneWidget);
+      expect(h.stored?.streakGoal, 7);
       expect(h.stored?.onboardingCompletedAt, isNotNull);
     });
 
@@ -694,11 +785,17 @@ void main() {
         await tester.tap(find.byKey(BuddyOnboardingScreen.momentNextKey));
         await settle(tester);
 
-        // The first goals and his tip without scrolling.
+        // The first goals, his tip and „Ziel festlegen" without scrolling.
         for (final goal in ['7 Tage', '14 Tage']) {
           expectOnScreen(tester, find.text(goal));
         }
+        expectOnScreen(
+          tester,
+          find.byKey(BuddyOnboardingScreen.goalConfirmKey),
+        );
         await tester.tap(find.text('7 Tage'));
+        await settle(tester);
+        await tester.tap(find.byKey(BuddyOnboardingScreen.goalConfirmKey));
         await settle(tester);
 
         expectOnScreen(
@@ -748,7 +845,7 @@ void main() {
       await tapText(tester, 'fake-save-meal');
       expect(find.text(_bornLine), findsOneWidget);
       await tapKey(tester, BuddyOnboardingScreen.momentNextKey);
-      await tapText(tester, '7 Tage');
+      await pickGoal(tester, '7 Tage');
       await tapKey(tester, BuddyOnboardingScreen.reminderLaterKey);
 
       expect(find.text('dashboard-stub'), findsOneWidget);

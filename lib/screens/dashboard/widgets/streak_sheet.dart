@@ -10,8 +10,9 @@ import '../../buddy/streak_goal_picker.dart';
 import '../../buddy/widgets/streak_moment.dart';
 
 /// „Dein Streak" for [status]: the count and this week's row, the goal's
-/// progress, the streak savers, and „Ziel ändern" (the goal list in the
-/// same sheet). Returns the chosen goal, or null when dismissed.
+/// progress, the streak savers, and „Ziel ändern" (the goal list to choose
+/// from in the same sheet, the current goal selected). Returns the chosen
+/// goal, or null when dismissed.
 Future<int?> showStreakSheet(
   BuildContext context, {
   required BuddyStatus status,
@@ -71,9 +72,10 @@ class _StreakSheetState extends State<StreakSheet> {
             ),
             AppConstants.gap16,
             if (_picking)
-              StreakGoalPicker(
+              StreakGoalChooser(
                 currentStreak: streak,
-                onSelected: (g) => Navigator.pop(context, g),
+                initialGoal: goal,
+                onConfirmed: (g) => Navigator.pop(context, g),
               )
             else ...[
               StreakMoment(

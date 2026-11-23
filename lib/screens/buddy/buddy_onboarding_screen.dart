@@ -94,6 +94,7 @@ class BuddyOnboardingScreen extends ConsumerStatefulWidget {
   static const mealLogKey = Key('buddy_onboarding_meal_log');
   static const mealLaterKey = Key('buddy_onboarding_meal_later');
   static const momentNextKey = Key('buddy_onboarding_moment_next');
+  static const goalConfirmKey = Key('buddy_onboarding_goal_confirm');
 
   @override
   ConsumerState<BuddyOnboardingScreen> createState() =>
@@ -157,6 +158,10 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
   /// Something was logged for today (by the entry's date) during the
   /// onboarding: today counts, even before the Buddy's streak has refreshed.
   bool _loggedToday = false;
+
+  /// The goal tapped on the goal step; until then the stored goal or the
+  /// Buddy's tip shows as selected ([_selectedGoal]).
+  int? _goal;
 
   /// A step action is running (saving, permission dialog, meal tracker).
   bool _busy = false;
@@ -377,8 +382,19 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
     }
   }
 
-  void _pickGoal(int goal) {
+  /// The goal selected on the goal step: the tapped one, else the stored
+  /// one, else the Buddy's tip — whichever is still open.
+  int? _selectedGoal(BuddyStatus? status) => streakGoalSelection(
+    streakGoalChoices(status?.streak ?? 0),
+    _goal ?? status?.state.streakGoal,
+  );
+
+  /// „Ziel festlegen": saves the selected goal (in the background) and goes
+  /// on.
+  void _confirmGoal() {
     if (!_ready(BuddyOnboardingStep.streakGoal)) return;
+    final goal = _selectedGoal(ref.read(buddyProvider).value);
+    if (goal == null) return;
     final buddy = ref.read(buddyProvider.notifier);
     unawaited(
       _logErrors('Saving the streak goal', () => buddy.setStreakGoal(goal)),
@@ -514,7 +530,6 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
     final step = _step;
     final shown = _shownSteps;
     final switchDuration = _calm ? Duration.zero : AppConstants.animMedium;
-    final actions = _buildActions(step);
     final name = status?.state.name ?? _name;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -558,21 +573,19 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
           duration: switchDuration,
           child: KeyedSubtree(
             key: ValueKey(step),
-            child: actions.isEmpty
-                ? const SizedBox.shrink()
-                : Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppConstants.spacingLg,
-                      AppConstants.spacingSm,
-                      AppConstants.spacingLg,
-                      AppConstants.spacingMd,
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: actions,
-                    ),
-                  ),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppConstants.spacingLg,
+                AppConstants.spacingSm,
+                AppConstants.spacingLg,
+                AppConstants.spacingMd,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: _buildActions(step),
+              ),
+            ),
           ),
         ),
       ],
@@ -606,7 +619,9 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
           AppConstants.gap16,
           StreakGoalPicker(
             currentStreak: status?.streak ?? 0,
-            onSelected: _pickGoal,
+            selected: _selectedGoal(status),
+            // Once confirmed, the choice is made.
+            onChanged: _busy ? null : (g) => setState(() => _goal = g),
           ),
         ],
       ),
@@ -617,8 +632,7 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
     };
   }
 
-  /// The step's buttons for the fixed bottom slot; empty when the content
-  /// itself is the action (the goal cards).
+  /// The step's buttons for the fixed bottom slot.
   List<Widget> _buildActions(BuddyOnboardingStep step) {
     return switch (step) {
       BuddyOnboardingStep.intro => [
@@ -659,7 +673,14 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
           onPressed: _momentNext,
         ),
       ],
-      BuddyOnboardingStep.streakGoal => const [],
+      BuddyOnboardingStep.streakGoal => [
+        BbButton(
+          key: BuddyOnboardingScreen.goalConfirmKey,
+          label: 'Ziel festlegen',
+          isLoading: _busy,
+          onPressed: _confirmGoal,
+        ),
+      ],
       BuddyOnboardingStep.reminder => [
         BbButton(
           key: BuddyOnboardingScreen.reminderYesKey,

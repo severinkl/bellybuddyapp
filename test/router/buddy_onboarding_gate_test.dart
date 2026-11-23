@@ -228,6 +228,12 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
   await tester.pumpAndSettle();
 }
 
+/// On the goal step: selects [goal] and confirms with „Ziel festlegen".
+Future<void> _pickGoal(WidgetTester tester, String goal) async {
+  await _tap(tester, find.text(goal));
+  await _tap(tester, find.byKey(BuddyOnboardingScreen.goalConfirmKey));
+}
+
 /// The Buddy's bubble. (Buddies don't tick here and the bubble only
 /// rebuilds on a tick, so read it from the controller.)
 String? _bubble(WidgetTester tester) =>
@@ -291,7 +297,7 @@ void main() {
       expect(_bubble(tester), _noStreakLine);
       await _tap(tester, find.byKey(BuddyOnboardingScreen.momentNextKey));
       expect(_bubble(tester), _streakTitle);
-      await _tap(tester, find.text('7 Tage'));
+      await _pickGoal(tester, '7 Tage');
       expect(_bubble(tester), _reminderTitle);
 
       // Not completed before the last answer.
@@ -334,7 +340,7 @@ void main() {
       await _tap(tester, find.byKey(BuddyOnboardingScreen.momentNextKey));
 
       // Push is on: the goal is the last step.
-      await _tap(tester, find.text('14 Tage'));
+      await _pickGoal(tester, '14 Tage');
 
       expect(_currentPath(container), RoutePaths.dashboard);
       final stored = buddies.store[testUserId]!;
@@ -485,7 +491,7 @@ void main() {
       await _tap(tester, find.byKey(BuddyOnboardingScreen.introNextKey));
       await _tap(tester, find.byKey(BuddyOnboardingScreen.nameNextKey));
       await _tap(tester, find.byKey(BuddyOnboardingScreen.momentNextKey));
-      await _tap(tester, find.text('7 Tage'));
+      await _pickGoal(tester, '7 Tage');
 
       expect(_currentPath(container), RoutePaths.dashboard);
       expect(find.text(_tourSkip), findsOneWidget);
@@ -507,7 +513,7 @@ void main() {
       await _tap(tester, find.byKey(BuddyOnboardingScreen.nameNextKey));
       await _tap(tester, find.byKey(BuddyOnboardingScreen.momentNextKey));
       // Push is on: no reminder step; the goal finishes.
-      await _tap(tester, find.text('7 Tage'));
+      await _pickGoal(tester, '7 Tage');
       expect(find.text(_reminderTitle), findsNothing);
 
       expect(_currentPath(container), RoutePaths.dashboard);

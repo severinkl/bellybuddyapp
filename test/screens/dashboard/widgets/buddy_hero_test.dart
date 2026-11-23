@@ -21,6 +21,7 @@ import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
+import 'package:belly_buddy/screens/buddy/streak_goal_picker.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/streak_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/today_list.dart';
 import 'package:belly_buddy/services/buddy/buddy_copy.dart';
@@ -249,6 +250,18 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
   }
 
+  /// In an open goal list: selects [goal], confirms with „Ziel festlegen"
+  /// and lets the sheet close.
+  Future<void> chooseGoal(WidgetTester tester, String goal) async {
+    await tester.ensureVisible(find.text(goal));
+    await tester.tap(find.text(goal));
+    await tester.pump();
+    await tester.ensureVisible(find.byKey(StreakGoalChooser.confirmKey));
+    await tester.tap(find.byKey(StreakGoalChooser.confirmKey));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+  }
+
   /// In „Dein Streak": „Ziel ändern" → the goal list.
   Future<void> openGoalList(WidgetTester tester) async {
     await tester.ensureVisible(find.byKey(StreakSheet.changeGoalKey));
@@ -460,9 +473,7 @@ void main() {
       expect(find.text('7 Tage'), findsOneWidget);
       expect(find.text('14 Tage'), findsOneWidget);
 
-      await tester.tap(find.text('14 Tage'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
+      await chooseGoal(tester, '14 Tage');
 
       expect(find.text(_pickTitle), findsNothing);
       expect(buddy.goals, [14]);
@@ -501,9 +512,7 @@ void main() {
       expect(find.text(_goalTitle), findsOneWidget);
       expect(find.text(_sheetTitle), findsNothing);
 
-      await tester.tap(find.text('14 Tage'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
+      await chooseGoal(tester, '14 Tage');
       expect(buddy.goals, [14]);
 
       // Done: the chip works again.
@@ -687,9 +696,7 @@ void main() {
       expect(find.text(_goalTitle), findsOneWidget);
       expect(buddy.shown, isEmpty);
 
-      await tester.tap(find.text('14 Tage'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
+      await chooseGoal(tester, '14 Tage');
 
       expect(find.text(_goalTitle), findsNothing);
       expect(buddy.goals, [14]);
@@ -990,9 +997,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
       expect(find.text(_goalTitle), findsOneWidget);
 
-      await tester.tap(find.text('30 Tage'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
+      await chooseGoal(tester, '30 Tage');
       expect(buddy.goals, [30]);
     });
 
