@@ -19,6 +19,7 @@ import 'package:belly_buddy/router/app_router.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/router/tab_navigation.dart';
 import 'package:belly_buddy/screens/dashboard/dashboard_screen.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/insight_card.dart';
 import 'package:belly_buddy/screens/diary/diary_screen.dart';
 import 'package:belly_buddy/screens/discover/discover_screen.dart';
 import 'package:belly_buddy/screens/me/me_screen.dart';
@@ -297,6 +298,23 @@ void main() {
         await _tap(tester, key);
         expect(tester.takeException(), isNull, reason: '$key');
       }
+    });
+
+    testWidgets('Home fits 375×667 at text scale 1.3', (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await _pumpShell(tester, screen: const Size(375, 667));
+      expect(tester.takeException(), isNull);
+
+      // Scrolled into view, the insight card ends above the bar.
+      final card = find.byKey(InsightCard.cardKey);
+      await tester.ensureVisible(card);
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      expect(
+        tester.getRect(card).bottom,
+        lessThanOrEqualTo(tester.getRect(find.byType(BbBottomNav)).top),
+      );
     });
   });
 }

@@ -6,6 +6,7 @@ import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/drink.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
+import 'package:belly_buddy/models/insight_progress.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/models/recommendation.dart';
@@ -284,6 +285,29 @@ class FakeEntryRepository implements EntryRepository {
       final day = DateTime(d.year, d.month, d.day);
       return !day.isBefore(from) && (to == null || day.isBefore(to));
     }).toSet();
+  }
+
+  /// What [fetchInsightProgress] returns.
+  InsightProgress insightProgress = const InsightProgress(
+    activeDays: 0,
+    gutFeelingEntries: 0,
+  );
+
+  /// When set, [fetchInsightProgress] throws it.
+  Object? insightProgressError;
+
+  /// The `now` of every [fetchInsightProgress] call, in order.
+  final List<DateTime> insightProgressFetches = [];
+
+  @override
+  Future<InsightProgress> fetchInsightProgress({
+    required String userId,
+    required DateTime now,
+  }) async {
+    insightProgressFetches.add(now);
+    final error = insightProgressError;
+    if (error != null) throw error;
+    return insightProgress;
   }
 
   @override

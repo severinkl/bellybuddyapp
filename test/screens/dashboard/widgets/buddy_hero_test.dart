@@ -23,13 +23,13 @@ import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
 import 'package:belly_buddy/screens/buddy/streak_goal_picker.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/streak_sheet.dart';
-import 'package:belly_buddy/screens/dashboard/widgets/today_list.dart';
 import 'package:belly_buddy/services/buddy/buddy_copy.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/utils/date_format_utils.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
+import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
 
 import '../../../helpers/fixtures.dart';
 
@@ -135,6 +135,7 @@ void main() {
   late _FakeBuddy buddy;
   late _FakeEntries entries;
   late ValueNotifier<bool> visible;
+  late GoRouter router;
 
   setUp(() {
     // This directory's flutter_test_config.dart stops Buddy tickers; the
@@ -151,12 +152,11 @@ void main() {
     AnimatedBuddy.tickerEnabled = false;
   });
 
-  /// Pumps the hero on `/` of a router with a `/meal-tracker` stub page;
-  /// `TickerMode` follows [visible].
+  /// Pumps the hero on Home (`/dashboard`) of a router with stub pages for
+  /// the Tagebuch and the trackers; `TickerMode` follows [visible].
   Future<ProviderContainer> pumpHero(
     WidgetTester tester, {
     List<Override> extra = const [],
-    bool withTodayList = false,
   }) async {
     final container = ProviderContainer.test(
       overrides: [
@@ -168,22 +168,16 @@ void main() {
       ],
     );
     addTearDown(container.dispose);
-    final router = GoRouter(
+    router = GoRouter(
+      initialLocation: RoutePaths.dashboard,
       routes: [
         GoRoute(
-          path: '/',
+          path: RoutePaths.dashboard,
           builder: (_, _) => Scaffold(
             body: ValueListenableBuilder<bool>(
               valueListenable: visible,
               builder: (_, on, child) => TickerMode(enabled: on, child: child!),
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    const BuddyHero(),
-                    if (withTodayList) const TodayList(),
-                  ],
-                ),
-              ),
+              child: const SingleChildScrollView(child: BuddyHero()),
             ),
           ),
         ),
@@ -225,6 +219,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     return container;
   }
+
+  /// The path of the router's top page (a pushed tracker included).
+  String location() =>
+      router.routerDelegate.currentConfiguration.last.matchedLocation;
 
   BuddyController controller(WidgetTester tester) =>
       tester.widget<AnimatedBuddy>(find.byType(AnimatedBuddy)).controller;
@@ -1070,8 +1068,8 @@ void main() {
       expect(controller(tester).bubble, isNull);
     });
 
-    testWidgets('resumed the next morning: the ring, „Heute" and the diary '
-        'link move to the new day together', (tester) async {
+    testWidgets('resumed the next morning: the ring and its Tagebuch tap '
+        'move to the new day together', (tester) async {
       now = DateTime(2026, 11, 22, 21);
       entries = _FakeEntries(
         EntriesState(
@@ -1084,9 +1082,8 @@ void main() {
           ],
         ),
       );
-      final container = await pumpHero(tester, withTodayList: true);
+      final container = await pumpHero(tester);
       expect(find.text('🍽 1/3'), findsOneWidget);
-      expect(find.text('Abendbrot'), findsOneWidget);
 
       now = DateTime(2026, 11, 23, 8);
       entries.next = const EntriesState(); // nothing logged yet today
@@ -1098,12 +1095,10 @@ void main() {
 
       expect(entries.loaded.map(startOfDay), [DateTime(2026, 11, 23)]);
       expect(find.text('🍽 0/3'), findsOneWidget);
-      expect(find.text('Abendbrot'), findsNothing);
-      expect(find.text(TodayList.emptyText), findsOneWidget);
 
-      await tester.ensureVisible(find.byKey(TodayList.diaryLinkKey));
-      await tester.tap(find.byKey(TodayList.diaryLinkKey));
+      await tester.tap(find.byKey(CareRing.needKey(CareNeed.food)));
       await tester.pump();
+      expect(location(), RoutePaths.diary);
       expect(container.read(diaryDateProvider), DateTime(2026, 11, 23));
       await tester.pump(const Duration(seconds: 5));
     });
@@ -1123,8 +1118,8 @@ void main() {
           ],
         ),
       );
-      await pumpHero(tester, withTodayList: true);
-      expect(find.text('Abendbrot'), findsOneWidget);
+      await pumpHero(tester);
+      expect(find.text('🍽 1/3'), findsOneWidget);
 
       now = DateTime(2026, 11, 23, 0, 0, 30);
       await tester.pump(const Duration(minutes: 1));
@@ -1132,7 +1127,6 @@ void main() {
 
       expect(entries.loaded.map(startOfDay), [DateTime(2026, 11, 23)]);
       expect(find.text('🍽 0/3'), findsOneWidget);
-      expect(find.text(TodayList.emptyText), findsOneWidget);
     });
 
     testWidgets('the next-action button opens its tracker', (tester) async {
@@ -1143,6 +1137,61 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.text('page:${RoutePaths.mealTracker}'), findsOneWidget);
+    });
+
+    testWidgets('next-action button opens the suggested tracker', (
+      tester,
+    ) async {
+      // Before 05:00 no meal is due; with nothing logged, a drink is.
+      now = DateTime(2026, 11, 22, 4);
+      await pumpHero(tester);
+      expect(find.text('💧 Trinken eintragen'), findsOneWidget);
+
+      await tester.tap(find.byKey(BuddyHero.actionKey));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(location(), RoutePaths.drinkTracker);
+      expect(find.text('page:${RoutePaths.drinkTracker}'), findsOneWidget);
+    });
+
+    testWidgets('ring tap opens the Tagebuch on today', (tester) async {
+      final container = await pumpHero(tester);
+      container.read(diaryDateProvider.notifier).set(DateTime(2026, 11, 18));
+
+      // The ring's top edge, clear of the Buddy inside it.
+      final ring = tester.getRect(find.byKey(CareRing.tapKey));
+      await tester.tapAt(ring.topCenter + const Offset(0, 4));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(location(), RoutePaths.diary);
+      expect(find.text('diary-page'), findsOneWidget);
+      expect(container.read(diaryDateProvider), startOfDay(now));
+    });
+
+    testWidgets('tapping the Buddy pokes, no navigation', (tester) async {
+      await pumpHero(tester);
+      await advance(tester, const Duration(seconds: 3)); // greeting gone
+      expect(controller(tester).bubble, isNull);
+
+      await tester.tap(find.byType(AnimatedBuddy));
+      await tick(tester);
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(location(), RoutePaths.dashboard);
+      expect(find.text('diary-page'), findsNothing);
+      // 14:00, nothing eaten: his lunch line.
+      expect(careLines(CareAction.lunch), contains(controller(tester).bubble));
+    });
+
+    testWidgets('no week row on Home: it lives in „Dein Streak"', (
+      tester,
+    ) async {
+      await pumpHero(tester);
+
+      expect(find.byType(StreakChip), findsOneWidget);
+      expect(find.byType(StreakWeekRow), findsNothing);
     });
   });
 }

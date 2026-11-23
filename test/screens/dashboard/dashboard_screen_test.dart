@@ -5,11 +5,12 @@ import 'package:riverpod/src/internals.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
+import 'package:belly_buddy/models/insight_progress.dart';
 import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/screens/dashboard/dashboard_screen.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
-import 'package:belly_buddy/screens/dashboard/widgets/today_list.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/insight_card.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/dashboard_tutorial_steps.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_keys.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
@@ -20,6 +21,7 @@ import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
+import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
 
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
@@ -27,6 +29,7 @@ import '../../helpers/riverpod_helpers.dart';
 
 List<Override> _overrides({
   FakeBuddyRepository? buddyRepo,
+  FakeEntryRepository? entryRepo,
   UserProfile? profile,
 }) => [
   profileRepositoryProvider.overrideWithValue(
@@ -34,7 +37,7 @@ List<Override> _overrides({
         ? FakeProfileRepository()
         : (FakeProfileRepository()..seedProfile(profile)),
   ),
-  entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
+  entryRepositoryProvider.overrideWithValue(entryRepo ?? FakeEntryRepository()),
   ingredientRepositoryProvider.overrideWithValue(FakeIngredientRepository()),
   buddyRepositoryProvider.overrideWithValue(buddyRepo ?? FakeBuddyRepository()),
   currentUserIdProvider.overrideWithValue(testUserId),
@@ -61,38 +64,7 @@ const _optInTitle = 'Bleib auf dem Laufenden!';
 
 void main() {
   group('DashboardScreen', () {
-    testWidgets('renders feature card Tipps', (tester) async {
-      await tester.pumpWithProviders(
-        const DashboardScreen(),
-        overrides: _overrides(),
-      );
-      await tester.pump(const Duration(milliseconds: 100));
-
-      expect(find.text('Tipps', skipOffstage: false), findsOneWidget);
-    });
-
-    testWidgets('renders feature card Alternativen', (tester) async {
-      await tester.pumpWithProviders(
-        const DashboardScreen(),
-        overrides: _overrides(),
-      );
-      await tester.pump(const Duration(milliseconds: 100));
-
-      expect(find.text('Alternativen', skipOffstage: false), findsOneWidget);
-    });
-
-    testWidgets('renders feature card Rezepte', (tester) async {
-      await tester.pumpWithProviders(
-        const DashboardScreen(),
-        overrides: _overrides(),
-      );
-      await tester.pump(const Duration(milliseconds: 100));
-
-      expect(find.text('Rezepte', skipOffstage: false), findsOneWidget);
-    });
-
-    testWidgets('renders the care ring with all four needs and the Heute '
-        'list', (tester) async {
+    testWidgets('renders the care ring with all four needs', (tester) async {
       await tester.pumpWithProviders(
         const DashboardScreen(),
         overrides: _overrides(),
@@ -103,50 +75,73 @@ void main() {
       for (final label in ['Essen', 'Trinken', 'Bauchgefühl', 'Klo']) {
         expect(find.text(label), findsOneWidget, reason: label);
       }
-      expect(find.byType(TodayList), findsOneWidget);
-      expect(find.text('Heute'), findsOneWidget);
     });
 
-    testWidgets('renders Für dich erstellt section header', (tester) async {
+    testWidgets('Home shows chip, ring, one button and the insight card, '
+        'nothing else', (tester) async {
       await tester.pumpWithProviders(
         const DashboardScreen(),
         overrides: _overrides(),
       );
       await tester.pump(const Duration(milliseconds: 100));
 
+      expect(find.text('Für dich erstellt', skipOffstage: false), findsNothing);
+      expect(find.text('Heute', skipOffstage: false), findsNothing);
+      expect(find.byIcon(Icons.settings, skipOffstage: false), findsNothing);
       expect(
-        find.text('Für dich erstellt', skipOffstage: false),
-        findsOneWidget,
+        find.byIcon(Icons.feedback_outlined, skipOffstage: false),
+        findsNothing,
       );
-    });
-
-    testWidgets('shows the Buddy hero with the header icons top-right', (
-      tester,
-    ) async {
-      await tester.pumpWithProviders(
-        const DashboardScreen(),
-        overrides: _overrides(),
-      );
-      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byType(StreakWeekRow, skipOffstage: false), findsNothing);
 
       expect(find.byType(BuddyHero), findsOneWidget);
       expect(find.byType(AnimatedBuddy), findsOneWidget);
       expect(find.byKey(BuddyHero.actionKey), findsOneWidget);
+      expect(
+        find.byKey(InsightCard.cardKey, skipOffstage: false),
+        findsOneWidget,
+      );
       // New user without a buddy_state row: the chip still shows the streak.
       expect(find.byType(StreakChip), findsOneWidget);
 
+      // Top to bottom: the hero (chip, ring, button), then the card.
       final hero = tester.getRect(find.byType(BuddyHero));
-      final settings = tester.getRect(find.byKey(TutorialKeys.settings));
-      final feedback = tester.getRect(find.byKey(TutorialKeys.feedback));
-      expect(settings.top, hero.top);
-      expect(settings.right, hero.right);
-      expect(feedback.top, hero.top);
-      expect(feedback.right, lessThan(settings.left));
-      // The hero is the first content; the Heute list follows below it.
       expect(
-        tester.getRect(find.byType(TodayList)).top,
+        tester.getRect(find.byType(StreakChip)).top,
+        lessThan(tester.getRect(find.byType(CareRing)).top),
+      );
+      expect(
+        tester.getRect(find.byKey(BuddyHero.actionKey)).top,
+        greaterThan(tester.getRect(find.byType(CareRing)).bottom),
+      );
+      expect(
+        tester.getRect(find.byKey(InsightCard.cardKey)).top,
         greaterThan(hero.bottom),
       );
+    });
+
+    testWidgets('the insight card shows the progress toward the first '
+        'patterns', (tester) async {
+      final entryRepo = FakeEntryRepository()
+        ..insightProgress = const InsightProgress(
+          activeDays: 2,
+          gutFeelingEntries: 1,
+        );
+      await tester.pumpWithProviders(
+        const DashboardScreen(),
+        overrides: _overrides(entryRepo: entryRepo),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(
+        find.text(
+          'Noch 5 Tage, dann zeig ich dir erste Muster.',
+          skipOffstage: false,
+        ),
+        findsOneWidget,
+      );
+      // Loaded once on mount: the dashboard's load joins the card's.
+      expect(entryRepo.insightProgressFetches, hasLength(1));
     });
 
     testWidgets('390×844 phone: a big Buddy, the ring and its button above '
@@ -185,31 +180,16 @@ void main() {
       );
     });
 
-    testWidgets('mounts every dashboard tutorial target incl. the Buddy', (
-      tester,
-    ) async {
+    testWidgets('mounts the Buddy tour target on the hero', (tester) async {
       await tester.pumpWithProviders(
         const DashboardScreen(),
         overrides: _overrides(),
       );
       await tester.pump(const Duration(milliseconds: 100));
 
-      for (final key in [
-        TutorialKeys.buddy,
-        // bauchgefuehl/klo: no longer mounted (the counters are display only); Task 8 removes them from the tour.
-        TutorialKeys.fuerDich,
-        TutorialKeys.alternativen,
-        TutorialKeys.wissen,
-        TutorialKeys.rezepte,
-        TutorialKeys.feedback,
-        TutorialKeys.settings,
-      ]) {
-        expect(
-          find.byKey(key, skipOffstage: false),
-          findsOneWidget,
-          reason: '$key',
-        );
-      }
+      // Home's only tour target now: the Buddy. The counters, „Für dich"
+      // tiles, feedback and settings are gone from Home; Task 8 removes
+      // their steps from the tour.
       expect(find.byKey(TutorialKeys.buddy), findsOneWidget);
       expect(tester.widget(find.byKey(TutorialKeys.buddy)), isA<BuddyHero>());
     });

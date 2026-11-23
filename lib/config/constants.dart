@@ -118,14 +118,11 @@ class AppConstants {
   static const Offset careNeedShadowOffset = Offset(0, 3);
   static const Duration careNeedPulse = Duration(milliseconds: 1400);
 
-  // Dashboard „Heute" list: rows shown at most, a row's height and time
-  // column
-  static const int todayListMaxItems = 5;
-  static const double todayRowHeight = 40.0;
-  static const double todayRowTimeWidth = 44.0;
-
   // „Dein Streak" sheet: the goal progress bar
   static const double streakProgressHeight = 10.0;
+
+  // Home's insight card: its progress bars
+  static const double insightProgressHeight = 7.0;
 
   // Buddy reaction on the tracker success screens (bubble slot + Buddy)
   static const double buddyReactionSize = 220.0;

@@ -109,18 +109,19 @@ class EntryQueryService {
     }
   }
 
-  /// Fetches `tracked_at` of every entry (all four tables) since [since]
-  /// and, with [until], before [until].
+  /// Fetches `tracked_at` of every entry in [tables] (default: all four
+  /// entry tables) since [since] and, with [until], before [until].
   Future<List<DateTime>> fetchTrackedAtSince({
     required String userId,
     required DateTime since,
     DateTime? until,
+    Iterable<String>? tables,
   }) async {
     try {
       final sinceIso = since.toUtc().toIso8601String();
       final untilIso = until?.toUtc().toIso8601String();
       final results = await Future.wait(
-        entryTableFor.values.map(
+        (tables ?? entryTableFor.values).map(
           (t) => _fetchTrackedAtTable(t, userId, sinceIso, untilIso),
         ),
       );

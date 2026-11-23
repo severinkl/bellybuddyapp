@@ -1,29 +1,25 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/buddy_onboarding_gate_provider.dart';
 import '../../providers/buddy_provider.dart';
 import '../../providers/entries_provider.dart';
-import '../../providers/ingredient_suggestion_provider.dart';
-import '../../providers/recommendation_provider.dart';
+import '../../providers/insight_progress_provider.dart';
 import '../../providers/upgrade_gate_provider.dart';
-import '../../widgets/common/circle_icon_button.dart';
 import '../../widgets/common/upgrade_available_dialog.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/tutorial_provider.dart';
-import '../../router/route_names.dart';
 import '../../utils/logger.dart';
 import 'widgets/buddy_hero.dart';
-import 'widgets/feature_card.dart';
+import 'widgets/insight_card.dart';
 import 'widgets/notification_opt_in_dialog.dart';
-import 'widgets/today_list.dart';
 import 'widgets/tutorial/show_dashboard_tutorial.dart';
 import 'widgets/tutorial/tutorial_keys.dart';
 
+/// Home: the Buddy hero (streak chip, the Buddy in his care ring, the next
+/// action) and what he is learning about the user's gut ([InsightCard]).
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
@@ -96,8 +92,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       ref
           .read(entriesProvider.notifier)
           .loadEntries(ref.read(buddyClockProvider)()),
-      ref.read(ingredientSuggestionProvider.notifier).fetchSuggestions(),
       _refreshBuddy(),
+      ref.read(insightProgressProvider.notifier).refresh(),
     ]);
   }
 
@@ -133,16 +129,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     ref.listen<bool>(softNudgePendingProvider, (_, pending) {
       if (pending) _maybeShowSoftNudge();
     });
-    ref.watch(ingredientSuggestionProvider); // rebuild on data changes
-    final newSuggestionCount = ref
-        .read(ingredientSuggestionProvider.notifier)
-        .newCount;
-    final newRecommendationCount =
-        ref
-            .watch(unseenRecommendationCountProvider)
-            .whenOrNull(data: (count) => count) ??
-        0;
-
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
@@ -151,188 +137,35 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           color: AppTheme.primary,
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            // A short, fixed set of sections, all built and laid out (box
-            // slivers are never lazy), so every tour target below the fold
-            // exists for the tour to scroll to.
+            // Box slivers are never lazy: every tour target is built and
+            // laid out, even below the fold, for the tour to scroll to.
             slivers: [
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppConstants.spacingLg,
-                    AppConstants.spacingSm,
-                    AppConstants.spacingLg,
-                    0,
-                  ),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppConstants.spacingLg,
+                  AppConstants.spacingSm,
+                  AppConstants.spacingLg,
+                  AppConstants.spacingLg,
+                ),
+                sliver: SliverToBoxAdapter(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // The header icons sit top-right on the hero's streak
-                      // row.
-                      Stack(
-                        children: [
-                          BuddyHero(key: TutorialKeys.buddy),
-                          const Positioned(
-                            top: 0,
-                            right: 0,
-                            child: _DashboardHeader(),
-                          ),
-                        ],
+                      BuddyHero(key: TutorialKeys.buddy),
+                      AppConstants.gap16,
+                      // Only the card rebuilds with its progress.
+                      Consumer(
+                        builder: (_, ref, _) => InsightCard(
+                          progress: ref.watch(insightProgressProvider),
+                        ),
                       ),
-                      AppConstants.gap24,
-                      const TodayList(),
-                      AppConstants.gap24,
                     ],
                   ),
                 ),
               ),
-              // The „Für dich" section reaches down to the screen's bottom.
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppConstants.spacing12,
-                  ),
-                  child: _ForYouSection(
-                    newSuggestionCount: newSuggestionCount,
-                    newRecommendationCount: newRecommendationCount,
-                  ),
-                ),
-              ),
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _DashboardHeader extends StatelessWidget {
-  const _DashboardHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        CircleIconButton(
-          key: TutorialKeys.feedback,
-          icon: Icons.feedback_outlined,
-          size: AppConstants.iconBadgeLg,
-          onPressed: () => launchUrl(
-            Uri.parse(AppConstants.feedbackFormUrl),
-            mode: LaunchMode.externalApplication,
-          ),
-        ),
-        const SizedBox(width: AppConstants.spacingSm),
-        CircleIconButton(
-          key: TutorialKeys.settings,
-          icon: Icons.settings,
-          size: AppConstants.iconBadgeLg,
-          onPressed: () => context.push(RoutePaths.settings),
-        ),
-      ],
-    );
-  }
-}
-
-class _ForYouSection extends StatelessWidget {
-  final int newSuggestionCount;
-  final int newRecommendationCount;
-
-  const _ForYouSection({
-    required this.newSuggestionCount,
-    required this.newRecommendationCount,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-        AppConstants.spacingMd,
-        AppConstants.spacing20,
-        AppConstants.spacingMd,
-        AppConstants.spacingMd,
-      ),
-      decoration: const BoxDecoration(
-        color: AppTheme.beige,
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppConstants.radiusXl),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(
-              left: AppConstants.spacingXs,
-              bottom: AppConstants.spacingMd,
-            ),
-            child: Text(
-              'Für dich erstellt',
-              style: TextStyle(
-                fontSize: AppTheme.fontSizeTitle,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.foreground,
-              ),
-            ),
-          ),
-          Row(
-            children: [
-              Expanded(
-                child: FeatureCard(
-                  key: TutorialKeys.fuerDich,
-                  imageAsset: AppConstants.fuerDichCard,
-                  label: 'Tipps',
-                  icon: Icons.auto_awesome,
-                  iconColor: AppTheme.foreground,
-                  hasNew: newRecommendationCount > 0,
-                  onTap: () => context.push(RoutePaths.recommendations),
-                ),
-              ),
-              const SizedBox(width: AppConstants.spacing12),
-              Expanded(
-                child: FeatureCard(
-                  key: TutorialKeys.alternativen,
-                  imageAsset: AppConstants.alternativenCard,
-                  label: 'Alternativen',
-                  icon: Icons.eco,
-                  iconColor: AppTheme.foreground,
-                  badgeCount: newSuggestionCount,
-                  onTap: () => context.push(RoutePaths.ingredientSuggestions),
-                ),
-              ),
-            ],
-          ),
-          AppConstants.gap12,
-          Row(
-            children: [
-              Expanded(
-                child: FeatureCard(
-                  key: TutorialKeys.rezepte,
-                  imageAsset: AppConstants.rezepteCard,
-                  label: 'Rezepte',
-                  icon: Icons.restaurant_menu,
-                  iconColor: AppTheme.foreground,
-                  onTap: () => context.push(RoutePaths.recipes),
-                ),
-              ),
-              const SizedBox(width: AppConstants.spacing12),
-              Expanded(
-                child: FeatureCard(
-                  key: TutorialKeys.wissen,
-                  imageAsset: AppConstants.susiPhone,
-                  label: 'Wissen',
-                  icon: Icons.menu_book,
-                  iconColor: AppTheme.foreground,
-                  onTap: () => launchUrl(
-                    Uri.parse('https://www.myfodmap.at/blog'),
-                    mode: LaunchMode.externalApplication,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
       ),
     );
   }
