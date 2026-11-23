@@ -74,6 +74,33 @@ void main() {
     });
   });
 
+  test('fetchRecommendations: calls while a load runs make exactly one more '
+      'after it, and wait for it', () async {
+    final loads = <Completer<List<Recommendation>>>[];
+    when(() => mockRepo.fetchByUserId(any())).thenAnswer((_) {
+      final load = Completer<List<Recommendation>>();
+      loads.add(load);
+      return load.future;
+    });
+    final notifier = makeContainer().read(recommendationProvider.notifier);
+
+    var done = 0;
+    for (var i = 0; i < 3; i++) {
+      unawaited(notifier.fetchRecommendations().then((_) => done++));
+    }
+    expect(loads, hasLength(1));
+
+    loads.single.complete([testRecommendation()]);
+    await pumpEventQueue();
+    expect(loads, hasLength(2));
+    expect(done, 0);
+
+    loads.last.complete([testRecommendation()]);
+    await pumpEventQueue();
+    expect(loads, hasLength(2));
+    expect(done, 3);
+  });
+
   group('RecommendationNotifier.markAllAsSeen', () {
     final lastWeek = DateTime.utc(2026, 11, 9, 8);
 

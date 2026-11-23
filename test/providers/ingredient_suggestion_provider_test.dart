@@ -126,6 +126,35 @@ void main() {
     );
   });
 
+  test('fetchSuggestions: calls while a load runs make exactly one more '
+      'after it, and wait for it', () async {
+    final loads = <Completer<List<IngredientSuggestionGroup>>>[];
+    when(() => mockRepo.fetchSuggestionGroups(any())).thenAnswer((_) {
+      final load = Completer<List<IngredientSuggestionGroup>>();
+      loads.add(load);
+      return load.future;
+    });
+    final notifier = makeContainer().read(
+      ingredientSuggestionProvider.notifier,
+    );
+
+    var done = 0;
+    for (var i = 0; i < 3; i++) {
+      unawaited(notifier.fetchSuggestions().then((_) => done++));
+    }
+    expect(loads, hasLength(1));
+
+    loads.single.complete([testSuggestionGroup()]);
+    await pumpEventQueue();
+    expect(loads, hasLength(2));
+    expect(done, 0);
+
+    loads.last.complete([testSuggestionGroup()]);
+    await pumpEventQueue();
+    expect(loads, hasLength(2));
+    expect(done, 3);
+  });
+
   group('IngredientSuggestionNotifier.markAllNewAsSeen', () {
     test('marks seen in DB but keeps isNew in local state', () async {
       final groups = [

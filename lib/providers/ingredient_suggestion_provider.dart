@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/ingredient_suggestion_group.dart';
 import '../repositories/ingredient_repository.dart';
+import '../utils/coalesced_runner.dart';
 import '../utils/logger.dart';
 import 'auth_provider.dart';
 
@@ -13,6 +14,9 @@ class IngredientSuggestionNotifier
   /// [newIngredientSuggestionCountProvider] counts those no more.
   final _seenIds = <String>{};
 
+  /// The loads, coalesced per user.
+  final _fetches = CoalescedRunner();
+
   @override
   AsyncValue<List<IngredientSuggestionGroup>> build() {
     _seenIds.clear();
@@ -23,9 +27,17 @@ class IngredientSuggestionNotifier
   /// are in. A failed reload keeps them as they are (it is only logged), so
   /// an offline resume blanks neither the open Alternativen nor Entdecken;
   /// only a first load shows the error.
-  Future<void> fetchSuggestions() async {
-    if (!state.hasValue) state = const AsyncValue.loading();
+  ///
+  /// Coalesced per user: a call while a load runs (a push, a pull to
+  /// refresh, a screen opening) makes exactly one more after it and
+  /// completes once that one is done. Never throws.
+  Future<void> fetchSuggestions() {
     final userId = ref.read(currentUserIdProvider);
+    return _fetches.run(key: userId, () => _fetch(userId));
+  }
+
+  Future<void> _fetch(String? userId) async {
+    if (!state.hasValue) state = const AsyncValue.loading();
     if (userId == null) {
       state = const AsyncValue.data([]);
       return;

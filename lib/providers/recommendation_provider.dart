@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recommendation.dart';
 import '../repositories/recommendation_repository.dart';
+import '../utils/coalesced_runner.dart';
 import '../utils/logger.dart';
 import 'auth_provider.dart';
 
@@ -13,6 +14,9 @@ class RecommendationNotifier
   /// they keep the stamp.
   final _seenLocally = <String, DateTime>{};
 
+  /// The loads, coalesced per user.
+  final _fetches = CoalescedRunner();
+
   @override
   AsyncValue<List<Recommendation>> build() {
     _seenLocally.clear();
@@ -22,7 +26,16 @@ class RecommendationNotifier
   /// Loads the sets. A failed reload keeps the loaded ones as they are (it
   /// is only logged), so an offline resume blanks neither the open Tipps
   /// nor Entdecken nor Home; only a first load shows the error.
-  Future<void> fetchRecommendations() async {
+  ///
+  /// Coalesced per user: a call while a load runs (a push, a pull to
+  /// refresh, a screen opening) makes exactly one more after it and
+  /// completes once that one is done. Never throws.
+  Future<void> fetchRecommendations() {
+    final userId = ref.read(currentUserIdProvider);
+    return _fetches.run(key: userId, () => _fetch(userId));
+  }
+
+  Future<void> _fetch(String? userId) async {
     // Only flip to loading when we have no cached data. On re-entry / refresh
     // we keep the previous list visible so the PageView doesn't dismount —
     // remounting resets scroll position to initialPage 0 and the "open
@@ -30,7 +43,6 @@ class RecommendationNotifier
     if (!state.hasValue) {
       state = const AsyncValue.loading();
     }
-    final userId = ref.read(currentUserIdProvider);
     if (userId == null) {
       _log.debug('fetchRecommendations: no user');
       state = const AsyncValue.data([]);
