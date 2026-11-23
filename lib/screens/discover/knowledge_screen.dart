@@ -13,19 +13,6 @@ import '../../widgets/common/bb_async_state.dart';
 import '../../widgets/common/bb_chip_selector.dart';
 import 'widgets/knowledge_article_tile.dart';
 
-/// Opens [article] in the in-app browser; a SnackBar says when that fails.
-Future<void> openArticle(
-  BuildContext context,
-  KnowledgeArticle article, {
-  UrlOpener open = launchUrl,
-}) => openExternalUrl(
-  context,
-  article.link.toString(),
-  failureMessage: 'Der Artikel konnte nicht geöffnet werden.',
-  open: open,
-  mode: LaunchMode.inAppBrowserView,
-);
-
 /// Wissen: the myfodmap blog's articles, filtered by category.
 class KnowledgeScreen extends ConsumerStatefulWidget {
   const KnowledgeScreen({super.key, this.openUrl = launchUrl});

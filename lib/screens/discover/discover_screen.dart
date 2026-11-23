@@ -15,13 +15,13 @@ import '../../providers/recommendation_provider.dart';
 import '../../providers/user_recipes_provider.dart';
 import '../../router/route_names.dart';
 import '../../utils/url_utils.dart';
-import 'knowledge_screen.dart';
 import 'widgets/discover_alternatives_section.dart';
 import 'widgets/discover_knowledge_section.dart';
 import 'widgets/discover_recipes_section.dart';
 import 'widgets/discover_section.dart';
 import 'widgets/discover_tips_card.dart';
 import 'widgets/discover_tips_section.dart';
+import 'widgets/knowledge_article_tile.dart';
 
 /// The Entdecken tab: the hub over the app's content. Top to bottom:
 /// Tipps (the newest recommendation set), Alternativen (the newest

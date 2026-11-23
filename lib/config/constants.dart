@@ -44,8 +44,6 @@ class AppConstants {
   static const paddingLg = EdgeInsets.all(24);
 
   // Icon badge sizes
-  /// The thumbnail of a Wissen article.
-  static const double knowledgeThumbSize = 64.0;
   static const double iconBadgeXs = 32.0;
   static const double iconBadgeSm = 40.0;
   static const double iconBadgeMd = 44.0;
@@ -143,6 +141,9 @@ class AppConstants {
   // Entdecken: a recipe card's width in the Meine Rezepte row
   static const double discoverRecipeCardWidth = 148.0;
 
+  // Wissen: an article's square thumbnail
+  static const double knowledgeThumbSize = 64.0;
+
   // Ich: the Buddy in the header
   static const double meBuddySize = 112.0;
 
@@ -221,19 +222,19 @@ class AppConstants {
   /// gate again.
   static const String privacyPolicyVersion = '2026-11-22';
 
-  // Apple "Hide My Email" relay address suffix (includes the leading `@`).
-  // See the Sign in with Apple docs — this domain is stable since iOS 13.
-  static const String appleRelayEmailSuffix = '@privaterelay.appleid.com';
-
-  // SharedPreferences keys
-  static const String keyNotificationModalShown = 'notification_modal_shown';
-
   /// The myfodmap blog feed behind Wissen, how long a fetched copy counts as
   /// fresh, and how long a fetch may take.
   static const String knowledgeFeedUrl =
       'https://www.myfodmap.at/blog-feed.xml';
   static const Duration knowledgeFeedMaxAge = Duration(hours: 6);
   static const Duration knowledgeFeedTimeout = Duration(seconds: 10);
+
+  // Apple "Hide My Email" relay address suffix (includes the leading `@`).
+  // See the Sign in with Apple docs — this domain is stable since iOS 13.
+  static const String appleRelayEmailSuffix = '@privaterelay.appleid.com';
+
+  // SharedPreferences keys
+  static const String keyNotificationModalShown = 'notification_modal_shown';
   static const String keyKnowledgeFeedCache = 'knowledge_feed_cache_v1';
   static const String keyBuddyStatePrefix = 'buddy_state_';
 

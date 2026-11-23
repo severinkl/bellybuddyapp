@@ -1,12 +1,26 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/knowledge_article.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/url_utils.dart';
+
+/// Opens [article] in the in-app browser; a SnackBar says when that fails.
+Future<void> openArticle(
+  BuildContext context,
+  KnowledgeArticle article, {
+  UrlOpener open = launchUrl,
+}) => openExternalUrl(
+  context,
+  article.link.toString(),
+  failureMessage: 'Der Artikel konnte nicht geöffnet werden.',
+  open: open,
+  mode: LaunchMode.inAppBrowserView,
+);
 
 /// One article in the Wissen list: thumbnail, title, „Rezepte · 13. Mär 2025".
 class KnowledgeArticleTile extends StatelessWidget {
