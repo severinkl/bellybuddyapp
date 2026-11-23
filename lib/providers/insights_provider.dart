@@ -6,11 +6,11 @@ import '../models/insight_source.dart';
 import '../models/insights.dart';
 import '../repositories/entry_repository.dart';
 import '../services/insights/insights_engine.dart';
-import '../utils/date_format_utils.dart';
 import '../utils/logger.dart';
 import 'auth_provider.dart';
 import 'buddy_provider.dart';
 import 'entries_provider.dart';
+import 'today_provider.dart';
 
 /// The signed-in user's [Insights] over the last 30 local days as of the
 /// app's clock ([buddyClockProvider]); while signed out, those of no
@@ -18,12 +18,14 @@ import 'entries_provider.dart';
 ///
 /// Computed again:
 /// - after every entry write ([entriesRevisionProvider]: a log, an edit, a
-///   move, a delete), whoever made it; during a load, once it is done;
-/// - at local midnight, so the window moves on (while watched; a midnight
-///   missed while unwatched, e.g. on a hidden tab, is caught up once
-///   watched again, and one the timer missed while the device slept, on
-///   [appResumed]); during a load, once it is done;
+///   move, a delete), whoever made it;
+/// - when the day changes ([todayProvider]: at local midnight, or back in
+///   the foreground after the device slept through it), so the window
+///   moves on; a new day while unwatched (e.g. on a hidden tab) is caught
+///   up once watched again;
 /// - on [refresh] (Home's load and pull-to-refresh).
+///
+/// A write or a new day during a load is fetched after it.
 ///
 /// After a user change Riverpod keeps the previous user's value in the
 /// state while the new user's insights load ([AsyncValue.isReloading]) and
@@ -42,25 +44,23 @@ class InsightsNotifier extends AsyncNotifier<Insights> {
   /// result.
   int _seq = 0;
 
-  /// The app's clock, kept for the life-cycle callbacks, where [ref] can't
-  /// be used.
-  late DateTime Function() _clock;
-
-  Timer? _midnightTimer;
-
-  /// The local midnight [_midnightTimer] waits for.
-  DateTime? _nextMidnight;
-
   @override
   Future<Insights> build() async {
     final userId = ref.watch(currentUserIdProvider);
-    _clock = ref.read(buddyClockProvider);
+    ref.listen(entriesRevisionProvider, (_, _) => unawaited(_refetch()));
+    // Listened, not watched: a rebuild would hide the insights while the
+    // new day loads. Unwatched (e.g. Home on a hidden tab), a new day
+    // waits: resuming replays it, inside a life-cycle callback where ref
+    // can't be used, hence the microtask.
+    final newDay = ref.listen(todayProvider, (_, _) {
+      final opRef = ref;
+      scheduleMicrotask(() {
+        if (opRef.mounted) unawaited(_refetch());
+      });
+    });
     ref
-      ..listen(entriesRevisionProvider, (_, _) => unawaited(_refetch()))
-      ..onCancel(_disarmMidnight)
-      ..onResume(_resumeMidnight)
-      ..onDispose(_disarmMidnight);
-    _armMidnight();
+      ..onCancel(newDay.pause)
+      ..onResume(newDay.resume);
     try {
       return await _compute(userId);
     } catch (e, st) {
@@ -82,7 +82,7 @@ class InsightsNotifier extends AsyncNotifier<Insights> {
     await _fetchAndApply();
   }
 
-  /// After an entry write or at midnight: a running load may have fetched
+  /// After an entry write or on a new day: a running load may have fetched
   /// before it, so this waits for that load to apply and then computes
   /// again (fetching only afterwards, an older load never overwrites it).
   Future<void> _refetch() async {
@@ -119,61 +119,17 @@ class InsightsNotifier extends AsyncNotifier<Insights> {
   }
 
   Future<Insights> _compute(String? userId) async {
-    final now = _clock();
+    final now = ref.read(buddyClockProvider)();
     if (userId == null) return computeInsights(_noEntries, now);
     final source = await ref
         .read(entryRepositoryProvider)
         .fetchInsightSource(userId: userId, now: now);
     return computeInsights(source, now);
   }
-
-  /// A one-shot timer to the next local midnight that refreshes and arms
-  /// the next one.
-  void _armMidnight() {
-    _midnightTimer?.cancel();
-    final now = _clock().toLocal();
-    final midnight = addDays(startOfDay(now), 1);
-    _nextMidnight = midnight;
-    _midnightTimer = Timer(midnight.difference(now), () {
-      _armMidnight();
-      unawaited(_refetch());
-    });
-  }
-
-  void _disarmMidnight() {
-    _midnightTimer?.cancel();
-    _midnightTimer = null;
-  }
-
-  /// The app is in the foreground again (Home's `AppLifecycleListener`).
-  /// Timers stand still while an iOS device sleeps, so the midnight timer
-  /// may be late: while watched, a midnight that passed meanwhile is caught
-  /// up now, and the timer armed for the next one. Unwatched, being watched
-  /// again catches up ([_resumeMidnight]).
-  void appResumed() {
-    final missed = _nextMidnight;
-    if (_midnightTimer == null || missed == null || _clock().isBefore(missed)) {
-      return;
-    }
-    _armMidnight();
-    unawaited(_refetch());
-  }
-
-  /// Watched again: arms the timer, and refreshes when the midnight it
-  /// waited for passed meanwhile (right after this life-cycle callback).
-  void _resumeMidnight() {
-    final missed = _nextMidnight;
-    _armMidnight();
-    if (missed == null || _clock().isBefore(missed)) return;
-    final opRef = ref;
-    scheduleMicrotask(() {
-      if (opRef.mounted) unawaited(_refetch());
-    });
-  }
 }
 
 /// No automatic rebuild retries: a failed load stays an error until the
-/// next entry write, midnight or refresh.
+/// next entry write, new day or refresh.
 Duration? _noRetry(int retryCount, Object error) => null;
 
 /// What the Buddy noticed in the last 30 days of entries: Home's card and

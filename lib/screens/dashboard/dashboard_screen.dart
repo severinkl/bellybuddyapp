@@ -41,16 +41,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   // post-load path takes it.
   bool _firstRunDone = false;
 
-  /// Back in the foreground, the insights catch up a midnight their timer
-  /// missed while the device slept.
-  late final AppLifecycleListener _lifecycle;
-
   @override
   void initState() {
     super.initState();
-    _lifecycle = AppLifecycleListener(
-      onResume: () => ref.read(insightsProvider.notifier).appResumed(),
-    );
     // Order is load-bearing: _loadData awaits fetchProfile, so by the time
     // _maybeShowTutorial reads profileProvider.shouldShow() the profile is
     // guaranteed to be AsyncData (or AsyncError).
@@ -81,7 +74,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
 
   @override
   void dispose() {
-    _lifecycle.dispose();
     _tutorialHandle?.cancel();
     _tutorialHandle = null;
     super.dispose();

@@ -1,6 +1,7 @@
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart' show AppLifecycleState;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:belly_buddy/models/insight_progress.dart';
@@ -42,6 +43,14 @@ const _noEntries = InsightSource(
 );
 
 void main() {
+  // The day signal's AppLifecycleListener needs the binding.
+  final binding = TestWidgetsFlutterBinding.ensureInitialized();
+
+  /// The app comes back to the foreground.
+  void resume() => binding
+    ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+    ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+
   final now = DateTime(2026, 11, 23, 14);
   late FakeEntryRepository entryRepo;
 
@@ -299,7 +308,7 @@ void main() {
       });
     });
 
-    test('unwatched over midnight (Home hidden): no timer meanwhile, '
+    test('unwatched over midnight (Home hidden): nothing fetched meanwhile, '
         'recomputed once watched again', () {
       fakeAsync((async) {
         entryRepo.insightSource = source;
@@ -360,8 +369,8 @@ void main() {
     });
   });
 
-  group('app resumed (the midnight timer stood still while the device '
-      'slept)', () {
+  group('back in the foreground (the midnight timer stood still while the '
+      'device slept)', () {
     final source = InsightSource(
       meals: const [],
       gutFeelings: const [],
@@ -382,7 +391,7 @@ void main() {
         async.flushMicrotasks();
 
         asleep = const Duration(hours: 8);
-        notifier(c).appResumed();
+        resume();
         async.flushMicrotasks();
 
         expect(entryRepo.insightSourceCalls, 2);
@@ -415,7 +424,7 @@ void main() {
         c.listen(insightsProvider, (_, _) {});
         async.flushMicrotasks();
 
-        notifier(c).appResumed();
+        resume();
         async.flushMicrotasks();
 
         expect(entryRepo.insightSourceCalls, 1);
@@ -431,16 +440,13 @@ void main() {
         );
         final sub = c.listen(insightsProvider, (_, _) {});
         async.flushMicrotasks();
-        // Held, not read: a read would resume the provider for a moment.
-        final insights = notifier(c);
         sub.pause();
         async.flushMicrotasks();
 
         asleep = const Duration(hours: 8);
-        insights.appResumed();
+        resume();
         async.flushMicrotasks();
         expect(entryRepo.insightSourceCalls, 1);
-        expect(async.pendingTimers, isEmpty);
 
         sub.resume();
         async.flushMicrotasks();

@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/router/app_router.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/patterns/patterns_screen.dart';
@@ -17,13 +18,17 @@ Future<ProviderContainer> _pump(
   FakeEntryRepository entries, {
   Size size = const Size(390, 844),
   double textScale = 1,
+  DateTime Function()? clock,
 }) async {
   tester.view
     ..physicalSize = size
     ..devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   final container = ProviderContainer.test(
-    overrides: baseOverrides(entries: entries),
+    overrides: [
+      ...baseOverrides(entries: entries),
+      if (clock != null) buddyClockProvider.overrideWithValue(clock),
+    ],
   );
   final router = GoRouter(
     routes: [GoRoute(path: '/', builder: (_, _) => const PatternsScreen())],
@@ -244,6 +249,24 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(entries.insightSourceCalls, greaterThan(before));
+  });
+
+  testWidgets('back in the foreground on a new day, the page computes the '
+      'insights again, without Home', (tester) async {
+    var now = DateTime(2026, 11, 23, 23, 50);
+    final entries = _entries(2, 1);
+    await _pump(tester, entries, clock: () => now);
+    expect(entries.insightSourceCalls, 1);
+
+    // The device slept past midnight; its timer stood still.
+    now = DateTime(2026, 11, 24, 7);
+    tester.binding
+      ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+      ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+
+    expect(entries.insightSourceCalls, 2);
+    expect(entries.insightSourceRequests.last.now, now);
   });
 
   testWidgets('fits 375×667 at text scale 1.3', (tester) async {
