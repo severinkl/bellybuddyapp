@@ -16,13 +16,11 @@ import '../../providers/profile_provider.dart';
 import '../../router/route_names.dart';
 import '../../services/buddy/buddy_copy.dart';
 import '../../services/buddy/buddy_mood_logic.dart';
-import '../../services/buddy/streak_engine.dart' show maxStreakSavers;
 import '../../utils/logger.dart';
 import '../../widgets/buddy/buddy.dart';
 import '../../widgets/common/bb_button.dart';
 import '../registration/steps/buddy_name_step.dart';
 import 'streak_goal_picker.dart';
-import 'widgets/gift_reveal.dart';
 
 /// Where `/buddy-onboarding` was opened from.
 enum BuddyOnboardingEntry {
@@ -33,11 +31,13 @@ enum BuddyOnboardingEntry {
   gate,
 }
 
-enum BuddyOnboardingStep { intro, name, streakGoal, reminder, firstMeal, gift }
+enum BuddyOnboardingStep { intro, name, streakGoal, reminder, firstMeal, done }
 
 /// The steps for [entry]: the intro and naming only for a gate user without
 /// a Buddy row ([hasRow]), the reminder ask only while push is off
-/// ([remindersAlreadyOn]), the first meal only right after registration.
+/// ([remindersAlreadyOn]), the first meal only right after registration;
+/// the Buddy's cheer and the way to the dashboard ([BuddyOnboardingStep.done])
+/// last.
 List<BuddyOnboardingStep> buddyOnboardingSteps({
   required BuddyOnboardingEntry entry,
   required bool hasRow,
@@ -51,13 +51,14 @@ List<BuddyOnboardingStep> buddyOnboardingSteps({
   if (!remindersAlreadyOn) BuddyOnboardingStep.reminder,
   if (entry == BuddyOnboardingEntry.afterRegistration)
     BuddyOnboardingStep.firstMeal,
-  BuddyOnboardingStep.gift,
+  BuddyOnboardingStep.done,
 ];
 
 /// The Buddy-hosted sequence after sign-up (or for existing users via the
-/// gate): streak goal, reminder ask, first meal and a gift (one
-/// Streak-Saver), which completes the Buddy onboarding. One Buddy stays on
-/// top across all steps; system back returns to the previous step.
+/// gate): streak goal, reminder ask and first meal; then the Buddy cheers
+/// and „Los geht's" completes the Buddy onboarding and opens the dashboard.
+/// One Buddy stays on top across all steps; system back returns to the
+/// previous step.
 class BuddyOnboardingScreen extends ConsumerStatefulWidget {
   const BuddyOnboardingScreen({
     super.key,
@@ -95,18 +96,10 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
         'Darf ich dich erinnern, wenn ich Hunger habe?',
     BuddyOnboardingStep.firstMeal:
         'Ich hab Hunger! Was hast du zuletzt gegessen?',
-    BuddyOnboardingStep.gift: 'Ein Geschenk für dich!',
+    BuddyOnboardingStep.done: _doneLine,
   };
 
-  static const _giftSaverText =
-      'Ein Streak-Saver! Der rettet unseren Streak, falls du mal einen Tag '
-      'vergisst.';
-  static const _giftSaversFullText =
-      'Deine Schutzschilde sind schon voll – du bist bestens gerüstet!';
-  static const _giftNoSaverText = "Du bist bestens gerüstet – los geht's!";
-  static const _giftSaverCard = '🛡 Streak-Saver';
-  static const _giftSaversFullCard = '🛡 Schutzschilde voll';
-  static const _giftNoSaverCard = '🛡 Bestens gerüstet';
+  static const _doneLine = 'Geschafft! Ich freu mich auf unsere Zeit zusammen.';
 
   /// Reactions stay this long (long enough to read across a step change),
   /// then the Buddy asks the step's question again.
@@ -119,9 +112,6 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
   final BuddyController _buddy = BuddyController();
   final math.Random _rnd = math.Random();
   final ScrollController _scroll = ScrollController();
-
-  /// The gift's text, scrolled into view once it shows.
-  final GlobalKey _giftTextKey = GlobalKey();
 
   /// Brings the question back after a reaction.
   Timer? _reask;
@@ -136,12 +126,6 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
 
   /// A step action is running (saving, permission dialog, meal tracker).
   bool _busy = false;
-  bool _giftOpened = false;
-  Future<bool>? _completion;
-
-  /// Whether completing the onboarding added the gift saver; null until it
-  /// has completed. The gift's text waits for it.
-  bool? _saverGranted;
   bool _calm = false;
 
   BuddyOnboardingStep get _step => _steps![_index];
@@ -213,10 +197,10 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
     if (_index < _steps!.length - 1) _goTo(_index + 1);
   }
 
-  /// System back: the previous step; nothing on the first one, while busy
-  /// or once the gift is open.
+  /// System back: the previous step; nothing on the first one or while
+  /// busy.
   void _back() {
-    if (_steps == null || _index == 0 || _busy || _giftOpened) return;
+    if (_steps == null || _index == 0 || _busy) return;
     _goTo(_index - 1);
   }
 
@@ -231,10 +215,13 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
           ..play(BuddyAction.wakeUp);
       case BuddyOnboardingStep.firstMeal:
         _buddy.mood = BuddyMood.hungry;
+      case BuddyOnboardingStep.done:
+        _buddy
+          ..mood = BuddyMood.inLove
+          ..play(BuddyAction.celebrate);
       case BuddyOnboardingStep.name:
       case BuddyOnboardingStep.streakGoal:
       case BuddyOnboardingStep.reminder:
-      case BuddyOnboardingStep.gift:
         _buddy.mood = BuddyMood.happy;
     }
   }
@@ -378,29 +365,7 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
     if (_ready(BuddyOnboardingStep.firstMeal)) _advance();
   }
 
-  void _onGiftOpened() {
-    if (_giftOpened) return;
-    setState(() => _giftOpened = true);
-    _buddy
-      ..mood = BuddyMood.inLove
-      ..play(BuddyAction.celebrate);
-    _completion = _complete();
-  }
-
-  /// Small screens: brings the gift's text into view once it shows.
-  void _revealGiftText() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final text = _giftTextKey.currentContext;
-      if (!mounted || text == null) return;
-      Scrollable.ensureVisible(
-        text,
-        duration: _calm ? Duration.zero : AppConstants.animMedium,
-        alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
-      );
-    });
-  }
-
-  /// Completes the onboarding and grants the gift saver; false on failure.
+  /// Completes the onboarding; false on failure.
   Future<bool> _complete() async {
     final buddy = ref.read(buddyProvider.notifier);
     // Push was already on, so the reminder ask was skipped: the dashboard's
@@ -409,11 +374,7 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
       await _markRemindersAsked();
     }
     try {
-      final granted = await buddy.completeOnboarding(grantGiftSaver: true);
-      if (mounted) {
-        setState(() => _saverGranted = granted);
-        _revealGiftText();
-      }
+      await buddy.completeOnboarding();
       return true;
     } catch (e, st) {
       _log.error('Completing the Buddy onboarding failed', e, st);
@@ -421,17 +382,17 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
     }
   }
 
+  /// „Los geht's": completes the onboarding and opens the dashboard.
   Future<void> _finish() async {
-    if (!_ready(BuddyOnboardingStep.gift) || !_giftOpened) return;
+    if (!_ready(BuddyOnboardingStep.done)) return;
     _setBusy(true);
-    final ok = await (_completion ??= _complete());
+    final ok = await _complete();
     if (!mounted) return;
     if (ok) {
       context.go(RoutePaths.dashboard);
       return;
     }
     // Try again on the next tap (completeOnboarding is idempotent).
-    _completion = null;
     _setBusy(false);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -515,7 +476,7 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
         AnimatedSwitcher(
           duration: switchDuration,
           child: KeyedSubtree(
-            key: ValueKey((_step, _giftOpened)),
+            key: ValueKey(_step),
             child: actions.isEmpty
                 ? const SizedBox.shrink()
                 : Padding(
@@ -547,48 +508,15 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
         currentStreak: status?.streak ?? 0,
         onSelected: _pickGoal,
       ),
-      // The Buddy's question is the whole content; the buttons below answer.
+      // The Buddy's line is the whole content; the buttons below answer.
       BuddyOnboardingStep.reminder ||
-      BuddyOnboardingStep.firstMeal => const SizedBox.shrink(),
-      BuddyOnboardingStep.gift => _StepColumn(
-        children: [
-          Center(
-            child: GiftReveal(
-              onOpened: _onGiftOpened,
-              cardLabel: _saverGranted == null ? null : _giftCopy(status).card,
-            ),
-          ),
-          if (_giftOpened && _saverGranted != null) ...[
-            AppConstants.gap16,
-            Text(
-              key: _giftTextKey,
-              _giftCopy(status).text,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: AppTheme.fontSizeBodyLG,
-                color: AppTheme.foreground,
-              ),
-            ),
-          ],
-        ],
-      ),
+      BuddyOnboardingStep.firstMeal ||
+      BuddyOnboardingStep.done => const SizedBox.shrink(),
     };
   }
 
-  /// What the opened gift's card and text say: the Streak-Saver only when
-  /// one was added.
-  ({String card, String text}) _giftCopy(BuddyStatus? status) {
-    if (_saverGranted ?? false) {
-      return (card: _giftSaverCard, text: _giftSaverText);
-    }
-    final full = (status?.state.savers ?? 0) >= maxStreakSavers;
-    return full
-        ? (card: _giftSaversFullCard, text: _giftSaversFullText)
-        : (card: _giftNoSaverCard, text: _giftNoSaverText);
-  }
-
   /// The step's buttons for the fixed bottom slot; empty when the content
-  /// itself is the action (goal cards, the closed gift).
+  /// itself is the action (the goal cards).
   List<Widget> _buildActions(BuddyOnboardingStep step) {
     return switch (step) {
       BuddyOnboardingStep.intro => [
@@ -634,14 +562,13 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
           onPressed: _busy ? null : _mealLater,
         ),
       ],
-      BuddyOnboardingStep.gift => [
-        if (_giftOpened)
-          BbButton(
-            key: BuddyOnboardingScreen.finishKey,
-            label: "Los geht's",
-            isLoading: _busy,
-            onPressed: _finish,
-          ),
+      BuddyOnboardingStep.done => [
+        BbButton(
+          key: BuddyOnboardingScreen.finishKey,
+          label: "Los geht's",
+          isLoading: _busy,
+          onPressed: _finish,
+        ),
       ],
     };
   }

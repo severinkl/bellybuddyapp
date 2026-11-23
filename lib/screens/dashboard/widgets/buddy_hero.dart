@@ -501,7 +501,6 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
                   ? null
                   : StreakChip(
                       streak: status.streak,
-                      savers: status.state.savers,
                       todayCounted: status.todayCounted,
                       onTap: streakGoalChoices(status.streak).isEmpty
                           ? null

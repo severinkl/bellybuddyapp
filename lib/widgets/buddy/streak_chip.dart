@@ -3,7 +3,8 @@ import 'package:material_ui/material_ui.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 
-/// Compact streak indicator: "🔥 5 Tage" plus an optional "🛡 2" saver count.
+/// Compact streak indicator: "🔥 5 Tage" (the streak only; savers are not
+/// shown here).
 ///
 /// Muted while today is not yet counted; pops when [streak] increases.
 /// With [onTap] it is a button that sets the streak goal.
@@ -11,13 +12,11 @@ class StreakChip extends StatefulWidget {
   const StreakChip({
     super.key,
     required this.streak,
-    required this.savers,
     required this.todayCounted,
     this.onTap,
   });
 
   final int streak;
-  final int savers;
   final bool todayCounted;
 
   /// Opens the streak goal picker.
@@ -63,11 +62,9 @@ class _StreakChipState extends State<StreakChip>
   Widget build(BuildContext context) {
     final muted = !widget.todayCounted && widget.streak > 0;
     final days = '${widget.streak} ${widget.streak == 1 ? 'Tag' : 'Tage'}';
-    final label = '🔥 $days${widget.savers > 0 ? '  🛡 ${widget.savers}' : ''}';
+    final label = '🔥 $days';
     final semantics = [
       'Serie: $days',
-      if (widget.savers > 0)
-        '${widget.savers} ${widget.savers == 1 ? 'Schutz' : 'Schutzschilde'}',
       if (muted) 'Heute noch offen',
     ].join(', ');
     final color = muted ? AppTheme.mutedForeground : AppTheme.foreground;

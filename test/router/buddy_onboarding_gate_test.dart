@@ -20,7 +20,6 @@ import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/router/app_router.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/buddy/buddy_onboarding_screen.dart';
-import 'package:belly_buddy/screens/buddy/widgets/gift_reveal.dart';
 import 'package:belly_buddy/screens/health_consent/health_consent_screen.dart';
 import 'package:belly_buddy/screens/recipes/recipe_editor_screen.dart';
 import 'package:belly_buddy/screens/trackers/drink/drink_tracker_screen.dart';
@@ -79,9 +78,7 @@ class _GateTestHostState extends ConsumerState<_GateTestHost> {
 const _introLine = 'Hi! Ich bin neu hier — dein Belly Buddy.';
 const _streakTitle = 'Wie viele Tage schaffen wir zusammen?';
 const _reminderTitle = 'Darf ich dich erinnern, wenn ich Hunger habe?';
-const _giftText =
-    'Ein Streak-Saver! Der rettet unseren Streak, falls du mal einen Tag '
-    'vergisst.';
+const _doneLine = 'Geschafft! Ich freu mich auf unsere Zeit zusammen.';
 const _welcomeModalTitle = 'Willkommen bei Belly Buddy!';
 const _optInTitle = 'Bleib auf dem Laufenden!';
 const _tourSkip = 'Überspringen';
@@ -176,10 +173,13 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
   await tester.pumpAndSettle();
 }
 
-/// Opens the gift: the onboarding completes, and the finish button appears.
-Future<void> _openGift(WidgetTester tester) async {
-  await _tap(tester, find.byKey(GiftReveal.boxKey));
-  expect(find.text(_giftText), findsOneWidget);
+/// The last step: the Buddy cheers; „Los geht's" completes the onboarding.
+void _expectDoneStep(WidgetTester tester) {
+  expect(
+    tester.widget<AnimatedBuddy>(find.byType(AnimatedBuddy)).controller.bubble,
+    _doneLine,
+  );
+  expect(find.byKey(BuddyOnboardingScreen.finishKey), findsOneWidget);
 }
 
 void main() {
@@ -237,18 +237,20 @@ void main() {
       await _tap(tester, find.text('7 Tage'));
       expect(find.text(_reminderTitle), findsOneWidget);
       await _tap(tester, find.byKey(BuddyOnboardingScreen.reminderLaterKey));
-      await _openGift(tester);
+      _expectDoneStep(tester);
 
-      // Completed at the gift, but the user is still reading it: no redirect.
-      expect(buddies.store[testUserId]?.onboardingCompletedAt, isNotNull);
-      expect(container.read(buddyOnboardingRequiredProvider), isFalse);
+      // Not completed before „Los geht's".
+      expect(buddies.store[testUserId]?.onboardingCompletedAt, isNull);
       expect(_currentPath(container), RoutePaths.buddyOnboarding);
 
       await _tap(tester, find.byKey(BuddyOnboardingScreen.finishKey));
       expect(_currentPath(container), RoutePaths.dashboard);
       expect(find.byType(BuddyOnboardingScreen), findsNothing);
+      expect(buddies.store[testUserId]?.onboardingCompletedAt, isNotNull);
+      expect(container.read(buddyOnboardingRequiredProvider), isFalse);
       expect(buddies.store[testUserId]?.name, 'Bauchi');
-      expect(buddies.store[testUserId]?.savers, 1);
+      // No start gift: savers are only earned at streak milestones.
+      expect(buddies.store[testUserId]?.savers, 0);
 
       router.go(RoutePaths.diary);
       await tester.pumpAndSettle();
@@ -256,7 +258,7 @@ void main() {
     });
 
     testWidgets('killed mid-onboarding: a named Buddy resumes at the streak '
-        'goal, and the gift is granted once', (tester) async {
+        'goal and completes once, without a saver', (tester) async {
       final buddies = FakeBuddyRepository()
         ..store[testUserId] = const BuddyState(
           userId: testUserId,
@@ -276,14 +278,14 @@ void main() {
       expect(find.text(_streakTitle), findsOneWidget);
 
       await _tap(tester, find.text('14 Tage'));
-      await _openGift(tester);
+      _expectDoneStep(tester);
       await _tap(tester, find.byKey(BuddyOnboardingScreen.finishKey));
 
       expect(_currentPath(container), RoutePaths.dashboard);
       final stored = buddies.store[testUserId]!;
       expect(stored.name, 'Bauchi');
       expect(stored.streakGoal, 14);
-      expect(stored.savers, 1);
+      expect(stored.savers, 0);
       expect(stored.onboardingCompletedAt, isNotNull);
 
       // The next app start passes the gate and grants nothing more.
@@ -295,7 +297,7 @@ void main() {
       );
       expect(_currentPath(restarted), RoutePaths.dashboard);
       expect(find.byType(BuddyOnboardingScreen), findsNothing);
-      expect(buddies.store[testUserId]!.savers, 1);
+      expect(buddies.store[testUserId]!.savers, 0);
     });
 
     testWidgets('while onboarding, the meal and drink trackers stay '
@@ -428,7 +430,7 @@ void main() {
       await _tap(tester, find.byKey(BuddyOnboardingScreen.introNextKey));
       await _tap(tester, find.byKey(BuddyOnboardingScreen.nameNextKey));
       await _tap(tester, find.text('7 Tage'));
-      await _openGift(tester);
+      _expectDoneStep(tester);
       await _tap(tester, find.byKey(BuddyOnboardingScreen.finishKey));
 
       expect(_currentPath(container), RoutePaths.dashboard);
@@ -452,7 +454,7 @@ void main() {
       await _tap(tester, find.text('7 Tage'));
       // Push is on: no reminder step.
       expect(find.text(_reminderTitle), findsNothing);
-      await _openGift(tester);
+      _expectDoneStep(tester);
       await _tap(tester, find.byKey(BuddyOnboardingScreen.finishKey));
 
       expect(_currentPath(container), RoutePaths.dashboard);

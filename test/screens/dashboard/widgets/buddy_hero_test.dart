@@ -238,7 +238,6 @@ void main() {
 
       final chip = tester.widget<StreakChip>(find.byType(StreakChip));
       expect(chip.streak, 4);
-      expect(chip.savers, 1);
       expect(chip.todayCounted, isFalse);
     });
 

@@ -58,9 +58,8 @@ const buddyOnboardingGatedPaths = {RoutePaths.dashboard, RoutePaths.diary};
 /// The redirect for [path]: `/buddy-onboarding` while the onboarding
 /// [isRequired] and [path] is gated, otherwise null (stay).
 ///
-/// Deliberately nothing the other way: the onboarding completes when the
-/// gift opens, before the user has read it, and the screen moves on to the
-/// dashboard by itself.
+/// Deliberately nothing the other way: the onboarding completes on its last
+/// step's „Los geht's", and the screen moves on to the dashboard by itself.
 String? buddyOnboardingRedirect({
   required bool isRequired,
   required String path,

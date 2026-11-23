@@ -90,12 +90,11 @@ class AppConstants {
   // Buddy reaction on the tracker success screens (bubble slot + Buddy)
   static const double buddyReactionSize = 220.0;
 
-  // Buddy onboarding (/buddy-onboarding): stage (bubble slot + Buddy),
-  // progress dots and the gift box (box, lid and sparkle area)
+  // Buddy onboarding (/buddy-onboarding): stage (bubble slot + Buddy) and
+  // progress dots
   static const double buddyOnboardingStageHeight = 240.0;
   static const double progressDotSize = 8.0;
   static const double progressDotActiveWidth = 24.0;
-  static const double giftRevealSize = 160.0;
 
   // Registration wizard: above every step a header with the Buddy on the
   // left (this wide; his height follows) and his bubble on the right; with

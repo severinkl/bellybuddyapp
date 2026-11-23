@@ -82,8 +82,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       // profile whose Buddy onboarding isn't done (users from before the
       // Buddy, or the app was killed mid-onboarding) is sent from the shell
       // roots to /buddy-onboarding; pushes from inside the flow stay. No
-      // redirect away once it is done: the onboarding completes when the
-      // gift opens and leaves for the dashboard itself.
+      // redirect away once it is done: the onboarding completes on its last
+      // step and leaves for the dashboard itself.
       final buddyRedirect = buddyOnboardingRedirect(
         isRequired: ref.read(buddyOnboardingRequiredProvider),
         path: path,
