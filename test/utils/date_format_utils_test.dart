@@ -38,6 +38,31 @@ void main() {
     });
   });
 
+  group('isoWeekOf', () {
+    test('Monday to Sunday share one week', () {
+      expect(isoWeekOf(DateTime(2026, 11, 16)), 47);
+      expect(isoWeekOf(DateTime(2026, 11, 22, 23, 59)), 47);
+      expect(isoWeekOf(DateTime(2026, 11, 23)), 48);
+    });
+
+    test("days around New Year belong to their Thursday's year", () {
+      // 2026 starts on a Thursday, so it has 53 weeks.
+      expect(isoWeekOf(DateTime(2025, 12, 29)), 1);
+      expect(isoWeekOf(DateTime(2026, 1, 1)), 1);
+      expect(isoWeekOf(DateTime(2026, 12, 31)), 53);
+      expect(isoWeekOf(DateTime(2027, 1, 3)), 53);
+      expect(isoWeekOf(DateTime(2027, 1, 4)), 1);
+      // 3 Jan 2021 (a Sunday) is still in 2020's last week.
+      expect(isoWeekOf(DateTime(2021, 1, 3)), 53);
+    });
+
+    test('ignores the switch to summer time', () {
+      // 29 Mar 2026: in Europe/Vienna that day has 23 hours.
+      expect(isoWeekOf(DateTime(2026, 3, 29, 12)), 13);
+      expect(isoWeekOf(DateTime(2026, 3, 30)), 14);
+    });
+  });
+
   group('weekday names', () {
     test('Monday first, the short forms their first two letters', () {
       expect(kWeekdayNames.first, 'Montag');

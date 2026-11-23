@@ -16,6 +16,20 @@ DateTime addDays(DateTime d, int days) =>
 /// The Monday of [d]'s week, at midnight.
 DateTime mondayOf(DateTime d) => addDays(d, 1 - d.weekday);
 
+/// The ISO 8601 week number of [d]'s date (1–53): weeks start on Monday,
+/// and a week belongs to the year its Thursday falls in. Pass a local time
+/// for the user's week.
+int isoWeekOf(DateTime d) {
+  final thursday = addDays(d, DateTime.thursday - d.weekday);
+  // Counted in UTC, so a DST switch never shortens a day.
+  final dayOfYear = DateTime.utc(
+    thursday.year,
+    thursday.month,
+    thursday.day,
+  ).difference(DateTime.utc(thursday.year)).inDays;
+  return dayOfYear ~/ 7 + 1;
+}
+
 /// The German weekday names, Monday first (index: `weekday - 1`).
 const kWeekdayNames = [
   'Montag',

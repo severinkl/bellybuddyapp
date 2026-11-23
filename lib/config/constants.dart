@@ -82,9 +82,8 @@ class AppConstants {
   static const double streakChipPopScale = 1.25;
   static const double streakSheetBuddyHeight = 220.0;
 
-  // Streak week row (Mo–So): day circle, regular and small
+  // Streak week row (Mo–So): day circle
   static const double streakWeekDaySize = 36.0;
-  static const double streakWeekDaySizeSmall = 26.0;
 
   // A streak goal's row in the goal list
   static const double streakGoalRowHeight = 56.0;
@@ -124,6 +123,9 @@ class AppConstants {
   // Home's insight card: its progress bars
   static const double insightProgressHeight = 7.0;
 
+  // Entdecken: a recipe card's width in the Meine Rezepte row
+  static const double discoverRecipeCardWidth = 148.0;
+
   // Buddy reaction on the tracker success screens (bubble slot + Buddy)
   static const double buddyReactionSize = 220.0;
 
@@ -161,7 +163,6 @@ class AppConstants {
   static const double mealImageHeight = 180.0;
   static const double mascotSizeMd = 96.0;
   static const double mascotSizeLg = 160.0;
-  static const double featureCardHeight = 128.0;
 
   // Divider
   static const double dividerThickness = 0.5;
@@ -184,6 +185,9 @@ class AppConstants {
   /// Belly Buddy web app, where the user sets the new password.
   static const String resetPasswordRedirectUrl =
       'https://app.bellybuddy.at/reset-password';
+
+  /// The myfodmap blog: Entdecken's „Wissen" opens it.
+  static const String blogUrl = 'https://www.myfodmap.at/blog';
 
   /// Public privacy policy (Datenschutzerklärung) of the Belly Buddy web app.
   static const String privacyPolicyUrl =

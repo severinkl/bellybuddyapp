@@ -71,7 +71,7 @@ class _IngredientSuggestionsScreenState
     final state = ref.watch(ingredientSuggestionProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Zutaten-Vorschläge')),
+      appBar: AppBar(title: const Text('Alternativen')),
       body: Column(
         children: [
           Padding(
