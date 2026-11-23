@@ -11,7 +11,12 @@ import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/models/recommendation_item.dart';
 import 'package:belly_buddy/models/replacement_ingredient.dart';
+import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/models/user_recipe.dart';
+import 'package:belly_buddy/providers/profile_provider.dart';
+import 'package:belly_buddy/repositories/profile_repository.dart';
+import 'package:belly_buddy/screens/discover/widgets/discover_tips_section.dart';
+import 'package:belly_buddy/widgets/common/weekly_tips_switch.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/ingredient_suggestion_provider.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
@@ -65,7 +70,17 @@ class _Launches {
   }
 }
 
+/// A ProfileNotifier that starts with [_profile] loaded.
+class _SeededProfile extends ProfileNotifier {
+  _SeededProfile(this._profile);
+  final UserProfile _profile;
+
+  @override
+  AsyncValue<UserProfile?> build() => AsyncValue.data(_profile);
+}
+
 void main() {
+  late FakeProfileRepository profileRepo;
   late MockRecommendationRepository recommendations;
   late MockIngredientRepository ingredients;
   late MockUserRecipeRepository recipes;
@@ -78,6 +93,7 @@ void main() {
     recipes = MockUserRecipeRepository();
     launches = _Launches();
     knowledge = FakeKnowledgeRepository();
+    profileRepo = FakeProfileRepository();
   });
 
   Future<void> pump(
@@ -88,6 +104,8 @@ void main() {
     List<UserRecipe> myRecipes = const [],
     double textScale = 1,
     bool realRecipesScreen = false,
+    // null: the profile is still unknown.
+    bool? weeklyTips,
   }) async {
     when(
       () => recommendations.fetchByUserId(any()),
@@ -132,6 +150,11 @@ void main() {
       ingredientRepositoryProvider.overrideWithValue(ingredients),
       userRecipeRepositoryProvider.overrideWithValue(recipes),
       knowledgeRepositoryProvider.overrideWithValue(knowledge),
+      profileRepositoryProvider.overrideWithValue(profileRepo),
+      if (weeklyTips != null)
+        profileProvider.overrideWith(
+          () => _SeededProfile(testUserProfile(weeklyTipsEnabled: weeklyTips)),
+        ),
     ];
     await tester.pumpWidget(
       ProviderScope(
@@ -151,6 +174,64 @@ void main() {
     await tester.tap(finder);
     await tester.pumpAndSettle();
   }
+
+  group('weekly tips opt-in', () {
+    final optIn = find.byKey(DiscoverTipsSection.optInKey);
+    final someTips = [
+      testRecommendation(
+        id: 'new',
+        recommendations: const [_item],
+        createdAt: DateTime.utc(2026, 11, 16, 10),
+      ),
+    ];
+
+    testWidgets('off, no tips: only the opt-in', (tester) async {
+      await pump(tester, weeklyTips: false);
+
+      expect(optIn, findsOneWidget);
+      expect(find.text('Noch keine Tipps.'), findsNothing);
+      expect(find.byKey(DiscoverScreen.tipsKey), findsNothing);
+    });
+
+    testWidgets('off, with tips: set card and opt-in', (tester) async {
+      await pump(tester, weeklyTips: false, tips: someTips);
+
+      expect(find.byKey(DiscoverScreen.tipsKey), findsOneWidget);
+      expect(optIn, findsOneWidget);
+    });
+
+    testWidgets('on, no tips: when the first tips come', (tester) async {
+      await pump(tester, weeklyTips: true);
+
+      expect(find.text(DiscoverTipsSection.emptyWhileOn), findsOneWidget);
+      expect(find.byKey(WeeklyTipsSwitch.switchKey), findsNothing);
+    });
+
+    testWidgets('on, with tips: no switch', (tester) async {
+      await pump(tester, weeklyTips: true, tips: someTips);
+
+      expect(find.byKey(DiscoverScreen.tipsKey), findsOneWidget);
+      expect(find.byKey(WeeklyTipsSwitch.switchKey), findsNothing);
+    });
+
+    testWidgets('profile unknown: no switch', (tester) async {
+      await pump(tester);
+
+      expect(find.byKey(WeeklyTipsSwitch.switchKey), findsNothing);
+      expect(find.text('Noch keine Tipps.'), findsOneWidget);
+    });
+
+    testWidgets('turning it on shows when the first tips come', (tester) async {
+      profileRepo.seedProfile(testUserProfile());
+      await pump(tester, weeklyTips: false);
+
+      await tapVisible(tester, find.byKey(WeeklyTipsSwitch.switchKey));
+
+      expect(profileRepo.weeklyTipsWrites, [true]);
+      expect(find.text(DiscoverTipsSection.emptyWhileOn), findsOneWidget);
+      expect(find.byKey(WeeklyTipsSwitch.switchKey), findsNothing);
+    });
+  });
 
   testWidgets('loads tips, alternatives and recipes when opened', (
     tester,

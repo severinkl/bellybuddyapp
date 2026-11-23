@@ -12,6 +12,7 @@ import '../../../utils/url_utils.dart';
 import '../../../widgets/common/bb_async_state.dart';
 import '../../../widgets/common/bb_card.dart';
 import '../../../widgets/common/settings_section_card.dart';
+import '../../../widgets/common/weekly_tips_switch.dart';
 import 'reminder_time_picker.dart';
 
 /// The iOS Settings page of the app (`UIApplication.openSettingsURLString`).
@@ -317,15 +318,35 @@ class _SettingsNotificationsScreenState
                             ],
                           ),
                         ),
-                        AppConstants.gap16,
-                        SettingsSectionCard(
-                          icon: Icons.lightbulb_outline,
-                          title: 'Tipps',
+                      ],
+                    ),
+                  ),
+                ),
+                AppConstants.gap16,
+                SettingsSectionCard(
+                  icon: Icons.lightbulb_outline,
+                  title: 'Tipps',
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Generation, not delivery: never greyed.
+                      const WeeklyTipsSwitch(),
+                      AppConstants.gap8,
+                      const Divider(
+                        color: AppTheme.border,
+                        thickness: AppConstants.dividerThickness,
+                      ),
+                      AppConstants.gap8,
+                      IgnorePointer(
+                        ignoring: !allowed,
+                        child: AnimatedOpacity(
+                          opacity: allowed ? 1.0 : AppConstants.disabledOpacity,
+                          duration: AppConstants.animFast,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               SwitchListTile(
-                                title: const Text('Tipps'),
+                                title: const Text('Tipps per Push'),
                                 value: tipsOn,
                                 activeThumbColor: AppTheme.primary,
                                 contentPadding: EdgeInsets.zero,
@@ -338,7 +359,7 @@ class _SettingsNotificationsScreenState
                                 },
                               ),
                               const Text(
-                                'Wir benachrichtigen dich, wenn Belly Buddy deine Daten analysiert hat und neue Tipps für dich bereit sind.',
+                                'Ich sag dir Bescheid, sobald neue Tipps da sind.',
                                 style: TextStyle(
                                   fontSize: AppTheme.fontSizeCaptionLG,
                                   color: AppTheme.mutedForeground,
@@ -347,8 +368,8 @@ class _SettingsNotificationsScreenState
                             ],
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
                 AppConstants.gap32,

@@ -9,6 +9,7 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/ingredient_suggestion_provider.dart';
 import '../../providers/knowledge_provider.dart';
+import '../../providers/profile_provider.dart';
 import '../../providers/recommendation_provider.dart';
 import '../../providers/user_recipes_provider.dart';
 import '../../router/route_names.dart';
@@ -19,6 +20,7 @@ import 'widgets/discover_knowledge_section.dart';
 import 'widgets/discover_recipes_section.dart';
 import 'widgets/discover_section.dart';
 import 'widgets/discover_tips_card.dart';
+import 'widgets/discover_tips_section.dart';
 
 /// The Entdecken tab: the hub over the app's content. Top to bottom:
 /// Tipps (the newest recommendation set), Alternativen (the newest
@@ -86,6 +88,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
       }
     });
     final tips = ref.watch(recommendationProvider);
+    final weeklyTips = ref.watch(weeklyTipsEnabledProvider);
     final unseenTips = ref.watch(unseenRecommendationCountProvider).value ?? 0;
     final groups = ref.watch(ingredientSuggestionProvider);
     final newGroups = ref.watch(newIngredientSuggestionCountProvider);
@@ -111,10 +114,11 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
             children: [
               DiscoverSection(
                 title: 'Tipps',
-                child: DiscoverTipsCard(
+                child: DiscoverTipsSection(
                   tips: tips,
                   unseen: unseenTips > 0,
-                  onTap: () => context.push(RoutePaths.recommendations),
+                  weeklyTips: weeklyTips,
+                  onOpen: () => context.push(RoutePaths.recommendations),
                 ),
               ),
               AppConstants.gap24,

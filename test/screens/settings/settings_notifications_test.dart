@@ -10,6 +10,7 @@ import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/repositories/notification_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 
+import 'package:belly_buddy/widgets/common/weekly_tips_switch.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../helpers/fakes.dart';
@@ -110,6 +111,41 @@ void main() {
 
     UserProfile stored() => container.read(profileProvider).value!;
 
+    testWidgets('the weekly switch works without notification permission', (
+      tester,
+    ) async {
+      await pump(tester, permission: NotificationPermission.notDetermined);
+
+      expect(
+        find.ancestor(
+          of: find.byKey(WeeklyTipsSwitch.switchKey),
+          matching: find.byWidgetPredicate(
+            (w) => w is IgnorePointer && w.ignoring,
+          ),
+        ),
+        findsNothing,
+      );
+      await tester.ensureVisible(find.byKey(WeeklyTipsSwitch.switchKey));
+      await tester.tap(find.byKey(WeeklyTipsSwitch.switchKey));
+      await tester.pumpAndSettle();
+
+      expect(stored().weeklyTipsEnabled, isTrue);
+    });
+
+    testWidgets('Tipps per Push is greyed without permission', (tester) async {
+      await pump(tester, permission: NotificationPermission.notDetermined);
+
+      expect(
+        find.ancestor(
+          of: find.widgetWithText(SwitchListTile, 'Tipps per Push'),
+          matching: find.byWidgetPredicate(
+            (w) => w is IgnorePointer && w.ignoring,
+          ),
+        ),
+        findsOneWidget,
+      );
+    });
+
     testWidgets('never asked: everything shows off although the profile '
         'still says on', (tester) async {
       await pump(tester, permission: NotificationPermission.notDetermined);
@@ -117,7 +153,7 @@ void main() {
       expect(switchOn(tester, 'Benachrichtigungen erlauben'), isFalse);
       expect(switchOn(tester, 'Mahlzeiten'), isFalse);
       expect(switchOn(tester, 'Bauchgefühl'), isFalse);
-      expect(switchOn(tester, 'Tipps'), isFalse);
+      expect(switchOn(tester, 'Tipps per Push'), isFalse);
       // No reminder times offered for reminders that cannot arrive.
       expect(find.text('18:00'), findsNothing);
       expect(os.requests, 0);
@@ -141,7 +177,7 @@ void main() {
       expect(switchOn(tester, 'Benachrichtigungen erlauben'), isTrue);
       expect(switchOn(tester, 'Mahlzeiten'), isTrue);
       expect(switchOn(tester, 'Bauchgefühl'), isTrue);
-      expect(switchOn(tester, 'Tipps'), isTrue);
+      expect(switchOn(tester, 'Tipps per Push'), isTrue);
       expect(stored().remindersEnabled, isTrue);
       expect(stored().dailySummaryEnabled, isTrue);
       expect(stored().pushEnabled, isTrue);
@@ -285,8 +321,8 @@ void main() {
       );
       await tester.pump();
 
-      // Master toggle + 3 notification toggles = 4
-      expect(find.byType(SwitchListTile), findsNWidgets(4));
+      // Master toggle + 3 notification toggles + the weekly tips = 5
+      expect(find.byType(SwitchListTile), findsNWidgets(5));
     });
   });
 }
