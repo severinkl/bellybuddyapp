@@ -294,6 +294,24 @@ void main() {
         );
       });
 
+      testWidgets('coming and going keeps the icon (same element, same '
+          'place)', (tester) async {
+        final container = await _pumpShell(tester, tips: newTips());
+        final icon = find.descendant(
+          of: find.byKey(BbBottomNav.navDiscoverKey),
+          matching: find.byType(Icon),
+        );
+        final before = tester.element(icon);
+        final at = tester.getRect(icon);
+
+        await container.read(recommendationProvider.notifier).markAllAsSeen();
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(BbBottomNav.discoverBadgeKey), findsNothing);
+        expect(tester.element(icon), same(before));
+        expect(tester.getRect(icon), at);
+      });
+
       testWidgets('is not there when nothing is new', (tester) async {
         await _pumpShell(tester);
         expect(find.byKey(BbBottomNav.discoverBadgeKey), findsNothing);

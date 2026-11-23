@@ -126,6 +126,7 @@ class BbBottomNav extends ConsumerWidget {
                           activeIcon: Icons.explore,
                           label: 'Entdecken',
                           badge: ref.watch(discoverBadgeProvider),
+                          badgeKey: discoverBadgeKey,
                           isActive: currentIndex == _discoverBranch,
                           onTap: () => goBranch(_discoverBranch),
                         ),
@@ -221,6 +222,9 @@ class _NavItem extends StatelessWidget {
   /// Whether a dot on the icon says there is something new.
   final bool badge;
 
+  /// The dot's key.
+  final Key? badgeKey;
+
   const _NavItem({
     this.tapKey,
     required this.icon,
@@ -229,17 +233,11 @@ class _NavItem extends StatelessWidget {
     required this.isActive,
     required this.onTap,
     this.badge = false,
+    this.badgeKey,
   });
 
   @override
   Widget build(BuildContext context) {
-    final iconWidget = Icon(
-      isActive ? activeIcon : icon,
-      color: isActive
-          ? AppTheme.foreground
-          : AppTheme.foreground.withValues(alpha: 0.6),
-      size: 32,
-    );
     return GestureDetector(
       key: tapKey,
       onTap: onTap,
@@ -247,21 +245,28 @@ class _NavItem extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (badge)
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                iconWidget,
+          // Always a Stack, so the dot coming or going keeps the icon.
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Icon(
+                isActive ? activeIcon : icon,
+                color: isActive
+                    ? AppTheme.foreground
+                    : AppTheme.foreground.withValues(alpha: 0.6),
+                size: AppConstants.iconSizeLg,
+              ),
+              if (badge)
                 Positioned(
                   top: 0,
                   right: 0,
                   child: Semantics(
                     label: 'Neues',
-                    child: const SizedBox(
-                      key: BbBottomNav.discoverBadgeKey,
+                    child: SizedBox(
+                      key: badgeKey,
                       width: AppConstants.navBadgeSize,
                       height: AppConstants.navBadgeSize,
-                      child: DecoratedBox(
+                      child: const DecoratedBox(
                         decoration: BoxDecoration(
                           color: AppTheme.navBadge,
                           shape: BoxShape.circle,
@@ -276,10 +281,8 @@ class _NavItem extends StatelessWidget {
                     ),
                   ),
                 ),
-              ],
-            )
-          else
-            iconWidget,
+            ],
+          ),
           AppConstants.gap4,
           Flexible(
             child: _BarLabel(
