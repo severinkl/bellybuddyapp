@@ -110,12 +110,7 @@ class _IngredientSuggestionsScreenState
                                 ),
                               ))
                         .toList()
-                      ..sort((a, b) {
-                        if (a.isNew != b.isNew) return a.isNew ? -1 : 1;
-                        return a.ingredientName.toLowerCase().compareTo(
-                          b.ingredientName.toLowerCase(),
-                        );
-                      });
+                      ..sort(IngredientSuggestionGroup.compareNewFirst);
 
                 if (filtered.isEmpty) {
                   return const Center(

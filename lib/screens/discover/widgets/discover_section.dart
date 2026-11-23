@@ -1,3 +1,4 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../config/app_theme.dart';
@@ -115,6 +116,11 @@ class DiscoverAllLink extends StatelessWidget {
 /// yet, loading, or failed. Never tappable.
 class DiscoverNote extends StatelessWidget {
   const DiscoverNote(this.text, {super.key});
+
+  /// For a section whose [value] has no data yet: „Laden…", or once it
+  /// failed „[what] konnten nicht geladen werden.".
+  DiscoverNote.pending(AsyncValue<Object?> value, String what, {super.key})
+    : text = value.hasError ? '$what konnten nicht geladen werden.' : 'Laden…';
 
   final String text;
 
