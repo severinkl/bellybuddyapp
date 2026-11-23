@@ -50,6 +50,38 @@ void main() {
     }
   });
 
+  test('„merk ich mir" stays rare across the whole catalog', () {
+    final merk = [
+      for (final e in kWizardReactions.values)
+        ...e.lines.where((l) => l.toLowerCase().contains('merk')),
+    ];
+    expect(merk.length, lessThanOrEqualTo(2), reason: merk.join('\n'));
+  });
+
+  test('multi-select answers never share a line', () {
+    // Symptoms and intolerances react per tap, several in a row: a line
+    // shared between two answers would make the Buddy repeat himself.
+    for (final group in ['symptom:', 'intolerance:']) {
+      final seen = <String, String>{};
+      for (final e in kWizardReactions.entries) {
+        if (!e.key.startsWith(group)) continue;
+        for (final l in e.value.lines) {
+          expect(seen[l], isNull, reason: '"$l" in ${seen[l]} and ${e.key}');
+          seen[l] = e.key;
+        }
+      }
+    }
+  });
+
+  test('every answer reaction has at least two variants', () {
+    for (final e in kWizardReactions.entries) {
+      final isAnswer =
+          e.key.startsWith('symptom:') || e.key.startsWith('intolerance:');
+      if (!isAnswer || e.key.endsWith(':none')) continue;
+      expect(e.value.lines.length, greaterThanOrEqualTo(2), reason: e.key);
+    }
+  });
+
   test('{name} only appears in name:confirmed', () {
     for (final e in kWizardReactions.entries) {
       final has = e.value.lines.any((l) => l.contains('{name}'));

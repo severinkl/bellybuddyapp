@@ -81,7 +81,7 @@ class BuddyOnboardingScreen extends ConsumerStatefulWidget {
 class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
   static const _log = AppLogger('BuddyOnboarding');
 
-  static const _introLine = 'Hi! Ich bin neu hier — dein Bauch-Buddy.';
+  static const _introLine = 'Hi! Ich bin neu hier — dein Belly Buddy.';
   static const _thanksLine = 'Mmmh! Danke!';
 
   static const _giftSaverText =

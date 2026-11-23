@@ -133,7 +133,7 @@ const _giftText =
 const _giftFullText =
     'Deine Schutzschilde sind schon voll – du bist bestens gerüstet!';
 const _giftAlreadyText = "Du bist bestens gerüstet – los geht's!";
-const _introLine = 'Hi! Ich bin neu hier — dein Bauch-Buddy.';
+const _introLine = 'Hi! Ich bin neu hier — dein Belly Buddy.';
 
 void main() {
   group('buddyOnboardingSteps', () {

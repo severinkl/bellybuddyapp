@@ -75,7 +75,7 @@ class _GateTestHostState extends ConsumerState<_GateTestHost> {
   }
 }
 
-const _introLine = 'Hi! Ich bin neu hier — dein Bauch-Buddy.';
+const _introLine = 'Hi! Ich bin neu hier — dein Belly Buddy.';
 const _streakTitle = 'Wie viele Tage schaffen wir zusammen?';
 const _reminderTitle = 'Darf ich dich erinnern, wenn ich Hunger habe?';
 const _giftText =

@@ -33,7 +33,7 @@ class WelcomeScreen extends ConsumerStatefulWidget {
 class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     with SingleTickerProviderStateMixin {
   static const _lines = [
-    'Hi! Ich bin dein Bauch-Buddy.',
+    'Hi! Ich bin dein Belly Buddy.',
     'Ich helfe dir herauszufinden, was deinem Bauch guttut.',
     'Lass uns uns kennenlernen!',
   ];
@@ -137,11 +137,15 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
         _wake();
       case _Phase.talking:
         _showLine(_line + 1);
-      case _Phase.waking:
       case _Phase.ready:
+        _start();
+      case _Phase.waking:
         break;
     }
   }
+
+  /// Starts the registration, from „Los geht's" or a tap on the awake Buddy.
+  void _start() => context.go(RoutePaths.registration);
 
   /// The Buddy as large as the area allows at its natural proportions, with
   /// the bubble slot right above it, centred: a stretched stage would park
@@ -181,10 +185,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                   behavior: HitTestBehavior.opaque,
                   excludeFromSemantics: true,
                   onTap: _onAreaTap,
-                  // The story owns taps until the button shows; then the
-                  // Buddy can be poked.
+                  // The area owns every tap: it wakes the Buddy, skips
+                  // through the story, and once he is awake starts like
+                  // „Los geht's".
                   child: IgnorePointer(
-                    ignoring: _phase != _Phase.ready,
                     child: LayoutBuilder(builder: _buildStage),
                   ),
                 ),
@@ -211,7 +215,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                     _Phase.ready => BbButton(
                       key: WelcomeScreen.registrationButtonKey,
                       label: "Los geht's",
-                      onPressed: () => context.go(RoutePaths.registration),
+                      onPressed: _start,
                     ),
                     _Phase.waking || _Phase.talking => const SizedBox.shrink(),
                   },
