@@ -7,10 +7,21 @@ import '../utils/logger.dart';
 import 'core_providers.dart';
 import 'user_recipes_provider.dart';
 
-/// The recipe search of the screen showing it (Meine Rezepte, the recipe
-/// picker): the user's recipes, or with a query the server's matches.
+/// Where a recipe search shows. Each host has its own search
+/// ([recipeSearchProvider]), so two open at once (Meine Rezepte below the
+/// meal tracker's picker) never share a query.
+enum RecipeSearchHost {
+  /// Meine Rezepte (Entdecken → „Alle ›").
+  myRecipes,
+
+  /// The meal tracker's „Rezept auswählen" sheet.
+  recipePicker,
+}
+
+/// The recipe search of one host ([RecipeSearchHost]): the user's recipes,
+/// or with a query the server's matches.
 ///
-/// Auto-disposed: the search ends with the screen that watches it, and
+/// Auto-disposed: the search ends with the host that watches it, and
 /// [userRecipesProvider] (Entdecken's preview, the meal tracker, the
 /// detail screen) is never filtered.
 class RecipeSearchNotifier extends Notifier<AsyncValue<List<UserRecipe>>> {
@@ -86,8 +97,10 @@ class RecipeSearchNotifier extends Notifier<AsyncValue<List<UserRecipe>>> {
   }
 }
 
-final recipeSearchProvider =
-    NotifierProvider.autoDispose<
+/// The recipe search of [RecipeSearchHost] `host`.
+final recipeSearchProvider = NotifierProvider.autoDispose
+    .family<
       RecipeSearchNotifier,
-      AsyncValue<List<UserRecipe>>
-    >(RecipeSearchNotifier.new);
+      AsyncValue<List<UserRecipe>>,
+      RecipeSearchHost
+    >((_) => RecipeSearchNotifier());

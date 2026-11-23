@@ -75,15 +75,17 @@ class _RecipeSelectorBodyState extends ConsumerState<_RecipeSelectorBody> {
     context.push(RoutePaths.recipeNew);
   }
 
+  static const _host = RecipeSearchHost.recipePicker;
+
   @override
   Widget build(BuildContext context) {
     // The sheet's own search, auto-disposed with it.
-    final async = ref.watch(recipeSearchProvider);
+    final async = ref.watch(recipeSearchProvider(_host));
     // Snapshot — `build` already re-runs whenever the AsyncValue changes
     // (which happens after every setQuery → search round-trip), so a watch
     // on the notifier instance would only add a redundant subscription.
     final hasActiveQuery = ref
-        .read(recipeSearchProvider.notifier)
+        .read(recipeSearchProvider(_host).notifier)
         .hasActiveQuery;
 
     return Column(
@@ -109,7 +111,7 @@ class _RecipeSelectorBodyState extends ConsumerState<_RecipeSelectorBody> {
         ),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: AppConstants.spacingMd),
-          child: RecipesSearchField(),
+          child: RecipesSearchField(host: _host),
         ),
         AppConstants.gap8,
         Expanded(

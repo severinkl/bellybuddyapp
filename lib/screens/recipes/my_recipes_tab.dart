@@ -30,27 +30,30 @@ class _MyRecipesTabState extends ConsumerState<MyRecipesTab> {
     });
   }
 
+  static const _host = RecipeSearchHost.myRecipes;
+
   @override
   Widget build(BuildContext context) {
     // The search belongs to this screen (auto-disposed with it): Entdecken's
-    // Meine Rezepte never shows its matches.
-    final async = ref.watch(recipeSearchProvider);
+    // Meine Rezepte never shows its matches, nor does the meal tracker's
+    // picker share its query.
+    final async = ref.watch(recipeSearchProvider(_host));
     return async.when(
       loading: () => const BbLoadingState(),
       error: (e, _) => BbErrorState(
         message: 'Konnte Rezepte nicht laden',
-        onRetry: () => ref.read(recipeSearchProvider.notifier).retry(),
+        onRetry: () => ref.read(recipeSearchProvider(_host).notifier).retry(),
       ),
       data: (recipes) {
         final hasActiveQuery = ref
-            .read(recipeSearchProvider.notifier)
+            .read(recipeSearchProvider(_host).notifier)
             .hasActiveQuery;
         if (recipes.isEmpty && !hasActiveQuery) return const _EmptyState();
         return Column(
           children: [
             const Padding(
               padding: AppConstants.paddingMd,
-              child: RecipesSearchField(),
+              child: RecipesSearchField(host: _host),
             ),
             Expanded(
               child: recipes.isEmpty

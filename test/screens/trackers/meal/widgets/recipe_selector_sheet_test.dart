@@ -12,6 +12,9 @@ import 'package:belly_buddy/screens/trackers/meal/widgets/recipe_selector_sheet.
 
 import '../../../../helpers/fakes.dart';
 
+/// The search under test (Meine Rezepte's).
+final _search = recipeSearchProvider(RecipeSearchHost.recipePicker);
+
 class _FakeUserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>>
     implements UserRecipesNotifier {
   _FakeUserRecipesNotifier(this._recipes);
@@ -154,12 +157,12 @@ void main() {
     final container = ProviderScope.containerOf(
       tester.element(find.text('open')),
     );
-    expect(container.read(recipeSearchProvider.exists), isTrue);
+    expect(container.read(_search.exists), isTrue);
 
     // Dismiss the modal sheet by tapping the barrier scrim above it.
     await tester.tapAt(const Offset(20, 20));
     await tester.pumpAndSettle();
 
-    expect(container.read(recipeSearchProvider.exists), isFalse);
+    expect(container.read(_search.exists), isFalse);
   });
 }

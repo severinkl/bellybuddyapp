@@ -11,6 +11,9 @@ import '../helpers/fixtures.dart';
 import '../helpers/mocks.dart';
 import '../helpers/riverpod_helpers.dart';
 
+/// The search under test (Meine Rezepte's).
+final _search = recipeSearchProvider(RecipeSearchHost.myRecipes);
+
 void main() {
   late MockUserRecipeRepository repo;
 
@@ -27,7 +30,7 @@ void main() {
         currentUserIdProvider.overrideWithValue(testUserId),
       ],
     );
-    container.listen(recipeSearchProvider, (_, _) {});
+    container.listen(_search, (_, _) {});
     await container.read(userRecipesProvider.notifier).fetch();
     return container;
   }
@@ -42,8 +45,8 @@ void main() {
 
     final container = await makeContainer();
 
-    expect(container.read(recipeSearchProvider).value, recipes);
-    expect(container.read(recipeSearchProvider.notifier).hasActiveQuery, false);
+    expect(container.read(_search).value, recipes);
+    expect(container.read(_search.notifier).hasActiveQuery, false);
   });
 
   test('setQuery with a non-empty value searches after the debounce, and '
@@ -55,15 +58,12 @@ void main() {
     ).thenAnswer((_) async => [testUserRecipe(title: 'Curry mit Reis')]);
 
     final container = await makeContainer();
-    container.read(recipeSearchProvider.notifier).setQuery('curry');
-    expect(container.read(recipeSearchProvider.notifier).activeQuery, 'curry');
+    container.read(_search.notifier).setQuery('curry');
+    expect(container.read(_search.notifier).activeQuery, 'curry');
     await debounce();
 
     verify(() => repo.searchForUser(testUserId, 'curry')).called(1);
-    expect(
-      container.read(recipeSearchProvider).value?.single.title,
-      'Curry mit Reis',
-    );
+    expect(container.read(_search).value?.single.title, 'Curry mit Reis');
     expect(container.read(userRecipesProvider).value, all);
   });
 
@@ -74,14 +74,14 @@ void main() {
     reset(repo);
     when(() => repo.fetchForUser(any())).thenAnswer((_) async => []);
 
-    container.read(recipeSearchProvider.notifier).setQuery('curry');
-    container.read(recipeSearchProvider.notifier).setQuery('  ');
+    container.read(_search.notifier).setQuery('curry');
+    container.read(_search.notifier).setQuery('  ');
     await debounce();
 
     // An empty query reloads all recipes, not searchForUser.
     verify(() => repo.fetchForUser(testUserId)).called(1);
     verifyNever(() => repo.searchForUser(any(), any()));
-    expect(container.read(recipeSearchProvider.notifier).hasActiveQuery, false);
+    expect(container.read(_search.notifier).hasActiveQuery, false);
   });
 
   test('clearing a search shows all recipes again', () async {
@@ -90,15 +90,15 @@ void main() {
     when(() => repo.searchForUser(any(), any())).thenAnswer((_) async => []);
 
     final container = await makeContainer();
-    final search = container.read(recipeSearchProvider.notifier);
+    final search = container.read(_search.notifier);
     search.setQuery('zzz');
     await debounce();
-    expect(container.read(recipeSearchProvider).value, isEmpty);
+    expect(container.read(_search).value, isEmpty);
 
     search.setQuery(null);
     await debounce();
 
-    expect(container.read(recipeSearchProvider).value, all);
+    expect(container.read(_search).value, all);
   });
 
   test('rapid calls only fire the last value (debounce)', () async {
@@ -106,7 +106,7 @@ void main() {
     when(() => repo.searchForUser(any(), any())).thenAnswer((_) async => []);
 
     final container = await makeContainer();
-    final notifier = container.read(recipeSearchProvider.notifier);
+    final notifier = container.read(_search.notifier);
     notifier.setQuery('c');
     notifier.setQuery('cu');
     notifier.setQuery('cur');
@@ -122,12 +122,12 @@ void main() {
     when(() => repo.searchForUser(any(), any())).thenAnswer((_) async => []);
 
     final container = await makeContainer();
-    container.read(recipeSearchProvider.notifier).setQuery('curry');
+    container.read(_search.notifier).setQuery('curry');
     await debounce();
     reset(repo);
     when(() => repo.searchForUser(any(), any())).thenAnswer((_) async => []);
 
-    container.read(recipeSearchProvider.notifier).setQuery('curry');
+    container.read(_search.notifier).setQuery('curry');
     await debounce();
 
     verifyNever(() => repo.searchForUser(any(), any()));
@@ -139,7 +139,7 @@ void main() {
     when(() => repo.delete(any())).thenAnswer((_) async {});
 
     final container = await makeContainer();
-    container.read(recipeSearchProvider.notifier).setQuery('curry');
+    container.read(_search.notifier).setQuery('curry');
     await debounce();
     when(
       () => repo.searchForUser(any(), any()),
@@ -148,10 +148,7 @@ void main() {
     await container.read(userRecipesProvider.notifier).delete('rec-1');
     await Future<void>.delayed(Duration.zero);
 
-    expect(
-      container.read(recipeSearchProvider).value?.single.title,
-      'Curry neu',
-    );
+    expect(container.read(_search).value?.single.title, 'Curry neu');
   });
 
   test('without a screen watching it, the search is gone', () async {
@@ -162,13 +159,31 @@ void main() {
         currentUserIdProvider.overrideWithValue(testUserId),
       ],
     );
-    final sub = container.listen(recipeSearchProvider, (_, _) {});
-    container.read(recipeSearchProvider.notifier).setQuery('curry');
+    final sub = container.listen(_search, (_, _) {});
+    container.read(_search.notifier).setQuery('curry');
 
     sub.close();
     await container.pump();
 
-    expect(container.read(recipeSearchProvider.exists), isFalse);
-    expect(container.read(recipeSearchProvider.notifier).activeQuery, isNull);
+    expect(container.read(_search.exists), isFalse);
+    expect(container.read(_search.notifier).activeQuery, isNull);
+  });
+
+  test('each host has its own search', () async {
+    final all = [testUserRecipe(id: 'a'), testUserRecipe(id: 'b')];
+    when(() => repo.fetchForUser(any())).thenAnswer((_) async => all);
+    when(
+      () => repo.searchForUser(any(), any()),
+    ).thenAnswer((_) async => [testUserRecipe(title: 'Pasta Pesto')]);
+    final picker = recipeSearchProvider(RecipeSearchHost.recipePicker);
+    final container = await makeContainer();
+    container.listen(picker, (_, _) {});
+
+    container.read(_search.notifier).setQuery('pasta');
+    await debounce();
+
+    expect(container.read(_search).value?.single.title, 'Pasta Pesto');
+    expect(container.read(picker.notifier).activeQuery, isNull);
+    expect(container.read(picker).value, all);
   });
 }

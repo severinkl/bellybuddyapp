@@ -27,7 +27,11 @@ void main() {
           userRecipeRepositoryProvider.overrideWithValue(repo),
           currentUserIdProvider.overrideWithValue(testUserId),
         ],
-        child: const MaterialApp(home: Scaffold(body: RecipesSearchField())),
+        child: const MaterialApp(
+          home: Scaffold(
+            body: RecipesSearchField(host: RecipeSearchHost.myRecipes),
+          ),
+        ),
       ),
     );
   }
@@ -70,16 +74,25 @@ void main() {
 
     // Seed an active query before the widget mounts (a screen keeps the
     // search alive).
-    container.listen(recipeSearchProvider, (_, _) {});
+    container.listen(
+      recipeSearchProvider(RecipeSearchHost.myRecipes),
+      (_, _) {},
+    );
     await container.read(userRecipesProvider.notifier).fetch();
-    container.read(recipeSearchProvider.notifier).setQuery('reis');
+    container
+        .read(recipeSearchProvider(RecipeSearchHost.myRecipes).notifier)
+        .setQuery('reis');
     // Advance fake time past the 300 ms debounce so the timer fires.
     await tester.pump(const Duration(milliseconds: 350));
 
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const MaterialApp(home: Scaffold(body: RecipesSearchField())),
+        child: const MaterialApp(
+          home: Scaffold(
+            body: RecipesSearchField(host: RecipeSearchHost.myRecipes),
+          ),
+        ),
       ),
     );
     // Single pump is enough — initState already set the controller text.
