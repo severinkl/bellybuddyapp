@@ -103,4 +103,28 @@ void main() {
       expect(glutenChip.selected, isFalse);
     });
   });
+
+  group('BbFilterChip', () {
+    testWidgets('a tap asks for the other state', (tester) async {
+      final asked = <bool>[];
+      for (final selected in [false, true]) {
+        await tester.pumpWithProviders(
+          Scaffold(
+            body: BbFilterChip(
+              label: 'Rezepte',
+              selected: selected,
+              onSelected: asked.add,
+            ),
+          ),
+        );
+        expect(
+          tester.widget<FilterChip>(find.byType(FilterChip)).selected,
+          selected,
+        );
+        await tester.tap(find.text('Rezepte'));
+      }
+
+      expect(asked, [true, false]);
+    });
+  });
 }

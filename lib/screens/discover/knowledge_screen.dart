@@ -8,9 +8,9 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../models/knowledge_article.dart';
 import '../../providers/knowledge_provider.dart';
-import '../../services/haptic_service.dart';
 import '../../utils/url_utils.dart';
 import '../../widgets/common/bb_async_state.dart';
+import '../../widgets/common/bb_chip_selector.dart';
 import 'widgets/knowledge_article_tile.dart';
 
 /// Opens [article] in the in-app browser; a SnackBar says when that fails.
@@ -108,10 +108,11 @@ class _KnowledgeScreenState extends ConsumerState<KnowledgeScreen> {
             child: Row(
               children: [
                 for (final c in [null, ...categories]) ...[
-                  _CategoryChip(
-                    category: c,
+                  BbFilterChip(
+                    key: KnowledgeScreen.chipKey(c),
+                    label: c ?? 'Alle',
                     selected: c == category,
-                    onTap: () => setState(() => _category = c),
+                    onSelected: (_) => setState(() => _category = c),
                   ),
                   const SizedBox(width: AppConstants.spacingSm),
                 ],
@@ -139,39 +140,6 @@ class _KnowledgeScreenState extends ConsumerState<KnowledgeScreen> {
             ),
         ],
       ),
-    );
-  }
-}
-
-class _CategoryChip extends StatelessWidget {
-  const _CategoryChip({
-    required this.category,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String? category;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    const chipColor = AppTheme.chipDefault;
-    return FilterChip(
-      key: KnowledgeScreen.chipKey(category),
-      label: Text(category ?? 'Alle'),
-      selected: selected,
-      showCheckmark: false,
-      onSelected: (_) {
-        HapticService.selection();
-        onTap();
-      },
-      selectedColor: chipColor,
-      labelStyle: TextStyle(
-        color: selected ? AppTheme.primaryForeground : AppTheme.foreground,
-        fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
-      ),
-      side: BorderSide(color: selected ? chipColor : AppTheme.border),
     );
   }
 }
