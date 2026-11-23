@@ -13,8 +13,8 @@ import 'recommendation_provider.dart';
 /// Alternativen. Loads them when a user signs in and, while one is signed
 /// in, when the app is back in the foreground ([appForegroundProvider]) and
 /// the last load is [AppConstants.discoverNewsForegroundInterval] old;
-/// pushes, Home and Entdecken call [refresh] themselves. The app root keeps
-/// it alive.
+/// pushes and pull to refresh call [refresh], Entdecken's first load
+/// [ensureLoaded]. The app root keeps it alive.
 class DiscoverNewsNotifier extends Notifier<void> {
   /// The newest load under way for the signed-in user.
   Future<void>? _loading;
@@ -48,6 +48,18 @@ class DiscoverNewsNotifier extends Notifier<void> {
       return;
     }
     unawaited(refresh());
+  }
+
+  /// Entdecken's first load: joins a load under way (the sign-in load the
+  /// app root just started); otherwise loads only while the tips or the
+  /// Alternativen have no value yet (their first load failed).
+  Future<void> ensureLoaded() {
+    final loading = _loading;
+    if (loading != null) return loading;
+    final loaded =
+        ref.read(recommendationProvider).hasValue &&
+        ref.read(ingredientSuggestionProvider).hasValue;
+    return loaded ? Future.value() : refresh();
   }
 
   /// Loads the tip sets and the Alternativen together. Each load is

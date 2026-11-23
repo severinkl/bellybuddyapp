@@ -57,12 +57,14 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     Future.microtask(_load);
   }
 
-  /// Loads tips, alternatives, recipes and articles; [refresh] also reloads
-  /// what is cached (the recipes and the articles).
+  /// Loads tips, alternatives, recipes and articles. The first load keeps
+  /// the tips and Alternativen the app root loaded; [refresh] reloads them,
+  /// and what is cached (the recipes and the articles).
   Future<void> _load({bool refresh = false}) async {
     if (!mounted) return;
+    final news = ref.read(discoverNewsProvider.notifier);
     await Future.wait([
-      ref.read(discoverNewsProvider.notifier).refresh(),
+      if (refresh) news.refresh() else news.ensureLoaded(),
       ref.read(userRecipesProvider.notifier).fetch(force: refresh),
       if (refresh)
         ref.read(knowledgeFeedProvider.notifier).refresh()

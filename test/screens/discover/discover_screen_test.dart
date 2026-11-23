@@ -107,6 +107,8 @@ void main() {
     bool realRecipesScreen = false,
     // null: the profile is still unknown.
     bool? weeklyTips,
+    // Whether the app root keeps the news loaded, as in the app.
+    bool appRoot = false,
   }) async {
     when(
       () => recommendations.fetchByUserId(any()),
@@ -154,10 +156,19 @@ void main() {
           () => _SeededProfile(testUserProfile(weeklyTipsEnabled: weeklyTips)),
         ),
     ];
+    final app = germanRouterApp(router, textScale: textScale);
     await tester.pumpWidget(
       ProviderScope(
         overrides: overrides,
-        child: germanRouterApp(router, textScale: textScale),
+        child: appRoot
+            ? Consumer(
+                builder: (_, ref, child) {
+                  ref.watch(discoverNewsProvider);
+                  return child!;
+                },
+                child: app,
+              )
+            : app,
       ),
     );
     await tester.pumpAndSettle();
@@ -241,6 +252,14 @@ void main() {
     verify(() => recipes.fetchForUser(testUserId)).called(1);
     // Only the Tipps screen marks tips as seen.
     verifyNever(() => recommendations.markAllAsSeen(any()));
+  });
+
+  testWidgets('opened right after sign-in: the tips and Alternativen load '
+      'once, with the app root\'s sign-in load', (tester) async {
+    await pump(tester, appRoot: true);
+
+    verify(() => recommendations.fetchByUserId(testUserId)).called(1);
+    verify(() => ingredients.fetchSuggestionGroups(testUserId)).called(1);
   });
 
   testWidgets('four sections in order', (tester) async {

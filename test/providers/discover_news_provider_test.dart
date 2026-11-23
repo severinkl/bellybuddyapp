@@ -213,6 +213,60 @@ void main() {
     verify(() => alternatives.fetchSuggestionGroups(testUserId)).called(1);
   });
 
+  group('ensureLoaded (Entdecken opening)', () {
+    test('right after sign-in: joins the sign-in load, no other', () async {
+      final signInLoad = Completer<List<IngredientSuggestionGroup>>();
+      when(
+        () => alternatives.fetchSuggestionGroups(any()),
+      ).thenAnswer((_) => signInLoad.future);
+      final c = makeContainer();
+      await settle();
+
+      var loaded = false;
+      unawaited(
+        c
+            .read(discoverNewsProvider.notifier)
+            .ensureLoaded()
+            .then((_) => loaded = true),
+      );
+      await settle();
+      expect(loaded, isFalse);
+
+      signInLoad.complete([testSuggestionGroup()]);
+      await settle();
+      expect(loaded, isTrue);
+      expect(tips.fetchCount, 1);
+      verify(() => alternatives.fetchSuggestionGroups(testUserId)).called(1);
+    });
+
+    test('both loaded: nothing', () async {
+      final c = makeContainer();
+      await settle();
+
+      await c.read(discoverNewsProvider.notifier).ensureLoaded();
+
+      expect(tips.fetchCount, 1);
+      verify(() => alternatives.fetchSuggestionGroups(testUserId)).called(1);
+    });
+
+    test('after a failed first load: loads', () async {
+      var fetches = 0;
+      when(() => alternatives.fetchSuggestionGroups(any())).thenAnswer(
+        (_) => ++fetches == 1
+            ? Future.error(Exception('offline'))
+            : Future.value([testSuggestionGroup()]),
+      );
+      final c = makeContainer();
+      await settle();
+      expect(c.read(ingredientSuggestionProvider).hasValue, isFalse);
+
+      await c.read(discoverNewsProvider.notifier).ensureLoaded();
+
+      expect(fetches, 2);
+      expect(c.read(ingredientSuggestionProvider).value, hasLength(1));
+    });
+  });
+
   group('discoverBadgeProvider', () {
     /// Loads what the container's fakes hold, then reads the badge.
     Future<bool> badgeAfterLoad({
