@@ -24,9 +24,11 @@ class GutFeelingDetail extends StatefulWidget {
 class _GutFeelingDetailState extends State<GutFeelingDetail> {
   int _gutFeelingTab = 0;
 
-  double _calculateEditAvg() {
-    final es = widget.editState!;
-    return gutFeelingAverage(
+  /// The entry as shown: with the edited values while editing.
+  GutFeelingEntry get _shown {
+    final es = widget.editState;
+    if (!widget.isEditing || es == null) return widget.gut;
+    return widget.gut.copyWith(
       bloating: es.bloating,
       gas: es.gas,
       cramps: es.cramps,
@@ -41,17 +43,19 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
 
   @override
   Widget build(BuildContext context) {
-    final rating = calculateGutFeelingRating(widget.gut);
-    final displayAvg = widget.isEditing ? _calculateEditAvg() : rating.avg;
+    final rating = calculateGutFeelingRating(_shown);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Rating pill + numeric score
+        // Rating pill + the strongest symptom it comes from
         Row(
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppConstants.spacing12,
+                vertical: AppConstants.spacing6,
+              ),
               decoration: BoxDecoration(
                 color: rating.color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(AppConstants.radiusRound),
@@ -65,13 +69,15 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
                 ),
               ),
             ),
-            const SizedBox(width: 12),
-            Text(
-              '${displayAvg.toStringAsFixed(1)} / 5.0',
-              style: const TextStyle(
-                fontSize: AppTheme.fontSizeSubtitle,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.mutedForeground,
+            const SizedBox(width: AppConstants.spacing12),
+            Expanded(
+              child: Text(
+                gutFeelingScoreLabel(rating.score),
+                style: const TextStyle(
+                  fontSize: AppTheme.fontSizeBody,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.mutedForeground,
+                ),
               ),
             ),
           ],
@@ -167,27 +173,27 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
         children: [
           _editSlider(
             AppConstants.stimmungLabels[0],
-            es.stress ?? 3,
+            es.stress,
             es.onStressChanged,
           ),
           _editSlider(
             AppConstants.stimmungLabels[1],
-            es.happiness ?? 3,
+            es.happiness,
             es.onHappinessChanged,
           ),
           _editSlider(
             AppConstants.stimmungLabels[2],
-            es.energy ?? 3,
+            es.energy,
             es.onEnergyChanged,
           ),
           _editSlider(
             AppConstants.stimmungLabels[3],
-            es.focus ?? 3,
+            es.focus,
             es.onFocusChanged,
           ),
           _editSlider(
             AppConstants.stimmungLabels[4],
-            es.bodyFeel ?? 3,
+            es.bodyFeel,
             es.onBodyFeelChanged,
           ),
         ],
@@ -221,10 +227,14 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
     );
   }
 
-  Widget _editSlider(String label, int value, ValueChanged<int> onChanged) {
-    final color = getValueColor(value);
+  /// A 1-5 slider for [label]. A null [value] (a mood value never set)
+  /// shows as „nicht angegeben" until the slider is moved.
+  Widget _editSlider(String label, int? value, ValueChanged<int> onChanged) {
+    final color = value == null
+        ? AppTheme.mutedForeground
+        : getValueColor(value);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: AppConstants.spacing12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -236,7 +246,7 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
                 style: const TextStyle(fontSize: AppTheme.fontSizeBodyLG),
               ),
               Text(
-                '$value / 5',
+                value == null ? 'nicht angegeben' : '$value / 5',
                 style: TextStyle(
                   fontSize: AppTheme.fontSizeBodyLG,
                   fontWeight: FontWeight.w600,
@@ -252,7 +262,7 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
               inactiveTrackColor: color.withValues(alpha: 0.2),
             ),
             child: Slider(
-              value: value.toDouble(),
+              value: (value ?? 1).toDouble(),
               min: 1,
               max: 5,
               divisions: 4,

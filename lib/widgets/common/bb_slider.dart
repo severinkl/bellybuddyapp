@@ -5,7 +5,10 @@ import '../../services/haptic_service.dart';
 enum SliderVariant { normal, danger, stool }
 
 class BbSlider extends StatelessWidget {
-  final int value;
+  /// The selected value; null while the user hasn't set one (an optional
+  /// rating): the thumb then rests at [min] in muted colors, and any touch,
+  /// even on [min], sets it.
+  final int? value;
   final int min;
   final int max;
   final ValueChanged<int> onChanged;
@@ -27,6 +30,8 @@ class BbSlider extends StatelessWidget {
   });
 
   Color _getTrackColor() {
+    final value = this.value;
+    if (value == null) return AppTheme.mutedForeground;
     switch (variant) {
       case SliderVariant.danger:
         return AppTheme.dangerSliderColor(value.toDouble(), maxValue: max);
@@ -51,7 +56,7 @@ class BbSlider extends StatelessWidget {
             thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 14),
           ),
           child: Slider(
-            value: value.toDouble(),
+            value: (value ?? min).toDouble(),
             min: min.toDouble(),
             max: max.toDouble(),
             divisions: max - min,
@@ -62,6 +67,14 @@ class BbSlider extends StatelessWidget {
                 onChanged(newValue);
               }
             },
+            // Slider reports no change for a touch on the value it shows,
+            // so an unset slider touched at [min] is set when let go.
+            onChangeEnd: value == null
+                ? (v) {
+                    HapticService.selection();
+                    onChanged(v.round());
+                  }
+                : null,
           ),
         ),
         if (leftLabel != null || centerLabel != null || rightLabel != null)

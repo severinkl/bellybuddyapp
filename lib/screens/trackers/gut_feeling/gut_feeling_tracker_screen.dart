@@ -47,12 +47,12 @@ class _GutFeelingTrackerScreenState
   int _cramps = 1;
   int _fullness = 1;
 
-  // Stimmung values
-  int _stress = 1;
-  int _happiness = 1;
-  int _energy = 1;
-  int _focus = 1;
-  int _bodyFeel = 1;
+  // Stimmung values: optional, null until the user sets them
+  int? _stress;
+  int? _happiness;
+  int? _energy;
+  int? _focus;
+  int? _bodyFeel;
 
   // Page controller for smooth tab transitions
   late final PageController _pageController;
