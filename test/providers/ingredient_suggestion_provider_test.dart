@@ -156,7 +156,7 @@ void main() {
   });
 
   group('IngredientSuggestionNotifier.markAllNewAsSeen', () {
-    test('marks seen in DB but keeps isNew in local state', () async {
+    test('marks the new groups seen, in the list and in the DB', () async {
       final groups = [
         testSuggestionGroup(isNew: true, suggestionIds: ['sug-1']),
         testSuggestionGroup(
@@ -181,8 +181,7 @@ void main() {
 
       verify(() => mockRepo.markAllSeen(['sug-1'])).called(1);
       final updatedGroups = container.read(ingredientSuggestionProvider).value!;
-      expect(updatedGroups[0].isNew, isTrue);
-      expect(updatedGroups[1].isNew, isFalse);
+      expect(updatedGroups.where((g) => g.isNew), isEmpty);
     });
   });
 
@@ -254,12 +253,13 @@ void main() {
       expect(container.read(newIngredientSuggestionCountProvider), 0);
     });
 
-    test('drops to 0 for its listeners once they are marked seen, while the '
-        'groups stay new', () async {
+    test('drops to 0 for its listeners once they are marked seen, before '
+        'the server answers', () async {
       when(
         () => mockRepo.fetchSuggestionGroups(any()),
       ).thenAnswer((_) async => threeGroupsTwoNew());
-      when(() => mockRepo.markAllSeen(any())).thenAnswer((_) async {});
+      final write = Completer<void>();
+      when(() => mockRepo.markAllSeen(any())).thenAnswer((_) => write.future);
 
       final container = makeContainer();
       final counts = <int>[];
@@ -271,12 +271,13 @@ void main() {
       final notifier = container.read(ingredientSuggestionProvider.notifier);
       await notifier.fetchSuggestions();
       await container.pump();
-      await notifier.markAllNewAsSeen();
+      final marking = notifier.markAllNewAsSeen();
       await container.pump();
 
       expect(counts, [0, 2, 0]);
-      final groups = container.read(ingredientSuggestionProvider).value!;
-      expect(groups.where((g) => g.isNew), hasLength(2));
+      write.complete();
+      await marking;
+      expect(counts, [0, 2, 0]);
     });
 
     test('new groups arriving after a mark count again (the „n neu" badge '
@@ -353,6 +354,34 @@ void main() {
       await notifier.markAllNewAsSeen();
 
       expect(container.read(newIngredientSuggestionCountProvider), 2);
+      final groups = container.read(ingredientSuggestionProvider).value!;
+      expect(groups.where((g) => g.isNew), hasLength(2));
     });
+
+    test(
+      'a group with a suggestion added since the mark counts again',
+      () async {
+        var groups = [
+          testSuggestionGroup(suggestionIds: ['sug-1']),
+        ];
+        when(
+          () => mockRepo.fetchSuggestionGroups(any()),
+        ).thenAnswer((_) async => groups);
+        when(() => mockRepo.markAllSeen(any())).thenAnswer((_) async {});
+
+        final container = makeContainer();
+        final notifier = container.read(ingredientSuggestionProvider.notifier);
+        await notifier.fetchSuggestions();
+        await notifier.markAllNewAsSeen();
+        expect(container.read(newIngredientSuggestionCountProvider), 0);
+
+        groups = [
+          testSuggestionGroup(suggestionIds: ['sug-1', 'sug-5']),
+        ];
+        await notifier.fetchSuggestions();
+
+        expect(container.read(newIngredientSuggestionCountProvider), 1);
+      },
+    );
   });
 }

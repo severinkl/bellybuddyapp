@@ -84,6 +84,21 @@ void main() {
       expect(find.text('Zwiebel'), findsOneWidget);
     });
 
+    testWidgets('the groups new on opening keep „Neu" while it is open; '
+        'they count as seen at once', (tester) async {
+      await tester.pumpWithProviders(
+        const IngredientSuggestionsScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(IngredientSuggestionsScreen)),
+      );
+      expect(container.read(newIngredientSuggestionCountProvider), 0);
+      expect(find.text('Neu'), findsOneWidget);
+    });
+
     testWidgets('renders Vorschläge count text after loading', (tester) async {
       await tester.pumpWithProviders(
         const IngredientSuggestionsScreen(),
