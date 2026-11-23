@@ -7,7 +7,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/models/recommendation_item.dart';
@@ -18,7 +17,9 @@ import 'package:belly_buddy/providers/ingredient_suggestion_provider.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
+import 'package:belly_buddy/repositories/knowledge_repository.dart';
 import 'package:belly_buddy/repositories/recommendation_repository.dart';
+import 'package:belly_buddy/screens/discover/widgets/knowledge_article_tile.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/discover/discover_screen.dart';
 import 'package:belly_buddy/screens/recipes/recipes_screen.dart';
@@ -69,12 +70,14 @@ void main() {
   late MockIngredientRepository ingredients;
   late MockUserRecipeRepository recipes;
   late _Launches launches;
+  late FakeKnowledgeRepository knowledge;
 
   setUp(() {
     recommendations = MockRecommendationRepository();
     ingredients = MockIngredientRepository();
     recipes = MockUserRecipeRepository();
     launches = _Launches();
+    knowledge = FakeKnowledgeRepository();
   });
 
   Future<void> pump(
@@ -117,6 +120,7 @@ void main() {
           RoutePaths.ingredientSuggestions,
           if (!realRecipesScreen) RoutePaths.recipes,
           RoutePaths.recipeDetail,
+          RoutePaths.knowledge,
         ]),
       ],
     );
@@ -127,6 +131,7 @@ void main() {
       recommendationRepositoryProvider.overrideWithValue(recommendations),
       ingredientRepositoryProvider.overrideWithValue(ingredients),
       userRecipeRepositoryProvider.overrideWithValue(recipes),
+      knowledgeRepositoryProvider.overrideWithValue(knowledge),
     ];
     await tester.pumpWidget(
       ProviderScope(
@@ -475,24 +480,79 @@ void main() {
     expect(find.text('Rezept hinzufügen'), findsOneWidget);
   });
 
-  testWidgets('Wissen opens the blog', (tester) async {
+  Finder tilesIn(Key section) => inSection(
+    section,
+    find.byWidgetPredicate(
+      (w) => w.key.toString().contains('knowledge_article_'),
+    ),
+  );
+
+  testWidgets('Wissen previews the newest 3 and Alle ›', (tester) async {
     await pump(tester);
 
-    expect(find.text('Wissen rund um die Verdauung'), findsOneWidget);
-    expect(find.text('Artikel aus dem myfodmap-Blog'), findsOneWidget);
-    await tapVisible(tester, find.byKey(DiscoverScreen.knowledgeKey));
+    expect(tilesIn(DiscoverScreen.knowledgeKey), findsNWidgets(3));
+    for (final t in [
+      'Was ist FODMAP?',
+      'Suppe für kalte Tage',
+      'Mein Weg zum Bauchgefühl',
+    ]) {
+      expect(find.text(t), findsOneWidget, reason: t);
+    }
+    expect(find.text('Ballaststoffe verstehen'), findsNothing);
 
-    expect(launches.urls, [Uri.parse(AppConstants.blogUrl)]);
-    expect(launches.modes, [LaunchMode.externalApplication]);
-    expect(AppConstants.blogUrl, 'https://www.myfodmap.at/blog');
+    await tapVisible(
+      tester,
+      inSection(DiscoverScreen.knowledgeKey, find.text('Alle ›')),
+    );
+    expect(find.text('page:${RoutePaths.knowledge}'), findsOneWidget);
   });
 
-  testWidgets('a blog that does not open says so', (tester) async {
-    launches.result = false;
+  testWidgets('an article opens in the in-app browser', (tester) async {
     await pump(tester);
 
-    await tapVisible(tester, find.byKey(DiscoverScreen.knowledgeKey));
-    expect(find.text('Der Blog konnte nicht geöffnet werden.'), findsOneWidget);
+    await tapVisible(
+      tester,
+      find.byKey(KnowledgeArticleTile.keyFor(knowledge.articles.first)),
+    );
+
+    expect(launches.urls, [knowledge.articles.first.link]);
+    expect(launches.modes, [LaunchMode.inAppBrowserView]);
+  });
+
+  testWidgets('no copy and offline', (tester) async {
+    knowledge.fetchError = Exception('offline');
+    await pump(tester);
+
+    expect(find.text('Artikel konnten nicht geladen werden.'), findsOneWidget);
+    expect(
+      inSection(DiscoverScreen.knowledgeKey, find.text('Alle ›')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('no articles', (tester) async {
+    knowledge = FakeKnowledgeRepository(articles: const []);
+    await pump(tester);
+
+    expect(find.text('Gerade keine Artikel.'), findsOneWidget);
+    expect(
+      inSection(DiscoverScreen.knowledgeKey, find.text('Alle ›')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('pull-to-refresh refreshes the feed', (tester) async {
+    await pump(tester);
+    final before = knowledge.fetchCount;
+
+    await tester.fling(
+      find.byType(RefreshIndicator),
+      const Offset(0, 400),
+      1000,
+    );
+    await tester.pumpAndSettle();
+
+    expect(knowledge.fetchCount, before + 1);
   });
 
   testWidgets('pull to refresh reloads all three', (tester) async {

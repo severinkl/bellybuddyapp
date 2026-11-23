@@ -211,9 +211,6 @@ class AppConstants {
   static const String resetPasswordRedirectUrl =
       'https://app.bellybuddy.at/reset-password';
 
-  /// The myfodmap blog: Entdecken's „Wissen" opens it.
-  static const String blogUrl = 'https://www.myfodmap.at/blog';
-
   /// Public privacy policy (Datenschutzerklärung) of the Belly Buddy web app.
   static const String privacyPolicyUrl =
       'https://app.bellybuddy.at/datenschutz';
