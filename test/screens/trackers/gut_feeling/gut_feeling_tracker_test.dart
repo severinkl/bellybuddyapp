@@ -11,6 +11,7 @@ import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 import 'package:belly_buddy/widgets/buddy/buddy_reaction_view.dart';
+import 'package:belly_buddy/widgets/common/bb_button.dart';
 import 'package:belly_buddy/widgets/common/mascot_image.dart';
 import 'package:belly_buddy/config/constants.dart';
 
@@ -193,6 +194,35 @@ void main() {
         find.byType(BuddyReactionView),
       );
       expect(view.sentiment, LogSentiment.bad);
+    });
+
+    testWidgets('on a phone, the Stimmung rows end above Speichern', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1206, 2622); // iPhone 17
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      await pumpTracker(tester, FakeEntryRepository());
+
+      await tester.tap(find.text('Weiter'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump();
+
+      final button = find.ancestor(
+        of: find.text('Speichern'),
+        matching: find.byType(BbButton),
+      );
+      expect(button, findsOneWidget);
+      final buttonTop = tester.getRect(button).top;
+      expect(
+        tester.getRect(find.byType(PageView)).bottom,
+        lessThanOrEqualTo(buttonTop),
+        reason: 'the content ends above the pinned button, not under it',
+      );
+      await tester.ensureVisible(find.text('unwohl'));
+      await tester.pump();
+      expect(tester.getRect(find.text('unwohl')).bottom, lessThan(buttonTop));
     });
   });
 }

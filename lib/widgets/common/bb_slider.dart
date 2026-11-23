@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 import '../../config/app_theme.dart';
+import '../../config/constants.dart';
 import '../../services/haptic_service.dart';
 
 enum SliderVariant { normal, danger, stool }
@@ -28,6 +29,11 @@ class BbSlider extends StatelessWidget {
     this.centerLabel,
     this.rightLabel,
   });
+
+  static const _labelStyle = TextStyle(
+    fontSize: AppTheme.fontSizeCaption,
+    color: AppTheme.mutedForeground,
+  );
 
   Color _getTrackColor() {
     final value = this.value;
@@ -80,29 +86,29 @@ class BbSlider extends StatelessWidget {
         if (leftLabel != null || centerLabel != null || rightLabel != null)
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
+            // Labels wrap instead of overflowing on narrow screens or with
+            // larger text.
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  leftLabel ?? '',
-                  style: const TextStyle(
-                    fontSize: AppTheme.fontSizeCaption,
-                    color: AppTheme.mutedForeground,
-                  ),
-                ),
-                if (centerLabel != null)
-                  Text(
-                    centerLabel!,
-                    style: const TextStyle(
-                      fontSize: AppTheme.fontSizeCaption,
-                      color: AppTheme.mutedForeground,
+                Flexible(child: Text(leftLabel ?? '', style: _labelStyle)),
+                if (centerLabel != null) ...[
+                  const SizedBox(width: AppConstants.spacingXs),
+                  Flexible(
+                    child: Text(
+                      centerLabel!,
+                      style: _labelStyle,
+                      textAlign: TextAlign.center,
                     ),
                   ),
-                Text(
-                  rightLabel ?? '',
-                  style: const TextStyle(
-                    fontSize: AppTheme.fontSizeCaption,
-                    color: AppTheme.mutedForeground,
+                ],
+                const SizedBox(width: AppConstants.spacingXs),
+                Flexible(
+                  child: Text(
+                    rightLabel ?? '',
+                    style: _labelStyle,
+                    textAlign: TextAlign.end,
                   ),
                 ),
               ],
