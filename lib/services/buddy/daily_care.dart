@@ -5,7 +5,23 @@ import '../../utils/date_format_utils.dart';
 
 /// The Buddy's four daily needs, one per tracker; they make up the
 /// dashboard's care ring.
-enum CareNeed { food, drink, gutFeeling, toilet }
+enum CareNeed {
+  food('🍽', 'Essen', 'Mahlzeit eintragen'),
+  drink('💧', 'Trinken', 'Getränk eintragen'),
+  gutFeeling('🙂', 'Bauchgefühl', 'Bauchgefühl eintragen'),
+  toilet('🧻', 'Klo', 'Klo-Eintrag hinzufügen');
+
+  const CareNeed(this.emoji, this.label, this.logLabel);
+
+  /// Its icon in the care ring and the „Heute" list.
+  final String emoji;
+
+  /// Its name in the care ring.
+  final String label;
+
+  /// Logging it, as an action („Getränk eintragen").
+  final String logLabel;
+}
 
 /// The meal the time of day asks for.
 enum MealSlot { breakfast, lunch, snack, dinner }

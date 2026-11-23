@@ -205,38 +205,25 @@ class _NeedBubble extends StatelessWidget {
   /// The glow's spread at the pulse's low point, as a share of its peak.
   static const _glowMin = 0.6;
 
-  static const _hints = {
-    CareNeed.food: 'Mahlzeit eintragen',
-    CareNeed.drink: 'Getränk eintragen',
-    CareNeed.gutFeeling: 'Bauchgefühl eintragen',
-    CareNeed.toilet: 'Klo-Eintrag hinzufügen',
-  };
-
-  (String, String) get _value => switch (need) {
-    CareNeed.food => ('🍽 ${care.meals}/${DailyCare.mealGoal}', 'Essen'),
-    CareNeed.drink => ('💧 ${care.glasses}/${DailyCare.glassGoal}', 'Trinken'),
-    CareNeed.gutFeeling => (
-      care.isMet(CareNeed.gutFeeling) ? '🙂 ✓' : '🙂 –',
-      'Bauchgefühl',
+  /// Today's count as shown after the need's emoji („2/3") and as spoken
+  /// after its label („2 von 3 Mahlzeiten").
+  (String, String) get _count => switch (need) {
+    CareNeed.food => (
+      '${care.meals}/${DailyCare.mealGoal}',
+      '${care.meals} von ${DailyCare.mealGoal} Mahlzeiten',
     ),
-    CareNeed.toilet => (
-      care.toilets > 0 ? '🧻 ${care.toilets}×' : '🧻 –',
-      'Klo',
+    CareNeed.drink => (
+      '${care.glasses}/${DailyCare.glassGoal}',
+      '${care.glasses} von ${DailyCare.glassGoal} Gläsern',
     ),
-  };
-
-  String get _semantics => switch (need) {
-    CareNeed.food =>
-      'Essen: ${care.meals} von ${DailyCare.mealGoal} Mahlzeiten',
-    CareNeed.drink =>
-      'Trinken: ${care.glasses} von ${DailyCare.glassGoal} Gläsern',
     CareNeed.gutFeeling =>
       care.isMet(CareNeed.gutFeeling)
-          ? 'Bauchgefühl: heute eingetragen'
-          : 'Bauchgefühl: heute noch offen',
-    CareNeed.toilet =>
-      'Klo: ${care.toilets} ${care.toilets == 1 ? 'Eintrag' : 'Einträge'} '
-          'heute',
+          ? ('✓', 'heute eingetragen')
+          : ('–', 'heute noch offen'),
+    CareNeed.toilet => (
+      care.toilets > 0 ? '${care.toilets}×' : '–',
+      '${care.toilets} ${care.toilets == 1 ? 'Eintrag' : 'Einträge'} heute',
+    ),
   };
 
   /// 0..1 along the pulse; 1 (full glow) without one.
@@ -269,7 +256,7 @@ class _NeedBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (value, label) = _value;
+    final (count, spoken) = _count;
     final content = Column(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
@@ -277,7 +264,7 @@ class _NeedBubble extends StatelessWidget {
         FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(
-            value,
+            '${need.emoji} $count',
             maxLines: 1,
             style: const TextStyle(
               fontSize: AppTheme.fontSizeSubtitle,
@@ -290,7 +277,7 @@ class _NeedBubble extends StatelessWidget {
         FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(
-            label,
+            need.label,
             maxLines: 1,
             style: const TextStyle(
               fontSize: AppTheme.fontSizeCaption,
@@ -317,8 +304,8 @@ class _NeedBubble extends StatelessWidget {
         : null;
     return Semantics(
       button: true,
-      label: _semantics,
-      hint: _hints[need],
+      label: '${need.label}: $spoken',
+      hint: need.logLabel,
       excludeSemantics: true,
       onTap: onTap,
       child: GestureDetector(

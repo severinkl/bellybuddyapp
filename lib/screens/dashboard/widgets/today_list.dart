@@ -7,36 +7,22 @@ import '../../../config/constants.dart';
 import '../../../providers/diary_provider.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../router/route_names.dart';
-import '../../../services/buddy/buddy_mood_logic.dart';
+import '../../../services/buddy/daily_care.dart';
 import '../../../utils/date_format_utils.dart';
+import '../../../utils/drink_helpers.dart';
 import '../../../utils/gut_feeling_rating.dart';
 import 'buddy_hero.dart';
 
 /// One row of the dashboard's „Heute" list.
 class TodayLogItem {
-  const TodayLogItem(this.at, this.kind, this.label);
+  const TodayLogItem(this.at, this.need, this.label);
 
   /// Local time of the entry.
   final DateTime at;
-  final EntryKind kind;
+
+  /// The tracker the entry belongs to.
+  final CareNeed need;
   final String label;
-
-  String get icon => switch (kind) {
-    EntryKind.meal => '🍽',
-    EntryKind.drink => '💧',
-    EntryKind.gutFeeling => '🙂',
-    EntryKind.toilet => '🧻',
-  };
-}
-
-/// "250 ml" below a litre, "1,5 l" from a litre on.
-String _amount(int ml) {
-  if (ml < 1000) return '$ml ml';
-  final litres = ml / 1000;
-  final text = litres == litres.roundToDouble()
-      ? litres.toStringAsFixed(0)
-      : litres.toStringAsFixed(1).replaceAll('.', ',');
-  return '$text l';
 }
 
 /// Today's (local) entries of [s], oldest first, each with a short label.
@@ -48,26 +34,26 @@ List<TodayLogItem> todayLogItems(EntriesState s, DateTime now) {
       if (isToday(e.trackedAt))
         TodayLogItem(
           e.trackedAt.toLocal(),
-          EntryKind.meal,
+          CareNeed.food,
           e.title.trim().isEmpty ? 'Mahlzeit' : e.title.trim(),
         ),
     for (final e in s.drinks)
       if (isToday(e.trackedAt))
         TodayLogItem(
           e.trackedAt.toLocal(),
-          EntryKind.drink,
-          '${e.drinkName} · ${_amount(e.amountMl)}',
+          CareNeed.drink,
+          '${e.drinkName} · ${DrinkHelpers.formatAmount(e.amountMl)}',
         ),
     for (final e in s.gutFeelings)
       if (isToday(e.trackedAt))
         TodayLogItem(
           e.trackedAt.toLocal(),
-          EntryKind.gutFeeling,
+          CareNeed.gutFeeling,
           'Bauchgefühl: ${calculateGutFeelingRating(e).level.label}',
         ),
     for (final e in s.toiletEntries)
       if (isToday(e.trackedAt))
-        TodayLogItem(e.trackedAt.toLocal(), EntryKind.toilet, 'Klo-Eintrag'),
+        TodayLogItem(e.trackedAt.toLocal(), CareNeed.toilet, 'Klo-Eintrag'),
   ]..sort((a, b) => a.at.compareTo(b.at));
 }
 
@@ -189,7 +175,7 @@ class _TodayRow extends StatelessWidget {
             ),
             const SizedBox(width: AppConstants.spacingXs),
             Text(
-              item.icon,
+              item.need.emoji,
               style: const TextStyle(fontSize: AppTheme.fontSizeBodyLG),
             ),
             const SizedBox(width: AppConstants.spacingSm),

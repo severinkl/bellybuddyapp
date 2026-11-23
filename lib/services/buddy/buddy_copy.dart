@@ -138,16 +138,19 @@ class BuddyCopy {
     ],
   };
 
-  /// The dashboard's next-action button.
-  static const careButton = <CareAction, String>{
-    CareAction.breakfast: '🍳 Frühstück eintragen',
-    CareAction.lunch: '🍝 Mittagessen eintragen',
-    CareAction.snack: '🍎 Snack eintragen',
-    CareAction.dinner: '🍲 Abendessen eintragen',
-    CareAction.drink: '💧 Getränk eintragen',
-    CareAction.gutFeeling: '🙂 Bauchgefühl eintragen',
-    CareAction.feed: '🍎 Füttern',
+  /// The dashboard's next-action button: the meal the time of day asks
+  /// for, logging a need („💧 Getränk eintragen") or Füttern.
+  static String careButton(CareAction action) => switch (action) {
+    CareAction.breakfast => '🍳 Frühstück eintragen',
+    CareAction.lunch => '🍝 Mittagessen eintragen',
+    CareAction.snack => '🍎 Snack eintragen',
+    CareAction.dinner => '🍲 Abendessen eintragen',
+    CareAction.drink => _log(CareNeed.drink),
+    CareAction.gutFeeling => _log(CareNeed.gutFeeling),
+    CareAction.feed => '🍎 Füttern',
   };
+
+  static String _log(CareNeed need) => '${need.emoji} ${need.logLabel}';
 
   /// Sleepy lines for late evening / night (hour < 5 or >= 10).
   static const sleepyNight = [

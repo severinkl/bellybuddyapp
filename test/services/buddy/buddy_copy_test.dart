@@ -31,7 +31,7 @@ void main() {
 
   test('every care action has a button label and at least 2 lines', () {
     for (final a in CareAction.values) {
-      expect(BuddyCopy.careButton[a], isNotNull, reason: '$a');
+      expect(BuddyCopy.careButton(a), isNotEmpty, reason: '$a');
       expect(BuddyCopy.care[a]!.length, greaterThanOrEqualTo(2), reason: '$a');
     }
   });

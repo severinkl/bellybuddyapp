@@ -602,7 +602,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
         AppConstants.gap12,
         BbButton(
           tapKey: BuddyHero.actionKey,
-          label: BuddyCopy.careButton[action]!,
+          label: BuddyCopy.careButton(action),
           onPressed: () => _open(action.need ?? CareNeed.food),
         ),
       ],

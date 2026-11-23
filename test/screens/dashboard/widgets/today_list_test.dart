@@ -10,7 +10,7 @@ import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/today_list.dart';
-import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
+import 'package:belly_buddy/services/buddy/daily_care.dart';
 
 import '../../../helpers/fixtures.dart';
 
@@ -55,11 +55,11 @@ void main() {
         now,
       );
 
-      expect(items.map((i) => i.kind), [
-        EntryKind.meal,
-        EntryKind.gutFeeling,
-        EntryKind.drink,
-        EntryKind.toilet,
+      expect(items.map((i) => i.need), [
+        CareNeed.food,
+        CareNeed.gutFeeling,
+        CareNeed.drink,
+        CareNeed.toilet,
       ]);
       expect(items.first.label, 'Haferbrei mit Banane');
       expect(items[2].label, endsWith('· 500 ml'));
@@ -79,7 +79,7 @@ void main() {
         ),
         now,
       );
-      expect(items.single.label, endsWith('· 1,5 l'));
+      expect(items.single.label, endsWith('· 1.5 L'));
     });
   });
 
