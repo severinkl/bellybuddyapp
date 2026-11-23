@@ -198,6 +198,44 @@ void main() {
       handle.dispose();
     });
 
+    for (final (phone, size, padding) in [
+      ('375×667', const Size(375, 667), FakeViewPadding.zero),
+      // A home-indicator phone: the bar loses its extra bottom space.
+      ('402×874', const Size(402, 874), const FakeViewPadding(bottom: 34)),
+    ]) {
+      for (final scale in [1.6, 2.0, 3.0]) {
+        testWidgets('fits a $phone phone at accessibility text scale $scale: '
+            'no overflow, every label whole', (tester) async {
+          tester.view
+            ..physicalSize = size
+            ..devicePixelRatio = 1
+            ..padding = padding;
+          addTearDown(tester.view.reset);
+          tester.platformDispatcher.textScaleFactorTestValue = scale;
+          addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+          await _pumpNav(tester);
+          expect(tester.takeException(), isNull);
+
+          // Each tab once, so each label is drawn active (bold) too.
+          for (final key in [
+            BbBottomNav.navDiaryKey,
+            BbBottomNav.navDiscoverKey,
+            BbBottomNav.navMeKey,
+            BbBottomNav.navHomeKey,
+          ]) {
+            await _tap(tester, key);
+            expect(tester.takeException(), isNull, reason: '$key');
+          }
+          final bar = tester.getRect(find.byType(BbBottomNav));
+          for (final label in ['Home', 'Tagebuch', 'Eintragen', 'Entdecken']) {
+            final rect = tester.getRect(find.text(label));
+            expect(rect.bottom, lessThanOrEqualTo(bar.bottom), reason: label);
+            expect(rect.top, greaterThanOrEqualTo(bar.top), reason: label);
+          }
+        });
+      }
+    }
+
     testWidgets('before Home loaded anything, the plus suggests nothing', (
       tester,
     ) async {

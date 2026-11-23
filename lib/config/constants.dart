@@ -255,6 +255,10 @@ class AppConstants {
   // Bottom nav
   static const double bottomNavCenterButtonSize = 80.0;
 
+  /// The largest text scale the bottom bar's labels follow; above it they
+  /// stay this size (like iOS's own tab bars), so five slots keep fitting.
+  static const double bottomNavMaxTextScale = 1.3;
+
   // Durations
   static const Duration pressScaleDuration = Duration(milliseconds: 100);
   static const Duration successOverlayDuration = Duration(milliseconds: 1500);

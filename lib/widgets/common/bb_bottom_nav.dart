@@ -63,75 +63,82 @@ class BbBottomNav extends ConsumerWidget {
           ),
           child: SafeArea(
             top: false,
-            child: SizedBox(
-              height: 64 + (bottomPadding > 0 ? 0 : 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: _NavItem(
-                      tapKey: navHomeKey,
-                      icon: Icons.home_outlined,
-                      activeIcon: Icons.home,
-                      label: 'Home',
-                      isActive: currentIndex == _homeBranch,
-                      onTap: () => goBranch(_homeBranch),
-                    ),
-                  ),
-                  Expanded(
-                    child: KeyedSubtree(
-                      key: TutorialKeys.tagebuch,
+            // A fixed-height bar: its labels follow large text only up to a
+            // point, and shrink to fit what is left of their slot.
+            child: MediaQuery.withClampedTextScaling(
+              maxScaleFactor: AppConstants.bottomNavMaxTextScale,
+              child: SizedBox(
+                height: 64 + (bottomPadding > 0 ? 0 : 12),
+                child: Row(
+                  children: [
+                    Expanded(
                       child: _NavItem(
-                        tapKey: navDiaryKey,
-                        icon: Icons.menu_book_outlined,
-                        activeIcon: Icons.menu_book,
-                        label: 'Tagebuch',
-                        isActive: currentIndex == _diaryBranch,
+                        tapKey: navHomeKey,
+                        icon: Icons.home_outlined,
+                        activeIcon: Icons.home,
+                        label: 'Home',
+                        isActive: currentIndex == _homeBranch,
+                        onTap: () => goBranch(_homeBranch),
+                      ),
+                    ),
+                    Expanded(
+                      child: KeyedSubtree(
+                        key: TutorialKeys.tagebuch,
+                        child: _NavItem(
+                          tapKey: navDiaryKey,
+                          icon: Icons.menu_book_outlined,
+                          activeIcon: Icons.menu_book,
+                          label: 'Tagebuch',
+                          isActive: currentIndex == _diaryBranch,
+                          onTap: () {
+                            // The tab always opens on today.
+                            ref
+                                .read(diaryDateProvider.notifier)
+                                .set(
+                                  startOfDay(ref.read(buddyClockProvider)()),
+                                );
+                            goBranch(_diaryBranch);
+                          },
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: _CenterButton(
+                        tapKey: centerButtonKey,
                         onTap: () {
-                          // The tab always opens on today.
-                          ref
-                              .read(diaryDateProvider.notifier)
-                              .set(startOfDay(ref.read(buddyClockProvider)()));
-                          goBranch(_diaryBranch);
+                          HapticService.light();
+                          _openLogSheet(context, ref);
                         },
                       ),
                     ),
-                  ),
-                  Expanded(
-                    child: _CenterButton(
-                      tapKey: centerButtonKey,
-                      onTap: () {
-                        HapticService.light();
-                        _openLogSheet(context, ref);
-                      },
-                    ),
-                  ),
-                  Expanded(
-                    child: KeyedSubtree(
-                      key: TutorialKeys.entdecken,
-                      child: _NavItem(
-                        tapKey: navDiscoverKey,
-                        icon: Icons.explore_outlined,
-                        activeIcon: Icons.explore,
-                        label: 'Entdecken',
-                        isActive: currentIndex == _discoverBranch,
-                        onTap: () => goBranch(_discoverBranch),
+                    Expanded(
+                      child: KeyedSubtree(
+                        key: TutorialKeys.entdecken,
+                        child: _NavItem(
+                          tapKey: navDiscoverKey,
+                          icon: Icons.explore_outlined,
+                          activeIcon: Icons.explore,
+                          label: 'Entdecken',
+                          isActive: currentIndex == _discoverBranch,
+                          onTap: () => goBranch(_discoverBranch),
+                        ),
                       ),
                     ),
-                  ),
-                  Expanded(
-                    child: KeyedSubtree(
-                      key: TutorialKeys.ich,
-                      child: _NavItem(
-                        tapKey: navMeKey,
-                        icon: Icons.person_outline,
-                        activeIcon: Icons.person,
-                        label: 'Ich',
-                        isActive: currentIndex == _meBranch,
-                        onTap: () => goBranch(_meBranch),
+                    Expanded(
+                      child: KeyedSubtree(
+                        key: TutorialKeys.ich,
+                        child: _NavItem(
+                          tapKey: navMeKey,
+                          icon: Icons.person_outline,
+                          activeIcon: Icons.person,
+                          label: 'Ich',
+                          isActive: currentIndex == _meBranch,
+                          onTap: () => goBranch(_meBranch),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -230,14 +237,16 @@ class _NavItem extends StatelessWidget {
             size: 32,
           ),
           AppConstants.gap4,
-          _BarLabel(
-            label,
-            style: TextStyle(
-              fontSize: AppTheme.fontSizeBody,
-              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-              color: isActive
-                  ? AppTheme.foreground
-                  : AppTheme.foreground.withValues(alpha: 0.6),
+          Flexible(
+            child: _BarLabel(
+              label,
+              style: TextStyle(
+                fontSize: AppTheme.fontSizeBody,
+                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+                color: isActive
+                    ? AppTheme.foreground
+                    : AppTheme.foreground.withValues(alpha: 0.6),
+              ),
             ),
           ),
         ],
@@ -310,7 +319,8 @@ class _CenterButton extends StatelessWidget {
 }
 
 /// A slot's label: one line, shrunk to fit its slot when needed (five slots
-/// on a narrow phone with large text).
+/// on a narrow phone with large text, or a short bar above the home
+/// indicator).
 class _BarLabel extends StatelessWidget {
   const _BarLabel(this.label, {required this.style});
 
