@@ -147,14 +147,25 @@ void main() {
   group('mealSlotAt', () {
     test('Frühstück until 10:30, Mittag until 15:00, Snack until 17:00, '
         'then Abendessen', () {
-      expect(mealSlotAt(DateTime(2026, 11, 23, 6)), MealSlot.breakfast);
-      expect(mealSlotAt(DateTime(2026, 11, 23, 10, 29)), MealSlot.breakfast);
-      expect(mealSlotAt(DateTime(2026, 11, 23, 10, 30)), MealSlot.lunch);
-      expect(mealSlotAt(DateTime(2026, 11, 23, 14, 59)), MealSlot.lunch);
-      expect(mealSlotAt(DateTime(2026, 11, 23, 15)), MealSlot.snack);
-      expect(mealSlotAt(DateTime(2026, 11, 23, 16, 59)), MealSlot.snack);
-      expect(mealSlotAt(DateTime(2026, 11, 23, 17)), MealSlot.dinner);
-      expect(mealSlotAt(DateTime(2026, 11, 23, 23)), MealSlot.dinner);
+      expect(mealSlotAt(DateTime(2026, 11, 23, 6)), CareAction.breakfast);
+      expect(mealSlotAt(DateTime(2026, 11, 23, 10, 29)), CareAction.breakfast);
+      expect(mealSlotAt(DateTime(2026, 11, 23, 10, 30)), CareAction.lunch);
+      expect(mealSlotAt(DateTime(2026, 11, 23, 14, 59)), CareAction.lunch);
+      expect(mealSlotAt(DateTime(2026, 11, 23, 15)), CareAction.snack);
+      expect(mealSlotAt(DateTime(2026, 11, 23, 16, 59)), CareAction.snack);
+      expect(mealSlotAt(DateTime(2026, 11, 23, 17)), CareAction.dinner);
+      expect(mealSlotAt(DateTime(2026, 11, 23, 23)), CareAction.dinner);
+    });
+  });
+
+  group('DayParts', () {
+    test('by day from 05:00 until 22:00', () {
+      bool at(int h, [int m = 0]) =>
+          DayParts.isDay(DateTime(2026, 11, 23, h, m));
+      expect(at(4, 59), isFalse);
+      expect(at(5), isTrue);
+      expect(at(21, 59), isTrue);
+      expect(at(22), isFalse);
     });
   });
 

@@ -23,9 +23,6 @@ enum CareNeed {
   final String logLabel;
 }
 
-/// The meal the time of day asks for.
-enum MealSlot { breakfast, lunch, snack, dinner }
-
 /// What the dashboard suggests logging next ([nextCareAction]).
 enum CareAction {
   breakfast(CareNeed.food),
@@ -170,23 +167,53 @@ class DailyCare {
   bool isMet(CareNeed need) => progress(need) >= 1;
 }
 
-/// Frühstück until 10:30, Mittagessen until 15:00, a snack until 17:00,
-/// then Abendessen.
-MealSlot mealSlotAt(DateTime now) {
-  final minutes = now.hour * 60 + now.minute;
-  if (minutes < 10 * 60 + 30) return MealSlot.breakfast;
-  if (minutes < 15 * 60) return MealSlot.lunch;
-  if (minutes < 17 * 60) return MealSlot.snack;
-  return MealSlot.dinner;
+/// The Buddy's day: where its parts start, in minutes after local
+/// midnight.
+abstract final class DayParts {
+  /// Mittagessen is asked for from here (Frühstück before), and a meal
+  /// from here on counts for lunch and the afternoon snack.
+  static const lunchFrom = 10 * 60 + 30;
+
+  /// The afternoon snack.
+  static const snackFrom = 15 * 60;
+
+  /// Abendessen.
+  static const dinnerFrom = 17 * 60;
+
+  /// The dashboard Buddy's resting line names his next need by day, from
+  /// [dayFrom] until [nightFrom].
+  static const dayFrom = 5 * 60;
+  static const nightFrom = 22 * 60;
+
+  /// [t]'s minutes after midnight.
+  static int minuteOf(DateTime t) => t.hour * 60 + t.minute;
+
+  /// Whether [t] is by day ([dayFrom] until [nightFrom]).
+  static bool isDay(DateTime t) {
+    final minute = minuteOf(t);
+    return minute >= dayFrom && minute < nightFrom;
+  }
 }
 
-/// Since when a meal counts for [slot] on [now]'s day: breakfast from
-/// midnight, lunch and the afternoon snack from 10:30, dinner from 17:00.
-DateTime _slotStart(MealSlot slot, DateTime now) => switch (slot) {
-  MealSlot.breakfast => DateTime(now.year, now.month, now.day),
-  MealSlot.lunch ||
-  MealSlot.snack => DateTime(now.year, now.month, now.day, 10, 30),
-  MealSlot.dinner => DateTime(now.year, now.month, now.day, 17),
+/// The meal the time of day asks for: Frühstück until
+/// [DayParts.lunchFrom], Mittagessen until [DayParts.snackFrom], a snack
+/// until [DayParts.dinnerFrom], then Abendessen.
+CareAction mealSlotAt(DateTime now) {
+  final minute = DayParts.minuteOf(now);
+  if (minute < DayParts.lunchFrom) return CareAction.breakfast;
+  if (minute < DayParts.snackFrom) return CareAction.lunch;
+  if (minute < DayParts.dinnerFrom) return CareAction.snack;
+  return CareAction.dinner;
+}
+
+/// Since when (minutes after midnight) a meal counts for each meal slot:
+/// breakfast from midnight, lunch and the afternoon snack from
+/// [DayParts.lunchFrom], dinner from [DayParts.dinnerFrom].
+const _mealCountsFrom = {
+  CareAction.breakfast: 0,
+  CareAction.lunch: DayParts.lunchFrom,
+  CareAction.snack: DayParts.lunchFrom,
+  CareAction.dinner: DayParts.dinnerFrom,
 };
 
 /// The next thing to log: the meal the time of day asks for until a meal
@@ -195,16 +222,17 @@ DateTime _slotStart(MealSlot slot, DateTime now) => switch (slot) {
 /// Klo never drives it.
 CareAction nextCareAction(DailyCare care, DateTime now) {
   final slot = mealSlotAt(now);
+  final from = _mealCountsFrom[slot]!;
+  final slotStart = DateTime(
+    now.year,
+    now.month,
+    now.day,
+    from ~/ 60,
+    from % 60,
+  );
   final last = care.lastMealAt;
-  final ateThisSlot = last != null && !last.isBefore(_slotStart(slot, now));
-  if (!ateThisSlot && care.meals < DailyCare.mealGoal) {
-    return switch (slot) {
-      MealSlot.breakfast => CareAction.breakfast,
-      MealSlot.lunch => CareAction.lunch,
-      MealSlot.snack => CareAction.snack,
-      MealSlot.dinner => CareAction.dinner,
-    };
-  }
+  final ateThisSlot = last != null && !last.isBefore(slotStart);
+  if (!ateThisSlot && care.meals < DailyCare.mealGoal) return slot;
   if (!care.isMet(CareNeed.drink)) return CareAction.drink;
   if (!care.isMet(CareNeed.gutFeeling)) return CareAction.gutFeeling;
   return CareAction.feed;

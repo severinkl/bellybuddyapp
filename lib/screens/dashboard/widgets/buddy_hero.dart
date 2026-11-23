@@ -96,10 +96,6 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   static const _saverEarnedLine = 'Du hast einen Streak-Saver verdient! 🛡';
   static const _newGoalTitle = "Wir haben's geschafft! Neues Ziel?";
 
-  /// His resting line names his next need from this hour until [_nightFrom].
-  static const _dayFrom = 5;
-  static const _nightFrom = 22;
-
   late final BuddyController _buddy;
   late final AppLifecycleListener _lifecycle;
   final math.Random _rnd = math.Random();
@@ -262,7 +258,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     final status = ref.read(buddyProvider).value;
     final name = status?.state.name ?? 'Buddy';
     final now = _now();
-    final byDay = now.hour >= _dayFrom && now.hour < _nightFrom;
+    final byDay = DayParts.isDay(now);
     const moodOnly = {BuddyMood.empathetic, BuddyMood.inLove, BuddyMood.asleep};
     if (byDay && !moodOnly.contains(mood)) {
       return BuddyCopy.fill(
