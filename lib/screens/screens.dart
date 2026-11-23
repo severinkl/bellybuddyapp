@@ -6,6 +6,7 @@ export 'not_found_screen.dart';
 export 'diary/diary_screen.dart';
 export 'health_consent/health_consent_screen.dart';
 export 'ingredient_suggestions/ingredient_suggestions_screen.dart';
+export 'loading_screen.dart';
 export 'recommendations/recommendations_screen.dart';
 export 'recipes/recipe_detail_screen.dart';
 export 'recipes/recipe_editor_screen.dart';

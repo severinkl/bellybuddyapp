@@ -19,8 +19,12 @@ import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/router/app_router.dart';
 import 'package:belly_buddy/router/route_names.dart';
+import 'package:belly_buddy/screens/auth/auth_screen.dart';
 import 'package:belly_buddy/screens/buddy/buddy_onboarding_screen.dart';
+import 'package:belly_buddy/screens/dashboard/dashboard_screen.dart';
+import 'package:belly_buddy/screens/diary/diary_screen.dart';
 import 'package:belly_buddy/screens/health_consent/health_consent_screen.dart';
+import 'package:belly_buddy/screens/loading_screen.dart';
 import 'package:belly_buddy/screens/recipes/recipe_editor_screen.dart';
 import 'package:belly_buddy/screens/trackers/drink/drink_tracker_screen.dart';
 import 'package:belly_buddy/screens/trackers/meal/meal_tracker_screen.dart';
@@ -40,7 +44,9 @@ import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
 
 /// Pared-down app root: owns the upgrade decision like [BellyBuddyApp] and
-/// loads the profile on start when signed in, without the splash overlay.
+/// loads the profile on start when signed in (and on sign-in, resets it on
+/// sign-out, listening after the router like the app), without the splash
+/// overlay.
 class _GateTestHost extends ConsumerStatefulWidget {
   const _GateTestHost();
 
@@ -61,6 +67,10 @@ class _GateTestHostState extends ConsumerState<_GateTestHost> {
   Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
     listenForUpgradeDecision(ref);
+    ref.listen<bool>(isAuthenticatedProvider, (_, signedIn) {
+      final profile = ref.read(profileProvider.notifier);
+      signedIn ? profile.fetchProfile() : profile.reset();
+    });
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       routerConfig: router,
@@ -89,8 +99,9 @@ List<Override> _overrides({
   required FakeProfileRepository profiles,
   required FakeBuddyRepository buddies,
   UpgradeDecision decision = UpgradeDecision.ok,
+  FakeAuthRepository? auth,
 }) => [
-  authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
+  authRepositoryProvider.overrideWithValue(auth ?? FakeAuthRepository()),
   profileRepositoryProvider.overrideWithValue(profiles),
   buddyRepositoryProvider.overrideWithValue(buddies),
   entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
@@ -141,7 +152,9 @@ Future<ProviderContainer> _pumpHost(
   required FakeProfileRepository profiles,
   required FakeBuddyRepository buddies,
   UpgradeDecision decision = UpgradeDecision.ok,
+  FakeAuthRepository? auth,
   Size screen = const Size(400, 860),
+  bool settle = true,
 }) async {
   tester.view
     ..physicalSize = screen
@@ -154,6 +167,7 @@ Future<ProviderContainer> _pumpHost(
       profiles: profiles,
       buddies: buddies,
       decision: decision,
+      auth: auth,
     ),
   );
   await tester.pumpWidget(
@@ -162,8 +176,49 @@ Future<ProviderContainer> _pumpHost(
       child: const _GateTestHost(),
     ),
   );
-  await tester.pumpAndSettle();
+  if (settle) {
+    await tester.pumpAndSettle();
+  } else {
+    await _pumpFrames(tester);
+  }
   return container;
+}
+
+/// A few frames over [total], without waiting for anything to settle (a
+/// held fetch never does).
+Future<void> _pumpFrames(
+  WidgetTester tester, {
+  Duration total = const Duration(milliseconds: 600),
+}) async {
+  const frame = Duration(milliseconds: 50);
+  for (var t = Duration.zero; t < total; t += frame) {
+    await tester.pump(frame);
+  }
+}
+
+/// Not a single frame of the dashboard (or the diary) so far.
+void _expectNoShell(WidgetTester tester) {
+  expect(find.byType(DashboardScreen, skipOffstage: false), findsNothing);
+  expect(find.byType(DiaryScreen, skipOffstage: false), findsNothing);
+}
+
+/// The auth screen's social buttons need more width than 400 px in the
+/// test font.
+const _authScreenSize = Size(1080, 2400);
+
+/// Signs in through the auth screen („Ich habe schon ein Konto").
+Future<void> _signInViaAuthScreen(
+  WidgetTester tester,
+  ProviderContainer container,
+) async {
+  container.read(routerProvider).go(RoutePaths.auth);
+  await _pumpFrames(tester);
+  await tester.enterText(
+    find.byKey(AuthScreen.emailFieldKey),
+    'sevi@example.com',
+  );
+  await tester.enterText(find.byKey(AuthScreen.passwordFieldKey), 'geheim123');
+  await tester.tap(find.byKey(AuthScreen.submitLoginButtonKey));
 }
 
 Future<void> _tap(WidgetTester tester, Finder finder) async {
@@ -177,6 +232,17 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
 /// rebuilds on a tick, so read it from the controller.)
 String? _bubble(WidgetTester tester) =>
     tester.widget<AnimatedBuddy>(find.byType(AnimatedBuddy)).controller.bubble;
+
+/// A profile repository whose reads wait for [hold] while it is set.
+class _HeldProfiles extends FakeProfileRepository {
+  Completer<void>? hold;
+
+  @override
+  Future<UserProfile?> getProfile(String userId) async {
+    if (hold case final hold?) await hold.future;
+    return super.getProfile(userId);
+  }
+}
 
 void main() {
   setUp(() {
@@ -446,6 +512,155 @@ void main() {
 
       expect(_currentPath(container), RoutePaths.dashboard);
       expect(find.text(_optInTitle), findsNothing);
+    });
+  });
+
+  group('no dashboard before the gate knows', () {
+    testWidgets('app start with a session: nothing of the shell while the '
+        'Buddy loads, then the onboarding', (tester) async {
+      final buddies = FakeBuddyRepository()..fetchHold = Completer<void>();
+      final container = await _pumpHost(
+        tester,
+        profiles: _profilesWith(testUserProfile()),
+        buddies: buddies,
+        settle: false,
+      );
+
+      expect(buddies.fetchCount, greaterThan(0));
+      _expectNoShell(tester);
+      expect(_currentPath(container), RoutePaths.loading);
+      expect(find.byType(LoadingScreen), findsOneWidget);
+
+      buddies.fetchHold!.complete();
+      await _pumpFrames(tester);
+      _expectNoShell(tester);
+      await tester.pumpAndSettle();
+      expect(_currentPath(container), RoutePaths.buddyOnboarding);
+      expect(find.text(_introLine), findsOneWidget);
+    });
+
+    testWidgets('signing in („Ich habe schon ein Konto"): nothing of the '
+        'shell while profile and Buddy load, then the onboarding', (
+      tester,
+    ) async {
+      final buddies = FakeBuddyRepository()..fetchHold = Completer<void>();
+      final container = await _pumpHost(
+        tester,
+        profiles: _profilesWith(testUserProfile()),
+        buddies: buddies,
+        auth: FakeAuthRepository(signedIn: false),
+        screen: _authScreenSize,
+      );
+      expect(_currentPath(container), RoutePaths.welcome);
+
+      await _signInViaAuthScreen(tester, container);
+      await _pumpFrames(tester);
+      expect(buddies.fetchCount, greaterThan(0));
+      _expectNoShell(tester);
+      expect(find.byType(LoadingScreen), findsOneWidget);
+
+      buddies.fetchHold!.complete();
+      await _pumpFrames(tester);
+      _expectNoShell(tester);
+      await tester.pumpAndSettle();
+      expect(_currentPath(container), RoutePaths.buddyOnboarding);
+      expect(find.text(_introLine), findsOneWidget);
+    });
+
+    testWidgets('signing in again after signing out: nothing of the shell '
+        'before the gate knows', (tester) async {
+      final auth = FakeAuthRepository();
+      final buddies = FakeBuddyRepository();
+      final container = await _pumpHost(
+        tester,
+        profiles: _profilesWith(testUserProfile()),
+        buddies: buddies,
+        auth: auth,
+        screen: _authScreenSize,
+      );
+      expect(_currentPath(container), RoutePaths.buddyOnboarding);
+
+      await auth.signOut();
+      await tester.pumpAndSettle();
+      expect(_currentPath(container), RoutePaths.welcome);
+
+      buddies.fetchHold = Completer<void>();
+      await _signInViaAuthScreen(tester, container);
+      await _pumpFrames(tester);
+      _expectNoShell(tester);
+
+      buddies.fetchHold!.complete();
+      await _pumpFrames(tester);
+      _expectNoShell(tester);
+      await tester.pumpAndSettle();
+      expect(_currentPath(container), RoutePaths.buddyOnboarding);
+    });
+
+    testWidgets('a completed Buddy: the dashboard once it is known', (
+      tester,
+    ) async {
+      final buddies = FakeBuddyRepository()
+        ..store[testUserId] = BuddyState(
+          userId: testUserId,
+          onboardingCompletedAt: _completedAt,
+        )
+        ..fetchHold = Completer<void>();
+      final container = await _pumpHost(
+        tester,
+        profiles: _profilesWith(testUserProfile()),
+        buddies: buddies,
+        settle: false,
+      );
+      _expectNoShell(tester);
+
+      buddies.fetchHold!.complete();
+      await tester.pumpAndSettle();
+      expect(_currentPath(container), RoutePaths.dashboard);
+      expect(find.byType(DashboardScreen), findsOneWidget);
+    });
+
+    testWidgets('a Buddy that never answers holds the app only briefly '
+        '(never blocks it)', (tester) async {
+      final buddies = FakeBuddyRepository()..fetchHold = Completer<void>();
+      final container = await _pumpHost(
+        tester,
+        profiles: _profilesWith(testUserProfile()),
+        buddies: buddies,
+        settle: false,
+      );
+      _expectNoShell(tester);
+
+      await tester.pump(AppConstants.buddyGateMaxWait);
+      await _pumpFrames(tester);
+      expect(_currentPath(container), RoutePaths.dashboard);
+      expect(find.byType(DashboardScreen), findsOneWidget);
+    });
+
+    testWidgets('a profile reload later never holds the dashboard again', (
+      tester,
+    ) async {
+      final profiles = _HeldProfiles()..seedProfile(testUserProfile());
+      final container = await _pumpHost(
+        tester,
+        profiles: profiles,
+        buddies: FakeBuddyRepository()
+          ..store[testUserId] = BuddyState(
+            userId: testUserId,
+            onboardingCompletedAt: _completedAt,
+          ),
+      );
+      expect(_currentPath(container), RoutePaths.dashboard);
+
+      profiles.hold = Completer<void>();
+      unawaited(container.read(profileProvider.notifier).fetchProfile());
+      await _pumpFrames(tester);
+      expect(container.read(profileProvider).isLoading, isTrue);
+      expect(_currentPath(container), RoutePaths.dashboard);
+      expect(find.byType(DashboardScreen), findsOneWidget);
+
+      profiles.hold!.complete();
+      await tester.pumpAndSettle();
+      expect(_currentPath(container), RoutePaths.dashboard);
     });
   });
 }

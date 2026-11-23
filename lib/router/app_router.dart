@@ -20,6 +20,7 @@ class _RouterRefreshNotifier extends ChangeNotifier {
     ref.listen(hardGateActiveProvider, (_, _) => notifyListeners());
     ref.listen(healthConsentRequiredProvider, (_, _) => notifyListeners());
     ref.listen(buddyOnboardingRequiredProvider, (_, _) => notifyListeners());
+    ref.listen(buddyOnboardingGatePendingProvider, (_, _) => notifyListeners());
   }
 }
 
@@ -81,12 +82,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Buddy onboarding gate: a signed-in user with a complete, consented
       // profile whose Buddy onboarding isn't done (users from before the
       // Buddy, or the app was killed mid-onboarding) is sent from the shell
-      // roots to /buddy-onboarding; pushes from inside the flow stay. No
-      // redirect away once it is done: the onboarding completes on its last
-      // step and leaves for the dashboard itself.
+      // roots to /buddy-onboarding; pushes from inside the flow stay. Until
+      // the gate knows (profile and Buddy loading after sign-in or app
+      // start), the shell roots wait on /loading, so no dashboard frame
+      // shows before the onboarding. No redirect away once it is done: the
+      // onboarding completes on its last step and leaves for the dashboard
+      // itself.
       final buddyRedirect = buddyOnboardingRedirect(
         isRequired: ref.read(buddyOnboardingRequiredProvider),
-        path: path,
+        isPending: ref.read(buddyOnboardingGatePendingProvider),
+        location: state.uri,
       );
       if (buddyRedirect != null) return buddyRedirect;
 
@@ -293,6 +298,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.healthConsent,
         name: RouteNames.healthConsent,
         builder: (_, _) => const HealthConsentScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.loading,
+        name: RouteNames.loading,
+        builder: (_, _) => const LoadingScreen(),
       ),
       GoRoute(
         path: RoutePaths.buddyOnboarding,

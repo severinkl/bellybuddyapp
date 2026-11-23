@@ -251,6 +251,11 @@ class AppConstants {
   static const Duration autoAdvanceDuration = Duration(seconds: 4);
   static const Duration debounceDuration = Duration(milliseconds: 800);
 
+  /// The longest the app waits on its loading screen for the Buddy
+  /// onboarding gate's answer after sign-in or app start; then it goes on
+  /// as if no onboarding were due (a hanging backend never blocks the app).
+  static const Duration buddyGateMaxWait = Duration(seconds: 3);
+
   // Animation durations
   static const Duration animFast = Duration(milliseconds: 150);
   static const Duration animNormal = Duration(milliseconds: 200);

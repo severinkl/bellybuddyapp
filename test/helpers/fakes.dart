@@ -563,6 +563,10 @@ class FakeBuddyRepository implements BuddyRepository {
   bool throwOnFetch = false;
   bool throwOnSave = false;
 
+  /// While set and not completed, every [fetch] waits for it (a slow or
+  /// hanging backend).
+  Completer<void>? fetchHold;
+
   /// The `retry` argument of every [fetch], in order.
   final List<bool> fetchRetries = [];
 
@@ -570,6 +574,7 @@ class FakeBuddyRepository implements BuddyRepository {
   Future<BuddyState?> fetch(String userId, {bool retry = true}) async {
     fetchCount++;
     fetchRetries.add(retry);
+    if (fetchHold case final hold?) await hold.future;
     if (throwOnFetch) throw Exception('fetch failed');
     return store[userId];
   }
