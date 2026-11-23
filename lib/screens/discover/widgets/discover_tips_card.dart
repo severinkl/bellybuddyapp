@@ -28,60 +28,54 @@ class DiscoverTipsCard extends StatelessWidget {
     // The list is newest first.
     final newest = list.first;
     final summary = newest.summary?.trim() ?? '';
-    return Semantics(
-      button: true,
-      child: BbCard(
-        key: cardKey,
-        onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                if (newest.seenAt == null) ...[
-                  const DiscoverPill('Neu'),
-                  const SizedBox(width: AppConstants.spacingSm),
-                ],
-                Expanded(
-                  child: Text(
-                    newest.weekLabel ?? 'Deine Tipps',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: AppTheme.fontSizeSubtitle,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.foreground,
-                    ),
-                  ),
-                ),
-                Text(
-                  newest.tipCountLabel,
-                  style: const TextStyle(
-                    fontSize: AppTheme.fontSizeCaptionLG,
-                    color: AppTheme.mutedForeground,
-                  ),
-                ),
-                const Icon(
-                  Icons.chevron_right,
-                  color: AppTheme.mutedForeground,
-                ),
+    return BbCard(
+      key: cardKey,
+      onTap: onTap,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              if (newest.seenAt == null) ...[
+                const DiscoverPill('Neu'),
+                const SizedBox(width: AppConstants.spacingSm),
               ],
-            ),
-            if (summary.isNotEmpty) ...[
-              AppConstants.gap6,
-              Text(
-                summary,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontSize: AppTheme.fontSizeBody,
-                  color: AppTheme.mutedForeground,
-                  height: AppTheme.lineHeightBody,
+              Expanded(
+                child: Text(
+                  newest.weekLabel ?? 'Deine Tipps',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontSize: AppTheme.fontSizeSubtitle,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.foreground,
+                  ),
                 ),
               ),
+              Text(
+                newest.tipCountLabel,
+                style: const TextStyle(
+                  fontSize: AppTheme.fontSizeCaptionLG,
+                  color: AppTheme.mutedForeground,
+                ),
+              ),
+              const Icon(Icons.chevron_right, color: AppTheme.mutedForeground),
             ],
+          ),
+          if (summary.isNotEmpty) ...[
+            AppConstants.gap6,
+            Text(
+              summary,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: AppTheme.fontSizeBody,
+                color: AppTheme.mutedForeground,
+                height: AppTheme.lineHeightBody,
+              ),
+            ),
           ],
-        ),
+        ],
       ),
     );
   }

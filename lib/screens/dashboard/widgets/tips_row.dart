@@ -23,29 +23,26 @@ class TipsRow extends StatelessWidget {
   ].join(' · ');
 
   @override
-  Widget build(BuildContext context) => Semantics(
-    button: true,
-    child: BbCard(
-      key: rowKey,
-      onTap: onTap,
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label(set),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: AppTheme.fontSizeBodyLG,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.foreground,
-              ),
+  Widget build(BuildContext context) => BbCard(
+    key: rowKey,
+    onTap: onTap,
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            label(set),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              fontSize: AppTheme.fontSizeBodyLG,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.foreground,
             ),
           ),
-          const SizedBox(width: AppConstants.spacingSm),
-          const Icon(Icons.chevron_right, color: AppTheme.mutedForeground),
-        ],
-      ),
+        ),
+        const SizedBox(width: AppConstants.spacingSm),
+        const Icon(Icons.chevron_right, color: AppTheme.mutedForeground),
+      ],
     ),
   );
 }

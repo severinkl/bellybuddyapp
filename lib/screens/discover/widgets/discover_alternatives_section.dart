@@ -57,14 +57,11 @@ class DiscoverAlternativesSection extends StatelessWidget {
         [] => const DiscoverNote(
           'Noch keine Alternativen – sie entstehen nach deinen Mahlzeiten.',
         ),
-        final items => Semantics(
-          button: true,
-          child: DiscoverListCard(
-            onTap: onOpen,
-            children: [
-              for (final group in _newest(items)) _AlternativeRow(group: group),
-            ],
-          ),
+        final items => DiscoverListCard(
+          onTap: onOpen,
+          children: [
+            for (final group in _newest(items)) _AlternativeRow(group: group),
+          ],
         ),
       },
     );

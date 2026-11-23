@@ -39,5 +39,31 @@ void main() {
       await tester.pump();
       expect(tapped, isTrue);
     });
+
+    testWidgets('a button to assistive tech while tappable, one node', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWithProviders(
+        Scaffold(
+          body: Column(
+            children: [
+              BbCard(onTap: () {}, child: const Text('Tippbar')),
+              const BbCard(child: Text('Nur Text')),
+            ],
+          ),
+        ),
+      );
+
+      expect(
+        tester.getSemantics(find.text('Tippbar')),
+        isSemantics(label: 'Tippbar', isButton: true, hasTapAction: true),
+      );
+      expect(
+        tester.getSemantics(find.text('Nur Text')),
+        isSemantics(label: 'Nur Text', isButton: false, hasTapAction: false),
+      );
+      handle.dispose();
+    });
   });
 }
