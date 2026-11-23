@@ -6,12 +6,12 @@ import '../../utils/date_format_utils.dart';
 /// The Buddy's four daily needs, one per tracker; they make up the
 /// dashboard's care ring.
 enum CareNeed {
-  food('🍽', 'Essen', 'Mahlzeit eintragen'),
-  drink('💧', 'Trinken', 'Getränk eintragen'),
-  gutFeeling('🙂', 'Bauchgefühl', 'Bauchgefühl eintragen'),
-  toilet('🧻', 'Klo', 'Klo-Eintrag hinzufügen');
+  food('🍽', 'Essen'),
+  drink('💧', 'Trinken'),
+  gutFeeling('🙂', 'Bauchgefühl'),
+  toilet('🧻', 'Klo');
 
-  const CareNeed(this.emoji, this.label, this.logLabel);
+  const CareNeed(this.emoji, this.label);
 
   /// Its icon in the care ring and the „Heute" list.
   final String emoji;
@@ -19,8 +19,8 @@ enum CareNeed {
   /// Its name in the care ring.
   final String label;
 
-  /// Logging it, as an action („Getränk eintragen").
-  final String logLabel;
+  /// Logging it, as an action („Trinken eintragen").
+  String get logLabel => '$label eintragen';
 }
 
 /// What the dashboard suggests logging next ([nextCareAction]).
@@ -32,7 +32,7 @@ enum CareAction {
   drink(CareNeed.drink),
   gutFeeling(CareNeed.gutFeeling),
 
-  /// Nothing open right now: the plain „Füttern" shortcut.
+  /// Nothing open right now: the plain „Essen eintragen" shortcut.
   feed(null);
 
   const CareAction(this.need);

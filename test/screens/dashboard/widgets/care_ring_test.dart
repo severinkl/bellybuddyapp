@@ -1,3 +1,5 @@
+import 'dart:ui' show SemanticsAction;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -7,7 +9,8 @@ import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 
 void main() {
-  Future<List<CareNeed>> pump(
+  var buddyTapsLog = <int>[];
+  Future<List<int>> pump(
     WidgetTester tester, {
     DailyCare care = const DailyCare(),
     CareNeed? highlight,
@@ -15,7 +18,8 @@ void main() {
     double textScale = 1.0,
     Duration settle = const Duration(milliseconds: 400),
   }) async {
-    final tapped = <CareNeed>[];
+    final tapped = <int>[];
+    final buddyTaps = <int>[];
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
     tester.platformDispatcher.textScaleFactorTestValue = textScale;
@@ -35,8 +39,13 @@ void main() {
                   care: care,
                   diameter: CareRing.diameterFor(width, size.height),
                   highlight: highlight,
-                  onNeed: tapped.add,
-                  buddy: const ColoredBox(color: AppTheme.buddyBody),
+                  onTap: () => tapped.add(1),
+                  buddy: GestureDetector(
+                    key: const Key('buddy_double'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => buddyTaps.add(1),
+                    child: const ColoredBox(color: AppTheme.buddyBody),
+                  ),
                 );
               },
             ),
@@ -45,6 +54,7 @@ void main() {
       ),
     );
     await tester.pump(settle);
+    buddyTapsLog = buddyTaps;
     return tapped;
   }
 
@@ -80,27 +90,41 @@ void main() {
     expect(find.text('🧻 –'), findsOneWidget);
   });
 
-  testWidgets('each bubble reports its need', (tester) async {
+  testWidgets('tapping a counter calls onTap once', (tester) async {
     final tapped = await pump(tester);
 
-    for (final need in CareNeed.values) {
-      await tester.tap(find.byKey(CareRing.needKey(need)));
-    }
-    expect(tapped, CareNeed.values);
+    await tester.tap(find.byKey(CareRing.needKey(CareNeed.food)));
+    expect(tapped.length, 1);
   });
 
-  testWidgets('bubbles are buttons with a spoken count', (tester) async {
+  testWidgets('tapping the Buddy does not call onTap', (tester) async {
+    final tapped = await pump(tester);
+
+    await tester.tap(find.byKey(const Key('buddy_double')));
+    expect(tapped, isEmpty);
+    expect(buddyTapsLog.length, 1);
+  });
+
+  testWidgets('counters are not buttons, they speak their count', (
+    tester,
+  ) async {
     final handle = tester.ensureSemantics();
     await pump(tester, care: const DailyCare(meals: 1));
 
+    for (final need in CareNeed.values) {
+      final data = tester
+          .getSemantics(find.byKey(CareRing.needKey(need)))
+          .getSemanticsData();
+      expect(data.hasAction(SemanticsAction.tap), isFalse, reason: '$need');
+      expect(data.label, contains(need.label));
+    }
     expect(
-      tester.getSemantics(find.byKey(CareRing.needKey(CareNeed.food))),
-      matchesSemantics(
-        label: 'Essen: 1 von 3 Mahlzeiten',
-        hint: 'Mahlzeit eintragen',
-        isButton: true,
-        hasTapAction: true,
-      ),
+      tester.getSemantics(find.byKey(CareRing.needKey(CareNeed.food))).label,
+      'Essen: 1 von 3 Mahlzeiten',
+    );
+    expect(
+      tester.getSemantics(find.byKey(CareRing.tapKey)).label,
+      'Heute im Tagebuch ansehen',
     );
     handle.dispose();
   });

@@ -325,7 +325,7 @@ void main() {
       await tick(tester);
 
       expect(careLines(CareAction.drink), contains(controller(tester).bubble));
-      expect(find.text('💧 Getränk eintragen'), findsOneWidget);
+      expect(find.text('💧 Trinken eintragen'), findsOneWidget);
       expect(
         tester.widget<CareRing>(find.byType(CareRing)).highlight,
         CareNeed.drink,
@@ -1144,22 +1144,5 @@ void main() {
 
       expect(find.text('page:${RoutePaths.mealTracker}'), findsOneWidget);
     });
-
-    for (final (need, path) in [
-      (CareNeed.food, RoutePaths.mealTracker),
-      (CareNeed.drink, RoutePaths.drinkTracker),
-      (CareNeed.gutFeeling, RoutePaths.gutFeelingTracker),
-      (CareNeed.toilet, RoutePaths.toiletTracker),
-    ]) {
-      testWidgets('the ${need.name} bubble opens $path', (tester) async {
-        await pumpHero(tester);
-
-        await tester.tap(find.byKey(CareRing.needKey(need)));
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 500));
-
-        expect(find.text('page:$path'), findsOneWidget);
-      });
-    }
   });
 }

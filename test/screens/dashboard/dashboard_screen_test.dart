@@ -17,6 +17,7 @@ import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
+import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
 
@@ -169,11 +170,13 @@ void main() {
       // The bottom nav (64 + the 34 home-indicator inset) covers the rest.
       const navTop = 844.0 - 64 - 34;
       expect(
-        tester.getRect(find.byKey(TutorialKeys.bauchgefuehl)).bottom,
+        tester
+            .getRect(find.byKey(CareRing.needKey(CareNeed.gutFeeling)))
+            .bottom,
         lessThanOrEqualTo(navTop),
       );
       expect(
-        tester.getRect(find.byKey(TutorialKeys.klo)).bottom,
+        tester.getRect(find.byKey(CareRing.needKey(CareNeed.toilet))).bottom,
         lessThanOrEqualTo(navTop),
       );
       expect(
@@ -193,8 +196,7 @@ void main() {
 
       for (final key in [
         TutorialKeys.buddy,
-        TutorialKeys.bauchgefuehl,
-        TutorialKeys.klo,
+        // bauchgefuehl/klo: no longer mounted (the counters are display only); Task 8 removes them from the tour.
         TutorialKeys.fuerDich,
         TutorialKeys.alternativen,
         TutorialKeys.wissen,

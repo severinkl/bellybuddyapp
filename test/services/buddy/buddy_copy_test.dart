@@ -36,6 +36,15 @@ void main() {
     }
   });
 
+  test('the care buttons speak of Essen, Trinken, Bauchgefühl eintragen', () {
+    expect(BuddyCopy.careButton(CareAction.feed), '🍽 Essen eintragen');
+    expect(BuddyCopy.careButton(CareAction.drink), '💧 Trinken eintragen');
+    expect(
+      BuddyCopy.careButton(CareAction.gutFeeling),
+      '🙂 Bauchgefühl eintragen',
+    );
+  });
+
   test('care lines fit the dashboard bubble', () {
     for (final pool in BuddyCopy.care.values) {
       for (final line in pool) {
