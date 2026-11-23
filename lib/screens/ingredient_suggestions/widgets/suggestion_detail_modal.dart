@@ -79,7 +79,7 @@ class SuggestionDetailModal extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: AppTheme.fontSizeBody,
                             color: AppTheme.foreground,
-                            height: 1.4,
+                            height: AppTheme.lineHeightBody,
                           ),
                         ),
                       ),

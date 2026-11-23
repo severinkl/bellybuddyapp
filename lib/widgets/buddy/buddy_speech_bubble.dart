@@ -197,7 +197,7 @@ class _BubbleState extends State<_Bubble> with SingleTickerProviderStateMixin {
         color: AppTheme.foreground,
         fontSize: widget.fontSize,
         fontWeight: FontWeight.w600,
-        height: 1.3,
+        height: AppTheme.lineHeightSnug,
       ),
     );
   }

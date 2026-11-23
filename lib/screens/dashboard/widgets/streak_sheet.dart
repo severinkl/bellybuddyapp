@@ -254,7 +254,7 @@ class _SaverCard extends StatelessWidget {
                 StreakSheet.saverText,
                 style: TextStyle(
                   fontSize: AppTheme.fontSizeBody,
-                  height: 1.4,
+                  height: AppTheme.lineHeightBody,
                   color: AppTheme.mutedForeground,
                 ),
               ),

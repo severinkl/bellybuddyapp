@@ -93,6 +93,14 @@ class AppTheme {
   static const double fontSizeDisplay = 28;
   static const double fontSizeDisplayLG = 30;
 
+  // Line heights (multiples of the font size)
+  /// Running text: notes, summaries, explanations.
+  static const double lineHeightBody = 1.4;
+
+  /// Short, dense text: headlines over two lines, speech and tour bubbles,
+  /// previews.
+  static const double lineHeightSnug = 1.35;
+
   // The streak moment's big count („🔥 1 Tag"): flame and number
   static const double fontSizeStreakFlame = 40;
   static const double fontSizeStreakCount = 56;

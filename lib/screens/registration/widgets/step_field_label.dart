@@ -33,7 +33,7 @@ class StepFieldLabel extends StatelessWidget {
             helper,
             style: const TextStyle(
               fontSize: AppTheme.fontSizeBodyLG,
-              height: 1.4,
+              height: AppTheme.lineHeightBody,
               color: AppTheme.mutedForeground,
             ),
           ),

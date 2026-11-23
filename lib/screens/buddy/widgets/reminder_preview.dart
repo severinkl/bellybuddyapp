@@ -63,7 +63,7 @@ class ReminderPreview extends StatelessWidget {
           note,
           style: const TextStyle(
             fontSize: AppTheme.fontSizeBody,
-            height: 1.4,
+            height: AppTheme.lineHeightBody,
             color: AppTheme.mutedForeground,
           ),
         ),
@@ -141,7 +141,7 @@ class NotificationPreview extends StatelessWidget {
                 body,
                 style: const TextStyle(
                   fontSize: AppTheme.fontSizeBody,
-                  height: 1.35,
+                  height: AppTheme.lineHeightSnug,
                   color: AppTheme.notificationForeground,
                 ),
               ),
@@ -241,7 +241,7 @@ class ReminderExampleWeek extends StatelessWidget {
                 'sind leichter zu sehen.',
                 style: TextStyle(
                   fontSize: AppTheme.fontSizeCaption,
-                  height: 1.35,
+                  height: AppTheme.lineHeightSnug,
                   color: AppTheme.mutedForeground,
                 ),
               ),

@@ -84,7 +84,7 @@ class InsightCard extends StatelessWidget {
             style: const TextStyle(
               fontSize: AppTheme.fontSizeSubtitleLG,
               fontWeight: FontWeight.w700,
-              height: 1.3,
+              height: AppTheme.lineHeightSnug,
               color: AppTheme.foreground,
             ),
           ),

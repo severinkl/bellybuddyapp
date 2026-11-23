@@ -132,7 +132,7 @@ class DiscoverNote extends StatelessWidget {
         style: const TextStyle(
           fontSize: AppTheme.fontSizeBody,
           color: AppTheme.mutedForeground,
-          height: 1.4,
+          height: AppTheme.lineHeightBody,
         ),
       ),
     );

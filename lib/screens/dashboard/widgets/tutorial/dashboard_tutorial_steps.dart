@@ -8,14 +8,14 @@ import 'tutorial_step.dart';
 const _baseStyle = TextStyle(
   fontSize: AppTheme.fontSizeBody,
   color: AppTheme.foreground,
-  height: 1.35,
+  height: AppTheme.lineHeightSnug,
 );
 
 const _boldStyle = TextStyle(
   fontSize: AppTheme.fontSizeBody,
   color: AppTheme.foreground,
   fontWeight: FontWeight.w700,
-  height: 1.35,
+  height: AppTheme.lineHeightSnug,
 );
 
 TextSpan _t(String text) => TextSpan(text: text, style: _baseStyle);
