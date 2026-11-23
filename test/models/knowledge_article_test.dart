@@ -48,5 +48,22 @@ void main() {
       throwsFormatException,
     );
     expect(() => KnowledgeFeed.fromJson(const {}), throwsFormatException);
+    const fetchedAt = '2026-01-01T00:00:00.000Z';
+    expect(
+      () => KnowledgeFeed.fromJson(const {
+        'articles': [3],
+        'fetchedAt': fetchedAt,
+      }),
+      throwsFormatException,
+    );
+    expect(
+      () => KnowledgeFeed.fromJson(const {
+        'articles': [
+          {'title': 'Ohne Link', 'link': 7},
+        ],
+        'fetchedAt': fetchedAt,
+      }),
+      throwsFormatException,
+    );
   });
 }

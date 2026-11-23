@@ -29,20 +29,20 @@ List<KnowledgeArticle> parseKnowledgeFeed(String xml) {
   }
 
   // List.sort is not stable; order by (date desc, original index).
-  final indexed = [for (var i = 0; i < articles.length; i++) (i, articles[i])];
-  indexed.sort((x, y) {
-    final dx = x.$2.publishedAt;
-    final dy = y.$2.publishedAt;
-    if (dx != null && dy != null) {
-      final c = dy.compareTo(dx);
-      if (c != 0) return c;
-    } else if (dx != null) {
-      return -1;
-    } else if (dy != null) {
-      return 1;
-    }
-    return x.$1.compareTo(y.$1);
-  });
+  final indexed = [...articles.indexed]
+    ..sort((x, y) {
+      final dx = x.$2.publishedAt;
+      final dy = y.$2.publishedAt;
+      if (dx != null && dy != null) {
+        final c = dy.compareTo(dx);
+        if (c != 0) return c;
+      } else if (dx != null) {
+        return -1;
+      } else if (dy != null) {
+        return 1;
+      }
+      return x.$1.compareTo(y.$1);
+    });
   return [for (final e in indexed) e.$2];
 }
 
@@ -67,9 +67,7 @@ KnowledgeArticle? _parseItem(XmlElement item) {
     link: link,
     category: normalizeFeedCategory(_text(item.getElement('category'))),
     publishedAt: _date(_text(item.getElement('pubDate'))),
-    imageUrl: image != null && image.isNotEmpty && isValidImageUrl(image)
-        ? image
-        : null,
+    imageUrl: image != null && isValidImageUrl(image) ? image : null,
   );
 }
 
@@ -79,14 +77,15 @@ String? _text(XmlElement? e) {
   return text.isEmpty ? null : text;
 }
 
-Uri? _httpUri(String? raw) {
-  if (raw == null) return null;
-  final uri = Uri.tryParse(raw);
-  if (uri == null || !(uri.isScheme('http') || uri.isScheme('https'))) {
-    return null;
-  }
-  return uri;
-}
+/// [raw] as an http(s) link with a host; null otherwise.
+Uri? _httpUri(String? raw) => switch (raw == null ? null : Uri.tryParse(raw)) {
+  final uri?
+      when (uri.isScheme('http') || uri.isScheme('https')) &&
+          uri.hasAuthority &&
+          uri.host.isNotEmpty =>
+    uri,
+  _ => null,
+};
 
 DateTime? _date(String? raw) {
   if (raw == null) return null;

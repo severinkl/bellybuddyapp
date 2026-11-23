@@ -15,16 +15,16 @@ class KnowledgeFeedService {
   final http.Client _client;
   final Duration timeout;
 
+  static final _feedUrl = Uri.parse(AppConstants.knowledgeFeedUrl);
+
   /// The feed's XML. Throws on a non-200 status or when it takes longer than
   /// [timeout].
   Future<String> fetchFeed() async {
-    final response = await _client
-        .get(Uri.parse(AppConstants.knowledgeFeedUrl))
-        .timeout(timeout);
+    final response = await _client.get(_feedUrl).timeout(timeout);
     if (response.statusCode != 200) {
       throw http.ClientException(
         'Feed answered ${response.statusCode}',
-        Uri.parse(AppConstants.knowledgeFeedUrl),
+        _feedUrl,
       );
     }
     return utf8.decode(response.bodyBytes);

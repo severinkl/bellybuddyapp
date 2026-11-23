@@ -27,29 +27,27 @@ class KnowledgeArticle {
     'imageUrl': imageUrl,
   };
 
-  factory KnowledgeArticle.fromJson(Map<String, Object?> json) {
-    final title = json['title'];
-    final link = json['link'];
-    final category = json['category'];
-    final publishedAt = json['publishedAt'];
-    final imageUrl = json['imageUrl'];
-    if (title is! String ||
-        link is! String ||
-        (category != null && category is! String) ||
-        (publishedAt != null && publishedAt is! String) ||
-        (imageUrl != null && imageUrl is! String)) {
-      throw const FormatException('Invalid KnowledgeArticle JSON');
-    }
-    return KnowledgeArticle(
-      title: title,
-      link: Uri.parse(link),
-      category: category as String?,
-      publishedAt: publishedAt == null
-          ? null
-          : DateTime.parse(publishedAt as String).toUtc(),
-      imageUrl: imageUrl as String?,
-    );
-  }
+  /// Throws [FormatException] on any other shape than [toJson]'s.
+  factory KnowledgeArticle.fromJson(Map<String, Object?> json) =>
+      switch (json) {
+        {
+          'title': final String title,
+          'link': final String link,
+          'category': final String? category,
+          'publishedAt': final String? publishedAt,
+          'imageUrl': final String? imageUrl,
+        } =>
+          KnowledgeArticle(
+            title: title,
+            link: Uri.parse(link),
+            category: category,
+            publishedAt: publishedAt == null
+                ? null
+                : DateTime.parse(publishedAt).toUtc(),
+            imageUrl: imageUrl,
+          ),
+        _ => throw const FormatException('Invalid KnowledgeArticle JSON'),
+      };
 
   @override
   bool operator ==(Object other) =>
@@ -96,21 +94,22 @@ class KnowledgeFeed {
     'fetchedAt': fetchedAt.toUtc().toIso8601String(),
   };
 
-  factory KnowledgeFeed.fromJson(Map<String, Object?> json) {
-    final articles = json['articles'];
-    final fetchedAt = json['fetchedAt'];
-    if (articles is! List || fetchedAt is! String) {
-      throw const FormatException('Invalid KnowledgeFeed JSON');
-    }
-    return KnowledgeFeed(
-      articles: [
-        for (final a in articles)
-          if (a is Map<String, Object?>)
-            KnowledgeArticle.fromJson(a)
-          else
-            throw const FormatException('Invalid KnowledgeArticle JSON'),
-      ],
-      fetchedAt: DateTime.parse(fetchedAt).toUtc(),
-    );
-  }
+  /// Throws [FormatException] on any other shape than [toJson]'s.
+  factory KnowledgeFeed.fromJson(Map<String, Object?> json) => switch (json) {
+    {
+      'articles': final List<Object?> articles,
+      'fetchedAt': final String fetchedAt,
+    } =>
+      KnowledgeFeed(
+        articles: [
+          for (final a in articles)
+            switch (a) {
+              final Map<String, Object?> a => KnowledgeArticle.fromJson(a),
+              _ => throw const FormatException('Invalid KnowledgeArticle JSON'),
+            },
+        ],
+        fetchedAt: DateTime.parse(fetchedAt).toUtc(),
+      ),
+    _ => throw const FormatException('Invalid KnowledgeFeed JSON'),
+  };
 }

@@ -68,6 +68,17 @@ void main() {
     expect(articles[1].publishedAt, isNull);
   });
 
+  test('skips links without a host', () {
+    final articles = parseKnowledgeFeed(
+      _feed([
+        _item(title: 'nohost', link: 'https:///blog/post'),
+        _item(title: 'path', link: 'https:blog/post'),
+        _item(title: 'ok'),
+      ]),
+    );
+    expect(articles.map((a) => a.title), ['ok']);
+  });
+
   test('sorts newest first, undated last', () {
     final articles = parseKnowledgeFeed(
       _feed([
@@ -77,6 +88,19 @@ void main() {
       ]),
     );
     expect(articles.map((a) => a.title), ['A', 'B', 'C']);
+  });
+
+  test('articles of the same date keep the feed\'s order', () {
+    const sameDay = 'Mon, 01 Jan 2024 10:00:00 GMT';
+    final articles = parseKnowledgeFeed(
+      _feed([
+        for (final title in ['D', 'A', 'C', 'B'])
+          _item(title: title, pubDate: sameDay),
+        _item(title: 'neu', pubDate: 'Wed, 01 Jan 2025 10:00:00 GMT'),
+        for (final title in ['Y', 'X']) _item(title: title, pubDate: null),
+      ]),
+    );
+    expect(articles.map((a) => a.title), ['neu', 'D', 'A', 'C', 'B', 'Y', 'X']);
   });
 
   test('an empty channel is no error', () {
