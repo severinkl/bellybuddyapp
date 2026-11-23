@@ -5,6 +5,7 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/buddy_onboarding_gate_provider.dart';
 import '../../providers/buddy_provider.dart';
+import '../../providers/buddy_welcome_provider.dart';
 import '../../providers/entries_provider.dart';
 import '../../providers/insight_progress_provider.dart';
 import '../../providers/upgrade_gate_provider.dart';
@@ -27,6 +28,9 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  /// The longest the first tour waits for the Buddy's welcome.
+  static const _welcomeWait = Duration(seconds: 8);
+
   // Active tutorial handle; non-null while the overlay is open. Cancelled
   // in dispose() so the OverlayEntry + its AnimationController don't leak
   // if the screen is torn down mid-tour (e.g. sign-out).
@@ -85,8 +89,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final replay = tutorial.consumeReplay();
     if (_tutorialHandle != null) return;
     if (!replay && !tutorial.shouldShow()) return;
-    // The Buddy onboarding already welcomed the user: the spotlight tour
-    // starts right away. tutorialSeenAt is persisted at its end.
+    // Right after the Buddy onboarding he says his welcome first; the tour
+    // would cover it. At most [_welcomeWait]: a welcome he never gets to say
+    // (Home hidden) holds nothing up. tutorialSeenAt is persisted at the
+    // tour's end.
+    if (!replay) {
+      await ref
+          .read(buddyWelcomeProvider.notifier)
+          .played
+          .timeout(_welcomeWait, onTimeout: () {});
+      if (!mounted || _tutorialHandle != null) return;
+    }
     final handle = showDashboardTutorial(context);
     _tutorialHandle = handle;
     await handle.future;

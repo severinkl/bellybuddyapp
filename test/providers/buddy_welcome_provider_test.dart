@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -40,4 +42,42 @@ void main() {
       expect(c.read(buddyWelcomeProvider), isNull);
     });
   }
+
+  group('played', () {
+    test('completes at once when no welcome is pending', () async {
+      final c = makeContainer();
+      await expectLater(
+        c.read(buddyWelcomeProvider.notifier).played,
+        completes,
+      );
+    });
+
+    test('waits from set until the Buddy has said it, taken or not', () async {
+      final c = makeContainer();
+      final welcome = c.read(buddyWelcomeProvider.notifier)
+        ..set(BuddyWelcomeNotifier.line);
+      var done = false;
+      unawaited(welcome.played.then((_) => done = true));
+
+      welcome.take();
+      await Future<void>.delayed(Duration.zero);
+      expect(done, isFalse);
+
+      welcome.markPlayed();
+      await Future<void>.delayed(Duration.zero);
+      expect(done, isTrue);
+    });
+
+    test('a user change releases whoever waits', () async {
+      final c = makeContainer();
+      final welcome = c.read(buddyWelcomeProvider.notifier)
+        ..set(BuddyWelcomeNotifier.line);
+      final played = welcome.played;
+
+      c.read(_userIdProvider.notifier).set(null);
+      c.read(buddyWelcomeProvider);
+
+      await expectLater(played, completes);
+    });
+  });
 }

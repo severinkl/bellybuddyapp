@@ -18,6 +18,8 @@ import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_keys.dar
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_step.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
+import 'package:belly_buddy/providers/buddy_welcome_provider.dart';
+import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
@@ -617,6 +619,41 @@ void main() {
 
       expect(find.text(_tourSkip), findsOneWidget);
       expect(find.text(_welcomeModalTitle), findsNothing);
+    });
+
+    testWidgets('right after the Buddy onboarding he welcomes the user '
+        'first; the tour follows once he has said it', (tester) async {
+      final container = ProviderContainer.test(
+        overrides: _overrides(
+          profile: testUserProfile(alreadySeenTutorial: false),
+          buddyRepo: _onboardedBuddy(),
+        ),
+      );
+      // As the onboarding's last step does before it opens Home.
+      container
+          .read(buddyWelcomeProvider.notifier)
+          .set(BuddyWelcomeNotifier.line);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: AppTheme.theme,
+            home: const DashboardScreen(),
+          ),
+        ),
+      );
+      await _settleFirstRun(tester);
+
+      BuddyController buddy() =>
+          tester.widget<AnimatedBuddy>(find.byType(AnimatedBuddy)).controller;
+      expect(buddy().bubble, BuddyWelcomeNotifier.line);
+      expect(find.text(_tourSkip), findsNothing);
+
+      // His line has had its time: now the tour.
+      for (var i = 0; i < 40; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(find.text(_tourSkip), findsOneWidget);
     });
 
     testWidgets('the opt-in dialog asks while push is off', (tester) async {
