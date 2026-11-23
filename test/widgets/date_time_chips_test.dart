@@ -35,5 +35,32 @@ void main() {
       expect(find.byIcon(Icons.calendar_today_outlined), findsOneWidget);
       expect(find.byIcon(Icons.access_time_outlined), findsOneWidget);
     });
+
+    testWidgets('side by side when they fit; the time wraps below the date '
+        'instead of overflowing on a narrow sheet', (tester) async {
+      Future<void> pumpAt(double width) => tester.pumpWithProviders(
+        Scaffold(
+          body: Center(
+            child: SizedBox(
+              width: width,
+              child: DateTimeChips(value: testDate, onChanged: (_) {}),
+            ),
+          ),
+        ),
+      );
+
+      await pumpAt(600);
+      expect(
+        tester.getCenter(find.text('14:30')).dy,
+        tester.getCenter(find.text('15.03.2024')).dy,
+      );
+
+      await pumpAt(300);
+      expect(tester.takeException(), isNull);
+      expect(
+        tester.getTopLeft(find.text('14:30')).dy,
+        greaterThan(tester.getBottomLeft(find.text('15.03.2024')).dy),
+      );
+    });
   });
 }

@@ -47,9 +47,13 @@ class DateTimeChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Side by side when they fit; on a narrow sheet or with larger text the
+    // time moves below the date instead of overflowing.
     return Center(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: AppConstants.spacingSm,
+        runSpacing: AppConstants.spacingSm,
         children: [
           _DateTimeChip(
             label: DateFormat('dd.MM.yyyy').format(value),
@@ -57,7 +61,6 @@ class DateTimeChips extends StatelessWidget {
             color: chipColor,
             onTap: () => _pickDate(context),
           ),
-          const SizedBox(width: AppConstants.spacingSm),
           _DateTimeChip(
             label: DateFormat('HH:mm').format(value),
             icon: Icons.access_time_outlined,
