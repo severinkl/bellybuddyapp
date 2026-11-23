@@ -52,6 +52,22 @@ void main() {
     }
   });
 
+  test('in love: a clear 😍 — eyes wide open, heart pupils looking '
+      'straight at the viewer', () {
+    final love = FacePose.forMood(BuddyMood.inLove);
+    expect(love.lidTop, 0);
+    expect(love.heart, 1);
+    expect(love.gazeY, 0);
+    expect(love.gazeWander, 0);
+    expect(love.smile, greaterThan(0.5));
+    expect(love.blush, 1);
+    expect(love.hearts, 1);
+    // Every other mood still glances around.
+    for (final m in BuddyMood.values.where((m) => m != BuddyMood.inLove)) {
+      expect(FacePose.forMood(m).gazeWander, 1, reason: '$m');
+    }
+  });
+
   test('copyWith changes only the given field', () {
     const base = FacePose();
     final c = base.copyWith(smile: -1);
@@ -61,5 +77,6 @@ void main() {
     expect(base.copyWith(zzz: 1).zzz, 1);
     expect(base.copyWith(lean: 0.5).lean, 0.5);
     expect(base.copyWith(rumble: 0.5).rumble, 0.5);
+    expect(base.copyWith(gazeWander: 0).gazeWander, 0);
   });
 }

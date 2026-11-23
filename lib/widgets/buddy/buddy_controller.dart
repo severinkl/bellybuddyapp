@@ -388,7 +388,7 @@ class BuddyController extends ChangeNotifier {
         );
         _nextGlance = t + 1.2 + _rnd.nextDouble() * 2.8;
       }
-      target = _gazeTarget + Offset(0, face.gazeY);
+      target = _gazeTarget * face.gazeWander + Offset(0, face.gazeY);
     }
     if (target.distance > 1) target = target / target.distance;
     _gaze = Offset.lerp(_gaze, target, _approach(_gazeRate, dt))!;

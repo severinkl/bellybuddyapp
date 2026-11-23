@@ -309,6 +309,15 @@ void main() {
     expect(c.frame.gaze.dy, lessThan(0.4));
   });
 
+  test('in love, the idle eyes look straight at the viewer', () {
+    final c = BuddyController(mood: BuddyMood.inLove);
+    // Long enough for several idle glances.
+    for (var i = 0; i < 20; i++) {
+      _run(c, 0.5);
+      expect(c.frame.gaze.distance, lessThan(0.05), reason: 'at ${i / 2}s');
+    }
+  });
+
   test('action gaze target beats lookAt', () {
     final c = BuddyController()
       ..lookAt(const Offset(467, 2000))
