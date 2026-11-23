@@ -15,7 +15,6 @@ class DiscoverTipsSection extends StatelessWidget {
   const DiscoverTipsSection({
     super.key,
     required this.tips,
-    required this.unseen,
     required this.weeklyTips,
     required this.onOpen,
   });
@@ -29,7 +28,6 @@ class DiscoverTipsSection extends StatelessWidget {
   static const optInKey = Key('discover_weekly_tips');
 
   final AsyncValue<List<Recommendation>> tips;
-  final bool unseen;
   final bool? weeklyTips;
   final VoidCallback onOpen;
 
@@ -60,7 +58,7 @@ class DiscoverTipsSection extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        DiscoverTipsCard(tips: tips, unseen: unseen, onTap: onOpen),
+        DiscoverTipsCard(tips: tips, onTap: onOpen),
         if (optIn) ...[AppConstants.gap12, optInCard],
       ],
     );

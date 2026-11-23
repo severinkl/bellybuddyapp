@@ -52,6 +52,10 @@ abstract class Recommendation with _$Recommendation {
     RecommendationState state,
     @JsonKey(name: 'dislike_comment') String? dislikeComment,
     @JsonKey(name: 'rated_at') DateTime? ratedAt,
+
+    /// When the user opened the Tipps with this set loaded; null while the
+    /// set is new.
+    @JsonKey(name: 'seen_at') DateTime? seenAt,
   }) = _Recommendation;
 
   factory Recommendation.fromJson(Map<String, dynamic> json) =>

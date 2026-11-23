@@ -90,5 +90,16 @@ void main() {
       expect(rec.dislikeComment, 'Kein Kommentar');
       expect(rec.ratedAt, DateTime.utc(2026, 4, 22, 13));
     });
+
+    test('fromJson reads seen_at', () {
+      final seen = Recommendation.fromJson({
+        'id': 'rec-1',
+        'seen_at': '2026-11-16T08:30:00Z',
+      });
+      final unseen = Recommendation.fromJson({'id': 'rec-2', 'seen_at': null});
+
+      expect(seen.seenAt, DateTime.utc(2026, 11, 16, 8, 30));
+      expect(unseen.seenAt, isNull);
+    });
   });
 }

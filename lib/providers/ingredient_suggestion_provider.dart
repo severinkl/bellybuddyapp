@@ -8,38 +8,45 @@ class IngredientSuggestionNotifier
     extends Notifier<AsyncValue<List<IngredientSuggestionGroup>>> {
   static const _log = AppLogger('IngredientSuggestions');
 
-  /// Whether [markAllNewAsSeen] marked the loaded groups seen;
-  /// [newIngredientSuggestionCountProvider] is 0 then. Cleared when groups
-  /// load again: the server no longer marks the seen ones new, so what is
-  /// new then is new since.
-  bool _markedSeen = false;
+  /// The suggestion ids [markAllNewAsSeen] stored as seen. A fetch that
+  /// started before the server stored them still has their groups new;
+  /// [newIngredientSuggestionCountProvider] counts those no more.
+  final _seenIds = <String>{};
 
   @override
-  AsyncValue<List<IngredientSuggestionGroup>> build() =>
-      const AsyncValue.loading();
+  AsyncValue<List<IngredientSuggestionGroup>> build() {
+    _seenIds.clear();
+    return const AsyncValue.loading();
+  }
 
+  /// Loads the groups; while some are loaded, they stay until the new ones
+  /// are in.
   Future<void> fetchSuggestions() async {
-    state = const AsyncValue.loading();
+    if (!state.hasValue) state = const AsyncValue.loading();
+    final userId = ref.read(currentUserIdProvider);
+    if (userId == null) {
+      state = const AsyncValue.data([]);
+      return;
+    }
     try {
-      final userId = ref.read(currentUserIdProvider);
-      if (userId == null) {
-        state = const AsyncValue.data([]);
-        return;
-      }
-
       final repo = ref.read(ingredientRepositoryProvider);
       final groups = await repo.fetchSuggestionGroups(userId);
-      _markedSeen = false;
-      state = AsyncValue.data(groups);
+      if (_isCurrentUser(userId)) state = AsyncValue.data(groups);
     } catch (e, st) {
       _log.error('fetchSuggestions failed', e, st);
-      state = AsyncValue.error(e, st);
+      if (_isCurrentUser(userId)) state = AsyncValue.error(e, st);
     }
   }
 
+  /// Whether [userId] is still the signed-in user after an await; what was
+  /// fetched for the previous one is dropped.
+  bool _isCurrentUser(String userId) =>
+      ref.mounted && ref.read(currentUserIdProvider) == userId;
+
   /// Marks the new groups seen in the backend. The list keeps their
   /// `isNew` (the Alternativen screen still shows „Neu" while open), but
-  /// [newIngredientSuggestionCountProvider] drops to 0.
+  /// [newIngredientSuggestionCountProvider] no longer counts them once the
+  /// server has stored it.
   Future<void> markAllNewAsSeen() async {
     final groups = state.whenOrNull(data: (g) => g);
     if (groups == null) return;
@@ -52,7 +59,8 @@ class IngredientSuggestionNotifier
 
     try {
       await ref.read(ingredientRepositoryProvider).markAllSeen(unseenIds);
-      _markedSeen = true;
+      if (!ref.mounted) return;
+      _seenIds.addAll(unseenIds);
       // The list is unchanged; tell the count it changed.
       ref.notifyListeners();
     } catch (e, st) {
@@ -81,13 +89,16 @@ final ingredientSuggestionProvider =
     >(IngredientSuggestionNotifier.new);
 
 /// How many suggestion groups are new, for Entdecken's „n neu": 0 while
-/// loading or failed, and once [IngredientSuggestionNotifier.markAllNewAsSeen]
-/// marked them seen, until groups load again.
+/// loading or failed. A group [IngredientSuggestionNotifier.markAllNewAsSeen]
+/// marked seen counts no more, even if a fetch from before the mark still
+/// has it new; one with a suggestion added since counts again.
 final newIngredientSuggestionCountProvider = Provider<int>((ref) {
   final groups = ref.watch(ingredientSuggestionProvider);
-  if (ref.read(ingredientSuggestionProvider.notifier)._markedSeen) {
-    return 0;
-  }
-  return groups.whenOrNull(data: (list) => list.where((g) => g.isNew).length) ??
+  final seen = ref.read(ingredientSuggestionProvider.notifier)._seenIds;
+  return groups.whenOrNull(
+        data: (list) => list
+            .where((g) => g.isNew && !g.suggestionIds.every(seen.contains))
+            .length,
+      ) ??
       0;
 });

@@ -8,8 +8,16 @@ class RecommendationNotifier
     extends Notifier<AsyncValue<List<Recommendation>>> {
   static const _log = AppLogger('RecommendationNotifier');
 
+  /// The sets [markAllAsSeen] stamped, by id, with their stamp. A fetch that
+  /// started before the server stored the mark still returns them unseen;
+  /// they keep the stamp.
+  final _seenLocally = <String, DateTime>{};
+
   @override
-  AsyncValue<List<Recommendation>> build() => const AsyncValue.loading();
+  AsyncValue<List<Recommendation>> build() {
+    _seenLocally.clear();
+    return const AsyncValue.loading();
+  }
 
   Future<void> fetchRecommendations() async {
     // Only flip to loading when we have no cached data. On re-entry / refresh
@@ -19,28 +27,50 @@ class RecommendationNotifier
     if (!state.hasValue) {
       state = const AsyncValue.loading();
     }
+    final userId = ref.read(currentUserIdProvider);
+    if (userId == null) {
+      _log.debug('fetchRecommendations: no user');
+      state = const AsyncValue.data([]);
+      return;
+    }
     try {
-      final userId = ref.read(currentUserIdProvider);
-      if (userId == null) {
-        _log.debug('fetchRecommendations: no user');
-        state = const AsyncValue.data([]);
-        return;
-      }
-
-      final recommendations = await ref
+      final sets = await ref
           .read(recommendationRepositoryProvider)
           .fetchByUserId(userId);
-      state = AsyncValue.data(recommendations);
+      if (_isCurrentUser(userId)) state = AsyncValue.data(_keepSeen(sets));
     } catch (e, st) {
-      state = AsyncValue.error(e, st);
+      if (_isCurrentUser(userId)) state = AsyncValue.error(e, st);
     }
   }
 
+  /// Whether [userId] is still the signed-in user after an await; what was
+  /// fetched for the previous one is dropped.
+  bool _isCurrentUser(String userId) =>
+      ref.mounted && ref.read(currentUserIdProvider) == userId;
+
+  /// [sets] with the stamps [markAllAsSeen] gave them.
+  List<Recommendation> _keepSeen(List<Recommendation> sets) => [
+    for (final set in sets)
+      switch (_seenLocally[set.id]) {
+        final seenAt? when set.seenAt == null => set.copyWith(seenAt: seenAt),
+        _ => set,
+      },
+  ];
+
+  /// Marks every set seen: the loaded ones at once, so „Neu" and whatever
+  /// follows [unseenTipSetProvider] go as the Tipps open, then the server's.
   Future<void> markAllAsSeen() async {
     final userId = ref.read(currentUserIdProvider);
     if (userId == null) return;
+    final sets = state.value ?? const <Recommendation>[];
+    if (sets.any((s) => s.seenAt == null)) {
+      final now = DateTime.now().toUtc();
+      for (final set in sets) {
+        if (set.seenAt == null) _seenLocally[set.id] = now;
+      }
+      state = AsyncValue.data(_keepSeen(sets));
+    }
     await ref.read(recommendationRepositoryProvider).markAllAsSeen(userId);
-    ref.invalidate(unseenRecommendationCountProvider);
   }
 
   Future<void> setRecommendationState({
@@ -124,8 +154,14 @@ final recommendationProvider =
       RecommendationNotifier.new,
     );
 
-final unseenRecommendationCountProvider = FutureProvider<int>((ref) async {
-  final userId = ref.watch(currentUserIdProvider);
-  if (userId == null) return 0;
-  return ref.read(recommendationRepositoryProvider).countUnseen(userId);
+/// The newest loaded tip set while it is unseen: Home's „Neue Tipps" row,
+/// the Entdecken dot and the Buddy's announcement. Null while loading,
+/// failed, empty or seen; an older unseen set behind a seen newest one is
+/// not new.
+final unseenTipSetProvider = Provider<Recommendation?>((ref) {
+  final newest = switch (ref.watch(recommendationProvider)) {
+    AsyncData(:final value) => value.firstOrNull,
+    _ => null,
+  };
+  return newest != null && newest.seenAt == null ? newest : null;
 });

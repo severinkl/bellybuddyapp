@@ -26,21 +26,6 @@ class RecommendationService {
     }
   }
 
-  Future<int> countUnseen(String userId) async {
-    try {
-      final result = await _client
-          .from('recommendations')
-          .select()
-          .eq('user_id', userId)
-          .isFilter('seen_at', null)
-          .count(CountOption.exact);
-      return result.count;
-    } catch (e, st) {
-      _log.error('countUnseen failed', e, st);
-      return 0;
-    }
-  }
-
   Future<void> markAllAsSeen(String userId) async {
     try {
       await _client

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -54,6 +56,31 @@ void main() {
       expect(state, isA<AsyncData>());
       expect(state.value, isEmpty);
       verifyNever(() => mockRepo.fetchSuggestionGroups(any()));
+    });
+
+    test('fetchSuggestions keeps the groups while reloading', () async {
+      final first = [testSuggestionGroup()];
+      final held = Completer<List<IngredientSuggestionGroup>>();
+      var fetches = 0;
+      when(
+        () => mockRepo.fetchSuggestionGroups(any()),
+      ).thenAnswer((_) => ++fetches == 1 ? Future.value(first) : held.future);
+
+      final container = makeContainer();
+      final notifier = container.read(ingredientSuggestionProvider.notifier);
+      await notifier.fetchSuggestions();
+
+      final reload = notifier.fetchSuggestions();
+      final during = container.read(ingredientSuggestionProvider);
+      expect(during.isLoading, isFalse);
+      expect(during.value, same(first));
+
+      final second = [
+        testSuggestionGroup(ingredientId: 'ing-2', ingredientName: 'Lauch'),
+      ];
+      held.complete(second);
+      await reload;
+      expect(container.read(ingredientSuggestionProvider).value, same(second));
     });
 
     test('repo error → AsyncError state', () async {
@@ -226,6 +253,36 @@ void main() {
 
       expect(container.read(newIngredientSuggestionCountProvider), 1);
     });
+
+    test(
+      'an earlier fetch landing after the mark keeps the count at 0',
+      () async {
+        final held = Completer<List<IngredientSuggestionGroup>>();
+        var fetches = 0;
+        when(() => mockRepo.fetchSuggestionGroups(any())).thenAnswer(
+          (_) =>
+              ++fetches == 1 ? Future.value(threeGroupsTwoNew()) : held.future,
+        );
+        when(() => mockRepo.markAllSeen(any())).thenAnswer((_) async {});
+
+        final container = makeContainer();
+        container.listen(newIngredientSuggestionCountProvider, (_, _) {});
+        final notifier = container.read(ingredientSuggestionProvider.notifier);
+        await notifier.fetchSuggestions();
+        expect(container.read(newIngredientSuggestionCountProvider), 2);
+
+        // A refresh (Entdecken, a push) starts before the Alternativen are
+        // marked seen …
+        final refresh = notifier.fetchSuggestions();
+        await notifier.markAllNewAsSeen();
+        expect(container.read(newIngredientSuggestionCountProvider), 0);
+        // … and lands after, from a server that still had them new.
+        held.complete(threeGroupsTwoNew());
+        await refresh;
+
+        expect(container.read(newIngredientSuggestionCountProvider), 0);
+      },
+    );
 
     test('a failed mark keeps the count', () async {
       when(

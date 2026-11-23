@@ -8,21 +8,15 @@ import '../../../utils/date_format_utils.dart';
 import '../../../widgets/common/bb_card.dart';
 import 'discover_section.dart';
 
-/// The newest tip set: „Neu" while [unseen], its ISO week, how many tips,
-/// two lines of its summary. No tips: a line, not tappable.
+/// The newest tip set: „Neu" while it is unseen, its ISO week, how many
+/// tips, two lines of its summary. No tips: a line, not tappable.
 class DiscoverTipsCard extends StatelessWidget {
-  const DiscoverTipsCard({
-    super.key,
-    required this.tips,
-    required this.unseen,
-    required this.onTap,
-  });
+  const DiscoverTipsCard({super.key, required this.tips, required this.onTap});
 
   /// The card (or the line in its place).
   static const cardKey = Key('discover_tips');
 
   final AsyncValue<List<Recommendation>> tips;
-  final bool unseen;
   final VoidCallback onTap;
 
   @override
@@ -47,7 +41,7 @@ class DiscoverTipsCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                if (unseen) ...[
+                if (newest.seenAt == null) ...[
                   const DiscoverPill('Neu'),
                   const SizedBox(width: AppConstants.spacingSm),
                 ],

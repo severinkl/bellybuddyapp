@@ -547,14 +547,28 @@ class FakeUserRecipeRepository implements UserRecipeRepository {
 
 // -- FakeRecommendationRepository --
 class FakeRecommendationRepository implements RecommendationRepository {
+  /// [sets], newest first; by default one set, seen on 1.11.2026, so
+  /// nothing is new.
+  FakeRecommendationRepository({List<Recommendation>? sets})
+    : sets = sets ?? [testRecommendation(seenAt: DateTime.utc(2026, 11))];
+
+  List<Recommendation> sets;
+  int fetchCount = 0;
+
   @override
-  Future<List<Recommendation>> fetchByUserId(String userId) async => [
-    testRecommendation(),
-  ];
+  Future<List<Recommendation>> fetchByUserId(String userId) async {
+    fetchCount++;
+    return sets;
+  }
+
   @override
-  Future<int> countUnseen(String userId) async => 0;
-  @override
-  Future<void> markAllAsSeen(String userId) async {}
+  Future<void> markAllAsSeen(String userId) async {
+    final now = DateTime.now().toUtc();
+    sets = [
+      for (final s in sets) s.seenAt == null ? s.copyWith(seenAt: now) : s,
+    ];
+  }
+
   @override
   Future<void> updateFeedback({
     required String id,

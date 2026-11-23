@@ -7,6 +7,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
+import '../../providers/discover_news_provider.dart';
 import '../../providers/ingredient_suggestion_provider.dart';
 import '../../providers/knowledge_provider.dart';
 import '../../providers/profile_provider.dart';
@@ -57,13 +58,11 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
   }
 
   /// Loads tips, alternatives, recipes and articles; [refresh] also reloads
-  /// what is cached (the recipes, the unseen-tips count and the articles).
+  /// what is cached (the recipes and the articles).
   Future<void> _load({bool refresh = false}) async {
     if (!mounted) return;
-    if (refresh) ref.invalidate(unseenRecommendationCountProvider);
     await Future.wait([
-      ref.read(recommendationProvider.notifier).fetchRecommendations(),
-      ref.read(ingredientSuggestionProvider.notifier).fetchSuggestions(),
+      ref.read(discoverNewsProvider.notifier).refresh(),
       ref.read(userRecipesProvider.notifier).fetch(force: refresh),
       if (refresh)
         ref.read(knowledgeFeedProvider.notifier).refresh()
@@ -74,22 +73,8 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // More unseen tips than before (a tips push refreshed the count): a new
-    // set arrived, so load it, or „Neu" would mark the previous one.
-    ref.listen<AsyncValue<int>>(unseenRecommendationCountProvider, (
-      previous,
-      next,
-    ) {
-      final before = previous?.value;
-      if (before != null && (next.value ?? 0) > before) {
-        unawaited(
-          ref.read(recommendationProvider.notifier).fetchRecommendations(),
-        );
-      }
-    });
     final tips = ref.watch(recommendationProvider);
     final weeklyTips = ref.watch(weeklyTipsEnabledProvider);
-    final unseenTips = ref.watch(unseenRecommendationCountProvider).value ?? 0;
     final groups = ref.watch(ingredientSuggestionProvider);
     final newGroups = ref.watch(newIngredientSuggestionCountProvider);
     final recipes = ref.watch(userRecipesProvider);
@@ -116,7 +101,6 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                 title: 'Tipps',
                 child: DiscoverTipsSection(
                   tips: tips,
-                  unseen: unseenTips > 0,
                   weeklyTips: weeklyTips,
                   onOpen: () => context.push(RoutePaths.recommendations),
                 ),

@@ -18,6 +18,7 @@ import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/screens/discover/widgets/discover_tips_section.dart';
 import 'package:belly_buddy/widgets/common/weekly_tips_switch.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
+import 'package:belly_buddy/providers/discover_news_provider.dart';
 import 'package:belly_buddy/providers/ingredient_suggestion_provider.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
@@ -99,7 +100,6 @@ void main() {
   Future<void> pump(
     WidgetTester tester, {
     List<Recommendation> tips = const [],
-    int unseenTips = 0,
     List<IngredientSuggestionGroup> groups = const [],
     List<UserRecipe> myRecipes = const [],
     double textScale = 1,
@@ -110,9 +110,6 @@ void main() {
     when(
       () => recommendations.fetchByUserId(any()),
     ).thenAnswer((_) async => tips);
-    when(
-      () => recommendations.countUnseen(any()),
-    ).thenAnswer((_) async => unseenTips);
     when(
       () => ingredients.fetchSuggestionGroups(any()),
     ).thenAnswer((_) async => groups);
@@ -256,12 +253,15 @@ void main() {
     expect(tops.toSet(), hasLength(4));
   });
 
-  testWidgets('Tipps card shows the newest set', (tester) async {
+  testWidgets('Tipps card shows the newest set, „Neu" while unseen', (
+    tester,
+  ) async {
     await pump(
       tester,
       tips: [
         testRecommendation(
           id: 'new',
+          seenAt: null,
           summary: 'Diese Woche lief es mit Reis besonders gut.',
           recommendations: const [_item, _item, _item],
           createdAt: DateTime.utc(2026, 11, 16, 10),
@@ -271,9 +271,9 @@ void main() {
           summary: 'Ältere Tipps.',
           recommendations: const [_item],
           createdAt: DateTime.utc(2026, 11, 9, 10),
+          seenAt: DateTime.utc(2026, 11, 10, 7),
         ),
       ],
-      unseenTips: 1,
     );
 
     final card = find.byKey(DiscoverScreen.tipsKey);
@@ -300,12 +300,36 @@ void main() {
         testRecommendation(
           recommendations: const [_item],
           createdAt: DateTime.utc(2026, 11, 16, 10),
+          seenAt: DateTime.utc(2026, 11, 16, 18),
         ),
       ],
     );
 
     expect(inSection(DiscoverScreen.tipsKey, find.text('Neu')), findsNothing);
     expect(find.text('1 Tipp'), findsOneWidget);
+  });
+
+  testWidgets('„Neu" goes once the Tipps are marked seen, while Entdecken '
+      'stays open underneath', (tester) async {
+    when(() => recommendations.markAllAsSeen(any())).thenAnswer((_) async {});
+    await pump(
+      tester,
+      tips: [
+        testRecommendation(
+          recommendations: const [_item],
+          createdAt: DateTime.utc(2026, 11, 16, 10),
+        ),
+      ],
+    );
+    expect(inSection(DiscoverScreen.tipsKey, find.text('Neu')), findsOneWidget);
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(DiscoverScreen)),
+    );
+    await container.read(recommendationProvider.notifier).markAllAsSeen();
+    await tester.pump();
+
+    expect(inSection(DiscoverScreen.tipsKey, find.text('Neu')), findsNothing);
   });
 
   testWidgets('a tips push brings the new set to the card, as „Neu"', (
@@ -316,12 +340,13 @@ void main() {
       summary: 'Ältere Tipps.',
       recommendations: const [_item],
       createdAt: DateTime.utc(2026, 11, 9, 10),
+      seenAt: DateTime.utc(2026, 11, 10, 7),
     );
     await pump(tester, tips: [lastWeek]);
     expect(find.text('Woche 46'), findsOneWidget);
     expect(inSection(DiscoverScreen.tipsKey, find.text('Neu')), findsNothing);
 
-    // A new set arrives; the push handler refreshes the unseen count.
+    // A new set arrives; the push handler refreshes the news.
     when(() => recommendations.fetchByUserId(any())).thenAnswer(
       (_) async => [
         testRecommendation(
@@ -333,10 +358,9 @@ void main() {
         lastWeek,
       ],
     );
-    when(() => recommendations.countUnseen(any())).thenAnswer((_) async => 1);
-    ProviderScope.containerOf(
+    await ProviderScope.containerOf(
       tester.element(find.byType(DiscoverScreen)),
-    ).invalidate(unseenRecommendationCountProvider);
+    ).read(discoverNewsProvider.notifier).refresh();
     await tester.pumpAndSettle();
 
     expect(inSection(DiscoverScreen.tipsKey, find.text('Neu')), findsOneWidget);
@@ -647,7 +671,6 @@ void main() {
     await tester.pumpAndSettle();
 
     verify(() => recommendations.fetchByUserId(testUserId)).called(2);
-    verify(() => recommendations.countUnseen(testUserId)).called(2);
     verify(() => ingredients.fetchSuggestionGroups(testUserId)).called(2);
     verify(() => recipes.fetchForUser(testUserId)).called(2);
   });
@@ -670,7 +693,6 @@ void main() {
           createdAt: DateTime.utc(2026, 11, 16, 10),
         ),
       ],
-      unseenTips: 1,
       groups: [
         for (final name in ['Zwiebel', 'Knoblauch', 'Weizen'])
           _group(name, isNew: true, lastMeal: DateTime(2026, 11, 20)),
