@@ -270,9 +270,11 @@ void main() {
         overrides: _overrides(entryRepo: entryRepo),
       );
       await tester.pump(const Duration(milliseconds: 100));
+      // Unlocked, no meals: nothing stands out yet.
       expect(
         find.text(
-          'Genug Einträge! Deine ersten Muster kommen bald.',
+          'Noch fällt mir nichts Eindeutiges auf – trag weiter ein, dann '
+          'sehe ich mehr.',
           skipOffstage: false,
         ),
         findsOneWidget,
@@ -295,6 +297,38 @@ void main() {
         ),
         findsOneWidget,
       );
+    });
+
+    testWidgets('back in the foreground on a new day, the insights are '
+        'computed again', (tester) async {
+      var now = DateTime(2026, 11, 23, 23, 50);
+      final entryRepo = FakeEntryRepository()
+        ..insightSource = insightSourceFor(activeDays: 2, gutFeelings: 1);
+      await tester.pumpWithProviders(
+        const DashboardScreen(),
+        overrides: [
+          ..._overrides(entryRepo: entryRepo),
+          buddyClockProvider.overrideWithValue(() => now),
+        ],
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(entryRepo.insightSourceCalls, 1);
+
+      void resume() => tester.binding
+        ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+        ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+
+      // The same day: nothing.
+      resume();
+      await tester.pump();
+      expect(entryRepo.insightSourceCalls, 1);
+
+      // The device slept past midnight; its timer stood still.
+      now = DateTime(2026, 11, 24, 7);
+      resume();
+      await tester.pump();
+      expect(entryRepo.insightSourceCalls, 2);
+      expect(entryRepo.insightSourceRequests.last.now, now);
     });
 
     testWidgets('after a user change the card never shows the previous '

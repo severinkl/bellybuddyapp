@@ -360,6 +360,99 @@ void main() {
     });
   });
 
+  group('app resumed (the midnight timer stood still while the device '
+      'slept)', () {
+    final source = InsightSource(
+      meals: const [],
+      gutFeelings: const [],
+      activityInstants: [DateTime(2026, 10, 25, 12), DateTime(2026, 11, 23, 9)],
+    );
+    final beforeMidnight = DateTime(2026, 11, 23, 23, 59, 30);
+
+    test('past midnight: computed for the new day, the timer armed for the '
+        'next one', () {
+      fakeAsync((async) {
+        // The clock moves on while asleep; fake timers only with elapse.
+        var asleep = Duration.zero;
+        entryRepo.insightSource = source;
+        final c = makeContainer(
+          clock: () => beforeMidnight.add(async.elapsed + asleep),
+        );
+        c.listen(insightsProvider, (_, _) {});
+        async.flushMicrotasks();
+
+        asleep = const Duration(hours: 8);
+        notifier(c).appResumed();
+        async.flushMicrotasks();
+
+        expect(entryRepo.insightSourceCalls, 2);
+        expect(
+          entryRepo.insightSourceRequests.last.now,
+          DateTime(2026, 11, 24, 7, 59, 30),
+        );
+        expect(
+          c.read(insightsProvider).value!.calendar.last.day,
+          DateTime(2026, 11, 24),
+        );
+
+        // The late timer is gone: nothing more when it would have fired …
+        async.elapse(const Duration(seconds: 31));
+        expect(entryRepo.insightSourceCalls, 2);
+        // … and the next midnight (25 Nov, 16 h 0 min 30 s after waking)
+        // fires.
+        async.elapse(const Duration(hours: 16));
+        expect(entryRepo.insightSourceCalls, 3);
+        expect(
+          entryRepo.insightSourceRequests.last.now,
+          DateTime(2026, 11, 25),
+        );
+      });
+    });
+
+    test('the same day: nothing fetched', () {
+      fakeAsync((async) {
+        final c = makeContainer(clock: () => now.add(async.elapsed));
+        c.listen(insightsProvider, (_, _) {});
+        async.flushMicrotasks();
+
+        notifier(c).appResumed();
+        async.flushMicrotasks();
+
+        expect(entryRepo.insightSourceCalls, 1);
+      });
+    });
+
+    test('unwatched: nothing until watched again', () {
+      fakeAsync((async) {
+        var asleep = Duration.zero;
+        entryRepo.insightSource = source;
+        final c = makeContainer(
+          clock: () => beforeMidnight.add(async.elapsed + asleep),
+        );
+        final sub = c.listen(insightsProvider, (_, _) {});
+        async.flushMicrotasks();
+        // Held, not read: a read would resume the provider for a moment.
+        final insights = notifier(c);
+        sub.pause();
+        async.flushMicrotasks();
+
+        asleep = const Duration(hours: 8);
+        insights.appResumed();
+        async.flushMicrotasks();
+        expect(entryRepo.insightSourceCalls, 1);
+        expect(async.pendingTimers, isEmpty);
+
+        sub.resume();
+        async.flushMicrotasks();
+        expect(entryRepo.insightSourceCalls, 2);
+        expect(
+          c.read(insightsProvider).value!.calendar.last.day,
+          DateTime(2026, 11, 24),
+        );
+      });
+    });
+  });
+
   group('refresh', () {
     test('during the first load it joins it', () async {
       final c = makeContainer();

@@ -267,6 +267,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: RouteNames.recommendations,
         builder: (context, state) => const RecommendationsScreen(),
       ),
+      // The Muster page behind Home's insight card.
+      GoRoute(
+        path: RoutePaths.patterns,
+        name: RouteNames.patterns,
+        builder: (context, state) => const PatternsScreen(),
+      ),
       GoRoute(
         path: RoutePaths.ingredientSuggestions,
         name: RouteNames.ingredientSuggestions,

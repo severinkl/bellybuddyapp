@@ -9,6 +9,7 @@ export 'health_consent/health_consent_screen.dart';
 export 'ingredient_suggestions/ingredient_suggestions_screen.dart';
 export 'loading_screen.dart';
 export 'me/me_screen.dart';
+export 'patterns/patterns_screen.dart';
 export 'recommendations/recommendations_screen.dart';
 export 'recipes/recipe_detail_screen.dart';
 export 'recipes/recipe_editor_screen.dart';

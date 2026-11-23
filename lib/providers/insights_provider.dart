@@ -21,7 +21,8 @@ import 'entries_provider.dart';
 ///   move, a delete), whoever made it; during a load, once it is done;
 /// - at local midnight, so the window moves on (while watched; a midnight
 ///   missed while unwatched, e.g. on a hidden tab, is caught up once
-///   watched again); during a load, once it is done;
+///   watched again, and one the timer missed while the device slept, on
+///   [appResumed]); during a load, once it is done;
 /// - on [refresh] (Home's load and pull-to-refresh).
 ///
 /// After a user change Riverpod keeps the previous user's value in the
@@ -142,6 +143,20 @@ class InsightsNotifier extends AsyncNotifier<Insights> {
   void _disarmMidnight() {
     _midnightTimer?.cancel();
     _midnightTimer = null;
+  }
+
+  /// The app is in the foreground again (Home's `AppLifecycleListener`).
+  /// Timers stand still while an iOS device sleeps, so the midnight timer
+  /// may be late: while watched, a midnight that passed meanwhile is caught
+  /// up now, and the timer armed for the next one. Unwatched, being watched
+  /// again catches up ([_resumeMidnight]).
+  void appResumed() {
+    final missed = _nextMidnight;
+    if (_midnightTimer == null || missed == null || _clock().isBefore(missed)) {
+      return;
+    }
+    _armMidnight();
+    unawaited(_refetch());
   }
 
   /// Watched again: arms the timer, and refreshes when the midnight it
