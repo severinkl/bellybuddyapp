@@ -49,6 +49,17 @@ void main() {
       expect(find.text('Stimmung'), findsOneWidget);
     });
 
+    testWidgets('the symptom sliders start at „gar nicht"', (tester) async {
+      await tester.pumpWithProviders(
+        const GutFeelingTrackerScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(find.text('gar nicht'), findsWidgets);
+      expect(find.text('garnicht'), findsNothing);
+    });
+
     testWidgets('renders weiter button on first tab', (tester) async {
       await tester.pumpWithProviders(
         const GutFeelingTrackerScreen(),
