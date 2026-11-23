@@ -72,8 +72,9 @@ class IngredientAutocompleteNotifier
       await ref
           .read(ingredientRepositoryProvider)
           .insertIfNew(trimmed, userId: userId);
-    } catch (e, st) {
-      _log.error('insertIfNew failed', e, st);
+    } catch (_) {
+      // Best effort: the entry keeps the ingredient either way, and
+      // IngredientService already logged the failure.
     }
   }
 
