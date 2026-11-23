@@ -32,6 +32,7 @@ class _BbPasswordFieldState extends State<BbPasswordField> {
       decoration: InputDecoration(
         labelText: widget.labelText,
         suffixIcon: IconButton(
+          tooltip: _obscure ? 'Passwort anzeigen' : 'Passwort verbergen',
           icon: Icon(
             _obscure ? Icons.visibility_off : Icons.visibility,
             color: AppTheme.mutedForeground,

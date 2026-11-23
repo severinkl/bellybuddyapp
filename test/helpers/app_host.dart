@@ -1,12 +1,10 @@
 // ignore_for_file: invalid_use_of_internal_member
-import 'package:cupertino_ui/cupertino_ui.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'
-    show GlobalWidgetsLocalizations;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 
+import 'package:belly_buddy/config/app_localizations.dart';
 import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
@@ -27,11 +25,7 @@ import 'fakes.dart';
 import 'fixtures.dart';
 
 /// The app's German localizations.
-const germanLocalizations = <LocalizationsDelegate<dynamic>>[
-  GlobalMaterialLocalizations.delegate,
-  GlobalWidgetsLocalizations.delegate,
-  GlobalCupertinoLocalizations.delegate,
-];
+const germanLocalizations = appLocalizationsDelegates;
 
 /// The app's one locale.
 const germanLocale = Locale('de', 'DE');

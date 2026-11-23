@@ -189,6 +189,7 @@ class _GutFeelingTrackerScreenState
         backgroundColor: AppTheme.screenBackground,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
           onPressed: () => context.popOrGoDashboard(),
         ),
         title: const Text('Wie geht es dir?'),
