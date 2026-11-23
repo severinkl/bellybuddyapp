@@ -5,10 +5,12 @@ import 'package:integration_test/integration_test.dart';
 import 'package:belly_buddy/screens/dashboard/dashboard_screen.dart';
 import 'package:belly_buddy/screens/discover/discover_screen.dart';
 import 'package:belly_buddy/screens/recipes/recipes_screen.dart';
+import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
 import 'package:belly_buddy/widgets/common/bb_success_overlay.dart';
 import 'package:belly_buddy/widgets/common/editable_app_bar_title.dart';
 import 'package:belly_buddy/widgets/common/ingredient_search.dart';
+import 'package:belly_buddy/widgets/log_sheet/log_sheet.dart';
 
 import '../test/helpers/fakes.dart';
 import 'helpers/test_app.dart';
@@ -28,8 +30,11 @@ Future<void> _openRecipesTab(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+/// The plus in the bar → Essen in the „Eintragen" sheet.
 Future<void> _openMealTracker(WidgetTester tester) async {
   await tester.tap(find.byKey(BbBottomNav.centerButtonKey));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(LogSheet.optionKey(CareNeed.food)));
   await tester.pumpAndSettle();
 }
 

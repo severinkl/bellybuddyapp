@@ -1,4 +1,5 @@
 import 'package:belly_buddy/screens/auth/auth_screen.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
 import 'package:belly_buddy/screens/welcome/welcome_screen.dart';
 import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -90,6 +91,9 @@ void main() {
     await tester.tap(find.byKey(AuthScreen.submitLoginButtonKey));
     await tester.pumpAndSettle();
 
+    // Signed in: Home with the Buddy's next-action button and the bar.
+    expect(find.byKey(BuddyHero.actionKey), findsOneWidget);
     expect(find.byKey(BbBottomNav.centerButtonKey), findsOneWidget);
+    expect(find.text('Für dich erstellt'), findsNothing);
   });
 }
