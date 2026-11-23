@@ -48,6 +48,10 @@ class _IngredientSearchState extends State<IngredientSearch> {
   bool _isAdding = false;
   Timer? _searchDebounceTimer;
 
+  /// Return was pressed before the search answered: an exact match among
+  /// its results is added then.
+  bool _addExactOnResults = false;
+
   @override
   void initState() {
     super.initState();
@@ -61,6 +65,15 @@ class _IngredientSearchState extends State<IngredientSearch> {
   void didUpdateWidget(IngredientSearch oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!identical(oldWidget.suggestions, widget.suggestions)) {
+      final exact = _addExactOnResults ? _exactMatch : null;
+      _addExactOnResults = false;
+      if (exact != null) {
+        // Not during this build: adding updates the host.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _isAdding) _add(exact.name);
+        });
+        return;
+      }
       _revealSuggestions();
     }
   }
@@ -115,6 +128,8 @@ class _IngredientSearchState extends State<IngredientSearch> {
     } else if (_typed.isEmpty) {
       _close();
     } else {
+      // The results may not be in yet.
+      _addExactOnResults = true;
       _flushSearch(value);
     }
   }
@@ -209,6 +224,7 @@ class _IngredientSearchState extends State<IngredientSearch> {
                     ),
                     textInputAction: TextInputAction.done,
                     onChanged: (value) {
+                      _addExactOnResults = false;
                       setState(() {}); // for the „hinzufügen" row
                       _onQueryChanged(value);
                       _revealSuggestions();

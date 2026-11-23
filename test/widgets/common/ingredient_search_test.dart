@@ -155,6 +155,28 @@ void main() {
     expect(added, ['Haferflocken']);
   });
 
+  testWidgets('Return before the search answered adds the exact match once '
+      'it arrives', (tester) async {
+    await pump(tester);
+    await tester.enterText(field(), 'Haferflocken');
+    // Return right away, inside the search debounce.
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+
+    expect(added, ['Haferflocken']);
+  });
+
+  testWidgets('Return before the search answered adds nothing without an '
+      'exact match', (tester) async {
+    await pump(tester);
+    await tester.enterText(field(), 'Hafer');
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+
+    expect(added, isEmpty);
+    expect(find.byKey(IngredientSearch.addTypedKey), findsOneWidget);
+  });
+
   testWidgets('leaving the field does not add the typed text', (tester) async {
     await pump(tester);
     await type(tester, 'Hafer');
