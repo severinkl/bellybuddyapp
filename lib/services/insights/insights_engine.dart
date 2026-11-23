@@ -109,7 +109,7 @@ DateTime _localDay(DateTime t) => startOfDay(t.toLocal());
 
 DayClass _classOf(GutFeelingRatingLevel level) => switch (level) {
   GutFeelingRatingLevel.spiGut || GutFeelingRatingLevel.gut => DayClass.good,
-  GutFeelingRatingLevel.durchschnittlich => DayClass.medium,
+  GutFeelingRatingLevel.mittel => DayClass.medium,
   GutFeelingRatingLevel.schlecht => DayClass.hard,
 };
 

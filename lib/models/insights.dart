@@ -8,7 +8,7 @@ enum DayClass {
   /// „Sehr gut" or „Gut": a mean of at most 2.5.
   good,
 
-  /// „Durchschnittlich": above 2.5, at most 3.5.
+  /// „Mittel": above 2.5, at most 3.5.
   medium,
 
   /// „Schlecht": above 3.5.
