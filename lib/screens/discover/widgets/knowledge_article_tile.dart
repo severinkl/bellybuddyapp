@@ -113,8 +113,9 @@ class _Thumbnail extends StatelessWidget {
               width: _size,
               height: _size,
               fit: BoxFit.cover,
-              // The blog's images are 1000 px wide.
-              memCacheWidth: (_size * dpr).round(),
+              // The blog's images are 1000 px wide landscapes: decoded as
+              // tall as the box, their short side fills it under cover.
+              memCacheHeight: (_size * dpr).round(),
               placeholder: (_, _) => Shimmer.fromColors(
                 baseColor: AppTheme.muted,
                 highlightColor: AppTheme.background,

@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/knowledge_article.dart';
 import 'package:belly_buddy/providers/knowledge_provider.dart';
 import 'package:belly_buddy/repositories/knowledge_repository.dart';
@@ -257,6 +258,14 @@ void main() {
     expect(image.imageUrl, 'https://static.wixstatic.com/media/x.jpg');
     final context = tester.element(find.byType(CachedNetworkImage));
     expect(image.placeholder!(context, image.imageUrl), isA<Shimmer>());
+    // Decoded as tall as the box (the landscape images' short side), so
+    // BoxFit.cover fills it without upscaling.
+    final dpr = tester.view.devicePixelRatio;
+    expect(
+      image.memCacheHeight,
+      (AppConstants.knowledgeThumbSize * dpr).round(),
+    );
+    expect(image.memCacheWidth, isNull);
   });
 
   testWidgets('fits 375x667 at text scale 1.3', (tester) async {
