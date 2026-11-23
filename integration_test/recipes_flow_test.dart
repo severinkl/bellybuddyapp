@@ -43,8 +43,13 @@ Future<void> _enterTitleAndIngredient(
   required String title,
   required String ingredient,
 }) async {
+  // The meal tracker shows its title as a label until it is tapped (a new
+  // recipe's editor opens it for editing; the tap just focuses it there).
+  final titleWidget = find.byType(EditableAppBarTitle);
+  await tester.tap(titleWidget);
+  await tester.pumpAndSettle();
   final titleField = find.descendant(
-    of: find.byType(EditableAppBarTitle),
+    of: titleWidget,
     matching: find.byType(TextField),
   );
   await tester.enterText(titleField, title);
