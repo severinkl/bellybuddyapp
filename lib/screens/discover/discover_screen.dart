@@ -14,13 +14,11 @@ import '../../providers/user_recipes_provider.dart';
 import '../../router/route_names.dart';
 import '../../utils/date_format_utils.dart';
 import '../../utils/logger.dart';
+import '../../utils/url_utils.dart';
 import '../../widgets/common/bb_card.dart';
 import '../recipes/widgets/add_recipe_chooser_sheet.dart';
 import '../recipes/widgets/recipe_card.dart';
 import 'widgets/discover_section.dart';
-
-/// Opens [url] the way `url_launcher`'s `launchUrl` does.
-typedef UrlOpener = Future<bool> Function(Uri url, {LaunchMode mode});
 
 /// The Entdecken tab: the hub over the app's content. Top to bottom:
 /// Tipps (the newest recommendation set), Alternativen (the newest
