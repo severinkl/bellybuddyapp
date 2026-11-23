@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/models/insight_progress.dart';
+import 'package:belly_buddy/models/insight_rules.dart';
 import 'package:belly_buddy/models/insights.dart';
 import 'package:belly_buddy/providers/insights_provider.dart';
 import 'package:belly_buddy/screens/patterns/patterns_screen.dart';
@@ -52,7 +53,7 @@ Future<void> _pump(
 /// The window from 25.10.2026 (a Sunday) to 23.11.2026, each day's class
 /// from [classOf] by its index.
 List<InsightDay> _calendar(DayClass Function(int i) classOf) => [
-  for (var i = 0; i < InsightProgress.windowDays; i++)
+  for (var i = 0; i < InsightRules.windowDays; i++)
     InsightDay(day: DateTime(2026, 10, 25 + i), dayClass: classOf(i)),
 ];
 
@@ -114,7 +115,7 @@ void main() {
     testWidgets('has 30 day cells aligned to weekdays', (tester) async {
       await _pump(tester, _insights());
 
-      expect(_dayCells, findsNWidgets(InsightProgress.windowDays));
+      expect(_dayCells, findsNWidgets(InsightRules.windowDays));
       for (final name in ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']) {
         expect(find.text(name), findsOneWidget);
       }
@@ -280,8 +281,8 @@ void main() {
       await _pump(
         tester,
         _insights(
-          goodDays: const DayColumn(days: DayColumn.minDays),
-          hardDays: const DayColumn(days: DayColumn.minDays),
+          goodDays: const DayColumn(days: InsightRules.minColumnDays),
+          hardDays: const DayColumn(days: InsightRules.minColumnDays),
         ),
       );
 
@@ -326,7 +327,7 @@ void main() {
     testWidgets('nothing yet at 3 hard days without items', (tester) async {
       await _pump(
         tester,
-        _insights(hardDays: const DayColumn(days: Noticed.minHardDays)),
+        _insights(hardDays: const DayColumn(days: InsightRules.minHardDays)),
       );
 
       expect(_noticedTitle, findsOneWidget);
@@ -336,7 +337,9 @@ void main() {
     testWidgets('no section below 3 hard days', (tester) async {
       await _pump(
         tester,
-        _insights(hardDays: const DayColumn(days: Noticed.minHardDays - 1)),
+        _insights(
+          hardDays: const DayColumn(days: InsightRules.minHardDays - 1),
+        ),
       );
 
       expect(_noticedTitle, findsNothing);

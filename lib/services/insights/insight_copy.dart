@@ -1,4 +1,5 @@
 import '../../models/insight_progress.dart';
+import '../../models/insight_rules.dart';
 import '../../models/insights.dart';
 import '../../utils/date_format_utils.dart';
 
@@ -51,8 +52,9 @@ class InsightCopy {
     return 'Genug Einträge! Deine ersten Muster kommen bald.';
   }
 
-  /// „Zwiebel war an 4 von 5 schweren Tagen dabei." (a noticed item has at
-  /// least [Noticed.minHardDays] hard days, so always „Tagen").
+  /// „Zwiebel war an 4 von 5 schweren Tagen dabei." (a shown item was there
+  /// on at least [InsightRules.minNoticedHard] hard days, so always
+  /// „Tagen").
   static String noticedHeadline(Noticed n) =>
       '${n.name} war ${_onHardDays(n)} dabei.';
 
@@ -79,14 +81,14 @@ class InsightCopy {
   /// „6 gute Tage in den letzten 30".
   static String goodDaysSub(DayColumn goodDays) =>
       '${columnTitle(goodDays, hard: false)} in den letzten '
-      '${InsightProgress.windowDays}';
+      '${InsightRules.windowDays}';
 
   // The Muster page, once unlocked.
 
   /// The calendar's header: „Letzte 30 Tage · 21 Tage mit Bauchgefühl".
   static String calendarHeader(int gutFeelingDays) {
     final days = gutFeelingDays == 1 ? 'Tag' : 'Tage';
-    return 'Letzte ${InsightProgress.windowDays} Tage · $gutFeelingDays '
+    return 'Letzte ${InsightRules.windowDays} Tage · $gutFeelingDays '
         '$days mit Bauchgefühl';
   }
 
@@ -121,7 +123,7 @@ class InsightCopy {
   static const oftenLabel = 'oft dabei:';
 
   /// A column item: „Reis · an 3 von 4 guten Tagen" (an item is there on
-  /// at least 2 days, so always „Tagen").
+  /// at least [InsightRules.minOftenCount] days, so always „Tagen").
   static String oftenRow(IngredientCount i, {required bool hard}) =>
       '${i.name} · an ${i.count} von ${i.of} '
       '${hard ? 'schweren' : 'guten'} Tagen';
@@ -129,7 +131,7 @@ class InsightCopy {
   /// A shown column without items.
   static const nothingOften = 'Noch nichts, das oft dabei war.';
 
-  /// A column below [DayColumn.minDays] days.
+  /// A column below [InsightRules.minColumnDays] days.
   static String tooFewDays({required bool hard}) =>
       'Noch zu wenige ${hard ? 'schwere' : 'gute'} Tage';
 

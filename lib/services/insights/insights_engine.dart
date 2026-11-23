@@ -1,28 +1,13 @@
 import '../../models/gut_feeling_entry.dart';
 import '../../models/insight_progress.dart';
+import '../../models/insight_rules.dart';
 import '../../models/insight_source.dart';
 import '../../models/insights.dart';
 import '../../utils/date_format_utils.dart';
 import '../../utils/gut_feeling_rating.dart';
 
-/// The ingredients that count for a day are those of the meals in the 24 h
-/// before its first entry of the day's class.
-const _windowBefore = Duration(hours: 24);
-
-/// A shown „Fällt mir auf" item was there on at least this many hard days;
-/// a „noch unsicher" one on exactly [_uncertainHard].
-const _minShownHard = 3;
-const _uncertainHard = 2;
-const _maxShown = 5;
-const _maxUncertain = 3;
-
-/// „oft dabei": there on at least this many days of the column (and on at
-/// least half of them); at most [_maxOften] per column.
-const _minOftenCount = 2;
-const _maxOften = 5;
-
-/// What the last [InsightProgress.windowDays] local days of [source] show,
-/// as of [now].
+/// What the last [InsightRules.windowDays] local days of [source] show,
+/// as of [now]; every threshold comes from [InsightRules].
 ///
 /// - The window runs from local midnight 29 days before [now]'s day through
 ///   [now]; anything tracked after [now] is ignored.
@@ -37,10 +22,7 @@ const _maxOften = 5;
 ///
 /// Pure: no I/O and no clock.
 Insights computeInsights(InsightSource source, DateTime now) {
-  final start = addDays(
-    startOfDay(now.toLocal()),
-    1 - InsightProgress.windowDays,
-  );
+  final start = addDays(startOfDay(now.toLocal()), 1 - InsightRules.windowDays);
   bool inWindow(DateTime t) => !t.isBefore(start) && !t.isAfter(now);
 
   final gutFeelings = [
@@ -55,7 +37,7 @@ Insights computeInsights(InsightSource source, DateTime now) {
   final calendar = <InsightDay>[];
   final hardAnchors = <DateTime>[];
   final goodAnchors = <DateTime>[];
-  for (var i = 0; i < InsightProgress.windowDays; i++) {
+  for (var i = 0; i < InsightRules.windowDays; i++) {
     final day = addDays(start, i);
     final entries = entriesByDay[day];
     final dayClass = entries == null ? DayClass.none : _dayClassOf(entries);
@@ -190,7 +172,7 @@ Map<String, String> _displayNames(List<_Meal> meals) {
 Map<String, int> _daysThere(List<_Meal> meals, List<DateTime> anchors) {
   final counts = <String, int>{};
   for (final anchor in anchors) {
-    final from = anchor.subtract(_windowBefore);
+    final from = anchor.subtract(InsightRules.mealsBefore);
     final there = {
       for (final m in meals)
         if (!m.trackedAt.isBefore(from) && m.trackedAt.isBefore(anchor))
@@ -204,21 +186,24 @@ Map<String, int> _daysThere(List<_Meal> meals, List<DateTime> anchors) {
 }
 
 /// The column of [days] days: ingredients there on at least
-/// [_minOftenCount] and at least half of them, by count, then by name.
+/// [InsightRules.minOftenCount] and [InsightRules.minOftenShare] of them,
+/// by count, then by name.
 DayColumn _column(
   Map<String, int> counts,
   int days,
   Map<String, String> names,
 ) {
-  if (days < DayColumn.minDays) return DayColumn(days: days);
+  if (days < InsightRules.minColumnDays) return DayColumn(days: days);
   final often = [
     for (final e in counts.entries)
-      if (e.value >= _minOftenCount && e.value * 2 >= days) e,
+      if (e.value >= InsightRules.minOftenCount &&
+          _reaches(e.value, days, InsightRules.minOftenShare))
+        e,
   ]..sort((a, b) => _higherFirstThenName(a.value, b.value, a.key, b.key));
   return DayColumn(
     days: days,
     often: List.unmodifiable([
-      for (final e in often.take(_maxOften))
+      for (final e in often.take(InsightRules.maxOften))
         IngredientCount(names[e.key]!, e.value, of: days),
     ]),
   );
@@ -229,8 +214,9 @@ DayColumn _column(
 typedef _Candidate = ({String key, int hard, int good, int gap});
 
 /// „Fällt mir auf", in whole numbers so the thresholds hold exactly:
-/// `rate = hard/H ≥ 0.5` and `gap = rate − (G > 0 ? good/G : 0) ≥ 0.25`.
-/// The gap is kept as its numerator over the denominator shared by every
+/// `rate = hard/H ≥` [InsightRules.minHardShare] and
+/// `gap = rate − (G > 0 ? good/G : 0) ≥` [InsightRules.minShareGap]. The
+/// gap is kept as its numerator over the denominator shared by every
 /// ingredient (`H·G`, or `H` while `G == 0`), which also sorts it exactly.
 List<Noticed> _noticed(
   Map<String, int> hardCounts,
@@ -239,13 +225,14 @@ List<Noticed> _noticed(
   required int goodDays,
   required Map<String, String> names,
 }) {
-  if (hardDays < Noticed.minHardDays) return const [];
+  if (hardDays < InsightRules.minHardDays) return const [];
   final denominator = goodDays > 0 ? hardDays * goodDays : hardDays;
   final candidates = <_Candidate>[];
   for (final MapEntry(key: key, value: hard) in hardCounts.entries) {
     final good = goodCounts[key] ?? 0;
     final gap = goodDays > 0 ? hard * goodDays - good * hardDays : hard;
-    if (hard * 2 >= hardDays && gap * 4 >= denominator) {
+    if (_reaches(hard, hardDays, InsightRules.minHardShare) &&
+        _reaches(gap, denominator, InsightRules.minShareGap)) {
       candidates.add((key: key, hard: hard, good: good, gap: gap));
     }
   }
@@ -263,14 +250,21 @@ List<Noticed> _noticed(
     goodDays: goodDays,
     uncertain: uncertain,
   );
-  final shown = candidates.where((c) => c.hard >= _minShownHard);
-  final uncertain = candidates.where((c) => c.hard == _uncertainHard);
+  final shown = candidates.where((c) => c.hard >= InsightRules.minNoticedHard);
+  final uncertain = candidates.where(
+    (c) => c.hard == InsightRules.uncertainHard,
+  );
   return [
-    for (final c in shown.take(_maxShown)) toNoticed(c, uncertain: false),
-    for (final c in uncertain.take(_maxUncertain))
+    for (final c in shown.take(InsightRules.maxNoticed))
+      toNoticed(c, uncertain: false),
+    for (final c in uncertain.take(InsightRules.maxUncertain))
       toNoticed(c, uncertain: true),
   ];
 }
+
+/// Whether [count] of [of] is at least [share], exactly.
+bool _reaches(int count, int of, InsightShare share) =>
+    count * share.denominator >= of * share.numerator;
 
 /// The higher of [a] and [b] first, then by key (the name without case).
 int _higherFirstThenName(int a, int b, String keyA, String keyB) =>

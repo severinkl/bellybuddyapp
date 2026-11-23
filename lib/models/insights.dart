@@ -1,4 +1,5 @@
 import 'insight_progress.dart';
+import 'insight_rules.dart';
 
 /// How a day went, from the mean of its gut-feeling entries' scores (each
 /// the entry's worst gut symptom, `gutFeelingScore`) and the levels of
@@ -71,19 +72,19 @@ class IngredientCount {
 class DayColumn {
   const DayColumn({required this.days, this.often = const []});
 
-  /// A column needs this many days of its class to be [shown].
-  static const minDays = 3;
-
   /// Days of the column's class in the window.
   final int days;
 
-  /// Whether there are enough [days] to show the column. Otherwise the
-  /// page says „Noch zu wenige gute/schwere Tage".
-  bool get shown => days >= minDays;
+  /// Whether there are enough [days] ([InsightRules.minColumnDays]) to show
+  /// the column. Otherwise the page says „Noch zu wenige gute/schwere
+  /// Tage".
+  bool get shown => days >= InsightRules.minColumnDays;
 
-  /// „oft dabei": ingredients there on at least 2 of the [days] and on at
-  /// least half of them. Most frequent first, then by name; at most 5.
-  /// Empty while the column is not [shown].
+  /// „oft dabei": ingredients there on at least
+  /// [InsightRules.minOftenCount] of the [days] and on at least
+  /// [InsightRules.minOftenShare] of them. Most frequent first, then by
+  /// name; at most [InsightRules.maxOften]. Empty while the column is not
+  /// [shown].
   final List<IngredientCount> often;
 
   @override
@@ -112,10 +113,6 @@ class Noticed {
     this.uncertain = false,
   });
 
-  /// „Fällt mir auf" appears only with at least this many hard days in the
-  /// window.
-  static const minHardDays = 3;
-
   /// The trimmed spelling from the most recent meal that lists it.
   final String name;
 
@@ -131,7 +128,8 @@ class Noticed {
   /// All good days in the window; 0 reads „an guten Tagen: noch keine".
   final int goodDays;
 
-  /// There on only 2 hard days so far: marked „noch unsicher".
+  /// There on only [InsightRules.uncertainHard] hard days so far: marked
+  /// „noch unsicher".
   final bool uncertain;
 
   @override
@@ -238,8 +236,9 @@ class Insights {
 
   final DayColumn hardDays;
 
-  /// „Fällt mir auf": the shown items (at most 5), then the „noch unsicher"
-  /// ones (at most 3). Empty below [Noticed.minHardDays] hard days.
+  /// „Fällt mir auf": the shown items (at most [InsightRules.maxNoticed]),
+  /// then the „noch unsicher" ones (at most [InsightRules.maxUncertain]).
+  /// Empty below [InsightRules.minHardDays] hard days.
   final List<Noticed> noticed;
 
   /// What Home's card shows once [unlocked].

@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/insight_progress.dart';
+import '../models/insight_rules.dart';
 import '../models/insight_source.dart';
 import '../models/meal_entry.dart';
 import '../services/entry_crud_service.dart';
@@ -43,14 +43,14 @@ class EntryRepository {
     return {for (final i in instants) startOfDay(i.toLocal())};
   }
 
-  /// The last [InsightProgress.windowDays] local days as of [now], today
+  /// The last [InsightRules.windowDays] local days as of [now], today
   /// included, with meals reaching 24 h further back (a meal the evening
   /// before still counts for the first day's entries).
   Future<InsightSource> fetchInsightSource({
     required String userId,
     required DateTime now,
   }) {
-    final since = addDays(startOfDay(now), -(InsightProgress.windowDays - 1));
+    final since = addDays(startOfDay(now), -(InsightRules.windowDays - 1));
     return _queryService.fetchInsightSource(
       userId: userId,
       since: since,
