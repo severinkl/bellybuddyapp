@@ -18,10 +18,10 @@ import 'entries_provider.dart';
 ///
 /// Computed again:
 /// - after every entry write ([entriesRevisionProvider]: a log, an edit, a
-///   move, a delete), whoever made it;
+///   move, a delete), whoever made it; during a load, once it is done;
 /// - at local midnight, so the window moves on (while watched; a midnight
 ///   missed while unwatched, e.g. on a hidden tab, is caught up once
-///   watched again);
+///   watched again); during a load, once it is done;
 /// - on [refresh] (Home's load and pull-to-refresh).
 ///
 /// After a user change Riverpod keeps the previous user's value in the
@@ -37,7 +37,8 @@ class InsightsNotifier extends AsyncNotifier<Insights> {
     activityInstants: [],
   );
 
-  /// Counts refresh fetches; only the latest one applies its result.
+  /// Counts computations outside build; only the latest one applies its
+  /// result.
   int _seq = 0;
 
   /// The app's clock, kept for the life-cycle callbacks, where [ref] can't
@@ -54,7 +55,7 @@ class InsightsNotifier extends AsyncNotifier<Insights> {
     final userId = ref.watch(currentUserIdProvider);
     _clock = ref.read(buddyClockProvider);
     ref
-      ..listen(entriesRevisionProvider, (_, _) => unawaited(refresh()))
+      ..listen(entriesRevisionProvider, (_, _) => unawaited(_refetch()))
       ..onCancel(_disarmMidnight)
       ..onResume(_resumeMidnight)
       ..onDispose(_disarmMidnight);
@@ -70,17 +71,37 @@ class InsightsNotifier extends AsyncNotifier<Insights> {
   /// Computes the insights again. While a load runs (the first one, or the
   /// one after a user change), waits for it instead. Never throws: on
   /// failure the last insights stay (an error without them stays an
-  /// error). A result applies only if no newer refresh started meanwhile
-  /// and the user is still the same.
+  /// error). A result applies only if no newer computation started
+  /// meanwhile and the user is still the same.
   Future<void> refresh() async {
     if (state.isLoading) {
-      try {
-        await future;
-      } catch (_) {
-        // Logged by build.
-      }
+      await _loadDone();
       return;
     }
+    await _fetchAndApply();
+  }
+
+  /// After an entry write or at midnight: a running load may have fetched
+  /// before it, so this waits for that load to apply and then computes
+  /// again (fetching only afterwards, an older load never overwrites it).
+  Future<void> _refetch() async {
+    final opRef = ref;
+    while (opRef.mounted && state.isLoading) {
+      await _loadDone();
+    }
+    // A rebuild (another user) meanwhile loads on its own, after this.
+    if (opRef.mounted) await _fetchAndApply();
+  }
+
+  Future<void> _loadDone() async {
+    try {
+      await future;
+    } catch (_) {
+      // Logged by build.
+    }
+  }
+
+  Future<void> _fetchAndApply() async {
     final opRef = ref;
     final userId = opRef.read(currentUserIdProvider);
     final seq = ++_seq;
@@ -114,7 +135,7 @@ class InsightsNotifier extends AsyncNotifier<Insights> {
     _nextMidnight = midnight;
     _midnightTimer = Timer(midnight.difference(now), () {
       _armMidnight();
-      unawaited(refresh());
+      unawaited(_refetch());
     });
   }
 
@@ -131,7 +152,7 @@ class InsightsNotifier extends AsyncNotifier<Insights> {
     if (missed == null || _clock().isBefore(missed)) return;
     final opRef = ref;
     scheduleMicrotask(() {
-      if (opRef.mounted) unawaited(refresh());
+      if (opRef.mounted) unawaited(_refetch());
     });
   }
 }

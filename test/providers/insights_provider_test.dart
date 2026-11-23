@@ -135,6 +135,57 @@ void main() {
       expect(c.read(insightsProvider).value!.progress.gutFeelingsLeft, 1);
     });
 
+    test('a write during the first load is fetched after it', () async {
+      final before = insightSourceFor(activeDays: 7, gutFeelings: 3);
+      final after = insightSourceFor(activeDays: 7, gutFeelings: 2);
+      entryRepo.holdInsightSource = true;
+      final c = makeContainer();
+      c.listen(insightsProvider, (_, _) {});
+      await settle();
+      expect(entryRepo.heldInsightSources, hasLength(1));
+
+      // The 3rd gut-feeling entry is deleted while the load runs.
+      await c.read(entriesProvider.notifier).deleteByType('gutFeeling', 'g3');
+      await settle();
+      entryRepo
+        ..holdInsightSource = false
+        ..insightSource = after;
+      // The load's fetch started before the delete.
+      entryRepo.heldInsightSources.single.complete(before);
+      await settle();
+
+      expect(entryRepo.insightSourceCalls, 2);
+      expect(c.read(insightsProvider).value, computeInsights(after, now));
+      expect(c.read(insightsProvider).value!.unlocked, isFalse);
+    });
+
+    test('a write during a user change\'s load is fetched after it', () async {
+      final c = makeContainer();
+      c.listen(insightsProvider, (_, _) {});
+      await c.read(insightsProvider.future);
+      entryRepo.holdInsightSource = true;
+      c.read(_userIdProvider.notifier).set('u2');
+      await settle();
+
+      await c
+          .read(entriesProvider.notifier)
+          .addGutFeeling(testGutFeelingEntry());
+      await settle();
+      final after = insightSourceFor(activeDays: 1, gutFeelings: 1);
+      entryRepo
+        ..holdInsightSource = false
+        ..insightSource = after;
+      entryRepo.heldInsightSources.single.complete(_noEntries);
+      await settle();
+
+      expect(entryRepo.insightSourceRequests.map((r) => r.userId), [
+        'u1',
+        'u2',
+        'u2',
+      ]);
+      expect(c.read(insightsProvider).value, computeInsights(after, now));
+    });
+
     test('a Buddy event alone (no write) fetches nothing', () async {
       final c = makeContainer();
       await c.read(insightsProvider.future);
@@ -201,6 +252,33 @@ void main() {
           c.read(insightsProvider).value!.calendar.last.day,
           DateTime(2026, 11, 25),
         );
+      });
+    });
+
+    test('midnight during a load: fetched again for the new day after it', () {
+      fakeAsync((async) {
+        entryRepo
+          ..insightSource = source
+          ..holdInsightSource = true;
+        final c = makeContainer(clock: () => beforeMidnight.add(async.elapsed));
+        c.listen(insightsProvider, (_, _) {});
+        async.flushMicrotasks();
+        expect(entryRepo.heldInsightSources, hasLength(1));
+
+        // Midnight passes while the load (as of 23:59:30) still runs.
+        async.elapse(const Duration(seconds: 31));
+        entryRepo.holdInsightSource = false;
+        entryRepo.heldInsightSources.single.complete(source);
+        async.flushMicrotasks();
+
+        expect(entryRepo.insightSourceCalls, 2);
+        expect(
+          entryRepo.insightSourceRequests.last.now,
+          DateTime(2026, 11, 24, 0, 0, 1),
+        );
+        final value = c.read(insightsProvider).value!;
+        expect(value.calendar.last.day, DateTime(2026, 11, 24));
+        expect(value.progress.activeDays, 1);
       });
     });
 
