@@ -33,6 +33,7 @@ import '../../../helpers/ambient_animations.dart';
 import '../../../helpers/app_host.dart';
 import '../../../helpers/fakes.dart';
 import '../../../helpers/fixtures.dart';
+import '../../../helpers/riverpod_helpers.dart';
 
 /// A welcome already set when the hero first reads it.
 class _PresetWelcome extends BuddyWelcomeNotifier {
@@ -128,9 +129,11 @@ void main() {
   late ValueNotifier<bool> visible;
   late GoRouter router;
 
-  /// What [unseenTipSetProvider] and [weeklyTipsEnabledProvider] hold.
+  /// What [unseenTipSetProvider] and [weeklyTipsEnabledProvider] hold; the
+  /// latter switchable once pumped ([weeklyTipsSwitch]).
   late Recommendation? unseenTipSet;
   late bool? weeklyTips;
+  late NotifierProvider<Switchable<bool?>, bool?> weeklyTipsSwitch;
 
   // The hero's bubble and actions need ticking Buddies.
   tickBuddiesInTests();
@@ -155,6 +158,9 @@ void main() {
     WidgetTester tester, {
     List<Override> extra = const [],
   }) async {
+    weeklyTipsSwitch = NotifierProvider<Switchable<bool?>, bool?>(
+      () => Switchable(weeklyTips),
+    );
     final container = ProviderContainer.test(
       overrides: [
         buddyClockProvider.overrideWithValue(() => now),
@@ -162,7 +168,9 @@ void main() {
         buddyProvider.overrideWith(() => buddy),
         entriesProvider.overrideWith(() => entries),
         unseenTipSetProvider.overrideWithValue(unseenTipSet),
-        weeklyTipsEnabledProvider.overrideWithValue(weeklyTips),
+        weeklyTipsEnabledProvider.overrideWith(
+          (ref) => ref.watch(weeklyTipsSwitch),
+        ),
         ...extra,
       ],
     );
@@ -839,6 +847,22 @@ void main() {
       expect(find.byType(WeeklyTipsOfferSheet), findsNothing);
     });
 
+    testWidgets('weeklyTipsOffer plays while the profile is reloading (the '
+        'weekly tips unknown)', (tester) async {
+      weeklyTips = null;
+      buddy = _FakeBuddy(
+        () => _status(announcements: const [BuddyAnnouncement.weeklyTipsOffer]),
+      );
+      await pumpHero(tester);
+      await tick(tester);
+
+      expect(controller(tester).currentAction, BuddyAction.wave);
+      await tester.pump(const Duration(seconds: 1, milliseconds: 400));
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byType(WeeklyTipsOfferSheet), findsOneWidget);
+      expect(buddy.shown, isEmpty);
+    });
+
     testWidgets('the StreakChip is ignored while the weekly-tips offer is on '
         'stage', (tester) async {
       buddy = _FakeBuddy(
@@ -1298,6 +1322,28 @@ void main() {
       expect(find.byType(WeeklyTipsOfferSheet), findsOneWidget);
 
       await closeOffer(tester, WeeklyTipsOfferSheet.laterKey);
+      expect(buddy.shown, [BuddyAnnouncement.weeklyTipsOffer]);
+    });
+
+    testWidgets('weekly tips switched on while the offer sheet waited: no '
+        'sheet, marked shown', (tester) async {
+      buddy = _FakeBuddy(
+        () => _status(announcements: const [BuddyAnnouncement.weeklyTipsOffer]),
+      );
+      final container = await pumpHero(tester);
+      visible.value = false;
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // Switched on elsewhere (Entdecken, Settings) meanwhile.
+      container.read(weeklyTipsSwitch.notifier).set(true);
+      visible.value = true;
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byType(WeeklyTipsOfferSheet), findsNothing);
       expect(buddy.shown, [BuddyAnnouncement.weeklyTipsOffer]);
     });
 

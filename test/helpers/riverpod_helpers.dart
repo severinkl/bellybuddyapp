@@ -17,6 +17,19 @@ ProviderContainer createContainer({List<Override> overrides = const []}) {
   return ProviderContainer.test(overrides: overrides);
 }
 
+/// A value a test switches while its container lives (the signed-in user,
+/// a setting): override the provider under test with
+/// `ref.watch(switchableProvider)`, then call [set].
+class Switchable<T> extends Notifier<T> {
+  Switchable(this._initial);
+  final T _initial;
+
+  @override
+  T build() => _initial;
+
+  void set(T value) => state = value;
+}
+
 /// An [EntriesNotifier] whose [build] returns a pre-seeded [EntriesState] so
 /// widgets that `ref.read(entriesProvider)` in `initState` see the supplied
 /// meals without needing to wait for [EntriesNotifier.loadEntries].

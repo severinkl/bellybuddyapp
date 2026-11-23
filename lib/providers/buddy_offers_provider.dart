@@ -33,3 +33,21 @@ final buddyOffersProvider = Provider<Map<BuddyAnnouncement, String>>((ref) {
       BuddyAnnouncement.weeklyTipsOffer: weeklyTipsOfferSuffix,
   };
 });
+
+/// Whether an announcement still applies as the Buddy plays it: when its
+/// cue starts, and again right before its sheet opens (it may have waited
+/// while Home was hidden). „Neue Tipps" needs the set still unseen; the
+/// weekly-tips offer goes only once the weekly tips are known to be on, so
+/// a profile still (re)loading never withdraws the one-time offer (and so
+/// never has it marked shown unplayed). The others always apply.
+final offerStillAppliesProvider = Provider.family<bool, BuddyAnnouncement>(
+  (ref, announcement) => switch (announcement) {
+    BuddyAnnouncement.tipsArrived => ref.watch(unseenTipSetProvider) != null,
+    BuddyAnnouncement.weeklyTipsOffer =>
+      ref.watch(weeklyTipsEnabledProvider) != true,
+    BuddyAnnouncement.saverUsed ||
+    BuddyAnnouncement.streakBroken ||
+    BuddyAnnouncement.saverEarned ||
+    BuddyAnnouncement.goalReached => true,
+  },
+);

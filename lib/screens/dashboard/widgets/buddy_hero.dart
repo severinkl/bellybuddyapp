@@ -9,12 +9,11 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../config/constants.dart';
 import '../../../providers/buddy_events_provider.dart';
+import '../../../providers/buddy_offers_provider.dart';
 import '../../../providers/buddy_provider.dart';
 import '../../../providers/buddy_welcome_provider.dart';
 import '../../../providers/daily_care_provider.dart';
 import '../../../providers/entries_provider.dart';
-import '../../../providers/profile_provider.dart';
-import '../../../providers/recommendation_provider.dart';
 import '../../../providers/today_provider.dart';
 import '../../../router/route_names.dart';
 import '../../../router/tracker_routes.dart';
@@ -40,18 +39,27 @@ enum _Cue {
   saverUsed(BuddyAnnouncement.saverUsed),
   streakBroken(BuddyAnnouncement.streakBroken),
   saverEarned(BuddyAnnouncement.saverEarned),
-  goalReached(BuddyAnnouncement.goalReached),
+  goalReached(BuddyAnnouncement.goalReached, endsInSheet: true),
   tipsArrived(BuddyAnnouncement.tipsArrived),
-  weeklyTipsOffer(BuddyAnnouncement.weeklyTipsOffer);
+  weeklyTipsOffer(BuddyAnnouncement.weeklyTipsOffer, endsInSheet: true);
 
-  const _Cue(this.announcement);
+  const _Cue(this.announcement, {this.endsInSheet = false});
 
   /// The announcement this cue plays, if any.
   final BuddyAnnouncement? announcement;
+
+  /// Whether the cue ends in a sheet (the new goal, the weekly-tips offer).
+  final bool endsInSheet;
 }
 
-_Cue _cueFor(BuddyAnnouncement a) =>
-    _Cue.values.firstWhere((cue) => cue.announcement == a);
+_Cue _cueFor(BuddyAnnouncement a) => switch (a) {
+  BuddyAnnouncement.saverUsed => _Cue.saverUsed,
+  BuddyAnnouncement.streakBroken => _Cue.streakBroken,
+  BuddyAnnouncement.saverEarned => _Cue.saverEarned,
+  BuddyAnnouncement.goalReached => _Cue.goalReached,
+  BuddyAnnouncement.tipsArrived => _Cue.tipsArrived,
+  BuddyAnnouncement.weeklyTipsOffer => _Cue.weeklyTipsOffer,
+};
 
 /// The Buddy at the top of the dashboard: the streak chip (opens „Dein
 /// Streak"), his speech bubble, the Buddy inside the [CareRing] of his four
@@ -181,8 +189,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   /// A cue that ends in a sheet is on stage (a reached goal's celebration,
   /// the weekly-tips offer's wave): from its start until its sheet closed.
-  bool get _sheetCueOnStage =>
-      _playing == _Cue.goalReached || _playing == _Cue.weeklyTipsOffer;
+  bool get _sheetCueOnStage => _playing?.endsInSheet ?? false;
 
   /// The StreakChip's „Dein Streak" sheet is open.
   bool _chipSheetOpen = false;
@@ -522,6 +529,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     }
     _cueRunning = true;
     final cue = _playing = _cues.removeFirst();
+    // Withdrawn meanwhile (the set opened, the weekly tips switched on): it
+    // ends unplayed.
+    if (!_stillApplies(cue)) return _nextCue();
     switch (cue) {
       case _Cue.welcome:
         _say(_welcome);
@@ -550,13 +560,10 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
           () => unawaited(_askForNewGoal()),
         );
       case _Cue.tipsArrived:
-        // The set was opened meanwhile: nothing new to announce.
-        if (ref.read(unseenTipSetProvider) == null) return _nextCue();
         _buddy.play(BuddyAction.celebrate);
         _say(_tipsArrivedLine);
         _holdStage();
       case _Cue.weeklyTipsOffer:
-        if (ref.read(weeklyTipsEnabledProvider) == true) return _nextCue();
         _buddy.play(BuddyAction.wave);
         _cueTimer = Timer(
           buddyActionDuration(BuddyAction.wave),
@@ -580,11 +587,19 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     );
   }
 
+  /// Whether [cue]'s announcement still applies ([offerStillAppliesProvider]).
+  bool _stillApplies(_Cue? cue) => switch (cue?.announcement) {
+    final a? => ref.read(offerStillAppliesProvider(a)),
+    null => true,
+  };
+
   /// Shows the sheet that waited, if any (it checks again whether it may).
+  /// Withdrawn while it waited, its cue ends without it.
   void _showDeferredSheet() {
     final sheet = _deferredSheet;
     if (sheet == null || !mounted) return;
     _deferredSheet = null;
+    if (!_stillApplies(_playing)) return _nextCue();
     unawaited(sheet());
   }
 

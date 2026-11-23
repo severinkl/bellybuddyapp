@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/providers/buddy_offers_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
@@ -134,6 +135,53 @@ void main() {
 
       expect(c.read(weeklyTipsOfferDueProvider), isFalse);
       expect(c.read(buddyOffersProvider), isEmpty);
+    });
+  });
+
+  group('offerStillAppliesProvider (as an offer plays)', () {
+    ProviderContainer container({Recommendation? unseen, bool? weeklyTips}) =>
+        ProviderContainer.test(
+          overrides: [
+            unseenTipSetProvider.overrideWithValue(unseen),
+            weeklyTipsEnabledProvider.overrideWithValue(weeklyTips),
+          ],
+        );
+
+    test('tipsArrived: while the set is unseen', () {
+      final unseen = container(unseen: testRecommendation());
+      expect(
+        unseen.read(offerStillAppliesProvider(BuddyAnnouncement.tipsArrived)),
+        isTrue,
+      );
+      expect(
+        container().read(
+          offerStillAppliesProvider(BuddyAnnouncement.tipsArrived),
+        ),
+        isFalse,
+      );
+    });
+
+    test('weeklyTipsOffer: until the weekly tips are known to be on; a '
+        'profile still loading does not withdraw it', () {
+      bool applies(bool? weeklyTips) => container(
+        weeklyTips: weeklyTips,
+      ).read(offerStillAppliesProvider(BuddyAnnouncement.weeklyTipsOffer));
+
+      expect(applies(false), isTrue);
+      expect(applies(null), isTrue);
+      expect(applies(true), isFalse);
+    });
+
+    test('the others always', () {
+      final c = container(weeklyTips: true);
+      for (final a in [
+        BuddyAnnouncement.saverUsed,
+        BuddyAnnouncement.streakBroken,
+        BuddyAnnouncement.saverEarned,
+        BuddyAnnouncement.goalReached,
+      ]) {
+        expect(c.read(offerStillAppliesProvider(a)), isTrue, reason: '$a');
+      }
     });
   });
 }
