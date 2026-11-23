@@ -138,3 +138,37 @@ class DiscoverNote extends StatelessWidget {
     );
   }
 }
+
+/// A card of rows divided by hairlines (Wissen's articles, the
+/// Alternativen); [onTap] makes the whole card one button.
+class DiscoverListCard extends StatelessWidget {
+  const DiscoverListCard({super.key, this.onTap, required this.children});
+
+  final VoidCallback? onTap;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return BbCard(
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.spacingMd,
+        vertical: AppConstants.spacingXs,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          for (final (i, child) in children.indexed) ...[
+            if (i > 0)
+              const Divider(
+                height: AppConstants.dividerThickness,
+                thickness: AppConstants.dividerThickness,
+                color: AppTheme.border,
+              ),
+            child,
+          ],
+        ],
+      ),
+    );
+  }
+}

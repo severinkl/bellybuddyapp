@@ -1,10 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
-import '../../../config/app_theme.dart';
-import '../../../config/constants.dart';
 import '../../../models/knowledge_article.dart';
-import '../../../widgets/common/bb_card.dart';
 import 'discover_section.dart';
 import 'knowledge_article_tile.dart';
 
@@ -38,28 +35,14 @@ class DiscoverKnowledgeSection extends StatelessWidget {
       child: switch (articles) {
         null => DiscoverNote.pending(feed, 'Artikel'),
         [] => const DiscoverNote('Gerade keine Artikel.'),
-        final items => BbCard(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppConstants.spacingMd,
-            vertical: AppConstants.spacingXs,
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              for (final (i, article) in items.take(shown).indexed) ...[
-                if (i > 0)
-                  const Divider(
-                    height: AppConstants.dividerThickness,
-                    thickness: AppConstants.dividerThickness,
-                    color: AppTheme.border,
-                  ),
-                KnowledgeArticleTile(
-                  article: article,
-                  onTap: () => onOpen(article),
-                ),
-              ],
-            ],
-          ),
+        final items => DiscoverListCard(
+          children: [
+            for (final article in items.take(shown))
+              KnowledgeArticleTile(
+                article: article,
+                onTap: () => onOpen(article),
+              ),
+          ],
         ),
       },
     );
