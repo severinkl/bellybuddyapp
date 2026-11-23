@@ -2,6 +2,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:belly_buddy/screens/trackers/drink/drink_tracker_screen.dart';
@@ -302,6 +303,59 @@ void main() {
       await tester.pump();
       expect(find.text('Bitte gib 1 bis 3000 ml ein.'), findsNothing);
       expect(container.read(drinkTrackerProvider).selectedAmount, 3000);
+    });
+
+    testWidgets('after a save it closes with true for its opener', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      Object? result = 'not closed';
+      final router = GoRouter(
+        initialLocation: '/opener',
+        routes: [
+          GoRoute(
+            path: '/opener',
+            builder: (context, _) => Scaffold(
+              body: TextButton(
+                onPressed: () async =>
+                    result = await context.push<bool>('/drink'),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+          GoRoute(
+            path: '/drink',
+            builder: (_, _) => const DrinkTrackerScreen(),
+          ),
+        ],
+      );
+      final container = ProviderContainer.test(overrides: _overrides());
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(routerConfig: router),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      container.read(drinkTrackerProvider.notifier)
+        ..toggleDrink(testDrink())
+        ..selectAmount(250);
+      await tester.pump();
+      await tester.ensureVisible(find.text('Speichern'));
+      await tester.tap(find.text('Speichern'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 700));
+
+      await tester.tap(find.text('Getränk gespeichert!'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(result, isTrue);
+      expect(find.text('open'), findsOneWidget);
     });
   });
 }

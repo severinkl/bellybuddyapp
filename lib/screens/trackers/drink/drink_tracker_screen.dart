@@ -1,10 +1,12 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../providers/buddy_events_provider.dart';
 import '../../../providers/drink_tracker_provider.dart';
+import '../../../router/route_names.dart';
 import '../../../services/buddy/buddy_mood_logic.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/drink_helpers.dart';
@@ -58,6 +60,11 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
         kind: EntryKind.drink,
         sentiment: LogSentiment.good,
       ),
+      // Closes with true: the opener knows a drink was saved (the meal
+      // success screen then closes as well).
+      onSuccessDismissed: () => context.canPop()
+          ? context.pop(true)
+          : context.go(RoutePaths.dashboard),
       body: state.isLoading
           ? const Center(
               child: CircularProgressIndicator(color: AppTheme.primary),
