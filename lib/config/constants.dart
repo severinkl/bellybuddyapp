@@ -89,6 +89,10 @@ class AppConstants {
   // A streak goal's row in the goal list
   static const double streakGoalRowHeight = 56.0;
 
+  // The Eintragen sheet's option height; the diary's empty-day Buddy
+  static const double logSheetOptionHeight = 96.0;
+  static const double diaryEmptyBuddySize = 96.0;
+
   // Reminder step: the notification preview's corner radius and app icon,
   // the example week's label column and dots
   static const double notificationPreviewRadius = 20.0;

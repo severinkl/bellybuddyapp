@@ -103,15 +103,39 @@ String formatDateShort(DateTime dt) {
 bool isSameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
 
-/// Returns [initialDate] at the current wall-clock time, or [DateTime.now()] if null.
-DateTime buildTrackedAt(DateTime? initialDate) {
-  if (initialDate == null) return DateTime.now();
-  final now = DateTime.now();
+/// The moment an entry for [initialDate] is logged at: [now] when null; on
+/// today the current clock time (h:m of [now]); on any other day 12:00.
+/// [now] defaults to [DateTime.now()]. Idempotent.
+DateTime buildTrackedAt(DateTime? initialDate, {DateTime? now}) {
+  final current = now ?? DateTime.now();
+  if (initialDate == null) return current;
+  final sameDay = isSameDay(initialDate, current);
   return DateTime(
     initialDate.year,
     initialDate.month,
     initialDate.day,
-    now.hour,
-    now.minute,
+    sameDay ? current.hour : 12,
+    sameDay ? current.minute : 0,
   );
 }
+
+/// The months' three-letter short forms, January first („Jan" … „Dez").
+const List<String> kMonthShortNames = [
+  'Jan',
+  'Feb',
+  'Mär',
+  'Apr',
+  'Mai',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Okt',
+  'Nov',
+  'Dez',
+];
+
+/// [day] as „Mi, 18. Nov".
+String formatLogTargetDay(DateTime day) =>
+    '${kWeekdayShortNames[day.weekday - 1]}, ${day.day}. '
+    '${kMonthShortNames[day.month - 1]}';

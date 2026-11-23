@@ -1,16 +1,14 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/diary_provider.dart';
-import '../../router/route_names.dart';
 import '../../services/haptic_service.dart';
 import '../../utils/date_format_utils.dart';
 import '../../utils/page_controller_utils.dart';
 import '../../widgets/common/bb_async_state.dart';
 import '../../widgets/common/circle_icon_button.dart';
-import '../../widgets/common/tracker_card.dart';
+import '../../widgets/common/mascot_image.dart';
 import 'widgets/diary_detail_sheets.dart';
 import 'widgets/diary_entry_card.dart';
 
@@ -207,10 +205,16 @@ class _DiaryBody extends ConsumerWidget {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  const MascotImage(
+                    assetPath: AppConstants.mascotHappy,
+                    width: AppConstants.diaryEmptyBuddySize,
+                    height: AppConstants.diaryEmptyBuddySize,
+                  ),
+                  AppConstants.gap16,
                   Text(
                     isToday
-                        ? 'Noch keine Daten für heute.'
-                        : 'Keine Daten für diesen Tag.',
+                        ? 'Noch keine Einträge für heute.'
+                        : 'Keine Einträge an diesem Tag.',
                     style: const TextStyle(
                       fontSize: AppTheme.fontSizeTitleLG,
                       color: AppTheme.mutedForeground,
@@ -218,40 +222,12 @@ class _DiaryBody extends ConsumerWidget {
                   ),
                   AppConstants.gap4,
                   const Text(
-                    'Bereit zum Tracken?',
+                    'Tipp unten aufs Plus, dann tragen wir was ein!',
+                    textAlign: TextAlign.center,
                     style: TextStyle(
-                      fontSize: AppTheme.fontSizeHeadingLG,
+                      fontSize: AppTheme.fontSizeSubtitle,
                       fontWeight: FontWeight.w600,
                       color: AppTheme.foreground,
-                    ),
-                  ),
-                  AppConstants.gap24,
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TrackerCard(
-                            svgPath: AppConstants.logoSvg,
-                            label: 'Bauchgefühl',
-                            onTap: () => context.push(
-                              RoutePaths.gutFeelingTracker,
-                              extra: date,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: TrackerCard(
-                            svgPath: AppConstants.toiletPaperSvg,
-                            label: 'Klo',
-                            onTap: () => context.push(
-                              RoutePaths.toiletTracker,
-                              extra: date,
-                            ),
-                          ),
-                        ),
-                      ],
                     ),
                   ),
                 ],

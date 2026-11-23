@@ -216,30 +216,44 @@ void main() {
   });
 
   group('buildTrackedAt', () {
-    test('null returns a value within the current now() window', () {
+    test('null initialDate → now', () {
+      final now = DateTime(2026, 11, 23, 9, 41);
+      expect(buildTrackedAt(null, now: now), now);
+    });
+
+    test('null without now stays within the current now() window', () {
       final before = DateTime.now();
       final result = buildTrackedAt(null);
       final after = DateTime.now();
-
       expect(result.isAtSameMomentAs(before) || result.isAfter(before), isTrue);
       expect(result.isAtSameMomentAs(after) || result.isBefore(after), isTrue);
     });
 
-    test('non-null: date from initialDate, h:m from now, s/ms zeroed', () {
-      final initialDate = DateTime(2020, 1, 5, 23, 59, 45, 123);
-      final before = DateTime.now();
-      final result = buildTrackedAt(initialDate);
-      final after = DateTime.now();
-
-      expect(result.year, 2020);
-      expect(result.month, 1);
-      expect(result.day, 5);
-      // Guard against the internal DateTime.now() crossing a minute (and,
-      // rarely, hour) boundary between `before` and `after`.
-      expect([before.hour, after.hour], contains(result.hour));
-      expect([before.minute, after.minute], contains(result.minute));
-      expect(result.second, 0);
-      expect(result.millisecond, 0);
+    test('today keeps the current clock time', () {
+      final now = DateTime(2026, 11, 23, 9, 41);
+      expect(
+        buildTrackedAt(DateTime(2026, 11, 23), now: now),
+        DateTime(2026, 11, 23, 9, 41),
+      );
     });
+
+    test('a past day defaults to 12:00', () {
+      final now = DateTime(2026, 11, 23, 9, 41);
+      expect(
+        buildTrackedAt(DateTime(2026, 11, 18, 22, 5), now: now),
+        DateTime(2026, 11, 18, 12),
+      );
+    });
+
+    test('is idempotent', () {
+      final now = DateTime(2026, 11, 23, 9, 41);
+      final once = buildTrackedAt(DateTime(2026, 11, 18), now: now);
+      expect(buildTrackedAt(once, now: now), once);
+    });
+  });
+
+  test('formatLogTargetDay', () {
+    expect(formatLogTargetDay(DateTime(2026, 11, 18)), 'Mi, 18. Nov');
+    expect(formatLogTargetDay(DateTime(2026, 3, 2)), 'Mo, 2. Mär');
   });
 }

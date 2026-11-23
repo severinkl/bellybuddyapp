@@ -8,6 +8,7 @@ import 'package:belly_buddy/screens/diary/diary_screen.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/utils/date_format_utils.dart';
+import 'package:belly_buddy/widgets/common/mascot_image.dart';
 
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
@@ -61,7 +62,12 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Noch keine Daten für heute.'), findsOneWidget);
+      expect(find.text('Noch keine Einträge für heute.'), findsOneWidget);
+      expect(
+        find.text('Tipp unten aufs Plus, dann tragen wir was ein!'),
+        findsOneWidget,
+      );
+      expect(find.byType(MascotImage), findsOneWidget);
     });
 
     testWidgets('renders navigation chevrons', (tester) async {
