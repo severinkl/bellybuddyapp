@@ -36,7 +36,7 @@ class BbBottomNav extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = navigationShell.currentIndex;
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
+    final bottomPadding = MediaQuery.paddingOf(context).bottom;
 
     void goBranch(int index) {
       HapticService.light();
@@ -48,7 +48,7 @@ class BbBottomNav extends ConsumerWidget {
       children: [
         // Wavy separator
         CustomPaint(
-          size: Size(MediaQuery.of(context).size.width, 20),
+          size: Size(MediaQuery.sizeOf(context).width, 20),
           painter: const _WavePainter(),
         ),
         // Nav bar
