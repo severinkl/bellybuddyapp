@@ -4,6 +4,7 @@ import 'package:belly_buddy/config/buddy_reactions.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/config/symptom_options.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
+import 'package:flutter/widgets.dart' show StringCharacters;
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -159,5 +160,19 @@ void main() {
     expect(AppConstants.isValidBuddyName('a' * 20), isTrue);
     expect(AppConstants.isValidBuddyName('a' * 21), isFalse);
     expect(AppConstants.isValidBuddyName('🍎' * 20), isTrue);
+  });
+
+  test('isValidBuddyName: 20 emojis fit, up to 400 code points', () {
+    expect(AppConstants.isValidBuddyName('❤️' * 20), isTrue);
+
+    const family = '👨🏻‍👩🏻‍👧🏻‍👦🏻';
+    expect(family.runes.length * 10, 110);
+    expect(AppConstants.isValidBuddyName(family * 10), isTrue);
+
+    // 20 characters, but 20 x 21 = 420 code points.
+    final heavy = ('a${'\u0301' * 20}') * 20;
+    expect(heavy.characters.length, 20);
+    expect(heavy.runes.length, 420);
+    expect(AppConstants.isValidBuddyName(heavy), isFalse);
   });
 }

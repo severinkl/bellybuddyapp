@@ -246,9 +246,9 @@ class AppConstants {
   /// them (grapheme clusters: an emoji is one).
   static const int buddyNameMaxLength = 20;
 
-  /// What the `buddy_state.name` check (`char_length`, code points) takes.
-  /// Raise it once core relaxes the check, so 20 emojis fit too.
-  static const int buddyNameMaxCodePoints = 20;
+  /// What the `buddy_state.name` check takes: the database counts code
+  /// points up to 400 (core 0011), so 20 emojis fit, even long ZWJ ones.
+  static const int buddyNameMaxCodePoints = 400;
 
   /// Whether [name] is a valid Buddy name: 1 to [buddyNameMaxLength]
   /// characters after trimming, and storable ([buddyNameMaxCodePoints]).

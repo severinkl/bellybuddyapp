@@ -122,17 +122,26 @@ void main() {
     ) async {
       await pumpStep(tester);
 
-      // 11 characters, but 22 code points: more than the buddy_state check
+      // 20 characters, but 420 code points: more than the buddy_state check
       // (char_length <= ${AppConstants.buddyNameMaxCodePoints}) takes.
-      const heart = '\u2764\uFE0F';
-      await tester.enterText(find.byKey(BuddyNameStep.fieldKey), heart * 11);
+      final heavy = 'a${'\u0301' * 20}' * 20;
+      await tester.enterText(find.byKey(BuddyNameStep.fieldKey), heavy);
       await tester.pump();
 
-      expect(counter('11/20'), findsOneWidget);
+      expect(counter('20/20'), findsOneWidget);
       expect(AppConstants.isValidBuddyName(text(tester)), isFalse);
       expect(find.text(BuddyNameRules.tooManySymbols), findsOneWidget);
 
-      await tester.enterText(find.byKey(BuddyNameStep.fieldKey), heart * 10);
+      const heart = '\u2764\uFE0F';
+      await tester.enterText(find.byKey(BuddyNameStep.fieldKey), heart * 11);
+      await tester.pump();
+      expect(AppConstants.isValidBuddyName(text(tester)), isTrue);
+      expect(find.text(BuddyNameRules.tooManySymbols), findsNothing);
+
+      const family =
+          '\u{1F468}\u{1F3FB}\u200D\u{1F469}\u{1F3FB}\u200D'
+          '\u{1F467}\u{1F3FB}\u200D\u{1F466}\u{1F3FB}';
+      await tester.enterText(find.byKey(BuddyNameStep.fieldKey), family * 10);
       await tester.pump();
       expect(AppConstants.isValidBuddyName(text(tester)), isTrue);
       expect(find.text(BuddyNameRules.tooManySymbols), findsNothing);

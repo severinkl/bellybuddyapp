@@ -232,6 +232,20 @@ void main() {
     expect(saveButton(tester).onPressed, isNotNull);
   });
 
+  testWidgets('rename saves 20 hearts', (tester) async {
+    final buddy = await pump(tester);
+
+    await openRename(tester);
+    final hearts = '\u2764\uFE0F' * 20;
+    await tester.enterText(find.byType(TextField), hearts);
+    await tester.pump();
+    expect(find.text(_renameError), findsNothing);
+    await tester.tap(find.text('Speichern'));
+    await tester.pumpAndSettle();
+
+    expect(buddy.names, [hearts]);
+  });
+
   testWidgets('rename to the same name saves nothing', (tester) async {
     final buddy = await pump(tester);
 
