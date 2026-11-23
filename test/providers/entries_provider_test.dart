@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -5,6 +7,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
+import 'package:belly_buddy/services/entry_query_service.dart';
 
 import '../helpers/fixtures.dart';
 import '../helpers/mocks.dart';
@@ -217,6 +220,134 @@ void main() {
 
       verify(() => mockRepo.deleteByType('meal', 'meal-1')).called(1);
     });
+  });
+
+  group('EntriesNotifier keeps the loaded day current', () {
+    final day = DateTime(2026, 3, 25);
+
+    /// The backend: [fetchForDate] serves [rows]; a write changes them.
+    late EntryQueryResult rows;
+    late List<DateTime> fetched;
+
+    setUp(() {
+      rows = testEntryQueryResult();
+      fetched = [];
+      when(
+        () => mockRepo.fetchForDate(
+          userId: any(named: 'userId'),
+          date: any(named: 'date'),
+          ordered: any(named: 'ordered'),
+        ),
+      ).thenAnswer((invocation) async {
+        fetched.add(invocation.namedArguments[#date] as DateTime);
+        return rows;
+      });
+    });
+
+    EntryQueryResult without({bool meals = false, bool drinks = false}) =>
+        testEntryQueryResult(
+          meals: meals ? const [] : null,
+          drinks: drinks ? const [] : null,
+        );
+
+    test('loadEntries remembers the local day it loaded', () async {
+      final container = makeContainer();
+      await container
+          .read(entriesProvider.notifier)
+          .loadEntries(DateTime(2026, 3, 25, 21, 30));
+
+      expect(container.read(entriesProvider).day, day);
+    });
+
+    test('a diary delete reloads the loaded day: the entry is gone', () async {
+      when(() => mockRepo.deleteByType(any(), any())).thenAnswer((_) async {
+        rows = without(meals: true);
+      });
+      final container = makeContainer();
+      final notifier = container.read(entriesProvider.notifier);
+      await notifier.loadEntries(day);
+      expect(container.read(entriesProvider).meals, hasLength(1));
+
+      await notifier.deleteByType('meal', 'meal-1');
+      await pumpEventQueue();
+
+      expect(container.read(entriesProvider).meals, isEmpty);
+      expect(fetched, [day, day]);
+    });
+
+    test('a diary edit reloads the loaded day', () async {
+      when(() => mockRepo.updateEntry(any(), any(), any())).thenAnswer((
+        _,
+      ) async {
+        rows = testEntryQueryResult(drinks: [testDrinkEntry(amountMl: 500)]);
+      });
+      final container = makeContainer();
+      final notifier = container.read(entriesProvider.notifier);
+      await notifier.loadEntries(day);
+
+      await notifier.updateDrinkById('drink-entry-1', amountMl: 500);
+      await pumpEventQueue();
+
+      expect(container.read(entriesProvider).drinks.single.amountMl, 500);
+    });
+
+    test("a tracker's log reloads the loaded day, with or without a Buddy "
+        'event', () async {
+      rows = without(drinks: true);
+      when(
+        () => mockRepo.insertEntry(any(), any(), userId: any(named: 'userId')),
+      ).thenAnswer((_) async {
+        rows = testEntryQueryResult();
+      });
+      final container = makeContainer();
+      final notifier = container.read(entriesProvider.notifier);
+      await notifier.loadEntries(day);
+      expect(container.read(entriesProvider).drinks, isEmpty);
+
+      await notifier.addDrinkEntry(testDrinkEntry());
+      await pumpEventQueue();
+
+      expect(container.read(entriesProvider).drinks, hasLength(1));
+    });
+
+    test('a write before anything was loaded loads nothing', () async {
+      when(() => mockRepo.deleteByType(any(), any())).thenAnswer((_) async {});
+      final container = makeContainer();
+
+      await container
+          .read(entriesProvider.notifier)
+          .deleteByType('meal', 'meal-1');
+      await pumpEventQueue();
+
+      expect(fetched, isEmpty);
+      expect(container.read(entriesProvider).day, isNull);
+    });
+
+    test(
+      'an older load finishing last does not overwrite a newer one',
+      () async {
+        final slow = Completer<EntryQueryResult>();
+        var calls = 0;
+        when(
+          () => mockRepo.fetchForDate(
+            userId: any(named: 'userId'),
+            date: any(named: 'date'),
+            ordered: any(named: 'ordered'),
+          ),
+        ).thenAnswer((_) => ++calls == 1 ? slow.future : Future.value(rows));
+        final container = makeContainer();
+        final notifier = container.read(entriesProvider.notifier);
+
+        final first = notifier.loadEntries(day);
+        rows = without(meals: true);
+        await notifier.loadEntries(day);
+        slow.complete(testEntryQueryResult());
+        await first;
+
+        expect(container.read(entriesProvider).meals, isEmpty);
+        expect(container.read(entriesProvider).isLoading, isFalse);
+      },
+    );
   });
 
   group('EntriesNotifier.reset', () {

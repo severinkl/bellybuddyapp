@@ -93,7 +93,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Future<void> _loadData() async {
     await Future.wait<void>([
       ref.read(profileProvider.notifier).fetchProfile(),
-      ref.read(entriesProvider.notifier).loadEntries(DateTime.now()),
+      ref
+          .read(entriesProvider.notifier)
+          .loadEntries(ref.read(buddyClockProvider)()),
       ref.read(ingredientSuggestionProvider.notifier).fetchSuggestions(),
       _refreshBuddy(),
     ]);

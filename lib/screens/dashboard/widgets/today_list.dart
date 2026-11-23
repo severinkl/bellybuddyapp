@@ -26,9 +26,10 @@ class TodayLogItem {
   final String label;
 }
 
-/// Today's (local) entries of [s], oldest first, each with a short label.
-List<TodayLogItem> todayLogItems(EntriesState s, DateTime now) {
-  bool isToday(DateTime trackedAt) => isSameDay(trackedAt.toLocal(), now);
+/// The entries of [s] on [day] (local), oldest first, each with a short
+/// label.
+List<TodayLogItem> todayLogItems(EntriesState s, DateTime day) {
+  bool isToday(DateTime trackedAt) => isSameDay(trackedAt.toLocal(), day);
 
   return <TodayLogItem>[
     for (final e in s.meals)
@@ -60,7 +61,8 @@ List<TodayLogItem> todayLogItems(EntriesState s, DateTime now) {
 
 /// The dashboard's „Heute" list: today's latest entries (at most
 /// [AppConstants.todayListMaxItems], oldest of them first) and a link to the
-/// whole day in the diary.
+/// whole day in the diary. Today is the loaded day ([EntriesState.day]),
+/// like the hero's care ring, which moves it on at midnight.
 class TodayList extends ConsumerWidget {
   const TodayList({super.key});
 
@@ -69,8 +71,10 @@ class TodayList extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final now = ref.watch(buddyClockProvider)();
-    final all = todayLogItems(ref.watch(entriesProvider), now);
+    final entries = ref.watch(entriesProvider);
+    // The clock's day only until the first load.
+    final day = entries.day ?? startOfDay(ref.watch(buddyClockProvider)());
+    final all = todayLogItems(entries, day);
     final shown = all.length > AppConstants.todayListMaxItems
         ? all.sublist(all.length - AppConstants.todayListMaxItems)
         : all;
@@ -115,7 +119,7 @@ class TodayList extends ConsumerWidget {
           child: TextButton(
             key: diaryLinkKey,
             onPressed: () {
-              ref.read(diaryDateProvider.notifier).set(startOfDay(now));
+              ref.read(diaryDateProvider.notifier).set(day);
               context.go(RoutePaths.diary);
             },
             child: const Text(

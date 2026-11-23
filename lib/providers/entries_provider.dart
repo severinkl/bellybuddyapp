@@ -5,9 +5,11 @@ import '../models/gut_feeling_entry.dart';
 import '../models/drink_entry.dart';
 import '../providers/core_providers.dart';
 import '../repositories/entry_repository.dart';
+import '../utils/date_format_utils.dart';
 import '../utils/logger.dart';
 
-/// State holding all entries for a given date range
+/// The entries of one local day ([day]); the dashboard's ring and „Heute"
+/// list show them.
 class EntriesState {
   final List<MealEntry> meals;
   final List<ToiletEntry> toiletEntries;
@@ -16,6 +18,10 @@ class EntriesState {
   final bool isLoading;
   final Object? error;
 
+  /// The local day (its midnight) loaded last, set as its load starts;
+  /// null until the first load.
+  final DateTime? day;
+
   const EntriesState({
     this.meals = const [],
     this.toiletEntries = const [],
@@ -23,6 +29,7 @@ class EntriesState {
     this.drinks = const [],
     this.isLoading = false,
     this.error,
+    this.day,
   });
 
   EntriesState copyWith({
@@ -32,6 +39,7 @@ class EntriesState {
     List<DrinkEntry>? drinks,
     bool? isLoading,
     Object? error,
+    DateTime? day,
   }) {
     return EntriesState(
       meals: meals ?? this.meals,
@@ -40,18 +48,30 @@ class EntriesState {
       drinks: drinks ?? this.drinks,
       isLoading: isLoading ?? this.isLoading,
       error: error,
+      day: day ?? this.day,
     );
   }
 }
 
+/// The entries of one day. Every write through it reloads that day, so the
+/// state stays current whoever wrote (a tracker, the diary).
 class EntriesNotifier extends Notifier<EntriesState> {
   static const _log = AppLogger('EntriesNotifier');
 
-  @override
-  EntriesState build() => const EntriesState();
+  /// Counts loads (and resets); only the latest load publishes its result.
+  int _load = 0;
 
+  @override
+  EntriesState build() {
+    _load++;
+    return const EntriesState();
+  }
+
+  /// Loads the entries of [date]'s local day ([EntriesState.day]). A load
+  /// started meanwhile supersedes this one.
   Future<void> loadEntries(DateTime date) async {
-    state = state.copyWith(isLoading: true, error: null);
+    final load = ++_load;
+    state = state.copyWith(isLoading: true, error: null, day: startOfDay(date));
     try {
       final userId = ref.read(currentUserIdProvider);
       if (userId == null) {
@@ -62,6 +82,7 @@ class EntriesNotifier extends Notifier<EntriesState> {
       final result = await ref
           .read(entryRepositoryProvider)
           .fetchForDate(userId: userId, date: date, ordered: true);
+      if (!_isLatest(load)) return;
 
       state = state.copyWith(
         meals: result.meals,
@@ -72,90 +93,81 @@ class EntriesNotifier extends Notifier<EntriesState> {
       );
     } catch (e, st) {
       _log.error('loadEntries failed for $date', e, st);
-      state = state.copyWith(isLoading: false, error: e);
+      if (_isLatest(load)) state = state.copyWith(isLoading: false, error: e);
       rethrow;
     }
   }
 
-  // -- Meal CRUD --
+  bool _isLatest(int load) => ref.mounted && load == _load;
 
-  Future<void> addMeal(MealEntry meal) {
-    final userId = ref.read(currentUserIdProvider)!;
-    return ref
-        .read(entryRepositoryProvider)
-        .insertEntry(entryTableFor['meal']!, meal.toJson(), userId: userId);
+  /// Runs [write], then reloads the loaded day in the background so the
+  /// state shows it. Before the first load there is nothing to reload.
+  Future<void> _write(Future<void> Function() write) async {
+    await write();
+    if (!ref.mounted) return;
+    final day = state.day;
+    // A failing reload is logged by loadEntries; the write itself is done.
+    if (day != null) loadEntries(day).ignore();
   }
 
-  Future<void> updateMeal(MealEntry meal) => ref
-      .read(entryRepositoryProvider)
-      .updateEntry(entryTableFor['meal']!, meal.id, meal.toJson());
+  EntryRepository get _repo => ref.read(entryRepositoryProvider);
 
-  Future<void> deleteMeal(String id) =>
-      ref.read(entryRepositoryProvider).deleteEntry(entryTableFor['meal']!, id);
+  Future<void> _insert(String type, Map<String, dynamic> data) {
+    final userId = ref.read(currentUserIdProvider)!;
+    return _write(
+      () => _repo.insertEntry(entryTableFor[type]!, data, userId: userId),
+    );
+  }
+
+  Future<void> _update(String type, String id, Map<String, dynamic> data) =>
+      _write(() => _repo.updateEntry(entryTableFor[type]!, id, data));
+
+  Future<void> _delete(String type, String id) =>
+      _write(() => _repo.deleteEntry(entryTableFor[type]!, id));
+
+  // -- Meal CRUD --
+
+  Future<void> addMeal(MealEntry meal) => _insert('meal', meal.toJson());
+
+  Future<void> updateMeal(MealEntry meal) =>
+      _update('meal', meal.id, meal.toJson());
+
+  Future<void> deleteMeal(String id) => _delete('meal', id);
 
   // -- Toilet CRUD --
 
-  Future<void> addToiletEntry(ToiletEntry entry) {
-    final userId = ref.read(currentUserIdProvider)!;
-    return ref
-        .read(entryRepositoryProvider)
-        .insertEntry(entryTableFor['toilet']!, entry.toJson(), userId: userId);
-  }
+  Future<void> addToiletEntry(ToiletEntry entry) =>
+      _insert('toilet', entry.toJson());
 
-  Future<void> updateToiletEntry(ToiletEntry entry) => ref
-      .read(entryRepositoryProvider)
-      .updateEntry(entryTableFor['toilet']!, entry.id, entry.toJson());
+  Future<void> updateToiletEntry(ToiletEntry entry) =>
+      _update('toilet', entry.id, entry.toJson());
 
-  Future<void> deleteToiletEntry(String id) => ref
-      .read(entryRepositoryProvider)
-      .deleteEntry(entryTableFor['toilet']!, id);
+  Future<void> deleteToiletEntry(String id) => _delete('toilet', id);
 
   // -- Gut feeling CRUD --
 
-  Future<void> addGutFeeling(GutFeelingEntry entry) {
-    final userId = ref.read(currentUserIdProvider)!;
-    return ref
-        .read(entryRepositoryProvider)
-        .insertEntry(
-          entryTableFor['gutFeeling']!,
-          entry.toJson(),
-          userId: userId,
-        );
-  }
+  Future<void> addGutFeeling(GutFeelingEntry entry) =>
+      _insert('gutFeeling', entry.toJson());
 
-  Future<void> updateGutFeeling(GutFeelingEntry entry) => ref
-      .read(entryRepositoryProvider)
-      .updateEntry(entryTableFor['gutFeeling']!, entry.id, entry.toJson());
+  Future<void> updateGutFeeling(GutFeelingEntry entry) =>
+      _update('gutFeeling', entry.id, entry.toJson());
 
-  Future<void> deleteGutFeeling(String id) => ref
-      .read(entryRepositoryProvider)
-      .deleteEntry(entryTableFor['gutFeeling']!, id);
+  Future<void> deleteGutFeeling(String id) => _delete('gutFeeling', id);
 
   // -- Drink CRUD --
 
-  Future<void> addDrinkEntry(DrinkEntry entry) {
-    final userId = ref.read(currentUserIdProvider)!;
-    return ref
-        .read(entryRepositoryProvider)
-        .insertEntry(
-          entryTableFor['drink']!,
-          entry.toInsertJson(),
-          userId: userId,
-        );
-  }
+  Future<void> addDrinkEntry(DrinkEntry entry) =>
+      _insert('drink', entry.toInsertJson());
 
-  Future<void> updateDrinkEntry(DrinkEntry entry) => ref
-      .read(entryRepositoryProvider)
-      .updateEntry(entryTableFor['drink']!, entry.id, entry.toInsertJson());
+  Future<void> updateDrinkEntry(DrinkEntry entry) =>
+      _update('drink', entry.id, entry.toInsertJson());
 
-  Future<void> deleteDrinkEntry(String id) => ref
-      .read(entryRepositoryProvider)
-      .deleteEntry(entryTableFor['drink']!, id);
+  Future<void> deleteDrinkEntry(String id) => _delete('drink', id);
 
   // -- Generic delete by type (used by diary) --
 
   Future<void> deleteByType(String type, String id) =>
-      ref.read(entryRepositoryProvider).deleteByType(type, id);
+      _write(() => _repo.deleteByType(type, id));
 
   // -- Typed update by ID (used by diary detail sheets) --
 
@@ -170,35 +182,29 @@ class EntriesNotifier extends Notifier<EntriesState> {
     int? energy,
     int? focus,
     int? bodyFeel,
-  }) => ref
-      .read(entryRepositoryProvider)
-      .updateEntry(entryTableFor['gutFeeling']!, id, {
-        'bloating': bloating,
-        'gas': gas,
-        'cramps': cramps,
-        'fullness': fullness,
-        'stress': stress,
-        'happiness': happiness,
-        'energy': energy,
-        'focus': focus,
-        'body_feel': bodyFeel,
-      });
+  }) => _update('gutFeeling', id, {
+    'bloating': bloating,
+    'gas': gas,
+    'cramps': cramps,
+    'fullness': fullness,
+    'stress': stress,
+    'happiness': happiness,
+    'energy': energy,
+    'focus': focus,
+    'body_feel': bodyFeel,
+  });
 
-  Future<void> updateToiletById(String id, {required int stoolType}) => ref
-      .read(entryRepositoryProvider)
-      .updateEntry(entryTableFor['toilet']!, id, {'stool_type': stoolType});
+  Future<void> updateToiletById(String id, {required int stoolType}) =>
+      _update('toilet', id, {'stool_type': stoolType});
 
   Future<void> updateDrinkById(
     String id, {
     required int amountMl,
     String? notes,
-  }) => ref.read(entryRepositoryProvider).updateEntry(
-    entryTableFor['drink']!,
-    id,
-    {'amount_ml': amountMl, 'notes': notes},
-  );
+  }) => _update('drink', id, {'amount_ml': amountMl, 'notes': notes});
 
   void reset() {
+    _load++;
     state = const EntriesState();
   }
 }

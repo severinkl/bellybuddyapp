@@ -26,8 +26,9 @@ import '../../buddy/streak_goal_picker.dart';
 import 'care_ring.dart';
 import 'streak_sheet.dart';
 
-/// The hero's clock (mood, event age). Follows the Buddy's clock
-/// ([buddyTodayProvider]) unless overridden; tests pin it.
+/// The dashboard's clock (the hero's mood and day, event age, the day the
+/// dashboard loads). Follows the Buddy's clock ([buddyTodayProvider])
+/// unless overridden; tests pin it.
 final buddyClockProvider = Provider<DateTime Function()>(
   (ref) => ref.watch(buddyTodayProvider),
 );
@@ -57,13 +58,15 @@ _Cue _cueFor(BuddyAnnouncement a) =>
 ///
 /// The mood follows today's entries (re-derived on every change and every
 /// minute); his resting line names what he needs next ([BuddyCopy.care]),
-/// except while empathetic, in love, asleep or at night. Everything it says
-/// waits until it is visible (`TickerMode` on, i.e. the dashboard is not
-/// under the splash or covered by another route or tab): the first line,
-/// the follow-up to a fresh [BuddyLogEvent] (which also reloads today's
-/// entries) and the Buddy's announcements. Without a Buddy status (loading,
-/// error, signed out) the Buddy still shows, named 'Buddy', without the
-/// streak chip and week row.
+/// except while empathetic, in love, asleep or at night. Every write
+/// reloads [entriesProvider]; the hero moves it on to the new day once his
+/// clock has passed midnight (minute tick, resume, shown again), and the
+/// ring and „Heute" both show its day. Everything it says waits until it is
+/// visible (`TickerMode` on, i.e. the dashboard is not under the splash or
+/// covered by another route or tab): the first line, the follow-up to a
+/// fresh [BuddyLogEvent] and the Buddy's announcements. Without a Buddy
+/// status (loading, error, signed out) the Buddy still shows, named
+/// 'Buddy', without the streak chip and week row.
 class BuddyHero extends ConsumerStatefulWidget {
   const BuddyHero({super.key});
 
@@ -101,9 +104,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   final math.Random _rnd = math.Random();
   Timer? _moodTimer;
 
-  /// Today's care, derived from the entries at [_careAt]: re-derived on
-  /// every entries change, every minute and on resume. The ring, his mood
-  /// and the next action all follow it.
+  /// Today's care, derived from the loaded day's entries (see
+  /// [_deriveCare]): re-derived on every entries change, every minute and
+  /// on resume. The ring, his mood and the next action all follow it.
   late DailyCare _care;
   late DateTime _careAt;
 
@@ -232,9 +235,27 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   // --- Mood -----------------------------------------------------------------
 
+  /// The care of the loaded day — the day „Heute" shows too — or of
+  /// [_careAt]'s before the first load.
   void _deriveCare() {
     _careAt = _now();
-    _care = DailyCare.fromEntries(ref.read(entriesProvider), _careAt);
+    final entries = ref.read(entriesProvider);
+    _care = DailyCare.fromEntries(entries, entries.day ?? _careAt);
+  }
+
+  /// Once the loaded day is over by his clock (midnight passed, or the app
+  /// slept through it), loads the new one; the ring and „Heute" switch
+  /// together. After the frame: this may run while the entries notify.
+  void _followDay() {
+    bool over() {
+      final day = ref.read(entriesProvider).day;
+      return day != null && !isSameDay(day, _careAt);
+    }
+
+    if (!over()) return;
+    _afterFrame(() {
+      if (over()) unawaited(_loadToday());
+    });
   }
 
   /// Re-derives today's care; a new mood or next action gets its line,
@@ -243,6 +264,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     if (!mounted) return;
     final (care, mood, action) = (_care, _careMood, _careAction);
     _deriveCare();
+    _followDay();
     final moodChanged = _careMood != mood;
     final actionChanged = _careAction != action;
     // The ring, its glow and the button follow the entries and the clock.
@@ -360,16 +382,14 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       _followUpPending = true;
       _enqueue(const [_Cue.followUp]);
     }
-    unawaited(_reloadEntries());
   });
 
-  /// Trackers don't refresh [entriesProvider]; reload today so the mood
-  /// reflects the new entry.
-  Future<void> _reloadEntries() async {
+  /// Loads the entries of [_careAt]'s day.
+  Future<void> _loadToday() async {
     try {
-      await ref.read(entriesProvider.notifier).loadEntries(_now());
+      await ref.read(entriesProvider.notifier).loadEntries(_careAt);
     } catch (e, st) {
-      _log.error("Reloading today's entries failed", e, st);
+      _log.error("Loading today's entries failed", e, st);
     }
   }
 

@@ -15,14 +15,17 @@ import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/buddy_welcome_provider.dart';
+import 'package:belly_buddy/providers/diary_provider.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/streak_sheet.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/today_list.dart';
 import 'package:belly_buddy/services/buddy/buddy_copy.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
+import 'package:belly_buddy/utils/date_format_utils.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
 
@@ -78,23 +81,30 @@ class _FakeBuddy extends BuddyNotifier {
   void push(BuddyStatus status) => state = AsyncData(status);
 }
 
-/// [EntriesNotifier] with a seeded state; [loadEntries] swaps in [next].
+/// [EntriesNotifier] with a seeded state; [loadEntries] loads [next] for
+/// its day.
 class _FakeEntries extends EntriesNotifier {
   _FakeEntries(this._initial);
 
   final EntriesState _initial;
+
+  /// What the next [loadEntries] finds.
   EntriesState? next;
-  int loads = 0;
+
+  /// The dates [loadEntries] was called with.
+  final List<DateTime> loaded = [];
 
   @override
   EntriesState build() => _initial;
 
   @override
   Future<void> loadEntries(DateTime date) async {
-    loads++;
-    final n = next;
-    if (n != null) state = n;
+    loaded.add(date);
+    state = (next ?? state).copyWith(day: startOfDay(date));
   }
+
+  /// A write's reload lands: today's entries are [s] now.
+  void push(EntriesState s) => state = s;
 }
 
 BuddyStatus _status({
@@ -144,6 +154,7 @@ void main() {
   Future<ProviderContainer> pumpHero(
     WidgetTester tester, {
     List<Override> extra = const [],
+    bool withTodayList = false,
   }) async {
     final container = ProviderContainer.test(
       overrides: [
@@ -162,9 +173,20 @@ void main() {
             body: ValueListenableBuilder<bool>(
               valueListenable: visible,
               builder: (_, on, child) => TickerMode(enabled: on, child: child!),
-              child: const SingleChildScrollView(child: BuddyHero()),
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    const BuddyHero(),
+                    if (withTodayList) const TodayList(),
+                  ],
+                ),
+              ),
             ),
           ),
+        ),
+        GoRoute(
+          path: RoutePaths.diary,
+          builder: (_, _) => const Scaffold(body: Text('diary-page')),
         ),
         for (final path in [
           RoutePaths.mealTracker,
@@ -632,14 +654,15 @@ void main() {
       tester,
     ) async {
       final container = await pumpHero(tester);
-      entries.next = EntriesState(meals: [testMealEntry(trackedAt: now)]);
 
       emit(container, LogSentiment.good);
       buddy.push(_status(streak: 5, todayCounted: true));
       await tester.pump();
-
       expect(container.read(buddyEventsProvider), isNull);
-      expect(entries.loads, 1);
+
+      // The tracker's save reloads today's entries.
+      entries.push(EntriesState(meals: [testMealEntry(trackedAt: now)]));
+      await tester.pump();
       expect(controller(tester).mood, BuddyMood.happy);
 
       await tester.pump(const Duration(milliseconds: 600));
@@ -711,10 +734,10 @@ void main() {
     ) async {
       buddy = _FakeBuddy(() => _status(streak: 5, todayCounted: true));
       final container = await pumpHero(tester);
-      entries.next = EntriesState(meals: [testMealEntry(trackedAt: now)]);
 
       emit(container, LogSentiment.good);
       await tester.pump();
+      entries.push(EntriesState(meals: [testMealEntry(trackedAt: now)]));
       await tester.pump(const Duration(milliseconds: 600));
       await tick(tester);
 
@@ -733,11 +756,12 @@ void main() {
       await advance(tester, const Duration(seconds: 3)); // greeting gone
       await tick(tester);
       expect(controller(tester).bubble, isNull);
-      entries.next = EntriesState(meals: [testMealEntry(trackedAt: now)]);
 
       emit(container, LogSentiment.good);
       buddy.push(_status(streak: 5, todayCounted: true));
       await tester.pump();
+      // The log's entries land while the follow-up waits.
+      entries.push(EntriesState(meals: [testMealEntry(trackedAt: now)]));
       await tick(tester);
 
       // Mood flipped to happy, but the bubble waits for the follow-up.
@@ -771,9 +795,8 @@ void main() {
       await tester.pump(const Duration(seconds: 5));
     });
 
-    testWidgets('a stale event (older than 2 min) is dropped silently', (
-      tester,
-    ) async {
+    testWidgets('a stale event (older than 2 min) is dropped silently; '
+        "today's entries don't depend on it", (tester) async {
       final container = await pumpHero(tester);
       await advance(tester, const Duration(seconds: 3)); // greeting gone
 
@@ -789,7 +812,8 @@ void main() {
 
       expect(container.read(buddyEventsProvider), isNull);
       expect(controller(tester).bubble, isNull);
-      expect(entries.loads, 0);
+      // The log's own write reloaded today's entries already.
+      expect(entries.loaded, isEmpty);
     });
 
     testWidgets('an event while hidden waits until the hero is visible', (
@@ -969,6 +993,71 @@ void main() {
       await tick(tester);
       expect(find.text('🍝 Mittagessen eintragen'), findsOneWidget);
       expect(controller(tester).bubble, isNull);
+    });
+
+    testWidgets('resumed the next morning: the ring, „Heute" and the diary '
+        'link move to the new day together', (tester) async {
+      now = DateTime(2026, 11, 22, 21);
+      entries = _FakeEntries(
+        EntriesState(
+          day: DateTime(2026, 11, 22),
+          meals: [
+            testMealEntry(
+              trackedAt: DateTime(2026, 11, 22, 19),
+              title: 'Abendbrot',
+            ),
+          ],
+        ),
+      );
+      final container = await pumpHero(tester, withTodayList: true);
+      expect(find.text('🍽 1/3'), findsOneWidget);
+      expect(find.text('Abendbrot'), findsOneWidget);
+
+      now = DateTime(2026, 11, 23, 8);
+      entries.next = const EntriesState(); // nothing logged yet today
+      tester.binding
+        ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+        ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
+      await tester.pump();
+
+      expect(entries.loaded.map(startOfDay), [DateTime(2026, 11, 23)]);
+      expect(find.text('🍽 0/3'), findsOneWidget);
+      expect(find.text('Abendbrot'), findsNothing);
+      expect(find.text(TodayList.emptyText), findsOneWidget);
+
+      await tester.ensureVisible(find.byKey(TodayList.diaryLinkKey));
+      await tester.tap(find.byKey(TodayList.diaryLinkKey));
+      await tester.pump();
+      expect(container.read(diaryDateProvider), DateTime(2026, 11, 23));
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('open across midnight: the minute tick loads the new day', (
+      tester,
+    ) async {
+      now = DateTime(2026, 11, 22, 23, 59);
+      entries = _FakeEntries(
+        EntriesState(
+          day: DateTime(2026, 11, 22),
+          meals: [
+            testMealEntry(
+              trackedAt: DateTime(2026, 11, 22, 19),
+              title: 'Abendbrot',
+            ),
+          ],
+        ),
+      );
+      await pumpHero(tester, withTodayList: true);
+      expect(find.text('Abendbrot'), findsOneWidget);
+
+      now = DateTime(2026, 11, 23, 0, 0, 30);
+      await tester.pump(const Duration(minutes: 1));
+      await tester.pump();
+
+      expect(entries.loaded.map(startOfDay), [DateTime(2026, 11, 23)]);
+      expect(find.text('🍽 0/3'), findsOneWidget);
+      expect(find.text(TodayList.emptyText), findsOneWidget);
     });
 
     testWidgets('the next-action button opens its tracker', (tester) async {
