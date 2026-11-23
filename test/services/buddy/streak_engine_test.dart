@@ -855,7 +855,7 @@ void main() {
       expect(earnedDaily(daily, state: const BuddyState()), [7, 14]);
     });
 
-    test('day 7 filled by the gift saver, evaluated on day 8 → milestone 14 '
+    test('day 7 filled by a saver in stock, evaluated on day 8 → milestone 14 '
         'still pays on day 14', () {
       expect(
         earnedDaily(daily.difference({7}), state: const BuddyState(savers: 1)),

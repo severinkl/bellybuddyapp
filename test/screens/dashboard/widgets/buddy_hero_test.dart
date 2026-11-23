@@ -951,6 +951,26 @@ void main() {
       expect(find.text('🍝 Mittagessen eintragen'), findsOneWidget);
     });
 
+    testWidgets('hidden, the minute ticks wait; shown again, he catches up '
+        'without a line', (tester) async {
+      now = DateTime(2026, 11, 22, 10, 29);
+      await pumpHero(tester);
+      await advance(tester, const Duration(seconds: 3)); // greeting gone
+      visible.value = false;
+      await tester.pump();
+
+      now = DateTime(2026, 11, 22, 10, 30);
+      await tester.pump(const Duration(minutes: 1));
+      expect(find.text('🍳 Frühstück eintragen'), findsOneWidget);
+
+      visible.value = true;
+      await tester.pump();
+      await tester.pump();
+      await tick(tester);
+      expect(find.text('🍝 Mittagessen eintragen'), findsOneWidget);
+      expect(controller(tester).bubble, isNull);
+    });
+
     testWidgets('the next-action button opens its tracker', (tester) async {
       await pumpHero(tester);
 

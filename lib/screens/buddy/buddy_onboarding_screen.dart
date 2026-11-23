@@ -129,6 +129,18 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
   static const double _maxStageShare = 0.33;
   static const double _maxHeroStageShare = 0.45;
 
+  /// The stage's height on [step] in a [height] tall screen.
+  static double _stageHeight(BuddyOnboardingStep step, double height) =>
+      _heroSteps.contains(step)
+      ? math.min(
+          AppConstants.buddyOnboardingHeroStageHeight,
+          height * _maxHeroStageShare,
+        )
+      : math.min(
+          AppConstants.buddyOnboardingStageHeight,
+          height * _maxStageShare,
+        );
+
   final BuddyController _buddy = BuddyController();
   final math.Random _rnd = math.Random();
   final ScrollController _scroll = ScrollController();
@@ -522,26 +534,13 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
           ),
         ] else
           SizedBox(
-            height: _heroSteps.contains(step)
-                ? math.min(
-                    AppConstants.buddyOnboardingHeroStageHeight,
-                    height * _maxHeroStageShare,
-                  )
-                : math.min(
-                    AppConstants.buddyOnboardingStageHeight,
-                    height * _maxStageShare,
-                  ),
+            height: _stageHeight(step, height),
             child: BuddyStage(controller: _buddy, name: name),
           ),
         Expanded(
           child: SingleChildScrollView(
             controller: _scroll,
-            padding: const EdgeInsets.fromLTRB(
-              AppConstants.spacingLg,
-              AppConstants.spacingSm,
-              AppConstants.spacingLg,
-              AppConstants.spacingMd,
-            ),
+            padding: AppConstants.wizardStepPadding,
             child: AnimatedSwitcher(
               duration: switchDuration,
               child: KeyedSubtree(
@@ -566,7 +565,11 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
                       AppConstants.spacingLg,
                       AppConstants.spacingMd,
                     ),
-                    child: _StepColumn(children: actions),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: actions,
+                    ),
                   ),
           ),
         ),
@@ -670,19 +673,6 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
       ],
     };
   }
-}
-
-class _StepColumn extends StatelessWidget {
-  const _StepColumn({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) => Column(
-    mainAxisSize: MainAxisSize.min,
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: children,
-  );
 }
 
 class _LaterButton extends StatelessWidget {

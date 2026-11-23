@@ -128,8 +128,8 @@ String _topPath(ProviderContainer container) => container
 FakeProfileRepository _profilesWith(UserProfile profile) =>
     FakeProfileRepository()..seedProfile(profile);
 
-/// Reduced motion: the gift box opens instantly and never wiggles, so
-/// `pumpAndSettle` settles on every onboarding step.
+/// Reduced motion: the onboarding's step changes and the Buddy's bubble
+/// show at once, so `pumpAndSettle` settles quickly on every step.
 void _reduceMotion(WidgetTester tester) {
   tester.platformDispatcher.accessibilityFeaturesTestValue =
       const FakeAccessibilityFeatures(disableAnimations: true);

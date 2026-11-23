@@ -57,45 +57,40 @@ class BuddyStepHost extends StatelessWidget {
   /// What the Buddy does while [keyboardOpen].
   final BuddyKeyboardStage keyboardStage;
 
-  /// The Buddy's size in the header; null when he is hidden.
-  Size? get _buddySize {
-    if (!keyboardOpen) return BuddySideHeader.defaultBuddySize;
-    return switch (keyboardStage) {
-      BuddyKeyboardStage.compact => const Size(
-        AppConstants.buddyWizardCompactSize * kBuddyStageAspect,
-        AppConstants.buddyWizardCompactSize,
-      ),
-      BuddyKeyboardStage.hidden => null,
-    };
-  }
-
-  double get _headerHeight {
-    final buddy = _buddySize;
-    if (buddy == null) return 0;
-    return keyboardOpen
-        ? AppConstants.buddyWizardCompactHeaderHeight
-        : buddy.height;
-  }
-
-  Widget _header(Size? buddy, double height) {
-    if (buddy == null) return const SizedBox(width: double.infinity);
-    return BuddySideHeader(
-      key: headerKey,
-      controller: controller,
-      name: name,
-      buddySize: buddy,
-      height: height,
-    );
-  }
+  /// The Buddy's size in the header (null while he is hidden) and the
+  /// header's height.
+  ({Size? buddy, double height}) get _header =>
+      switch ((keyboardOpen, keyboardStage)) {
+        (false, _) => (
+          buddy: BuddySideHeader.defaultBuddySize,
+          height: BuddySideHeader.defaultBuddySize.height,
+        ),
+        (true, BuddyKeyboardStage.compact) => (
+          buddy: const Size(
+            AppConstants.buddyWizardCompactSize * kBuddyStageAspect,
+            AppConstants.buddyWizardCompactSize,
+          ),
+          height: AppConstants.buddyWizardCompactHeaderHeight,
+        ),
+        (true, BuddyKeyboardStage.hidden) => (buddy: null, height: 0),
+      };
 
   @override
   Widget build(BuildContext context) {
-    final buddy = _buddySize;
-    final header = _headerHeight;
+    final (:buddy, height: headerHeight) = _header;
+    final header = buddy == null
+        ? const SizedBox(width: double.infinity)
+        : BuddySideHeader(
+            key: headerKey,
+            controller: controller,
+            name: name,
+            buddySize: buddy,
+            height: headerHeight,
+          );
     final calm = MediaQuery.disableAnimationsOf(context);
     return LayoutBuilder(
       builder: (context, constraints) {
-        final minHeight = header + AppConstants.buddyWizardMinStepHeight;
+        final minHeight = headerHeight + AppConstants.buddyWizardMinStepHeight;
         final height = constraints.hasBoundedHeight
             ? math.max(constraints.maxHeight, minHeight)
             : minHeight;
@@ -109,13 +104,13 @@ class BuddyStepHost extends StatelessWidget {
                 // AnimatedSize with a zero duration: that one re-dirties
                 // itself during layout once it relayouts.)
                 if (calm)
-                  _header(buddy, header)
+                  header
                 else
                   AnimatedSize(
                     duration: AppConstants.animMedium,
                     curve: Curves.easeInOut,
                     alignment: Alignment.topCenter,
-                    child: _header(buddy, header),
+                    child: header,
                   ),
                 Expanded(child: child),
               ],

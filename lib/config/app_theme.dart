@@ -60,7 +60,7 @@ class AppTheme {
 
   // Dashboard care ring: one color per need (Essen, Trinken, Bauchgefühl,
   // Klo) and the glow around the need he suggests next
-  static const Color careFood = Color(0xFFB5CC47);
+  static const Color careFood = primary;
   static const Color careWater = Color(0xFF86BFE6);
   static const Color careGut = Color(0xFFF0A646);
   static const Color careLoo = Color(0xFFBFAE9F);

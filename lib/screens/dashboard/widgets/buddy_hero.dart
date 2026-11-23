@@ -164,7 +164,10 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     super.initState();
     _deriveCare();
     _buddy = BuddyController(mood: _careMood);
-    _moodTimer = Timer.periodic(_moodInterval, (_) => _updateCare());
+    // Hidden, the hero skips the minute ticks; it catches up once visible.
+    _moodTimer = Timer.periodic(_moodInterval, (_) {
+      if (_visible) _updateCare();
+    });
     _lifecycle = AppLifecycleListener(onResume: _onResume);
     ref.listenManual(entriesProvider, (_, _) => _updateCare());
     ref.listenManual(buddyEventsProvider, (_, event) {
@@ -185,6 +188,8 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _visible = visible;
     if (visible) {
       _afterFrame(() {
+        // What changed while hidden was never said; it isn't now either.
+        _updateCare(speak: false);
         _consumeEvent();
         _takeAnnouncements();
         _maybeGreet();
@@ -232,7 +237,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _care = DailyCare.fromEntries(ref.read(entriesProvider), _careAt);
   }
 
-  void _updateCare() {
+  /// Re-derives today's care; a new mood or next action gets its line,
+  /// unless not to [speak].
+  void _updateCare({bool speak = true}) {
     if (!mounted) return;
     final (care, mood, action) = (_care, _careMood, _careAction);
     _deriveCare();
@@ -242,7 +249,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     if (_care != care || actionChanged) setState(() {});
     if (!moodChanged && !actionChanged) return;
     if (moodChanged) _applyMood();
-    if (_override == null) _sayMoodLine();
+    if (speak && _override == null) _sayMoodLine();
   }
 
   void _setOverride(BuddyMood? mood) {

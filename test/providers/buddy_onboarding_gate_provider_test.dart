@@ -163,7 +163,7 @@ void main() {
     });
 
     test('not required: nothing moves, not even away from the onboarding '
-        '(it completes at the gift and leaves by itself)', () {
+        '(it completes on its last step and leaves by itself)', () {
       for (final path in [
         RoutePaths.buddyOnboarding,
         RoutePaths.dashboard,
