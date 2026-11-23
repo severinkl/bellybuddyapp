@@ -76,6 +76,7 @@ List<Override> baseOverrides({
   FakeProfileRepository? profiles,
   FakeBuddyRepository? buddies,
   FakeEntryRepository? entries,
+  FakeIngredientRepository? ingredients,
   UpgradeDecision decision = UpgradeDecision.ok,
 }) => [
   authRepositoryProvider.overrideWithValue(auth ?? FakeAuthRepository()),
@@ -87,7 +88,9 @@ List<Override> baseOverrides({
   ),
   entryRepositoryProvider.overrideWithValue(entries ?? FakeEntryRepository()),
   drinkRepositoryProvider.overrideWithValue(FakeDrinkRepository()),
-  ingredientRepositoryProvider.overrideWithValue(FakeIngredientRepository()),
+  ingredientRepositoryProvider.overrideWithValue(
+    ingredients ?? FakeIngredientRepository(),
+  ),
   userRecipeRepositoryProvider.overrideWithValue(FakeUserRecipeRepository()),
   mealMediaRepositoryProvider.overrideWithValue(FakeMealMediaRepository()),
   notificationRepositoryProvider.overrideWithValue(

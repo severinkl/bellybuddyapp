@@ -436,6 +436,12 @@ class FakeDrinkRepository implements DrinkRepository {
 
 // -- FakeIngredientRepository --
 class FakeIngredientRepository implements IngredientRepository {
+  /// [groups] are the suggestion groups it answers with; by default one new.
+  FakeIngredientRepository({List<IngredientSuggestionGroup>? groups})
+    : groups = groups ?? [testSuggestionGroup()];
+
+  final List<IngredientSuggestionGroup> groups;
+
   @override
   Future<List<IngredientSearchResult>> search(
     String query, {
@@ -449,7 +455,7 @@ class FakeIngredientRepository implements IngredientRepository {
   @override
   Future<List<IngredientSuggestionGroup>> fetchSuggestionGroups(
     String userId,
-  ) async => [testSuggestionGroup()];
+  ) async => groups;
   @override
   Future<void> markAllSeen(List<String> ids) async {}
   @override

@@ -85,3 +85,11 @@ class _Run {
 final discoverNewsProvider = NotifierProvider<DiscoverNewsNotifier, void>(
   DiscoverNewsNotifier.new,
 );
+
+/// Whether Entdecken holds news: an unseen tip set or a new Alternative.
+/// The dot on the bar's Entdecken tab.
+final discoverBadgeProvider = Provider<bool>(
+  (ref) =>
+      ref.watch(unseenTipSetProvider) != null ||
+      ref.watch(newIngredientSuggestionCountProvider) > 0,
+);

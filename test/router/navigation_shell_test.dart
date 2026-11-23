@@ -3,7 +3,10 @@ import 'dart:ui' as ui;
 
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
+import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/providers/diary_provider.dart';
+import 'package:belly_buddy/providers/discover_news_provider.dart';
+import 'package:belly_buddy/providers/recommendation_provider.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
 import 'package:belly_buddy/router/app_router.dart';
 import 'package:belly_buddy/router/route_names.dart';
@@ -17,7 +20,9 @@ import 'package:belly_buddy/screens/diary/diary_screen.dart';
 import 'package:belly_buddy/screens/discover/discover_screen.dart';
 import 'package:belly_buddy/screens/discover/knowledge_screen.dart';
 import 'package:belly_buddy/screens/me/me_screen.dart';
+import 'package:belly_buddy/repositories/recommendation_repository.dart';
 import 'package:belly_buddy/screens/patterns/patterns_screen.dart';
+import 'package:belly_buddy/screens/recommendations/recommendations_screen.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
 import 'package:belly_buddy/widgets/log_sheet/log_sheet.dart';
@@ -39,6 +44,8 @@ final _now = DateTime(2026, 11, 23, 12, 40);
 Future<ProviderContainer> _pumpShell(
   WidgetTester tester, {
   Size screen = const Size(400, 860),
+  FakeRecommendationRepository? tips,
+  List<IngredientSuggestionGroup> groups = const [],
 }) async {
   tester.view
     ..physicalSize = screen
@@ -48,6 +55,7 @@ Future<ProviderContainer> _pumpShell(
   final container = ProviderContainer.test(
     overrides: [
       ...baseOverrides(
+        ingredients: FakeIngredientRepository(groups: groups),
         entries: FakeEntryRepository()
           ..seedResult(
             testEntryQueryResult(
@@ -59,8 +67,13 @@ Future<ProviderContainer> _pumpShell(
           ),
       ),
       buddyTodayProvider.overrideWithValue(() => _now),
+      recommendationRepositoryProvider.overrideWithValue(
+        tips ?? FakeRecommendationRepository(),
+      ),
     ],
   );
+  // The app root keeps the news loaded.
+  container.listen(discoverNewsProvider, (_, _) {});
   await tester.pumpWidget(
     UncontrolledProviderScope(container: container, child: const AppTestHost()),
   );
@@ -240,7 +253,12 @@ void main() {
     testWidgets('5-slot bar fits 375×667 at text scale 1.3', (tester) async {
       tester.platformDispatcher.textScaleFactorTestValue = 1.3;
       addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-      await _pumpShell(tester, screen: const Size(375, 667));
+      await _pumpShell(
+        tester,
+        screen: const Size(375, 667),
+        tips: FakeRecommendationRepository(sets: [testRecommendation()]),
+      );
+      expect(find.byKey(BbBottomNav.discoverBadgeKey), findsOneWidget);
       expect(tester.takeException(), isNull);
 
       // Each tab once, so each label is drawn active (bold) too.
@@ -253,6 +271,69 @@ void main() {
         await _tap(tester, key);
         expect(tester.takeException(), isNull, reason: '$key');
       }
+    });
+
+    group('the Entdecken dot', () {
+      // The Tipps screen is laid out for the width of a real font.
+      const wide = Size(800, 1200);
+
+      FakeRecommendationRepository newTips() =>
+          FakeRecommendationRepository(sets: [testRecommendation()]);
+
+      testWidgets('shows while a tip set is new', (tester) async {
+        await _pumpShell(tester, tips: newTips());
+
+        final dot = find.byKey(BbBottomNav.discoverBadgeKey);
+        expect(dot, findsOneWidget);
+        final slot = tester.getRect(find.byKey(BbBottomNav.navDiscoverKey));
+        expect(slot.contains(tester.getCenter(dot)), isTrue);
+        // The tab's one semantics node carries the dot's label.
+        expect(
+          tester.getSemantics(find.byKey(BbBottomNav.navDiscoverKey)).label,
+          contains('Neues'),
+        );
+      });
+
+      testWidgets('is not there when nothing is new', (tester) async {
+        await _pumpShell(tester);
+        expect(find.byKey(BbBottomNav.discoverBadgeKey), findsNothing);
+      });
+
+      testWidgets('goes once the Tipps are opened', (tester) async {
+        final container = await _pumpShell(
+          tester,
+          screen: wide,
+          tips: newTips(),
+        );
+        expect(find.byKey(BbBottomNav.discoverBadgeKey), findsOneWidget);
+
+        container.read(routerProvider).go(RoutePaths.recommendations);
+        await tester.pumpAndSettle();
+        expect(find.byType(RecommendationsScreen), findsOneWidget);
+        container.read(routerProvider).go(RoutePaths.dashboard);
+        await tester.pumpAndSettle();
+
+        expect(find.byKey(BbBottomNav.discoverBadgeKey), findsNothing);
+      });
+
+      testWidgets('stays for new alternatives after the Tipps are seen', (
+        tester,
+      ) async {
+        final container = await _pumpShell(
+          tester,
+          screen: wide,
+          tips: newTips(),
+          groups: [testSuggestionGroup()],
+        );
+
+        container.read(routerProvider).go(RoutePaths.recommendations);
+        await tester.pumpAndSettle();
+        container.read(routerProvider).go(RoutePaths.dashboard);
+        await tester.pumpAndSettle();
+
+        expect(container.read(unseenTipSetProvider), isNull);
+        expect(find.byKey(BbBottomNav.discoverBadgeKey), findsOneWidget);
+      });
     });
 
     testWidgets('Home fits 375×667 at text scale 1.3', (tester) async {

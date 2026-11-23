@@ -6,6 +6,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
+import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/discover_news_provider.dart';
 import 'package:belly_buddy/providers/ingredient_suggestion_provider.dart';
@@ -180,5 +181,41 @@ void main() {
 
     expect(tips.fetchCount, 1);
     verify(() => alternatives.fetchSuggestionGroups(testUserId)).called(1);
+  });
+
+  group('discoverBadgeProvider', () {
+    /// Loads what the container's fakes hold, then reads the badge.
+    Future<bool> badgeAfterLoad({
+      List<Recommendation>? sets,
+      List<IngredientSuggestionGroup>? groups,
+    }) async {
+      tips = FakeRecommendationRepository(sets: sets);
+      when(
+        () => alternatives.fetchSuggestionGroups(any()),
+      ).thenAnswer((_) async => groups ?? []);
+      final c = makeContainer();
+      await settle();
+      return c.read(discoverBadgeProvider);
+    }
+
+    test('an unseen tip set: true', () async {
+      expect(await badgeAfterLoad(sets: [testRecommendation()]), isTrue);
+    });
+
+    test('one new alternative: true', () async {
+      expect(await badgeAfterLoad(groups: [testSuggestionGroup()]), isTrue);
+    });
+
+    test('nothing new: false', () async {
+      expect(
+        await badgeAfterLoad(groups: [testSuggestionGroup(isNew: false)]),
+        isFalse,
+      );
+    });
+
+    test('both still loading: false', () {
+      final c = ProviderContainer.test();
+      expect(c.read(discoverBadgeProvider), isFalse);
+    });
   });
 }

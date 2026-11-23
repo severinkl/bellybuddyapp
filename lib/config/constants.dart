@@ -292,6 +292,9 @@ class AppConstants {
   /// stay this size (like iOS's own tab bars), so five slots keep fitting.
   static const double bottomNavMaxTextScale = 1.3;
 
+  /// The diameter of the news dot on a bottom-bar icon.
+  static const double navBadgeSize = 10.0;
+
   // Durations
   static const Duration pressScaleDuration = Duration(milliseconds: 100);
   static const Duration successOverlayDuration = Duration(milliseconds: 1500);
