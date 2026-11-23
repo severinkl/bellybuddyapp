@@ -21,21 +21,15 @@ const _maxUncertain = 3;
 const _minOftenCount = 2;
 const _maxOften = 5;
 
-/// Every entry's average is a whole sum of 4 to 9 ratings over their count,
-/// so times 2520 (divisible by every count up to 10) it is a whole number.
-/// A day's mean summed that way and divided once is exact at the level
-/// thresholds, where adding the averages as doubles can land a hair off:
-/// 2, 23/6 and 10/6 make 2.5000000000000004, „Durchschnittlich" instead of
-/// „Gut".
-const _averageScale = 2520;
-
 /// What the last [InsightProgress.windowDays] local days of [source] show,
 /// as of [now].
 ///
 /// - The window runs from local midnight 29 days before [now]'s day through
 ///   [now]; anything tracked after [now] is ignored.
-/// - A day's class comes from the mean of its gut-feeling entries' averages
-///   (`gutFeelingLevelFor`): hard = „Schlecht", good = „Gut"/„Sehr gut".
+/// - A day's class comes from the mean of its gut-feeling entries' scores
+///   (`gutFeelingScore`: the worst gut symptom; the mood never counts),
+///   mapped with `gutFeelingLevelFor`: hard = „Schlecht", good = „Gut" or
+///   „Sehr gut".
 /// - For each good and hard day, the meals in the 24 h before its first
 ///   entry of that class (`[anchor − 24 h, anchor)`) say which ingredients
 ///   were there. Names match trimmed and case-insensitively, and each
@@ -75,11 +69,7 @@ Insights computeInsights(InsightSource source, DateTime now) {
       // The anchor is the day's first entry in the day's class; a mean is
       // in a class only if at least one of its entries is too.
       anchors.add(
-        entries!
-            .firstWhere(
-              (e) => _classOf(calculateGutFeelingRating(e).level) == dayClass,
-            )
-            .trackedAt,
+        entries!.firstWhere((e) => _entryClassOf(e) == dayClass).trackedAt,
       );
     }
   }
@@ -138,15 +128,22 @@ DayClass _classOf(GutFeelingRatingLevel level) => switch (level) {
   GutFeelingRatingLevel.schlecht => DayClass.hard,
 };
 
+/// The class of one entry on its own, from its [gutFeelingScore].
+DayClass _entryClassOf(GutFeelingEntry entry) =>
+    _classOf(gutFeelingLevelFor(gutFeelingScore(entry)));
+
 /// The class of a day with [entries] (at least one), from the mean of their
-/// averages (exact, see [_averageScale]).
+/// [gutFeelingScore]s.
+///
+/// Exact at the half-step thresholds: the mean is one division of two whole
+/// numbers, rounded once, and a mean that is not on a half step is at least
+/// `1 / (2 · count)` away from it, far more than that rounding can move it.
 DayClass _dayClassOf(List<GutFeelingEntry> entries) {
-  var scaledSum = 0;
+  var sum = 0;
   for (final e in entries) {
-    scaledSum += (calculateGutFeelingRating(e).avg * _averageScale).round();
+    sum += gutFeelingScore(e);
   }
-  final mean = scaledSum / (_averageScale * entries.length);
-  return _classOf(gutFeelingLevelFor(mean));
+  return _classOf(gutFeelingLevelFor(sum / entries.length));
 }
 
 /// A meal reduced to what the insights match on.

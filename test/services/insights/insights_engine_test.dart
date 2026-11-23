@@ -18,7 +18,7 @@ InsightMeal meal(DateTime at, List<String> ingredients) =>
 
 var _ids = 0;
 
-/// A gut-feeling entry with all four symptoms at [v], so its average is [v].
+/// A gut-feeling entry with all four symptoms at [v], so its score is [v].
 GutFeelingEntry gut(DateTime at, int v) => GutFeelingEntry(
   id: 'g${_ids++}',
   trackedAt: at,
@@ -26,6 +26,29 @@ GutFeelingEntry gut(DateTime at, int v) => GutFeelingEntry(
   gas: v,
   cramps: v,
   fullness: v,
+);
+
+/// A gut-feeling entry with each gut symptom given (1 = none) and every
+/// mood value at [mood] (null = not set).
+GutFeelingEntry symptoms(
+  DateTime at, {
+  int bloating = 1,
+  int gas = 1,
+  int cramps = 1,
+  int fullness = 1,
+  int? mood,
+}) => GutFeelingEntry(
+  id: 's${_ids++}',
+  trackedAt: at,
+  bloating: bloating,
+  gas: gas,
+  cramps: cramps,
+  fullness: fullness,
+  stress: mood,
+  happiness: mood,
+  energy: mood,
+  focus: mood,
+  bodyFeel: mood,
 );
 
 Insights compute({
@@ -179,7 +202,7 @@ void main() {
   });
 
   group('day classes', () {
-    test("day class from the mean of the day's entries", () {
+    test("day class from the mean of the day's entries' scores", () {
       final insights = compute(
         guts: [
           gut(nov(10, 9), 2),
@@ -199,27 +222,78 @@ void main() {
       expect(insights.hardDays.days, 1);
     });
 
-    test('a mean of exactly 2.5 is good, also with thirds and sixths', () {
-      // Averages 2, 23/6 and 10/6: added as doubles they make
-      // 2.5000000000000004.
-      GutFeelingEntry entry(int h, List<int> v) => GutFeelingEntry(
-        id: 'm$h',
-        trackedAt: nov(10, h),
-        bloating: v[0],
-        gas: v[1],
-        cramps: v[2],
-        fullness: v[3],
-        stress: v.length > 4 ? v[4] : null,
-        happiness: v.length > 5 ? v[5] : null,
-      );
+    test('a mean of exactly 2.5 is good, just above is medium', () {
+      List<GutFeelingEntry> day(int d, List<int> scores) => [
+        for (var i = 0; i < scores.length; i++) gut(nov(d, 8 + i), scores[i]),
+      ];
       final insights = compute(
         guts: [
-          entry(8, [2, 2, 2, 2]),
-          entry(12, [4, 4, 4, 4, 4, 3]),
-          entry(18, [2, 2, 2, 1, 1, 2]),
+          ...day(1, [2, 3]), // 5/2
+          ...day(2, [1, 1, 3, 5]), // 10/4
+          ...day(3, [2, 2, 3]), // 7/3
+          ...day(4, [2, 3, 3]), // 8/3
+          ...day(5, [3, 3, 3, 2, 2, 2]), // 15/6
+          ...day(6, [3, 3, 3, 3, 2, 2, 2]), // 18/7
+        ],
+      );
+      expect(classOn(insights, nov(1)), DayClass.good);
+      expect(classOn(insights, nov(2)), DayClass.good);
+      expect(classOn(insights, nov(3)), DayClass.good);
+      expect(classOn(insights, nov(4)), DayClass.medium);
+      expect(classOn(insights, nov(5)), DayClass.good);
+      expect(classOn(insights, nov(6)), DayClass.medium);
+    });
+
+    test('a mean of exactly 3.5 is medium, just above is hard', () {
+      List<GutFeelingEntry> day(int d, List<int> scores) => [
+        for (var i = 0; i < scores.length; i++) gut(nov(d, 8 + i), scores[i]),
+      ];
+      final insights = compute(
+        guts: [
+          ...day(1, [2, 5]), // 7/2
+          ...day(2, [1, 5, 5, 3]), // 14/4
+          ...day(3, [3, 4, 3]), // 10/3
+          ...day(4, [4, 4, 3]), // 11/3
+          ...day(5, [4, 4, 4, 3, 3, 3]), // 21/6
+          ...day(6, [4, 4, 4, 4, 3, 3, 3]), // 25/7
+        ],
+      );
+      expect(classOn(insights, nov(1)), DayClass.medium);
+      expect(classOn(insights, nov(2)), DayClass.medium);
+      expect(classOn(insights, nov(3)), DayClass.medium);
+      expect(classOn(insights, nov(4)), DayClass.hard);
+      expect(classOn(insights, nov(5)), DayClass.medium);
+      expect(classOn(insights, nov(6)), DayClass.hard);
+    });
+
+    test('an entry counts with its worst gut symptom', () {
+      // Krämpfe 5 and Völlegefühl 5 with no Blähbauch or Blähungen.
+      final insights = compute(
+        guts: [symptoms(nov(10), cramps: 5, fullness: 5)],
+      );
+      expect(classOn(insights, nov(10)), DayClass.hard);
+      expect(insights.hardDays.days, 1);
+    });
+
+    test('the mood never counts', () {
+      final insights = compute(
+        guts: [
+          symptoms(nov(10, 9), mood: 5),
+          symptoms(nov(10, 18), mood: 5),
+          symptoms(nov(11), mood: 1, gas: 4),
         ],
       );
       expect(classOn(insights, nov(10)), DayClass.good);
+      expect(classOn(insights, nov(11)), DayClass.hard);
+    });
+
+    test('a day with a 1 and a 5 is medium (mean 3)', () {
+      final insights = compute(
+        guts: [symptoms(nov(10, 9)), symptoms(nov(10, 18), bloating: 5)],
+      );
+      expect(classOn(insights, nov(10)), DayClass.medium);
+      expect(insights.goodDays.days, 0);
+      expect(insights.hardDays.days, 0);
     });
   });
 
@@ -238,6 +312,31 @@ void main() {
         ],
       );
       expect(hardCounts(insights), {'A': 3, 'B': 3, 'D': 3, 'C': 2, 'E': 2});
+    });
+
+    test('a bad mood does not make the hard anchor', () {
+      // 10 Nov: at 08:00 every symptom 3 with every mood value 5 (score 3),
+      // at 12:00 Krämpfe 5 (score 5) → mean 4, anchor 12:00.
+      final insights = compute(
+        guts: [
+          ...twoHardDays(),
+          symptoms(
+            nov(10, 8),
+            bloating: 3,
+            gas: 3,
+            cramps: 3,
+            fullness: 3,
+            mood: 5,
+          ),
+          symptoms(nov(10, 12), cramps: 5),
+        ],
+        meals: [
+          ...twoHardDayMeals(['A', 'B']),
+          meal(nov(10, 7), ['A']), // before both entries
+          meal(nov(10, 10), ['B']), // after the 08:00 entry, before 12:00
+        ],
+      );
+      expect(hardCounts(insights), {'A': 3, 'B': 3});
     });
 
     test('good anchor is the first gut/sehr gut entry', () {

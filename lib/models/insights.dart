@@ -1,7 +1,8 @@
 import 'insight_progress.dart';
 
-/// How a day went, from the mean of its gut-feeling entries' averages and
-/// the levels of `gutFeelingLevelFor` (higher = worse).
+/// How a day went, from the mean of its gut-feeling entries' scores (each
+/// the entry's worst gut symptom, `gutFeelingScore`) and the levels of
+/// `gutFeelingLevelFor` (higher = worse).
 enum DayClass {
   /// „Sehr gut" or „Gut": a mean of at most 2.5.
   good,
