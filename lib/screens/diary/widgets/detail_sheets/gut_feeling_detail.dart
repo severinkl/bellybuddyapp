@@ -261,18 +261,25 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
               ),
             ],
           ),
-          SliderTheme(
-            data: SliderThemeData(
-              activeTrackColor: color,
-              thumbColor: color,
-              inactiveTrackColor: color.withValues(alpha: 0.2),
-            ),
-            child: Slider(
-              value: (value ?? 1).toDouble(),
-              min: 1,
-              max: 5,
-              divisions: 4,
-              onChanged: (v) => onChanged(v.round()),
+          // A local overlay for the Slider's value-indicator portal, as in
+          // BbSlider: in the app's overlay its semantics node outlives the
+          // slider's own when the sheet shrinks or scrolls the slider out
+          // of view, and iOS then empties the whole accessibility tree.
+          Overlay.wrap(
+            clipBehavior: Clip.none,
+            child: SliderTheme(
+              data: SliderThemeData(
+                activeTrackColor: color,
+                thumbColor: color,
+                inactiveTrackColor: color.withValues(alpha: 0.2),
+              ),
+              child: Slider(
+                value: (value ?? 1).toDouble(),
+                min: 1,
+                max: 5,
+                divisions: 4,
+                onChanged: (v) => onChanged(v.round()),
+              ),
             ),
           ),
         ],
