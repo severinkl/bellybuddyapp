@@ -63,8 +63,8 @@ const Map<String, BuddyLine> kWizardReactions = {
   'auth:intro': BuddyLine(
     mood: BuddyMood.happy,
     lines: [
+      'Fast geschafft! Leg dir noch ein Konto an.',
       'Damit ich mir alles merken kann, brauchst du ein Konto.',
-      'Fast geschafft! Noch ein Konto, dann geht es richtig los.',
     ],
   ),
   'emailCapture:intro': BuddyLine(
@@ -223,7 +223,7 @@ const Map<String, BuddyLine> kWizardReactions = {
   ),
   'step:gender': BuddyLine(
     mood: BuddyMood.happy,
-    lines: ['Wie darf ich dich ansprechen?'],
+    lines: ['Welches biologische Geschlecht hast du?'],
   ),
   'step:heightWeight': BuddyLine(
     mood: BuddyMood.happy,
@@ -239,6 +239,6 @@ const Map<String, BuddyLine> kWizardReactions = {
   ),
   'step:intolerances': BuddyLine(
     mood: BuddyMood.happy,
-    lines: ['Gibt es etwas, das du nicht verträgst?'],
+    lines: ['Wurden dir Unverträglichkeiten diagnostiziert?'],
   ),
 };

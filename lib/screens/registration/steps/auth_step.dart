@@ -94,34 +94,15 @@ class _AuthStepState extends State<AuthStep> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    // The Buddy's bubble above asks for the account, so no headline here.
     return SingleChildScrollView(
-      padding: AppConstants.paddingLg,
+      padding: AppConstants.wizardStepPadding,
       child: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            AppConstants.gap16,
-            const Text(
-              'Konto erstellen',
-              style: TextStyle(
-                fontSize: AppTheme.fontSizeDisplay,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.foreground,
-              ),
-              textAlign: TextAlign.center,
-            ),
             AppConstants.gap8,
-            const Text(
-              'Erstelle dein Konto, um dein Profil zu speichern.',
-              style: TextStyle(
-                fontSize: AppTheme.fontSizeBodyLG,
-                color: AppTheme.mutedForeground,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            AppConstants.gap32,
-
             if (widget.error != null)
               BbAuthBanner(text: widget.error!, isError: true),
 

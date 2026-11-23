@@ -4,8 +4,8 @@ import 'package:material_ui/material_ui.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 
-/// Lets the user name the Buddy: a title in the Buddy's voice over a text
-/// field prefilled with [value]. The host shows the Buddy, adds the padding
+/// Lets the user name the Buddy: a text field prefilled with [value]. The
+/// host shows the Buddy (his bubble asks for the name), adds the padding
 /// and the „Weiter" button, and validates the name (trimmed, not empty).
 ///
 /// [value] is only the initial text; later changes come from the field and
@@ -27,6 +27,7 @@ class BuddyNameStep extends StatefulWidget {
   final ValueChanged<String> onChanged;
   final VoidCallback? onSubmitted;
 
+  /// Identifies the step (it has no headline: the Buddy asks).
   static const titleKey = Key('buddy_name_step_title');
   static const fieldKey = Key('buddy_name_field');
 
@@ -66,20 +67,10 @@ class _BuddyNameStepState extends State<BuddyNameStep> {
   @override
   Widget build(BuildContext context) {
     return Column(
+      key: BuddyNameStep.titleKey,
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
-          key: BuddyNameStep.titleKey,
-          'Wie soll ich heißen?',
-          style: TextStyle(
-            fontSize: AppTheme.fontSizeHeadingLG,
-            fontWeight: FontWeight.w700,
-            color: AppTheme.foreground,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        AppConstants.gap16,
         TextFormField(
           key: BuddyNameStep.fieldKey,
           controller: _controller,

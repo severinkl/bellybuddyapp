@@ -60,10 +60,22 @@ class AppConstants {
   static const double dragHandleHeight = 4.0;
   static const double dragHandleRadius = 2.0;
 
-  // Buddy speech bubble: the slot above the Buddy (two lines at body size)
-  // and the bubble's widest width
-  static const double buddyBubbleHeight = 72.0;
+  // Buddy speech bubble (comic style): the slot above the Buddy (two lines
+  // plus tail and shadow), the bubble's widest width and its line limit
+  static const double buddyBubbleHeight = 76.0;
   static const double buddyBubbleMaxWidth = 280.0;
+  static const int buddyBubbleMaxLines = 4;
+
+  // Its tail (base width, length), the side tail's middle below the
+  // bubble's top, and the flat shadow's offset
+  static const double buddyBubbleTailBase = 24.0;
+  static const double buddyBubbleTailLength = 12.0;
+  static const double buddyBubbleSideTailTop = 34.0;
+  static const Offset buddyBubbleShadowOffset = Offset(3, 4);
+
+  // Typewriter reveal: per character, at most this long in total
+  static const Duration buddyBubbleCharDelay = Duration(milliseconds: 30);
+  static const Duration buddyBubbleTypeMax = Duration(milliseconds: 1200);
 
   // Streak chip / goal sheet
   static const double streakChipPopScale = 1.25;
@@ -85,15 +97,23 @@ class AppConstants {
   static const double progressDotActiveWidth = 24.0;
   static const double giftRevealSize = 160.0;
 
-  // Registration wizard: the Buddy stage (bubble slot + Buddy) above every
-  // step takes this share of the screen height, clamped; with the keyboard
-  // open a compact Buddy without bubble. Below it a step keeps at least the
-  // min height (on shorter screens the host scrolls instead).
-  static const double buddyWizardHeightFactor = 0.26;
-  static const double buddyWizardSize = 150.0;
-  static const double buddyWizardMaxSize = 240.0;
+  // Registration wizard: above every step a header with the Buddy on the
+  // left (this wide; his height follows) and his bubble on the right; with
+  // the keyboard open a compact header (the Buddy this tall). Below it a
+  // step keeps at least the min height (on shorter screens the host
+  // scrolls instead).
+  static const double buddyWizardBuddyWidth = 124.0;
   static const double buddyWizardCompactSize = 72.0;
+  static const double buddyWizardCompactHeaderHeight = 100.0;
   static const double buddyWizardMinStepHeight = 280.0;
+
+  // Padding of a wizard step below the header
+  static const wizardStepPadding = EdgeInsets.fromLTRB(
+    spacingLg,
+    spacingSm,
+    spacingLg,
+    spacingMd,
+  );
 
   // Scroll clearance (space below content to clear fixed bottom bars)
   static const double bottomBarClearance = 128.0;

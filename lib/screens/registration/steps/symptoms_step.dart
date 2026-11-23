@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../config/app_theme.dart';
 import '../../../widgets/common/bb_selection_button.dart';
 import '../../../config/constants.dart';
+import '../widgets/step_field_label.dart';
 
 /// Symptom labels offered during registration.
 const List<String> kRegistrationSymptoms = [
@@ -26,20 +27,16 @@ class SymptomsStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: AppConstants.paddingLg,
+      padding: AppConstants.wizardStepPadding,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
+          const StepFieldLabel(
             key: symptomsTitleKey,
-            'Welche Beschwerden nerven dich?',
-            style: TextStyle(
-              fontSize: AppTheme.fontSizeHeadingLG,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.foreground,
-            ),
-            textAlign: TextAlign.center,
+            'Beschwerden',
+            helper: 'Mehrfachauswahl möglich.',
           ),
-          AppConstants.gap32,
+          AppConstants.gap16,
           ...kRegistrationSymptoms.map((option) {
             final isSelected = selected.contains(option);
             return BbSelectionButton(

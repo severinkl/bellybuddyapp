@@ -31,12 +31,12 @@ void main() {
 
     Finder emailField() => find.byKey(EmailCaptureStep.emailFieldKey);
 
-    testWidgets('shows headline, optional body copy, and skip button', (
+    testWidgets('shows the field label, optional body copy, and skip button', (
       tester,
     ) async {
       await pumpStep(tester, onChanged: (_) {}, onSubmit: () {});
 
-      expect(find.text('Deine E-Mail-Adresse'), findsOneWidget);
+      expect(find.text('DEINE E-MAIL-ADRESSE'), findsOneWidget);
       expect(
         find.textContaining('Dieser Schritt ist optional'),
         findsOneWidget,

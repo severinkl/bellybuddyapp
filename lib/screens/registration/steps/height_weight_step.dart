@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../widgets/common/bb_scroll_picker.dart';
+import '../widgets/step_field_label.dart';
 
 class HeightWeightStep extends StatelessWidget {
   final int? height;
@@ -24,29 +25,16 @@ class HeightWeightStep extends StatelessWidget {
     final weights = List.generate(150, (i) => 30 + i);
 
     return Padding(
-      padding: AppConstants.paddingLg,
+      padding: AppConstants.wizardStepPadding,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
+          const StepFieldLabel(
             key: heightWeightTitleKey,
             'Größe & Gewicht',
-            style: TextStyle(
-              fontSize: AppTheme.fontSizeHeadingLG,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.foreground,
-            ),
-            textAlign: TextAlign.center,
+            helper: 'Hilft uns, deine Verdauung besser zu verstehen.',
           ),
-          AppConstants.gap8,
-          const Text(
-            'Diese Angaben helfen uns dabei, deine Verdauung besser zu verstehen.',
-            style: TextStyle(
-              fontSize: AppTheme.fontSizeBodyLG,
-              color: AppTheme.mutedForeground,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          AppConstants.gap24,
+          AppConstants.gap16,
           Expanded(
             child: Container(
               padding: AppConstants.paddingMd,

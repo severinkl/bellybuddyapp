@@ -1,7 +1,7 @@
 import 'package:material_ui/material_ui.dart';
-import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../widgets/common/bb_selection_button.dart';
+import '../widgets/step_field_label.dart';
 
 class GenderStep extends StatelessWidget {
   final String? value;
@@ -22,29 +22,16 @@ class GenderStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: AppConstants.paddingLg,
+      padding: AppConstants.wizardStepPadding,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
+          const StepFieldLabel(
             key: genderTitleKey,
-            'Wie lautet dein biologisches Geschlecht?',
-            style: TextStyle(
-              fontSize: AppTheme.fontSizeHeadingLG,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.foreground,
-            ),
-            textAlign: TextAlign.center,
+            'Biologisches Geschlecht',
+            helper: 'Wird für eine personalisierte Analyse verwendet.',
           ),
-          AppConstants.gap8,
-          const Text(
-            'Diese Information wird für eine personalisierte Analyse verwendet.',
-            style: TextStyle(
-              fontSize: AppTheme.fontSizeBodyLG,
-              color: AppTheme.mutedForeground,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          AppConstants.gap32,
+          AppConstants.gap16,
           ..._options.map((option) {
             return BbSelectionButton(
               selectionKey: Key(option.$3),

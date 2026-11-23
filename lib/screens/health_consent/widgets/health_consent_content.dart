@@ -4,10 +4,11 @@ import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../utils/logger.dart';
 
-/// The GDPR Art. 9 health-data consent text, the privacy policy link and the
-/// explicit-consent checkbox. Shared by the post-login [HealthConsentScreen]
-/// and the registration wizard's consent step so both ask for the same
-/// consent with the same wording.
+/// The GDPR Art. 9 health-data consent text, the privacy policy link and
+/// (unless [showCheckbox] is false) the explicit-consent checkbox. Shared by
+/// the post-login [HealthConsentScreen] and the registration wizard's
+/// consent step so both ask for the same consent with the same wording; the
+/// wizard pins the [HealthConsentCheckbox] below the scrolling text instead.
 class HealthConsentContent extends StatelessWidget {
   /// Whether the consent checkbox is ticked.
   final bool checked;
@@ -15,10 +16,11 @@ class HealthConsentContent extends StatelessWidget {
   /// Called with the new checkbox value; null disables the checkbox.
   final ValueChanged<bool>? onChanged;
 
-  static const checkboxKey = Key('health_consent_checkbox');
-  static const consentText =
-      'Ich willige ausdrücklich ein, dass meine Gesundheitsdaten wie '
-      'beschrieben verarbeitet werden.';
+  /// Whether the checkbox follows the text.
+  final bool showCheckbox;
+
+  static const checkboxKey = HealthConsentCheckbox.checkboxKey;
+  static const consentText = HealthConsentCheckbox.consentText;
 
   static const _log = AppLogger('HealthConsentContent');
 
@@ -26,6 +28,7 @@ class HealthConsentContent extends StatelessWidget {
     super.key,
     required this.checked,
     required this.onChanged,
+    this.showCheckbox = true,
   });
 
   Future<void> _openPrivacyPolicy(BuildContext context) async {
@@ -52,7 +55,6 @@ class HealthConsentContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final onChanged = this.onChanged;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -96,38 +98,64 @@ class HealthConsentContent extends StatelessWidget {
             label: const Text('Datenschutzerklärung lesen'),
           ),
         ),
-        AppConstants.gap8,
-        InkWell(
-          borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-          onTap: onChanged == null ? null : () => onChanged(!checked),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Checkbox(
-                key: checkboxKey,
-                value: checked,
-                activeColor: AppTheme.primary,
-                onChanged: onChanged == null
-                    ? null
-                    : (v) => onChanged(v ?? false),
-              ),
-              const Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(top: AppConstants.spacing12),
-                  child: Text(
-                    consentText,
-                    style: TextStyle(
-                      fontSize: AppTheme.fontSizeBody,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.foreground,
-                    ),
-                  ),
+        if (showCheckbox) ...[
+          AppConstants.gap8,
+          HealthConsentCheckbox(checked: checked, onChanged: onChanged),
+        ],
+      ],
+    );
+  }
+}
+
+/// The explicit-consent checkbox with its statement.
+class HealthConsentCheckbox extends StatelessWidget {
+  const HealthConsentCheckbox({
+    super.key,
+    required this.checked,
+    required this.onChanged,
+  });
+
+  /// Whether the box is ticked.
+  final bool checked;
+
+  /// Called with the new value; null disables the checkbox.
+  final ValueChanged<bool>? onChanged;
+
+  static const checkboxKey = Key('health_consent_checkbox');
+  static const consentText =
+      'Ich willige ausdrücklich ein, dass meine Gesundheitsdaten wie '
+      'beschrieben verarbeitet werden.';
+
+  @override
+  Widget build(BuildContext context) {
+    final onChanged = this.onChanged;
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+      onTap: onChanged == null ? null : () => onChanged(!checked),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Checkbox(
+            key: checkboxKey,
+            value: checked,
+            activeColor: AppTheme.primary,
+            onChanged: onChanged == null ? null : (v) => onChanged(v ?? false),
+          ),
+          const Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(top: AppConstants.spacing12),
+              child: Text(
+                consentText,
+                style: TextStyle(
+                  fontSize: AppTheme.fontSizeBody,
+                  fontWeight: FontWeight.w500,
+                  color: AppTheme.foreground,
                 ),
               ),
-            ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

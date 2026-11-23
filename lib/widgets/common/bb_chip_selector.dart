@@ -7,17 +7,21 @@ class BbChipSelector extends StatelessWidget {
   final List<String> selected;
   final ValueChanged<List<String>> onChanged;
 
+  /// How the chips line up in each row.
+  final WrapAlignment alignment;
+
   const BbChipSelector({
     super.key,
     required this.options,
     required this.selected,
     required this.onChanged,
+    this.alignment = WrapAlignment.center,
   });
 
   @override
   Widget build(BuildContext context) {
     return Wrap(
-      alignment: WrapAlignment.center,
+      alignment: alignment,
       spacing: 8,
       runSpacing: 8,
       children: options.map((option) {
