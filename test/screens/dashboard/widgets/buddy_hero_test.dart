@@ -12,6 +12,7 @@ import 'package:riverpod/src/internals.dart' show Override;
 
 import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
+import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/buddy_welcome_provider.dart';
@@ -159,6 +160,7 @@ void main() {
     final container = ProviderContainer.test(
       overrides: [
         buddyClockProvider.overrideWithValue(() => now),
+        currentUserIdProvider.overrideWithValue('u1'),
         buddyProvider.overrideWith(() => buddy),
         entriesProvider.overrideWith(() => entries),
         ...extra,
@@ -355,6 +357,67 @@ void main() {
 
       expect(controller(tester).bubble, BuddyWelcomeNotifier.line);
       expect(container.read(buddyWelcomeProvider), isNull);
+    });
+
+    testWidgets('the welcome holds the stage: the first meal\'s follow-up '
+        'waits for it', (tester) async {
+      // Sign-up: the first meal's event is still pending when the
+      // onboarding opens the dashboard.
+      visible.value = false;
+      buddy = _FakeBuddy(() => _status(streak: 0, savers: 0));
+      final container = await pumpHero(
+        tester,
+        extra: [
+          buddyWelcomeProvider.overrideWith(
+            () => _PresetWelcome(BuddyWelcomeNotifier.line),
+          ),
+        ],
+      );
+      emit(container, LogSentiment.good);
+      buddy.push(_status(streak: 1, savers: 0, todayCounted: true));
+      await tester.pump();
+
+      visible.value = true;
+      await tester.pump();
+      await tester.pump();
+      await tick(tester);
+      expect(controller(tester).bubble, BuddyWelcomeNotifier.line);
+
+      // Past the follow-up's delay: still the welcome.
+      await tester.pump(const Duration(milliseconds: 700));
+      await tick(tester);
+      expect(controller(tester).bubble, BuddyWelcomeNotifier.line);
+
+      // Then the thanks for the meal.
+      await tester.pump(const Duration(seconds: 4));
+      await tick(tester);
+      expect(controller(tester).bubble, 'Danke! 🔥 1 Tag');
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('announcements pending at first sight: the welcome still '
+        'comes first and is taken', (tester) async {
+      buddy = _FakeBuddy(
+        () => _status(announcements: const [BuddyAnnouncement.saverEarned]),
+      );
+      final container = await pumpHero(
+        tester,
+        extra: [
+          buddyWelcomeProvider.overrideWith(
+            () => _PresetWelcome(BuddyWelcomeNotifier.line),
+          ),
+        ],
+      );
+      await tick(tester);
+
+      expect(controller(tester).bubble, BuddyWelcomeNotifier.line);
+      expect(container.read(buddyWelcomeProvider), isNull);
+
+      await tester.pump(const Duration(seconds: 4));
+      await tick(tester);
+      expect(controller(tester).bubble, _saverEarnedLine);
+      await tester.pump(const Duration(seconds: 5));
+      expect(buddy.shown, [BuddyAnnouncement.saverEarned]);
     });
 
     testWidgets('a meal logged 1 h ago → happy', (tester) async {

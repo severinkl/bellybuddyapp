@@ -33,9 +33,10 @@ final buddyClockProvider = Provider<DateTime Function()>(
   (ref) => ref.watch(buddyTodayProvider),
 );
 
-/// Lines the hero plays one after another: the follow-up after a log and
-/// the [BuddyAnnouncement]s.
+/// Lines the hero plays one after another: the onboarding's welcome (ahead
+/// of all others), the follow-up after a log and the [BuddyAnnouncement]s.
 enum _Cue {
+  welcome(null),
   followUp(null),
   saverUsed(BuddyAnnouncement.saverUsed),
   streakBroken(BuddyAnnouncement.streakBroken),
@@ -140,9 +141,13 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// The Buddy refresh of the latest log ([BuddyEventsNotifier.lastRefresh]).
   Future<void>? _logRefresh;
 
-  /// Whether the first mood line was said (or replaced by announcements).
-  /// Waits for the Buddy status (real name and streak) and visibility.
+  /// Whether the first mood line was said (or replaced by the welcome or
+  /// announcements). Waits for the Buddy status (real name and streak) and
+  /// visibility.
   bool _greeted = false;
+
+  /// The line of [_Cue.welcome] ([buddyWelcomeProvider]'s, once taken).
+  String _welcome = BuddyWelcomeNotifier.line;
 
   /// `TickerMode` of the hero (false until the first dependency update).
   bool _visible = false;
@@ -311,21 +316,31 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   }
 
   /// The first mood line, once the Buddy status is known and the hero is
-  /// visible: the onboarding's welcome ([buddyWelcomeProvider]) instead,
-  /// if one is pending. Pending announcements speak first instead.
+  /// visible. A pending welcome or announcements greet instead.
   void _maybeGreet() => _whenVisible(() {
+    if (_takeWelcome()) {
+      if (!_cueRunning) _nextCue();
+      return;
+    }
     if (_greeted) return;
     final buddy = ref.read(buddyProvider);
     if (buddy.isLoading && !buddy.hasValue) return; // first load running
     if (buddy.value?.announcements.isNotEmpty ?? false) return;
     _greeted = true;
-    final welcome = ref.read(buddyWelcomeProvider.notifier).take();
-    if (welcome != null) {
-      _buddy.say(welcome);
-      return;
-    }
     _sayMoodLine();
   });
+
+  /// Takes the onboarding's pending welcome ([buddyWelcomeProvider]) ahead
+  /// of every queued cue: it greets, and a log's follow-up or the
+  /// announcements wait for it. False if none is pending.
+  bool _takeWelcome() {
+    final line = ref.read(buddyWelcomeProvider.notifier).take();
+    if (line == null) return false;
+    _welcome = line;
+    _greeted = true;
+    _cues.addFirst(_Cue.welcome);
+    return true;
+  }
 
   // --- Buddy status -----------------------------------------------------------
 
@@ -429,6 +444,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   void _enqueue(Iterable<_Cue> cues) {
     _cues.addAll(cues);
+    _takeWelcome();
     if (!_cueRunning) _nextCue();
   }
 
@@ -448,6 +464,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _cueRunning = true;
     final cue = _playing = _cues.removeFirst();
     switch (cue) {
+      case _Cue.welcome:
+        _say(_welcome);
+        _holdStage();
       case _Cue.followUp:
         _cueTimer = Timer(
           _followUpDelay,
