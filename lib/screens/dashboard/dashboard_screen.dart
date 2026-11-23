@@ -11,7 +11,6 @@ import '../../providers/upgrade_gate_provider.dart';
 import '../../widgets/common/upgrade_available_dialog.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/tutorial_provider.dart';
-import '../../utils/logger.dart';
 import 'widgets/buddy_hero.dart';
 import 'widgets/insight_card.dart';
 import 'widgets/notification_opt_in_dialog.dart';
@@ -28,8 +27,6 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
-  static const _log = AppLogger('Dashboard');
-
   // Active tutorial handle; non-null while the overlay is open. Cancelled
   // in dispose() so the OverlayEntry + its AnimationController don't leak
   // if the screen is torn down mid-tour (e.g. sign-out).
@@ -104,27 +101,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       ref
           .read(entriesProvider.notifier)
           .loadEntries(ref.read(buddyClockProvider)()),
-      _refreshBuddy(),
+      ref.read(buddyProvider.notifier).reload(),
       ref.read(insightProgressProvider.notifier).refresh(),
     ]);
-  }
-
-  /// Re-evaluates the Buddy's streak. Never throws: a missing backend table
-  /// or a network error only hides the streak chip, so pull-to-refresh
-  /// still completes.
-  Future<void> _refreshBuddy() async {
-    try {
-      final buddy = ref.read(buddyProvider);
-      if (buddy.isLoading && !buddy.hasValue) {
-        // The first load (started by the hero) is still running; wait for
-        // it instead of syncing twice.
-        await ref.read(buddyProvider.future);
-      } else {
-        await ref.read(buddyProvider.notifier).refresh();
-      }
-    } catch (e, st) {
-      _log.error('Refreshing the Buddy failed', e, st);
-    }
   }
 
   Future<void> _maybeShowNotificationModal() async {

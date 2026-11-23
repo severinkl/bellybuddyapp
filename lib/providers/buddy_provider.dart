@@ -124,6 +124,25 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
     }
   }
 
+  /// [refresh] for a screen's (re)load, e.g. Home's pull-to-refresh: while
+  /// the first load still runs, waits for it instead of syncing twice.
+  /// Never throws: a missing backend table or a network error only hides
+  /// the streak, so the reload still completes.
+  ///
+  /// A write's refresh (a new entry) calls [refresh] itself: a first load
+  /// that fetched before the write would miss it.
+  Future<void> reload() async {
+    try {
+      if (state.isLoading && !state.hasValue) {
+        await future;
+      } else {
+        await refresh();
+      }
+    } catch (_) {
+      // Logged by build / refresh.
+    }
+  }
+
   /// Re-fetches the row and activity days, re-evaluates and persists changes
   /// (only when the row exists). On failure the last data is kept (an error
   /// state stays an error) and the error is rethrown.
