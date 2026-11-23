@@ -8,6 +8,7 @@ import '../../config/constants.dart';
 import '../../providers/buddy_provider.dart';
 import '../../providers/daily_care_provider.dart';
 import '../../providers/diary_provider.dart';
+import '../../providers/entries_provider.dart';
 import '../../services/buddy/daily_care.dart';
 import '../../utils/date_format_utils.dart';
 import '../../screens/dashboard/widgets/tutorial/tutorial_keys.dart';
@@ -141,13 +142,17 @@ class BbBottomNav extends ConsumerWidget {
 
   /// Opens the „Eintragen" sheet: on the Tagebuch for the day it shows,
   /// on the other tabs for now. For today, the need Home suggests next
-  /// ([nextCareAction]) is highlighted.
+  /// ([nextCareAction]) is highlighted, but only while Home holds today's
+  /// entries: before its first load, or still on yesterday after midnight,
+  /// its counts say nothing about today.
   void _openLogSheet(BuildContext context, WidgetRef ref) {
     final now = ref.read(buddyClockProvider)();
     final day = navigationShell.currentIndex == _diaryBranch
         ? ref.read(diaryDateProvider)
         : now;
-    final suggested = isSameDay(day, now)
+    final homeDay = ref.read(entriesProvider).day;
+    final suggested =
+        isSameDay(day, now) && homeDay != null && isSameDay(homeDay, now)
         ? nextCareAction(ref.read(dailyCareProvider), now).need
         : null;
     unawaited(showLogSheet(context, day: day, now: now, suggested: suggested));
