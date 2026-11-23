@@ -26,6 +26,9 @@ class DashboardTutorialOverlay extends StatefulWidget {
   /// coordinates (which change with the Überspringen link's position).
   static const advanceKey = Key('tutorial_overlay_advance');
 
+  /// Key on the „Überspringen" pill.
+  static const skipKey = Key('tutorial_overlay_skip');
+
   const DashboardTutorialOverlay({
     super.key,
     required this.steps,
@@ -40,6 +43,9 @@ class DashboardTutorialOverlay extends StatefulWidget {
 class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
     with SingleTickerProviderStateMixin {
   static const _log = AppLogger('TutorialOverlay');
+
+  /// The widest the „Überspringen" pill gets, as a share of the screen.
+  static const _skipMaxWidth = 0.4;
 
   int _index = 0;
   Rect? _targetRect;
@@ -196,15 +202,22 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
                     screenSize: screenSize,
                     safe: safe,
                   ),
-                // "Überspringen" link (must sit above the advance layer)
+                // "Überspringen" link (must sit above the advance layer),
+                // top right and at most [_skipMaxWidth] of the width: Home's
+                // top left holds the streak chip, which the first step
+                // spotlights.
                 Positioned(
                   top: safe.top + AppConstants.spacingSm,
-                  left: AppConstants.spacingMd,
+                  right: AppConstants.spacingMd,
                   child: GestureDetector(
+                    key: DashboardTutorialOverlay.skipKey,
                     behavior: HitTestBehavior.opaque,
                     onTap: _finish,
                     child: Container(
-                      constraints: const BoxConstraints(minHeight: 44),
+                      constraints: BoxConstraints(
+                        minHeight: 44,
+                        maxWidth: screenSize.width * _skipMaxWidth,
+                      ),
                       alignment: Alignment.center,
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppConstants.spacingMd,
@@ -216,12 +229,16 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
                           AppConstants.radiusRound,
                         ),
                       ),
-                      child: const Text(
-                        'Überspringen',
-                        style: TextStyle(
-                          fontSize: AppTheme.fontSizeBody,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.foreground,
+                      child: const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'Überspringen',
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontSize: AppTheme.fontSizeBody,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.foreground,
+                          ),
                         ),
                       ),
                     ),
