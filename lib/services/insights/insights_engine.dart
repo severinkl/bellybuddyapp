@@ -9,8 +9,10 @@ import '../../utils/gut_feeling_rating.dart';
 /// What the last [InsightRules.windowDays] local days of [source] show,
 /// as of [now]; every threshold comes from [InsightRules].
 ///
-/// - The window runs from local midnight 29 days before [now]'s day through
-///   [now]; anything tracked after [now] is ignored.
+/// - The window is [now]'s local day and the 29 before it, from local
+///   midnight to the end of today: an entry logged for later today (the
+///   trackers allow any time today) counts at once; anything after today is
+///   ignored. So the result depends only on [now]'s day.
 /// - A day's class comes from the mean of its gut-feeling entries' scores
 ///   (`gutFeelingScore`: the worst gut symptom; the mood never counts),
 ///   mapped with `gutFeelingLevelFor`: hard = „Schlecht", good = „Gut" or
@@ -23,7 +25,8 @@ import '../../utils/gut_feeling_rating.dart';
 /// Pure: no I/O and no clock.
 Insights computeInsights(InsightSource source, DateTime now) {
   final start = addDays(startOfDay(now.toLocal()), 1 - InsightRules.windowDays);
-  bool inWindow(DateTime t) => !t.isBefore(start) && !t.isAfter(now);
+  final end = addDays(start, InsightRules.windowDays);
+  bool inWindow(DateTime t) => !t.isBefore(start) && t.isBefore(end);
 
   final gutFeelings = [
     for (final e in source.gutFeelings)
@@ -58,7 +61,7 @@ Insights computeInsights(InsightSource source, DateTime now) {
 
   final meals = [
     for (final m in source.meals)
-      if (!m.trackedAt.isAfter(now)) _Meal.of(m),
+      if (m.trackedAt.isBefore(end)) _Meal.of(m),
   ];
   final names = _displayNames(meals);
   final hardCounts = _daysThere(meals, hardAnchors);

@@ -126,9 +126,9 @@ void main() {
           nov(20, 18),
           nov(21),
           oct(24, 23, 59), // before the window
-          nov(23, 20, 1), // after now
+          nov(24, 0), // after today
         ],
-        guts: [gut(nov(20), 2), gut(oct(24, 23, 59), 2), gut(nov(23, 21), 2)],
+        guts: [gut(nov(20), 2), gut(oct(24, 23, 59), 2), gut(nov(24, 0), 2)],
       );
       expect(
         insights.progress,
@@ -136,23 +136,42 @@ void main() {
       );
     });
 
-    test('the window runs from local midnight 29 days ago through now', () {
+    test('the window runs from local midnight 29 days ago through the end '
+        'of today', () {
       final insights = compute(
-        activity: [oct(24, 23, 59), oct(25, 0), now, nov(23, 20, 1)],
+        activity: [oct(24, 23, 59), oct(25, 0), now, nov(24, 0)],
         guts: [
           gut(oct(24, 23, 59), 5),
           gut(oct(25, 0), 1),
           gut(now, 1),
-          gut(nov(23, 20, 1), 5),
+          gut(nov(23, 23, 59), 2),
+          gut(nov(24, 0), 5),
         ],
       );
       expect(
         insights.progress,
-        const InsightProgress(activeDays: 2, gutFeelingEntries: 2),
+        const InsightProgress(activeDays: 2, gutFeelingEntries: 3),
       );
       expect(insights.calendar.first.dayClass, DayClass.good);
-      // The entry after now does not make today's mean 3.
+      // The entry after today does not make today's mean 8/3 (medium).
       expect(insights.calendar.last.dayClass, DayClass.good);
+    });
+
+    test('an entry logged for later today counts now', () {
+      // At 18:00 the 3rd gut-feeling entry is logged for 21:00.
+      final at = nov(23, 18);
+      final insights = compute(
+        activity: [for (var d = 17; d <= 22; d++) nov(d), nov(23, 21)],
+        guts: [gut(nov(20), 2), gut(nov(21), 2), gut(nov(23, 21), 5)],
+        at: at,
+      );
+      expect(
+        insights.progress,
+        const InsightProgress(activeDays: 7, gutFeelingEntries: 3),
+      );
+      expect(insights.unlocked, isTrue);
+      expect(insights.calendar.last.day, DateTime(2026, 11, 23));
+      expect(insights.calendar.last.dayClass, DayClass.hard);
     });
 
     test('unlocks with 7 active days and 3 gut entries', () {
@@ -404,6 +423,22 @@ void main() {
       expect(hardCounts(insights), {'Drin': 3, 'Draussen': 2});
     });
 
+    test("a later-today entry's window ends at its own time", () {
+      // At 18:00, a hard entry logged for 21:00: the meals before it count,
+      // also those logged for later today; one after it does not.
+      final insights = compute(
+        guts: [...twoHardDays(), gut(nov(23, 21), 5)],
+        meals: [
+          ...twoHardDayMeals(['Früh', 'Später', 'Danach']),
+          meal(nov(23, 12), ['Früh']),
+          meal(nov(23, 19), ['Später']), // later today, before the anchor
+          meal(nov(23, 21, 30), ['Danach']), // after the anchor
+        ],
+        at: nov(23, 18),
+      );
+      expect(hardCounts(insights), {'Früh': 3, 'Später': 3, 'Danach': 2});
+    });
+
     test("a meal in two days' windows counts on both", () {
       final insights = compute(
         guts: [gut(nov(9, 21), 5), gut(nov(10, 19), 5), gut(nov(11), 5)],
@@ -421,12 +456,12 @@ void main() {
       final insights = compute(
         guts: [gut(nov(3), 5), gut(nov(5), 5), gut(nov(7), 5)],
         // Out of order on purpose: the most recent meal (by time, not by
-        // position) names it, even outside every window and not after now.
+        // position) names it, even outside every window and not after today.
         meals: [
           meal(nov(7, 8), ['Zwiebel']),
-          meal(nov(20, 10), [' zwiebel ']), // most recent, in no window
+          meal(nov(23, 21), [' zwiebel ']), // most recent, later today
           meal(nov(5, 8), [' zwiebel ']),
-          meal(nov(23, 21), ['ZWIEBEL']), // after now: ignored
+          meal(nov(24, 0), ['ZWIEBEL']), // after today: ignored
           meal(nov(3, 8), ['ZWIEBEL']),
         ],
       );
