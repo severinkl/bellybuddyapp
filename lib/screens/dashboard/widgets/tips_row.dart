@@ -3,7 +3,6 @@ import 'package:material_ui/material_ui.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/recommendation.dart';
-import '../../../utils/date_format_utils.dart';
 import '../../../widgets/common/bb_card.dart';
 
 /// Home's row while a tip set is new: „✨ Neue Tipps · Woche 47 · 3 Tipps".
@@ -17,15 +16,11 @@ class TipsRow extends StatelessWidget {
   final VoidCallback onTap;
 
   /// The row's text; the week and the count are left out when unknown.
-  static String label(Recommendation set) {
-    final createdAt = set.createdAt;
-    final count = set.recommendations.length;
-    return [
-      '✨ Neue Tipps',
-      if (createdAt != null) 'Woche ${isoWeekOf(createdAt.toLocal())}',
-      if (count > 0) count == 1 ? '1 Tipp' : '$count Tipps',
-    ].join(' · ');
-  }
+  static String label(Recommendation set) => [
+    '✨ Neue Tipps',
+    ?set.weekLabel,
+    if (set.recommendations.isNotEmpty) set.tipCountLabel,
+  ].join(' · ');
 
   @override
   Widget build(BuildContext context) => Semantics(

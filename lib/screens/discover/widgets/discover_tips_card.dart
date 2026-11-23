@@ -4,7 +4,6 @@ import 'package:material_ui/material_ui.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/recommendation.dart';
-import '../../../utils/date_format_utils.dart';
 import '../../../widgets/common/bb_card.dart';
 import 'discover_section.dart';
 
@@ -28,8 +27,6 @@ class DiscoverTipsCard extends StatelessWidget {
     }
     // The list is newest first.
     final newest = list.first;
-    final createdAt = newest.createdAt;
-    final count = newest.recommendations.length;
     final summary = newest.summary?.trim() ?? '';
     return Semantics(
       button: true,
@@ -47,9 +44,7 @@ class DiscoverTipsCard extends StatelessWidget {
                 ],
                 Expanded(
                   child: Text(
-                    createdAt == null
-                        ? 'Deine Tipps'
-                        : 'Woche ${isoWeekOf(createdAt.toLocal())}',
+                    newest.weekLabel ?? 'Deine Tipps',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
@@ -60,7 +55,7 @@ class DiscoverTipsCard extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  count == 1 ? '1 Tipp' : '$count Tipps',
+                  newest.tipCountLabel,
                   style: const TextStyle(
                     fontSize: AppTheme.fontSizeCaptionLG,
                     color: AppTheme.mutedForeground,
