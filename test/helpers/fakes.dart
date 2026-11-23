@@ -239,11 +239,14 @@ class FakeProfileRepository implements ProfileRepository {
 
 // -- FakeEntryRepository --
 class FakeEntryRepository implements EntryRepository {
-  FakeEntryRepository({this.throwOnUpdate = false});
+  FakeEntryRepository({this.throwOnUpdate = false, this.throwOnDelete = false});
 
   /// When true, [updateEntry] throws on invocation. Used in tests that verify
   /// the screen stays open and surfaces the error rather than popping.
   final bool throwOnUpdate;
+
+  /// When true, [deleteByType] throws on invocation (a delete that fails).
+  final bool throwOnDelete;
 
   final List<Map<String, dynamic>> _inserted = [];
 
@@ -359,7 +362,9 @@ class FakeEntryRepository implements EntryRepository {
   @override
   Future<void> deleteEntry(String table, String id) async {}
   @override
-  Future<void> deleteByType(String type, String id) async {}
+  Future<void> deleteByType(String type, String id) async {
+    if (throwOnDelete) throw Exception('fake delete failure');
+  }
 }
 
 // -- FakeDrinkRepository --

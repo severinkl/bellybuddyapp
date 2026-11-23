@@ -27,8 +27,8 @@ void showDiaryDetailSheet(
           minChildSize: 0.3,
           maxChildSize: 0.9,
           expand: false,
-          builder: (context, scrollController) {
-            return switch (entry.data) {
+          builder: (context, scrollController) => _SheetMessenger(
+            child: switch (entry.data) {
               MealDiaryData() => MealDetailSheet(
                 entry: entry,
                 data: entry.data as MealDiaryData,
@@ -53,10 +53,31 @@ void showDiaryDetailSheet(
                 parentRef: ref,
                 scrollController: scrollController,
               ),
-            };
-          },
+            },
+          ),
         ),
       );
     },
   );
+}
+
+/// The sheet's own messenger, so its SnackBars (a failed delete or save)
+/// show in the sheet. The app's messenger paints on the shell's Scaffold,
+/// which lies under this root-navigator sheet and its scrim.
+class _SheetMessenger extends StatelessWidget {
+  final Widget child;
+
+  const _SheetMessenger({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaffoldMessenger(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        // The sheet keeps its height with the keyboard up, as before.
+        resizeToAvoidBottomInset: false,
+        body: child,
+      ),
+    );
+  }
 }

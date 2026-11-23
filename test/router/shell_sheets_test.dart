@@ -20,8 +20,11 @@ import '../helpers/fixtures.dart';
 final _now = DateTime(2026, 11, 23, 12, 40);
 
 /// The shell on a 402×874 phone with a home indicator; today has one Klo
-/// entry.
-Future<ProviderContainer> _pumpShell(WidgetTester tester) async {
+/// entry in [entries].
+Future<ProviderContainer> _pumpShell(
+  WidgetTester tester, {
+  FakeEntryRepository? entries,
+}) async {
   tester.view
     ..physicalSize = const Size(402, 874)
     ..devicePixelRatio = 1
@@ -30,7 +33,7 @@ Future<ProviderContainer> _pumpShell(WidgetTester tester) async {
   final container = ProviderContainer.test(
     overrides: [
       ...baseOverrides(
-        entries: FakeEntryRepository()
+        entries: (entries ?? FakeEntryRepository())
           ..seedResult(
             testEntryQueryResult(
               meals: [],
@@ -128,5 +131,50 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(LogSheet), findsNothing);
     expect(_path(container), RoutePaths.diary);
+  });
+
+  group('a Tagebuch detail sheet shows its own errors above the scrim', () {
+    Future<void> openKloSheet(
+      WidgetTester tester,
+      FakeEntryRepository entries,
+    ) async {
+      await _pumpShell(tester, entries: entries);
+      await tester.tap(find.byKey(BbBottomNav.navDiaryKey));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(DiaryEntryCard));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('a failed delete', (tester) async {
+      await openKloSheet(tester, FakeEntryRepository(throwOnDelete: true));
+
+      await tester.ensureVisible(find.text('Eintrag löschen'));
+      await tester.tap(find.text('Eintrag löschen'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Löschen'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // Readable and in front: not on the shell's Scaffold under the sheet.
+      expect(
+        find.text('Eintrag konnte nicht gelöscht werden.').hitTestable(),
+        findsOneWidget,
+      );
+      expect(find.text('Eintrag löschen'), findsOneWidget);
+    });
+
+    testWidgets('a failed save', (tester) async {
+      await openKloSheet(tester, FakeEntryRepository(throwOnUpdate: true));
+
+      await tester.tap(find.byIcon(Icons.edit));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('Speichern'));
+      await tester.tap(find.text('Speichern'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Fehler beim Speichern.').hitTestable(), findsOneWidget);
+      expect(find.text('Speichern'), findsOneWidget);
+    });
   });
 }
