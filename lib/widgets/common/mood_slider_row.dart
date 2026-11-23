@@ -56,6 +56,9 @@ class MoodSliderRow extends StatelessWidget {
               onChanged: onChanged,
               rightLabel: rightLabel,
               leftLabel: leftLabel,
+              // The scale runs towards the symptom (or mood) on the right,
+              // as the Tagebuch names it.
+              semanticLabel: rightLabel,
             ),
           ),
           const SizedBox(width: AppConstants.spacing6),

@@ -1,4 +1,6 @@
 // ignore_for_file: invalid_use_of_internal_member
+import 'dart:ui' show SemanticsFlag;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -42,6 +44,25 @@ void main() {
       await tester.pump();
 
       expect(find.text('Konsistenz?'), findsOneWidget);
+    });
+
+    testWidgets('VoiceOver reads the slider as the consistency, not in '
+        'percent', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWithProviders(
+        const ToiletTrackerScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pump();
+
+      final node = find.semantics
+          .byFlag(SemanticsFlag.isSlider)
+          .evaluate()
+          .single;
+      expect(node.label, 'Konsistenz');
+      expect(node.value, isNot(contains('%')));
+      expect(node.value, contains('von 5'));
+      semantics.dispose();
     });
 
     testWidgets('renders slider labels', (tester) async {

@@ -1,4 +1,6 @@
 // ignore_for_file: invalid_use_of_internal_member
+import 'dart:ui' show SemanticsFlag;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -58,6 +60,31 @@ void main() {
 
       expect(find.text('gar nicht'), findsWidgets);
       expect(find.text('garnicht'), findsNothing);
+    });
+
+    testWidgets('VoiceOver reads each symptom slider by its name and as '
+        '„N von 5", not in percent', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWithProviders(
+        const GutFeelingTrackerScreen(),
+        overrides: _overrides(),
+      );
+      // Past the entry fade-in (hidden from screen readers until shown).
+      await tester.pump(const Duration(seconds: 1));
+
+      final sliders = find.semantics
+          .byFlag(SemanticsFlag.isSlider)
+          .evaluate()
+          .toList();
+      expect(sliders, hasLength(4));
+      for (var i = 0; i < 4; i++) {
+        final node = sliders[i];
+        expect(node.label, AppConstants.gutFeelingSymptoms[i]);
+        expect(node.value, '1 von 5');
+        expect(node.increasedValue, '2 von 5');
+        expect(node.value, isNot(contains('%')));
+      }
+      semantics.dispose();
     });
 
     testWidgets('renders weiter button on first tab', (tester) async {

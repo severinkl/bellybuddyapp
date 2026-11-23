@@ -71,6 +71,27 @@ void main() {
       expect(find.byType(MascotImage), findsOneWidget);
     });
 
+    testWidgets('VoiceOver reads the day arrows by name', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWithProviders(
+        const DiaryScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getSemantics(find.byIcon(Icons.chevron_left)).label,
+        'Vorheriger Tag',
+      );
+      await tester.tap(find.byIcon(Icons.chevron_left));
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSemantics(find.byIcon(Icons.chevron_right)).label,
+        'Nächster Tag',
+      );
+      semantics.dispose();
+    });
+
     testWidgets('renders navigation chevrons', (tester) async {
       await tester.pumpWithProviders(
         const DiaryScreen(),

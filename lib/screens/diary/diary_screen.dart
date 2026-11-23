@@ -109,6 +109,7 @@ class _DiaryScreenState extends ConsumerState<DiaryScreen> {
               CircleIconButton(
                 tapKey: DiaryScreen.previousDayKey,
                 icon: Icons.chevron_left,
+                semanticLabel: 'Vorheriger Tag',
                 onPressed: () {
                   HapticService.light();
                   ref
@@ -122,6 +123,7 @@ class _DiaryScreenState extends ConsumerState<DiaryScreen> {
               CircleIconButton(
                 tapKey: DiaryScreen.nextDayKey,
                 icon: Icons.chevron_right,
+                semanticLabel: 'Nächster Tag',
                 onPressed: () {
                   HapticService.light();
                   ref

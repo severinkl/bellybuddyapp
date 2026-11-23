@@ -278,6 +278,13 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
                 min: 1,
                 max: 5,
                 divisions: 4,
+                // Read by its name and as „N von 5", not in percent.
+                label: label,
+                showValueIndicator: ShowValueIndicator.never,
+                semanticFormatterCallback: (v) =>
+                    value == null && v.round() == 1
+                    ? 'nicht angegeben'
+                    : '${v.round()} von 5',
                 onChanged: (v) => onChanged(v.round()),
               ),
             ),

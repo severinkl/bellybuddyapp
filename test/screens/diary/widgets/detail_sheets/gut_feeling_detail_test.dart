@@ -1,3 +1,5 @@
+import 'dart:ui' show SemanticsFlag;
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -64,6 +66,23 @@ void main() {
   );
 
   group('GutFeelingDetail', () {
+    testWidgets('editing: VoiceOver reads each slider by its name and as '
+        '„N von 5"', (tester) async {
+      final semantics = tester.ensureSemantics();
+      final gut = _gut(bloating: 3);
+      await pumpDetail(tester, gut, editState: _editState(gut));
+      await tester.pumpAndSettle();
+
+      final node = find.semantics
+          .byFlag(SemanticsFlag.isSlider)
+          .evaluate()
+          .first;
+      expect(node.label, AppConstants.gutFeelingSymptoms[0]);
+      expect(node.value, '3 von 5');
+      expect(node.value, isNot(contains('%')));
+      semantics.dispose();
+    });
+
     testWidgets('shows the level and the strongest symptom, no average', (
       tester,
     ) async {

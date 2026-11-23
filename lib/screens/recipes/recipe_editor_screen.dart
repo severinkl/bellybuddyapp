@@ -154,6 +154,7 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
         backgroundColor: AppTheme.screenBackground,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
+          tooltip: 'Zurück',
           onPressed: () => context.pop(),
         ),
         title: EditableAppBarTitle(

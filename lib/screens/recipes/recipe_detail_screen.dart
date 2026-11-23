@@ -48,6 +48,7 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
           backgroundColor: AppTheme.screenBackground,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
+            tooltip: 'Zurück',
             onPressed: () => context.popOrGoDashboard(),
           ),
           title: const Text('Rezept'),
@@ -67,6 +68,7 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
           backgroundColor: AppTheme.screenBackground,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
+            tooltip: 'Zurück',
             onPressed: () => context.popOrGoDashboard(),
           ),
           title: const Text('Rezept'),
@@ -89,6 +91,7 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
         backgroundColor: AppTheme.screenBackground,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
+          tooltip: 'Zurück',
           onPressed: () => context.popOrGoDashboard(),
         ),
         // The recipe's name is the page's heading below; said once.
@@ -96,10 +99,12 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_outlined),
+            tooltip: 'Bearbeiten',
             onPressed: () => context.push(RoutePaths.recipeEditFor(recipe.id)),
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline),
+            tooltip: 'Rezept löschen',
             onPressed: () => _confirmDelete(context, ref, recipe),
           ),
         ],

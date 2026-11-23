@@ -18,6 +18,12 @@ class BbSlider extends StatelessWidget {
   final String? centerLabel;
   final String? rightLabel;
 
+  /// What VoiceOver/TalkBack call the slider (e.g. the symptom).
+  final String? semanticLabel;
+
+  /// How VoiceOver/TalkBack read a value; „N von [max]" by default.
+  final String Function(int value)? semanticValue;
+
   const BbSlider({
     super.key,
     required this.value,
@@ -28,7 +34,16 @@ class BbSlider extends StatelessWidget {
     this.leftLabel,
     this.centerLabel,
     this.rightLabel,
+    this.semanticLabel,
+    this.semanticValue,
   });
+
+  /// The value as read aloud: „nicht angegeben" while unset.
+  String _semanticValue(double v) {
+    final n = v.round();
+    if (value == null && n == min) return 'nicht angegeben';
+    return semanticValue?.call(n) ?? '$n von $max';
+  }
 
   static const _labelStyle = TextStyle(
     fontSize: AppTheme.fontSizeCaption,
@@ -75,6 +90,11 @@ class BbSlider extends StatelessWidget {
               min: min.toDouble(),
               max: max.toDouble(),
               divisions: max - min,
+              // Read by its name and as „N von 5", not in percent. (The
+              // label is for screen readers only: no value bubble.)
+              label: semanticLabel,
+              showValueIndicator: ShowValueIndicator.never,
+              semanticFormatterCallback: _semanticValue,
               onChanged: (v) {
                 final newValue = v.round();
                 if (newValue != value) {

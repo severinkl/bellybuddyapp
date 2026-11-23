@@ -110,6 +110,9 @@ class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
               leftLabel: 'sehr hart',
               centerLabel: 'normal',
               rightLabel: 'flüssig',
+              semanticLabel: 'Konsistenz',
+              semanticValue: (v) =>
+                  '${AppConstants.stoolTypeDescriptions[v]}, $v von 5',
             ),
 
             const Spacer(),

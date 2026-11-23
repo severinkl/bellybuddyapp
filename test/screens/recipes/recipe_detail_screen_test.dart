@@ -56,6 +56,20 @@ void main() {
     expect(find.text('Jetzt als Essen eintragen'), findsOneWidget);
   });
 
+  testWidgets('VoiceOver reads ←, ✎ and 🗑 by name', (tester) async {
+    final semantics = tester.ensureSemantics();
+    final recipe = testUserRecipe(id: 'rec-1', title: 'Linseneintopf');
+    await pumpDetail(tester, recipes: [recipe], id: 'rec-1');
+
+    // VoiceOver reads an icon button's tooltip as its label.
+    String spoken(IconData icon) =>
+        tester.getSemantics(find.byIcon(icon)).tooltip;
+    expect(spoken(Icons.arrow_back), 'Zurück');
+    expect(spoken(Icons.edit_outlined), 'Bearbeiten');
+    expect(spoken(Icons.delete_outline), 'Rezept löschen');
+    semantics.dispose();
+  });
+
   testWidgets('a recipe without a photo shows a placeholder', (tester) async {
     final recipe = testUserRecipe(id: 'rec-1', title: 'Linseneintopf');
     await pumpDetail(tester, recipes: [recipe], id: 'rec-1');

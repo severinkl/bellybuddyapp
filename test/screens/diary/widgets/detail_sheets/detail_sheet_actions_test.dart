@@ -61,6 +61,24 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  group('VoiceOver', () {
+    for (final type in DiaryEntryType.values.where(
+      (t) => t != DiaryEntryType.meal,
+    )) {
+      testWidgets('${type.name}: ✎ is read as „Bearbeiten"', (tester) async {
+        final semantics = tester.ensureSemantics();
+        await openSheet(tester, _entryOf(type));
+
+        // VoiceOver reads an icon button's tooltip as its label.
+        expect(
+          tester.getSemantics(find.byIcon(Icons.edit)).tooltip,
+          'Bearbeiten',
+        );
+        semantics.dispose();
+      });
+    }
+  });
+
   group('Eintrag löschen', () {
     for (final type in DiaryEntryType.values) {
       testWidgets('${type.name}: asks first; Abbrechen keeps the entry', (

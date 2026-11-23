@@ -111,6 +111,7 @@ class _DetailSheetScaffoldState extends State<DetailSheetScaffold> {
               if (widget.canEdit && !widget.isEditing)
                 IconButton(
                   icon: const Icon(Icons.edit, size: 20),
+                  tooltip: 'Bearbeiten',
                   onPressed: widget.onEditPressed,
                 ),
             ],
