@@ -217,6 +217,20 @@ class FakeProfileRepository implements ProfileRepository {
     _profile = _profile?.copyWith(tutorialSeenAt: value);
   }
 
+  /// When set, [setWeeklyTips] throws it instead of writing.
+  Object? weeklyTipsError;
+
+  /// The values [setWeeklyTips] was called with, in order.
+  final List<bool> weeklyTipsWrites = [];
+
+  @override
+  Future<void> setWeeklyTips(String userId, bool enabled) async {
+    weeklyTipsWrites.add(enabled);
+    final error = weeklyTipsError;
+    if (error != null) throw error;
+    _profile = _profile?.copyWith(weeklyTipsEnabled: enabled);
+  }
+
   /// Number of [acceptHealthConsent] calls, for tests.
   int acceptHealthConsentCount = 0;
 

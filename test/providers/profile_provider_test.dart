@@ -1,12 +1,16 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
 import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 
+import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
 import '../helpers/mocks.dart';
 import '../helpers/riverpod_helpers.dart';
@@ -238,5 +242,80 @@ void main() {
       // profileProvider starts in loading state (build returns AsyncValue.loading())
       expect(container.read(hasCompletedRegistrationProvider), isFalse);
     });
+  });
+
+  group('weekly tips', () {
+    test('setWeeklyTips is optimistic', () async {
+      when(
+        () => mockRepo.getProfile(any()),
+      ).thenAnswer((_) async => testUserProfile());
+      final completer = Completer<void>();
+      when(
+        () => mockRepo.setWeeklyTips(any(), any()),
+      ).thenAnswer((_) => completer.future);
+      final container = makeContainer();
+      final notifier = container.read(profileProvider.notifier);
+      await notifier.fetchProfile();
+
+      final pending = notifier.setWeeklyTips(true);
+
+      expect(container.read(weeklyTipsEnabledProvider), isTrue);
+      completer.complete();
+      await pending;
+      expect(container.read(weeklyTipsEnabledProvider), isTrue);
+      verify(() => mockRepo.setWeeklyTips(testUserId, true)).called(1);
+    });
+
+    test('a missing column reverts only the switch', () async {
+      final fake = FakeProfileRepository()..seedProfile(testUserProfile());
+      fake.weeklyTipsError = const PostgrestException(
+        message:
+            "Could not find the 'weekly_tips_enabled' column of 'profiles' in the schema cache",
+        code: 'PGRST204',
+      );
+      final container = createContainer(
+        overrides: [
+          profileRepositoryProvider.overrideWithValue(fake),
+          currentUserIdProvider.overrideWithValue(testUserId),
+          supabaseClientProvider.overrideWithValue(mockSupabase),
+        ],
+      );
+      final notifier = container.read(profileProvider.notifier);
+      await notifier.fetchProfile();
+
+      await expectLater(
+        notifier.setWeeklyTips(true),
+        throwsA(isA<PostgrestException>()),
+      );
+      expect(container.read(weeklyTipsEnabledProvider), isFalse);
+      expect(fake.weeklyTipsWrites, [true]);
+
+      final profile = container.read(profileProvider).value!;
+      await notifier.updateProfile(profile.copyWith(remindersEnabled: false));
+      expect(container.read(profileProvider).value!.remindersEnabled, isFalse);
+    });
+
+    test('setWeeklyTips without a loaded profile throws StateError', () {
+      final container = makeContainer();
+      expect(
+        container.read(profileProvider.notifier).setWeeklyTips(true),
+        throwsStateError,
+      );
+    });
+
+    test(
+      'weeklyTipsEnabledProvider is null until a profile is loaded',
+      () async {
+        when(
+          () => mockRepo.getProfile(any()),
+        ).thenAnswer((_) async => testUserProfile(weeklyTipsEnabled: true));
+        final container = makeContainer();
+        expect(container.read(weeklyTipsEnabledProvider), isNull);
+
+        await container.read(profileProvider.notifier).fetchProfile();
+
+        expect(container.read(weeklyTipsEnabledProvider), isTrue);
+      },
+    );
   });
 }

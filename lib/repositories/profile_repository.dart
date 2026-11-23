@@ -64,6 +64,9 @@ class ProfileRepository {
     // sending an explicit value suppresses the DB DEFAULT. This strips
     // unconditionally — if registration ever collects user-picked times,
     // guard the removes or those inputs will be dropped silently.
+    // Weekly tips are written only by setWeeklyTips; the column may not
+    // exist yet (migration 0009).
+    data.remove('weekly_tips_enabled');
     data.remove('meal_reminder_times');
     data.remove('mood_reminder_times');
     // Not the model's default (Europe/Berlin): the device's own zone.
@@ -84,6 +87,9 @@ class ProfileRepository {
     // UserProfile must neither clear nor forge it.
     data.remove('health_consent_at');
     data.remove('privacy_policy_version');
+    // Written only by setWeeklyTips: a stale profile must not flip the
+    // opt-in, and a backend without migration 0009 must still accept this.
+    data.remove('weekly_tips_enabled');
     _applyDeviceTimezone(data);
     await _profileService.update(userId, data);
   }
@@ -98,6 +104,11 @@ class ProfileRepository {
       'privacy_policy_version': AppConstants.privacyPolicyVersion,
     });
     return acceptedAt;
+  }
+
+  /// Switches the weekly AI tips on or off. Touches only that column.
+  Future<void> setWeeklyTips(String userId, bool enabled) async {
+    await _profileService.update(userId, {'weekly_tips_enabled': enabled});
   }
 
   Future<void> updateTutorialSeenAt(String userId, DateTime? value) async {

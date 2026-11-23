@@ -48,6 +48,7 @@ UserProfile testUserProfile({
   DateTime? healthConsentAt,
   String? privacyPolicyVersion,
   bool hasHealthConsent = true,
+  bool weeklyTipsEnabled = false,
 }) => UserProfile(
   userId: userId ?? testUserId,
   birthYear: birthYear ?? 1990,
@@ -72,6 +73,7 @@ UserProfile testUserProfile({
   privacyPolicyVersion:
       privacyPolicyVersion ??
       (hasHealthConsent ? AppConstants.privacyPolicyVersion : null),
+  weeklyTipsEnabled: weeklyTipsEnabled,
 );
 
 MealEntry testMealEntry({
