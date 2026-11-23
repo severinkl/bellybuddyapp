@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
+import '../../providers/buddy_offers_provider.dart';
 import '../../providers/buddy_onboarding_gate_provider.dart';
 import '../../providers/buddy_provider.dart';
 import '../../providers/buddy_welcome_provider.dart';
@@ -67,6 +70,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // the user signed in after the decision resolved). If it resolves later,
     // the listener in build() picks it up instead.
     WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowSoftNudge());
+    // New tips and the weekly-tips offer, whenever they apply: offered to
+    // the Buddy in a microtask, never during a build. He queues each once.
+    ref.listenManual<Map<BuddyAnnouncement, String>>(
+      buddyOffersProvider,
+      (_, offers) => Future.microtask(() => _offerToBuddy(offers)),
+      fireImmediately: true,
+    );
+  }
+
+  /// Hands each of [offers] to the Buddy ([BuddyNotifier.offerAnnouncement]).
+  void _offerToBuddy(Map<BuddyAnnouncement, String> offers) {
+    if (!mounted) return;
+    final buddy = ref.read(buddyProvider.notifier);
+    for (final MapEntry(key: kind, value: suffix) in offers.entries) {
+      unawaited(buddy.offerAnnouncement(kind, suffix: suffix));
+    }
   }
 
   /// Shows the "update available" dialog if a soft nudge is pending. The flag

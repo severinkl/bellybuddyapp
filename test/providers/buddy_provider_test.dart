@@ -427,6 +427,137 @@ void main() {
     });
   });
 
+  group('offerAnnouncement', () {
+    const tips = BuddyAnnouncement.tipsArrived;
+    const weekly = BuddyAnnouncement.weeklyTipsOffer;
+
+    List<BuddyAnnouncement> pending(ProviderContainer c) =>
+        c.read(buddyProvider).value!.announcements;
+
+    test('offered once', () async {
+      final c = makeContainer();
+      await load(c);
+      final notifier = c.read(buddyProvider.notifier);
+
+      await notifier.offerAnnouncement(tips, suffix: 'rec-1');
+      await notifier.offerAnnouncement(tips, suffix: 'rec-1');
+
+      expect(pending(c), [tips]);
+      expect(c.read(buddyProvider).value!.announcementKeys, {
+        tips: 'buddy_announced_u1_tipsArrived_rec-1',
+      });
+    });
+
+    test('a set flag stops it', () async {
+      SharedPreferences.setMockInitialValues({
+        'buddy_announced_u1_tipsArrived_rec-1': true,
+      });
+      final c = makeContainer();
+      await load(c);
+
+      await c
+          .read(buddyProvider.notifier)
+          .offerAnnouncement(tips, suffix: 'rec-1');
+
+      expect(pending(c), isEmpty);
+    });
+
+    test('not after it was shown', () async {
+      final c = makeContainer();
+      await load(c);
+      final notifier = c.read(buddyProvider.notifier);
+      await notifier.offerAnnouncement(weekly, suffix: 'once');
+      expect(pending(c), [weekly]);
+
+      await notifier.markAnnouncementsShown(const [weekly]);
+      await notifier.offerAnnouncement(weekly, suffix: 'once');
+
+      expect(pending(c), isEmpty);
+      expect(await flags(), {'buddy_announced_u1_weeklyTipsOffer_once': true});
+    });
+
+    test('not after a restart', () async {
+      final first = makeContainer();
+      await load(first);
+      await first
+          .read(buddyProvider.notifier)
+          .offerAnnouncement(weekly, suffix: 'once');
+      await first.read(buddyProvider.notifier).markAnnouncementsShown(const [
+        weekly,
+      ]);
+
+      final again = makeContainer();
+      await load(again);
+      await again
+          .read(buddyProvider.notifier)
+          .offerAnnouncement(weekly, suffix: 'once');
+
+      expect(pending(again), isEmpty);
+    });
+
+    test('a newer set replaces a pending one', () async {
+      final c = makeContainer();
+      await load(c);
+      final notifier = c.read(buddyProvider.notifier);
+
+      await notifier.offerAnnouncement(tips, suffix: 'rec-1');
+      await notifier.offerAnnouncement(weekly, suffix: 'once');
+      await notifier.offerAnnouncement(tips, suffix: 'rec-2');
+
+      // It keeps its place in the queue and takes the newer set's flag.
+      expect(pending(c), [tips, weekly]);
+      expect(
+        c.read(buddyProvider).value!.announcementKeys[tips],
+        endsWith('_rec-2'),
+      );
+    });
+
+    test('pending offers survive a refresh', () async {
+      buddyRepo.store['u1'] = const BuddyState(userId: 'u1');
+      entryRepo.seedActivityDays(novDays(15, 19));
+      final c = makeContainer();
+      expect((await load(c)).announcements, [BuddyAnnouncement.streakBroken]);
+      final notifier = c.read(buddyProvider.notifier);
+      await notifier.offerAnnouncement(tips, suffix: 'rec-1');
+
+      await notifier.refresh();
+
+      final status = c.read(buddyProvider).value!;
+      expect(status.announcements, [BuddyAnnouncement.streakBroken, tips]);
+      expect(
+        status.announcementKeys[tips],
+        'buddy_announced_u1_tipsArrived_rec-1',
+      );
+    });
+
+    test('signed out: nothing', () async {
+      final c = makeContainer(userId: null);
+
+      await c
+          .read(buddyProvider.notifier)
+          .offerAnnouncement(tips, suffix: 'rec-1');
+
+      expect(await c.read(buddyProvider.future), isNull);
+    });
+
+    test('waits for the first load', () async {
+      final c = makeContainer();
+      c.listen(buddyProvider, (_, _) {});
+      buddyRepo.gateNext();
+      await settle();
+      expect(c.read(buddyProvider).isLoading, isTrue);
+
+      final offer = c
+          .read(buddyProvider.notifier)
+          .offerAnnouncement(tips, suffix: 'rec-1');
+      await settle();
+      buddyRepo.release();
+      await offer;
+
+      expect(pending(c), [tips]);
+    });
+  });
+
   group('setName', () {
     test('trims and creates the row', () async {
       final c = makeContainer();
@@ -749,6 +880,22 @@ void main() {
       await c.read(buddyProvider.notifier).refresh();
 
       expect(c.read(buddyProvider).value!.announcements, isEmpty);
+    });
+
+    test("an offer for the previous user doesn't reach the next", () async {
+      final c = makeSwitchable();
+      c.listen(buddyProvider, (_, _) {});
+      await load(c);
+
+      final offer = c
+          .read(buddyProvider.notifier)
+          .offerAnnouncement(BuddyAnnouncement.tipsArrived, suffix: 'rec-1');
+      c.read(_testUserProvider.notifier).set('u2');
+      await offer;
+
+      final u2 = await load(c);
+      expect(u2.state.userId, 'u2');
+      expect(u2.announcements, isEmpty);
     });
   });
 }

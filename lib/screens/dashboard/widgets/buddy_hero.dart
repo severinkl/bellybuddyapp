@@ -46,6 +46,9 @@ enum _Cue {
 _Cue _cueFor(BuddyAnnouncement a) =>
     _Cue.values.firstWhere((cue) => cue.announcement == a);
 
+/// The announcements a cue plays. Others are not taken: they stay pending.
+final _playable = {for (final cue in _Cue.values) ?cue.announcement};
+
 /// The Buddy at the top of the dashboard: the streak chip (opens „Dein
 /// Streak"), his speech bubble, the Buddy inside the [CareRing] of his four
 /// daily needs (tapping a need's bubble opens its tracker; tapping the
@@ -360,7 +363,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     if (_greeted) return;
     final buddy = ref.read(buddyProvider);
     if (buddy.isLoading && !buddy.hasValue) return; // first load running
-    if (buddy.value?.announcements.isNotEmpty ?? false) return;
+    if (buddy.value?.announcements.any(_playable.contains) ?? false) return;
     _greeted = true;
     _sayMoodLine();
   });
@@ -405,7 +408,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     if (status == null) return;
     final fresh = [
       for (final a in status.announcements)
-        if (!_taken.contains(a)) a,
+        if (!_taken.contains(a) && _playable.contains(a)) a,
     ];
     if (fresh.isEmpty) return;
     _taken.addAll(fresh);

@@ -1116,4 +1116,71 @@ void main() {
       expect(container.read(tutorialProvider), isFalse);
     });
   });
+
+  group('DashboardScreen Buddy offers', () {
+    // The offers read the Buddy's announcement flags; no opt-in dialog.
+    setUp(
+      () => SharedPreferences.setMockInitialValues({
+        AppConstants.keyNotificationModalShown: true,
+      }),
+    );
+
+    ProviderContainer containerOf(WidgetTester tester) =>
+        ProviderScope.containerOf(tester.element(find.byType(DashboardScreen)));
+
+    testWidgets('an unseen tip set is offered to the Buddy', (tester) async {
+      await tester.pumpWithProviders(
+        const _AppRoot(),
+        overrides: _overrides(recommendationRepo: _unseenTips()),
+      );
+      await _settleFirstRun(tester);
+
+      final status = containerOf(tester).read(buddyProvider).value!;
+      expect(status.announcements, [BuddyAnnouncement.tipsArrived]);
+      expect(
+        status.announcementKeys[BuddyAnnouncement.tipsArrived],
+        endsWith('_rec-1'),
+      );
+    });
+
+    testWidgets('repeated offers queue it once', (tester) async {
+      final entryRepo = FakeEntryRepository()
+        ..insightSource = insightSourceFor(
+          activeDays: 7,
+          gutFeelings: 3,
+          now: _insightsNow,
+        );
+      await tester.pumpWithProviders(
+        const DashboardScreen(),
+        overrides: [
+          ..._overrides(entryRepo: entryRepo, profile: testUserProfile()),
+          buddyClockProvider.overrideWithValue(() => _insightsNow),
+        ],
+      );
+      await _settleFirstRun(tester);
+      final container = containerOf(tester);
+      expect(container.read(buddyProvider).value!.announcements, [
+        BuddyAnnouncement.weeklyTipsOffer,
+      ]);
+
+      // The insights recompute after each write: unlocked, locked again,
+      // unlocked again, so the offer comes once more.
+      for (final gutFeelings in [3, 2, 3]) {
+        entryRepo.insightSource = insightSourceFor(
+          activeDays: 7,
+          gutFeelings: gutFeelings,
+          now: _insightsNow,
+        );
+        await container
+            .read(entriesProvider.notifier)
+            .deleteByType('gutFeeling', 'gut-1');
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      expect(entryRepo.insightSourceCalls, 4);
+      expect(container.read(buddyProvider).value!.announcements, [
+        BuddyAnnouncement.weeklyTipsOffer,
+      ]);
+    });
+  });
 }
