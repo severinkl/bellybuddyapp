@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../providers/diary_provider.dart';
 import '../../../../providers/entries_provider.dart';
+import '../../../../utils/drink_helpers.dart';
 import '../../../../utils/save_helper.dart';
 import 'detail_sheet_scaffold.dart';
 import 'drink_detail.dart';
@@ -33,7 +34,9 @@ class _DrinkDetailSheetState extends State<DrinkDetailSheet> {
   @override
   void initState() {
     super.initState();
-    _amountController = TextEditingController();
+    _amountController = TextEditingController()
+      // Speichern follows whether the typed amount is valid.
+      ..addListener(() => setState(() {}));
     _resetEditState();
   }
 
@@ -48,6 +51,9 @@ class _DrinkDetailSheetState extends State<DrinkDetailSheet> {
     _trackedAt = widget.data.drink.trackedAt;
   }
 
+  /// The typed amount, or null when it isn't 1 to 3000 ml.
+  int? get _amountMl => DrinkHelpers.parseAmount(_amountController.text);
+
   Future<void> _save() async {
     final drink = widget.data.drink;
     setState(() => _saving = true);
@@ -57,7 +63,7 @@ class _DrinkDetailSheetState extends State<DrinkDetailSheet> {
           .read(entriesProvider.notifier)
           .updateDrinkById(
             widget.entry.id,
-            amountMl: int.tryParse(_amountController.text) ?? drink.amountMl,
+            amountMl: _amountMl!,
             notes: drink.notes,
             trackedAt: movedTo,
           );
@@ -85,7 +91,7 @@ class _DrinkDetailSheetState extends State<DrinkDetailSheet> {
         _resetEditState();
         _isEditing = false;
       }),
-      onSavePressed: _save,
+      onSavePressed: _amountMl == null ? null : _save,
       onTrackedAtChanged: (dt) => setState(() => _trackedAt = dt),
       onDelete: () async {
         await widget.parentRef

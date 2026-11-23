@@ -45,6 +45,20 @@ void main() {
       final state = container.read(drinkTrackerProvider);
       expect(state.allDrinks, hasLength(1));
       expect(state.isLoading, isFalse);
+      expect(state.hasRecentDrinks, isFalse);
+    });
+
+    test('knows when the user has logged drinks before', () async {
+      final drinks = [testDrink(id: 'd-1', name: 'Wasser')];
+      when(() => mockDrinkRepo.fetchAll()).thenAnswer((_) async => drinks);
+      when(
+        () => mockDrinkRepo.fetchRecentDrinkIds(any()),
+      ).thenAnswer((_) async => ['d-1']);
+
+      final container = makeContainer();
+      await container.read(drinkTrackerProvider.notifier).loadDrinks();
+
+      expect(container.read(drinkTrackerProvider).hasRecentDrinks, isTrue);
     });
 
     test('sets isLoading false on error', () async {
@@ -99,6 +113,59 @@ void main() {
       expect(state.customAmount, equals('350'));
       expect(state.selectedAmount, equals(350));
     });
+
+    test('an amount over the cap selects nothing', () {
+      final container = makeContainer();
+      container.read(drinkTrackerProvider.notifier).setCustomAmount('99999');
+
+      final state = container.read(drinkTrackerProvider);
+      expect(state.customAmount, equals('99999'));
+      expect(state.selectedAmount, isNull);
+    });
+  });
+
+  group('DrinkTrackerNotifier day total', () {
+    test("loads the total of the entry's day", () async {
+      when(
+        () => mockDrinkRepo.fetchDayTotal(any(), any()),
+      ).thenAnswer((_) async => 750);
+      final container = makeContainer();
+      final notifier = container.read(drinkTrackerProvider.notifier);
+      notifier.setTrackedAt(DateTime(2026, 11, 22, 12));
+      await pumpEventQueue();
+      clearInteractions(mockDrinkRepo);
+
+      await notifier.loadDayTotal();
+
+      verify(
+        () => mockDrinkRepo.fetchDayTotal(testUserId, DateTime(2026, 11, 22)),
+      ).called(1);
+      expect(container.read(drinkTrackerProvider).dayTotal, 750);
+    });
+
+    test('moving the entry to another day reloads that day', () async {
+      when(
+        () => mockDrinkRepo.fetchDayTotal(any(), DateTime(2026, 11, 22)),
+      ).thenAnswer((_) async => 750);
+      when(
+        () => mockDrinkRepo.fetchDayTotal(any(), DateTime(2026, 11, 21)),
+      ).thenAnswer((_) async => 200);
+      final container = makeContainer();
+      final notifier = container.read(drinkTrackerProvider.notifier);
+      notifier.setTrackedAt(DateTime(2026, 11, 22, 12));
+      await pumpEventQueue();
+      expect(container.read(drinkTrackerProvider).dayTotal, 750);
+
+      notifier.setTrackedAt(DateTime(2026, 11, 22, 18));
+      await pumpEventQueue();
+      verify(
+        () => mockDrinkRepo.fetchDayTotal(any(), DateTime(2026, 11, 22)),
+      ).called(1);
+
+      notifier.setTrackedAt(DateTime(2026, 11, 21, 18));
+      await pumpEventQueue();
+      expect(container.read(drinkTrackerProvider).dayTotal, 200);
+    });
   });
 
   group('DrinkTrackerNotifier.createDrink', () {
@@ -145,7 +212,7 @@ void main() {
         ),
       ).thenAnswer((_) async {});
       when(
-        () => mockDrinkRepo.fetchTodayTotal(any()),
+        () => mockDrinkRepo.fetchDayTotal(any(), any()),
       ).thenAnswer((_) async => 250);
 
       final container = makeContainer();

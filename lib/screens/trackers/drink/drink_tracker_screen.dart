@@ -1,10 +1,12 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../providers/buddy_events_provider.dart';
 import '../../../providers/drink_tracker_provider.dart';
 import '../../../services/buddy/buddy_mood_logic.dart';
+import '../../../utils/date_format_utils.dart';
 import '../../../utils/drink_helpers.dart';
 import '../../../utils/save_helper.dart';
 import '../../../widgets/buddy/buddy_reaction_view.dart';
@@ -35,22 +37,17 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
     // Deferred to avoid state change during widget tree construction.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      notifier.reset();
-      if (widget.initialTrackedAt != null) {
-        notifier.setTrackedAt(widget.initialTrackedAt!);
-      }
+      notifier.reset(trackedAt: widget.initialTrackedAt);
       notifier.loadDrinks();
-      notifier.loadTodayTotal();
+      notifier.loadDayTotal();
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(drinkTrackerProvider);
-    final canSave =
-        state.selectedDrink != null &&
-        state.selectedAmount != null &&
-        state.selectedAmount! > 0;
+    // selectedAmount is set only for a valid amount (1 to 3000 ml).
+    final canSave = state.selectedDrink != null && state.selectedAmount != null;
 
     return TrackerScreenScaffold(
       trackerKey: DrinkTrackerScreen.trackerKey,
@@ -73,8 +70,8 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Today's total with live preview
-                        _buildTodayTotal(state),
+                        // The day's total with live preview
+                        _buildDayTotal(state),
                         AppConstants.gap16,
 
                         // Date/Time picker — always visible
@@ -110,11 +107,12 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
                     ),
                   ),
                 ),
-                // Fixed bottom save button
+                // Fixed bottom save button, set apart from the content
+                // scrolling above it (also with the keyboard open)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
                     AppConstants.spacingLg,
-                    0,
+                    AppConstants.spacingMd,
                     AppConstants.spacingLg,
                     AppConstants.spacingLg,
                   ),
@@ -129,9 +127,12 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
     );
   }
 
-  Widget _buildTodayTotal(DrinkTrackerState state) {
+  Widget _buildDayTotal(DrinkTrackerState state) {
     final pendingAmount = state.selectedAmount ?? 0;
-    final totalWithPending = state.todayTotal + pendingAmount;
+    final totalWithPending = state.dayTotal + pendingAmount;
+    final dayLabel = isSameDay(state.trackedAt, DateTime.now())
+        ? 'Heute: '
+        : 'Am ${DateFormat('d.M.').format(state.trackedAt)}: ';
 
     return Container(
       padding: const EdgeInsets.symmetric(
@@ -147,9 +148,9 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
         children: [
           const Icon(Icons.water_drop, color: AppTheme.info, size: 20),
           const SizedBox(width: AppConstants.spacingSm),
-          const Text(
-            'Heute: ',
-            style: TextStyle(
+          Text(
+            dayLabel,
+            style: const TextStyle(
               fontSize: AppTheme.fontSizeBody,
               color: AppTheme.mutedForeground,
             ),

@@ -215,5 +215,33 @@ void main() {
               as Map<String, dynamic>;
       expect(data['notes'], 'mit Zitrone');
     });
+
+    testWidgets('a drink amount over 3000 ml cannot be saved', (tester) async {
+      await startEditing(tester, DiaryEntryType.drink);
+
+      await tester.enterText(find.byType(TextField), '99999');
+      await tester.pump();
+
+      expect(find.text('Bitte gib 1 bis 3000 ml ein.'), findsOneWidget);
+      final save = tester.widget<BbButton>(
+        find.ancestor(
+          of: find.text('Speichern'),
+          matching: find.byType(BbButton),
+        ),
+      );
+      expect(save.onPressed, isNull);
+
+      await tester.enterText(find.byType(TextField), '750');
+      await tester.pump();
+      await tester.tap(find.text('Speichern'));
+      await tester.pumpAndSettle();
+
+      final data =
+          verify(
+                () => repo.updateEntry(any(), any(), captureAny()),
+              ).captured.single
+              as Map<String, dynamic>;
+      expect(data['amount_ml'], 750);
+    });
   });
 }

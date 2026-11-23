@@ -4,6 +4,7 @@ import '../models/drink.dart';
 import '../models/drink_entry.dart';
 import '../providers/core_providers.dart';
 import '../repositories/drink_repository.dart';
+import '../utils/date_format_utils.dart';
 import '../utils/drink_helpers.dart';
 import '../utils/logger.dart';
 import 'diary_provider.dart';
@@ -19,7 +20,12 @@ class DrinkTrackerState {
   final bool isLoading;
   final bool isSaving;
   final bool showSuccess;
-  final int todayTotal;
+
+  /// The ml drunk on [trackedAt]'s day (without the drink being entered).
+  final int dayTotal;
+
+  /// The user has logged drinks before; [quickDrinks] are their last ones.
+  final bool hasRecentDrinks;
   final DateTime trackedAt;
 
   DrinkTrackerState({
@@ -32,7 +38,8 @@ class DrinkTrackerState {
     this.isLoading = true,
     this.isSaving = false,
     this.showSuccess = false,
-    this.todayTotal = 0,
+    this.dayTotal = 0,
+    this.hasRecentDrinks = false,
     DateTime? trackedAt,
   }) : trackedAt = trackedAt ?? DateTime.now();
 
@@ -48,7 +55,8 @@ class DrinkTrackerState {
     bool? isLoading,
     bool? isSaving,
     bool? showSuccess,
-    int? todayTotal,
+    int? dayTotal,
+    bool? hasRecentDrinks,
     DateTime? trackedAt,
   }) {
     return DrinkTrackerState(
@@ -65,7 +73,8 @@ class DrinkTrackerState {
       isLoading: isLoading ?? this.isLoading,
       isSaving: isSaving ?? this.isSaving,
       showSuccess: showSuccess ?? this.showSuccess,
-      todayTotal: todayTotal ?? this.todayTotal,
+      dayTotal: dayTotal ?? this.dayTotal,
+      hasRecentDrinks: hasRecentDrinks ?? this.hasRecentDrinks,
       trackedAt: trackedAt ?? this.trackedAt,
     );
   }
@@ -76,8 +85,10 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
   @override
   DrinkTrackerState build() => DrinkTrackerState(trackedAt: DateTime.now());
 
-  /// Reset to fresh state — call when opening the tracker screen
-  void reset() => state = DrinkTrackerState(trackedAt: DateTime.now());
+  /// Reset to fresh state at [trackedAt] (default: now) — call when
+  /// opening the tracker screen.
+  void reset({DateTime? trackedAt}) =>
+      state = DrinkTrackerState(trackedAt: trackedAt ?? DateTime.now());
 
   Future<void> loadDrinks() async {
     try {
@@ -87,9 +98,11 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
       // Build quick drinks from recent entries
       final userId = ref.read(currentUserIdProvider);
       List<Drink> quick;
+      var hasRecent = false;
       if (userId != null) {
         final recentIds = await drinkRepo.fetchRecentDrinkIds(userId);
         quick = DrinkHelpers.buildQuickDrinks(drinks, recentIds);
+        hasRecent = recentIds.isNotEmpty;
       } else {
         quick = drinks.take(11).toList();
       }
@@ -97,6 +110,7 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
       state = state.copyWith(
         allDrinks: drinks,
         quickDrinks: quick,
+        hasRecentDrinks: hasRecent,
         isLoading: false,
       );
     } catch (e, st) {
@@ -105,19 +119,23 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
     }
   }
 
-  Future<void> loadTodayTotal() async {
+  /// Loads [DrinkTrackerState.dayTotal] for [DrinkTrackerState.trackedAt]'s
+  /// day. A result for a day the entry has since moved away from is dropped.
+  Future<void> loadDayTotal() async {
     try {
       final userId = ref.read(currentUserIdProvider);
       if (userId == null) {
-        _log.debug('loadTodayTotal: no user');
+        _log.debug('loadDayTotal: no user');
         return;
       }
+      final day = startOfDay(state.trackedAt);
       final total = await ref
           .read(drinkRepositoryProvider)
-          .fetchTodayTotal(userId);
-      state = state.copyWith(todayTotal: total);
+          .fetchDayTotal(userId, day);
+      if (!ref.mounted || startOfDay(state.trackedAt) != day) return;
+      state = state.copyWith(dayTotal: total);
     } catch (e, st) {
-      _log.error('failed to load today total', e, st);
+      _log.error('failed to load the day total', e, st);
     }
   }
 
@@ -158,8 +176,11 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
     );
   }
 
+  /// Sets the entry's time; another day loads that day's total.
   void setTrackedAt(DateTime dt) {
+    final dayChanged = !isSameDay(dt, state.trackedAt);
     state = state.copyWith(trackedAt: dt);
+    if (dayChanged) loadDayTotal();
   }
 
   Future<void> createDrink(String name) async {
@@ -216,7 +237,7 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
         amountMl: state.selectedAmount!,
       );
       await ref.read(entriesProvider.notifier).addDrinkEntry(entry);
-      await loadTodayTotal();
+      await loadDayTotal();
 
       // Invalidate diary cache so it refetches with the new entry
       final date = DateTime(
