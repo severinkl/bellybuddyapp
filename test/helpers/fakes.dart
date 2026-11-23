@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' show AsyncData;
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/drink.dart';
@@ -12,6 +13,7 @@ import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/models/user_recipe.dart';
+import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/repositories/auth_repository.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/drink_repository.dart';
@@ -611,4 +613,77 @@ class FakeBuddyRepository implements BuddyRepository {
     if (throwOnSave) throw Exception('save failed');
     store[userId] = state.copyWith(userId: userId);
   }
+}
+
+// -- FakeBuddyNotifier --
+
+/// A loaded Buddy status: a [BuddyState] row named [name] with the streak
+/// figures.
+BuddyStatus buddyStatus({
+  String userId = testUserId,
+  String name = 'Bubu',
+  int? goal,
+  int savers = 0,
+  DateTime? onboardingCompletedAt,
+  bool hasRow = true,
+  int streak = 0,
+  bool todayCounted = false,
+  Set<DateTime> weekDays = const {},
+  List<BuddyAnnouncement> announcements = const [],
+}) => BuddyStatus(
+  state: BuddyState(
+    userId: userId,
+    name: name,
+    streakGoal: goal,
+    savers: savers,
+    onboardingCompletedAt: onboardingCompletedAt,
+  ),
+  hasRow: hasRow,
+  streak: streak,
+  todayCounted: todayCounted,
+  weekDays: weekDays,
+  announcements: announcements,
+);
+
+/// [BuddyNotifier] serving [initial] (none: no Buddy) without a backend.
+/// Records names and goals: [setName] publishes the new name like the real
+/// one, or throws while [failRename]; [setStreakGoal] throws while
+/// [failGoal]. [push] publishes a status like a finished refresh.
+class FakeBuddyNotifier extends BuddyNotifier {
+  FakeBuddyNotifier([FutureOr<BuddyStatus?> Function()? initial])
+    : _initial = initial;
+
+  final FutureOr<BuddyStatus?> Function()? _initial;
+
+  bool failRename = false;
+  bool failGoal = false;
+  final List<String> names = [];
+  final List<int?> goals = [];
+
+  @override
+  Future<BuddyStatus?> build() async => _initial?.call();
+
+  @override
+  Future<void> setName(String name) async {
+    names.add(name);
+    if (failRename) throw Exception('offline');
+    final s = state.value!;
+    push(
+      BuddyStatus(
+        state: s.state.copyWith(name: name),
+        hasRow: true,
+        streak: s.streak,
+        todayCounted: s.todayCounted,
+        weekDays: s.weekDays,
+      ),
+    );
+  }
+
+  @override
+  Future<void> setStreakGoal(int? goal) async {
+    goals.add(goal);
+    if (failGoal) throw Exception('offline');
+  }
+
+  void push(BuddyStatus? status) => state = AsyncData(status);
 }

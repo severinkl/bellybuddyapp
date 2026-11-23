@@ -6,9 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/config/constants.dart';
-import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
 import 'package:belly_buddy/providers/upgrade_gate_provider.dart';
@@ -17,37 +15,8 @@ import 'package:belly_buddy/screens/me/me_screen.dart';
 import 'package:belly_buddy/widgets/buddy/animated_buddy.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
 
-/// [BuddyNotifier] serving [initial]; records renames and goals. A rename
-/// publishes the new name like the real one, or throws while [failRename].
-class _FakeBuddy extends BuddyNotifier {
-  _FakeBuddy(this._initial, {this.failRename = false});
-
-  final FutureOr<BuddyStatus?> Function() _initial;
-  final bool failRename;
-  final names = <String>[];
-  final goals = <int?>[];
-
-  @override
-  Future<BuddyStatus?> build() async => _initial();
-
-  @override
-  Future<void> setName(String name) async {
-    names.add(name);
-    if (failRename) throw Exception('offline');
-    final s = state.value!;
-    state = AsyncData(
-      BuddyStatus(
-        state: s.state.copyWith(name: name),
-        hasRow: true,
-        streak: s.streak,
-        todayCounted: s.todayCounted,
-      ),
-    );
-  }
-
-  @override
-  Future<void> setStreakGoal(int? goal) async => goals.add(goal);
-}
+import '../../helpers/app_host.dart';
+import '../../helpers/fakes.dart';
 
 /// The launched URLs and modes.
 class _Launches {
@@ -63,12 +32,7 @@ class _Launches {
 }
 
 BuddyStatus _status({int streak = 3, int? goal = 14, String name = 'Bruno'}) =>
-    BuddyStatus(
-      state: BuddyState(userId: 'u1', name: name, streakGoal: goal),
-      hasRow: true,
-      streak: streak,
-      todayCounted: true,
-    );
+    buddyStatus(name: name, goal: goal, streak: streak, todayCounted: true);
 
 const _renameError = 'Bitte gib einen Namen mit 1 bis 20 Zeichen ein.';
 
@@ -80,7 +44,7 @@ void main() {
 
   setUp(() => launches = _Launches());
 
-  Future<_FakeBuddy> pump(
+  Future<FakeBuddyNotifier> pump(
     WidgetTester tester, {
     FutureOr<BuddyStatus?> Function()? status,
     bool failRename = false,
@@ -92,7 +56,7 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
 
-    final buddy = _FakeBuddy(status ?? _status, failRename: failRename);
+    final buddy = FakeBuddyNotifier(status ?? _status)..failRename = failRename;
     container = ProviderContainer.test(
       overrides: [
         buddyProvider.overrideWith(() => buddy),
@@ -107,27 +71,14 @@ void main() {
           path: RoutePaths.me,
           builder: (_, _) => MeScreen(openUrl: launches.call),
         ),
-        for (final path in [RoutePaths.settings, RoutePaths.dashboard])
-          GoRoute(
-            path: path,
-            builder: (_, _) => Scaffold(body: Text('page:$path')),
-          ),
+        ...stubRoutes([RoutePaths.settings, RoutePaths.dashboard]),
       ],
     );
     addTearDown(router.dispose);
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(
-          theme: AppTheme.theme,
-          routerConfig: router,
-          builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaler: TextScaler.linear(textScale)),
-            child: child!,
-          ),
-        ),
+        child: germanRouterApp(router, textScale: textScale),
       ),
     );
     await tester.pumpAndSettle();

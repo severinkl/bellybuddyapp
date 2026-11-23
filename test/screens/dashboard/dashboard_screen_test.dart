@@ -1,14 +1,10 @@
 // ignore_for_file: invalid_use_of_internal_member
-import 'package:cupertino_ui/cupertino_ui.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'
-    show GlobalWidgetsLocalizations;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/insight_progress.dart';
@@ -32,6 +28,7 @@ import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
 import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
 
+import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/riverpod_helpers.dart';
@@ -112,17 +109,7 @@ Future<(ProviderContainer, GoRouter)> _pumpTabs(
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
-      child: MaterialApp.router(
-        theme: AppTheme.theme,
-        routerConfig: router,
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: const [Locale('de', 'DE')],
-        locale: const Locale('de', 'DE'),
-      ),
+      child: germanRouterApp(router),
     ),
   );
   await tester.pumpAndSettle();

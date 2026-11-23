@@ -1,17 +1,15 @@
-import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'
-    show GlobalWidgetsLocalizations;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_keys.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
 import 'package:belly_buddy/widgets/log_sheet/log_sheet.dart';
+
+import '../../helpers/app_host.dart';
 
 /// Monday, 23 Nov 2026, 12:40: nothing logged yet, so lunch is next.
 final _now = DateTime(2026, 11, 23, 12, 40);
@@ -49,17 +47,7 @@ Future<void> _pumpNav(WidgetTester tester) async {
   await tester.pumpWidget(
     ProviderScope(
       overrides: [buddyClockProvider.overrideWithValue(() => _now)],
-      child: MaterialApp.router(
-        theme: AppTheme.theme,
-        routerConfig: _buildRouter(),
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: const [Locale('de', 'DE')],
-        locale: const Locale('de', 'DE'),
-      ),
+      child: germanRouterApp(_buildRouter()),
     ),
   );
   await tester.pumpAndSettle();

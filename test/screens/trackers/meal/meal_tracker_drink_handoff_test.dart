@@ -1,8 +1,5 @@
 // ignore_for_file: invalid_use_of_internal_member
-import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'
-    show GlobalWidgetsLocalizations;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -17,6 +14,7 @@ import 'package:belly_buddy/repositories/meal_media_repository.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/trackers/meal/meal_tracker_screen.dart';
 
+import '../../../helpers/app_host.dart';
 import '../../../helpers/fakes.dart';
 
 GoRouter _buildRouter() {
@@ -54,16 +52,7 @@ Future<ProviderContainer> _pumpMealTracker(WidgetTester tester) async {
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
-      child: MaterialApp.router(
-        routerConfig: _buildRouter(),
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: const [Locale('de', 'DE')],
-        locale: const Locale('de', 'DE'),
-      ),
+      child: germanRouterApp(_buildRouter()),
     ),
   );
   await tester.pumpAndSettle();

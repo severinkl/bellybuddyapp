@@ -7,15 +7,13 @@ import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/repositories/meal_media_repository.dart';
 import 'package:belly_buddy/screens/trackers/meal/meal_tracker_screen.dart';
-import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'
-    show GlobalWidgetsLocalizations;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 
+import '../../../helpers/app_host.dart';
 import '../../../helpers/fakes.dart';
 import '../../../helpers/riverpod_helpers.dart';
 
@@ -47,16 +45,7 @@ Future<void> _pumpEditScreen(
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: ProviderContainer.test(overrides: overrides),
-      child: MaterialApp.router(
-        routerConfig: router,
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: const [Locale('de', 'DE')],
-        locale: const Locale('de', 'DE'),
-      ),
+      child: germanRouterApp(router),
     ),
   );
   // Push from home → edit so the tracker screen has something to pop back to.

@@ -4,19 +4,9 @@ import 'dart:async';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/user_profile.dart';
-import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_onboarding_gate_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/providers/upgrade_gate_provider.dart';
-import 'package:belly_buddy/repositories/auth_repository.dart';
-import 'package:belly_buddy/repositories/buddy_repository.dart';
-import 'package:belly_buddy/repositories/drink_repository.dart';
-import 'package:belly_buddy/repositories/entry_repository.dart';
-import 'package:belly_buddy/repositories/ingredient_repository.dart';
-import 'package:belly_buddy/repositories/meal_media_repository.dart';
-import 'package:belly_buddy/repositories/notification_repository.dart';
-import 'package:belly_buddy/repositories/profile_repository.dart';
-import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/router/app_router.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/auth/auth_screen.dart';
@@ -35,57 +25,13 @@ import 'package:belly_buddy/screens/upgrade/upgrade_required_screen.dart';
 import 'package:belly_buddy/widgets/buddy/animated_buddy.dart';
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'
-    show GlobalWidgetsLocalizations;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:riverpod/src/internals.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/app_host.dart';
 import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
-
-/// Pared-down app root: owns the upgrade decision like [BellyBuddyApp] and
-/// loads the profile on start when signed in (and on sign-in, resets it on
-/// sign-out, listening after the router like the app), without the splash
-/// overlay.
-class _GateTestHost extends ConsumerStatefulWidget {
-  const _GateTestHost();
-
-  @override
-  ConsumerState<_GateTestHost> createState() => _GateTestHostState();
-}
-
-class _GateTestHostState extends ConsumerState<_GateTestHost> {
-  @override
-  void initState() {
-    super.initState();
-    if (ref.read(isAuthenticatedProvider)) {
-      Future.microtask(() => ref.read(profileProvider.notifier).fetchProfile());
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final router = ref.watch(routerProvider);
-    listenForUpgradeDecision(ref);
-    ref.listen<bool>(isAuthenticatedProvider, (_, signedIn) {
-      final profile = ref.read(profileProvider.notifier);
-      signedIn ? profile.fetchProfile() : profile.reset();
-    });
-    return MaterialApp.router(
-      debugShowCheckedModeBanner: false,
-      routerConfig: router,
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [Locale('de', 'DE')],
-      locale: const Locale('de', 'DE'),
-    );
-  }
-}
 
 const _introLine = 'Hi! Ich bin neu hier — dein Belly Buddy.';
 const _streakTitle = 'Wie viele Tage schaffen wir zusammen?';
@@ -96,26 +42,6 @@ const _optInTitle = 'Bleib auf dem Laufenden!';
 const _tourSkip = 'Überspringen';
 
 final _completedAt = DateTime(2026, 11, 1);
-
-List<Override> _overrides({
-  required FakeProfileRepository profiles,
-  required FakeBuddyRepository buddies,
-  UpgradeDecision decision = UpgradeDecision.ok,
-  FakeAuthRepository? auth,
-}) => [
-  authRepositoryProvider.overrideWithValue(auth ?? FakeAuthRepository()),
-  profileRepositoryProvider.overrideWithValue(profiles),
-  buddyRepositoryProvider.overrideWithValue(buddies),
-  entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
-  drinkRepositoryProvider.overrideWithValue(FakeDrinkRepository()),
-  ingredientRepositoryProvider.overrideWithValue(FakeIngredientRepository()),
-  userRecipeRepositoryProvider.overrideWithValue(FakeUserRecipeRepository()),
-  mealMediaRepositoryProvider.overrideWithValue(FakeMealMediaRepository()),
-  notificationRepositoryProvider.overrideWithValue(
-    FakeNotificationRepository(),
-  ),
-  upgradeDecisionProvider.overrideWith((_) => Future.value(decision)),
-];
 
 String _currentPath(ProviderContainer container) =>
     container.read(routerProvider).routerDelegate.currentConfiguration.uri.path;
@@ -165,17 +91,17 @@ Future<ProviderContainer> _pumpHost(
   _reduceMotion(tester);
 
   final container = ProviderContainer.test(
-    overrides: _overrides(
+    overrides: baseOverrides(
+      auth: auth,
       profiles: profiles,
       buddies: buddies,
       decision: decision,
-      auth: auth,
     ),
   );
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
-      child: const _GateTestHost(),
+      child: const AppTestHost(followAuth: true),
     ),
   );
   if (settle) {

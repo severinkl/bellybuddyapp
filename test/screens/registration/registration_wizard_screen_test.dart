@@ -1,15 +1,11 @@
 // ignore_for_file: invalid_use_of_internal_member
 import 'dart:async';
 
-import 'package:cupertino_ui/cupertino_ui.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'
-    show GlobalWidgetsLocalizations;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
-import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/config/buddy_reactions.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
@@ -31,6 +27,7 @@ import 'package:belly_buddy/widgets/common/bb_scroll_picker.dart';
 import 'package:belly_buddy/widgets/common/bb_social_button.dart';
 import 'package:belly_buddy/widgets/common/mascot_image.dart';
 
+import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/registration_driver.dart';
@@ -237,17 +234,7 @@ Future<_RoutedWizard> _pumpRoutedWizard(
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
-      child: MaterialApp.router(
-        theme: AppTheme.theme,
-        routerConfig: router,
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: const [Locale('de', 'DE')],
-        locale: const Locale('de', 'DE'),
-      ),
+      child: germanRouterApp(router),
     ),
   );
   await tester.pumpAndSettle();

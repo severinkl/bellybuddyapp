@@ -1,17 +1,11 @@
 // ignore_for_file: invalid_use_of_internal_member
-import 'dart:async';
 
-import 'package:cupertino_ui/cupertino_ui.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'
-    show GlobalWidgetsLocalizations;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 
-import 'package:belly_buddy/config/app_theme.dart';
-import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
@@ -31,6 +25,8 @@ import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
 import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
 
+import '../../../helpers/app_host.dart';
+import '../../../helpers/fakes.dart';
 import '../../../helpers/fixtures.dart';
 
 /// A welcome already set when the hero first reads it.
@@ -43,11 +39,10 @@ class _PresetWelcome extends BuddyWelcomeNotifier {
   String? build() => _line;
 }
 
-/// [BuddyNotifier] serving a fixed first result; records the hero's calls.
-class _FakeBuddy extends BuddyNotifier {
-  _FakeBuddy(this._initial);
-
-  final FutureOr<BuddyStatus?> Function() _initial;
+/// [FakeBuddyNotifier] that also records the hero's refreshes and shown
+/// announcements.
+class _FakeBuddy extends FakeBuddyNotifier {
+  _FakeBuddy(super.initial);
 
   /// Every announcement the hero marked as shown, in order.
   final List<BuddyAnnouncement> shown = [];
@@ -57,10 +52,6 @@ class _FakeBuddy extends BuddyNotifier {
   /// a slow backend.
   Duration refreshDelay = Duration.zero;
   BuddyStatus? afterRefresh;
-  final List<int?> goals = [];
-
-  @override
-  Future<BuddyStatus?> build() async => _initial();
 
   @override
   Future<void> refresh() async {
@@ -71,16 +62,10 @@ class _FakeBuddy extends BuddyNotifier {
   }
 
   @override
-  Future<void> setStreakGoal(int? goal) async => goals.add(goal);
-
-  @override
   Future<void> markAnnouncementsShown(List<BuddyAnnouncement> announcements) {
     shown.addAll(announcements);
     return super.markAnnouncementsShown(announcements);
   }
-
-  /// Publishes [status] like a finished refresh.
-  void push(BuddyStatus status) => state = AsyncData(status);
 }
 
 /// [EntriesNotifier] with a seeded state; [loadEntries] loads [next] for
@@ -115,8 +100,8 @@ BuddyStatus _status({
   int savers = 1,
   bool hasRow = true,
   List<BuddyAnnouncement> announcements = const [],
-}) => BuddyStatus(
-  state: BuddyState(userId: 'u1', name: 'Bubu', savers: savers),
+}) => buddyStatus(
+  savers: savers,
   hasRow: hasRow,
   streak: streak,
   todayCounted: todayCounted,
@@ -185,33 +170,19 @@ void main() {
           path: RoutePaths.diary,
           builder: (_, _) => const Scaffold(body: Text('diary-page')),
         ),
-        for (final path in [
+        ...stubRoutes([
           RoutePaths.mealTracker,
           RoutePaths.drinkTracker,
           RoutePaths.gutFeelingTracker,
           RoutePaths.toiletTracker,
-        ])
-          GoRoute(
-            path: path,
-            builder: (_, _) => Scaffold(body: Text('page:$path')),
-          ),
+        ]),
       ],
     );
     addTearDown(router.dispose);
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(
-          theme: AppTheme.theme,
-          routerConfig: router,
-          localizationsDelegates: const [
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: const [Locale('de', 'DE')],
-          locale: const Locale('de', 'DE'),
-        ),
+        child: germanRouterApp(router),
       ),
     );
     // Buddy load, first-frame callbacks and a few Buddy ticks.

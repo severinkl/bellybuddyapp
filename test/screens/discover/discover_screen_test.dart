@@ -7,7 +7,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/recommendation.dart';
@@ -23,6 +22,7 @@ import 'package:belly_buddy/screens/discover/discover_screen.dart';
 import 'package:belly_buddy/screens/recipes/recipes_screen.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_card.dart';
 
+import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/mocks.dart';
@@ -110,16 +110,12 @@ void main() {
             path: RoutePaths.recipes,
             builder: (_, _) => const RecipesScreen(),
           ),
-        for (final path in [
+        ...stubRoutes([
           RoutePaths.recommendations,
           RoutePaths.ingredientSuggestions,
           if (!realRecipesScreen) RoutePaths.recipes,
           RoutePaths.recipeDetail,
-        ])
-          GoRoute(
-            path: path,
-            builder: (_, _) => Scaffold(body: Text('page:$path')),
-          ),
+        ]),
       ],
     );
     addTearDown(router.dispose);
@@ -133,16 +129,7 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: overrides,
-        child: MaterialApp.router(
-          theme: AppTheme.theme,
-          routerConfig: router,
-          builder: (context, child) => MediaQuery(
-            data: MediaQuery.of(
-              context,
-            ).copyWith(textScaler: TextScaler.linear(textScale)),
-            child: child!,
-          ),
-        ),
+        child: germanRouterApp(router, textScale: textScale),
       ),
     );
     await tester.pumpAndSettle();

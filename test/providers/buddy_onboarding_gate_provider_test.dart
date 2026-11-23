@@ -20,15 +20,10 @@ import '../helpers/fixtures.dart';
 import '../helpers/riverpod_helpers.dart';
 
 BuddyStatus _status({required bool hasRow, DateTime? completedAt}) =>
-    BuddyStatus(
-      state: BuddyState(
-        userId: testUserId,
-        name: 'Bauchi',
-        onboardingCompletedAt: completedAt,
-      ),
+    buddyStatus(
+      name: 'Bauchi',
+      onboardingCompletedAt: completedAt,
       hasRow: hasRow,
-      streak: 0,
-      todayCounted: false,
     );
 
 /// A Buddy repository whose [fetch] blocks until [release] is called.

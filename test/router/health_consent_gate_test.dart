@@ -2,17 +2,10 @@
 import 'dart:async';
 
 import 'package:belly_buddy/config/constants.dart';
-import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/user_profile.dart';
-import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/health_consent_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/providers/upgrade_gate_provider.dart';
-import 'package:belly_buddy/repositories/auth_repository.dart';
-import 'package:belly_buddy/repositories/buddy_repository.dart';
-import 'package:belly_buddy/repositories/entry_repository.dart';
-import 'package:belly_buddy/repositories/ingredient_repository.dart';
-import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/router/app_router.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/health_consent/health_consent_screen.dart';
@@ -21,52 +14,15 @@ import 'package:belly_buddy/screens/upgrade/upgrade_required_screen.dart';
 import 'package:belly_buddy/widgets/common/bb_password_field.dart';
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'
-    show GlobalWidgetsLocalizations;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/app_host.dart';
 import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
 import '../helpers/registration_driver.dart';
-
-/// Pared-down app root: owns the upgrade decision like [BellyBuddyApp] and
-/// loads the profile on start when signed in, without the splash overlay.
-class _GateTestHost extends ConsumerStatefulWidget {
-  const _GateTestHost();
-
-  @override
-  ConsumerState<_GateTestHost> createState() => _GateTestHostState();
-}
-
-class _GateTestHostState extends ConsumerState<_GateTestHost> {
-  @override
-  void initState() {
-    super.initState();
-    if (ref.read(isAuthenticatedProvider)) {
-      Future.microtask(() => ref.read(profileProvider.notifier).fetchProfile());
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final router = ref.watch(routerProvider);
-    listenForUpgradeDecision(ref);
-    return MaterialApp.router(
-      debugShowCheckedModeBanner: false,
-      routerConfig: router,
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [Locale('de', 'DE')],
-      locale: const Locale('de', 'DE'),
-    );
-  }
-}
 
 /// A profile repository whose first [getProfile] call blocks until
 /// [release] is called, to observe the router while the profile loads.
@@ -82,29 +38,17 @@ class _SlowProfileRepository extends FakeProfileRepository {
   }
 }
 
-/// Existing users here finished the Buddy onboarding long ago, so its gate
-/// stays out of the way.
-FakeBuddyRepository _onboardedBuddy() => FakeBuddyRepository()
-  ..store[testUserId] = BuddyState(
-    userId: testUserId,
-    onboardingCompletedAt: DateTime(2026, 11, 1),
-  );
-
 List<Override> _overrides({
   required FakeProfileRepository profiles,
   bool signedIn = true,
   UpgradeDecision decision = UpgradeDecision.ok,
   FakeBuddyRepository? buddies,
-}) => [
-  authRepositoryProvider.overrideWithValue(
-    FakeAuthRepository(signedIn: signedIn),
-  ),
-  profileRepositoryProvider.overrideWithValue(profiles),
-  entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
-  ingredientRepositoryProvider.overrideWithValue(FakeIngredientRepository()),
-  buddyRepositoryProvider.overrideWithValue(buddies ?? _onboardedBuddy()),
-  upgradeDecisionProvider.overrideWith((_) => Future.value(decision)),
-];
+}) => baseOverrides(
+  auth: FakeAuthRepository(signedIn: signedIn),
+  profiles: profiles,
+  buddies: buddies,
+  decision: decision,
+);
 
 /// Signed-out tests start on /welcome, whose hint pulses forever unless
 /// animations are disabled; `pumpAndSettle` needs it steady.
@@ -123,10 +67,7 @@ Future<ProviderContainer> _pumpHost(
 ) async {
   final container = ProviderContainer.test(overrides: overrides);
   await tester.pumpWidget(
-    UncontrolledProviderScope(
-      container: container,
-      child: const _GateTestHost(),
-    ),
+    UncontrolledProviderScope(container: container, child: const AppTestHost()),
   );
   await tester.pumpAndSettle();
   return container;

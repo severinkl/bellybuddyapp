@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/notification_provider.dart';
@@ -12,41 +11,29 @@ import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/repositories/notification_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 
+import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
 import '../helpers/mocks.dart';
 import '../helpers/riverpod_helpers.dart';
 
-class _FakeBuddy extends BuddyNotifier {
-  _FakeBuddy(this.initial);
-  final BuddyStatus? initial;
-
-  @override
-  Future<BuddyStatus?> build() async => initial;
-
-  void emit(BuddyStatus? status) => state = AsyncData(status);
-}
-
 /// A Buddy whose first load waits for [gate], then yields [status] (or
 /// fails with a [StateError] when [fail]).
-class _SlowBuddy extends _FakeBuddy {
-  _SlowBuddy(this.gate, super.initial, {this.fail = false});
+class _SlowBuddy extends FakeBuddyNotifier {
+  _SlowBuddy(this.gate, this.status, {this.fail = false});
   final Future<void> gate;
+  final BuddyStatus? status;
   final bool fail;
 
   @override
   Future<BuddyStatus?> build() async {
     await gate;
     if (fail) throw StateError('backend down');
-    return initial;
+    return status;
   }
 }
 
-BuddyStatus _status(String name, {bool hasRow = true}) => BuddyStatus(
-  state: BuddyState(name: name),
-  hasRow: hasRow,
-  streak: 0,
-  todayCounted: false,
-);
+BuddyStatus _status(String name, {bool hasRow = true}) =>
+    buddyStatus(name: name, hasRow: hasRow);
 
 void main() {
   late MockNotificationRepository mockNotificationRepo;
@@ -61,13 +48,15 @@ void main() {
   ProviderContainer makeContainer({
     String? userId = testUserId,
     BuddyStatus? buddy,
-    _FakeBuddy? fakeBuddy,
+    FakeBuddyNotifier? fakeBuddy,
   }) => createContainer(
     overrides: [
       notificationRepositoryProvider.overrideWithValue(mockNotificationRepo),
       profileRepositoryProvider.overrideWithValue(mockProfileRepo),
       currentUserIdProvider.overrideWithValue(userId),
-      buddyProvider.overrideWith(() => fakeBuddy ?? _FakeBuddy(buddy)),
+      buddyProvider.overrideWith(
+        () => fakeBuddy ?? FakeBuddyNotifier(() => buddy),
+      ),
     ],
   );
 
@@ -267,14 +256,14 @@ void main() {
       ),
     ).thenAnswer((_) async {});
 
-    final fake = _FakeBuddy(_status('Pünktchen'));
+    final fake = FakeBuddyNotifier(() => _status('Pünktchen'));
     final container = makeContainer(fakeBuddy: fake);
     await container.read(buddyProvider.future);
     await container.read(profileProvider.notifier).fetchProfile();
     container.listen(notificationSyncProvider, (_, _) {});
     await Future<void>.delayed(Duration.zero);
 
-    fake.emit(_status('Pünktchen'));
+    fake.push(_status('Pünktchen'));
     await Future<void>.delayed(Duration.zero);
     verify(
       () => mockNotificationRepo.syncNotifications(
@@ -283,7 +272,7 @@ void main() {
       ),
     ).called(1);
 
-    fake.emit(_status('Krümel'));
+    fake.push(_status('Krümel'));
     await Future<void>.delayed(Duration.zero);
     verify(
       () =>

@@ -1,21 +1,9 @@
 import 'dart:ui' as ui;
 
 import 'package:belly_buddy/config/constants.dart';
-import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/diary_provider.dart';
-import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
-import 'package:belly_buddy/providers/upgrade_gate_provider.dart';
-import 'package:belly_buddy/providers/user_recipes_provider.dart';
-import 'package:belly_buddy/repositories/auth_repository.dart';
-import 'package:belly_buddy/repositories/buddy_repository.dart';
-import 'package:belly_buddy/repositories/drink_repository.dart';
-import 'package:belly_buddy/repositories/entry_repository.dart';
-import 'package:belly_buddy/repositories/ingredient_repository.dart';
-import 'package:belly_buddy/repositories/meal_media_repository.dart';
-import 'package:belly_buddy/repositories/notification_repository.dart';
-import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/router/app_router.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/router/tab_navigation.dart';
@@ -32,50 +20,15 @@ import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
 import 'package:belly_buddy/widgets/log_sheet/log_sheet.dart';
 import 'package:cupertino_ui/cupertino_ui.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'
-    show GlobalWidgetsLocalizations;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/app_host.dart';
 import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
-
-/// Pared-down app root, as in the gate tests: the real router, the upgrade
-/// decision, and the profile loaded on start.
-class _ShellTestHost extends ConsumerStatefulWidget {
-  const _ShellTestHost();
-
-  @override
-  ConsumerState<_ShellTestHost> createState() => _ShellTestHostState();
-}
-
-class _ShellTestHostState extends ConsumerState<_ShellTestHost> {
-  @override
-  void initState() {
-    super.initState();
-    Future.microtask(() => ref.read(profileProvider.notifier).fetchProfile());
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final router = ref.watch(routerProvider);
-    listenForUpgradeDecision(ref);
-    return MaterialApp.router(
-      debugShowCheckedModeBanner: false,
-      routerConfig: router,
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [Locale('de', 'DE')],
-      locale: const Locale('de', 'DE'),
-    );
-  }
-}
 
 /// Monday, 23 Nov 2026, 12:40: lunch time.
 final _now = DateTime(2026, 11, 23, 12, 40);
@@ -92,49 +45,22 @@ Future<ProviderContainer> _pumpShell(
 
   final container = ProviderContainer.test(
     overrides: [
-      authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
-      profileRepositoryProvider.overrideWithValue(
-        FakeProfileRepository()..seedProfile(testUserProfile()),
-      ),
-      buddyRepositoryProvider.overrideWithValue(
-        FakeBuddyRepository()
-          ..store[testUserId] = BuddyState(
-            userId: testUserId,
-            onboardingCompletedAt: DateTime(2026, 11, 1),
+      ...baseOverrides(
+        entries: FakeEntryRepository()
+          ..seedResult(
+            testEntryQueryResult(
+              meals: [testMealEntry(trackedAt: DateTime(2026, 11, 23, 9))],
+              toiletEntries: [],
+              gutFeelings: [],
+              drinks: [],
+            ),
           ),
-      ),
-      entryRepositoryProvider.overrideWithValue(
-        FakeEntryRepository()..seedResult(
-          testEntryQueryResult(
-            meals: [testMealEntry(trackedAt: DateTime(2026, 11, 23, 9))],
-            toiletEntries: [],
-            gutFeelings: [],
-            drinks: [],
-          ),
-        ),
-      ),
-      drinkRepositoryProvider.overrideWithValue(FakeDrinkRepository()),
-      ingredientRepositoryProvider.overrideWithValue(
-        FakeIngredientRepository(),
-      ),
-      userRecipeRepositoryProvider.overrideWithValue(
-        FakeUserRecipeRepository(),
-      ),
-      mealMediaRepositoryProvider.overrideWithValue(FakeMealMediaRepository()),
-      notificationRepositoryProvider.overrideWithValue(
-        FakeNotificationRepository(),
-      ),
-      upgradeDecisionProvider.overrideWith(
-        (_) => Future.value(UpgradeDecision.ok),
       ),
       buddyTodayProvider.overrideWithValue(() => _now),
     ],
   );
   await tester.pumpWidget(
-    UncontrolledProviderScope(
-      container: container,
-      child: const _ShellTestHost(),
-    ),
+    UncontrolledProviderScope(container: container, child: const AppTestHost()),
   );
   await tester.pumpAndSettle();
   return container;
