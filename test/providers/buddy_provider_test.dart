@@ -128,6 +128,22 @@ void main() {
       expect(status.state.savedDays, [nov(21)]);
     });
 
+    test('weekDays: this week\'s counted days, entries and saved days', () {
+      // Sunday 22 Nov; the week runs Mon 16 – Sun 22.
+      buddyRepo.store['u1'] = const BuddyState(userId: 'u1', savers: 1);
+      entryRepo.seedActivityDays({nov(15), ...novDays(18, 20), nov(22)});
+
+      return load(makeContainer()).then((status) {
+        // 21 is filled by the saver; 15 belongs to last week.
+        expect(status.weekDays, novDays(18, 22));
+      });
+    });
+
+    test('weekDays: empty without entries', () async {
+      final status = await load(makeContainer());
+      expect(status.weekDays, isEmpty);
+    });
+
     test('existing row without changes is not saved', () async {
       buddyRepo.store['u1'] = const BuddyState(userId: 'u1', savers: 1);
       entryRepo.seedActivityDays(novDays(20, 22));

@@ -81,6 +81,20 @@ class AppConstants {
   static const double streakChipPopScale = 1.25;
   static const double streakSheetBuddyHeight = 220.0;
 
+  // Streak week row (Mo–So): day circle, regular and small
+  static const double streakWeekDaySize = 36.0;
+  static const double streakWeekDaySizeSmall = 26.0;
+
+  // A streak goal's row in the goal list
+  static const double streakGoalRowHeight = 56.0;
+
+  // Reminder step: the notification preview's corner radius and app icon,
+  // the example week's label column and dots
+  static const double notificationPreviewRadius = 20.0;
+  static const double notificationPreviewIconSize = 22.0;
+  static const double reminderExampleLabelWidth = 112.0;
+  static const double reminderExampleDotSize = 16.0;
+
   // Dashboard Buddy hero (streak row, bubble, Buddy, „Füttern" button):
   // this share of the screen height, clamped
   static const double buddyHeroHeightFactor = 0.47;
@@ -93,6 +107,9 @@ class AppConstants {
   // Buddy onboarding (/buddy-onboarding): stage (bubble slot + Buddy) and
   // progress dots
   static const double buddyOnboardingStageHeight = 240.0;
+  // … and on steps with little content below him (intro, first meal,
+  // streak moment) a bigger one
+  static const double buddyOnboardingHeroStageHeight = 340.0;
   static const double progressDotSize = 8.0;
   static const double progressDotActiveWidth = 24.0;
 
@@ -220,6 +237,7 @@ class AppConstants {
   static const Duration animSlower = Duration(milliseconds: 600);
 
   // Asset paths
+  static const String appIconPath = 'assets/images/app-icon.png';
   static const String mascotBasePath = 'assets/images/mascot';
   static const String imagesBasePath = 'assets/images';
   static const String iconsBasePath = 'assets/images/icons';

@@ -34,6 +34,7 @@ class BuddyStatus {
     required this.hasRow,
     required this.streak,
     required this.todayCounted,
+    this.weekDays = const {},
     this.announcements = const [],
     this.announcementKeys = const {},
   });
@@ -52,6 +53,10 @@ class BuddyStatus {
   /// Whether today already has an entry.
   final bool todayCounted;
 
+  /// The counted days (an entry or a saved day) of the current local week,
+  /// Monday to today, at local midnight. Feeds the streak week row.
+  final Set<DateTime> weekDays;
+
   /// Announcements not yet played, in the order they arose.
   final List<BuddyAnnouncement> announcements;
 
@@ -67,6 +72,7 @@ class BuddyStatus {
     hasRow: hasRow,
     streak: streak,
     todayCounted: todayCounted,
+    weekDays: weekDays,
     announcements: announcements ?? this.announcements,
     announcementKeys: announcementKeys ?? this.announcementKeys,
   );
@@ -308,9 +314,25 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
       hasRow: hasRow || change != null,
       streak: evaluation.streak,
       todayCounted: evaluation.todayCounted,
+      weekDays: _weekDays(today, await firstWindow, next.savedDays),
       announcements: announcements.keys.toList(),
       announcementKeys: announcements,
     );
+  }
+
+  /// The days from this week's Monday to [today] with an entry
+  /// ([activity]) or saved ([saved]).
+  static Set<DateTime> _weekDays(
+    DateTime today,
+    Set<DateTime> activity,
+    List<DateTime> saved,
+  ) {
+    final monday = addDays(today, 1 - today.weekday);
+    final counted = {...activity, ...saved}.map(startOfDay);
+    return {
+      for (final day in counted)
+        if (!day.isBefore(monday) && !day.isAfter(today)) day,
+    };
   }
 
   /// Evaluates [state] over a window of activity days ([firstWindow]: the
