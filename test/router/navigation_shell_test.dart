@@ -250,6 +250,27 @@ void main() {
       expect(find.byType(BbBottomNav), findsNothing);
     });
 
+    testWidgets('a double tap on the insight card pushes the Muster page '
+        'once', (tester) async {
+      final container = await _pumpShell(tester);
+
+      final card = find.byKey(InsightCard.cardKey);
+      await tester.ensureVisible(card);
+      await tester.pumpAndSettle();
+      // Both taps before the next frame (e.g. a slow one).
+      await tester.tap(card);
+      await tester.tap(card);
+      await tester.pumpAndSettle();
+      expect(find.byType(PatternsScreen), findsOneWidget);
+
+      // One back leads Home.
+      container.read(routerProvider).pop();
+      await tester.pumpAndSettle();
+      expect(find.byType(PatternsScreen), findsNothing);
+      expect(find.byType(BbBottomNav), findsOneWidget);
+      expect(_currentPath(container), RoutePaths.dashboard);
+    });
+
     testWidgets('the tour spotlights all 7 targets and keeps its bubbles on '
         'a 375×667 phone at text scale 1.3', (tester) async {
       tester.platformDispatcher.textScaleFactorTestValue = 1.3;

@@ -13,11 +13,11 @@ import 'package:belly_buddy/screens/dashboard/widgets/insight_card.dart';
 import '../../../helpers/app_host.dart';
 
 /// The card on a Home-like scrolling page, with `/patterns` stubbed.
-Future<void> _pump(
+Future<GoRouter> _pump(
   WidgetTester tester,
   AsyncValue<Insights> insights, {
   double textScale = 1,
-}) {
+}) async {
   final router = GoRouter(
     routes: [
       GoRoute(
@@ -33,7 +33,8 @@ Future<void> _pump(
     ],
   );
   addTearDown(router.dispose);
-  return tester.pumpWidget(germanRouterApp(router, textScale: textScale));
+  await tester.pumpWidget(germanRouterApp(router, textScale: textScale));
+  return router;
 }
 
 Insights _insights(
@@ -254,6 +255,39 @@ void main() {
       );
       expect(_card, findsNothing);
       expect(find.textContaining('Zwiebel'), findsNothing);
+    });
+
+    group('a double tap opens Muster once', () {
+      Future<void> expectOneMusterPage(
+        WidgetTester tester,
+        GoRouter router,
+      ) async {
+        await tester.pumpAndSettle();
+        expect(find.text('page:${RoutePaths.patterns}'), findsOneWidget);
+        // One back leads to the card again.
+        router.pop();
+        await tester.pumpAndSettle();
+        expect(find.text('page:${RoutePaths.patterns}'), findsNothing);
+        expect(_card, findsOneWidget);
+      }
+
+      testWidgets('both taps before the next frame', (tester) async {
+        final router = await _pump(tester, _locked(2, 1));
+
+        await tester.tap(_card);
+        await tester.tap(_card);
+
+        await expectOneMusterPage(tester, router);
+      });
+
+      testWidgets('back on the card, a tap opens Muster again', (tester) async {
+        final router = await _pump(tester, _locked(2, 1));
+        await tester.tap(_card);
+        await tester.tap(_card);
+        await expectOneMusterPage(tester, router);
+
+        await _expectOpensPatterns(tester);
+      });
     });
 
     group('fits 375×667 at text scale 1.3', () {

@@ -13,7 +13,7 @@ import '../../../widgets/common/insight_progress_row.dart';
 import '../../registration/widgets/step_field_label.dart';
 
 /// Home's card on what the Buddy learns about the user's gut; a tap opens
-/// the Muster page.
+/// the Muster page (once: a double tap doesn't push it twice).
 ///
 /// - Locked: how much is left until the first patterns, and both progress
 ///   bars (days with entries, gut-feeling entries).
@@ -45,7 +45,14 @@ class InsightCard extends StatelessWidget {
       _ => null,
     };
     if (value == null) return const SizedBox.shrink();
-    void open() => context.push(RoutePaths.patterns);
+    void open() {
+      final router = GoRouter.of(context);
+      // Already on top: the second tap of a double tap, both before the
+      // next frame (e.g. a slow one), so before the page covered the card.
+      if (router.state.uri.path == RoutePaths.patterns) return;
+      router.push(RoutePaths.patterns);
+    }
+
     return MergeSemantics(
       child: Semantics(
         button: true,
