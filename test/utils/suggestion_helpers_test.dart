@@ -214,4 +214,87 @@ void main() {
       expect(groups, isEmpty);
     });
   });
+
+  group('a group whose ingredient row is hidden', () {
+    // Row level security can hide the detected ingredient's row: the
+    // embedded `ingredients` is then null, but the help text and the meal
+    // still say which ingredient it is.
+    const tofuHelp =
+        'Tofu ist eine tolle Proteinquelle für deine vegetarische Bowl. '
+        'Weicher oder Seidentofu kann aber Galakto-Oligosaccharide (GOS) '
+        'enthalten. Halloumi ist von Natur aus sehr laktosearm.';
+
+    Map<String, dynamic> hiddenRow({String? helptext, String? mealId}) => {
+      'id': 's1',
+      'detected_ingredient_id': 'ing-tofu',
+      'ingredients': null,
+      'meal_id': mealId,
+      'seen_at': null,
+      'helptext': helptext,
+    };
+
+    Map<String, dynamic> meal(List<String> ingredients) => {
+      'id': 'm1',
+      'title': 'Bowl mit gebratenem Tofu, Gemüse und Wachteleiern',
+      'tracked_at': '2026-11-23T12:00:00',
+      'image_url': null,
+      'ingredients': ingredients,
+    };
+
+    test('is named after the meal ingredient its help text is about', () {
+      final groups = SuggestionHelpers.buildGroups(
+        suggestionData: [hiddenRow(helptext: tofuHelp, mealId: 'm1')],
+        replacementsData: [],
+        mealsData: [
+          meal(['Reis', 'Wachteleier', 'Tofu', 'Brokkoli']),
+        ],
+      );
+
+      expect(groups.single.ingredientName, 'Tofu');
+      expect(groups.single.meals.single.ingredients, contains('Tofu'));
+    });
+
+    test('an ingredient name inside another word does not count', () {
+      final groups = SuggestionHelpers.buildGroups(
+        suggestionData: [
+          hiddenRow(
+            helptext: 'Eiweißreich, aber Knoblauch enthält Fruktane.',
+            mealId: 'm1',
+          ),
+        ],
+        replacementsData: [],
+        mealsData: [
+          meal(['Ei', 'Knoblauch']),
+        ],
+      );
+
+      expect(groups.single.ingredientName, 'Knoblauch');
+    });
+
+    test('the fallback help text names it too', () {
+      final groups = SuggestionHelpers.buildGroups(
+        suggestionData: [
+          hiddenRow(
+            helptext:
+                'Knoblauch enthält Fruktane, was bei empfindlichen Personen '
+                'Beschwerden auslösen kann. Probiere sanfte Alternativen!',
+          ),
+        ],
+        replacementsData: [],
+        mealsData: [],
+      );
+
+      expect(groups.single.ingredientName, 'Knoblauch');
+    });
+
+    test('without any hint it is an „Unbekannte Zutat", never „Unbekannt"', () {
+      final groups = SuggestionHelpers.buildGroups(
+        suggestionData: [hiddenRow()],
+        replacementsData: [],
+        mealsData: [],
+      );
+
+      expect(groups.single.ingredientName, 'Unbekannte Zutat');
+    });
+  });
 }

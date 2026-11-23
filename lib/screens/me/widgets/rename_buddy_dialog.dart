@@ -1,8 +1,7 @@
-import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
-import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
+import '../../../utils/buddy_name.dart';
 
 /// „Buddy umbenennen": a name field prefilled with [current] (selected, so
 /// typing replaces it). „Speichern" is enabled only for a valid name
@@ -26,10 +25,6 @@ class _RenameBuddyDialog extends StatefulWidget {
 }
 
 class _RenameBuddyDialogState extends State<_RenameBuddyDialog> {
-  static const _error =
-      'Bitte gib einen Namen mit 1 bis ${AppConstants.buddyNameMaxLength} '
-      'Zeichen ein.';
-
   late final TextEditingController _controller =
       TextEditingController(text: widget.current)
         ..selection = TextSelection(
@@ -51,24 +46,13 @@ class _RenameBuddyDialogState extends State<_RenameBuddyDialog> {
     if (_valid) Navigator.pop(context, _name);
   }
 
-  /// „n/20": the trimmed name's length in code points, as validated and
-  /// stored (an emoji family is one character but five code points).
+  /// „n/20" in characters as a person sees them.
   Widget _counter(
     BuildContext context, {
     required int currentLength,
     required bool isFocused,
     required int? maxLength,
-  }) => Semantics(
-    container: true,
-    liveRegion: isFocused,
-    child: Text(
-      '${_name.runes.length}/${AppConstants.buddyNameMaxLength}',
-      style: const TextStyle(
-        fontSize: AppTheme.fontSizeCaption,
-        color: AppTheme.mutedForeground,
-      ),
-    ),
-  );
+  }) => BuddyNameRules.counter(_controller.text, isFocused: isFocused);
 
   @override
   Widget build(BuildContext context) {
@@ -78,16 +62,15 @@ class _RenameBuddyDialogState extends State<_RenameBuddyDialog> {
       content: TextField(
         controller: _controller,
         autofocus: true,
-        // Not cut off at the limit: a too long name shows the error instead.
-        maxLength: AppConstants.buddyNameMaxLength,
-        maxLengthEnforcement: MaxLengthEnforcement.none,
+        // Capped like in the registration: a 21st character isn't taken.
+        inputFormatters: const [BuddyNameLengthFormatter()],
         buildCounter: _counter,
         textCapitalization: TextCapitalization.words,
         textInputAction: TextInputAction.done,
         autocorrect: false,
         decoration: InputDecoration(
           labelText: 'Name',
-          errorText: _valid ? null : _error,
+          errorText: BuddyNameRules.error(_controller.text),
           errorMaxLines: 2,
         ),
         onChanged: (_) => setState(() {}),

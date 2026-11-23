@@ -20,7 +20,11 @@ void main() {
   setUp(() {
     profileService = MockProfileService();
     authService = MockAuthService();
-    repo = ProfileRepository(profileService, authService);
+    repo = ProfileRepository(
+      profileService,
+      authService,
+      deviceTimezone: () => 'Europe/Vienna',
+    );
   });
 
   group('getProfile', () {
@@ -55,6 +59,80 @@ void main() {
       ).thenThrow(Exception('network error'));
 
       expect(() => repo.getProfile('user-123'), throwsException);
+    });
+  });
+
+  group('timezone', () {
+    test(
+      'a new profile gets the device time zone, not Europe/Berlin',
+      () async {
+        when(() => authService.detectAuthMethod()).thenReturn('email');
+        when(() => profileService.upsert(any())).thenAnswer((_) async {});
+
+        // The model's default is Europe/Berlin.
+        await repo.createProfile('user-123', testUserProfile(timezone: null));
+
+        final captured =
+            verify(() => profileService.upsert(captureAny())).captured.single
+                as Map<String, dynamic>;
+        expect(captured['timezone'], 'Europe/Vienna');
+      },
+    );
+
+    test('an update keeps the stored time zone current', () async {
+      when(() => profileService.update(any(), any())).thenAnswer((_) async {});
+
+      await repo.updateProfile(
+        'user-123',
+        testUserProfile(timezone: 'Europe/Berlin'),
+      );
+
+      final captured =
+          verify(
+                () => profileService.update('user-123', captureAny()),
+              ).captured.single
+              as Map<String, dynamic>;
+      expect(captured['timezone'], 'Europe/Vienna');
+    });
+
+    test('without the time zone database the zone counts as unknown', () async {
+      // Nothing in this test isolate initialized package:timezone.
+      final plain = ProfileRepository(profileService, authService);
+      when(() => authService.detectAuthMethod()).thenReturn('email');
+      when(() => profileService.upsert(any())).thenAnswer((_) async {});
+
+      await plain.createProfile('user-123', testUserProfile());
+
+      final created =
+          verify(() => profileService.upsert(captureAny())).captured.single
+              as Map<String, dynamic>;
+      expect(created.containsKey('timezone'), isFalse);
+    });
+
+    test('an unknown device time zone is not written', () async {
+      final unknown = ProfileRepository(
+        profileService,
+        authService,
+        deviceTimezone: () => null,
+      );
+      when(() => authService.detectAuthMethod()).thenReturn('email');
+      when(() => profileService.upsert(any())).thenAnswer((_) async {});
+      when(() => profileService.update(any(), any())).thenAnswer((_) async {});
+
+      await unknown.createProfile('user-123', testUserProfile());
+      await unknown.updateProfile('user-123', testUserProfile());
+
+      final created =
+          verify(() => profileService.upsert(captureAny())).captured.single
+              as Map<String, dynamic>;
+      final updated =
+          verify(
+                () => profileService.update('user-123', captureAny()),
+              ).captured.single
+              as Map<String, dynamic>;
+      // The database default applies, or the stored zone stays.
+      expect(created.containsKey('timezone'), isFalse);
+      expect(updated.containsKey('timezone'), isFalse);
     });
   });
 

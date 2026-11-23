@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
+import '../../../utils/profile_limits.dart';
 import '../../../widgets/common/bb_scroll_picker.dart';
 import '../widgets/step_field_label.dart';
 
@@ -21,8 +22,8 @@ class HeightWeightStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final heights = List.generate(100, (i) => 120 + i);
-    final weights = List.generate(150, (i) => 30 + i);
+    final heights = ProfileLimits.heights;
+    final weights = ProfileLimits.weights;
 
     return Padding(
       padding: AppConstants.wizardStepPadding,
@@ -32,7 +33,7 @@ class HeightWeightStep extends StatelessWidget {
           const StepFieldLabel(
             key: heightWeightTitleKey,
             'Größe & Gewicht',
-            helper: 'Hilft uns, deine Verdauung besser zu verstehen.',
+            helper: 'Hilft mir, deine Verdauung besser zu verstehen.',
           ),
           AppConstants.gap16,
           Expanded(

@@ -51,8 +51,9 @@ class SymptomsStep extends StatelessWidget {
                 }
                 onChanged(newSelected);
               },
+              // Checkboxes: several symptoms can be picked.
               leading: Icon(
-                isSelected ? Icons.check_circle : Icons.circle_outlined,
+                isSelected ? Icons.check_box : Icons.check_box_outline_blank,
                 color: isSelected ? AppTheme.primary : AppTheme.mutedForeground,
                 size: 20,
               ),

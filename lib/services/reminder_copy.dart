@@ -34,7 +34,7 @@ class ReminderCopy {
     TimeSlot.evening: [
       '🌙 Abendessen notieren — bevor der Tag vorbei ist.',
       "🍲 Was hat's heute Abend gegeben?",
-      "🍕 Abendbrot, Pizza oder Resteverwertung? Trag's ein.",
+      "🍕 Abendessen, Pizza oder Resteverwertung? Trag's ein.",
       '🌆 Letzte Mahlzeit des Tages im Kasten?',
       '🍽️ Was hat dein Bauch heute Abend abbekommen?',
       '📝 Vergiss nicht, dein Essen einzutragen!',
@@ -60,7 +60,7 @@ class ReminderCopy {
       '🌙 {name} möchte wissen, was es heute Abend gab.',
       '🍲 {name} ist gespannt auf dein Abendessen!',
       '🌆 {name} fragt: Schon die letzte Mahlzeit eingetragen?',
-      '📝 {name} wartet auf deinen Eintrag zum Abendbrot.',
+      '📝 {name} wartet auf deinen Eintrag zum Abendessen.',
     ],
   };
 

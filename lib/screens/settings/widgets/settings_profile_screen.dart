@@ -8,6 +8,7 @@ import '../../../config/constants.dart';
 import '../../../models/user_profile.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../utils/intolerance_helpers.dart';
+import '../../../utils/profile_limits.dart';
 import '../../../widgets/common/bb_async_state.dart';
 import '../../../widgets/common/bb_chip_selector.dart';
 import '../../../widgets/common/settings_section_card.dart';
@@ -27,24 +28,100 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
   Timer? _debounce;
   bool _saved = false;
 
+  /// Hides „Gespeichert" again.
+  Timer? _savedTimer;
+
   final _birthYearController = TextEditingController();
   final _heightController = TextEditingController();
   final _weightController = TextEditingController();
   bool _controllersInitialized = false;
 
+  /// Typed body data is saved once typing rests ([_bodyDebounce]) or the
+  /// field is left, and only the values in the registration's ranges.
+  Timer? _bodyDebounce;
+  String? _birthYearError;
+  String? _heightError;
+  String? _weightError;
+
+  /// The profile as last built, and the notifier: a pending save still
+  /// runs when the screen is left before typing rested.
+  UserProfile? _latest;
+  late final ProfileNotifier _profileNotifier = ref.read(
+    profileProvider.notifier,
+  );
+
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => ref.read(profileProvider.notifier).fetchProfile());
+    Future.microtask(() => _profileNotifier.fetchProfile());
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
+    _savedTimer?.cancel();
+    if (_bodyDebounce?.isActive ?? false) _saveBodyData(leaving: true);
+    _bodyDebounce?.cancel();
     _birthYearController.dispose();
     _heightController.dispose();
     _weightController.dispose();
     super.dispose();
+  }
+
+  ({int? value, String? error}) _birthYear() => ProfileLimits.birthYear(
+    _birthYearController.text,
+    currentYear: DateTime.now().year,
+  );
+
+  ({int? value, String? error}) _height() =>
+      ProfileLimits.height(_heightController.text);
+
+  ({int? value, String? error}) _weight() =>
+      ProfileLimits.weight(_weightController.text);
+
+  /// A keystroke in a body data field: an error shown for it goes away as
+  /// soon as the value is valid; the save waits until typing rests.
+  void _onBodyDataChanged() {
+    final clear = (
+      birthYear: _birthYearError != null && _birthYear().error == null,
+      height: _heightError != null && _height().error == null,
+      weight: _weightError != null && _weight().error == null,
+    );
+    if (clear.birthYear || clear.height || clear.weight) {
+      setState(() {
+        if (clear.birthYear) _birthYearError = null;
+        if (clear.height) _heightError = null;
+        if (clear.weight) _weightError = null;
+      });
+    }
+    _bodyDebounce?.cancel();
+    _bodyDebounce = Timer(AppConstants.debounceDuration, _saveBodyData);
+  }
+
+  /// Shows the errors of the body data fields (unless [leaving] the
+  /// screen) and saves their valid values that changed.
+  void _saveBodyData({bool leaving = false}) {
+    _bodyDebounce?.cancel();
+    final birthYear = _birthYear();
+    final height = _height();
+    final weight = _weight();
+    if (!leaving && mounted) {
+      setState(() {
+        _birthYearError = birthYear.error;
+        _heightError = height.error;
+        _weightError = weight.error;
+      });
+    }
+    final latest = _latest;
+    if (latest == null) return;
+    final next = latest.copyWith(
+      birthYear: birthYear.value ?? latest.birthYear,
+      height: height.value ?? latest.height,
+      weight: weight.value ?? latest.weight,
+    );
+    if (next == latest) return;
+    _latest = next;
+    unawaited(_saveImmediately(next));
   }
 
   void _initControllers(UserProfile profile) {
@@ -57,10 +134,11 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
 
   Future<void> _saveImmediately(UserProfile profile) async {
     try {
-      await ref.read(profileProvider.notifier).updateProfile(profile);
+      await _profileNotifier.updateProfile(profile);
       if (mounted) {
         setState(() => _saved = true);
-        Future.delayed(const Duration(seconds: 2), () {
+        _savedTimer?.cancel();
+        _savedTimer = Timer(const Duration(seconds: 2), () {
           if (mounted) setState(() => _saved = false);
         });
       }
@@ -71,19 +149,10 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
 
   void _debounceSave(UserProfile profile) {
     _debounce?.cancel();
-    _debounce = Timer(AppConstants.debounceDuration, () async {
-      try {
-        await ref.read(profileProvider.notifier).updateProfile(profile);
-        if (mounted) {
-          setState(() => _saved = true);
-          Future.delayed(const Duration(seconds: 2), () {
-            if (mounted) setState(() => _saved = false);
-          });
-        }
-      } catch (e) {
-        _log.error('failed to save profile', e);
-      }
-    });
+    _debounce = Timer(
+      AppConstants.debounceDuration,
+      () => _saveImmediately(profile),
+    );
   }
 
   @override
@@ -122,8 +191,12 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
             return const Center(child: Text('Kein Profil gefunden.'));
           }
           _initControllers(profile);
+          _latest = profile;
           return SingleChildScrollView(
             padding: AppConstants.paddingLg,
+            // The number keypad has no „Fertig": dragging the page or
+            // tapping outside a field closes it.
+            keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -134,24 +207,18 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      TextField(
+                      _BodyDataField(
                         controller: _birthYearController,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(4),
-                        ],
-                        decoration: const InputDecoration(
+                        maxLength: 4,
+                        decoration: InputDecoration(
                           labelText: 'Geburtsjahr',
                           hintText: '1990',
-                          prefixIcon: Icon(Icons.cake_outlined),
+                          prefixIcon: const Icon(Icons.cake_outlined),
+                          errorText: _birthYearError,
+                          errorMaxLines: 2,
                         ),
-                        onChanged: (v) {
-                          final year = int.tryParse(v);
-                          if (year != null && v.length == 4) {
-                            _debounceSave(profile.copyWith(birthYear: year));
-                          }
-                        },
+                        onChanged: _onBodyDataChanged,
+                        onDone: _saveBodyData,
                       ),
                       AppConstants.gap16,
                       DropdownButtonFormField<String>(
@@ -185,38 +252,30 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                       Row(
                         children: [
                           Expanded(
-                            child: TextField(
+                            child: _BodyDataField(
                               controller: _heightController,
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                                LengthLimitingTextInputFormatter(3),
-                              ],
-                              decoration: const InputDecoration(
+                              maxLength: 3,
+                              decoration: InputDecoration(
                                 labelText: 'Größe (cm)',
+                                errorText: _heightError,
+                                errorMaxLines: 3,
                               ),
-                              onChanged: (v) {
-                                final height = int.tryParse(v);
-                                _debounceSave(profile.copyWith(height: height));
-                              },
+                              onChanged: _onBodyDataChanged,
+                              onDone: _saveBodyData,
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: TextField(
+                            child: _BodyDataField(
                               controller: _weightController,
-                              keyboardType: TextInputType.number,
-                              inputFormatters: [
-                                FilteringTextInputFormatter.digitsOnly,
-                                LengthLimitingTextInputFormatter(3),
-                              ],
-                              decoration: const InputDecoration(
+                              maxLength: 3,
+                              decoration: InputDecoration(
                                 labelText: 'Gewicht (kg)',
+                                errorText: _weightError,
+                                errorMaxLines: 3,
                               ),
-                              onChanged: (v) {
-                                final weight = int.tryParse(v);
-                                _debounceSave(profile.copyWith(weight: weight));
-                              },
+                              onChanged: _onBodyDataChanged,
+                              onDone: _saveBodyData,
                             ),
                           ),
                         ],
@@ -274,6 +333,48 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// A number field of the body data. Tapping outside it closes the number
+/// keypad (it has no „Fertig"); leaving it ([onDone]) saves right away.
+class _BodyDataField extends StatelessWidget {
+  const _BodyDataField({
+    required this.controller,
+    required this.maxLength,
+    required this.decoration,
+    required this.onChanged,
+    required this.onDone,
+  });
+
+  final TextEditingController controller;
+  final int maxLength;
+  final InputDecoration decoration;
+  final VoidCallback onChanged;
+  final VoidCallback onDone;
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      canRequestFocus: false,
+      skipTraversal: true,
+      onFocusChange: (focused) {
+        if (!focused) onDone();
+      },
+      child: TextField(
+        controller: controller,
+        keyboardType: TextInputType.number,
+        textInputAction: TextInputAction.done,
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(maxLength),
+        ],
+        decoration: decoration,
+        onChanged: (_) => onChanged(),
+        onSubmitted: (_) => onDone(),
+        onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
       ),
     );
   }

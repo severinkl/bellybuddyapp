@@ -76,6 +76,20 @@ void main() {
     });
   });
 
+  test('says „Abendessen", not the northern „Abendbrot"', () {
+    final pools = [
+      ReminderCopy.mealPools,
+      ReminderCopy.buddyMealPools,
+      ReminderCopy.moodPools,
+      ReminderCopy.buddyMoodPools,
+    ];
+    for (final pool in pools) {
+      for (final line in pool.values.expand((l) => l)) {
+        expect(line, isNot(contains('Abendbrot')));
+      }
+    }
+  });
+
   group('pool integrity', () {
     test('every meal pool is non-empty', () {
       for (final entry in ReminderCopy.mealPools.entries) {

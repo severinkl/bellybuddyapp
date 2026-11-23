@@ -52,6 +52,15 @@ String wizardKey(String step, [String? value]) => '$step:${value ?? 'any'}';
 
 BuddyLine? wizardReaction(String key) => kWizardReactions[key];
 
+const _genderNoted = BuddyLine(
+  mood: BuddyMood.happy,
+  action: BuddyAction.nodYes,
+  lines: [
+    'Danke, notiert!',
+    'Alles klar – das hilft mir, deinen Bauch zu verstehen.',
+  ],
+);
+
 const Map<String, BuddyLine> kWizardReactions = {
   'name:intro': BuddyLine(
     mood: BuddyMood.happy,
@@ -91,18 +100,11 @@ const Map<String, BuddyLine> kWizardReactions = {
     action: BuddyAction.nodYes,
     lines: ['Danke, das hilft mir weiter!', 'Super, damit kann ich arbeiten!'],
   ),
-  'gender:weiblich': BuddyLine(
-    mood: BuddyMood.happy,
-    lines: ['Schön, dich kennenzulernen!', 'Hallo du! Ich freu mich auf uns.'],
-  ),
-  'gender:männlich': BuddyLine(
-    mood: BuddyMood.happy,
-    lines: ['Schön, dich kennenzulernen!', 'Hallo du! Ich freu mich auf uns.'],
-  ),
-  'gender:andere': BuddyLine(
-    mood: BuddyMood.happy,
-    lines: ['Schön, dass du da bist!', 'Hallo du! Ich freu mich auf uns.'],
-  ),
+  // The step asks for the biological sex: the reactions just take note of
+  // the answer, the same for every option (no greetings, no cliches).
+  'gender:weiblich': _genderNoted,
+  'gender:männlich': _genderNoted,
+  'gender:andere': _genderNoted,
   'diet:alles': BuddyLine(
     mood: BuddyMood.hungry,
     lines: ['Oh, da gibt es viel zu probieren!', 'Mhm, ich hab schon Hunger!'],

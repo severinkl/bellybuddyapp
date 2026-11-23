@@ -23,6 +23,8 @@ Future<UserRecipe?> showRecipeSelectorSheet(BuildContext context) {
     context: context,
     useSafeArea: true,
     isScrollControlled: true,
+    // The sheet draws its own handle.
+    showDragHandle: false,
     backgroundColor: AppTheme.card,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(

@@ -101,6 +101,10 @@ class _RegistrationWizardScreenState
   Timer? _followUp;
   Timer? _pickerSettle;
 
+  /// The catalog key of the multi-select pick the bubble reacts to (until
+  /// the next line).
+  String? _shownPick;
+
   // Form state
   bool _healthConsentChecked = false;
   // Set when the user advances past the consent step with the box ticked;
@@ -181,6 +185,7 @@ class _RegistrationWizardScreenState
   /// headline), and a reaction stays next to the step's label.
   void _react(BuddyLine line) {
     _cancelPendingLines();
+    _shownPick = null;
     _buddy.react(line, name: _name, rnd: _rnd, duration: null);
   }
 
@@ -205,15 +210,39 @@ class _RegistrationWizardScreenState
   }
 
   void _onSymptomsChanged(List<String> symptoms) {
-    final added = _newest(symptoms, _symptoms);
+    final previous = _symptoms;
     setState(() => _symptoms = symptoms);
-    if (added != null) _reactTo(wizardKey('symptom', added));
+    _reactToPicks('symptom', _symptomsStep, previous, symptoms);
   }
 
   void _onIntolerancesChanged(List<String> intolerances) {
-    final added = _newest(intolerances, _intolerances);
+    final previous = _intolerances;
     setState(() => _intolerances = intolerances);
-    if (added != null) _reactTo(wizardKey('intolerance', added));
+    _reactToPicks('intolerance', _intolerancesStep, previous, intolerances);
+  }
+
+  /// On a multi-select [step] (catalog [group]): the Buddy reacts to the
+  /// newest pick. Taking back the pick he is reacting to takes his reaction
+  /// back too: he asks the step's question again.
+  void _reactToPicks(
+    String group,
+    int step,
+    List<String> previous,
+    List<String> selected,
+  ) {
+    final added = _newest(selected, previous);
+    if (added != null) {
+      final key = wizardKey(group, added);
+      _reactTo(key);
+      _shownPick = key;
+      return;
+    }
+    final shown = _shownPick;
+    if (shown == null || selected.any((s) => wizardKey(group, s) == shown)) {
+      return;
+    }
+    final intro = _introFor(step);
+    if (intro != null) _react(intro);
   }
 
   bool get _canAdvance {
@@ -507,10 +536,10 @@ class _RegistrationWizardScreenState
                 controller: _buddy,
                 name: _nameValid ? _name : 'Buddy',
                 keyboardOpen: keyboardOpen,
-                // The sign-up forms need all the room above the keyboard.
-                keyboardStage: _currentStep >= _authStep
-                    ? BuddyKeyboardStage.hidden
-                    : BuddyKeyboardStage.compact,
+                // The sign-up forms open the keyboard right away: their
+                // header is compact from the start, so nothing jumps (and no
+                // field moves under a tap) when it opens.
+                compact: _currentStep >= _authStep,
                 child: PageView(
                   controller: _pageController,
                   physics: const NeverScrollableScrollPhysics(),

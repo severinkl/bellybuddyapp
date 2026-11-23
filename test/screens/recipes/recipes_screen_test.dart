@@ -47,6 +47,28 @@ void main() {
     expect(find.text('Noch keine Rezepte'), findsOneWidget); // empty-state body
   });
 
+  testWidgets('is „Meine Rezepte" with a back arrow, like on Entdecken', (
+    tester,
+  ) async {
+    await pumpScreen(tester);
+
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.text('Meine Rezepte'),
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: find.byType(AppBar),
+        matching: find.byIcon(Icons.arrow_back),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byIcon(Icons.close), findsNothing);
+  });
+
   testWidgets('no Inspiration', (tester) async {
     await pumpScreen(tester);
     expect(find.text('Inspiration'), findsNothing);

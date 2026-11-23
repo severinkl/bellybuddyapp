@@ -12,6 +12,11 @@ class StepFieldLabel extends StatelessWidget {
   final String label;
   final String? helper;
 
+  /// [text] in capitals, the German way: „ß" becomes „SS" (Dart's
+  /// `toUpperCase` keeps it, which reads „GRÖßE").
+  static String capitals(String text) =>
+      text.toUpperCase().replaceAll('ß', 'SS');
+
   /// The label's style (drawn in capitals).
   static const style = TextStyle(
     fontSize: AppTheme.fontSizeCaptionLG,
@@ -26,7 +31,7 @@ class StepFieldLabel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Semantics(header: true, child: Text(label.toUpperCase(), style: style)),
+        Semantics(header: true, child: Text(capitals(label), style: style)),
         if (helper != null) ...[
           AppConstants.gap4,
           Text(

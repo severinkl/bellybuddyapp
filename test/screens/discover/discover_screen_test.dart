@@ -434,7 +434,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Keine Treffer'), findsOneWidget);
 
-    await tester.tap(find.byIcon(Icons.close));
+    await tester.tap(find.byIcon(Icons.arrow_back));
     await tester.pumpAndSettle();
 
     expect(find.byType(DiscoverScreen), findsOneWidget);

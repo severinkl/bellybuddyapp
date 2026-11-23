@@ -28,7 +28,7 @@ class DietStep extends StatelessWidget {
             key: dietTitleKey,
             'Ernährung',
             helper:
-                'Damit wir dir passende Zutaten und Rezepte vorschlagen können.',
+                'Damit ich dir passende Zutaten und Rezepte vorschlagen kann.',
           ),
           AppConstants.gap16,
           ..._options.map((option) {

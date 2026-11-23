@@ -220,14 +220,22 @@ class AppConstants {
   /// announcement was shown, so each one shows only once.
   static const String keyBuddyAnnouncedPrefix = 'buddy_announced_';
 
-  /// Maximum length of the Buddy's name (matches the `buddy_state` check).
+  /// Maximum length of the Buddy's name, in characters as a person sees
+  /// them (grapheme clusters: an emoji is one).
   static const int buddyNameMaxLength = 20;
 
+  /// What the `buddy_state.name` check (`char_length`, code points) takes.
+  /// Raise it once core relaxes the check, so 20 emojis fit too.
+  static const int buddyNameMaxCodePoints = 20;
+
   /// Whether [name] is a valid Buddy name: 1 to [buddyNameMaxLength]
-  /// characters after trimming.
+  /// characters after trimming, and storable ([buddyNameMaxCodePoints]).
   static bool isValidBuddyName(String name) {
-    final length = name.trim().runes.length;
-    return length > 0 && length <= buddyNameMaxLength;
+    final trimmed = name.trim();
+    final length = trimmed.characters.length;
+    return length > 0 &&
+        length <= buddyNameMaxLength &&
+        trimmed.runes.length <= buddyNameMaxCodePoints;
   }
 
   /// App Store numeric ID for Belly Buddy, used by the upgrade screen and

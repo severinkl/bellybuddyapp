@@ -89,6 +89,17 @@ void main() {
     }
   });
 
+  test('the gender reactions acknowledge the answer, they don\'t greet', () {
+    // The Buddy asked „Welches biologische Geschlecht hast du?": a greeting
+    // („Hallo du!", „Schön, dass du da bist!") doesn't answer that.
+    final greeting = RegExp(r'Hallo|kennenzulernen|da bist|freu mich auf uns');
+    for (final g in ['weiblich', 'männlich', 'andere']) {
+      for (final l in wizardReaction('gender:$g')!.lines) {
+        expect(greeting.hasMatch(l), isFalse, reason: 'gender:$g: $l');
+      }
+    }
+  });
+
   test('wizardKey builds keys', () {
     expect(wizardKey('gender', 'weiblich'), 'gender:weiblich');
     expect(wizardKey('birthYear'), 'birthYear:any');

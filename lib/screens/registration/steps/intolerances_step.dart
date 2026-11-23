@@ -31,7 +31,7 @@ class IntolerancesStep extends StatelessWidget {
             const StepFieldLabel(
               key: intolerancesTitleKey,
               'Ärztlich diagnostiziert',
-              helper: 'Hilft uns bei der Analyse deiner Mahlzeiten.',
+              helper: 'Hilft mir bei der Analyse deiner Mahlzeiten.',
             ),
             AppConstants.gap16,
             BbChipSelector(

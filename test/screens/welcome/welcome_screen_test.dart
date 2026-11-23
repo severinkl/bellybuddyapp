@@ -66,8 +66,9 @@ Future<GoRouter> _pump(WidgetTester tester, {bool calm = false}) async {
 BuddyController _buddy(WidgetTester tester) =>
     tester.widget<AnimatedBuddy>(find.byType(AnimatedBuddy)).controller;
 
+/// The top-most location, pushed routes included.
 String _path(GoRouter router) =>
-    router.routerDelegate.currentConfiguration.uri.path;
+    router.routerDelegate.currentConfiguration.last.matchedLocation;
 
 /// Lets a page transition finish (the welcome Buddy is gone afterwards).
 Future<void> _settleNavigation(WidgetTester tester) async {
@@ -288,6 +289,13 @@ void main() {
 
       expect(_path(router), RoutePaths.auth);
       expect(find.text('auth-page'), findsOneWidget);
+
+      // It is pushed: going back returns to the welcome screen.
+      expect(router.canPop(), isTrue);
+      router.pop();
+      await _settleNavigation(tester);
+      expect(_path(router), RoutePaths.welcome);
+      expect(find.byType(WelcomeScreen), findsOneWidget);
     });
 
     testWidgets('leaving mid-story cancels the story timers', (tester) async {

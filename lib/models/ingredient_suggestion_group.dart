@@ -6,11 +6,15 @@ class MealDetail {
   final DateTime trackedAt;
   final String? imageUrl;
 
+  /// The meal's ingredient names.
+  final List<String> ingredients;
+
   const MealDetail({
     required this.id,
     required this.title,
     required this.trackedAt,
     this.imageUrl,
+    this.ingredients = const [],
   });
 }
 

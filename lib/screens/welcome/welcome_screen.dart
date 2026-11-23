@@ -250,7 +250,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
               AppConstants.gap12,
               TextButton(
                 key: WelcomeScreen.signInButtonKey,
-                onPressed: () => context.go(RoutePaths.auth),
+                // Pushed, so the sign-in can go back here.
+                onPressed: () => context.push(RoutePaths.auth),
                 child: const Text('Ich habe schon ein Konto'),
               ),
               AppConstants.gap16,

@@ -22,6 +22,7 @@ class AuthScreen extends ConsumerStatefulWidget {
   static const passwordFieldKey = Key('auth_password_field');
   static const submitLoginButtonKey = Key('auth_submit_button');
   static const errorMessageKey = Key('auth_error_message');
+  static const backButtonKey = Key('auth_back_button');
 
   @override
   ConsumerState<AuthScreen> createState() => _AuthScreenState();
@@ -119,6 +120,22 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
     }
   }
 
+  /// Back to the welcome screen: to the one below when it pushed this
+  /// screen (as it was left), otherwise a fresh one.
+  void _toWelcome() {
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go(RoutePaths.welcome);
+    }
+  }
+
+  void _showLogin() => setState(() {
+    _error = null;
+    _resetSent = false;
+    _view = _AuthView.login;
+  });
+
   String _mapResetPasswordError(Object e) {
     if (e is AuthApiException && e.code == 'over_email_send_rate_limit') {
       return 'Zu viele Anfragen. Bitte warte einen Moment und versuche es erneut.';
@@ -137,7 +154,19 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const SizedBox(height: 48),
+                // „Passwort vergessen?" goes back to the sign-in, the
+                // sign-in to the welcome screen.
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: IconButton(
+                    key: AuthScreen.backButtonKey,
+                    icon: const Icon(Icons.arrow_back),
+                    tooltip: 'Zurück',
+                    onPressed: _view == _AuthView.forgotPassword
+                        ? _showLogin
+                        : _toWelcome,
+                  ),
+                ),
                 Text(
                   _view == _AuthView.forgotPassword
                       ? 'Passwort vergessen?'
@@ -269,17 +298,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
                 // Toggle or back
                 TextButton(
-                  onPressed: () {
-                    if (_view == _AuthView.forgotPassword) {
-                      setState(() {
-                        _error = null;
-                        _resetSent = false;
-                        _view = _AuthView.login;
-                      });
-                    } else {
-                      context.go(RoutePaths.registration);
-                    }
-                  },
+                  // „Registrieren" starts where every sign-up starts: on the
+                  // welcome screen with the Buddy.
+                  onPressed: _view == _AuthView.forgotPassword
+                      ? _showLogin
+                      : _toWelcome,
                   child: Text(
                     _view == _AuthView.forgotPassword
                         ? 'Zurück zur Anmeldung'
