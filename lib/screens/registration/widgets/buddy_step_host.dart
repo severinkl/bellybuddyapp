@@ -2,9 +2,9 @@ import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 
-import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../widgets/buddy/buddy.dart';
+import '../../../widgets/buddy/buddy_side_header.dart';
 
 /// How the Buddy makes room while the keyboard is open.
 enum BuddyKeyboardStage {
@@ -59,10 +59,7 @@ class BuddyStepHost extends StatelessWidget {
 
   /// The Buddy's size in the header; null when he is hidden.
   Size? get _buddySize {
-    if (!keyboardOpen) {
-      const width = AppConstants.buddyWizardBuddyWidth;
-      return const Size(width, width / kBuddyStageAspect);
-    }
+    if (!keyboardOpen) return BuddySideHeader.defaultBuddySize;
     return switch (keyboardStage) {
       BuddyKeyboardStage.compact => const Size(
         AppConstants.buddyWizardCompactSize * kBuddyStageAspect,
@@ -82,45 +79,12 @@ class BuddyStepHost extends StatelessWidget {
 
   Widget _header(Size? buddy, double height) {
     if (buddy == null) return const SizedBox(width: double.infinity);
-    // The bubble starts so its tail meets his face.
-    final face = BuddyLayout(buddy).toLocal(kBuddyFaceCenter).dy;
-    final bubbleTop = math.max(0.0, face - AppConstants.buddyBubbleSideTailTop);
-    return SizedBox(
+    return BuddySideHeader(
       key: headerKey,
+      controller: controller,
+      name: name,
+      buddySize: buddy,
       height: height,
-      child: Padding(
-        padding: const EdgeInsets.only(
-          left: AppConstants.spacingSm,
-          right: AppConstants.spacingMd,
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox.fromSize(
-              size: buddy,
-              child: AnimatedBuddy(controller: controller, name: name),
-            ),
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.only(top: bubbleTop),
-                child: LayoutBuilder(
-                  // A taller bubble (large text scale) is scaled down to fit.
-                  builder: (context, constraints) => FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.topLeft,
-                    child: BuddySpeechBubble(
-                      controller: controller,
-                      maxWidth: constraints.maxWidth,
-                      tail: const BuddyBubbleTail.left(),
-                      fontSize: AppTheme.fontSizeSubtitleLG,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
     );
   }
 
