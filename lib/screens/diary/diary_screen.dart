@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
+import '../../providers/buddy_provider.dart';
 import '../../providers/diary_provider.dart';
 import '../../services/haptic_service.dart';
 import '../../utils/date_format_utils.dart';
@@ -25,8 +26,12 @@ class DiaryScreen extends ConsumerStatefulWidget {
 class _DiaryScreenState extends ConsumerState<DiaryScreen> {
   static final DateTime _firstDate = DateTime(2020, 1, 1);
   late final PageController _controller;
-  late final DateTime _today;
-  late final int _pageCount;
+  late final AppLifecycleListener _lifecycle;
+
+  /// Today by the app's clock, and the pages up to it. The shell keeps the
+  /// tab across midnight, so both move on with the clock ([_syncToday]).
+  late DateTime _today;
+  late int _pageCount;
 
   // DST-safe calendar math: Duration(days: n) is n*86400s, which drifts by
   // ±1h across DST boundaries. Over a multi-year span this rounds to the
@@ -41,32 +46,52 @@ class _DiaryScreenState extends ConsumerState<DiaryScreen> {
   @override
   void initState() {
     super.initState();
-    _today = startOfDay(DateTime.now());
-    _pageCount = _indexFor(_today) + 1;
+    _syncToday();
     _controller = PageController(
       initialPage: _indexFor(ref.read(diaryDateProvider)),
     );
+    // Back in the app after midnight: the new today gets its page.
+    _lifecycle = AppLifecycleListener(onResume: () => setState(_syncToday));
   }
 
   @override
   void dispose() {
+    _lifecycle.dispose();
     _controller.dispose();
     super.dispose();
   }
 
+  /// Sets [_today] (and the pages with it) to today by the app's clock.
+  void _syncToday() {
+    _today = startOfDay(ref.read(buddyClockProvider)());
+    _pageCount = _indexFor(_today) + 1;
+  }
+
+  void _animateTo(DateTime date) => animatePageControllerTo(
+    _controller,
+    _indexFor(date),
+    duration: AppConstants.animNormal,
+  );
+
   @override
   Widget build(BuildContext context) {
     final date = ref.watch(diaryDateProvider);
+    // Any rebuild after midnight (a new day set, the resume) adds its page.
+    _syncToday();
     final currentIndex = _indexFor(date);
     final isToday = isSameDay(date, _today);
     final isFirstDay = currentIndex <= 0;
 
     ref.listen<DateTime>(diaryDateProvider, (_, next) {
-      animatePageControllerTo(
-        _controller,
-        _indexFor(next),
-        duration: AppConstants.animNormal,
-      );
+      if (_indexFor(next) < _pageCount) {
+        _animateTo(next);
+        return;
+      }
+      // Past the last page: a new today (midnight passed while the tab was
+      // kept). The rebuild this change starts adds its page; go there then.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _animateTo(ref.read(diaryDateProvider));
+      });
     });
 
     return Scaffold(

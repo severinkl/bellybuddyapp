@@ -19,7 +19,7 @@ final buddyTodayProvider = Provider<DateTime Function()>((_) => DateTime.now);
 
 /// The app's clock for what „now" means on screen (the dashboard hero's
 /// mood and day, event age, the day the dashboard loads, the plus sheet's
-/// time and suggestion). Follows the Buddy's clock ([buddyTodayProvider])
+/// time and suggestion, the Tagebuch's today). Follows the Buddy's clock ([buddyTodayProvider])
 /// unless overridden; tests pin it.
 final buddyClockProvider = Provider<DateTime Function()>(
   (ref) => ref.watch(buddyTodayProvider),
