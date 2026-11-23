@@ -198,6 +198,10 @@ class EntryQueryService {
     }
   }
 
+  /// Every row of [table] for [userId] with `tracked_at` since [sinceIso]
+  /// (and before [untilIso]), page by page. The pages follow a total order
+  /// (`tracked_at`, then the unique `id`), so rows sharing a `tracked_at`
+  /// across a page boundary are neither repeated nor skipped.
   Future<List<Map<String, dynamic>>> _fetchPaged(
     String table,
     String columns,
@@ -216,6 +220,7 @@ class EntryQueryService {
       if (untilIso != null) query = query.lt('tracked_at', untilIso);
       final page = await query
           .order('tracked_at', ascending: false)
+          .order('id', ascending: false)
           .range(from, from + trackedAtPageSize - 1);
       all.addAll(page.cast<Map<String, dynamic>>());
       if (page.length < trackedAtPageSize) return all;

@@ -100,12 +100,24 @@ List<MockPostgrestFilterBuilder> _setupAllTables(
 }
 
 /// Transform builder whose `range` returns successive pages and records the
-/// requested ranges.
+/// requested ranges, and the orders added after the first one.
 class _PagedTransform extends MockPostgrestTransformBuilder {
   _PagedTransform(this._pages);
 
   final List<List<Map<String, dynamic>>> _pages;
   final ranges = <(int, int)>[];
+  final orders = <(String, {bool ascending})>[];
+
+  @override
+  PostgrestTransformBuilder<PostgrestList> order(
+    String column, {
+    bool ascending = false,
+    bool nullsFirst = false,
+    String? referencedTable,
+  }) {
+    orders.add((column, ascending: ascending));
+    return this;
+  }
 
   @override
   PostgrestTransformBuilder<PostgrestList> range(
@@ -391,6 +403,44 @@ void main() {
       expect(meals!.ranges, [(0, 999), (1000, 1999)]);
     });
 
+    test(
+      'pages in a total order: by tracked_at, then by the unique id',
+      () async {
+        final filters = <String, SettlableFilterBuilder>{};
+        final paged = <String, _PagedTransform>{};
+        for (final t in [
+          'meal_entries',
+          'toilet_entries',
+          'gut_feeling_entries',
+          'drink_entries',
+        ]) {
+          final qb = MockSupabaseQueryBuilder();
+          final f = SettlableFilterBuilder(
+            Future.value(<Map<String, dynamic>>[]),
+          );
+          final p = _PagedTransform([<Map<String, dynamic>>[]]);
+          when(() => client.from(t)).thenAnswer((_) => qb);
+          when(() => qb.select(any())).thenAnswer((_) => f);
+          when(() => f.eq(any(), any())).thenAnswer((_) => f);
+          when(() => f.gte(any(), any())).thenAnswer((_) => f);
+          when(
+            () => f.order(any(), ascending: any(named: 'ascending')),
+          ).thenAnswer((_) => p);
+          filters[t] = f;
+          paged[t] = p;
+        }
+
+        await service.fetchTrackedAtSince(userId: testUserId, since: since);
+
+        for (final t in filters.keys) {
+          verify(
+            () => filters[t]!.order('tracked_at', ascending: false),
+          ).called(1);
+          expect(paged[t]!.orders, [('id', ascending: false)], reason: t);
+        }
+      },
+    );
+
     test('with tables, queries only those tables', () async {
       final qb = MockSupabaseQueryBuilder();
       final f = SettlableFilterBuilder(Future.value(<Map<String, dynamic>>[]));
@@ -552,6 +602,23 @@ void main() {
       expect(result.activityInstants, hasLength(4 * 1003));
       for (final t in tables) {
         expect(paged[t]!.ranges, [(0, 999), (1000, 1999)]);
+      }
+    });
+
+    test('pages every table by tracked_at, then by the unique id', () async {
+      final (_, filters, paged) = mockTables({});
+
+      await service.fetchInsightSource(
+        userId: testUserId,
+        since: since,
+        mealsSince: mealsSince,
+      );
+
+      for (final t in tables) {
+        verify(
+          () => filters[t]!.order('tracked_at', ascending: false),
+        ).called(1);
+        expect(paged[t]!.orders, [('id', ascending: false)], reason: t);
       }
     });
 
