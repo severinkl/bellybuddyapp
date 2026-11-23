@@ -40,9 +40,15 @@ class InsightsNotifier extends AsyncNotifier<Insights> {
     activityInstants: [],
   );
 
-  /// Counts computations outside build; only the latest one applies its
-  /// result.
+  /// Counts computations outside build, in the order they start.
   int _seq = 0;
+
+  /// The [_seq] of the last computation outside build that applied its
+  /// result: a result applies only if its computation started after that
+  /// one, so an older one never overwrites a newer one, and when the newest
+  /// fails, an older one that succeeds (with a write the state lacks) still
+  /// applies.
+  int _appliedSeq = 0;
 
   /// The ref of the build whose [_refetch] runs; another write or new day
   /// for it meanwhile only marks [_again].
@@ -80,8 +86,8 @@ class InsightsNotifier extends AsyncNotifier<Insights> {
   /// Computes the insights again. While a load runs (the first one, or the
   /// one after a user change), waits for it instead. Never throws: on
   /// failure the last insights stay (an error without them stays an
-  /// error). A result applies only if no newer computation started
-  /// meanwhile and the user is still the same.
+  /// error). A result applies only if no newer computation has applied
+  /// one meanwhile and the user is still the same.
   Future<void> refresh() async {
     if (state.isLoading) {
       await _loadDone();
@@ -132,9 +138,10 @@ class InsightsNotifier extends AsyncNotifier<Insights> {
     final seq = ++_seq;
     try {
       final insights = await _compute(userId);
-      if (seq == _seq &&
+      if (seq > _appliedSeq &&
           opRef.mounted &&
           opRef.read(currentUserIdProvider) == userId) {
+        _appliedSeq = seq;
         state = AsyncData(insights);
       }
     } catch (e, st) {

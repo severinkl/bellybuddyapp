@@ -561,6 +561,36 @@ void main() {
       },
     );
 
+    test('when the newest fetch fails, an older one that succeeds still '
+        'applies (a write is never lost)', () async {
+      final c = makeContainer();
+      c.listen(insightsProvider, (_, _) {});
+      final loaded = await c.read(insightsProvider.future);
+      entryRepo.holdInsightSource = true;
+      final afterDelete = insightSourceFor(
+        activeDays: 2,
+        gutFeelings: 0,
+        now: now,
+      );
+
+      // A delete: its fetch is slow.
+      await c.read(entriesProvider.notifier).deleteByType('gutFeeling', 'g1');
+      await settle();
+      // A refresh meanwhile: its fetch fails fast.
+      final refresh = notifier(c).refresh();
+      await settle();
+      expect(entryRepo.heldInsightSources, hasLength(2));
+      entryRepo.heldInsightSources[1].completeError(Exception('offline'));
+      await refresh;
+      expect(c.read(insightsProvider).value, loaded);
+
+      entryRepo.heldInsightSources[0].complete(afterDelete);
+      await settle();
+
+      expect(c.read(insightsProvider).value, computeInsights(afterDelete, now));
+      expect(c.read(insightsProvider).value!.progress.gutFeelingEntries, 0);
+    });
+
     test('a failed refresh keeps the last value and never throws', () async {
       final c = makeContainer();
       final loaded = await c.read(insightsProvider.future);
