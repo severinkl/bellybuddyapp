@@ -33,7 +33,7 @@ Future<int?> showStreakSheet(
 
 /// Opens „Dein Streak" ([showStreakSheet]) and saves the goal chosen there
 /// ([saveStreakGoal]), unless the sheet was dismissed or [context] is gone
-/// by then.
+/// by then. A failing save shows a SnackBar.
 Future<void> openStreakSheetAndSaveGoal(
   BuildContext context,
   WidgetRef ref, {
@@ -42,16 +42,22 @@ Future<void> openStreakSheetAndSaveGoal(
 }) async {
   final goal = await showStreakSheet(context, status: status, today: today);
   if (goal == null || !context.mounted) return;
-  await saveStreakGoal(ref, goal);
+  final saved = await saveStreakGoal(ref, goal);
+  if (saved || !context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text('Das Ziel konnte nicht gespeichert werden.')),
+  );
 }
 
 /// Sets the Buddy's streak goal to [goal]. Never throws: a failing save is
-/// logged.
-Future<void> saveStreakGoal(WidgetRef ref, int goal) async {
+/// logged and reported as false.
+Future<bool> saveStreakGoal(WidgetRef ref, int goal) async {
   try {
     await ref.read(buddyProvider.notifier).setStreakGoal(goal);
+    return true;
   } catch (e, st) {
     _log.error('Saving the new streak goal failed', e, st);
+    return false;
   }
 }
 
