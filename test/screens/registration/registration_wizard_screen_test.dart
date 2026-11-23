@@ -8,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:belly_buddy/config/buddy_reactions.dart';
 import 'package:belly_buddy/config/constants.dart';
+import 'package:belly_buddy/config/symptom_options.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/buddy/buddy_onboarding_screen.dart';
@@ -670,7 +671,7 @@ void main() {
       await _tapNext(tester); // height & weight
       await tapVisible(find.text('Vegan'));
       await _tapNext(tester);
-      await tapVisible(find.text(kRegistrationSymptoms.last));
+      await tapVisible(find.text(kRegistrationSymptomOptions.last.label));
       await _tapNext(tester);
       await tapVisible(find.text('Gluten'));
 
@@ -737,7 +738,7 @@ void main() {
       await _tapNext(tester);
       expect(_lines('step:symptoms'), contains(buddy.bubble));
 
-      await tester.tap(find.text(kRegistrationSymptoms.first));
+      await tester.tap(find.text(kRegistrationSymptomOptions.first.label));
       await tester.pumpAndSettle();
       await _tapNext(tester);
       expect(_lines('step:intolerances'), contains(buddy.bubble));
@@ -830,7 +831,7 @@ void main() {
       await _pumpWizard(tester);
       await _walkTo(tester, SymptomsStep.symptomsTitleKey);
       final question = _line('step:symptoms').lines.single;
-      const symptom = 'Nervige Verstopfung';
+      const symptom = 'Verstopfung';
 
       await tester.tap(find.text(symptom));
       await tester.pumpAndSettle();
@@ -880,17 +881,17 @@ void main() {
       await _walkTo(tester, SymptomsStep.symptomsTitleKey);
       final buddy = _buddy(tester);
 
-      await tester.tap(find.text('Nervige Verstopfung'));
+      await tester.tap(find.text('Verstopfung'));
       await tester.pumpAndSettle();
-      expect(_lines('symptom:Nervige Verstopfung'), contains(buddy.bubble));
+      expect(_lines('symptom:Verstopfung'), contains(buddy.bubble));
 
-      await tester.tap(find.text('Unangenehme Blähungen'));
+      await tester.tap(find.text('Blähungen'));
       await tester.pumpAndSettle();
-      expect(_lines('symptom:Unangenehme Blähungen'), contains(buddy.bubble));
+      expect(_lines('symptom:Blähungen'), contains(buddy.bubble));
       expect(buddy.mood, BuddyMood.empathetic);
 
       final id = buddy.bubbleId;
-      await tester.tap(find.text('Nervige Verstopfung'));
+      await tester.tap(find.text('Verstopfung'));
       await tester.pumpAndSettle();
       expect(buddy.bubbleId, id);
     });

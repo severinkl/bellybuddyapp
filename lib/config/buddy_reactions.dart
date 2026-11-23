@@ -123,35 +123,35 @@ const Map<String, BuddyLine> kWizardReactions = {
       'Pflanzenpower, ich bin dabei!',
     ],
   ),
-  'symptom:Belastender Durchfall': BuddyLine(
+  'symptom:Durchfall': BuddyLine(
     mood: BuddyMood.empathetic,
     lines: [
       'Oh je, das ist wirklich belastend.',
       'Das tut mir leid. Gut, dass du es mir sagst.',
     ],
   ),
-  'symptom:Nervige Verstopfung': BuddyLine(
+  'symptom:Verstopfung': BuddyLine(
     mood: BuddyMood.empathetic,
     lines: [
       'Puh, das nervt wirklich. Ich bin bei dir.',
       'Echt lästig! Da schauen wir gemeinsam genauer hin.',
     ],
   ),
-  'symptom:Unangenehme Blähungen': BuddyLine(
+  'symptom:Blähungen': BuddyLine(
     mood: BuddyMood.empathetic,
     lines: [
       'Oh, das kenn ich nur zu gut!',
       'Blähungen sind echt fies, ich weiß.',
     ],
   ),
-  'symptom:Übermäßiges Völlegefühl': BuddyLine(
+  'symptom:Völlegefühl': BuddyLine(
     mood: BuddyMood.empathetic,
     lines: [
       'Oje, so ein Völlegefühl ist wirklich unangenehm.',
       'Das drückt ganz schön, oder? Ich versteh dich.',
     ],
   ),
-  'symptom:Hartnäckiger Blähbauch ohne Pupsen': BuddyLine(
+  'symptom:Blähbauch': BuddyLine(
     mood: BuddyMood.empathetic,
     lines: [
       'Ein praller Bauch, der nicht nachgibt – ich fühl mit dir!',

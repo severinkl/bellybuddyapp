@@ -75,6 +75,84 @@ void main() {
     });
   });
 
+  group('SettingsProfileScreen symptoms and intolerances', () {
+    late _RecordingProfileRepository repo;
+
+    Future<void> pump(WidgetTester tester, Map<String, dynamic> row) async {
+      // As stored on the server: the sign-up wrote its own labels.
+      repo = _RecordingProfileRepository()
+        ..seedProfile(
+          UserProfile.fromJson({
+            'user_id': 'test-user',
+            'birth_year': 1990,
+            'gender': 'weiblich',
+            'height': 168,
+            'weight': 64,
+            'diet': 'alles',
+            ...row,
+          }),
+        );
+      await tester.pumpWithProviders(
+        const SettingsProfileScreen(),
+        overrides: [
+          profileRepositoryProvider.overrideWithValue(repo),
+          currentUserIdProvider.overrideWithValue('test-user'),
+        ],
+      );
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('symptoms picked at sign-up show as selected', (tester) async {
+      await pump(tester, {
+        'symptoms': ['Nervige Verstopfung', 'Übermäßiges Völlegefühl'],
+      });
+
+      expect(_chip(tester, 'Verstopfung').selected, isTrue);
+      expect(_chip(tester, 'Völlegefühl').selected, isTrue);
+      expect(_chip(tester, 'Durchfall').selected, isFalse);
+      expect(find.text('Nervige Verstopfung'), findsNothing);
+    });
+
+    testWidgets('toggling a symptom writes canonical values only', (
+      tester,
+    ) async {
+      await pump(tester, {
+        'symptoms': ['Nervige Verstopfung', 'Blähungen'],
+      });
+
+      await tester.ensureVisible(find.text('Durchfall'));
+      await tester.tap(find.text('Durchfall'));
+      await tester.pumpAndSettle();
+
+      expect(repo.updates.last.symptoms, [
+        'Verstopfung',
+        'Blähungen',
+        'Durchfall',
+      ]);
+      expect(repo.updates.last.toJson()['symptoms'], [
+        'Verstopfung',
+        'Blähungen',
+        'Durchfall',
+      ]);
+    });
+
+    testWidgets('an intolerance no longer on the list still shows, selected, '
+        'so it can be taken off', (tester) async {
+      await pump(tester, {
+        'intolerances': ['Laktose', 'Erdnuss'],
+      });
+
+      expect(_chip(tester, 'Laktose').selected, isTrue);
+      expect(_chip(tester, 'Erdnuss').selected, isTrue);
+
+      await tester.ensureVisible(find.text('Erdnuss'));
+      await tester.tap(find.text('Erdnuss'));
+      await tester.pumpAndSettle();
+
+      expect(repo.updates.last.intolerances, ['Laktose']);
+    });
+  });
+
   group('SettingsProfileScreen body data', () {
     late _RecordingProfileRepository repo;
 
@@ -215,6 +293,12 @@ void main() {
     });
   });
 }
+
+/// The chip labelled [label] in the profile.
+FilterChip _chip(WidgetTester tester, String label) =>
+    tester.widget<FilterChip>(
+      find.ancestor(of: find.text(label), matching: find.byType(FilterChip)),
+    );
 
 class _RecordingProfileRepository extends FakeProfileRepository {
   final updates = <UserProfile>[];

@@ -2,7 +2,7 @@ import 'dart:math';
 
 import 'package:belly_buddy/config/buddy_reactions.dart';
 import 'package:belly_buddy/config/constants.dart';
-import 'package:belly_buddy/screens/registration/steps/symptoms_step.dart';
+import 'package:belly_buddy/config/symptom_options.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -17,7 +17,7 @@ void main() {
     'emailCapture:intro',
     for (final g in ['weiblich', 'männlich', 'andere']) 'gender:$g',
     for (final d in ['alles', 'vegetarisch', 'vegan']) 'diet:$d',
-    for (final s in kRegistrationSymptoms) 'symptom:$s',
+    for (final s in kRegistrationSymptomOptions) 'symptom:${s.value}',
     'symptom:none',
     for (final i in AppConstants.intoleranceOptions) 'intolerance:$i',
     'intolerance:none',

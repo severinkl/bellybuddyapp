@@ -10,25 +10,32 @@ class BbChipSelector extends StatelessWidget {
   /// How the chips line up in each row.
   final WrapAlignment alignment;
 
+  /// The label shown for an option value (the value itself by default).
+  final String Function(String value)? labelOf;
+
   const BbChipSelector({
     super.key,
     required this.options,
     required this.selected,
     required this.onChanged,
     this.alignment = WrapAlignment.center,
+    this.labelOf,
   });
 
   @override
   Widget build(BuildContext context) {
+    // A selected value no longer on the list (an older answer) still shows,
+    // so it can be seen and taken off.
+    final shown = [...options, ...selected.where((s) => !options.contains(s))];
     return Wrap(
       alignment: alignment,
       spacing: 8,
       runSpacing: 8,
-      children: options.map((option) {
+      children: shown.map((option) {
         final isSelected = selected.contains(option);
         const chipColor = AppTheme.chipDefault;
         return FilterChip(
-          label: Text(option),
+          label: Text(labelOf?.call(option) ?? option),
           selected: isSelected,
           showCheckmark: false,
           onSelected: (value) {

@@ -2,16 +2,8 @@ import 'package:material_ui/material_ui.dart';
 import '../../../config/app_theme.dart';
 import '../../../widgets/common/bb_selection_button.dart';
 import '../../../config/constants.dart';
+import '../../../config/symptom_options.dart';
 import '../widgets/step_field_label.dart';
-
-/// Symptom labels offered during registration.
-const List<String> kRegistrationSymptoms = [
-  'Belastender Durchfall',
-  'Nervige Verstopfung',
-  'Unangenehme Blähungen',
-  'Übermäßiges Völlegefühl',
-  'Hartnäckiger Blähbauch ohne Pupsen',
-];
 
 class SymptomsStep extends StatelessWidget {
   final List<String> selected;
@@ -37,17 +29,17 @@ class SymptomsStep extends StatelessWidget {
             helper: 'Mehrfachauswahl möglich.',
           ),
           AppConstants.gap16,
-          ...kRegistrationSymptoms.map((option) {
-            final isSelected = selected.contains(option);
+          ...kRegistrationSymptomOptions.map((option) {
+            final isSelected = selected.contains(option.value);
             return BbSelectionButton(
-              label: option,
+              label: option.label,
               isSelected: isSelected,
               onPressed: () {
                 final newSelected = List<String>.from(selected);
                 if (isSelected) {
-                  newSelected.remove(option);
+                  newSelected.remove(option.value);
                 } else {
-                  newSelected.add(option);
+                  newSelected.add(option.value);
                 }
                 onChanged(newSelected);
               },

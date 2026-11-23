@@ -348,17 +348,7 @@ class AppConstants {
     'Weizen',
   ];
 
-  // Symptom options (used in registration + settings)
-  static const List<String> symptomOptions = [
-    'Blähungen',
-    'Bauchschmerzen',
-    'Durchfall',
-    'Verstopfung',
-    'Übelkeit',
-    'Sodbrennen',
-    'Krämpfe',
-    'Völlegefühl',
-  ];
+  // Symptom options: kSymptomOptions in symptom_options.dart.
 
   // Drink sizes
   static const List<int> drinkSizes = [250, 330, 500, 1000];

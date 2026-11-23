@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../utils/logger.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
+import '../../../config/symptom_options.dart';
 import '../../../models/user_profile.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../utils/intolerance_helpers.dart';
@@ -302,7 +303,8 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                   icon: Icons.monitor_heart_outlined,
                   title: 'Symptome',
                   child: BbChipSelector(
-                    options: AppConstants.symptomOptions,
+                    options: [for (final s in kSymptomOptions) s.value],
+                    labelOf: symptomLabel,
                     selected: profile.symptoms,
                     onChanged: (v) =>
                         _saveImmediately(profile.copyWith(symptoms: v)),
