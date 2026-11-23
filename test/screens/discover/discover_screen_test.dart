@@ -14,6 +14,7 @@ import 'package:belly_buddy/models/recommendation_item.dart';
 import 'package:belly_buddy/models/replacement_ingredient.dart';
 import 'package:belly_buddy/models/user_recipe.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
+import 'package:belly_buddy/providers/ingredient_suggestion_provider.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/repositories/recommendation_repository.dart';
@@ -268,6 +269,38 @@ void main() {
     expect(
       find.text('page:${RoutePaths.ingredientSuggestions}'),
       findsOneWidget,
+    );
+  });
+
+  testWidgets('„n neu" goes once the Alternativen are marked seen, while '
+      'Entdecken stays open underneath', (tester) async {
+    when(() => ingredients.markAllSeen(any())).thenAnswer((_) async {});
+    await pump(
+      tester,
+      groups: [
+        _group('Bohnen', isNew: true, lastMeal: DateTime(2026, 11, 18)),
+        _group('Zwiebel', isNew: true, lastMeal: DateTime(2026, 11, 20)),
+      ],
+    );
+    expect(
+      inSection(DiscoverScreen.alternativesKey, find.text('2 neu')),
+      findsOneWidget,
+    );
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(DiscoverScreen)),
+    );
+    await container
+        .read(ingredientSuggestionProvider.notifier)
+        .markAllNewAsSeen();
+    await tester.pump();
+
+    expect(
+      inSection(
+        DiscoverScreen.alternativesKey,
+        find.textContaining(RegExp(r'^\d+ neu$')),
+      ),
+      findsNothing,
     );
   });
 

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/ingredient_suggestion_provider.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
@@ -133,45 +134,79 @@ void main() {
     });
   });
 
-  group('IngredientSuggestionNotifier.newCount', () {
-    test('returns count of isNew groups', () async {
-      final groups = [
-        testSuggestionGroup(isNew: true),
-        testSuggestionGroup(
-          ingredientId: 'ing-2',
-          ingredientName: 'Knoblauch',
-          isNew: true,
-          suggestionIds: ['sug-2'],
-        ),
-        testSuggestionGroup(
-          ingredientId: 'ing-3',
-          ingredientName: 'Paprika',
-          isNew: false,
-          suggestionIds: ['sug-3'],
-        ),
-      ];
+  group('newIngredientSuggestionCountProvider', () {
+    List<IngredientSuggestionGroup> threeGroupsTwoNew() => [
+      testSuggestionGroup(isNew: true),
+      testSuggestionGroup(
+        ingredientId: 'ing-2',
+        ingredientName: 'Knoblauch',
+        isNew: true,
+        suggestionIds: ['sug-2'],
+      ),
+      testSuggestionGroup(
+        ingredientId: 'ing-3',
+        ingredientName: 'Paprika',
+        isNew: false,
+        suggestionIds: ['sug-3'],
+      ),
+    ];
+
+    test('counts the new groups', () async {
       when(
         () => mockRepo.fetchSuggestionGroups(any()),
-      ).thenAnswer((_) async => groups);
+      ).thenAnswer((_) async => threeGroupsTwoNew());
 
       final container = makeContainer();
       await container
           .read(ingredientSuggestionProvider.notifier)
           .fetchSuggestions();
 
-      expect(
-        container.read(ingredientSuggestionProvider.notifier).newCount,
-        equals(2),
-      );
+      expect(container.read(newIngredientSuggestionCountProvider), 2);
     });
 
-    test('returns 0 when state is loading', () {
+    test('is 0 while loading', () {
       final container = makeContainer();
       // No fetchSuggestions called — state stays AsyncLoading
-      expect(
-        container.read(ingredientSuggestionProvider.notifier).newCount,
-        equals(0),
+      expect(container.read(newIngredientSuggestionCountProvider), 0);
+    });
+
+    test('drops to 0 for its listeners once they are marked seen, while the '
+        'groups stay new', () async {
+      when(
+        () => mockRepo.fetchSuggestionGroups(any()),
+      ).thenAnswer((_) async => threeGroupsTwoNew());
+      when(() => mockRepo.markAllSeen(any())).thenAnswer((_) async {});
+
+      final container = makeContainer();
+      final counts = <int>[];
+      container.listen(
+        newIngredientSuggestionCountProvider,
+        (_, next) => counts.add(next),
+        fireImmediately: true,
       );
+      final notifier = container.read(ingredientSuggestionProvider.notifier);
+      await notifier.fetchSuggestions();
+      await container.pump();
+      await notifier.markAllNewAsSeen();
+      await container.pump();
+
+      expect(counts, [0, 2, 0]);
+      final groups = container.read(ingredientSuggestionProvider).value!;
+      expect(groups.where((g) => g.isNew), hasLength(2));
+    });
+
+    test('a failed mark keeps the count', () async {
+      when(
+        () => mockRepo.fetchSuggestionGroups(any()),
+      ).thenAnswer((_) async => threeGroupsTwoNew());
+      when(() => mockRepo.markAllSeen(any())).thenThrow(Exception('offline'));
+
+      final container = makeContainer();
+      final notifier = container.read(ingredientSuggestionProvider.notifier);
+      await notifier.fetchSuggestions();
+      await notifier.markAllNewAsSeen();
+
+      expect(container.read(newIngredientSuggestionCountProvider), 2);
     });
   });
 }

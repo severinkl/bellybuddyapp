@@ -61,13 +61,6 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     ]);
   }
 
-  /// Pushes [path]; back here, rebuilds, since the Alternativen screen marks
-  /// its suggestions seen without a state change („n neu" reads it).
-  Future<void> _open(String path) async {
-    await context.push(path);
-    if (mounted) setState(() {});
-  }
-
   Future<void> _openBlog() => openExternalUrl(
     context,
     AppConstants.blogUrl,
@@ -80,7 +73,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     final tips = ref.watch(recommendationProvider);
     final unseenTips = ref.watch(unseenRecommendationCountProvider).value ?? 0;
     final groups = ref.watch(ingredientSuggestionProvider);
-    final newGroups = ref.read(ingredientSuggestionProvider.notifier).newCount;
+    final newGroups = ref.watch(newIngredientSuggestionCountProvider);
     final recipes = ref.watch(userRecipesProvider);
 
     return Scaffold(
@@ -108,21 +101,22 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                       child: DiscoverTipsCard(
                         tips: tips,
                         unseen: unseenTips > 0,
-                        onTap: () => _open(RoutePaths.recommendations),
+                        onTap: () => context.push(RoutePaths.recommendations),
                       ),
                     ),
                     AppConstants.gap24,
                     DiscoverAlternativesSection(
                       groups: groups,
                       newCount: newGroups,
-                      onOpen: () => _open(RoutePaths.ingredientSuggestions),
+                      onOpen: () =>
+                          context.push(RoutePaths.ingredientSuggestions),
                     ),
                     AppConstants.gap24,
                     DiscoverRecipesSection(
                       recipes: recipes,
-                      onOpenAll: () => _open(RoutePaths.recipes),
+                      onOpenAll: () => context.push(RoutePaths.recipes),
                       onOpen: (recipe) =>
-                          _open(RoutePaths.recipeDetailFor(recipe.id)),
+                          context.push(RoutePaths.recipeDetailFor(recipe.id)),
                     ),
                     AppConstants.gap24,
                     DiscoverSection(
