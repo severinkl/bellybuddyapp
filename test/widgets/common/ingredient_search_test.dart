@@ -143,6 +143,22 @@ void main() {
     expect(find.byKey(IngredientSearch.addTypedKey), findsOneWidget);
   });
 
+  testWidgets('Return without an exact match says how to add the name; '
+      'typing on clears the hint', (tester) async {
+    await pump(tester);
+    await type(tester, 'Hafer');
+
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+
+    const hint = 'Tippe auf „‚Hafer‘ hinzufügen“.';
+    expect(find.text(hint), findsOneWidget);
+    expect(added, isEmpty);
+
+    await type(tester, 'Haferk');
+    expect(find.textContaining('Tippe auf'), findsNothing);
+  });
+
   testWidgets('Return on an exact catalog match adds the catalog name', (
     tester,
   ) async {

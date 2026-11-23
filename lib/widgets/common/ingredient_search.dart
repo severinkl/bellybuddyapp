@@ -9,7 +9,8 @@ import '../../models/ingredient_search_result.dart';
 /// a search field with the catalog's best matches ([suggestions], ranked by
 /// the search) below it, above the keyboard. A name that isn't in the
 /// catalog is added only explicitly, with its „Name hinzufügen" row:
-/// Return adds an exact catalog match, never the raw text.
+/// Return adds an exact catalog match, never the raw text (it points to the
+/// row instead).
 class IngredientSearch extends StatefulWidget {
   final List<String> ingredients;
   final List<IngredientSearchResult> suggestions;
@@ -51,6 +52,10 @@ class _IngredientSearchState extends State<IngredientSearch> {
   /// Return was pressed before the search answered: an exact match among
   /// its results is added then.
   bool _addExactOnResults = false;
+
+  /// Return found no exact match: a hint points to the „hinzufügen" row
+  /// until the text changes.
+  bool _showSubmitHint = false;
 
   @override
   void initState() {
@@ -116,7 +121,10 @@ class _IngredientSearchState extends State<IngredientSearch> {
   void _close() {
     _controller.clear();
     _flushSearch('');
-    setState(() => _isAdding = false);
+    setState(() {
+      _isAdding = false;
+      _showSubmitHint = false;
+    });
   }
 
   /// Return: adds the exact catalog match; anything else stays in the field
@@ -128,8 +136,9 @@ class _IngredientSearchState extends State<IngredientSearch> {
     } else if (_typed.isEmpty) {
       _close();
     } else {
-      // The results may not be in yet.
+      // The results may not be in yet: an exact match still gets added.
       _addExactOnResults = true;
+      setState(() => _showSubmitHint = true);
       _flushSearch(value);
     }
   }
@@ -225,7 +234,8 @@ class _IngredientSearchState extends State<IngredientSearch> {
                     textInputAction: TextInputAction.done,
                     onChanged: (value) {
                       _addExactOnResults = false;
-                      setState(() {}); // for the „hinzufügen" row
+                      // for the „hinzufügen" row and the Return hint
+                      setState(() => _showSubmitHint = false);
                       _onQueryChanged(value);
                       _revealSuggestions();
                     },
@@ -257,6 +267,20 @@ class _IngredientSearchState extends State<IngredientSearch> {
                 ),
             ],
           ),
+          if (showAddTyped && _showSubmitHint)
+            Padding(
+              padding: const EdgeInsets.only(top: AppConstants.spacingXs),
+              child: Semantics(
+                liveRegion: true,
+                child: Text(
+                  'Tippe auf „‚$typed‘ hinzufügen“.',
+                  style: const TextStyle(
+                    fontSize: AppTheme.fontSizeCaptionLG,
+                    color: AppTheme.mutedForeground,
+                  ),
+                ),
+              ),
+            ),
           if (_isAdding &&
               (filteredSuggestions.isNotEmpty || showAddTyped)) ...[
             Container(
