@@ -120,13 +120,26 @@ class _Bubble extends StatefulWidget {
 }
 
 class _BubbleState extends State<_Bubble> with SingleTickerProviderStateMixin {
-  late final Characters _characters = widget.text.characters;
+  /// Where each character (grapheme) of the text ends, as a string index,
+  /// so the typed part is a plain substring.
+  late final List<int> _ends = _characterEnds(widget.text);
 
   late final AnimationController _typing = AnimationController(
     vsync: this,
-    duration: _typeDuration(_characters.length),
+    duration: _typeDuration(_ends.length),
     value: widget.typewriter ? 0 : 1,
   );
+
+  /// How many characters are typed; the text rebuilds only when it changes,
+  /// not on every frame of [_typing].
+  late final ValueNotifier<int> _shown = ValueNotifier(_typedCount);
+
+  int get _typedCount => (_ends.length * _typing.value).round();
+
+  static List<int> _characterEnds(String text) {
+    var end = 0;
+    return [for (final c in text.characters) end += c.length];
+  }
 
   static Duration _typeDuration(int length) {
     final total = AppConstants.buddyBubbleCharDelay * math.max(length, 1);
@@ -138,6 +151,7 @@ class _BubbleState extends State<_Bubble> with SingleTickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    _typing.addListener(() => _shown.value = _typedCount);
     if (widget.typewriter) _typing.forward();
   }
 
@@ -151,17 +165,19 @@ class _BubbleState extends State<_Bubble> with SingleTickerProviderStateMixin {
   @override
   void dispose() {
     _typing.dispose();
+    _shown.dispose();
     super.dispose();
   }
 
   void _complete() => _typing.value = 1;
 
-  /// The whole text laid out once; the part not typed yet is transparent,
-  /// so the bubble keeps its size while it types.
-  Widget _text(BuildContext context, Widget? _) {
-    final shown = (_characters.length * _typing.value).round();
-    final typed = _characters.take(shown).toString();
-    final rest = _characters.skip(shown).toString();
+  /// The whole text laid out once; the part not typed yet ([shown]
+  /// characters on) is transparent, so the bubble keeps its size while it
+  /// types.
+  Widget _text(BuildContext context, int shown, Widget? _) {
+    final cut = shown == 0 ? 0 : _ends[shown - 1];
+    final typed = widget.text.substring(0, cut);
+    final rest = widget.text.substring(cut);
     return Text.rich(
       TextSpan(
         children: [
@@ -214,7 +230,10 @@ class _BubbleState extends State<_Bubble> with SingleTickerProviderStateMixin {
                       shadow.dy +
                       AppConstants.spacing10,
                 ),
-                child: AnimatedBuilder(animation: _typing, builder: _text),
+                child: ValueListenableBuilder(
+                  valueListenable: _shown,
+                  builder: _text,
+                ),
               ),
             ),
           ),
@@ -280,6 +299,12 @@ class _BubblePainter extends CustomPainter {
 
   final BuddyBubbleTail tail;
 
+  /// The outline (and its shadow) for [_size]: typing repaints the bubble
+  /// with every new character, at the same size.
+  Size? _size;
+  late Path _path;
+  late Path _shadowPath;
+
   static final Paint _shadow = Paint()..color = AppTheme.buddyBody;
   static final Paint _fill = Paint()..color = Colors.white;
   static final Paint _outline = Paint()
@@ -290,11 +315,15 @@ class _BubblePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final path = buddyBubblePath(size, tail);
+    if (size != _size) {
+      _size = size;
+      _path = buddyBubblePath(size, tail);
+      _shadowPath = _path.shift(AppConstants.buddyBubbleShadowOffset);
+    }
     canvas
-      ..drawPath(path.shift(AppConstants.buddyBubbleShadowOffset), _shadow)
-      ..drawPath(path, _fill)
-      ..drawPath(path, _outline);
+      ..drawPath(_shadowPath, _shadow)
+      ..drawPath(_path, _fill)
+      ..drawPath(_path, _outline);
   }
 
   @override

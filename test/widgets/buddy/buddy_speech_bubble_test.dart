@@ -107,6 +107,38 @@ void main() {
       expect(_typed(tester), line);
     });
 
+    testWidgets('types whole characters (emoji with modifiers stay whole)', (
+      tester,
+    ) async {
+      // 4 characters (graphemes): „H", „i", „👋🏽", „!".
+      const wave = 'Hi👋🏽!';
+      await _pumpBubble(tester, say: wave);
+      final seen = <String>{};
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 15));
+        seen.add(_typed(tester));
+      }
+      expect(seen, containsAll(['H', 'Hi', 'Hi👋🏽', wave]));
+      expect(seen, isNot(contains('Hi👋')));
+    });
+
+    testWidgets('the text rebuilds only when another character is typed', (
+      tester,
+    ) async {
+      await _pumpBubble(tester, say: 'Hi');
+      var builds = 0;
+      Text? last;
+      // 2 characters type in 60 ms; pump it in many short frames.
+      for (var i = 0; i < 12; i++) {
+        await tester.pump(const Duration(milliseconds: 5));
+        final text = _text(tester);
+        if (!identical(text, last)) builds++;
+        last = text;
+      }
+      expect(_typed(tester), 'Hi');
+      expect(builds, lessThanOrEqualTo(3));
+    });
+
     testWidgets('text starts aligned left', (tester) async {
       await _pumpBubble(tester, say: line);
       expect(_text(tester).textAlign, TextAlign.start);
