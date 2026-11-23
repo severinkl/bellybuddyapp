@@ -136,7 +136,11 @@ class InsightCopy {
   /// The badge of a „Fällt mir auf" item seen on only 2 hard days.
   static const uncertain = 'noch unsicher';
 
-  /// Below the page's „kein medizinischer Befund": what the classes mean.
+  /// The Muster page's footer, locked or not.
+  static const footer =
+      'ⓘ Beobachtung aus deinen Einträgen, kein medizinischer Befund.';
+
+  /// Below the [footer], once unlocked: what the classes mean.
   static const dayDefinitions =
       'Schwerer Tag = Bauchgefühl „Schlecht"; guter Tag = „Gut" oder '
       '„Sehr gut".';

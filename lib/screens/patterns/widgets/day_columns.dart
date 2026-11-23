@@ -60,8 +60,8 @@ class _ColumnCard extends StatelessWidget {
                       : Icons.sentiment_satisfied_alt,
                   size: AppConstants.iconSizeSm,
                   color: hard
-                      ? AppTheme.gutFeelingBad
-                      : AppTheme.gutFeelingGood,
+                      ? AppTheme.gutFeelingBadIcon
+                      : AppTheme.gutFeelingGoodIcon,
                 ),
               ),
               Expanded(

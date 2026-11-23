@@ -48,10 +48,15 @@ class AppTheme {
   static const Color gutFeelingBad = Color(0xFFD93636);
 
   // Muster calendar: a day's cell, a light tint of its class's colour
-  // above (its icon draws in that colour on it)
+  // above, and the class's icon (in the cells, the legend and the day
+  // cards): darker shades with at least 3:1 on the tint, the page and the
+  // card (WCAG 1.4.11; schwer's colour already has it)
   static const Color gutFeelingGoodSoft = Color(0xFFE5F5E5);
   static const Color gutFeelingNeutralSoft = Color(0xFFFCF4D6);
   static const Color gutFeelingBadSoft = Color(0xFFF9E1E1);
+  static const Color gutFeelingGoodIcon = Color(0xFF2E8B2E);
+  static const Color gutFeelingNeutralIcon = Color(0xFF9A7A00);
+  static const Color gutFeelingBadIcon = gutFeelingBad;
 
   // Buddy mascot colors
   static const Color buddyOutline = Color(0xFF0D0D0F);

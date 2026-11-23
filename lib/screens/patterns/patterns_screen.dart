@@ -22,8 +22,6 @@ class PatternsScreen extends ConsumerWidget {
   static const title = 'Muster';
   static const errorText = 'Muster konnten nicht geladen werden.';
   static const retryLabel = 'Nochmal versuchen';
-  static const footer =
-      'ⓘ Beobachtung aus deinen Einträgen, kein medizinischer Befund.';
 
   static const _footerStyle = TextStyle(
     fontSize: AppTheme.fontSizeCaptionLG,
@@ -61,7 +59,7 @@ class PatternsScreen extends ConsumerWidget {
                 else
                   PatternsLocked(progress: insights.progress),
                 AppConstants.gap24,
-                const Text(footer, style: _footerStyle),
+                const Text(InsightCopy.footer, style: _footerStyle),
                 if (insights.unlocked) ...[
                   AppConstants.gap4,
                   const Text(InsightCopy.dayDefinitions, style: _footerStyle),

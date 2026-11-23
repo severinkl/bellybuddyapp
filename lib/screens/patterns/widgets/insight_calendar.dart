@@ -69,17 +69,17 @@ class InsightCalendar extends StatelessWidget {
 ({IconData icon, Color color, Color fill})? _look(DayClass c) => switch (c) {
   DayClass.good => (
     icon: Icons.sentiment_satisfied_alt,
-    color: AppTheme.gutFeelingGood,
+    color: AppTheme.gutFeelingGoodIcon,
     fill: AppTheme.gutFeelingGoodSoft,
   ),
   DayClass.medium => (
     icon: Icons.sentiment_neutral,
-    color: AppTheme.gutFeelingNeutral,
+    color: AppTheme.gutFeelingNeutralIcon,
     fill: AppTheme.gutFeelingNeutralSoft,
   ),
   DayClass.hard => (
     icon: Icons.sentiment_dissatisfied,
-    color: AppTheme.gutFeelingBad,
+    color: AppTheme.gutFeelingBadIcon,
     fill: AppTheme.gutFeelingBadSoft,
   ),
   DayClass.none => null,

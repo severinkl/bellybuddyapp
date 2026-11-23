@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/models/insight_progress.dart';
 import 'package:belly_buddy/models/insights.dart';
 import 'package:belly_buddy/providers/insights_provider.dart';
@@ -147,18 +148,28 @@ void main() {
         of: find.bySemanticsLabel(label),
         matching: find.byIcon(icon),
       );
-      expect(
-        iconIn('18. Nov: schwer', Icons.sentiment_dissatisfied),
-        findsOneWidget,
-      );
-      expect(
-        iconIn('26. Okt: gut', Icons.sentiment_satisfied_alt),
-        findsOneWidget,
-      );
-      expect(
-        iconIn('27. Okt: mittel', Icons.sentiment_neutral),
-        findsOneWidget,
-      );
+      // Each in its class's icon colour, which keeps 3:1 (see
+      // app_theme_contrast_test).
+      for (final (label, icon, color) in [
+        (
+          '18. Nov: schwer',
+          Icons.sentiment_dissatisfied,
+          AppTheme.gutFeelingBadIcon,
+        ),
+        (
+          '26. Okt: gut',
+          Icons.sentiment_satisfied_alt,
+          AppTheme.gutFeelingGoodIcon,
+        ),
+        (
+          '27. Okt: mittel',
+          Icons.sentiment_neutral,
+          AppTheme.gutFeelingNeutralIcon,
+        ),
+      ]) {
+        expect(iconIn(label, icon), findsOneWidget);
+        expect(tester.widget<Icon>(iconIn(label, icon)).color, color);
+      }
       final none = find.bySemanticsLabel('1. Nov: kein Eintrag');
       expect(none, findsOneWidget);
       expect(
