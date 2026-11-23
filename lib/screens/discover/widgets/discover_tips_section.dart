@@ -33,33 +33,18 @@ class DiscoverTipsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final list = tips.value;
-    final optIn = weeklyTips == false;
     const optInCard = BbCard(key: optInKey, child: WeeklyTipsSwitch());
-    if (list == null) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          DiscoverNote.pending(tips, 'Tipps', key: DiscoverTipsCard.cardKey),
-          if (optIn) ...[AppConstants.gap12, optInCard],
-        ],
-      );
-    }
-    if (list.isEmpty) {
-      return switch (weeklyTips) {
-        false => optInCard,
-        true => const DiscoverNote(key: DiscoverTipsCard.cardKey, emptyWhileOn),
-        null => const DiscoverNote(
-          key: DiscoverTipsCard.cardKey,
-          'Noch keine Tipps.',
-        ),
-      };
+    final weeklyTips = this.weeklyTips;
+    if (weeklyTips != null && (tips.value?.isEmpty ?? false)) {
+      return weeklyTips
+          ? const DiscoverNote(key: DiscoverTipsCard.cardKey, emptyWhileOn)
+          : optInCard;
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         DiscoverTipsCard(tips: tips, onTap: onOpen),
-        if (optIn) ...[AppConstants.gap12, optInCard],
+        if (weeklyTips == false) ...[AppConstants.gap12, optInCard],
       ],
     );
   }
