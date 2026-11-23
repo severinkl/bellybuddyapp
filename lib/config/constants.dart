@@ -160,11 +160,13 @@ class AppConstants {
   // left (this wide; his height follows) and his bubble on the right; with
   // the keyboard open a compact header (the Buddy this tall). Below it a
   // step keeps at least the min height (on shorter screens the host
-  // scrolls instead).
+  // scrolls instead). The min height leaves a 393×852 phone with the
+  // keyboard open a fixed header: a field scrolled into view never pushes
+  // the Buddy's bubble off the top.
   static const double buddyWizardBuddyWidth = 124.0;
   static const double buddyWizardCompactSize = 72.0;
   static const double buddyWizardCompactHeaderHeight = 100.0;
-  static const double buddyWizardMinStepHeight = 280.0;
+  static const double buddyWizardMinStepHeight = 220.0;
 
   // Padding of a wizard step below the header
   static const wizardStepPadding = EdgeInsets.fromLTRB(

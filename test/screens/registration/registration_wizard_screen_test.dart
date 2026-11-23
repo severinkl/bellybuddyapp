@@ -1066,6 +1066,81 @@ void main() {
       });
     });
 
+    testWidgets('on a 393×852 phone with the keyboard open the header stays '
+        'put, no field slips under it, and „Registrieren" shows in full', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(393, 852)
+        ..devicePixelRatio = 1
+        ..padding = const FakeViewPadding(top: 59, bottom: 34)
+        ..viewPadding = const FakeViewPadding(top: 59, bottom: 34);
+      addTearDown(tester.view.reset);
+      await tester.pumpWithProviders(
+        const RegistrationWizardScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pumpAndSettle();
+
+      await _withTestFontRows(() async {
+        await advanceToAuthStep(tester);
+        final email = find.byKey(AuthStep.emailFieldKey);
+        final password = find.byKey(BbPasswordField.passwordFieldKey);
+        final submit = find.byKey(AuthStep.submitButtonKey);
+        final header = find.byKey(BuddyStepHost.headerKey);
+        Rect stepViewport() => tester.getRect(
+          find.ancestor(of: email, matching: find.byType(Scrollable)).first,
+        );
+        double hostScroll() => tester
+            .state<ScrollableState>(
+              find
+                  .ancestor(of: header, matching: find.byType(Scrollable))
+                  .first,
+            )
+            .position
+            .pixels;
+        void expectInStep(Finder f, String what) {
+          final rect = tester.getRect(f);
+          final viewport = stepViewport();
+          expect(rect.top, greaterThanOrEqualTo(viewport.top), reason: what);
+          expect(rect.bottom, lessThanOrEqualTo(viewport.bottom), reason: what);
+          expect(rect.bottom, lessThanOrEqualTo(852 - 336), reason: what);
+        }
+
+        // A typo in the address, then the password with the keyboard open.
+        // (The keyboard covers the bottom safe area: no padding there.)
+        await tester.showKeyboard(email);
+        tester.view.padding = const FakeViewPadding(top: 59);
+        await _openKeyboard(tester, 336);
+        await tester.enterText(email, 'abc');
+        await tester.showKeyboard(password);
+        await tester.enterText(password, 'TestPassword123');
+        await tester.pumpAndSettle();
+        await tester.tap(submit);
+        await tester.pumpAndSettle();
+        expect(find.text('Ungültige E-Mail'), findsOneWidget);
+
+        expect(hostScroll(), 0, reason: 'the header scrolled away');
+        expect(
+          stepViewport().top,
+          greaterThanOrEqualTo(tester.getRect(header).bottom),
+        );
+        expectInStep(email, 'E-Mail');
+        expectInStep(find.text('Ungültige E-Mail'), 'the error');
+        expectInStep(submit, 'Registrieren');
+
+        // The address fixed: still all in view.
+        await tester.showKeyboard(email);
+        await tester.enterText(email, 'abc@example.com');
+        await tester.pumpAndSettle();
+        expect(hostScroll(), 0, reason: 'the header scrolled away');
+        expectInStep(email, 'E-Mail');
+        expectInStep(password, 'Passwort');
+        expectInStep(submit, 'Registrieren');
+        expect(submit.hitTestable(), findsOneWidget);
+      });
+    });
+
     testWidgets('on a small phone „Registrieren" stays above the keyboard '
         'while the password is typed', (tester) async {
       _phone(tester, const Size(375, 667));
