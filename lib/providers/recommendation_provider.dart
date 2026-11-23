@@ -1,9 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recommendation.dart';
-import '../providers/core_providers.dart';
 import '../repositories/recommendation_repository.dart';
-import '../utils/async_value_utils.dart';
 import '../utils/logger.dart';
+import 'auth_provider.dart';
 
 class RecommendationNotifier
     extends Notifier<AsyncValue<List<Recommendation>>> {
@@ -20,8 +19,9 @@ class RecommendationNotifier
     return const AsyncValue.loading();
   }
 
-  /// Loads the sets. A failed reload keeps the loaded ones (with the
-  /// error), so an offline resume blanks neither Entdecken nor Home.
+  /// Loads the sets. A failed reload keeps the loaded ones as they are (it
+  /// is only logged), so an offline resume blanks neither the open Tipps
+  /// nor Entdecken nor Home; only a first load shows the error.
   Future<void> fetchRecommendations() async {
     // Only flip to loading when we have no cached data. On re-entry / refresh
     // we keep the previous list visible so the PageView doesn't dismount —
@@ -40,17 +40,14 @@ class RecommendationNotifier
       final sets = await ref
           .read(recommendationRepositoryProvider)
           .fetchByUserId(userId);
-      if (_isCurrentUser(userId)) state = AsyncValue.data(_keepSeen(sets));
+      if (ref.isCurrentUser(userId)) state = AsyncValue.data(_keepSeen(sets));
     } catch (e, st) {
       _log.error('fetchRecommendations failed', e, st);
-      if (_isCurrentUser(userId)) state = errorKeepingValue(e, st, state);
+      if (ref.isCurrentUser(userId) && !state.hasValue) {
+        state = AsyncValue.error(e, st);
+      }
     }
   }
-
-  /// Whether [userId] is still the signed-in user after an await; what was
-  /// fetched for the previous one is dropped.
-  bool _isCurrentUser(String userId) =>
-      ref.mounted && ref.read(currentUserIdProvider) == userId;
 
   /// [sets] with the stamps [markAllAsSeen] gave them.
   List<Recommendation> _keepSeen(List<Recommendation> sets) => [
@@ -63,15 +60,10 @@ class RecommendationNotifier
 
   /// Marks every set seen: the loaded ones at once, so „Neu" and whatever
   /// follows [unseenTipSetProvider] go as the Tipps open, then the server's.
-  /// Sets kept after a failed fetch are not stamped here: the Tipps show the
-  /// error then, not them.
   Future<void> markAllAsSeen() async {
     final userId = ref.read(currentUserIdProvider);
     if (userId == null) return;
-    final sets = switch (state) {
-      AsyncData(:final value) => value,
-      _ => const <Recommendation>[],
-    };
+    final sets = state.value ?? const <Recommendation>[];
     if (sets.any((s) => s.seenAt == null)) {
       final now = DateTime.now().toUtc();
       for (final set in sets) {
@@ -164,9 +156,9 @@ final recommendationProvider =
     );
 
 /// The newest loaded tip set while it is unseen: Home's „Neue Tipps" row,
-/// the Entdecken dot and the Buddy's announcement. Null while loading or
-/// failed (with nothing loaded), empty or seen; an older unseen set behind
-/// a seen newest one is not new. A failed reload keeps the answer.
+/// the Entdecken dot and the Buddy's announcement. Null while loading,
+/// failed, empty or seen; an older unseen set behind a seen newest one is
+/// not new.
 final unseenTipSetProvider = Provider<Recommendation?>((ref) {
   final newest = ref.watch(recommendationProvider).value?.firstOrNull;
   return newest != null && newest.seenAt == null ? newest : null;

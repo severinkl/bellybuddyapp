@@ -149,8 +149,8 @@ void main() {
       expect(container.read(unseenTipSetProvider)?.id, 'newer');
     });
 
-    test('after a failed fetch (the Tipps show the error) nothing is stamped '
-        'here; the server is still asked', () async {
+    test('after a failed reload the kept sets are stamped (the Tipps still '
+        'show them)', () async {
       var fetches = 0;
       when(() => mockRepo.fetchByUserId(any())).thenAnswer(
         (_) => ++fetches == 1
@@ -166,7 +166,7 @@ void main() {
       await notifier.markAllAsSeen();
 
       verify(() => mockRepo.markAllAsSeen(testUserId)).called(1);
-      expect(container.read(unseenTipSetProvider)?.id, 'new');
+      expect(container.read(unseenTipSetProvider), isNull);
     });
 
     test('a rebuild (sign-out) forgets the stamps', () async {
@@ -253,8 +253,9 @@ void main() {
           .read(recommendationProvider.notifier)
           .fetchRecommendations();
 
+      // Still the loaded data, not an error: the open Tipps keep their set.
       final state = container.read(recommendationProvider);
-      expect(state.hasError, isTrue);
+      expect(state, isA<AsyncData<List<Recommendation>>>());
       expect(state.value, sets);
       expect(container.read(unseenTipSetProvider)?.id, 'new');
     });

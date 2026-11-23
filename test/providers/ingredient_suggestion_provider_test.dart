@@ -116,8 +116,10 @@ void main() {
 
         await notifier.fetchSuggestions();
 
+        // Still the loaded data, not an error: the open Alternativen keep
+        // their groups.
         final state = container.read(ingredientSuggestionProvider);
-        expect(state.hasError, isTrue);
+        expect(state, isA<AsyncData<List<IngredientSuggestionGroup>>>());
         expect(state.value, same(groups));
         expect(container.read(newIngredientSuggestionCountProvider), 1);
       },

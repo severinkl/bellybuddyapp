@@ -93,6 +93,47 @@ void main() {
       expect(find.text('Erneut versuchen'), findsOneWidget);
     });
 
+    testWidgets('a failed reload (offline resume) keeps the open set: title '
+        'and page', (tester) async {
+      final recs = [
+        _rec('2', createdAt: DateTime(2026, 4, 22)),
+        _rec('1', createdAt: DateTime(2026, 4, 20)),
+      ];
+      final mock = MockRecommendationRepository();
+      when(() => mock.fetchByUserId(any())).thenAnswer((_) async => recs);
+      when(() => mock.markAllAsSeen(any())).thenAnswer((_) async {});
+      await tester.pumpWithProviders(
+        const RecommendationsScreen(),
+        overrides: [
+          recommendationRepositoryProvider.overrideWithValue(mock),
+          currentUserIdProvider.overrideWithValue('test-user'),
+        ],
+      );
+      await tester.pumpAndSettle();
+      final title = find.descendant(
+        of: find.byType(AppBar),
+        matching: find.text(formatDateWeekdayShort(recs[0].createdAt!)),
+      );
+      expect(title, findsOneWidget);
+
+      // The resume refresh reloads them, offline.
+      when(
+        () => mock.fetchByUserId(any()),
+      ).thenAnswer((_) async => throw Exception('offline'));
+      await ProviderScope.containerOf(
+        tester.element(find.byType(RecommendationsScreen)),
+      ).read(recommendationProvider.notifier).fetchRecommendations();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Fehler beim Laden der Tipps.'), findsNothing);
+      expect(find.byType(PageView), findsOneWidget);
+      expect(title, findsOneWidget);
+      final prevBtn = tester.widget<IconButton>(
+        find.byKey(RecommendationsScreen.previousRecommendationKey),
+      );
+      expect(prevBtn.onPressed, isNotNull);
+    });
+
     testWidgets('empty state shows mascot + "Noch keine Tipps"', (
       tester,
     ) async {

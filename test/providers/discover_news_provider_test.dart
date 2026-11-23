@@ -141,15 +141,44 @@ void main() {
     );
   });
 
-  test('two refreshes at once fetch once', () async {
+  test('calls while a refresh runs make exactly one more after it, and '
+      'wait for it', () async {
     final c = makeContainer();
     await settle();
-    expect(tips.fetchCount, 1);
 
+    // Every load from here on waits until the test lets it finish.
+    final loads = <Completer<List<IngredientSuggestionGroup>>>[];
+    when(() => alternatives.fetchSuggestionGroups(any())).thenAnswer((_) {
+      final load = Completer<List<IngredientSuggestionGroup>>();
+      loads.add(load);
+      return load.future;
+    });
     final news = c.read(discoverNewsProvider.notifier);
-    await Future.wait([news.refresh(), news.refresh()]);
+    var done = 0;
+    // One starts; a push and a resume arrive while it runs.
+    for (var i = 0; i < 3; i++) {
+      unawaited(news.refresh().then((_) => done++));
+    }
+    await settle();
+    expect(loads, hasLength(1));
 
-    expect(tips.fetchCount, 2);
-    verify(() => alternatives.fetchSuggestionGroups(testUserId)).called(2);
+    loads.single.complete([testSuggestionGroup()]);
+    await settle();
+    expect(loads, hasLength(2));
+    expect(done, 0);
+
+    loads.last.complete([testSuggestionGroup()]);
+    await settle();
+    expect(loads, hasLength(2));
+    expect(done, 3);
+  });
+
+  test('a refresh at sign-in is the sign-in load, not one more', () async {
+    final c = makeContainer();
+    unawaited(c.read(discoverNewsProvider.notifier).refresh());
+    await settle();
+
+    expect(tips.fetchCount, 1);
+    verify(() => alternatives.fetchSuggestionGroups(testUserId)).called(1);
   });
 }

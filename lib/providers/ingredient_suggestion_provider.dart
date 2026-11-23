@@ -1,9 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/ingredient_suggestion_group.dart';
-import '../providers/core_providers.dart';
 import '../repositories/ingredient_repository.dart';
-import '../utils/async_value_utils.dart';
 import '../utils/logger.dart';
+import 'auth_provider.dart';
 
 class IngredientSuggestionNotifier
     extends Notifier<AsyncValue<List<IngredientSuggestionGroup>>> {
@@ -21,8 +20,9 @@ class IngredientSuggestionNotifier
   }
 
   /// Loads the groups; while some are loaded, they stay until the new ones
-  /// are in, and when the reload fails (with the error), so an offline
-  /// resume does not blank Entdecken.
+  /// are in. A failed reload keeps them as they are (it is only logged), so
+  /// an offline resume blanks neither the open Alternativen nor Entdecken;
+  /// only a first load shows the error.
   Future<void> fetchSuggestions() async {
     if (!state.hasValue) state = const AsyncValue.loading();
     final userId = ref.read(currentUserIdProvider);
@@ -33,17 +33,14 @@ class IngredientSuggestionNotifier
     try {
       final repo = ref.read(ingredientRepositoryProvider);
       final groups = await repo.fetchSuggestionGroups(userId);
-      if (_isCurrentUser(userId)) state = AsyncValue.data(groups);
+      if (ref.isCurrentUser(userId)) state = AsyncValue.data(groups);
     } catch (e, st) {
       _log.error('fetchSuggestions failed', e, st);
-      if (_isCurrentUser(userId)) state = errorKeepingValue(e, st, state);
+      if (ref.isCurrentUser(userId) && !state.hasValue) {
+        state = AsyncValue.error(e, st);
+      }
     }
   }
-
-  /// Whether [userId] is still the signed-in user after an await; what was
-  /// fetched for the previous one is dropped.
-  bool _isCurrentUser(String userId) =>
-      ref.mounted && ref.read(currentUserIdProvider) == userId;
 
   /// Marks the new groups seen in the backend. The list keeps their
   /// `isNew` (the Alternativen screen still shows „Neu" while open), but
@@ -91,10 +88,9 @@ final ingredientSuggestionProvider =
     >(IngredientSuggestionNotifier.new);
 
 /// How many suggestion groups are new, for Entdecken's „n neu": 0 while
-/// loading or failed (with nothing loaded); a failed reload keeps the
-/// count. A group [IngredientSuggestionNotifier.markAllNewAsSeen] marked
-/// seen counts no more, even if a fetch from before the mark still has it
-/// new; one with a suggestion added since counts again.
+/// loading or failed. A group [IngredientSuggestionNotifier.markAllNewAsSeen]
+/// marked seen counts no more, even if a fetch from before the mark still
+/// has it new; one with a suggestion added since counts again.
 final newIngredientSuggestionCountProvider = Provider<int>((ref) {
   final groups = ref.watch(ingredientSuggestionProvider).value ?? const [];
   final seen = ref.read(ingredientSuggestionProvider.notifier)._seenIds;
