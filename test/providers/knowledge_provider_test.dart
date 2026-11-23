@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:belly_buddy/models/knowledge_article.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/knowledge_provider.dart';
@@ -97,6 +99,59 @@ void main() {
     final value = c.read(knowledgeFeedProvider).value!;
     expect(value.offline, isTrue);
     expect(value.articles, testKnowledgeArticles());
+  });
+
+  test('a pull while the first load still fetches: the pull\'s answer '
+      'stays, not the first load\'s failure', () async {
+    final hold = Completer<void>();
+    final repo = FakeKnowledgeRepository()
+      ..fetchError = Exception('down')
+      ..fetchHold = hold;
+    final c = container(repo);
+    c.listen(knowledgeFeedProvider, (_, _) {});
+    await pumpEventQueue();
+    expect(repo.fetchCount, 1);
+
+    repo
+      ..fetchError = null
+      ..fetchHold = null;
+    final pulling = c.read(knowledgeFeedProvider.notifier).refresh();
+    await pumpEventQueue();
+    hold.complete();
+    await pulling;
+    await pumpEventQueue();
+
+    final state = c.read(knowledgeFeedProvider);
+    expect(state.hasError, isFalse);
+    expect(state.value!.articles, testKnowledgeArticles());
+    expect(state.value!.offline, isFalse);
+  });
+
+  test('a pull while the first load still fetches: the pull\'s answer '
+      'stays, not the first load\'s older one', () async {
+    final hold = Completer<void>();
+    final repo = FakeKnowledgeRepository(
+      articles: testKnowledgeArticles().sublist(1),
+    )..fetchHold = hold;
+    final c = container(repo);
+    c.listen(knowledgeFeedProvider, (_, _) {});
+    await pumpEventQueue();
+
+    // By the pull, the blog has a newer article.
+    repo
+      ..articles = testKnowledgeArticles()
+      ..fetchHold = null;
+    final pulling = c.read(knowledgeFeedProvider.notifier).refresh();
+    await pumpEventQueue();
+    hold.complete();
+    await pulling;
+    await pumpEventQueue();
+
+    expect(
+      c.read(knowledgeFeedProvider).value!.articles,
+      testKnowledgeArticles(),
+    );
+    expect(repo.fetchCount, 2);
   });
 
   test('refreshIfStale during the first load fetches nothing more', () async {

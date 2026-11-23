@@ -818,11 +818,16 @@ class FakeKnowledgeRepository implements KnowledgeRepository {
   FakeKnowledgeRepository({List<KnowledgeArticle>? articles, this.cache})
     : articles = articles ?? testKnowledgeArticles();
 
-  final List<KnowledgeArticle> articles;
+  /// What [fetchArticles] answers (as they were when the call began).
+  List<KnowledgeArticle> articles;
 
-  /// Thrown by [fetchArticles] when set.
+  /// Thrown by [fetchArticles] when set (as it was when the call began).
   Object? fetchError;
   int fetchCount = 0;
+
+  /// While set and not completed, [fetchArticles] waits for it (a slow
+  /// feed); a call keeps the hold it began with.
+  Completer<void>? fetchHold;
 
   /// The in-memory cache.
   KnowledgeFeed? cache;
@@ -833,9 +838,10 @@ class FakeKnowledgeRepository implements KnowledgeRepository {
   @override
   Future<List<KnowledgeArticle>> fetchArticles() async {
     fetchCount++;
-    final error = fetchError;
+    final (error, result) = (fetchError, articles);
+    if (fetchHold case final hold?) await hold.future;
     if (error != null) throw error;
-    return articles;
+    return result;
   }
 
   @override

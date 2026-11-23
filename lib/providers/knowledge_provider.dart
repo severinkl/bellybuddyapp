@@ -47,8 +47,17 @@ class KnowledgeFeedNotifier extends AsyncNotifier<KnowledgeFeed> {
   }
 
   /// Fetches now. A failure keeps the current articles, marked offline.
-  /// Never throws.
+  /// Never throws. While [build] runs, fetches after it, so its answer
+  /// (older, or a failure) can't land over this one.
   Future<void> refresh() async {
+    if (state.isLoading) {
+      try {
+        await future;
+      } on Object catch (_) {
+        // Logged by build; this fetch decides.
+      }
+      if (!ref.mounted) return;
+    }
     final KnowledgeFeed feed;
     try {
       feed = await _fetch(_now());
