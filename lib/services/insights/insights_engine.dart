@@ -269,6 +269,22 @@ List<Noticed> _noticed(
 bool _reaches(int count, int of, InsightShare share) =>
     count * share.denominator >= of * share.numerator;
 
-/// The higher of [a] and [b] first, then by key (the name without case).
+/// The higher of [a] and [b] first, then by key (the name without case) in
+/// German order ([_germanOrder]).
 int _higherFirstThenName(int a, int b, String keyA, String keyB) =>
-    a != b ? b - a : keyA.compareTo(keyB);
+    a != b ? b - a : _germanOrder(keyA, keyB);
+
+/// Lower-case keys in German dictionary order (DIN 5007-1): ä, ö, ü as a,
+/// o, u and ß as ss, so „Äpfel" sorts with the A's, not after „Zwiebel".
+/// Keys equal that way (e.g. „masse", „maße") fall back to their code
+/// units, so the order stays total and the same whatever the input order.
+int _germanOrder(String keyA, String keyB) {
+  final folded = _foldUmlauts(keyA).compareTo(_foldUmlauts(keyB));
+  return folded != 0 ? folded : keyA.compareTo(keyB);
+}
+
+String _foldUmlauts(String key) => key
+    .replaceAll('ä', 'a')
+    .replaceAll('ö', 'o')
+    .replaceAll('ü', 'u')
+    .replaceAll('ß', 'ss');

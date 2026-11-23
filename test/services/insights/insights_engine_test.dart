@@ -597,6 +597,18 @@ void main() {
       ]);
     });
 
+    test('ties sort by name in German order', () {
+      final insights = fromDays(
+        hard: spread(3, {'Zwiebel': 3, 'Äpfel': 3, 'Öl': 3, 'Brot': 3}),
+      );
+      expect(insights.noticed.map((n) => n.name), [
+        'Äpfel',
+        'Brot',
+        'Öl',
+        'Zwiebel',
+      ]);
+    });
+
     test('top 5 shown, then top 3 uncertain', () {
       final insights = fromDays(
         hard: spread(4, {
@@ -667,6 +679,52 @@ void main() {
         IngredientCount('Birne', 3, of: 6),
         IngredientCount('Dill', 3, of: 6),
       ]);
+    });
+
+    test('ties sort by name in German order: Ä with A, ahead of Z', () {
+      // By code unit, „Äpfel" sorts after „Zwiebel" and falls out of the
+      // top 5.
+      final insights = fromDays(
+        good: spread(3, {
+          'Zwiebel': 3,
+          'Feige': 3,
+          'Ei': 3,
+          'Dill': 3,
+          'Birne': 3,
+          'Äpfel': 3,
+        }),
+      );
+      expect(insights.goodDays.often.map((i) => i.name), [
+        'Äpfel',
+        'Birne',
+        'Dill',
+        'Ei',
+        'Feige',
+      ]);
+    });
+
+    test('a name with an umlaut sorts next to its plain spelling, the same '
+        'way every time', () {
+      final names = [
+        'Muesli',
+        'Möhre',
+        'Mohn',
+        'Mus',
+        'Müsli',
+        'Maße',
+        'Masse',
+      ];
+      for (final order in [names, names.reversed.toList()]) {
+        final insights = fromDays(
+          good: spread(3, {for (final n in order) n: 3}),
+        );
+        expect(
+          insights.goodDays.often.map((i) => i.name),
+          // ß as ss; on equal folds („Masse"/„Maße") the plain one first.
+          ['Masse', 'Maße', 'Mohn', 'Möhre', 'Muesli'],
+          reason: 'input order $order',
+        );
+      }
     });
 
     test('the hard column counts hard days', () {
