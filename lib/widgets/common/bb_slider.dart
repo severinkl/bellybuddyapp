@@ -41,27 +41,37 @@ class BbSlider extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        SliderTheme(
-          data: SliderThemeData(
-            activeTrackColor: _getTrackColor(),
-            inactiveTrackColor: AppTheme.muted,
-            thumbColor: _getTrackColor(),
-            overlayColor: _getTrackColor().withValues(alpha: 0.2),
-            trackHeight: 8,
-            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 14),
-          ),
-          child: Slider(
-            value: value.toDouble(),
-            min: min.toDouble(),
-            max: max.toDouble(),
-            divisions: max - min,
-            onChanged: (v) {
-              final newValue = v.round();
-              if (newValue != value) {
-                HapticService.selection();
-                onChanged(newValue);
-              }
-            },
+        // The Slider keeps its value indicator in an OverlayPortal, always
+        // shown. In the app's overlay, that portal's semantics node stays in
+        // the tree while an ancestor hides the slider's (a fade-in at opacity
+        // 0, a page scrolled out of view); iOS drops the orphan, and once the
+        // slider lists it again the engine makes up a node with the root's
+        // id and empties the whole accessibility tree, on every screen. A
+        // local overlay keeps the portal inside the slider's own subtree.
+        Overlay.wrap(
+          clipBehavior: Clip.none,
+          child: SliderTheme(
+            data: SliderThemeData(
+              activeTrackColor: _getTrackColor(),
+              inactiveTrackColor: AppTheme.muted,
+              thumbColor: _getTrackColor(),
+              overlayColor: _getTrackColor().withValues(alpha: 0.2),
+              trackHeight: 8,
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 14),
+            ),
+            child: Slider(
+              value: value.toDouble(),
+              min: min.toDouble(),
+              max: max.toDouble(),
+              divisions: max - min,
+              onChanged: (v) {
+                final newValue = v.round();
+                if (newValue != value) {
+                  HapticService.selection();
+                  onChanged(newValue);
+                }
+              },
+            ),
           ),
         ),
         if (leftLabel != null || centerLabel != null || rightLabel != null)

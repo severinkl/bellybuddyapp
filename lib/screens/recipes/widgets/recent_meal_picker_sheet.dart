@@ -17,6 +17,8 @@ import '../../../widgets/common/bb_sheet_row.dart';
 Future<void> showRecentMealPickerSheet(BuildContext context) {
   return showModalBottomSheet(
     context: context,
+    // Above the bottom bar when opened from Entdecken.
+    useRootNavigator: true,
     useSafeArea: true,
     isScrollControlled: true,
     backgroundColor: AppTheme.card,

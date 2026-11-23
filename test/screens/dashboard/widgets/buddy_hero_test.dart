@@ -408,6 +408,31 @@ void main() {
       expect(buddy.shown, [BuddyAnnouncement.saverEarned]);
     });
 
+    testWidgets('every load reaches the ring at once: its loading step, '
+        'then the day (no minute tick needed)', (tester) async {
+      await pumpHero(tester);
+      final day = DateTime(2026, 11, 22);
+      // Two loads: Riverpod tells the hero and the care in an order that
+      // alternates, so both orders are covered.
+      for (final meals in [1, 2]) {
+        entries.push(EntriesState(isLoading: true, day: day));
+        await tester.pump();
+        entries.push(
+          EntriesState(
+            day: day,
+            meals: [
+              for (var h = 0; h < meals; h++)
+                testMealEntry(trackedAt: DateTime(2026, 11, 22, 8 + h)),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.text('🍽 $meals/3'), findsOneWidget, reason: '$meals');
+      }
+    });
+
     testWidgets('a meal logged 1 h ago → happy', (tester) async {
       entries = _FakeEntries(
         EntriesState(
@@ -574,7 +599,8 @@ void main() {
       final c = controller(tester);
       expect(c.currentAction, BuddyAction.hug);
       expect(c.bubble, _saverUsedLine);
-      expect(find.text(_saverUsedLine), findsOneWidget);
+      // Drawn with the shield glued to its word.
+      expect(find.text(glueClosingSymbol(_saverUsedLine)), findsOneWidget);
       // Still pending while it plays: lost if the app closes now.
       expect(buddy.shown, isEmpty);
       expect(container.read(buddyProvider).value!.announcements, [
@@ -792,6 +818,63 @@ void main() {
       // Lunch logged at 14:00: he asks for a drink next.
       expect(careLines(CareAction.drink), contains(c.bubble));
       await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('right after a drink, while he still wants more, he thanks '
+        'for it instead of asking for a drink', (tester) async {
+      buddy = _FakeBuddy(() => _status(streak: 5, todayCounted: true));
+      final lunch = testMealEntry(trackedAt: DateTime(2026, 11, 22, 13));
+      entries = _FakeEntries(EntriesState(meals: [lunch]));
+      final container = await pumpHero(tester);
+      await advance(tester, const Duration(seconds: 3)); // greeting gone
+
+      container
+          .read(buddyEventsProvider.notifier)
+          .emit(
+            BuddyLogEvent(
+              EntryKind.drink,
+              LogSentiment.good,
+              at: now,
+              trackedAt: now,
+            ),
+          );
+      await tester.pump();
+      entries.push(
+        EntriesState(
+          meals: [lunch],
+          drinks: [testDrinkEntry(trackedAt: now)],
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 600));
+      await tick(tester);
+
+      // One glass of six: a drink is still what he asks for next …
+      expect(find.text('💧 Trinken eintragen'), findsOneWidget);
+      // … but not now: he thanks for this one.
+      final c = controller(tester);
+      expect(careLines(CareAction.drink), isNot(contains(c.bubble)));
+      expect(
+        BuddyCopy.careAfterLog[CareAction.drink]!.map(
+          (l) => BuddyCopy.fill(l, name: 'Bubu'),
+        ),
+        contains(c.bubble),
+      );
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('tapping the Buddy again and again never repeats the line '
+        'he just said', (tester) async {
+      await pumpHero(tester);
+      final said = <String?>[controller(tester).bubble];
+      for (var i = 0; i < 12; i++) {
+        await tester.tap(find.byType(AnimatedBuddy));
+        await tick(tester);
+        said.add(controller(tester).bubble);
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+      for (var i = 1; i < said.length; i++) {
+        expect(said[i], isNot(said[i - 1]), reason: 'tap $i: ${said[i]}');
+      }
     });
 
     testWidgets('a mood change during the follow-up delay says nothing extra', (

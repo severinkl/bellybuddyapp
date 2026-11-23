@@ -185,6 +185,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         appBar: AppBar(
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
             onPressed: () => context.popOrGoDashboard(),
           ),
           title: const Text('Mahlzeit'),

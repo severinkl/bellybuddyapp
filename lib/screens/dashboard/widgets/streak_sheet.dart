@@ -25,6 +25,10 @@ Future<int?> showStreakSheet(
 }) {
   return showModalBottomSheet<int>(
     context: context,
+    // Over the whole screen, the bottom bar included: from a tab's own
+    // navigator the sheet slid under the bar, its scrim left the bar
+    // tappable and a tab switch left it open.
+    useRootNavigator: true,
     isScrollControlled: true,
     showDragHandle: false,
     builder: (_) => StreakSheet(status: status, today: today),

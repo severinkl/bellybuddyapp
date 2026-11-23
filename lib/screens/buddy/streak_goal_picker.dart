@@ -285,6 +285,8 @@ Future<int?> showStreakGoalSheet(
 }) {
   return showModalBottomSheet<int>(
     context: context,
+    // Over the bottom bar too (it opens from Home's tab).
+    useRootNavigator: true,
     isScrollControlled: true,
     showDragHandle: false,
     builder: (_) =>

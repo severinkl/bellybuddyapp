@@ -18,10 +18,14 @@ import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_keys.dar
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_step.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
+import 'package:belly_buddy/providers/buddy_welcome_provider.dart';
+import 'package:belly_buddy/config/app_theme.dart';
+import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
+import 'package:belly_buddy/services/entry_query_service.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
@@ -486,6 +490,115 @@ void main() {
     }
   });
 
+  group('DashboardScreen shows the signed-in user\'s day', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({
+        AppConstants.keyNotificationModalShown: true,
+      });
+    });
+
+    final now = DateTime(2026, 11, 23, 14);
+    EntryQueryResult lunchToday() => testEntryQueryResult(
+      meals: [testMealEntry(trackedAt: DateTime(2026, 11, 23, 12))],
+      toiletEntries: const [],
+      gutFeelings: const [],
+      drinks: const [],
+    );
+
+    /// A few frames, well under the hero's one-minute tick.
+    Future<void> settle(WidgetTester tester) async {
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+    }
+
+    testWidgets('after sign-up / onboarding: the ring shows the day as soon '
+        'as it loads', (tester) async {
+      final entryRepo = FakeEntryRepository()..seedResult(lunchToday());
+      await tester.pumpWithProviders(
+        const DashboardScreen(),
+        overrides: [
+          ..._overrides(
+            profile: testUserProfile(),
+            buddyRepo: _onboardedBuddy(),
+            entryRepo: entryRepo,
+          ),
+          buddyClockProvider.overrideWithValue(() => now),
+        ],
+      );
+      await settle(tester);
+
+      expect(find.text('🍽 1/3'), findsOneWidget);
+      expect(find.text('🍽 0/3'), findsNothing);
+    });
+
+    testWidgets('after signing out and in again: Home shows the new day '
+        'without a tab switch', (tester) async {
+      final entryRepo = FakeEntryRepository()
+        ..seedResult(
+          testEntryQueryResult(
+            meals: const [],
+            toiletEntries: const [],
+            gutFeelings: const [],
+            drinks: const [],
+          ),
+        );
+      final router = GoRouter(
+        initialLocation: RoutePaths.dashboard,
+        routes: [
+          GoRoute(
+            path: RoutePaths.dashboard,
+            builder: (_, _) => const DashboardScreen(),
+          ),
+          ...stubRoutes([RoutePaths.welcome]),
+        ],
+      );
+      addTearDown(router.dispose);
+      final container = ProviderContainer.test(
+        overrides: [
+          ..._overrides(
+            profile: testUserProfile(),
+            buddyRepo: _onboardedBuddy(),
+            entryRepo: entryRepo,
+          ),
+          buddyClockProvider.overrideWithValue(() => now),
+        ],
+      );
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: germanRouterApp(router),
+        ),
+      );
+      await settle(tester);
+      expect(find.text('🍽 0/3'), findsOneWidget);
+
+      // Twice: each round leaves the providers in another order.
+      for (final meals in [1, 2]) {
+        // Sign-out: Home goes, the app drops the user's entries.
+        router.go(RoutePaths.welcome);
+        await settle(tester);
+        container.invalidate(entriesProvider);
+        // Sign-in: the account has [meals] meals today; Home is built again.
+        entryRepo.seedResult(
+          testEntryQueryResult(
+            meals: [
+              for (var h = 0; h < meals; h++)
+                testMealEntry(trackedAt: DateTime(2026, 11, 23, 8 + h)),
+            ],
+            toiletEntries: const [],
+            gutFeelings: const [],
+            drinks: const [],
+          ),
+        );
+        router.go(RoutePaths.dashboard);
+        await settle(tester);
+
+        expect(find.text('🍽 $meals/3'), findsOneWidget, reason: '$meals');
+      }
+    });
+  });
+
   group('DashboardScreen first run', () {
     setUp(() {
       SharedPreferences.setMockInitialValues({
@@ -506,6 +619,41 @@ void main() {
 
       expect(find.text(_tourSkip), findsOneWidget);
       expect(find.text(_welcomeModalTitle), findsNothing);
+    });
+
+    testWidgets('right after the Buddy onboarding he welcomes the user '
+        'first; the tour follows once he has said it', (tester) async {
+      final container = ProviderContainer.test(
+        overrides: _overrides(
+          profile: testUserProfile(alreadySeenTutorial: false),
+          buddyRepo: _onboardedBuddy(),
+        ),
+      );
+      // As the onboarding's last step does before it opens Home.
+      container
+          .read(buddyWelcomeProvider.notifier)
+          .set(BuddyWelcomeNotifier.line);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: AppTheme.theme,
+            home: const DashboardScreen(),
+          ),
+        ),
+      );
+      await _settleFirstRun(tester);
+
+      BuddyController buddy() =>
+          tester.widget<AnimatedBuddy>(find.byType(AnimatedBuddy)).controller;
+      expect(buddy().bubble, BuddyWelcomeNotifier.line);
+      expect(find.text(_tourSkip), findsNothing);
+
+      // His line has had its time: now the tour.
+      for (var i = 0; i < 40; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(find.text(_tourSkip), findsOneWidget);
     });
 
     testWidgets('the opt-in dialog asks while push is off', (tester) async {

@@ -5,6 +5,7 @@ import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/providers/buddy_onboarding_gate_provider.dart';
+import 'package:belly_buddy/providers/buddy_welcome_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/providers/upgrade_gate_provider.dart';
 import 'package:belly_buddy/router/app_router.dart';
@@ -422,8 +423,8 @@ void main() {
       expect(find.byType(UpgradeRequiredScreen), findsOneWidget);
     });
 
-    testWidgets('a first-run user gets the spotlight tour right after the '
-        'onboarding, without the old welcome modal', (tester) async {
+    testWidgets('a first-run user is welcomed by the Buddy, then gets the '
+        'spotlight tour, without the old welcome modal', (tester) async {
       final container = await _pumpHost(
         tester,
         profiles: _profilesWith(
@@ -443,6 +444,19 @@ void main() {
       await _pickGoal(tester, '7 Tage');
 
       expect(_currentPath(container), RoutePaths.dashboard);
+      // His welcome first, uncovered …
+      expect(
+        tester
+            .widget<AnimatedBuddy>(find.byType(AnimatedBuddy))
+            .controller
+            .bubble,
+        BuddyWelcomeNotifier.line,
+      );
+      expect(find.text(_tourSkip), findsNothing);
+      // … then the tour.
+      for (var i = 0; i < 50; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
       expect(find.text(_tourSkip), findsOneWidget);
       expect(find.text(_welcomeModalTitle), findsNothing);
     });

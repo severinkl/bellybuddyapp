@@ -265,11 +265,11 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
                   const SizedBox(height: AppConstants.spacingXxl),
                   FadeTransition(
                     opacity: _textOpacityAnimation,
-                    child: Text(
+                    child: const Text(
                       'Tippen zum Fortfahren',
                       style: TextStyle(
                         fontSize: AppTheme.fontSizeBody,
-                        color: textColor.withValues(alpha: 0.6),
+                        color: AppTheme.primaryForegroundMuted,
                       ),
                     ),
                   ),

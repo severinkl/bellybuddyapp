@@ -124,6 +124,13 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
     BuddyOnboardingStep.streakMoment,
   };
 
+  /// The steps without content below the Buddy (his line is the step; the
+  /// buttons answer it): he fills the height between the dots and them.
+  static const _bareSteps = {
+    BuddyOnboardingStep.intro,
+    BuddyOnboardingStep.firstMeal,
+  };
+
   /// The stage never takes more than this share of the height (small
   /// screens, open keyboard), so the step content keeps room; the bigger
   /// stage of [_heroSteps] at most [_maxHeroStageShare].
@@ -549,24 +556,41 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
             name: name,
             buddySize: BuddySideHeader.defaultBuddySize,
           ),
-        ] else
+        ] else if (_bareSteps.contains(step))
+          // Nothing below him: he takes the free height (up to a point),
+          // centred in it, instead of leaving it empty above the buttons.
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) => Center(
+                child: SizedBox(
+                  height: math.min(
+                    constraints.maxHeight,
+                    AppConstants.buddyOnboardingHeroStageMaxHeight,
+                  ),
+                  child: BuddyStage(controller: _buddy, name: name),
+                ),
+              ),
+            ),
+          )
+        else
           SizedBox(
             height: _stageHeight(step, height),
             child: BuddyStage(controller: _buddy, name: name),
           ),
-        Expanded(
-          child: SingleChildScrollView(
-            controller: _scroll,
-            padding: AppConstants.wizardStepPadding,
-            child: AnimatedSwitcher(
-              duration: switchDuration,
-              child: KeyedSubtree(
-                key: ValueKey(step),
-                child: _buildContent(step, status, name),
+        if (!_bareSteps.contains(step))
+          Expanded(
+            child: SingleChildScrollView(
+              controller: _scroll,
+              padding: AppConstants.wizardStepPadding,
+              child: AnimatedSwitcher(
+                duration: switchDuration,
+                child: KeyedSubtree(
+                  key: ValueKey(step),
+                  child: _buildContent(step, status, name),
+                ),
               ),
             ),
           ),
-        ),
         // The step's actions never scroll away; the Scaffold keeps them
         // above the keyboard.
         AnimatedSwitcher(
