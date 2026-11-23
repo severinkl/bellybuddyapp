@@ -99,6 +99,10 @@ class MealImageSection extends StatelessWidget {
               : 'Erlaube Belly Buddy in den Einstellungen den Zugriff auf '
                     'deine Fotos, um ein Bild deiner Mahlzeit auszuwählen.',
         ),
+        // Too wide for one row on a phone: stacked, centered, the way out
+        // („Einstellungen öffnen") on top.
+        actionsOverflowAlignment: OverflowBarAlignment.center,
+        actionsOverflowDirection: VerticalDirection.up,
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),

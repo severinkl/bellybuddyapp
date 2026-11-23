@@ -99,6 +99,28 @@ void main() {
       expect(find.text('Kein Zugriff auf die Kamera'), findsNothing);
     });
 
+    testWidgets('on a 393 pt phone the two buttons stack evenly: centered, '
+        '„Einstellungen öffnen" on top', (tester) async {
+      tester.view
+        ..physicalSize = const Size(393, 852)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await pumpDenied(tester, 'camera_access_denied');
+      await tester.tap(find.text('Kamera'));
+      await tester.pumpAndSettle();
+
+      final dialog = tester.getRect(find.byType(AlertDialog));
+      final settings = tester.getRect(find.text('Einstellungen öffnen'));
+      final cancel = tester.getRect(find.text('Abbrechen'));
+      if (settings.top != cancel.top) {
+        expect(settings.bottom, lessThanOrEqualTo(cancel.top));
+        expect(settings.center.dx, closeTo(dialog.center.dx, 1));
+        expect(cancel.center.dx, closeTo(dialog.center.dx, 1));
+      } else {
+        expect(cancel.right, lessThan(settings.left));
+      }
+    });
+
     testWidgets('gallery denied explains it too', (tester) async {
       await pumpDenied(tester, 'photo_access_denied');
 
