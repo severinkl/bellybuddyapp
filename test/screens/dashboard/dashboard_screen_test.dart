@@ -19,7 +19,10 @@ import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/buddy_welcome_provider.dart';
 import 'package:belly_buddy/config/app_theme.dart';
+import 'package:belly_buddy/providers/discover_news_provider.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
+import 'package:belly_buddy/repositories/recommendation_repository.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/tips_row.dart';
 import 'package:belly_buddy/providers/insights_provider.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
@@ -56,9 +59,13 @@ List<Override> _overrides({
   FakeBuddyRepository? buddyRepo,
   FakeEntryRepository? entryRepo,
   FakeProfileRepository? profileRepo,
+  FakeRecommendationRepository? recommendationRepo,
   UserProfile? profile,
   bool switchableUser = false,
 }) => [
+  recommendationRepositoryProvider.overrideWithValue(
+    recommendationRepo ?? FakeRecommendationRepository(),
+  ),
   profileRepositoryProvider.overrideWithValue(
     profileRepo ??
         (profile == null
@@ -157,7 +164,124 @@ const _tourSkip = 'Überspringen';
 const _welcomeModalTitle = 'Willkommen bei Belly Buddy!';
 const _optInTitle = 'Bleib auf dem Laufenden!';
 
+/// Home as in the app, where the root keeps [discoverNewsProvider] alive
+/// and its sign-in load brings the tips.
+class _AppRoot extends ConsumerWidget {
+  const _AppRoot();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    ref.watch(discoverNewsProvider);
+    return const DashboardScreen();
+  }
+}
+
+/// A tip set that nobody opened yet.
+FakeRecommendationRepository _unseenTips() => FakeRecommendationRepository(
+  sets: [testRecommendation(createdAt: DateTime(2026, 11, 16))],
+);
+
 void main() {
+  group('DashboardScreen Neue Tipps row', () {
+    testWidgets('an unseen tip set shows the row under the insight card', (
+      tester,
+    ) async {
+      await tester.pumpWithProviders(
+        const _AppRoot(),
+        overrides: _overrides(recommendationRepo: _unseenTips()),
+      );
+      await _settleFirstRun(tester);
+
+      expect(find.byKey(TipsRow.rowKey), findsOneWidget);
+      expect(find.text('✨ Neue Tipps · Woche 47'), findsOneWidget);
+      expect(
+        tester.getRect(find.byKey(TipsRow.rowKey)).top,
+        greaterThanOrEqualTo(
+          tester.getRect(find.byKey(InsightCard.cardKey)).bottom,
+        ),
+      );
+    });
+
+    testWidgets('tapping it opens the Tipps', (tester) async {
+      final router = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => const _AppRoot(),
+            routes: [
+              GoRoute(
+                path: 'recommendations',
+                builder: (_, _) => const Scaffold(body: Text('Tipps')),
+              ),
+            ],
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: _overrides(recommendationRepo: _unseenTips()),
+          child: germanRouterApp(router),
+        ),
+      );
+      await _settleFirstRun(tester);
+
+      await tester.ensureVisible(find.byKey(TipsRow.rowKey));
+      await tester.pump();
+      await tester.tap(find.byKey(TipsRow.rowKey));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(
+        router.routerDelegate.currentConfiguration.last.matchedLocation,
+        RoutePaths.recommendations,
+      );
+    });
+
+    testWidgets('no row when every set is seen', (tester) async {
+      await tester.pumpWithProviders(const _AppRoot(), overrides: _overrides());
+      await _settleFirstRun(tester);
+
+      expect(find.byKey(TipsRow.rowKey, skipOffstage: false), findsNothing);
+    });
+
+    testWidgets('pull-to-refresh brings tips that came since', (tester) async {
+      final repo = FakeRecommendationRepository();
+      await tester.pumpWithProviders(
+        const _AppRoot(),
+        overrides: _overrides(recommendationRepo: repo),
+      );
+      await _settleFirstRun(tester);
+      expect(find.byKey(TipsRow.rowKey, skipOffstage: false), findsNothing);
+
+      repo.sets = [testRecommendation(createdAt: DateTime(2026, 11, 16))];
+      await tester.fling(
+        find.byType(RefreshIndicator),
+        const Offset(0, 400),
+        1000,
+      );
+      await _settleFirstRun(tester);
+
+      expect(find.byKey(TipsRow.rowKey), findsOneWidget);
+    });
+
+    testWidgets('fits 375×667 at text scale 1.3 with the row', (tester) async {
+      tester.view.physicalSize = const Size(375, 667);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await tester.pumpWithProviders(
+        const _AppRoot(),
+        overrides: _overrides(recommendationRepo: _unseenTips()),
+      );
+      await _settleFirstRun(tester);
+
+      expect(find.byKey(TipsRow.rowKey), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   group('DashboardScreen', () {
     testWidgets('renders the care ring with all four needs', (tester) async {
       await tester.pumpWithProviders(
