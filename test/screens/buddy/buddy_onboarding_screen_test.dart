@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/widgets/buddy/buddy_stage.dart';
@@ -27,6 +28,7 @@ import 'package:belly_buddy/screens/buddy/streak_goal_picker.dart';
 import 'package:belly_buddy/screens/buddy/widgets/streak_moment.dart';
 import 'package:belly_buddy/screens/registration/steps/steps.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
+import 'package:belly_buddy/utils/buddy_name.dart';
 import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
 
 import '../../helpers/ambient_animations.dart';
@@ -789,6 +791,65 @@ void main() {
       await settle(tester);
 
       expect(h.stored?.name, 'Bauchi');
+      await afterReaction(tester);
+      expect(find.text(_noStreakLine), findsOneWidget);
+    });
+
+    testWidgets('a name the database refuses as too many symbols says so; '
+        'the step stays for a shorter one', (tester) async {
+      final h = await pumpOnboarding(tester, entry: BuddyOnboardingEntry.gate);
+      await tapKey(tester, BuddyOnboardingScreen.introNextKey);
+      // Refused as a check counting fewer code points than the app would.
+      h.buddyRepo.saveError = const PostgrestException(
+        message:
+            'new row for relation "buddy_state" violates check constraint '
+            '"buddy_state_name_check"',
+        code: '23514',
+      );
+
+      await tester.enterText(
+        find.byKey(BuddyNameStep.fieldKey),
+        '\u2764\uFE0F' * 10,
+      );
+      await tester.pump();
+      await tapKey(tester, BuddyOnboardingScreen.nameNextKey);
+
+      expect(find.text(BuddyNameRules.tooManySymbols), findsOneWidget);
+      expect(
+        find.text('Der Name konnte nicht gespeichert werden.'),
+        findsNothing,
+      );
+      expect(find.byKey(BuddyNameStep.fieldKey), findsOneWidget);
+      expect(h.stored?.name, isNull);
+
+      h.buddyRepo.saveError = null;
+      await tester.pump(const Duration(seconds: 5));
+      await settle(tester);
+      await tester.enterText(find.byKey(BuddyNameStep.fieldKey), 'Bauchi');
+      await tester.pump();
+      await tapKey(tester, BuddyOnboardingScreen.nameNextKey);
+
+      expect(h.stored?.name, 'Bauchi');
+      await afterReaction(tester);
+      expect(find.text(_noStreakLine), findsOneWidget);
+    });
+
+    testWidgets('a name that fails to save otherwise says so and goes on', (
+      tester,
+    ) async {
+      final h = await pumpOnboarding(tester, entry: BuddyOnboardingEntry.gate);
+      await tapKey(tester, BuddyOnboardingScreen.introNextKey);
+      h.buddyRepo.throwOnSave = true;
+
+      await tester.enterText(find.byKey(BuddyNameStep.fieldKey), 'Bauchi');
+      await tester.pump();
+      await tapKey(tester, BuddyOnboardingScreen.nameNextKey);
+
+      expect(
+        find.text('Der Name konnte nicht gespeichert werden.'),
+        findsOneWidget,
+      );
+      expect(find.text(BuddyNameRules.tooManySymbols), findsNothing);
       await afterReaction(tester);
       expect(find.text(_noStreakLine), findsOneWidget);
     });

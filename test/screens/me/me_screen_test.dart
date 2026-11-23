@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:belly_buddy/config/constants.dart';
@@ -15,6 +16,7 @@ import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/buddy/streak_goal_picker.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/streak_sheet.dart';
 import 'package:belly_buddy/screens/me/me_screen.dart';
+import 'package:belly_buddy/utils/buddy_name.dart';
 import 'package:belly_buddy/widgets/buddy/animated_buddy.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
 
@@ -262,6 +264,57 @@ void main() {
     );
     expect(find.text('Bruno'), findsOneWidget);
     expect(find.text('Pepe'), findsNothing);
+  });
+
+  testWidgets('rename refused by a database counting fewer symbols says '
+      'so', (tester) async {
+    // Refused as a check counting fewer code points than the app would.
+    final hearts = '\u2764\uFE0F' * 10;
+    final buddy = await pump(tester);
+    buddy.renameError = const PostgrestException(
+      message:
+          'new row for relation "buddy_state" violates check constraint '
+          '"buddy_state_name_check"',
+      code: '23514',
+    );
+
+    await openRename(tester);
+    await tester.enterText(find.byType(TextField), hearts);
+    await tester.pump();
+    await tester.tap(find.text('Speichern'));
+    await tester.pumpAndSettle();
+
+    expect(buddy.names, [hearts]);
+    expect(find.text(BuddyNameRules.tooManySymbols), findsOneWidget);
+    expect(
+      find.text('Umbenennen hat nicht geklappt. Versuch es später nochmal.'),
+      findsNothing,
+    );
+    expect(find.text('Bruno'), findsOneWidget);
+  });
+
+  testWidgets('rename refused by another check keeps the general message', (
+    tester,
+  ) async {
+    final buddy = await pump(tester);
+    buddy.renameError = const PostgrestException(
+      message:
+          'new row for relation "buddy_state" violates check constraint '
+          '"buddy_state_savers_check"',
+      code: '23514',
+    );
+
+    await openRename(tester);
+    await tester.enterText(find.byType(TextField), 'Pepe');
+    await tester.pump();
+    await tester.tap(find.text('Speichern'));
+    await tester.pumpAndSettle();
+
+    expect(find.text(BuddyNameRules.tooManySymbols), findsNothing);
+    expect(
+      find.text('Umbenennen hat nicht geklappt. Versuch es später nochmal.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('Einstellungen pushes /settings', (tester) async {

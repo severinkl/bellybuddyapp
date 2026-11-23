@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
 import '../config/app_theme.dart';
 import '../config/constants.dart';
@@ -38,6 +39,15 @@ abstract final class BuddyNameRules {
     }
     return null;
   }
+
+  /// Whether [error], from saving a name, is the database's name check
+  /// refusing it: a backend counting fewer code points than the app (before
+  /// core 0011: 20) refuses a name of many emojis, which [tooManySymbols]
+  /// explains.
+  static bool refusedAsTooLong(Object error) =>
+      error is PostgrestException &&
+      error.code == '23514' &&
+      error.message.contains('buddy_state_name_check');
 
   /// The „n/20" counter of a name field showing [text].
   static Widget counter(String text, {required bool isFocused}) => Semantics(

@@ -16,6 +16,7 @@ import '../../providers/notification_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../router/route_names.dart';
 import '../../services/buddy/buddy_mood_logic.dart';
+import '../../utils/buddy_name.dart';
 import '../../utils/date_format_utils.dart';
 import '../../utils/logger.dart';
 import '../../widgets/buddy/buddy.dart';
@@ -365,17 +366,24 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
     final messenger = ScaffoldMessenger.of(context);
     final buddy = ref.read(buddyProvider.notifier);
     _setBusy(true);
-    var saved = true;
+    Object? failure;
     try {
       await buddy.setName(name);
     } catch (e, st) {
       // Not blocking: the Buddy keeps its current name.
-      saved = false;
+      failure = e;
       _log.error('Saving the Buddy name failed', e, st);
     }
     if (!mounted) return;
     _setBusy(false);
-    if (!saved) {
+    if (failure != null && BuddyNameRules.refusedAsTooLong(failure)) {
+      // The step stays, so a shorter name can follow.
+      messenger.showSnackBar(
+        const SnackBar(content: Text(BuddyNameRules.tooManySymbols)),
+      );
+      return;
+    }
+    if (failure != null) {
       messenger.showSnackBar(
         const SnackBar(
           content: Text('Der Name konnte nicht gespeichert werden.'),

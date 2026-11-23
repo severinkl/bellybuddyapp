@@ -11,6 +11,7 @@ import '../../providers/buddy_provider.dart';
 import '../../providers/tutorial_provider.dart';
 import '../../providers/upgrade_gate_provider.dart';
 import '../../router/route_names.dart';
+import '../../utils/buddy_name.dart';
 import '../../utils/logger.dart';
 import '../../utils/url_utils.dart';
 import '../../widgets/buddy/buddy.dart';
@@ -82,9 +83,11 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     } catch (e, st) {
       _log.error('Renaming the Buddy failed', e, st);
       messenger.showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text(
-            'Umbenennen hat nicht geklappt. Versuch es später nochmal.',
+            BuddyNameRules.refusedAsTooLong(e)
+                ? BuddyNameRules.tooManySymbols
+                : 'Umbenennen hat nicht geklappt. Versuch es später nochmal.',
           ),
         ),
       );

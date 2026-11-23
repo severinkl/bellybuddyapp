@@ -676,6 +676,9 @@ class FakeBuddyRepository implements BuddyRepository {
   bool throwOnFetch = false;
   bool throwOnSave = false;
 
+  /// When set, [save] throws it (a refusal like the database's checks).
+  Object? saveError;
+
   /// While set and not completed, every [fetch] (or [save]) waits for it
   /// (a slow or hanging backend).
   Completer<void>? fetchHold;
@@ -698,6 +701,7 @@ class FakeBuddyRepository implements BuddyRepository {
     saveCount++;
     if (saveHold case final hold?) await hold.future;
     if (throwOnSave) throw Exception('save failed');
+    if (saveError case final error?) throw error;
     store[userId] = state.copyWith(userId: userId);
   }
 }
@@ -743,6 +747,9 @@ class FakeBuddyNotifier extends BuddyNotifier {
   final FutureOr<BuddyStatus?> Function()? _initial;
 
   bool failRename = false;
+
+  /// When set, [setName] throws it (instead of [failRename]'s error).
+  Object? renameError;
   bool failGoal = false;
   final List<String> names = [];
   final List<int?> goals = [];
@@ -757,6 +764,7 @@ class FakeBuddyNotifier extends BuddyNotifier {
   Future<void> setName(String name) async {
     names.add(name);
     await nameSave;
+    if (renameError case final error?) throw error;
     if (failRename) throw Exception('offline');
     final s = state.value!;
     push(
