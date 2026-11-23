@@ -101,7 +101,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   Timer? _moodTimer;
 
   /// Today's care, derived from the loaded day's entries (see
-  /// [_deriveCare]): re-derived on every entries change, every minute and
+  /// [_deriveCare]): re-derived on every change of it, every minute and
   /// on resume. The ring, his mood and the next action all follow it.
   late DailyCare _care;
   late DateTime _careAt;
@@ -172,7 +172,11 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       if (_visible) _updateCare();
     });
     _lifecycle = AppLifecycleListener(onResume: _onResume);
-    ref.listenManual(entriesProvider, (_, _) => _updateCare());
+    // The care itself, not the entries it derives from: a listener of
+    // entriesProvider that reads dailyCareProvider can get its previous
+    // value (dependents are told in subscription order), which left the
+    // ring on an empty day after a load until the next minute tick.
+    ref.listenManual(dailyCareProvider, (_, _) => _updateCare());
     ref.listenManual(buddyEventsProvider, (_, event) {
       if (event != null) _afterFrame(_consumeEvent);
     });

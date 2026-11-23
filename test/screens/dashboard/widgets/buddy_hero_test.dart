@@ -408,6 +408,31 @@ void main() {
       expect(buddy.shown, [BuddyAnnouncement.saverEarned]);
     });
 
+    testWidgets('every load reaches the ring at once: its loading step, '
+        'then the day (no minute tick needed)', (tester) async {
+      await pumpHero(tester);
+      final day = DateTime(2026, 11, 22);
+      // Two loads: Riverpod tells the hero and the care in an order that
+      // alternates, so both orders are covered.
+      for (final meals in [1, 2]) {
+        entries.push(EntriesState(isLoading: true, day: day));
+        await tester.pump();
+        entries.push(
+          EntriesState(
+            day: day,
+            meals: [
+              for (var h = 0; h < meals; h++)
+                testMealEntry(trackedAt: DateTime(2026, 11, 22, 8 + h)),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.text('🍽 $meals/3'), findsOneWidget, reason: '$meals');
+      }
+    });
+
     testWidgets('a meal logged 1 h ago → happy', (tester) async {
       entries = _FakeEntries(
         EntriesState(
