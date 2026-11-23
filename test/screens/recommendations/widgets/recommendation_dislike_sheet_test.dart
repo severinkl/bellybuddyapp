@@ -48,7 +48,7 @@ void main() {
     ) async {
       final repo = MockRecommendationRepository();
       when(() => repo.fetchByUserId(any())).thenAnswer((_) async => []);
-      when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => repo.markSeen(any(), any())).thenAnswer((_) async {});
       when(
         () => repo.updateFeedback(
           id: any(named: 'id'),
@@ -80,7 +80,7 @@ void main() {
     testWidgets('Fertig pops without calling the repo', (tester) async {
       final repo = MockRecommendationRepository();
       when(() => repo.fetchByUserId(any())).thenAnswer((_) async => []);
-      when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => repo.markSeen(any(), any())).thenAnswer((_) async {});
 
       final rec = testRecommendation(
         id: 'r1',
@@ -119,7 +119,7 @@ void main() {
           ).copyWith(state: RecommendationState.disliked),
         ],
       );
-      when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => repo.markSeen(any(), any())).thenAnswer((_) async {});
       when(
         () => repo.updateFeedback(
           id: any(named: 'id'),
@@ -183,7 +183,7 @@ void main() {
           id: 'r1',
         ).copyWith(state: RecommendationState.disliked);
         when(() => repo.fetchByUserId(any())).thenAnswer((_) async => [rec]);
-        when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+        when(() => repo.markSeen(any(), any())).thenAnswer((_) async {});
         when(
           () => repo.updateFeedback(
             id: any(named: 'id'),
@@ -244,7 +244,7 @@ void main() {
     ) async {
       final repo = MockRecommendationRepository();
       when(() => repo.fetchByUserId(any())).thenAnswer((_) async => []);
-      when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => repo.markSeen(any(), any())).thenAnswer((_) async {});
 
       final rec = testRecommendation(id: 'r1').copyWith(
         state: RecommendationState.disliked,

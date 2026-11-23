@@ -9,6 +9,7 @@ import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
 import 'package:belly_buddy/repositories/recommendation_repository.dart';
 
+import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
 import '../helpers/mocks.dart';
 import '../helpers/riverpod_helpers.dart';
@@ -112,7 +113,9 @@ void main() {
         ],
       );
       final write = Completer<void>();
-      when(() => mockRepo.markAllAsSeen(any())).thenAnswer((_) => write.future);
+      when(
+        () => mockRepo.markSeen(any(), any()),
+      ).thenAnswer((_) => write.future);
 
       final container = makeContainer();
       final notifier = container.read(recommendationProvider.notifier);
@@ -129,7 +132,7 @@ void main() {
 
       write.complete();
       await marking;
-      verify(() => mockRepo.markAllAsSeen(testUserId)).called(1);
+      verify(() => mockRepo.markSeen(testUserId, ['new'])).called(1);
       expect(container.read(unseenTipSetProvider), isNull);
     });
 
@@ -140,7 +143,7 @@ void main() {
       when(() => mockRepo.fetchByUserId(any())).thenAnswer(
         (_) => ++fetches == 1 ? Future.value([unseen]) : held.future,
       );
-      when(() => mockRepo.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => mockRepo.markSeen(any(), any())).thenAnswer((_) async {});
 
       final container = makeContainer();
       final notifier = container.read(recommendationProvider.notifier);
@@ -163,7 +166,7 @@ void main() {
     test('a set that arrives after the mark is new', () async {
       var sets = [testRecommendation(id: 'old')];
       when(() => mockRepo.fetchByUserId(any())).thenAnswer((_) async => sets);
-      when(() => mockRepo.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => mockRepo.markSeen(any(), any())).thenAnswer((_) async {});
 
       final container = makeContainer();
       final notifier = container.read(recommendationProvider.notifier);
@@ -184,7 +187,7 @@ void main() {
             ? Future.value([testRecommendation(id: 'new')])
             : Future.error(Exception('offline')),
       );
-      when(() => mockRepo.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => mockRepo.markSeen(any(), any())).thenAnswer((_) async {});
 
       final container = makeContainer();
       final notifier = container.read(recommendationProvider.notifier);
@@ -192,15 +195,80 @@ void main() {
       await notifier.fetchRecommendations();
       await notifier.markAllAsSeen();
 
-      verify(() => mockRepo.markAllAsSeen(testUserId)).called(1);
+      verify(() => mockRepo.markSeen(testUserId, ['new'])).called(1);
       expect(container.read(unseenTipSetProvider), isNull);
+    });
+
+    test('only the loaded sets are marked: one that arrived after the '
+        'fetch stays new', () async {
+      final repo = FakeRecommendationRepository(
+        sets: [testRecommendation(id: 'a')],
+      );
+      final container = createContainer(
+        overrides: [
+          recommendationRepositoryProvider.overrideWithValue(repo),
+          currentUserIdProvider.overrideWithValue(testUserId),
+        ],
+      );
+      final notifier = container.read(recommendationProvider.notifier);
+      await notifier.fetchRecommendations();
+
+      // The weekly job inserts set b before the Tipps mark what they show.
+      repo.sets = [testRecommendation(id: 'b'), ...repo.sets];
+      await notifier.markAllAsSeen();
+      expect(repo.marked, [
+        ['a'],
+      ]);
+
+      await notifier.fetchRecommendations();
+      expect(container.read(unseenTipSetProvider)?.id, 'b');
+    });
+
+    test('nothing unseen: no write', () async {
+      when(() => mockRepo.fetchByUserId(any())).thenAnswer(
+        (_) async => [testRecommendation(id: 'old', seenAt: lastWeek)],
+      );
+
+      final container = makeContainer();
+      final notifier = container.read(recommendationProvider.notifier);
+      await notifier.fetchRecommendations();
+      await notifier.markAllAsSeen();
+
+      verifyNever(() => mockRepo.markSeen(any(), any()));
+    });
+
+    test('a failed mark rethrows and shows the sets new again, also after '
+        'a fetch', () async {
+      when(() => mockRepo.fetchByUserId(any())).thenAnswer(
+        (_) async => [
+          testRecommendation(id: 'new'),
+          testRecommendation(id: 'old', seenAt: lastWeek),
+        ],
+      );
+      when(
+        () => mockRepo.markSeen(any(), any()),
+      ).thenAnswer((_) => Future.error(Exception('offline')));
+
+      final container = makeContainer();
+      final notifier = container.read(recommendationProvider.notifier);
+      await notifier.fetchRecommendations();
+
+      await expectLater(notifier.markAllAsSeen(), throwsException);
+      expect(container.read(unseenTipSetProvider)?.id, 'new');
+      expect(
+        container.read(recommendationProvider).value!.last.seenAt,
+        lastWeek,
+      );
+
+      await notifier.fetchRecommendations();
+      expect(container.read(unseenTipSetProvider)?.id, 'new');
     });
 
     test('a rebuild (sign-out) forgets the stamps', () async {
       when(
         () => mockRepo.fetchByUserId(any()),
       ).thenAnswer((_) async => [testRecommendation(id: 'new')]);
-      when(() => mockRepo.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => mockRepo.markSeen(any(), any())).thenAnswer((_) async {});
 
       final container = makeContainer();
       final notifier = container.read(recommendationProvider.notifier);

@@ -573,11 +573,20 @@ class FakeRecommendationRepository implements RecommendationRepository {
     return sets;
   }
 
+  /// Thrown by [markSeen] when set.
+  Object? markError;
+
+  /// The ids of every [markSeen], in order.
+  final List<List<String>> marked = [];
+
   @override
-  Future<void> markAllAsSeen(String userId) async {
+  Future<void> markSeen(String userId, List<String> ids) async {
+    marked.add(ids);
+    if (markError case final error?) throw error;
     final now = DateTime.now().toUtc();
     sets = [
-      for (final s in sets) s.seenAt == null ? s.copyWith(seenAt: now) : s,
+      for (final s in sets)
+        s.seenAt == null && ids.contains(s.id) ? s.copyWith(seenAt: now) : s,
     ];
   }
 

@@ -18,6 +18,7 @@ import 'package:belly_buddy/screens/recommendations/recommendations_screen.dart'
 import 'package:belly_buddy/utils/date_format_utils.dart';
 import 'package:belly_buddy/widgets/common/bb_async_state.dart';
 
+import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/mocks.dart';
 import '../../helpers/riverpod_helpers.dart';
@@ -27,7 +28,7 @@ List<Override> _overridesFor(List<Recommendation> recommendations) {
   when(
     () => mock.fetchByUserId(any()),
   ).thenAnswer((_) async => recommendations);
-  when(() => mock.markAllAsSeen(any())).thenAnswer((_) async {});
+  when(() => mock.markSeen(any(), any())).thenAnswer((_) async {});
   return [
     recommendationRepositoryProvider.overrideWithValue(mock),
     currentUserIdProvider.overrideWithValue('test-user'),
@@ -54,7 +55,7 @@ void main() {
       final mock = MockRecommendationRepository();
       final completer = Completer<List<Recommendation>>();
       when(() => mock.fetchByUserId(any())).thenAnswer((_) => completer.future);
-      when(() => mock.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => mock.markSeen(any(), any())).thenAnswer((_) async {});
 
       await tester.pumpWithProviders(
         const RecommendationsScreen(),
@@ -77,7 +78,7 @@ void main() {
       when(
         () => mock.fetchByUserId(any()),
       ).thenAnswer((_) async => throw Exception('boom'));
-      when(() => mock.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => mock.markSeen(any(), any())).thenAnswer((_) async {});
 
       await tester.pumpWithProviders(
         const RecommendationsScreen(),
@@ -101,7 +102,7 @@ void main() {
       ];
       final mock = MockRecommendationRepository();
       when(() => mock.fetchByUserId(any())).thenAnswer((_) async => recs);
-      when(() => mock.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => mock.markSeen(any(), any())).thenAnswer((_) async {});
       await tester.pumpWithProviders(
         const RecommendationsScreen(),
         overrides: [
@@ -132,6 +133,30 @@ void main() {
         find.byKey(RecommendationsScreen.previousRecommendationKey),
       );
       expect(prevBtn.onPressed, isNotNull);
+    });
+
+    testWidgets('opening marks the shown set seen; a failed mark leaves it '
+        'new, quietly', (tester) async {
+      final repo = FakeRecommendationRepository(sets: [_rec('1')])
+        ..markError = Exception('offline');
+      await tester.pumpWithProviders(
+        const RecommendationsScreen(),
+        overrides: [
+          recommendationRepositoryProvider.overrideWithValue(repo),
+          currentUserIdProvider.overrideWithValue('test-user'),
+        ],
+      );
+      await tester.pumpAndSettle();
+
+      expect(repo.marked, [
+        ['1'],
+      ]);
+      expect(tester.takeException(), isNull);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(RecommendationsScreen)),
+      );
+      expect(container.read(unseenTipSetProvider)?.id, '1');
+      expect(find.byType(PageView), findsOneWidget);
     });
 
     testWidgets('empty state shows mascot + "Noch keine Tipps"', (
@@ -304,7 +329,7 @@ void main() {
       ];
       final mock = MockRecommendationRepository();
       when(() => mock.fetchByUserId(any())).thenAnswer((_) async => recs);
-      when(() => mock.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => mock.markSeen(any(), any())).thenAnswer((_) async {});
 
       final container = createContainer(
         overrides: [
@@ -398,7 +423,7 @@ void main() {
         ];
         final mock = MockRecommendationRepository();
         when(() => mock.fetchByUserId(any())).thenAnswer((_) async => recs);
-        when(() => mock.markAllAsSeen(any())).thenAnswer((_) async {});
+        when(() => mock.markSeen(any(), any())).thenAnswer((_) async {});
 
         final container = createContainer(
           overrides: [
@@ -475,7 +500,7 @@ void main() {
           callCount++;
           return callCount == 1 ? initial : afterRefresh;
         });
-        when(() => mock.markAllAsSeen(any())).thenAnswer((_) async {});
+        when(() => mock.markSeen(any(), any())).thenAnswer((_) async {});
 
         final container = createContainer(
           overrides: [
@@ -531,7 +556,7 @@ void main() {
       when(
         () => repo.fetchByUserId(any()),
       ).thenAnswer((_) async => [testRecommendation(id: '1')]);
-      when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => repo.markSeen(any(), any())).thenAnswer((_) async {});
 
       // Build a 2-route GoRouter so context.pop() has a real navigator stack
       // to pop back to. The sentinel home screen lets us assert that the pop
@@ -597,7 +622,7 @@ void main() {
         when(
           () => repo.fetchByUserId(any()),
         ).thenAnswer((_) async => [_rec('3'), _rec('2'), _rec('1')]);
-        when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+        when(() => repo.markSeen(any(), any())).thenAnswer((_) async {});
         when(
           () => repo.updateFeedback(
             id: any(named: 'id'),
@@ -649,7 +674,7 @@ void main() {
       );
       final repo = MockRecommendationRepository();
       when(() => repo.fetchByUserId(any())).thenAnswer((_) async => [rec]);
-      when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => repo.markSeen(any(), any())).thenAnswer((_) async {});
 
       await tester.pumpWithProviders(
         const RecommendationsScreen(),
@@ -682,7 +707,7 @@ void main() {
       ];
       final repo = MockRecommendationRepository();
       when(() => repo.fetchByUserId(any())).thenAnswer((_) async => recs);
-      when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => repo.markSeen(any(), any())).thenAnswer((_) async {});
 
       await tester.pumpWithProviders(
         const RecommendationsScreen(),
@@ -725,7 +750,7 @@ void main() {
     ) async {
       final repo = MockRecommendationRepository();
       when(() => repo.fetchByUserId(any())).thenAnswer((_) async => []);
-      when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => repo.markSeen(any(), any())).thenAnswer((_) async {});
 
       await tester.pumpWithProviders(
         const RecommendationsScreen(),

@@ -70,20 +70,45 @@ class RecommendationNotifier
       },
   ];
 
-  /// Marks every set seen: the loaded ones at once, so „Neu" and whatever
-  /// follows [unseenTipSetProvider] go as the Tipps open, then the server's.
+  /// Marks the loaded sets seen: here at once, so „Neu" and whatever
+  /// follows [unseenTipSetProvider] go as the Tipps open, then on the server
+  /// (only these: a set that arrived since stays new). A failed write takes
+  /// the stamps back, so the sets show as new again like on the server, and
+  /// rethrows.
   Future<void> markAllAsSeen() async {
     final userId = ref.read(currentUserIdProvider);
     if (userId == null) return;
     final sets = state.value ?? const <Recommendation>[];
-    if (sets.any((s) => s.seenAt == null)) {
-      final now = DateTime.now().toUtc();
-      for (final set in sets) {
-        if (set.seenAt == null) _seenLocally[set.id] = now;
-      }
-      state = AsyncValue.data(_keepSeen(sets));
+    final ids = [
+      for (final set in sets)
+        if (set.seenAt == null) set.id,
+    ];
+    if (ids.isEmpty) return;
+    final now = DateTime.now().toUtc();
+    for (final id in ids) {
+      _seenLocally[id] = now;
     }
-    await ref.read(recommendationRepositoryProvider).markAllAsSeen(userId);
+    state = AsyncValue.data(_keepSeen(sets));
+    try {
+      await ref.read(recommendationRepositoryProvider).markSeen(userId, ids);
+    } catch (_) {
+      if (!ref.mounted) rethrow;
+      final ours = [
+        for (final id in ids)
+          if (_seenLocally[id] == now) id,
+      ];
+      ours.forEach(_seenLocally.remove);
+      final current = state.value;
+      if (ref.isCurrentUser(userId) && current != null) {
+        state = AsyncValue.data([
+          for (final set in current)
+            ours.contains(set.id) && set.seenAt == now
+                ? set.copyWith(seenAt: null)
+                : set,
+        ]);
+      }
+      rethrow;
+    }
   }
 
   Future<void> setRecommendationState({

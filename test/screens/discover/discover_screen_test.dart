@@ -222,7 +222,7 @@ void main() {
     verify(() => ingredients.fetchSuggestionGroups(testUserId)).called(1);
     verify(() => recipes.fetchForUser(testUserId)).called(1);
     // Only the Tipps screen marks tips as seen.
-    verifyNever(() => recommendations.markAllAsSeen(any()));
+    verifyNever(() => recommendations.markSeen(any(), any()));
   });
 
   testWidgets('opened right after sign-in: the tips and Alternativen load '
@@ -301,7 +301,7 @@ void main() {
 
   testWidgets('„Neu" goes once the Tipps are marked seen, while Entdecken '
       'stays open underneath', (tester) async {
-    when(() => recommendations.markAllAsSeen(any())).thenAnswer((_) async {});
+    when(() => recommendations.markSeen(any(), any())).thenAnswer((_) async {});
     await pump(
       tester,
       tips: [

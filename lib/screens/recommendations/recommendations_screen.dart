@@ -53,10 +53,19 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
     super.initState();
     _controller = PageController();
     Future.microtask(() async {
-      final notifier = ref.read(recommendationProvider.notifier);
-      await notifier.fetchRecommendations();
-      await notifier.markAllAsSeen();
+      await ref.read(recommendationProvider.notifier).fetchRecommendations();
+      await _markSeen();
     });
+  }
+
+  /// Marks the shown sets seen.
+  Future<void> _markSeen() async {
+    if (!mounted) return;
+    try {
+      await ref.read(recommendationProvider.notifier).markAllAsSeen();
+    } catch (_) {
+      // Logged by the service; the sets stay new until the next open.
+    }
   }
 
   @override

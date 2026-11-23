@@ -10,8 +10,8 @@ class RecommendationRepository {
 
   RecommendationRepository(this._recommendationService);
 
-  Future<void> markAllAsSeen(String userId) =>
-      _recommendationService.markAllAsSeen(userId);
+  Future<void> markSeen(String userId, List<String> ids) =>
+      _recommendationService.markSeen(userId, ids);
 
   Future<List<Recommendation>> fetchByUserId(String userId) => retryAsync(
     () => _recommendationService.fetchByUserId(userId),
