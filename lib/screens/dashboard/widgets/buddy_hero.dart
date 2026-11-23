@@ -12,7 +12,6 @@ import '../../../providers/buddy_provider.dart';
 import '../../../providers/buddy_welcome_provider.dart';
 import '../../../providers/daily_care_provider.dart';
 import '../../../providers/entries_provider.dart';
-import '../../../router/tab_navigation.dart';
 import '../../../router/tracker_routes.dart';
 import '../../../services/buddy/buddy_copy.dart';
 import '../../../services/buddy/buddy_mood_logic.dart';
@@ -48,7 +47,7 @@ _Cue _cueFor(BuddyAnnouncement a) =>
 
 /// The Buddy at the top of the dashboard: the streak chip (opens „Dein
 /// Streak"), his speech bubble, the Buddy inside the [CareRing] of his four
-/// daily needs (tapping the ring opens today in the Tagebuch; tapping the
+/// daily needs (tapping a need's bubble opens its tracker; tapping the
 /// Buddy makes him talk), and a button that opens the tracker for the next
 /// thing to log ([nextCareAction]).
 ///
@@ -588,7 +587,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
                   care: _care,
                   diameter: diameter,
                   highlight: action.need,
-                  onTap: () => openDiaryOn(context, ref, _now()),
+                  onNeed: (need) => openTracker(context, need),
                   buddy: AnimatedBuddy(
                     controller: _buddy,
                     name: name,

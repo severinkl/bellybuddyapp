@@ -36,7 +36,7 @@ final List<TutorialStep> dashboardTutorialSteps = [
       _t(' am Leben. Der '),
       _b('Ring'),
       _t(
-        ' zeigt, was er heute schon bekommen hat – tipp drauf für dein Tagebuch.',
+        ' zeigt, was er heute schon bekommen hat – tipp auf eine Blase, um es einzutragen.',
       ),
     ],
   ),

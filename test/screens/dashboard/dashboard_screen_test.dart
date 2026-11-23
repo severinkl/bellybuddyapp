@@ -17,6 +17,7 @@ import 'package:belly_buddy/screens/dashboard/widgets/tutorial/dashboard_tutoria
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_keys.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_step.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
+import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
@@ -287,7 +288,7 @@ void main() {
       expect(dashboardTutorialSteps.map(_markedCopy), [
         'Das ist dein **Buddy**! Jeder Eintrag hält euren 🔥 **Streak** am '
             'Leben. Der **Ring** zeigt, was er heute schon bekommen hat – '
-            'tipp drauf für dein Tagebuch.',
+            'tipp auf eine Blase, um es einzutragen.',
         'Dieser Knopf schlägt dir den **nächsten Eintrag** vor – passend zur '
             'Tageszeit.',
         'Hier trägst du **alles** ein: Essen, Trinken, Bauchgefühl und Klo.',
@@ -349,6 +350,140 @@ void main() {
 
       expect(buddyRepo.fetchCount, 1);
     });
+  });
+
+  group('DashboardScreen taps on a phone', () {
+    setUp(() {
+      SharedPreferences.setMockInitialValues({
+        AppConstants.keyNotificationModalShown: true,
+      });
+    });
+
+    const trackers = {
+      CareNeed.food: RoutePaths.mealTracker,
+      CareNeed.drink: RoutePaths.drinkTracker,
+      CareNeed.gutFeeling: RoutePaths.gutFeelingTracker,
+      CareNeed.toilet: RoutePaths.toiletTracker,
+    };
+
+    /// Home at 14:00 (nothing logged: lunch is next) on a [size] phone
+    /// with [padding], under a router with the Tagebuch and the trackers.
+    Future<GoRouter> pumpPhone(
+      WidgetTester tester,
+      Size size,
+      FakeViewPadding padding,
+    ) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1.0;
+      tester.view.padding = padding;
+      addTearDown(tester.view.reset);
+      final router = GoRouter(
+        initialLocation: RoutePaths.dashboard,
+        routes: [
+          GoRoute(
+            path: RoutePaths.dashboard,
+            builder: (_, _) => const DashboardScreen(),
+          ),
+          ...stubRoutes([RoutePaths.diary, ...trackers.values]),
+        ],
+      );
+      addTearDown(router.dispose);
+      final container = ProviderContainer.test(
+        overrides: [
+          ..._overrides(
+            profile: testUserProfile(),
+            buddyRepo: _onboardedBuddy(),
+          ),
+          buddyClockProvider.overrideWithValue(
+            () => DateTime(2026, 11, 23, 14),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: germanRouterApp(router),
+        ),
+      );
+      await _settleFirstRun(tester);
+      return router;
+    }
+
+    String location(GoRouter router) =>
+        router.routerDelegate.currentConfiguration.last.matchedLocation;
+
+    /// Taps at [at], expects [path] on top, then goes back Home.
+    Future<void> tapOpens(
+      WidgetTester tester,
+      GoRouter router,
+      Offset at,
+      String path, {
+      required String reason,
+    }) async {
+      await tester.tapAt(at);
+      await tester.pumpAndSettle();
+      expect(location(router), path, reason: reason);
+      router.go(RoutePaths.dashboard);
+      await tester.pumpAndSettle();
+    }
+
+    /// The bordered box [need]'s bubble draws (its shadow falls below it).
+    Rect bubbleBox(WidgetTester tester, CareNeed need) => tester.getRect(
+      find
+          .descendant(
+            of: find.byKey(CareRing.needKey(need)),
+            matching: find.byType(DecoratedBox),
+          )
+          .last,
+    );
+
+    for (final (name, size, padding) in [
+      (
+        '393×852',
+        const Size(393, 852),
+        const FakeViewPadding(top: 59, bottom: 34),
+      ),
+      ('375×667', const Size(375, 667), const FakeViewPadding(top: 20)),
+    ]) {
+      testWidgets('$name: a bubble opens its own tracker, at its centre and '
+          'on its lower edge; the button opens the suggested one', (
+        tester,
+      ) async {
+        final router = await pumpPhone(tester, size, padding);
+        expect(find.text('🍝 Mittagessen eintragen'), findsOneWidget);
+
+        for (final MapEntry(key: need, value: path) in trackers.entries) {
+          final box = bubbleBox(tester, need);
+          await tapOpens(
+            tester,
+            router,
+            box.center,
+            path,
+            reason: '$need centre',
+          );
+          // On its shadow, just above the bubble's visual bottom.
+          await tapOpens(
+            tester,
+            router,
+            Offset(
+              box.center.dx,
+              box.bottom + AppConstants.careNeedShadowOffset.dy - 1,
+            ),
+            path,
+            reason: '$need lower edge',
+          );
+        }
+
+        await tapOpens(
+          tester,
+          router,
+          tester.getCenter(find.byKey(BuddyHero.actionKey)),
+          RoutePaths.mealTracker,
+          reason: 'next-action button',
+        );
+      });
+    }
   });
 
   group('DashboardScreen first run', () {

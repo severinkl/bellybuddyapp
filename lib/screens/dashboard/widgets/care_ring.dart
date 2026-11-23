@@ -5,28 +5,27 @@ import 'package:material_ui/material_ui.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../services/buddy/daily_care.dart';
+import '../../../services/haptic_service.dart';
 
 /// The Buddy inside a ring of his four daily needs. Each quarter of the ring
 /// fills with today's progress of one need (Trinken top right, Bauchgefühl
-/// bottom right, Klo bottom left, Essen top left), and a counter in
-/// that corner shows it („🍽 2/3"). The ring only displays; tapping it calls
-/// [onTap] (the Buddy's own taps win). The [highlight]ed
-/// need (the one he suggests next) glows and, unless animations are off,
-/// pulses gently on its own clock (paused while `TickerMode` is off).
+/// bottom right, Klo bottom left, Essen top left), and a bubble in that
+/// corner shows it („🍽 2/3"); tapping a bubble calls [onNeed] with its
+/// need. The ring itself is no tap target (the Buddy has his own). The
+/// [highlight]ed need (the one he suggests next) glows and, unless
+/// animations are off, pulses gently on its own clock (paused while
+/// `TickerMode` is off).
 class CareRing extends StatelessWidget {
   const CareRing({
     super.key,
     required this.care,
     required this.diameter,
     required this.buddy,
-    required this.onTap,
+    required this.onNeed,
     this.highlight,
   });
 
-  /// The one tap target on the ring (opens the Tagebuch).
-  static const tapKey = Key('care_ring_tap');
-
-  /// A need's counter: `care_need_<name>`.
+  /// A need's bubble (its whole tap area): `care_need_<name>`.
   static Key needKey(CareNeed need) => ValueKey('care_need_${need.name}');
 
   /// Test seam: while false, the highlighted need glows without pulsing,
@@ -58,8 +57,8 @@ class CareRing extends StatelessWidget {
   /// its diameter square.
   final Widget buddy;
 
-  /// Tapping the ring (not the Buddy) calls this.
-  final VoidCallback onTap;
+  /// Tapping a need's bubble calls this with the need.
+  final ValueChanged<CareNeed> onNeed;
   final CareNeed? highlight;
 
   @override
@@ -70,9 +69,10 @@ class CareRing extends StatelessWidget {
       need: need,
       care: care,
       highlighted: need == highlight,
+      onTap: () => onNeed(need),
     );
 
-    final ring = SizedBox(
+    return SizedBox(
       width: double.infinity,
       height: diameter,
       child: Stack(
@@ -101,16 +101,6 @@ class CareRing extends StatelessWidget {
           Positioned(bottom: 0, left: 0, child: bubble(CareNeed.toilet)),
           Positioned(bottom: 0, right: 0, child: bubble(CareNeed.gutFeeling)),
         ],
-      ),
-    );
-    return Semantics(
-      button: true,
-      label: 'Heute im Tagebuch ansehen',
-      child: GestureDetector(
-        key: tapKey,
-        behavior: HitTestBehavior.opaque,
-        onTap: onTap,
-        child: ring,
       ),
     );
   }
@@ -190,22 +180,33 @@ class _RingPainter extends CustomPainter {
   bool shouldRepaint(_RingPainter old) => old.progress != progress;
 }
 
-/// A need's corner bubble: its count over its label; filled once met,
-/// ringed and glowing ([_Glow]) while it is the next need.
+/// A need's corner bubble, a button that logs it ([onTap]): its count
+/// over its label; filled once met, ringed and glowing ([_Glow]) while it
+/// is the next need. Its tap area is everything it paints: the box inset
+/// by the glow's reach ([AppConstants.careNeedGlow], which also covers the
+/// shadow below), so the ring's box holds all of it and no tap on the
+/// bubble lands on what sits around the ring.
 class _NeedBubble extends StatelessWidget {
   const _NeedBubble({
     super.key,
     required this.need,
     required this.care,
     required this.highlighted,
+    required this.onTap,
   });
 
   final CareNeed need;
   final DailyCare care;
   final bool highlighted;
+  final VoidCallback onTap;
+
+  void _tap() {
+    HapticService.selection();
+    onTap();
+  }
 
   /// Today's count as shown after the need's emoji („2/3") and as spoken
-  /// after its label („2 von 3 Mahlzeiten").
+  /// after the button's label („2 von 3 Mahlzeiten").
   (String, String) get _count => switch (need) {
     CareNeed.food => (
       '${care.meals}/${DailyCare.mealGoal}',
@@ -286,10 +287,19 @@ class _NeedBubble extends StatelessWidget {
       child: content,
     );
     return Semantics(
-      container: true,
-      label: '${need.label}: $spoken',
+      button: true,
+      label: need.logLabel,
+      value: spoken,
       excludeSemantics: true,
-      child: highlighted ? _Glow(child: box) : box,
+      onTap: _tap,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _tap,
+        child: Padding(
+          padding: const EdgeInsets.all(AppConstants.careNeedGlow),
+          child: highlighted ? _Glow(child: box) : box,
+        ),
+      ),
     );
   }
 }

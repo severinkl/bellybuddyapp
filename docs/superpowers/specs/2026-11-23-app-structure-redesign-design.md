@@ -105,8 +105,8 @@ From top to bottom (see the mockup H2, three states):
    - The week row moves off Home and lives only in that sheet *(my call, matches the mockup)*.
    - There is no feedback or settings icon on Home any more.
 2. **Speech bubble + Buddy inside the care ring (from PR #83):**
-   - The ring segments and the four counters (Essen n/3, Trinken n/6, Bauchgefühl ✓/–, Klo n×) are **display only**. They are not separate buttons.
-   - **Tapping the ring area** opens the Tagebuch on today *(my call: the numbers must not look tappable and then do nothing)*.
+   - The ring segments are **display only**. The four bubbles (Essen n/3, Trinken n/6, Bauchgefühl ✓/–, Klo n×) show today's count.
+   - **Tapping a bubble** opens that need's tracker: Essen → meal, Trinken → drink, Bauchgefühl → Bauchgefühl, Klo → Klo. Each bubble is a button („Klo eintragen") whose tap area covers everything it paints, glow and shadow included, so a tap on a bubble never reaches the button below. There is no ring → Tagebuch tap; the Tagebuch is one tab away. *(Changed after Severin's test 2026-11-23: bubbles open their trackers; no ring → Tagebuch. Before, a bubble looked like a button for its need but opened the Tagebuch, and a tap just under Klo landed on the next-action button, i.e. Essen.)*
    - Tapping the Buddy keeps doing what it does today (he talks).
    - The glow highlights the suggested need.
 3. **One next-action button** (from `nextCareAction`): "🍳 Frühstück eintragen", "💧 Trinken eintragen", "🙂 Bauchgefühl eintragen" and so on.
@@ -116,13 +116,12 @@ From top to bottom (see the mockup H2, three states):
 5. **Tips row, only when an unseen weekly tip set exists:** "✨ Neue Tipps · Woche 47 · 3 Tipps ›". It opens the Tipps.
    - The Buddy announces them once via the existing announcement queue: "Neue Tipps sind da! ✨".
 6. **Removed from Home:**
-   - the four need bubbles as buttons
    - the "Heute" list and its diary link
    - the "Für dich erstellt" tiles
    - the feedback and settings icons
    - the dashboard notification opt-in dialog stays as is; it already shares the "offered" flag with the onboarding reminder step.
 
-Tap targets: chip, Buddy, ring → Tagebuch, button, insight card (plus the tips row on tips days), plus the bottom bar.
+Tap targets: chip, Buddy, the four need bubbles (→ their trackers), button, insight card (plus the tips row on tips days), plus the bottom bar.
 
 ### 5.4 Tagebuch
 - **Unchanged** except for the plus context (§5.2) and the empty state.

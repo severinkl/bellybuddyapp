@@ -6,7 +6,6 @@ import 'package:belly_buddy/providers/diary_provider.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
 import 'package:belly_buddy/router/app_router.dart';
 import 'package:belly_buddy/router/route_names.dart';
-import 'package:belly_buddy/router/tab_navigation.dart';
 import 'package:belly_buddy/screens/dashboard/dashboard_screen.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/insight_card.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/dashboard_tutorial_overlay.dart';
@@ -198,19 +197,6 @@ void main() {
       await _tap(tester, BbBottomNav.navDiaryKey);
       expect(_currentPath(container), RoutePaths.diary);
       expect(container.read(diaryDateProvider), DateTime(2026, 11, 23));
-    });
-
-    testWidgets('openDiaryOn opens the Tagebuch on that day', (tester) async {
-      final container = await _pumpShell(tester);
-
-      // The bar is a ConsumerWidget: its element is a WidgetRef.
-      final element = tester.element(find.byType(BbBottomNav));
-      openDiaryOn(element, element as WidgetRef, DateTime(2026, 11, 18, 15));
-      await tester.pumpAndSettle();
-
-      expect(_currentPath(container), RoutePaths.diary);
-      expect(find.byType(DiaryScreen), findsOneWidget);
-      expect(container.read(diaryDateProvider), DateTime(2026, 11, 18));
     });
 
     testWidgets('5-slot bar fits 375×667 at text scale 1.3', (tester) async {

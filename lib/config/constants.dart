@@ -110,7 +110,9 @@ class AppConstants {
   static const double careRingGapDegrees = 6.0;
   static const double careRingBuddyFactor = 0.74;
 
-  // Its need bubbles (Essen n/3 …): size, the next need's glow, its pulse
+  // Its need bubbles (Essen n/3 …): size, the next need's glow (also the
+  // margin of each bubble's tap area, so it must reach past the shadow's
+  // offset), its pulse
   static const double careNeedWidth = 88.0;
   static const double careNeedMinHeight = 62.0;
   static const double careNeedGlow = 5.0;

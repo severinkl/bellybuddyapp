@@ -10,7 +10,6 @@ import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/buddy_welcome_provider.dart';
-import 'package:belly_buddy/providers/diary_provider.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
@@ -1039,8 +1038,9 @@ void main() {
       expect(controller(tester).bubble, isNull);
     });
 
-    testWidgets('resumed the next morning: the ring and its Tagebuch tap '
-        'move to the new day together', (tester) async {
+    testWidgets('resumed the next morning: the ring moves to the new day', (
+      tester,
+    ) async {
       now = DateTime(2026, 11, 22, 21);
       entries = _FakeEntries(
         EntriesState(
@@ -1053,7 +1053,7 @@ void main() {
           ],
         ),
       );
-      final container = await pumpHero(tester);
+      await pumpHero(tester);
       expect(find.text('🍽 1/3'), findsOneWidget);
 
       now = DateTime(2026, 11, 23, 8);
@@ -1066,12 +1066,6 @@ void main() {
 
       expect(entries.loaded.map(startOfDay), [DateTime(2026, 11, 23)]);
       expect(find.text('🍽 0/3'), findsOneWidget);
-
-      await tester.tap(find.byKey(CareRing.needKey(CareNeed.food)));
-      await tester.pump();
-      expect(location(), RoutePaths.diary);
-      expect(container.read(diaryDateProvider), DateTime(2026, 11, 23));
-      await tester.pump(const Duration(seconds: 5));
     });
 
     testWidgets('open across midnight: the minute tick loads the new day', (
@@ -1126,19 +1120,25 @@ void main() {
       expect(find.text('page:${RoutePaths.drinkTracker}'), findsOneWidget);
     });
 
-    testWidgets('ring tap opens the Tagebuch on today', (tester) async {
-      final container = await pumpHero(tester);
-      container.read(diaryDateProvider.notifier).set(DateTime(2026, 11, 18));
+    testWidgets('a bubble opens its own tracker', (tester) async {
+      await pumpHero(tester);
 
-      // The ring's top edge, clear of the Buddy inside it.
-      final ring = tester.getRect(find.byKey(CareRing.tapKey));
-      await tester.tapAt(ring.topCenter + const Offset(0, 4));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
+      for (final (need, path) in [
+        (CareNeed.food, RoutePaths.mealTracker),
+        (CareNeed.drink, RoutePaths.drinkTracker),
+        (CareNeed.gutFeeling, RoutePaths.gutFeelingTracker),
+        (CareNeed.toilet, RoutePaths.toiletTracker),
+      ]) {
+        await tester.tap(find.byKey(CareRing.needKey(need)));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(location(), path, reason: '$need');
+        expect(find.text('page:$path'), findsOneWidget);
 
-      expect(location(), RoutePaths.diary);
-      expect(find.text('diary-page'), findsOneWidget);
-      expect(container.read(diaryDateProvider), startOfDay(now));
+        router.pop();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+      }
     });
 
     testWidgets('tapping the Buddy pokes, no navigation', (tester) async {

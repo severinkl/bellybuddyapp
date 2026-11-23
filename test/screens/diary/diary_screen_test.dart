@@ -239,12 +239,13 @@ void main() {
       expect(find.byKey(DiaryScreen.nextDayKey), findsNothing);
     }
 
-    testWidgets('opened on the new today (Tagebuch tab, Home\'s ring), it '
-        'shows that day', (tester) async {
+    testWidgets('opened on the new today (Tagebuch tab), it shows that day', (
+      tester,
+    ) async {
       final container = await pumpDiary(tester);
 
       now = nextDay.add(const Duration(minutes: 10));
-      // As the Tagebuch tab and openDiaryOn do.
+      // As the Tagebuch tab does.
       container.read(diaryDateProvider.notifier).set(startOfDay(now));
       await tester.pumpAndSettle();
 
