@@ -70,6 +70,55 @@ void main() {
         expect(care.progress(need), 0, reason: '$need');
         expect(care.isMet(need), isFalse, reason: '$need');
       }
+      expect(care.entries, 0);
+      expect(care.kindsLogged, 0);
+      expect(care.lastLogAt, isNull);
+    });
+
+    test("today's entries of every kind, the kinds and the latest one", () {
+      final care = DailyCare.fromEntries(
+        EntriesState(
+          meals: [testMealEntry(trackedAt: DateTime(2026, 11, 23, 8))],
+          drinks: [
+            testDrinkEntry(trackedAt: DateTime(2026, 11, 23, 9)),
+            testDrinkEntry(trackedAt: DateTime(2026, 11, 23, 9, 30)),
+            testDrinkEntry(trackedAt: yesterday),
+          ],
+          toiletEntries: [
+            testToiletEntry(trackedAt: DateTime(2026, 11, 23, 12)),
+            testToiletEntry(trackedAt: DateTime(2026, 11, 22, 23)),
+          ],
+        ),
+        now,
+      );
+
+      expect(care.drinks, 2);
+      expect(care.entries, 4);
+      expect(care.kindsLogged, 3);
+      expect(care.lastLogAt, DateTime(2026, 11, 23, 12));
+    });
+
+    test('a drink without volume is an entry but no glass', () {
+      final care = DailyCare.fromEntries(
+        EntriesState(
+          drinks: [
+            testDrinkEntry(trackedAt: DateTime(2026, 11, 23, 9), amountMl: 0),
+          ],
+        ),
+        now,
+      );
+
+      expect(care.drinks, 1);
+      expect(care.glasses, 0);
+      expect(care.kindsLogged, 1);
+    });
+
+    test('equal when every count and time matches', () {
+      expect(
+        DailyCare(meals: 1, lastMealAt: now, lastLogAt: now),
+        DailyCare(meals: 1, lastMealAt: now, lastLogAt: now),
+      );
+      expect(const DailyCare(drinks: 1), isNot(const DailyCare(glasses: 1)));
     });
   });
 

@@ -1,8 +1,8 @@
 import 'dart:math';
 
 import 'package:belly_buddy/models/gut_feeling_entry.dart';
-import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
+import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/buddy/buddy_actions.dart';
 import 'package:belly_buddy/widgets/buddy/buddy_pose.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -17,67 +17,25 @@ void main() {
 
   group('deriveBuddyMood', () {
     test('no logs before 10:00 -> sleepy (boundary 09:59 vs 10:00)', () {
-      expect(deriveBuddyMood(const TodayCare(), at(9, 59)), BuddyMood.sleepy);
-      expect(deriveBuddyMood(const TodayCare(), at(10)), BuddyMood.hungry);
+      expect(deriveBuddyMood(const DailyCare(), at(9, 59)), BuddyMood.sleepy);
+      expect(deriveBuddyMood(const DailyCare(), at(10)), BuddyMood.hungry);
     });
 
     test('three kinds -> energetic', () {
-      final care = TodayCare(
-        count: 3,
-        kinds: {EntryKind.meal, EntryKind.drink, EntryKind.toilet},
-        lastLogAt: at(8),
-      );
+      final care = DailyCare(meals: 1, drinks: 1, toilets: 1, lastLogAt: at(8));
       expect(deriveBuddyMood(care, at(20)), BuddyMood.energetic);
     });
 
     test('recent log within 5h -> happy (4h59 vs 5h01)', () {
-      final care = TodayCare(
-        count: 1,
-        kinds: {EntryKind.meal},
-        lastLogAt: at(8),
-      );
+      final care = DailyCare(meals: 1, lastLogAt: at(8));
       expect(deriveBuddyMood(care, at(12, 59)), BuddyMood.happy);
       expect(deriveBuddyMood(care, at(13, 1)), BuddyMood.hungry);
     });
 
     test('late night without recent log -> sleepy', () {
-      final care = TodayCare(
-        count: 1,
-        kinds: {EntryKind.meal},
-        lastLogAt: at(8),
-      );
+      final care = DailyCare(meals: 1, lastLogAt: at(8));
       expect(deriveBuddyMood(care, at(22)), BuddyMood.sleepy);
-      expect(deriveBuddyMood(const TodayCare(), at(23)), BuddyMood.sleepy);
-    });
-  });
-
-  group('TodayCare.fromEntries', () {
-    test('only counts today and ignores yesterday', () {
-      final now = at(15);
-      final s = EntriesState(
-        meals: [
-          testMealEntry(trackedAt: at(8)),
-          testMealEntry(
-            id: 'old',
-            trackedAt: now.subtract(const Duration(days: 1)),
-          ),
-        ],
-        toiletEntries: [testToiletEntry(trackedAt: at(12))],
-        gutFeelings: const [],
-        drinks: [
-          testDrinkEntry(trackedAt: now.subtract(const Duration(days: 1))),
-        ],
-      );
-      final care = TodayCare.fromEntries(s, now);
-      expect(care.count, 2);
-      expect(care.kinds, {EntryKind.meal, EntryKind.toilet});
-      expect(care.lastLogAt, at(12));
-    });
-
-    test('empty state', () {
-      final care = TodayCare.fromEntries(const EntriesState(), at(9));
-      expect(care.count, 0);
-      expect(care.lastLogAt, isNull);
+      expect(deriveBuddyMood(const DailyCare(), at(23)), BuddyMood.sleepy);
     });
   });
 

@@ -105,11 +105,17 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   final math.Random _rnd = math.Random();
   Timer? _moodTimer;
 
+  /// Today's care, derived from the entries at [_careAt]: re-derived on
+  /// every entries change, every minute and on resume. The ring, his mood
+  /// and the next action all follow it.
+  late DailyCare _care;
+  late DateTime _careAt;
+
   /// Mood derived from today's entries.
-  late BuddyMood _careMood;
+  BuddyMood get _careMood => deriveBuddyMood(_care, _careAt);
 
   /// What he needs next, from today's entries and the time of day.
-  late CareAction _careAction;
+  CareAction get _careAction => nextCareAction(_care, _careAt);
 
   /// Temporary mood on top of [_careMood] (empathetic after a bad log for
   /// this dashboard visit, in love while celebrating a reached goal).
@@ -160,12 +166,11 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   @override
   void initState() {
     super.initState();
-    _careMood = _deriveCareMood();
-    _careAction = _deriveCareAction();
+    _deriveCare();
     _buddy = BuddyController(mood: _careMood);
-    _moodTimer = Timer.periodic(_moodInterval, (_) => _updateCareMood());
+    _moodTimer = Timer.periodic(_moodInterval, (_) => _updateCare());
     _lifecycle = AppLifecycleListener(onResume: _onResume);
-    ref.listenManual(entriesProvider, (_, _) => _updateCareMood());
+    ref.listenManual(entriesProvider, (_, _) => _updateCare());
     ref.listenManual(buddyEventsProvider, (_, event) {
       if (event != null) _afterFrame(_consumeEvent);
     });
@@ -220,39 +225,26 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   }
 
   void _onResume() {
-    _updateCareMood();
+    _updateCare();
     _afterFrame(_consumeEvent);
   }
 
   // --- Mood -----------------------------------------------------------------
 
-  BuddyMood _deriveCareMood() {
-    final now = _now();
-    return deriveBuddyMood(
-      TodayCare.fromEntries(ref.read(entriesProvider), now),
-      now,
-    );
+  void _deriveCare() {
+    _careAt = _now();
+    _care = DailyCare.fromEntries(ref.read(entriesProvider), _careAt);
   }
 
-  CareAction _deriveCareAction() {
-    final now = _now();
-    return nextCareAction(
-      DailyCare.fromEntries(ref.read(entriesProvider), now),
-      now,
-    );
-  }
-
-  void _updateCareMood() {
+  void _updateCare() {
     if (!mounted) return;
-    final care = _deriveCareMood();
-    final action = _deriveCareAction();
-    if (care == _careMood && action == _careAction) return;
-    final moodChanged = care != _careMood;
-    _careMood = care;
-    if (action != _careAction) {
-      // The ring's glow and the button follow the clock too.
-      setState(() => _careAction = action);
-    }
+    final (care, mood, action) = (_care, _careMood, _careAction);
+    _deriveCare();
+    final moodChanged = _careMood != mood;
+    final actionChanged = _careAction != action;
+    // The ring, its glow and the button follow the entries and the clock.
+    if (_care != care || actionChanged) setState(() {});
+    if (!moodChanged && !actionChanged) return;
     if (moodChanged) _applyMood();
     if (_override == null) _sayMoodLine();
   }
@@ -534,7 +526,6 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   Widget build(BuildContext context) {
     final status = ref.watch(buddyProvider).value;
     final now = _now();
-    final care = DailyCare.fromEntries(ref.watch(entriesProvider), now);
     final action = _careAction;
     final name = status?.state.name ?? 'Buddy';
     return Column(
@@ -593,7 +584,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
                   ),
                 ),
                 CareRing(
-                  care: care,
+                  care: _care,
                   diameter: diameter,
                   highlight: action.need,
                   pulse: _buddy,

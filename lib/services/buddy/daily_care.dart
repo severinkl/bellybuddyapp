@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 
 import '../../providers/entries_provider.dart';
+import '../../utils/date_format_utils.dart';
 
 /// The Buddy's four daily needs, one per tracker; they make up the
 /// dashboard's care ring.
@@ -36,10 +37,12 @@ int glassesForMl(int ml) =>
 class DailyCare {
   const DailyCare({
     this.meals = 0,
+    this.drinks = 0,
     this.glasses = 0,
     this.gutFeelings = 0,
     this.toilets = 0,
     this.lastMealAt,
+    this.lastLogAt,
   });
 
   static const mealGoal = 3;
@@ -49,6 +52,9 @@ class DailyCare {
 
   final int meals;
 
+  /// Today's drink entries, whatever their volume.
+  final int drinks;
+
   /// Today's drinks in glasses ([glassesForMl] of their total volume).
   final int glasses;
   final int gutFeelings;
@@ -57,29 +63,70 @@ class DailyCare {
   /// Local time of today's latest meal.
   final DateTime? lastMealAt;
 
-  factory DailyCare.fromEntries(EntriesState s, DateTime now) {
-    bool isToday(DateTime t) {
-      final l = t.toLocal();
-      return l.year == now.year && l.month == now.month && l.day == now.day;
-    }
+  /// Local time of today's latest entry of any kind.
+  final DateTime? lastLogAt;
 
-    final ml = s.drinks
-        .where((d) => isToday(d.trackedAt))
-        .fold<int>(0, (sum, d) => sum + d.amountMl);
-    final mealTimes = [
-      for (final e in s.meals)
-        if (isToday(e.trackedAt)) e.trackedAt.toLocal(),
+  /// All of today's entries.
+  int get entries => meals + drinks + gutFeelings + toilets;
+
+  /// How many of the four kinds (meal, drink, Bauchgefühl, Klo) have an
+  /// entry today.
+  int get kindsLogged =>
+      [meals, drinks, gutFeelings, toilets].where((n) => n > 0).length;
+
+  factory DailyCare.fromEntries(EntriesState s, DateTime now) {
+    /// The local times of today's entries among [trackedAt].
+    List<DateTime> today(Iterable<DateTime> trackedAt) => [
+      for (final t in trackedAt)
+        if (isSameDay(t.toLocal(), now)) t.toLocal(),
     ];
+    DateTime? latest(List<DateTime> times) =>
+        times.isEmpty ? null : times.reduce((a, b) => a.isAfter(b) ? a : b);
+
+    final drinks = [
+      for (final d in s.drinks)
+        if (isSameDay(d.trackedAt.toLocal(), now)) d,
+    ];
+    final mealTimes = today(s.meals.map((e) => e.trackedAt));
+    final gutFeelingTimes = today(s.gutFeelings.map((e) => e.trackedAt));
+    final toiletTimes = today(s.toiletEntries.map((e) => e.trackedAt));
     return DailyCare(
       meals: mealTimes.length,
-      lastMealAt: mealTimes.isEmpty
-          ? null
-          : mealTimes.reduce((a, b) => a.isAfter(b) ? a : b),
-      glasses: glassesForMl(ml),
-      gutFeelings: s.gutFeelings.where((e) => isToday(e.trackedAt)).length,
-      toilets: s.toiletEntries.where((e) => isToday(e.trackedAt)).length,
+      drinks: drinks.length,
+      glasses: glassesForMl(drinks.fold(0, (sum, d) => sum + d.amountMl)),
+      gutFeelings: gutFeelingTimes.length,
+      toilets: toiletTimes.length,
+      lastMealAt: latest(mealTimes),
+      lastLogAt: latest([
+        ...mealTimes,
+        for (final d in drinks) d.trackedAt.toLocal(),
+        ...gutFeelingTimes,
+        ...toiletTimes,
+      ]),
     );
   }
+
+  @override
+  bool operator ==(Object other) =>
+      other is DailyCare &&
+      other.meals == meals &&
+      other.drinks == drinks &&
+      other.glasses == glasses &&
+      other.gutFeelings == gutFeelings &&
+      other.toilets == toilets &&
+      other.lastMealAt == lastMealAt &&
+      other.lastLogAt == lastLogAt;
+
+  @override
+  int get hashCode => Object.hash(
+    meals,
+    drinks,
+    glasses,
+    gutFeelings,
+    toilets,
+    lastMealAt,
+    lastLogAt,
+  );
 
   /// The daily goal of [need]; null for Klo (counted, never a target).
   static int? goalFor(CareNeed need) => switch (need) {

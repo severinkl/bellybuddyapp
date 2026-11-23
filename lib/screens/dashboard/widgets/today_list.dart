@@ -41,32 +41,34 @@ String _amount(int ml) {
 
 /// Today's (local) entries of [s], oldest first, each with a short label.
 List<TodayLogItem> todayLogItems(EntriesState s, DateTime now) {
-  bool isToday(DateTime l) =>
-      l.year == now.year && l.month == now.month && l.day == now.day;
+  bool isToday(DateTime trackedAt) => isSameDay(trackedAt.toLocal(), now);
 
-  final items = <TodayLogItem>[
+  return <TodayLogItem>[
     for (final e in s.meals)
-      TodayLogItem(
-        e.trackedAt.toLocal(),
-        EntryKind.meal,
-        e.title.trim().isEmpty ? 'Mahlzeit' : e.title.trim(),
-      ),
+      if (isToday(e.trackedAt))
+        TodayLogItem(
+          e.trackedAt.toLocal(),
+          EntryKind.meal,
+          e.title.trim().isEmpty ? 'Mahlzeit' : e.title.trim(),
+        ),
     for (final e in s.drinks)
-      TodayLogItem(
-        e.trackedAt.toLocal(),
-        EntryKind.drink,
-        '${e.drinkName} · ${_amount(e.amountMl)}',
-      ),
+      if (isToday(e.trackedAt))
+        TodayLogItem(
+          e.trackedAt.toLocal(),
+          EntryKind.drink,
+          '${e.drinkName} · ${_amount(e.amountMl)}',
+        ),
     for (final e in s.gutFeelings)
-      TodayLogItem(
-        e.trackedAt.toLocal(),
-        EntryKind.gutFeeling,
-        'Bauchgefühl: ${calculateGutFeelingRating(e).level.label}',
-      ),
+      if (isToday(e.trackedAt))
+        TodayLogItem(
+          e.trackedAt.toLocal(),
+          EntryKind.gutFeeling,
+          'Bauchgefühl: ${calculateGutFeelingRating(e).level.label}',
+        ),
     for (final e in s.toiletEntries)
-      TodayLogItem(e.trackedAt.toLocal(), EntryKind.toilet, 'Klo-Eintrag'),
-  ].where((i) => isToday(i.at)).toList()..sort((a, b) => a.at.compareTo(b.at));
-  return items;
+      if (isToday(e.trackedAt))
+        TodayLogItem(e.trackedAt.toLocal(), EntryKind.toilet, 'Klo-Eintrag'),
+  ]..sort((a, b) => a.at.compareTo(b.at));
 }
 
 /// The dashboard's „Heute" list: today's latest entries (at most
