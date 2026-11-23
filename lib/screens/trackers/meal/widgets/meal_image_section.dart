@@ -1,12 +1,26 @@
 import 'dart:math';
-import 'dart:typed_data';
 import 'dart:ui';
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../config/constants.dart';
+import '../../../../utils/logger.dart';
+import '../../../../utils/url_utils.dart';
 import '../../../../widgets/common/signed_path_image.dart';
+
+/// Picks a photo from [source]; null when the user cancels.
+typedef MealImagePicker = Future<XFile?> Function(ImageSource source);
+
+Future<XFile?> _pickWithImagePicker(ImageSource source) =>
+    ImagePicker().pickImage(source: source, maxWidth: 1024, imageQuality: 85);
+
+/// The iOS Settings page of the app (`UIApplication.openSettingsURLString`).
+const _appSettingsUrl = 'app-settings:';
+
+const _log = AppLogger('MealImageSection');
 
 class MealImageSection extends StatelessWidget {
   final Uint8List? imageBytes;
@@ -22,6 +36,12 @@ class MealImageSection extends StatelessWidget {
   /// When non-null, adds a third "Rezept" button to the empty-state row.
   final VoidCallback? onPickRecipe;
 
+  /// Picks the photo (default: the system camera / photo picker).
+  final MealImagePicker pickImage;
+
+  /// Opens the Settings app when photo access was denied.
+  final UrlOpener openUrl;
+
   const MealImageSection({
     super.key,
     required this.imageBytes,
@@ -30,18 +50,74 @@ class MealImageSection extends StatelessWidget {
     required this.onClearImage,
     this.initialImageUrl,
     this.onPickRecipe,
+    this.pickImage = _pickWithImagePicker,
+    this.openUrl = launchUrl,
   });
 
   Future<void> _pickImage(BuildContext context, ImageSource source) async {
-    final picker = ImagePicker();
-    final file = await picker.pickImage(
-      source: source,
-      maxWidth: 1024,
-      imageQuality: 85,
-    );
+    final XFile? file;
+    try {
+      file = await pickImage(source);
+    } on PlatformException catch (e, st) {
+      if (!context.mounted) return;
+      // image_picker: camera_access_denied / photo_access_denied.
+      if (e.code.endsWith('_access_denied')) {
+        await _showAccessDenied(context, camera: source == ImageSource.camera);
+      } else {
+        _log.error('picking an image failed', e, st);
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          const SnackBar(
+            content: Text('Das Bild konnte nicht geladen werden.'),
+          ),
+        );
+      }
+      return;
+    }
     if (file == null) return;
     final bytes = await file.readAsBytes();
     await onImagePicked(bytes, file.name);
+  }
+
+  /// Explains that the app may not use the camera ([camera]) or the photos,
+  /// and offers the Settings app, where the user can allow it.
+  Future<void> _showAccessDenied(
+    BuildContext context, {
+    required bool camera,
+  }) async {
+    final openSettings = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(
+          camera
+              ? 'Kein Zugriff auf die Kamera'
+              : 'Kein Zugriff auf deine Fotos',
+        ),
+        content: Text(
+          camera
+              ? 'Erlaube Belly Buddy in den Einstellungen den Zugriff auf die '
+                    'Kamera, um deine Mahlzeit zu fotografieren.'
+              : 'Erlaube Belly Buddy in den Einstellungen den Zugriff auf '
+                    'deine Fotos, um ein Bild deiner Mahlzeit auszuwählen.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Abbrechen'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Einstellungen öffnen'),
+          ),
+        ],
+      ),
+    );
+    if (openSettings != true || !context.mounted) return;
+    await openExternalUrl(
+      context,
+      _appSettingsUrl,
+      failureMessage: 'Die Einstellungen konnten nicht geöffnet werden.',
+      open: openUrl,
+    );
   }
 
   @override
