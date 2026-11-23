@@ -9,9 +9,9 @@ import 'buddy_shape_data.dart';
 import 'buddy_controller.dart';
 import 'buddy_speech_bubble.dart';
 
-/// The Buddy with its speech bubble above it: a fixed-height bubble slot
-/// (the bubble sits on its bottom edge, its tail pointing at his face) over
-/// an [AnimatedBuddy] filling the rest. Needs a bounded height.
+/// The Buddy with its speech bubble above it: a fixed-height
+/// [BuddyBubbleSlot] over an [AnimatedBuddy] filling the rest. Needs a
+/// bounded height.
 class BuddyStage extends StatelessWidget {
   const BuddyStage({
     super.key,
@@ -45,18 +45,11 @@ class BuddyStage extends StatelessWidget {
         );
         return Column(
           children: [
-            SizedBox(
+            BuddyBubbleSlot(
+              controller: controller,
+              width: width,
+              buddyArea: buddyArea,
               height: bubbleHeight,
-              width: double.infinity,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.bottomCenter,
-                child: BuddySpeechBubble(
-                  controller: controller,
-                  maxWidth: math.min(AppConstants.buddyBubbleMaxWidth, width),
-                  tail: BuddyBubbleTail.down(shift: faceShift(buddyArea)),
-                ),
-              ),
             ),
             Expanded(
               child: AnimatedBuddy(
@@ -68,6 +61,43 @@ class BuddyStage extends StatelessWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// The bubble slot above a Buddy who fills [buddyArea]: [height] tall and
+/// [width] wide, his speech bubble on its bottom edge (at most
+/// [AppConstants.buddyBubbleMaxWidth] wide) with its tail pointing at his
+/// face. A taller bubble (large text scale) is scaled down to fit instead
+/// of overflowing.
+class BuddyBubbleSlot extends StatelessWidget {
+  const BuddyBubbleSlot({
+    super.key,
+    required this.controller,
+    required this.width,
+    required this.buddyArea,
+    this.height = AppConstants.buddyBubbleHeight,
+  });
+
+  final BuddyController controller;
+  final double width;
+  final Size buddyArea;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: height,
+      width: double.infinity,
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: Alignment.bottomCenter,
+        child: BuddySpeechBubble(
+          controller: controller,
+          maxWidth: math.min(AppConstants.buddyBubbleMaxWidth, width),
+          tail: BuddyBubbleTail.down(shift: BuddyStage.faceShift(buddyArea)),
+        ),
+      ),
     );
   }
 }

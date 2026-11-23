@@ -565,23 +565,10 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
             final buddySide = diameter * AppConstants.careRingBuddyFactor;
             return Column(
               children: [
-                SizedBox(
-                  height: AppConstants.buddyBubbleHeight,
-                  width: double.infinity,
-                  child: FittedBox(
-                    fit: BoxFit.scaleDown,
-                    alignment: Alignment.bottomCenter,
-                    child: BuddySpeechBubble(
-                      controller: _buddy,
-                      maxWidth: math.min(
-                        AppConstants.buddyBubbleMaxWidth,
-                        width,
-                      ),
-                      tail: BuddyBubbleTail.down(
-                        shift: BuddyStage.faceShift(Size.square(buddySide)),
-                      ),
-                    ),
-                  ),
+                BuddyBubbleSlot(
+                  controller: _buddy,
+                  width: width,
+                  buddyArea: Size.square(buddySide),
                 ),
                 CareRing(
                   care: _care,
