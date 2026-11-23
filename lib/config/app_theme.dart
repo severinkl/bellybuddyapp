@@ -135,6 +135,13 @@ class AppTheme {
     color: mutedForeground,
   );
 
+  /// Small muted text: a caption, a tile's meta line, a switch's
+  /// explanation.
+  static const TextStyle captionMutedStyle = TextStyle(
+    fontSize: fontSizeCaptionLG,
+    color: mutedForeground,
+  );
+
   // The streak moment's big count („🔥 1 Tag"): flame and number
   static const double fontSizeStreakFlame = 40;
   static const double fontSizeStreakCount = 56;

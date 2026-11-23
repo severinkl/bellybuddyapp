@@ -87,19 +87,13 @@ class _KnowledgeScreenState extends ConsumerState<KnowledgeScreen> {
         children: [
           const Text(
             'Artikel aus dem myfodmap-Blog',
-            style: TextStyle(
-              fontSize: AppTheme.fontSizeCaptionLG,
-              color: AppTheme.mutedForeground,
-            ),
+            style: AppTheme.captionMutedStyle,
           ),
           if (feed.offline) ...[
             AppConstants.gap4,
             const Text(
               'Gerade offline – du siehst den zuletzt geladenen Stand.',
-              style: TextStyle(
-                fontSize: AppTheme.fontSizeCaptionLG,
-                color: AppTheme.mutedForeground,
-              ),
+              style: AppTheme.captionMutedStyle,
             ),
           ],
           AppConstants.gap12,

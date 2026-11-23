@@ -64,13 +64,7 @@ class KnowledgeArticleTile extends StatelessWidget {
                     ),
                     if (meta != null) ...[
                       AppConstants.gap4,
-                      Text(
-                        meta,
-                        style: const TextStyle(
-                          fontSize: AppTheme.fontSizeCaptionLG,
-                          color: AppTheme.mutedForeground,
-                        ),
-                      ),
+                      Text(meta, style: AppTheme.captionMutedStyle),
                     ],
                   ],
                 ),

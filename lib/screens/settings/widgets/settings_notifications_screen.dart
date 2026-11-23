@@ -351,10 +351,7 @@ class _SettingsNotificationsScreenState
                             ),
                             const Text(
                               'Ich sag dir Bescheid, sobald neue Tipps da sind.',
-                              style: TextStyle(
-                                fontSize: AppTheme.fontSizeCaptionLG,
-                                color: AppTheme.mutedForeground,
-                              ),
+                              style: AppTheme.captionMutedStyle,
                             ),
                           ],
                         ),

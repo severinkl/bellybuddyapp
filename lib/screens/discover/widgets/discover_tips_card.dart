@@ -52,13 +52,7 @@ class DiscoverTipsCard extends StatelessWidget {
                   ),
                 ),
               ),
-              Text(
-                newest.tipCountLabel,
-                style: const TextStyle(
-                  fontSize: AppTheme.fontSizeCaptionLG,
-                  color: AppTheme.mutedForeground,
-                ),
-              ),
+              Text(newest.tipCountLabel, style: AppTheme.captionMutedStyle),
               const Icon(Icons.chevron_right, color: AppTheme.mutedForeground),
             ],
           ),

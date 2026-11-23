@@ -61,10 +61,7 @@ class _WeeklyTipsSwitchState extends ConsumerState<WeeklyTipsSwitch> {
         ),
         const Text(
           WeeklyTipsSwitch.sentence,
-          style: TextStyle(
-            fontSize: AppTheme.fontSizeCaptionLG,
-            color: AppTheme.mutedForeground,
-          ),
+          style: AppTheme.captionMutedStyle,
         ),
       ],
     );
