@@ -8,6 +8,7 @@ import 'package:riverpod/src/internals.dart' show Override;
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
+import 'package:belly_buddy/models/knowledge_article.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/models/recommendation_item.dart';
 import 'package:belly_buddy/models/replacement_ingredient.dart';
@@ -646,6 +647,21 @@ void main() {
       inSection(DiscoverScreen.knowledgeKey, find.text('Alle ›')),
     );
     expect(find.text('page:${RoutePaths.knowledge}'), findsOneWidget);
+  });
+
+  testWidgets('a fresh copy of the articles: opening fetches none', (
+    tester,
+  ) async {
+    knowledge = FakeKnowledgeRepository(
+      cache: KnowledgeFeed(
+        articles: testKnowledgeArticles(),
+        fetchedAt: DateTime.now(),
+      ),
+    );
+    await pump(tester);
+
+    expect(knowledge.fetchCount, 0);
+    expect(tilesIn(DiscoverScreen.knowledgeKey), findsNWidgets(3));
   });
 
   testWidgets('an article opens in the in-app browser', (tester) async {

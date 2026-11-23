@@ -48,20 +48,26 @@ class KnowledgeFeedNotifier extends AsyncNotifier<KnowledgeFeed> {
   /// Fetches now. A failure keeps the current articles, marked offline.
   /// Never throws.
   Future<void> refresh() async {
+    final KnowledgeFeed feed;
     try {
-      state = AsyncData(await _fetch(_now()));
+      feed = await _fetch(_now());
     } on Object catch (e, st) {
       _log.error('Feed refresh failed', e, st);
+      if (!ref.mounted) return;
       final current = state.value;
       state = current == null
           ? AsyncError(e, st)
           : AsyncData(current.copyWith(offline: true));
+      return;
     }
+    if (ref.mounted) state = AsyncData(feed);
   }
 
   /// [refresh]es when the shown copy is [AppConstants.knowledgeFeedMaxAge]
-  /// old or older.
+  /// old or older. Nothing while [build] runs: it shows the cached copy
+  /// while fresh and fetches otherwise.
   Future<void> refreshIfStale() async {
+    if (state.isLoading) return;
     final current = state.value;
     if (current != null && _isFresh(current, _now())) return;
     await refresh();

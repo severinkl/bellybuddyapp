@@ -103,6 +103,18 @@ void main() {
     expect(value.articles, testKnowledgeArticles());
   });
 
+  test('refreshIfStale during the first load fetches nothing more', () async {
+    final repo = FakeKnowledgeRepository(
+      cache: copyAt(DateTime(2026, 11, 23, 9)),
+    );
+    final c = container(repo);
+    c.listen(knowledgeFeedProvider, (_, _) {});
+    await c.read(knowledgeFeedProvider.notifier).refreshIfStale();
+    await c.read(knowledgeFeedProvider.future);
+
+    expect(repo.fetchCount, 0);
+  });
+
   test('refreshIfStale fetches only after 6 h', () async {
     final repo = FakeKnowledgeRepository();
     final c = container(repo);
