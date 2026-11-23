@@ -83,6 +83,9 @@ class _DrinkSizeSelectorState extends ConsumerState<DrinkSizeSelector> {
                 key: DrinkSizeSelector.customAmountKey,
                 controller: _customController,
                 keyboardType: TextInputType.number,
+                // Scrolls the hint under the field into view with the
+                // field, not just the digits.
+                scrollPadding: AppConstants.fieldWithHintScrollPadding,
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
                   LengthLimitingTextInputFormatter(5),

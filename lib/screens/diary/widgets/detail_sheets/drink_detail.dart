@@ -36,6 +36,7 @@ class DrinkDetail extends StatelessWidget {
             builder: (context, amount, _) => TextField(
               controller: amountController,
               keyboardType: TextInputType.number,
+              scrollPadding: AppConstants.fieldWithHintScrollPadding,
               inputFormatters: [
                 FilteringTextInputFormatter.digitsOnly,
                 LengthLimitingTextInputFormatter(5),

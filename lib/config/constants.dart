@@ -17,6 +17,16 @@ class AppConstants {
   static const double spacingXl = 32.0;
   static const double spacingXxl = 48.0;
 
+  /// The scroll padding of a text field with a hint line under it: below
+  /// the caret it scrolls the field's bottom, the hint and a margin clear
+  /// of the keyboard (the default 20 can leave the hint cut off).
+  static const EdgeInsets fieldWithHintScrollPadding = EdgeInsets.fromLTRB(
+    spacing20,
+    spacing20,
+    spacing20,
+    72,
+  );
+
   // Spacing widgets
   static const gap4 = SizedBox(height: 4);
   static const gap6 = SizedBox(height: 6);
