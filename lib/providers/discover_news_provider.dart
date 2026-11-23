@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../config/constants.dart';
+import '../router/route_names.dart';
 import 'app_foreground_provider.dart';
 import 'auth_provider.dart';
 import 'buddy_provider.dart';
@@ -13,8 +14,8 @@ import 'recommendation_provider.dart';
 /// Alternativen. Loads them when a user signs in and, while one is signed
 /// in, when the app is back in the foreground ([appForegroundProvider]) and
 /// the last load is [AppConstants.discoverNewsForegroundInterval] old;
-/// pushes and pull to refresh call [refresh], Entdecken's first load
-/// [ensureLoaded]. The app root keeps it alive.
+/// pushes about them ([pushArrived]) and pull to refresh load them too,
+/// Entdecken's first load joins ([ensureLoaded]). The app root keeps it alive.
 class DiscoverNewsNotifier extends Notifier<void> {
   /// The newest load under way for the signed-in user.
   Future<void>? _loading;
@@ -49,6 +50,15 @@ class DiscoverNewsNotifier extends Notifier<void> {
     }
     unawaited(refresh());
   }
+
+  /// A push arrived while the app is open: one routed to the Tipps or the
+  /// Alternativen brings news of them, so they load; others bring none.
+  Future<void> pushArrived(String? route) => switch (route == null
+      ? null
+      : Uri.tryParse(route)?.path) {
+    RoutePaths.recommendations || RoutePaths.ingredientSuggestions => refresh(),
+    _ => Future.value(),
+  };
 
   /// Entdecken's first load: joins a load under way (the sign-in load the
   /// app root just started); otherwise loads only while the tips or the

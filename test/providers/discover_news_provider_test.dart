@@ -13,6 +13,7 @@ import 'package:belly_buddy/providers/ingredient_suggestion_provider.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/repositories/recommendation_repository.dart';
+import 'package:belly_buddy/router/route_names.dart';
 
 import '../helpers/app_lifecycle.dart';
 import '../helpers/fakes.dart';
@@ -211,6 +212,35 @@ void main() {
 
     expect(tips.fetchCount, 1);
     verify(() => alternatives.fetchSuggestionGroups(testUserId)).called(1);
+  });
+
+  group('a push in the foreground', () {
+    for (final route in [
+      RoutePaths.recommendations,
+      RoutePaths.ingredientSuggestions,
+    ]) {
+      test('routed to $route: loads them', () async {
+        final c = makeContainer();
+        await settle();
+
+        await c.read(discoverNewsProvider.notifier).pushArrived(route);
+
+        expect(tips.fetchCount, 2);
+        verify(() => alternatives.fetchSuggestionGroups(testUserId)).called(2);
+      });
+    }
+
+    for (final route in [RoutePaths.diary, null]) {
+      test('routed to $route: nothing', () async {
+        final c = makeContainer();
+        await settle();
+
+        await c.read(discoverNewsProvider.notifier).pushArrived(route);
+
+        expect(tips.fetchCount, 1);
+        verify(() => alternatives.fetchSuggestionGroups(testUserId)).called(1);
+      });
+    }
   });
 
   group('ensureLoaded (Entdecken opening)', () {

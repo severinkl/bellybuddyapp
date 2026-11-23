@@ -96,7 +96,7 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
       }
 
       // New tips or Alternativen may have arrived.
-      unawaited(ref.read(discoverNewsProvider.notifier).refresh());
+      unawaited(ref.read(discoverNewsProvider.notifier).pushArrived(route));
     });
 
     // Handle initial message (app opened from terminated state via notification)
