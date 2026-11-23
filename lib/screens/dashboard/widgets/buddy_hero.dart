@@ -24,6 +24,7 @@ import '../../../widgets/common/bb_button.dart';
 import '../../buddy/streak_goal_picker.dart';
 import 'care_ring.dart';
 import 'streak_sheet.dart';
+import 'tutorial/tutorial_keys.dart';
 
 /// Lines the hero plays one after another: the onboarding's welcome (ahead
 /// of all others), the follow-up after a log and the [BuddyAnnouncement]s.
@@ -95,8 +96,6 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   late final BuddyController _buddy;
 
-  /// The next-action button's key; the tour will target it.
-  final _nextActionKey = GlobalKey(debugLabel: 'buddyHero.nextAction');
   late final AppLifecycleListener _lifecycle;
   final math.Random _rnd = math.Random();
   Timer? _moodTimer;
@@ -602,7 +601,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
         ),
         AppConstants.gap12,
         KeyedSubtree(
-          key: _nextActionKey,
+          key: TutorialKeys.nextAction,
           child: BbButton(
             tapKey: BuddyHero.actionKey,
             label: BuddyCopy.careButton(action),

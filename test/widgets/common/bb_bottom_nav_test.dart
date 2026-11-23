@@ -120,12 +120,33 @@ void main() {
       expect(find.byIcon(Icons.explore_outlined), findsOneWidget);
     });
 
-    testWidgets('Tagebuch keeps its tutorial key', (tester) async {
+    testWidgets('the tour targets the plus, Tagebuch, Entdecken and Ich', (
+      tester,
+    ) async {
       await _pumpNav(tester);
+      for (final (key, label) in [
+        (TutorialKeys.tagebuch, 'Tagebuch'),
+        (TutorialKeys.entdecken, 'Entdecken'),
+        (TutorialKeys.ich, 'Ich'),
+      ]) {
+        expect(
+          find.descendant(of: find.byKey(key), matching: find.text(label)),
+          findsOneWidget,
+          reason: label,
+        );
+      }
+      // The plus circle itself, inside the centre button.
       expect(
         find.descendant(
-          of: find.byKey(TutorialKeys.tagebuch),
-          matching: find.text('Tagebuch'),
+          of: find.byKey(BbBottomNav.centerButtonKey),
+          matching: find.byKey(TutorialKeys.plus),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: find.byKey(TutorialKeys.plus),
+          matching: find.byIcon(Icons.add),
         ),
         findsOneWidget,
       );

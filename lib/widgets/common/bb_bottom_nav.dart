@@ -105,23 +105,29 @@ class BbBottomNav extends ConsumerWidget {
                     ),
                   ),
                   Expanded(
-                    child: _NavItem(
-                      tapKey: navDiscoverKey,
-                      icon: Icons.explore_outlined,
-                      activeIcon: Icons.explore,
-                      label: 'Entdecken',
-                      isActive: currentIndex == _discoverBranch,
-                      onTap: () => goBranch(_discoverBranch),
+                    child: KeyedSubtree(
+                      key: TutorialKeys.entdecken,
+                      child: _NavItem(
+                        tapKey: navDiscoverKey,
+                        icon: Icons.explore_outlined,
+                        activeIcon: Icons.explore,
+                        label: 'Entdecken',
+                        isActive: currentIndex == _discoverBranch,
+                        onTap: () => goBranch(_discoverBranch),
+                      ),
                     ),
                   ),
                   Expanded(
-                    child: _NavItem(
-                      tapKey: navMeKey,
-                      icon: Icons.person_outline,
-                      activeIcon: Icons.person,
-                      label: 'Ich',
-                      isActive: currentIndex == _meBranch,
-                      onTap: () => goBranch(_meBranch),
+                    child: KeyedSubtree(
+                      key: TutorialKeys.ich,
+                      child: _NavItem(
+                        tapKey: navMeKey,
+                        icon: Icons.person_outline,
+                        activeIcon: Icons.person,
+                        label: 'Ich',
+                        isActive: currentIndex == _meBranch,
+                        onTap: () => goBranch(_meBranch),
+                      ),
                     ),
                   ),
                 ],
@@ -259,7 +265,7 @@ class _CenterButton extends StatelessWidget {
             Positioned(
               top: -26,
               child: Container(
-                key: TutorialKeys.essenTracken,
+                key: TutorialKeys.plus,
                 width: 72,
                 height: 72,
                 decoration: const BoxDecoration(

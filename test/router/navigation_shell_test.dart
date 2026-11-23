@@ -5,6 +5,7 @@ import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/diary_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
+import 'package:belly_buddy/providers/tutorial_provider.dart';
 import 'package:belly_buddy/providers/upgrade_gate_provider.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/repositories/auth_repository.dart';
@@ -20,6 +21,10 @@ import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/router/tab_navigation.dart';
 import 'package:belly_buddy/screens/dashboard/dashboard_screen.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/insight_card.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/tutorial/dashboard_tutorial_overlay.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/tutorial/dashboard_tutorial_steps.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/tutorial/spotlight_painter.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tooltip_bubble.dart';
 import 'package:belly_buddy/screens/diary/diary_screen.dart';
 import 'package:belly_buddy/screens/discover/discover_screen.dart';
 import 'package:belly_buddy/screens/me/me_screen.dart';
@@ -315,6 +320,50 @@ void main() {
         tester.getRect(card).bottom,
         lessThanOrEqualTo(tester.getRect(find.byType(BbBottomNav)).top),
       );
+    });
+
+    testWidgets('the tour spotlights all 7 targets and keeps its bubbles on '
+        'a 375×667 phone at text scale 1.3', (tester) async {
+      tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      tester.view.padding = const FakeViewPadding(top: 20);
+      final container = await _pumpShell(tester, screen: const Size(375, 667));
+
+      // „Tutorial wiederholen" in the Ich tab.
+      await _tap(tester, BbBottomNav.navMeKey);
+      container.read(tutorialProvider.notifier).requestReplay();
+      container.read(routerProvider).go(RoutePaths.dashboard);
+      await tester.pumpAndSettle();
+
+      for (final (i, step) in dashboardTutorialSteps.indexed) {
+        // No step skipped: each shows its own text, spotlit on its target
+        // (the insight card scrolled into view first).
+        final target = tester.getRect(find.byKey(step.targetKey));
+        final spotlight = tester
+            .widgetList<CustomPaint>(find.byType(CustomPaint))
+            .map((paint) => paint.painter)
+            .whereType<SpotlightPainter>()
+            .single
+            .targetRect;
+        expect(
+          spotlight,
+          target.inflate(AppConstants.spacingXs),
+          reason: 'step $i',
+        );
+        final bubble = find.byType(TooltipBubble);
+        expect(
+          tester.widget<TooltipBubble>(bubble).richText,
+          step.richText,
+          reason: 'step $i',
+        );
+        final rect = tester.getRect(bubble);
+        expect(rect.top, greaterThanOrEqualTo(20), reason: 'step $i');
+        expect(rect.bottom, lessThanOrEqualTo(667), reason: 'step $i');
+        expect(tester.takeException(), isNull, reason: 'step $i');
+
+        await _tap(tester, DashboardTutorialOverlay.advanceKey);
+      }
+      expect(find.byType(DashboardTutorialOverlay), findsNothing);
     });
   });
 }

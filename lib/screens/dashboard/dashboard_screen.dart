@@ -35,6 +35,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   // if the screen is torn down mid-tour (e.g. sign-out).
   TutorialHandle? _tutorialHandle;
 
+  // Set once the first load is done and no Buddy onboarding takes over.
+  // From then on a replay request starts the tour right away; before, the
+  // post-load path takes it.
+  bool _firstRunDone = false;
+
   @override
   void initState() {
     super.initState();
@@ -47,6 +52,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       // gate): no first-run prompts underneath it. They run when the
       // onboarding comes back here.
       if (!mounted || ref.read(buddyOnboardingRequiredProvider)) return;
+      _firstRunDone = true;
       await _maybeShowTutorial();
       if (!mounted) return;
       _maybeShowNotificationModal();
@@ -72,10 +78,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     super.dispose();
   }
 
+  /// Shows the tour to a new user, and again for each replay requested in
+  /// the Ich tab („Tutorial wiederholen"), even when it was seen. The
+  /// request is taken here, so each one shows the tour once.
   Future<void> _maybeShowTutorial() async {
     if (!mounted) return;
-    final shouldShow = ref.read(tutorialProvider.notifier).shouldShow();
-    if (!shouldShow) return;
+    final tutorial = ref.read(tutorialProvider.notifier);
+    // Taken even while a tour is up: that tour answers the request.
+    final replay = tutorial.consumeReplay();
+    if (_tutorialHandle != null) return;
+    if (!replay && !tutorial.shouldShow()) return;
     // The Buddy onboarding already welcomed the user: the spotlight tour
     // starts right away. tutorialSeenAt is persisted at its end.
     final handle = showDashboardTutorial(context);
@@ -129,6 +141,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     ref.listen<bool>(softNudgePendingProvider, (_, pending) {
       if (pending) _maybeShowSoftNudge();
     });
+    // „Tutorial wiederholen" while Home is already built (the shell keeps
+    // the tab): the Ich tab requests, then goes Home, and the tour starts in
+    // that same frame. Taken in a microtask, not inside this notification;
+    // before the first load is done, the post-load path takes it instead.
+    ref.listen<bool>(tutorialReplayProvider, (_, pending) {
+      if (pending && _firstRunDone) Future.microtask(_maybeShowTutorial);
+    });
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
@@ -156,6 +175,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       // Only the card rebuilds with its progress.
                       Consumer(
                         builder: (_, ref, _) => InsightCard(
+                          key: TutorialKeys.insight,
                           progress: ref.watch(insightProgressProvider),
                         ),
                       ),
