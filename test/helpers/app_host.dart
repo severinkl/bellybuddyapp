@@ -103,9 +103,7 @@ List<Override> baseOverrides({
   notificationRepositoryProvider.overrideWithValue(
     FakeNotificationRepository(),
   ),
-  knowledgeRepositoryProvider.overrideWithValue(
-    FakeKnowledgeRepository(articles: testKnowledgeArticles()),
-  ),
+  knowledgeRepositoryProvider.overrideWithValue(FakeKnowledgeRepository()),
   upgradeDecisionProvider.overrideWith((_) => Future.value(decision)),
 ];
 

@@ -67,15 +67,28 @@ void main() {
     expect(isOn(tester), isTrue);
   });
 
-  testWidgets('failure snaps back with a SnackBar', (tester) async {
+  testWidgets('failure snaps back with a SnackBar, and is logged', (
+    tester,
+  ) async {
     await pump(tester, using: FakeProfileRepository());
     repo.weeklyTipsError = const PostgrestException(message: 'no column');
 
-    await tester.tap(find.byKey(WeeklyTipsSwitch.switchKey));
-    await tester.pumpAndSettle();
+    final logs = <String>[];
+    final print = debugPrint;
+    debugPrint = (message, {wrapWidth}) => logs.add(message ?? '');
+    try {
+      await tester.tap(find.byKey(WeeklyTipsSwitch.switchKey));
+      await tester.pumpAndSettle();
+    } finally {
+      debugPrint = print;
+    }
 
     expect(isOn(tester), isFalse);
     expect(find.text(WeeklyTipsSwitch.failure), findsOneWidget);
+    expect(
+      logs,
+      contains('WeeklyTipsSwitch [ERROR]: saving the weekly tips failed'),
+    );
   });
 
   testWidgets('a second tap while saving is ignored', (tester) async {

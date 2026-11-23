@@ -7,6 +7,9 @@ import 'package:belly_buddy/screens/discover/widgets/discover_tips_section.dart'
 import 'package:belly_buddy/screens/discover/widgets/knowledge_article_tile.dart';
 import 'package:belly_buddy/screens/me/me_screen.dart';
 import 'package:belly_buddy/screens/recommendations/recommendations_screen.dart';
+import 'package:belly_buddy/screens/settings/settings_screen.dart';
+import 'package:belly_buddy/screens/settings/widgets/settings_notifications_screen.dart';
+import 'package:belly_buddy/utils/date_format_utils.dart';
 import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
 import 'package:belly_buddy/widgets/common/weekly_tips_switch.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -23,6 +26,12 @@ import 'helpers/welcome_driver.dart' show pumpUntilFound;
 Finder get _optInSwitch => find.descendant(
   of: find.byKey(DiscoverTipsSection.optInKey),
   matching: find.byType(WeeklyTipsSwitch),
+);
+
+/// Its switch tile.
+Finder get _optInTile => find.descendant(
+  of: _optInSwitch,
+  matching: find.byKey(WeeklyTipsSwitch.switchKey),
 );
 
 void main() {
@@ -60,16 +69,16 @@ void main() {
         find.descendant(of: section, matching: find.text('Alle ›')),
       );
       expect(find.byType(KnowledgeScreen), findsOneWidget);
-      for (final (category, label) in [
-        (null, 'Alle'),
-        ('Gesund verdauen', 'Gesund verdauen'),
-        ('Rezepte', 'Rezepte'),
-        ('Persönliches', 'Persönliches'),
+      for (final category in [
+        null,
+        'Gesund verdauen',
+        'Rezepte',
+        'Persönliches',
       ]) {
         expect(
           find.descendant(
             of: find.byKey(KnowledgeScreen.chipKey(category)),
-            matching: find.text(label),
+            matching: find.text(category ?? 'Alle'),
           ),
           findsOneWidget,
         );
@@ -104,16 +113,24 @@ void main() {
     expect(_optInSwitch, findsOneWidget);
     expect(find.text(DiscoverTipsSection.emptyWhileOn), findsNothing);
 
-    await tester.tapVisible(find.byKey(WeeklyTipsSwitch.switchKey));
+    await tester.tapVisible(_optInTile);
     expect(profileRepo.weeklyTipsWrites, [true]);
     expect(find.text(DiscoverTipsSection.emptyWhileOn), findsOneWidget);
     expect(_optInSwitch, findsNothing);
 
     await tester.tapVisible(find.byKey(BbBottomNav.navMeKey));
     await tester.tapVisible(find.byKey(MeScreen.settingsKey));
-    await tester.tapVisible(find.text('Benachrichtigungen'));
+    await tester.tapVisible(
+      find.descendant(
+        of: find.byType(SettingsScreen),
+        matching: find.text('Benachrichtigungen'),
+      ),
+    );
 
-    final weekly = find.byKey(WeeklyTipsSwitch.switchKey);
+    final weekly = find.descendant(
+      of: find.byType(SettingsNotificationsScreen),
+      matching: find.byKey(WeeklyTipsSwitch.switchKey),
+    );
     await tester.ensureVisible(weekly);
     await tester.pumpAndSettle();
     expect(tester.widget<SwitchListTile>(weekly).value, isTrue);
@@ -126,14 +143,8 @@ void main() {
 
   testWidgets('new tips: Home\'s row and the Entdecken dot until the Tipps '
       'are opened', (tester) async {
-    final now = DateTime.now();
-    final thisMonday = DateTime(
-      now.year,
-      now.month,
-      now.day - (now.weekday - DateTime.monday),
-      8,
-    );
-    final set = testRecommendation(seenAt: null, createdAt: thisMonday);
+    final thisMonday = mondayOf(DateTime.now()).add(const Duration(hours: 8));
+    final set = testRecommendation(createdAt: thisMonday);
     await tester.pumpWidget(
       buildTestApp(
         recommendationRepo: FakeRecommendationRepository(sets: [set]),
@@ -181,11 +192,6 @@ void main() {
     expect(find.byType(DiscoverScreen), findsOneWidget);
     expect(_optInSwitch.hitTestable(), findsOneWidget);
     // The offer only leads there: the weekly tips stay off until switched.
-    expect(
-      tester
-          .widget<SwitchListTile>(find.byKey(WeeklyTipsSwitch.switchKey))
-          .value,
-      isFalse,
-    );
+    expect(tester.widget<SwitchListTile>(_optInTile).value, isFalse);
   });
 }

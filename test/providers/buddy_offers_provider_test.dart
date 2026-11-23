@@ -81,7 +81,6 @@ void main() {
         c.read(buddyOffersProvider),
         containsPair(BuddyAnnouncement.weeklyTipsOffer, 'once'),
       );
-      expect(weeklyTipsOfferSuffix, 'once');
     });
 
     test('unlocked and weekly tips on: no offer', () async {

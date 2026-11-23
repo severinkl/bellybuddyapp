@@ -6,6 +6,7 @@ import 'package:belly_buddy/models/gut_feeling_entry.dart';
 import 'package:belly_buddy/models/insight_source.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/splash_screen_provider.dart';
+import 'package:belly_buddy/providers/upgrade_gate_provider.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/repositories/knowledge_repository.dart';
 import 'package:belly_buddy/repositories/repositories.dart';
@@ -139,15 +140,17 @@ ProviderScope buildTestApp({
       recommendationRepositoryProvider.overrideWithValue(
         recommendationRepo ?? FakeRecommendationRepository(),
       ),
-      knowledgeRepositoryProvider.overrideWithValue(
-        FakeKnowledgeRepository(articles: testKnowledgeArticles()),
-      ),
+      knowledgeRepositoryProvider.overrideWithValue(FakeKnowledgeRepository()),
       mealMediaRepositoryProvider.overrideWithValue(FakeMealMediaRepository()),
       notificationRepositoryProvider.overrideWithValue(
         FakeNotificationRepository(),
       ),
       buddyRepositoryProvider.overrideWithValue(fakeBuddyRepo),
       splashConfigProvider.overrideWithValue(SplashConfig.test),
+      // No app_config backend: no upgrade gate.
+      upgradeDecisionProvider.overrideWith(
+        (_) => Future.value(UpgradeDecision.ok),
+      ),
     ],
     child: const BellyBuddyApp(),
   );

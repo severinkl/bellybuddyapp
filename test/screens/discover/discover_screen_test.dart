@@ -252,7 +252,6 @@ void main() {
       tips: [
         testRecommendation(
           id: 'new',
-          seenAt: null,
           summary: 'Diese Woche lief es mit Reis besonders gut.',
           recommendations: const [_item, _item, _item],
           createdAt: DateTime.utc(2026, 11, 16, 10),
@@ -608,12 +607,8 @@ void main() {
     expect(find.text('Rezept hinzufügen'), findsOneWidget);
   });
 
-  Finder tilesIn(Key section) => inSection(
-    section,
-    find.byWidgetPredicate(
-      (w) => w.key.toString().contains('knowledge_article_'),
-    ),
-  );
+  Finder tilesIn(Key section) =>
+      inSection(section, find.byType(KnowledgeArticleTile));
 
   testWidgets('Wissen previews the newest 3 and Alle ›', (tester) async {
     await pump(tester);
@@ -682,22 +677,9 @@ void main() {
     );
   });
 
-  testWidgets('pull-to-refresh refreshes the feed', (tester) async {
+  testWidgets('pull to refresh reloads all four', (tester) async {
     await pump(tester);
-    final before = knowledge.fetchCount;
-
-    await tester.fling(
-      find.byType(RefreshIndicator),
-      const Offset(0, 400),
-      1000,
-    );
-    await tester.pumpAndSettle();
-
-    expect(knowledge.fetchCount, before + 1);
-  });
-
-  testWidgets('pull to refresh reloads all three', (tester) async {
-    await pump(tester);
+    final feedFetches = knowledge.fetchCount;
 
     await tester.fling(
       find.byType(RefreshIndicator),
@@ -709,6 +691,7 @@ void main() {
     verify(() => recommendations.fetchByUserId(testUserId)).called(2);
     verify(() => ingredients.fetchSuggestionGroups(testUserId)).called(2);
     verify(() => recipes.fetchForUser(testUserId)).called(2);
+    expect(knowledge.fetchCount, feedFetches + 1);
   });
 
   testWidgets('fits a 375×667 phone at text scale 1.3', (tester) async {

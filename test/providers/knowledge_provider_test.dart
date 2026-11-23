@@ -16,16 +16,13 @@ void main() {
     fetchedAt: at,
   );
 
-  ProviderContainer container(FakeKnowledgeRepository repo) {
-    final c = ProviderContainer(
-      overrides: [
-        knowledgeRepositoryProvider.overrideWithValue(repo),
-        buddyClockProvider.overrideWithValue(() => now),
-      ],
-    );
-    addTearDown(c.dispose);
-    return c;
-  }
+  ProviderContainer container(FakeKnowledgeRepository repo) =>
+      ProviderContainer.test(
+        overrides: [
+          knowledgeRepositoryProvider.overrideWithValue(repo),
+          buddyClockProvider.overrideWithValue(() => now),
+        ],
+      );
 
   setUp(() => now = DateTime(2026, 11, 23, 10));
 
@@ -60,7 +57,6 @@ void main() {
     final repo = FakeKnowledgeRepository()..fetchError = Exception('down');
     final c = container(repo);
     await expectLater(c.read(knowledgeFeedProvider.future), throwsException);
-    await Future<void>.delayed(const Duration(milliseconds: 20));
     expect(c.read(knowledgeFeedProvider).hasError, isTrue);
     expect(repo.fetchCount, 1);
   });
