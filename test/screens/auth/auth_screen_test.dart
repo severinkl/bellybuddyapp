@@ -147,9 +147,8 @@ void main() {
         expect(find.text('welcome-page'), findsOneWidget);
       });
 
-      testWidgets('„Registrieren" starts at the welcome screen ($how)', (
-        tester,
-      ) async {
+      testWidgets('„Registrieren" goes straight into the sign-up, not back '
+          'to the sleeping Buddy ($how)', (tester) async {
         final router = await pumpRouted(tester, pushed: pushed);
 
         final register = find.text('Noch kein Konto? Registrieren');
@@ -157,8 +156,8 @@ void main() {
         await tester.tap(register);
         await tester.pumpAndSettle();
 
-        expect(path(router), RoutePaths.welcome);
-        expect(find.text('registration-page'), findsNothing);
+        expect(path(router), RoutePaths.registration);
+        expect(find.text('registration-page'), findsOneWidget);
       });
     }
 

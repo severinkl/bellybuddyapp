@@ -298,11 +298,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
                 // Toggle or back
                 TextButton(
-                  // „Registrieren" starts where every sign-up starts: on the
-                  // welcome screen with the Buddy.
+                  // „Registrieren" goes straight into the sign-up: back on
+                  // the welcome screen the Buddy would be asleep again, one
+                  // wake-up away from „Los geht's".
                   onPressed: _view == _AuthView.forgotPassword
                       ? _showLogin
-                      : _toWelcome,
+                      : () => context.go(RoutePaths.registration),
                   child: Text(
                     _view == _AuthView.forgotPassword
                         ? 'Zurück zur Anmeldung'
