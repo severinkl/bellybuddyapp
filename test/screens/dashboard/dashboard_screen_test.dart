@@ -48,6 +48,10 @@ class _UserId extends Notifier<String?> {
 
 final _userIdProvider = NotifierProvider<_UserId, String?>(_UserId.new);
 
+/// The app's clock in the insight-card tests, pinned: their entries
+/// ([insightSourceFor]) lie before it, in the insights' window on any date.
+final _insightsNow = DateTime(2026, 11, 23, 14);
+
 List<Override> _overrides({
   FakeBuddyRepository? buddyRepo,
   FakeEntryRepository? entryRepo,
@@ -214,10 +218,17 @@ void main() {
     testWidgets('the insight card shows the progress toward the first '
         'patterns', (tester) async {
       final entryRepo = FakeEntryRepository()
-        ..insightSource = insightSourceFor(activeDays: 2, gutFeelings: 1);
+        ..insightSource = insightSourceFor(
+          activeDays: 2,
+          gutFeelings: 1,
+          now: _insightsNow,
+        );
       await tester.pumpWithProviders(
         const DashboardScreen(),
-        overrides: _overrides(entryRepo: entryRepo),
+        overrides: [
+          ..._overrides(entryRepo: entryRepo),
+          buddyClockProvider.overrideWithValue(() => _insightsNow),
+        ],
       );
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -234,13 +245,24 @@ void main() {
 
     testWidgets('pull-to-refresh fetches the insights again', (tester) async {
       final entryRepo = FakeEntryRepository()
-        ..insightSource = insightSourceFor(activeDays: 2, gutFeelings: 1);
+        ..insightSource = insightSourceFor(
+          activeDays: 2,
+          gutFeelings: 1,
+          now: _insightsNow,
+        );
       await tester.pumpWithProviders(
         const DashboardScreen(),
-        overrides: _overrides(entryRepo: entryRepo),
+        overrides: [
+          ..._overrides(entryRepo: entryRepo),
+          buddyClockProvider.overrideWithValue(() => _insightsNow),
+        ],
       );
       await tester.pump(const Duration(milliseconds: 100));
-      entryRepo.insightSource = insightSourceFor(activeDays: 3, gutFeelings: 1);
+      entryRepo.insightSource = insightSourceFor(
+        activeDays: 3,
+        gutFeelings: 1,
+        now: _insightsNow,
+      );
 
       await tester.fling(
         find.byType(RefreshIndicator),
@@ -264,10 +286,17 @@ void main() {
     testWidgets('deleting the 3rd gut-feeling entry locks the card again, '
         'without pull-to-refresh', (tester) async {
       final entryRepo = FakeEntryRepository()
-        ..insightSource = insightSourceFor(activeDays: 7, gutFeelings: 3);
+        ..insightSource = insightSourceFor(
+          activeDays: 7,
+          gutFeelings: 3,
+          now: _insightsNow,
+        );
       await tester.pumpWithProviders(
         const DashboardScreen(),
-        overrides: _overrides(entryRepo: entryRepo),
+        overrides: [
+          ..._overrides(entryRepo: entryRepo),
+          buddyClockProvider.overrideWithValue(() => _insightsNow),
+        ],
       );
       await tester.pump(const Duration(milliseconds: 100));
       // Unlocked, no meals: nothing stands out yet.
@@ -283,7 +312,11 @@ void main() {
         tester.element(find.byType(DashboardScreen)),
       );
 
-      entryRepo.insightSource = insightSourceFor(activeDays: 7, gutFeelings: 2);
+      entryRepo.insightSource = insightSourceFor(
+        activeDays: 7,
+        gutFeelings: 2,
+        now: _insightsNow,
+      );
       await container
           .read(entriesProvider.notifier)
           .deleteByType('gutFeeling', 'gut-1');
@@ -303,7 +336,11 @@ void main() {
         'computed again', (tester) async {
       var now = DateTime(2026, 11, 23, 23, 50);
       final entryRepo = FakeEntryRepository()
-        ..insightSource = insightSourceFor(activeDays: 2, gutFeelings: 1);
+        ..insightSource = insightSourceFor(
+          activeDays: 2,
+          gutFeelings: 1,
+          now: now,
+        );
       await tester.pumpWithProviders(
         const DashboardScreen(),
         overrides: [
@@ -334,10 +371,17 @@ void main() {
     testWidgets('after a user change the card never shows the previous '
         "user's numbers", (tester) async {
       final entryRepo = FakeEntryRepository()
-        ..insightSource = insightSourceFor(activeDays: 2, gutFeelings: 1);
+        ..insightSource = insightSourceFor(
+          activeDays: 2,
+          gutFeelings: 1,
+          now: _insightsNow,
+        );
       await tester.pumpWithProviders(
         const DashboardScreen(),
-        overrides: _overrides(entryRepo: entryRepo, switchableUser: true),
+        overrides: [
+          ..._overrides(entryRepo: entryRepo, switchableUser: true),
+          buddyClockProvider.overrideWithValue(() => _insightsNow),
+        ],
       );
       await tester.pump(const Duration(milliseconds: 100));
       expect(
@@ -367,7 +411,11 @@ void main() {
       // Loaded later: their own numbers.
       entryRepo
         ..holdInsightSource = false
-        ..insightSource = insightSourceFor(activeDays: 1, gutFeelings: 0);
+        ..insightSource = insightSourceFor(
+          activeDays: 1,
+          gutFeelings: 0,
+          now: _insightsNow,
+        );
       await container.read(insightsProvider.notifier).refresh();
       await tester.pump();
       expect(

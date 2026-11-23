@@ -13,6 +13,10 @@ import 'package:belly_buddy/screens/patterns/patterns_screen.dart';
 import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
 
+/// The app's clock, pinned: the entries ([_entries]) lie before it, in the
+/// insights' window on any date.
+final _now = DateTime(2026, 11, 23, 14);
+
 Future<ProviderContainer> _pump(
   WidgetTester tester,
   FakeEntryRepository entries, {
@@ -27,7 +31,7 @@ Future<ProviderContainer> _pump(
   final container = ProviderContainer.test(
     overrides: [
       ...baseOverrides(entries: entries),
-      if (clock != null) buddyClockProvider.overrideWithValue(clock),
+      buddyClockProvider.overrideWithValue(clock ?? () => _now),
     ],
   );
   final router = GoRouter(
@@ -44,9 +48,12 @@ Future<ProviderContainer> _pump(
   return container;
 }
 
-FakeEntryRepository _entries(int days, int gut) =>
-    FakeEntryRepository()
-      ..insightSource = insightSourceFor(activeDays: days, gutFeelings: gut);
+FakeEntryRepository _entries(int days, int gut) => FakeEntryRepository()
+  ..insightSource = insightSourceFor(
+    activeDays: days,
+    gutFeelings: gut,
+    now: _now,
+  );
 
 const _hintGut =
     'Trag abends kurz dein Bauchgefühl ein, das hilft mir am meisten.';
@@ -61,7 +68,10 @@ void main() {
       ..devicePixelRatio = 1;
     addTearDown(tester.view.reset);
     final container = ProviderContainer.test(
-      overrides: baseOverrides(entries: _entries(2, 1)),
+      overrides: [
+        ...baseOverrides(entries: _entries(2, 1)),
+        buddyClockProvider.overrideWithValue(() => _now),
+      ],
     );
     await tester.pumpWidget(
       UncontrolledProviderScope(
@@ -83,7 +93,10 @@ void main() {
         ..devicePixelRatio = 1;
       addTearDown(tester.view.reset);
       final container = ProviderContainer.test(
-        overrides: baseOverrides(entries: _entries(2, 1)),
+        overrides: [
+          ...baseOverrides(entries: _entries(2, 1)),
+          buddyClockProvider.overrideWithValue(() => _now),
+        ],
       );
       await tester.pumpWidget(
         UncontrolledProviderScope(

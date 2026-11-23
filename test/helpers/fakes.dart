@@ -7,6 +7,7 @@ import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/drink.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
+import 'package:belly_buddy/models/insight_rules.dart';
 import 'package:belly_buddy/models/insight_source.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/recipe.dart';
@@ -738,17 +739,27 @@ class FakeBuddyNotifier extends BuddyNotifier {
 }
 
 /// An [InsightSource] with [activeDays] distinct active days and
-/// [gutFeelings] gut-feeling entries.
+/// [gutFeelings] gut-feeling entries, one per day at 09:00 on the days
+/// before [now]'s, so all of them are in the insights' window as of [now].
+/// Pass the clock the insights compute with ([buddyClockProvider]): pin it
+/// to a fixed [now], never pair a fixed [now] with the real clock.
 InsightSource insightSourceFor({
   required int activeDays,
   required int gutFeelings,
-}) => InsightSource(
-  meals: const [],
-  gutFeelings: [
-    for (var i = 0; i < gutFeelings; i++)
-      testGutFeelingEntry(trackedAt: DateTime(2026, 11, 1 + i, 9)),
-  ],
-  activityInstants: [
-    for (var i = 0; i < activeDays; i++) DateTime(2026, 11, 1 + i, 9),
-  ],
-);
+  required DateTime now,
+}) {
+  assert(
+    activeDays < InsightRules.windowDays &&
+        gutFeelings < InsightRules.windowDays,
+  );
+  DateTime dayBefore(int i) =>
+      DateTime(now.year, now.month, now.day - 1 - i, 9);
+  return InsightSource(
+    meals: const [],
+    gutFeelings: [
+      for (var i = 0; i < gutFeelings; i++)
+        testGutFeelingEntry(trackedAt: dayBefore(i)),
+    ],
+    activityInstants: [for (var i = 0; i < activeDays; i++) dayBefore(i)],
+  );
+}

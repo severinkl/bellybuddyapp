@@ -57,7 +57,11 @@ void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     entryRepo = FakeEntryRepository()
-      ..insightSource = insightSourceFor(activeDays: 2, gutFeelings: 1);
+      ..insightSource = insightSourceFor(
+        activeDays: 2,
+        gutFeelings: 1,
+        now: now,
+      );
   });
 
   ProviderContainer makeContainer({DateTime Function()? clock}) =>
@@ -76,7 +80,7 @@ void main() {
       c.read(insightsProvider.notifier);
 
   test('loads and computes', () async {
-    final source = insightSourceFor(activeDays: 7, gutFeelings: 3);
+    final source = insightSourceFor(activeDays: 7, gutFeelings: 3, now: now);
     entryRepo.insightSource = source;
     final c = makeContainer();
 
@@ -118,7 +122,7 @@ void main() {
       test(name, () async {
         final c = makeContainer();
         await c.read(insightsProvider.future);
-        final next = insightSourceFor(activeDays: 3, gutFeelings: 2);
+        final next = insightSourceFor(activeDays: 3, gutFeelings: 2, now: now);
         entryRepo.insightSource = next;
 
         await write(c.read(entriesProvider.notifier));
@@ -131,10 +135,18 @@ void main() {
 
     test('deleting the 3rd gut-feeling entry locks the insights again '
         '(no refresh needed)', () async {
-      entryRepo.insightSource = insightSourceFor(activeDays: 7, gutFeelings: 3);
+      entryRepo.insightSource = insightSourceFor(
+        activeDays: 7,
+        gutFeelings: 3,
+        now: now,
+      );
       final c = makeContainer();
       expect((await c.read(insightsProvider.future)).unlocked, isTrue);
-      entryRepo.insightSource = insightSourceFor(activeDays: 7, gutFeelings: 2);
+      entryRepo.insightSource = insightSourceFor(
+        activeDays: 7,
+        gutFeelings: 2,
+        now: now,
+      );
 
       await c.read(entriesProvider.notifier).deleteByType('gutFeeling', 'g3');
       await settle();
@@ -145,8 +157,8 @@ void main() {
     });
 
     test('a write during the first load is fetched after it', () async {
-      final before = insightSourceFor(activeDays: 7, gutFeelings: 3);
-      final after = insightSourceFor(activeDays: 7, gutFeelings: 2);
+      final before = insightSourceFor(activeDays: 7, gutFeelings: 3, now: now);
+      final after = insightSourceFor(activeDays: 7, gutFeelings: 2, now: now);
       entryRepo.holdInsightSource = true;
       final c = makeContainer();
       c.listen(insightsProvider, (_, _) {});
@@ -180,7 +192,7 @@ void main() {
           .read(entriesProvider.notifier)
           .addGutFeeling(testGutFeelingEntry());
       await settle();
-      final after = insightSourceFor(activeDays: 1, gutFeelings: 1);
+      final after = insightSourceFor(activeDays: 1, gutFeelings: 1, now: now);
       entryRepo
         ..holdInsightSource = false
         ..insightSource = after;
@@ -213,13 +225,13 @@ void main() {
       await settle();
       expect(entryRepo.heldInsightSources, hasLength(1));
 
-      final all = insightSourceFor(activeDays: 4, gutFeelings: 3);
+      final all = insightSourceFor(activeDays: 4, gutFeelings: 3, now: now);
       entryRepo
         ..holdInsightSource = false
         ..insightSource = all;
       // The running fetch started before the last three writes.
       entryRepo.heldInsightSources.single.complete(
-        insightSourceFor(activeDays: 3, gutFeelings: 2),
+        insightSourceFor(activeDays: 3, gutFeelings: 2, now: now),
       );
       await settle();
 
@@ -236,7 +248,11 @@ void main() {
       final loaded = await c.read(insightsProvider.future);
       heard.clear();
       // Equal entries, fetched anew.
-      entryRepo.insightSource = insightSourceFor(activeDays: 2, gutFeelings: 1);
+      entryRepo.insightSource = insightSourceFor(
+        activeDays: 2,
+        gutFeelings: 1,
+        now: now,
+      );
 
       await c.read(entriesProvider.notifier).updateMeal(testMealEntry());
       await settle();
@@ -527,8 +543,8 @@ void main() {
         final c = makeContainer();
         await c.read(insightsProvider.future);
         entryRepo.holdInsightSource = true;
-        final older = insightSourceFor(activeDays: 3, gutFeelings: 1);
-        final newer = insightSourceFor(activeDays: 4, gutFeelings: 2);
+        final older = insightSourceFor(activeDays: 3, gutFeelings: 1, now: now);
+        final newer = insightSourceFor(activeDays: 4, gutFeelings: 2, now: now);
 
         final first = notifier(c).refresh();
         final second = notifier(c).refresh();
@@ -586,8 +602,8 @@ void main() {
   });
 
   group('a user change never shows the previous user\'s insights', () {
-    final a = insightSourceFor(activeDays: 7, gutFeelings: 3);
-    final b = insightSourceFor(activeDays: 1, gutFeelings: 0);
+    final a = insightSourceFor(activeDays: 7, gutFeelings: 3, now: now);
+    final b = insightSourceFor(activeDays: 1, gutFeelings: 0, now: now);
 
     test(
       'while the new user\'s insights load, the state is reloading',
@@ -691,7 +707,7 @@ void main() {
       sub.pause();
       c.read(_userIdProvider.notifier).set('u2');
       entryRepo.heldInsightSources[0].complete(
-        insightSourceFor(activeDays: 9, gutFeelings: 9),
+        insightSourceFor(activeDays: 9, gutFeelings: 9, now: now),
       );
       await late;
 
