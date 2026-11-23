@@ -8,9 +8,11 @@ class IngredientSuggestionNotifier
     extends Notifier<AsyncValue<List<IngredientSuggestionGroup>>> {
   static const _log = AppLogger('IngredientSuggestions');
 
-  /// Whether [markAllNewAsSeen] marked the new groups seen since this
-  /// notifier was built; [newIngredientSuggestionCountProvider] is 0 then.
-  bool _markedSeenThisSession = false;
+  /// Whether [markAllNewAsSeen] marked the loaded groups seen;
+  /// [newIngredientSuggestionCountProvider] is 0 then. Cleared when groups
+  /// load again: the server no longer marks the seen ones new, so what is
+  /// new then is new since.
+  bool _markedSeen = false;
 
   @override
   AsyncValue<List<IngredientSuggestionGroup>> build() =>
@@ -27,6 +29,7 @@ class IngredientSuggestionNotifier
 
       final repo = ref.read(ingredientRepositoryProvider);
       final groups = await repo.fetchSuggestionGroups(userId);
+      _markedSeen = false;
       state = AsyncValue.data(groups);
     } catch (e, st) {
       _log.error('fetchSuggestions failed', e, st);
@@ -49,7 +52,7 @@ class IngredientSuggestionNotifier
 
     try {
       await ref.read(ingredientRepositoryProvider).markAllSeen(unseenIds);
-      _markedSeenThisSession = true;
+      _markedSeen = true;
       // The list is unchanged; tell the count it changed.
       ref.notifyListeners();
     } catch (e, st) {
@@ -79,10 +82,10 @@ final ingredientSuggestionProvider =
 
 /// How many suggestion groups are new, for Entdecken's „n neu": 0 while
 /// loading or failed, and once [IngredientSuggestionNotifier.markAllNewAsSeen]
-/// marked them seen.
+/// marked them seen, until groups load again.
 final newIngredientSuggestionCountProvider = Provider<int>((ref) {
   final groups = ref.watch(ingredientSuggestionProvider);
-  if (ref.read(ingredientSuggestionProvider.notifier)._markedSeenThisSession) {
+  if (ref.read(ingredientSuggestionProvider.notifier)._markedSeen) {
     return 0;
   }
   return groups.whenOrNull(data: (list) => list.where((g) => g.isNew).length) ??

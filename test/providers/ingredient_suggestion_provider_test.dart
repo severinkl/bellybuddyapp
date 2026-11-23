@@ -195,6 +195,38 @@ void main() {
       expect(groups.where((g) => g.isNew), hasLength(2));
     });
 
+    test('new groups arriving after a mark count again (the „n neu" badge '
+        'returns)', () async {
+      var groups = threeGroupsTwoNew();
+      when(
+        () => mockRepo.fetchSuggestionGroups(any()),
+      ).thenAnswer((_) async => groups);
+      when(() => mockRepo.markAllSeen(any())).thenAnswer((_) async {});
+
+      final container = makeContainer();
+      container.listen(newIngredientSuggestionCountProvider, (_, _) {});
+      final notifier = container.read(ingredientSuggestionProvider.notifier);
+      // Alternativen opened: fetched, marked seen.
+      await notifier.fetchSuggestions();
+      await notifier.markAllNewAsSeen();
+      expect(container.read(newIngredientSuggestionCountProvider), 0);
+
+      // Later a new group arrives; the server no longer marks the seen ones
+      // new.
+      groups = [
+        testSuggestionGroup(
+          ingredientId: 'ing-4',
+          ingredientName: 'Lauch',
+          isNew: true,
+          suggestionIds: ['sug-4'],
+        ),
+        for (final g in threeGroupsTwoNew()) g.copyWith(isNew: false),
+      ];
+      await notifier.fetchSuggestions();
+
+      expect(container.read(newIngredientSuggestionCountProvider), 1);
+    });
+
     test('a failed mark keeps the count', () async {
       when(
         () => mockRepo.fetchSuggestionGroups(any()),
