@@ -14,6 +14,7 @@ import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
+import 'package:belly_buddy/providers/buddy_welcome_provider.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
@@ -23,6 +24,16 @@ import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
 
 import '../../../helpers/fixtures.dart';
+
+/// A welcome already set when the hero first reads it.
+class _PresetWelcome extends BuddyWelcomeNotifier {
+  _PresetWelcome(this._line);
+
+  final String _line;
+
+  @override
+  String? build() => _line;
+}
 
 /// [BuddyNotifier] serving a fixed first result; records the hero's calls.
 class _FakeBuddy extends BuddyNotifier {
@@ -220,6 +231,21 @@ void main() {
       expect(c.mood, BuddyMood.hungry);
       expect(BuddyCopy.mood[BuddyMood.hungry], contains(c.bubble));
       expect(find.text(c.bubble!), findsOneWidget);
+    });
+
+    testWidgets('a pending welcome is his first line, once', (tester) async {
+      final container = await pumpHero(
+        tester,
+        extra: [
+          buddyWelcomeProvider.overrideWith(
+            () => _PresetWelcome(BuddyWelcomeNotifier.line),
+          ),
+        ],
+      );
+      await tick(tester);
+
+      expect(controller(tester).bubble, BuddyWelcomeNotifier.line);
+      expect(container.read(buddyWelcomeProvider), isNull);
     });
 
     testWidgets('a meal logged 1 h ago → happy', (tester) async {

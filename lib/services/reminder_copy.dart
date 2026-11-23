@@ -110,6 +110,21 @@ class ReminderCopy {
     ],
   };
 
+  /// A fixed sample of the Buddy's meal reminder at [hour], for previews.
+  static String previewMealBody(int hour, String buddyName) {
+    final pool = buddyMealPools[timeSlotForHour(hour)]!;
+    return _withName(pool[1 % pool.length], buddyName);
+  }
+
+  /// A fixed sample of the Buddy's gut-feeling reminder at [hour], for
+  /// previews.
+  static String previewMoodBody(int hour, String buddyName) {
+    final pool =
+        buddyMoodPools[timeSlotForHour(hour)] ??
+        buddyMoodPools[TimeSlot.evening]!;
+    return _withName(pool.last, buddyName);
+  }
+
   static String pickMoodBody(int hour, Random random, {String? buddyName}) {
     final slot = timeSlotForHour(hour);
     if (buddyName != null) {

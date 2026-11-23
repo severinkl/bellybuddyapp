@@ -10,6 +10,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../config/constants.dart';
 import '../../../providers/buddy_events_provider.dart';
 import '../../../providers/buddy_provider.dart';
+import '../../../providers/buddy_welcome_provider.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../router/route_names.dart';
 import '../../../services/buddy/buddy_mood_logic.dart';
@@ -250,13 +251,19 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   }
 
   /// The first mood line, once the Buddy status is known and the hero is
-  /// visible. Pending announcements speak first instead.
+  /// visible: the onboarding's welcome ([buddyWelcomeProvider]) instead,
+  /// if one is pending. Pending announcements speak first instead.
   void _maybeGreet() => _whenVisible(() {
     if (_greeted) return;
     final buddy = ref.read(buddyProvider);
     if (buddy.isLoading && !buddy.hasValue) return; // first load running
     if (buddy.value?.announcements.isNotEmpty ?? false) return;
     _greeted = true;
+    final welcome = ref.read(buddyWelcomeProvider.notifier).take();
+    if (welcome != null) {
+      _buddy.say(welcome);
+      return;
+    }
     _sayMoodLine();
   });
 

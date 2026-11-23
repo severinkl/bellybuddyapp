@@ -77,8 +77,8 @@ class _GateTestHostState extends ConsumerState<_GateTestHost> {
 
 const _introLine = 'Hi! Ich bin neu hier — dein Belly Buddy.';
 const _streakTitle = 'Wie viele Tage schaffen wir zusammen?';
-const _reminderTitle = 'Darf ich dich erinnern, wenn ich Hunger habe?';
-const _doneLine = 'Geschafft! Ich freu mich auf unsere Zeit zusammen.';
+const _reminderTitle = 'Darf ich mich melden, wenn ich Hunger hab?';
+const _noStreakLine = 'Mit deinem nächsten Eintrag startet unser Streak!';
 const _welcomeModalTitle = 'Willkommen bei Belly Buddy!';
 const _optInTitle = 'Bleib auf dem Laufenden!';
 const _tourSkip = 'Überspringen';
@@ -173,14 +173,10 @@ Future<void> _tap(WidgetTester tester, Finder finder) async {
   await tester.pumpAndSettle();
 }
 
-/// The last step: the Buddy cheers; „Los geht's" completes the onboarding.
-void _expectDoneStep(WidgetTester tester) {
-  expect(
-    tester.widget<AnimatedBuddy>(find.byType(AnimatedBuddy)).controller.bubble,
-    _doneLine,
-  );
-  expect(find.byKey(BuddyOnboardingScreen.finishKey), findsOneWidget);
-}
+/// The Buddy's bubble. (Buddies don't tick here and the bubble only
+/// rebuilds on a tick, so read it from the controller.)
+String? _bubble(WidgetTester tester) =>
+    tester.widget<AnimatedBuddy>(find.byType(AnimatedBuddy)).controller.bubble;
 
 void main() {
   setUp(() {
@@ -193,7 +189,7 @@ void main() {
 
   group('Buddy onboarding gate', () {
     testWidgets('an existing user without a Buddy lands on the onboarding, '
-        'cannot leave it, and lands on the dashboard after the gift', (
+        'cannot leave it, and lands on the dashboard after the last step', (
       tester,
     ) async {
       final buddies = FakeBuddyRepository();
@@ -223,27 +219,20 @@ void main() {
       await tester.enterText(find.byKey(BuddyNameStep.fieldKey), 'Bauchi');
       await tester.pump();
       await _tap(tester, find.byKey(BuddyOnboardingScreen.nameNextKey));
-      // His cheer first; then he asks for the goal. (Buddies don't tick
-      // here, so read his bubble from the controller.)
+      // His cheer first; then the streak moment (no entries yet).
       await tester.pump(const Duration(seconds: 4));
       await tester.pumpAndSettle();
-      expect(
-        tester
-            .widget<AnimatedBuddy>(find.byType(AnimatedBuddy))
-            .controller
-            .bubble,
-        _streakTitle,
-      );
+      expect(_bubble(tester), _noStreakLine);
+      await _tap(tester, find.byKey(BuddyOnboardingScreen.momentNextKey));
+      expect(_bubble(tester), _streakTitle);
       await _tap(tester, find.text('7 Tage'));
-      expect(find.text(_reminderTitle), findsOneWidget);
-      await _tap(tester, find.byKey(BuddyOnboardingScreen.reminderLaterKey));
-      _expectDoneStep(tester);
+      expect(_bubble(tester), _reminderTitle);
 
-      // Not completed before „Los geht's".
+      // Not completed before the last answer.
       expect(buddies.store[testUserId]?.onboardingCompletedAt, isNull);
       expect(_currentPath(container), RoutePaths.buddyOnboarding);
 
-      await _tap(tester, find.byKey(BuddyOnboardingScreen.finishKey));
+      await _tap(tester, find.byKey(BuddyOnboardingScreen.reminderLaterKey));
       expect(_currentPath(container), RoutePaths.dashboard);
       expect(find.byType(BuddyOnboardingScreen), findsNothing);
       expect(buddies.store[testUserId]?.onboardingCompletedAt, isNotNull);
@@ -258,7 +247,7 @@ void main() {
     });
 
     testWidgets('killed mid-onboarding: a named Buddy resumes at the streak '
-        'goal and completes once, without a saver', (tester) async {
+        'moment and completes once, without a saver', (tester) async {
       final buddies = FakeBuddyRepository()
         ..store[testUserId] = const BuddyState(
           userId: testUserId,
@@ -275,11 +264,11 @@ void main() {
       expect(_currentPath(container), RoutePaths.buddyOnboarding);
       expect(find.text(_introLine), findsNothing);
       expect(find.byKey(BuddyNameStep.titleKey), findsNothing);
-      expect(find.text(_streakTitle), findsOneWidget);
+      expect(_bubble(tester), _noStreakLine);
+      await _tap(tester, find.byKey(BuddyOnboardingScreen.momentNextKey));
 
+      // Push is on: the goal is the last step.
       await _tap(tester, find.text('14 Tage'));
-      _expectDoneStep(tester);
-      await _tap(tester, find.byKey(BuddyOnboardingScreen.finishKey));
 
       expect(_currentPath(container), RoutePaths.dashboard);
       final stored = buddies.store[testUserId]!;
@@ -429,9 +418,8 @@ void main() {
 
       await _tap(tester, find.byKey(BuddyOnboardingScreen.introNextKey));
       await _tap(tester, find.byKey(BuddyOnboardingScreen.nameNextKey));
+      await _tap(tester, find.byKey(BuddyOnboardingScreen.momentNextKey));
       await _tap(tester, find.text('7 Tage'));
-      _expectDoneStep(tester);
-      await _tap(tester, find.byKey(BuddyOnboardingScreen.finishKey));
 
       expect(_currentPath(container), RoutePaths.dashboard);
       expect(find.text(_tourSkip), findsOneWidget);
@@ -451,11 +439,10 @@ void main() {
 
       await _tap(tester, find.byKey(BuddyOnboardingScreen.introNextKey));
       await _tap(tester, find.byKey(BuddyOnboardingScreen.nameNextKey));
+      await _tap(tester, find.byKey(BuddyOnboardingScreen.momentNextKey));
+      // Push is on: no reminder step; the goal finishes.
       await _tap(tester, find.text('7 Tage'));
-      // Push is on: no reminder step.
       expect(find.text(_reminderTitle), findsNothing);
-      _expectDoneStep(tester);
-      await _tap(tester, find.byKey(BuddyOnboardingScreen.finishKey));
 
       expect(_currentPath(container), RoutePaths.dashboard);
       expect(find.text(_optInTitle), findsNothing);
