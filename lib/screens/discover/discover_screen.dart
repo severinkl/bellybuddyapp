@@ -82,52 +82,45 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
       body: RefreshIndicator(
         onRefresh: () => _load(refresh: true),
         color: AppTheme.primary,
-        child: CustomScrollView(
+        child: SingleChildScrollView(
           physics: const AlwaysScrollableScrollPhysics(),
-          slivers: [
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(
-                AppConstants.spacingMd,
-                AppConstants.spacingSm,
-                AppConstants.spacingMd,
-                AppConstants.spacingLg,
-              ),
-              sliver: SliverToBoxAdapter(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    DiscoverSection(
-                      title: 'Tipps',
-                      child: DiscoverTipsCard(
-                        tips: tips,
-                        unseen: unseenTips > 0,
-                        onTap: () => context.push(RoutePaths.recommendations),
-                      ),
-                    ),
-                    AppConstants.gap24,
-                    DiscoverAlternativesSection(
-                      groups: groups,
-                      newCount: newGroups,
-                      onOpen: () =>
-                          context.push(RoutePaths.ingredientSuggestions),
-                    ),
-                    AppConstants.gap24,
-                    DiscoverRecipesSection(
-                      recipes: recipes,
-                      onOpenAll: () => context.push(RoutePaths.recipes),
-                      onOpen: (recipe) =>
-                          context.push(RoutePaths.recipeDetailFor(recipe.id)),
-                    ),
-                    AppConstants.gap24,
-                    DiscoverSection(
-                      title: 'Wissen',
-                      child: DiscoverKnowledgeCard(onTap: _openBlog),
-                    ),
-                  ],
+          padding: const EdgeInsets.fromLTRB(
+            AppConstants.spacingMd,
+            AppConstants.spacingSm,
+            AppConstants.spacingMd,
+            AppConstants.spacingLg,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              DiscoverSection(
+                title: 'Tipps',
+                child: DiscoverTipsCard(
+                  tips: tips,
+                  unseen: unseenTips > 0,
+                  onTap: () => context.push(RoutePaths.recommendations),
                 ),
               ),
-            ),
-          ],
+              AppConstants.gap24,
+              DiscoverAlternativesSection(
+                groups: groups,
+                newCount: newGroups,
+                onOpen: () => context.push(RoutePaths.ingredientSuggestions),
+              ),
+              AppConstants.gap24,
+              DiscoverRecipesSection(
+                recipes: recipes,
+                onOpenAll: () => context.push(RoutePaths.recipes),
+                onOpen: (recipe) =>
+                    context.push(RoutePaths.recipeDetailFor(recipe.id)),
+              ),
+              AppConstants.gap24,
+              DiscoverSection(
+                title: 'Wissen',
+                child: DiscoverKnowledgeCard(onTap: _openBlog),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -154,36 +154,30 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         child: RefreshIndicator(
           onRefresh: _loadData,
           color: AppTheme.primary,
-          child: CustomScrollView(
+          // Not lazy: every tour target is built and laid out, even below
+          // the fold, for the tour to scroll to.
+          child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            // Box slivers are never lazy: every tour target is built and
-            // laid out, even below the fold, for the tour to scroll to.
-            slivers: [
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppConstants.spacingLg,
-                  AppConstants.spacingSm,
-                  AppConstants.spacingLg,
-                  AppConstants.spacingLg,
-                ),
-                sliver: SliverToBoxAdapter(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      BuddyHero(key: TutorialKeys.buddy),
-                      AppConstants.gap16,
-                      // Only the card rebuilds with its progress.
-                      Consumer(
-                        builder: (_, ref, _) => InsightCard(
-                          key: TutorialKeys.insight,
-                          progress: ref.watch(insightProgressProvider),
-                        ),
-                      ),
-                    ],
+            padding: const EdgeInsets.fromLTRB(
+              AppConstants.spacingLg,
+              AppConstants.spacingSm,
+              AppConstants.spacingLg,
+              AppConstants.spacingLg,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                BuddyHero(key: TutorialKeys.buddy),
+                AppConstants.gap16,
+                // Only the card rebuilds with its progress.
+                Consumer(
+                  builder: (_, ref, _) => InsightCard(
+                    key: TutorialKeys.insight,
+                    progress: ref.watch(insightProgressProvider),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

@@ -322,7 +322,7 @@ void main() {
       final fetchesAfterLoad = buddyRepo.fetchCount;
 
       await tester.fling(
-        find.byType(CustomScrollView),
+        find.byType(RefreshIndicator),
         const Offset(0, 400),
         1000,
       );

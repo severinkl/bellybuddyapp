@@ -464,7 +464,7 @@ void main() {
     await pump(tester);
 
     await tester.fling(
-      find.byType(CustomScrollView),
+      find.byType(RefreshIndicator),
       const Offset(0, 400),
       1000,
     );
@@ -509,7 +509,7 @@ void main() {
     );
 
     expect(tester.takeException(), isNull);
-    await tester.drag(find.byType(CustomScrollView), const Offset(0, -2000));
+    await tester.drag(find.byType(RefreshIndicator), const Offset(0, -2000));
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     expect(find.byKey(DiscoverScreen.knowledgeKey), findsOneWidget);
