@@ -9,7 +9,7 @@ import '../../../models/insights.dart';
 import '../../../router/route_names.dart';
 import '../../../services/insights/insight_copy.dart';
 import '../../../widgets/common/bb_card.dart';
-import '../../../widgets/common/bb_progress_bar.dart';
+import '../../../widgets/common/insight_progress_row.dart';
 import '../../registration/widgets/step_field_label.dart';
 
 /// Home's card on what the Buddy learns about the user's gut; a tap opens
@@ -152,13 +152,13 @@ class _Locked extends StatelessWidget {
       locked: true,
       below: [
         AppConstants.gap12,
-        _ProgressRow(
+        InsightProgressRow(
           label: 'Tage mit Einträgen',
           count: progress.activeDays,
           goal: InsightProgress.daysNeeded,
         ),
         AppConstants.gap10,
-        _ProgressRow(
+        InsightProgressRow(
           label: 'Bauchgefühl-Einträge',
           count: progress.gutFeelingEntries,
           goal: InsightProgress.gutFeelingsNeeded,
@@ -223,63 +223,6 @@ class _Unlocked extends StatelessWidget {
           ],
         ),
       ],
-    );
-  }
-}
-
-/// „[label] … n von [goal]" over its bar; read as one label.
-class _ProgressRow extends StatelessWidget {
-  const _ProgressRow({
-    required this.label,
-    required this.count,
-    required this.goal,
-  });
-
-  final String label;
-  final int count;
-  final int goal;
-
-  @override
-  Widget build(BuildContext context) {
-    // A full bar says „7 von 7", not „9 von 7".
-    final shown = count.clamp(0, goal);
-    final value = '$shown von $goal';
-    return Semantics(
-      label: '$label: $value',
-      excludeSemantics: true,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: AppTheme.fontSizeCaptionLG,
-                    color: AppTheme.mutedForeground,
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppConstants.spacing10),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontSize: AppTheme.fontSizeCaptionLG,
-                  fontWeight: FontWeight.w600,
-                  color: AppTheme.foreground,
-                  fontFeatures: [FontFeature.tabularFigures()],
-                ),
-              ),
-            ],
-          ),
-          AppConstants.gap4,
-          BbProgressBar(
-            value: shown / goal,
-            height: AppConstants.insightProgressHeight,
-          ),
-        ],
-      ),
     );
   }
 }

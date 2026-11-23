@@ -135,6 +135,9 @@ class AppConstants {
   // Home's insight card: its progress bars
   static const double insightProgressHeight = 7.0;
 
+  // Muster page: how blurred the locked state's sample preview is
+  static const double patternsPreviewBlur = 5.0;
+
   // Entdecken: a recipe card's width in the Meine Rezepte row
   static const double discoverRecipeCardWidth = 148.0;
 
