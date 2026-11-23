@@ -215,10 +215,6 @@ class BuddyController extends ChangeNotifier {
   /// they changed (a [say] or the bubble expiring), not every frame.
   ValueListenable<BuddyBubble> get bubbleListenable => _bubbleNotifier;
 
-  /// Seconds this controller has been ticked; listeners hear every tick, so
-  /// it doubles as a frame clock for effects next to the Buddy.
-  double get elapsed => _t;
-
   /// Whether [imagePoint] (Buddy image coords) is on the Buddy.
   bool hitTest(Offset imagePoint) => BuddyShapes.hitPath.contains(imagePoint);
 

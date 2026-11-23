@@ -587,7 +587,6 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
                   care: _care,
                   diameter: diameter,
                   highlight: action.need,
-                  pulse: _buddy,
                   onNeed: _open,
                   buddy: AnimatedBuddy(
                     controller: _buddy,

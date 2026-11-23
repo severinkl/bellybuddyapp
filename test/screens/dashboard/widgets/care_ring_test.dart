@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:belly_buddy/config/app_theme.dart';
+import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 
@@ -112,6 +113,61 @@ void main() {
     expect(at(CareNeed.drink).topRight, ring.topRight);
     expect(at(CareNeed.toilet).bottomLeft, ring.bottomLeft);
     expect(at(CareNeed.gutFeeling).bottomRight, ring.bottomRight);
+  });
+
+  group('the next need\'s glow', () {
+    setUp(() => CareRing.pulseEnabled = true);
+    tearDown(() => CareRing.pulseEnabled = false);
+
+    /// The spread of [need]'s glow, or null when it has none.
+    double? glow(WidgetTester tester, CareNeed need) {
+      final shadows = tester
+          .widgetList<DecoratedBox>(
+            find.descendant(
+              of: find.byKey(CareRing.needKey(need)),
+              matching: find.byType(DecoratedBox),
+            ),
+          )
+          .map((box) => box.decoration)
+          .whereType<BoxDecoration>()
+          .expand((d) => d.boxShadow ?? const <BoxShadow>[])
+          .where((s) => s.color == AppTheme.careGlow);
+      return shadows.isEmpty ? null : shadows.single.spreadRadius;
+    }
+
+    testWidgets('only the highlighted need glows, pulsing on its own clock', (
+      tester,
+    ) async {
+      await pump(tester, highlight: CareNeed.food);
+
+      for (final need in [
+        CareNeed.drink,
+        CareNeed.gutFeeling,
+        CareNeed.toilet,
+      ]) {
+        expect(glow(tester, need), isNull, reason: '$need');
+      }
+      final before = glow(tester, CareNeed.food)!;
+      await tester.pump(const Duration(milliseconds: 350));
+      final after = glow(tester, CareNeed.food)!;
+      expect(after, isNot(before));
+      for (final spread in [before, after]) {
+        expect(spread, greaterThanOrEqualTo(AppConstants.careNeedGlow * 0.6));
+        expect(spread, lessThanOrEqualTo(AppConstants.careNeedGlow));
+      }
+    });
+
+    testWidgets('reduced motion: a full glow that holds still', (tester) async {
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      await pump(tester, highlight: CareNeed.drink);
+
+      expect(glow(tester, CareNeed.drink), AppConstants.careNeedGlow);
+      expect(tester.binding.hasScheduledFrame, isFalse);
+    });
   });
 
   for (final (name, size) in [

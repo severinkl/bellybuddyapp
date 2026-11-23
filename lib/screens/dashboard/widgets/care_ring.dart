@@ -1,11 +1,11 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:material_ui/material_ui.dart';
 
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../services/buddy/daily_care.dart';
-import '../../../widgets/buddy/buddy_controller.dart';
 import 'tutorial/tutorial_keys.dart';
 
 /// The Buddy inside a ring of his four daily needs. Each quarter of the ring
@@ -13,7 +13,7 @@ import 'tutorial/tutorial_keys.dart';
 /// bottom right, Klo bottom left, Essen top left), and a tappable bubble in
 /// that corner shows it („🍽 2/3") and opens its tracker. The [highlight]ed
 /// need (the one he suggests next) glows and, unless animations are off,
-/// pulses gently with [pulse] (the Buddy's controller, his frame clock).
+/// pulses gently on its own clock (paused while `TickerMode` is off).
 class CareRing extends StatelessWidget {
   const CareRing({
     super.key,
@@ -22,11 +22,17 @@ class CareRing extends StatelessWidget {
     required this.buddy,
     required this.onNeed,
     this.highlight,
-    this.pulse,
   });
 
   /// A need's bubble: `care_need_<name>`.
   static Key needKey(CareNeed need) => ValueKey('care_need_${need.name}');
+
+  /// Test seam: while false, the highlighted need glows without pulsing,
+  /// so `pumpAndSettle` can settle on screens that show the ring (e.g. the
+  /// dashboard). Set it in a test directory's `flutter_test_config.dart`;
+  /// never change it in app code.
+  @visibleForTesting
+  static bool pulseEnabled = true;
 
   /// The ring's diameter in a [width] wide slot on a [screenHeight] tall
   /// screen.
@@ -51,7 +57,6 @@ class CareRing extends StatelessWidget {
   final Widget buddy;
   final ValueChanged<CareNeed> onNeed;
   final CareNeed? highlight;
-  final BuddyController? pulse;
 
   /// Ring quarters clockwise from the top.
   static const _ringOrder = [
@@ -76,7 +81,6 @@ class CareRing extends StatelessWidget {
         need: need,
         care: care,
         highlighted: need == highlight,
-        pulse: pulse,
         onTap: () => onNeed(need),
       );
       final tutorialKey = _tutorialKeys[need];
@@ -91,14 +95,18 @@ class CareRing extends StatelessWidget {
         children: [
           SizedBox.square(
             dimension: diameter,
-            child: TweenAnimationBuilder<List<double>>(
-              tween: _ProgressTween(
-                end: [for (final n in _ringOrder) care.progress(n)],
+            // The Buddy and the glow next to it repaint every frame; the
+            // ring only while its progress animates.
+            child: RepaintBoundary(
+              child: TweenAnimationBuilder<List<double>>(
+                tween: _ProgressTween(
+                  end: [for (final n in _ringOrder) care.progress(n)],
+                ),
+                duration: calm ? Duration.zero : AppConstants.animMedium,
+                curve: Curves.easeOut,
+                builder: (_, progress, _) =>
+                    CustomPaint(painter: _RingPainter(progress)),
               ),
-              duration: calm ? Duration.zero : AppConstants.animMedium,
-              curve: Curves.easeOut,
-              builder: (_, progress, _) =>
-                  CustomPaint(painter: _RingPainter(progress)),
             ),
           ),
           SizedBox.square(
@@ -141,6 +149,10 @@ class _RingPainter extends CustomPainter {
     AppTheme.careFood,
   ];
 
+  static final Paint _paint = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = AppConstants.careRingStroke;
+
   @override
   void paint(Canvas canvas, Size size) {
     const stroke = AppConstants.careRingStroke;
@@ -152,12 +164,9 @@ class _RingPainter extends CustomPainter {
     );
     const gap = AppConstants.careRingGapDegrees * math.pi / 180;
     const sweep = math.pi / 2 - gap;
-    final paint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = stroke;
     for (var i = 0; i < 4; i++) {
       final start = -math.pi / 2 + i * math.pi / 2 + gap / 2;
-      canvas.drawArc(rect, start, sweep, false, paint..color = AppTheme.muted);
+      canvas.drawArc(rect, start, sweep, false, _paint..color = AppTheme.muted);
       final p = progress[i].clamp(0.0, 1.0);
       if (p > 0) {
         canvas.drawArc(
@@ -165,27 +174,18 @@ class _RingPainter extends CustomPainter {
           start,
           sweep * p,
           false,
-          paint..color = _colors[i],
+          _paint..color = _colors[i],
         );
       }
     }
   }
 
   @override
-  bool shouldRepaint(_RingPainter old) => !_listEquals(old.progress, progress);
-
-  static bool _listEquals(List<double> a, List<double> b) {
-    if (a.length != b.length) return false;
-    for (var i = 0; i < a.length; i++) {
-      if (a[i] != b[i]) return false;
-    }
-    return true;
-  }
+  bool shouldRepaint(_RingPainter old) => !listEquals(old.progress, progress);
 }
 
 /// A need's corner bubble: its count over its label; filled once met,
-/// ringed and glowing while it is the next need. The glow breathes with
-/// [pulse]'s clock (the Buddy's controller) unless animations are off.
+/// ringed and glowing ([_Glow]) while it is the next need.
 class _NeedBubble extends StatelessWidget {
   const _NeedBubble({
     super.key,
@@ -193,17 +193,12 @@ class _NeedBubble extends StatelessWidget {
     required this.care,
     required this.highlighted,
     required this.onTap,
-    this.pulse,
   });
 
   final CareNeed need;
   final DailyCare care;
   final bool highlighted;
   final VoidCallback onTap;
-  final BuddyController? pulse;
-
-  /// The glow's spread at the pulse's low point, as a share of its peak.
-  static const _glowMin = 0.6;
 
   /// Today's count as shown after the need's emoji („2/3") and as spoken
   /// after its label („2 von 3 Mahlzeiten").
@@ -226,14 +221,7 @@ class _NeedBubble extends StatelessWidget {
     ),
   };
 
-  /// 0..1 along the pulse; 1 (full glow) without one.
-  static double _pulseAt(BuddyController? clock) {
-    if (clock == null) return 1;
-    final period = AppConstants.careNeedPulse.inMicroseconds / 1e6;
-    return 0.5 + 0.5 * math.sin(clock.elapsed / period * 2 * math.pi);
-  }
-
-  BoxDecoration _decoration(double pulse) => BoxDecoration(
+  BoxDecoration get _decoration => BoxDecoration(
     color: care.isMet(need) ? AppTheme.primarySoft : AppTheme.background,
     borderRadius: BorderRadius.circular(AppConstants.radiusLg),
     border: Border.all(
@@ -241,12 +229,6 @@ class _NeedBubble extends StatelessWidget {
       width: AppConstants.borderWidthLg,
     ),
     boxShadow: [
-      if (highlighted)
-        BoxShadow(
-          color: AppTheme.careGlow,
-          spreadRadius:
-              AppConstants.careNeedGlow * (_glowMin + (1 - _glowMin) * pulse),
-        ),
       BoxShadow(
         color: highlighted ? AppTheme.primary : AppTheme.border,
         offset: AppConstants.careNeedShadowOffset,
@@ -287,7 +269,7 @@ class _NeedBubble extends StatelessWidget {
         ),
       ],
     );
-    Widget box(double pulse) => Container(
+    final box = Container(
       width: AppConstants.careNeedWidth,
       constraints: const BoxConstraints(
         minHeight: AppConstants.careNeedMinHeight,
@@ -296,12 +278,9 @@ class _NeedBubble extends StatelessWidget {
         horizontal: AppConstants.spacingXs,
         vertical: AppConstants.spacing6,
       ),
-      decoration: _decoration(pulse),
+      decoration: _decoration,
       child: content,
     );
-    final clock = highlighted && !MediaQuery.disableAnimationsOf(context)
-        ? pulse
-        : null;
     return Semantics(
       button: true,
       label: '${need.label}: $spoken',
@@ -311,13 +290,74 @@ class _NeedBubble extends StatelessWidget {
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
-        child: clock == null
-            ? box(1)
-            : AnimatedBuilder(
-                animation: clock,
-                builder: (_, _) => box(_pulseAt(clock)),
-              ),
+        child: highlighted ? _Glow(child: box) : box,
       ),
     );
   }
+}
+
+/// The next need's glow around its bubble ([child]), painted under it. It
+/// breathes once per [AppConstants.careNeedPulse] on its own clock (paused
+/// while `TickerMode` is off) and stays full while animations are off.
+class _Glow extends StatefulWidget {
+  const _Glow({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_Glow> createState() => _GlowState();
+}
+
+class _GlowState extends State<_Glow> with SingleTickerProviderStateMixin {
+  /// The glow's spread at the pulse's low point, as a share of its peak.
+  static const _glowMin = 0.6;
+
+  late final AnimationController _clock = AnimationController(
+    vsync: this,
+    duration: AppConstants.careNeedPulse,
+  );
+
+  /// Animations are off: a full glow that doesn't pulse.
+  bool _still = true;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _still = !CareRing.pulseEnabled || MediaQuery.disableAnimationsOf(context);
+    if (_still) {
+      _clock.stop();
+    } else if (!_clock.isAnimating) {
+      _clock.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _clock.dispose();
+    super.dispose();
+  }
+
+  /// 0..1 along the pulse (a sine wave); 1 while [_still].
+  double get _pulse =>
+      _still ? 1 : 0.5 + 0.5 * math.sin(_clock.value * 2 * math.pi);
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _clock,
+    builder: (_, child) => DecoratedBox(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(AppConstants.radiusLg),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.careGlow,
+            spreadRadius:
+                AppConstants.careNeedGlow *
+                (_glowMin + (1 - _glowMin) * _pulse),
+          ),
+        ],
+      ),
+      child: child,
+    ),
+    child: widget.child,
+  );
 }
