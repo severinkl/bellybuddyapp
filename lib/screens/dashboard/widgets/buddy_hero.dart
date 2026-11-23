@@ -139,6 +139,18 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// The need of the log the pending follow-up answers.
   CareNeed? _loggedNeed;
 
+  /// When a drink was last logged here (the entry's time may lie earlier).
+  DateTime? _drinkLoggedAt;
+
+  /// After a drink he doesn't ask for the next one this soon: he thanks
+  /// for it instead ([BuddyCopy.careAfterLog]).
+  static const _thirstPause = Duration(minutes: 30);
+
+  /// Whether a drink was logged, or taken, within [_thirstPause] of [now].
+  bool _justDrank(DateTime now) => [_drinkLoggedAt, _care.lastDrinkAt].any(
+    (t) => t != null && !t.isAfter(now) && now.difference(t) < _thirstPause,
+  );
+
   /// The line he said last; a pool never repeats it right away (a few taps
   /// in a row each get another line).
   String? _lastLine;
@@ -293,7 +305,8 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// His resting line: what he needs next by day, else the [mood]'s line
   /// (empathetic, in love, asleep, or at night); never the line he just
   /// said. Right after a log of [justLogged], when he would ask for more of
-  /// the same, he thanks for it instead ([BuddyCopy.careAfterLog]).
+  /// the same, he thanks for it instead ([BuddyCopy.careAfterLog]); after a
+  /// drink he does so for [_thirstPause].
   String _moodLine(BuddyMood mood, {CareNeed? justLogged}) {
     final status = ref.read(buddyProvider).value;
     final name = status?.state.name ?? 'Buddy';
@@ -302,10 +315,11 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     const moodOnly = {BuddyMood.empathetic, BuddyMood.inLove, BuddyMood.asleep};
     if (byDay && !moodOnly.contains(mood)) {
       final action = _careAction;
+      final moreOfTheSame =
+          (justLogged != null && justLogged == action.need) ||
+          (action == CareAction.drink && _justDrank(now));
       final pool =
-          (justLogged != null && justLogged == action.need
-              ? BuddyCopy.careAfterLog[action]
-              : null) ??
+          (moreOfTheSame ? BuddyCopy.careAfterLog[action] : null) ??
           BuddyCopy.care[action]!;
       final lines = [for (final l in pool) BuddyCopy.fill(l, name: name)];
       final fresh = [
@@ -416,6 +430,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     }
     _logRefresh = events.lastRefresh;
     _loggedNeed = _needOf(event.kind);
+    if (event.kind == EntryKind.drink) _drinkLoggedAt = event.at;
     if (!_followUpPending) {
       _followUpPending = true;
       _enqueue(const [_Cue.followUp]);

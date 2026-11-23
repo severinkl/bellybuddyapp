@@ -56,6 +56,7 @@ class DailyCare {
     this.gutFeelings = 0,
     this.toilets = 0,
     this.lastMealAt,
+    this.lastDrinkAt,
     this.lastLogAt,
     this.lastGutFeelingLevel,
   });
@@ -77,6 +78,9 @@ class DailyCare {
 
   /// Local time of today's latest meal.
   final DateTime? lastMealAt;
+
+  /// Local time of today's latest drink.
+  final DateTime? lastDrinkAt;
 
   /// Local time of today's latest entry of any kind.
   final DateTime? lastLogAt;
@@ -124,6 +128,7 @@ class DailyCare {
       gutFeelings: gutFeelingTimes.length,
       toilets: toiletTimes.length,
       lastMealAt: latest(mealTimes),
+      lastDrinkAt: latest([for (final d in drinks) d.trackedAt.toLocal()]),
       lastLogAt: latest([
         ...mealTimes,
         for (final d in drinks) d.trackedAt.toLocal(),
@@ -145,6 +150,7 @@ class DailyCare {
       other.gutFeelings == gutFeelings &&
       other.toilets == toilets &&
       other.lastMealAt == lastMealAt &&
+      other.lastDrinkAt == lastDrinkAt &&
       other.lastLogAt == lastLogAt &&
       other.lastGutFeelingLevel == lastGutFeelingLevel;
 
@@ -156,6 +162,7 @@ class DailyCare {
     gutFeelings,
     toilets,
     lastMealAt,
+    lastDrinkAt,
     lastLogAt,
     lastGutFeelingLevel,
   );

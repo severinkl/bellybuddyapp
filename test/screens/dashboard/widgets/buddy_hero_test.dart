@@ -862,6 +862,63 @@ void main() {
       await tester.pump(const Duration(seconds: 5));
     });
 
+    testWidgets('taps in the half hour after a drink never ask for another '
+        'one; later they may again', (tester) async {
+      buddy = _FakeBuddy(() => _status(streak: 5, todayCounted: true));
+      final lunch = testMealEntry(trackedAt: DateTime(2026, 11, 22, 13));
+      entries = _FakeEntries(EntriesState(meals: [lunch]));
+      final container = await pumpHero(tester);
+      await advance(tester, const Duration(seconds: 3)); // greeting gone
+
+      container
+          .read(buddyEventsProvider.notifier)
+          .emit(
+            BuddyLogEvent(
+              EntryKind.drink,
+              LogSentiment.good,
+              at: now,
+              trackedAt: now,
+            ),
+          );
+      await tester.pump();
+      entries.push(
+        EntriesState(
+          meals: [lunch],
+          drinks: [testDrinkEntry(trackedAt: now)],
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 600));
+      await tick(tester);
+      await advance(tester, const Duration(seconds: 6)); // follow-up gone
+
+      final thanks = BuddyCopy.careAfterLog[CareAction.drink]!
+          .map((l) => BuddyCopy.fill(l, name: 'Bubu'))
+          .toList();
+      final said = <String?>[];
+      Future<void> tapAt(DateTime at) async {
+        now = at;
+        await tester.tap(find.byType(AnimatedBuddy));
+        await tick(tester);
+        said.add(controller(tester).bubble);
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+
+      final drankAt = now;
+      for (var i = 0; i < 6; i++) {
+        await tapAt(drankAt.add(Duration(minutes: 5 * i)));
+        expect(thanks, contains(said.last), reason: 'tap $i');
+      }
+      // The rotation still never repeats a line right away.
+      for (var i = 1; i < said.length; i++) {
+        expect(said[i], isNot(said[i - 1]));
+      }
+
+      // Half an hour on he may be thirsty again.
+      await tapAt(drankAt.add(const Duration(minutes: 31)));
+      expect(careLines(CareAction.drink), contains(said.last));
+      await tester.pump(const Duration(seconds: 5));
+    });
+
     testWidgets('tapping the Buddy again and again never repeats the line '
         'he just said', (tester) async {
       await pumpHero(tester);
