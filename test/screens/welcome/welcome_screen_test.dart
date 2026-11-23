@@ -166,12 +166,16 @@ void main() {
       expect(find.text(_line3), findsNothing);
       expect(find.byKey(WelcomeScreen.registrationButtonKey), findsNothing);
 
+      expect(find.byKey(WelcomeScreen.startHintKey), findsNothing);
+
       await tester.pump(_step);
       expect(find.text(_line3), findsOneWidget);
       await tester.pump(const Duration(milliseconds: 500));
       expect(find.byKey(WelcomeScreen.registrationButtonKey), findsOneWidget);
       expect(find.text(_letsGo), findsOneWidget);
       expect(find.byKey(WelcomeScreen.signInButtonKey), findsOneWidget);
+      // Awake, he tells the user that a tap on him starts too.
+      expect(find.text("Tipp mich an, dann geht's los"), findsOneWidget);
 
       // The last line stays up next to the button.
       await tester.pump(const Duration(seconds: 10));

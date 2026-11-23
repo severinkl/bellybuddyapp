@@ -71,8 +71,8 @@ class StreakGoalPicker extends StatelessWidget {
   }
 }
 
-/// Modal sheet with Buddy, [title] and the goal picker. Returns the chosen
-/// goal, or null when dismissed.
+/// Modal sheet with the Buddy (his bubble asks [title]) and the goal picker.
+/// Returns the chosen goal, or null when dismissed.
 Future<int?> showStreakGoalSheet(
   BuildContext context, {
   required int currentStreak,
@@ -101,6 +101,13 @@ class _StreakGoalSheetState extends State<_StreakGoalSheet> {
   final BuddyController _buddy = BuddyController(mood: BuddyMood.inLove);
 
   @override
+  void initState() {
+    super.initState();
+    // The Buddy asks; the sheet has no title of its own.
+    _buddy.say(widget.title, duration: null);
+  }
+
+  @override
   void dispose() {
     _buddy.dispose();
     super.dispose();
@@ -120,16 +127,6 @@ class _StreakGoalSheetState extends State<_StreakGoalSheet> {
             SizedBox(
               height: AppConstants.streakSheetBuddyHeight,
               child: BuddyStage(controller: _buddy),
-            ),
-            AppConstants.gap8,
-            Text(
-              widget.title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: AppTheme.fontSizeTitleLG,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.foreground,
-              ),
             ),
             AppConstants.gap16,
             StreakGoalPicker(

@@ -25,6 +25,7 @@ class WelcomeScreen extends ConsumerStatefulWidget {
   static const signInButtonKey = Key('welcome_sign_in_button');
   static const buddyAreaKey = Key('welcome_buddy_area');
   static const hintKey = Key('welcome_wake_hint');
+  static const startHintKey = Key('welcome_start_hint');
 
   @override
   ConsumerState<WelcomeScreen> createState() => _WelcomeScreenState();
@@ -212,10 +213,25 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                   ),
                   child: switch (_phase) {
                     _Phase.asleep => _WakeHint(onTap: _wake, pulse: _pulse),
-                    _Phase.ready => BbButton(
-                      key: WelcomeScreen.registrationButtonKey,
-                      label: "Los geht's",
-                      onPressed: _start,
+                    _Phase.ready => Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          key: WelcomeScreen.startHintKey,
+                          "Tipp mich an, dann geht's los",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: AppTheme.fontSizeBodyLG,
+                            color: AppTheme.mutedForeground,
+                          ),
+                        ),
+                        AppConstants.gap16,
+                        BbButton(
+                          key: WelcomeScreen.registrationButtonKey,
+                          label: "Los geht's",
+                          onPressed: _start,
+                        ),
+                      ],
                     ),
                     _Phase.waking || _Phase.talking => const SizedBox.shrink(),
                   },

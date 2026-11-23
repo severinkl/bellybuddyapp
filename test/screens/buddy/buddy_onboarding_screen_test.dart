@@ -206,6 +206,13 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400));
     }
 
+    /// A reaction shows for a while, then the Buddy asks the step's
+    /// question again.
+    Future<void> afterReaction(WidgetTester tester) async {
+      await tester.pump(const Duration(seconds: 4));
+      await settle(tester);
+    }
+
     Future<void> tapKey(WidgetTester tester, Key key) async {
       await tester.ensureVisible(find.byKey(key));
       await tester.pump();
@@ -405,8 +412,12 @@ void main() {
       expect(find.text('fake-save-meal'), findsOneWidget);
       await tapText(tester, 'fake-save-meal');
 
-      expect(find.text(_giftTitle), findsOneWidget);
+      // He thanks for the meal on the gift step, then asks again.
+      expect(find.byKey(GiftReveal.boxKey), findsOneWidget);
       expect(find.text('Mmmh! Danke!'), findsOneWidget);
+      await afterReaction(tester);
+      expect(find.text(_giftTitle), findsOneWidget);
+      expect(find.text('Mmmh! Danke!'), findsNothing);
     });
 
     testWidgets('leaving the tracker without a meal stays; „Später" '
@@ -461,6 +472,9 @@ void main() {
       await tapKey(tester, BuddyOnboardingScreen.nameNextKey);
       expect(h.stored?.name, 'Bauchi');
 
+      // He cheers with his new name first, then asks for the goal.
+      expect(find.text(_streakTitle), findsNothing);
+      await afterReaction(tester);
       expect(find.text(_streakTitle), findsOneWidget);
       await tapText(tester, '14 Tage');
       expect(find.text(_reminderTitle), findsOneWidget);
@@ -577,7 +591,7 @@ void main() {
       await tapKey(tester, BuddyOnboardingScreen.mealLogKey);
       await tapText(tester, 'fake-meal-then-drink');
 
-      expect(find.text(_giftTitle), findsOneWidget);
+      expect(find.byKey(GiftReveal.boxKey), findsOneWidget);
       expect(find.text('Mmmh! Danke!'), findsOneWidget);
     });
 
@@ -592,6 +606,7 @@ void main() {
       await settle(tester);
 
       expect(h.stored?.name, 'Bauchi');
+      await afterReaction(tester);
       expect(find.text(_streakTitle), findsOneWidget);
     });
 

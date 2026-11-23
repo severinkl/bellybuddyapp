@@ -14,6 +14,7 @@ import '../../providers/buddy_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../router/route_names.dart';
+import '../../services/buddy/buddy_copy.dart';
 import '../../services/buddy/buddy_mood_logic.dart';
 import '../../services/buddy/streak_engine.dart' show maxStreakSavers;
 import '../../utils/logger.dart';
@@ -84,6 +85,19 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
   static const _introLine = 'Hi! Ich bin neu hier — dein Belly Buddy.';
   static const _thanksLine = 'Mmmh! Danke!';
 
+  /// What the Buddy asks on each step. His bubble carries it; the steps have
+  /// no headline of their own.
+  static const _questions = {
+    BuddyOnboardingStep.intro: _introLine,
+    BuddyOnboardingStep.name: 'Wie soll ich heißen?',
+    BuddyOnboardingStep.streakGoal: 'Wie viele Tage schaffen wir zusammen?',
+    BuddyOnboardingStep.reminder:
+        'Darf ich dich erinnern, wenn ich Hunger habe?',
+    BuddyOnboardingStep.firstMeal:
+        'Ich hab Hunger! Was hast du zuletzt gegessen?',
+    BuddyOnboardingStep.gift: 'Ein Geschenk für dich!',
+  };
+
   static const _giftSaverText =
       'Ein Streak-Saver! Der rettet unseren Streak, falls du mal einen Tag '
       'vergisst.';
@@ -94,7 +108,8 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
   static const _giftSaversFullCard = '🛡 Schutzschilde voll';
   static const _giftNoSaverCard = '🛡 Bestens gerüstet';
 
-  /// Reactions stay long enough to read across a step change.
+  /// Reactions stay this long (long enough to read across a step change),
+  /// then the Buddy asks the step's question again.
   static const _reactionHold = Duration(seconds: 4);
 
   /// The stage never takes more than this share of the height (small
@@ -107,6 +122,9 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
 
   /// The gift's text, scrolled into view once it shows.
   final GlobalKey _giftTextKey = GlobalKey();
+
+  /// Brings the question back after a reaction.
+  Timer? _reask;
 
   /// Fixed once the Buddy and the profile have loaded.
   List<BuddyOnboardingStep>? _steps;
@@ -150,6 +168,7 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
 
   @override
   void dispose() {
+    _reask?.cancel();
     _scroll.dispose();
     _buddy.dispose();
     super.dispose();
@@ -201,16 +220,15 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
     _goTo(_index - 1);
   }
 
-  /// Sets the Buddy up for [step].
+  /// Sets the Buddy up for [step]: his mood, and he asks its question.
   void _enter(BuddyOnboardingStep step) {
     _mealLogged = false;
+    _ask(step);
     switch (step) {
       case BuddyOnboardingStep.intro:
         _buddy
           ..mood = BuddyMood.happy
-          ..play(BuddyAction.wakeUp)
-          // Up until the next line replaces it.
-          ..say(_introLine, duration: null);
+          ..play(BuddyAction.wakeUp);
       case BuddyOnboardingStep.firstMeal:
         _buddy.mood = BuddyMood.hungry;
       case BuddyOnboardingStep.name:
@@ -219,6 +237,24 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
       case BuddyOnboardingStep.gift:
         _buddy.mood = BuddyMood.happy;
     }
+  }
+
+  /// The Buddy asks [step]'s question, up until the next line replaces it.
+  void _ask(BuddyOnboardingStep step) {
+    _reask?.cancel();
+    final question = _questions[step];
+    if (question != null) _buddy.say(question, duration: null);
+  }
+
+  /// Shows [line] (a reaction) for [_reactionHold], then asks the current
+  /// step's question again.
+  void _sayBriefly(String line) {
+    _buddy.say(line, duration: null);
+    _reask?.cancel();
+    final step = _step;
+    _reask = Timer(_reactionHold, () {
+      if (mounted && _step == step) _ask(step);
+    });
   }
 
   /// Whether [step] is showing and free for a new action. The outgoing step
@@ -275,7 +311,11 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
     _advance();
     final reaction = wizardReaction('name:confirmed');
     if (reaction != null) {
-      _buddy.react(reaction, name: name, rnd: _rnd, duration: _reactionHold);
+      final mood = reaction.mood;
+      final action = reaction.action;
+      if (mood != null) _buddy.mood = mood;
+      if (action != null) _buddy.play(action);
+      _sayBriefly(BuddyCopy.fill(reaction.pick(_rnd), name: name));
     }
   }
 
@@ -330,8 +370,8 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
     _advance();
     _buddy
       ..mood = BuddyMood.happy
-      ..play(BuddyAction.eat)
-      ..say(_thanksLine, duration: _reactionHold);
+      ..play(BuddyAction.eat);
+    _sayBriefly(_thanksLine);
   }
 
   void _mealLater() {
@@ -503,26 +543,15 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
         onChanged: (v) => setState(() => _name = v),
         onSubmitted: _confirmName,
       ),
-      BuddyOnboardingStep.streakGoal => _StepColumn(
-        children: [
-          const _StepTitle('Wie viele Tage schaffen wir zusammen?'),
-          AppConstants.gap16,
-          StreakGoalPicker(
-            currentStreak: status?.streak ?? 0,
-            onSelected: _pickGoal,
-          ),
-        ],
+      BuddyOnboardingStep.streakGoal => StreakGoalPicker(
+        currentStreak: status?.streak ?? 0,
+        onSelected: _pickGoal,
       ),
-      BuddyOnboardingStep.reminder => const _StepTitle(
-        'Darf ich dich erinnern, wenn ich Hunger habe?',
-      ),
-      BuddyOnboardingStep.firstMeal => const _StepTitle(
-        'Ich hab Hunger! Was hast du zuletzt gegessen?',
-      ),
+      // The Buddy's question is the whole content; the buttons below answer.
+      BuddyOnboardingStep.reminder ||
+      BuddyOnboardingStep.firstMeal => const SizedBox.shrink(),
       BuddyOnboardingStep.gift => _StepColumn(
         children: [
-          const _StepTitle('Ein Geschenk für dich!'),
-          AppConstants.gap16,
           Center(
             child: GiftReveal(
               onOpened: _onGiftOpened,
@@ -628,23 +657,6 @@ class _StepColumn extends StatelessWidget {
     mainAxisSize: MainAxisSize.min,
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: children,
-  );
-}
-
-class _StepTitle extends StatelessWidget {
-  const _StepTitle(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Text(
-    text,
-    textAlign: TextAlign.center,
-    style: const TextStyle(
-      fontSize: AppTheme.fontSizeHeadingLG,
-      fontWeight: FontWeight.w700,
-      color: AppTheme.foreground,
-    ),
   );
 }
 

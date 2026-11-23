@@ -27,6 +27,7 @@ import 'package:belly_buddy/screens/trackers/drink/drink_tracker_screen.dart';
 import 'package:belly_buddy/screens/trackers/meal/meal_tracker_screen.dart';
 import 'package:belly_buddy/screens/registration/steps/buddy_name_step.dart';
 import 'package:belly_buddy/screens/upgrade/upgrade_required_screen.dart';
+import 'package:belly_buddy/widgets/buddy/animated_buddy.dart';
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_localizations/flutter_localizations.dart'
@@ -222,7 +223,17 @@ void main() {
       await tester.enterText(find.byKey(BuddyNameStep.fieldKey), 'Bauchi');
       await tester.pump();
       await _tap(tester, find.byKey(BuddyOnboardingScreen.nameNextKey));
-      expect(find.text(_streakTitle), findsOneWidget);
+      // His cheer first; then he asks for the goal. (Buddies don't tick
+      // here, so read his bubble from the controller.)
+      await tester.pump(const Duration(seconds: 4));
+      await tester.pumpAndSettle();
+      expect(
+        tester
+            .widget<AnimatedBuddy>(find.byType(AnimatedBuddy))
+            .controller
+            .bubble,
+        _streakTitle,
+      );
       await _tap(tester, find.text('7 Tage'));
       expect(find.text(_reminderTitle), findsOneWidget);
       await _tap(tester, find.byKey(BuddyOnboardingScreen.reminderLaterKey));
