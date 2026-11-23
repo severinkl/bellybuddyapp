@@ -1,18 +1,21 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
-import '../../models/insights.dart';
 import '../../providers/insights_provider.dart';
+import '../../router/route_names.dart';
 import '../../services/insights/insight_copy.dart';
 import 'widgets/patterns_locked.dart';
+import 'widgets/patterns_unlocked.dart';
 
 /// The Muster page behind Home's insight card (`/patterns`): what the last
 /// 30 days of entries show. Locked until the first patterns unlock.
 ///
 /// Shows only [AsyncData]: loading (also while the next user's insights
-/// load) is a spinner, a failure offers a retry. Pull to refresh.
+/// load) is a spinner, a failure offers a retry. Pull to refresh. Opened
+/// without a page below (a cold start on `/patterns`), back goes Home.
 class PatternsScreen extends ConsumerWidget {
   const PatternsScreen({super.key});
 
@@ -21,6 +24,12 @@ class PatternsScreen extends ConsumerWidget {
   static const retryLabel = 'Nochmal versuchen';
   static const footer =
       'ⓘ Beobachtung aus deinen Einträgen, kein medizinischer Befund.';
+
+  static const _footerStyle = TextStyle(
+    fontSize: AppTheme.fontSizeCaptionLG,
+    height: AppTheme.lineHeightSnug,
+    color: AppTheme.mutedForeground,
+  );
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -47,19 +56,16 @@ class PatternsScreen extends ConsumerWidget {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: AppConstants.paddingMd,
               children: [
-                if (insights.progress.unlocked)
-                  _UnlockedPlaceholder(insights)
+                if (insights.unlocked)
+                  PatternsUnlocked(insights: insights)
                 else
                   PatternsLocked(progress: insights.progress),
                 AppConstants.gap24,
-                const Text(
-                  footer,
-                  style: TextStyle(
-                    fontSize: AppTheme.fontSizeCaptionLG,
-                    height: AppTheme.lineHeightSnug,
-                    color: AppTheme.mutedForeground,
-                  ),
-                ),
+                const Text(footer, style: _footerStyle),
+                if (insights.unlocked) ...[
+                  AppConstants.gap4,
+                  const Text(InsightCopy.dayDefinitions, style: _footerStyle),
+                ],
               ],
             ),
           ),
@@ -69,32 +75,12 @@ class PatternsScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: AppTheme.background,
         title: const Text(title),
+        // Pushed from Home, the default back arrow pops.
+        leading: context.canPop()
+            ? null
+            : BackButton(onPressed: () => context.go(RoutePaths.dashboard)),
       ),
       body: SafeArea(child: body),
-    );
-  }
-}
-
-/// Stands in until the unlocked page lands: the observations as rows.
-class _UnlockedPlaceholder extends StatelessWidget {
-  const _UnlockedPlaceholder(this.insights);
-
-  final Insights insights;
-
-  @override
-  Widget build(BuildContext context) {
-    final noticed = insights.noticed;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        if (noticed.isEmpty)
-          const Text(InsightCopy.nothingYet)
-        else
-          for (final n in noticed) ...[
-            Text(InsightCopy.noticedRow(n)),
-            AppConstants.gap8,
-          ],
-      ],
     );
   }
 }

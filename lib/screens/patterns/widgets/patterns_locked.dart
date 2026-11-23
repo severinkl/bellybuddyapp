@@ -71,13 +71,13 @@ class PatternsLocked extends StatelessWidget {
         const StepFieldLabel(sectionLabel),
         AppConstants.gap12,
         InsightProgressRow(
-          label: 'Tage mit Einträgen',
+          label: InsightCopy.activeDaysLabel,
           count: progress.activeDays,
           goal: InsightProgress.daysNeeded,
         ),
         AppConstants.gap10,
         InsightProgressRow(
-          label: 'Bauchgefühl-Einträge',
+          label: InsightCopy.gutFeelingEntriesLabel,
           count: progress.gutFeelingEntries,
           goal: InsightProgress.gutFeelingsNeeded,
         ),

@@ -47,6 +47,12 @@ class AppTheme {
   static const Color gutFeelingNeutral = Color(0xFFE6B800);
   static const Color gutFeelingBad = Color(0xFFD93636);
 
+  // Muster calendar: a day's cell, a light tint of its class's colour
+  // above (its icon draws in that colour on it)
+  static const Color gutFeelingGoodSoft = Color(0xFFE5F5E5);
+  static const Color gutFeelingNeutralSoft = Color(0xFFFCF4D6);
+  static const Color gutFeelingBadSoft = Color(0xFFF9E1E1);
+
   // Buddy mascot colors
   static const Color buddyOutline = Color(0xFF0D0D0F);
   static const Color buddyBody = Color(0xFFFFABB6);

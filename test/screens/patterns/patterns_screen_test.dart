@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -67,6 +69,65 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(PatternsScreen), findsOneWidget);
     expect(find.text('Ich sammle noch!'), findsOneWidget);
+  });
+
+  group('back', () {
+    Future<ProviderContainer> openApp(WidgetTester tester) async {
+      tester.view
+        ..physicalSize = const Size(400, 860)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final container = ProviderContainer.test(
+        overrides: baseOverrides(entries: _entries(2, 1)),
+      );
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const AppTestHost(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      return container;
+    }
+
+    final appBar = find.descendant(
+      of: find.byType(PatternsScreen),
+      matching: find.byType(AppBar),
+    );
+    final back = find.descendant(
+      of: find.byType(PatternsScreen),
+      matching: find.byType(BackButton),
+    );
+    String location(ProviderContainer c) =>
+        c.read(routerProvider).routerDelegate.currentConfiguration.uri.path;
+
+    testWidgets('from a cold start, the back button goes Home', (tester) async {
+      final container = await openApp(tester);
+      container.read(routerProvider).go(RoutePaths.patterns);
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<AppBar>(appBar).leading, isA<BackButton>());
+      await tester.tap(back);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PatternsScreen), findsNothing);
+      expect(location(container), RoutePaths.dashboard);
+    });
+
+    testWidgets('pushed from Home, the default back arrow pops', (
+      tester,
+    ) async {
+      final container = await openApp(tester);
+      unawaited(container.read(routerProvider).push(RoutePaths.patterns));
+      await tester.pumpAndSettle();
+
+      expect(tester.widget<AppBar>(appBar).leading, isNull);
+      await tester.tap(back);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PatternsScreen), findsNothing);
+      expect(location(container), RoutePaths.dashboard);
+    });
   });
 
   group('locked', () {

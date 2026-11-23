@@ -115,6 +115,64 @@ void main() {
     });
   });
 
+  group('Muster page', () {
+    test('calendar header, plural and singular', () {
+      expect(
+        InsightCopy.calendarHeader(21),
+        'Letzte 30 Tage · 21 Tage mit Bauchgefühl',
+      );
+      expect(
+        InsightCopy.calendarHeader(1),
+        'Letzte 30 Tage · 1 Tag mit Bauchgefühl',
+      );
+    });
+
+    test('a day reads its date and class', () {
+      InsightDay day(int month, int d, DayClass c) =>
+          InsightDay(day: DateTime(2026, month, d), dayClass: c);
+      expect(
+        InsightCopy.daySemantics(day(11, 18, DayClass.hard)),
+        '18. Nov: schwer',
+      );
+      expect(
+        InsightCopy.daySemantics(day(10, 25, DayClass.good)),
+        '25. Okt: gut',
+      );
+      expect(
+        InsightCopy.daySemantics(day(11, 3, DayClass.medium)),
+        '3. Nov: mittel',
+      );
+      expect(
+        InsightCopy.daySemantics(day(11, 1, DayClass.none)),
+        '1. Nov: kein Eintrag',
+      );
+    });
+
+    test('column titles, plural, singular and none', () {
+      String title(int days, {required bool hard}) =>
+          InsightCopy.columnTitle(DayColumn(days: days), hard: hard);
+      expect(title(6, hard: false), '6 gute Tage');
+      expect(title(1, hard: false), '1 guter Tag');
+      expect(title(0, hard: false), '0 gute Tage');
+      expect(title(5, hard: true), '5 schwere Tage');
+      expect(title(1, hard: true), '1 schwerer Tag');
+    });
+
+    test('column items and too few days', () {
+      const reis = IngredientCount('Reis', 3, of: 4);
+      expect(
+        InsightCopy.oftenRow(reis, hard: false),
+        'Reis · an 3 von 4 guten Tagen',
+      );
+      expect(
+        InsightCopy.oftenRow(reis, hard: true),
+        'Reis · an 3 von 4 schweren Tagen',
+      );
+      expect(InsightCopy.tooFewDays(hard: false), 'Noch zu wenige gute Tage');
+      expect(InsightCopy.tooFewDays(hard: true), 'Noch zu wenige schwere Tage');
+    });
+  });
+
   test('nothing yet and kein Befund', () {
     expect(
       InsightCopy.nothingYet,
