@@ -156,6 +156,12 @@ void main() {
       expect(mealSlotAt(DateTime(2026, 11, 23, 17)), CareAction.dinner);
       expect(mealSlotAt(DateTime(2026, 11, 23, 23)), CareAction.dinner);
     });
+
+    test('none before the day starts (05:00): no breakfast at night', () {
+      expect(mealSlotAt(DateTime(2026, 11, 23, 0, 30)), isNull);
+      expect(mealSlotAt(DateTime(2026, 11, 23, 4, 59)), isNull);
+      expect(mealSlotAt(DateTime(2026, 11, 23, 5)), CareAction.breakfast);
+    });
   });
 
   group('DayParts', () {
@@ -179,6 +185,25 @@ void main() {
       expect(at(13, DailyCare(meals: 1, lastMealAt: t(8))), CareAction.lunch);
       expect(at(16, DailyCare(meals: 1, lastMealAt: t(8))), CareAction.snack);
       expect(at(19, DailyCare(meals: 2, lastMealAt: t(12))), CareAction.dinner);
+    });
+
+    test('a late-night meal is no breakfast: at 08:00 he still asks', () {
+      expect(
+        at(8, DailyCare(meals: 1, lastMealAt: t(1))),
+        CareAction.breakfast,
+      );
+      expect(
+        at(8, DailyCare(meals: 1, lastMealAt: t(5), glasses: 1)),
+        CareAction.drink,
+      );
+    });
+
+    test('before 05:00 no meal is suggested: the next need instead', () {
+      expect(at(2, const DailyCare()), CareAction.drink);
+      expect(
+        at(4, const DailyCare(glasses: 6, gutFeelings: 1)),
+        CareAction.feed,
+      );
     });
 
     test('nothing eaten by noon → the lunch slot', () {

@@ -181,7 +181,8 @@ abstract final class DayParts {
   static const dinnerFrom = 17 * 60;
 
   /// The dashboard Buddy's resting line names his next need by day, from
-  /// [dayFrom] until [nightFrom].
+  /// [dayFrom] until [nightFrom]. Breakfast is asked for, and counted, from
+  /// [dayFrom] on.
   static const dayFrom = 5 * 60;
   static const nightFrom = 22 * 60;
 
@@ -195,11 +196,13 @@ abstract final class DayParts {
   }
 }
 
-/// The meal the time of day asks for: Frühstück until
-/// [DayParts.lunchFrom], Mittagessen until [DayParts.snackFrom], a snack
-/// until [DayParts.dinnerFrom], then Abendessen.
-CareAction mealSlotAt(DateTime now) {
+/// The meal the time of day asks for: none before [DayParts.dayFrom],
+/// Frühstück until [DayParts.lunchFrom], Mittagessen until
+/// [DayParts.snackFrom], a snack until [DayParts.dinnerFrom], then
+/// Abendessen.
+CareAction? mealSlotAt(DateTime now) {
   final minute = DayParts.minuteOf(now);
+  if (minute < DayParts.dayFrom) return null;
   if (minute < DayParts.lunchFrom) return CareAction.breakfast;
   if (minute < DayParts.snackFrom) return CareAction.lunch;
   if (minute < DayParts.dinnerFrom) return CareAction.snack;
@@ -207,32 +210,34 @@ CareAction mealSlotAt(DateTime now) {
 }
 
 /// Since when (minutes after midnight) a meal counts for each meal slot:
-/// breakfast from midnight, lunch and the afternoon snack from
-/// [DayParts.lunchFrom], dinner from [DayParts.dinnerFrom].
+/// breakfast from [DayParts.dayFrom] (a late-night meal is none), lunch and
+/// the afternoon snack from [DayParts.lunchFrom], dinner from
+/// [DayParts.dinnerFrom].
 const _mealCountsFrom = {
-  CareAction.breakfast: 0,
+  CareAction.breakfast: DayParts.dayFrom,
   CareAction.lunch: DayParts.lunchFrom,
   CareAction.snack: DayParts.lunchFrom,
   CareAction.dinner: DayParts.dinnerFrom,
 };
 
-/// The next thing to log: the meal the time of day asks for until a meal
-/// is logged in its slot (a skipped breakfast is not asked for at noon),
-/// then Trinken under its goal, then Bauchgefühl, else [CareAction.feed].
-/// Klo never drives it.
+/// The next thing to log: the meal the time of day asks for (none at night
+/// before [DayParts.dayFrom]) until a meal is logged in its slot (a skipped
+/// breakfast is not asked for at noon), then Trinken under its goal, then
+/// Bauchgefühl, else [CareAction.feed]. Klo never drives it.
 CareAction nextCareAction(DailyCare care, DateTime now) {
   final slot = mealSlotAt(now);
-  final from = _mealCountsFrom[slot]!;
-  final slotStart = DateTime(
-    now.year,
-    now.month,
-    now.day,
-    from ~/ 60,
-    from % 60,
-  );
-  final last = care.lastMealAt;
-  final ateThisSlot = last != null && !last.isBefore(slotStart);
-  if (!ateThisSlot && care.meals < DailyCare.mealGoal) return slot;
+  if (slot != null && care.meals < DailyCare.mealGoal) {
+    final from = _mealCountsFrom[slot]!;
+    final slotStart = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      from ~/ 60,
+      from % 60,
+    );
+    final last = care.lastMealAt;
+    if (last == null || last.isBefore(slotStart)) return slot;
+  }
   if (!care.isMet(CareNeed.drink)) return CareAction.drink;
   if (!care.isMet(CareNeed.gutFeeling)) return CareAction.gutFeeling;
   return CareAction.feed;
