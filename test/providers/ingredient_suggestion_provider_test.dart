@@ -95,7 +95,33 @@ void main() {
 
       final state = container.read(ingredientSuggestionProvider);
       expect(state, isA<AsyncError>());
+      expect(state.value, isNull);
     });
+
+    test(
+      'a failed refresh (offline resume) keeps the groups and the count',
+      () async {
+        final groups = [testSuggestionGroup()];
+        var fetches = 0;
+        when(() => mockRepo.fetchSuggestionGroups(any())).thenAnswer(
+          (_) => ++fetches == 1
+              ? Future.value(groups)
+              : Future.error(Exception('offline')),
+        );
+
+        final container = makeContainer();
+        final notifier = container.read(ingredientSuggestionProvider.notifier);
+        await notifier.fetchSuggestions();
+        expect(container.read(newIngredientSuggestionCountProvider), 1);
+
+        await notifier.fetchSuggestions();
+
+        final state = container.read(ingredientSuggestionProvider);
+        expect(state.hasError, isTrue);
+        expect(state.value, same(groups));
+        expect(container.read(newIngredientSuggestionCountProvider), 1);
+      },
+    );
   });
 
   group('IngredientSuggestionNotifier.markAllNewAsSeen', () {

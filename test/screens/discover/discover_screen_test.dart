@@ -369,6 +369,42 @@ void main() {
     expect(find.text('Woche 46'), findsNothing);
   });
 
+  testWidgets('a failed refresh (offline resume) keeps the set card and the '
+      'Alternativen', (tester) async {
+    await pump(
+      tester,
+      tips: [
+        testRecommendation(
+          recommendations: const [_item, _item],
+          createdAt: DateTime.utc(2026, 11, 16, 10),
+        ),
+      ],
+      groups: [
+        _group('Zwiebel', isNew: true, lastMeal: DateTime(2026, 11, 20)),
+      ],
+    );
+
+    when(
+      () => recommendations.fetchByUserId(any()),
+    ).thenAnswer((_) => Future.error(Exception('offline')));
+    when(
+      () => ingredients.fetchSuggestionGroups(any()),
+    ).thenAnswer((_) => Future.error(Exception('offline')));
+    await ProviderScope.containerOf(
+      tester.element(find.byType(DiscoverScreen)),
+    ).read(discoverNewsProvider.notifier).refresh();
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('konnten nicht geladen werden'), findsNothing);
+    expect(inSection(DiscoverScreen.tipsKey, find.text('Neu')), findsOneWidget);
+    expect(find.text('Woche 47'), findsOneWidget);
+    expect(find.text('Zwiebel'), findsOneWidget);
+    expect(
+      inSection(DiscoverScreen.alternativesKey, find.text('1 neu')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('no tips', (tester) async {
     await pump(tester);
 

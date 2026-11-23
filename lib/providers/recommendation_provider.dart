@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recommendation.dart';
 import '../providers/core_providers.dart';
 import '../repositories/recommendation_repository.dart';
+import '../utils/async_value_utils.dart';
 import '../utils/logger.dart';
 
 class RecommendationNotifier
@@ -19,6 +20,8 @@ class RecommendationNotifier
     return const AsyncValue.loading();
   }
 
+  /// Loads the sets. A failed reload keeps the loaded ones (with the
+  /// error), so an offline resume blanks neither Entdecken nor Home.
   Future<void> fetchRecommendations() async {
     // Only flip to loading when we have no cached data. On re-entry / refresh
     // we keep the previous list visible so the PageView doesn't dismount —
@@ -39,7 +42,8 @@ class RecommendationNotifier
           .fetchByUserId(userId);
       if (_isCurrentUser(userId)) state = AsyncValue.data(_keepSeen(sets));
     } catch (e, st) {
-      if (_isCurrentUser(userId)) state = AsyncValue.error(e, st);
+      _log.error('fetchRecommendations failed', e, st);
+      if (_isCurrentUser(userId)) state = errorKeepingValue(e, st, state);
     }
   }
 
@@ -59,10 +63,15 @@ class RecommendationNotifier
 
   /// Marks every set seen: the loaded ones at once, so „Neu" and whatever
   /// follows [unseenTipSetProvider] go as the Tipps open, then the server's.
+  /// Sets kept after a failed fetch are not stamped here: the Tipps show the
+  /// error then, not them.
   Future<void> markAllAsSeen() async {
     final userId = ref.read(currentUserIdProvider);
     if (userId == null) return;
-    final sets = state.value ?? const <Recommendation>[];
+    final sets = switch (state) {
+      AsyncData(:final value) => value,
+      _ => const <Recommendation>[],
+    };
     if (sets.any((s) => s.seenAt == null)) {
       final now = DateTime.now().toUtc();
       for (final set in sets) {
@@ -155,13 +164,10 @@ final recommendationProvider =
     );
 
 /// The newest loaded tip set while it is unseen: Home's „Neue Tipps" row,
-/// the Entdecken dot and the Buddy's announcement. Null while loading,
-/// failed, empty or seen; an older unseen set behind a seen newest one is
-/// not new.
+/// the Entdecken dot and the Buddy's announcement. Null while loading or
+/// failed (with nothing loaded), empty or seen; an older unseen set behind
+/// a seen newest one is not new. A failed reload keeps the answer.
 final unseenTipSetProvider = Provider<Recommendation?>((ref) {
-  final newest = switch (ref.watch(recommendationProvider)) {
-    AsyncData(:final value) => value.firstOrNull,
-    _ => null,
-  };
+  final newest = ref.watch(recommendationProvider).value?.firstOrNull;
   return newest != null && newest.seenAt == null ? newest : null;
 });

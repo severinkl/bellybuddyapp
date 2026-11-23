@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/ingredient_suggestion_group.dart';
 import '../providers/core_providers.dart';
 import '../repositories/ingredient_repository.dart';
+import '../utils/async_value_utils.dart';
 import '../utils/logger.dart';
 
 class IngredientSuggestionNotifier
@@ -20,7 +21,8 @@ class IngredientSuggestionNotifier
   }
 
   /// Loads the groups; while some are loaded, they stay until the new ones
-  /// are in.
+  /// are in, and when the reload fails (with the error), so an offline
+  /// resume does not blank Entdecken.
   Future<void> fetchSuggestions() async {
     if (!state.hasValue) state = const AsyncValue.loading();
     final userId = ref.read(currentUserIdProvider);
@@ -34,7 +36,7 @@ class IngredientSuggestionNotifier
       if (_isCurrentUser(userId)) state = AsyncValue.data(groups);
     } catch (e, st) {
       _log.error('fetchSuggestions failed', e, st);
-      if (_isCurrentUser(userId)) state = AsyncValue.error(e, st);
+      if (_isCurrentUser(userId)) state = errorKeepingValue(e, st, state);
     }
   }
 
@@ -89,16 +91,14 @@ final ingredientSuggestionProvider =
     >(IngredientSuggestionNotifier.new);
 
 /// How many suggestion groups are new, for Entdecken's „n neu": 0 while
-/// loading or failed. A group [IngredientSuggestionNotifier.markAllNewAsSeen]
-/// marked seen counts no more, even if a fetch from before the mark still
-/// has it new; one with a suggestion added since counts again.
+/// loading or failed (with nothing loaded); a failed reload keeps the
+/// count. A group [IngredientSuggestionNotifier.markAllNewAsSeen] marked
+/// seen counts no more, even if a fetch from before the mark still has it
+/// new; one with a suggestion added since counts again.
 final newIngredientSuggestionCountProvider = Provider<int>((ref) {
-  final groups = ref.watch(ingredientSuggestionProvider);
+  final groups = ref.watch(ingredientSuggestionProvider).value ?? const [];
   final seen = ref.read(ingredientSuggestionProvider.notifier)._seenIds;
-  return groups.whenOrNull(
-        data: (list) => list
-            .where((g) => g.isNew && !g.suggestionIds.every(seen.contains))
-            .length,
-      ) ??
-      0;
+  return groups
+      .where((g) => g.isNew && !g.suggestionIds.every(seen.contains))
+      .length;
 });

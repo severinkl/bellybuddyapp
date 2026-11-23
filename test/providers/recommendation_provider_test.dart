@@ -149,6 +149,26 @@ void main() {
       expect(container.read(unseenTipSetProvider)?.id, 'newer');
     });
 
+    test('after a failed fetch (the Tipps show the error) nothing is stamped '
+        'here; the server is still asked', () async {
+      var fetches = 0;
+      when(() => mockRepo.fetchByUserId(any())).thenAnswer(
+        (_) => ++fetches == 1
+            ? Future.value([testRecommendation(id: 'new')])
+            : Future.error(Exception('offline')),
+      );
+      when(() => mockRepo.markAllAsSeen(any())).thenAnswer((_) async {});
+
+      final container = makeContainer();
+      final notifier = container.read(recommendationProvider.notifier);
+      await notifier.fetchRecommendations();
+      await notifier.fetchRecommendations();
+      await notifier.markAllAsSeen();
+
+      verify(() => mockRepo.markAllAsSeen(testUserId)).called(1);
+      expect(container.read(unseenTipSetProvider)?.id, 'new');
+    });
+
     test('a rebuild (sign-out) forgets the stamps', () async {
       when(
         () => mockRepo.fetchByUserId(any()),
@@ -221,6 +241,22 @@ void main() {
       await failed.read(recommendationProvider.notifier).fetchRecommendations();
       expect(failed.read(recommendationProvider).hasError, isTrue);
       expect(failed.read(unseenTipSetProvider), isNull);
+    });
+
+    test('a failed refresh (offline resume) keeps the answer', () async {
+      final sets = [testRecommendation(id: 'new')];
+      final container = await loaded(sets);
+      expect(container.read(unseenTipSetProvider)?.id, 'new');
+
+      when(() => mockRepo.fetchByUserId(any())).thenThrow(Exception('offline'));
+      await container
+          .read(recommendationProvider.notifier)
+          .fetchRecommendations();
+
+      final state = container.read(recommendationProvider);
+      expect(state.hasError, isTrue);
+      expect(state.value, sets);
+      expect(container.read(unseenTipSetProvider)?.id, 'new');
     });
   });
 
