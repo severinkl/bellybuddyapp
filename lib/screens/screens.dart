@@ -1,5 +1,6 @@
 export 'auth/auth_screen.dart';
 export 'auth/reset_password_screen.dart';
+export 'buddy/buddy_onboarding_screen.dart';
 export 'dashboard/dashboard_screen.dart';
 export 'not_found_screen.dart';
 export 'diary/diary_screen.dart';

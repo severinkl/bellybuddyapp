@@ -12,6 +12,7 @@ abstract class NotificationScheduler {
   Future<void> scheduleMealReminders({
     required List<String> mealReminderTimes,
     required String timezone,
+    String? buddyName,
   });
 
   Future<void> cancelMealReminders();
@@ -19,6 +20,7 @@ abstract class NotificationScheduler {
   Future<void> scheduleMoodReminders({
     required List<String> moodReminderTimes,
     required String timezone,
+    String? buddyName,
   });
 
   Future<void> cancelMoodReminders();
@@ -32,9 +34,11 @@ class LocalNotificationScheduler implements NotificationScheduler {
   Future<void> scheduleMealReminders({
     required List<String> mealReminderTimes,
     required String timezone,
+    String? buddyName,
   }) => LocalNotificationService.scheduleMealReminders(
     mealReminderTimes: mealReminderTimes,
     timezone: timezone,
+    buddyName: buddyName,
   );
 
   @override
@@ -45,9 +49,11 @@ class LocalNotificationScheduler implements NotificationScheduler {
   Future<void> scheduleMoodReminders({
     required List<String> moodReminderTimes,
     required String timezone,
+    String? buddyName,
   }) => LocalNotificationService.scheduleMoodReminders(
     moodReminderTimes: moodReminderTimes,
     timezone: timezone,
+    buddyName: buddyName,
   );
 
   @override
@@ -65,14 +71,19 @@ class NotificationRepository {
   NotificationRepository(this._scheduler);
 
   /// Schedules or cancels local notifications based on the user's profile
-  /// settings. Uses the device timezone (set during initialization).
-  Future<void> syncNotifications(UserProfile profile) async {
+  /// settings. When [buddyName] is set, reminder bodies use Buddy-voiced copy.
+  /// Uses the device timezone (set during initialization).
+  Future<void> syncNotifications(
+    UserProfile profile, {
+    String? buddyName,
+  }) async {
     final timezone = tz.local.name;
 
     if (profile.remindersEnabled && profile.mealReminderTimes.isNotEmpty) {
       await _scheduler.scheduleMealReminders(
         mealReminderTimes: profile.mealReminderTimes,
         timezone: timezone,
+        buddyName: buddyName,
       );
     } else {
       await _scheduler.cancelMealReminders();
@@ -82,6 +93,7 @@ class NotificationRepository {
       await _scheduler.scheduleMoodReminders(
         moodReminderTimes: profile.moodReminderTimes,
         timezone: timezone,
+        buddyName: buddyName,
       );
     } else {
       await _scheduler.cancelMoodReminders();

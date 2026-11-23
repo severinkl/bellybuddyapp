@@ -2,9 +2,12 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
+import '../../../providers/buddy_events_provider.dart';
 import '../../../providers/drink_tracker_provider.dart';
+import '../../../services/buddy/buddy_mood_logic.dart';
 import '../../../utils/drink_helpers.dart';
 import '../../../utils/save_helper.dart';
+import '../../../widgets/buddy/buddy_reaction_view.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/date_time_chips.dart';
 import '../../../widgets/common/tracker_screen_scaffold.dart';
@@ -54,7 +57,10 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
       title: 'Was hast du getrunken? \u{1F4A7}',
       showSuccess: state.showSuccess,
       successMessage: 'Getränk gespeichert!',
-      successMascotAsset: AppConstants.mascotEnergetic,
+      successIllustration: const BuddyReactionView(
+        kind: EntryKind.drink,
+        sentiment: LogSentiment.good,
+      ),
       body: state.isLoading
           ? const Center(
               child: CircularProgressIndicator(color: AppTheme.primary),
@@ -217,9 +223,17 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
   }
 
   Future<void> _save() async {
-    await saveWithFeedback(
+    final ok = await saveWithFeedback(
       context,
       () => ref.read(drinkTrackerProvider.notifier).save(),
     );
+    // save() is a no-op without a drink and amount; only a stored entry
+    // (shown as success) is a log the Buddy reacts to.
+    if (!mounted || !ok || !ref.read(drinkTrackerProvider).showSuccess) return;
+    ref
+        .read(buddyEventsProvider.notifier)
+        .emit(
+          BuddyLogEvent(EntryKind.drink, LogSentiment.good, at: DateTime.now()),
+        );
   }
 }

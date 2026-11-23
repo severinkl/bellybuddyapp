@@ -53,11 +53,47 @@ class AppConstants {
 
   // Border widths
   static const double borderWidthMd = 1.5;
+  static const double borderWidthLg = 2.0;
 
   // Drag handle
   static const double dragHandleWidth = 40.0;
   static const double dragHandleHeight = 4.0;
   static const double dragHandleRadius = 2.0;
+
+  // Buddy speech bubble: the slot above the Buddy (two lines at body size)
+  // and the bubble's widest width
+  static const double buddyBubbleHeight = 72.0;
+  static const double buddyBubbleMaxWidth = 280.0;
+
+  // Streak chip / goal sheet
+  static const double streakChipPopScale = 1.25;
+  static const double streakSheetBuddyHeight = 220.0;
+
+  // Dashboard Buddy hero (streak row, bubble, Buddy, „Füttern" button):
+  // this share of the screen height, clamped
+  static const double buddyHeroHeightFactor = 0.47;
+  static const double buddyHeroMinHeight = 340.0;
+  static const double buddyHeroMaxHeight = 440.0;
+
+  // Buddy reaction on the tracker success screens (bubble slot + Buddy)
+  static const double buddyReactionSize = 220.0;
+
+  // Buddy onboarding (/buddy-onboarding): stage (bubble slot + Buddy),
+  // progress dots and the gift box (box, lid and sparkle area)
+  static const double buddyOnboardingStageHeight = 240.0;
+  static const double progressDotSize = 8.0;
+  static const double progressDotActiveWidth = 24.0;
+  static const double giftRevealSize = 160.0;
+
+  // Registration wizard: the Buddy stage (bubble slot + Buddy) above every
+  // step takes this share of the screen height, clamped; with the keyboard
+  // open a compact Buddy without bubble. Below it a step keeps at least the
+  // min height (on shorter screens the host scrolls instead).
+  static const double buddyWizardHeightFactor = 0.26;
+  static const double buddyWizardSize = 150.0;
+  static const double buddyWizardMaxSize = 240.0;
+  static const double buddyWizardCompactSize = 72.0;
+  static const double buddyWizardMinStepHeight = 280.0;
 
   // Scroll clearance (space below content to clear fixed bottom bars)
   static const double bottomBarClearance = 128.0;
@@ -106,6 +142,22 @@ class AppConstants {
 
   // SharedPreferences keys
   static const String keyNotificationModalShown = 'notification_modal_shown';
+  static const String keyBuddyStatePrefix = 'buddy_state_';
+
+  /// Prefix of the Buddy announcement flags
+  /// (`buddy_announced_<userId>_<kind>_<yyyy-MM-dd | goal>`), set once an
+  /// announcement was shown, so each one shows only once.
+  static const String keyBuddyAnnouncedPrefix = 'buddy_announced_';
+
+  /// Maximum length of the Buddy's name (matches the `buddy_state` check).
+  static const int buddyNameMaxLength = 20;
+
+  /// Whether [name] is a valid Buddy name: 1 to [buddyNameMaxLength]
+  /// characters after trimming.
+  static bool isValidBuddyName(String name) {
+    final length = name.trim().runes.length;
+    return length > 0 && length <= buddyNameMaxLength;
+  }
 
   /// App Store numeric ID for Belly Buddy, used by the upgrade screen and
   /// dialog to open the store listing (App Store Connect → App Information →

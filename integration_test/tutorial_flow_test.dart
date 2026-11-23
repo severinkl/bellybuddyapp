@@ -33,23 +33,22 @@ void main() {
       buildTestApp(
         authenticated: true,
         seedProfile: false,
+        // Back from the Buddy onboarding: the gate lets the dashboard show.
+        seedBuddy: true,
         profileRepo: profileRepo,
       ),
     );
     await tester.pumpAndSettle();
 
-    // Welcome modal is the first tutorial stage on first launch. Dismiss it
-    // via the CTA so the spotlight tour renders behind it.
-    expect(find.text('Willkommen bei Belly Buddy!'), findsOneWidget);
-    await tester.tap(find.text("Los geht's"));
-    await tester.pumpAndSettle();
-
-    // Tour is visible after the welcome modal is dismissed.
+    // The Buddy onboarding did the welcoming: the spotlight tour starts
+    // right away, with no welcome modal in front of it.
+    expect(find.text('Willkommen bei Belly Buddy!'), findsNothing);
     expect(find.text('Überspringen'), findsOneWidget);
 
-    // Advance 10 times via the overlay's advance gesture — key-based so
-    // the test is independent of where the Überspringen link sits.
-    for (var i = 0; i < 10; i++) {
+    // Advance 11 times (Buddy + 10 feature steps) via the overlay's advance
+    // gesture — key-based so the test is independent of where the
+    // Überspringen link sits.
+    for (var i = 0; i < 11; i++) {
       await tester.tap(find.byKey(DashboardTutorialOverlay.advanceKey));
       await tester.pumpAndSettle();
     }

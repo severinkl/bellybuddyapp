@@ -3,6 +3,15 @@ import '../../../config/app_theme.dart';
 import '../../../widgets/common/bb_selection_button.dart';
 import '../../../config/constants.dart';
 
+/// Symptom labels offered during registration.
+const List<String> kRegistrationSymptoms = [
+  'Belastender Durchfall',
+  'Nervige Verstopfung',
+  'Unangenehme Blähungen',
+  'Übermäßiges Völlegefühl',
+  'Hartnäckiger Blähbauch ohne Pupsen',
+];
+
 class SymptomsStep extends StatelessWidget {
   final List<String> selected;
   final ValueChanged<List<String>> onChanged;
@@ -14,21 +23,12 @@ class SymptomsStep extends StatelessWidget {
     required this.onChanged,
   });
 
-  static const _options = [
-    'Belastender Durchfall',
-    'Nervige Verstopfung',
-    'Unangenehme Blähungen',
-    'Übermäßiges Völlegefühl',
-    'Hartnäckiger Blähbauch ohne Pupsen',
-  ];
-
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: AppConstants.paddingLg,
       child: Column(
         children: [
-          AppConstants.gap24,
           const Text(
             key: symptomsTitleKey,
             'Welche Beschwerden nerven dich?',
@@ -40,7 +40,7 @@ class SymptomsStep extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           AppConstants.gap32,
-          ..._options.map((option) {
+          ...kRegistrationSymptoms.map((option) {
             final isSelected = selected.contains(option);
             return BbSelectionButton(
               label: option,

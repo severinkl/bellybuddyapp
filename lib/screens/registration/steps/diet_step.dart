@@ -2,7 +2,6 @@ import 'package:material_ui/material_ui.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../widgets/common/bb_selection_button.dart';
-import '../../../widgets/common/mascot_image.dart';
 
 class DietStep extends StatelessWidget {
   final String? value;
@@ -24,13 +23,6 @@ class DietStep extends StatelessWidget {
       padding: AppConstants.paddingLg,
       child: Column(
         children: [
-          AppConstants.gap24,
-          const MascotImage(
-            assetPath: AppConstants.mascotHappy,
-            width: 120,
-            height: 120,
-          ),
-          AppConstants.gap16,
           const Text(
             key: dietTitleKey,
             'Wie ernährst du dich?',

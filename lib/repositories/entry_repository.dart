@@ -2,14 +2,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/meal_entry.dart';
 import '../services/entry_crud_service.dart';
 import '../services/entry_query_service.dart';
+import '../utils/date_format_utils.dart';
 
-/// Table name for each entry type
-const entryTableFor = {
-  'meal': 'meal_entries',
-  'toilet': 'toilet_entries',
-  'gutFeeling': 'gut_feeling_entries',
-  'drink': 'drink_entries',
-};
+export '../config/entry_tables.dart';
 
 class EntryRepository {
   final EntryCrudService _crudService;
@@ -30,6 +25,21 @@ class EntryRepository {
     date: date,
     ordered: ordered,
   );
+
+  /// Local calendar days (date-only) with at least one entry since [since]
+  /// (and, with [until], before [until]).
+  Future<Set<DateTime>> fetchActivityDays({
+    required String userId,
+    required DateTime since,
+    DateTime? until,
+  }) async {
+    final instants = await _queryService.fetchTrackedAtSince(
+      userId: userId,
+      since: since,
+      until: until,
+    );
+    return {for (final i in instants) startOfDay(i.toLocal())};
+  }
 
   Future<void> insertEntry(
     String table,

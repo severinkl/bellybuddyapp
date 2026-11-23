@@ -9,6 +9,7 @@ import '../../../providers/core_providers.dart';
 import '../../../repositories/entry_repository.dart';
 import '../../../router/route_names.dart';
 import '../../../utils/logger.dart';
+import '../../../widgets/common/bb_drag_handle.dart';
 import '../../../widgets/common/bb_ingredient_chip.dart';
 import '../../../widgets/common/bb_pastel_thumb.dart';
 import '../../../widgets/common/bb_sheet_row.dart';
@@ -90,16 +91,7 @@ class _RecentMealPickerSheetState
         child: Column(
           children: [
             const SizedBox(height: AppConstants.spacingSm),
-            Container(
-              width: AppConstants.dragHandleWidth,
-              height: AppConstants.dragHandleHeight,
-              decoration: BoxDecoration(
-                color: AppTheme.muted,
-                borderRadius: BorderRadius.circular(
-                  AppConstants.dragHandleRadius,
-                ),
-              ),
-            ),
+            const BbDragHandle(),
             const Padding(
               padding: EdgeInsets.symmetric(
                 horizontal: AppConstants.spacingMd,

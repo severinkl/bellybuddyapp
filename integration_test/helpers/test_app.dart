@@ -1,10 +1,12 @@
 import 'package:belly_buddy/app.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/config/splash_screen_config.dart';
+import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/splash_screen_provider.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/repositories/repositories.dart';
+import 'package:belly_buddy/widgets/buddy/animated_buddy.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -25,9 +27,13 @@ User? _buildTestUser() {
   });
 }
 
+/// [seedBuddy] (default: [seedProfile]) stores a Buddy whose onboarding is
+/// done for the test user, so existing users pass the Buddy onboarding gate
+/// and land on the dashboard; a new user (no profile) has no Buddy yet.
 ProviderScope buildTestApp({
   bool authenticated = true,
   bool seedProfile = true,
+  bool? seedBuddy,
   bool dynamicAuth = false,
   bool failEmailSignIn = false,
   String signInErrorMessage = 'Login failed',
@@ -36,10 +42,23 @@ ProviderScope buildTestApp({
   FakeEntryRepository? entryRepo,
   FakeDrinkRepository? drinkRepo,
   FakeUserRecipeRepository? userRecipeRepo,
+  FakeBuddyRepository? buddyRepo,
 }) {
+  // Animated Buddies (dashboard hero, welcome screen) tick every frame, so
+  // `pumpAndSettle` would never settle: render them without ticking.
+  AnimatedBuddy.tickerEnabled = false;
+
   final fakeProfileRepo = profileRepo ?? FakeProfileRepository();
   if (seedProfile) {
     fakeProfileRepo.seedProfile(testUserProfile());
+  }
+
+  final fakeBuddyRepo = buddyRepo ?? FakeBuddyRepository();
+  if (seedBuddy ?? seedProfile) {
+    fakeBuddyRepo.store[testUserId] = BuddyState(
+      userId: testUserId,
+      onboardingCompletedAt: DateTime(2026, 1, 1),
+    );
   }
 
   final initialUser = authenticated ? _buildTestUser() : null;
@@ -111,6 +130,7 @@ ProviderScope buildTestApp({
       notificationRepositoryProvider.overrideWithValue(
         FakeNotificationRepository(),
       ),
+      buddyRepositoryProvider.overrideWithValue(fakeBuddyRepo),
       splashConfigProvider.overrideWithValue(SplashConfig.test),
     ],
     child: const BellyBuddyApp(),

@@ -2,6 +2,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:belly_buddy/services/auth_service.dart';
+import 'package:belly_buddy/services/buddy_service.dart';
 import 'package:belly_buddy/services/drink_service.dart';
 import 'package:belly_buddy/services/edge_function_service.dart';
 import 'package:belly_buddy/services/entry_crud_service.dart';
@@ -51,6 +52,8 @@ class MockPostgrestMapTransformBuilder extends Mock
 
 // -- Service mocks --
 class MockProfileService extends Mock implements ProfileService {}
+
+class MockBuddyService extends Mock implements BuddyService {}
 
 class MockAuthService extends Mock implements AuthService {}
 

@@ -1,8 +1,9 @@
+import 'package:belly_buddy/screens/buddy/buddy_onboarding_screen.dart';
 import 'package:belly_buddy/screens/health_consent/health_consent_screen.dart';
 import 'package:belly_buddy/screens/registration/steps/auth_step.dart';
+import 'package:belly_buddy/screens/registration/steps/buddy_name_step.dart';
 import 'package:belly_buddy/screens/registration/steps/email_capture_step.dart';
 import 'package:belly_buddy/screens/welcome/welcome_screen.dart';
-import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
 import 'package:belly_buddy/widgets/common/bb_password_field.dart';
 import 'package:belly_buddy/widgets/common/bb_social_button.dart';
 import 'package:material_ui/material_ui.dart';
@@ -12,6 +13,7 @@ import 'package:integration_test/integration_test.dart';
 import '../test/helpers/fakes.dart';
 import '../test/helpers/registration_driver.dart';
 import 'helpers/test_app.dart';
+import 'helpers/welcome_driver.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -22,9 +24,11 @@ void main() {
     await tester.pumpWidget(
       buildTestApp(authenticated: false, seedProfile: false, dynamicAuth: true),
     );
-    await tester.pumpAndSettle();
+    await pumpUntilWelcome(tester);
 
-    // New user (no profile) should be redirected to the welcome screen
+    // New user (no profile) should be redirected to the welcome screen,
+    // whose Buddy offers the registration after his intro.
+    await finishWelcomeStory(tester);
     expect(find.byKey(WelcomeScreen.registrationButtonKey), findsOneWidget);
   });
 
@@ -40,7 +44,8 @@ void main() {
         ),
       );
 
-      await tester.pumpAndSettle();
+      await pumpUntilWelcome(tester);
+      await finishWelcomeStory(tester);
 
       final registrationButton = find.byKey(
         WelcomeScreen.registrationButtonKey,
@@ -53,14 +58,17 @@ void main() {
       await tester.tap(registrationButton);
       await tester.pumpAndSettle();
 
-      // Advance through the 6 pre-auth wizard steps
+      // Step 0: name the Buddy, then advance through the consent and the
+      // six profile steps
+      await tester.enterText(find.byKey(BuddyNameStep.fieldKey), 'Bauchi');
+      await tester.pump();
       await advanceToAuthStep(tester);
 
-      // Step 7: Auth - Verify email/password fields are shown
+      // Step 8: Auth - Verify email/password fields are shown
       expect(find.byKey(AuthStep.emailFieldKey), findsOneWidget);
       expect(find.byKey(BbPasswordField.passwordFieldKey), findsOneWidget);
 
-      // Step 8: Enter email and password, then tap on sign up button
+      // Enter email and password, then tap on sign up button
       await tester.enterText(
         find.byKey(AuthStep.emailFieldKey),
         'test@example.com',
@@ -83,8 +91,9 @@ void main() {
       // post-login consent gate does not appear.
       expect(find.byType(HealthConsentScreen), findsNothing);
 
-      // After successful registration, user should be navigated to the main app (bottom nav should be visible)
-      expect(find.byKey(BbBottomNav.centerButtonKey), findsOneWidget);
+      // After successful registration the Buddy onboarding takes over.
+      // (Saving the typed name is covered by the wizard's widget tests.)
+      expect(find.byType(BuddyOnboardingScreen), findsOneWidget);
     },
   );
 
@@ -117,13 +126,14 @@ void main() {
           profileRepo: profileRepo,
         ),
       );
-      await tester.pumpAndSettle();
+      await pumpUntilWelcome(tester);
 
       // Start registration.
+      await finishWelcomeStory(tester);
       await tester.tap(find.byKey(WelcomeScreen.registrationButtonKey));
       await tester.pumpAndSettle();
 
-      // Advance through the 6 pre-auth wizard steps.
+      // Advance through the name, consent and six profile steps.
       await advanceToAuthStep(tester);
 
       // Tap Google sign-up (see test-VM note above).
@@ -149,8 +159,8 @@ void main() {
       // post-login consent gate does not appear.
       expect(find.byType(HealthConsentScreen), findsNothing);
 
-      // Dashboard reached.
-      expect(find.byKey(BbBottomNav.navHomeKey), findsOneWidget);
+      // The Buddy onboarding takes over.
+      expect(find.byType(BuddyOnboardingScreen), findsOneWidget);
 
       // Profile was written with the captured email.
       expect(profileRepo.lastWrittenEmail, equals('user@example.com'));

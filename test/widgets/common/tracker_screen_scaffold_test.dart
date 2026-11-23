@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:belly_buddy/router/route_names.dart';
+import 'package:belly_buddy/widgets/common/bb_success_overlay.dart';
 import 'package:belly_buddy/widgets/common/tracker_screen_scaffold.dart';
 
 GoRouter _buildRouter({required String initialLocation}) {
@@ -90,5 +91,28 @@ void main() {
         expect(find.text('DASHBOARD'), findsOneWidget);
       },
     );
+  });
+
+  testWidgets('passes successIllustration to the success overlay', (
+    tester,
+  ) async {
+    const illustration = SizedBox(key: Key('illustration'));
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: TrackerScreenScaffold(
+          showSuccess: true,
+          successMessage: 'Gespeichert!',
+          successIllustration: illustration,
+          body: SizedBox.shrink(),
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 700));
+
+    final overlay = tester.widget<BbSuccessOverlay>(
+      find.byType(BbSuccessOverlay),
+    );
+    expect(overlay.illustration, same(illustration));
+    expect(find.byKey(const Key('illustration')), findsOneWidget);
   });
 }

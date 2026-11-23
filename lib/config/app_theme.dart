@@ -43,6 +43,18 @@ class AppTheme {
   static const Color gutFeelingNeutral = Color(0xFFE6B800);
   static const Color gutFeelingBad = Color(0xFFD93636);
 
+  // Buddy mascot colors
+  static const Color buddyOutline = Color(0xFF0D0D0F);
+  static const Color buddyBody = Color(0xFFFFABB6);
+  static const Color buddyTongue = Color(0xFFE8456F);
+  static const Color buddyBlush = Color(0xFFFF7F95);
+  static const Color buddySparkle = Color(0xFFFFC83D);
+  static const Color buddyHeart = Color(0xFFE8456F);
+  static const Color buddyWater = Color(0xFF6EC6F0);
+  static const Color buddyFood = Color(0xFFB5CC47);
+  static const Color buddyFoodLeaf = Color(0xFF6E8B2A);
+  static const Color buddyShadow = Color(0x140D0D0F);
+
   // Shadow
   static const Color shadow = Color(0x20000000);
 

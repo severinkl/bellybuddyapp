@@ -1,12 +1,13 @@
 import 'package:flutter/widgets.dart';
 
-/// Global keys attached to the 10 dashboard elements highlighted in the
+/// Global keys attached to the 11 dashboard elements highlighted in the
 /// onboarding tour. Referenced both by the dashboard/bottom-nav widgets
 /// (at construction time) and by the tutorial overlay (to resolve each
 /// target's render box).
 class TutorialKeys {
   TutorialKeys._();
 
+  static final buddy = GlobalKey(debugLabel: 'tutorial.buddy');
   static final bauchgefuehl = GlobalKey(debugLabel: 'tutorial.bauchgefuehl');
   static final klo = GlobalKey(debugLabel: 'tutorial.klo');
   static final essenTracken = GlobalKey(debugLabel: 'tutorial.essenTracken');

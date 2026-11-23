@@ -5,6 +5,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
+import '../../providers/buddy_onboarding_gate_provider.dart';
+import '../../providers/buddy_provider.dart';
 import '../../providers/entries_provider.dart';
 import '../../providers/ingredient_suggestion_provider.dart';
 import '../../providers/recommendation_provider.dart';
@@ -14,12 +16,13 @@ import '../../widgets/common/upgrade_available_dialog.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/tutorial_provider.dart';
 import '../../router/route_names.dart';
+import '../../utils/logger.dart';
 import '../../widgets/common/tracker_card.dart';
+import 'widgets/buddy_hero.dart';
 import 'widgets/feature_card.dart';
 import 'widgets/notification_opt_in_dialog.dart';
 import 'widgets/tutorial/show_dashboard_tutorial.dart';
 import 'widgets/tutorial/tutorial_keys.dart';
-import 'widgets/welcome_modal.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
@@ -29,6 +32,8 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  static const _log = AppLogger('Dashboard');
+
   // Active tutorial handle; non-null while the overlay is open. Cancelled
   // in dispose() so the OverlayEntry + its AnimationController don't leak
   // if the screen is torn down mid-tour (e.g. sign-out).
@@ -42,6 +47,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // guaranteed to be AsyncData (or AsyncError).
     Future.microtask(() async {
       await _loadData();
+      // A pending Buddy onboarding is about to replace the dashboard (router
+      // gate): no first-run prompts underneath it. They run when the
+      // onboarding comes back here.
+      if (!mounted || ref.read(buddyOnboardingRequiredProvider)) return;
       await _maybeShowTutorial();
       if (!mounted) return;
       _maybeShowNotificationModal();
@@ -71,11 +80,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     if (!mounted) return;
     final shouldShow = ref.read(tutorialProvider.notifier).shouldShow();
     if (!shouldShow) return;
-    // Welcome modal is the first stage of the tutorial. Dismissing it
-    // (tap "Los geht's") falls through to the spotlight tour, and
-    // tutorialSeenAt is only persisted at the end of the spotlight.
-    await showWelcomeModal(context);
-    if (!mounted) return;
+    // The Buddy onboarding already welcomed the user: the spotlight tour
+    // starts right away. tutorialSeenAt is persisted at its end.
     final handle = showDashboardTutorial(context);
     _tutorialHandle = handle;
     await handle.future;
@@ -89,7 +95,26 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       ref.read(profileProvider.notifier).fetchProfile(),
       ref.read(entriesProvider.notifier).loadEntries(DateTime.now()),
       ref.read(ingredientSuggestionProvider.notifier).fetchSuggestions(),
+      _refreshBuddy(),
     ]);
+  }
+
+  /// Re-evaluates the Buddy's streak. Never throws: a missing backend table
+  /// or a network error only hides the streak chip, so pull-to-refresh
+  /// still completes.
+  Future<void> _refreshBuddy() async {
+    try {
+      final buddy = ref.read(buddyProvider);
+      if (buddy.isLoading && !buddy.hasValue) {
+        // The first load (started by the hero) is still running; wait for
+        // it instead of syncing twice.
+        await ref.read(buddyProvider.future);
+      } else {
+        await ref.read(buddyProvider.notifier).refresh();
+      }
+    } catch (e, st) {
+      _log.error('Refreshing the Buddy failed', e, st);
+    }
   }
 
   Future<void> _maybeShowNotificationModal() async {
@@ -125,15 +150,25 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             slivers: [
-              const SliverToBoxAdapter(
+              SliverToBoxAdapter(
                 child: Padding(
-                  padding: EdgeInsets.fromLTRB(
+                  padding: const EdgeInsets.fromLTRB(
                     AppConstants.spacingLg,
-                    AppConstants.spacingLg,
+                    AppConstants.spacingSm,
                     AppConstants.spacingLg,
                     0,
                   ),
-                  child: _DashboardHeader(),
+                  // The header icons sit top-right on the hero's streak row.
+                  child: Stack(
+                    children: [
+                      BuddyHero(key: TutorialKeys.buddy),
+                      const Positioned(
+                        top: 0,
+                        right: 0,
+                        child: _DashboardHeader(),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SliverToBoxAdapter(child: AppConstants.gap24),
@@ -172,7 +207,7 @@ class _DashboardHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
+      mainAxisSize: MainAxisSize.min,
       children: [
         CircleIconButton(
           key: TutorialKeys.feedback,

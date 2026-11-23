@@ -8,7 +8,7 @@ import 'spotlight_painter.dart';
 import 'tooltip_bubble.dart';
 import 'tutorial_step.dart';
 
-/// Full-screen overlay widget driving the 10-step dashboard tour.
+/// Full-screen overlay widget driving the dashboard tour.
 ///
 /// Displayed by inserting it into the root [Overlay] (see
 /// `show_dashboard_tutorial.dart`). Tapping anywhere advances a step.
@@ -51,13 +51,52 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _measure());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _showStep());
   }
 
   @override
   void dispose() {
     _fade.dispose();
     super.dispose();
+  }
+
+  /// Scrolls the current step's target into view when it sits in a
+  /// scrollable and is not fully visible (e.g. the feature cards below the
+  /// Buddy hero), then measures it.
+  Future<void> _showStep() async {
+    final index = _index;
+    final ctx = widget.steps[index].targetKey.currentContext;
+    final scrollable = ctx == null ? null : Scrollable.maybeOf(ctx);
+    if (ctx != null && scrollable != null && !_fullyVisible(ctx, scrollable)) {
+      await Scrollable.ensureVisible(
+        ctx,
+        alignment: 0.5,
+        duration: AppConstants.animFast,
+      );
+      if (!mounted || _finished || index != _index) return;
+    }
+    _measure();
+  }
+
+  /// Whether [target] lies completely inside [scrollable]'s viewport.
+  static bool _fullyVisible(BuildContext target, ScrollableState scrollable) {
+    final box = target.findRenderObject();
+    final viewport = scrollable.context.findRenderObject();
+    if (box is! RenderBox ||
+        viewport is! RenderBox ||
+        !box.attached ||
+        !viewport.attached) {
+      return true; // nothing laid out to scroll to; _measure handles it
+    }
+    final rect = MatrixUtils.transformRect(
+      box.getTransformTo(viewport),
+      Offset.zero & box.size,
+    );
+    final bounds = Offset.zero & viewport.size;
+    return rect.left >= bounds.left &&
+        rect.top >= bounds.top &&
+        rect.right <= bounds.right &&
+        rect.bottom <= bounds.bottom;
   }
 
   void _measure() {
@@ -98,7 +137,7 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
       _index += 1;
       _targetRect = null;
     });
-    WidgetsBinding.instance.addPostFrameCallback((_) => _measure());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _showStep());
   }
 
   Future<void> _finish() async {

@@ -1,11 +1,14 @@
+import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/widgets/common/bb_success_overlay.dart';
+import 'package:belly_buddy/widgets/common/mascot_image.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 Widget _wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
 
-/// Pumps past all staggered animation timers in [BbSuccessOverlay.initState]
-/// (100 ms mascot delay + 250 ms text delay + animation durations ≤ 600 ms).
+/// Pumps past all staggered intro timers of [BbSuccessOverlay] (scheduled on
+/// its first `didChangeDependencies`: 100 ms mascot delay + 250 ms text delay
+/// + animation durations ≤ 600 ms).
 /// Draining to 700 ms leaves no pending timers while still within test bounds.
 Future<void> _pumpOverlay(WidgetTester tester, Widget overlay) async {
   await tester.pumpWidget(_wrap(overlay));
@@ -101,6 +104,87 @@ void main() {
       );
 
       expect(find.text('ACTION_ONE'), findsOneWidget);
+    });
+  });
+
+  group('BbSuccessOverlay illustration', () {
+    const illustrationKey = Key('illustration');
+    const illustration = SizedBox(key: illustrationKey, width: 10, height: 10);
+
+    testWidgets('replaces the mascot image', (tester) async {
+      await _pumpOverlay(
+        tester,
+        BbSuccessOverlay(
+          message: 'Gespeichert!',
+          onDismissed: () {},
+          mascotAsset: 'assets/images/mascot/mascot-cool.png',
+          illustration: illustration,
+        ),
+      );
+
+      expect(find.byKey(illustrationKey), findsOneWidget);
+      expect(find.byType(MascotImage), findsNothing);
+    });
+
+    testWidgets('does not auto-dismiss and dismisses on tap', (tester) async {
+      var dismissed = 0;
+      await _pumpOverlay(
+        tester,
+        BbSuccessOverlay(
+          message: 'Gespeichert!',
+          onDismissed: () => dismissed++,
+          illustration: illustration,
+        ),
+      );
+      await tester.pump(
+        AppConstants.successOverlayDuration + const Duration(seconds: 1),
+      );
+      expect(dismissed, 0);
+      expect(find.text('Tippen zum Fortfahren'), findsOneWidget);
+
+      await tester.tap(find.text('Gespeichert!'));
+      expect(dismissed, 1);
+    });
+
+    testWidgets('shows its content at once under reduced motion', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(disableAnimations: true),
+              child: Scaffold(
+                body: BbSuccessOverlay(
+                  message: 'Gespeichert!',
+                  onDismissed: () {},
+                  illustration: illustration,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // One frame, no further pumps: nothing may still be fading or sliding.
+      final message = find.text('Gespeichert!');
+      Finder above(Type type) =>
+          find.ancestor(of: message, matching: find.byType(type));
+      expect(above(Opacity), findsWidgets);
+      for (final o in tester.widgetList<Opacity>(above(Opacity))) {
+        expect(o.opacity, 1.0);
+      }
+      for (final f in tester.widgetList<FadeTransition>(
+        above(FadeTransition),
+      )) {
+        expect(f.opacity.value, 1.0);
+      }
+      expect(above(SlideTransition), findsWidgets);
+      for (final s in tester.widgetList<SlideTransition>(
+        above(SlideTransition),
+      )) {
+        expect(s.position.value, Offset.zero);
+      }
     });
   });
 }

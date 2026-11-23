@@ -27,6 +27,7 @@ void main() {
       () => scheduler.scheduleMealReminders(
         mealReminderTimes: any(named: 'mealReminderTimes'),
         timezone: any(named: 'timezone'),
+        buddyName: any(named: 'buddyName'),
       ),
     ).thenAnswer((_) async {});
     when(() => scheduler.cancelMealReminders()).thenAnswer((_) async {});
@@ -34,6 +35,7 @@ void main() {
       () => scheduler.scheduleMoodReminders(
         moodReminderTimes: any(named: 'moodReminderTimes'),
         timezone: any(named: 'timezone'),
+        buddyName: any(named: 'buddyName'),
       ),
     ).thenAnswer((_) async {});
     when(() => scheduler.cancelMoodReminders()).thenAnswer((_) async {});
@@ -189,5 +191,29 @@ void main() {
       const message = RemoteMessage(data: {'route': '/diary'});
       expect(repo.extractRoute(message), '/diary');
     });
+  });
+
+  test('forwards buddyName to both schedulers', () async {
+    final profile = testUserProfile(
+      remindersEnabled: true,
+      mealReminderTimes: ['08:00'],
+      dailySummaryEnabled: true,
+      moodReminderTimes: ['20:00'],
+    );
+    await repo.syncNotifications(profile, buddyName: 'Pünktchen');
+    verify(
+      () => scheduler.scheduleMealReminders(
+        mealReminderTimes: ['08:00'],
+        timezone: any(named: 'timezone'),
+        buddyName: 'Pünktchen',
+      ),
+    ).called(1);
+    verify(
+      () => scheduler.scheduleMoodReminders(
+        moodReminderTimes: ['20:00'],
+        timezone: any(named: 'timezone'),
+        buddyName: 'Pünktchen',
+      ),
+    ).called(1);
   });
 }
