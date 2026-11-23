@@ -12,6 +12,8 @@ import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
 import 'package:belly_buddy/providers/upgrade_gate_provider.dart';
 import 'package:belly_buddy/router/route_names.dart';
+import 'package:belly_buddy/screens/buddy/streak_goal_picker.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/streak_sheet.dart';
 import 'package:belly_buddy/screens/me/me_screen.dart';
 import 'package:belly_buddy/widgets/buddy/animated_buddy.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
@@ -266,6 +268,58 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Dein Streak'), findsOneWidget);
+  });
+
+  testWidgets('while a chosen goal saves, „Dein Streak" does not open '
+      'again', (tester) async {
+    final buddy = await pump(tester);
+    final save = Completer<void>();
+    buddy.goalSave = save.future;
+
+    await tapRow(tester, MeScreen.streakKey);
+    await tester.ensureVisible(find.byKey(StreakSheet.changeGoalKey));
+    await tester.tap(find.byKey(StreakSheet.changeGoalKey));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('30 Tage'));
+    await tester.pump();
+    await tester.tap(find.byKey(StreakGoalChooser.confirmKey));
+    await tester.pumpAndSettle();
+    expect(find.byType(StreakSheet), findsNothing);
+
+    await tester.tap(find.byType(StreakChip));
+    await tester.pumpAndSettle();
+    expect(find.byType(StreakSheet), findsNothing);
+
+    save.complete();
+    await tester.pumpAndSettle();
+    await tester.tap(find.byType(StreakChip));
+    await tester.pumpAndSettle();
+    expect(find.byType(StreakSheet), findsOneWidget);
+    expect(buddy.goals, [30]);
+  });
+
+  testWidgets('while a new name saves, Umbenennen does not open again', (
+    tester,
+  ) async {
+    final buddy = await pump(tester);
+    final save = Completer<void>();
+    buddy.nameSave = save.future;
+
+    await openRename(tester);
+    await tester.enterText(find.byType(TextField), 'Pepe');
+    await tester.pump();
+    await tester.tap(find.text('Speichern'));
+    await tester.pumpAndSettle();
+    expect(find.text('Buddy umbenennen'), findsNothing);
+
+    await tester.tap(find.byKey(MeScreen.renameKey));
+    await tester.pumpAndSettle();
+    expect(find.text('Buddy umbenennen'), findsNothing);
+
+    save.complete();
+    await tester.pumpAndSettle();
+    await openRename(tester);
+    expect(buddy.names, ['Pepe']);
   });
 
   testWidgets('Tutorial wiederholen requests a replay and goes Home', (

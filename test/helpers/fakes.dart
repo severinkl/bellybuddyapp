@@ -668,12 +668,16 @@ class FakeBuddyNotifier extends BuddyNotifier {
   final List<String> names = [];
   final List<int?> goals = [];
 
+  /// When set, [setName] / [setStreakGoal] wait for it (a slow save).
+  Future<void>? nameSave, goalSave;
+
   @override
   Future<BuddyStatus?> build() async => _initial?.call();
 
   @override
   Future<void> setName(String name) async {
     names.add(name);
+    await nameSave;
     if (failRename) throw Exception('offline');
     final s = state.value!;
     push(
@@ -690,6 +694,7 @@ class FakeBuddyNotifier extends BuddyNotifier {
   @override
   Future<void> setStreakGoal(int? goal) async {
     goals.add(goal);
+    await goalSave;
     if (failGoal) throw Exception('offline');
   }
 

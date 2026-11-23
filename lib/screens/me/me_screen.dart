@@ -46,15 +46,32 @@ class _MeScreenState extends ConsumerState<MeScreen> {
 
   final _buddy = BuddyController(mood: BuddyMood.happy);
 
+  /// „Dein Streak" or the rename dialog is open, or what was chosen there
+  /// still saves ([_oneSheet]).
+  bool _sheetOpen = false;
+
   @override
   void dispose() {
     _buddy.dispose();
     super.dispose();
   }
 
+  /// Runs [sheet] (a sheet or dialog and the save of what was chosen in it)
+  /// unless one already runs: a second one (a tap while the first closes,
+  /// chip and row) would start from the old status and race its write.
+  Future<void> _oneSheet(Future<void> Function() sheet) async {
+    if (_sheetOpen) return;
+    _sheetOpen = true;
+    try {
+      await sheet();
+    } finally {
+      _sheetOpen = false;
+    }
+  }
+
   /// „Umbenennen": saves a new, different name; a failing save says so and
   /// the old name stays.
-  Future<void> _rename() async {
+  Future<void> _rename() => _oneSheet(() async {
     final current = ref.read(buddyProvider).value?.state.name;
     if (current == null) return;
     final name = await showRenameBuddyDialog(context, current: current);
@@ -72,10 +89,10 @@ class _MeScreenState extends ConsumerState<MeScreen> {
         ),
       );
     }
-  }
+  });
 
   /// „Dein Streak", saving a goal chosen there.
-  Future<void> _openStreak() async {
+  Future<void> _openStreak() => _oneSheet(() async {
     final status = ref.read(buddyProvider).value;
     if (status == null) return;
     await openStreakSheetAndSaveGoal(
@@ -84,7 +101,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
       status: status,
       today: ref.read(buddyClockProvider)(),
     );
-  }
+  });
 
   Future<void> _openFeedback() => openExternalUrl(
     context,
