@@ -65,6 +65,7 @@ void main() {
       expect(gutFeelingLevelFor(1.5), GutFeelingRatingLevel.spiGut);
       expect(gutFeelingLevelFor(1.51), GutFeelingRatingLevel.gut);
       expect(gutFeelingLevelFor(2.5), GutFeelingRatingLevel.gut);
+      expect(gutFeelingLevelFor(2.51), GutFeelingRatingLevel.mittel);
       expect(gutFeelingLevelFor(3.5), GutFeelingRatingLevel.mittel);
       expect(gutFeelingLevelFor(3.51), GutFeelingRatingLevel.schlecht);
     });
