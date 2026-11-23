@@ -20,10 +20,10 @@ final currentUserIdProvider = Provider<String?>((ref) {
 });
 
 extension CurrentUserRef on Ref {
-  /// Whether [userId] is still the signed-in user, after an await, and the
-  /// provider still there: what was fetched for a previous user lands
-  /// nowhere.
-  bool isCurrentUser(String userId) =>
+  /// Whether [userId] is still the signed-in user (null: still signed out),
+  /// after an await, and the provider still there: what was fetched for a
+  /// previous user lands nowhere.
+  bool isCurrentUser(String? userId) =>
       mounted && read(currentUserIdProvider) == userId;
 }
 

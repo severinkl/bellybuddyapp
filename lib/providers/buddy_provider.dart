@@ -12,6 +12,8 @@ import '../repositories/entry_repository.dart';
 import '../services/buddy/streak_engine.dart';
 import '../utils/date_format_utils.dart';
 import '../utils/logger.dart';
+import '../utils/retry_helper.dart';
+import 'auth_provider.dart' show CurrentUserRef;
 import 'core_providers.dart';
 
 /// The Buddy's clock. Day boundaries use its local date; tests override it.
@@ -278,7 +280,7 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
         }
       }
       // After the last await: the state as it is now.
-      if (!ref.mounted || ref.read(currentUserIdProvider) != userId) return;
+      if (!ref.isCurrentUser(userId)) return;
       final status = state.value;
       if (status == null || status.state.userId != userId) return;
       if (_shownKeys.contains(key) || status.announcementKeys[kind] == key) {
@@ -479,25 +481,26 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
         kind: _announcementKey(userId, kind, suffix),
     };
     if (keys.isEmpty) return keys;
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      keys.removeWhere((_, key) => prefs.getBool(key) ?? false);
-    } catch (e, st) {
-      // Better to repeat a message than to lose a one-shot one.
-      _log.error('Announcement flags unavailable', e, st);
-    }
-    return keys;
+    final flags = await _flags();
+    return {
+      for (final MapEntry(key: kind, value: key) in keys.entries)
+        if (!(flags?.getBool(key) ?? false)) kind: key,
+    };
   }
 
   /// Whether the flag [key] is set; false when the flags can't be read.
-  Future<bool> _flagged(String key) async {
+  Future<bool> _flagged(String key) async =>
+      (await _flags())?.getBool(key) ?? false;
+
+  /// The announcement flags; null (logged) when they can't be read, and
+  /// then every flag reads as unset: better to repeat a message than to
+  /// lose a one-shot one.
+  Future<SharedPreferences?> _flags() async {
     try {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getBool(key) ?? false;
+      return await SharedPreferences.getInstance();
     } catch (e, st) {
-      // Better to repeat a message than to lose a one-shot one.
       _log.error('Announcement flags unavailable', e, st);
-      return false;
+      return null;
     }
   }
 
@@ -542,9 +545,7 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
 /// No automatic rebuild retries: the repository already retries the fetch,
 /// and a missing table or offline backend should surface as an [AsyncError]
 /// right away (the UI degrades); the next refresh recovers.
-Duration? _noRetry(int retryCount, Object error) => null;
-
 final buddyProvider = AsyncNotifierProvider<BuddyNotifier, BuddyStatus?>(
   BuddyNotifier.new,
-  retry: _noRetry,
+  retry: noRetry,
 );

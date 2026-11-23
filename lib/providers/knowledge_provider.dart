@@ -4,6 +4,7 @@ import '../config/constants.dart';
 import '../models/knowledge_article.dart';
 import '../repositories/knowledge_repository.dart';
 import '../utils/logger.dart';
+import '../utils/retry_helper.dart';
 import 'buddy_provider.dart';
 
 /// The blog feed behind Wissen: the cached copy while it is fresh, else a
@@ -74,10 +75,8 @@ class KnowledgeFeedNotifier extends AsyncNotifier<KnowledgeFeed> {
   }
 }
 
-Duration? _noRetry(int retryCount, Object error) => null;
-
 final knowledgeFeedProvider =
     AsyncNotifierProvider<KnowledgeFeedNotifier, KnowledgeFeed>(
       KnowledgeFeedNotifier.new,
-      retry: _noRetry,
+      retry: noRetry,
     );

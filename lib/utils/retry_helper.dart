@@ -24,3 +24,7 @@ Future<T> retryAsync<T>(
   // Unreachable, but required by the type system
   throw StateError('retryAsync: unreachable');
 }
+
+/// A provider's `retry` that never retries: a failed build stays an error
+/// until something loads it again.
+Duration? noRetry(int retryCount, Object error) => null;

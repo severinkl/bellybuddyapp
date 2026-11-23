@@ -8,6 +8,7 @@ import '../repositories/entry_repository.dart';
 import '../services/insights/insights_engine.dart';
 import '../utils/coalesced_runner.dart';
 import '../utils/logger.dart';
+import '../utils/retry_helper.dart';
 import 'auth_provider.dart';
 import 'buddy_provider.dart';
 import 'entries_provider.dart';
@@ -124,9 +125,7 @@ class InsightsNotifier extends AsyncNotifier<Insights> {
     final seq = ++_seq;
     try {
       final insights = await _compute(userId);
-      if (seq > _appliedSeq &&
-          opRef.mounted &&
-          opRef.read(currentUserIdProvider) == userId) {
+      if (seq > _appliedSeq && opRef.isCurrentUser(userId)) {
         _appliedSeq = seq;
         state = AsyncData(insights);
       }
@@ -145,13 +144,10 @@ class InsightsNotifier extends AsyncNotifier<Insights> {
   }
 }
 
-/// No automatic rebuild retries: a failed load stays an error until the
-/// next entry write, new day or refresh.
-Duration? _noRetry(int retryCount, Object error) => null;
-
 /// What the Buddy noticed in the last 30 days of entries: Home's card and
-/// the Muster page.
+/// the Muster page. No automatic rebuild retries: a failed load stays an
+/// error until the next entry write, new day or refresh.
 final insightsProvider = AsyncNotifierProvider<InsightsNotifier, Insights>(
   InsightsNotifier.new,
-  retry: _noRetry,
+  retry: noRetry,
 );
