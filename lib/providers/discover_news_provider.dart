@@ -1,31 +1,37 @@
 import 'dart:async';
 
-import 'package:flutter/widgets.dart' show AppLifecycleListener;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../config/constants.dart';
+import 'app_foreground_provider.dart';
 import 'auth_provider.dart';
+import 'buddy_provider.dart';
 import 'ingredient_suggestion_provider.dart';
 import 'recommendation_provider.dart';
 
 /// Keeps what Entdecken marks new loaded: the tip sets and the
 /// Alternativen. Loads them when a user signs in and, while one is signed
-/// in, whenever the app is back in the foreground; pushes and Entdecken
-/// call [refresh] themselves. The app root keeps it alive.
+/// in, when the app is back in the foreground ([appForegroundProvider]) and
+/// the last load is [AppConstants.discoverNewsForegroundInterval] old;
+/// pushes, Home and Entdecken call [refresh] themselves. The app root keeps
+/// it alive.
 class DiscoverNewsNotifier extends Notifier<void> {
   /// The newest load under way for the signed-in user.
   Future<void>? _loading;
 
+  /// When the last load for the signed-in user finished.
+  DateTime? _loadedAt;
+
+  DateTime _now() => ref.read(buddyClockProvider)();
+
   @override
   void build() {
-    AppLifecycleListener? lifecycle;
-    ref.onDispose(() => lifecycle?.dispose());
+    ref.listen(appForegroundProvider, (_, _) => _onForeground());
     ref.listen<String?>(currentUserIdProvider, (_, userId) {
-      lifecycle?.dispose();
-      lifecycle = null;
       // Loads for the previous user are not this one's.
       _loading = null;
+      _loadedAt = null;
       if (userId == null) return;
-      lifecycle = AppLifecycleListener(onResume: () => unawaited(refresh()));
       // The sign-in load; a load started since covers it.
       Future.microtask(() {
         if (ref.mounted && _loading == null) unawaited(refresh());
@@ -33,9 +39,21 @@ class DiscoverNewsNotifier extends Notifier<void> {
     }, fireImmediately: true);
   }
 
+  void _onForeground() {
+    if (ref.read(currentUserIdProvider) == null) return;
+    final loadedAt = _loadedAt;
+    if (loadedAt != null &&
+        _now().difference(loadedAt) <
+            AppConstants.discoverNewsForegroundInterval) {
+      return;
+    }
+    unawaited(refresh());
+  }
+
   /// Loads the tip sets and the Alternativen together. Each load is
-  /// coalesced: a call while one runs (a push, a resume) makes exactly one
-  /// more after it and completes once that one is done. Never throws.
+  /// coalesced: a call while one runs (a push, a pull to refresh) makes
+  /// exactly one more after it and completes once that one is done. Never
+  /// throws.
   Future<void> refresh() async {
     if (!ref.mounted) return;
     final load = _loading = Future.wait([
@@ -43,7 +61,9 @@ class DiscoverNewsNotifier extends Notifier<void> {
       ref.read(ingredientSuggestionProvider.notifier).fetchSuggestions(),
     ]);
     await load;
-    if (identical(_loading, load)) _loading = null;
+    if (!ref.mounted || !identical(_loading, load)) return;
+    _loading = null;
+    _loadedAt = _now();
   }
 }
 

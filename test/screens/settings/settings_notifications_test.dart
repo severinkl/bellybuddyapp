@@ -13,6 +13,7 @@ import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/widgets/common/weekly_tips_switch.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../helpers/app_lifecycle.dart';
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/riverpod_helpers.dart';
@@ -212,9 +213,7 @@ void main() {
       // Allowed in the Settings app, back in the app: the reminders the
       // user asked for are on.
       os.permission = NotificationPermission.granted;
-      tester.binding
-        ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
-        ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      returnFromBackground();
       await tester.pumpAndSettle();
       expect(switchOn(tester, 'Benachrichtigungen erlauben'), isTrue);
       expect(stored().remindersEnabled, isTrue);

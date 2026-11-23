@@ -36,6 +36,7 @@ import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
 import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
 
+import '../../helpers/app_lifecycle.dart';
 import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
@@ -475,18 +476,14 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       expect(entryRepo.insightSourceCalls, 1);
 
-      void resume() => tester.binding
-        ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
-        ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-
       // The same day: nothing.
-      resume();
+      returnFromBackground();
       await tester.pump();
       expect(entryRepo.insightSourceCalls, 1);
 
       // The device slept past midnight; its timer stood still.
       now = DateTime(2026, 11, 24, 7);
-      resume();
+      returnFromBackground();
       await tester.pump();
       expect(entryRepo.insightSourceCalls, 2);
       expect(entryRepo.insightSourceRequests.last.now, now);

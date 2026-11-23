@@ -28,6 +28,7 @@ import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
 import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
 
+import '../../../helpers/app_lifecycle.dart';
 import '../../../helpers/ambient_animations.dart';
 import '../../../helpers/app_host.dart';
 import '../../../helpers/fakes.dart';
@@ -1389,9 +1390,7 @@ void main() {
 
       now = DateTime(2026, 11, 23, 8);
       entries.next = const EntriesState(); // nothing logged yet today
-      tester.binding
-        ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
-        ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      returnFromBackground();
       await tester.pump();
       await tester.pump();
 

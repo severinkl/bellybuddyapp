@@ -25,7 +25,7 @@ class _UserId extends Notifier<String?> {
 final _userIdProvider = NotifierProvider<_UserId, String?>(_UserId.new);
 
 void main() {
-  // The insights' day signal (an AppLifecycleListener) needs the binding.
+  // The foreground signal (an AppLifecycleListener) needs the binding.
   TestWidgetsFlutterBinding.ensureInitialized();
 
   final now = DateTime(2026, 11, 23, 14);

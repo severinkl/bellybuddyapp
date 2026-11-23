@@ -1,7 +1,6 @@
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart' show AppLifecycleState;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:belly_buddy/models/insight_progress.dart';
@@ -17,6 +16,7 @@ import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 import 'package:belly_buddy/services/insights/insights_engine.dart';
 
+import '../helpers/app_lifecycle.dart';
 import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
 
@@ -43,13 +43,8 @@ const _noEntries = InsightSource(
 );
 
 void main() {
-  // The day signal's AppLifecycleListener needs the binding.
-  final binding = TestWidgetsFlutterBinding.ensureInitialized();
-
-  /// The app comes back to the foreground.
-  void resume() => binding
-    ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
-    ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+  // The foreground signal's AppLifecycleListener needs the binding.
+  TestWidgetsFlutterBinding.ensureInitialized();
 
   final now = DateTime(2026, 11, 23, 14);
   late FakeEntryRepository entryRepo;
@@ -458,7 +453,7 @@ void main() {
         async.flushMicrotasks();
 
         asleep = const Duration(hours: 8);
-        resume();
+        returnFromBackground();
         async.flushMicrotasks();
 
         expect(entryRepo.insightSourceCalls, 2);
@@ -491,7 +486,7 @@ void main() {
         c.listen(insightsProvider, (_, _) {});
         async.flushMicrotasks();
 
-        resume();
+        returnFromBackground();
         async.flushMicrotasks();
 
         expect(entryRepo.insightSourceCalls, 1);
@@ -511,7 +506,7 @@ void main() {
         async.flushMicrotasks();
 
         asleep = const Duration(hours: 8);
-        resume();
+        returnFromBackground();
         async.flushMicrotasks();
         expect(entryRepo.insightSourceCalls, 1);
 

@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/recommendation.dart';
+import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/discover_news_provider.dart';
 import 'package:belly_buddy/providers/ingredient_suggestion_provider.dart';
@@ -14,6 +14,7 @@ import 'package:belly_buddy/providers/recommendation_provider.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/repositories/recommendation_repository.dart';
 
+import '../helpers/app_lifecycle.dart';
 import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
 import '../helpers/mocks.dart';
@@ -30,18 +31,22 @@ class _UserId extends Notifier<String?> {
 }
 
 void main() {
-  // The provider's AppLifecycleListener needs the binding.
-  final binding = TestWidgetsFlutterBinding.ensureInitialized();
-
-  void resume() => binding
-    ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
-    ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+  // The foreground signal's AppLifecycleListener needs the binding.
+  TestWidgetsFlutterBinding.ensureInitialized();
 
   late FakeRecommendationRepository tips;
   late MockIngredientRepository alternatives;
   late NotifierProvider<_UserId, String?> user;
+  late DateTime now;
+
+  /// The app is back in the foreground [later] after now.
+  void returnLater(Duration later) {
+    now = now.add(later);
+    returnFromBackground();
+  }
 
   setUp(() {
+    now = DateTime(2026, 11, 23, 9);
     tips = FakeRecommendationRepository();
     alternatives = MockIngredientRepository();
     when(
@@ -58,6 +63,7 @@ void main() {
         currentUserIdProvider.overrideWith((ref) => ref.watch(user)),
         recommendationRepositoryProvider.overrideWithValue(tips),
         ingredientRepositoryProvider.overrideWithValue(alternatives),
+        buddyClockProvider.overrideWithValue(() => now),
       ],
     );
     c.listen(discoverNewsProvider, (_, _) {});
@@ -77,22 +83,46 @@ void main() {
     expect(c.read(ingredientSuggestionProvider).value, hasLength(1));
   });
 
-  test('back in the foreground: loads them again', () async {
+  test('back in the foreground 5 minutes after the last load: loads them '
+      'again', () async {
     makeContainer();
     await settle();
 
-    resume();
+    returnLater(const Duration(minutes: 5));
     await settle();
 
     expect(tips.fetchCount, 2);
     verify(() => alternatives.fetchSuggestionGroups(testUserId)).called(2);
   });
 
+  test(
+    'back in the foreground sooner: nothing; a push loads regardless',
+    () async {
+      final c = makeContainer();
+      await settle();
+
+      returnLater(const Duration(minutes: 4, seconds: 59));
+      await settle();
+      expect(tips.fetchCount, 1);
+
+      await c.read(discoverNewsProvider.notifier).refresh();
+      expect(tips.fetchCount, 2);
+
+      // 5 minutes after the push's load, not after the sign-in's.
+      returnLater(const Duration(minutes: 4));
+      await settle();
+      expect(tips.fetchCount, 2);
+      returnLater(const Duration(minutes: 1));
+      await settle();
+      expect(tips.fetchCount, 3);
+    },
+  );
+
   test('signed out: loads nothing', () async {
     makeContainer(userId: null);
     await settle();
 
-    resume();
+    returnLater(const Duration(hours: 1));
     await settle();
 
     expect(tips.fetchCount, 0);
@@ -111,7 +141,7 @@ void main() {
 
       c.read(user.notifier).set(null);
       await settle();
-      resume();
+      returnLater(const Duration(hours: 1));
       await settle();
       expect(tips.fetchCount, 1);
     },

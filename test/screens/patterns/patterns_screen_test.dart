@@ -10,6 +10,7 @@ import 'package:belly_buddy/router/app_router.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/patterns/patterns_screen.dart';
 
+import '../../helpers/app_lifecycle.dart';
 import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
 
@@ -273,9 +274,7 @@ void main() {
 
     // The device slept past midnight; its timer stood still.
     now = DateTime(2026, 11, 24, 7);
-    tester.binding
-      ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
-      ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    returnFromBackground();
     await tester.pumpAndSettle();
 
     expect(entries.insightSourceCalls, 2);

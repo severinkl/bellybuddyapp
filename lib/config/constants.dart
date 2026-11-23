@@ -301,6 +301,11 @@ class AppConstants {
   static const Duration autoAdvanceDuration = Duration(seconds: 4);
   static const Duration debounceDuration = Duration(milliseconds: 800);
 
+  /// Back in the foreground, the tips and Alternativen load again only once
+  /// their last load is at least this old (pushes and pull to refresh load
+  /// regardless).
+  static const Duration discoverNewsForegroundInterval = Duration(minutes: 5);
+
   /// The longest the app waits on its loading screen for the Buddy
   /// onboarding gate's answer after sign-in or app start; then it goes on
   /// as if no onboarding were due (a hanging backend never blocks the app).
