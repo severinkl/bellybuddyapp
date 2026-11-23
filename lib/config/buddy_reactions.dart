@@ -20,18 +20,30 @@ class BuddyLine {
 /// Plays [BuddyLine]s on a Buddy.
 extension BuddyLineReaction on BuddyController {
   /// Plays [line]: its mood and action, and one of its texts with `{name}`
-  /// filled in, shown for [duration] (null: until the next `say`).
+  /// filled in, shown for [duration] (null: until the next `say`) — or,
+  /// with [hold], for that long before the resting line comes back
+  /// ([BuddyController.sayThenRest]).
   void react(
     BuddyLine line, {
     required String name,
     required Random rnd,
-    required Duration? duration,
+    Duration? duration,
+    Duration? hold,
   }) {
+    assert(
+      duration == null || hold == null,
+      'A held line returns to the resting line; it has no duration.',
+    );
     final mood = line.mood;
     final action = line.action;
     if (mood != null) this.mood = mood;
     if (action != null) play(action);
-    say(BuddyCopy.fill(line.pick(rnd), name: name), duration: duration);
+    final text = BuddyCopy.fill(line.pick(rnd), name: name);
+    if (hold != null) {
+      sayThenRest(text, hold: hold);
+    } else {
+      say(text, duration: duration);
+    }
   }
 }
 

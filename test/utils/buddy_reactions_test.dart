@@ -119,6 +119,27 @@ void main() {
     c.dispose();
   });
 
+  testWidgets('react with a hold returns to the resting line', (tester) async {
+    final line = wizardReaction('name:confirmed')!;
+    final c = BuddyController()..rest('Wie viele Tage schaffen wir?');
+    addTearDown(c.dispose);
+    c.react(
+      line,
+      name: 'Bauchi',
+      rnd: Random(1),
+      hold: const Duration(seconds: 4),
+    );
+    expect(c.mood, line.mood);
+    expect(c.currentAction, line.action);
+    expect(
+      line.lines.map((l) => l.replaceAll('{name}', 'Bauchi')),
+      contains(c.bubble),
+    );
+
+    await tester.pump(const Duration(seconds: 4));
+    expect(c.bubble, 'Wie viele Tage schaffen wir?');
+  });
+
   test('isValidBuddyName: 1 to 20 characters after trimming', () {
     expect(AppConstants.isValidBuddyName('Bauchi'), isTrue);
     expect(AppConstants.isValidBuddyName('  Bauchi  '), isTrue);

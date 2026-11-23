@@ -2,6 +2,7 @@
 /// text of the animated Buddy. Widgets only render [BuddyController.frame].
 library;
 
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui' show Offset;
 import 'dart:ui' as ui show Image;
@@ -88,9 +89,10 @@ typedef BuddyBubble = ({String? text, int id});
 
 /// Drives the Buddy: call [tick] once per frame (e.g. from a `Ticker`).
 ///
-/// Setters and commands ([mood], [play], [lookAt], [say], [reducedMotion])
-/// never notify by themselves, so they are safe to call during build; their
-/// effect shows on the next [tick], which always notifies.
+/// Setters and commands ([mood], [play], [lookAt], [say], [rest],
+/// [sayThenRest], [reducedMotion]) never notify by themselves, so they are
+/// safe to call during build; their effect shows on the next [tick], which
+/// always notifies.
 class BuddyController extends ChangeNotifier {
   BuddyController({this.mood = BuddyMood.happy, int seed = 42})
     : _pose = FacePose.forMood(mood),
@@ -163,6 +165,12 @@ class BuddyController extends ChangeNotifier {
   String? _bubble;
   int _bubbleId = 0;
   double _bubbleUntil = 0;
+
+  /// The line [rest] set, which [sayThenRest] returns to.
+  String? _restingLine;
+
+  /// Brings the resting line back after [sayThenRest]'s hold.
+  Timer? _backToRest;
   late final _BubbleNotifier _bubbleNotifier = _BubbleNotifier(this);
 
   late BuddyFrame _frame;
@@ -195,14 +203,37 @@ class BuddyController extends ChangeNotifier {
   }
 
   /// Shows [text] in the speech bubble for [duration]; a null [duration]
-  /// keeps it up until the next [say].
+  /// keeps it up until the next [say]. Cancels a pending return to the
+  /// resting line ([sayThenRest]).
   void say(
     String text, {
     Duration? duration = const Duration(milliseconds: 2800),
   }) {
+    _backToRest?.cancel();
+    _backToRest = null;
     _bubble = text;
     _bubbleId++;
     _bubbleUntil = duration == null ? double.infinity : _t + _secs(duration);
+  }
+
+  /// Shows [line] until the next [say] and makes it the resting line, the
+  /// one [sayThenRest] comes back to (e.g. the question a screen asks).
+  void rest(String line) {
+    _restingLine = line;
+    say(line, duration: null);
+  }
+
+  /// Shows [text] (a reaction) for [hold], then the resting line ([rest])
+  /// again; without one, [text] stays. The hold runs on wall-clock time
+  /// (a timer), so it ends on time even while the Buddy isn't ticking. A
+  /// [say] or [rest] in the meantime cancels the return.
+  void sayThenRest(String text, {required Duration hold}) {
+    say(text, duration: null);
+    _backToRest = Timer(hold, () {
+      _backToRest = null;
+      final line = _restingLine;
+      if (line != null) say(line, duration: null);
+    });
   }
 
   /// Current speech-bubble text; null when nothing to say.
@@ -237,6 +268,7 @@ class BuddyController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _backToRest?.cancel();
     _food = null;
     _bubbleNotifier.dispose();
     super.dispose();

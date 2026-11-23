@@ -408,4 +408,88 @@ void main() {
     expect(c.frame.hearts, 0);
     expect(c.frame.sparkleP, greaterThanOrEqualTo(0));
   });
+
+  group('resting line', () {
+    // testWidgets: its fake clock drives sayThenRest's (wall-clock) timer.
+    const hold = Duration(seconds: 4);
+
+    testWidgets('rest shows its line until the next say, without expiry', (
+      tester,
+    ) async {
+      final c = BuddyController()..rest('Wie soll ich heißen?');
+      addTearDown(c.dispose);
+      _run(c, 10);
+      expect(c.bubble, 'Wie soll ich heißen?');
+      c.say('Hallo!');
+      expect(c.bubble, 'Hallo!');
+    });
+
+    testWidgets('sayThenRest holds its line, then the resting line is back', (
+      tester,
+    ) async {
+      final c = BuddyController()..rest('Frage');
+      addTearDown(c.dispose);
+      c.sayThenRest('Reaktion', hold: hold);
+      final reactionId = c.bubbleId;
+
+      // Held on wall-clock time, however long (or little) the Buddy ticks.
+      _run(c, 6);
+      await tester.pump(hold - const Duration(milliseconds: 1));
+      expect(c.bubble, 'Reaktion');
+
+      await tester.pump(const Duration(milliseconds: 1));
+      expect(c.bubble, 'Frage');
+      expect(c.bubbleId, greaterThan(reactionId)); // pops in again
+      _run(c, 10);
+      expect(c.bubble, 'Frage'); // and rests there
+    });
+
+    testWidgets('a say or rest in the meantime cancels the return', (
+      tester,
+    ) async {
+      final c = BuddyController()..rest('Frage 1');
+      addTearDown(c.dispose);
+
+      c
+        ..sayThenRest('Reaktion', hold: hold)
+        ..rest('Frage 2');
+      final id = c.bubbleId;
+      await tester.pump(hold * 2);
+      expect((c.bubble, c.bubbleId), ('Frage 2', id));
+
+      c
+        ..sayThenRest('Reaktion', hold: hold)
+        ..say('Noch was', duration: null);
+      await tester.pump(hold * 2);
+      expect(c.bubble, 'Noch was');
+    });
+
+    testWidgets('a newer sayThenRest restarts the hold', (tester) async {
+      final c = BuddyController()..rest('Frage');
+      addTearDown(c.dispose);
+
+      c.sayThenRest('Eins', hold: hold);
+      await tester.pump(const Duration(seconds: 3));
+      c.sayThenRest('Zwei', hold: hold);
+      await tester.pump(const Duration(seconds: 3));
+      expect(c.bubble, 'Zwei');
+      await tester.pump(const Duration(seconds: 1));
+      expect(c.bubble, 'Frage');
+    });
+
+    testWidgets('without a resting line the held line stays', (tester) async {
+      final c = BuddyController()..sayThenRest('Reaktion', hold: hold);
+      addTearDown(c.dispose);
+      await tester.pump(hold * 2);
+      expect(c.bubble, 'Reaktion');
+    });
+
+    testWidgets('dispose cancels a pending return', (tester) async {
+      BuddyController()
+        ..rest('Frage')
+        ..sayThenRest('Reaktion', hold: hold)
+        ..dispose();
+      // testWidgets fails when a timer is still pending at its end.
+    });
+  });
 }

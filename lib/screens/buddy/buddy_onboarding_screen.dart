@@ -15,7 +15,6 @@ import '../../providers/buddy_welcome_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../router/route_names.dart';
-import '../../services/buddy/buddy_copy.dart';
 import '../../services/buddy/buddy_mood_logic.dart';
 import '../../utils/date_format_utils.dart';
 import '../../utils/logger.dart';
@@ -104,20 +103,6 @@ class BuddyOnboardingScreen extends ConsumerStatefulWidget {
 class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
   static const _log = AppLogger('BuddyOnboarding');
 
-  static const _introLine = 'Hi! Ich bin neu hier — dein Belly Buddy.';
-
-  /// What the Buddy asks on each step. His bubble carries it; the steps have
-  /// no headline of their own. (The streak moment's line depends on the
-  /// streak: [streakMomentLine].)
-  static const _questions = {
-    BuddyOnboardingStep.intro: _introLine,
-    BuddyOnboardingStep.name: 'Wie soll ich heißen?',
-    BuddyOnboardingStep.firstMeal:
-        'Ich hab Hunger! Was hast du zuletzt gegessen?',
-    BuddyOnboardingStep.streakGoal: 'Wie viele Tage schaffen wir zusammen?',
-    BuddyOnboardingStep.reminder: 'Darf ich mich melden, wenn ich Hunger hab?',
-  };
-
   /// The steps whose bubble sits beside a small Buddy above a list
   /// (Layout 1); the others show him centred under his bubble.
   static const _sideSteps = {
@@ -126,7 +111,8 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
   };
 
   /// Reactions stay this long (long enough to read across a step change),
-  /// then the Buddy asks the step's question again.
+  /// then the Buddy asks the step's question again
+  /// ([BuddyController.sayThenRest]).
   static const _reactionHold = Duration(seconds: 4);
 
   /// The steps with little content below the Buddy: he gets a bigger
@@ -146,9 +132,6 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
   final BuddyController _buddy = BuddyController();
   final math.Random _rnd = math.Random();
   final ScrollController _scroll = ScrollController();
-
-  /// Brings the question back after a reaction.
-  Timer? _reask;
 
   /// Fixed once the Buddy and the profile have loaded.
   List<BuddyOnboardingStep>? _steps;
@@ -216,7 +199,6 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
 
   @override
   void dispose() {
-    _reask?.cancel();
     _scroll.dispose();
     _buddy.dispose();
     super.dispose();
@@ -304,25 +286,24 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
     }
   }
 
-  /// The Buddy asks [step]'s question, up until the next line replaces it.
-  void _ask(BuddyOnboardingStep step) {
-    _reask?.cancel();
-    final question = step == BuddyOnboardingStep.streakMoment
-        ? streakMomentLine(_momentStreak(ref.read(buddyProvider).value))
-        : _questions[step];
-    if (question != null) _buddy.say(question, duration: null);
-  }
+  /// What the Buddy asks on [step]. His bubble carries it; the steps have
+  /// no headline of their own.
+  String _question(BuddyOnboardingStep step) => switch (step) {
+    BuddyOnboardingStep.intro => 'Hi! Ich bin neu hier — dein Belly Buddy.',
+    BuddyOnboardingStep.name => 'Wie soll ich heißen?',
+    BuddyOnboardingStep.firstMeal =>
+      'Ich hab Hunger! Was hast du zuletzt gegessen?',
+    BuddyOnboardingStep.streakMoment => streakMomentLine(
+      _momentStreak(ref.read(buddyProvider).value),
+    ),
+    BuddyOnboardingStep.streakGoal => 'Wie viele Tage schaffen wir zusammen?',
+    BuddyOnboardingStep.reminder =>
+      'Darf ich mich melden, wenn ich Hunger hab?',
+  };
 
-  /// Shows [line] (a reaction) for [_reactionHold], then asks the current
-  /// step's question again.
-  void _sayBriefly(String line) {
-    _buddy.say(line, duration: null);
-    _reask?.cancel();
-    final step = _step;
-    _reask = Timer(_reactionHold, () {
-      if (mounted && _step == step) _ask(step);
-    });
-  }
+  /// The Buddy asks [step]'s question. It stays until the next step's
+  /// replaces it and comes back after a reaction.
+  void _ask(BuddyOnboardingStep step) => _buddy.rest(_question(step));
 
   /// Whether [step] is showing and free for a new action. The outgoing step
   /// stays tappable while it fades out, so every handler checks this.
@@ -378,11 +359,7 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
     _advance();
     final reaction = wizardReaction('name:confirmed');
     if (reaction != null) {
-      final mood = reaction.mood;
-      final action = reaction.action;
-      if (mood != null) _buddy.mood = mood;
-      if (action != null) _buddy.play(action);
-      _sayBriefly(BuddyCopy.fill(reaction.pick(_rnd), name: name));
+      _buddy.react(reaction, name: name, rnd: _rnd, hold: _reactionHold);
     }
   }
 
