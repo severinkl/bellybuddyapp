@@ -270,11 +270,11 @@ void main() {
     tester,
   ) async {
     await pump(tester);
-    expect(container.read(tutorialReplayProvider), isFalse);
+    expect(container.read(tutorialProvider), isFalse);
 
     await tapRow(tester, MeScreen.tutorialKey);
 
-    expect(container.read(tutorialReplayProvider), isTrue);
+    expect(container.read(tutorialProvider), isTrue);
     expect(find.text('page:${RoutePaths.dashboard}'), findsOneWidget);
     expect(router.canPop(), isFalse);
   });

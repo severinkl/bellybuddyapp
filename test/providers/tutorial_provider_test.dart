@@ -91,7 +91,7 @@ void main() {
       final c = makeContainer();
 
       expect(c.read(tutorialProvider.notifier).consumeReplay(), isFalse);
-      expect(c.read(tutorialReplayProvider), isFalse);
+      expect(c.read(tutorialProvider), isFalse);
     });
 
     test('consumeReplay is true once', () {
@@ -99,10 +99,10 @@ void main() {
       final tutorial = c.read(tutorialProvider.notifier);
 
       tutorial.requestReplay();
-      expect(c.read(tutorialReplayProvider), isTrue);
+      expect(c.read(tutorialProvider), isTrue);
 
       expect(tutorial.consumeReplay(), isTrue);
-      expect(c.read(tutorialReplayProvider), isFalse);
+      expect(c.read(tutorialProvider), isFalse);
       expect(tutorial.consumeReplay(), isFalse);
 
       // Each new request is taken once again.

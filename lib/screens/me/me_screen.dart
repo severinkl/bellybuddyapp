@@ -86,11 +86,6 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     );
   }
 
-  void _replayTutorial() {
-    ref.read(tutorialProvider.notifier).requestReplay();
-    context.go(RoutePaths.dashboard);
-  }
-
   Future<void> _openFeedback() => openExternalUrl(
     context,
     AppConstants.feedbackFormUrl,
@@ -146,7 +141,8 @@ class _MeScreenState extends ConsumerState<MeScreen> {
               icon: Icons.replay,
               title: 'Tutorial wiederholen',
               subtitle: 'Die Tour durch Home nochmal ansehen',
-              onTap: _replayTutorial,
+              onTap: () =>
+                  ref.read(tutorialProvider.notifier).replayFrom(context),
             ),
             AppConstants.gap12,
             BbSettingsItem(

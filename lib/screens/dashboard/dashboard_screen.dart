@@ -145,7 +145,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // the tab): the Ich tab requests, then goes Home, and the tour starts in
     // that same frame. Taken in a microtask, not inside this notification;
     // before the first load is done, the post-load path takes it instead.
-    ref.listen<bool>(tutorialReplayProvider, (_, pending) {
+    ref.listen<bool>(tutorialProvider, (_, pending) {
       if (pending && _firstRunDone) Future.microtask(_maybeShowTutorial);
     });
     return Scaffold(

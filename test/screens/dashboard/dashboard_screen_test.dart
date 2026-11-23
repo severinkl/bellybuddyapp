@@ -439,7 +439,7 @@ void main() {
       await _go(tester, router, RoutePaths.dashboard);
 
       expect(find.text(_tourSkip), findsOneWidget);
-      expect(container.read(tutorialReplayProvider), isFalse);
+      expect(container.read(tutorialProvider), isFalse);
 
       await tester.tap(find.text(_tourSkip));
       await tester.pumpAndSettle();
@@ -469,7 +469,7 @@ void main() {
       await _go(tester, router, RoutePaths.dashboard);
 
       expect(find.text(_tourSkip), findsOneWidget);
-      expect(container.read(tutorialReplayProvider), isFalse);
+      expect(container.read(tutorialProvider), isFalse);
 
       await tester.tap(find.text(_tourSkip));
       await tester.pumpAndSettle();
