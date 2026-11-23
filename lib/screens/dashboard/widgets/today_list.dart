@@ -11,6 +11,7 @@ import '../../../services/buddy/daily_care.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/drink_helpers.dart';
 import '../../../utils/gut_feeling_rating.dart';
+import '../../../widgets/common/bb_card.dart';
 import 'buddy_hero.dart';
 
 /// One row of the dashboard's „Heute" list.
@@ -143,7 +144,7 @@ class _TodayRow extends StatelessWidget {
     return Semantics(
       label: '$time Uhr, ${item.label}',
       excludeSemantics: true,
-      child: Container(
+      child: BbCard(
         constraints: const BoxConstraints(
           minHeight: AppConstants.todayRowHeight,
         ),
@@ -151,10 +152,8 @@ class _TodayRow extends StatelessWidget {
           horizontal: AppConstants.spacing12,
           vertical: AppConstants.spacingSm,
         ),
-        decoration: BoxDecoration(
-          color: AppTheme.card,
-          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-        ),
+        radius: AppConstants.radiusMd,
+        showBorder: false,
         child: Row(
           children: [
             // At least this wide so the rows line up; wider with large

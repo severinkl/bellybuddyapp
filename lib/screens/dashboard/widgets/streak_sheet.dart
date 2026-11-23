@@ -4,6 +4,7 @@ import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../providers/buddy_provider.dart';
 import '../../../widgets/common/bb_button.dart';
+import '../../../widgets/common/bb_card.dart';
 import '../../../widgets/common/bb_drag_handle.dart';
 import '../../buddy/streak_goal_picker.dart';
 import '../../buddy/widgets/streak_moment.dart';
@@ -101,25 +102,19 @@ class _StreakSheetState extends State<StreakSheet> {
   }
 }
 
+/// A card of the sheet (goal, savers).
 class _Card extends StatelessWidget {
   const _Card({required this.child});
 
   final Widget child;
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) => BbCard(
     padding: const EdgeInsets.symmetric(
       horizontal: AppConstants.spacingMd,
       vertical: AppConstants.spacing14,
     ),
-    decoration: BoxDecoration(
-      color: AppTheme.card,
-      borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-      border: Border.all(
-        color: AppTheme.border,
-        width: AppConstants.borderWidthMd,
-      ),
-    ),
+    borderWidth: AppConstants.borderWidthMd,
     child: child,
   );
 }

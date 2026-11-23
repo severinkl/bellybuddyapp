@@ -52,6 +52,7 @@ class AppConstants {
   static const double radiusFull = 100.0;
 
   // Border widths
+  static const double borderWidthSm = 0.5;
   static const double borderWidthMd = 1.5;
   static const double borderWidthLg = 2.0;
 

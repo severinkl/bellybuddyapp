@@ -5,6 +5,7 @@ import '../../../config/constants.dart';
 import '../../../models/user_profile.dart';
 import '../../../services/reminder_copy.dart';
 import '../../../utils/date_format_utils.dart';
+import '../../../widgets/common/bb_card.dart';
 import '../../registration/widgets/step_field_label.dart';
 
 /// The reminder step's explanation before the system dialog: how the Buddy
@@ -168,21 +169,15 @@ class ReminderExampleWeek extends StatelessWidget {
           'Tag eingetragen. Weniger Lücken, und Zusammenhänge zwischen Essen '
           'und Bauch sind leichter zu sehen.',
       child: ExcludeSemantics(
-        child: Container(
+        child: BbCard(
           padding: const EdgeInsets.fromLTRB(
             AppConstants.spacing14,
             AppConstants.spacing10,
             AppConstants.spacing14,
             AppConstants.spacing12,
           ),
-          decoration: BoxDecoration(
-            color: AppTheme.background,
-            borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-            border: Border.all(
-              color: AppTheme.border,
-              width: AppConstants.borderWidthMd,
-            ),
-          ),
+          color: AppTheme.background,
+          borderWidth: AppConstants.borderWidthMd,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

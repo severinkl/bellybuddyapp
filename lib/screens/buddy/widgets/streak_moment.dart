@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../widgets/buddy/streak_week_row.dart';
+import '../../../widgets/common/bb_card.dart';
 
 /// What counts as a streak day, in one sentence.
 const String kStreakRuleText =
@@ -89,16 +90,14 @@ class StreakGoalWhyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
+    return const BbCard(
+      padding: EdgeInsets.symmetric(
         horizontal: AppConstants.spacingMd,
         vertical: AppConstants.spacing14,
       ),
-      decoration: BoxDecoration(
-        color: AppTheme.beige,
-        borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-      ),
-      child: const Column(
+      color: AppTheme.beige,
+      showBorder: false,
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
