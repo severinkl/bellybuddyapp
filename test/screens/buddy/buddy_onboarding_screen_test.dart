@@ -27,6 +27,7 @@ import 'package:belly_buddy/screens/registration/steps/steps.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
 
+import '../../helpers/ambient_animations.dart';
 import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
@@ -154,6 +155,9 @@ const _noStreakLine = 'Mit deinem nächsten Eintrag startet unser Streak!';
 const _introLine = 'Hi! Ich bin neu hier — dein Belly Buddy.';
 
 void main() {
+  // These Buddies must tick: reactions, blinks, waking up.
+  tickBuddiesInTests();
+
   group('buddyOnboardingSteps', () {
     const after = BuddyOnboardingEntry.afterRegistration;
     const gate = BuddyOnboardingEntry.gate;

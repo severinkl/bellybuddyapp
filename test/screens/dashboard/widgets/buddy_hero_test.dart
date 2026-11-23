@@ -25,6 +25,7 @@ import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
 import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
 
+import '../../../helpers/ambient_animations.dart';
 import '../../../helpers/app_host.dart';
 import '../../../helpers/fakes.dart';
 import '../../../helpers/fixtures.dart';
@@ -122,10 +123,10 @@ void main() {
   late ValueNotifier<bool> visible;
   late GoRouter router;
 
+  // The hero's bubble and actions need ticking Buddies.
+  tickBuddiesInTests();
+
   setUp(() {
-    // This directory's flutter_test_config.dart stops Buddy tickers; the
-    // hero's bubble and actions need them.
-    AnimatedBuddy.tickerEnabled = true;
     now = DateTime(2026, 11, 22, 14);
     buddy = _FakeBuddy(() => _status());
     entries = _FakeEntries(const EntriesState());
@@ -134,7 +135,6 @@ void main() {
 
   tearDown(() {
     visible.dispose();
-    AnimatedBuddy.tickerEnabled = false;
   });
 
   /// Pumps the hero on Home (`/dashboard`) of a router with stub pages for

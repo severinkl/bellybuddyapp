@@ -31,8 +31,8 @@ class CareRing extends StatelessWidget {
 
   /// Test seam: while false, the highlighted need glows without pulsing,
   /// so `pumpAndSettle` can settle on screens that show the ring (e.g. the
-  /// dashboard). Set it in a test directory's `flutter_test_config.dart`;
-  /// never change it in app code.
+  /// dashboard). The test root's `flutter_test_config.dart` sets it; never
+  /// change it in app code.
   @visibleForTesting
   static bool pulseEnabled = true;
 

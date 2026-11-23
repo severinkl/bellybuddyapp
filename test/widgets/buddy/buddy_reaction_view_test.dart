@@ -16,6 +16,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../helpers/ambient_animations.dart';
 import '../../helpers/fakes.dart';
 import '../../helpers/riverpod_helpers.dart';
 
@@ -65,6 +66,9 @@ Future<Uint8List> _png(WidgetTester tester) async {
 }
 
 void main() {
+  // These Buddies must tick: reactions, blinks, waking up.
+  tickBuddiesInTests();
+
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     _buddyRepo = FakeBuddyRepository();

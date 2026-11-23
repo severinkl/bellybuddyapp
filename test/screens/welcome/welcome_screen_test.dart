@@ -7,6 +7,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../helpers/ambient_animations.dart';
+
 const _line1 = 'Hi! Ich bin dein Belly Buddy.';
 const _line2 = 'Ich helfe dir herauszufinden, was deinem Bauch guttut.';
 const _line3 = 'Lass uns uns kennenlernen!';
@@ -75,6 +77,9 @@ Future<void> _settleNavigation(WidgetTester tester) async {
 }
 
 void main() {
+  // These Buddies must tick: reactions, blinks, waking up.
+  tickBuddiesInTests();
+
   group('WelcomeScreen', () {
     testWidgets('starts with a sleeping Buddy, the wake hint and the '
         'sign-in link, but no „Los geht\'s"', (tester) async {
