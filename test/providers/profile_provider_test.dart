@@ -320,6 +320,156 @@ void main() {
       expect(after.remindersEnabled, isFalse);
     });
 
+    test('a save holding the profile from before the switch keeps the switch '
+        '(the debounced reminder save)', () async {
+      when(
+        () => mockRepo.getProfile(any()),
+      ).thenAnswer((_) async => testUserProfile());
+      when(() => mockRepo.updateProfile(any(), any())).thenAnswer((_) async {});
+      when(() => mockRepo.setWeeklyTips(any(), any())).thenAnswer((_) async {});
+      final container = makeContainer();
+      final notifier = container.read(profileProvider.notifier);
+      await notifier.fetchProfile();
+      final held = container.read(profileProvider).value!;
+
+      await notifier.setWeeklyTips(true);
+      await notifier.updateProfile(held.copyWith(mealReminderTimes: ['07:30']));
+
+      final after = container.read(profileProvider).value!;
+      expect(after.weeklyTipsEnabled, isTrue);
+      expect(after.mealReminderTimes, ['07:30']);
+    });
+
+    test(
+      'a save begun before the switch that fails keeps the switch',
+      () async {
+        when(
+          () => mockRepo.getProfile(any()),
+        ).thenAnswer((_) async => testUserProfile());
+        final save = Completer<void>();
+        when(
+          () => mockRepo.updateProfile(any(), any()),
+        ).thenAnswer((_) => save.future);
+        when(
+          () => mockRepo.setWeeklyTips(any(), any()),
+        ).thenAnswer((_) async {});
+        final container = makeContainer();
+        final notifier = container.read(profileProvider.notifier);
+        await notifier.fetchProfile();
+        final held = container.read(profileProvider).value!;
+
+        final saving = notifier.updateProfile(
+          held.copyWith(remindersEnabled: false),
+        );
+        await notifier.setWeeklyTips(true);
+        save.completeError(Exception('offline'));
+        await expectLater(saving, throwsException);
+
+        final after = container.read(profileProvider).value!;
+        expect(after.weeklyTipsEnabled, isTrue);
+        expect(after.remindersEnabled, isTrue);
+      },
+    );
+
+    test('a fetch that read the profile before the switch landed keeps the '
+        'switch', () async {
+      when(
+        () => mockRepo.getProfile(any()),
+      ).thenAnswer((_) async => testUserProfile());
+      final write = Completer<void>();
+      when(
+        () => mockRepo.setWeeklyTips(any(), any()),
+      ).thenAnswer((_) => write.future);
+      final container = makeContainer();
+      final notifier = container.read(profileProvider.notifier);
+      await notifier.fetchProfile();
+
+      final switching = notifier.setWeeklyTips(true);
+      final read = Completer<UserProfile?>();
+      when(() => mockRepo.getProfile(any())).thenAnswer((_) => read.future);
+      final fetching = notifier.fetchProfile();
+      write.complete();
+      await switching;
+      read.complete(testUserProfile());
+      await fetching;
+
+      expect(container.read(weeklyTipsEnabledProvider), isTrue);
+    });
+
+    test('a switch that fails while a fetch runs leaves it off', () async {
+      when(
+        () => mockRepo.getProfile(any()),
+      ).thenAnswer((_) async => testUserProfile());
+      final write = Completer<void>();
+      when(
+        () => mockRepo.setWeeklyTips(any(), any()),
+      ).thenAnswer((_) => write.future);
+      final container = makeContainer();
+      final notifier = container.read(profileProvider.notifier);
+      await notifier.fetchProfile();
+
+      final switching = notifier.setWeeklyTips(true);
+      final read = Completer<UserProfile?>();
+      when(() => mockRepo.getProfile(any())).thenAnswer((_) => read.future);
+      final fetching = notifier.fetchProfile();
+      write.completeError(Exception('offline'));
+      await expectLater(switching, throwsException);
+      // Read while the write was still on its way: shows it on.
+      read.complete(testUserProfile(weeklyTipsEnabled: true));
+      await fetching;
+
+      expect(container.read(weeklyTipsEnabledProvider), isFalse);
+    });
+
+    test('a fetch begun after the switch landed takes the stored value '
+        '(switched elsewhere)', () async {
+      when(
+        () => mockRepo.getProfile(any()),
+      ).thenAnswer((_) async => testUserProfile());
+      when(() => mockRepo.setWeeklyTips(any(), any())).thenAnswer((_) async {});
+      final container = makeContainer();
+      final notifier = container.read(profileProvider.notifier);
+      await notifier.fetchProfile();
+      await notifier.setWeeklyTips(true);
+
+      await notifier.fetchProfile();
+
+      expect(container.read(weeklyTipsEnabledProvider), isFalse);
+    });
+
+    test('a switch still writing for the previous user is not carried into '
+        'the next user\'s fetch', () async {
+      when(
+        () => mockRepo.getProfile(any()),
+      ).thenAnswer((_) async => testUserProfile());
+      final write = Completer<void>();
+      when(
+        () => mockRepo.setWeeklyTips(any(), any()),
+      ).thenAnswer((_) => write.future);
+      final user = SwitchableUserId(testUserId);
+      final container = createContainer(
+        overrides: [
+          profileRepositoryProvider.overrideWithValue(mockRepo),
+          user.override,
+          supabaseClientProvider.overrideWithValue(mockSupabase),
+        ],
+      );
+      final notifier = container.read(profileProvider.notifier);
+      await notifier.fetchProfile();
+      final switching = notifier.setWeeklyTips(true);
+
+      notifier.reset();
+      user.set(container, 'other-user');
+      when(
+        () => mockRepo.getProfile(any()),
+      ).thenAnswer((_) async => testUserProfile(userId: 'other-user'));
+      await notifier.fetchProfile();
+      write.complete();
+      await switching;
+
+      expect(container.read(weeklyTipsEnabledProvider), isFalse);
+    });
+
     test('setWeeklyTips without a loaded profile throws StateError', () {
       final container = makeContainer();
       expect(

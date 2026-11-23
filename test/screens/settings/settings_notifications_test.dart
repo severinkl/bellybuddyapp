@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
+import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/screens/settings/widgets/settings_notifications_screen.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
@@ -122,6 +123,35 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(stored().weeklyTipsEnabled, isTrue);
+    });
+
+    testWidgets('a reminder time saved after the weekly switch keeps it on', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        permission: NotificationPermission.granted,
+        profile: testUserProfile(mealReminderTimes: ['08:00', '18:00']),
+      );
+
+      // Removing 08:00 arms the debounced save with the profile as it is.
+      await tester.tap(
+        find.descendant(
+          of: find.ancestor(
+            of: find.text('08:00'),
+            matching: find.byType(GestureDetector),
+          ),
+          matching: find.byIcon(Icons.close),
+        ),
+      );
+      await tester.ensureVisible(find.byKey(WeeklyTipsSwitch.switchKey));
+      await tester.tap(find.byKey(WeeklyTipsSwitch.switchKey));
+      await tester.pump();
+      await tester.pumpAndSettle(AppConstants.debounceDuration);
+
+      expect(stored().mealReminderTimes, ['18:00']);
+      expect(stored().weeklyTipsEnabled, isTrue);
+      expect(switchOn(tester, WeeklyTipsSwitch.title), isTrue);
     });
 
     testWidgets('Tipps per Push is greyed without permission', (tester) async {

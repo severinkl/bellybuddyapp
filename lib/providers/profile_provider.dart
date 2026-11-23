@@ -17,6 +17,15 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
   String? get loadedFor => _loadedFor;
   String? _loadedFor;
 
+  /// Only [setWeeklyTips] changes the weekly-tips switch here: a save holding
+  /// an older profile keeps the switch as it stands, and so does a fetch that
+  /// overlapped a switch (its read may predate the write). Kept for that: the
+  /// switch's latest value and its user, the writes still on their way, and
+  /// a count of switches.
+  ({String userId, bool enabled})? _switched;
+  int _switchWrites = 0;
+  int _switches = 0;
+
   @override
   AsyncValue<UserProfile?> build() => const AsyncValue.loading();
 
@@ -31,6 +40,8 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
       return;
     }
     state = const AsyncValue.loading();
+    final overlapping = _switchWrites > 0;
+    final switches = _switches;
     try {
       final userId = _resolveUserId();
       _loadedFor = userId;
@@ -42,7 +53,12 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
       final profile = await ref
           .read(profileRepositoryProvider)
           .getProfile(userId);
-      state = AsyncValue.data(profile);
+      final switched = _switched;
+      state = AsyncValue.data(
+        (overlapping || _switches != switches) && switched?.userId == userId
+            ? profile?.copyWith(weeklyTipsEnabled: switched!.enabled)
+            : profile,
+      );
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
@@ -74,14 +90,31 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
 
     // Optimistic update — revert on failure
     _loadedFor = userId;
-    state = AsyncValue.data(profile.copyWith(userId: userId));
+    state = AsyncValue.data(_keepSwitch(profile.copyWith(userId: userId)));
 
     try {
       await ref.read(profileRepositoryProvider).updateProfile(userId, profile);
     } catch (e) {
-      state = previous;
+      state = switch (previous) {
+        AsyncData(:final value?) => AsyncValue.data(_keepSwitch(value)),
+        _ => previous,
+      };
       rethrow;
     }
+  }
+
+  /// [profile] with the weekly-tips switch as it stands: the loaded
+  /// profile's, else (mid-fetch) the one a switch still writing set.
+  UserProfile _keepSwitch(UserProfile profile) {
+    final switched = _switched;
+    final enabled =
+        state.value?.weeklyTipsEnabled ??
+        (_switchWrites > 0 && switched?.userId == profile.userId
+            ? switched!.enabled
+            : null);
+    return enabled == null
+        ? profile
+        : profile.copyWith(weeklyTipsEnabled: enabled);
   }
 
   /// Stores the user's health-data consent for the current privacy policy
@@ -118,19 +151,28 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
       throw StateError('setWeeklyTips needs a loaded profile');
     }
     final was = profile.weeklyTipsEnabled;
+    _switched = (userId: userId, enabled: enabled);
+    _switches++;
+    _switchWrites++;
     state = AsyncValue.data(profile.copyWith(weeklyTipsEnabled: enabled));
     try {
       await ref.read(profileRepositoryProvider).setWeeklyTips(userId, enabled);
     } catch (e) {
-      if (state case AsyncData(:final value?)) {
-        state = AsyncValue.data(value.copyWith(weeklyTipsEnabled: was));
+      if (_switched?.userId == userId) {
+        _switched = (userId: userId, enabled: was);
+        if (state case AsyncData(:final value?)) {
+          state = AsyncValue.data(value.copyWith(weeklyTipsEnabled: was));
+        }
       }
       rethrow;
+    } finally {
+      _switchWrites--;
     }
   }
 
   void reset() {
     _loadedFor = null;
+    _switched = null;
     state = const AsyncValue.data(null);
   }
 }

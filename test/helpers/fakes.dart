@@ -207,9 +207,15 @@ class FakeProfileRepository implements ProfileRepository {
   @override
   Future<void> createProfile(String userId, UserProfile profile) async =>
       _profile = profile.copyWith(userId: userId);
+
+  /// Like the real one: leaves the weekly tips (setWeeklyTips' column) alone.
   @override
   Future<void> updateProfile(String userId, UserProfile profile) async =>
-      _profile = profile.copyWith(userId: userId);
+      _profile = profile.copyWith(
+        userId: userId,
+        weeklyTipsEnabled:
+            _profile?.weeklyTipsEnabled ?? profile.weeklyTipsEnabled,
+      );
   @override
   Future<void> updateTutorialSeenAt(String userId, DateTime? value) async {
     _tutorialUpdateCalled = true;
