@@ -12,6 +12,10 @@ class AppTheme {
   static const Color cardForeground = Color(0xFF302820);
   static const Color primary = Color(0xFFB5CC47);
   static const Color primaryForeground = Color(0xFF302820);
+
+  /// Secondary text on [primary] (hints): 5:1 on it, where a faded
+  /// [primaryForeground] fell to 3:1.
+  static const Color primaryForegroundMuted = Color(0xFF4B4928);
   static const Color secondary = Color(0xFFEFEBE6);
   static const Color secondaryForeground = Color(0xFF302820);
   static const Color muted = Color(0xFFE8E4DF);

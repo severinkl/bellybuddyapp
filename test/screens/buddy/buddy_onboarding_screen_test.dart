@@ -1,5 +1,6 @@
 // ignore_for_file: invalid_use_of_internal_member
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -9,6 +10,7 @@ import 'package:riverpod/src/internals.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:belly_buddy/config/constants.dart';
+import 'package:belly_buddy/widgets/buddy/buddy_stage.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
@@ -756,6 +758,45 @@ void main() {
       expect(h.stored?.streakGoal, 7);
       expect(h.stored?.onboardingCompletedAt, isNotNull);
     });
+
+    for (final (phone, size) in [
+      ('402×874', const Size(402, 874)),
+      ('375×667', const Size(375, 667)),
+    ]) {
+      for (final (step, entry, action) in [
+        (
+          'first meal',
+          BuddyOnboardingEntry.afterRegistration,
+          BuddyOnboardingScreen.mealLogKey,
+        ),
+        (
+          'intro',
+          BuddyOnboardingEntry.gate,
+          BuddyOnboardingScreen.introNextKey,
+        ),
+      ]) {
+        testWidgets('$phone, $step: the Buddy fills the step, no big empty '
+            'gap above its button', (tester) async {
+          await pumpOnboarding(tester, entry: entry, screen: size);
+
+          final stage = tester.getRect(find.byType(BuddyStage));
+          final button = tester.getRect(find.byKey(action));
+          // Little room left between him and his button …
+          expect(button.top - stage.bottom, lessThan(size.height * 0.2));
+          // … and he is no smaller than before.
+          expect(
+            stage.height,
+            greaterThanOrEqualTo(
+              math.min(
+                AppConstants.buddyOnboardingHeroStageHeight,
+                size.height * 0.45,
+              ),
+            ),
+          );
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
 
     group('small phone (375×667): actions visible without scrolling', () {
       const phone = Size(375, 667);

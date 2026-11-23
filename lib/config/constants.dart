@@ -140,6 +140,9 @@ class AppConstants {
   // … and on steps with little content below him (intro, first meal,
   // streak moment) a bigger one
   static const double buddyOnboardingHeroStageHeight = 340.0;
+  // … and on steps with nothing below him (intro, first meal) he grows into
+  // the free height up to this, centred in it
+  static const double buddyOnboardingHeroStageMaxHeight = 460.0;
   static const double progressDotSize = 8.0;
   static const double progressDotActiveWidth = 24.0;
 
