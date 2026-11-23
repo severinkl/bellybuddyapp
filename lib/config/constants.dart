@@ -114,10 +114,6 @@ class AppConstants {
   static const Offset careNeedShadowOffset = Offset(0, 3);
   static const Duration careNeedPulse = Duration(milliseconds: 1400);
 
-  // Dashboard scroll view: lays out this far past the viewport, so every
-  // tutorial target exists even on a small phone
-  static const double dashboardCacheExtent = 1200.0;
-
   // Dashboard „Heute" list: rows shown at most, a row's height and time
   // column
   static const int todayListMaxItems = 5;

@@ -149,11 +149,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           color: AppTheme.primary,
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            // The tour scrolls to targets below the fold, which must be
-            // built: keep the whole (short) dashboard laid out.
-            scrollCacheExtent: const ScrollCacheExtent.pixels(
-              AppConstants.dashboardCacheExtent,
-            ),
+            // A short, fixed set of sections, all built and laid out (box
+            // slivers are never lazy), so every tour target below the fold
+            // exists for the tour to scroll to.
             slivers: [
               SliverToBoxAdapter(
                 child: Padding(
@@ -163,29 +161,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     AppConstants.spacingLg,
                     0,
                   ),
-                  // The header icons sit top-right on the hero's streak row.
-                  child: Stack(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      BuddyHero(key: TutorialKeys.buddy),
-                      const Positioned(
-                        top: 0,
-                        right: 0,
-                        child: _DashboardHeader(),
+                      // The header icons sit top-right on the hero's streak
+                      // row.
+                      Stack(
+                        children: [
+                          BuddyHero(key: TutorialKeys.buddy),
+                          const Positioned(
+                            top: 0,
+                            right: 0,
+                            child: _DashboardHeader(),
+                          ),
+                        ],
                       ),
+                      AppConstants.gap24,
+                      const TodayList(),
+                      AppConstants.gap24,
                     ],
                   ),
                 ),
               ),
-              const SliverToBoxAdapter(child: AppConstants.gap24),
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppConstants.spacingLg,
-                  ),
-                  child: TodayList(),
-                ),
-              ),
-              const SliverToBoxAdapter(child: AppConstants.gap24),
+              // The „Für dich" section reaches down to the screen's bottom.
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: Padding(
