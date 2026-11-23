@@ -429,6 +429,9 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
   Future<void> _remindersLater() async {
     if (!_ready(BuddyOnboardingStep.reminder)) return;
     _setBusy(true);
+    await _logErrors('Postponing reminders', () => postponeReminders(ref));
+    // postponeReminders marks the opt-in as offered first, but not when it
+    // failed before that.
     await _markRemindersAsked();
     if (!mounted) return;
     _setBusy(false);

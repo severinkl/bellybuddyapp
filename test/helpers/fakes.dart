@@ -581,6 +581,12 @@ UserRecipe testUserRecipe({
 class FakeNotificationRepository implements NotificationRepository {
   int syncCount = 0;
 
+  /// What [permissionStatus] reports.
+  NotificationPermission permission = NotificationPermission.granted;
+
+  @override
+  Future<NotificationPermission> permissionStatus() async => permission;
+
   @override
   Future<void> syncNotifications(
     UserProfile profile, {

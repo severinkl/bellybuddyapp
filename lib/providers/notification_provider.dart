@@ -39,10 +39,19 @@ final notificationSyncProvider = Provider<void>((ref) {
   });
 });
 
+// The notification model: the profile's flags (`remindersEnabled`,
+// `dailySummaryEnabled`, `pushEnabled`) say what the user wants; a
+// notification arrives only while the OS allows them, too. The flags are
+// only ever turned on together with the OS permission, and an answer
+// without it („Später", a declined OS dialog) turns them off, so the
+// profile never claims reminders the phone won't show. Settings shows a
+// flag as on only while the OS allows notifications.
+
 /// Turns reminders on: asks the OS for notification permissions, remembers
 /// that the opt-in was offered ([AppConstants.keyNotificationModalShown], so
-/// the dashboard dialog doesn't show again) and stores the outcome as the
-/// profile's `pushEnabled`. Returns whether permission was granted.
+/// the dashboard dialog doesn't show again) and stores the outcome: with
+/// permission every notification is on, without it every one is off.
+/// Returns whether permission was granted.
 ///
 /// Does nothing and returns false while no profile is loaded. Errors (e.g.
 /// saving the profile) are rethrown to the caller.
@@ -56,8 +65,26 @@ Future<bool> enableReminders(WidgetRef ref) async {
 
   final granted = await notifications.requestAllPermissions();
   await markNotificationOptInOffered();
-  await profiles.updateProfile(profile.copyWith(pushEnabled: granted));
+  await profiles.updateProfile(profile.withNotifications(granted));
   return granted;
+}
+
+/// The reminder opt-in answered with „Später": remembers that it was
+/// offered and, unless the OS already allows notifications, turns every
+/// notification off (nothing would arrive). Settings turns them on later.
+///
+/// Errors (e.g. saving the profile) are rethrown to the caller.
+Future<void> postponeReminders(WidgetRef ref) async {
+  // Read before the async gaps: the caller may unmount meanwhile.
+  final profile = ref.read(profileProvider).whenOrNull(data: (p) => p);
+  final notifications = ref.read(notificationRepositoryProvider);
+  final profiles = ref.read(profileProvider.notifier);
+
+  await markNotificationOptInOffered();
+  if (profile == null || !profile.anyNotificationOn) return;
+  final permission = await notifications.permissionStatus();
+  if (permission == NotificationPermission.granted) return;
+  await profiles.updateProfile(profile.withNotifications(false));
 }
 
 /// Remembers that the reminder opt-in was offered

@@ -56,6 +56,16 @@ abstract class UserProfile with _$UserProfile {
   factory UserProfile.fromJson(Map<String, dynamic> json) =>
       _$UserProfileFromJson(json);
 
+  /// Whether any notification is on: a meal or Bauchgefühl reminder, tips.
+  /// These say what the user wants; they only arrive while the OS allows
+  /// notifications (see `NotificationPermission`).
+  bool get anyNotificationOn =>
+      remindersEnabled || dailySummaryEnabled || pushEnabled;
+
+  /// This profile with every notification [on] (or off).
+  UserProfile withNotifications(bool on) =>
+      copyWith(remindersEnabled: on, dailySummaryEnabled: on, pushEnabled: on);
+
   bool get isComplete =>
       birthYear != null &&
       gender != null &&

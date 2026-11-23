@@ -43,6 +43,10 @@ class PushNotificationService {
     _log.debug('initialized');
   }
 
+  /// The OS notification permission, without asking for it.
+  static Future<AuthorizationStatus> authorizationStatus() async =>
+      (await _messaging.getNotificationSettings()).authorizationStatus;
+
   /// Request push notification permission. Returns true if granted.
   static Future<bool> requestPermission() async {
     final settings = await _messaging.requestPermission(

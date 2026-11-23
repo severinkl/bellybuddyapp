@@ -36,14 +36,22 @@ import '../../helpers/fixtures.dart';
 
 typedef _Step = BuddyOnboardingStep;
 
-/// Counts permission requests; grants them unless [grant] is false.
+/// Counts permission requests; grants them unless [grant] is false. The OS
+/// permission starts as never asked.
 class _CountingNotifications extends FakeNotificationRepository {
+  _CountingNotifications() {
+    permission = NotificationPermission.notDetermined;
+  }
+
   int permissionRequests = 0;
   bool grant = true;
 
   @override
   Future<bool> requestAllPermissions() async {
     permissionRequests++;
+    permission = grant
+        ? NotificationPermission.granted
+        : NotificationPermission.denied;
     return grant;
   }
 }
@@ -497,6 +505,53 @@ void main() {
       expect(h.container.read(buddyWelcomeProvider), BuddyWelcomeNotifier.line);
     });
 
+    testWidgets('„Später" without the OS permission turns the reminders off: '
+        'nothing claims to be on that never arrives', (tester) async {
+      final h = await pumpOnboarding(tester);
+      await tapKey(tester, BuddyOnboardingScreen.mealLaterKey);
+      await pickGoal(tester, '7 Tage');
+
+      await tapKey(tester, BuddyOnboardingScreen.reminderLaterKey);
+
+      expect(h.notifications.permissionRequests, 0);
+      final profile = h.container.read(profileProvider).value!;
+      expect(profile.remindersEnabled, isFalse);
+      expect(profile.dailySummaryEnabled, isFalse);
+      expect(profile.pushEnabled, isFalse);
+      expect(find.text('dashboard-stub'), findsOneWidget);
+    });
+
+    testWidgets('„Später" with the OS permission already given keeps the '
+        'reminders', (tester) async {
+      final h = await pumpOnboarding(tester);
+      h.notifications.permission = NotificationPermission.granted;
+      await tapKey(tester, BuddyOnboardingScreen.mealLaterKey);
+      await pickGoal(tester, '7 Tage');
+
+      await tapKey(tester, BuddyOnboardingScreen.reminderLaterKey);
+
+      final profile = h.container.read(profileProvider).value!;
+      expect(profile.remindersEnabled, isTrue);
+      expect(profile.dailySummaryEnabled, isTrue);
+    });
+
+    testWidgets('„Erinnerungen aktivieren" declined in the OS dialog turns the '
+        'reminders off', (tester) async {
+      final h = await pumpOnboarding(tester);
+      h.notifications.grant = false;
+      await tapKey(tester, BuddyOnboardingScreen.mealLaterKey);
+      await pickGoal(tester, '7 Tage');
+
+      await tapKey(tester, BuddyOnboardingScreen.reminderYesKey);
+
+      expect(h.notifications.permissionRequests, 1);
+      final profile = h.container.read(profileProvider).value!;
+      expect(profile.remindersEnabled, isFalse);
+      expect(profile.dailySummaryEnabled, isFalse);
+      expect(profile.pushEnabled, isFalse);
+      expect(find.text('dashboard-stub'), findsOneWidget);
+    });
+
     testWidgets('after registration without a meal: no streak moment; back '
         'skips it too', (tester) async {
       await pumpOnboarding(tester);
@@ -525,7 +580,10 @@ void main() {
 
       expect(h.notifications.permissionRequests, 1);
       expect(await modalShownPref(), isTrue);
-      expect(h.container.read(profileProvider).value?.pushEnabled, isTrue);
+      final profile = h.container.read(profileProvider).value!;
+      expect(profile.pushEnabled, isTrue);
+      expect(profile.remindersEnabled, isTrue);
+      expect(profile.dailySummaryEnabled, isTrue);
       expect(find.text('dashboard-stub'), findsOneWidget);
       expect(h.stored?.onboardingCompletedAt, isNotNull);
     });

@@ -67,7 +67,12 @@ class _NotificationOptInDialogState
   }
 
   Future<void> _dismiss() async {
-    await markNotificationOptInOffered();
+    try {
+      await postponeReminders(ref);
+    } catch (e) {
+      _log.error('failed to postpone notifications', e);
+      await markNotificationOptInOffered();
+    }
     if (!mounted) return;
     Navigator.pop(context, false);
   }
