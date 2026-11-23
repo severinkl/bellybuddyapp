@@ -13,13 +13,18 @@ import '../../../providers/buddy_provider.dart';
 import '../../../providers/buddy_welcome_provider.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../router/route_names.dart';
+import '../../../services/buddy/buddy_copy.dart';
 import '../../../services/buddy/buddy_mood_logic.dart';
+import '../../../services/buddy/daily_care.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/logger.dart';
 import '../../../widgets/buddy/buddy.dart';
 import '../../../widgets/buddy/streak_chip.dart';
+import '../../../widgets/buddy/streak_week_row.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../buddy/streak_goal_picker.dart';
+import 'care_ring.dart';
+import 'streak_sheet.dart';
 
 /// The hero's clock (mood, event age). Follows the Buddy's clock
 /// ([buddyTodayProvider]) unless overridden; tests pin it.
@@ -45,20 +50,25 @@ enum _Cue {
 _Cue _cueFor(BuddyAnnouncement a) =>
     _Cue.values.firstWhere((cue) => cue.announcement == a);
 
-/// The Buddy at the top of the dashboard: streak chip, the animated Buddy
-/// with its speech bubble, and the „🍎 Füttern" shortcut to the meal
-/// tracker.
+/// The Buddy at the top of the dashboard: the streak chip (opens „Dein
+/// Streak") over this week's row, his speech bubble, the Buddy inside the
+/// [CareRing] of his four daily needs, and a button for the next thing to
+/// log ([nextCareAction]).
 ///
 /// The mood follows today's entries (re-derived on every change and every
-/// minute). Everything it says waits until it is visible (`TickerMode` on,
-/// i.e. the dashboard is not under the splash or covered by another route
-/// or tab): the first mood line, the follow-up to a fresh [BuddyLogEvent]
-/// (which also reloads today's entries) and the Buddy's announcements.
-/// Without a Buddy status (loading, error, signed out) the Buddy still
-/// shows, named 'Buddy', without the streak chip. Its height is a share of
-/// the screen height, clamped.
+/// minute); his resting line names what he needs next ([BuddyCopy.care]),
+/// except while empathetic, in love, asleep or at night. Everything it says
+/// waits until it is visible (`TickerMode` on, i.e. the dashboard is not
+/// under the splash or covered by another route or tab): the first line,
+/// the follow-up to a fresh [BuddyLogEvent] (which also reloads today's
+/// entries) and the Buddy's announcements. Without a Buddy status (loading,
+/// error, signed out) the Buddy still shows, named 'Buddy', without the
+/// streak chip and week row.
 class BuddyHero extends ConsumerStatefulWidget {
   const BuddyHero({super.key});
+
+  /// The next-action button under the ring.
+  static const actionKey = Key('buddy_hero_next_action');
 
   @override
   ConsumerState<BuddyHero> createState() => _BuddyHeroState();
@@ -85,7 +95,10 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   static const _streakBrokenLine = 'Neuer Anlauf — ich bin dabei!';
   static const _saverEarnedLine = 'Du hast einen Streak-Saver verdient! 🛡';
   static const _newGoalTitle = "Wir haben's geschafft! Neues Ziel?";
-  static const _changeGoalTitle = 'Neues Streak-Ziel';
+
+  /// His resting line names his next need from this hour until [_nightFrom].
+  static const _dayFrom = 5;
+  static const _nightFrom = 22;
 
   late final BuddyController _buddy;
   late final AppLifecycleListener _lifecycle;
@@ -94,6 +107,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   /// Mood derived from today's entries.
   late BuddyMood _careMood;
+
+  /// What he needs next, from today's entries and the time of day.
+  late CareAction _careAction;
 
   /// Temporary mood on top of [_careMood] (empathetic after a bad log for
   /// this dashboard visit, in love while celebrating a reached goal).
@@ -132,7 +148,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// From a reached goal's celebration until its sheet has closed.
   bool _goalCelebrating = false;
 
-  /// The StreakChip's goal sheet is open.
+  /// The StreakChip's „Dein Streak" sheet is open.
   bool _chipSheetOpen = false;
 
   /// The local day for which "today counted" was already thanked for or
@@ -145,6 +161,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   void initState() {
     super.initState();
     _careMood = _deriveCareMood();
+    _careAction = _deriveCareAction();
     _buddy = BuddyController(mood: _careMood);
     _moodTimer = Timer.periodic(_moodInterval, (_) => _updateCareMood());
     _lifecycle = AppLifecycleListener(onResume: _onResume);
@@ -217,12 +234,26 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     );
   }
 
+  CareAction _deriveCareAction() {
+    final now = _now();
+    return nextCareAction(
+      DailyCare.fromEntries(ref.read(entriesProvider), now),
+      now,
+    );
+  }
+
   void _updateCareMood() {
     if (!mounted) return;
     final care = _deriveCareMood();
-    if (care == _careMood) return;
+    final action = _deriveCareAction();
+    if (care == _careMood && action == _careAction) return;
+    final moodChanged = care != _careMood;
     _careMood = care;
-    _applyMood();
+    if (action != _careAction) {
+      // The ring's glow and the button follow the clock too.
+      setState(() => _careAction = action);
+    }
+    if (moodChanged) _applyMood();
     if (_override == null) _sayMoodLine();
   }
 
@@ -233,13 +264,25 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   void _applyMood() => _buddy.mood = _override ?? _careMood;
 
+  /// His resting line: what he needs next by day, else the [mood]'s line
+  /// (empathetic, in love, asleep, or at night).
   String _moodLine(BuddyMood mood) {
     final status = ref.read(buddyProvider).value;
+    final name = status?.state.name ?? 'Buddy';
+    final now = _now();
+    final byDay = now.hour >= _dayFrom && now.hour < _nightFrom;
+    const moodOnly = {BuddyMood.empathetic, BuddyMood.inLove, BuddyMood.asleep};
+    if (byDay && !moodOnly.contains(mood)) {
+      return BuddyCopy.fill(
+        BuddyCopy.pick(BuddyCopy.care[_careAction]!, _rnd),
+        name: name,
+      );
+    }
     return moodLine(
       mood,
-      name: status?.state.name ?? 'Buddy',
+      name: name,
       streak: status?.streak ?? 0,
-      now: _now(),
+      now: now,
       rnd: _rnd,
     );
   }
@@ -453,20 +496,16 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _nextCue();
   }
 
-  /// The StreakChip's tap: sets or changes the streak goal. Ignored while a
-  /// reached goal is celebrated (its own sheet follows) or the sheet is
-  /// already open, so sheets never stack.
-  Future<void> _changeGoal() async {
-    if (_goalCelebrating || _chipSheetOpen) return;
-    final streak = ref.read(buddyProvider).value?.streak ?? 0;
+  /// The StreakChip's tap: „Dein Streak", where the goal can be set or
+  /// changed. Ignored while a reached goal is celebrated (its own sheet
+  /// follows) or the sheet is already open, so sheets never stack.
+  Future<void> _openStreakSheet() async {
+    final status = ref.read(buddyProvider).value;
+    if (status == null || _goalCelebrating || _chipSheetOpen) return;
     _chipSheetOpen = true;
     final int? goal;
     try {
-      goal = await showStreakGoalSheet(
-        context,
-        currentStreak: streak,
-        title: _changeGoalTitle,
-      );
+      goal = await showStreakSheet(context, status: status, today: _now());
     } finally {
       _chipSheetOpen = false;
     }
@@ -484,51 +523,98 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   // --- UI ---------------------------------------------------------------------
 
+  void _open(CareNeed need) => context.push(switch (need) {
+    CareNeed.food => RoutePaths.mealTracker,
+    CareNeed.drink => RoutePaths.drinkTracker,
+    CareNeed.gutFeeling => RoutePaths.gutFeelingTracker,
+    CareNeed.toilet => RoutePaths.toiletTracker,
+  });
+
   @override
   Widget build(BuildContext context) {
     final status = ref.watch(buddyProvider).value;
-    final height =
-        (MediaQuery.sizeOf(context).height * AppConstants.buddyHeroHeightFactor)
-            .clamp(
-              AppConstants.buddyHeroMinHeight,
-              AppConstants.buddyHeroMaxHeight,
-            );
-    return SizedBox(
-      width: double.infinity,
-      height: height,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // As tall as the dashboard's header icons, which sit on its right.
-          SizedBox(
-            height: AppConstants.iconBadgeLg,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: status == null
-                  ? null
-                  : StreakChip(
-                      streak: status.streak,
-                      todayCounted: status.todayCounted,
-                      onTap: streakGoalChoices(status.streak).isEmpty
-                          ? null
-                          : () => unawaited(_changeGoal()),
-                    ),
-            ),
+    final now = _now();
+    final care = DailyCare.fromEntries(ref.watch(entriesProvider), now);
+    final action = _careAction;
+    final name = status?.state.name ?? 'Buddy';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // As tall as the dashboard's header icons, which sit on its right.
+        SizedBox(
+          height: AppConstants.iconBadgeLg,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: status == null
+                ? null
+                : StreakChip(
+                    streak: status.streak,
+                    todayCounted: status.todayCounted,
+                    onTap: () => unawaited(_openStreakSheet()),
+                  ),
           ),
-          Expanded(
-            child: BuddyStage(
-              controller: _buddy,
-              name: status?.state.name ?? 'Buddy',
-              onPoke: _sayMoodLine,
-            ),
-          ),
+        ),
+        if (status != null) ...[
           AppConstants.gap8,
-          BbButton(
-            label: '🍎 Füttern',
-            onPressed: () => context.push(RoutePaths.mealTracker),
+          StreakWeekRow(
+            activeDays: status.weekDays,
+            today: now,
+            size: StreakWeekRowSize.small,
           ),
         ],
-      ),
+        AppConstants.gap8,
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            final diameter = CareRing.diameterFor(
+              width,
+              MediaQuery.sizeOf(context).height,
+            );
+            final buddySide = diameter * AppConstants.careRingBuddyFactor;
+            return Column(
+              children: [
+                SizedBox(
+                  height: AppConstants.buddyBubbleHeight,
+                  width: double.infinity,
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.bottomCenter,
+                    child: BuddySpeechBubble(
+                      controller: _buddy,
+                      maxWidth: math.min(
+                        AppConstants.buddyBubbleMaxWidth,
+                        width,
+                      ),
+                      tail: BuddyBubbleTail.down(
+                        shift: BuddyStage.faceShift(Size.square(buddySide)),
+                      ),
+                    ),
+                  ),
+                ),
+                CareRing(
+                  care: care,
+                  diameter: diameter,
+                  highlight: action.need,
+                  pulse: _buddy,
+                  onNeed: _open,
+                  buddy: AnimatedBuddy(
+                    controller: _buddy,
+                    name: name,
+                    onPoke: _sayMoodLine,
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+        AppConstants.gap12,
+        BbButton(
+          tapKey: BuddyHero.actionKey,
+          label: BuddyCopy.careButton[action]!,
+          onPressed: () => _open(action.need ?? CareNeed.food),
+        ),
+      ],
     );
   }
 }

@@ -95,11 +95,36 @@ class AppConstants {
   static const double reminderExampleLabelWidth = 112.0;
   static const double reminderExampleDotSize = 16.0;
 
-  // Dashboard Buddy hero (streak row, bubble, Buddy, „Füttern" button):
-  // this share of the screen height, clamped
-  static const double buddyHeroHeightFactor = 0.47;
-  static const double buddyHeroMinHeight = 340.0;
-  static const double buddyHeroMaxHeight = 440.0;
+  // Dashboard care ring: its diameter (at most this, this share of the
+  // width and of the screen height, at least the minimum), stroke, the gap
+  // between its four segments, and the Buddy's box inside it
+  static const double careRingMaxDiameter = 260.0;
+  static const double careRingMinDiameter = 170.0;
+  static const double careRingWidthFactor = 0.72;
+  static const double careRingHeightFactor = 0.3;
+  static const double careRingStroke = 13.0;
+  static const double careRingGapDegrees = 6.0;
+  static const double careRingBuddyFactor = 0.74;
+
+  // Its need bubbles (Essen n/3 …): size, the next need's glow, its pulse
+  static const double careNeedWidth = 88.0;
+  static const double careNeedMinHeight = 62.0;
+  static const double careNeedGlow = 5.0;
+  static const Offset careNeedShadowOffset = Offset(0, 3);
+  static const Duration careNeedPulse = Duration(milliseconds: 1400);
+
+  // Dashboard scroll view: lays out this far past the viewport, so every
+  // tutorial target exists even on a small phone
+  static const double dashboardCacheExtent = 1200.0;
+
+  // Dashboard „Heute" list: rows shown at most, a row's height and time
+  // column
+  static const int todayListMaxItems = 5;
+  static const double todayRowHeight = 40.0;
+  static const double todayRowTimeWidth = 44.0;
+
+  // „Dein Streak" sheet: the goal progress bar
+  static const double streakProgressHeight = 10.0;
 
   // Buddy reaction on the tracker success screens (bubble slot + Buddy)
   static const double buddyReactionSize = 220.0;

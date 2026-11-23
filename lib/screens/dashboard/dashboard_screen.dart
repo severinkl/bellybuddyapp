@@ -17,10 +17,10 @@ import '../../providers/profile_provider.dart';
 import '../../providers/tutorial_provider.dart';
 import '../../router/route_names.dart';
 import '../../utils/logger.dart';
-import '../../widgets/common/tracker_card.dart';
 import 'widgets/buddy_hero.dart';
 import 'widgets/feature_card.dart';
 import 'widgets/notification_opt_in_dialog.dart';
+import 'widgets/today_list.dart';
 import 'widgets/tutorial/show_dashboard_tutorial.dart';
 import 'widgets/tutorial/tutorial_keys.dart';
 
@@ -149,6 +149,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           color: AppTheme.primary,
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
+            // The tour scrolls to targets below the fold, which must be
+            // built: keep the whole (short) dashboard laid out.
+            scrollCacheExtent: const ScrollCacheExtent.pixels(
+              AppConstants.dashboardCacheExtent,
+            ),
             slivers: [
               SliverToBoxAdapter(
                 child: Padding(
@@ -175,12 +180,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               const SliverToBoxAdapter(
                 child: Padding(
                   padding: EdgeInsets.symmetric(
-                    horizontal: AppConstants.spacing12,
+                    horizontal: AppConstants.spacingLg,
                   ),
-                  child: _TrackerCards(),
+                  child: TodayList(),
                 ),
               ),
-              const SliverToBoxAdapter(child: AppConstants.gap32),
+              const SliverToBoxAdapter(child: AppConstants.gap24),
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: Padding(
@@ -224,35 +229,6 @@ class _DashboardHeader extends StatelessWidget {
           icon: Icons.settings,
           size: AppConstants.iconBadgeLg,
           onPressed: () => context.push(RoutePaths.settings),
-        ),
-      ],
-    );
-  }
-}
-
-class _TrackerCards extends StatelessWidget {
-  const _TrackerCards();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: TrackerCard(
-            key: TutorialKeys.bauchgefuehl,
-            svgPath: AppConstants.logoSvg,
-            label: 'Bauchgefühl',
-            onTap: () => context.push(RoutePaths.gutFeelingTracker),
-          ),
-        ),
-        const SizedBox(width: AppConstants.spacing12),
-        Expanded(
-          child: TrackerCard(
-            key: TutorialKeys.klo,
-            svgPath: AppConstants.toiletPaperSvg,
-            label: 'Klo',
-            onTap: () => context.push(RoutePaths.toiletTracker),
-          ),
         ),
       ],
     );

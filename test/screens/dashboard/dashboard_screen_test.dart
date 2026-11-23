@@ -8,6 +8,8 @@ import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/screens/dashboard/dashboard_screen.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/today_list.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/dashboard_tutorial_steps.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_keys.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
@@ -65,7 +67,7 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('Tipps'), findsOneWidget);
+      expect(find.text('Tipps', skipOffstage: false), findsOneWidget);
     });
 
     testWidgets('renders feature card Alternativen', (tester) async {
@@ -75,7 +77,7 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('Alternativen'), findsOneWidget);
+      expect(find.text('Alternativen', skipOffstage: false), findsOneWidget);
     });
 
     testWidgets('renders feature card Rezepte', (tester) async {
@@ -85,20 +87,23 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('Rezepte'), findsOneWidget);
+      expect(find.text('Rezepte', skipOffstage: false), findsOneWidget);
     });
 
-    testWidgets('renders TrackerCards with Bauchgefühl and Klo', (
-      tester,
-    ) async {
+    testWidgets('renders the care ring with all four needs and the Heute '
+        'list', (tester) async {
       await tester.pumpWithProviders(
         const DashboardScreen(),
         overrides: _overrides(),
       );
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('Bauchgefühl'), findsOneWidget);
-      expect(find.text('Klo'), findsOneWidget);
+      expect(find.byType(CareRing), findsOneWidget);
+      for (final label in ['Essen', 'Trinken', 'Bauchgefühl', 'Klo']) {
+        expect(find.text(label), findsOneWidget, reason: label);
+      }
+      expect(find.byType(TodayList), findsOneWidget);
+      expect(find.text('Heute'), findsOneWidget);
     });
 
     testWidgets('renders Für dich erstellt section header', (tester) async {
@@ -108,7 +113,10 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('Für dich erstellt'), findsOneWidget);
+      expect(
+        find.text('Für dich erstellt', skipOffstage: false),
+        findsOneWidget,
+      );
     });
 
     testWidgets('shows the Buddy hero with the header icons top-right', (
@@ -122,7 +130,7 @@ void main() {
 
       expect(find.byType(BuddyHero), findsOneWidget);
       expect(find.byType(AnimatedBuddy), findsOneWidget);
-      expect(find.text('🍎 Füttern'), findsOneWidget);
+      expect(find.byKey(BuddyHero.actionKey), findsOneWidget);
       // New user without a buddy_state row: the chip still shows the streak.
       expect(find.byType(StreakChip), findsOneWidget);
 
@@ -133,16 +141,15 @@ void main() {
       expect(settings.right, hero.right);
       expect(feedback.top, hero.top);
       expect(feedback.right, lessThan(settings.left));
-      // The hero is the first content; the tracker cards follow below it.
+      // The hero is the first content; the Heute list follows below it.
       expect(
-        tester.getRect(find.byKey(TutorialKeys.bauchgefuehl)).top,
+        tester.getRect(find.byType(TodayList)).top,
         greaterThan(hero.bottom),
       );
     });
 
-    testWidgets('390×844 phone: a big Buddy, tracker cards above the nav', (
-      tester,
-    ) async {
+    testWidgets('390×844 phone: a big Buddy, the ring and its button above '
+        'the nav', (tester) async {
       tester.view.physicalSize = const Size(390, 844);
       tester.view.devicePixelRatio = 1.0;
       tester.view.padding = const FakeViewPadding(top: 59, bottom: 34);
@@ -157,7 +164,7 @@ void main() {
 
       expect(
         tester.getSize(find.byType(AnimatedBuddy)).height,
-        greaterThanOrEqualTo(200),
+        greaterThanOrEqualTo(180),
       );
       // The bottom nav (64 + the 34 home-indicator inset) covers the rest.
       const navTop = 844.0 - 64 - 34;
@@ -167,6 +174,10 @@ void main() {
       );
       expect(
         tester.getRect(find.byKey(TutorialKeys.klo)).bottom,
+        lessThanOrEqualTo(navTop),
+      );
+      expect(
+        tester.getRect(find.byKey(BuddyHero.actionKey)).bottom,
         lessThanOrEqualTo(navTop),
       );
     });
@@ -191,7 +202,11 @@ void main() {
         TutorialKeys.feedback,
         TutorialKeys.settings,
       ]) {
-        expect(find.byKey(key), findsOneWidget, reason: '$key');
+        expect(
+          find.byKey(key, skipOffstage: false),
+          findsOneWidget,
+          reason: '$key',
+        );
       }
       expect(find.byKey(TutorialKeys.buddy), findsOneWidget);
       expect(tester.widget(find.byKey(TutorialKeys.buddy)), isA<BuddyHero>());

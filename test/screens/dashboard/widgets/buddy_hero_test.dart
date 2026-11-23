@@ -18,8 +18,11 @@ import 'package:belly_buddy/providers/buddy_welcome_provider.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/streak_sheet.dart';
 import 'package:belly_buddy/services/buddy/buddy_copy.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
+import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
 
@@ -112,6 +115,8 @@ const _saverUsedLine = 'Puh! Dein Streak-Saver hat uns gestern gerettet 🛡';
 const _streakBrokenLine = 'Neuer Anlauf — ich bin dabei!';
 const _saverEarnedLine = 'Du hast einen Streak-Saver verdient! 🛡';
 const _goalTitle = "Wir haben's geschafft! Neues Ziel?";
+const _sheetTitle = 'Dein Streak';
+const _pickTitle = 'Neues Streak-Ziel';
 
 void main() {
   late DateTime now;
@@ -161,10 +166,16 @@ void main() {
             ),
           ),
         ),
-        GoRoute(
-          path: RoutePaths.mealTracker,
-          builder: (_, _) => const Scaffold(body: Text('meal-tracker-page')),
-        ),
+        for (final path in [
+          RoutePaths.mealTracker,
+          RoutePaths.drinkTracker,
+          RoutePaths.gutFeelingTracker,
+          RoutePaths.toiletTracker,
+        ])
+          GoRoute(
+            path: path,
+            builder: (_, _) => Scaffold(body: Text('page:$path')),
+          ),
       ],
     );
     addTearDown(router.dispose);
@@ -207,30 +218,106 @@ void main() {
     }
   }
 
+  /// Taps the StreakChip and lets „Dein Streak" open.
+  Future<void> openSheet(WidgetTester tester) async {
+    await tester.tap(find.byType(StreakChip));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+  }
+
+  /// In „Dein Streak": „Ziel ändern" → the goal list.
+  Future<void> openGoalList(WidgetTester tester) async {
+    await tester.ensureVisible(find.byKey(StreakSheet.changeGoalKey));
+    await tester.tap(find.byKey(StreakSheet.changeGoalKey));
+    await tester.pump();
+  }
+
+  /// The care pool [action]'s lines as the hero fills them for Bubu.
+  List<String> careLines(CareAction action) => [
+    for (final l in BuddyCopy.care[action]!) BuddyCopy.fill(l, name: 'Bubu'),
+  ];
+
   void emit(ProviderContainer c, LogSentiment sentiment, {DateTime? at}) => c
       .read(buddyEventsProvider.notifier)
       .emit(BuddyLogEvent(EntryKind.meal, sentiment, at: at ?? now));
 
   group('BuddyHero', () {
-    testWidgets('renders the animated Buddy and the Füttern button', (
+    testWidgets('renders the Buddy in the care ring and the next action', (
       tester,
     ) async {
       await pumpHero(tester);
 
       expect(find.byType(AnimatedBuddy), findsOneWidget);
-      expect(find.text('🍎 Füttern'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: find.byType(CareRing),
+          matching: find.byType(AnimatedBuddy),
+        ),
+        findsOneWidget,
+      );
+      // 14:00, nothing eaten: lunch.
+      expect(find.text('🍝 Mittagessen eintragen'), findsOneWidget);
+      expect(find.byKey(BuddyHero.actionKey), findsOneWidget);
     });
 
-    testWidgets('no entries at 14:00 → hungry, greets with a hungry line', (
-      tester,
-    ) async {
+    testWidgets('no entries at 14:00 → hungry, asks for lunch', (tester) async {
       await pumpHero(tester);
       await tick(tester);
 
       final c = controller(tester);
       expect(c.mood, BuddyMood.hungry);
-      expect(BuddyCopy.mood[BuddyMood.hungry], contains(c.bubble));
-      expect(find.text(c.bubble!), findsOneWidget);
+      expect(careLines(CareAction.lunch), contains(c.bubble));
+    });
+
+    testWidgets('lunch logged → he asks for a drink, Trinken glows', (
+      tester,
+    ) async {
+      entries = _FakeEntries(
+        EntriesState(
+          meals: [testMealEntry(trackedAt: DateTime(2026, 11, 22, 13))],
+        ),
+      );
+      await pumpHero(tester);
+      await tick(tester);
+
+      expect(careLines(CareAction.drink), contains(controller(tester).bubble));
+      expect(find.text('💧 Getränk eintragen'), findsOneWidget);
+      expect(
+        tester.widget<CareRing>(find.byType(CareRing)).highlight,
+        CareNeed.drink,
+      );
+      expect(find.text('🍽 1/3'), findsOneWidget);
+    });
+
+    testWidgets('a bad log keeps the empathetic line, not a care line', (
+      tester,
+    ) async {
+      final container = await pumpHero(tester);
+      await tick(tester);
+      emit(container, LogSentiment.bad);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      await tick(tester);
+
+      final c = controller(tester);
+      expect(c.mood, BuddyMood.empathetic);
+      expect(careLines(CareAction.lunch), isNot(contains(c.bubble)));
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('at night he says a sleepy line instead of a care line', (
+      tester,
+    ) async {
+      now = DateTime(2026, 11, 22, 23);
+      await pumpHero(tester);
+      await tick(tester);
+
+      final c = controller(tester);
+      expect(c.mood, BuddyMood.sleepy);
+      expect(
+        BuddyCopy.sleepyNight.map((l) => BuddyCopy.fill(l, name: 'Bubu')),
+        contains(c.bubble),
+      );
     });
 
     testWidgets('a pending welcome is his first line, once', (tester) async {
@@ -267,24 +354,25 @@ void main() {
       expect(chip.todayCounted, isFalse);
     });
 
-    testWidgets('tapping the StreakChip lets the user set a new goal', (
-      tester,
-    ) async {
+    testWidgets('the StreakChip opens „Dein Streak"; „Ziel ändern" sets a '
+        'new goal', (tester) async {
       await pumpHero(tester);
 
-      await tester.tap(find.byType(StreakChip));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-      expect(find.text('Neues Streak-Ziel'), findsOneWidget);
-      // Streak 4: the next three goals.
+      await openSheet(tester);
+      expect(find.text(_sheetTitle), findsOneWidget);
+      expect(find.text('Streak-Saver: 1'), findsOneWidget);
+
+      await openGoalList(tester);
+      expect(find.text(_pickTitle), findsOneWidget);
+      // Streak 4: the next goals.
       expect(find.text('7 Tage'), findsOneWidget);
-      expect(find.text('30 Tage'), findsOneWidget);
+      expect(find.text('14 Tage'), findsOneWidget);
 
       await tester.tap(find.text('14 Tage'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.text('Neues Streak-Ziel'), findsNothing);
+      expect(find.text(_pickTitle), findsNothing);
       expect(buddy.goals, [14]);
     });
 
@@ -298,7 +386,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.text('Neues Streak-Ziel'), findsOneWidget);
+      expect(find.text(_sheetTitle), findsOneWidget);
     });
 
     testWidgets('the StreakChip is ignored while a reached goal is '
@@ -313,15 +401,13 @@ void main() {
       await tick(tester);
 
       // Celebrating: a chip tap opens nothing.
-      await tester.tap(find.byType(StreakChip));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-      expect(find.text('Neues Streak-Ziel'), findsNothing);
+      await openSheet(tester);
+      expect(find.text(_sheetTitle), findsNothing);
 
       await tester.pump(const Duration(seconds: 2));
       await tester.pump(const Duration(milliseconds: 500));
       expect(find.text(_goalTitle), findsOneWidget);
-      expect(find.text('Neues Streak-Ziel'), findsNothing);
+      expect(find.text(_sheetTitle), findsNothing);
 
       await tester.tap(find.text('14 Tage'));
       await tester.pump();
@@ -329,20 +415,16 @@ void main() {
       expect(buddy.goals, [14]);
 
       // Done: the chip works again.
-      await tester.tap(find.byType(StreakChip));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-      expect(find.text('Neues Streak-Ziel'), findsOneWidget);
+      await openSheet(tester);
+      expect(find.text(_sheetTitle), findsOneWidget);
     });
 
     testWidgets('a goal reached while the StreakChip sheet is open does not '
         'stack its own sheet on top', (tester) async {
       buddy = _FakeBuddy(() => _status(streak: 7));
       await pumpHero(tester);
-      await tester.tap(find.byType(StreakChip));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
-      expect(find.text('Neues Streak-Ziel'), findsOneWidget);
+      await openSheet(tester);
+      expect(find.text(_sheetTitle), findsOneWidget);
 
       buddy.push(
         _status(
@@ -355,17 +437,18 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.text(_goalTitle), findsNothing);
-      expect(find.text('Neues Streak-Ziel'), findsOneWidget);
+      expect(find.text(_sheetTitle), findsOneWidget);
       expect(buddy.shown, [BuddyAnnouncement.goalReached]);
     });
 
-    testWidgets('no goal left above the streak → the chip is no button', (
-      tester,
-    ) async {
+    testWidgets('no goal left above the streak → „Dein Streak" without '
+        '„Ziel ändern"', (tester) async {
       buddy = _FakeBuddy(() => _status(streak: 100));
       await pumpHero(tester);
 
-      expect(tester.widget<StreakChip>(find.byType(StreakChip)).onTap, isNull);
+      await openSheet(tester);
+      expect(find.text(_sheetTitle), findsOneWidget);
+      expect(find.byKey(StreakSheet.changeGoalKey), findsNothing);
     });
 
     testWidgets('new user without a Buddy row → chip shows 0 Tage', (
@@ -638,9 +721,8 @@ void main() {
       final c = controller(tester);
       expect(c.mood, BuddyMood.happy);
       expect(c.bubble, isNot(startsWith('Danke!')));
-      expect([
-        ...BuddyCopy.mood[BuddyMood.happy]!.map(_fill),
-      ], contains(c.bubble));
+      // Lunch logged at 14:00: he asks for a drink next.
+      expect(careLines(CareAction.drink), contains(c.bubble));
       await tester.pump(const Duration(seconds: 5));
     });
 
@@ -767,7 +849,7 @@ void main() {
       await tick(tester);
 
       final c = controller(tester);
-      expect(BuddyCopy.mood[BuddyMood.hungry], contains(c.bubble));
+      expect(careLines(CareAction.lunch), contains(c.bubble));
     });
 
     testWidgets('mounted hidden: announcements play once shown, no greeting', (
@@ -820,20 +902,21 @@ void main() {
       expect(buddy.goals, [30]);
     });
 
-    testWidgets('height follows the screen (clamped)', (tester) async {
-      tester.view.physicalSize = const Size(390, 844);
+    testWidgets('the ring follows the screen (clamped)', (tester) async {
+      tester.view.physicalSize = const Size(393, 852);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
       await pumpHero(tester);
 
+      // min(260, 393 × 0.72, 852 × 0.3) = 255.6
       expect(
-        tester.getSize(find.byType(BuddyHero)).height,
-        moreOrLessEquals(844 * 0.47),
+        tester.getSize(find.byType(CareRing)).height,
+        moreOrLessEquals(255.6),
       );
       expect(
         tester.getSize(find.byType(AnimatedBuddy)).height,
-        greaterThanOrEqualTo(200),
+        greaterThanOrEqualTo(180),
       );
     });
 
@@ -850,20 +933,49 @@ void main() {
 
       final c = controller(tester);
       expect(c.mood, BuddyMood.hungry);
-      expect(BuddyCopy.mood[BuddyMood.hungry], contains(c.bubble));
+      // Still before 10:30: breakfast.
+      expect(careLines(CareAction.breakfast), contains(c.bubble));
     });
 
-    testWidgets('tapping „Füttern" pushes the meal tracker', (tester) async {
+    testWidgets('the slot changes with the clock: button follows', (
+      tester,
+    ) async {
+      now = DateTime(2026, 11, 22, 10, 29);
+      await pumpHero(tester);
+      expect(find.text('🍳 Frühstück eintragen'), findsOneWidget);
+
+      now = DateTime(2026, 11, 22, 10, 30);
+      await tester.pump(const Duration(minutes: 1));
+      await tester.pump();
+
+      expect(find.text('🍝 Mittagessen eintragen'), findsOneWidget);
+    });
+
+    testWidgets('the next-action button opens its tracker', (tester) async {
       await pumpHero(tester);
 
-      await tester.tap(find.text('🍎 Füttern'));
+      await tester.tap(find.byKey(BuddyHero.actionKey));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.text('meal-tracker-page'), findsOneWidget);
+      expect(find.text('page:${RoutePaths.mealTracker}'), findsOneWidget);
     });
+
+    for (final (need, path) in [
+      (CareNeed.food, RoutePaths.mealTracker),
+      (CareNeed.drink, RoutePaths.drinkTracker),
+      (CareNeed.gutFeeling, RoutePaths.gutFeelingTracker),
+      (CareNeed.toilet, RoutePaths.toiletTracker),
+    ]) {
+      testWidgets('the ${need.name} bubble opens $path', (tester) async {
+        await pumpHero(tester);
+
+        await tester.tap(find.byKey(CareRing.needKey(need)));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(find.text('page:$path'), findsOneWidget);
+      });
+    }
   });
 }
-
-/// A happy pool line as `moodLine` fills it for Bubu with streak 5.
-String _fill(String line) => BuddyCopy.fill(line, name: 'Bubu', streak: 5);
