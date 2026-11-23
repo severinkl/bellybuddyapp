@@ -350,6 +350,67 @@ void main() {
     );
   });
 
+  group('entriesRevisionProvider', () {
+    setUp(() {
+      when(
+        () => mockRepo.fetchForDate(
+          userId: any(named: 'userId'),
+          date: any(named: 'date'),
+          ordered: any(named: 'ordered'),
+        ),
+      ).thenAnswer((_) async => testEntryQueryResult());
+      when(
+        () => mockRepo.insertEntry(any(), any(), userId: any(named: 'userId')),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockRepo.updateEntry(any(), any(), any()),
+      ).thenAnswer((_) async {});
+      when(() => mockRepo.deleteEntry(any(), any())).thenAnswer((_) async {});
+      when(() => mockRepo.deleteByType(any(), any())).thenAnswer((_) async {});
+    });
+
+    test('rises once per entry write: log, edit, moved date, delete', () async {
+      final container = makeContainer();
+      final revisions = <int>[];
+      container.listen(
+        entriesRevisionProvider,
+        (_, next) => revisions.add(next),
+      );
+      final notifier = container.read(entriesProvider.notifier);
+
+      await notifier.addMeal(testMealEntry());
+      // A meal edit, also when it moves the meal to another day.
+      await notifier.updateMeal(testMealEntry());
+      await notifier.updateGutFeelingById(
+        'gut-1',
+        bloating: 1,
+        gas: 1,
+        cramps: 1,
+        fullness: 1,
+      );
+      await notifier.deleteByType('meal', 'meal-1');
+      await notifier.deleteToiletEntry('toilet-1');
+
+      expect(revisions, [1, 2, 3, 4, 5]);
+    });
+
+    test('loads and failed writes leave it alone', () async {
+      when(
+        () => mockRepo.deleteByType(any(), any()),
+      ).thenThrow(Exception('offline'));
+      final container = makeContainer();
+      final notifier = container.read(entriesProvider.notifier);
+
+      await notifier.loadEntries(DateTime(2026, 3, 25));
+      await expectLater(
+        notifier.deleteByType('meal', 'meal-1'),
+        throwsA(isA<Exception>()),
+      );
+
+      expect(container.read(entriesRevisionProvider), 0);
+    });
+  });
+
   group('EntriesNotifier.reset', () {
     test('clears state back to defaults', () async {
       final result = testEntryQueryResult();

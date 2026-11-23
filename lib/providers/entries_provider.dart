@@ -54,7 +54,8 @@ class EntriesState {
 }
 
 /// The entries of one day. Every write through it reloads that day, so the
-/// state stays current whoever wrote (a tracker, the diary).
+/// state stays current whoever wrote (a tracker, the diary), and raises
+/// [entriesRevisionProvider].
 class EntriesNotifier extends Notifier<EntriesState> {
   static const _log = AppLogger('EntriesNotifier');
 
@@ -100,11 +101,13 @@ class EntriesNotifier extends Notifier<EntriesState> {
 
   bool _isLatest(int load) => ref.mounted && load == _load;
 
-  /// Runs [write], then reloads the loaded day in the background so the
-  /// state shows it. Before the first load there is nothing to reload.
+  /// Runs [write], announces it ([entriesRevisionProvider]), then reloads
+  /// the loaded day in the background so the state shows it. Before the
+  /// first load there is nothing to reload.
   Future<void> _write(Future<void> Function() write) async {
     await write();
     if (!ref.mounted) return;
+    ref.read(entriesRevisionProvider.notifier)._bump();
     final day = state.day;
     // A failing reload is logged by loadEntries; the write itself is done.
     if (day != null) loadEntries(day).ignore();
@@ -212,3 +215,30 @@ class EntriesNotifier extends Notifier<EntriesState> {
 final entriesProvider = NotifierProvider<EntriesNotifier, EntriesState>(
   EntriesNotifier.new,
 );
+
+/// The entry-write signal: rises by one after every entry write that went
+/// through [EntriesNotifier] (insert, update, delete of any kind: a
+/// tracker's log, a meal edit or moved date, a diary edit or delete), once
+/// the write is done. A failed write leaves it alone; loads never change it.
+///
+/// Whatever is computed from the user's entries beyond the day
+/// [entriesProvider] holds (the insight progress, the insights) listens to
+/// it to recompute after any write, whoever made it:
+///
+/// ```dart
+/// ref.listen(entriesRevisionProvider, (_, _) => unawaited(refresh()));
+/// ```
+///
+/// Only the value's change means something; it starts at 0 each session.
+final entriesRevisionProvider = NotifierProvider<EntriesRevision, int>(
+  EntriesRevision.new,
+);
+
+/// The count behind [entriesRevisionProvider]; only [EntriesNotifier]
+/// raises it.
+class EntriesRevision extends Notifier<int> {
+  @override
+  int build() => 0;
+
+  void _bump() => state++;
+}

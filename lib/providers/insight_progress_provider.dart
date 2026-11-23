@@ -6,13 +6,13 @@ import '../models/insight_progress.dart';
 import '../repositories/entry_repository.dart';
 import '../utils/logger.dart';
 import 'auth_provider.dart';
-import 'buddy_events_provider.dart';
 import 'buddy_provider.dart';
+import 'entries_provider.dart';
 
 /// The signed-in user's [InsightProgress] as of the app's clock
 /// ([buddyClockProvider]); zero progress while signed out. Fetched again
-/// after every log ([buddyEventsProvider]) and on [refresh] (Home's load and
-/// pull-to-refresh).
+/// after every entry write ([entriesRevisionProvider]: a log, an edit, a
+/// delete) and on [refresh] (Home's load and pull-to-refresh).
 class InsightProgressNotifier extends AsyncNotifier<InsightProgress> {
   static const _log = AppLogger('InsightProgress');
 
@@ -21,9 +21,7 @@ class InsightProgressNotifier extends AsyncNotifier<InsightProgress> {
   @override
   Future<InsightProgress> build() async {
     final userId = ref.watch(currentUserIdProvider);
-    ref.listen(buddyEventsProvider, (_, event) {
-      if (event != null) unawaited(refresh());
-    });
+    ref.listen(entriesRevisionProvider, (_, _) => unawaited(refresh()));
     if (userId == null) return _none;
     try {
       return await _fetch(userId);
@@ -66,7 +64,7 @@ class InsightProgressNotifier extends AsyncNotifier<InsightProgress> {
 }
 
 /// No automatic rebuild retries: a failed load hides the card until the next
-/// log or refresh.
+/// entry write or refresh.
 Duration? _noRetry(int retryCount, Object error) => null;
 
 /// Stage 1's progress toward the first patterns on Home; Stage 2 replaces it

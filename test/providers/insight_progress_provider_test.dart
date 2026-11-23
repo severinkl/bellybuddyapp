@@ -6,12 +6,14 @@ import 'package:belly_buddy/models/insight_progress.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
+import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/providers/insight_progress_provider.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 
 import '../helpers/fakes.dart';
+import '../helpers/fixtures.dart';
 import '../helpers/riverpod_helpers.dart';
 
 Future<void> settle() async {
@@ -91,7 +93,7 @@ void main() {
       expect(entryRepo.insightProgressFetches, [now]);
     });
 
-    test('provider refetches after a log event', () async {
+    test('provider refetches after a log', () async {
       final c = makeContainer();
       await c.read(insightProgressProvider.future);
       entryRepo.insightProgress = const InsightProgress(
@@ -99,7 +101,9 @@ void main() {
         gutFeelingEntries: 2,
       );
 
-      c.read(buddyEventsProvider.notifier).emit(event);
+      await c
+          .read(entriesProvider.notifier)
+          .addGutFeeling(testGutFeelingEntry());
       await settle();
 
       expect(entryRepo.insightProgressFetches, hasLength(2));
@@ -107,6 +111,57 @@ void main() {
         c.read(insightProgressProvider).value,
         const InsightProgress(activeDays: 3, gutFeelingEntries: 2),
       );
+    });
+
+    test('provider refetches after a diary delete', () async {
+      final c = makeContainer();
+      await c.read(insightProgressProvider.future);
+      entryRepo.insightProgress = const InsightProgress(
+        activeDays: 1,
+        gutFeelingEntries: 0,
+      );
+
+      await c.read(entriesProvider.notifier).deleteByType('gutFeeling', 'g1');
+      await settle();
+
+      expect(entryRepo.insightProgressFetches, hasLength(2));
+      expect(
+        c.read(insightProgressProvider).value,
+        const InsightProgress(activeDays: 1, gutFeelingEntries: 0),
+      );
+    });
+
+    test(
+      'provider refetches after an edit (a meal moved to another day)',
+      () async {
+        final c = makeContainer();
+        await c.read(insightProgressProvider.future);
+        entryRepo.insightProgress = const InsightProgress(
+          activeDays: 3,
+          gutFeelingEntries: 1,
+        );
+
+        await c
+            .read(entriesProvider.notifier)
+            .updateMeal(testMealEntry(trackedAt: DateTime(2026, 11, 20, 9)));
+        await settle();
+
+        expect(entryRepo.insightProgressFetches, hasLength(2));
+        expect(
+          c.read(insightProgressProvider).value,
+          const InsightProgress(activeDays: 3, gutFeelingEntries: 1),
+        );
+      },
+    );
+
+    test('a Buddy event alone (no write) fetches nothing', () async {
+      final c = makeContainer();
+      await c.read(insightProgressProvider.future);
+
+      c.read(buddyEventsProvider.notifier).emit(event);
+      await settle();
+
+      expect(entryRepo.insightProgressFetches, hasLength(1));
     });
 
     test('refresh during the first load joins it', () async {
