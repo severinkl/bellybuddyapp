@@ -60,5 +60,23 @@ void main() {
       expect(find.text('Mit Icon'), findsOneWidget);
       expect(find.byIcon(Icons.check), findsOneWidget);
     });
+
+    testWidgets('an outlined button carries its tapKey too', (tester) async {
+      const key = Key('outlined');
+      var pressed = false;
+      await tester.pumpWithProviders(
+        Scaffold(
+          body: BbButton(
+            tapKey: key,
+            label: 'Umriss',
+            isOutlined: true,
+            onPressed: () => pressed = true,
+          ),
+        ),
+      );
+      await tester.tap(find.byKey(key));
+      await tester.pump();
+      expect(pressed, isTrue);
+    });
   });
 }
