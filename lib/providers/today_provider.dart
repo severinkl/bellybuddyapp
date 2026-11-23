@@ -13,9 +13,8 @@ import 'buddy_provider.dart';
 /// Moves on at local midnight (one timer to the next, armed by the
 /// calendar so a DST change can't shift it) and, since timers stand still
 /// while an iOS device sleeps, when the app is back in the foreground.
-/// Unchanged otherwise: a listener hears of each new day once, also one
-/// that came while it was paused (Riverpod replays the latest change on
-/// resume).
+/// Unchanged otherwise, so a listener hears of a new day once; a paused one
+/// hears of the latest once it resumes (Riverpod replays it).
 class TodayNotifier extends Notifier<DateTime> {
   Timer? _midnight;
 
