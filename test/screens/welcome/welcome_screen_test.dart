@@ -233,6 +233,31 @@ void main() {
       expect(find.text('registration-page'), findsOneWidget);
     });
 
+    testWidgets('tapping fast through the story does not start the flow '
+        'by accident; a tap once the last line has settled does', (
+      tester,
+    ) async {
+      final router = await _pump(tester);
+      await tester.tap(find.byKey(WelcomeScreen.buddyAreaKey));
+      await tester.pump(_step);
+      expect(find.text(_line1), findsOneWidget);
+
+      // Skipping quickly: line 2, line 3, and one tap too many.
+      for (final line in [_line2, _line3]) {
+        await tester.tap(find.byKey(WelcomeScreen.buddyAreaKey));
+        await tester.pump(const Duration(milliseconds: 150));
+        expect(find.text(line), findsOneWidget);
+      }
+      await tester.tap(find.byKey(WelcomeScreen.buddyAreaKey));
+      await _settleNavigation(tester);
+      expect(_path(router), RoutePaths.welcome);
+      expect(find.text(_line3), findsOneWidget);
+
+      await tester.tap(find.byKey(WelcomeScreen.buddyAreaKey));
+      await _settleNavigation(tester);
+      expect(_path(router), RoutePaths.registration);
+    });
+
     testWidgets('tapping the Buddy mid-story does not start the flow', (
       tester,
     ) async {

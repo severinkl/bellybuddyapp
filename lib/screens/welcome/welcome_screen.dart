@@ -61,6 +61,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
 
   static const _hintPulse = Duration(milliseconds: 1400);
 
+  /// A tap on the area starts the sign-up only once the last line has been
+  /// up this long: a quick tap meant to skip a line must not start it.
+  static const _startGrace = Duration(milliseconds: 800);
+
   final _buddy = BuddyController(mood: BuddyMood.asleep);
   late final AnimationController _pulse = AnimationController(
     vsync: this,
@@ -72,6 +76,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   int _line = -1;
   Timer? _timer;
   bool _calm = false;
+
+  /// A tap on the area starts the sign-up ([_startGrace] after the last
+  /// line).
+  bool _startArmed = false;
 
   @override
   void didChangeDependencies() {
@@ -129,7 +137,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       _phase = last ? _Phase.ready : _Phase.talking;
     });
     _syncPulse();
-    if (!last) _timer = Timer(_linePace, () => _showLine(i + 1));
+    _timer = last
+        ? Timer(_startGrace, () => _startArmed = true)
+        : Timer(_linePace, () => _showLine(i + 1));
   }
 
   void _onAreaTap() {
@@ -139,7 +149,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       case _Phase.talking:
         _showLine(_line + 1);
       case _Phase.ready:
-        _start();
+        if (_startArmed) _start();
       case _Phase.waking:
         break;
     }
@@ -187,8 +197,8 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                   excludeFromSemantics: true,
                   onTap: _onAreaTap,
                   // The area owns every tap: it wakes the Buddy, skips
-                  // through the story, and once he is awake starts like
-                  // „Los geht's".
+                  // through the story, and once he is awake (his last line
+                  // settled) starts like „Los geht's".
                   child: IgnorePointer(
                     child: LayoutBuilder(builder: _buildStage),
                   ),
