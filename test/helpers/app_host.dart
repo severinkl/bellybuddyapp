@@ -16,6 +16,7 @@ import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/drink_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
+import 'package:belly_buddy/repositories/knowledge_repository.dart';
 import 'package:belly_buddy/repositories/meal_media_repository.dart';
 import 'package:belly_buddy/repositories/notification_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
@@ -91,6 +92,9 @@ List<Override> baseOverrides({
   mealMediaRepositoryProvider.overrideWithValue(FakeMealMediaRepository()),
   notificationRepositoryProvider.overrideWithValue(
     FakeNotificationRepository(),
+  ),
+  knowledgeRepositoryProvider.overrideWithValue(
+    FakeKnowledgeRepository(articles: testKnowledgeArticles()),
   ),
   upgradeDecisionProvider.overrideWith((_) => Future.value(decision)),
 ];

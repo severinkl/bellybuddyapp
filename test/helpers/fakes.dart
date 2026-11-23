@@ -7,6 +7,7 @@ import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/drink.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
+import 'package:belly_buddy/models/knowledge_article.dart';
 import 'package:belly_buddy/models/insight_rules.dart';
 import 'package:belly_buddy/models/insight_source.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
@@ -20,6 +21,7 @@ import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/drink_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
+import 'package:belly_buddy/repositories/knowledge_repository.dart';
 import 'package:belly_buddy/repositories/meal_media_repository.dart';
 import 'package:belly_buddy/repositories/notification_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
@@ -762,4 +764,38 @@ InsightSource insightSourceFor({
     ],
     activityInstants: [for (var i = 0; i < activeDays; i++) dayBefore(i)],
   );
+}
+
+class FakeKnowledgeRepository implements KnowledgeRepository {
+  FakeKnowledgeRepository({List<KnowledgeArticle>? articles, this.cache})
+    : articles = articles ?? testKnowledgeArticles();
+
+  final List<KnowledgeArticle> articles;
+
+  /// Thrown by [fetchArticles] when set.
+  Object? fetchError;
+  int fetchCount = 0;
+
+  /// The in-memory cache.
+  KnowledgeFeed? cache;
+
+  /// Every feed passed to [writeCache].
+  final List<KnowledgeFeed> written = [];
+
+  @override
+  Future<List<KnowledgeArticle>> fetchArticles() async {
+    fetchCount++;
+    final error = fetchError;
+    if (error != null) throw error;
+    return articles;
+  }
+
+  @override
+  Future<KnowledgeFeed?> readCache() async => cache;
+
+  @override
+  Future<void> writeCache(KnowledgeFeed feed) async {
+    written.add(feed);
+    cache = feed;
+  }
 }

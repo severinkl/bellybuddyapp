@@ -228,6 +228,14 @@ class AppConstants {
 
   // SharedPreferences keys
   static const String keyNotificationModalShown = 'notification_modal_shown';
+
+  /// The myfodmap blog feed behind Wissen, how long a fetched copy counts as
+  /// fresh, and how long a fetch may take.
+  static const String knowledgeFeedUrl =
+      'https://www.myfodmap.at/blog-feed.xml';
+  static const Duration knowledgeFeedMaxAge = Duration(hours: 6);
+  static const Duration knowledgeFeedTimeout = Duration(seconds: 10);
+  static const String keyKnowledgeFeedCache = 'knowledge_feed_cache_v1';
   static const String keyBuddyStatePrefix = 'buddy_state_';
 
   /// Prefix of the Buddy announcement flags
