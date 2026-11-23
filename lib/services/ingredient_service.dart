@@ -140,7 +140,7 @@ class IngredientService {
     try {
       return await _client
           .from('meal_entries')
-          .select('id, title, tracked_at, image_url')
+          .select('id, title, tracked_at, image_url, ingredients')
           .inFilter('id', mealIds);
     } catch (e, st) {
       _log.error('fetchMealDetails failed', e, st);

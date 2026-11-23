@@ -319,6 +319,22 @@ void main() {
       expect(result, hasLength(1));
       verify(() => fb.inFilter('id', ['meal-1', 'meal-2'])).called(1);
     });
+
+    test('also loads the meals\' ingredients (to name a suggestion whose '
+        'ingredient row is hidden)', () async {
+      final queryBuilder = MockSupabaseQueryBuilder();
+      final fb = SettlableFilterBuilder(Future.value([]));
+      when(() => client.from('meal_entries')).thenAnswer((_) => queryBuilder);
+      when(() => queryBuilder.select(any())).thenAnswer((_) => fb);
+      when(() => fb.inFilter(any(), any())).thenAnswer((_) => fb);
+
+      await service.fetchMealDetails(['meal-1']);
+
+      final columns =
+          verify(() => queryBuilder.select(captureAny())).captured.single
+              as String;
+      expect(columns.split(RegExp(r',\s*')), contains('ingredients'));
+    });
   });
 
   group('IngredientService.markAllSeen', () {

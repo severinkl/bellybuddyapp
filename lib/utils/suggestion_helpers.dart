@@ -3,7 +3,10 @@ import '../models/replacement_ingredient.dart';
 
 class _GroupAccumulator {
   final String ingredientId;
-  final String ingredientName;
+
+  /// The embedded catalog name; null when row level security hides the
+  /// ingredient's row.
+  final String? ingredientName;
   final String? ingredientImageUrl;
   final String? helptext;
   final List<String> suggestionIds = [];
@@ -12,13 +15,50 @@ class _GroupAccumulator {
 
   _GroupAccumulator({
     required this.ingredientId,
-    required this.ingredientName,
+    this.ingredientName,
     this.ingredientImageUrl,
     this.helptext,
   });
 }
 
 abstract final class SuggestionHelpers {
+  /// A group's name when nothing tells which ingredient it is.
+  static const unknownIngredient = 'Unbekannte Zutat';
+
+  /// The ingredient a suggestion's [helptext] is about, when its catalog
+  /// row is hidden: the one of [candidates] (its meals' ingredients) the
+  /// text names first, as a word of its own (a German ending allowed:
+  /// „Zwiebel" in „Zwiebeln", not „Ei" in „Eiweiß"); else the name before
+  /// „enthält" of the server's fallback text („Knoblauch enthält …").
+  static String? nameFromHelptext(
+    String? helptext,
+    Iterable<String> candidates,
+  ) {
+    if (helptext == null || helptext.trim().isEmpty) return null;
+    String? best;
+    var bestAt = -1;
+    for (final candidate in candidates) {
+      final name = candidate.trim();
+      if (name.isEmpty) continue;
+      final match = RegExp(
+        '(?<!\\p{L})${RegExp.escape(name)}(?:e|n|s|en|es|er|ern)?(?!\\p{L})',
+        caseSensitive: false,
+        unicode: true,
+      ).firstMatch(helptext);
+      if (match == null) continue;
+      final at = match.start;
+      if (best == null ||
+          at < bestAt ||
+          (at == bestAt && name.length > best.length)) {
+        best = name;
+        bestAt = at;
+      }
+    }
+    if (best != null) return best;
+    final fallback = RegExp(r'^(.+?) enthält ').firstMatch(helptext.trim());
+    return fallback?.group(1)?.trim();
+  }
+
   /// Transforms raw suggestion rows + replacement rows + meal rows into
   /// grouped, sorted [IngredientSuggestionGroup] list.
   static List<IngredientSuggestionGroup> buildGroups({
@@ -26,6 +66,22 @@ abstract final class SuggestionHelpers {
     required List<Map<String, dynamic>> replacementsData,
     required List<Map<String, dynamic>> mealsData,
   }) {
+    // Index meals by id
+    final mealsById = <String, MealDetail>{};
+    for (final row in mealsData) {
+      final id = row['id'] as String;
+      mealsById[id] = MealDetail(
+        id: id,
+        title: row['title'] as String? ?? '',
+        trackedAt: DateTime.parse(row['tracked_at'] as String),
+        imageUrl: row['image_url'] as String?,
+        ingredients: [
+          for (final name in row['ingredients'] as List? ?? const [])
+            if (name is String) name,
+        ],
+      );
+    }
+
     // Group rows by detected_ingredient_id
     final grouped = <String, _GroupAccumulator>{};
     for (final row in suggestionData) {
@@ -37,7 +93,7 @@ abstract final class SuggestionHelpers {
         ingredientId,
         () => _GroupAccumulator(
           ingredientId: ingredientId,
-          ingredientName: ingredients?['name'] as String? ?? 'Unbekannt',
+          ingredientName: ingredients?['name'] as String?,
           ingredientImageUrl: ingredients?['image_url'] as String?,
           helptext: row['helptext'] as String?,
         ),
@@ -82,18 +138,6 @@ abstract final class SuggestionHelpers {
       );
     }
 
-    // Index meals by id
-    final mealsById = <String, MealDetail>{};
-    for (final row in mealsData) {
-      final id = row['id'] as String;
-      mealsById[id] = MealDetail(
-        id: id,
-        title: row['title'] as String? ?? '',
-        trackedAt: DateTime.parse(row['tracked_at'] as String),
-        imageUrl: row['image_url'] as String?,
-      );
-    }
-
     // Build groups sorted alphabetically by ingredient name
     final groups =
         grouped.values.map((acc) {
@@ -104,9 +148,16 @@ abstract final class SuggestionHelpers {
           final replacements =
               replacementsByIngredient[acc.ingredientId]?.values.toList() ?? [];
 
+          final name =
+              acc.ingredientName ??
+              nameFromHelptext(acc.helptext, [
+                for (final meal in meals) ...meal.ingredients,
+              ]) ??
+              unknownIngredient;
+
           return IngredientSuggestionGroup(
             ingredientId: acc.ingredientId,
-            ingredientName: acc.ingredientName,
+            ingredientName: name,
             ingredientImageUrl: acc.ingredientImageUrl,
             helptext: acc.helptext,
             mealCount: acc.mealIds.length,
