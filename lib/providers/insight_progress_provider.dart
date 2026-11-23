@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/insight_progress.dart';
 import '../repositories/entry_repository.dart';
+import '../utils/date_format_utils.dart';
 import '../utils/logger.dart';
 import 'auth_provider.dart';
 import 'buddy_provider.dart';
@@ -55,12 +56,20 @@ class InsightProgressNotifier extends AsyncNotifier<InsightProgress> {
     }
   }
 
-  Future<InsightProgress> _fetch(String userId) => ref
-      .read(entryRepositoryProvider)
-      .fetchInsightProgress(
-        userId: userId,
-        now: ref.read(buddyClockProvider)(),
-      );
+  Future<InsightProgress> _fetch(String userId) async {
+    final source = await ref
+        .read(entryRepositoryProvider)
+        .fetchInsightSource(
+          userId: userId,
+          now: ref.read(buddyClockProvider)(),
+        );
+    return InsightProgress(
+      activeDays: {
+        for (final i in source.activityInstants) startOfDay(i.toLocal()),
+      }.length,
+      gutFeelingEntries: source.gutFeelings.length,
+    );
+  }
 }
 
 /// No automatic rebuild retries: a failed load hides the card until the next

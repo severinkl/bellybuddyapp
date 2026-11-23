@@ -66,10 +66,7 @@ void main() {
     setUp(() {
       SharedPreferences.setMockInitialValues({});
       entryRepo = FakeEntryRepository()
-        ..insightProgress = const InsightProgress(
-          activeDays: 2,
-          gutFeelingEntries: 1,
-        );
+        ..insightSource = insightSourceFor(activeDays: 2, gutFeelings: 1);
     });
 
     ProviderContainer makeContainer({String? userId = 'u1'}) => createContainer(
@@ -90,23 +87,20 @@ void main() {
         progress,
         const InsightProgress(activeDays: 2, gutFeelingEntries: 1),
       );
-      expect(entryRepo.insightProgressFetches, [now]);
+      expect(entryRepo.insightSourceCalls, 1);
     });
 
     test('provider refetches after a log', () async {
       final c = makeContainer();
       await c.read(insightProgressProvider.future);
-      entryRepo.insightProgress = const InsightProgress(
-        activeDays: 3,
-        gutFeelingEntries: 2,
-      );
+      entryRepo.insightSource = insightSourceFor(activeDays: 3, gutFeelings: 2);
 
       await c
           .read(entriesProvider.notifier)
           .addGutFeeling(testGutFeelingEntry());
       await settle();
 
-      expect(entryRepo.insightProgressFetches, hasLength(2));
+      expect(entryRepo.insightSourceCalls, 2);
       expect(
         c.read(insightProgressProvider).value,
         const InsightProgress(activeDays: 3, gutFeelingEntries: 2),
@@ -116,15 +110,12 @@ void main() {
     test('provider refetches after a diary delete', () async {
       final c = makeContainer();
       await c.read(insightProgressProvider.future);
-      entryRepo.insightProgress = const InsightProgress(
-        activeDays: 1,
-        gutFeelingEntries: 0,
-      );
+      entryRepo.insightSource = insightSourceFor(activeDays: 1, gutFeelings: 0);
 
       await c.read(entriesProvider.notifier).deleteByType('gutFeeling', 'g1');
       await settle();
 
-      expect(entryRepo.insightProgressFetches, hasLength(2));
+      expect(entryRepo.insightSourceCalls, 2);
       expect(
         c.read(insightProgressProvider).value,
         const InsightProgress(activeDays: 1, gutFeelingEntries: 0),
@@ -136,9 +127,9 @@ void main() {
       () async {
         final c = makeContainer();
         await c.read(insightProgressProvider.future);
-        entryRepo.insightProgress = const InsightProgress(
+        entryRepo.insightSource = insightSourceFor(
           activeDays: 3,
-          gutFeelingEntries: 1,
+          gutFeelings: 1,
         );
 
         await c
@@ -146,7 +137,7 @@ void main() {
             .updateMeal(testMealEntry(trackedAt: DateTime(2026, 11, 20, 9)));
         await settle();
 
-        expect(entryRepo.insightProgressFetches, hasLength(2));
+        expect(entryRepo.insightSourceCalls, 2);
         expect(
           c.read(insightProgressProvider).value,
           const InsightProgress(activeDays: 3, gutFeelingEntries: 1),
@@ -161,7 +152,7 @@ void main() {
       c.read(buddyEventsProvider.notifier).emit(event);
       await settle();
 
-      expect(entryRepo.insightProgressFetches, hasLength(1));
+      expect(entryRepo.insightSourceCalls, 1);
     });
 
     test('refresh during the first load joins it', () async {
@@ -170,7 +161,7 @@ void main() {
 
       await c.read(insightProgressProvider.notifier).refresh();
 
-      expect(entryRepo.insightProgressFetches, hasLength(1));
+      expect(entryRepo.insightSourceCalls, 1);
       expect(c.read(insightProgressProvider).hasValue, isTrue);
     });
 
@@ -179,7 +170,7 @@ void main() {
       () async {
         final c = makeContainer();
         await c.read(insightProgressProvider.future);
-        entryRepo.insightProgressError = Exception('offline');
+        entryRepo.insightSourceError = Exception('offline');
 
         await c.read(insightProgressProvider.notifier).refresh();
 
@@ -197,7 +188,7 @@ void main() {
 
       expect(progress.activeDays, 0);
       expect(progress.gutFeelingEntries, 0);
-      expect(entryRepo.insightProgressFetches, isEmpty);
+      expect(entryRepo.insightSourceCalls, 0);
     });
   });
 }

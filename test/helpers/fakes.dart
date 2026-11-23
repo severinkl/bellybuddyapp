@@ -7,7 +7,7 @@ import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/drink.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
-import 'package:belly_buddy/models/insight_progress.dart';
+import 'package:belly_buddy/models/insight_source.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/models/recommendation.dart';
@@ -292,27 +292,28 @@ class FakeEntryRepository implements EntryRepository {
     }).toSet();
   }
 
-  /// What [fetchInsightProgress] returns.
-  InsightProgress insightProgress = const InsightProgress(
-    activeDays: 0,
-    gutFeelingEntries: 0,
+  /// What [fetchInsightSource] returns.
+  InsightSource insightSource = const InsightSource(
+    meals: [],
+    gutFeelings: [],
+    activityInstants: [],
   );
 
-  /// When set, [fetchInsightProgress] throws it.
-  Object? insightProgressError;
+  /// When set, [fetchInsightSource] throws it.
+  Object? insightSourceError;
 
-  /// The `now` of every [fetchInsightProgress] call, in order.
-  final List<DateTime> insightProgressFetches = [];
+  /// How often [fetchInsightSource] was called.
+  int insightSourceCalls = 0;
 
   @override
-  Future<InsightProgress> fetchInsightProgress({
+  Future<InsightSource> fetchInsightSource({
     required String userId,
     required DateTime now,
   }) async {
-    insightProgressFetches.add(now);
-    final error = insightProgressError;
+    insightSourceCalls++;
+    final error = insightSourceError;
     if (error != null) throw error;
-    return insightProgress;
+    return insightSource;
   }
 
   @override
@@ -720,3 +721,19 @@ class FakeBuddyNotifier extends BuddyNotifier {
 
   void push(BuddyStatus? status) => state = AsyncData(status);
 }
+
+/// An [InsightSource] with [activeDays] distinct active days and
+/// [gutFeelings] gut-feeling entries.
+InsightSource insightSourceFor({
+  required int activeDays,
+  required int gutFeelings,
+}) => InsightSource(
+  meals: const [],
+  gutFeelings: [
+    for (var i = 0; i < gutFeelings; i++)
+      testGutFeelingEntry(trackedAt: DateTime(2026, 11, 1 + i, 9)),
+  ],
+  activityInstants: [
+    for (var i = 0; i < activeDays; i++) DateTime(2026, 11, 1 + i, 9),
+  ],
+);

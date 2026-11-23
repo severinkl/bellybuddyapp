@@ -7,7 +7,6 @@ import 'package:riverpod/src/internals.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
-import 'package:belly_buddy/models/insight_progress.dart';
 import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/screens/dashboard/dashboard_screen.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
@@ -200,10 +199,7 @@ void main() {
     testWidgets('the insight card shows the progress toward the first '
         'patterns', (tester) async {
       final entryRepo = FakeEntryRepository()
-        ..insightProgress = const InsightProgress(
-          activeDays: 2,
-          gutFeelingEntries: 1,
-        );
+        ..insightSource = insightSourceFor(activeDays: 2, gutFeelings: 1);
       await tester.pumpWithProviders(
         const DashboardScreen(),
         overrides: _overrides(entryRepo: entryRepo),
@@ -218,7 +214,7 @@ void main() {
         findsOneWidget,
       );
       // Loaded once on mount: the dashboard's load joins the card's.
-      expect(entryRepo.insightProgressFetches, hasLength(1));
+      expect(entryRepo.insightSourceCalls, 1);
     });
 
     testWidgets('390×844 phone: a big Buddy, the ring and its button above '

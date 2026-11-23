@@ -429,4 +429,195 @@ void main() {
       );
     });
   });
+
+  group('EntryQueryService.fetchInsightSource', () {
+    final since = DateTime(2026, 10, 25);
+    final mealsSince = DateTime(2026, 10, 24);
+    const tables = [
+      'meal_entries',
+      'toilet_entries',
+      'gut_feeling_entries',
+      'drink_entries',
+    ];
+
+    Map<String, dynamic> gutRow(String at) => {..._gutRow(), 'tracked_at': at};
+
+    /// Mocks every table; [pages] gives each table's pages.
+    (
+      Map<String, MockSupabaseQueryBuilder>,
+      Map<String, SettlableFilterBuilder>,
+      Map<String, _PagedTransform>,
+    )
+    mockTables(Map<String, List<List<Map<String, dynamic>>>> pages) {
+      final builders = <String, MockSupabaseQueryBuilder>{};
+      final filters = <String, SettlableFilterBuilder>{};
+      final paged = <String, _PagedTransform>{};
+      for (final t in tables) {
+        final qb = MockSupabaseQueryBuilder();
+        final f = SettlableFilterBuilder(
+          Future.value(<Map<String, dynamic>>[]),
+        );
+        final p = _PagedTransform(pages[t] ?? [<Map<String, dynamic>>[]]);
+        when(() => client.from(t)).thenAnswer((_) => qb);
+        when(() => qb.select(any())).thenAnswer((_) => f);
+        when(() => f.eq(any(), any())).thenAnswer((_) => f);
+        when(() => f.gte(any(), any())).thenAnswer((_) => f);
+        when(
+          () => f.order(any(), ascending: any(named: 'ascending')),
+        ).thenAnswer((_) => p);
+        builders[t] = qb;
+        filters[t] = f;
+        paged[t] = p;
+      }
+      return (builders, filters, paged);
+    }
+
+    test(
+      'fetchInsightSource selects each table once with its columns',
+      () async {
+        final (builders, filters, _) = mockTables({});
+
+        await service.fetchInsightSource(
+          userId: testUserId,
+          since: since,
+          mealsSince: mealsSince,
+        );
+
+        verify(
+          () => builders['meal_entries']!.select('tracked_at, ingredients'),
+        ).called(1);
+        verify(() => builders['gut_feeling_entries']!.select('*')).called(1);
+        verify(
+          () => builders['toilet_entries']!.select('tracked_at'),
+        ).called(1);
+        verify(() => builders['drink_entries']!.select('tracked_at')).called(1);
+        for (final t in tables) {
+          verify(() => filters[t]!.eq('user_id', testUserId)).called(1);
+          verify(() => filters[t]!.gte('tracked_at', any())).called(1);
+        }
+      },
+    );
+
+    test('fetches meals 24 h before the window', () async {
+      final (_, filters, _) = mockTables({});
+
+      await service.fetchInsightSource(
+        userId: testUserId,
+        since: since,
+        mealsSince: mealsSince,
+      );
+
+      verify(
+        () => filters['meal_entries']!.gte(
+          'tracked_at',
+          mealsSince.toUtc().toIso8601String(),
+        ),
+      ).called(1);
+      for (final t in tables.where((t) => t != 'meal_entries')) {
+        verify(
+          () => filters[t]!.gte('tracked_at', since.toUtc().toIso8601String()),
+        ).called(1);
+      }
+    });
+
+    test('paginates every table', () async {
+      List<Map<String, dynamic>> full(Map<String, dynamic> row) =>
+          List.generate(EntryQueryService.trackedAtPageSize, (_) => row);
+      final short = [
+        for (final r in [1, 2, 3])
+          {'tracked_at': '2026-11-0${r}T12:00:00.000Z'},
+      ];
+      final fullRow = {'tracked_at': '2026-11-10T12:00:00.000Z'};
+      final gutShort = [
+        for (final r in [1, 2, 3]) gutRow('2026-11-0${r}T12:00:00.000Z'),
+      ];
+      final (_, _, paged) = mockTables({
+        'meal_entries': [full(fullRow), short],
+        'toilet_entries': [full(fullRow), short],
+        'drink_entries': [full(fullRow), short],
+        'gut_feeling_entries': [
+          full(gutRow('2026-11-10T12:00:00.000Z')),
+          gutShort,
+        ],
+      });
+
+      final result = await service.fetchInsightSource(
+        userId: testUserId,
+        since: since,
+        mealsSince: mealsSince,
+      );
+
+      expect(result.meals, hasLength(1003));
+      expect(result.gutFeelings, hasLength(1003));
+      expect(result.activityInstants, hasLength(4 * 1003));
+      for (final t in tables) {
+        expect(paged[t]!.ranges, [(0, 999), (1000, 1999)]);
+      }
+    });
+
+    test('meal instants before since are not activity', () async {
+      final early = since.subtract(const Duration(hours: 2)).toUtc();
+      final inside = since.add(const Duration(hours: 3)).toUtc();
+      mockTables({
+        'meal_entries': [
+          [
+            {
+              'tracked_at': inside.toIso8601String(),
+              'ingredients': ['Reis'],
+            },
+            {'tracked_at': early.toIso8601String(), 'ingredients': null},
+          ],
+        ],
+      });
+
+      final result = await service.fetchInsightSource(
+        userId: testUserId,
+        since: since,
+        mealsSince: mealsSince,
+      );
+
+      expect(result.meals.map((m) => m.trackedAt), [inside, early]);
+      expect(result.meals.first.ingredients, ['Reis']);
+      expect(result.meals.last.ingredients, isEmpty);
+      expect(result.activityInstants, [inside]);
+    });
+
+    test('activity holds the instants of all four tables', () async {
+      mockTables({
+        'meal_entries': [
+          [
+            {'tracked_at': '2026-11-01T08:00:00.000Z', 'ingredients': []},
+          ],
+        ],
+        'toilet_entries': [
+          [
+            {'tracked_at': '2026-11-02T08:00:00.000Z'},
+          ],
+        ],
+        'gut_feeling_entries': [
+          [gutRow('2026-11-03T08:00:00.000Z')],
+        ],
+        'drink_entries': [
+          [
+            {'tracked_at': '2026-11-04T08:00:00.000Z'},
+          ],
+        ],
+      });
+
+      final result = await service.fetchInsightSource(
+        userId: testUserId,
+        since: since,
+        mealsSince: mealsSince,
+      );
+
+      expect(result.activityInstants.toSet(), {
+        for (final d in [1, 2, 3, 4])
+          DateTime.parse('2026-11-0${d}T08:00:00.000Z'),
+      });
+      expect(
+        result.gutFeelings.single.trackedAt,
+        DateTime.parse('2026-11-03T08:00:00.000Z'),
+      );
+    });
+  });
 }
