@@ -6,22 +6,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
-import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/widgets/common/weekly_tips_switch.dart';
 
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
-
-class _Seeded extends ProfileNotifier {
-  _Seeded(this._profile);
-  final UserProfile _profile;
-
-  @override
-  AsyncValue<UserProfile?> build() => AsyncValue.data(_profile);
-}
+import '../../helpers/riverpod_helpers.dart';
 
 /// A repository whose weekly-tips write waits for [release].
 class _SlowRepo extends FakeProfileRepository {
@@ -46,7 +37,7 @@ void main() {
         overrides: [
           profileRepositoryProvider.overrideWithValue(repo),
           currentUserIdProvider.overrideWithValue(testUserId),
-          profileProvider.overrideWith(() => _Seeded(profile)),
+          profileProviderSeededWith(profile),
         ],
         child: const MaterialApp(home: Scaffold(body: WeeklyTipsSwitch())),
       ),

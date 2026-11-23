@@ -833,3 +833,17 @@ class FakeKnowledgeRepository implements KnowledgeRepository {
     cache = feed;
   }
 }
+
+/// A [UrlOpener] that records each launch ([urls], [modes]) and answers
+/// [result].
+class RecordingUrlOpener {
+  final urls = <Uri>[];
+  final modes = <LaunchMode>[];
+  bool result = true;
+
+  Future<bool> call(Uri url, {LaunchMode mode = LaunchMode.platformDefault}) {
+    urls.add(url);
+    modes.add(mode);
+    return Future.value(result);
+  }
+}

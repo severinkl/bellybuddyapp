@@ -7,7 +7,6 @@ import 'package:mocktail/mocktail.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
-import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/discover_news_provider.dart';
 import 'package:belly_buddy/providers/ingredient_suggestion_provider.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
@@ -19,17 +18,7 @@ import '../helpers/app_lifecycle.dart';
 import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
 import '../helpers/mocks.dart';
-
-/// The signed-in user's id, switchable.
-class _UserId extends Notifier<String?> {
-  _UserId(this._initial);
-  final String? _initial;
-
-  @override
-  String? build() => _initial;
-
-  void set(String? id) => state = id;
-}
+import '../helpers/riverpod_helpers.dart';
 
 void main() {
   // The foreground signal's AppLifecycleListener needs the binding.
@@ -37,7 +26,7 @@ void main() {
 
   late FakeRecommendationRepository tips;
   late MockIngredientRepository alternatives;
-  late NotifierProvider<_UserId, String?> user;
+  late SwitchableUserId user;
   late DateTime now;
 
   /// The app is back in the foreground [later] after now.
@@ -58,10 +47,10 @@ void main() {
   /// A container with [userId] signed in (none for null) that keeps
   /// [discoverNewsProvider] alive like the app root does.
   ProviderContainer makeContainer({String? userId = testUserId}) {
-    user = NotifierProvider<_UserId, String?>(() => _UserId(userId));
+    user = SwitchableUserId(userId);
     final c = ProviderContainer.test(
       overrides: [
-        currentUserIdProvider.overrideWith((ref) => ref.watch(user)),
+        user.override,
         recommendationRepositoryProvider.overrideWithValue(tips),
         ingredientRepositoryProvider.overrideWithValue(alternatives),
         buddyClockProvider.overrideWithValue(() => now),
@@ -136,11 +125,11 @@ void main() {
       final c = makeContainer(userId: null);
       await settle();
 
-      c.read(user.notifier).set(testUserId);
+      user.set(c, testUserId);
       await settle();
       expect(tips.fetchCount, 1);
 
-      c.read(user.notifier).set(null);
+      user.set(c, null);
       await settle();
       returnLater(const Duration(hours: 1));
       await settle();
@@ -160,7 +149,7 @@ void main() {
     final c = makeContainer();
     await settle();
 
-    c.read(user.notifier).set('other-user');
+    user.set(c, 'other-user');
     await settle();
     verify(() => alternatives.fetchSuggestionGroups('other-user')).called(1);
 

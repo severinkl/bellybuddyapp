@@ -15,15 +15,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../test/helpers/fakes.dart';
 import '../test/helpers/fixtures.dart';
+import '../test/helpers/widget_tester_helpers.dart';
 import 'helpers/test_app.dart';
 import 'helpers/welcome_driver.dart' show pumpUntilFound;
-
-Future<void> _tap(WidgetTester tester, Finder finder) async {
-  await tester.ensureVisible(finder);
-  await tester.pumpAndSettle();
-  await tester.tap(finder);
-  await tester.pumpAndSettle();
-}
 
 /// The weekly-tips switch inside Entdecken's opt-in card.
 Finder get _optInSwitch => find.descendant(
@@ -43,7 +37,7 @@ void main() {
     (tester) async {
       await tester.pumpWidget(buildTestApp());
       await tester.pumpAndSettle();
-      await _tap(tester, find.byKey(BbBottomNav.navDiscoverKey));
+      await tester.tapVisible(find.byKey(BbBottomNav.navDiscoverKey));
 
       // Entdecken previews the three newest articles.
       final articles = testKnowledgeArticles();
@@ -62,8 +56,7 @@ void main() {
         );
       }
 
-      await _tap(
-        tester,
+      await tester.tapVisible(
         find.descendant(of: section, matching: find.text('Alle ›')),
       );
       expect(find.byType(KnowledgeScreen), findsOneWidget);
@@ -83,13 +76,13 @@ void main() {
       }
       expect(find.byType(KnowledgeArticleTile), findsNWidgets(articles.length));
 
-      await _tap(tester, find.byKey(KnowledgeScreen.chipKey('Rezepte')));
+      await tester.tapVisible(find.byKey(KnowledgeScreen.chipKey('Rezepte')));
       final recipe = articles.singleWhere((a) => a.category == 'Rezepte');
       expect(find.byType(KnowledgeArticleTile), findsOneWidget);
       expect(find.byKey(KnowledgeArticleTile.keyFor(recipe)), findsOneWidget);
 
       // Wissen lives in the Entdecken tab: its tab leads back to Entdecken.
-      await _tap(tester, find.byKey(BbBottomNav.navDiscoverKey));
+      await tester.tapVisible(find.byKey(BbBottomNav.navDiscoverKey));
       expect(find.byType(KnowledgeScreen), findsNothing);
       expect(find.byType(DiscoverScreen), findsOneWidget);
       expect(find.byType(BbBottomNav).hitTestable(), findsOneWidget);
@@ -106,19 +99,19 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await _tap(tester, find.byKey(BbBottomNav.navDiscoverKey));
+    await tester.tapVisible(find.byKey(BbBottomNav.navDiscoverKey));
 
     expect(_optInSwitch, findsOneWidget);
     expect(find.text(DiscoverTipsSection.emptyWhileOn), findsNothing);
 
-    await _tap(tester, find.byKey(WeeklyTipsSwitch.switchKey));
+    await tester.tapVisible(find.byKey(WeeklyTipsSwitch.switchKey));
     expect(profileRepo.weeklyTipsWrites, [true]);
     expect(find.text(DiscoverTipsSection.emptyWhileOn), findsOneWidget);
     expect(_optInSwitch, findsNothing);
 
-    await _tap(tester, find.byKey(BbBottomNav.navMeKey));
-    await _tap(tester, find.byKey(MeScreen.settingsKey));
-    await _tap(tester, find.text('Benachrichtigungen'));
+    await tester.tapVisible(find.byKey(BbBottomNav.navMeKey));
+    await tester.tapVisible(find.byKey(MeScreen.settingsKey));
+    await tester.tapVisible(find.text('Benachrichtigungen'));
 
     final weekly = find.byKey(WeeklyTipsSwitch.switchKey);
     await tester.ensureVisible(weekly);
@@ -156,12 +149,11 @@ void main() {
     expect(find.text(TipsRow.label(set)), findsOneWidget);
     expect(dot, findsOneWidget);
 
-    await _tap(tester, row);
+    await tester.tapVisible(row);
     expect(find.byType(RecommendationsScreen), findsOneWidget);
     expect(find.text(set.summary!), findsOneWidget);
 
-    await _tap(
-      tester,
+    await tester.tapVisible(
       find.descendant(
         of: find.byType(RecommendationsScreen),
         matching: find.byTooltip('Zurück'),
@@ -184,7 +176,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(WeeklyTipsOfferSheet.body), findsOneWidget);
 
-    await _tap(tester, find.byKey(WeeklyTipsOfferSheet.openKey));
+    await tester.tapVisible(find.byKey(WeeklyTipsOfferSheet.openKey));
     expect(find.byType(WeeklyTipsOfferSheet), findsNothing);
     expect(find.byType(DiscoverScreen), findsOneWidget);
     expect(_optInSwitch.hitTestable(), findsOneWidget);

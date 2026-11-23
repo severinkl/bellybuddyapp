@@ -12,9 +12,7 @@ import 'package:belly_buddy/models/knowledge_article.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/models/recommendation_item.dart';
 import 'package:belly_buddy/models/replacement_ingredient.dart';
-import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/models/user_recipe.dart';
-import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/screens/discover/widgets/discover_tips_section.dart';
 import 'package:belly_buddy/widgets/common/weekly_tips_switch.dart';
@@ -36,6 +34,8 @@ import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/mocks.dart';
+import '../../helpers/riverpod_helpers.dart';
+import '../../helpers/widget_tester_helpers.dart';
 
 const _item = RecommendationItem(
   type: 'try',
@@ -59,41 +59,19 @@ IngredientSuggestionGroup _group(
   ],
 );
 
-/// The launched URL and mode, from [DiscoverScreen.openUrl].
-class _Launches {
-  final urls = <Uri>[];
-  final modes = <LaunchMode>[];
-  bool result = true;
-
-  Future<bool> call(Uri url, {LaunchMode mode = LaunchMode.platformDefault}) {
-    urls.add(url);
-    modes.add(mode);
-    return Future.value(result);
-  }
-}
-
-/// A ProfileNotifier that starts with [_profile] loaded.
-class _SeededProfile extends ProfileNotifier {
-  _SeededProfile(this._profile);
-  final UserProfile _profile;
-
-  @override
-  AsyncValue<UserProfile?> build() => AsyncValue.data(_profile);
-}
-
 void main() {
   late FakeProfileRepository profileRepo;
   late MockRecommendationRepository recommendations;
   late MockIngredientRepository ingredients;
   late MockUserRecipeRepository recipes;
-  late _Launches launches;
+  late RecordingUrlOpener launches;
   late FakeKnowledgeRepository knowledge;
 
   setUp(() {
     recommendations = MockRecommendationRepository();
     ingredients = MockIngredientRepository();
     recipes = MockUserRecipeRepository();
-    launches = _Launches();
+    launches = RecordingUrlOpener();
     knowledge = FakeKnowledgeRepository();
     profileRepo = FakeProfileRepository();
   });
@@ -152,8 +130,8 @@ void main() {
       knowledgeRepositoryProvider.overrideWithValue(knowledge),
       profileRepositoryProvider.overrideWithValue(profileRepo),
       if (weeklyTips != null)
-        profileProvider.overrideWith(
-          () => _SeededProfile(testUserProfile(weeklyTipsEnabled: weeklyTips)),
+        profileProviderSeededWith(
+          testUserProfile(weeklyTipsEnabled: weeklyTips),
         ),
     ];
     final app = germanRouterApp(router, textScale: textScale);
@@ -176,13 +154,6 @@ void main() {
 
   Finder inSection(Key section, Finder matching) =>
       find.descendant(of: find.byKey(section), matching: matching);
-
-  Future<void> tapVisible(WidgetTester tester, Finder finder) async {
-    await tester.ensureVisible(finder);
-    await tester.pumpAndSettle();
-    await tester.tap(finder);
-    await tester.pumpAndSettle();
-  }
 
   group('weekly tips opt-in', () {
     final optIn = find.byKey(DiscoverTipsSection.optInKey);
@@ -234,7 +205,7 @@ void main() {
       profileRepo.seedProfile(testUserProfile());
       await pump(tester, weeklyTips: false);
 
-      await tapVisible(tester, find.byKey(WeeklyTipsSwitch.switchKey));
+      await tester.tapVisible(find.byKey(WeeklyTipsSwitch.switchKey));
 
       expect(profileRepo.weeklyTipsWrites, [true]);
       expect(find.text(DiscoverTipsSection.emptyWhileOn), findsOneWidget);
@@ -307,7 +278,7 @@ void main() {
     expect(find.text('Woche 46'), findsNothing);
     expect(find.text('Ältere Tipps.'), findsNothing);
 
-    await tapVisible(tester, card);
+    await tester.tapVisible(card);
     expect(find.text('page:${RoutePaths.recommendations}'), findsOneWidget);
   });
 
@@ -429,7 +400,7 @@ void main() {
     await pump(tester);
 
     expect(find.text('Noch keine Tipps.'), findsOneWidget);
-    await tapVisible(tester, find.byKey(DiscoverScreen.tipsKey));
+    await tester.tapVisible(find.byKey(DiscoverScreen.tipsKey));
     expect(find.text('page:${RoutePaths.recommendations}'), findsNothing);
     expect(find.byType(DiscoverScreen), findsOneWidget);
   });
@@ -466,8 +437,7 @@ void main() {
       findsOneWidget,
     );
 
-    await tapVisible(
-      tester,
+    await tester.tapVisible(
       inSection(DiscoverScreen.alternativesKey, find.text('Alle ›')),
     );
     expect(
@@ -572,8 +542,7 @@ void main() {
     expect(find.text('Rezept 6'), findsOneWidget);
     expect(find.text('Rezept 7'), findsNothing);
 
-    await tapVisible(
-      tester,
+    await tester.tapVisible(
       inSection(DiscoverScreen.recipesKey, find.text('Alle ›')),
     );
     expect(find.text('page:${RoutePaths.recipes}'), findsOneWidget);
@@ -591,8 +560,7 @@ void main() {
       ],
     );
 
-    await tapVisible(
-      tester,
+    await tester.tapVisible(
       inSection(DiscoverScreen.recipesKey, find.text('Alle ›')),
     );
     await tester.enterText(find.byType(TextField), 'zzz');
@@ -615,8 +583,7 @@ void main() {
   testWidgets("Meine Rezepte's + opens the chooser", (tester) async {
     await pump(tester, myRecipes: [testUserRecipe()]);
 
-    await tapVisible(
-      tester,
+    await tester.tapVisible(
       inSection(DiscoverScreen.recipesKey, find.byIcon(Icons.add)),
     );
     expect(find.text('Rezept hinzufügen'), findsOneWidget);
@@ -625,7 +592,7 @@ void main() {
   testWidgets('a recipe card opens that recipe', (tester) async {
     await pump(tester, myRecipes: [testUserRecipe(id: 'r1')]);
 
-    await tapVisible(tester, find.byType(RecipeCard));
+    await tester.tapVisible(find.byType(RecipeCard));
     expect(find.text('page:${RoutePaths.recipeDetail}'), findsOneWidget);
   });
 
@@ -637,7 +604,7 @@ void main() {
       inSection(DiscoverScreen.recipesKey, find.text('Alle ›')),
       findsNothing,
     );
-    await tapVisible(tester, find.text('Erstes Rezept erstellen'));
+    await tester.tapVisible(find.text('Erstes Rezept erstellen'));
     expect(find.text('Rezept hinzufügen'), findsOneWidget);
   });
 
@@ -661,8 +628,7 @@ void main() {
     }
     expect(find.text('Ballaststoffe verstehen'), findsNothing);
 
-    await tapVisible(
-      tester,
+    await tester.tapVisible(
       inSection(DiscoverScreen.knowledgeKey, find.text('Alle ›')),
     );
     expect(find.text('page:${RoutePaths.knowledge}'), findsOneWidget);
@@ -686,8 +652,7 @@ void main() {
   testWidgets('an article opens in the in-app browser', (tester) async {
     await pump(tester);
 
-    await tapVisible(
-      tester,
+    await tester.tapVisible(
       find.byKey(KnowledgeArticleTile.keyFor(knowledge.articles.first)),
     );
 

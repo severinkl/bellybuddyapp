@@ -18,15 +18,6 @@ import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/riverpod_helpers.dart';
 
-/// A ProfileNotifier that immediately provides a seeded profile.
-class _SeededProfileNotifier extends ProfileNotifier {
-  _SeededProfileNotifier(this._profile);
-  final UserProfile _profile;
-
-  @override
-  AsyncValue<UserProfile?> build() => AsyncValue.data(_profile);
-}
-
 List<Override> _overrides() {
   final profile = testUserProfile(remindersEnabled: true);
   final fakeRepo = FakeProfileRepository()..seedProfile(profile);
@@ -36,7 +27,7 @@ List<Override> _overrides() {
       FakeNotificationRepository(),
     ),
     currentUserIdProvider.overrideWithValue('test-user'),
-    profileProvider.overrideWith(() => _SeededProfileNotifier(profile)),
+    profileProviderSeededWith(profile),
   ];
 }
 
@@ -86,7 +77,7 @@ void main() {
           profileRepositoryProvider.overrideWithValue(repo),
           notificationRepositoryProvider.overrideWithValue(os),
           currentUserIdProvider.overrideWithValue('test-user'),
-          profileProvider.overrideWith(() => _SeededProfileNotifier(seeded)),
+          profileProviderSeededWith(seeded),
         ],
       );
       Future<bool> open(

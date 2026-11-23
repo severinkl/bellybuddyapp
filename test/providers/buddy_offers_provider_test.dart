@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/providers/buddy_offers_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
-import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/insights_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
@@ -14,16 +13,10 @@ import 'package:belly_buddy/repositories/recommendation_repository.dart';
 
 import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
+import '../helpers/riverpod_helpers.dart';
 
 /// The signed-in user's id, switchable.
-class _UserId extends Notifier<String?> {
-  @override
-  String? build() => testUserId;
-
-  void set(String? id) => state = id;
-}
-
-final _userIdProvider = NotifierProvider<_UserId, String?>(_UserId.new);
+final _user = SwitchableUserId();
 
 void main() {
   // The foreground signal (an AppLifecycleListener) needs the binding.
@@ -53,7 +46,7 @@ void main() {
       overrides: [
         entryRepositoryProvider.overrideWithValue(entryRepo),
         recommendationRepositoryProvider.overrideWithValue(tips),
-        currentUserIdProvider.overrideWith((ref) => ref.watch(_userIdProvider)),
+        _user.override,
         buddyClockProvider.overrideWithValue(() => now),
         weeklyTipsEnabledProvider.overrideWithValue(weeklyTips),
       ],
@@ -128,7 +121,7 @@ void main() {
       // The next user's insights load; the state keeps the previous
       // user's unlocked value meanwhile.
       entryRepo.holdInsightSource = true;
-      c.read(_userIdProvider.notifier).set('u2');
+      _user.set(c, 'u2');
       final insights = c.read(insightsProvider);
       expect(insights, isA<AsyncLoading<Object?>>());
       expect(insights.value!.unlocked, isTrue);

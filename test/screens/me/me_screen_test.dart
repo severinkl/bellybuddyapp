@@ -21,19 +21,6 @@ import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
 import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
 
-/// The launched URLs and modes.
-class _Launches {
-  final urls = <Uri>[];
-  final modes = <LaunchMode>[];
-  bool result = true;
-
-  Future<bool> call(Uri url, {LaunchMode mode = LaunchMode.platformDefault}) {
-    urls.add(url);
-    modes.add(mode);
-    return Future.value(result);
-  }
-}
-
 BuddyStatus _status({int streak = 3, int? goal = 14, String name = 'Bruno'}) =>
     buddyStatus(name: name, goal: goal, streak: streak, todayCounted: true);
 
@@ -41,11 +28,11 @@ const _renameError = 'Bitte gib einen Namen mit 1 bis 20 Zeichen ein.';
 
 void main() {
   final today = DateTime(2026, 11, 23, 13);
-  late _Launches launches;
+  late RecordingUrlOpener launches;
   late GoRouter router;
   late ProviderContainer container;
 
-  setUp(() => launches = _Launches());
+  setUp(() => launches = RecordingUrlOpener());
 
   Future<FakeBuddyNotifier> pump(
     WidgetTester tester, {

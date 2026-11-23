@@ -6,15 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
 import '../test/helpers/fakes.dart';
+import '../test/helpers/widget_tester_helpers.dart';
 import 'helpers/test_app.dart';
-
-Future<void> _openCard(WidgetTester tester) async {
-  final card = find.byKey(InsightCard.cardKey);
-  await tester.ensureVisible(card);
-  await tester.pumpAndSettle();
-  await tester.tap(card);
-  await tester.pumpAndSettle();
-}
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -30,7 +23,7 @@ void main() {
 
     expect(find.text(InsightCopy.learningTitle.toUpperCase()), findsOneWidget);
 
-    await _openCard(tester);
+    await tester.tapVisible(find.byKey(InsightCard.cardKey));
     expect(find.text(InsightCopy.patternsTitle), findsWidgets);
     expect(find.text(InsightCopy.lockedTitle), findsOneWidget);
 
@@ -57,7 +50,7 @@ void main() {
       findsOneWidget,
     );
 
-    await _openCard(tester);
+    await tester.tapVisible(find.byKey(InsightCard.cardKey));
     expect(find.text(InsightCopy.columnsTitle.toUpperCase()), findsOneWidget);
     expect(find.text(InsightCopy.calendarHeader(11)), findsOneWidget);
     expect(find.text('6 gute Tage'), findsOneWidget);

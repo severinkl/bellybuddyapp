@@ -13,6 +13,7 @@ import 'package:belly_buddy/widgets/common/ingredient_search.dart';
 import 'package:belly_buddy/widgets/log_sheet/log_sheet.dart';
 
 import '../test/helpers/fakes.dart';
+import '../test/helpers/widget_tester_helpers.dart';
 import 'helpers/test_app.dart';
 
 /// Entdecken → Meine Rezepte → „Alle ›". The link only shows while the
@@ -24,10 +25,7 @@ Future<void> _openRecipesTab(WidgetTester tester) async {
     of: find.byKey(DiscoverScreen.recipesKey),
     matching: find.text('Alle ›'),
   );
-  await tester.ensureVisible(all);
-  await tester.pumpAndSettle();
-  await tester.tap(all);
-  await tester.pumpAndSettle();
+  await tester.tapVisible(all);
 }
 
 /// The plus in the bar → Essen in the „Eintragen" sheet.

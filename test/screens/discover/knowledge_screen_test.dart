@@ -18,25 +18,13 @@ import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 
-class _Launches {
-  final urls = <Uri>[];
-  final modes = <LaunchMode>[];
-  bool result = true;
-
-  Future<bool> call(Uri url, {LaunchMode mode = LaunchMode.platformDefault}) {
-    urls.add(url);
-    modes.add(mode);
-    return Future.value(result);
-  }
-}
-
 void main() {
-  late _Launches launches;
+  late RecordingUrlOpener launches;
   late FakeKnowledgeRepository repo;
   late ProviderContainer container;
 
   setUp(() {
-    launches = _Launches();
+    launches = RecordingUrlOpener();
     repo = FakeKnowledgeRepository();
   });
 

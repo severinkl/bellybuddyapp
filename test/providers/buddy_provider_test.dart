@@ -16,16 +16,6 @@ import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
 import '../helpers/riverpod_helpers.dart';
 
-/// Switchable signed-in user for the user-switch tests.
-class _TestUser extends Notifier<String?> {
-  @override
-  String? build() => 'u1';
-
-  void set(String? id) => state = id;
-}
-
-final _testUserProvider = NotifierProvider<_TestUser, String?>(_TestUser.new);
-
 /// Delays the next [fetch] answer until [release] (opt-in via [gateNext]).
 class _GatedBuddyRepository extends FakeBuddyRepository {
   Completer<void>? _gate;
@@ -63,6 +53,9 @@ Future<void> settle() async {
     await Future<void>.delayed(Duration.zero);
   }
 }
+
+/// Switchable signed-in user for the user-switch tests.
+final _user = SwitchableUserId('u1');
 
 void main() {
   late _GatedBuddyRepository buddyRepo;
@@ -825,9 +818,7 @@ void main() {
       overrides: [
         buddyRepositoryProvider.overrideWithValue(buddyRepo),
         entryRepositoryProvider.overrideWithValue(entryRepo),
-        currentUserIdProvider.overrideWith(
-          (ref) => ref.watch(_testUserProvider),
-        ),
+        _user.override,
         buddyTodayProvider.overrideWithValue(() => now),
       ],
     );
@@ -840,12 +831,12 @@ void main() {
 
       expect((await load(c)).state.name, 'Eins');
 
-      c.read(_testUserProvider.notifier).set('u2');
+      _user.set(c, 'u2');
       final u2 = await load(c);
       expect(u2.state.name, 'Zwei');
       expect(u2.state.userId, 'u2');
 
-      c.read(_testUserProvider.notifier).set(null);
+      _user.set(c, null);
       expect(await c.read(buddyProvider.future), isNull);
     });
 
@@ -862,7 +853,7 @@ void main() {
           BuddyAnnouncement.streakBroken,
         ]);
 
-        c.read(_testUserProvider.notifier).set('u2');
+        _user.set(c, 'u2');
 
         expect((await load(c)).announcements, [BuddyAnnouncement.streakBroken]);
       },
@@ -875,7 +866,7 @@ void main() {
       c.listen(buddyProvider, (_, _) {});
       expect((await load(c)).announcements, [BuddyAnnouncement.saverUsed]);
 
-      c.read(_testUserProvider.notifier).set('u2');
+      _user.set(c, 'u2');
       await load(c);
       await c.read(buddyProvider.notifier).refresh();
 
@@ -890,7 +881,7 @@ void main() {
       final offer = c
           .read(buddyProvider.notifier)
           .offerAnnouncement(BuddyAnnouncement.tipsArrived, suffix: 'rec-1');
-      c.read(_testUserProvider.notifier).set('u2');
+      _user.set(c, 'u2');
       await offer;
 
       final u2 = await load(c);

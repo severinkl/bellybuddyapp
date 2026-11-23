@@ -42,19 +42,12 @@ import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/riverpod_helpers.dart';
 
-/// The signed-in user's id, switchable (sign-in as another user).
-class _UserId extends Notifier<String?> {
-  @override
-  String? build() => testUserId;
-
-  void set(String? id) => state = id;
-}
-
-final _userIdProvider = NotifierProvider<_UserId, String?>(_UserId.new);
-
 /// The app's clock in the insight-card tests, pinned: their entries
 /// ([insightSourceFor]) lie before it, in the insights' window on any date.
 final _insightsNow = DateTime(2026, 11, 23, 14);
+
+/// The signed-in user's id, switchable (sign-in as another user).
+final _user = SwitchableUserId();
 
 List<Override> _overrides({
   FakeBuddyRepository? buddyRepo,
@@ -77,7 +70,7 @@ List<Override> _overrides({
   ingredientRepositoryProvider.overrideWithValue(FakeIngredientRepository()),
   buddyRepositoryProvider.overrideWithValue(buddyRepo ?? FakeBuddyRepository()),
   if (switchableUser)
-    currentUserIdProvider.overrideWith((ref) => ref.watch(_userIdProvider))
+    _user.override
   else
     currentUserIdProvider.overrideWithValue(testUserId),
   isAuthenticatedProvider.overrideWithValue(true),
@@ -519,7 +512,7 @@ void main() {
 
       // The next user's insights load: no card meanwhile.
       entryRepo.holdInsightSource = true;
-      container.read(_userIdProvider.notifier).set('u2');
+      _user.set(container, 'u2');
       await tester.pump();
       expect(entryRepo.insightSourceRequests.last.userId, 'u2');
       expect(card, findsNothing);

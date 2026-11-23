@@ -8,7 +8,6 @@ import 'package:belly_buddy/models/insight_source.dart';
 import 'package:belly_buddy/models/insights.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
-import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/providers/insights_provider.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
@@ -19,6 +18,7 @@ import 'package:belly_buddy/services/insights/insights_engine.dart';
 import '../helpers/app_lifecycle.dart';
 import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
+import '../helpers/riverpod_helpers.dart';
 
 Future<void> settle() async {
   for (var i = 0; i < 20; i++) {
@@ -26,21 +26,14 @@ Future<void> settle() async {
   }
 }
 
-/// The signed-in user's id, switchable.
-class _UserId extends Notifier<String?> {
-  @override
-  String? build() => 'u1';
-
-  void set(String? id) => state = id;
-}
-
-final _userIdProvider = NotifierProvider<_UserId, String?>(_UserId.new);
-
 const _noEntries = InsightSource(
   meals: [],
   gutFeelings: [],
   activityInstants: [],
 );
+
+/// The signed-in user's id, switchable.
+final _user = SwitchableUserId('u1');
 
 void main() {
   // The foreground signal's AppLifecycleListener needs the binding.
@@ -64,9 +57,7 @@ void main() {
         overrides: [
           entryRepositoryProvider.overrideWithValue(entryRepo),
           buddyRepositoryProvider.overrideWithValue(FakeBuddyRepository()),
-          currentUserIdProvider.overrideWith(
-            (ref) => ref.watch(_userIdProvider),
-          ),
+          _user.override,
           buddyClockProvider.overrideWithValue(clock ?? () => now),
         ],
       );
@@ -93,7 +84,7 @@ void main() {
 
   test('signed out: the empty insights, nothing fetched', () async {
     final c = makeContainer();
-    c.read(_userIdProvider.notifier).set(null);
+    _user.set(c, null);
 
     final insights = await c.read(insightsProvider.future);
 
@@ -180,7 +171,7 @@ void main() {
       c.listen(insightsProvider, (_, _) {});
       await c.read(insightsProvider.future);
       entryRepo.holdInsightSource = true;
-      c.read(_userIdProvider.notifier).set('u2');
+      _user.set(c, 'u2');
       await settle();
 
       await c
@@ -356,7 +347,7 @@ void main() {
     test('signed out, the empty calendar moves too (nothing fetched)', () {
       fakeAsync((async) {
         final c = makeContainer(clock: () => beforeMidnight.add(async.elapsed));
-        c.read(_userIdProvider.notifier).set(null);
+        _user.set(c, null);
         c.listen(insightsProvider, (_, _) {});
         async.flushMicrotasks();
 
@@ -639,7 +630,7 @@ void main() {
         await c.read(insightsProvider.future);
         entryRepo.holdInsightSource = true;
 
-        c.read(_userIdProvider.notifier).set('u2');
+        _user.set(c, 'u2');
         await settle();
 
         final reloading = c.read(insightsProvider);
@@ -662,7 +653,7 @@ void main() {
       c.listen(insightsProvider, (_, _) {});
       await c.read(insightsProvider.future);
       entryRepo.holdInsightSource = true;
-      c.read(_userIdProvider.notifier).set('u2');
+      _user.set(c, 'u2');
       await settle();
 
       final refresh = notifier(c).refresh();
@@ -682,7 +673,7 @@ void main() {
       await c.read(insightsProvider.future);
       entryRepo.insightSourceError = Exception('offline');
 
-      c.read(_userIdProvider.notifier).set('u2');
+      _user.set(c, 'u2');
       await settle();
 
       final failed = c.read(insightsProvider);
@@ -701,7 +692,7 @@ void main() {
         final late = notifier(c).refresh();
         await settle();
 
-        c.read(_userIdProvider.notifier).set('u2');
+        _user.set(c, 'u2');
         await settle();
         entryRepo.heldInsightSources[1].complete(b);
         await settle();
@@ -730,7 +721,7 @@ void main() {
 
       // Unwatched, the provider rebuilds for u2 only when read again.
       sub.pause();
-      c.read(_userIdProvider.notifier).set('u2');
+      _user.set(c, 'u2');
       entryRepo.heldInsightSources[0].complete(
         insightSourceFor(activeDays: 9, gutFeelings: 9, now: now),
       );
@@ -753,7 +744,7 @@ void main() {
         c.listen(insightsProvider, (_, _) {});
         await c.read(insightsProvider.future);
 
-        c.read(_userIdProvider.notifier).set(null);
+        _user.set(c, null);
         await settle();
         expect(
           c.read(insightsProvider).value,
@@ -761,7 +752,7 @@ void main() {
         );
 
         entryRepo.insightSource = b;
-        c.read(_userIdProvider.notifier).set('u2');
+        _user.set(c, 'u2');
         await settle();
         expect(c.read(insightsProvider).value, computeInsights(b, now));
         expect(entryRepo.insightSourceCalls, 2);
