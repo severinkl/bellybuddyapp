@@ -4,12 +4,15 @@ import 'package:go_router/go_router.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../router/route_names.dart';
+import '../../../widgets/common/bb_drag_handle.dart';
 import 'recent_meal_picker_sheet.dart';
 
 Future<void> showAddRecipeChooserSheet(BuildContext context) {
   return showModalBottomSheet(
     context: context,
     useSafeArea: true,
+    // The sheet draws its own handle.
+    showDragHandle: false,
     backgroundColor: AppTheme.card,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(
@@ -34,14 +37,7 @@ class _AddRecipeChooserSheet extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         const SizedBox(height: AppConstants.spacingSm),
-        Container(
-          width: AppConstants.dragHandleWidth,
-          height: AppConstants.dragHandleHeight,
-          decoration: BoxDecoration(
-            color: AppTheme.muted,
-            borderRadius: BorderRadius.circular(AppConstants.dragHandleRadius),
-          ),
-        ),
+        const BbDragHandle(),
         const Padding(
           padding: EdgeInsets.symmetric(
             horizontal: AppConstants.spacingMd,

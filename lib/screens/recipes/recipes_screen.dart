@@ -16,9 +16,12 @@ class RecipesScreen extends StatelessWidget {
       backgroundColor: AppTheme.screenBackground,
       appBar: AppBar(
         backgroundColor: AppTheme.screenBackground,
-        title: const Text('Rezepte'),
+        // Named like its section on Entdecken; a back arrow like the
+        // screens pushed from there.
+        title: const Text('Meine Rezepte'),
         leading: IconButton(
-          icon: const Icon(Icons.close),
+          icon: const Icon(Icons.arrow_back),
+          tooltip: 'Zurück',
           onPressed: () => context.popOrGoDashboard(),
         ),
         actions: [

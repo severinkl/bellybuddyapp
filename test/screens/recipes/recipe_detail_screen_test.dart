@@ -46,10 +46,21 @@ void main() {
     );
     await pumpDetail(tester, recipes: [recipe], id: 'rec-1');
 
-    // Title appears in AppBar and in the scrollable body (spec requirement)
-    expect(find.text('Linseneintopf'), findsAtLeastNWidgets(2));
+    // The title shows once, as the page's heading.
+    expect(find.text('Linseneintopf'), findsOneWidget);
+    expect(
+      find.descendant(of: find.byType(AppBar), matching: find.text('Rezept')),
+      findsOneWidget,
+    );
     expect(find.text('Linsen'), findsOneWidget);
     expect(find.text('Jetzt als Essen eintragen'), findsOneWidget);
+  });
+
+  testWidgets('a recipe without a photo shows a placeholder', (tester) async {
+    final recipe = testUserRecipe(id: 'rec-1', title: 'Linseneintopf');
+    await pumpDetail(tester, recipes: [recipe], id: 'rec-1');
+
+    expect(find.byKey(RecipeDetailScreen.imagePlaceholderKey), findsOneWidget);
   });
 
   testWidgets('shows not-found when recipe id is missing', (tester) async {

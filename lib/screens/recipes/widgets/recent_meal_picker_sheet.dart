@@ -6,8 +6,11 @@ import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/meal_entry.dart';
 import '../../../providers/core_providers.dart';
+import '../../../providers/user_recipes_provider.dart';
 import '../../../repositories/entry_repository.dart';
 import '../../../router/route_names.dart';
+import '../../trackers/meal/meal_tracker_screen.dart'
+    show hasMatchingUserRecipe;
 import '../../../utils/logger.dart';
 import '../../../widgets/common/bb_drag_handle.dart';
 import '../../../widgets/common/bb_ingredient_chip.dart';
@@ -19,6 +22,8 @@ Future<void> showRecentMealPickerSheet(BuildContext context) {
     context: context,
     useSafeArea: true,
     isScrollControlled: true,
+    // The sheet draws its own handle.
+    showDragHandle: false,
     backgroundColor: AppTheme.card,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(
@@ -48,6 +53,9 @@ class _RecentMealPickerSheetState
   void initState() {
     super.initState();
     _fetchMeals();
+    // Usually loaded already (a no-op then): marks the meals saved as
+    // recipes.
+    Future.microtask(() => ref.read(userRecipesProvider.notifier).fetch());
   }
 
   Future<void> _fetchMeals() async {
@@ -84,6 +92,7 @@ class _RecentMealPickerSheetState
 
   @override
   Widget build(BuildContext context) {
+    final recipes = ref.watch(userRecipesProvider).value;
     return SafeArea(
       top: false,
       child: FractionallySizedBox(
@@ -127,6 +136,10 @@ class _RecentMealPickerSheetState
                       separatorBuilder: (_, _) => AppConstants.gap8,
                       itemBuilder: (context, i) {
                         final meal = _meals![i];
+                        final savedAsRecipe = hasMatchingUserRecipe(
+                          meal.title,
+                          recipes,
+                        );
                         return BbSheetRow(
                           onTap: () => _openEditorWith(meal),
                           leading: BbPastelThumb(
@@ -147,6 +160,10 @@ class _RecentMealPickerSheetState
                                   color: AppTheme.foreground,
                                 ),
                               ),
+                              if (savedAsRecipe) ...[
+                                AppConstants.gap4,
+                                const _SavedAsRecipeLabel(),
+                              ],
                               if (meal.ingredients.isNotEmpty) ...[
                                 AppConstants.gap4,
                                 Wrap(
@@ -168,6 +185,34 @@ class _RecentMealPickerSheetState
           ],
         ),
       ),
+    );
+  }
+}
+
+/// „Schon als Rezept gespeichert" under a meal that is a recipe already.
+class _SavedAsRecipeLabel extends StatelessWidget {
+  const _SavedAsRecipeLabel();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Row(
+      children: [
+        Icon(
+          Icons.bookmark_added_outlined,
+          size: AppConstants.iconSizeXs,
+          color: AppTheme.mutedForeground,
+        ),
+        SizedBox(width: AppConstants.spacingXs),
+        Flexible(
+          child: Text(
+            'Schon als Rezept gespeichert',
+            style: TextStyle(
+              fontSize: AppTheme.fontSizeCaption,
+              color: AppTheme.mutedForeground,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
