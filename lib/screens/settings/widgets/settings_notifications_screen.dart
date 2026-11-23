@@ -219,107 +219,101 @@ class _SettingsNotificationsScreenState
                         ),
                 ),
                 AppConstants.gap16,
-                IgnorePointer(
-                  ignoring: !allowed,
-                  child: AnimatedOpacity(
-                    opacity: allowed ? 1.0 : AppConstants.disabledOpacity,
-                    duration: AppConstants.animFast,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SettingsSectionCard(
-                          icon: Icons.alarm_outlined,
-                          title: 'Erinnerungen',
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SwitchListTile(
-                                title: const Text('Mahlzeiten'),
-                                value: mealOn,
-                                activeThumbColor: AppTheme.primary,
-                                contentPadding: EdgeInsets.zero,
-                                onChanged: (v) {
-                                  ref
-                                      .read(profileProvider.notifier)
-                                      .updateProfile(
-                                        profile.copyWith(remindersEnabled: v),
-                                      );
+                _Greyed(
+                  enabled: allowed,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SettingsSectionCard(
+                        icon: Icons.alarm_outlined,
+                        title: 'Erinnerungen',
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SwitchListTile(
+                              title: const Text('Mahlzeiten'),
+                              value: mealOn,
+                              activeThumbColor: AppTheme.primary,
+                              contentPadding: EdgeInsets.zero,
+                              onChanged: (v) {
+                                ref
+                                    .read(profileProvider.notifier)
+                                    .updateProfile(
+                                      profile.copyWith(remindersEnabled: v),
+                                    );
+                              },
+                            ),
+                            const Text(
+                              'Erinnert dich daran, dein Essen einzutragen.',
+                              style: TextStyle(
+                                fontSize: AppTheme.fontSizeCaptionLG,
+                                color: AppTheme.mutedForeground,
+                              ),
+                            ),
+                            if (mealOn) ...[
+                              AppConstants.gap8,
+                              ReminderTimePicker(
+                                selectedTimes: profile.mealReminderTimes,
+                                onChanged: (newTimes) {
+                                  _debounceSave(() {
+                                    ref
+                                        .read(profileProvider.notifier)
+                                        .updateProfile(
+                                          profile.copyWith(
+                                            mealReminderTimes: newTimes,
+                                          ),
+                                        );
+                                  });
                                 },
                               ),
-                              const Text(
-                                'Erinnert dich daran, dein Essen einzutragen.',
-                                style: TextStyle(
-                                  fontSize: AppTheme.fontSizeCaptionLG,
-                                  color: AppTheme.mutedForeground,
-                                ),
-                              ),
-                              if (mealOn) ...[
-                                AppConstants.gap8,
-                                ReminderTimePicker(
-                                  selectedTimes: profile.mealReminderTimes,
-                                  onChanged: (newTimes) {
-                                    _debounceSave(() {
-                                      ref
-                                          .read(profileProvider.notifier)
-                                          .updateProfile(
-                                            profile.copyWith(
-                                              mealReminderTimes: newTimes,
-                                            ),
-                                          );
-                                    });
-                                  },
-                                ),
-                              ],
-                              AppConstants.gap8,
-                              const Divider(
-                                color: AppTheme.border,
-                                thickness: AppConstants.dividerThickness,
-                              ),
-                              AppConstants.gap8,
-                              SwitchListTile(
-                                title: const Text('Bauchgefühl'),
-                                value: gutOn,
-                                activeThumbColor: AppTheme.primary,
-                                contentPadding: EdgeInsets.zero,
-                                onChanged: (v) {
-                                  ref
-                                      .read(profileProvider.notifier)
-                                      .updateProfile(
-                                        profile.copyWith(
-                                          dailySummaryEnabled: v,
-                                        ),
-                                      );
-                                },
-                              ),
-                              const Text(
-                                'Erinnert dich daran, dein Bauchgefühl einzutragen.',
-                                style: TextStyle(
-                                  fontSize: AppTheme.fontSizeCaptionLG,
-                                  color: AppTheme.mutedForeground,
-                                ),
-                              ),
-                              if (gutOn) ...[
-                                AppConstants.gap8,
-                                ReminderTimePicker(
-                                  selectedTimes: profile.moodReminderTimes,
-                                  onChanged: (newTimes) {
-                                    _debounceSave(() {
-                                      ref
-                                          .read(profileProvider.notifier)
-                                          .updateProfile(
-                                            profile.copyWith(
-                                              moodReminderTimes: newTimes,
-                                            ),
-                                          );
-                                    });
-                                  },
-                                ),
-                              ],
                             ],
-                          ),
+                            AppConstants.gap8,
+                            const Divider(
+                              color: AppTheme.border,
+                              thickness: AppConstants.dividerThickness,
+                            ),
+                            AppConstants.gap8,
+                            SwitchListTile(
+                              title: const Text('Bauchgefühl'),
+                              value: gutOn,
+                              activeThumbColor: AppTheme.primary,
+                              contentPadding: EdgeInsets.zero,
+                              onChanged: (v) {
+                                ref
+                                    .read(profileProvider.notifier)
+                                    .updateProfile(
+                                      profile.copyWith(dailySummaryEnabled: v),
+                                    );
+                              },
+                            ),
+                            const Text(
+                              'Erinnert dich daran, dein Bauchgefühl einzutragen.',
+                              style: TextStyle(
+                                fontSize: AppTheme.fontSizeCaptionLG,
+                                color: AppTheme.mutedForeground,
+                              ),
+                            ),
+                            if (gutOn) ...[
+                              AppConstants.gap8,
+                              ReminderTimePicker(
+                                selectedTimes: profile.moodReminderTimes,
+                                onChanged: (newTimes) {
+                                  _debounceSave(() {
+                                    ref
+                                        .read(profileProvider.notifier)
+                                        .updateProfile(
+                                          profile.copyWith(
+                                            moodReminderTimes: newTimes,
+                                          ),
+                                        );
+                                  });
+                                },
+                              ),
+                            ],
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
                 ),
                 AppConstants.gap16,
@@ -337,36 +331,32 @@ class _SettingsNotificationsScreenState
                         thickness: AppConstants.dividerThickness,
                       ),
                       AppConstants.gap8,
-                      IgnorePointer(
-                        ignoring: !allowed,
-                        child: AnimatedOpacity(
-                          opacity: allowed ? 1.0 : AppConstants.disabledOpacity,
-                          duration: AppConstants.animFast,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              SwitchListTile(
-                                title: const Text('Tipps per Push'),
-                                value: tipsOn,
-                                activeThumbColor: AppTheme.primary,
-                                contentPadding: EdgeInsets.zero,
-                                onChanged: (v) {
-                                  ref
-                                      .read(profileProvider.notifier)
-                                      .updateProfile(
-                                        profile.copyWith(pushEnabled: v),
-                                      );
-                                },
+                      _Greyed(
+                        enabled: allowed,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SwitchListTile(
+                              title: const Text('Tipps per Push'),
+                              value: tipsOn,
+                              activeThumbColor: AppTheme.primary,
+                              contentPadding: EdgeInsets.zero,
+                              onChanged: (v) {
+                                ref
+                                    .read(profileProvider.notifier)
+                                    .updateProfile(
+                                      profile.copyWith(pushEnabled: v),
+                                    );
+                              },
+                            ),
+                            const Text(
+                              'Ich sag dir Bescheid, sobald neue Tipps da sind.',
+                              style: TextStyle(
+                                fontSize: AppTheme.fontSizeCaptionLG,
+                                color: AppTheme.mutedForeground,
                               ),
-                              const Text(
-                                'Ich sag dir Bescheid, sobald neue Tipps da sind.',
-                                style: TextStyle(
-                                  fontSize: AppTheme.fontSizeCaptionLG,
-                                  color: AppTheme.mutedForeground,
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -377,6 +367,27 @@ class _SettingsNotificationsScreenState
             ),
           );
         },
+      ),
+    );
+  }
+}
+
+/// [child] greyed out and untouchable unless [enabled] (while the OS
+/// notifications are not allowed).
+class _Greyed extends StatelessWidget {
+  const _Greyed({required this.enabled, required this.child});
+
+  final bool enabled;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      ignoring: !enabled,
+      child: AnimatedOpacity(
+        opacity: enabled ? 1.0 : AppConstants.disabledOpacity,
+        duration: AppConstants.animFast,
+        child: child,
       ),
     );
   }
