@@ -1,4 +1,6 @@
 import 'package:belly_buddy/config/app_theme.dart';
+import 'package:belly_buddy/config/constants.dart';
+import 'package:belly_buddy/widgets/buddy/streak_flame.dart';
 import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -33,8 +35,28 @@ void main() {
     for (final day in ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']) {
       expect(find.text(day), findsOneWidget);
     }
-    expect(find.text('🔥'), findsNWidgets(2));
+    expect(find.byType(StreakFlame), findsNWidgets(2));
     expect(t.takeException(), isNull);
+  });
+
+  testWidgets('active days show a still flame mark', (t) async {
+    await t.pumpWidget(
+      _wrap(
+        StreakWeekRow(
+          activeDays: {DateTime(2026, 11, 23), DateTime(2026, 11, 24)},
+          today: _wednesday,
+        ),
+      ),
+    );
+
+    final flames = t.widgetList<StreakFlame>(find.byType(StreakFlame));
+    expect(flames, hasLength(2));
+    for (final flame in flames) {
+      expect(flame.still, isTrue);
+      expect(flame.lit, isTrue);
+      expect(flame.height, AppConstants.streakFlameMarkHeight);
+    }
+    expect(find.text('🔥'), findsNothing);
   });
 
   testWidgets('marks today and reads the active days out', (t) async {
@@ -62,7 +84,7 @@ void main() {
       _wrap(StreakWeekRow(activeDays: const {}, today: _wednesday)),
     );
 
-    expect(find.text('🔥'), findsNothing);
+    expect(find.byType(StreakFlame), findsNothing);
     expect(
       find.bySemanticsLabel('Diese Woche noch kein Eintrag'),
       findsOneWidget,

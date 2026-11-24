@@ -4,11 +4,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/services/entry_query_service.dart';
 
+import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
 import '../helpers/mocks.dart';
 import '../helpers/riverpod_helpers.dart';
@@ -510,6 +512,65 @@ void main() {
     });
   });
 
+  group('EntriesNotifier refreshes a loaded Buddy', () {
+    late _CountingBuddy buddy;
+
+    setUp(() {
+      buddy = _CountingBuddy();
+      when(
+        () => mockRepo.insertEntry(any(), any(), userId: any(named: 'userId')),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockRepo.updateEntry(any(), any(), any()),
+      ).thenAnswer((_) async {});
+      when(() => mockRepo.deleteByType(any(), any())).thenAnswer((_) async {});
+    });
+
+    ProviderContainer withBuddy() => createContainer(
+      overrides: [
+        entryRepositoryProvider.overrideWithValue(mockRepo),
+        currentUserIdProvider.overrideWithValue(testUserId),
+        buddyProvider.overrideWith(() => buddy),
+      ],
+    );
+
+    test('a delete or a move reloads a loaded Buddy', () async {
+      final container = withBuddy();
+      container.read(buddyProvider);
+      final notifier = container.read(entriesProvider.notifier);
+
+      await notifier.deleteByType('meal', 'm1');
+      expect(buddy.reloads, 1);
+
+      await notifier.updateDrinkById(
+        'drink-1',
+        amountMl: 250,
+        trackedAt: DateTime(2026, 11, 22, 18),
+      );
+      expect(buddy.reloads, 2);
+    });
+
+    test('an insert does not', () async {
+      final container = withBuddy();
+      container.read(buddyProvider);
+
+      await container
+          .read(entriesProvider.notifier)
+          .addDrinkEntry(testDrinkEntry());
+
+      expect(buddy.reloads, 0);
+    });
+
+    test('no Buddy loaded: nothing reloads', () async {
+      final container = withBuddy();
+
+      await container.read(entriesProvider.notifier).deleteByType('meal', 'm1');
+
+      expect(buddy.builds, 0);
+      expect(buddy.reloads, 0);
+    });
+  });
+
   group('EntriesNotifier.reset', () {
     test('clears state back to defaults', () async {
       final result = testEntryQueryResult();
@@ -538,4 +599,19 @@ void main() {
       expect(state.error, isNull);
     });
   });
+}
+
+/// A Buddy that counts its builds and reloads.
+class _CountingBuddy extends FakeBuddyNotifier {
+  int builds = 0;
+  int reloads = 0;
+
+  @override
+  Future<BuddyStatus?> build() {
+    builds++;
+    return super.build();
+  }
+
+  @override
+  Future<void> reload() async => reloads++;
 }

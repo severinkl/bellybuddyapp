@@ -154,8 +154,7 @@ class AppTheme {
     color: mutedForeground,
   );
 
-  // The streak moment's big count („🔥 1 Tag"): flame and number
-  static const double fontSizeStreakFlame = 40;
+  // The streak moment's big count („1 Tag" beside the flame)
   static const double fontSizeStreakCount = 56;
 
   // Stool scale colors

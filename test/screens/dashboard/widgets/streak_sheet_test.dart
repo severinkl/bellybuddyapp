@@ -6,6 +6,7 @@ import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/screens/buddy/streak_goal_picker.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/streak_sheet.dart';
+import 'package:belly_buddy/widgets/buddy/streak_flame.dart';
 import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
 
 import '../../../helpers/fakes.dart';
@@ -13,14 +14,18 @@ import '../../../helpers/fakes.dart';
 void main() {
   final today = DateTime(2026, 11, 23, 13);
 
-  BuddyStatus status({int streak = 3, int? goal = 14, int savers = 1}) =>
-      buddyStatus(
-        goal: goal,
-        savers: savers,
-        streak: streak,
-        todayCounted: true,
-        weekDays: {DateTime(2026, 11, 23)},
-      );
+  BuddyStatus status({
+    int streak = 3,
+    int? goal = 14,
+    int savers = 1,
+    bool todayCounted = true,
+  }) => buddyStatus(
+    goal: goal,
+    savers: savers,
+    streak: streak,
+    todayCounted: todayCounted,
+    weekDays: {if (todayCounted) DateTime(2026, 11, 23)},
+  );
 
   /// The goal row for [days] shows as the selected one.
   bool selected(WidgetTester tester, int days) => find
@@ -59,6 +64,37 @@ void main() {
     expect(find.text('Streak-Saver: 1'), findsOneWidget);
     expect(find.text(StreakSheet.saverText), findsOneWidget);
     expect(find.text('Ziel ändern'), findsOneWidget);
+  });
+
+  testWidgets('„Dein Streak" shows the flame as an ember until today counts', (
+    tester,
+  ) async {
+    List<String?> texts() => [
+      for (final text in tester.widgetList<Text>(find.byType(Text))) text.data,
+    ];
+    // The count's flame (the week row's marks are flames too).
+    FlameLook look() =>
+        (tester
+                    .widget<CustomPaint>(
+                      find.descendant(
+                        of: find.byWidgetPredicate(
+                          (w) => w is StreakFlame && !w.still,
+                        ),
+                        matching: find.byType(CustomPaint),
+                      ),
+                    )
+                    .painter!
+                as FlamePainter)
+            .look;
+
+    await pump(tester, status(todayCounted: true));
+    expect(look(), FlameLook.lit);
+    final litTexts = texts();
+
+    await pump(tester, status(todayCounted: false));
+    expect(look(), FlameLook.ember);
+    // Neutral: no text of its own.
+    expect(texts(), litTexts);
   });
 
   testWidgets('no goal yet → „Noch kein Ziel" and „Ziel festlegen"', (

@@ -611,7 +611,7 @@ void main() {
       buddy = _FakeBuddy(() => _status(streak: 0, savers: 0, hasRow: false));
       await pumpHero(tester);
 
-      expect(find.text('🔥 0 Tage'), findsOneWidget);
+      expect(find.text('0 Tage'), findsOneWidget);
       expect(controller(tester).mood, BuddyMood.hungry);
     });
 

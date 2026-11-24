@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/meal_entry.dart';
 import '../models/toilet_entry.dart';
 import '../models/gut_feeling_entry.dart';
 import '../models/drink_entry.dart';
+import '../providers/buddy_provider.dart';
 import '../providers/core_providers.dart';
 import '../repositories/entry_repository.dart';
 import '../services/entry_query_service.dart';
@@ -136,10 +139,21 @@ class EntriesNotifier extends Notifier<EntriesState> {
   /// Runs [write], announces it ([entriesRevisionProvider]), then reloads
   /// the loaded day in the background so the state shows it. Before the
   /// first load there is nothing to reload.
-  Future<void> _write(Future<void> Function() write) async {
+  ///
+  /// With [refreshesBuddy] (an edit, a move or a delete) a loaded Buddy
+  /// reloads too: the write can change his streak or whether today counts
+  /// (today's only entry deleted). An insert needs none of it; a tracker's
+  /// log event already refreshes him.
+  Future<void> _write(
+    Future<void> Function() write, {
+    bool refreshesBuddy = false,
+  }) async {
     await write();
     if (!ref.mounted) return;
     ref.read(entriesRevisionProvider.notifier)._bump();
+    if (refreshesBuddy && ref.read(buddyProvider.exists)) {
+      unawaited(ref.read(buddyProvider.notifier).reload());
+    }
     final day = state.day;
     // A failing reload is logged by loadEntries; the write itself is done.
     if (day != null) loadEntries(day).ignore();
@@ -155,10 +169,15 @@ class EntriesNotifier extends Notifier<EntriesState> {
   }
 
   Future<void> _update(String type, String id, Map<String, dynamic> data) =>
-      _write(() => _repo.updateEntry(entryTableFor[type]!, id, data));
+      _write(
+        () => _repo.updateEntry(entryTableFor[type]!, id, data),
+        refreshesBuddy: true,
+      );
 
-  Future<void> _delete(String type, String id) =>
-      _write(() => _repo.deleteEntry(entryTableFor[type]!, id));
+  Future<void> _delete(String type, String id) => _write(
+    () => _repo.deleteEntry(entryTableFor[type]!, id),
+    refreshesBuddy: true,
+  );
 
   // -- Meal CRUD --
 
@@ -202,7 +221,7 @@ class EntriesNotifier extends Notifier<EntriesState> {
   // -- Generic delete by type (used by diary) --
 
   Future<void> deleteByType(String type, String id) =>
-      _write(() => _repo.deleteByType(type, id));
+      _write(() => _repo.deleteByType(type, id), refreshesBuddy: true);
 
   // -- Typed update by ID (used by diary detail sheets) --
   // A non-null [trackedAt] moves the entry to that date and time.

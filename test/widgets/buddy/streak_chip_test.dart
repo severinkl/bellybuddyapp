@@ -1,5 +1,7 @@
 import 'package:belly_buddy/config/app_theme.dart';
+import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
+import 'package:belly_buddy/widgets/buddy/streak_flame.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -26,9 +28,33 @@ void main() {
   testWidgets('shows only the streak, never the savers', (t) async {
     final h = t.ensureSemantics();
     await t.pumpWidget(_wrap(const StreakChip(streak: 1, todayCounted: true)));
-    expect(find.text('🔥 1 Tag'), findsOneWidget);
+    expect(find.text('1 Tag'), findsOneWidget);
     expect(find.textContaining('🛡'), findsNothing);
     expect(find.bySemanticsLabel(RegExp('Schutz')), findsNothing);
+    h.dispose();
+  });
+
+  testWidgets('the flame replaces the emoji', (t) async {
+    await t.pumpWidget(_wrap(const StreakChip(streak: 4, todayCounted: false)));
+    expect(find.textContaining('🔥'), findsNothing);
+    expect(find.text('4 Tage'), findsOneWidget);
+    var flame = t.widget<StreakFlame>(find.byType(StreakFlame));
+    expect(flame.streak, 4);
+    expect(flame.lit, isFalse);
+    expect(flame.height, AppConstants.streakFlameChipHeight);
+
+    await t.pumpWidget(_wrap(const StreakChip(streak: 4, todayCounted: true)));
+    flame = t.widget<StreakFlame>(find.byType(StreakFlame));
+    expect(flame.lit, isTrue);
+  });
+
+  testWidgets('semantics unchanged', (t) async {
+    final h = t.ensureSemantics();
+    await t.pumpWidget(_wrap(const StreakChip(streak: 4, todayCounted: false)));
+    expect(
+      find.semantics.byLabel(RegExp('^Streak: 4 Tage')).evaluate().single.label,
+      'Streak: 4 Tage, Heute noch offen',
+    );
     h.dispose();
   });
 

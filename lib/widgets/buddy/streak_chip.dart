@@ -2,11 +2,13 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
+import 'streak_flame.dart';
 
-/// Compact streak indicator: "🔥 5 Tage" (the streak only; savers are not
-/// shown here).
+/// Compact streak indicator: the drawn flame and "5 Tage" (the streak only;
+/// savers are not shown here).
 ///
-/// Muted while today is not yet counted; pops when [streak] increases.
+/// Muted while today is not yet counted, the flame an ember until today's
+/// first entry ignites it; pops when [streak] increases.
 /// With [onTap] it is a button that sets the streak goal.
 class StreakChip extends StatefulWidget {
   const StreakChip({
@@ -62,7 +64,6 @@ class _StreakChipState extends State<StreakChip>
   Widget build(BuildContext context) {
     final muted = !widget.todayCounted && widget.streak > 0;
     final days = '${widget.streak} ${widget.streak == 1 ? 'Tag' : 'Tage'}';
-    final label = '🔥 $days';
     final semantics = [
       'Streak: $days',
       if (muted) 'Heute noch offen',
@@ -90,13 +91,24 @@ class _StreakChipState extends State<StreakChip>
               color: muted ? AppTheme.muted : AppTheme.secondary,
               borderRadius: BorderRadius.circular(AppConstants.radiusFull),
             ),
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: AppTheme.fontSizeBody,
-                fontWeight: FontWeight.w600,
-                color: color,
-              ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                StreakFlame(
+                  streak: widget.streak,
+                  lit: widget.todayCounted,
+                  height: AppConstants.streakFlameChipHeight,
+                ),
+                const SizedBox(width: AppConstants.spacingXs),
+                Text(
+                  days,
+                  style: TextStyle(
+                    fontSize: AppTheme.fontSizeBody,
+                    fontWeight: FontWeight.w600,
+                    color: color,
+                  ),
+                ),
+              ],
             ),
           ),
         ),

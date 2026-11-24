@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
+import '../../../widgets/buddy/streak_flame.dart';
 import '../../../widgets/buddy/streak_week_row.dart';
 import '../../../widgets/common/bb_card.dart';
 
@@ -10,19 +11,24 @@ const String kStreakRuleText =
     'Jeder Tag mit mindestens einem Eintrag zählt: Mahlzeit, Getränk, '
     'Bauchgefühl oder Klo.';
 
-/// The streak moment below the Buddy: the big count („🔥 1 Tag", left out
-/// while [streak] is 0), this week's row and the rule of what counts.
+/// The streak moment below the Buddy: the big count beside the flame
+/// („1 Tag", left out while [streak] is 0), this week's row and the rule of
+/// what counts.
 class StreakMoment extends StatelessWidget {
   const StreakMoment({
     super.key,
     required this.streak,
     required this.weekDays,
     required this.today,
+    this.lit = true,
   });
 
   final int streak;
   final Set<DateTime> weekDays;
   final DateTime today;
+
+  /// Today counts: the flame burns; otherwise it is an ember.
+  final bool lit;
 
   @override
   Widget build(BuildContext context) {
@@ -34,33 +40,42 @@ class StreakMoment extends StatelessWidget {
           Semantics(
             label: 'Streak: $streak $unit',
             child: ExcludeSemantics(
+              // The flame stands on the count's bottom edge; count and unit
+              // share a baseline.
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  const Text(
-                    '🔥',
-                    style: TextStyle(fontSize: AppTheme.fontSizeStreakFlame),
+                  StreakFlame(
+                    streak: streak,
+                    lit: lit,
+                    height: AppConstants.streakFlameMomentHeight,
                   ),
                   const SizedBox(width: AppConstants.spacingSm),
-                  Text(
-                    '$streak',
-                    style: const TextStyle(
-                      fontSize: AppTheme.fontSizeStreakCount,
-                      fontWeight: FontWeight.w800,
-                      height: 1,
-                      color: AppTheme.foreground,
-                    ),
-                  ),
-                  const SizedBox(width: AppConstants.spacingSm),
-                  Text(
-                    unit,
-                    style: const TextStyle(
-                      fontSize: AppTheme.fontSizeTitleLG,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.mutedForeground,
-                    ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      Text(
+                        '$streak',
+                        style: const TextStyle(
+                          fontSize: AppTheme.fontSizeStreakCount,
+                          fontWeight: FontWeight.w800,
+                          height: 1,
+                          color: AppTheme.foreground,
+                        ),
+                      ),
+                      const SizedBox(width: AppConstants.spacingSm),
+                      Text(
+                        unit,
+                        style: const TextStyle(
+                          fontSize: AppTheme.fontSizeTitleLG,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.mutedForeground,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

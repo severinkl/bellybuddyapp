@@ -95,6 +95,18 @@ class AppConstants {
   // Streak week row (Mo–So): day circle
   static const double streakWeekDaySize = 36.0;
 
+  // The drawn streak flame: its height in the chip, the streak moment, a
+  // week row's day and the success page's ignite; the ignite's burst, the
+  // lit flame's wobble, the ember's breathing and a blazing flame's sparks
+  static const double streakFlameChipHeight = 22.0;
+  static const double streakFlameMomentHeight = 72.0;
+  static const double streakFlameMarkHeight = 20.0;
+  static const double streakFlameIgniteHeight = 32.0;
+  static const Duration streakFlameIgnite = Duration(milliseconds: 750);
+  static const Duration streakFlameWobble = Duration(milliseconds: 1700);
+  static const Duration streakFlameBreath = Duration(milliseconds: 2800);
+  static const Duration streakFlameSparks = Duration(milliseconds: 1600);
+
   // A streak goal's row in the goal list
   static const double streakGoalRowHeight = 56.0;
 
