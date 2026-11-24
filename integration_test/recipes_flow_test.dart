@@ -209,9 +209,11 @@ void main() {
     await tester.pumpAndSettle();
 
     // Success overlay — tap to dismiss. Because initialRecipe != null,
-    // the dismiss handler is context.go(/dashboard).
+    // the dismiss handler is context.go(/dashboard). Tap the message: a
+    // tap in the middle would land on the Buddy, who is interactive and
+    // gets poked instead.
     expect(find.byType(BbSuccessOverlay), findsOneWidget);
-    await tester.tap(find.byType(BbSuccessOverlay));
+    await tester.tap(find.text('Mahlzeit gespeichert!'));
     await tester.pumpAndSettle();
 
     expect(find.byType(DashboardScreen), findsOneWidget);
