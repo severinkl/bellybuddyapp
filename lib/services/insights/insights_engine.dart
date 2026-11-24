@@ -23,6 +23,9 @@ import '../../utils/gut_feeling_rating.dart';
 ///   entry of that class (`[anchor − 24 h, anchor)`) say which ingredients
 ///   were there. Names match trimmed and case-insensitively, and each
 ///   ingredient counts once per day.
+/// - The calm-day ingredients are those of every meal on a window day
+///   without an entry that is „Schlecht" on its own (days without entries
+///   count).
 ///
 /// The journey holds the latest [InsightRules.daysNeeded] days with any
 /// entry, from the same active-day set as the progress.
@@ -72,6 +75,17 @@ Insights computeInsights(InsightSource source, DateTime now) {
   final hardCounts = _daysThere(meals, hardAnchors);
   final goodCounts = _daysThere(meals, goodAnchors);
 
+  final hardEntryDays = {
+    for (final e in gutFeelings)
+      if (_entryClassOf(e) == DayClass.hard) _localDay(e.trackedAt),
+  };
+  final calmDayIngredients = {
+    for (final m in meals)
+      if (inWindow(m.trackedAt) &&
+          !hardEntryDays.contains(_localDay(m.trackedAt)))
+        ...m.spellings.keys,
+  };
+
   final hardDays = _column(hardCounts, hardAnchors.length, names);
   final goodDays = _column(goodCounts, goodAnchors.length, names);
   final noticed = _noticed(
@@ -105,6 +119,7 @@ Insights computeInsights(InsightSource source, DateTime now) {
       for (final day in journeyDays)
         JourneyDay(day, gutFeeling: entriesByDay.containsKey(day)),
     ]),
+    calmDayIngredients: Set.unmodifiable(calmDayIngredients),
   );
 }
 

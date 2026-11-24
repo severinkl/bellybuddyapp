@@ -240,6 +240,7 @@ class Insights {
     required this.noticed,
     required this.pick,
     this.journey = const [],
+    this.calmDayIngredients = const {},
   });
 
   /// Toward the first patterns: active days and gut-feeling entries.
@@ -275,6 +276,11 @@ class Insights {
   /// is the active days, up to [InsightRules.daysNeeded].
   final List<JourneyDay> journey;
 
+  /// The ingredient keys (trimmed, lower case) of the window's meals on
+  /// local days without a „Schlecht" gut-feeling entry (days without any
+  /// count): what ranks recipes up while [unlocked] is false.
+  final Set<String> calmDayIngredients;
+
   @override
   bool operator ==(Object other) =>
       other is Insights &&
@@ -284,7 +290,8 @@ class Insights {
       other.hardDays == hardDays &&
       _listEquals(other.noticed, noticed) &&
       other.pick == pick &&
-      _listEquals(other.journey, journey);
+      _listEquals(other.journey, journey) &&
+      _setEquals(other.calmDayIngredients, calmDayIngredients);
 
   @override
   int get hashCode => Object.hash(
@@ -295,12 +302,14 @@ class Insights {
     Object.hashAll(noticed),
     pick,
     Object.hashAll(journey),
+    Object.hashAllUnordered(calmDayIngredients),
   );
 
   @override
   String toString() =>
       'Insights($progress, goodDays: $goodDays, hardDays: $hardDays, '
-      'noticed: $noticed, pick: $pick, journey: $journey)';
+      'noticed: $noticed, pick: $pick, journey: $journey, '
+      'calmDayIngredients: $calmDayIngredients)';
 }
 
 bool _listEquals<T>(List<T> a, List<T> b) {
@@ -311,3 +320,6 @@ bool _listEquals<T>(List<T> a, List<T> b) {
   }
   return true;
 }
+
+bool _setEquals<T>(Set<T> a, Set<T> b) =>
+    identical(a, b) || (a.length == b.length && a.containsAll(b));

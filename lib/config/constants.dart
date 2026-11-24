@@ -175,6 +175,9 @@ class AppConstants {
   // Entdecken: a recipe card's width in the Meine Rezepte row
   static const double discoverRecipeCardWidth = 148.0;
 
+  /// Entdecken: how many recipes „Für dich" shows.
+  static const int recipeForYouCount = 3;
+
   // Wissen: an article's square thumbnail
   static const double knowledgeThumbSize = 64.0;
 
