@@ -398,6 +398,72 @@ void main() {
     });
   });
 
+  group('diet', () {
+    RecipeFit dietFit(
+      List<RecipeIngredient> lines, {
+      Set<String> dietTags = const {'vegetarisch'},
+      String? diet = 'vegan',
+      List<String> intolerances = const ['Fruktose'],
+      bool withRules = true,
+    }) => UserIntolerances(withRules ? _rules : null, intolerances).fit(
+      testRecipe(ingredients: lines, dietTags: dietTags),
+      diet: diet,
+    );
+
+    test('against the diet: no „Passt zu dir", no ✓, not „Passt zu mir"', () {
+      final fit = dietFit([_reis]);
+
+      expect(fit.offDiet, 'vegan');
+      expect(fit.badge, isNull);
+      expect(_marks(fit), {'Reis': LineMark.neutral});
+      expect(fit.passtZuMir, isFalse);
+      // An adaptation is made for the diet: its lines may still get a ✓.
+      expect(fit.cleanMark, LineMark.fits);
+    });
+
+    test('against the diet, with a kritisch line: that one still counts', () {
+      final fit = dietFit([_reis, _honig]);
+
+      expect(fit.badge, const KritischBadge(1));
+      expect(_marks(fit), {
+        'Reis': LineMark.neutral,
+        'Honig': LineMark.kritisch,
+      });
+    });
+
+    test('fitting the diet, or none set: as before', () {
+      for (final (tags, diet) in [
+        ({'vegan', 'vegetarisch'}, 'vegan'),
+        ({'vegetarisch'}, 'vegetarisch'),
+        (<String>{}, 'alles'),
+        (<String>{}, null),
+      ]) {
+        final fit = dietFit([_reis], dietTags: tags, diet: diet);
+        expect(fit.offDiet, isNull, reason: '$diet');
+        expect(fit.badge, const FitsBadge(), reason: '$diet');
+        expect(_marks(fit), {'Reis': LineMark.fits}, reason: '$diet');
+      }
+    });
+
+    test('unchecked: still against the diet', () {
+      final fit = dietFit([_reis], withRules: false);
+
+      expect(fit.checked, isFalse);
+      expect(fit.offDiet, 'vegan');
+      expect(fit.badge, isNull);
+    });
+
+    test('fitsDiet: vegan needs the vegan tag, vegetarisch the vegetarian '
+        'one', () {
+      final vegan = testRecipe(dietTags: const {'vegan', 'vegetarisch'});
+      final vegetarian = testRecipe(dietTags: const {'vegetarisch'});
+      expect(fitsDiet(vegan, 'vegan'), isTrue);
+      expect(fitsDiet(vegetarian, 'vegan'), isFalse);
+      expect(fitsDiet(vegetarian, 'vegetarisch'), isTrue);
+      expect(fitsDiet(testRecipe(dietTags: const {}), 'alles'), isTrue);
+    });
+  });
+
   test('kritischCount counts the kritisch lines once', () {
     final fit = RecipeFit(
       recipe: testRecipe(),
@@ -460,6 +526,26 @@ void main() {
   });
 
   group('RecipeCopy', () {
+    test('against the diet, and the adapt hint for it', () {
+      expect(
+        RecipeCopy.offDiet('vegan'),
+        'Passt nicht zu deiner Ernährungsweise (vegan)',
+      );
+      expect(
+        RecipeCopy.adaptHint(const ['Honig']),
+        'Ich tausche Honig und schreibe die Schritte passend um.',
+      );
+      expect(
+        RecipeCopy.adaptHint(const [], diet: 'vegan'),
+        'Ich mache es vegan und schreibe die Schritte passend um.',
+      );
+      expect(
+        RecipeCopy.adaptHint(const ['Honig', 'Quark'], diet: 'vegetarisch'),
+        'Ich tausche Honig und Quark, mache es vegetarisch und schreibe die '
+        'Schritte passend um.',
+      );
+    });
+
     test('joins names in German', () {
       expect(RecipeCopy.kritisch(1), '1 Zutat ist für dich kritisch');
       expect(RecipeCopy.kritisch(3), '3 Zutaten sind für dich kritisch');

@@ -67,6 +67,7 @@ void main() {
   Future<void> pump(
     WidgetTester tester, {
     List<String> intolerances = const ['Fruktose'],
+    String? diet,
     String id = 'recipe-1',
     double textScale = 1,
   }) async {
@@ -94,7 +95,7 @@ void main() {
         overrides: [
           recipeRepositoryProvider.overrideWithValue(repo),
           profileProviderSeededWith(
-            testUserProfile(intolerances: intolerances),
+            testUserProfile(intolerances: intolerances, diet: diet),
           ),
           currentUserIdProvider.overrideWithValue(testUserId),
         ],
@@ -178,6 +179,67 @@ void main() {
     expect(inLine('Reis', find.byIcon(Icons.check)), findsOneWidget);
     expect(find.byKey(CollectionRecipeScreen.adaptKey), findsNothing);
     expect(find.text('Für mich anpassen'), findsNothing);
+  });
+
+  group('against the diet', () {
+    const offDiet = 'Passt nicht zu deiner Ernährungsweise (vegan)';
+
+    testWidgets('no „Passt zu dir", no ✓; says so and offers to adapt', (
+      tester,
+    ) async {
+      repo.collection = [
+        testRecipe(
+          title: 'Reis mit Ei',
+          ingredients: [reis],
+          dietTags: const {'vegetarisch'},
+        ),
+      ];
+      await pump(tester, diet: 'vegan');
+
+      expect(find.text(offDiet), findsOneWidget);
+      expect(find.text('Passt zu dir'), findsNothing);
+      expect(find.byType(FitBadgeView), findsNothing);
+      expect(find.byIcon(Icons.check), findsNothing);
+      expect(
+        inLine('Reis', find.byKey(IngredientLineView.neutralKey)),
+        findsOne,
+      );
+      expect(
+        find.text('Ich mache es vegan und schreibe die Schritte passend um.'),
+        findsOneWidget,
+      );
+
+      await tester.tapVisible(find.byKey(CollectionRecipeScreen.adaptKey));
+      expect(pushed, {'/collection/recipe-1/adapt': true});
+    });
+
+    testWidgets('with a kritisch line: both in the hint', (tester) async {
+      repo.collection = [
+        testRecipe(
+          title: 'Reis mit Honig',
+          ingredients: [reis, honig],
+          dietTags: const {'vegetarisch'},
+        ),
+      ];
+      await pump(tester, diet: 'vegan');
+
+      expect(find.text(offDiet), findsOneWidget);
+      expect(find.text('1 Zutat ist für dich kritisch'), findsOneWidget);
+      expect(
+        find.text(
+          'Ich tausche Honig, mache es vegan und schreibe die Schritte '
+          'passend um.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('fitting the diet: nothing said', (tester) async {
+      await pump(tester, diet: 'vegan');
+
+      expect(find.text(offDiet), findsNothing);
+      expect(find.text(adaptHint), findsOneWidget);
+    });
   });
 
   testWidgets('Histamin user', (tester) async {

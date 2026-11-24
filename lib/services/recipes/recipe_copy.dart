@@ -54,9 +54,20 @@ abstract final class RecipeCopy {
   /// The pill on an adapted recipe's picture.
   static const adaptedForYou = 'Für dich angepasst';
 
-  /// Below „Für mich anpassen": which ingredients the Buddy swaps.
-  static String adaptHint(List<String> names) =>
-      'Ich tausche ${joinGerman(names)} und schreibe die Schritte passend um.';
+  /// A recipe that doesn't fit the profile's [diet] (`vegan`,
+  /// `vegetarisch`).
+  static String offDiet(String diet) =>
+      'Passt nicht zu deiner Ernährungsweise ($diet)';
+
+  /// Below „Für mich anpassen": which ingredients the Buddy swaps, and the
+  /// [diet] he makes it fit.
+  static String adaptHint(List<String> names, {String? diet}) {
+    final what = [
+      if (names.isNotEmpty) 'tausche ${joinGerman(names)}',
+      if (diet != null) 'mache es $diet',
+    ].join(', ');
+    return 'Ich $what und schreibe die Schritte passend um.';
+  }
 
   /// Below the „Passt zu mir" toggle: what it can't check.
   static String selfCheckFilter(List<String> names) =>

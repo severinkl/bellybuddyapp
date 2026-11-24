@@ -23,8 +23,9 @@ import 'widgets/recipe_page_parts.dart';
 import 'widgets/recipe_steps.dart';
 
 /// A recipe of the collection (`/collection/:id`): how each ingredient fits
-/// the user (✓ / ⚠), „Für mich anpassen" while one is kritisch, the steps
-/// and the source, with „Als Essen eintragen" and „Merken" below.
+/// the user (✓ / ⚠), whether it is against their diet, „Für mich anpassen"
+/// while one is kritisch or it is, the steps and the source, with „Als
+/// Essen eintragen" and „Merken" below.
 class CollectionRecipeScreen extends ConsumerWidget {
   const CollectionRecipeScreen({
     super.key,
@@ -106,6 +107,16 @@ class _RecipeBody extends StatelessWidget {
             meta: recipe.detailMeta,
             badge: fit.badge,
           ),
+          if (fit.offDiet case final diet?) ...[
+            AppConstants.gap8,
+            Text(
+              RecipeCopy.offDiet(diet),
+              style: const TextStyle(
+                fontSize: AppTheme.fontSizeBody,
+                color: AppTheme.mutedForeground,
+              ),
+            ),
+          ],
           AppConstants.gap16,
           _IngredientsCard(fit: fit),
           if (recipe.instructions.isNotEmpty) ...[
@@ -133,7 +144,7 @@ class _RecipeBody extends StatelessWidget {
 }
 
 /// „Zutaten": each line with its mark, and „Für mich anpassen" while one is
-/// kritisch.
+/// kritisch or the recipe is against the diet (core adapts it for both).
 class _IngredientsCard extends StatelessWidget {
   const _IngredientsCard({required this.fit});
 
@@ -148,7 +159,7 @@ class _IngredientsCard extends StatelessWidget {
       servings: recipe.servingsLabel,
       children: [
         ..._lines(),
-        if (kritisch.isNotEmpty) ...[
+        if (kritisch.isNotEmpty || fit.offDiet != null) ...[
           AppConstants.gap12,
           FilledButton.tonalIcon(
             key: CollectionRecipeScreen.adaptKey,
@@ -173,7 +184,7 @@ class _IngredientsCard extends StatelessWidget {
           ),
           AppConstants.gap8,
           Text(
-            RecipeCopy.adaptHint(kritisch),
+            RecipeCopy.adaptHint(kritisch, diet: fit.offDiet),
             textAlign: TextAlign.center,
             style: const TextStyle(
               fontSize: AppTheme.fontSizeCaptionLG,

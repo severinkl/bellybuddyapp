@@ -97,6 +97,14 @@ final class SelfCheckBadge extends FitBadge {
   String toString() => 'SelfCheckBadge($intolerances)';
 }
 
+/// Whether [recipe] fits the profile's [diet] (`alles`, `vegetarisch`,
+/// `vegan`; anything else keeps every recipe).
+bool fitsDiet(Recipe recipe, String? diet) => switch (diet) {
+  'vegan' => recipe.dietTags.contains('vegan'),
+  'vegetarisch' => recipe.dietTags.contains('vegetarisch'),
+  _ => true,
+};
+
 /// How a collection recipe fits the user ([fitOf]).
 class RecipeFit {
   RecipeFit({
@@ -105,9 +113,15 @@ class RecipeFit {
     this.lines = const [],
     this.selfCheck = const [],
     this.judged = false,
+    this.offDiet,
   }) : kritischCount = lines.where((l) => l.mark == LineMark.kritisch).length;
 
   final Recipe recipe;
+
+  /// The profile's diet (`vegan`, `vegetarisch`) when the recipe doesn't
+  /// fit it ([fitsDiet]); null when it does or none is set. Such a recipe
+  /// is never „Passt zu dir" and its clean lines get no ✓.
+  final String? offDiet;
 
   /// Whether the intolerance table and the user's intolerances are known.
   /// Otherwise nothing is judged: no lines, no badge.
@@ -134,21 +148,23 @@ class RecipeFit {
   /// often.
   final int kritischCount;
 
-  /// Null while unchecked, and while an unjudged recipe has no kritisch
-  /// line: nothing that reads like a verdict.
+  /// Null while unchecked, and while an unjudged recipe, or one against
+  /// the diet, has no kritisch line: nothing that reads like a verdict.
   FitBadge? get badge {
     if (!checked) return null;
     final count = kritischCount;
     if (count > 0) return KritischBadge(count);
-    if (!judged) return null;
+    if (!judged || offDiet != null) return null;
     if (selfCheck.isNotEmpty) return SelfCheckBadge(selfCheck);
     return const FitsBadge();
   }
 
   /// Whether the recipe passes „Passt zu mir" (which ignores [selfCheck]).
-  bool get passtZuMir => checked && judged && kritischCount == 0;
+  bool get passtZuMir =>
+      checked && judged && kritischCount == 0 && offDiet == null;
 
-  /// The mark of a line that hits nothing: ✓ only while every intolerance
+  /// The mark of a line that hits nothing in a recipe made for the user
+  /// (an adaptation, which fits the diet): ✓ only while every intolerance
   /// is known and can be judged, else neutral (a ✓ would read like a
   /// verdict on Histamin).
   LineMark get cleanMark =>
@@ -161,7 +177,8 @@ RecipeFit fitOf(
   Recipe recipe, {
   required IntoleranceRules? rules,
   required List<String>? intolerances,
-}) => UserIntolerances(rules, intolerances).fit(recipe);
+  String? diet,
+}) => UserIntolerances(rules, intolerances).fit(recipe, diet: diet);
 
 /// The user's intolerances resolved against the table, once for many
 /// recipes ([fit] is [fitOf]).
@@ -172,7 +189,7 @@ RecipeFit fitOf(
 /// whether a rule is judgeable doesn't matter here. An unmapped line has no
 /// flags, so only its allergens count. The other lines are
 /// [LineMark.fits], or [LineMark.neutral] while an intolerance can't be
-/// judged.
+/// judged or the recipe is against the diet.
 class UserIntolerances {
   factory UserIntolerances(
     IntoleranceRules? rules,
@@ -215,9 +232,19 @@ class UserIntolerances {
   /// Katalog".
   Iterable<_NamedRule> get _judgeable => _named.where((r) => r.rule.judgeable);
 
-  RecipeFit fit(Recipe recipe) {
-    if (!checked) return RecipeFit(recipe: recipe, checked: false);
-    final lines = [for (final line in recipe.ingredients) _lineFit(line)];
+  /// How [recipe] fits; against the profile's [diet], no line gets a ✓
+  /// ([RecipeFit.offDiet]).
+  RecipeFit fit(Recipe recipe, {String? diet}) {
+    final offDiet = fitsDiet(recipe, diet) ? null : diet;
+    if (!checked) {
+      return RecipeFit(recipe: recipe, checked: false, offDiet: offDiet);
+    }
+    final clean = selfCheck.isEmpty && offDiet == null
+        ? LineMark.fits
+        : LineMark.neutral;
+    final lines = [
+      for (final line in recipe.ingredients) _lineFit(line, clean),
+    ];
     final judged =
         !lines.any((l) => l.mark == LineMark.unknown) &&
         !(recipe.isLegacy && _judgeable.isNotEmpty);
@@ -227,6 +254,7 @@ class UserIntolerances {
       lines: List.unmodifiable(lines),
       selfCheck: selfCheck,
       judged: judged,
+      offDiet: offDiet,
     );
   }
 
@@ -241,7 +269,8 @@ class UserIntolerances {
   @override
   int get hashCode => Object.hash(checked, Object.hashAll(_named));
 
-  LineFit _lineFit(RecipeIngredient line) {
+  /// [line]'s fit; [clean] when it hits nothing and can be judged.
+  LineFit _lineFit(RecipeIngredient line, LineMark clean) {
     final because = [
       for (final r in _named)
         if (_hits(r.rule, line)) r.name,
@@ -252,7 +281,7 @@ class UserIntolerances {
     if (!line.mapped && _judgeable.any((r) => r.rule.fodmaps.isNotEmpty)) {
       return LineFit(line, LineMark.unknown);
     }
-    return LineFit(line, selfCheck.isEmpty ? LineMark.fits : LineMark.neutral);
+    return LineFit(line, clean);
   }
 
   static bool _hits(IntoleranceRule rule, RecipeIngredient line) {

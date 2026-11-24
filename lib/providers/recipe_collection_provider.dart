@@ -198,13 +198,17 @@ final collectionRecipeProvider = Provider.autoDispose
       }),
     );
 
-/// How the recipe [id] fits the user, diet ignored; null for an unknown id.
+/// How the recipe [id] fits the user, against their diet too (a saved or
+/// linked recipe may not fit it); null for an unknown id.
 final recipeFitProvider = Provider.autoDispose
     .family<AsyncValue<RecipeFit?>, String>((ref, id) {
+      final diet = ref.watch(profileProvider.select((p) => p.value?.diet));
       final user = ref.watch(userIntolerancesProvider);
       return ref
           .watch(collectionRecipeProvider(id))
-          .whenData((recipe) => recipe == null ? null : user.fit(recipe));
+          .whenData(
+            (recipe) => recipe == null ? null : user.fit(recipe, diet: diet),
+          );
     });
 
 /// „Für dich" on the collection's page.

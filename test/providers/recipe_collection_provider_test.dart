@@ -751,7 +751,7 @@ void main() {
       c.listen(recipeFitProvider('meat'), (_, _) {});
       await c.read(recipeCollectionProvider.future);
       await c.read(intoleranceRulesProvider.future);
-      // Diet is ignored: the non-vegan recipe still has a fit.
+      // Against the diet, the recipe still has a fit.
       expect(c.read(recipeFitProvider('meat')).requireValue?.recipe, meat);
       expect(c.read(recipeFitProvider('nope')).requireValue, isNull);
 
@@ -762,6 +762,25 @@ void main() {
         throwsStateError,
       );
       expect(failing.read(recipeFitProvider('meat')).hasError, isTrue);
+    });
+  });
+
+  group('recipeFit and the diet', () {
+    test('a recipe against the profile diet says so', () async {
+      final c = make(diet: 'vegan');
+      c.listen(recipeFitProvider('meat'), (_, _) {});
+      c.listen(recipeFitProvider('vegan'), (_, _) {});
+      await c.read(recipeCollectionProvider.future);
+      await c.read(intoleranceRulesProvider.future);
+
+      expect(c.read(recipeFitProvider('meat')).requireValue?.offDiet, 'vegan');
+      expect(c.read(recipeFitProvider('vegan')).requireValue?.offDiet, isNull);
+
+      final profile = c.read(profileProvider).requireValue!;
+      c.read(profileProvider.notifier).state = AsyncData(
+        profile.copyWith(diet: 'alles'),
+      );
+      expect(c.read(recipeFitProvider('meat')).requireValue?.offDiet, isNull);
     });
   });
 

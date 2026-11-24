@@ -48,14 +48,6 @@ class RankingSignals {
   );
 }
 
-/// Whether [recipe] fits the profile's [diet] (`alles`, `vegetarisch`,
-/// `vegan`; anything else keeps every recipe).
-bool fitsDiet(Recipe recipe, String? diet) => switch (diet) {
-  'vegan' => recipe.dietTags.contains('vegan'),
-  'vegetarisch' => recipe.dietTags.contains('vegetarisch'),
-  _ => true,
-};
-
 /// 2 per distinct good key of [recipe]'s lines, minus 3 per distinct
 /// noticed key; 0 for an older recipe.
 int recipeScore(Recipe recipe, RankingSignals signals) {
