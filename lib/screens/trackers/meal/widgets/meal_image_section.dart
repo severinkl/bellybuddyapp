@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'dart:ui';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
@@ -9,6 +8,7 @@ import '../../../../config/app_theme.dart';
 import '../../../../config/constants.dart';
 import '../../../../utils/logger.dart';
 import '../../../../utils/url_utils.dart';
+import '../../../../widgets/common/dashed_border_painter.dart';
 import '../../../../widgets/common/signed_path_image.dart';
 
 /// Picks a photo from [source]; null when the user cancels.
@@ -161,12 +161,10 @@ class _EmptyState extends StatelessWidget {
     return AspectRatio(
       aspectRatio: 4 / 3,
       child: CustomPaint(
-        painter: _DashedBorderPainter(
-          color: AppTheme.border,
-          borderRadius: AppConstants.radiusXl,
-          dashWidth: 8,
-          dashGap: 5,
-          strokeWidth: 2,
+        foregroundPainter: const DashedBorderPainter(
+          radius: AppConstants.radiusXl,
+          dashLength: AppConstants.dashLengthLg,
+          dashGap: AppConstants.dashGapLg,
         ),
         child: Container(
           decoration: BoxDecoration(
@@ -400,53 +398,4 @@ class _UrlImagePreview extends StatelessWidget {
       ),
     );
   }
-}
-
-class _DashedBorderPainter extends CustomPainter {
-  final Color color;
-  final double borderRadius;
-  final double dashWidth;
-  final double dashGap;
-  final double strokeWidth;
-
-  _DashedBorderPainter({
-    required this.color,
-    required this.borderRadius,
-    required this.dashWidth,
-    required this.dashGap,
-    required this.strokeWidth,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = strokeWidth
-      ..style = PaintingStyle.stroke;
-
-    final rrect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(0, 0, size.width, size.height),
-      Radius.circular(borderRadius),
-    );
-    final path = Path()..addRRect(rrect);
-    final metrics = path.computeMetrics();
-
-    for (final metric in metrics) {
-      double distance = 0;
-      while (distance < metric.length) {
-        final len = min(dashWidth, metric.length - distance);
-        final extracted = metric.extractPath(distance, distance + len);
-        canvas.drawPath(extracted, paint);
-        distance += dashWidth + dashGap;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant _DashedBorderPainter old) =>
-      color != old.color ||
-      borderRadius != old.borderRadius ||
-      dashWidth != old.dashWidth ||
-      dashGap != old.dashGap ||
-      strokeWidth != old.strokeWidth;
 }

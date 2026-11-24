@@ -13,6 +13,8 @@ import '../../providers/buddy_welcome_provider.dart';
 import '../../providers/discover_news_provider.dart';
 import '../../providers/entries_provider.dart';
 import '../../providers/insights_provider.dart';
+import '../../providers/journey_provider.dart';
+import '../../providers/journey_rewards_provider.dart';
 import '../../providers/upgrade_gate_provider.dart';
 import '../../widgets/common/upgrade_available_dialog.dart';
 import '../../providers/profile_provider.dart';
@@ -21,6 +23,7 @@ import '../../router/route_names.dart';
 import '../../providers/tutorial_provider.dart';
 import 'widgets/buddy_hero.dart';
 import 'widgets/insight_card.dart';
+import 'widgets/journey_reward_line.dart';
 import 'widgets/notification_opt_in_dialog.dart';
 import 'widgets/tips_row.dart';
 import 'widgets/tutorial/show_dashboard_tutorial.dart';
@@ -152,7 +155,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ref.read(profileProvider.notifier).fetchProfile(),
         ref
             .read(entriesProvider.notifier)
-            .loadEntries(ref.read(buddyClockProvider)()),
+            .loadEntries(ref.read(buddyClockProvider)(), refreshLatest: true),
         ref.read(buddyProvider.notifier).reload(),
         ref.read(insightsProvider.notifier).refresh(),
         // The first load leaves the tips to the app root's sign-in load.
@@ -207,11 +210,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 AppConstants.gap16,
                 // Only the card rebuilds with the insights. It shows only
                 // AsyncData: after a user change, the value of a loading or
-                // failed state is still the previous user's.
+                // failed state is still the previous user's. The reward
+                // line only while there is one.
                 Consumer(
                   builder: (_, ref, _) => InsightCard(
                     key: TutorialKeys.insight,
                     insights: ref.watch(insightsProvider),
+                    journey: ref.watch(journeyProvider),
+                    journeyReward:
+                        ref.watch(
+                          journeyRewardLineProvider.select(
+                            (line) => line != null,
+                          ),
+                        )
+                        ? const JourneyRewardLineView()
+                        : null,
                   ),
                 ),
                 // Only while a tip set is new.

@@ -1,0 +1,232 @@
+import 'package:material_ui/material_ui.dart';
+
+import '../../../config/app_theme.dart';
+import '../../../config/constants.dart';
+import '../../../models/adapted_recipe.dart';
+import '../../../services/recipes/recipe_copy.dart';
+import '../../../services/recipes/recipe_fit.dart';
+import '../../../utils/url_utils.dart';
+import '../../../widgets/buddy/buddy_says.dart';
+import 'ingredient_line_view.dart';
+import 'recipe_collection_card.dart';
+import 'recipe_image.dart';
+import 'recipe_page_parts.dart';
+import 'recipe_steps.dart';
+
+/// The adapted recipe: the original's picture with the pill, the new title,
+/// the Buddy's note, the check line, the ingredients with the swaps and
+/// removals marked, the steps with the changed ones highlighted, and the
+/// original with its source.
+class AdaptedRecipeView extends StatelessWidget {
+  const AdaptedRecipeView({
+    super.key,
+    required this.adapted,
+    required this.fit,
+    required this.openUrl,
+  });
+
+  final AdaptedRecipe adapted;
+
+  /// The original and how it fits the user; null while unknown (or gone
+  /// from the collection).
+  final RecipeFit? fit;
+  final UrlOpener openUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final fit = this.fit;
+    final original = fit?.recipe;
+    final selfCheck = fit?.selfCheck ?? const [];
+    final steps = adapted.steps;
+    final changed = {
+      for (final (i, step) in steps.indexed)
+        if (step.changed) i,
+    };
+    return SingleChildScrollView(
+      padding: AppConstants.paddingMd,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          RecipePageHead(
+            image: original == null
+                ? const RecipePlaceholder()
+                : RecipeImage(recipe: original),
+            tag: RecipeCardTag.adapted,
+            title: adapted.title,
+            meta: original?.detailMeta ?? '',
+            // The catalog can't judge these (Histamin): said as on the
+            // detail.
+            badge: selfCheck.isEmpty ? null : SelfCheckBadge(selfCheck),
+          ),
+          if (adapted.note.isNotEmpty) ...[
+            AppConstants.gap16,
+            BuddySays.beside(
+              line: adapted.note,
+              height: AppConstants.adaptBuddyBesideHeight,
+              fontSize: AppTheme.fontSizeBodyLG,
+            ),
+          ],
+          AppConstants.gap16,
+          _CheckLine(adapted.unknownNames),
+          AppConstants.gap16,
+          _IngredientsCard(
+            adapted: adapted,
+            servings: original?.servingsLabel,
+            clean: fit?.cleanMark ?? LineMark.neutral,
+          ),
+          if (steps.isNotEmpty) ...[
+            AppConstants.gap16,
+            RecipeSectionCard(
+              title: 'Zubereitung',
+              trailing: changed.isEmpty ? null : const _ChangedLegend(),
+              children: [
+                RecipeSteps(
+                  steps: [for (final step in steps) step.text],
+                  changed: changed,
+                ),
+              ],
+            ),
+          ],
+          if (original != null) ...[
+            AppConstants.gap8,
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: RecipeSourceLink.original(
+                recipe: original,
+                openUrl: openUrl,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+/// „Alle Zutaten mit dem FODMAP-Katalog geprüft" in green, or which
+/// ingredients weren't in it on yellow: never „alle" with an unknown.
+class _CheckLine extends StatelessWidget {
+  const _CheckLine(this.unknown);
+
+  final List<String> unknown;
+
+  @override
+  Widget build(BuildContext context) {
+    final all = unknown.isEmpty;
+    final color = all
+        ? AppTheme.gutFeelingGoodIcon
+        : AppTheme.gutFeelingNeutralIcon;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: all
+            ? AppTheme.gutFeelingGoodSoft
+            : AppTheme.gutFeelingNeutralSoft,
+        borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppConstants.spacing14,
+          vertical: AppConstants.spacing10,
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              all ? Icons.task_alt : Icons.help_outline,
+              size: AppConstants.iconSizeSm,
+              color: color,
+            ),
+            const SizedBox(width: AppConstants.spacingSm),
+            Expanded(
+              child: Text(
+                all ? RecipeCopy.allChecked : RecipeCopy.someUnknown(unknown),
+                style: TextStyle(
+                  fontSize: AppTheme.fontSizeBody,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// „Zutaten": each adapted ingredient (✓, or „?" and „nicht im Katalog"
+/// when not in it; a swap with its original struck), then the removed
+/// ones struck with „weggelassen".
+class _IngredientsCard extends StatelessWidget {
+  const _IngredientsCard({
+    required this.adapted,
+    required this.servings,
+    required this.clean,
+  });
+
+  final AdaptedRecipe adapted;
+  final String? servings;
+
+  /// The mark of a line in the catalog ([RecipeFit.cleanMark]).
+  final LineMark clean;
+
+  @override
+  Widget build(BuildContext context) {
+    final amounts = adapted.ingredients.any((i) => i.amount != null);
+    return RecipeSectionCard(
+      title: 'Zutaten',
+      servings: servings,
+      children: [
+        for (final i in adapted.ingredients)
+          IngredientLineView(
+            amount: i.amount,
+            name: i.name,
+            mark: i.unknown ? LineMark.unknown : clean,
+            replaces: i.replaces,
+            // The line says „nicht im Katalog" itself, except for a swap.
+            note: i.unknown && i.replaces != null
+                ? RecipeCopy.notInCatalog
+                : null,
+            amountColumn: amounts,
+          ),
+        // A neutral dot keeps them in line with the marked names.
+        for (final name in adapted.removed)
+          IngredientLineView(
+            name: name,
+            mark: LineMark.neutral,
+            removed: true,
+            amountColumn: amounts,
+          ),
+      ],
+    );
+  }
+}
+
+/// The legend of the highlighted steps: a swatch and „geändert".
+class _ChangedLegend extends StatelessWidget {
+  const _ChangedLegend();
+
+  @override
+  Widget build(BuildContext context) {
+    // Each changed step says „geändert" to screen readers itself.
+    return ExcludeSemantics(
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppTheme.recipeChanged,
+              borderRadius: BorderRadius.circular(AppConstants.radiusXs),
+            ),
+            child: const SizedBox(
+              width: AppConstants.recipeChangedSwatchWidth,
+              height: AppConstants.recipeChangedSwatchHeight,
+            ),
+          ),
+          const SizedBox(width: AppConstants.spacing6),
+          const Text(RecipeCopy.stepChanged, style: AppTheme.captionMutedStyle),
+        ],
+      ),
+    );
+  }
+}

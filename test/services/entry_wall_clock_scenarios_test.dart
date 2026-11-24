@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/drink_entry.dart';
 import 'package:belly_buddy/models/gut_feeling_entry.dart';
@@ -11,14 +12,18 @@ import 'package:belly_buddy/models/insight_progress.dart';
 import 'package:belly_buddy/models/insights.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/toilet_entry.dart';
+import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
+import 'package:belly_buddy/services/buddy/care_meters.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
+import 'package:belly_buddy/services/buddy/log_moment.dart';
 import 'package:belly_buddy/services/buddy/streak_engine.dart';
 import 'package:belly_buddy/services/entry_query_service.dart';
 import 'package:belly_buddy/services/insights/insights_engine.dart';
 import 'package:belly_buddy/utils/gut_feeling_rating.dart';
+import 'package:belly_buddy/utils/wall_clock.dart';
 import 'package:belly_buddy/widgets/buddy/buddy_pose.dart';
 
 import '../helpers/fixtures.dart';
@@ -63,7 +68,7 @@ ToiletEntry _toilet(String at) => ToiletEntry.fromJson({
   'tracked_at': _wire(at),
 });
 
-/// A `range` that answers with one settled page.
+/// A `range` (or `limit`) that answers with one settled page.
 class _Page extends MockPostgrestTransformBuilder {
   _Page(this._rows);
 
@@ -83,6 +88,12 @@ class _Page extends MockPostgrestTransformBuilder {
     int to, {
     String? referencedTable,
   }) => _Settled(Future.value(from == 0 ? _rows : <Map<String, dynamic>>[]));
+
+  @override
+  PostgrestTransformBuilder<PostgrestList> limit(
+    int count, {
+    String? referencedTable,
+  }) => _Settled(Future.value(_rows.take(count).toList()));
 }
 
 class _Settled extends MockPostgrestTransformBuilder {
@@ -143,110 +154,194 @@ Map<String, dynamic> _gutRow(String at, int score) => {
 };
 
 void main() {
-  group('Pflege-Ring', () {
-    test('a 23:30 entry of every kind counts for its own day', () {
-      final care = DailyCare.fromEntries(
+  group('care log (meters, Klo line)', () {
+    final day = DateTime(2026, 11, 23);
+
+    test('a 23:30 entry of every kind is logged on its own day', () {
+      final now = DateTime(2026, 11, 23, 23, 45);
+      final log = CareLog.fromEntries(
         EntriesState(
+          day: day,
           meals: [_meal('2026-11-23T23:30')],
           drinks: [_drink('2026-11-23T23:30')],
           gutFeelings: [_gutFeeling('2026-11-23T23:30')],
           toiletEntries: [_toilet('2026-11-23T23:30')],
         ),
-        DateTime(2026, 11, 23, 23, 45),
+        day,
       );
 
-      expect(care.meals, 1);
-      expect(care.drinks, 1);
-      expect(care.glasses, 1);
-      expect(care.gutFeelings, 1);
-      expect(care.toilets, 1);
-      expect(care.lastMealAt, DateTime(2026, 11, 23, 23, 30));
-      expect(care.lastLogAt, DateTime(2026, 11, 23, 23, 30));
+      for (final need in CareNeed.values) {
+        expect(
+          log.lastAt(need),
+          DateTime(2026, 11, 23, 23, 30),
+          reason: '$need',
+        );
+        expect(log.loggedOn(need, now), isTrue, reason: '$need');
+      }
+      expect(CareCopy.looLine(log, now), 'vor 15 Min');
     });
 
-    test("yesterday's 23:30 entry is not today's", () {
-      final care = DailyCare.fromEntries(
-        EntriesState(meals: [_meal('2026-11-22T23:30')]),
-        DateTime(2026, 11, 23, 0, 15),
+    test('a drink at 04:38 was „vor 20 Min“ at 04:58, not „um 05:38“', () {
+      final today = DateTime(2026, 11, 24);
+      final log = CareLog.fromEntries(
+        EntriesState(day: today, drinks: [_drink('2026-11-24T04:38')]),
+        today,
       );
 
-      expect(care.meals, 0);
+      expect(
+        CareCopy.spoken(CareNeed.drink, log, DateTime(2026, 11, 24, 4, 58)),
+        'zuletzt vor 20 Min',
+      );
     });
-  });
 
-  group("the day's Bauchgefühl", () {
-    test('a bad 23:30 check-in is the latest of the day', () {
-      final care = DailyCare.fromEntries(
+    test('a meter drains from the entry on, not an hour later', () {
+      final log = CareLog.fromEntries(
+        EntriesState(day: day, drinks: [_drink('2026-11-23T12:00')]),
+        day,
+      );
+
+      // One awake hour of Trinken's drain from full.
+      expect(
+        CareMeters.at(log, DateTime(2026, 11, 23, 13)).drink,
+        closeTo(
+          1 -
+              (1 - AppConstants.careMeterFloor) *
+                  60 /
+                  AppConstants.careDrinkDrain.inMinutes,
+          1e-9,
+        ),
+      );
+    });
+
+    test("the day's Bauchgefühl is a bad 23:30 check-in", () {
+      final log = CareLog.fromEntries(
         EntriesState(
+          day: day,
           gutFeelings: [
             _gutFeeling('2026-11-23T12:00'),
             _gutFeeling('2026-11-23T23:30', bloating: 5),
           ],
         ),
-        DateTime(2026, 11, 23, 23, 45),
+        day,
       );
 
-      expect(care.gutFeelings, 2);
-      expect(care.lastGutFeelingLevel, GutFeelingRatingLevel.schlecht);
+      expect(log.lastGutFeelingLevel, GutFeelingRatingLevel.schlecht);
     });
-  });
 
-  group('thirst pause (Buddy hero)', () {
-    test('a drink read back after a restart is in the past, not ahead', () {
-      final now = DateTime(2026, 11, 23, 4, 58);
-      final care = DailyCare.fromEntries(
-        EntriesState(drinks: [_drink('2026-11-23T04:38')]),
-        now,
-      );
+    test(
+      "yesterday's 23:30 entry is not today's: sleepy in the morning",
+      () async {
+        final client = MockSupabaseClient();
+        final filters = _serveRows(client, {
+          'drink_entries': [
+            {'tracked_at': _wire('2026-11-22T23:30')},
+          ],
+        });
 
-      expect(care.lastDrinkAt, DateTime(2026, 11, 23, 4, 38));
-      expect(care.lastDrinkAt!.isAfter(now), isFalse);
-      expect(now.difference(care.lastDrinkAt!), const Duration(minutes: 20));
-    });
+        final latest = await EntryQueryService(
+          client,
+        ).fetchLatestBefore(userId: testUserId, before: day);
+        expect(latest.drink, DateTime(2026, 11, 22, 23, 30));
+        verify(
+          () => filters['drink_entries']!.lt(
+            'tracked_at',
+            '2026-11-23T00:00:00.000Z',
+          ),
+        ).called(1);
+
+        final morning = DateTime(2026, 11, 23, 7);
+        final log = CareLog.fromEntries(
+          EntriesState(day: day, latestBefore: latest),
+          day,
+        );
+        expect(log.anyOn(morning), isFalse);
+        expect(deriveBuddyMood(log, morning), BuddyMood.sleepy);
+      },
+    );
   });
 
   group('meal prompt', () {
-    test('a 09:45 breakfast is breakfast: Mittagessen is asked at 11:00', () {
-      final now = DateTime(2026, 11, 23, 11);
-      final care = DailyCare.fromEntries(
-        EntriesState(meals: [_meal('2026-11-23T09:45')]),
-        now,
+    test('a 09:45 breakfast is breakfast: Mittagessen is asked for', () {
+      final day = DateTime(2026, 11, 23);
+      final log = CareLog.fromEntries(
+        EntriesState(
+          day: day,
+          meals: [_meal('2026-11-23T09:45')],
+          drinks: [_drink('2026-11-23T13:30')],
+          gutFeelings: [_gutFeeling('2026-11-23T13:30')],
+        ),
+        day,
       );
 
-      expect(care.lastMealAt, DateTime(2026, 11, 23, 9, 45));
-      expect(nextCareAction(care, now), CareAction.lunch);
+      expect(
+        nextCareAction(log, DateTime(2026, 11, 23, 13, 45)),
+        CareAction.lunch,
+      );
     });
 
-    test('a 16:15 snack is no dinner: Abendessen is asked at 17:30', () {
-      final now = DateTime(2026, 11, 23, 17, 30);
-      final care = DailyCare.fromEntries(
-        EntriesState(meals: [_meal('2026-11-23T16:15')]),
-        now,
+    test('in summer (CEST) a 15:15 snack is no dinner', () {
+      final day = DateTime(2026, 7, 14);
+      final log = CareLog.fromEntries(
+        EntriesState(
+          day: day,
+          meals: [_meal('2026-07-14T15:15')],
+          drinks: [_drink('2026-07-14T19:15')],
+          gutFeelings: [_gutFeeling('2026-07-14T19:15')],
+        ),
+        day,
       );
 
-      expect(nextCareAction(care, now), CareAction.dinner);
-    });
-
-    test('in summer (CEST) a 15:15 snack is no dinner either', () {
-      final now = DateTime(2026, 7, 14, 17, 30);
-      final care = DailyCare.fromEntries(
-        EntriesState(meals: [_meal('2026-07-14T15:15')]),
-        now,
+      expect(
+        nextCareAction(log, DateTime(2026, 7, 14, 19, 30)),
+        CareAction.dinner,
       );
-
-      expect(nextCareAction(care, now), CareAction.dinner);
     });
   });
 
-  group('Buddy mood', () {
-    test('happy for 5 hours after the last entry, not longer', () {
-      final entries = EntriesState(drinks: [_drink('2026-11-23T10:00')]);
-      DailyCare at(DateTime now) => DailyCare.fromEntries(entries, now);
+  group('log moment (success page)', () {
+    final day = DateTime(2026, 11, 23);
 
-      final happy = DateTime(2026, 11, 23, 14, 30);
-      final later = DateTime(2026, 11, 23, 15, 30);
-      expect(deriveBuddyMood(at(happy), happy), BuddyMood.happy);
-      expect(deriveBuddyMood(at(later), later), BuddyMood.hungry);
+    test('a drink an hour after the last fills from a drained meter', () {
+      final now = DateTime(2026, 11, 23, 13);
+      final moment = logMomentFor(
+        kind: EntryKind.drink,
+        trackedAt: now,
+        care: CareLog.fromEntries(
+          EntriesState(day: day, drinks: [_drink('2026-11-23T12:00')]),
+          day,
+        ),
+        now: now,
+      );
+
+      expect(moment.from, lessThan(1.0));
+      expect(moment.to, 1.0);
+    });
+
+    test("the morning's first entry after yesterday's 23:30 one ignites "
+        'the day', () {
+      final now = DateTime(2026, 11, 23, 8);
+      final moment = logMomentFor(
+        kind: EntryKind.drink,
+        trackedAt: now,
+        care: CareLog.fromEntries(
+          EntriesState(
+            day: day,
+            latestBefore: LatestEntries(
+              drink: wallClockFromWire(_wire('2026-11-22T23:30')),
+            ),
+          ),
+          day,
+        ),
+        now: now,
+        buddy: const BuddyStatus(
+          state: BuddyState(),
+          hasRow: true,
+          streak: 3,
+          todayCounted: false,
+        ),
+      );
+
+      expect(moment.ignitesDay, 4);
     });
   });
 

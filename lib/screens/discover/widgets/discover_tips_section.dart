@@ -7,6 +7,7 @@ import '../../../widgets/common/bb_card.dart';
 import '../../../widgets/common/weekly_tips_switch.dart';
 import 'discover_section.dart';
 import 'discover_tips_card.dart';
+import 'example_tip_card.dart';
 
 /// The Tipps section's content: the newest tip set and, while the weekly
 /// tips are off, the opt-in. [weeklyTips] is null while the profile is
@@ -33,19 +34,28 @@ class DiscoverTipsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const optInCard = BbCard(key: optInKey, child: WeeklyTipsSwitch());
     final weeklyTips = this.weeklyTips;
     if (weeklyTips != null && (tips.value?.isEmpty ?? false)) {
       return weeklyTips
           ? const DiscoverNote(key: DiscoverTipsCard.cardKey, emptyWhileOn)
-          : optInCard;
+          : const Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: _optInWithExample,
+            );
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         DiscoverTipsCard(tips: tips, onTap: onOpen),
-        if (weeklyTips == false) ...[AppConstants.gap12, optInCard],
+        if (weeklyTips == false) ...[AppConstants.gap12, ..._optInWithExample],
       ],
     );
   }
 }
+
+/// The example tip, then the opt-in card.
+const _optInWithExample = [
+  ExampleTipCard(),
+  AppConstants.gap12,
+  BbCard(key: DiscoverTipsSection.optInKey, child: WeeklyTipsSwitch()),
+];

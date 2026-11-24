@@ -4,18 +4,22 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' show AsyncData;
 import 'package:belly_buddy/config/constants.dart';
+import 'package:belly_buddy/models/adapted_recipe.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/drink.dart';
+import 'package:belly_buddy/models/first_tip.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/knowledge_article.dart';
 import 'package:belly_buddy/models/insight_rules.dart';
 import 'package:belly_buddy/models/insight_source.dart';
+import 'package:belly_buddy/models/intolerance_rules.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/models/user_recipe.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
+import 'package:belly_buddy/providers/first_tip_provider.dart';
 import 'package:belly_buddy/repositories/auth_repository.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/drink_repository.dart';
@@ -30,6 +34,8 @@ import 'package:belly_buddy/repositories/recommendation_repository.dart';
 import 'package:belly_buddy/repositories/user_recipe_repository.dart';
 import 'package:belly_buddy/services/entry_query_service.dart';
 import 'package:belly_buddy/services/ingredient_service.dart';
+import 'package:belly_buddy/utils/date_format_utils.dart';
+import 'package:belly_buddy/utils/wall_clock.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'fixtures.dart';
@@ -262,7 +268,11 @@ class FakeProfileRepository implements ProfileRepository {
 
 // -- FakeEntryRepository --
 class FakeEntryRepository implements EntryRepository {
-  FakeEntryRepository({this.throwOnUpdate = false, this.throwOnDelete = false});
+  FakeEntryRepository({
+    this.throwOnUpdate = false,
+    this.throwOnDelete = false,
+    this.countInsertsAsActivity = false,
+  });
 
   /// When true, [updateEntry] throws on invocation. Used in tests that verify
   /// the screen stays open and surfaces the error rather than popping.
@@ -270,6 +280,10 @@ class FakeEntryRepository implements EntryRepository {
 
   /// When true, [deleteByType] throws on invocation (a delete that fails).
   final bool throwOnDelete;
+
+  /// When true, [insertEntry] adds the row's local `tracked_at` day to the
+  /// activity days, so the Buddy's refresh after a log sees it.
+  final bool countInsertsAsActivity;
 
   final List<Map<String, dynamic>> _inserted = [];
 
@@ -360,6 +374,12 @@ class FakeEntryRepository implements EntryRepository {
     int? limit,
   }) async => _result.meals;
 
+  @override
+  Future<LatestEntries> fetchLatestBefore({
+    required String userId,
+    required DateTime before,
+  }) async => const LatestEntries();
+
   /// When set, [fetchForDate] throws it (a day that fails to load).
   Object? fetchForDateError;
 
@@ -383,6 +403,10 @@ class FakeEntryRepository implements EntryRepository {
     _inserted.add(data);
     if (table == 'meal_entries') {
       addedMeals.add(MealEntry.fromJson(data));
+    }
+    if (countInsertsAsActivity) {
+      final at = wallClockFromWire(data['tracked_at'] as String);
+      _activityDays = {..._activityDays, startOfDay(at)};
     }
   }
 
@@ -472,22 +496,107 @@ class FakeIngredientRepository implements IngredientRepository {
 
 // -- FakeRecipeRepository --
 class FakeRecipeRepository implements RecipeRepository {
-  List<Recipe> _recipes = [testRecipe()];
-  Set<String> _favorites = {};
+  List<Recipe> collection = [testRecipe()];
+  IntoleranceRules? rules = testIntoleranceRules();
+  List<FavoriteRecipe> favorites = [];
 
-  void seedRecipes(List<Recipe> recipes) => _recipes = recipes;
+  /// Thrown by [fetchCollection] when set.
+  Object? collectionError;
+
+  /// Thrown by [addFavorite] and [removeFavorite] when set.
+  Object? favoriteError;
+
+  /// Thrown by [fetchFavorites] when set.
+  Object? favoritesError;
+
+  /// Thrown by [fetchIntoleranceRules] when set.
+  Object? rulesError;
+
+  /// Recipe ids passed to [addFavorite] / [removeFavorite], failed calls too.
+  final added = <String>[];
+  final removed = <String>[];
+
+  /// How often the rules, the favourites and the collection were fetched.
+  int rulesFetches = 0;
+  int favoritesFetches = 0;
+  int collectionFetches = 0;
 
   @override
-  Future<List<Recipe>> fetchAll() async => _recipes;
+  Future<List<Recipe>> fetchCollection() async {
+    collectionFetches++;
+    if (collectionError case final error?) throw error;
+    return collection;
+  }
+
   @override
-  Future<Set<String>> fetchFavoriteIds(String userId) async => _favorites;
+  Future<List<FavoriteRecipe>> fetchFavorites(String userId) async {
+    favoritesFetches++;
+    if (favoritesError case final error?) throw error;
+    return favorites;
+  }
+
   @override
-  Future<void> addFavorite(String userId, String recipeId) async =>
-      _favorites = {..._favorites, recipeId};
+  Future<void> addFavorite(String userId, String recipeId) async {
+    added.add(recipeId);
+    if (favoriteError case final error?) throw error;
+    favorites = [FavoriteRecipe(recipeId, DateTime.now()), ...favorites];
+  }
+
   @override
-  Future<void> removeFavorite(String userId, String recipeId) async =>
-      _favorites = _favorites.where((id) => id != recipeId).toSet();
+  Future<void> removeFavorite(String userId, String recipeId) async {
+    removed.add(recipeId);
+    if (favoriteError case final error?) throw error;
+    favorites = [
+      for (final f in favorites)
+        if (f.recipeId != recipeId) f,
+    ];
+  }
+
+  @override
+  Future<IntoleranceRules?> fetchIntoleranceRules() async {
+    rulesFetches++;
+    if (rulesError case final error?) throw error;
+    return rules;
+  }
+
+  /// Answers [adapt]; by default [testAdaptedRecipe] for the recipe.
+  Future<AdaptedRecipe> Function(String recipeId)? onAdapt;
+
+  /// How often [adapt] was called.
+  int adaptCalls = 0;
+
+  @override
+  Future<AdaptedRecipe> adapt(String recipeId) async {
+    adaptCalls++;
+    return await onAdapt?.call(recipeId) ??
+        testAdaptedRecipe(recipeId: recipeId);
+  }
 }
+
+/// An `adapt-recipe` answer: Honig swapped for Ahornsirup, the second step
+/// changed for it.
+AdaptedRecipe testAdaptedRecipe({
+  String recipeId = 'recipe-1',
+  String title = 'Porridge mit Ahornsirup',
+  List<AdaptedIngredient> ingredients = const [
+    AdaptedIngredient(amount: '50 g', name: 'Haferflocken'),
+    AdaptedIngredient(amount: '200 ml', name: 'Haferdrink'),
+    AdaptedIngredient(amount: '1 EL', name: 'Ahornsirup', replaces: 'Honig'),
+  ],
+  List<String> removed = const [],
+  List<AdaptedStep> steps = const [
+    AdaptedStep('Haferflocken im Haferdrink aufkochen.'),
+    AdaptedStep('Mit Ahornsirup süßen.', changed: true),
+  ],
+  String note = 'Ich hab Honig gegen Ahornsirup getauscht.',
+}) => AdaptedRecipe(
+  recipeId: recipeId,
+  title: title,
+  ingredients: ingredients,
+  removed: removed,
+  steps: steps,
+  note: note,
+);
 
 // -- FakeUserRecipeRepository --
 class FakeUserRecipeRepository implements UserRecipeRepository {
@@ -519,6 +628,9 @@ class FakeUserRecipeRepository implements UserRecipeRepository {
     required String title,
     required List<String> ingredients,
     String? imageUrl,
+    List<String> instructions = const [],
+    List<String?>? ingredientAmounts,
+    String? adaptedFromRecipeId,
   }) async {
     final created = testUserRecipe(
       id: 'rec-${_recipes.length + 1}',
@@ -526,6 +638,9 @@ class FakeUserRecipeRepository implements UserRecipeRepository {
       title: title,
       ingredients: ingredients,
       imageUrl: imageUrl,
+      instructions: instructions,
+      ingredientAmounts: ingredientAmounts,
+      adaptedFromRecipeId: adaptedFromRecipeId,
     );
     _recipes.add(created);
     return created;
@@ -537,15 +652,21 @@ class FakeUserRecipeRepository implements UserRecipeRepository {
     required String title,
     required List<String> ingredients,
     String? imageUrl,
+    required List<String> instructions,
+    required List<String?>? ingredientAmounts,
   }) async {
     final i = _recipes.indexWhere((r) => r.id == id);
     if (i < 0) throw StateError('UserRecipe $id not found');
+    final old = _recipes[i];
     final next = testUserRecipe(
       id: id,
-      userId: _recipes[i].userId,
+      userId: old.userId,
       title: title,
       ingredients: ingredients,
       imageUrl: imageUrl,
+      instructions: instructions,
+      ingredientAmounts: ingredientAmounts,
+      adaptedFromRecipeId: old.adaptedFromRecipeId,
     );
     _recipes[i] = next;
     return next;
@@ -596,6 +717,57 @@ class FakeRecommendationRepository implements RecommendationRepository {
     required RecommendationState state,
     String? dislikeComment,
   }) async {}
+
+  /// The set a first-tip request saves: put first into [sets], then
+  /// answered as its id and number of tips. Null: an answer without id or
+  /// tips.
+  Recommendation? firstTipSet;
+
+  /// Thrown by [requestFirstTip] when set (after [firstTipGate]).
+  Object? firstTipError;
+
+  /// When set, [requestFirstTip] waits for it (an AI call on its way).
+  Completer<void>? firstTipGate;
+
+  /// Every [requestFirstTip], in order.
+  final List<({List<String> intolerances, String? diet})> firstTipRequests = [];
+
+  /// Asked as each [requestFirstTip] arrives: whether the user is opted in
+  /// to the weekly tips on the server then (e.g. the stored profile of a
+  /// [FakeProfileRepository]).
+  bool Function()? optedIn;
+
+  /// What [optedIn] answered at each [requestFirstTip], in order; null
+  /// while it is unset.
+  final List<bool?> firstTipRequestOptIns = [];
+
+  @override
+  Future<FirstTipResult> requestFirstTip({
+    required List<String> intolerances,
+    required String? diet,
+  }) async {
+    firstTipRequestOptIns.add(optedIn?.call());
+    firstTipRequests.add((intolerances: intolerances, diet: diet));
+    await firstTipGate?.future;
+    if (firstTipError case final error?) throw error;
+    final set = firstTipSet;
+    if (set == null) return const FirstTipResult(tips: 0);
+    sets = [set, ...sets];
+    return FirstTipResult(id: set.id, tips: set.recommendations.length);
+  }
+}
+
+/// A [FirstTipNotifier] that asks nothing: [accept] counts the calls in
+/// [accepts] and answers [acceptResult].
+class FakeFirstTipNotifier extends FirstTipNotifier {
+  int accepts = 0;
+  FirstTipAcceptance acceptResult = FirstTipAcceptance.started;
+
+  @override
+  Future<FirstTipAcceptance> accept() async {
+    accepts++;
+    return acceptResult;
+  }
 }
 
 // -- FakeMealMediaRepository --
@@ -634,6 +806,9 @@ UserRecipe testUserRecipe({
   String title = 'Curry mit Reis',
   List<String> ingredients = const ['Reis', 'Curry'],
   String? imageUrl,
+  List<String> instructions = const [],
+  List<String?>? ingredientAmounts,
+  String? adaptedFromRecipeId,
   DateTime? createdAt,
 }) => UserRecipe(
   id: id,
@@ -641,6 +816,9 @@ UserRecipe testUserRecipe({
   title: title,
   ingredients: ingredients,
   imageUrl: imageUrl,
+  instructions: instructions,
+  ingredientAmounts: ingredientAmounts,
+  adaptedFromRecipeId: adaptedFromRecipeId,
   createdAt: createdAt ?? DateTime.utc(2026, 4, 24),
   updatedAt: createdAt ?? DateTime.utc(2026, 4, 24),
 );
@@ -730,6 +908,7 @@ BuddyStatus buddyStatus({
   bool todayCounted = false,
   Set<DateTime> weekDays = const {},
   List<BuddyAnnouncement> announcements = const [],
+  Map<BuddyAnnouncement, String> announcementKeys = const {},
 }) => BuddyStatus(
   state: BuddyState(
     userId: userId,
@@ -743,6 +922,7 @@ BuddyStatus buddyStatus({
   todayCounted: todayCounted,
   weekDays: weekDays,
   announcements: announcements,
+  announcementKeys: announcementKeys,
 );
 
 /// [BuddyNotifier] serving [initial] (none: no Buddy) without a backend.

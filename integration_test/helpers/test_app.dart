@@ -10,13 +10,12 @@ import 'package:belly_buddy/providers/upgrade_gate_provider.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/repositories/knowledge_repository.dart';
 import 'package:belly_buddy/repositories/repositories.dart';
-import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
-import 'package:belly_buddy/widgets/buddy/animated_buddy.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show User;
 
+import '../../test/helpers/ambient_animations.dart';
 import '../../test/helpers/fakes.dart';
 import '../../test/helpers/fixtures.dart';
 
@@ -36,7 +35,8 @@ User? _buildTestUser() {
 /// done for the test user, so existing users pass the Buddy onboarding gate
 /// and land on the dashboard; a new user (no profile) has no Buddy yet.
 /// [weeklyTipsEnabled] goes into the seeded profile. The blog articles are
-/// [testKnowledgeArticles] (no network).
+/// [testKnowledgeArticles] (no network). The recipe collection is
+/// [recipeRepo] (default: one recipe that fits everyone).
 ProviderScope buildTestApp({
   bool authenticated = true,
   bool seedProfile = true,
@@ -48,17 +48,17 @@ ProviderScope buildTestApp({
   FakeProfileRepository? profileRepo,
   FakeEntryRepository? entryRepo,
   FakeDrinkRepository? drinkRepo,
+  FakeRecipeRepository? recipeRepo,
   FakeUserRecipeRepository? userRecipeRepo,
   FakeBuddyRepository? buddyRepo,
   FakeRecommendationRepository? recommendationRepo,
   FakeIngredientRepository? ingredientRepo,
   bool weeklyTipsEnabled = false,
 }) {
-  // Animated Buddies (dashboard hero, welcome screen) tick every frame and
-  // the care ring's glow pulses forever, so `pumpAndSettle` would never
-  // settle: render them without ticking and the glow without pulsing.
-  AnimatedBuddy.tickerEnabled = false;
-  CareRing.pulseEnabled = false;
+  // Animated Buddies (dashboard hero, welcome screen) tick every frame, the
+  // care ring's glow pulses and the streak flame wobbles forever, so
+  // `pumpAndSettle` would never settle: hold them still.
+  disableAmbientAnimationsForTests();
 
   final fakeProfileRepo = profileRepo ?? FakeProfileRepository();
   if (seedProfile) {
@@ -133,7 +133,9 @@ ProviderScope buildTestApp({
       ingredientRepositoryProvider.overrideWithValue(
         ingredientRepo ?? FakeIngredientRepository(),
       ),
-      recipeRepositoryProvider.overrideWithValue(FakeRecipeRepository()),
+      recipeRepositoryProvider.overrideWithValue(
+        recipeRepo ?? FakeRecipeRepository(),
+      ),
       userRecipeRepositoryProvider.overrideWithValue(
         userRecipeRepo ?? FakeUserRecipeRepository(),
       ),

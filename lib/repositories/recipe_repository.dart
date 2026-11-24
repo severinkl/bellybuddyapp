@@ -1,4 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
+import '../models/adapted_recipe.dart';
+import '../models/intolerance_rules.dart';
 import '../models/recipe.dart';
 import '../services/recipe_service.dart';
 import '../utils/logger.dart';
@@ -10,17 +13,30 @@ class RecipeRepository {
 
   RecipeRepository(this._recipeService);
 
-  Future<List<Recipe>> fetchAll() =>
-      retryAsync(() => _recipeService.fetchAll(), log: _log, label: 'fetchAll');
+  /// Retries only what another attempt can fix: a PostgREST error (schema,
+  /// permission) fails the same way again.
+  Future<List<Recipe>> fetchCollection() => retryAsync(
+    _recipeService.fetchCollection,
+    log: _log,
+    label: 'fetchCollection',
+    retryIf: (e) => e is! PostgrestException,
+  );
 
-  Future<Set<String>> fetchFavoriteIds(String userId) =>
-      _recipeService.fetchFavoriteIds(userId);
+  Future<List<FavoriteRecipe>> fetchFavorites(String userId) =>
+      _recipeService.fetchFavorites(userId);
 
   Future<void> addFavorite(String userId, String recipeId) =>
       _recipeService.addFavorite(userId, recipeId);
 
   Future<void> removeFavorite(String userId, String recipeId) =>
       _recipeService.removeFavorite(userId, recipeId);
+
+  Future<IntoleranceRules?> fetchIntoleranceRules() =>
+      _recipeService.fetchIntoleranceRules();
+
+  /// Not retried: each call may be a paid AI call, and the user retries.
+  Future<AdaptedRecipe> adapt(String recipeId) =>
+      _recipeService.adapt(recipeId);
 }
 
 final recipeRepositoryProvider = Provider<RecipeRepository>(

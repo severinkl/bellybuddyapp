@@ -50,6 +50,9 @@ class AppConstants {
   static const double iconBadgeLg = 48.0;
   static const double iconBadgeXl = 56.0;
 
+  /// The smallest tap target (Apple's 44 pt).
+  static const double minTapTarget = 44.0;
+
   // Border radius
   static const double radiusXs = 4.0;
   static const double radiusSm = 8.0;
@@ -65,6 +68,12 @@ class AppConstants {
   static const double borderWidthSm = 0.5;
   static const double borderWidthMd = 1.5;
   static const double borderWidthLg = 2.0;
+
+  // Dashed outlines; the meal photo picker's longer dashes
+  static const double dashLength = 6.0;
+  static const double dashGap = 4.0;
+  static const double dashLengthLg = 8.0;
+  static const double dashGapLg = 5.0;
 
   // Drag handle
   static const double dragHandleWidth = 40.0;
@@ -92,8 +101,28 @@ class AppConstants {
   static const double streakChipPopScale = 1.25;
   static const double streakSheetBuddyHeight = 220.0;
 
+  // A Buddy sheet's Buddy on a short screen (below this height), so both
+  // its buttons stay on screen without scrolling
+  static const double buddyAskSheetCompactBelow = 700.0;
+  static const double buddyAskSheetCompactHeight = 140.0;
+
+  /// The Buddy's height on the „Muster frei!" page.
+  static const double patternsUnlockedBuddyHeight = 220.0;
+
   // Streak week row (Mo–So): day circle
   static const double streakWeekDaySize = 36.0;
+
+  // The drawn streak flame: its height in the chip, the streak moment, a
+  // week row's day and the success page's ignite; the ignite's burst, the
+  // lit flame's wobble, the ember's breathing and a blazing flame's sparks
+  static const double streakFlameChipHeight = 22.0;
+  static const double streakFlameMomentHeight = 72.0;
+  static const double streakFlameMarkHeight = 20.0;
+  static const double streakFlameIgniteHeight = 32.0;
+  static const Duration streakFlameIgnite = Duration(milliseconds: 750);
+  static const Duration streakFlameWobble = Duration(milliseconds: 1700);
+  static const Duration streakFlameBreath = Duration(milliseconds: 2800);
+  static const Duration streakFlameSparks = Duration(milliseconds: 1600);
 
   // A streak goal's row in the goal list
   static const double streakGoalRowHeight = 56.0;
@@ -109,24 +138,40 @@ class AppConstants {
   static const double reminderExampleLabelWidth = 112.0;
   static const double reminderExampleDotSize = 16.0;
 
+  /// Need meters (tunable): how long awake time drains each need from full
+  /// (the night pause is in DayParts), and the levels. The floor keeps a
+  /// meter from ever looking empty; low and high split the meter's mood
+  /// colours.
+  static const Duration careFoodDrain = Duration(hours: 5);
+  static const Duration careDrinkDrain = Duration(hours: 3);
+  static const Duration careGutFeelingDrain = Duration(hours: 24);
+  static const double careMeterFloor = 0.15;
+  static const double careMeterLow = 0.35;
+  static const double careMeterHigh = 0.7;
+
+  /// A need meter's ring thickness, as a share of its diameter.
+  static const double careMeterStrokeShare = 0.085;
+
+  /// The share of a need meter its icon (emoji) may take.
+  static const double careMeterIconShare = 0.5;
+
   // Dashboard care ring: its diameter (at most this, this share of the
-  // width and of the screen height, at least the minimum), stroke, the gap
-  // between its four segments, and the Buddy's box inside it
+  // width and of the screen height, at least the minimum) and the Buddy's
+  // box inside it
   static const double careRingMaxDiameter = 260.0;
   static const double careRingMinDiameter = 170.0;
   static const double careRingWidthFactor = 0.72;
   static const double careRingHeightFactor = 0.3;
-  static const double careRingStroke = 13.0;
-  static const double careRingGapDegrees = 6.0;
   static const double careRingBuddyFactor = 0.74;
 
-  // Its need bubbles (Essen n/3 …): size, the next need's glow (also the
-  // margin of each bubble's tap area, so it must reach past the shadow's
-  // offset), its pulse
+  // Its need bubbles: a bubble's meter (this share of the ring's diameter,
+  // within min and max), the bubble's width, the next need's glow around
+  // its meter (also the margin of each bubble's tap area) and its pulse
+  static const double careMeterFactor = 0.27;
+  static const double careMeterMinSize = 48.0;
+  static const double careMeterMaxSize = 72.0;
   static const double careNeedWidth = 88.0;
-  static const double careNeedMinHeight = 62.0;
   static const double careNeedGlow = 5.0;
-  static const Offset careNeedShadowOffset = Offset(0, 3);
   static const Duration careNeedPulse = Duration(milliseconds: 1400);
 
   // „Dein Streak" sheet: the goal progress bar
@@ -138,8 +183,41 @@ class AppConstants {
   // Muster page: how blurred the locked state's sample preview is
   static const double patternsPreviewBlur = 5.0;
 
+  // „Deine Belohnungen": a row's day circle
+  static const double journeyRewardDaySize = 44.0;
+
   // Entdecken: a recipe card's width in the Meine Rezepte row
   static const double discoverRecipeCardWidth = 148.0;
+
+  // Rezepte: a recipe page's and a card's picture (width / height), a list
+  // row's thumbnail, an ingredient line's mark and amount column, and the
+  // most steps and characters a recipe's steps may have
+  static const double recipePageImageAspect = 16 / 9;
+  static const double recipeCardImageAspect = 1.1;
+  static const double recipeListThumbSize = 88.0;
+  static const double recipeMarkSize = 24.0;
+  static const double recipeNeutralDotSize = 6.0;
+  static const double recipeAmountWidth = 64.0;
+  static const int recipeStepsMax = 50;
+  static const int recipeStepsMaxChars = 20000;
+
+  /// Core's limit on an own recipe's amounts, all together.
+  static const int recipeAmountsMaxChars = 5000;
+
+  // The „geändert" legend's swatch above a recipe's changed steps
+  static const double recipeChangedSwatchWidth = 16.0;
+  static const double recipeChangedSwatchHeight = 10.0;
+
+  // „Für mich anpassen": the Buddy's stage (bubble slot + Buddy) while he
+  // asks or works, and his height beside his note or a failure
+  static const double adaptBuddyStageHeight = 260.0;
+  static const double adaptBuddyBesideHeight = 88.0;
+
+  /// Entdecken: how many recipes „Für dich" shows.
+  static const int recipeForYouCount = 3;
+
+  /// Tipps: the thumbnail of a Tausch-Tipp's matching recipe.
+  static const double tipRecipeThumbSize = 40.0;
 
   // Wissen: an article's square thumbnail
   static const double knowledgeThumbSize = 64.0;
@@ -147,8 +225,20 @@ class AppConstants {
   // Ich: the Buddy in the header
   static const double meBuddySize = 112.0;
 
-  // Buddy reaction on the tracker success screens (bubble slot + Buddy)
+  // Buddy reaction on the tracker success screens (bubble slot + Buddy),
+  // and the least he is drawn tall in a short slot (the bubble yields)
   static const double buddyReactionSize = 220.0;
+  static const double buddyReactionMinHeight = 24.0;
+
+  // The success page's charging circle: at most this size and this share
+  // of the page's slot for it, and how long it charges
+  static const double careChargeSize = 120.0;
+  static const double careChargeHeightShare = 0.3;
+  static const Duration careChargeDuration = Duration(milliseconds: 1200);
+
+  /// In a success-page slot shorter than this, the charging circle and
+  /// „Tag n" stand side by side, so the Buddy keeps a body below them.
+  static const double logSuccessHeroStackedMinHeight = 320.0;
 
   // Buddy onboarding (/buddy-onboarding): stage (bubble slot + Buddy) and
   // progress dots
@@ -161,6 +251,14 @@ class AppConstants {
   static const double buddyOnboardingHeroStageMaxHeight = 460.0;
   static const double progressDotSize = 8.0;
   static const double progressDotActiveWidth = 24.0;
+
+  /// The first-patterns journey's dots: a dot, the Bauchgefühl pip under
+  /// it, the still Buddy over the row, the track line, and a new dot's bump.
+  static const double journeyDotSize = 22.0;
+  static const double journeyPipSize = 7.0;
+  static const double journeyBuddyHeight = 34.0;
+  static const double journeyTrackHeight = 3.0;
+  static const Duration journeyDotBump = Duration(milliseconds: 900);
 
   // Registration wizard: above every step a header with the Buddy on the
   // left (this wide; his height follows) and his bubble on the right; with
@@ -187,6 +285,7 @@ class AppConstants {
 
   // Image sizes
   static const double mealImageHeight = 180.0;
+  static const double mascotSizeSm = 80.0;
   static const double mascotSizeMd = 96.0;
   static const double mascotSizeLg = 160.0;
 
@@ -219,8 +318,9 @@ class AppConstants {
   /// Version of the privacy policy the health-data consent refers to. Bump it
   /// when the policy changes materially: every user whose stored
   /// `profiles.privacy_policy_version` differs is sent through the consent
-  /// gate again.
-  static const String privacyPolicyVersion = '2026-11-22';
+  /// gate again. It equals core's `PRIVACY_POLICY_VERSION` (the public page's
+  /// „Stand") and moves with it.
+  static const String privacyPolicyVersion = '2026-11-24';
 
   /// The myfodmap blog feed behind Wissen, how long a fetched copy counts as
   /// fresh, and how long a fetch may take.
@@ -228,6 +328,13 @@ class AppConstants {
       'https://www.myfodmap.at/blog-feed.xml';
   static const Duration knowledgeFeedMaxAge = Duration(hours: 6);
   static const Duration knowledgeFeedTimeout = Duration(seconds: 10);
+
+  /// The day-3 first tip's one request may take this long.
+  static const Duration firstTipTimeout = Duration(seconds: 60);
+
+  /// „Ja, gern" to the first tip waits at most this long for a (re)loading
+  /// profile.
+  static const Duration firstTipProfileWait = Duration(seconds: 10);
 
   // Apple "Hide My Email" relay address suffix (includes the leading `@`).
   // See the Sign in with Apple docs — this domain is stable since iOS 13.
@@ -237,6 +344,14 @@ class AppConstants {
   static const String keyNotificationModalShown = 'notification_modal_shown';
   static const String keyKnowledgeFeedCache = 'knowledge_feed_cache_v1';
   static const String keyBuddyStatePrefix = 'buddy_state_';
+
+  /// Prefix of the once-per-user-and-device decision whether the user sees
+  /// the first-patterns journey (`insight_journey_<userId>`, a bool).
+  static const String keyInsightJourneyPrefix = 'insight_journey_';
+
+  /// Prefix of the rewards of the first 7 days, per user and device
+  /// (`journey_rewards_<userId>`, the JSON of a `JourneyRewards`).
+  static const String keyJourneyRewardsPrefix = 'journey_rewards_';
 
   /// Prefix of the Buddy announcement flags
   /// (`buddy_announced_<userId>_<kind>_<yyyy-MM-dd | goal>`), set once an

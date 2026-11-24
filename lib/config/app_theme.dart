@@ -7,6 +7,14 @@ class AppTheme {
   // Core colors (from HSL CSS variables)
   static const Color background = Color(0xFFFFFFFF);
   static const Color foreground = Color(0xFF302820);
+
+  /// A placeholder's glyph or monogram on its pastel: [foreground] at 45 %.
+  static const Color placeholderGlyph = Color.from(
+    alpha: 0.45,
+    red: 0x30 / 255,
+    green: 0x28 / 255,
+    blue: 0x20 / 255,
+  );
   static const Color beige = Color(0xFFF5EFE7);
   static const Color card = Color(0xFFF9F7F4);
   static const Color cardForeground = Color(0xFF302820);
@@ -76,12 +84,33 @@ class AppTheme {
   // Streak: a day with an entry (week row circle), the selected goal
   static const Color primarySoft = Color(0xFFF3F7DF);
 
-  // Dashboard care ring: one color per need (Essen, Trinken, Bauchgefühl,
-  // Klo) and the glow around the need he suggests next
-  static const Color careFood = primary;
-  static const Color careWater = Color(0xFF86BFE6);
-  static const Color careGut = Color(0xFFF0A646);
-  static const Color careLoo = Color(0xFFBFAE9F);
+  // Rezepte: the illustration background per meal type (the placeholder of a
+  // recipe without a photo), and the mark of a step the Buddy changed
+  static const Color recipeTintBreakfast = Color(0xFFFCF1CF);
+  static const Color recipeTintLunch = Color(0xFFEEF4D2);
+  static const Color recipeTintDinner = Color(0xFFFBE6CF);
+  static const Color recipeTintSnack = Color(0xFFF3EADF);
+  static const Color recipeTintOther = Color(0xFFEAD9CB);
+  static const Color recipeChanged = Color(0xFFE2EDA9);
+
+  // Care: one color and one soft tint per need (Essen, Trinken, Bauchgefühl,
+  // Klo), each at least 3:1 on the page, and the glow around the need he
+  // suggests next. The streak flame has a lit color (with a core and a hot
+  // tip), and an ember (lit, core, off) for a day it was not kept.
+  static const Color careFood = Color(0xFFD27A12);
+  static const Color careFoodSoft = Color(0xFFFCEBD5);
+  static const Color careWater = Color(0xFF3A8FCC);
+  static const Color careWaterSoft = Color(0xFFE2F0FA);
+  static const Color careGut = Color(0xFF3A9A48);
+  static const Color careGutSoft = gutFeelingGoodSoft;
+  static const Color careLoo = Color(0xFF9C7350);
+  static const Color careLooSoft = Color(0xFFF1E7DE);
+  static const Color streakFlame = Color(0xFFFF7A2E);
+  static const Color streakFlameCore = buddySparkle;
+  static const Color streakFlameHot = buddyWater;
+  static const Color streakEmber = Color(0xFFF4B996);
+  static const Color streakEmberCore = Color(0xFFF8DDA6);
+  static const Color streakEmberOff = Color(0xFFDDD5CC);
   static const Color careGlow = Color(0x4DB5CC47);
 
   // Notification previews (the reminder step): an iOS banner's colors
@@ -142,9 +171,11 @@ class AppTheme {
     color: mutedForeground,
   );
 
-  // The streak moment's big count („🔥 1 Tag"): flame and number
-  static const double fontSizeStreakFlame = 40;
+  // The streak moment's big count („1 Tag" beside the flame)
   static const double fontSizeStreakCount = 56;
+
+  // The need's emoji in the success page's charging circle
+  static const double fontSizeChargeIcon = 44;
 
   // Stool scale colors
   static const List<Color> stoolColors = [

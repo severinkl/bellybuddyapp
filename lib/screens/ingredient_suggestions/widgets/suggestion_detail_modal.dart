@@ -301,7 +301,7 @@ class _IngredientImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (imageUrl != null && isValidImageUrl(imageUrl!)) {
+    if (imageUrl != null && isHttpUrl(imageUrl!)) {
       return ClipRRect(
         borderRadius: BorderRadius.circular(size / 2),
         child: CachedNetworkImage(

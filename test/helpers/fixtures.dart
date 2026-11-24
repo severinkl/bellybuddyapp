@@ -1,10 +1,14 @@
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/drink.dart';
 import 'package:belly_buddy/models/drink_entry.dart';
+import 'package:belly_buddy/models/fodmap_flags.dart';
 import 'package:belly_buddy/models/gut_feeling_entry.dart';
 import 'package:belly_buddy/models/ingredient_suggestion.dart' as model;
 import 'package:belly_buddy/models/knowledge_article.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
+import 'package:belly_buddy/models/insight_progress.dart';
+import 'package:belly_buddy/models/insights.dart';
+import 'package:belly_buddy/models/intolerance_rules.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/models/recommendation.dart';
@@ -136,18 +140,79 @@ Drink testDrink({String? id, String? name, String? addedByUserId}) => Drink(
   addedByUserId: addedByUserId,
 );
 
-Recipe testRecipe({
-  String? id,
-  String? title,
-  List<String>? tags,
-  List<String>? ingredients,
-}) => Recipe(
-  id: id ?? 'recipe-1',
-  title: title ?? 'Testrezept',
-  tags: tags ?? ['vegetarisch'],
-  ingredients: ingredients ?? ['Reis', 'Gemüse'],
+/// A collection recipe line. A mapped line has `catalogId: 'ing-$name'` and
+/// `catalogName: name`.
+RecipeIngredient testLine(
+  String name, {
+  int position = 0,
+  String? amount,
+  FodmapFlags fodmaps = const FodmapFlags(),
+  Set<String> allergens = const {},
+  bool lowAtAmount = false,
+  bool mapped = true,
+}) => RecipeIngredient(
+  position: position,
+  amount: amount,
+  name: name,
+  catalogId: mapped ? 'ing-$name' : null,
+  catalogName: mapped ? name : null,
+  fodmaps: mapped ? fodmaps : null,
+  allergens: allergens,
+  lowAtAmount: lowAtAmount,
 );
 
+Recipe testRecipe({
+  String id = 'recipe-1',
+  String title = 'Testrezept',
+  List<RecipeIngredient>? ingredients,
+  List<MealType> mealTypes = const [MealType.lunch],
+  Set<String> dietTags = const {'vegan', 'vegetarisch'},
+  String? cookTime = '20 Min',
+  int? servings = 2,
+  List<String> instructions = const ['Alles kochen.'],
+  String? sourceName,
+  String? sourceUrl,
+  DateTime? createdAt,
+}) => Recipe(
+  id: id,
+  title: title,
+  ingredients: ingredients ?? [testLine('Reis')],
+  mealTypes: mealTypes,
+  dietTags: dietTags,
+  cookTime: cookTime,
+  servings: servings,
+  instructions: instructions,
+  sourceName: sourceName,
+  sourceUrl: sourceUrl,
+  createdAt: createdAt,
+);
+
+/// Core's intolerance table as core #11 publishes it in
+/// `app_config.intolerance_rules` (`json.dumps(INTOLERANCE_RULES,
+/// ensure_ascii=False)`), „Milch" and „Erdnuss" among the allergens.
+const kTestIntoleranceRulesJson =
+    '{"Laktose": {"fodmaps": ["lactose"], "allergens": [], "judgeable": true}, '
+    '"Gluten": {"fodmaps": [], "allergens": ["gluten"], "judgeable": true}, '
+    '"Weizen": {"fodmaps": ["fructans"], "allergens": ["weizen"], "judgeable": true}, '
+    '"Nüsse": {"fodmaps": [], "allergens": ["nuesse"], "judgeable": true}, '
+    '"Eier": {"fodmaps": [], "allergens": ["eier"], "judgeable": true}, '
+    '"Soja": {"fodmaps": [], "allergens": ["soja"], "judgeable": true}, '
+    '"Milch": {"fodmaps": [], "allergens": ["milch"], "judgeable": true}, '
+    '"Erdnuss": {"fodmaps": [], "allergens": ["erdnuss"], "judgeable": true}, '
+    '"Fruktose": {"fodmaps": ["fructose"], "allergens": [], "judgeable": true}, '
+    '"Sorbit": {"fodmaps": ["sorbitol"], "allergens": [], "judgeable": true}, '
+    '"Histamin": {"fodmaps": [], "allergens": [], "judgeable": false}, '
+    '"Mannit": {"fodmaps": ["mannitol"], "allergens": [], "judgeable": true}, '
+    '"Fructane": {"fodmaps": ["fructans"], "allergens": [], "judgeable": true}, '
+    '"GOS": {"fodmaps": ["gos"], "allergens": [], "judgeable": true}, '
+    '"FODMAPs": {"fodmaps": ["fructans", "gos", "lactose", "fructose", "sorbitol", "mannitol"], '
+    '"allergens": [], "judgeable": true}}';
+
+IntoleranceRules testIntoleranceRules() =>
+    IntoleranceRules.parse(kTestIntoleranceRulesJson)!;
+
+/// A tip set: by default with one tip ([testRecommendationItem]), since a
+/// set without tips is never new; pass `recommendations: []` for one.
 Recommendation testRecommendation({
   String? id,
   String? summary,
@@ -157,9 +222,29 @@ Recommendation testRecommendation({
 }) => Recommendation(
   id: id ?? 'rec-1',
   summary: summary ?? 'Tipp: Mehr Wasser trinken.',
-  recommendations: recommendations ?? [],
+  recommendations: recommendations ?? [testRecommendationItem()],
   createdAt: createdAt,
   seenAt: seenAt,
+);
+
+/// A tip: by default a Tausch-Tipp, Zwiebel → Schnittlauch, without focus
+/// or a recipe (an older set's shape).
+RecommendationItem testRecommendationItem({
+  String type = 'substitute',
+  String ingredient = 'Zwiebel',
+  String reason = 'Grund',
+  String? alternative = 'Schnittlauch',
+  bool focus = false,
+  String? recipeId,
+  String? recipeTitle,
+}) => RecommendationItem(
+  type: type,
+  ingredient: ingredient,
+  reason: reason,
+  alternative: alternative,
+  focus: focus,
+  recipeId: recipeId,
+  recipeTitle: recipeTitle,
 );
 
 EntryQueryResult testEntryQueryResult({
@@ -245,3 +330,23 @@ List<KnowledgeArticle> testKnowledgeArticles() => [
     publishedAt: DateTime.utc(2026, 10, 15, 8),
   ),
 ];
+
+/// Insights from the first days: [activeDays] days with entries and
+/// [gutFeelings] Bauchgefühl entries (locked below InsightRules'
+/// thresholds), the [journey]'s dots, nothing noticed yet.
+Insights lockedInsights({
+  int activeDays = 2,
+  int gutFeelings = 1,
+  List<JourneyDay> journey = const [],
+}) => Insights(
+  progress: InsightProgress(
+    activeDays: activeDays,
+    gutFeelingEntries: gutFeelings,
+  ),
+  calendar: const [],
+  goodDays: const DayColumn(days: 0),
+  hardDays: const DayColumn(days: 0),
+  noticed: const [],
+  pick: const NothingYetPick(),
+  journey: journey,
+);

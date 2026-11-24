@@ -10,7 +10,8 @@ const _line =
     'Ich seh schon erste Muster! Magst du jeden Montag Tipps von mir? ✨';
 const _body =
     'Unter Entdecken kannst du sie einschalten. Dafür schicke ich deine '
-    'Mahlzeiten und dein Bauchgefühl der letzten Woche an unseren KI-Dienst.';
+    'Einträge der letzten Wochen, die Muster daraus und deine Bewertungen '
+    'meiner Tipps an unseren KI-Dienst.';
 
 void main() {
   /// A page whose „open" button opens the sheet; each result goes to
@@ -46,6 +47,11 @@ void main() {
   }
 
   testWidgets('shows the line, the sentence and both buttons', (tester) async {
+    // A tall screen: the Buddy at his full sheet height.
+    tester.view
+      ..physicalSize = const Size(390, 844)
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await pumpOpener(tester, []);
     await openSheet(tester);
 
@@ -100,10 +106,12 @@ void main() {
     await openSheet(tester);
 
     expect(tester.takeException(), isNull);
-    // Both buttons on screen without scrolling.
-    expect(
-      tester.getRect(find.byKey(WeeklyTipsOfferSheet.laterKey)).bottom,
-      lessThanOrEqualTo(667),
-    );
+    // The compact Buddy keeps both buttons on screen without scrolling.
+    for (final key in [
+      WeeklyTipsOfferSheet.openKey,
+      WeeklyTipsOfferSheet.laterKey,
+    ]) {
+      expect(tester.getRect(find.byKey(key)).bottom, lessThanOrEqualTo(667));
+    }
   });
 }

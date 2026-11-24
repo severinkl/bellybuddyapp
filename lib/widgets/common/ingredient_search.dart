@@ -246,22 +246,25 @@ class _IngredientSearchState extends State<IngredientSearch> {
                   ),
                 )
               else
-                GestureDetector(
-                  onTap: () {
-                    setState(() => _isAdding = true);
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      _focusNode.requestFocus();
-                      // Delay to let the keyboard fully animate in before
-                      // scrolling, otherwise the scroll target is wrong.
-                      Future.delayed(AppConstants.animSlow, _scrollToField);
-                    });
-                  },
-                  child: const Text(
-                    '+ Hinzufügen',
-                    style: TextStyle(
-                      fontSize: AppTheme.fontSizeBody,
-                      color: AppTheme.primary,
-                      fontWeight: FontWeight.w500,
+                // Wraps rather than overflows at a large text size.
+                Flexible(
+                  child: GestureDetector(
+                    onTap: () {
+                      setState(() => _isAdding = true);
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _focusNode.requestFocus();
+                        // Delay to let the keyboard fully animate in before
+                        // scrolling, otherwise the scroll target is wrong.
+                        Future.delayed(AppConstants.animSlow, _scrollToField);
+                      });
+                    },
+                    child: const Text(
+                      '+ Hinzufügen',
+                      style: TextStyle(
+                        fontSize: AppTheme.fontSizeBody,
+                        color: AppTheme.primary,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ),

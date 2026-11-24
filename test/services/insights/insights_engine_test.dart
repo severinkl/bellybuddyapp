@@ -778,6 +778,42 @@ void main() {
     });
   });
 
+  group('calm-day ingredients', () {
+    test('every ingredient of window days without a „Schlecht" entry; days '
+        'without entries count', () {
+      final i = compute(
+        meals: [
+          meal(nov(10, 8), ['Zwiebel']), // A: schlecht
+          meal(nov(11, 8), ['Reis']), // B: gut
+          meal(nov(12, 8), [' Karotte ']), // C: no entry
+          meal(nov(13, 8), ['Brot']), // D: mean mittel, one entry schlecht
+          meal(oct(24, 8), ['Nudeln']), // before the window
+          meal(nov(24, 8), ['Lauch']), // after today
+        ],
+        guts: [
+          gut(nov(10), 5),
+          gut(nov(11), 1),
+          gut(nov(13, 10), 5),
+          gut(nov(13, 14), 1),
+        ],
+      );
+
+      expect(i.calmDayIngredients, {'reis', 'karotte'});
+    });
+
+    test('a „Schlecht" entry later that day excludes its earlier meals', () {
+      final i = compute(
+        meals: [
+          meal(nov(20, 8), ['Reis', 'Zwiebel']),
+          meal(nov(21, 8), ['KAROTTE']),
+        ],
+        guts: [gut(nov(20, 22), 5)],
+      );
+
+      expect(i.calmDayIngredients, {'karotte'});
+    });
+  });
+
   test('empty source: nothing yet, 30 days without entries', () {
     final insights = compute();
     final expected = Insights(
@@ -802,7 +838,47 @@ void main() {
     expect(() => insights.noticed.clear(), throwsUnsupportedError);
     expect(() => insights.calendar.clear(), throwsUnsupportedError);
     expect(() => insights.hardDays.often.clear(), throwsUnsupportedError);
+    expect(() => insights.calmDayIngredients.clear(), throwsUnsupportedError);
     expect(insights, fromDays(hard: spread(3, {'Reis': 3})));
     expect(insights, isNot(fromDays(hard: spread(3, {'Reis': 2}))));
+  });
+
+  group('journey', () {
+    DateTime day(int back) => DateTime(2026, 11, 23 - back, 12);
+
+    test('the latest 7 days with entries, oldest first, each marking a '
+        'Bauchgefühl', () {
+      final i = compute(
+        guts: [gut(day(3), 2), gut(day(0), 2)],
+        activity: [
+          for (final b in [9, 5, 3, 1, 0]) day(b),
+        ],
+      );
+
+      expect(i.journey, [
+        JourneyDay(DateTime(2026, 11, 14), gutFeeling: false),
+        JourneyDay(DateTime(2026, 11, 18), gutFeeling: false),
+        JourneyDay(DateTime(2026, 11, 20), gutFeeling: true),
+        JourneyDay(DateTime(2026, 11, 22), gutFeeling: false),
+        JourneyDay(DateTime(2026, 11, 23), gutFeeling: true),
+      ]);
+    });
+
+    test('with 9 active days only the latest 7', () {
+      final i = compute(activity: [for (var b = 0; b < 9; b++) day(b)]);
+
+      expect(i.journey, hasLength(7));
+      expect(i.journey.first.day, DateTime(2026, 11, 17));
+      expect(i.journey.last.day, DateTime(2026, 11, 23));
+    });
+
+    test('its length is the active days, up to 7', () {
+      for (var n = 0; n <= 10; n++) {
+        final i = compute(activity: [for (var b = 0; b < n; b++) day(b)]);
+        expect(i.journey.length, n.clamp(0, 7));
+        expect(i.journey.length, lessThanOrEqualTo(i.progress.activeDays));
+        if (n <= 7) expect(i.journey.length, i.progress.activeDays);
+      }
+    });
   });
 }

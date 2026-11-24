@@ -62,6 +62,36 @@ void main() {
       } catch (_) {}
       // If we get here, label param was accepted without error
     });
+
+    test('rethrows at once when retryIf says the error cannot help', () async {
+      var calls = 0;
+      await expectLater(
+        retryAsync(
+          () async {
+            calls++;
+            throw StateError('schema');
+          },
+          backoff: Duration.zero,
+          retryIf: (e) => e is! StateError,
+        ),
+        throwsA(isA<StateError>()),
+      );
+      expect(calls, 1);
+    });
+
+    test('retries the errors retryIf accepts', () async {
+      var calls = 0;
+      final result = await retryAsync(
+        () async {
+          if (++calls == 1) throw Exception('offline');
+          return 'ok';
+        },
+        backoff: Duration.zero,
+        retryIf: (e) => e is! StateError,
+      );
+      expect(result, 'ok');
+      expect(calls, 2);
+    });
   });
 
   test('noRetry never retries', () {

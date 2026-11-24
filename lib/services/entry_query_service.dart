@@ -25,6 +25,26 @@ class EntryQueryResult {
   });
 }
 
+/// When the user last logged a meal, a drink and a Bauchgefühl before some
+/// moment; null for a kind never logged then.
+class LatestEntries {
+  const LatestEntries({this.meal, this.drink, this.gutFeeling});
+
+  final DateTime? meal;
+  final DateTime? drink;
+  final DateTime? gutFeeling;
+
+  @override
+  bool operator ==(Object other) =>
+      other is LatestEntries &&
+      other.meal == meal &&
+      other.drink == drink &&
+      other.gutFeeling == gutFeeling;
+
+  @override
+  int get hashCode => Object.hash(meal, drink, gutFeeling);
+}
+
 class EntryQueryService {
   static const _log = AppLogger('EntryQueryService');
 
@@ -107,6 +127,44 @@ class EntryQueryService {
       );
     } catch (e, st) {
       _log.error('fetchEntriesForDateRange failed for $date', e, st);
+      rethrow;
+    }
+  }
+
+  /// The `tracked_at` of the latest meal, drink and Bauchgefühl before
+  /// [before]. Its string is the one [fetchEntriesForDateRange] starts a
+  /// day at, so a day and the latest entries before it meet without a gap.
+  Future<LatestEntries> fetchLatestBefore({
+    required String userId,
+    required DateTime before,
+  }) async {
+    try {
+      final beforeIso = wallClockToWire(before);
+      Future<DateTime?> latest(String table) async {
+        final rows = await _client
+            .from(table)
+            .select('tracked_at')
+            .eq('user_id', userId)
+            .lt('tracked_at', beforeIso)
+            .order('tracked_at', ascending: false)
+            .limit(1);
+        return rows.isEmpty
+            ? null
+            : wallClockFromWire(rows.first['tracked_at'] as String);
+      }
+
+      final results = await Future.wait([
+        latest('meal_entries'),
+        latest('drink_entries'),
+        latest('gut_feeling_entries'),
+      ]);
+      return LatestEntries(
+        meal: results[0],
+        drink: results[1],
+        gutFeeling: results[2],
+      );
+    } catch (e, st) {
+      _log.error('fetchLatestBefore failed before $before', e, st);
       rethrow;
     }
   }

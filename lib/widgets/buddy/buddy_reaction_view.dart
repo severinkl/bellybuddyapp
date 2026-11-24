@@ -15,7 +15,8 @@ import 'buddy_controller.dart';
 import 'buddy_stage.dart';
 
 /// The Buddy reacting to an entry the user just logged: plays the action of
-/// [reactionFor] from its first frame, says the reaction line and then
+/// [reactionFor] from its first frame, says the reaction line ([line], when
+/// given) and then
 /// switches to the reaction's mood. Used as the tracker success illustration.
 ///
 /// Owns its [BuddyController]. For [EntryKind.meal], [foodImageBytes] (the
@@ -27,6 +28,7 @@ class BuddyReactionView extends ConsumerStatefulWidget {
     required this.kind,
     required this.sentiment,
     this.foodImageBytes,
+    this.line,
     this.size = AppConstants.buddyReactionSize,
   });
 
@@ -36,8 +38,13 @@ class BuddyReactionView extends ConsumerStatefulWidget {
   /// Encoded meal photo (JPEG/PNG/…); only used by the `eat` reaction.
   final Uint8List? foodImageBytes;
 
+  /// Said instead of the reaction's line; the action and mood stay.
+  final String? line;
+
   /// Maximum height of the stage (speech-bubble slot plus Buddy); the Buddy
-  /// shrinks when less height is available.
+  /// shrinks when less height is available, down to
+  /// [AppConstants.buddyReactionMinHeight], below which the bubble's slot
+  /// yields instead.
   final double size;
 
   @override
@@ -108,7 +115,7 @@ class _BuddyReactionViewState extends ConsumerState<BuddyReactionView> {
   void _start(BuddyReaction reaction) {
     _controller
       ..play(reaction.action, food: _food)
-      ..say(reaction.line, duration: _bubbleDuration);
+      ..say(widget.line ?? reaction.line, duration: _bubbleDuration);
     final moodAfter = reaction.moodAfter;
     if (moodAfter != null) _controller.mood = moodAfter;
   }
@@ -126,7 +133,15 @@ class _BuddyReactionViewState extends ConsumerState<BuddyReactionView> {
     final name = ref.watch(buddyProvider.select((s) => s.value?.state.name));
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: widget.size),
-      child: BuddyStage(controller: _controller, name: name ?? _fallbackName),
+      child: LayoutBuilder(
+        builder: (context, constraints) => BuddyStage(
+          controller: _controller,
+          name: name ?? _fallbackName,
+          bubbleHeight:
+              (constraints.maxHeight - AppConstants.buddyReactionMinHeight)
+                  .clamp(0, AppConstants.buddyBubbleHeight),
+        ),
+      ),
     );
   }
 }

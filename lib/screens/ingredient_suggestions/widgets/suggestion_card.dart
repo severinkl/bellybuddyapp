@@ -136,7 +136,7 @@ class SuggestionCard extends StatelessWidget {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             if (repl.imageUrl != null &&
-                                isValidImageUrl(repl.imageUrl!)) ...[
+                                isHttpUrl(repl.imageUrl!)) ...[
                               ClipOval(
                                 child: CachedNetworkImage(
                                   imageUrl: repl.imageUrl!,
@@ -187,7 +187,7 @@ class _IngredientAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (imageUrl != null && isValidImageUrl(imageUrl!)) {
+    if (imageUrl != null && isHttpUrl(imageUrl!)) {
       return ClipOval(
         child: CachedNetworkImage(
           imageUrl: imageUrl!,

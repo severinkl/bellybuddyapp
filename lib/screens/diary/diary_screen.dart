@@ -6,6 +6,7 @@ import '../../providers/buddy_provider.dart';
 import '../../providers/diary_provider.dart';
 import '../../services/haptic_service.dart';
 import '../../utils/date_format_utils.dart';
+import '../../utils/diary_helpers.dart';
 import '../../utils/page_controller_utils.dart';
 import '../../widgets/common/bb_async_state.dart';
 import '../../widgets/common/circle_icon_button.dart';
@@ -18,6 +19,7 @@ class DiaryScreen extends ConsumerStatefulWidget {
 
   static const previousDayKey = Key('diary_previous_day');
   static const nextDayKey = Key('diary_next_day');
+  static const totalsKey = Key('diary_day_totals');
 
   @override
   ConsumerState<DiaryScreen> createState() => _DiaryScreenState();
@@ -261,11 +263,26 @@ class _DiaryBody extends ConsumerWidget {
               ),
             );
           }
+          // The totals head the list, when there is something to count.
+          final totals = DiaryHelpers.dayTotals(entries);
+          final head = totals == null ? 0 : 1;
           return ListView.builder(
             padding: AppConstants.paddingMd,
-            itemCount: entries.length,
+            itemCount: entries.length + head,
             itemBuilder: (context, index) {
-              final entry = entries[index];
+              if (totals != null && index == 0) {
+                return Padding(
+                  padding: const EdgeInsets.only(
+                    bottom: AppConstants.spacingSm,
+                  ),
+                  child: Text(
+                    totals,
+                    key: DiaryScreen.totalsKey,
+                    style: AppTheme.captionMutedStyle,
+                  ),
+                );
+              }
+              final entry = entries[index - head];
               return DiaryEntryCard(
                 entry: entry,
                 onTap: () => showDiaryDetailSheet(context, ref, entry),

@@ -105,14 +105,14 @@ class BuddyCopy {
   };
 
   /// The dashboard's resting line for what he needs next
-  /// ([nextCareAction]); [CareAction.feed] when nothing is open.
+  /// ([nextCareAction]); [CareAction.feed] when no meter is low.
   static const care = <CareAction, List<String>>{
     CareAction.breakfast: [
       "Guten Morgen! Was gab's zum Frühstück? 🍳",
-      'Frühstück fehlt mir noch – mein Bauch knurrt!',
+      'Lust auf Frühstück? ☕',
     ],
     CareAction.lunch: [
-      'Mittag fehlt mir noch! 🍝',
+      'Lust auf Mittagessen? 🍝',
       "Mahlzeit! Was gab's bei dir zu Mittag?",
     ],
     CareAction.snack: [
@@ -121,10 +121,10 @@ class BuddyCopy {
     ],
     CareAction.dinner: [
       "Was gab's zum Abendessen? 🍲",
-      'Abendessen fehlt mir noch!',
+      'Zeit fürs Abendessen? 🍲',
     ],
     CareAction.drink: [
-      'Ich hab Durst – ein Glas Wasser? 💧',
+      'Hast du Durst? 💧',
       'Schluck für Schluck: Was hast du getrunken?',
     ],
     CareAction.gutFeeling: [
@@ -132,20 +132,18 @@ class BuddyCopy {
       'Erzähl mir, wie sich dein Bauch anfühlt.',
     ],
     CareAction.feed: [
-      'Alles erledigt – ich bin rundum zufrieden! 💚',
-      'Heute hast du toll für uns gesorgt!',
-      'Ring voll, Bauch glücklich – danke dir!',
+      "Mir geht's richtig gut, danke dir! 💚",
+      'Du hast toll für uns gesorgt!',
+      'Rundum zufrieden – danke dir!',
     ],
   };
 
   /// Right after a log, when what he asks for next is more of the same
-  /// (one glass of six): he thanks for it first instead of the [care] line
-  /// („Ich hab Durst" just after a drink).
+  /// (a drink logged for earlier leaves Trinken the lowest): he thanks for
+  /// it first instead of the [care] line („Hast du Durst?" just after a
+  /// drink).
   static const careAfterLog = <CareAction, List<String>>{
-    CareAction.drink: [
-      'Danke fürs Trinken! Ein Glas mehr schadet nie. 💧',
-      'Ahh, das tat gut! Später gern noch eins. 💧',
-    ],
+    CareAction.drink: ['Danke fürs Trinken! 💧', 'Ahh, das tat gut! 💧'],
   };
 
   /// The dashboard's next-action button: the meal the time of day asks
@@ -162,7 +160,7 @@ class BuddyCopy {
 
   static String _log(CareNeed need) => '${need.emoji} ${need.logLabel}';
 
-  /// Sleepy lines for late evening / night (hour < 5 or >= 10).
+  /// Sleepy lines outside the morning: late evening and night.
   static const sleepyNight = [
     'Schon spät … *gähn* Gute Nacht bald?',
     'Mir fallen die Augen zu … *gähn*',

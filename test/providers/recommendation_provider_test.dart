@@ -14,6 +14,9 @@ import '../helpers/fixtures.dart';
 import '../helpers/mocks.dart';
 import '../helpers/riverpod_helpers.dart';
 
+/// A tip, so a set holding it can be new.
+final _item = testRecommendationItem();
+
 void main() {
   late MockRecommendationRepository mockRepo;
 
@@ -316,6 +319,35 @@ void main() {
       final container = await loaded([
         testRecommendation(id: 'new', seenAt: seen),
         testRecommendation(id: 'old'),
+      ]);
+
+      expect(container.read(unseenTipSetProvider), isNull);
+    });
+
+    test('a set without tips is never new', () async {
+      // E.g. core's fallback, saved after the first tip's timeout.
+      final container = await loaded([
+        testRecommendation(id: 'empty', recommendations: []),
+      ]);
+
+      expect(container.read(unseenTipSetProvider), isNull);
+    });
+
+    test('an empty newer set doesn\'t hide an older unseen one with tips: '
+        'empty sets are skipped, then the newest counts', () async {
+      final container = await loaded([
+        testRecommendation(id: 'empty', recommendations: []),
+        testRecommendation(id: 'old', recommendations: [_item]),
+      ]);
+
+      expect(container.read(unseenTipSetProvider)?.id, 'old');
+    });
+
+    test('an empty newer set: a seen one behind it stays seen', () async {
+      final container = await loaded([
+        testRecommendation(id: 'empty', recommendations: []),
+        testRecommendation(id: 'new', recommendations: [_item], seenAt: seen),
+        testRecommendation(id: 'old', recommendations: [_item]),
       ]);
 
       expect(container.read(unseenTipSetProvider), isNull);

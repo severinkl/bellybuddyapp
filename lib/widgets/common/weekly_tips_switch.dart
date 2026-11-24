@@ -12,9 +12,10 @@ class WeeklyTipsSwitch extends ConsumerStatefulWidget {
   const WeeklyTipsSwitch({super.key});
 
   static const title = 'Wöchentliche Tipps';
+  static const subline = 'Jeden Montag 2–3 Tipps';
   static const sentence =
-      'Dafür schicke ich deine Mahlzeiten und dein Bauchgefühl der letzten '
-      'Woche an unseren KI-Dienst.';
+      'Dafür schicke ich deine Einträge der letzten Wochen, die Muster daraus '
+      'und deine Bewertungen meiner Tipps an unseren KI-Dienst.';
   static const failure =
       'Wöchentliche Tipps konnten nicht gespeichert werden. '
       'Versuch es später nochmal.';
@@ -54,6 +55,7 @@ class _WeeklyTipsSwitchState extends ConsumerState<WeeklyTipsSwitch> {
         SwitchListTile(
           key: WeeklyTipsSwitch.switchKey,
           title: const Text(WeeklyTipsSwitch.title),
+          subtitle: const Text(WeeklyTipsSwitch.subline),
           value: enabled,
           activeThumbColor: AppTheme.primary,
           contentPadding: EdgeInsets.zero,

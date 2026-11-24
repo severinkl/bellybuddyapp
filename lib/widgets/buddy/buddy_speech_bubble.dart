@@ -52,6 +52,7 @@ class BuddySpeechBubble extends StatelessWidget {
     this.maxWidth = AppConstants.buddyBubbleMaxWidth,
     this.tail = const BuddyBubbleTail.down(),
     this.fontSize = AppTheme.fontSizeBodyLG,
+    this.maxLines = AppConstants.buddyBubbleMaxLines,
   });
 
   final BuddyController controller;
@@ -60,6 +61,10 @@ class BuddySpeechBubble extends StatelessWidget {
 
   /// The text's size; roomy places (the wizard header) use a larger one.
   final double fontSize;
+
+  /// The most lines shown, the last one ending in „…" when the text needs
+  /// more; null shows the whole text (a bubble in a scrolling page).
+  final int? maxLines;
 
   @override
   Widget build(BuildContext context) {
@@ -91,6 +96,7 @@ class BuddySpeechBubble extends StatelessWidget {
                   maxWidth: maxWidth,
                   tail: tail,
                   fontSize: fontSize,
+                  maxLines: maxLines,
                   typewriter: !calm,
                 ),
         );
@@ -119,6 +125,7 @@ class _Bubble extends StatefulWidget {
     required this.maxWidth,
     required this.tail,
     required this.fontSize,
+    required this.maxLines,
     required this.typewriter,
   });
 
@@ -126,6 +133,7 @@ class _Bubble extends StatefulWidget {
   final double maxWidth;
   final BuddyBubbleTail tail;
   final double fontSize;
+  final int? maxLines;
   final bool typewriter;
 
   @override
@@ -206,8 +214,8 @@ class _BubbleState extends State<_Bubble> with SingleTickerProviderStateMixin {
         ],
       ),
       softWrap: true,
-      maxLines: AppConstants.buddyBubbleMaxLines,
-      overflow: TextOverflow.ellipsis,
+      maxLines: widget.maxLines,
+      overflow: widget.maxLines == null ? null : TextOverflow.ellipsis,
       textAlign: TextAlign.start,
       style: TextStyle(
         color: AppTheme.foreground,

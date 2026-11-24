@@ -1,0 +1,9778 @@
+{
+ "_comment": [
+  "Shared test cases of the recipe-link food matching: core's food_words and match_key",
+  "(backend/app/domain/tip_recipes.py) and the app's port must give exactly these results. The file lives in",
+  "core (backend/tests/fixtures/recipes/food_words.json) and the app copies it byte for byte",
+  "(test/fixtures/recipes/food_words.json); both change together, core first.",
+  "match_key: [name, its match_key]. same_food: [name, other] with equal, non-empty food words. processed:",
+  "[processed or part, food] sharing a food word. apart: [name, other] sharing none. free_from: names with",
+  "no food words. names: every name above and the cross-check names (the collection's line and catalog",
+  "names, the eval's foods, upper-case and Unicode edge cases), each with its match_key (key) and sorted",
+  "food words (words). The case lists are written by hand; names is written by",
+  "backend/scripts/food_words_fixture.py from the code (--add a JSON list of names to add some). Rules:",
+  "the module docstring of tip_recipes. Synthetic data only."
+ ],
+ "match_key": [
+  [
+   "Knoblauchöl",
+   "knoblauchol"
+  ],
+  [
+   "Knoblauch-Öl",
+   "knoblauchol"
+  ],
+  [
+   "  Laktosefreie   Milch ",
+   "laktosefreiemilch"
+  ],
+  [
+   "Gemüsebrühe (low-FODMAP)",
+   "gemusebruhe"
+  ],
+  [
+   "Milch (laktosefrei)",
+   "milchlaktosefrei"
+  ],
+  [
+   "Brot (Glutenfrei)",
+   "brotglutenfrei"
+  ],
+  [
+   "Frühlingszwiebel (nur das Grün)",
+   "fruhlingszwiebel"
+  ],
+  [
+   "Weißkohl",
+   "weisskohl"
+  ]
+ ],
+ "same_food": [
+  [
+   "Zwiebeln",
+   "Zwiebel"
+  ],
+  [
+   "rote Zwiebel",
+   "Zwiebel"
+  ],
+  [
+   "Zwiebel, gehackt",
+   "Zwiebeln"
+  ],
+  [
+   "Rote Zwiebeln (fein gewürfelt)",
+   "zwiebel"
+  ],
+  [
+   "Tomaten",
+   "Tomate"
+  ],
+  [
+   "Gehackte Tomaten aus der Dose",
+   "Tomate"
+  ],
+  [
+   "Haselnüsse",
+   "Haselnuss"
+  ],
+  [
+   "Weiße Bohnen",
+   "Bohne"
+  ],
+  [
+   "Gemüsebrühwürfel ohne Zwiebel und Knoblauch",
+   "Gemüsebrühwürfel"
+  ],
+  [
+   "Eier",
+   "Ei"
+  ],
+  [
+   "Eiern",
+   "Ei"
+  ],
+  [
+   "Rühreier",
+   "Rührei"
+  ],
+  [
+   "Hühnereier",
+   "Hühnerei"
+  ],
+  [
+   "Kräuter",
+   "Kraut"
+  ],
+  [
+   "Gemischte Kräuter",
+   "Kräuter"
+  ],
+  [
+   "Nüsse",
+   "Nuss"
+  ],
+  [
+   "Walnüssen",
+   "Walnuss"
+  ],
+  [
+   "Äpfel",
+   "Apfel"
+  ],
+  [
+   "Hühner",
+   "Huhn"
+  ],
+  [
+   "Maiskörner",
+   "Maiskorn"
+  ],
+  [
+   "Kürbisse",
+   "Kürbis"
+  ],
+  [
+   "Hokkaido-Kürbisse",
+   "Hokkaido-Kürbis"
+  ],
+  [
+   "Lachse",
+   "Lachs"
+  ],
+  [
+   "Gänse",
+   "Gans"
+  ]
+ ],
+ "processed": [
+  [
+   "Zwiebelpulver",
+   "Zwiebeln"
+  ],
+  [
+   "Knoblauchpulver",
+   "Knoblauch"
+  ],
+  [
+   "Knoblauchgranulat",
+   "Knoblauch"
+  ],
+  [
+   "Knoblauchsalz",
+   "Knoblauch"
+  ],
+  [
+   "Knoblauchzehen",
+   "Knoblauch"
+  ],
+  [
+   "Apfelsaft",
+   "Äpfel"
+  ],
+  [
+   "Zitronensaft",
+   "Zitrone"
+  ],
+  [
+   "Agavendicksaft",
+   "Agavensirup"
+  ],
+  [
+   "Weizenmehl",
+   "Weizen"
+  ],
+  [
+   "Weizengrieß",
+   "Weizen"
+  ],
+  [
+   "Haferflocken",
+   "Hafer"
+  ],
+  [
+   "Erdnussmus",
+   "Erdnüsse"
+  ],
+  [
+   "Erdnussbutter",
+   "Erdnuss"
+  ],
+  [
+   "Apfelmus",
+   "Apfel"
+  ],
+  [
+   "Tomatenmark",
+   "Tomaten"
+  ],
+  [
+   "Tamarindenpaste",
+   "Tamarinde"
+  ],
+  [
+   "Kürbispüree",
+   "Kürbis"
+  ],
+  [
+   "Vanilleextrakt",
+   "Vanilleschote"
+  ],
+  [
+   "Rote Chilischote",
+   "Chili"
+  ],
+  [
+   "Fenchelknolle",
+   "Fenchel"
+  ],
+  [
+   "Lauchstangen",
+   "Lauch"
+  ],
+  [
+   "Brokkoliröschen",
+   "Brokkoli"
+  ],
+  [
+   "Zwiebel-Pulver",
+   "Zwiebel"
+  ]
+ ],
+ "apart": [
+  [
+   "Zwiebel",
+   "Frühlingszwiebelgrün"
+  ],
+  [
+   "Zwiebel",
+   "Frühlingszwiebel (nur das Grün)"
+  ],
+  [
+   "Knoblauch",
+   "Knoblauch-Öl"
+  ],
+  [
+   "rote Zwiebel",
+   "Rote Paprika"
+  ],
+  [
+   "Milch",
+   "Kokosmilch light"
+  ],
+  [
+   "Zwiebel",
+   "Gemüsebrühwürfel ohne Zwiebel und Knoblauch"
+  ],
+  [
+   "Zwiebeln",
+   "Frühlingszwiebelgrün"
+  ],
+  [
+   "Zwiebelpulver",
+   "Frühlingszwiebel"
+  ],
+  [
+   "Knoblauch",
+   "Knoblauchöl"
+  ],
+  [
+   "Reis",
+   "Milchreis"
+  ],
+  [
+   "Milch",
+   "Milchreis"
+  ],
+  [
+   "Milch",
+   "Kokosmilch"
+  ],
+  [
+   "Mandeln",
+   "Mandelmilch"
+  ],
+  [
+   "Lauch",
+   "Schnittlauch"
+  ],
+  [
+   "Zwiebel",
+   "Schnittlauch"
+  ],
+  [
+   "Ei",
+   "Eisbergsalat"
+  ],
+  [
+   "Eier",
+   "Eisbergsalat"
+  ],
+  [
+   "Eier",
+   "Eiweißpulver"
+  ],
+  [
+   "Ei",
+   "Salbei"
+  ],
+  [
+   "Paprika",
+   "Paprikapulver"
+  ],
+  [
+   "Kakao",
+   "Kakaobutter"
+  ],
+  [
+   "Kürbis",
+   "Kürbiskerne"
+  ],
+  [
+   "Apfel",
+   "Granatapfelsaft"
+  ],
+  [
+   "Apfel",
+   "Apfelessig"
+  ],
+  [
+   "Erdnuss",
+   "Erdnussöl"
+  ],
+  [
+   "Soja",
+   "Sojasprossen"
+  ],
+  [
+   "Mehl",
+   "Weizenmehl"
+  ],
+  [
+   "Saft",
+   "Apfelsaft"
+  ],
+  [
+   "Milch",
+   "Laktosefreie Milch"
+  ],
+  [
+   "Milch",
+   "Milch (laktosefrei)"
+  ],
+  [
+   "Brot",
+   "Glutenfreies Brot"
+  ],
+  [
+   "Brot",
+   "Brot (glutenfrei)"
+  ],
+  [
+   "Hafer",
+   "Haferflocken (glutenfrei)"
+  ],
+  [
+   "Joghurt",
+   "Laktosefrei-Joghurt"
+  ]
+ ],
+ "free_from": [
+  "Laktosefreie Milch",
+  "laktosefreier Joghurt",
+  "Laktosefreies Eis",
+  "mit laktosefreiem Quark",
+  "aus laktosefreien Milchprodukten",
+  "Milch, laktosefrei",
+  "Milch (laktosefrei)",
+  "Laktosefrei-Joghurt",
+  "Glutenfreies Brot",
+  "Brot (glutenfrei)",
+  "Weizenfreie Nudeln",
+  "Fruktosefreier Sirup",
+  "Fructosefreier Sirup"
+ ],
+ "names": {
+  "  ": {
+   "key": "",
+   "words": []
+  },
+  "  Laktosefreie   Milch ": {
+   "key": "laktosefreiemilch",
+   "words": []
+  },
+  "  Zwiebeln , rot ": {
+   "key": "zwiebeln,rot",
+   "words": [
+    "zwiebel"
+   ]
+  },
+  " for „Milch": {
+   "key": "for„milch",
+   "words": [
+    "for",
+    "milch"
+   ]
+  },
+  " item.": {
+   "key": "item.",
+   "words": [
+    "item"
+   ]
+  },
+  "(Zwiebel": {
+   "key": "(zwiebel",
+   "words": [
+    "zwiebel"
+   ]
+  },
+  "-X-": {
+   "key": "x",
+   "words": [
+    "x"
+   ]
+  },
+  "-x-": {
+   "key": "x",
+   "words": [
+    "x"
+   ]
+  },
+  "0": {
+   "key": "0",
+   "words": []
+  },
+  "1": {
+   "key": "1",
+   "words": []
+  },
+  "2": {
+   "key": "2",
+   "words": []
+  },
+  "A-EI": {
+   "key": "aei",
+   "words": [
+    "aei"
+   ]
+  },
+  "ABGERUNDET": {
+   "key": "abgerundet",
+   "words": [
+    "abgerundet"
+   ]
+  },
+  "ALLES": {
+   "key": "alles",
+   "words": [
+    "all"
+   ]
+  },
+  "AM": {
+   "key": "am",
+   "words": [
+    "am"
+   ]
+  },
+  "APFELSAFT": {
+   "key": "apfelsaft",
+   "words": [
+    "apfel",
+    "apfelsaft"
+   ]
+  },
+  "ASIATISCHES": {
+   "key": "asiatisches",
+   "words": [
+    "asiatisch"
+   ]
+  },
+  "AUBERGINE": {
+   "key": "aubergine",
+   "words": [
+    "aubergin"
+   ]
+  },
+  "AUBERGINEN": {
+   "key": "auberginen",
+   "words": [
+    "aubergin"
+   ]
+  },
+  "AUFLÄUFE": {
+   "key": "auflaufe",
+   "words": [
+    "auflauf"
+   ]
+  },
+  "AUS": {
+   "key": "aus",
+   "words": [
+    "aus"
+   ]
+  },
+  "AUSTERNPILZE": {
+   "key": "austernpilze",
+   "words": [
+    "austernpilz"
+   ]
+  },
+  "AVOCADOCREME": {
+   "key": "avocadocreme",
+   "words": [
+    "avocadocrem"
+   ]
+  },
+  "Agavendicksaft": {
+   "key": "agavendicksaft",
+   "words": [
+    "agav",
+    "agavendicksaft"
+   ]
+  },
+  "Agavensirup": {
+   "key": "agavensirup",
+   "words": [
+    "agav",
+    "agavensirup"
+   ]
+  },
+  "Ahorn": {
+   "key": "ahorn",
+   "words": [
+    "ahor"
+   ]
+  },
+  "Ahornsirup": {
+   "key": "ahornsirup",
+   "words": [
+    "ahor",
+    "ahornsirup"
+   ]
+  },
+  "Alt": {
+   "key": "alt",
+   "words": [
+    "alt"
+   ]
+  },
+  "Amaranth": {
+   "key": "amaranth",
+   "words": [
+    "amaranth"
+   ]
+  },
+  "Apfel": {
+   "key": "apfel",
+   "words": [
+    "apfel"
+   ]
+  },
+  "Apfelessig": {
+   "key": "apfelessig",
+   "words": [
+    "apfelessig"
+   ]
+  },
+  "Apfelmus": {
+   "key": "apfelmus",
+   "words": [
+    "apfel",
+    "apfelmu"
+   ]
+  },
+  "Apfelsaft": {
+   "key": "apfelsaft",
+   "words": [
+    "apfel",
+    "apfelsaft"
+   ]
+  },
+  "Arborio": {
+   "key": "arborio",
+   "words": [
+    "arborio"
+   ]
+  },
+  "Asafoetida": {
+   "key": "asafoetida",
+   "words": [
+    "asafoetida"
+   ]
+  },
+  "Aubergine": {
+   "key": "aubergine",
+   "words": [
+    "aubergin"
+   ]
+  },
+  "Auberginen": {
+   "key": "auberginen",
+   "words": [
+    "aubergin"
+   ]
+  },
+  "Auberginendip": {
+   "key": "auberginendip",
+   "words": [
+    "auberginendip"
+   ]
+  },
+  "Aufläufe": {
+   "key": "auflaufe",
+   "words": [
+    "auflauf"
+   ]
+  },
+  "Austernpilze": {
+   "key": "austernpilze",
+   "words": [
+    "austernpilz"
+   ]
+  },
+  "Austernpilzen": {
+   "key": "austernpilzen",
+   "words": [
+    "austernpilz"
+   ]
+  },
+  "Avocado": {
+   "key": "avocado",
+   "words": [
+    "avocado"
+   ]
+  },
+  "Avocado-Brot mit Kirschtomaten": {
+   "key": "avocadobrotmitkirschtomaten",
+   "words": [
+    "avocadobrot",
+    "kirschtomat"
+   ]
+  },
+  "Avocadocreme": {
+   "key": "avocadocreme",
+   "words": [
+    "avocadocrem"
+   ]
+  },
+  "Avocadoöl": {
+   "key": "avocadool",
+   "words": [
+    "avocadool"
+   ]
+  },
+  "AÇAÍ": {
+   "key": "acai",
+   "words": [
+    "acai"
+   ]
+  },
+  "Açaí": {
+   "key": "acai",
+   "words": [
+    "acai"
+   ]
+  },
+  "Açaí-Bowl mit Beeren": {
+   "key": "acaibowlmitbeeren",
+   "words": [
+    "acaibowl",
+    "beer"
+   ]
+  },
+  "Açaí-Pulver": {
+   "key": "acaipulver",
+   "words": [
+    "acai",
+    "acaipulv"
+   ]
+  },
+  "BABA GANOUSH": {
+   "key": "babaganoush",
+   "words": [
+    "baba",
+    "ganoush"
+   ]
+  },
+  "BACKPULVER": {
+   "key": "backpulver",
+   "words": [
+    "back",
+    "backpulv"
+   ]
+  },
+  "BACON": {
+   "key": "bacon",
+   "words": [
+    "baco"
+   ]
+  },
+  "BANANEN-HEIDELBEER-PANCAKES": {
+   "key": "bananenheidelbeerpancakes",
+   "words": [
+    "bananenheidelbeerpancak"
+   ]
+  },
+  "BASMATIREIS": {
+   "key": "basmatireis",
+   "words": [
+    "basmatirei"
+   ]
+  },
+  "BEERENSOSSE": {
+   "key": "beerensosse",
+   "words": [
+    "beerensoss"
+   ]
+  },
+  "BEIDES": {
+   "key": "beides",
+   "words": [
+    "beid"
+   ]
+  },
+  "BESTREUT": {
+   "key": "bestreut",
+   "words": [
+    "bestreut"
+   ]
+  },
+  "BLATTSALAT": {
+   "key": "blattsalat",
+   "words": [
+    "blattsalat"
+   ]
+  },
+  "BLATTSPINAT": {
+   "key": "blattspinat",
+   "words": [
+    "blattspinat"
+   ]
+  },
+  "BLAUBEEREN": {
+   "key": "blaubeeren",
+   "words": [
+    "blaubeer"
+   ]
+  },
+  "BOHNEN": {
+   "key": "bohnen",
+   "words": [
+    "bohn"
+   ]
+  },
+  "BOWL": {
+   "key": "bowl",
+   "words": [
+    "bowl"
+   ]
+  },
+  "BRATKARTOFFELN": {
+   "key": "bratkartoffeln",
+   "words": [
+    "bratkartoffel"
+   ]
+  },
+  "BRAUNE REISNUDELN": {
+   "key": "braunereisnudeln",
+   "words": [
+    "reisnudel"
+   ]
+  },
+  "BROKKOLIRÖSCHEN": {
+   "key": "brokkoliroschen",
+   "words": [
+    "brokkoli",
+    "brokkolirosch"
+   ]
+  },
+  "BRÖTCHEN": {
+   "key": "brotchen",
+   "words": [
+    "brotch"
+   ]
+  },
+  "BRÜHE": {
+   "key": "bruhe",
+   "words": [
+    "bruh"
+   ]
+  },
+  "BUCHWEIZEN-PANCAKES MIT RHABARBER-HIMBEER-KOMPOTT": {
+   "key": "buchweizenpancakesmitrhabarberhimbeerkompott",
+   "words": [
+    "buchweizenpancak",
+    "rhabarberhimbeerkompott"
+   ]
+  },
+  "BUNTER": {
+   "key": "bunter",
+   "words": [
+    "bunt"
+   ]
+  },
+  "BUTTER": {
+   "key": "butter",
+   "words": [
+    "butt"
+   ]
+  },
+  "BUTTERKEKSEN": {
+   "key": "butterkeksen",
+   "words": [
+    "butterkeks"
+   ]
+  },
+  "BUTTERNUT": {
+   "key": "butternut",
+   "words": [
+    "butternut"
+   ]
+  },
+  "BUTTERSCHMALZ": {
+   "key": "butterschmalz",
+   "words": [
+    "butterschmalz"
+   ]
+  },
+  "Baba Ganoush": {
+   "key": "babaganoush",
+   "words": [
+    "baba",
+    "ganoush"
+   ]
+  },
+  "Babyspinat": {
+   "key": "babyspinat",
+   "words": [
+    "babyspinat"
+   ]
+  },
+  "Backpulver": {
+   "key": "backpulver",
+   "words": [
+    "back",
+    "backpulv"
+   ]
+  },
+  "Bacon": {
+   "key": "bacon",
+   "words": [
+    "baco"
+   ]
+  },
+  "Balsamico": {
+   "key": "balsamico",
+   "words": [
+    "balsamico"
+   ]
+  },
+  "Balsamico-Essig": {
+   "key": "balsamicoessig",
+   "words": [
+    "balsamicoessig"
+   ]
+  },
+  "Banane": {
+   "key": "banane",
+   "words": [
+    "banan"
+   ]
+  },
+  "Bananen-Heidelbeer-Pancakes": {
+   "key": "bananenheidelbeerpancakes",
+   "words": [
+    "bananenheidelbeerpancak"
+   ]
+  },
+  "Bananenscheiben": {
+   "key": "bananenscheiben",
+   "words": [
+    "bananenscheib"
+   ]
+  },
+  "Basilikum": {
+   "key": "basilikum",
+   "words": [
+    "basilikum"
+   ]
+  },
+  "Basis": {
+   "key": "basis",
+   "words": [
+    "basi"
+   ]
+  },
+  "Basmatireis": {
+   "key": "basmatireis",
+   "words": [
+    "basmatirei"
+   ]
+  },
+  "Beerensoße": {
+   "key": "beerensosse",
+   "words": [
+    "beerensoss"
+   ]
+  },
+  "Beilage": {
+   "key": "beilage",
+   "words": [
+    "beilag"
+   ]
+  },
+  "Belieben": {
+   "key": "belieben",
+   "words": [
+    "belieb"
+   ]
+  },
+  "Bindung": {
+   "key": "bindung",
+   "words": [
+    "bindung"
+   ]
+  },
+  "Bio-laktosefreie Milch": {
+   "key": "biolaktosefreiemilch",
+   "words": []
+  },
+  "Blattgemüse": {
+   "key": "blattgemuse",
+   "words": [
+    "blattgemus"
+   ]
+  },
+  "Blattsalat": {
+   "key": "blattsalat",
+   "words": [
+    "blattsalat"
+   ]
+  },
+  "Blattspinat": {
+   "key": "blattspinat",
+   "words": [
+    "blattspinat"
+   ]
+  },
+  "Blaubeeren": {
+   "key": "blaubeeren",
+   "words": [
+    "blaubeer"
+   ]
+  },
+  "Boden": {
+   "key": "boden",
+   "words": [
+    "bod"
+   ]
+  },
+  "Bohne": {
+   "key": "bohne",
+   "words": [
+    "bohn"
+   ]
+  },
+  "Bohnen": {
+   "key": "bohnen",
+   "words": [
+    "bohn"
+   ]
+  },
+  "Bohnenohne": {
+   "key": "bohnenohne",
+   "words": [
+    "bohnenohn"
+   ]
+  },
+  "Bowl": {
+   "key": "bowl",
+   "words": [
+    "bowl"
+   ]
+  },
+  "Braten": {
+   "key": "braten",
+   "words": [
+    "brat"
+   ]
+  },
+  "Bratkartoffeln": {
+   "key": "bratkartoffeln",
+   "words": [
+    "bratkartoffel"
+   ]
+  },
+  "Bratlinge": {
+   "key": "bratlinge",
+   "words": [
+    "bratling"
+   ]
+  },
+  "Braune Reisnudeln": {
+   "key": "braunereisnudeln",
+   "words": [
+    "reisnudel"
+   ]
+  },
+  "Brauner Zucker": {
+   "key": "braunerzucker",
+   "words": [
+    "zuck"
+   ]
+  },
+  "Brei": {
+   "key": "brei",
+   "words": [
+    "brei"
+   ]
+  },
+  "Brokkoli": {
+   "key": "brokkoli",
+   "words": [
+    "brokkoli"
+   ]
+  },
+  "Brokkoliröschen": {
+   "key": "brokkoliroschen",
+   "words": [
+    "brokkoli",
+    "brokkolirosch"
+   ]
+  },
+  "Brot": {
+   "key": "brot",
+   "words": [
+    "brot"
+   ]
+  },
+  "Brot (Glutenfrei)": {
+   "key": "brotglutenfrei",
+   "words": []
+  },
+  "Brot (glutenfrei)": {
+   "key": "brotglutenfrei",
+   "words": []
+  },
+  "Brot ohne glutenfreies Mehl": {
+   "key": "brotohneglutenfreiesmehl",
+   "words": []
+  },
+  "Brotcroutons": {
+   "key": "brotcroutons",
+   "words": [
+    "brotcrouton"
+   ]
+  },
+  "Brötchen": {
+   "key": "brotchen",
+   "words": [
+    "brotch"
+   ]
+  },
+  "Brötchen ohne": {
+   "key": "brotchenohne",
+   "words": [
+    "brotch"
+   ]
+  },
+  "Brühe": {
+   "key": "bruhe",
+   "words": [
+    "bruh"
+   ]
+  },
+  "Brühe (low-FODMAP)": {
+   "key": "bruhe",
+   "words": [
+    "bruh"
+   ]
+  },
+  "Brühwürfel (low-FODMAP)": {
+   "key": "bruhwurfel",
+   "words": [
+    "bruhwurfel"
+   ]
+  },
+  "Buchweizen-Pancakes mit Rhabarber-Himbeer-Kompott": {
+   "key": "buchweizenpancakesmitrhabarberhimbeerkompott",
+   "words": [
+    "buchweizenpancak",
+    "rhabarberhimbeerkompott"
+   ]
+  },
+  "Buchweizenmehl": {
+   "key": "buchweizenmehl",
+   "words": [
+    "buchweiz",
+    "buchweizenmehl"
+   ]
+  },
+  "Buchweizenpfannkuchen": {
+   "key": "buchweizenpfannkuchen",
+   "words": [
+    "buchweizenpfannkuch"
+   ]
+  },
+  "Buddha Bowl": {
+   "key": "buddhabowl",
+   "words": [
+    "bowl",
+    "buddha"
+   ]
+  },
+  "Buddha Bowl mit Lachsforelle": {
+   "key": "buddhabowlmitlachsforelle",
+   "words": [
+    "bowl",
+    "buddha",
+    "lachsforell"
+   ]
+  },
+  "Butter": {
+   "key": "butter",
+   "words": [
+    "butt"
+   ]
+  },
+  "Butterkeksen": {
+   "key": "butterkeksen",
+   "words": [
+    "butterkeks"
+   ]
+  },
+  "Butternut": {
+   "key": "butternut",
+   "words": [
+    "butternut"
+   ]
+  },
+  "Butternut-Kürbis": {
+   "key": "butternutkurbis",
+   "words": [
+    "butternutkurbis"
+   ]
+  },
+  "Butternutkürbis": {
+   "key": "butternutkurbis",
+   "words": [
+    "butternutkurbis"
+   ]
+  },
+  "Butterschmalz": {
+   "key": "butterschmalz",
+   "words": [
+    "butterschmalz"
+   ]
+  },
+  "Bánh mì": {
+   "key": "banhmi",
+   "words": [
+    "banh",
+    "mi"
+   ]
+  },
+  "Bällchen": {
+   "key": "ballchen",
+   "words": [
+    "ballch"
+   ]
+  },
+  "CAYENNEPFEFFER": {
+   "key": "cayennepfeffer",
+   "words": [
+    "cayennepfeff"
+   ]
+  },
+  "CHEESE": {
+   "key": "cheese",
+   "words": [
+    "chees"
+   ]
+  },
+  "CHERRYTOMATEN": {
+   "key": "cherrytomaten",
+   "words": [
+    "cherrytomat"
+   ]
+  },
+  "CHIA": {
+   "key": "chia",
+   "words": [
+    "chia"
+   ]
+  },
+  "CHINAKOHL": {
+   "key": "chinakohl",
+   "words": [
+    "chinakohl"
+   ]
+  },
+  "CHIPOTLE": {
+   "key": "chipotle",
+   "words": [
+    "chipotl"
+   ]
+  },
+  "CHIPOTLEPULVER": {
+   "key": "chipotlepulver",
+   "words": [
+    "chipotl",
+    "chipotlepulv"
+   ]
+  },
+  "CHIPS": {
+   "key": "chips",
+   "words": [
+    "chip"
+   ]
+  },
+  "CRANBERRYS": {
+   "key": "cranberrys",
+   "words": [
+    "cranberry"
+   ]
+  },
+  "CREMIGE": {
+   "key": "cremige",
+   "words": [
+    "cremig"
+   ]
+  },
+  "CREMIGE ZUCCHINI-NUDELN MIT LACHS": {
+   "key": "cremigezucchininudelnmitlachs",
+   "words": [
+    "cremig",
+    "lachs",
+    "zucchininudel"
+   ]
+  },
+  "CREMIGEM": {
+   "key": "cremigem",
+   "words": [
+    "cremig"
+   ]
+  },
+  "CREMIGEN": {
+   "key": "cremigen",
+   "words": [
+    "cremig"
+   ]
+  },
+  "CRÈME FRAÎCHE": {
+   "key": "cremefraiche",
+   "words": [
+    "crem",
+    "fraich"
+   ]
+  },
+  "Café au lait": {
+   "key": "cafeaulait",
+   "words": [
+    "au",
+    "caf",
+    "lait"
+   ]
+  },
+  "Cayennepfeffer": {
+   "key": "cayennepfeffer",
+   "words": [
+    "cayennepfeff"
+   ]
+  },
+  "Champignons": {
+   "key": "champignons",
+   "words": [
+    "champignon"
+   ]
+  },
+  "Champignons aus der Dose": {
+   "key": "champignonsausderdose",
+   "words": [
+    "champignon"
+   ]
+  },
+  "Cheese": {
+   "key": "cheese",
+   "words": [
+    "chees"
+   ]
+  },
+  "Cherrytomaten": {
+   "key": "cherrytomaten",
+   "words": [
+    "cherrytomat"
+   ]
+  },
+  "Chia": {
+   "key": "chia",
+   "words": [
+    "chia"
+   ]
+  },
+  "Chia-Pudding mit Kokos und Beeren": {
+   "key": "chiapuddingmitkokosundbeeren",
+   "words": [
+    "beer",
+    "chiapudding",
+    "koko"
+   ]
+  },
+  "Chiapudding": {
+   "key": "chiapudding",
+   "words": [
+    "chiapudding"
+   ]
+  },
+  "Chiasamen": {
+   "key": "chiasamen",
+   "words": [
+    "chiasam"
+   ]
+  },
+  "Chili": {
+   "key": "chili",
+   "words": [
+    "chili"
+   ]
+  },
+  "Chiliflocken": {
+   "key": "chiliflocken",
+   "words": [
+    "chili",
+    "chiliflock"
+   ]
+  },
+  "Chilipulver": {
+   "key": "chilipulver",
+   "words": [
+    "chili",
+    "chilipulv"
+   ]
+  },
+  "Chinakohl": {
+   "key": "chinakohl",
+   "words": [
+    "chinakohl"
+   ]
+  },
+  "Chipotle": {
+   "key": "chipotle",
+   "words": [
+    "chipotl"
+   ]
+  },
+  "Chipotlepulver": {
+   "key": "chipotlepulver",
+   "words": [
+    "chipotl",
+    "chipotlepulv"
+   ]
+  },
+  "Chips": {
+   "key": "chips",
+   "words": [
+    "chip"
+   ]
+  },
+  "Choi": {
+   "key": "choi",
+   "words": [
+    "choi"
+   ]
+  },
+  "Cottage": {
+   "key": "cottage",
+   "words": [
+    "cottag"
+   ]
+  },
+  "Cottage Cheese": {
+   "key": "cottagecheese",
+   "words": [
+    "chees",
+    "cottag"
+   ]
+  },
+  "Cracker": {
+   "key": "cracker",
+   "words": [
+    "crack"
+   ]
+  },
+  "Cranberries": {
+   "key": "cranberries",
+   "words": [
+    "cranberri"
+   ]
+  },
+  "Cranberrys": {
+   "key": "cranberrys",
+   "words": [
+    "cranberry"
+   ]
+  },
+  "Creme": {
+   "key": "creme",
+   "words": [
+    "crem"
+   ]
+  },
+  "Cremige": {
+   "key": "cremige",
+   "words": [
+    "cremig"
+   ]
+  },
+  "Cremige Kürbis-Pasta": {
+   "key": "cremigekurbispasta",
+   "words": [
+    "cremig",
+    "kurbispasta"
+   ]
+  },
+  "Cremige Zucchini-Nudeln mit Lachs": {
+   "key": "cremigezucchininudelnmitlachs",
+   "words": [
+    "cremig",
+    "lachs",
+    "zucchininudel"
+   ]
+  },
+  "Cremiger": {
+   "key": "cremiger",
+   "words": [
+    "cremig"
+   ]
+  },
+  "Cremiger Hirse-Frühstücksbrei": {
+   "key": "cremigerhirsefruhstucksbrei",
+   "words": [
+    "cremig",
+    "hirsefruhstucksbrei"
+   ]
+  },
+  "Cremiges": {
+   "key": "cremiges",
+   "words": [
+    "cremig"
+   ]
+  },
+  "Cremiges Gemüsecurry mit Reis": {
+   "key": "cremigesgemusecurrymitreis",
+   "words": [
+    "cremig",
+    "gemusecurry",
+    "rei"
+   ]
+  },
+  "Cremiges Oatmeal für Eilige": {
+   "key": "cremigesoatmealfureilige",
+   "words": [
+    "cremig",
+    "eilig",
+    "oatmeal"
+   ]
+  },
+  "Crème fraîche": {
+   "key": "cremefraiche",
+   "words": [
+    "crem",
+    "fraich"
+   ]
+  },
+  "Curry": {
+   "key": "curry",
+   "words": [
+    "curry"
+   ]
+  },
+  "Currypulver": {
+   "key": "currypulver",
+   "words": [
+    "curry",
+    "currypulv"
+   ]
+  },
+  "DESSERT": {
+   "key": "dessert",
+   "words": [
+    "dessert"
+   ]
+  },
+  "DIET": {
+   "key": "diet",
+   "words": [
+    "diet"
+   ]
+  },
+  "DINKELFLOCKEN": {
+   "key": "dinkelflocken",
+   "words": [
+    "dinkel",
+    "dinkelflock"
+   ]
+  },
+  "DINKELVOLLKORNMEHL": {
+   "key": "dinkelvollkornmehl",
+   "words": [
+    "dinkelvollkorn",
+    "dinkelvollkornmehl"
+   ]
+  },
+  "DOSENTOMATEN": {
+   "key": "dosentomaten",
+   "words": [
+    "dosentomat"
+   ]
+  },
+  "Datteln": {
+   "key": "datteln",
+   "words": [
+    "dattel"
+   ]
+  },
+  "Dessert": {
+   "key": "dessert",
+   "words": [
+    "dessert"
+   ]
+  },
+  "Dijon-Senf": {
+   "key": "dijonsenf",
+   "words": [
+    "dijonsenf"
+   ]
+  },
+  "Dill": {
+   "key": "dill",
+   "words": [
+    "dill"
+   ]
+  },
+  "Dinkel": {
+   "key": "dinkel",
+   "words": [
+    "dinkel"
+   ]
+  },
+  "Dinkel-Sauerteigbrot": {
+   "key": "dinkelsauerteigbrot",
+   "words": [
+    "dinkelsauerteigbrot"
+   ]
+  },
+  "Dinkelbrot": {
+   "key": "dinkelbrot",
+   "words": [
+    "dinkelbrot"
+   ]
+  },
+  "Dinkelflocken": {
+   "key": "dinkelflocken",
+   "words": [
+    "dinkel",
+    "dinkelflock"
+   ]
+  },
+  "Dinkelvollkornmehl": {
+   "key": "dinkelvollkornmehl",
+   "words": [
+    "dinkelvollkorn",
+    "dinkelvollkornmehl"
+   ]
+  },
+  "Dip": {
+   "key": "dip",
+   "words": [
+    "dip"
+   ]
+  },
+  "Dosentomaten": {
+   "key": "dosentomaten",
+   "words": [
+    "dosentomat"
+   ]
+  },
+  "Dressing": {
+   "key": "dressing",
+   "words": [
+    "dressing"
+   ]
+  },
+  "Dressings": {
+   "key": "dressings",
+   "words": [
+    "dressing"
+   ]
+  },
+  "Dunkle Schokolade": {
+   "key": "dunkleschokolade",
+   "words": [
+    "dunkl",
+    "schokolad"
+   ]
+  },
+  "DÜNNE": {
+   "key": "dunne",
+   "words": [
+    "dunn"
+   ]
+  },
+  "Dünne": {
+   "key": "dunne",
+   "words": [
+    "dunn"
+   ]
+  },
+  "EI-SANDWICH": {
+   "key": "eisandwich",
+   "words": [
+    "eisandwich"
+   ]
+  },
+  "EI-WRAP": {
+   "key": "eiwrap",
+   "words": [
+    "eiwrap"
+   ]
+  },
+  "EIER": {
+   "key": "eier",
+   "words": [
+    "ei"
+   ]
+  },
+  "EIERSALAT": {
+   "key": "eiersalat",
+   "words": [
+    "eiersalat"
+   ]
+  },
+  "EINE": {
+   "key": "eine",
+   "words": [
+    "ein"
+   ]
+  },
+  "EINEM": {
+   "key": "einem",
+   "words": [
+    "ein"
+   ]
+  },
+  "EINTOPF": {
+   "key": "eintopf",
+   "words": [
+    "eintopf"
+   ]
+  },
+  "EISGEKÜHLT": {
+   "key": "eisgekuhlt",
+   "words": [
+    "eisgekuhlt"
+   ]
+  },
+  "EIWEISS": {
+   "key": "eiweiss",
+   "words": [
+    "eiweiss"
+   ]
+  },
+  "ENERGIEBÄLLCHEN": {
+   "key": "energieballchen",
+   "words": [
+    "energieballch"
+   ]
+  },
+  "ENERGIEKUGELN": {
+   "key": "energiekugeln",
+   "words": [
+    "energiekugel"
+   ]
+  },
+  "ERDBEER-ENERGIEKUGELN OHNE DATTELN": {
+   "key": "erdbeerenergiekugelnohnedatteln",
+   "words": [
+    "erdbeerenergiekugel"
+   ]
+  },
+  "ERDNUSSMUS": {
+   "key": "erdnussmus",
+   "words": [
+    "erdnuss",
+    "erdnussmu"
+   ]
+  },
+  "ERDNÜSSE": {
+   "key": "erdnusse",
+   "words": [
+    "erdnuss"
+   ]
+  },
+  "ERDNÜSSEN": {
+   "key": "erdnussen",
+   "words": [
+    "erdnuss"
+   ]
+  },
+  "ERGÄNZT": {
+   "key": "erganzt",
+   "words": [
+    "erganzt"
+   ]
+  },
+  "ESSIG": {
+   "key": "essig",
+   "words": [
+    "essig"
+   ]
+  },
+  "EXOTISCH": {
+   "key": "exotisch",
+   "words": [
+    "exotisch"
+   ]
+  },
+  "Edamame": {
+   "key": "edamame",
+   "words": [
+    "edamam"
+   ]
+  },
+  "Ei": {
+   "key": "ei",
+   "words": [
+    "ei"
+   ]
+  },
+  "Ei ohne": {
+   "key": "eiohne",
+   "words": [
+    "ei"
+   ]
+  },
+  "Ei-Sandwich": {
+   "key": "eisandwich",
+   "words": [
+    "eisandwich"
+   ]
+  },
+  "Ei-Wrap": {
+   "key": "eiwrap",
+   "words": [
+    "eiwrap"
+   ]
+  },
+  "Eier": {
+   "key": "eier",
+   "words": [
+    "ei"
+   ]
+  },
+  "Eiern": {
+   "key": "eiern",
+   "words": [
+    "ei"
+   ]
+  },
+  "Eiersalat": {
+   "key": "eiersalat",
+   "words": [
+    "eiersalat"
+   ]
+  },
+  "Ein": {
+   "key": "ein",
+   "words": [
+    "ein"
+   ]
+  },
+  "Eine": {
+   "key": "eine",
+   "words": [
+    "ein"
+   ]
+  },
+  "Eintopf": {
+   "key": "eintopf",
+   "words": [
+    "eintopf"
+   ]
+  },
+  "Eisbergsalat": {
+   "key": "eisbergsalat",
+   "words": [
+    "eisbergsalat"
+   ]
+  },
+  "Eiswürfel": {
+   "key": "eiswurfel",
+   "words": [
+    "eiswurfel"
+   ]
+  },
+  "Eiweiß": {
+   "key": "eiweiss",
+   "words": [
+    "eiweiss"
+   ]
+  },
+  "Eiweißpulver": {
+   "key": "eiweisspulver",
+   "words": [
+    "eiweiss",
+    "eiweisspulv"
+   ]
+  },
+  "Energiebällchen": {
+   "key": "energieballchen",
+   "words": [
+    "energieballch"
+   ]
+  },
+  "Energiebällchen mit Hafer, Cranberrys und Schokolade": {
+   "key": "energieballchenmithafer,cranberrysundschokolade",
+   "words": [
+    "cranberry",
+    "energieballch",
+    "haf",
+    "schokolad"
+   ]
+  },
+  "Energiekugeln": {
+   "key": "energiekugeln",
+   "words": [
+    "energiekugel"
+   ]
+  },
+  "Erbsen": {
+   "key": "erbsen",
+   "words": [
+    "erbs"
+   ]
+  },
+  "Erdbeer-Energiekugeln ohne Datteln": {
+   "key": "erdbeerenergiekugelnohnedatteln",
+   "words": [
+    "erdbeerenergiekugel"
+   ]
+  },
+  "Erdbeer-Spinat-Salat": {
+   "key": "erdbeerspinatsalat",
+   "words": [
+    "erdbeerspinatsalat"
+   ]
+  },
+  "Erdbeeren": {
+   "key": "erdbeeren",
+   "words": [
+    "erdbeer"
+   ]
+  },
+  "Erdbeermarmelade": {
+   "key": "erdbeermarmelade",
+   "words": [
+    "erdbeermarmelad"
+   ]
+  },
+  "Erdbeerscheiben": {
+   "key": "erdbeerscheiben",
+   "words": [
+    "erdbeerscheib"
+   ]
+  },
+  "Erdmandeln": {
+   "key": "erdmandeln",
+   "words": [
+    "erdmandel"
+   ]
+  },
+  "Erdnuss": {
+   "key": "erdnuss",
+   "words": [
+    "erdnuss"
+   ]
+  },
+  "Erdnussbutter": {
+   "key": "erdnussbutter",
+   "words": [
+    "erdnuss",
+    "erdnussbutt"
+   ]
+  },
+  "Erdnussbutterkern": {
+   "key": "erdnussbutterkern",
+   "words": [
+    "erdnussbutterker"
+   ]
+  },
+  "Erdnussmus": {
+   "key": "erdnussmus",
+   "words": [
+    "erdnuss",
+    "erdnussmu"
+   ]
+  },
+  "Erdnusssauce": {
+   "key": "erdnusssauce",
+   "words": [
+    "erdnusssauc"
+   ]
+  },
+  "Erdnussöl": {
+   "key": "erdnussol",
+   "words": [
+    "erdnussol"
+   ]
+  },
+  "Erdnüsse": {
+   "key": "erdnusse",
+   "words": [
+    "erdnuss"
+   ]
+  },
+  "Erdnüssen": {
+   "key": "erdnussen",
+   "words": [
+    "erdnuss"
+   ]
+  },
+  "Ersatz": {
+   "key": "ersatz",
+   "words": [
+    "ersatz"
+   ]
+  },
+  "Essig": {
+   "key": "essig",
+   "words": [
+    "essig"
+   ]
+  },
+  "FEIN": {
+   "key": "fein",
+   "words": [
+    "fei"
+   ]
+  },
+  "FELDSALAT": {
+   "key": "feldsalat",
+   "words": [
+    "feldsalat"
+   ]
+  },
+  "FENCHEL": {
+   "key": "fenchel",
+   "words": [
+    "fenchel"
+   ]
+  },
+  "FENCHELSAMEN": {
+   "key": "fenchelsamen",
+   "words": [
+    "fenchelsam"
+   ]
+  },
+  "FERTIG": {
+   "key": "fertig",
+   "words": [
+    "fertig"
+   ]
+  },
+  "FETA": {
+   "key": "feta",
+   "words": [
+    "feta"
+   ]
+  },
+  "FLAMMKUCHEN": {
+   "key": "flammkuchen",
+   "words": [
+    "flammkuch"
+   ]
+  },
+  "FLOHSAMENSCHALEN": {
+   "key": "flohsamenschalen",
+   "words": [
+    "flohsamenschal"
+   ]
+  },
+  "FLUFFIGE": {
+   "key": "fluffige",
+   "words": [
+    "fluffig"
+   ]
+  },
+  "FOCUS": {
+   "key": "focus",
+   "words": [
+    "focu"
+   ]
+  },
+  "FOOD": {
+   "key": "food",
+   "words": [
+    "food"
+   ]
+  },
+  "FRITTIERTE": {
+   "key": "frittierte",
+   "words": [
+    "frittiert"
+   ]
+  },
+  "FRUCHTIG": {
+   "key": "fruchtig",
+   "words": [
+    "fruchtig"
+   ]
+  },
+  "FRUCHTIGE": {
+   "key": "fruchtige",
+   "words": [
+    "fruchtig"
+   ]
+  },
+  "FRUKTOSE": {
+   "key": "fruktose",
+   "words": [
+    "fruktos"
+   ]
+  },
+  "FRÜHLINGSZWIEBEL": {
+   "key": "fruhlingszwiebel",
+   "words": [
+    "fruhlingszwiebel"
+   ]
+  },
+  "Feldsalat": {
+   "key": "feldsalat",
+   "words": [
+    "feldsalat"
+   ]
+  },
+  "Fenchel": {
+   "key": "fenchel",
+   "words": [
+    "fenchel"
+   ]
+  },
+  "Fenchelknolle": {
+   "key": "fenchelknolle",
+   "words": [
+    "fenchel",
+    "fenchelknoll"
+   ]
+  },
+  "Fenchelsamen": {
+   "key": "fenchelsamen",
+   "words": [
+    "fenchelsam"
+   ]
+  },
+  "Feta": {
+   "key": "feta",
+   "words": [
+    "feta"
+   ]
+  },
+  "Fingerfood": {
+   "key": "fingerfood",
+   "words": [
+    "fingerfood"
+   ]
+  },
+  "Fischsauce": {
+   "key": "fischsauce",
+   "words": [
+    "fischsauc"
+   ]
+  },
+  "Flammkuchen": {
+   "key": "flammkuchen",
+   "words": [
+    "flammkuch"
+   ]
+  },
+  "Fleischtomate": {
+   "key": "fleischtomate",
+   "words": [
+    "fleischtomat"
+   ]
+  },
+  "Flohsamenschalen": {
+   "key": "flohsamenschalen",
+   "words": [
+    "flohsamenschal"
+   ]
+  },
+  "Fluffige": {
+   "key": "fluffige",
+   "words": [
+    "fluffig"
+   ]
+  },
+  "Frische": {
+   "key": "frische",
+   "words": [
+    "frisch"
+   ]
+  },
+  "Frischer": {
+   "key": "frischer",
+   "words": [
+    "frisch"
+   ]
+  },
+  "Frischhefe": {
+   "key": "frischhefe",
+   "words": [
+    "frischhef"
+   ]
+  },
+  "Frischkäse": {
+   "key": "frischkase",
+   "words": [
+    "frischkas"
+   ]
+  },
+  "Frittata": {
+   "key": "frittata",
+   "words": [
+    "frittata"
+   ]
+  },
+  "Fructosefreier Sirup": {
+   "key": "fructosefreiersirup",
+   "words": []
+  },
+  "Fruktose": {
+   "key": "fruktose",
+   "words": [
+    "fruktos"
+   ]
+  },
+  "Fruktosefreier Sirup": {
+   "key": "fruktosefreiersirup",
+   "words": []
+  },
+  "Frühlingszwiebel": {
+   "key": "fruhlingszwiebel",
+   "words": [
+    "fruhlingszwiebel"
+   ]
+  },
+  "Frühlingszwiebel (nur das Grün)": {
+   "key": "fruhlingszwiebel",
+   "words": [
+    "fruhlingszwiebel"
+   ]
+  },
+  "Frühlingszwiebelgrün": {
+   "key": "fruhlingszwiebelgrun",
+   "words": [
+    "fruhlingszwiebelgru"
+   ]
+  },
+  "Frühstück": {
+   "key": "fruhstuck",
+   "words": [
+    "fruhstuck"
+   ]
+  },
+  "Frühstücks-Smoothie mit Erdbeeren": {
+   "key": "fruhstuckssmoothiemiterdbeeren",
+   "words": [
+    "erdbeer",
+    "fruhstuckssmoothi"
+   ]
+  },
+  "Frühstücksbrei": {
+   "key": "fruhstucksbrei",
+   "words": [
+    "fruhstucksbrei"
+   ]
+  },
+  "Frühstückspizza": {
+   "key": "fruhstuckspizza",
+   "words": [
+    "fruhstuckspizza"
+   ]
+  },
+  "FÜLLEN": {
+   "key": "fullen",
+   "words": [
+    "full"
+   ]
+  },
+  "FÜR": {
+   "key": "fur",
+   "words": [
+    "fur"
+   ]
+  },
+  "Füllung": {
+   "key": "fullung",
+   "words": [
+    "fullung"
+   ]
+  },
+  "GARAM": {
+   "key": "garam",
+   "words": [
+    "garam"
+   ]
+  },
+  "GARAM MASALA": {
+   "key": "garammasala",
+   "words": [
+    "garam",
+    "masala"
+   ]
+  },
+  "GAREN": {
+   "key": "garen",
+   "words": [
+    "gar"
+   ]
+  },
+  "GARNIERT": {
+   "key": "garniert",
+   "words": [
+    "garniert"
+   ]
+  },
+  "GAZPACHO": {
+   "key": "gazpacho",
+   "words": [
+    "gazpacho"
+   ]
+  },
+  "GEBACKENE": {
+   "key": "gebackene",
+   "words": [
+    "gebacken"
+   ]
+  },
+  "GEBACKENEM": {
+   "key": "gebackenem",
+   "words": [
+    "gebacken"
+   ]
+  },
+  "GEBACKENER": {
+   "key": "gebackener",
+   "words": [
+    "gebacken"
+   ]
+  },
+  "GEBRATENE": {
+   "key": "gebratene",
+   "words": [
+    "gebraten"
+   ]
+  },
+  "GEBRATENEM": {
+   "key": "gebratenem",
+   "words": [
+    "gebraten"
+   ]
+  },
+  "GEBRATENER TEMPEH IN SÜSSER SOJASAUCE": {
+   "key": "gebratenertempehinsussersojasauce",
+   "words": [
+    "sojasauc",
+    "suss",
+    "tempeh"
+   ]
+  },
+  "GEFÜLLTE RONDINI-ZUCCHINI MIT REIS UND FETA": {
+   "key": "gefullterondinizucchinimitreisundfeta",
+   "words": [
+    "feta",
+    "gefullt",
+    "rei",
+    "rondinizucchini"
+   ]
+  },
+  "GEGARTES": {
+   "key": "gegartes",
+   "words": [
+    "gegart"
+   ]
+  },
+  "GEHACKTE TOMATEN AUS DER DOSE": {
+   "key": "gehacktetomatenausderdose",
+   "words": [
+    "tomat"
+   ]
+  },
+  "GEHACKTEN": {
+   "key": "gehackten",
+   "words": [
+    "gehackt"
+   ]
+  },
+  "GEMAHLENEN": {
+   "key": "gemahlenen",
+   "words": [
+    "gemahlen"
+   ]
+  },
+  "GEMISCHTE KRÄUTER": {
+   "key": "gemischtekrauter",
+   "words": [
+    "kraut"
+   ]
+  },
+  "GEMÜSEBRÜHWÜRFEL": {
+   "key": "gemusebruhwurfel",
+   "words": [
+    "gemusebruhwurfel"
+   ]
+  },
+  "GEPUFFTER AMARANTH": {
+   "key": "gepuffteramaranth",
+   "words": [
+    "amaranth"
+   ]
+  },
+  "GEPUFFTER QUINOA": {
+   "key": "gepuffterquinoa",
+   "words": [
+    "quinoa"
+   ]
+  },
+  "GERASPELTER": {
+   "key": "geraspelter",
+   "words": [
+    "geraspelt"
+   ]
+  },
+  "GERIEBENEM": {
+   "key": "geriebenem",
+   "words": [
+    "gerieben"
+   ]
+  },
+  "GERÖSTETE KÜRBIS-KAROTTEN-SUPPE": {
+   "key": "gerostetekurbiskarottensuppe",
+   "words": [
+    "kurbiskarottensupp"
+   ]
+  },
+  "GERÖSTETE PAPRIKASUPPE": {
+   "key": "gerostetepaprikasuppe",
+   "words": [
+    "paprikasupp"
+   ]
+  },
+  "GESTOCKT": {
+   "key": "gestockt",
+   "words": [
+    "gestockt"
+   ]
+  },
+  "GESÜSST": {
+   "key": "gesusst",
+   "words": [
+    "gesusst"
+   ]
+  },
+  "GETOASTETES": {
+   "key": "getoastetes",
+   "words": [
+    "getoastet"
+   ]
+  },
+  "GETROCKNETE CRANBERRIES": {
+   "key": "getrocknetecranberries",
+   "words": [
+    "cranberri"
+   ]
+  },
+  "GETROCKNETE TOMATE": {
+   "key": "getrocknetetomate",
+   "words": [
+    "tomat"
+   ]
+  },
+  "GETROCKNETEN": {
+   "key": "getrockneten",
+   "words": [
+    "getrocknet"
+   ]
+  },
+  "GEVIERTELTEN": {
+   "key": "geviertelten",
+   "words": [
+    "geviertelt"
+   ]
+  },
+  "GEWÜRZEN": {
+   "key": "gewurzen",
+   "words": [
+    "gewurz"
+   ]
+  },
+  "GEWÜRZMISCHUNG": {
+   "key": "gewurzmischung",
+   "words": [
+    "gewurzmischung"
+   ]
+  },
+  "GEWÜRZT": {
+   "key": "gewurzt",
+   "words": [
+    "gewurzt"
+   ]
+  },
+  "GHEE": {
+   "key": "ghee",
+   "words": [
+    "ghe"
+   ]
+  },
+  "GLASIERT": {
+   "key": "glasiert",
+   "words": [
+    "glasiert"
+   ]
+  },
+  "GLASNUDELN": {
+   "key": "glasnudeln",
+   "words": [
+    "glasnudel"
+   ]
+  },
+  "GLUTEN": {
+   "key": "gluten",
+   "words": [
+    "glut"
+   ]
+  },
+  "GLUTENFREIE": {
+   "key": "glutenfreie",
+   "words": []
+  },
+  "GLUTENFREIE MEHLMISCHUNG": {
+   "key": "glutenfreiemehlmischung",
+   "words": []
+  },
+  "GLUTENFREIE NUDELN": {
+   "key": "glutenfreienudeln",
+   "words": []
+  },
+  "GLUTENFREIE SPAGHETTI": {
+   "key": "glutenfreiespaghetti",
+   "words": []
+  },
+  "GLUTENFREIEM": {
+   "key": "glutenfreiem",
+   "words": []
+  },
+  "GLUTENFREIER": {
+   "key": "glutenfreier",
+   "words": []
+  },
+  "GRANATAPFELSAFT": {
+   "key": "granatapfelsaft",
+   "words": [
+    "granatapfel",
+    "granatapfelsaft"
+   ]
+  },
+  "GROB": {
+   "key": "grob",
+   "words": [
+    "grob"
+   ]
+  },
+  "GROSSE ZWIEBEL": {
+   "key": "grossezwiebel",
+   "words": [
+    "zwiebel"
+   ]
+  },
+  "GROSSE Zwiebel": {
+   "key": "grossezwiebel",
+   "words": [
+    "zwiebel"
+   ]
+  },
+  "GRÜNE": {
+   "key": "grune",
+   "words": [
+    "grun"
+   ]
+  },
+  "GRÜNEN": {
+   "key": "grunen",
+   "words": [
+    "grun"
+   ]
+  },
+  "GRÜNER SMOOTHIE": {
+   "key": "grunersmoothie",
+   "words": [
+    "smoothi"
+   ]
+  },
+  "GRÜNKOHL": {
+   "key": "grunkohl",
+   "words": [
+    "grunkohl"
+   ]
+  },
+  "GRÜNKOHL-CHIPS MIT ERDNUSS-INGWER-MARINADE": {
+   "key": "grunkohlchipsmiterdnussingwermarinade",
+   "words": [
+    "erdnussingwermarinad",
+    "grunkohlchip"
+   ]
+  },
+  "GURKENSCHEIBEN": {
+   "key": "gurkenscheiben",
+   "words": [
+    "gurkenscheib"
+   ]
+  },
+  "Gado Gado": {
+   "key": "gadogado",
+   "words": [
+    "gado"
+   ]
+  },
+  "Gans": {
+   "key": "gans",
+   "words": [
+    "gans"
+   ]
+  },
+  "Garam": {
+   "key": "garam",
+   "words": [
+    "garam"
+   ]
+  },
+  "Garam Masala": {
+   "key": "garammasala",
+   "words": [
+    "garam",
+    "masala"
+   ]
+  },
+  "Garnelen": {
+   "key": "garnelen",
+   "words": [
+    "garnel"
+   ]
+  },
+  "Gazpacho": {
+   "key": "gazpacho",
+   "words": [
+    "gazpacho"
+   ]
+  },
+  "Gebackene": {
+   "key": "gebackene",
+   "words": [
+    "gebacken"
+   ]
+  },
+  "Gebackene Schoko-Haferflocken": {
+   "key": "gebackeneschokohaferflocken",
+   "words": [
+    "schokohaf",
+    "schokohaferflock"
+   ]
+  },
+  "Gebackener Haferbrei mit Erdnussbutter": {
+   "key": "gebackenerhaferbreimiterdnussbutter",
+   "words": [
+    "erdnuss",
+    "erdnussbutt",
+    "haferbrei"
+   ]
+  },
+  "Gebratene": {
+   "key": "gebratene",
+   "words": [
+    "gebraten"
+   ]
+  },
+  "Gebratener Tempeh in süßer Sojasauce": {
+   "key": "gebratenertempehinsussersojasauce",
+   "words": [
+    "sojasauc",
+    "suss",
+    "tempeh"
+   ]
+  },
+  "Gefüllte Gurkenhäppchen": {
+   "key": "gefulltegurkenhappchen",
+   "words": [
+    "gefullt",
+    "gurkenhappch"
+   ]
+  },
+  "Gefüllte Paprika mit Reis": {
+   "key": "gefulltepaprikamitreis",
+   "words": [
+    "gefullt",
+    "paprika",
+    "rei"
+   ]
+  },
+  "Gefüllte Rondini-Zucchini mit Reis und Feta": {
+   "key": "gefullterondinizucchinimitreisundfeta",
+   "words": [
+    "feta",
+    "gefullt",
+    "rei",
+    "rondinizucchini"
+   ]
+  },
+  "Gefüllte Süßkartoffel mit Gemüse und Mandelmus": {
+   "key": "gefulltesusskartoffelmitgemuseundmandelmus",
+   "words": [
+    "gefullt",
+    "gemus",
+    "mandel",
+    "mandelmu",
+    "susskartoffel"
+   ]
+  },
+  "Gefüllte rote Paprika mit Quinoa, Zucchini und Feta": {
+   "key": "gefullterotepaprikamitquinoa,zucchiniundfeta",
+   "words": [
+    "feta",
+    "gefullt",
+    "paprika",
+    "quinoa",
+    "zucchini"
+   ]
+  },
+  "Gehackte Tomaten aus der Dose": {
+   "key": "gehacktetomatenausderdose",
+   "words": [
+    "tomat"
+   ]
+  },
+  "Gemischte Kräuter": {
+   "key": "gemischtekrauter",
+   "words": [
+    "kraut"
+   ]
+  },
+  "Gemüse": {
+   "key": "gemuse",
+   "words": [
+    "gemus"
+   ]
+  },
+  "Gemüse-Frittata": {
+   "key": "gemusefrittata",
+   "words": [
+    "gemusefrittata"
+   ]
+  },
+  "Gemüse-Tikka-Masala mit Kichererbsen": {
+   "key": "gemusetikkamasalamitkichererbsen",
+   "words": [
+    "gemusetikkamasala",
+    "kichererbs"
+   ]
+  },
+  "Gemüsebrühe": {
+   "key": "gemusebruhe",
+   "words": [
+    "gemusebruh"
+   ]
+  },
+  "Gemüsebrühe (low-FODMAP)": {
+   "key": "gemusebruhe",
+   "words": [
+    "gemusebruh"
+   ]
+  },
+  "Gemüsebrühwürfel": {
+   "key": "gemusebruhwurfel",
+   "words": [
+    "gemusebruhwurfel"
+   ]
+  },
+  "Gemüsebrühwürfel (low-FODMAP)": {
+   "key": "gemusebruhwurfel",
+   "words": [
+    "gemusebruhwurfel"
+   ]
+  },
+  "Gemüsebrühwürfel ohne Zwiebel und Knoblauch": {
+   "key": "gemusebruhwurfelohnezwiebelundknoblauch",
+   "words": [
+    "gemusebruhwurfel"
+   ]
+  },
+  "Gemüsecurry": {
+   "key": "gemusecurry",
+   "words": [
+    "gemusecurry"
+   ]
+  },
+  "Gemüsepfanne aus dem Wok": {
+   "key": "gemusepfanneausdemwok",
+   "words": [
+    "gemusepfann",
+    "wok"
+   ]
+  },
+  "Gemüsesuppe": {
+   "key": "gemusesuppe",
+   "words": [
+    "gemusesupp"
+   ]
+  },
+  "Gepuffter Amaranth": {
+   "key": "gepuffteramaranth",
+   "words": [
+    "amaranth"
+   ]
+  },
+  "Gepuffter Quinoa": {
+   "key": "gepuffterquinoa",
+   "words": [
+    "quinoa"
+   ]
+  },
+  "Geriebener Käse": {
+   "key": "geriebenerkase",
+   "words": [
+    "kas"
+   ]
+  },
+  "Geräuchertes Paprikapulver": {
+   "key": "gerauchertespaprikapulver",
+   "words": [
+    "paprikapulv"
+   ]
+  },
+  "Geröstete Kürbis-Karotten-Suppe": {
+   "key": "gerostetekurbiskarottensuppe",
+   "words": [
+    "kurbiskarottensupp"
+   ]
+  },
+  "Geröstete Paprika": {
+   "key": "gerostetepaprika",
+   "words": [
+    "paprika"
+   ]
+  },
+  "Geröstete Paprikasuppe": {
+   "key": "gerostetepaprikasuppe",
+   "words": [
+    "paprikasupp"
+   ]
+  },
+  "Getrocknete Cranberries": {
+   "key": "getrocknetecranberries",
+   "words": [
+    "cranberri"
+   ]
+  },
+  "Getrocknete Tomate": {
+   "key": "getrocknetetomate",
+   "words": [
+    "tomat"
+   ]
+  },
+  "Gewürzen": {
+   "key": "gewurzen",
+   "words": [
+    "gewurz"
+   ]
+  },
+  "Gewürzmischung": {
+   "key": "gewurzmischung",
+   "words": [
+    "gewurzmischung"
+   ]
+  },
+  "Gewürzte": {
+   "key": "gewurzte",
+   "words": [
+    "gewurzt"
+   ]
+  },
+  "Ghee": {
+   "key": "ghee",
+   "words": [
+    "ghe"
+   ]
+  },
+  "Glas": {
+   "key": "glas",
+   "words": [
+    "gla"
+   ]
+  },
+  "Glasnudeln": {
+   "key": "glasnudeln",
+   "words": [
+    "glasnudel"
+   ]
+  },
+  "Glasnudelsalat": {
+   "key": "glasnudelsalat",
+   "words": [
+    "glasnudelsalat"
+   ]
+  },
+  "Glasnudelsalat mit Erdnussdressing": {
+   "key": "glasnudelsalatmiterdnussdressing",
+   "words": [
+    "erdnussdressing",
+    "glasnudelsalat"
+   ]
+  },
+  "Gluten": {
+   "key": "gluten",
+   "words": [
+    "glut"
+   ]
+  },
+  "Gluten frei": {
+   "key": "glutenfrei",
+   "words": [
+    "frei",
+    "glut"
+   ]
+  },
+  "Glutenfreibrot": {
+   "key": "glutenfreibrot",
+   "words": []
+  },
+  "Glutenfreie": {
+   "key": "glutenfreie",
+   "words": []
+  },
+  "Glutenfreie Butterkekse": {
+   "key": "glutenfreiebutterkekse",
+   "words": []
+  },
+  "Glutenfreie Haferflocken": {
+   "key": "glutenfreiehaferflocken",
+   "words": []
+  },
+  "Glutenfreie Mehlmischung": {
+   "key": "glutenfreiemehlmischung",
+   "words": []
+  },
+  "Glutenfreie Nudeln": {
+   "key": "glutenfreienudeln",
+   "words": []
+  },
+  "Glutenfreie Spaghetti": {
+   "key": "glutenfreiespaghetti",
+   "words": []
+  },
+  "Glutenfreier Wrap": {
+   "key": "glutenfreierwrap",
+   "words": []
+  },
+  "Glutenfreies Brot": {
+   "key": "glutenfreiesbrot",
+   "words": []
+  },
+  "Glutenfreies Mehl": {
+   "key": "glutenfreiesmehl",
+   "words": []
+  },
+  "Glutenfreies Pitabrot": {
+   "key": "glutenfreiespitabrot",
+   "words": []
+  },
+  "Goreng": {
+   "key": "goreng",
+   "words": [
+    "goreng"
+   ]
+  },
+  "Granatapfelkerne": {
+   "key": "granatapfelkerne",
+   "words": [
+    "granatapfelkern"
+   ]
+  },
+  "Granatapfelkernen": {
+   "key": "granatapfelkernen",
+   "words": [
+    "granatapfelkern"
+   ]
+  },
+  "Granatapfelsaft": {
+   "key": "granatapfelsaft",
+   "words": [
+    "granatapfel",
+    "granatapfelsaft"
+   ]
+  },
+  "Granola": {
+   "key": "granola",
+   "words": [
+    "granola"
+   ]
+  },
+  "Granola Grundrezept": {
+   "key": "granolagrundrezept",
+   "words": [
+    "granola",
+    "grundrezept"
+   ]
+  },
+  "Grüne": {
+   "key": "grune",
+   "words": [
+    "grun"
+   ]
+  },
+  "Grüne Bohnen": {
+   "key": "grunebohnen",
+   "words": [
+    "bohn"
+   ]
+  },
+  "Grüne Paprika": {
+   "key": "grunepaprika",
+   "words": [
+    "paprika"
+   ]
+  },
+  "Grüner Smoothie": {
+   "key": "grunersmoothie",
+   "words": [
+    "smoothi"
+   ]
+  },
+  "Grünkohl": {
+   "key": "grunkohl",
+   "words": [
+    "grunkohl"
+   ]
+  },
+  "Grünkohl-Chips mit Erdnuss-Ingwer-Marinade": {
+   "key": "grunkohlchipsmiterdnussingwermarinade",
+   "words": [
+    "erdnussingwermarinad",
+    "grunkohlchip"
+   ]
+  },
+  "Guarkernmehl": {
+   "key": "guarkernmehl",
+   "words": [
+    "guarker",
+    "guarkernmehl"
+   ]
+  },
+  "Gurke": {
+   "key": "gurke",
+   "words": [
+    "gurk"
+   ]
+  },
+  "Gurkenscheiben": {
+   "key": "gurkenscheiben",
+   "words": [
+    "gurkenscheib"
+   ]
+  },
+  "Gänse": {
+   "key": "ganse",
+   "words": [
+    "gans"
+   ]
+  },
+  "HAFERBREI": {
+   "key": "haferbrei",
+   "words": [
+    "haferbrei"
+   ]
+  },
+  "HAFERFLOCKEN (GLUTENFREI)": {
+   "key": "haferflockenglutenfrei",
+   "words": []
+  },
+  "HAFERFLOCKEN-WAFFELN": {
+   "key": "haferflockenwaffeln",
+   "words": [
+    "haferflockenwaffel"
+   ]
+  },
+  "HARTKÄSE": {
+   "key": "hartkase",
+   "words": [
+    "hartkas"
+   ]
+  },
+  "HEFEBROT": {
+   "key": "hefebrot",
+   "words": [
+    "hefebrot"
+   ]
+  },
+  "HEFEFLOCKEN": {
+   "key": "hefeflocken",
+   "words": [
+    "hef",
+    "hefeflock"
+   ]
+  },
+  "HEIDELBEEREN": {
+   "key": "heidelbeeren",
+   "words": [
+    "heidelbeer"
+   ]
+  },
+  "HERBSTLICHER GRÜNKOHLSALAT": {
+   "key": "herbstlichergrunkohlsalat",
+   "words": [
+    "grunkohlsalat",
+    "herbstlich"
+   ]
+  },
+  "HERBSTLICHER KARTOFFELEINTOPF MIT SPECK": {
+   "key": "herbstlicherkartoffeleintopfmitspeck",
+   "words": [
+    "herbstlich",
+    "kartoffeleintopf",
+    "speck"
+   ]
+  },
+  "HERZHAFTE": {
+   "key": "herzhafte",
+   "words": [
+    "herzhaft"
+   ]
+  },
+  "HERZHAFTER": {
+   "key": "herzhafter",
+   "words": [
+    "herzhaft"
+   ]
+  },
+  "HIMBEEREN": {
+   "key": "himbeeren",
+   "words": [
+    "himbeer"
+   ]
+  },
+  "HOKKAIDO-KÜRBIS": {
+   "key": "hokkaidokurbis",
+   "words": [
+    "hokkaidokurbis"
+   ]
+  },
+  "HOKKAIDO-KÜRBISSE": {
+   "key": "hokkaidokurbisse",
+   "words": [
+    "hokkaidokurbis"
+   ]
+  },
+  "HUMMUS MIT KREUZKÜMMEL UND PAPRIKA": {
+   "key": "hummusmitkreuzkummelundpaprika",
+   "words": [
+    "hum",
+    "hummu",
+    "kreuzkummel",
+    "paprika"
+   ]
+  },
+  "Hackfleischersatz": {
+   "key": "hackfleischersatz",
+   "words": [
+    "hackfleischersatz"
+   ]
+  },
+  "Hafer": {
+   "key": "hafer",
+   "words": [
+    "haf"
+   ]
+  },
+  "Hafer-Crème-fraîche": {
+   "key": "hafercremefraiche",
+   "words": [
+    "hafercremefraich"
+   ]
+  },
+  "Haferbrei": {
+   "key": "haferbrei",
+   "words": [
+    "haferbrei"
+   ]
+  },
+  "Haferflocken": {
+   "key": "haferflocken",
+   "words": [
+    "haf",
+    "haferflock"
+   ]
+  },
+  "Haferflocken (glutenfrei)": {
+   "key": "haferflockenglutenfrei",
+   "words": []
+  },
+  "Haferflocken-Waffeln": {
+   "key": "haferflockenwaffeln",
+   "words": [
+    "haferflockenwaffel"
+   ]
+  },
+  "Haferkleie": {
+   "key": "haferkleie",
+   "words": [
+    "haferklei"
+   ]
+  },
+  "Haferriegel": {
+   "key": "haferriegel",
+   "words": [
+    "haferriegel"
+   ]
+  },
+  "Hanfsamen": {
+   "key": "hanfsamen",
+   "words": [
+    "hanfsam"
+   ]
+  },
+  "Hartkäse": {
+   "key": "hartkase",
+   "words": [
+    "hartkas"
+   ]
+  },
+  "Haselnuss": {
+   "key": "haselnuss",
+   "words": [
+    "haselnuss"
+   ]
+  },
+  "Haselnüsse": {
+   "key": "haselnusse",
+   "words": [
+    "haselnuss"
+   ]
+  },
+  "Haselnüssen": {
+   "key": "haselnussen",
+   "words": [
+    "haselnuss"
+   ]
+  },
+  "Hauch": {
+   "key": "hauch",
+   "words": [
+    "hauch"
+   ]
+  },
+  "Hauptkomponente": {
+   "key": "hauptkomponente",
+   "words": [
+    "hauptkomponent"
+   ]
+  },
+  "Hefebrot": {
+   "key": "hefebrot",
+   "words": [
+    "hefebrot"
+   ]
+  },
+  "Hefeflocken": {
+   "key": "hefeflocken",
+   "words": [
+    "hef",
+    "hefeflock"
+   ]
+  },
+  "Hefeteig": {
+   "key": "hefeteig",
+   "words": [
+    "hefeteig"
+   ]
+  },
+  "Heidelbeer": {
+   "key": "heidelbeer",
+   "words": [
+    "heidelbe"
+   ]
+  },
+  "Heidelbeeren": {
+   "key": "heidelbeeren",
+   "words": [
+    "heidelbeer"
+   ]
+  },
+  "Herbstlicher Grünkohlsalat": {
+   "key": "herbstlichergrunkohlsalat",
+   "words": [
+    "grunkohlsalat",
+    "herbstlich"
+   ]
+  },
+  "Herbstlicher Kartoffeleintopf mit Speck": {
+   "key": "herbstlicherkartoffeleintopfmitspeck",
+   "words": [
+    "herbstlich",
+    "kartoffeleintopf",
+    "speck"
+   ]
+  },
+  "Herbstsalat": {
+   "key": "herbstsalat",
+   "words": [
+    "herbstsalat"
+   ]
+  },
+  "Herbstsalat mit geröstetem Kürbis und Pekannuss-Crunch": {
+   "key": "herbstsalatmitgerostetemkurbisundpekannusscrunch",
+   "words": [
+    "herbstsalat",
+    "kurbis",
+    "pekannusscrunch"
+   ]
+  },
+  "Herzhafte": {
+   "key": "herzhafte",
+   "words": [
+    "herzhaft"
+   ]
+  },
+  "Herzhafter Haferbrei mit Pilzen und Ziegenkäse": {
+   "key": "herzhafterhaferbreimitpilzenundziegenkase",
+   "words": [
+    "haferbrei",
+    "herzhaft",
+    "pilz",
+    "ziegenkas"
+   ]
+  },
+  "Himbeeren": {
+   "key": "himbeeren",
+   "words": [
+    "himbeer"
+   ]
+  },
+  "Hirse": {
+   "key": "hirse",
+   "words": [
+    "hirs"
+   ]
+  },
+  "Hirse-Bowl mit Ofengemüse und Tahini-Dressing": {
+   "key": "hirsebowlmitofengemuseundtahinidressing",
+   "words": [
+    "hirsebowl",
+    "ofengemus",
+    "tahinidressing"
+   ]
+  },
+  "Hirsebratlinge mit Gemüse und Sesamdip": {
+   "key": "hirsebratlingemitgemuseundsesamdip",
+   "words": [
+    "gemus",
+    "hirsebratling",
+    "sesamdip"
+   ]
+  },
+  "Hirseburger mit Käse und Gemüse": {
+   "key": "hirseburgermitkaseundgemuse",
+   "words": [
+    "gemus",
+    "hirseburg",
+    "kas"
+   ]
+  },
+  "Histamin": {
+   "key": "histamin",
+   "words": [
+    "histami"
+   ]
+  },
+  "Hokkaido": {
+   "key": "hokkaido",
+   "words": [
+    "hokkaido"
+   ]
+  },
+  "Hokkaido-Kürbis": {
+   "key": "hokkaidokurbis",
+   "words": [
+    "hokkaidokurbis"
+   ]
+  },
+  "Hokkaido-Kürbisse": {
+   "key": "hokkaidokurbisse",
+   "words": [
+    "hokkaidokurbis"
+   ]
+  },
+  "Holzspieße": {
+   "key": "holzspiesse",
+   "words": [
+    "holzspiess"
+   ]
+  },
+  "Honig": {
+   "key": "honig",
+   "words": [
+    "honig"
+   ]
+  },
+  "Huhn": {
+   "key": "huhn",
+   "words": [
+    "huhn"
+   ]
+  },
+  "Hummus": {
+   "key": "hummus",
+   "words": [
+    "hum",
+    "hummu"
+   ]
+  },
+  "Hummus mit Kreuzkümmel und Paprika": {
+   "key": "hummusmitkreuzkummelundpaprika",
+   "words": [
+    "hum",
+    "hummu",
+    "kreuzkummel",
+    "paprika"
+   ]
+  },
+  "HÄHNCHEN-SHAWARMA": {
+   "key": "hahnchenshawarma",
+   "words": [
+    "hahnchenshawarma"
+   ]
+  },
+  "HÄHNCHENBRUST": {
+   "key": "hahnchenbrust",
+   "words": [
+    "hahnchenbrust"
+   ]
+  },
+  "HÄHNCHENSTREIFEN": {
+   "key": "hahnchenstreifen",
+   "words": [
+    "hahnchenstreif"
+   ]
+  },
+  "HÜHNERBRÜHE": {
+   "key": "huhnerbruhe",
+   "words": [
+    "huhnerbruh"
+   ]
+  },
+  "HÜHNEREI": {
+   "key": "huhnerei",
+   "words": [
+    "huhnerei"
+   ]
+  },
+  "HÜHNEREIER": {
+   "key": "huhnereier",
+   "words": [
+    "huhnerei"
+   ]
+  },
+  "Hähnchen": {
+   "key": "hahnchen",
+   "words": [
+    "hahnch"
+   ]
+  },
+  "Hähnchen-Shawarma": {
+   "key": "hahnchenshawarma",
+   "words": [
+    "hahnchenshawarma"
+   ]
+  },
+  "Hähnchenbrust": {
+   "key": "hahnchenbrust",
+   "words": [
+    "hahnchenbrust"
+   ]
+  },
+  "Hähnchenschenkel": {
+   "key": "hahnchenschenkel",
+   "words": [
+    "hahnchenschenkel"
+   ]
+  },
+  "Hähnchenschenkelfilet": {
+   "key": "hahnchenschenkelfilet",
+   "words": [
+    "hahnchenschenkelfilet"
+   ]
+  },
+  "Hähnchenstreifen": {
+   "key": "hahnchenstreifen",
+   "words": [
+    "hahnchenstreif"
+   ]
+  },
+  "Hühner": {
+   "key": "huhner",
+   "words": [
+    "huhn"
+   ]
+  },
+  "Hühnerbrühe": {
+   "key": "huhnerbruhe",
+   "words": [
+    "huhnerbruh"
+   ]
+  },
+  "Hühnerei": {
+   "key": "huhnerei",
+   "words": [
+    "huhnerei"
+   ]
+  },
+  "Hühnereier": {
+   "key": "huhnereier",
+   "words": [
+    "huhnerei"
+   ]
+  },
+  "Hühnernudelsuppe aus dem Slow Cooker": {
+   "key": "huhnernudelsuppeausdemslowcooker",
+   "words": [
+    "cook",
+    "huhnernudelsupp",
+    "slow"
+   ]
+  },
+  "INDONESISCHE": {
+   "key": "indonesische",
+   "words": [
+    "indonesisch"
+   ]
+  },
+  "INGWERSCHÄRFE": {
+   "key": "ingwerscharfe",
+   "words": [
+    "ingwerscharf"
+   ]
+  },
+  "ITALIENISCHE": {
+   "key": "italienische",
+   "words": [
+    "italienisch"
+   ]
+  },
+  "ITALIENISCHEN": {
+   "key": "italienischen",
+   "words": [
+    "italienisch"
+   ]
+  },
+  "Im": {
+   "key": "im",
+   "words": [
+    "im"
+   ]
+  },
+  "Imbiss": {
+   "key": "imbiss",
+   "words": [
+    "imbiss"
+   ]
+  },
+  "Indonesischer": {
+   "key": "indonesischer",
+   "words": [
+    "indonesisch"
+   ]
+  },
+  "Ingwer": {
+   "key": "ingwer",
+   "words": [
+    "ingw"
+   ]
+  },
+  "Ingwerpulver": {
+   "key": "ingwerpulver",
+   "words": [
+    "ingw",
+    "ingwerpulv"
+   ]
+  },
+  "Ingwerschärfe": {
+   "key": "ingwerscharfe",
+   "words": [
+    "ingwerscharf"
+   ]
+  },
+  "Instant": {
+   "key": "instant",
+   "words": [
+    "instant"
+   ]
+  },
+  "Italienische": {
+   "key": "italienische",
+   "words": [
+    "italienisch"
+   ]
+  },
+  "Italienische Kräuter": {
+   "key": "italienischekrauter",
+   "words": [
+    "italienisch",
+    "kraut"
+   ]
+  },
+  "JOGHURTDRESSING": {
+   "key": "joghurtdressing",
+   "words": [
+    "joghurtdressing"
+   ]
+  },
+  "Jalapeño": {
+   "key": "jalapeno",
+   "words": [
+    "jalapeno"
+   ]
+  },
+  "Joghurt": {
+   "key": "joghurt",
+   "words": [
+    "joghurt"
+   ]
+  },
+  "Joghurtdressing": {
+   "key": "joghurtdressing",
+   "words": [
+    "joghurtdressing"
+   ]
+  },
+  "K": {
+   "key": "k",
+   "words": [
+    "k"
+   ]
+  },
+  "KABOCHA": {
+   "key": "kabocha",
+   "words": [
+    "kabocha"
+   ]
+  },
+  "KABOCHA-KÜRBIS": {
+   "key": "kabochakurbis",
+   "words": [
+    "kabochakurbis"
+   ]
+  },
+  "KAKAONIBS": {
+   "key": "kakaonibs",
+   "words": [
+    "kakaonib"
+   ]
+  },
+  "KALTE": {
+   "key": "kalte",
+   "words": [
+    "kalt"
+   ]
+  },
+  "KAROTTENKUCHEN": {
+   "key": "karottenkuchen",
+   "words": [
+    "karottenkuch"
+   ]
+  },
+  "KAROTTENKUCHEN-ENERGIEBÄLLCHEN": {
+   "key": "karottenkuchenenergieballchen",
+   "words": [
+    "karottenkuchenenergieballch"
+   ]
+  },
+  "KARTOFFELN": {
+   "key": "kartoffeln",
+   "words": [
+    "kartoffel"
+   ]
+  },
+  "KLASSISCHES": {
+   "key": "klassisches",
+   "words": [
+    "klassisch"
+   ]
+  },
+  "KLEBEREIS": {
+   "key": "klebereis",
+   "words": [
+    "kleberei"
+   ]
+  },
+  "KLEINE": {
+   "key": "kleine",
+   "words": [
+    "klein"
+   ]
+  },
+  "KLEINER": {
+   "key": "kleiner",
+   "words": [
+    "klein"
+   ]
+  },
+  "KNOBLAUCHGRANULAT": {
+   "key": "knoblauchgranulat",
+   "words": [
+    "knoblauch",
+    "knoblauchgranulat"
+   ]
+  },
+  "KNOBLAUCHPULVER": {
+   "key": "knoblauchpulver",
+   "words": [
+    "knoblauch",
+    "knoblauchpulv"
+   ]
+  },
+  "KNOBLAUCHSALZ": {
+   "key": "knoblauchsalz",
+   "words": [
+    "knoblauch",
+    "knoblauchsalz"
+   ]
+  },
+  "KNOBLAUCHZEHEN": {
+   "key": "knoblauchzehen",
+   "words": [
+    "knoblauch",
+    "knoblauchzeh"
+   ]
+  },
+  "KOCHEN": {
+   "key": "kochen",
+   "words": [
+    "koch"
+   ]
+  },
+  "KOKOS": {
+   "key": "kokos",
+   "words": [
+    "koko"
+   ]
+  },
+  "KOKOS-TOFU-CURRY": {
+   "key": "kokostofucurry",
+   "words": [
+    "kokostofucurry"
+   ]
+  },
+  "KOKOSCHIPS": {
+   "key": "kokoschips",
+   "words": [
+    "kokoschip"
+   ]
+  },
+  "KOKOSFLOCKEN": {
+   "key": "kokosflocken",
+   "words": [
+    "koko",
+    "kokosflock"
+   ]
+  },
+  "KOKOSJOGHURT": {
+   "key": "kokosjoghurt",
+   "words": [
+    "kokosjoghurt"
+   ]
+  },
+  "KOKOSMILCH": {
+   "key": "kokosmilch",
+   "words": [
+    "kokosmilch"
+   ]
+  },
+  "KOKOSRASPEL": {
+   "key": "kokosraspel",
+   "words": [
+    "kokosraspel"
+   ]
+  },
+  "KOMBINIERT": {
+   "key": "kombiniert",
+   "words": [
+    "kombiniert"
+   ]
+  },
+  "KOMPOTT": {
+   "key": "kompott",
+   "words": [
+    "kompott"
+   ]
+  },
+  "KORIANDER GEMAHLEN": {
+   "key": "koriandergemahlen",
+   "words": [
+    "koriand"
+   ]
+  },
+  "KRESSE": {
+   "key": "kresse",
+   "words": [
+    "kress"
+   ]
+  },
+  "KREUZKÜMMEL GEMAHLEN": {
+   "key": "kreuzkummelgemahlen",
+   "words": [
+    "kreuzkummel"
+   ]
+  },
+  "KRUSTE": {
+   "key": "kruste",
+   "words": [
+    "krust"
+   ]
+  },
+  "KURZ": {
+   "key": "kurz",
+   "words": [
+    "kurz"
+   ]
+  },
+  "Kabocha": {
+   "key": "kabocha",
+   "words": [
+    "kabocha"
+   ]
+  },
+  "Kabocha-Kürbis": {
+   "key": "kabochakurbis",
+   "words": [
+    "kabochakurbis"
+   ]
+  },
+  "Kakao": {
+   "key": "kakao",
+   "words": [
+    "kakao"
+   ]
+  },
+  "Kakaobutter": {
+   "key": "kakaobutter",
+   "words": [
+    "kakaobutt"
+   ]
+  },
+  "Kakaonibs": {
+   "key": "kakaonibs",
+   "words": [
+    "kakaonib"
+   ]
+  },
+  "Kakaopulver": {
+   "key": "kakaopulver",
+   "words": [
+    "kakao",
+    "kakaopulv"
+   ]
+  },
+  "Kala Namak": {
+   "key": "kalanamak",
+   "words": [
+    "kala",
+    "namak"
+   ]
+  },
+  "Kalte": {
+   "key": "kalte",
+   "words": [
+    "kalt"
+   ]
+  },
+  "Kardamom": {
+   "key": "kardamom",
+   "words": [
+    "kardamom"
+   ]
+  },
+  "Karotte": {
+   "key": "karotte",
+   "words": [
+    "karott"
+   ]
+  },
+  "Karotten": {
+   "key": "karotten",
+   "words": [
+    "karott"
+   ]
+  },
+  "Karotten-Ingwer-Suppe": {
+   "key": "karotteningwersuppe",
+   "words": [
+    "karotteningwersupp"
+   ]
+  },
+  "Karottenkuchen": {
+   "key": "karottenkuchen",
+   "words": [
+    "karottenkuch"
+   ]
+  },
+  "Karottenkuchen-Energiebällchen": {
+   "key": "karottenkuchenenergieballchen",
+   "words": [
+    "karottenkuchenenergieballch"
+   ]
+  },
+  "Karottenstücken": {
+   "key": "karottenstucken",
+   "words": [
+    "karottenstuck"
+   ]
+  },
+  "Karottensuppe": {
+   "key": "karottensuppe",
+   "words": [
+    "karottensupp"
+   ]
+  },
+  "Karottensuppe mit Ingwer und Kokosmilch": {
+   "key": "karottensuppemitingwerundkokosmilch",
+   "words": [
+    "ingw",
+    "karottensupp",
+    "kokosmilch"
+   ]
+  },
+  "Kartoffel": {
+   "key": "kartoffel",
+   "words": [
+    "kartoffel"
+   ]
+  },
+  "Kartoffel-Auberginen-Curry": {
+   "key": "kartoffelauberginencurry",
+   "words": [
+    "kartoffelauberginencurry"
+   ]
+  },
+  "Kartoffeln": {
+   "key": "kartoffeln",
+   "words": [
+    "kartoffel"
+   ]
+  },
+  "Kartoffelscheiben": {
+   "key": "kartoffelscheiben",
+   "words": [
+    "kartoffelscheib"
+   ]
+  },
+  "Kartoffelspalten": {
+   "key": "kartoffelspalten",
+   "words": [
+    "kartoffelspalt"
+   ]
+  },
+  "Kartoffelstärke": {
+   "key": "kartoffelstarke",
+   "words": [
+    "kartoffelstark"
+   ]
+  },
+  "Ketjap Manis": {
+   "key": "ketjapmanis",
+   "words": [
+    "ketjap",
+    "mani"
+   ]
+  },
+  "Kichererbsen": {
+   "key": "kichererbsen",
+   "words": [
+    "kichererbs"
+   ]
+  },
+  "Kichererbsen aus der Dose": {
+   "key": "kichererbsenausderdose",
+   "words": [
+    "kichererbs"
+   ]
+  },
+  "Kichererbsensalat": {
+   "key": "kichererbsensalat",
+   "words": [
+    "kichererbsensalat"
+   ]
+  },
+  "Kirschtomaten": {
+   "key": "kirschtomaten",
+   "words": [
+    "kirschtomat"
+   ]
+  },
+  "Kiwi": {
+   "key": "kiwi",
+   "words": [
+    "kiwi"
+   ]
+  },
+  "Klassischer Hummus": {
+   "key": "klassischerhummus",
+   "words": [
+    "hum",
+    "hummu",
+    "klassisch"
+   ]
+  },
+  "Klebereis": {
+   "key": "klebereis",
+   "words": [
+    "kleberei"
+   ]
+  },
+  "Klebreis": {
+   "key": "klebreis",
+   "words": [
+    "klebrei"
+   ]
+  },
+  "Kleine": {
+   "key": "kleine",
+   "words": [
+    "klein"
+   ]
+  },
+  "Knoblauch": {
+   "key": "knoblauch",
+   "words": [
+    "knoblauch"
+   ]
+  },
+  "Knoblauch (2 Zehen)": {
+   "key": "knoblauch",
+   "words": [
+    "knoblauch"
+   ]
+  },
+  "Knoblauch-Öl": {
+   "key": "knoblauchol",
+   "words": [
+    "knoblauchol"
+   ]
+  },
+  "Knoblauchgranulat": {
+   "key": "knoblauchgranulat",
+   "words": [
+    "knoblauch",
+    "knoblauchgranulat"
+   ]
+  },
+  "Knoblauchpulver": {
+   "key": "knoblauchpulver",
+   "words": [
+    "knoblauch",
+    "knoblauchpulv"
+   ]
+  },
+  "Knoblauchsalz": {
+   "key": "knoblauchsalz",
+   "words": [
+    "knoblauch",
+    "knoblauchsalz"
+   ]
+  },
+  "Knoblauchzehen": {
+   "key": "knoblauchzehen",
+   "words": [
+    "knoblauch",
+    "knoblauchzeh"
+   ]
+  },
+  "Knoblauchöl": {
+   "key": "knoblauchol",
+   "words": [
+    "knoblauchol"
+   ]
+  },
+  "Knusprig": {
+   "key": "knusprig",
+   "words": [
+    "knusprig"
+   ]
+  },
+  "Knusprige": {
+   "key": "knusprige",
+   "words": [
+    "knusprig"
+   ]
+  },
+  "Knusprige Buchweizen-Kürbiskern-Cracker": {
+   "key": "knusprigebuchweizenkurbiskerncracker",
+   "words": [
+    "buchweizenkurbiskerncrack",
+    "knusprig"
+   ]
+  },
+  "Knusprige Kartoffelecken aus dem Ofen": {
+   "key": "knusprigekartoffeleckenausdemofen",
+   "words": [
+    "kartoffeleck",
+    "knusprig",
+    "ofe"
+   ]
+  },
+  "Knuspriges": {
+   "key": "knuspriges",
+   "words": [
+    "knusprig"
+   ]
+  },
+  "Kochen": {
+   "key": "kochen",
+   "words": [
+    "koch"
+   ]
+  },
+  "Kokos": {
+   "key": "kokos",
+   "words": [
+    "koko"
+   ]
+  },
+  "Kokos-Kürbis-Curry mit gerösteten Kichererbsen": {
+   "key": "kokoskurbiscurrymitgerostetenkichererbsen",
+   "words": [
+    "kichererbs",
+    "kokoskurbiscurry"
+   ]
+  },
+  "Kokos-Tofu-Curry": {
+   "key": "kokostofucurry",
+   "words": [
+    "kokostofucurry"
+   ]
+  },
+  "Kokosblütenzucker": {
+   "key": "kokosblutenzucker",
+   "words": [
+    "kokosblutenzuck"
+   ]
+  },
+  "Kokoschips": {
+   "key": "kokoschips",
+   "words": [
+    "kokoschip"
+   ]
+  },
+  "Kokosfett": {
+   "key": "kokosfett",
+   "words": [
+    "kokosfett"
+   ]
+  },
+  "Kokosflocken": {
+   "key": "kokosflocken",
+   "words": [
+    "koko",
+    "kokosflock"
+   ]
+  },
+  "Kokosjoghurt": {
+   "key": "kokosjoghurt",
+   "words": [
+    "kokosjoghurt"
+   ]
+  },
+  "Kokosmilch": {
+   "key": "kokosmilch",
+   "words": [
+    "kokosmilch"
+   ]
+  },
+  "Kokosmilch light": {
+   "key": "kokosmilchlight",
+   "words": [
+    "kokosmilch"
+   ]
+  },
+  "Kokosmus": {
+   "key": "kokosmus",
+   "words": [
+    "koko",
+    "kokosmu"
+   ]
+  },
+  "Kokosraspel": {
+   "key": "kokosraspel",
+   "words": [
+    "kokosraspel"
+   ]
+  },
+  "Kokosraspeln": {
+   "key": "kokosraspeln",
+   "words": [
+    "kokosraspel"
+   ]
+  },
+  "Kokossauce": {
+   "key": "kokossauce",
+   "words": [
+    "kokossauc"
+   ]
+  },
+  "Kokosöl": {
+   "key": "kokosol",
+   "words": [
+    "kokosol"
+   ]
+  },
+  "Kompott": {
+   "key": "kompott",
+   "words": [
+    "kompott"
+   ]
+  },
+  "Koriander": {
+   "key": "koriander",
+   "words": [
+    "koriand"
+   ]
+  },
+  "Koriander gemahlen": {
+   "key": "koriandergemahlen",
+   "words": [
+    "koriand"
+   ]
+  },
+  "Koriandergrün": {
+   "key": "koriandergrun",
+   "words": [
+    "koriandergru"
+   ]
+  },
+  "Krabbenchips": {
+   "key": "krabbenchips",
+   "words": [
+    "krabbenchip"
+   ]
+  },
+  "Kraut": {
+   "key": "kraut",
+   "words": [
+    "kraut"
+   ]
+  },
+  "Kresse": {
+   "key": "kresse",
+   "words": [
+    "kress"
+   ]
+  },
+  "Kreuzkümmel": {
+   "key": "kreuzkummel",
+   "words": [
+    "kreuzkummel"
+   ]
+  },
+  "Kreuzkümmel gemahlen": {
+   "key": "kreuzkummelgemahlen",
+   "words": [
+    "kreuzkummel"
+   ]
+  },
+  "Kruste": {
+   "key": "kruste",
+   "words": [
+    "krust"
+   ]
+  },
+  "Kräuter": {
+   "key": "krauter",
+   "words": [
+    "kraut"
+   ]
+  },
+  "Kräutern": {
+   "key": "krautern",
+   "words": [
+    "kraut"
+   ]
+  },
+  "Kurkuma": {
+   "key": "kurkuma",
+   "words": [
+    "kurkuma"
+   ]
+  },
+  "KÜRBIS-BOLOGNESE MIT PARANUSS-PARMESAN": {
+   "key": "kurbisbolognesemitparanussparmesan",
+   "words": [
+    "kurbisbolognes",
+    "paranussparmesa"
+   ]
+  },
+  "KÜRBIS-FLAMMKUCHEN MIT QUINOABODEN": {
+   "key": "kurbisflammkuchenmitquinoaboden",
+   "words": [
+    "kurbisflammkuch",
+    "quinoabod"
+   ]
+  },
+  "Käse": {
+   "key": "kase",
+   "words": [
+    "kas"
+   ]
+  },
+  "Kümmel": {
+   "key": "kummel",
+   "words": [
+    "kummel"
+   ]
+  },
+  "Kürbis": {
+   "key": "kurbis",
+   "words": [
+    "kurbis"
+   ]
+  },
+  "Kürbis-Bolognese mit Paranuss-Parmesan": {
+   "key": "kurbisbolognesemitparanussparmesan",
+   "words": [
+    "kurbisbolognes",
+    "paranussparmesa"
+   ]
+  },
+  "Kürbis-Flammkuchen mit Quinoaboden": {
+   "key": "kurbisflammkuchenmitquinoaboden",
+   "words": [
+    "kurbisflammkuch",
+    "quinoabod"
+   ]
+  },
+  "Kürbis-Porridge": {
+   "key": "kurbisporridge",
+   "words": [
+    "kurbisporridg"
+   ]
+  },
+  "Kürbis-Thymian-Risotto": {
+   "key": "kurbisthymianrisotto",
+   "words": [
+    "kurbisthymianrisotto"
+   ]
+  },
+  "Kürbiskerne": {
+   "key": "kurbiskerne",
+   "words": [
+    "kurbiskern"
+   ]
+  },
+  "Kürbiskernen": {
+   "key": "kurbiskernen",
+   "words": [
+    "kurbiskern"
+   ]
+  },
+  "Kürbiskernöl": {
+   "key": "kurbiskernol",
+   "words": [
+    "kurbiskernol"
+   ]
+  },
+  "Kürbispüree": {
+   "key": "kurbispuree",
+   "words": [
+    "kurbis",
+    "kurbispure"
+   ]
+  },
+  "Kürbisse": {
+   "key": "kurbisse",
+   "words": [
+    "kurbis"
+   ]
+  },
+  "LACHS-WRAP MIT WASABI-FRISCHKÄSE": {
+   "key": "lachswrapmitwasabifrischkase",
+   "words": [
+    "lachswrap",
+    "wasabifrischkas"
+   ]
+  },
+  "LAKTOSEFREIE SCHOKOLADE": {
+   "key": "laktosefreieschokolade",
+   "words": []
+  },
+  "LAKTOSEFREIER QUARK": {
+   "key": "laktosefreierquark",
+   "words": []
+  },
+  "LAKTOSEFREIER TOPFEN": {
+   "key": "laktosefreiertopfen",
+   "words": []
+  },
+  "LAUWARMER": {
+   "key": "lauwarmer",
+   "words": [
+    "lauwarm"
+   ]
+  },
+  "LEBKUCHENGEWÜRZ": {
+   "key": "lebkuchengewurz",
+   "words": [
+    "lebkuchengewurz"
+   ]
+  },
+  "LEICHT": {
+   "key": "leicht",
+   "words": [
+    "leicht"
+   ]
+  },
+  "LEICHTER": {
+   "key": "leichter",
+   "words": [
+    "leicht"
+   ]
+  },
+  "LIEBSTÖCKEL": {
+   "key": "liebstockel",
+   "words": [
+    "liebstockel"
+   ]
+  },
+  "LINSEN AUS DER DOSE": {
+   "key": "linsenausderdose",
+   "words": [
+    "lins"
+   ]
+  },
+  "LOCKER": {
+   "key": "locker",
+   "words": [
+    "lock"
+   ]
+  },
+  "LOCKERER": {
+   "key": "lockerer",
+   "words": [
+    "locker"
+   ]
+  },
+  "LOW_AT_AMOUNT": {
+   "key": "low_at_amount",
+   "words": [
+    "amount",
+    "at",
+    "low"
+   ]
+  },
+  "Lachs": {
+   "key": "lachs",
+   "words": [
+    "lachs"
+   ]
+  },
+  "Lachs-Wrap mit Wasabi-Frischkäse": {
+   "key": "lachswrapmitwasabifrischkase",
+   "words": [
+    "lachswrap",
+    "wasabifrischkas"
+   ]
+  },
+  "Lachse": {
+   "key": "lachse",
+   "words": [
+    "lachs"
+   ]
+  },
+  "Lachsforelle": {
+   "key": "lachsforelle",
+   "words": [
+    "lachsforell"
+   ]
+  },
+  "Laktose": {
+   "key": "laktose",
+   "words": [
+    "laktos"
+   ]
+  },
+  "Laktosefrei-Joghurt": {
+   "key": "laktosefreijoghurt",
+   "words": []
+  },
+  "Laktosefreie Milch": {
+   "key": "laktosefreiemilch",
+   "words": []
+  },
+  "Laktosefreie Sahne": {
+   "key": "laktosefreiesahne",
+   "words": []
+  },
+  "Laktosefreie Schokolade": {
+   "key": "laktosefreieschokolade",
+   "words": []
+  },
+  "Laktosefreier Frischkäse": {
+   "key": "laktosefreierfrischkase",
+   "words": []
+  },
+  "Laktosefreier Joghurt": {
+   "key": "laktosefreierjoghurt",
+   "words": []
+  },
+  "Laktosefreier Quark": {
+   "key": "laktosefreierquark",
+   "words": []
+  },
+  "Laktosefreier Topfen": {
+   "key": "laktosefreiertopfen",
+   "words": []
+  },
+  "Laktosefreies Eis": {
+   "key": "laktosefreieseis",
+   "words": []
+  },
+  "Laktosefreimilch": {
+   "key": "laktosefreimilch",
+   "words": []
+  },
+  "Lauch": {
+   "key": "lauch",
+   "words": [
+    "lauch"
+   ]
+  },
+  "Lauchgrün": {
+   "key": "lauchgrun",
+   "words": [
+    "lauchgru"
+   ]
+  },
+  "Lauchstangen": {
+   "key": "lauchstangen",
+   "words": [
+    "lauch",
+    "lauchstang"
+   ]
+  },
+  "Lauwarmer": {
+   "key": "lauwarmer",
+   "words": [
+    "lauwarm"
+   ]
+  },
+  "Lebkuchengewürz": {
+   "key": "lebkuchengewurz",
+   "words": [
+    "lebkuchengewurz"
+   ]
+  },
+  "Leinsamen": {
+   "key": "leinsamen",
+   "words": [
+    "leinsam"
+   ]
+  },
+  "Liebstöckel": {
+   "key": "liebstockel",
+   "words": [
+    "liebstockel"
+   ]
+  },
+  "Limette": {
+   "key": "limette",
+   "words": [
+    "limett"
+   ]
+  },
+  "Limetten": {
+   "key": "limetten",
+   "words": [
+    "limett"
+   ]
+  },
+  "Limettensaft": {
+   "key": "limettensaft",
+   "words": [
+    "limett",
+    "limettensaft"
+   ]
+  },
+  "Limettenschale": {
+   "key": "limettenschale",
+   "words": [
+    "limettenschal"
+   ]
+  },
+  "Linsen": {
+   "key": "linsen",
+   "words": [
+    "lins"
+   ]
+  },
+  "Linsen aus der Dose": {
+   "key": "linsenausderdose",
+   "words": [
+    "lins"
+   ]
+  },
+  "Locker": {
+   "key": "locker",
+   "words": [
+    "lock"
+   ]
+  },
+  "Lorbeerblatt": {
+   "key": "lorbeerblatt",
+   "words": [
+    "lorbeerblatt"
+   ]
+  },
+  "Lust": {
+   "key": "lust",
+   "words": [
+    "lust"
+   ]
+  },
+  "M": {
+   "key": "m",
+   "words": [
+    "m"
+   ]
+  },
+  "MAISSTÄRKE": {
+   "key": "maisstarke",
+   "words": [
+    "maisstark"
+   ]
+  },
+  "MARGARINE": {
+   "key": "margarine",
+   "words": [
+    "margarin"
+   ]
+  },
+  "MARMELADE": {
+   "key": "marmelade",
+   "words": [
+    "marmelad"
+   ]
+  },
+  "MASALA": {
+   "key": "masala",
+   "words": [
+    "masala"
+   ]
+  },
+  "MEERSALZ": {
+   "key": "meersalz",
+   "words": [
+    "meer",
+    "meersalz"
+   ]
+  },
+  "MEHLMISCHUNG": {
+   "key": "mehlmischung",
+   "words": [
+    "mehlmischung"
+   ]
+  },
+  "MILCH": {
+   "key": "milch",
+   "words": [
+    "milch"
+   ]
+  },
+  "MILCHREIS MIT SCHOKO-BANANEN-SOSSE": {
+   "key": "milchreismitschokobananensosse",
+   "words": [
+    "milchrei",
+    "schokobananensoss"
+   ]
+  },
+  "MILD": {
+   "key": "mild",
+   "words": [
+    "mild"
+   ]
+  },
+  "MINESTRONE": {
+   "key": "minestrone",
+   "words": [
+    "minestron"
+   ]
+  },
+  "MINIGURKE": {
+   "key": "minigurke",
+   "words": [
+    "minigurk"
+   ]
+  },
+  "MISOPASTE": {
+   "key": "misopaste",
+   "words": [
+    "miso",
+    "misopast"
+   ]
+  },
+  "MITTE": {
+   "key": "mitte",
+   "words": [
+    "mitt"
+   ]
+  },
+  "MUSKATNUSS": {
+   "key": "muskatnuss",
+   "words": [
+    "muskatnuss"
+   ]
+  },
+  "MÜSLI": {
+   "key": "musli",
+   "words": [
+    "musli"
+   ]
+  },
+  "Mais": {
+   "key": "mais",
+   "words": [
+    "mai"
+   ]
+  },
+  "Mais-Stärke": {
+   "key": "maisstarke",
+   "words": [
+    "maisstark"
+   ]
+  },
+  "Maiskorn": {
+   "key": "maiskorn",
+   "words": [
+    "maiskorn"
+   ]
+  },
+  "Maiskörner": {
+   "key": "maiskorner",
+   "words": [
+    "maiskorn"
+   ]
+  },
+  "Maismehl": {
+   "key": "maismehl",
+   "words": [
+    "mai",
+    "maismehl"
+   ]
+  },
+  "Maisstärke": {
+   "key": "maisstarke",
+   "words": [
+    "maisstark"
+   ]
+  },
+  "Majoran": {
+   "key": "majoran",
+   "words": [
+    "majora"
+   ]
+  },
+  "Mandelmilch": {
+   "key": "mandelmilch",
+   "words": [
+    "mandelmilch"
+   ]
+  },
+  "Mandelmus": {
+   "key": "mandelmus",
+   "words": [
+    "mandel",
+    "mandelmu"
+   ]
+  },
+  "Mandeln": {
+   "key": "mandeln",
+   "words": [
+    "mandel"
+   ]
+  },
+  "Margarine": {
+   "key": "margarine",
+   "words": [
+    "margarin"
+   ]
+  },
+  "Marinade": {
+   "key": "marinade",
+   "words": [
+    "marinad"
+   ]
+  },
+  "Marinierte": {
+   "key": "marinierte",
+   "words": [
+    "mariniert"
+   ]
+  },
+  "Marinierter": {
+   "key": "marinierter",
+   "words": [
+    "mariniert"
+   ]
+  },
+  "Marinierter Tofu mit asiatischem Blattgemüse und Reis": {
+   "key": "mariniertertofumitasiatischemblattgemuseundreis",
+   "words": [
+    "asiatisch",
+    "blattgemus",
+    "mariniert",
+    "rei",
+    "tofu"
+   ]
+  },
+  "Marmelade": {
+   "key": "marmelade",
+   "words": [
+    "marmelad"
+   ]
+  },
+  "Maronen": {
+   "key": "maronen",
+   "words": [
+    "maron"
+   ]
+  },
+  "Masala": {
+   "key": "masala",
+   "words": [
+    "masala"
+   ]
+  },
+  "Masala-Paste": {
+   "key": "masalapaste",
+   "words": [
+    "masala",
+    "masalapast"
+   ]
+  },
+  "Mayonnaise": {
+   "key": "mayonnaise",
+   "words": [
+    "mayonnais"
+   ]
+  },
+  "Mediterraner Auberginen-Tomaten-Topf": {
+   "key": "mediterranerauberginentomatentopf",
+   "words": [
+    "auberginentomatentopf",
+    "mediterran"
+   ]
+  },
+  "Medjool": {
+   "key": "medjool",
+   "words": [
+    "medjool"
+   ]
+  },
+  "Medjool-Datteln": {
+   "key": "medjooldatteln",
+   "words": [
+    "medjooldattel"
+   ]
+  },
+  "Meersalz": {
+   "key": "meersalz",
+   "words": [
+    "meer",
+    "meersalz"
+   ]
+  },
+  "Mehl": {
+   "key": "mehl",
+   "words": [
+    "mehl"
+   ]
+  },
+  "Mehlmischung": {
+   "key": "mehlmischung",
+   "words": [
+    "mehlmischung"
+   ]
+  },
+  "Mexikanischer Quinoasalat mit Hähnchen": {
+   "key": "mexikanischerquinoasalatmithahnchen",
+   "words": [
+    "hahnch",
+    "mexikanisch",
+    "quinoasalat"
+   ]
+  },
+  "Milch": {
+   "key": "milch",
+   "words": [
+    "milch"
+   ]
+  },
+  "Milch (laktosefrei)": {
+   "key": "milchlaktosefrei",
+   "words": []
+  },
+  "Milch (laktosefrei) ohne Zucker": {
+   "key": "milchlaktosefreiohnezucker",
+   "words": []
+  },
+  "Milch, laktosefrei": {
+   "key": "milch,laktosefrei",
+   "words": []
+  },
+  "Milchreis": {
+   "key": "milchreis",
+   "words": [
+    "milchrei"
+   ]
+  },
+  "Milchreis mit Schoko-Bananen-Soße": {
+   "key": "milchreismitschokobananensosse",
+   "words": [
+    "milchrei",
+    "schokobananensoss"
+   ]
+  },
+  "Minestrone": {
+   "key": "minestrone",
+   "words": [
+    "minestron"
+   ]
+  },
+  "Minigurke": {
+   "key": "minigurke",
+   "words": [
+    "minigurk"
+   ]
+  },
+  "Minz-Hirse mit Tomaten": {
+   "key": "minzhirsemittomaten",
+   "words": [
+    "minzhirs",
+    "tomat"
+   ]
+  },
+  "Minze": {
+   "key": "minze",
+   "words": [
+    "minz"
+   ]
+  },
+  "Miso": {
+   "key": "miso",
+   "words": [
+    "miso"
+   ]
+  },
+  "Misopaste": {
+   "key": "misopaste",
+   "words": [
+    "miso",
+    "misopast"
+   ]
+  },
+  "Mitte": {
+   "key": "mitte",
+   "words": [
+    "mitt"
+   ]
+  },
+  "More of the good days' „oft dabei": {
+   "key": "moreofthegooddays'„oftdabei",
+   "words": [
+    "dabei",
+    "day",
+    "good",
+    "mor",
+    "of",
+    "oft",
+    "the"
+   ]
+  },
+  "Mus": {
+   "key": "mus",
+   "words": [
+    "mus"
+   ]
+  },
+  "Muskat": {
+   "key": "muskat",
+   "words": [
+    "muskat"
+   ]
+  },
+  "Muskatnuss": {
+   "key": "muskatnuss",
+   "words": [
+    "muskatnuss"
+   ]
+  },
+  "Müsli": {
+   "key": "musli",
+   "words": [
+    "musli"
+   ]
+  },
+  "Müsliriegel mit Erdnüssen": {
+   "key": "musliriegelmiterdnussen",
+   "words": [
+    "erdnuss",
+    "musliriegel"
+   ]
+  },
+  "Müsliriegel mit Heidelbeeren": {
+   "key": "musliriegelmitheidelbeeren",
+   "words": [
+    "heidelbeer",
+    "musliriegel"
+   ]
+  },
+  "NACH": {
+   "key": "nach",
+   "words": [
+    "nach"
+   ]
+  },
+  "NASI GORENG MIT KAROTTENREIS": {
+   "key": "nasigorengmitkarottenreis",
+   "words": [
+    "goreng",
+    "karottenrei",
+    "nasi"
+   ]
+  },
+  "NUDELN": {
+   "key": "nudeln",
+   "words": [
+    "nudel"
+   ]
+  },
+  "NUSS": {
+   "key": "nuss",
+   "words": [
+    "nuss"
+   ]
+  },
+  "Nacht": {
+   "key": "nacht",
+   "words": [
+    "nacht"
+   ]
+  },
+  "Nasi": {
+   "key": "nasi",
+   "words": [
+    "nasi"
+   ]
+  },
+  "Nasi Goreng mit Karottenreis": {
+   "key": "nasigorengmitkarottenreis",
+   "words": [
+    "goreng",
+    "karottenrei",
+    "nasi"
+   ]
+  },
+  "Naturreis": {
+   "key": "naturreis",
+   "words": [
+    "naturrei"
+   ]
+  },
+  "Neu": {
+   "key": "neu",
+   "words": [
+    "neu"
+   ]
+  },
+  "Nudelkochwasser": {
+   "key": "nudelkochwasser",
+   "words": [
+    "nudelkochwass"
+   ]
+  },
+  "Nudeln": {
+   "key": "nudeln",
+   "words": [
+    "nudel"
+   ]
+  },
+  "Nudelsalat": {
+   "key": "nudelsalat",
+   "words": [
+    "nudelsalat"
+   ]
+  },
+  "Nudelsalat mit Feta und Pinienkernen": {
+   "key": "nudelsalatmitfetaundpinienkernen",
+   "words": [
+    "feta",
+    "nudelsalat",
+    "pinienkern"
+   ]
+  },
+  "Nudelsalat mit Grillgemüse": {
+   "key": "nudelsalatmitgrillgemuse",
+   "words": [
+    "grillgemus",
+    "nudelsalat"
+   ]
+  },
+  "Nudelsuppe": {
+   "key": "nudelsuppe",
+   "words": [
+    "nudelsupp"
+   ]
+  },
+  "Nuss": {
+   "key": "nuss",
+   "words": [
+    "nuss"
+   ]
+  },
+  "NÜSSE": {
+   "key": "nusse",
+   "words": [
+    "nuss"
+   ]
+  },
+  "NÜSSEN": {
+   "key": "nussen",
+   "words": [
+    "nuss"
+   ]
+  },
+  "Nüsse": {
+   "key": "nusse",
+   "words": [
+    "nuss"
+   ]
+  },
+  "Nüssen": {
+   "key": "nussen",
+   "words": [
+    "nuss"
+   ]
+  },
+  "OATS": {
+   "key": "oats",
+   "words": [
+    "oat"
+   ]
+  },
+  "OFENGERÖSTETEM": {
+   "key": "ofengerostetem",
+   "words": [
+    "ofengerostet"
+   ]
+  },
+  "OHNE ZUTATEN": {
+   "key": "ohnezutaten",
+   "words": []
+  },
+  "OHNE ZWIEBEL": {
+   "key": "ohnezwiebel",
+   "words": []
+  },
+  "OL": {
+   "key": "ol",
+   "words": [
+    "ol"
+   ]
+  },
+  "OLIVEN": {
+   "key": "oliven",
+   "words": [
+    "oliv"
+   ]
+  },
+  "OLMITKNOBLAUCH": {
+   "key": "olmitknoblauch",
+   "words": [
+    "olmitknoblauch"
+   ]
+  },
+  "ORANGE": {
+   "key": "orange",
+   "words": [
+    "orang"
+   ]
+  },
+  "OVERNIGHT OATS MIT CHIA": {
+   "key": "overnightoatsmitchia",
+   "words": [
+    "chia",
+    "oat",
+    "overnight"
+   ]
+  },
+  "Oats": {
+   "key": "oats",
+   "words": [
+    "oat"
+   ]
+  },
+  "Obst": {
+   "key": "obst",
+   "words": [
+    "obst"
+   ]
+  },
+  "Obst nach Wahl": {
+   "key": "obstnachwahl",
+   "words": [
+    "obst"
+   ]
+  },
+  "Ofen": {
+   "key": "ofen",
+   "words": [
+    "ofe"
+   ]
+  },
+  "Ofenkürbis-Quinoa-Salat": {
+   "key": "ofenkurbisquinoasalat",
+   "words": [
+    "ofenkurbisquinoasalat"
+   ]
+  },
+  "Ohne Zutaten": {
+   "key": "ohnezutaten",
+   "words": []
+  },
+  "Oliven": {
+   "key": "oliven",
+   "words": [
+    "oliv"
+   ]
+  },
+  "Olivenöl": {
+   "key": "olivenol",
+   "words": [
+    "olivenol"
+   ]
+  },
+  "Omelett": {
+   "key": "omelett",
+   "words": [
+    "omelett"
+   ]
+  },
+  "One-Pot-Pasta mit Gemüse und Tomatensauce": {
+   "key": "onepotpastamitgemuseundtomatensauce",
+   "words": [
+    "gemus",
+    "onepotpasta",
+    "tomatensauc"
+   ]
+  },
+  "Orange": {
+   "key": "orange",
+   "words": [
+    "orang"
+   ]
+  },
+  "Orangen": {
+   "key": "orangen",
+   "words": [
+    "orang"
+   ]
+  },
+  "Oregano": {
+   "key": "oregano",
+   "words": [
+    "oregano"
+   ]
+  },
+  "Overnight": {
+   "key": "overnight",
+   "words": [
+    "overnight"
+   ]
+  },
+  "Overnight Oats": {
+   "key": "overnightoats",
+   "words": [
+    "oat",
+    "overnight"
+   ]
+  },
+  "Overnight Oats mit Chia": {
+   "key": "overnightoatsmitchia",
+   "words": [
+    "chia",
+    "oat",
+    "overnight"
+   ]
+  },
+  "Overnight Oats mit Kokos und Schokolade": {
+   "key": "overnightoatsmitkokosundschokolade",
+   "words": [
+    "koko",
+    "oat",
+    "overnight",
+    "schokolad"
+   ]
+  },
+  "PAD THAI MIT TOFU": {
+   "key": "padthaimittofu",
+   "words": [
+    "pad",
+    "thai",
+    "tofu"
+   ]
+  },
+  "PAPRIKA": {
+   "key": "paprika",
+   "words": [
+    "paprika"
+   ]
+  },
+  "PARANÜSSEN": {
+   "key": "paranussen",
+   "words": [
+    "paranuss"
+   ]
+  },
+  "PASTA MIT CREMIGER GRÜNKOHL-SPINAT-SAUCE": {
+   "key": "pastamitcremigergrunkohlspinatsauce",
+   "words": [
+    "cremig",
+    "grunkohlspinatsauc",
+    "pasta"
+   ]
+  },
+  "PASTINAKE": {
+   "key": "pastinake",
+   "words": [
+    "pastinak"
+   ]
+  },
+  "PASTINAKEN-SPINAT-FRITTATA": {
+   "key": "pastinakenspinatfrittata",
+   "words": [
+    "pastinakenspinatfrittata"
+   ]
+  },
+  "PESTO": {
+   "key": "pesto",
+   "words": [
+    "pesto"
+   ]
+  },
+  "PFANNE": {
+   "key": "pfanne",
+   "words": [
+    "pfann"
+   ]
+  },
+  "PFANNENGERICHT": {
+   "key": "pfannengericht",
+   "words": [
+    "pfannengericht"
+   ]
+  },
+  "PFANNKUCHEN": {
+   "key": "pfannkuchen",
+   "words": [
+    "pfannkuch"
+   ]
+  },
+  "PFEFFER": {
+   "key": "pfeffer",
+   "words": [
+    "pfeff"
+   ]
+  },
+  "PFIRSICH": {
+   "key": "pfirsich",
+   "words": [
+    "pfirsich"
+   ]
+  },
+  "PFLANZENÖL": {
+   "key": "pflanzenol",
+   "words": [
+    "pflanzenol"
+   ]
+  },
+  "PIKANTEN": {
+   "key": "pikanten",
+   "words": [
+    "pikant"
+   ]
+  },
+  "PILZEN": {
+   "key": "pilzen",
+   "words": [
+    "pilz"
+   ]
+  },
+  "PINIENKERNE": {
+   "key": "pinienkerne",
+   "words": [
+    "pinienkern"
+   ]
+  },
+  "POCHIERTEN": {
+   "key": "pochierten",
+   "words": [
+    "pochiert"
+   ]
+  },
+  "POLENTA-TALER AUF GRÜNEM GEMÜSE": {
+   "key": "polentataleraufgrunemgemuse",
+   "words": [
+    "auf",
+    "gemus",
+    "polentatal"
+   ]
+  },
+  "PRISE": {
+   "key": "prise",
+   "words": [
+    "pris"
+   ]
+  },
+  "PUFFREIS": {
+   "key": "puffreis",
+   "words": [
+    "puffrei"
+   ]
+  },
+  "PUMPKIN": {
+   "key": "pumpkin",
+   "words": [
+    "pumpki"
+   ]
+  },
+  "PUMPKIN SPICE": {
+   "key": "pumpkinspice",
+   "words": [
+    "pumpki",
+    "spic"
+   ]
+  },
+  "Pad Thai mit Tofu": {
+   "key": "padthaimittofu",
+   "words": [
+    "pad",
+    "thai",
+    "tofu"
+   ]
+  },
+  "Pak": {
+   "key": "pak",
+   "words": [
+    "pak"
+   ]
+  },
+  "Pak Choi": {
+   "key": "pakchoi",
+   "words": [
+    "choi",
+    "pak"
+   ]
+  },
+  "Pancakes": {
+   "key": "pancakes",
+   "words": [
+    "pancak"
+   ]
+  },
+  "Paprika": {
+   "key": "paprika",
+   "words": [
+    "paprika"
+   ]
+  },
+  "Paprikapulver": {
+   "key": "paprikapulver",
+   "words": [
+    "paprikapulv"
+   ]
+  },
+  "Paprikapulver edelsüß": {
+   "key": "paprikapulveredelsuss",
+   "words": [
+    "edelsuss",
+    "paprikapulv"
+   ]
+  },
+  "Paprikaschoten": {
+   "key": "paprikaschoten",
+   "words": [
+    "paprika",
+    "paprikaschot"
+   ]
+  },
+  "Paprikastiften": {
+   "key": "paprikastiften",
+   "words": [
+    "paprikastift"
+   ]
+  },
+  "Paprikastreifen": {
+   "key": "paprikastreifen",
+   "words": [
+    "paprikastreif"
+   ]
+  },
+  "Paranüsse": {
+   "key": "paranusse",
+   "words": [
+    "paranuss"
+   ]
+  },
+  "Paranüssen": {
+   "key": "paranussen",
+   "words": [
+    "paranuss"
+   ]
+  },
+  "Parmesan": {
+   "key": "parmesan",
+   "words": [
+    "parmesa"
+   ]
+  },
+  "Pasta": {
+   "key": "pasta",
+   "words": [
+    "pasta"
+   ]
+  },
+  "Pasta mit cremiger Grünkohl-Spinat-Sauce": {
+   "key": "pastamitcremigergrunkohlspinatsauce",
+   "words": [
+    "cremig",
+    "grunkohlspinatsauc",
+    "pasta"
+   ]
+  },
+  "Pastinake": {
+   "key": "pastinake",
+   "words": [
+    "pastinak"
+   ]
+  },
+  "Pastinaken": {
+   "key": "pastinaken",
+   "words": [
+    "pastinak"
+   ]
+  },
+  "Pastinaken-Spinat-Frittata": {
+   "key": "pastinakenspinatfrittata",
+   "words": [
+    "pastinakenspinatfrittata"
+   ]
+  },
+  "Pekannüsse": {
+   "key": "pekannusse",
+   "words": [
+    "pekannuss"
+   ]
+  },
+  "Pekannüssen": {
+   "key": "pekannussen",
+   "words": [
+    "pekannuss"
+   ]
+  },
+  "Penne": {
+   "key": "penne",
+   "words": [
+    "penn"
+   ]
+  },
+  "Pesto": {
+   "key": "pesto",
+   "words": [
+    "pesto"
+   ]
+  },
+  "Petersilie": {
+   "key": "petersilie",
+   "words": [
+    "petersili"
+   ]
+  },
+  "Pfanne": {
+   "key": "pfanne",
+   "words": [
+    "pfann"
+   ]
+  },
+  "Pfannengericht": {
+   "key": "pfannengericht",
+   "words": [
+    "pfannengericht"
+   ]
+  },
+  "Pfannkuchen": {
+   "key": "pfannkuchen",
+   "words": [
+    "pfannkuch"
+   ]
+  },
+  "Pfeffer": {
+   "key": "pfeffer",
+   "words": [
+    "pfeff"
+   ]
+  },
+  "Pflanzenjoghurt": {
+   "key": "pflanzenjoghurt",
+   "words": [
+    "pflanzenjoghurt"
+   ]
+  },
+  "Pflanzenöl": {
+   "key": "pflanzenol",
+   "words": [
+    "pflanzenol"
+   ]
+  },
+  "Phở": {
+   "key": "pho",
+   "words": [
+    "pho"
+   ]
+  },
+  "Pilzen": {
+   "key": "pilzen",
+   "words": [
+    "pilz"
+   ]
+  },
+  "Pinienkerne": {
+   "key": "pinienkerne",
+   "words": [
+    "pinienkern"
+   ]
+  },
+  "Pinienkernen": {
+   "key": "pinienkernen",
+   "words": [
+    "pinienkern"
+   ]
+  },
+  "Pitabrot": {
+   "key": "pitabrot",
+   "words": [
+    "pitabrot"
+   ]
+  },
+  "Pizza": {
+   "key": "pizza",
+   "words": [
+    "pizza"
+   ]
+  },
+  "Pizza Margherita-Basis mit Tomatensauce": {
+   "key": "pizzamargheritabasismittomatensauce",
+   "words": [
+    "margheritabasi",
+    "pizza",
+    "tomatensauc"
+   ]
+  },
+  "Pizzagewürz": {
+   "key": "pizzagewurz",
+   "words": [
+    "pizzagewurz"
+   ]
+  },
+  "Polenta": {
+   "key": "polenta",
+   "words": [
+    "polenta"
+   ]
+  },
+  "Polenta-Taler auf grünem Gemüse": {
+   "key": "polentataleraufgrunemgemuse",
+   "words": [
+    "auf",
+    "gemus",
+    "polentatal"
+   ]
+  },
+  "Prise": {
+   "key": "prise",
+   "words": [
+    "pris"
+   ]
+  },
+  "Pudding": {
+   "key": "pudding",
+   "words": [
+    "pudding"
+   ]
+  },
+  "Puderzucker": {
+   "key": "puderzucker",
+   "words": [
+    "puderzuck"
+   ]
+  },
+  "Puffquinoa": {
+   "key": "puffquinoa",
+   "words": [
+    "puffquinoa"
+   ]
+  },
+  "Puffreis": {
+   "key": "puffreis",
+   "words": [
+    "puffrei"
+   ]
+  },
+  "Pulver": {
+   "key": "pulver",
+   "words": [
+    "pulv"
+   ]
+  },
+  "Pumpkin": {
+   "key": "pumpkin",
+   "words": [
+    "pumpki"
+   ]
+  },
+  "Pumpkin Spice": {
+   "key": "pumpkinspice",
+   "words": [
+    "pumpki",
+    "spic"
+   ]
+  },
+  "PÜRIERT": {
+   "key": "puriert",
+   "words": [
+    "puriert"
+   ]
+  },
+  "PÜRIERTE": {
+   "key": "purierte",
+   "words": [
+    "puriert"
+   ]
+  },
+  "Pﬁrsich": {
+   "key": "pfirsich",
+   "words": [
+    "pfirsich"
+   ]
+  },
+  "QUINOA-BITES MIT ERDNUSSMUS UND SCHOKOLADE": {
+   "key": "quinoabitesmiterdnussmusundschokolade",
+   "words": [
+    "erdnuss",
+    "erdnussmu",
+    "quinoabit",
+    "schokolad"
+   ]
+  },
+  "Quinoa": {
+   "key": "quinoa",
+   "words": [
+    "quinoa"
+   ]
+  },
+  "Quinoa-Bites mit Erdnussmus und Schokolade": {
+   "key": "quinoabitesmiterdnussmusundschokolade",
+   "words": [
+    "erdnuss",
+    "erdnussmu",
+    "quinoabit",
+    "schokolad"
+   ]
+  },
+  "RAMEN MIT RÄUCHERTOFU": {
+   "key": "ramenmitrauchertofu",
+   "words": [
+    "ram",
+    "rauchertofu"
+   ]
+  },
+  "REISDRINK": {
+   "key": "reisdrink",
+   "words": [
+    "reisdrink"
+   ]
+  },
+  "REISNUDELN": {
+   "key": "reisnudeln",
+   "words": [
+    "reisnudel"
+   ]
+  },
+  "REISPAPIER": {
+   "key": "reispapier",
+   "words": [
+    "reispapi"
+   ]
+  },
+  "REISWAFFELN": {
+   "key": "reiswaffeln",
+   "words": [
+    "reiswaffel"
+   ]
+  },
+  "REZEPT A": {
+   "key": "rezepta",
+   "words": [
+    "a",
+    "rezept"
+   ]
+  },
+  "REZEPT B": {
+   "key": "rezeptb",
+   "words": [
+    "b",
+    "rezept"
+   ]
+  },
+  "REZEPT {ID_}": {
+   "key": "rezept{id_}",
+   "words": [
+    "id",
+    "rezept"
+   ]
+  },
+  "RISOTTO": {
+   "key": "risotto",
+   "words": [
+    "risotto"
+   ]
+  },
+  "RISPENTOMATEN": {
+   "key": "rispentomaten",
+   "words": [
+    "rispentomat"
+   ]
+  },
+  "ROASTBEEF": {
+   "key": "roastbeef",
+   "words": [
+    "roastbeef"
+   ]
+  },
+  "ROTE CHILISCHOTE": {
+   "key": "rotechilischote",
+   "words": [
+    "chili",
+    "chilischot"
+   ]
+  },
+  "ROTE PAPRIKA": {
+   "key": "rotepaprika",
+   "words": [
+    "paprika"
+   ]
+  },
+  "ROTE ZWIEBELN": {
+   "key": "rotezwiebeln",
+   "words": [
+    "zwiebel"
+   ]
+  },
+  "RUCOLA": {
+   "key": "rucola",
+   "words": [
+    "rucola"
+   ]
+  },
+  "RUNDE": {
+   "key": "runde",
+   "words": [
+    "rund"
+   ]
+  },
+  "Ramen mit Räuchertofu": {
+   "key": "ramenmitrauchertofu",
+   "words": [
+    "ram",
+    "rauchertofu"
+   ]
+  },
+  "Rapsöl": {
+   "key": "rapsol",
+   "words": [
+    "rapsol"
+   ]
+  },
+  "Rauchig": {
+   "key": "rauchig",
+   "words": [
+    "rauchig"
+   ]
+  },
+  "Rauten": {
+   "key": "rauten",
+   "words": [
+    "raut"
+   ]
+  },
+  "Reis": {
+   "key": "reis",
+   "words": [
+    "rei"
+   ]
+  },
+  "Reis-Mais-Nudeln": {
+   "key": "reismaisnudeln",
+   "words": [
+    "reismaisnudel"
+   ]
+  },
+  "Reis-ohne-Salz": {
+   "key": "reisohnesalz",
+   "words": [
+    "rei"
+   ]
+  },
+  "Reisdrink": {
+   "key": "reisdrink",
+   "words": [
+    "reisdrink"
+   ]
+  },
+  "Reisessig": {
+   "key": "reisessig",
+   "words": [
+    "reisessig"
+   ]
+  },
+  "Reismehl": {
+   "key": "reismehl",
+   "words": [
+    "rei",
+    "reismehl"
+   ]
+  },
+  "Reisnudeln": {
+   "key": "reisnudeln",
+   "words": [
+    "reisnudel"
+   ]
+  },
+  "Reispapier": {
+   "key": "reispapier",
+   "words": [
+    "reispapi"
+   ]
+  },
+  "Reispapierrollen": {
+   "key": "reispapierrollen",
+   "words": [
+    "reispapierroll"
+   ]
+  },
+  "Reisschüssel": {
+   "key": "reisschussel",
+   "words": [
+    "reisschussel"
+   ]
+  },
+  "Reissirup": {
+   "key": "reissirup",
+   "words": [
+    "rei",
+    "reissirup"
+   ]
+  },
+  "Reiswaffelbällchen mit Datteln und Karotte": {
+   "key": "reiswaffelballchenmitdattelnundkarotte",
+   "words": [
+    "dattel",
+    "karott",
+    "reiswaffelballch"
+   ]
+  },
+  "Reiswaffeln": {
+   "key": "reiswaffeln",
+   "words": [
+    "reiswaffel"
+   ]
+  },
+  "Rezept a": {
+   "key": "rezepta",
+   "words": [
+    "a",
+    "rezept"
+   ]
+  },
+  "Rezept b": {
+   "key": "rezeptb",
+   "words": [
+    "b",
+    "rezept"
+   ]
+  },
+  "Rezept {id_}": {
+   "key": "rezept{id_}",
+   "words": [
+    "id",
+    "rezept"
+   ]
+  },
+  "Rhabarber": {
+   "key": "rhabarber",
+   "words": [
+    "rhabarb"
+   ]
+  },
+  "Riegel": {
+   "key": "riegel",
+   "words": [
+    "riegel"
+   ]
+  },
+  "Risotto": {
+   "key": "risotto",
+   "words": [
+    "risotto"
+   ]
+  },
+  "Risottoreis": {
+   "key": "risottoreis",
+   "words": [
+    "risottorei"
+   ]
+  },
+  "Rispentomaten": {
+   "key": "rispentomaten",
+   "words": [
+    "rispentomat"
+   ]
+  },
+  "Roastbeef": {
+   "key": "roastbeef",
+   "words": [
+    "roastbeef"
+   ]
+  },
+  "Romatomate": {
+   "key": "romatomate",
+   "words": [
+    "romatomat"
+   ]
+  },
+  "Rosmarin": {
+   "key": "rosmarin",
+   "words": [
+    "rosmari"
+   ]
+  },
+  "Rote Chilischote": {
+   "key": "rotechilischote",
+   "words": [
+    "chili",
+    "chilischot"
+   ]
+  },
+  "Rote Paprika": {
+   "key": "rotepaprika",
+   "words": [
+    "paprika"
+   ]
+  },
+  "Rote Zwiebeln": {
+   "key": "rotezwiebeln",
+   "words": [
+    "zwiebel"
+   ]
+  },
+  "Rote Zwiebeln (fein gewürfelt)": {
+   "key": "rotezwiebeln",
+   "words": [
+    "zwiebel"
+   ]
+  },
+  "Rotkohl": {
+   "key": "rotkohl",
+   "words": [
+    "rotkohl"
+   ]
+  },
+  "Rucola": {
+   "key": "rucola",
+   "words": [
+    "rucola"
+   ]
+  },
+  "Runde": {
+   "key": "runde",
+   "words": [
+    "rund"
+   ]
+  },
+  "RÄUCHERLACHS": {
+   "key": "raucherlachs",
+   "words": [
+    "raucherlachs"
+   ]
+  },
+  "RÄUCHERTOFU": {
+   "key": "rauchertofu",
+   "words": [
+    "rauchertofu"
+   ]
+  },
+  "RÜHREIER": {
+   "key": "ruhreier",
+   "words": [
+    "ruhrei"
+   ]
+  },
+  "RÜHRTOFU": {
+   "key": "ruhrtofu",
+   "words": [
+    "ruhrtofu"
+   ]
+  },
+  "RÜHRTOFU MIT ZA'ATAR": {
+   "key": "ruhrtofumitza'atar",
+   "words": [
+    "atar",
+    "ruhrtofu",
+    "za"
+   ]
+  },
+  "Räucherfleisch": {
+   "key": "raucherfleisch",
+   "words": [
+    "raucherfleisch"
+   ]
+  },
+  "Räucherlachs": {
+   "key": "raucherlachs",
+   "words": [
+    "raucherlachs"
+   ]
+  },
+  "Räuchertofu": {
+   "key": "rauchertofu",
+   "words": [
+    "rauchertofu"
+   ]
+  },
+  "Rührei": {
+   "key": "ruhrei",
+   "words": [
+    "ruhrei"
+   ]
+  },
+  "Rühreier": {
+   "key": "ruhreier",
+   "words": [
+    "ruhrei"
+   ]
+  },
+  "Rührtofu": {
+   "key": "ruhrtofu",
+   "words": [
+    "ruhrtofu"
+   ]
+  },
+  "Rührtofu mit Paprika und Pilzen": {
+   "key": "ruhrtofumitpaprikaundpilzen",
+   "words": [
+    "paprika",
+    "pilz",
+    "ruhrtofu"
+   ]
+  },
+  "Rührtofu mit Za'atar": {
+   "key": "ruhrtofumitza'atar",
+   "words": [
+    "atar",
+    "ruhrtofu",
+    "za"
+   ]
+  },
+  "SAMBAL": {
+   "key": "sambal",
+   "words": [
+    "sambal"
+   ]
+  },
+  "SAME": {
+   "key": "same",
+   "words": [
+    "sam"
+   ]
+  },
+  "SAMTIGE": {
+   "key": "samtige",
+   "words": [
+    "samtig"
+   ]
+  },
+  "SANDWICH": {
+   "key": "sandwich",
+   "words": [
+    "sandwich"
+   ]
+  },
+  "SAUCE": {
+   "key": "sauce",
+   "words": [
+    "sauc"
+   ]
+  },
+  "SAUCEN": {
+   "key": "saucen",
+   "words": [
+    "sauc"
+   ]
+  },
+  "SCHEIBE": {
+   "key": "scheibe",
+   "words": [
+    "scheib"
+   ]
+  },
+  "SCHICHT": {
+   "key": "schicht",
+   "words": [
+    "schicht"
+   ]
+  },
+  "SCHLICHT": {
+   "key": "schlicht",
+   "words": [
+    "schlicht"
+   ]
+  },
+  "SCHNITTLAUCH": {
+   "key": "schnittlauch",
+   "words": [
+    "schnittlauch"
+   ]
+  },
+  "SCHOKO-GRANOLA": {
+   "key": "schokogranola",
+   "words": [
+    "schokogranola"
+   ]
+  },
+  "SCHOKOTROPFEN": {
+   "key": "schokotropfen",
+   "words": [
+    "schokotropf"
+   ]
+  },
+  "SCHWARZE OLIVEN": {
+   "key": "schwarzeoliven",
+   "words": [
+    "oliv"
+   ]
+  },
+  "SCHWARZEN": {
+   "key": "schwarzen",
+   "words": [
+    "schwarz"
+   ]
+  },
+  "SCHWARZER PFEFFER": {
+   "key": "schwarzerpfeffer",
+   "words": [
+    "pfeff"
+   ]
+  },
+  "SESAMMUS": {
+   "key": "sesammus",
+   "words": [
+    "sesam",
+    "sesammu"
+   ]
+  },
+  "SHAKSHUKA": {
+   "key": "shakshuka",
+   "words": [
+    "shakshuka"
+   ]
+  },
+  "SOBA": {
+   "key": "soba",
+   "words": [
+    "soba"
+   ]
+  },
+  "SOMMERROLLEN MIT QUINOA UND ERDNUSSDIP": {
+   "key": "sommerrollenmitquinoaunderdnussdip",
+   "words": [
+    "erdnussdip",
+    "quinoa",
+    "sommerroll"
+   ]
+  },
+  "SOSSE": {
+   "key": "sosse",
+   "words": [
+    "soss"
+   ]
+  },
+  "SPAGHETTI": {
+   "key": "spaghetti",
+   "words": [
+    "spaghetti"
+   ]
+  },
+  "SPANISCHE": {
+   "key": "spanische",
+   "words": [
+    "spanisch"
+   ]
+  },
+  "SPANISCHES": {
+   "key": "spanisches",
+   "words": [
+    "spanisch"
+   ]
+  },
+  "SPECK": {
+   "key": "speck",
+   "words": [
+    "speck"
+   ]
+  },
+  "SPECKWÜRFEL": {
+   "key": "speckwurfel",
+   "words": [
+    "speckwurfel"
+   ]
+  },
+  "SPEISEÖL": {
+   "key": "speiseol",
+   "words": [
+    "speiseol"
+   ]
+  },
+  "SPIESS": {
+   "key": "spiess",
+   "words": [
+    "spiess"
+   ]
+  },
+  "SPINAT": {
+   "key": "spinat",
+   "words": [
+    "spinat"
+   ]
+  },
+  "SPIRALEN": {
+   "key": "spiralen",
+   "words": [
+    "spiral"
+   ]
+  },
+  "SPROSSEN": {
+   "key": "sprossen",
+   "words": [
+    "spross"
+   ]
+  },
+  "STAUDENSELLERIE": {
+   "key": "staudensellerie",
+   "words": [
+    "staudenselleri"
+   ]
+  },
+  "STÜCKIGE TOMATEN": {
+   "key": "stuckigetomaten",
+   "words": [
+    "tomat"
+   ]
+  },
+  "SUBSTITUTE": {
+   "key": "substitute",
+   "words": [
+    "substitut"
+   ]
+  },
+  "SUPPE": {
+   "key": "suppe",
+   "words": [
+    "supp"
+   ]
+  },
+  "Saft": {
+   "key": "saft",
+   "words": [
+    "saft"
+   ]
+  },
+  "Saftig": {
+   "key": "saftig",
+   "words": [
+    "saftig"
+   ]
+  },
+  "Sahne": {
+   "key": "sahne",
+   "words": [
+    "sahn"
+   ]
+  },
+  "Salat": {
+   "key": "salat",
+   "words": [
+    "salat"
+   ]
+  },
+  "Salatgurke": {
+   "key": "salatgurke",
+   "words": [
+    "salatgurk"
+   ]
+  },
+  "Salbei": {
+   "key": "salbei",
+   "words": [
+    "salbei"
+   ]
+  },
+  "Salz": {
+   "key": "salz",
+   "words": [
+    "salz"
+   ]
+  },
+  "Sambal": {
+   "key": "sambal",
+   "words": [
+    "sambal"
+   ]
+  },
+  "Sambal Oelek": {
+   "key": "sambaloelek",
+   "words": [
+    "oelek",
+    "sambal"
+   ]
+  },
+  "Sandwich": {
+   "key": "sandwich",
+   "words": [
+    "sandwich"
+   ]
+  },
+  "Sandwich mit pochiertem Ei und Räucherlachs": {
+   "key": "sandwichmitpochiertemeiundraucherlachs",
+   "words": [
+    "ei",
+    "pochiert",
+    "raucherlachs",
+    "sandwich"
+   ]
+  },
+  "Sauce": {
+   "key": "sauce",
+   "words": [
+    "sauc"
+   ]
+  },
+  "Saucen": {
+   "key": "saucen",
+   "words": [
+    "sauc"
+   ]
+  },
+  "Sauerteigbrot": {
+   "key": "sauerteigbrot",
+   "words": [
+    "sauerteigbrot"
+   ]
+  },
+  "Schale": {
+   "key": "schale",
+   "words": [
+    "schal"
+   ]
+  },
+  "Scheibe": {
+   "key": "scheibe",
+   "words": [
+    "scheib"
+   ]
+  },
+  "Schicht": {
+   "key": "schicht",
+   "words": [
+    "schicht"
+   ]
+  },
+  "Schnelles": {
+   "key": "schnelles",
+   "words": [
+    "schnell"
+   ]
+  },
+  "Schnittlauch": {
+   "key": "schnittlauch",
+   "words": [
+    "schnittlauch"
+   ]
+  },
+  "Schnittlauchröllchen": {
+   "key": "schnittlauchrollchen",
+   "words": [
+    "schnittlauchrollch"
+   ]
+  },
+  "Schoko-Chia-Pudding mit Banane": {
+   "key": "schokochiapuddingmitbanane",
+   "words": [
+    "banan",
+    "schokochiapudding"
+   ]
+  },
+  "Schoko-Granola": {
+   "key": "schokogranola",
+   "words": [
+    "schokogranola"
+   ]
+  },
+  "Schoko-Quinoa-Porridge mit Banane": {
+   "key": "schokoquinoaporridgemitbanane",
+   "words": [
+    "banan",
+    "schokoquinoaporridg"
+   ]
+  },
+  "Schokolade": {
+   "key": "schokolade",
+   "words": [
+    "schokolad"
+   ]
+  },
+  "Schokoladenschicht": {
+   "key": "schokoladenschicht",
+   "words": [
+    "schokoladenschicht"
+   ]
+  },
+  "Schokoriegels": {
+   "key": "schokoriegels",
+   "words": [
+    "schokoriegel"
+   ]
+  },
+  "Schokotropfen": {
+   "key": "schokotropfen",
+   "words": [
+    "schokotropf"
+   ]
+  },
+  "Schwarze Oliven": {
+   "key": "schwarzeoliven",
+   "words": [
+    "oliv"
+   ]
+  },
+  "Schwarzer Pfeffer": {
+   "key": "schwarzerpfeffer",
+   "words": [
+    "pfeff"
+   ]
+  },
+  "Schweinefleisch": {
+   "key": "schweinefleisch",
+   "words": [
+    "schweinefleisch"
+   ]
+  },
+  "Sellerie": {
+   "key": "sellerie",
+   "words": [
+    "selleri"
+   ]
+  },
+  "Senf": {
+   "key": "senf",
+   "words": [
+    "senf"
+   ]
+  },
+  "Senfsaat": {
+   "key": "senfsaat",
+   "words": [
+    "senfsaat"
+   ]
+  },
+  "Sesam": {
+   "key": "sesam",
+   "words": [
+    "sesam"
+   ]
+  },
+  "Sesam-Tempeh mit Soba-Nudeln": {
+   "key": "sesamtempehmitsobanudeln",
+   "words": [
+    "sesamtempeh",
+    "sobanudel"
+   ]
+  },
+  "Sesammus": {
+   "key": "sesammus",
+   "words": [
+    "sesam",
+    "sesammu"
+   ]
+  },
+  "Sesamöl": {
+   "key": "sesamol",
+   "words": [
+    "sesamol"
+   ]
+  },
+  "Shakshuka": {
+   "key": "shakshuka",
+   "words": [
+    "shakshuka"
+   ]
+  },
+  "Smoothie": {
+   "key": "smoothie",
+   "words": [
+    "smoothi"
+   ]
+  },
+  "Smoothie Bowl mit Heidelbeeren und Banane": {
+   "key": "smoothiebowlmitheidelbeerenundbanane",
+   "words": [
+    "banan",
+    "bowl",
+    "heidelbeer",
+    "smoothi"
+   ]
+  },
+  "Soba": {
+   "key": "soba",
+   "words": [
+    "soba"
+   ]
+  },
+  "Soba-Nudeln": {
+   "key": "sobanudeln",
+   "words": [
+    "sobanudel"
+   ]
+  },
+  "Soja": {
+   "key": "soja",
+   "words": [
+    "soja"
+   ]
+  },
+  "Sojasauce": {
+   "key": "sojasauce",
+   "words": [
+    "sojasauc"
+   ]
+  },
+  "Sojasprossen": {
+   "key": "sojasprossen",
+   "words": [
+    "sojaspross"
+   ]
+  },
+  "Sommerrollen mit Quinoa und Erdnussdip": {
+   "key": "sommerrollenmitquinoaunderdnussdip",
+   "words": [
+    "erdnussdip",
+    "quinoa",
+    "sommerroll"
+   ]
+  },
+  "Sonnenblumenkerne": {
+   "key": "sonnenblumenkerne",
+   "words": [
+    "sonnenblumenkern"
+   ]
+  },
+  "Sonnenblumenkernen": {
+   "key": "sonnenblumenkernen",
+   "words": [
+    "sonnenblumenkern"
+   ]
+  },
+  "Sonnenblumenöl": {
+   "key": "sonnenblumenol",
+   "words": [
+    "sonnenblumenol"
+   ]
+  },
+  "Soße": {
+   "key": "sosse",
+   "words": [
+    "soss"
+   ]
+  },
+  "Spaghetti": {
+   "key": "spaghetti",
+   "words": [
+    "spaghetti"
+   ]
+  },
+  "Spaghetti mit Spinatpesto und Garnelen": {
+   "key": "spaghettimitspinatpestoundgarnelen",
+   "words": [
+    "garnel",
+    "spaghetti",
+    "spinatpesto"
+   ]
+  },
+  "Spanische Tortilla": {
+   "key": "spanischetortilla",
+   "words": [
+    "spanisch",
+    "tortilla"
+   ]
+  },
+  "Speck": {
+   "key": "speck",
+   "words": [
+    "speck"
+   ]
+  },
+  "Speckwürfel": {
+   "key": "speckwurfel",
+   "words": [
+    "speckwurfel"
+   ]
+  },
+  "Speckwürfeln": {
+   "key": "speckwurfeln",
+   "words": [
+    "speckwurfel"
+   ]
+  },
+  "Speisestärke": {
+   "key": "speisestarke",
+   "words": [
+    "speisestark"
+   ]
+  },
+  "Speiseöl": {
+   "key": "speiseol",
+   "words": [
+    "speiseol"
+   ]
+  },
+  "Spice": {
+   "key": "spice",
+   "words": [
+    "spic"
+   ]
+  },
+  "Spiegelei": {
+   "key": "spiegelei",
+   "words": [
+    "spiegelei"
+   ]
+  },
+  "Spieß": {
+   "key": "spiess",
+   "words": [
+    "spiess"
+   ]
+  },
+  "Spinat": {
+   "key": "spinat",
+   "words": [
+    "spinat"
+   ]
+  },
+  "Spinat-Pesto mit Vollkornreis-Penne": {
+   "key": "spinatpestomitvollkornreispenne",
+   "words": [
+    "spinatpesto",
+    "vollkornreispenn"
+   ]
+  },
+  "Spiralen": {
+   "key": "spiralen",
+   "words": [
+    "spiral"
+   ]
+  },
+  "Spirelli": {
+   "key": "spirelli",
+   "words": [
+    "spirelli"
+   ]
+  },
+  "Spritzer": {
+   "key": "spritzer",
+   "words": [
+    "spritz"
+   ]
+  },
+  "Sprossen": {
+   "key": "sprossen",
+   "words": [
+    "spross"
+   ]
+  },
+  "Sriracha": {
+   "key": "sriracha",
+   "words": [
+    "sriracha"
+   ]
+  },
+  "Staudensellerie": {
+   "key": "staudensellerie",
+   "words": [
+    "staudenselleri"
+   ]
+  },
+  "Stil": {
+   "key": "stil",
+   "words": [
+    "stil"
+   ]
+  },
+  "Stückige Tomaten": {
+   "key": "stuckigetomaten",
+   "words": [
+    "tomat"
+   ]
+  },
+  "Sumach": {
+   "key": "sumach",
+   "words": [
+    "sumach"
+   ]
+  },
+  "Suppe": {
+   "key": "suppe",
+   "words": [
+    "supp"
+   ]
+  },
+  "SÄTTIGER": {
+   "key": "sattiger",
+   "words": [
+    "sattig"
+   ]
+  },
+  "SÄUERLICHEN": {
+   "key": "sauerlichen",
+   "words": [
+    "sauerlich"
+   ]
+  },
+  "SÜSSE": {
+   "key": "susse",
+   "words": [
+    "suss"
+   ]
+  },
+  "SÜSSER": {
+   "key": "susser",
+   "words": [
+    "suss"
+   ]
+  },
+  "SÜSSKARTOFFEL-CURRY MIT KÜRBIS UND KICHERERBSEN": {
+   "key": "susskartoffelcurrymitkurbisundkichererbsen",
+   "words": [
+    "kichererbs",
+    "kurbis",
+    "susskartoffelcurry"
+   ]
+  },
+  "Süße": {
+   "key": "susse",
+   "words": [
+    "suss"
+   ]
+  },
+  "Süßkartoffel": {
+   "key": "susskartoffel",
+   "words": [
+    "susskartoffel"
+   ]
+  },
+  "Süßkartoffel-Curry mit Kürbis und Kichererbsen": {
+   "key": "susskartoffelcurrymitkurbisundkichererbsen",
+   "words": [
+    "kichererbs",
+    "kurbis",
+    "susskartoffelcurry"
+   ]
+  },
+  "Süßkartoffel-Hummus": {
+   "key": "susskartoffelhummus",
+   "words": [
+    "susskartoffelhum",
+    "susskartoffelhummu"
+   ]
+  },
+  "Süßkartoffel-Risotto mit Hähnchen und Zucchini": {
+   "key": "susskartoffelrisottomithahnchenundzucchini",
+   "words": [
+    "hahnch",
+    "susskartoffelrisotto",
+    "zucchini"
+   ]
+  },
+  "Süßkartoffeln": {
+   "key": "susskartoffeln",
+   "words": [
+    "susskartoffel"
+   ]
+  },
+  "Süßkartoffelwürfeln": {
+   "key": "susskartoffelwurfeln",
+   "words": [
+    "susskartoffelwurfel"
+   ]
+  },
+  "Süßungsmittel nach Wahl": {
+   "key": "sussungsmittelnachwahl",
+   "words": [
+    "sussungsmittel"
+   ]
+  },
+  "T KNOBLAUCHÖL": {
+   "key": "tknoblauchol",
+   "words": [
+    "knoblauchol",
+    "t"
+   ]
+  },
+  "T Knoblauchöl": {
+   "key": "tknoblauchol",
+   "words": [
+    "knoblauchol",
+    "t"
+   ]
+  },
+  "TABOULEH MIT QUINOA": {
+   "key": "taboulehmitquinoa",
+   "words": [
+    "quinoa",
+    "tabouleh"
+   ]
+  },
+  "TAMARINDENPASTE": {
+   "key": "tamarindenpaste",
+   "words": [
+    "tamarind",
+    "tamarindenpast"
+   ]
+  },
+  "TEMPEH-LINSEN-CHILI MIT BUTTERNUTKÜRBIS": {
+   "key": "tempehlinsenchilimitbutternutkurbis",
+   "words": [
+    "butternutkurbis",
+    "tempehlinsenchili"
+   ]
+  },
+  "TEMPEHSCHEIBEN": {
+   "key": "tempehscheiben",
+   "words": [
+    "tempehscheib"
+   ]
+  },
+  "THUNFISCHSALAT": {
+   "key": "thunfischsalat",
+   "words": [
+    "thunfischsalat"
+   ]
+  },
+  "TOFU-REISNUDEL-BOWL MIT ERDNUSSSAUCE": {
+   "key": "tofureisnudelbowlmiterdnusssauce",
+   "words": [
+    "erdnusssauc",
+    "tofureisnudelbowl"
+   ]
+  },
+  "TOMATE": {
+   "key": "tomate",
+   "words": [
+    "tomat"
+   ]
+  },
+  "TOMATEN": {
+   "key": "tomaten",
+   "words": [
+    "tomat"
+   ]
+  },
+  "TOMATEN1OHNE HAUT": {
+   "key": "tomaten1ohnehaut",
+   "words": [
+    "haut",
+    "ohn",
+    "tomat"
+   ]
+  },
+  "TOMATENBRÜHE": {
+   "key": "tomatenbruhe",
+   "words": [
+    "tomatenbruh"
+   ]
+  },
+  "TOMATENMARK": {
+   "key": "tomatenmark",
+   "words": [
+    "tomat",
+    "tomatenmark"
+   ]
+  },
+  "TOPF": {
+   "key": "topf",
+   "words": [
+    "topf"
+   ]
+  },
+  "TOPFEN": {
+   "key": "topfen",
+   "words": [
+    "topf"
+   ]
+  },
+  "TOPPINGS NACH WAHL": {
+   "key": "toppingsnachwahl",
+   "words": [
+    "topping"
+   ]
+  },
+  "TROCKENHEFE": {
+   "key": "trockenhefe",
+   "words": [
+    "trockenhef"
+   ]
+  },
+  "TRY": {
+   "key": "try",
+   "words": [
+    "try"
+   ]
+  },
+  "Tabouleh mit Quinoa": {
+   "key": "taboulehmitquinoa",
+   "words": [
+    "quinoa",
+    "tabouleh"
+   ]
+  },
+  "Tahin": {
+   "key": "tahin",
+   "words": [
+    "tahi"
+   ]
+  },
+  "Tahini": {
+   "key": "tahini",
+   "words": [
+    "tahini"
+   ]
+  },
+  "Tamari": {
+   "key": "tamari",
+   "words": [
+    "tamari"
+   ]
+  },
+  "Tamarinde": {
+   "key": "tamarinde",
+   "words": [
+    "tamarind"
+   ]
+  },
+  "Tamarindenpaste": {
+   "key": "tamarindenpaste",
+   "words": [
+    "tamarind",
+    "tamarindenpast"
+   ]
+  },
+  "Teigfladen": {
+   "key": "teigfladen",
+   "words": [
+    "teigflad"
+   ]
+  },
+  "Teller": {
+   "key": "teller",
+   "words": [
+    "tell"
+   ]
+  },
+  "Tempeh": {
+   "key": "tempeh",
+   "words": [
+    "tempeh"
+   ]
+  },
+  "Tempeh-Linsen-Chili mit Butternutkürbis": {
+   "key": "tempehlinsenchilimitbutternutkurbis",
+   "words": [
+    "butternutkurbis",
+    "tempehlinsenchili"
+   ]
+  },
+  "Tempehscheiben": {
+   "key": "tempehscheiben",
+   "words": [
+    "tempehscheib"
+   ]
+  },
+  "Thai-Basilikum": {
+   "key": "thaibasilikum",
+   "words": [
+    "thaibasilikum"
+   ]
+  },
+  "Thunfischsalat": {
+   "key": "thunfischsalat",
+   "words": [
+    "thunfischsalat"
+   ]
+  },
+  "Thymian": {
+   "key": "thymian",
+   "words": [
+    "thymia"
+   ]
+  },
+  "Tikka": {
+   "key": "tikka",
+   "words": [
+    "tikka"
+   ]
+  },
+  "Tikka-Masala-Sauce (low-FODMAP)": {
+   "key": "tikkamasalasauce",
+   "words": [
+    "tikkamasalasauc"
+   ]
+  },
+  "Toast": {
+   "key": "toast",
+   "words": [
+    "toast"
+   ]
+  },
+  "Tofu": {
+   "key": "tofu",
+   "words": [
+    "tofu"
+   ]
+  },
+  "Tofu-Reisnudel-Bowl mit Erdnusssauce": {
+   "key": "tofureisnudelbowlmiterdnusssauce",
+   "words": [
+    "erdnusssauc",
+    "tofureisnudelbowl"
+   ]
+  },
+  "Tofu-Spieße": {
+   "key": "tofuspiesse",
+   "words": [
+    "tofuspiess"
+   ]
+  },
+  "Tofuwürfel": {
+   "key": "tofuwurfel",
+   "words": [
+    "tofuwurfel"
+   ]
+  },
+  "Tom Kha Suppe im Glas": {
+   "key": "tomkhasuppeimglas",
+   "words": [
+    "kha",
+    "supp",
+    "tom"
+   ]
+  },
+  "Tomate": {
+   "key": "tomate",
+   "words": [
+    "tomat"
+   ]
+  },
+  "Tomaten": {
+   "key": "tomaten",
+   "words": [
+    "tomat"
+   ]
+  },
+  "Tomaten1ohne Haut": {
+   "key": "tomaten1ohnehaut",
+   "words": [
+    "haut",
+    "ohn",
+    "tomat"
+   ]
+  },
+  "Tomaten_ohne Haut": {
+   "key": "tomaten_ohnehaut",
+   "words": [
+    "haut",
+    "ohn",
+    "tomat"
+   ]
+  },
+  "Tomatenbrühe": {
+   "key": "tomatenbruhe",
+   "words": [
+    "tomatenbruh"
+   ]
+  },
+  "Tomatenmark": {
+   "key": "tomatenmark",
+   "words": [
+    "tomat",
+    "tomatenmark"
+   ]
+  },
+  "Tomatenreis": {
+   "key": "tomatenreis",
+   "words": [
+    "tomatenrei"
+   ]
+  },
+  "Tomatensalsa": {
+   "key": "tomatensalsa",
+   "words": [
+    "tomatensalsa"
+   ]
+  },
+  "Tomatensauce": {
+   "key": "tomatensauce",
+   "words": [
+    "tomatensauc"
+   ]
+  },
+  "Topf": {
+   "key": "topf",
+   "words": [
+    "topf"
+   ]
+  },
+  "Topfen": {
+   "key": "topfen",
+   "words": [
+    "topf"
+   ]
+  },
+  "Topping": {
+   "key": "topping",
+   "words": [
+    "topping"
+   ]
+  },
+  "Toppings nach Wahl": {
+   "key": "toppingsnachwahl",
+   "words": [
+    "topping"
+   ]
+  },
+  "Trockenhefe": {
+   "key": "trockenhefe",
+   "words": [
+    "trockenhef"
+   ]
+  },
+  "UND": {
+   "key": "und",
+   "words": [
+    "und"
+   ]
+  },
+  "UNGEBACKENE": {
+   "key": "ungebackene",
+   "words": [
+    "ungebacken"
+   ]
+  },
+  "V": {
+   "key": "v",
+   "words": [
+    "v"
+   ]
+  },
+  "VEGAN": {
+   "key": "vegan",
+   "words": [
+    "vega"
+   ]
+  },
+  "VEGANES HACK AUS LINSEN UND WALNÜSSEN": {
+   "key": "veganeshackauslinsenundwalnussen",
+   "words": [
+    "hack",
+    "lins",
+    "walnuss"
+   ]
+  },
+  "VERFEINERT": {
+   "key": "verfeinert",
+   "words": [
+    "verfeinert"
+   ]
+  },
+  "VERWENDET": {
+   "key": "verwendet",
+   "words": [
+    "verwendet"
+   ]
+  },
+  "VOLLKORNREIS": {
+   "key": "vollkornreis",
+   "words": [
+    "vollkornrei"
+   ]
+  },
+  "VON": {
+   "key": "von",
+   "words": [
+    "von"
+   ]
+  },
+  "Vanille": {
+   "key": "vanille",
+   "words": [
+    "vanill"
+   ]
+  },
+  "Vanilleextrakt": {
+   "key": "vanilleextrakt",
+   "words": [
+    "vanill",
+    "vanilleextrakt"
+   ]
+  },
+  "Vanillepulver": {
+   "key": "vanillepulver",
+   "words": [
+    "vanill",
+    "vanillepulv"
+   ]
+  },
+  "Vanilleschote": {
+   "key": "vanilleschote",
+   "words": [
+    "vanill",
+    "vanilleschot"
+   ]
+  },
+  "Vegane Mayonnaise": {
+   "key": "veganemayonnaise",
+   "words": [
+    "mayonnais"
+   ]
+  },
+  "Vegane Parmesan-Alternative": {
+   "key": "veganeparmesanalternative",
+   "words": [
+    "parmesanalternativ"
+   ]
+  },
+  "Veganer Frischkäse": {
+   "key": "veganerfrischkase",
+   "words": [
+    "frischkas"
+   ]
+  },
+  "Veganer Joghurt": {
+   "key": "veganerjoghurt",
+   "words": [
+    "joghurt"
+   ]
+  },
+  "Veganes Hack aus Linsen und Walnüssen": {
+   "key": "veganeshackauslinsenundwalnussen",
+   "words": [
+    "hack",
+    "lins",
+    "walnuss"
+   ]
+  },
+  "Veganes Masala-Curry mit Kokosmilch": {
+   "key": "veganesmasalacurrymitkokosmilch",
+   "words": [
+    "kokosmilch",
+    "masalacurry"
+   ]
+  },
+  "Veganes One-Pot-Curry": {
+   "key": "veganesonepotcurry",
+   "words": [
+    "onepotcurry"
+   ]
+  },
+  "Vollkornreis": {
+   "key": "vollkornreis",
+   "words": [
+    "vollkornrei"
+   ]
+  },
+  "Vollkornreis-Penne": {
+   "key": "vollkornreispenne",
+   "words": [
+    "vollkornreispenn"
+   ]
+  },
+  "WALNUSS": {
+   "key": "walnuss",
+   "words": [
+    "walnuss"
+   ]
+  },
+  "WALNUSSSTREUSELN": {
+   "key": "walnussstreuseln",
+   "words": [
+    "walnussstreusel"
+   ]
+  },
+  "WALNÜSSE": {
+   "key": "walnusse",
+   "words": [
+    "walnuss"
+   ]
+  },
+  "WARMEN": {
+   "key": "warmen",
+   "words": [
+    "warm"
+   ]
+  },
+  "WEISSE BOHNEN": {
+   "key": "weissebohnen",
+   "words": [
+    "bohn"
+   ]
+  },
+  "WEISSWEIN": {
+   "key": "weisswein",
+   "words": [
+    "weisswei"
+   ]
+  },
+  "WENIG": {
+   "key": "wenig",
+   "words": [
+    "wenig"
+   ]
+  },
+  "WERDEN": {
+   "key": "werden",
+   "words": [
+    "werd"
+   ]
+  },
+  "WINTERSALAT MIT MARONEN UND PASTINAKEN": {
+   "key": "wintersalatmitmaronenundpastinaken",
+   "words": [
+    "maron",
+    "pastinak",
+    "wintersalat"
+   ]
+  },
+  "WUNSCH": {
+   "key": "wunsch",
+   "words": [
+    "wunsch"
+   ]
+  },
+  "Waffeln": {
+   "key": "waffeln",
+   "words": [
+    "waffel"
+   ]
+  },
+  "Walnuss": {
+   "key": "walnuss",
+   "words": [
+    "walnuss"
+   ]
+  },
+  "Walnussstreuseln": {
+   "key": "walnussstreuseln",
+   "words": [
+    "walnussstreusel"
+   ]
+  },
+  "Walnüsse": {
+   "key": "walnusse",
+   "words": [
+    "walnuss"
+   ]
+  },
+  "Walnüssen": {
+   "key": "walnussen",
+   "words": [
+    "walnuss"
+   ]
+  },
+  "Wasabi": {
+   "key": "wasabi",
+   "words": [
+    "wasabi"
+   ]
+  },
+  "Wasabi-Pulver": {
+   "key": "wasabipulver",
+   "words": [
+    "wasabi",
+    "wasabipulv"
+   ]
+  },
+  "Wasser": {
+   "key": "wasser",
+   "words": [
+    "wass"
+   ]
+  },
+  "Weinsteinbackpulver": {
+   "key": "weinsteinbackpulver",
+   "words": [
+    "weinsteinback",
+    "weinsteinbackpulv"
+   ]
+  },
+  "Weizen": {
+   "key": "weizen",
+   "words": [
+    "weiz"
+   ]
+  },
+  "Weizen-Mehl": {
+   "key": "weizenmehl",
+   "words": [
+    "weiz",
+    "weizenmehl"
+   ]
+  },
+  "Weizenfreie Nudeln": {
+   "key": "weizenfreienudeln",
+   "words": []
+  },
+  "Weizenfreies Mehl": {
+   "key": "weizenfreiesmehl",
+   "words": []
+  },
+  "Weizengrieß": {
+   "key": "weizengriess",
+   "words": [
+    "weiz",
+    "weizengriess"
+   ]
+  },
+  "Weizenmehl": {
+   "key": "weizenmehl",
+   "words": [
+    "weiz",
+    "weizenmehl"
+   ]
+  },
+  "Weiße Bohnen": {
+   "key": "weissebohnen",
+   "words": [
+    "bohn"
+   ]
+  },
+  "Weißkohl": {
+   "key": "weisskohl",
+   "words": [
+    "weisskohl"
+   ]
+  },
+  "Weißwein": {
+   "key": "weisswein",
+   "words": [
+    "weisswei"
+   ]
+  },
+  "Wintersalat mit Maronen und Pastinaken": {
+   "key": "wintersalatmitmaronenundpastinaken",
+   "words": [
+    "maron",
+    "pastinak",
+    "wintersalat"
+   ]
+  },
+  "Wrap": {
+   "key": "wrap",
+   "words": [
+    "wrap"
+   ]
+  },
+  "Wraps": {
+   "key": "wraps",
+   "words": [
+    "wrap"
+   ]
+  },
+  "Wunsch": {
+   "key": "wunsch",
+   "words": [
+    "wunsch"
+   ]
+  },
+  "WÜRZIGE": {
+   "key": "wurzige",
+   "words": [
+    "wurzig"
+   ]
+  },
+  "WÜRZIGEM": {
+   "key": "wurzigem",
+   "words": [
+    "wurzig"
+   ]
+  },
+  "WÜRZIGES": {
+   "key": "wurziges",
+   "words": [
+    "wurzig"
+   ]
+  },
+  "Würzige": {
+   "key": "wurzige",
+   "words": [
+    "wurzig"
+   ]
+  },
+  "Würziger": {
+   "key": "wurziger",
+   "words": [
+    "wurzig"
+   ]
+  },
+  "Würziges": {
+   "key": "wurziges",
+   "words": [
+    "wurzig"
+   ]
+  },
+  "X": {
+   "key": "x",
+   "words": [
+    "x"
+   ]
+  },
+  "XOHNE Y": {
+   "key": "xohney",
+   "words": [
+    "xohn",
+    "y"
+   ]
+  },
+  "ZARTBITTER-SCHOKODROPS": {
+   "key": "zartbitterschokodrops",
+   "words": [
+    "zartbitterschokodrop"
+   ]
+  },
+  "ZARTBITTERSCHOKOLADE": {
+   "key": "zartbitterschokolade",
+   "words": [
+    "zartbitterschokolad"
+   ]
+  },
+  "ZARTEM": {
+   "key": "zartem",
+   "words": [
+    "zart"
+   ]
+  },
+  "ZERDRÜCKTER": {
+   "key": "zerdruckter",
+   "words": [
+    "zerdruckt"
+   ]
+  },
+  "ZIEGENFRISCHKÄSE": {
+   "key": "ziegenfrischkase",
+   "words": [
+    "ziegenfrischkas"
+   ]
+  },
+  "ZIEHEN": {
+   "key": "ziehen",
+   "words": [
+    "zieh"
+   ]
+  },
+  "ZITRONE": {
+   "key": "zitrone",
+   "words": [
+    "zitron"
+   ]
+  },
+  "ZITRONEN-CHEESECAKE IM GLAS OHNE BACKEN": {
+   "key": "zitronencheesecakeimglasohnebacken",
+   "words": [
+    "zitronencheesecak"
+   ]
+  },
+  "ZUCCHINI-HUMMUS": {
+   "key": "zucchinihummus",
+   "words": [
+    "zucchinihum",
+    "zucchinihummu"
+   ]
+  },
+  "ZUCCHINIWÜRFELN": {
+   "key": "zucchiniwurfeln",
+   "words": [
+    "zucchiniwurfel"
+   ]
+  },
+  "ZUCKER": {
+   "key": "zucker",
+   "words": [
+    "zuck"
+   ]
+  },
+  "ZWIEBEL": {
+   "key": "zwiebel",
+   "words": [
+    "zwiebel"
+   ]
+  },
+  "ZWIEBEL (OHNE SCHALE) OHNE GRÜN": {
+   "key": "zwiebelohnegrun",
+   "words": [
+    "zwiebel"
+   ]
+  },
+  "ZWIEBEL)(": {
+   "key": "zwiebel)(",
+   "words": [
+    "zwiebel"
+   ]
+  },
+  "ZWIEBEL, GEHACKT": {
+   "key": "zwiebel,gehackt",
+   "words": [
+    "zwiebel"
+   ]
+  },
+  "Za": {
+   "key": "za",
+   "words": [
+    "za"
+   ]
+  },
+  "Zartbitter-Schokodrops": {
+   "key": "zartbitterschokodrops",
+   "words": [
+    "zartbitterschokodrop"
+   ]
+  },
+  "Zartbitter-Schokotropfen": {
+   "key": "zartbitterschokotropfen",
+   "words": [
+    "zartbitterschokotropf"
+   ]
+  },
+  "Zartbitterschokolade": {
+   "key": "zartbitterschokolade",
+   "words": [
+    "zartbitterschokolad"
+   ]
+  },
+  "Zehe": {
+   "key": "zehe",
+   "words": [
+    "zeh"
+   ]
+  },
+  "Zerbröselter": {
+   "key": "zerbroselter",
+   "words": [
+    "zerbroselt"
+   ]
+  },
+  "Ziegenfrischkäse": {
+   "key": "ziegenfrischkase",
+   "words": [
+    "ziegenfrischkas"
+   ]
+  },
+  "Ziegenkäse": {
+   "key": "ziegenkase",
+   "words": [
+    "ziegenkas"
+   ]
+  },
+  "Zimt": {
+   "key": "zimt",
+   "words": [
+    "zimt"
+   ]
+  },
+  "Zitrone": {
+   "key": "zitrone",
+   "words": [
+    "zitron"
+   ]
+  },
+  "Zitronen": {
+   "key": "zitronen",
+   "words": [
+    "zitron"
+   ]
+  },
+  "Zitronen-Cheesecake im Glas ohne Backen": {
+   "key": "zitronencheesecakeimglasohnebacken",
+   "words": [
+    "zitronencheesecak"
+   ]
+  },
+  "Zitronengras": {
+   "key": "zitronengras",
+   "words": [
+    "zitronengra"
+   ]
+  },
+  "Zitronengraspulver": {
+   "key": "zitronengraspulver",
+   "words": [
+    "zitronengra",
+    "zitronengraspulv"
+   ]
+  },
+  "Zitronensaft": {
+   "key": "zitronensaft",
+   "words": [
+    "zitron",
+    "zitronensaft"
+   ]
+  },
+  "Zucchini": {
+   "key": "zucchini",
+   "words": [
+    "zucchini"
+   ]
+  },
+  "Zucchini-Buns": {
+   "key": "zucchinibuns",
+   "words": [
+    "zucchinibun"
+   ]
+  },
+  "Zucchini-Hummus": {
+   "key": "zucchinihummus",
+   "words": [
+    "zucchinihum",
+    "zucchinihummu"
+   ]
+  },
+  "Zucchiniwürfeln": {
+   "key": "zucchiniwurfeln",
+   "words": [
+    "zucchiniwurfel"
+   ]
+  },
+  "Zucker": {
+   "key": "zucker",
+   "words": [
+    "zuck"
+   ]
+  },
+  "Zucker ohne laktosefreie Milch": {
+   "key": "zuckerohnelaktosefreiemilch",
+   "words": []
+  },
+  "Zwiebel": {
+   "key": "zwiebel",
+   "words": [
+    "zwiebel"
+   ]
+  },
+  "Zwiebel (ohne Schale) ohne Grün": {
+   "key": "zwiebelohnegrun",
+   "words": [
+    "zwiebel"
+   ]
+  },
+  "Zwiebel)(": {
+   "key": "zwiebel)(",
+   "words": [
+    "zwiebel"
+   ]
+  },
+  "Zwiebel, gehackt": {
+   "key": "zwiebel,gehackt",
+   "words": [
+    "zwiebel"
+   ]
+  },
+  "Zwiebel-Pulver": {
+   "key": "zwiebelpulver",
+   "words": [
+    "zwiebel",
+    "zwiebelpulv"
+   ]
+  },
+  "Zwiebeln": {
+   "key": "zwiebeln",
+   "words": [
+    "zwiebel"
+   ]
+  },
+  "Zwiebelpulver": {
+   "key": "zwiebelpulver",
+   "words": [
+    "zwiebel",
+    "zwiebelpulv"
+   ]
+  },
+  "a": {
+   "key": "a",
+   "words": [
+    "a"
+   ]
+  },
+  "a-b-c": {
+   "key": "abc",
+   "words": [
+    "abc"
+   ]
+  },
+  "a-ei": {
+   "key": "aei",
+   "words": [
+    "aei"
+   ]
+  },
+  "a-pulver": {
+   "key": "apulver",
+   "words": [
+    "apulv"
+   ]
+  },
+  "abgerundet": {
+   "key": "abgerundet",
+   "words": [
+    "abgerundet"
+   ]
+  },
+  "abgeschmeckt": {
+   "key": "abgeschmeckt",
+   "words": [
+    "abgeschmeckt"
+   ]
+  },
+  "abgeschmeckter": {
+   "key": "abgeschmeckter",
+   "words": [
+    "abgeschmeckt"
+   ]
+  },
+  "allergens": {
+   "key": "allergens",
+   "words": [
+    "allergen"
+   ]
+  },
+  "alles": {
+   "key": "alles",
+   "words": [
+    "all"
+   ]
+  },
+  "als": {
+   "key": "als",
+   "words": [
+    "als"
+   ]
+  },
+  "alternative": {
+   "key": "alternative",
+   "words": [
+    "alternativ"
+   ]
+  },
+  "am": {
+   "key": "am",
+   "words": [
+    "am"
+   ]
+  },
+  "angebraten": {
+   "key": "angebraten",
+   "words": [
+    "angebrat"
+   ]
+  },
+  "angebratener": {
+   "key": "angebratener",
+   "words": [
+    "angebraten"
+   ]
+  },
+  "angedünsteten": {
+   "key": "angedunsteten",
+   "words": [
+    "angedunstet"
+   ]
+  },
+  "aromatisches": {
+   "key": "aromatisches",
+   "words": [
+    "aromatisch"
+   ]
+  },
+  "aromatisiert": {
+   "key": "aromatisiert",
+   "words": [
+    "aromatisiert"
+   ]
+  },
+  "asiatische": {
+   "key": "asiatische",
+   "words": [
+    "asiatisch"
+   ]
+  },
+  "asiatisches": {
+   "key": "asiatisches",
+   "words": [
+    "asiatisch"
+   ]
+  },
+  "atar": {
+   "key": "atar",
+   "words": [
+    "atar"
+   ]
+  },
+  "auf": {
+   "key": "auf",
+   "words": [
+    "auf"
+   ]
+  },
+  "aufgegossen": {
+   "key": "aufgegossen",
+   "words": [
+    "aufgegoss"
+   ]
+  },
+  "aus": {
+   "key": "aus",
+   "words": [
+    "aus"
+   ]
+  },
+  "aus laktosefreien Eiern": {
+   "key": "auslaktosefreieneiern",
+   "words": []
+  },
+  "aus laktosefreien Milchprodukten": {
+   "key": "auslaktosefreienmilchprodukten",
+   "words": []
+  },
+  "b": {
+   "key": "b",
+   "words": [
+    "b"
+   ]
+  },
+  "bei": {
+   "key": "bei",
+   "words": [
+    "bei"
+   ]
+  },
+  "beide": {
+   "key": "beide",
+   "words": [
+    "beid"
+   ]
+  },
+  "beides": {
+   "key": "beides",
+   "words": [
+    "beid"
+   ]
+  },
+  "belegt": {
+   "key": "belegt",
+   "words": [
+    "belegt"
+   ]
+  },
+  "bestreut": {
+   "key": "bestreut",
+   "words": [
+    "bestreut"
+   ]
+  },
+  "bestrichen": {
+   "key": "bestrichen",
+   "words": [
+    "bestrich"
+   ]
+  },
+  "beträufelt": {
+   "key": "betraufelt",
+   "words": [
+    "betraufelt"
+   ]
+  },
+  "blanchiertem": {
+   "key": "blanchiertem",
+   "words": [
+    "blanchiert"
+   ]
+  },
+  "braunen": {
+   "key": "braunen",
+   "words": [
+    "braun"
+   ]
+  },
+  "brot": {
+   "key": "brot",
+   "words": [
+    "brot"
+   ]
+  },
+  "bunte": {
+   "key": "bunte",
+   "words": [
+    "bunt"
+   ]
+  },
+  "bunter": {
+   "key": "bunter",
+   "words": [
+    "bunt"
+   ]
+  },
+  "catalog": {
+   "key": "catalog",
+   "words": [
+    "catalog"
+   ]
+  },
+  "cremige": {
+   "key": "cremige",
+   "words": [
+    "cremig"
+   ]
+  },
+  "cremigem": {
+   "key": "cremigem",
+   "words": [
+    "cremig"
+   ]
+  },
+  "cremigen": {
+   "key": "cremigen",
+   "words": [
+    "cremig"
+   ]
+  },
+  "cremiger": {
+   "key": "cremiger",
+   "words": [
+    "cremig"
+   ]
+  },
+  "cremiges": {
+   "key": "cremiges",
+   "words": [
+    "cremig"
+   ]
+  },
+  "das": {
+   "key": "das",
+   "words": [
+    "das"
+   ]
+  },
+  "dazu": {
+   "key": "dazu",
+   "words": [
+    "dazu"
+   ]
+  },
+  "deftiger": {
+   "key": "deftiger",
+   "words": [
+    "deftig"
+   ]
+  },
+  "dem": {
+   "key": "dem",
+   "words": [
+    "dem"
+   ]
+  },
+  "den": {
+   "key": "den",
+   "words": [
+    "den"
+   ]
+  },
+  "der": {
+   "key": "der",
+   "words": [
+    "der"
+   ]
+  },
+  "die": {
+   "key": "die",
+   "words": [
+    "die"
+   ]
+  },
+  "diet": {
+   "key": "diet",
+   "words": [
+    "diet"
+   ]
+  },
+  "du": {
+   "key": "du",
+   "words": [
+    "du"
+   ]
+  },
+  "dunklen": {
+   "key": "dunklen",
+   "words": [
+    "dunkl"
+   ]
+  },
+  "dunkler": {
+   "key": "dunkler",
+   "words": [
+    "dunkl"
+   ]
+  },
+  "dünne": {
+   "key": "dunne",
+   "words": [
+    "dunn"
+   ]
+  },
+  "dünner": {
+   "key": "dunner",
+   "words": [
+    "dunn"
+   ]
+  },
+  "eier": {
+   "key": "eier",
+   "words": [
+    "ei"
+   ]
+  },
+  "eignet": {
+   "key": "eignet",
+   "words": [
+    "eignet"
+   ]
+  },
+  "ein": {
+   "key": "ein",
+   "words": [
+    "ein"
+   ]
+  },
+  "eine": {
+   "key": "eine",
+   "words": [
+    "ein"
+   ]
+  },
+  "einem": {
+   "key": "einem",
+   "words": [
+    "ein"
+   ]
+  },
+  "einer": {
+   "key": "einer",
+   "words": [
+    "ein"
+   ]
+  },
+  "eines": {
+   "key": "eines",
+   "words": [
+    "ein"
+   ]
+  },
+  "eingeweicht": {
+   "key": "eingeweicht",
+   "words": [
+    "eingeweicht"
+   ]
+  },
+  "eingeweichte": {
+   "key": "eingeweichte",
+   "words": [
+    "eingeweicht"
+   ]
+  },
+  "eisgekühlt": {
+   "key": "eisgekuhlt",
+   "words": [
+    "eisgekuhlt"
+   ]
+  },
+  "ergänzt": {
+   "key": "erganzt",
+   "words": [
+    "erganzt"
+   ]
+  },
+  "ersetzen": {
+   "key": "ersetzen",
+   "words": [
+    "ersetz"
+   ]
+  },
+  "exotisch": {
+   "key": "exotisch",
+   "words": [
+    "exotisch"
+   ]
+  },
+  "fein": {
+   "key": "fein",
+   "words": [
+    "fei"
+   ]
+  },
+  "fertig": {
+   "key": "fertig",
+   "words": [
+    "fertig"
+   ]
+  },
+  "fester": {
+   "key": "fester",
+   "words": [
+    "fest"
+   ]
+  },
+  "fluffige": {
+   "key": "fluffige",
+   "words": [
+    "fluffig"
+   ]
+  },
+  "flüssigen": {
+   "key": "flussigen",
+   "words": [
+    "flussig"
+   ]
+  },
+  "focus": {
+   "key": "focus",
+   "words": [
+    "focu"
+   ]
+  },
+  "food": {
+   "key": "food",
+   "words": [
+    "food"
+   ]
+  },
+  "frisch": {
+   "key": "frisch",
+   "words": [
+    "frisch"
+   ]
+  },
+  "frischem": {
+   "key": "frischem",
+   "words": [
+    "frisch"
+   ]
+  },
+  "frischen": {
+   "key": "frischen",
+   "words": [
+    "frisch"
+   ]
+  },
+  "frischer": {
+   "key": "frischer",
+   "words": [
+    "frisch"
+   ]
+  },
+  "frittierte": {
+   "key": "frittierte",
+   "words": [
+    "frittiert"
+   ]
+  },
+  "fruchtig": {
+   "key": "fruchtig",
+   "words": [
+    "fruchtig"
+   ]
+  },
+  "fruchtige": {
+   "key": "fruchtige",
+   "words": [
+    "fruchtig"
+   ]
+  },
+  "fruchtigen": {
+   "key": "fruchtigen",
+   "words": [
+    "fruchtig"
+   ]
+  },
+  "fructans": {
+   "key": "fructans",
+   "words": [
+    "fructan"
+   ]
+  },
+  "fruhlingszwiebel": {
+   "key": "fruhlingszwiebel",
+   "words": [
+    "fruhlingszwiebel"
+   ]
+  },
+  "füllen": {
+   "key": "fullen",
+   "words": [
+    "full"
+   ]
+  },
+  "für": {
+   "key": "fur",
+   "words": [
+    "fur"
+   ]
+  },
+  "garen": {
+   "key": "garen",
+   "words": [
+    "gar"
+   ]
+  },
+  "garniert": {
+   "key": "garniert",
+   "words": [
+    "garniert"
+   ]
+  },
+  "gebacken": {
+   "key": "gebacken",
+   "words": [
+    "geback"
+   ]
+  },
+  "gebackene": {
+   "key": "gebackene",
+   "words": [
+    "gebacken"
+   ]
+  },
+  "gebackenem": {
+   "key": "gebackenem",
+   "words": [
+    "gebacken"
+   ]
+  },
+  "gebackener": {
+   "key": "gebackener",
+   "words": [
+    "gebacken"
+   ]
+  },
+  "gebraten": {
+   "key": "gebraten",
+   "words": [
+    "gebrat"
+   ]
+  },
+  "gebratene": {
+   "key": "gebratene",
+   "words": [
+    "gebraten"
+   ]
+  },
+  "gebratenem": {
+   "key": "gebratenem",
+   "words": [
+    "gebraten"
+   ]
+  },
+  "gebratenen": {
+   "key": "gebratenen",
+   "words": [
+    "gebraten"
+   ]
+  },
+  "gebratener": {
+   "key": "gebratener",
+   "words": [
+    "gebraten"
+   ]
+  },
+  "gebunden": {
+   "key": "gebunden",
+   "words": [
+    "gebund"
+   ]
+  },
+  "gedämpftem": {
+   "key": "gedampftem",
+   "words": [
+    "gedampft"
+   ]
+  },
+  "gefrorener": {
+   "key": "gefrorener",
+   "words": [
+    "gefroren"
+   ]
+  },
+  "gefüllt": {
+   "key": "gefullt",
+   "words": [
+    "gefullt"
+   ]
+  },
+  "gegart": {
+   "key": "gegart",
+   "words": [
+    "gegart"
+   ]
+  },
+  "gegarte": {
+   "key": "gegarte",
+   "words": [
+    "gegart"
+   ]
+  },
+  "gegarter": {
+   "key": "gegarter",
+   "words": [
+    "gegart"
+   ]
+  },
+  "gegartes": {
+   "key": "gegartes",
+   "words": [
+    "gegart"
+   ]
+  },
+  "gegrillt": {
+   "key": "gegrillt",
+   "words": [
+    "gegrillt"
+   ]
+  },
+  "gegrillte": {
+   "key": "gegrillte",
+   "words": [
+    "gegrillt"
+   ]
+  },
+  "gehackte": {
+   "key": "gehackte",
+   "words": [
+    "gehackt"
+   ]
+  },
+  "gehackten": {
+   "key": "gehackten",
+   "words": [
+    "gehackt"
+   ]
+  },
+  "gehackter": {
+   "key": "gehackter",
+   "words": [
+    "gehackt"
+   ]
+  },
+  "gekochtem": {
+   "key": "gekochtem",
+   "words": [
+    "gekocht"
+   ]
+  },
+  "gekochter": {
+   "key": "gekochter",
+   "words": [
+    "gekocht"
+   ]
+  },
+  "gekrönt": {
+   "key": "gekront",
+   "words": [
+    "gekront"
+   ]
+  },
+  "gemahlenen": {
+   "key": "gemahlenen",
+   "words": [
+    "gemahlen"
+   ]
+  },
+  "gemischten": {
+   "key": "gemischten",
+   "words": [
+    "gemischt"
+   ]
+  },
+  "gemusebruhe": {
+   "key": "gemusebruhe",
+   "words": [
+    "gemusebruh"
+   ]
+  },
+  "gepufftem": {
+   "key": "gepufftem",
+   "words": [
+    "gepufft"
+   ]
+  },
+  "geraspelten": {
+   "key": "geraspelten",
+   "words": [
+    "geraspelt"
+   ]
+  },
+  "geraspelter": {
+   "key": "geraspelter",
+   "words": [
+    "geraspelt"
+   ]
+  },
+  "geriebenem": {
+   "key": "geriebenem",
+   "words": [
+    "gerieben"
+   ]
+  },
+  "geriebenen": {
+   "key": "geriebenen",
+   "words": [
+    "gerieben"
+   ]
+  },
+  "geriebener": {
+   "key": "geriebener",
+   "words": [
+    "gerieben"
+   ]
+  },
+  "geräuchertem": {
+   "key": "gerauchertem",
+   "words": [
+    "gerauchert"
+   ]
+  },
+  "geröstetem": {
+   "key": "gerostetem",
+   "words": [
+    "gerostet"
+   ]
+  },
+  "gerösteten": {
+   "key": "gerosteten",
+   "words": [
+    "gerostet"
+   ]
+  },
+  "gerösteter": {
+   "key": "gerosteter",
+   "words": [
+    "gerostet"
+   ]
+  },
+  "geschlagener": {
+   "key": "geschlagener",
+   "words": [
+    "geschlagen"
+   ]
+  },
+  "gestockt": {
+   "key": "gestockt",
+   "words": [
+    "gestockt"
+   ]
+  },
+  "gesüßt": {
+   "key": "gesusst",
+   "words": [
+    "gesusst"
+   ]
+  },
+  "getoastetes": {
+   "key": "getoastetes",
+   "words": [
+    "getoastet"
+   ]
+  },
+  "getoppt": {
+   "key": "getoppt",
+   "words": [
+    "getoppt"
+   ]
+  },
+  "getrockneten": {
+   "key": "getrockneten",
+   "words": [
+    "getrocknet"
+   ]
+  },
+  "getrockneter": {
+   "key": "getrockneter",
+   "words": [
+    "getrocknet"
+   ]
+  },
+  "geviertelten": {
+   "key": "geviertelten",
+   "words": [
+    "geviertelt"
+   ]
+  },
+  "gewälzt": {
+   "key": "gewalzt",
+   "words": [
+    "gewalzt"
+   ]
+  },
+  "gewürzt": {
+   "key": "gewurzt",
+   "words": [
+    "gewurzt"
+   ]
+  },
+  "glasiert": {
+   "key": "glasiert",
+   "words": [
+    "glasiert"
+   ]
+  },
+  "gluten": {
+   "key": "gluten",
+   "words": [
+    "glut"
+   ]
+  },
+  "gluten-frei Brot": {
+   "key": "glutenfreibrot",
+   "words": [
+    "brot",
+    "glutenfrei"
+   ]
+  },
+  "glutenfreiem": {
+   "key": "glutenfreiem",
+   "words": []
+  },
+  "glutenfreier": {
+   "key": "glutenfreier",
+   "words": []
+  },
+  "glutenfreies Brot": {
+   "key": "glutenfreiesbrot",
+   "words": []
+  },
+  "goldbraun": {
+   "key": "goldbraun",
+   "words": [
+    "goldbrau"
+   ]
+  },
+  "grob": {
+   "key": "grob",
+   "words": [
+    "grob"
+   ]
+  },
+  "grun": {
+   "key": "grun",
+   "words": [
+    "gru"
+   ]
+  },
+  "grünen": {
+   "key": "grunen",
+   "words": [
+    "grun"
+   ]
+  },
+  "grüner": {
+   "key": "gruner",
+   "words": [
+    "grun"
+   ]
+  },
+  "heißem": {
+   "key": "heissem",
+   "words": [
+    "heiss"
+   ]
+  },
+  "herbstlicher": {
+   "key": "herbstlicher",
+   "words": [
+    "herbstlich"
+   ]
+  },
+  "herzhafter": {
+   "key": "herzhafter",
+   "words": [
+    "herzhaft"
+   ]
+  },
+  "herzhaftes": {
+   "key": "herzhaftes",
+   "words": [
+    "herzhaft"
+   ]
+  },
+  "honig": {
+   "key": "honig",
+   "words": [
+    "honig"
+   ]
+  },
+  "im": {
+   "key": "im",
+   "words": [
+    "im"
+   ]
+  },
+  "in": {
+   "key": "in",
+   "words": [
+    "in"
+   ]
+  },
+  "indonesische": {
+   "key": "indonesische",
+   "words": [
+    "indonesisch"
+   ]
+  },
+  "ingredient": {
+   "key": "ingredient",
+   "words": [
+    "ingredient"
+   ]
+  },
+  "ingredient_id": {
+   "key": "ingredient_id",
+   "words": [
+    "id",
+    "ingredient"
+   ]
+  },
+  "insights": {
+   "key": "insights",
+   "words": [
+    "insight"
+   ]
+  },
+  "intolerances": {
+   "key": "intolerances",
+   "words": [
+    "intoleranc"
+   ]
+  },
+  "italienischen": {
+   "key": "italienischen",
+   "words": [
+    "italienisch"
+   ]
+  },
+  "k": {
+   "key": "k",
+   "words": [
+    "k"
+   ]
+  },
+  "kannst": {
+   "key": "kannst",
+   "words": [
+    "kannst"
+   ]
+  },
+  "kernigen": {
+   "key": "kernigen",
+   "words": [
+    "kernig"
+   ]
+  },
+  "key": {
+   "key": "key",
+   "words": [
+    "key"
+   ]
+  },
+  "klassisches": {
+   "key": "klassisches",
+   "words": [
+    "klassisch"
+   ]
+  },
+  "kleiner": {
+   "key": "kleiner",
+   "words": [
+    "klein"
+   ]
+  },
+  "knackigen": {
+   "key": "knackigen",
+   "words": [
+    "knackig"
+   ]
+  },
+  "knoblauchol": {
+   "key": "knoblauchol",
+   "words": [
+    "knoblauchol"
+   ]
+  },
+  "knusprig": {
+   "key": "knusprig",
+   "words": [
+    "knusprig"
+   ]
+  },
+  "knusprige": {
+   "key": "knusprige",
+   "words": [
+    "knusprig"
+   ]
+  },
+  "knusprigem": {
+   "key": "knusprigem",
+   "words": [
+    "knusprig"
+   ]
+  },
+  "knusprigen": {
+   "key": "knusprigen",
+   "words": [
+    "knusprig"
+   ]
+  },
+  "knuspriger": {
+   "key": "knuspriger",
+   "words": [
+    "knusprig"
+   ]
+  },
+  "kombiniert": {
+   "key": "kombiniert",
+   "words": [
+    "kombiniert"
+   ]
+  },
+  "kurz": {
+   "key": "kurz",
+   "words": [
+    "kurz"
+   ]
+  },
+  "laktosefrei-Milch": {
+   "key": "laktosefreimilch",
+   "words": []
+  },
+  "laktosefreiemilch": {
+   "key": "laktosefreiemilch",
+   "words": []
+  },
+  "laktosefreier Joghurt": {
+   "key": "laktosefreierjoghurt",
+   "words": []
+  },
+  "leicht": {
+   "key": "leicht",
+   "words": [
+    "leicht"
+   ]
+  },
+  "leichter": {
+   "key": "leichter",
+   "words": [
+    "leicht"
+   ]
+  },
+  "lockerer": {
+   "key": "lockerer",
+   "words": [
+    "locker"
+   ]
+  },
+  "lockeres": {
+   "key": "lockeres",
+   "words": [
+    "locker"
+   ]
+  },
+  "low_at_amount": {
+   "key": "low_at_amount",
+   "words": [
+    "amount",
+    "at",
+    "low"
+   ]
+  },
+  "m": {
+   "key": "m",
+   "words": [
+    "m"
+   ]
+  },
+  "mariniert": {
+   "key": "mariniert",
+   "words": [
+    "mariniert"
+   ]
+  },
+  "mariniertem": {
+   "key": "mariniertem",
+   "words": [
+    "mariniert"
+   ]
+  },
+  "mediterranen": {
+   "key": "mediterranen",
+   "words": [
+    "mediterran"
+   ]
+  },
+  "milch": {
+   "key": "milch",
+   "words": [
+    "milch"
+   ]
+  },
+  "mild": {
+   "key": "mild",
+   "words": [
+    "mild"
+   ]
+  },
+  "mildes": {
+   "key": "mildes",
+   "words": [
+    "mild"
+   ]
+  },
+  "mit": {
+   "key": "mit",
+   "words": [
+    "mit"
+   ]
+  },
+  "mit laktosefreiem Quark": {
+   "key": "mitlaktosefreiemquark",
+   "words": []
+  },
+  "n": {
+   "key": "n",
+   "words": [
+    "n"
+   ]
+  },
+  "nach": {
+   "key": "nach",
+   "words": [
+    "nach"
+   ]
+  },
+  "name": {
+   "key": "name",
+   "words": [
+    "nam"
+   ]
+  },
+  "neu": {
+   "key": "neu",
+   "words": [
+    "neu"
+   ]
+  },
+  "nudeln": {
+   "key": "nudeln",
+   "words": [
+    "nudel"
+   ]
+  },
+  "nur": {
+   "key": "nur",
+   "words": [
+    "nur"
+   ]
+  },
+  "nussigen": {
+   "key": "nussigen",
+   "words": [
+    "nussig"
+   ]
+  },
+  "o": {
+   "key": "o",
+   "words": [
+    "o"
+   ]
+  },
+  "obendrauf": {
+   "key": "obendrauf",
+   "words": [
+    "obendrauf"
+   ]
+  },
+  "oder": {
+   "key": "oder",
+   "words": [
+    "oder"
+   ]
+  },
+  "ofengeröstetem": {
+   "key": "ofengerostetem",
+   "words": [
+    "ofengerostet"
+   ]
+  },
+  "ofengerösteten": {
+   "key": "ofengerosteten",
+   "words": [
+    "ofengerostet"
+   ]
+  },
+  "ohne": {
+   "key": "ohne",
+   "words": []
+  },
+  "ohne Zwiebel": {
+   "key": "ohnezwiebel",
+   "words": []
+  },
+  "ol": {
+   "key": "ol",
+   "words": [
+    "ol"
+   ]
+  },
+  "olmitknoblauch": {
+   "key": "olmitknoblauch",
+   "words": [
+    "olmitknoblauch"
+   ]
+  },
+  "orientalischer": {
+   "key": "orientalischer",
+   "words": [
+    "orientalisch"
+   ]
+  },
+  "other": {
+   "key": "other",
+   "words": [
+    "oth"
+   ]
+  },
+  "paprika": {
+   "key": "paprika",
+   "words": [
+    "paprika"
+   ]
+  },
+  "pikanten": {
+   "key": "pikanten",
+   "words": [
+    "pikant"
+   ]
+  },
+  "pochierten": {
+   "key": "pochierten",
+   "words": [
+    "pochiert"
+   ]
+  },
+  "position": {
+   "key": "position",
+   "words": [
+    "positio"
+   ]
+  },
+  "processed": {
+   "key": "processed",
+   "words": [
+    "processed"
+   ]
+  },
+  "püriert": {
+   "key": "puriert",
+   "words": [
+    "puriert"
+   ]
+  },
+  "pürierte": {
+   "key": "purierte",
+   "words": [
+    "puriert"
+   ]
+  },
+  "püriertem": {
+   "key": "puriertem",
+   "words": [
+    "puriert"
+   ]
+  },
+  "pürierter": {
+   "key": "purierter",
+   "words": [
+    "puriert"
+   ]
+  },
+  "rauchigem": {
+   "key": "rauchigem",
+   "words": [
+    "rauchig"
+   ]
+  },
+  "rauchiges": {
+   "key": "rauchiges",
+   "words": [
+    "rauchig"
+   ]
+  },
+  "recipe_id": {
+   "key": "recipe_id",
+   "words": [
+    "id",
+    "recip"
+   ]
+  },
+  "recipe_title": {
+   "key": "recipe_title",
+   "words": [
+    "recip",
+    "titl"
+   ]
+  },
+  "reis": {
+   "key": "reis",
+   "words": [
+    "rei"
+   ]
+  },
+  "replaced": {
+   "key": "replaced",
+   "words": [
+    "replaced"
+   ]
+  },
+  "rote": {
+   "key": "rote",
+   "words": [
+    "rot"
+   ]
+  },
+  "rote Zwiebel": {
+   "key": "rotezwiebel",
+   "words": [
+    "zwiebel"
+   ]
+  },
+  "rote Zwiebeln": {
+   "key": "rotezwiebeln",
+   "words": [
+    "zwiebel"
+   ]
+  },
+  "roten": {
+   "key": "roten",
+   "words": [
+    "rot"
+   ]
+  },
+  "row": {
+   "key": "row",
+   "words": [
+    "row"
+   ]
+  },
+  "saftiges": {
+   "key": "saftiges",
+   "words": [
+    "saftig"
+   ]
+  },
+  "salzigen": {
+   "key": "salzigen",
+   "words": [
+    "salzig"
+   ]
+  },
+  "same": {
+   "key": "same",
+   "words": [
+    "sam"
+   ]
+  },
+  "samtige": {
+   "key": "samtige",
+   "words": [
+    "samtig"
+   ]
+  },
+  "samtigen": {
+   "key": "samtigen",
+   "words": [
+    "samtig"
+   ]
+  },
+  "sanft": {
+   "key": "sanft",
+   "words": [
+    "sanft"
+   ]
+  },
+  "scharfen": {
+   "key": "scharfen",
+   "words": [
+    "scharf"
+   ]
+  },
+  "schlicht": {
+   "key": "schlicht",
+   "words": [
+    "schlicht"
+   ]
+  },
+  "schmeckt": {
+   "key": "schmeckt",
+   "words": [
+    "schmeckt"
+   ]
+  },
+  "schneller": {
+   "key": "schneller",
+   "words": [
+    "schnell"
+   ]
+  },
+  "schnelles": {
+   "key": "schnelles",
+   "words": [
+    "schnell"
+   ]
+  },
+  "schwarzen": {
+   "key": "schwarzen",
+   "words": [
+    "schwarz"
+   ]
+  },
+  "selbst": {
+   "key": "selbst",
+   "words": [
+    "selbst"
+   ]
+  },
+  "serviert": {
+   "key": "serviert",
+   "words": [
+    "serviert"
+   ]
+  },
+  "sich": {
+   "key": "sich",
+   "words": [
+    "sich"
+   ]
+  },
+  "sowie": {
+   "key": "sowie",
+   "words": [
+    "sowi"
+   ]
+  },
+  "spanische": {
+   "key": "spanische",
+   "words": [
+    "spanisch"
+   ]
+  },
+  "spanisches": {
+   "key": "spanisches",
+   "words": [
+    "spanisch"
+   ]
+  },
+  "substitute": {
+   "key": "substitute",
+   "words": [
+    "substitut"
+   ]
+  },
+  "sättiger": {
+   "key": "sattiger",
+   "words": [
+    "sattig"
+   ]
+  },
+  "säuerlichen": {
+   "key": "sauerlichen",
+   "words": [
+    "sauerlich"
+   ]
+  },
+  "süß": {
+   "key": "suss",
+   "words": [
+    "suss"
+   ]
+  },
+  "süßen": {
+   "key": "sussen",
+   "words": [
+    "suss"
+   ]
+  },
+  "süßer": {
+   "key": "susser",
+   "words": [
+    "suss"
+   ]
+  },
+  "taken": {
+   "key": "taken",
+   "words": [
+    "tak"
+   ]
+  },
+  "teilweise": {
+   "key": "teilweise",
+   "words": [
+    "teilweis"
+   ]
+  },
+  "try": {
+   "key": "try",
+   "words": [
+    "try"
+   ]
+  },
+  "type": {
+   "key": "type",
+   "words": [
+    "typ"
+   ]
+  },
+  "u": {
+   "key": "u",
+   "words": [
+    "u"
+   ]
+  },
+  "und": {
+   "key": "und",
+   "words": [
+    "und"
+   ]
+  },
+  "ungebackene": {
+   "key": "ungebackene",
+   "words": [
+    "ungebacken"
+   ]
+  },
+  "v": {
+   "key": "v",
+   "words": [
+    "v"
+   ]
+  },
+  "values (:n, 'admin', true) returning id": {
+   "key": "valuesreturningid",
+   "words": [
+    "id",
+    "returning",
+    "valu"
+   ]
+  },
+  "vegan": {
+   "key": "vegan",
+   "words": [
+    "vega"
+   ]
+  },
+  "vegane": {
+   "key": "vegane",
+   "words": [
+    "vegan"
+   ]
+  },
+  "veganem": {
+   "key": "veganem",
+   "words": [
+    "vegan"
+   ]
+  },
+  "veganer": {
+   "key": "veganer",
+   "words": [
+    "vegan"
+   ]
+  },
+  "veganes": {
+   "key": "veganes",
+   "words": [
+    "vegan"
+   ]
+  },
+  "vegetarisch": {
+   "key": "vegetarisch",
+   "words": [
+    "vegetarisch"
+   ]
+  },
+  "verfeinert": {
+   "key": "verfeinert",
+   "words": [
+    "verfeinert"
+   ]
+  },
+  "verwendet": {
+   "key": "verwendet",
+   "words": [
+    "verwendet"
+   ]
+  },
+  "von": {
+   "key": "von",
+   "words": [
+    "von"
+   ]
+  },
+  "wahlweise": {
+   "key": "wahlweise",
+   "words": [
+    "wahlweis"
+   ]
+  },
+  "warmen": {
+   "key": "warmen",
+   "words": [
+    "warm"
+   ]
+  },
+  "weich": {
+   "key": "weich",
+   "words": [
+    "weich"
+   ]
+  },
+  "weihnachtlichen": {
+   "key": "weihnachtlichen",
+   "words": [
+    "weihnachtlich"
+   ]
+  },
+  "weisskohl": {
+   "key": "weisskohl",
+   "words": [
+    "weisskohl"
+   ]
+  },
+  "weizen": {
+   "key": "weizen",
+   "words": [
+    "weiz"
+   ]
+  },
+  "wenig": {
+   "key": "wenig",
+   "words": [
+    "wenig"
+   ]
+  },
+  "werden": {
+   "key": "werden",
+   "words": [
+    "werd"
+   ]
+  },
+  "wie": {
+   "key": "wie",
+   "words": [
+    "wie"
+   ]
+  },
+  "wird": {
+   "key": "wird",
+   "words": [
+    "wird"
+   ]
+  },
+  "würzig": {
+   "key": "wurzig",
+   "words": [
+    "wurzig"
+   ]
+  },
+  "würzige": {
+   "key": "wurzige",
+   "words": [
+    "wurzig"
+   ]
+  },
+  "würzigem": {
+   "key": "wurzigem",
+   "words": [
+    "wurzig"
+   ]
+  },
+  "würzigen": {
+   "key": "wurzigen",
+   "words": [
+    "wurzig"
+   ]
+  },
+  "würziger": {
+   "key": "wurziger",
+   "words": [
+    "wurzig"
+   ]
+  },
+  "würziges": {
+   "key": "wurziges",
+   "words": [
+    "wurzig"
+   ]
+  },
+  "xohne y": {
+   "key": "xohney",
+   "words": [
+    "xohn",
+    "y"
+   ]
+  },
+  "z-andere": {
+   "key": "zandere",
+   "words": [
+    "zander"
+   ]
+  },
+  "zartem": {
+   "key": "zartem",
+   "words": [
+    "zart"
+   ]
+  },
+  "zerbröseltem": {
+   "key": "zerbroseltem",
+   "words": [
+    "zerbroselt"
+   ]
+  },
+  "zerdrückten": {
+   "key": "zerdruckten",
+   "words": [
+    "zerdruckt"
+   ]
+  },
+  "zerdrückter": {
+   "key": "zerdruckter",
+   "words": [
+    "zerdruckt"
+   ]
+  },
+  "zerkleinertem": {
+   "key": "zerkleinertem",
+   "words": [
+    "zerkleinert"
+   ]
+  },
+  "ziehen": {
+   "key": "ziehen",
+   "words": [
+    "zieh"
+   ]
+  },
+  "zum": {
+   "key": "zum",
+   "words": [
+    "zum"
+   ]
+  },
+  "zusammen": {
+   "key": "zusammen",
+   "words": [
+    "zusamm"
+   ]
+  },
+  "zwiebel": {
+   "key": "zwiebel",
+   "words": [
+    "zwiebel"
+   ]
+  },
+  "ÄPFEL": {
+   "key": "apfel",
+   "words": [
+    "apfel"
+   ]
+  },
+  "Äpfel": {
+   "key": "apfel",
+   "words": [
+    "apfel"
+   ]
+  },
+  "ÖL MIT KNOBLAUCH": {
+   "key": "olmitknoblauch",
+   "words": [
+    "knoblauch",
+    "ol"
+   ]
+  },
+  "Öl": {
+   "key": "ol",
+   "words": [
+    "ol"
+   ]
+  },
+  "Öl mit Knoblauch": {
+   "key": "olmitknoblauch",
+   "words": [
+    "knoblauch",
+    "ol"
+   ]
+  },
+  "ØL": {
+   "key": "øl",
+   "words": [
+    "l"
+   ]
+  },
+  "Øl": {
+   "key": "øl",
+   "words": [
+    "l"
+   ]
+  },
+  "ÜBERZOGEN": {
+   "key": "uberzogen",
+   "words": [
+    "uberzog"
+   ]
+  },
+  "Über": {
+   "key": "uber",
+   "words": [
+    "uber"
+   ]
+  },
+  "über": {
+   "key": "uber",
+   "words": [
+    "uber"
+   ]
+  },
+  "überbacken": {
+   "key": "uberbacken",
+   "words": [
+    "uberback"
+   ]
+  },
+  "überzogen": {
+   "key": "uberzogen",
+   "words": [
+    "uberzog"
+   ]
+  },
+  "ĳs": {
+   "key": "ijs",
+   "words": [
+    "ijs"
+   ]
+  },
+  "ǄEM": {
+   "key": "dzem",
+   "words": [
+    "dzem"
+   ]
+  },
+  "Ǆem": {
+   "key": "dzem",
+   "words": [
+    "dzem"
+   ]
+  },
+  "ẞ": {
+   "key": "ss",
+   "words": [
+    "ss"
+   ]
+  },
+  "„Fällt mir auf": {
+   "key": "„falltmirauf",
+   "words": [
+    "auf",
+    "fallt",
+    "mir"
+   ]
+  },
+  "„ZWIEBELN": {
+   "key": "„zwiebeln",
+   "words": [
+    "zwiebel"
+   ]
+  },
+  "„Zwiebeln": {
+   "key": "„zwiebeln",
+   "words": [
+    "zwiebel"
+   ]
+  },
+  "寿司": {
+   "key": "寿司",
+   "words": []
+  }
+ }
+}

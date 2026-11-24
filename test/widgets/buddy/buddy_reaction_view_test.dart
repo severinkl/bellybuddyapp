@@ -108,6 +108,24 @@ void main() {
       expect(BuddyCopy.toiletBad, contains(c.bubble));
     });
 
+    testWidgets('says the given line instead, keeps the reaction\'s action', (
+      tester,
+    ) async {
+      await _pumpView(
+        tester,
+        const BuddyReactionView(
+          kind: EntryKind.gutFeeling,
+          sentiment: LogSentiment.good,
+          line: 'Notiert! Noch 4 Tage.',
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 16));
+
+      final c = _controllerOf(tester);
+      expect(c.currentAction, BuddyAction.celebrate);
+      expect(c.bubble, 'Notiert! Noch 4 Tage.');
+    });
+
     const cases = <(EntryKind, LogSentiment, BuddyAction)>[
       (EntryKind.drink, LogSentiment.good, BuddyAction.drink),
       (EntryKind.toilet, LogSentiment.good, BuddyAction.relief),

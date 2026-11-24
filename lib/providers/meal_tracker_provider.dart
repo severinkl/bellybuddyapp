@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/meal_entry.dart';
-import '../models/user_recipe.dart';
+import '../models/meal_prefill.dart';
 import '../providers/core_providers.dart';
 import '../repositories/meal_media_repository.dart';
 import '../utils/date_format_utils.dart';
@@ -76,7 +76,7 @@ class MealTrackerState {
 
   /// This is [recipe] as it was put in, unchanged (title, ingredients and
   /// photo).
-  bool matchesRecipe(UserRecipe recipe) =>
+  bool matchesRecipe(MealPrefill recipe) =>
       title == recipe.title &&
       _listEq(ingredients, recipe.ingredients) &&
       imageBytes == null &&
@@ -145,10 +145,10 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
     );
   }
 
-  /// Pre-fills the tracker from a saved recipe (create-mode only).
+  /// Pre-fills the tracker from a recipe (create-mode only).
   /// Clears any locally-picked image bytes/name so they don't leak into a
   /// subsequent save; sets the recipe's remote image URL instead.
-  void prefillFromRecipe(UserRecipe recipe) {
+  void prefillFromRecipe(MealPrefill recipe) {
     // Always clear the old imageUrl first so that a recipe with no image
     // doesn't retain a previously loaded remote URL.
     state = state.copyWith(

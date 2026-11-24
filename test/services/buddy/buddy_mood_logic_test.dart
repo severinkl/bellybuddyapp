@@ -2,6 +2,7 @@ import 'dart:math';
 
 import 'package:belly_buddy/models/gut_feeling_entry.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
+import 'package:belly_buddy/services/buddy/care_meters.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/buddy/buddy_actions.dart';
 import 'package:belly_buddy/widgets/buddy/buddy_pose.dart';
@@ -16,26 +17,61 @@ void main() {
   DateTime at(int h, [int m = 0]) => DateTime(2026, 11, 22, h, m);
 
   group('deriveBuddyMood', () {
-    test('no logs before 10:00 -> sleepy (boundary 09:59 vs 10:00)', () {
-      expect(deriveBuddyMood(const DailyCare(), at(9, 59)), BuddyMood.sleepy);
-      expect(deriveBuddyMood(const DailyCare(), at(10)), BuddyMood.hungry);
+    test('nothing today: sleepy until 10:00, then hungry', () {
+      expect(deriveBuddyMood(const CareLog(), at(9, 59)), BuddyMood.sleepy);
+      expect(deriveBuddyMood(const CareLog(), at(10)), BuddyMood.hungry);
     });
 
-    test('three kinds -> energetic', () {
-      final care = DailyCare(meals: 1, drinks: 1, toilets: 1, lastLogAt: at(8));
-      expect(deriveBuddyMood(care, at(20)), BuddyMood.energetic);
+    test('every meter at 70 % or more -> energetic', () {
+      final log = CareLog(
+        lastMealAt: at(13, 30),
+        lastDrinkAt: at(13, 30),
+        lastGutFeelingAt: at(8),
+      );
+      expect(deriveBuddyMood(log, at(14)), BuddyMood.energetic);
     });
 
-    test('recent log within 5h -> happy (4h59 vs 5h01)', () {
-      final care = DailyCare(meals: 1, lastLogAt: at(8));
-      expect(deriveBuddyMood(care, at(12, 59)), BuddyMood.happy);
-      expect(deriveBuddyMood(care, at(13, 1)), BuddyMood.hungry);
+    test('the lowest at 35 % or more -> happy; under it by day -> hungry, '
+        'late -> sleepy', () {
+      final log = CareLog(
+        lastMealAt: at(13),
+        lastDrinkAt: at(12),
+        lastGutFeelingAt: at(8),
+      );
+      expect(deriveBuddyMood(log, at(14)), BuddyMood.happy);
+
+      final thirsty = CareLog(
+        lastMealAt: at(13),
+        lastDrinkAt: at(10),
+        lastGutFeelingAt: at(8),
+      );
+      expect(deriveBuddyMood(thirsty, at(14)), BuddyMood.hungry);
+      expect(deriveBuddyMood(thirsty, at(22, 30)), BuddyMood.sleepy);
     });
 
-    test('late night without recent log -> sleepy', () {
-      final care = DailyCare(meals: 1, lastLogAt: at(8));
-      expect(deriveBuddyMood(care, at(22)), BuddyMood.sleepy);
-      expect(deriveBuddyMood(const DailyCare(), at(23)), BuddyMood.sleepy);
+    test('only Klo this morning -> still sleepy', () {
+      expect(
+        deriveBuddyMood(CareLog(lastToiletAt: at(7)), at(8)),
+        BuddyMood.sleepy,
+      );
+    });
+
+    test("yesterday's late drink still counts", () {
+      final log = CareLog(
+        lastDrinkAt: DateTime(2026, 11, 21, 21, 30),
+        lastMealAt: at(7),
+        lastGutFeelingAt: at(7, 15),
+      );
+      expect(deriveBuddyMood(log, at(7, 30)), BuddyMood.energetic);
+    });
+  });
+
+  group('careNeedOf', () {
+    test('each entry kind fills its need', () {
+      expect(careNeedOf(EntryKind.meal), CareNeed.food);
+      expect(careNeedOf(EntryKind.drink), CareNeed.drink);
+      expect(careNeedOf(EntryKind.gutFeeling), CareNeed.gutFeeling);
+      expect(careNeedOf(EntryKind.toilet), CareNeed.toilet);
     });
   });
 

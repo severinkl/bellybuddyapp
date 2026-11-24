@@ -15,6 +15,7 @@ import '../utils/logger.dart';
 import '../utils/retry_helper.dart';
 import 'auth_provider.dart' show CurrentUserRef;
 import 'core_providers.dart';
+import 'today_provider.dart';
 
 /// The Buddy's clock. Day boundaries use its local date; tests override it.
 final buddyTodayProvider = Provider<DateTime Function()>((_) => DateTime.now);
@@ -36,9 +37,18 @@ final buddyClockProvider = Provider<DateTime Function()>(
 /// cause still holds, but `saverUsed` and `saverEarned` (produced only by
 /// the evaluation that saved the change) are gone.
 ///
-/// The streak evaluation produces the first four. The last two are offered
+/// The streak evaluation produces the first four. The others are offered
 /// from outside ([BuddyNotifier.offerAnnouncement], by Home while they
-/// apply): `tipsArrived` once per tip set, `weeklyTipsOffer` once ever.
+/// apply; `buddyOffersProvider`):
+/// - `tipsArrived` once per tip set;
+/// - `weeklyTipsOffer` once ever, off the journey: the weekly tips after the
+///   first patterns;
+/// - `firstTipOffer` once ever, on the journey: day 3's offer of a first
+///   tip;
+/// - `journeyReward` once per journey day (1–6, suffix `day<n>`): the
+///   newest earned day's reward;
+/// - `patternsUnlocked` once ever: the journey's day 7, „Muster frei!";
+/// - `firstTipFailed` once ever: day 3's first tip failed.
 enum BuddyAnnouncement {
   saverUsed,
   streakBroken,
@@ -46,6 +56,10 @@ enum BuddyAnnouncement {
   goalReached,
   tipsArrived,
   weeklyTipsOffer,
+  firstTipOffer,
+  journeyReward,
+  patternsUnlocked,
+  firstTipFailed,
 }
 
 /// The signed-in user's Buddy after today's streak evaluation.
@@ -86,6 +100,16 @@ class BuddyStatus {
   /// once it is shown.
   final Map<BuddyAnnouncement, String> announcementKeys;
 
+  /// The goal the pending [BuddyAnnouncement.goalReached] was announced for
+  /// (its flag's suffix); null while none is pending. A goal picked since
+  /// keeps the announcement's flag but not [state]'s goal.
+  int? get reachedGoal {
+    const marker = '_goalReached_';
+    final key = announcementKeys[BuddyAnnouncement.goalReached];
+    final at = key?.lastIndexOf(marker) ?? -1;
+    return at < 0 ? null : int.tryParse(key!.substring(at + marker.length));
+  }
+
   BuddyStatus copyWith({
     List<BuddyAnnouncement>? announcements,
     Map<BuddyAnnouncement, String>? announcementKeys,
@@ -101,7 +125,9 @@ class BuddyStatus {
 }
 
 /// Loads the Buddy, evaluates the streak (savers, refunds, milestones, goal),
-/// persists the result and exposes it; `null` while signed out.
+/// persists the result and exposes it; `null` while signed out. A new day
+/// ([todayProvider]) evaluates it again, watched or not: whether today
+/// counts and the streak are the day's (a tracker reads them as it logs).
 class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
   static const _log = AppLogger('BuddyProvider');
 
@@ -129,6 +155,8 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
   Future<BuddyStatus?> build() async {
     final userId = ref.watch(currentUserIdProvider);
     if (userId == null) return null;
+    // Logged by refresh.
+    ref.listen(todayProvider, (_, _) => refresh().ignore());
     try {
       final status = await _serialized(() => _sync(userId));
       return _withPending(userId, status);
@@ -261,8 +289,9 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
   /// nothing while signed out or without a status, when the user changed
   /// meanwhile, when the flag is set or was marked shown this session, or
   /// when the same flag is already pending. [kind] pending with another
-  /// suffix keeps its place and takes the new flag (a newer tip set).
-  /// Never throws; flags that can't be read queue it anyway.
+  /// suffix keeps its place and takes the new flag (a newer tip set, a
+  /// newer journey day). Never throws; flags that can't be read queue it
+  /// anyway.
   Future<void> offerAnnouncement(
     BuddyAnnouncement kind, {
     required String suffix,

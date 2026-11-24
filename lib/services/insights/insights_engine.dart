@@ -1,10 +1,14 @@
+import 'dart:math' as math;
+
 import '../../models/gut_feeling_entry.dart';
 import '../../models/insight_progress.dart';
 import '../../models/insight_rules.dart';
 import '../../models/insight_source.dart';
 import '../../models/insights.dart';
 import '../../utils/date_format_utils.dart';
+import '../../utils/german_list.dart';
 import '../../utils/gut_feeling_rating.dart';
+import '../../utils/ingredient_key.dart';
 
 /// What the last [InsightRules.windowDays] local days of [source] show,
 /// as of [now]; every threshold comes from [InsightRules].
@@ -21,6 +25,12 @@ import '../../utils/gut_feeling_rating.dart';
 ///   entry of that class (`[anchor − 24 h, anchor)`) say which ingredients
 ///   were there. Names match trimmed and case-insensitively, and each
 ///   ingredient counts once per day.
+/// - The calm-day ingredients are those of every meal on a window day
+///   without an entry that is „Schlecht" on its own (days without entries
+///   count).
+///
+/// The journey holds the latest [InsightRules.daysNeeded] days with any
+/// entry, from the same active-day set as the progress.
 ///
 /// Pure: no I/O and no clock.
 Insights computeInsights(InsightSource source, DateTime now) {
@@ -67,6 +77,17 @@ Insights computeInsights(InsightSource source, DateTime now) {
   final hardCounts = _daysThere(meals, hardAnchors);
   final goodCounts = _daysThere(meals, goodAnchors);
 
+  final hardEntryDays = {
+    for (final e in gutFeelings)
+      if (_entryClassOf(e) == DayClass.hard) _localDay(e.trackedAt),
+  };
+  final calmDayIngredients = {
+    for (final m in meals)
+      if (inWindow(m.trackedAt) &&
+          !hardEntryDays.contains(_localDay(m.trackedAt)))
+        ...m.spellings.keys,
+  };
+
   final hardDays = _column(hardCounts, hardAnchors.length, names);
   final goodDays = _column(goodCounts, goodAnchors.length, names);
   final noticed = _noticed(
@@ -77,12 +98,18 @@ Insights computeInsights(InsightSource source, DateTime now) {
     names: names,
   );
 
+  final activeDays = {
+    for (final t in source.activityTimes)
+      if (inWindow(t)) _localDay(t),
+  };
+  final sortedDays = activeDays.toList()..sort();
+  final journeyDays = sortedDays.skip(
+    math.max(0, sortedDays.length - InsightRules.daysNeeded),
+  );
+
   return Insights(
     progress: InsightProgress(
-      activeDays: {
-        for (final t in source.activityTimes)
-          if (inWindow(t)) _localDay(t),
-      }.length,
+      activeDays: activeDays.length,
       gutFeelingEntries: gutFeelings.length,
     ),
     calendar: List.unmodifiable(calendar),
@@ -90,6 +117,11 @@ Insights computeInsights(InsightSource source, DateTime now) {
     hardDays: hardDays,
     noticed: List.unmodifiable(noticed),
     pick: _pick(noticed, goodDays),
+    journey: List.unmodifiable([
+      for (final day in journeyDays)
+        JourneyDay(day, gutFeeling: entriesByDay.containsKey(day)),
+    ]),
+    calmDayIngredients: Set.unmodifiable(calmDayIngredients),
   );
 }
 
@@ -138,18 +170,16 @@ class _Meal {
   factory _Meal.of(InsightMeal meal) {
     final spellings = <String, String>{};
     for (final raw in meal.ingredients) {
-      final name = raw.trim();
-      if (name.isNotEmpty) {
-        spellings.putIfAbsent(name.toLowerCase(), () => name);
-      }
+      final key = ingredientKey(raw);
+      if (key.isNotEmpty) spellings.putIfAbsent(key, raw.trim);
     }
     return _Meal(meal.trackedAt, spellings);
   }
 
   final DateTime trackedAt;
 
-  /// The trimmed spelling per ingredient key (trimmed, lower case); one
-  /// entry per key, so a meal never counts an ingredient twice.
+  /// The trimmed spelling per [ingredientKey]; one entry per key, so a
+  /// meal never counts an ingredient twice.
   final Map<String, String> spellings;
 }
 
@@ -270,21 +300,6 @@ bool _reaches(int count, int of, InsightShare share) =>
     count * share.denominator >= of * share.numerator;
 
 /// The higher of [a] and [b] first, then by key (the name without case) in
-/// German order ([_germanOrder]).
+/// German order ([germanOrder]).
 int _higherFirstThenName(int a, int b, String keyA, String keyB) =>
-    a != b ? b - a : _germanOrder(keyA, keyB);
-
-/// Lower-case keys in German dictionary order (DIN 5007-1): ä, ö, ü as a,
-/// o, u and ß as ss, so „Äpfel" sorts with the A's, not after „Zwiebel".
-/// Keys equal that way (e.g. „masse", „maße") fall back to their code
-/// units, so the order stays total and the same whatever the input order.
-int _germanOrder(String keyA, String keyB) {
-  final folded = _foldUmlauts(keyA).compareTo(_foldUmlauts(keyB));
-  return folded != 0 ? folded : keyA.compareTo(keyB);
-}
-
-String _foldUmlauts(String key) => key
-    .replaceAll('ä', 'a')
-    .replaceAll('ö', 'o')
-    .replaceAll('ü', 'u')
-    .replaceAll('ß', 'ss');
+    a != b ? b - a : germanOrder(keyA, keyB);

@@ -45,6 +45,8 @@ Insights _with(
   DayColumn? hardDays,
   List<Noticed>? noticed,
   InsightPick? pick,
+  List<JourneyDay>? journey,
+  Set<String>? calmDayIngredients,
 }) => Insights(
   progress: progress ?? i.progress,
   calendar: calendar ?? i.calendar,
@@ -52,6 +54,8 @@ Insights _with(
   hardDays: hardDays ?? i.hardDays,
   noticed: noticed ?? i.noticed,
   pick: pick ?? i.pick,
+  journey: journey ?? i.journey,
+  calmDayIngredients: calmDayIngredients ?? i.calmDayIngredients,
 );
 
 void main() {
@@ -63,6 +67,7 @@ void main() {
     expect(insights.hardDays.often, isNotEmpty);
     expect(insights.noticed, isNotEmpty);
     expect(insights.pick, isA<NoticedPick>());
+    expect(insights.calmDayIngredients, {'reis'});
   });
 
   test('„Fällt mir auf" shows from the minimum of hard days on', () {
@@ -116,9 +121,25 @@ void main() {
       ),
       'what I noticed': _with(insights, noticed: const []),
       'the pick': _with(insights, pick: const NothingYetPick()),
+      'the journey': _with(
+        insights,
+        journey: [JourneyDay(DateTime(2026, 11, 23), gutFeeling: true)],
+      ),
+      'the calm-day ingredients': _with(
+        insights,
+        calmDayIngredients: {'reis', 'zwiebel'},
+      ),
     };
     for (final MapEntry(key: part, value: changed) in variants.entries) {
       expect(changed, isNot(insights), reason: part);
     }
+  });
+
+  test('calm-day ingredients compare as a set', () {
+    final ab = _with(insights, calmDayIngredients: {'a', 'b'});
+    final ba = _with(insights, calmDayIngredients: {'b', 'a'});
+
+    expect(ab, ba);
+    expect(ab.hashCode, ba.hashCode);
   });
 }

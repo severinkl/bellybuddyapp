@@ -1,10 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/meal_entry.dart';
 import '../models/toilet_entry.dart';
 import '../models/gut_feeling_entry.dart';
 import '../models/drink_entry.dart';
+import '../providers/buddy_provider.dart';
 import '../providers/core_providers.dart';
 import '../repositories/entry_repository.dart';
+import '../services/entry_query_service.dart';
 import '../utils/date_format_utils.dart';
 import '../utils/logger.dart';
 import '../utils/wall_clock.dart';
@@ -19,6 +23,10 @@ class EntriesState {
   final bool isLoading;
   final Object? error;
 
+  /// The latest meal, drink and Bauchgefühl before [day]; the Buddy's
+  /// meters reach back over midnight with them.
+  final LatestEntries latestBefore;
+
   /// The local day (its midnight) loaded last, set as its load starts;
   /// null until the first load.
   final DateTime? day;
@@ -30,6 +38,7 @@ class EntriesState {
     this.drinks = const [],
     this.isLoading = false,
     this.error,
+    this.latestBefore = const LatestEntries(),
     this.day,
   });
 
@@ -40,6 +49,7 @@ class EntriesState {
     List<DrinkEntry>? drinks,
     bool? isLoading,
     Object? error,
+    LatestEntries? latestBefore,
     DateTime? day,
   }) {
     return EntriesState(
@@ -49,6 +59,7 @@ class EntriesState {
       drinks: drinks ?? this.drinks,
       isLoading: isLoading ?? this.isLoading,
       error: error,
+      latestBefore: latestBefore ?? this.latestBefore,
       day: day ?? this.day,
     );
   }
@@ -63,17 +74,38 @@ class EntriesNotifier extends Notifier<EntriesState> {
   /// Counts loads (and resets); only the latest load publishes its result.
   int _load = 0;
 
+  /// The day whose [EntriesState.latestBefore] the state holds; null while
+  /// it holds none (none loaded yet, or the query failed for another day).
+  DateTime? _latestDay;
+
+  /// Whether the state's [EntriesState.latestBefore] is known to be
+  /// current; false after a failed query, a write that may have changed
+  /// it, or a pull to refresh, so the next load fetches it again.
+  bool _latestCurrent = false;
+
   @override
   EntriesState build() {
     _load++;
+    _forgetLatest();
     return const EntriesState();
   }
 
+  void _forgetLatest() {
+    _latestDay = null;
+    _latestCurrent = false;
+  }
+
   /// Loads the entries of [date]'s local day ([EntriesState.day]). A load
-  /// started meanwhile supersedes this one.
-  Future<void> loadEntries(DateTime date) async {
+  /// started meanwhile supersedes this one. The latest entries before the
+  /// day are fetched again only when they can have changed: for another
+  /// day, after a write that may change them or a failed query, or with
+  /// [refreshLatest] (pull to refresh). When that query fails, the same
+  /// day's stay; another day's are dropped.
+  Future<void> loadEntries(DateTime date, {bool refreshLatest = false}) async {
     final load = ++_load;
-    state = state.copyWith(isLoading: true, error: null, day: startOfDay(date));
+    final day = startOfDay(date);
+    if (refreshLatest) _latestCurrent = false;
+    state = state.copyWith(isLoading: true, error: null, day: day);
     try {
       final userId = ref.read(currentUserIdProvider);
       if (userId == null) {
@@ -81,16 +113,41 @@ class EntriesNotifier extends Notifier<EntriesState> {
         return;
       }
 
-      final result = await ref
-          .read(entryRepositoryProvider)
-          .fetchForDate(userId: userId, date: date, ordered: true);
+      final repo = ref.read(entryRepositoryProvider);
+      // Both start now. The day's error is the load's error, so the pair is
+      // not awaited as one ((a, b).wait would wrap it).
+      final dayFuture = repo.fetchForDate(
+        userId: userId,
+        date: date,
+        ordered: true,
+      );
+      final latestFuture = _latestCurrent && _latestDay == day
+          ? null
+          : _fetchLatestBefore(repo, userId, day);
+      final result = await dayFuture;
+      final fetched = await latestFuture;
       if (!_isLatest(load)) return;
 
+      // Null keeps the state's.
+      LatestEntries? latestBefore;
+      if (fetched != null) {
+        latestBefore = fetched;
+        _latestDay = day;
+        _latestCurrent = true;
+      } else if (latestFuture != null) {
+        // The query failed: tried again with the next load.
+        _latestCurrent = false;
+        if (_latestDay != day) {
+          _latestDay = null;
+          latestBefore = const LatestEntries();
+        }
+      }
       state = state.copyWith(
         meals: result.meals,
         toiletEntries: result.toiletEntries,
         gutFeelings: result.gutFeelings,
         drinks: result.drinks,
+        latestBefore: latestBefore,
         isLoading: false,
       );
     } catch (e, st) {
@@ -100,15 +157,45 @@ class EntriesNotifier extends Notifier<EntriesState> {
     }
   }
 
+  /// The latest entries before [before]; a failing query gives null, so
+  /// the day itself still loads.
+  Future<LatestEntries?> _fetchLatestBefore(
+    EntryRepository repo,
+    String userId,
+    DateTime before,
+  ) async {
+    try {
+      return await repo.fetchLatestBefore(userId: userId, before: before);
+    } catch (_) {
+      // Logged by the query service.
+      return null;
+    }
+  }
+
   bool _isLatest(int load) => ref.mounted && load == _load;
 
   /// Runs [write], announces it ([entriesRevisionProvider]), then reloads
   /// the loaded day in the background so the state shows it. Before the
   /// first load there is nothing to reload.
-  Future<void> _write(Future<void> Function() write) async {
+  ///
+  /// With [refreshesBuddy] (an edit, a move or a delete) a loaded Buddy
+  /// reloads too: the write can change his streak or whether today counts
+  /// (today's only entry deleted). An insert needs none of it; a tracker's
+  /// log event already refreshes him. Such a write, or one that [movesLatest]
+  /// (an insert dated before the loaded day), also fetches the latest
+  /// entries before the day again.
+  Future<void> _write(
+    Future<void> Function() write, {
+    bool refreshesBuddy = false,
+    bool movesLatest = false,
+  }) async {
     await write();
     if (!ref.mounted) return;
+    if (refreshesBuddy || movesLatest) _latestCurrent = false;
     ref.read(entriesRevisionProvider.notifier)._bump();
+    if (refreshesBuddy && ref.read(buddyProvider.exists)) {
+      unawaited(ref.read(buddyProvider.notifier).reload());
+    }
     final day = state.day;
     // A failing reload is logged by loadEntries; the write itself is done.
     if (day != null) loadEntries(day).ignore();
@@ -118,16 +205,27 @@ class EntriesNotifier extends Notifier<EntriesState> {
 
   Future<void> _insert(String type, Map<String, dynamic> data) {
     final userId = ref.read(currentUserIdProvider)!;
+    final day = state.day;
+    final trackedAt = data['tracked_at'];
     return _write(
       () => _repo.insertEntry(entryTableFor[type]!, data, userId: userId),
+      movesLatest:
+          day != null &&
+          trackedAt is String &&
+          wallClockFromWire(trackedAt).isBefore(day),
     );
   }
 
   Future<void> _update(String type, String id, Map<String, dynamic> data) =>
-      _write(() => _repo.updateEntry(entryTableFor[type]!, id, data));
+      _write(
+        () => _repo.updateEntry(entryTableFor[type]!, id, data),
+        refreshesBuddy: true,
+      );
 
-  Future<void> _delete(String type, String id) =>
-      _write(() => _repo.deleteEntry(entryTableFor[type]!, id));
+  Future<void> _delete(String type, String id) => _write(
+    () => _repo.deleteEntry(entryTableFor[type]!, id),
+    refreshesBuddy: true,
+  );
 
   // -- Meal CRUD --
 
@@ -171,7 +269,7 @@ class EntriesNotifier extends Notifier<EntriesState> {
   // -- Generic delete by type (used by diary) --
 
   Future<void> deleteByType(String type, String id) =>
-      _write(() => _repo.deleteByType(type, id));
+      _write(() => _repo.deleteByType(type, id), refreshesBuddy: true);
 
   // -- Typed update by ID (used by diary detail sheets) --
   // A non-null [trackedAt] moves the entry to that date and time.
@@ -228,6 +326,7 @@ class EntriesNotifier extends Notifier<EntriesState> {
 
   void reset() {
     _load++;
+    _forgetLatest();
     state = const EntriesState();
   }
 }

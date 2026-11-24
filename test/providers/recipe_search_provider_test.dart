@@ -186,4 +186,19 @@ void main() {
     expect(container.read(picker.notifier).activeQuery, isNull);
     expect(container.read(picker).value, all);
   });
+
+  group('titleMatches', () {
+    test('every word starts a title word, any order and case', () {
+      expect(titleMatches('Curry mit Reis', 'Reis Curry'), isTrue);
+      expect(titleMatches('Curry mit Reis', '  CUR  re '), isTrue);
+      expect(titleMatches('Möhren-Suppe', 'suppe möh'), isTrue);
+      expect(titleMatches('Curry mit Reis', 'urry'), isFalse);
+      expect(titleMatches('Curry mit Reis', 'Curry Nudeln'), isFalse);
+    });
+
+    test('a blank query, or one of signs only, matches', () {
+      expect(titleMatches('Curry', ''), isTrue);
+      expect(titleMatches('Curry', ' !! '), isTrue);
+    });
+  });
 }

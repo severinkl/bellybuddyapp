@@ -6,27 +6,38 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../config/constants.dart';
 import '../../../providers/buddy_events_provider.dart';
 import '../../../providers/buddy_offers_provider.dart';
 import '../../../providers/buddy_provider.dart';
 import '../../../providers/buddy_welcome_provider.dart';
-import '../../../providers/daily_care_provider.dart';
+import '../../../providers/care_log_provider.dart';
 import '../../../providers/entries_provider.dart';
+import '../../../providers/home_cover_provider.dart';
+import '../../../providers/journey_provider.dart';
+import '../../../providers/journey_rewards_provider.dart';
+import '../../../providers/profile_provider.dart';
 import '../../../providers/today_provider.dart';
 import '../../../router/route_names.dart';
 import '../../../router/tracker_routes.dart';
 import '../../../services/buddy/buddy_copy.dart';
 import '../../../services/buddy/buddy_mood_logic.dart';
+import '../../../services/buddy/care_now.dart';
 import '../../../services/buddy/daily_care.dart';
+import '../../../services/journey/journey_copy.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/logger.dart';
+import '../../../utils/url_utils.dart';
 import '../../../widgets/buddy/buddy.dart';
 import '../../../widgets/buddy/streak_chip.dart';
 import '../../../widgets/common/bb_button.dart';
+import '../../../widgets/common/weekly_tips_switch.dart';
 import '../../buddy/streak_goal_picker.dart';
 import 'care_ring.dart';
+import 'journey_reward_actions.dart';
+import 'journey_day_sheet.dart';
 import 'streak_sheet.dart';
 import 'tutorial/tutorial_keys.dart';
 import 'weekly_tips_offer_sheet.dart';
@@ -41,14 +52,19 @@ enum _Cue {
   saverEarned(BuddyAnnouncement.saverEarned),
   goalReached(BuddyAnnouncement.goalReached, endsInSheet: true),
   tipsArrived(BuddyAnnouncement.tipsArrived),
-  weeklyTipsOffer(BuddyAnnouncement.weeklyTipsOffer, endsInSheet: true);
+  weeklyTipsOffer(BuddyAnnouncement.weeklyTipsOffer, endsInSheet: true),
+  firstTipOffer(BuddyAnnouncement.firstTipOffer, endsInSheet: true),
+  journeyReward(BuddyAnnouncement.journeyReward, endsInSheet: true),
+  patternsUnlocked(BuddyAnnouncement.patternsUnlocked, endsInSheet: true),
+  firstTipFailed(BuddyAnnouncement.firstTipFailed);
 
   const _Cue(this.announcement, {this.endsInSheet = false});
 
   /// The announcement this cue plays, if any.
   final BuddyAnnouncement? announcement;
 
-  /// Whether the cue ends in a sheet (the new goal, the weekly-tips offer).
+  /// Whether the cue ends in a sheet or page (the new goal, the weekly-tips
+  /// or first-tip offer, a day's reward, „Muster frei!").
   final bool endsInSheet;
 }
 
@@ -59,26 +75,39 @@ _Cue _cueFor(BuddyAnnouncement a) => switch (a) {
   BuddyAnnouncement.goalReached => _Cue.goalReached,
   BuddyAnnouncement.tipsArrived => _Cue.tipsArrived,
   BuddyAnnouncement.weeklyTipsOffer => _Cue.weeklyTipsOffer,
+  BuddyAnnouncement.firstTipOffer => _Cue.firstTipOffer,
+  BuddyAnnouncement.journeyReward => _Cue.journeyReward,
+  BuddyAnnouncement.patternsUnlocked => _Cue.patternsUnlocked,
+  BuddyAnnouncement.firstTipFailed => _Cue.firstTipFailed,
 };
 
 /// The Buddy at the top of the dashboard: the streak chip (opens „Dein
 /// Streak"), his speech bubble, the Buddy inside the [CareRing] of his four
-/// daily needs (tapping a need's bubble opens its tracker; tapping the
-/// Buddy makes him talk), and a button that opens the tracker for the next
-/// thing to log ([nextCareAction]).
+/// needs (tapping a need's bubble opens its tracker; tapping the Buddy
+/// makes him talk), and a button that opens the tracker for the next thing
+/// to log ([nextCareAction]).
 ///
-/// The mood follows today's entries (re-derived on every change and every
-/// minute); his resting line names what he needs next ([BuddyCopy.care]),
-/// except while empathetic, in love, asleep or at night. Every write
-/// reloads [entriesProvider]; the hero moves it on to the new day when the
-/// day changes ([todayProvider]), and the ring shows its day. Everything it
-/// says waits until it is visible (`TickerMode` on, i.e. the dashboard is
-/// not under the splash or covered by another route or tab): the first
-/// line, the follow-up to a fresh [BuddyLogEvent] and the Buddy's
-/// announcements. Without a Buddy status (loading, error, signed out) the
-/// Buddy still shows, named 'Buddy', without the streak chip.
+/// The need meters, his mood and the next action follow [careNowProvider]
+/// (when each need was last logged, seen from the current minute); a new
+/// mood or next action gets his resting line, which names what he needs
+/// next ([BuddyCopy.care]), except while empathetic, in love, asleep or at
+/// night. Every write reloads [entriesProvider]; the hero moves it on to
+/// the new day when the day changes ([todayProvider]), and the meters
+/// carry over (the new day's load brings the latest entries before it).
+/// Everything it says waits until it is visible (`TickerMode` on, i.e. the
+/// dashboard is not under the splash or covered by another route or tab):
+/// the first line, the follow-up to a fresh [BuddyLogEvent] and the
+/// Buddy's announcements. His cues and their sheets also wait while Home is
+/// covered ([homeCoveredProvider]: a page over it or on its way in, a
+/// sheet, dialog or menu over it, another tab); the hero tells it whether
+/// Home's route is on top ([_onRoute]).
+/// Without a Buddy status (loading, error, signed out) the Buddy still
+/// shows, named 'Buddy', without the streak chip.
 class BuddyHero extends ConsumerStatefulWidget {
-  const BuddyHero({super.key});
+  const BuddyHero({super.key, this.openUrl = launchUrl});
+
+  /// Opens day 2's article (a reward); tests record it.
+  final UrlOpener openUrl;
 
   /// The next-action button under the ring.
   static const actionKey = Key('buddy_hero_next_action');
@@ -97,7 +126,6 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// The follow-up waits at most this long for the Buddy refresh the log
   /// started, so "Danke! 🔥" sees the new streak on a slow connection.
   static const _refreshWait = Duration(seconds: 3);
-  static const _moodInterval = Duration(minutes: 1);
 
   /// How long a follow-up or announcement line stays up; the next cue waits
   /// for it.
@@ -112,23 +140,13 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   late final BuddyController _buddy;
 
-  late final AppLifecycleListener _lifecycle;
   final math.Random _rnd = math.Random();
-  Timer? _moodTimer;
 
-  /// Today's care, derived from the loaded day's entries (see
-  /// [_deriveCare]): re-derived on every change of it, every minute and
-  /// on resume. The ring, his mood and the next action all follow it.
-  late DailyCare _care;
-  late DateTime _careAt;
+  /// His needs right now: the meters, his mood from them and the next
+  /// action.
+  CareNow get _care => ref.read(careNowProvider);
 
-  /// Mood derived from today's entries.
-  BuddyMood get _careMood => deriveBuddyMood(_care, _careAt);
-
-  /// What he needs next, from today's entries and the time of day.
-  CareAction get _careAction => nextCareAction(_care, _careAt);
-
-  /// Temporary mood on top of [_careMood] (empathetic after a bad log for
+  /// Temporary mood on top of [_care]'s (empathetic after a bad log for
   /// this dashboard visit, in love while celebrating a reached goal).
   BuddyMood? _override;
 
@@ -165,10 +183,12 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// for it instead ([BuddyCopy.careAfterLog]).
   static const _thirstPause = Duration(minutes: 30);
 
-  /// Whether a drink was logged, or taken, within [_thirstPause] of [now].
-  bool _justDrank(DateTime now) => [_drinkLoggedAt, _care.lastDrinkAt].any(
-    (t) => t != null && !t.isAfter(now) && now.difference(t) < _thirstPause,
-  );
+  /// Whether a drink was logged here within [_thirstPause] of [now]. (One
+  /// taken that recently fills Trinken, so it never asks for a drink.)
+  bool _justDrank(DateTime now) {
+    final at = _drinkLoggedAt;
+    return at != null && !at.isAfter(now) && now.difference(at) < _thirstPause;
+  }
 
   /// The line he said last; a pool never repeats it right away (a few taps
   /// in a row each get another line).
@@ -185,17 +205,22 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// `TickerMode` of the hero (false until the first dependency update).
   bool _visible = false;
 
-  /// A cue's sheet (the new goal, the weekly-tips offer) that came due
-  /// while the hero was hidden (or, the offer, while „Dein Streak" was
-  /// open); shown once visible (once it has closed).
+  /// A cue's sheet or page (the new goal, the weekly-tips offer, a day's
+  /// reward, „Muster frei!") that came due while the hero was hidden or
+  /// Home was covered ([homeCoveredProvider]); shown once Home is free
+  /// again ([_resume]).
   Future<void> Function()? _deferredSheet;
 
-  /// A cue that ends in a sheet is on stage (a reached goal's celebration,
-  /// the weekly-tips offer's wave): from its start until its sheet closed.
+  /// A cue that ends in a sheet or page is on stage (a celebration before
+  /// it, the weekly-tips offer's wave): from its start until it closed.
   bool get _sheetCueOnStage => _playing?.endsInSheet ?? false;
 
-  /// The StreakChip's „Dein Streak" sheet is open.
-  bool _chipSheetOpen = false;
+  /// Whether his cues and their sheets may play: the hero is visible and
+  /// nothing covers Home ([homeCoveredProvider]).
+  bool get _homeFree => _visible && !ref.read(homeCoveredProvider);
+
+  /// The router whose top route [_onRoute] follows.
+  GoRouter? _router;
 
   /// The local day for which "today counted" was already thanked for or
   /// known before a log, so "Danke! 🔥 …" is said once per day.
@@ -206,18 +231,8 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   @override
   void initState() {
     super.initState();
-    _deriveCare();
-    _buddy = BuddyController(mood: _careMood);
-    // Hidden, the hero skips the minute ticks; it catches up once visible.
-    _moodTimer = Timer.periodic(_moodInterval, (_) {
-      if (_visible) _updateCare();
-    });
-    _lifecycle = AppLifecycleListener(onResume: _onResume);
-    // The care itself, not the entries it derives from: a listener of
-    // entriesProvider that reads dailyCareProvider can get its previous
-    // value (dependents are told in subscription order), which left the
-    // ring on an empty day after a load until the next minute tick.
-    ref.listenManual(dailyCareProvider, (_, _) => _updateCare());
+    _buddy = BuddyController(mood: _care.mood);
+    ref.listenManual(careNowProvider, _onCare);
     ref.listenManual(todayProvider, (_, _) => _followDay());
     ref.listenManual(buddyEventsProvider, (_, event) {
       if (event != null) _afterFrame(_consumeEvent);
@@ -227,22 +242,29 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       (_, next) => _onStatus(next),
       fireImmediately: true,
     );
+    ref.listenManual(homeCoveredProvider, (_, covered) {
+      if (!covered) _afterFrame(_resume);
+    });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final router = GoRouter.maybeOf(context);
+    if (router != _router) {
+      _router?.routerDelegate.removeListener(_onRoute);
+      _router = router?..routerDelegate.addListener(_onRoute);
+      _onRoute();
+    }
     final visible = TickerMode.valuesOf(context).enabled;
     if (visible == _visible) return;
     _visible = visible;
     if (visible) {
       _afterFrame(() {
-        // What changed while hidden was never said; it isn't now either.
-        _updateCare(speak: false);
         _consumeEvent();
         _takeAnnouncements();
         _maybeGreet();
-        _showDeferredSheet();
+        _resume();
       });
     } else if (_override == BuddyMood.empathetic) {
       // Leaving the dashboard ends this visit's empathy.
@@ -252,12 +274,27 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   @override
   void dispose() {
-    _moodTimer?.cancel();
+    _router?.routerDelegate.removeListener(_onRoute);
     _cueTimer?.cancel();
-    _lifecycle.dispose();
     _buddy.dispose();
     super.dispose();
   }
+
+  /// The router moved: whether Home's route is on top
+  /// ([HomeCoverNotifier.homeCurrent]). Any page pushed over Home covers it
+  /// from the push on, before it is built, so what goes on right after
+  /// waits; so does another tab. Popped or replaced (a `go` to Home, also
+  /// on its way in), Home is free again. Without a router Home is on top.
+  void _onRoute() => outsideBuild(() {
+    if (!mounted) return;
+    ref
+        .read(homeCoveredProvider.notifier)
+        .homeCurrent(_router == null || _topLocation == RoutePaths.dashboard);
+  });
+
+  /// The path of the router's top route.
+  String? get _topLocation =>
+      _router?.routerDelegate.currentConfiguration.lastOrNull?.matchedLocation;
 
   /// Runs [fn] only while the hero is visible: nothing is said or played
   /// while the dashboard is hidden.
@@ -274,18 +311,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     SchedulerBinding.instance.ensureVisualUpdate();
   }
 
-  void _onResume() {
-    _updateCare();
-    _afterFrame(_consumeEvent);
-  }
-
   // --- Mood -----------------------------------------------------------------
-
-  /// The care of the loaded day ([dailyCareProvider]), at [_careAt].
-  void _deriveCare() {
-    _careAt = _now();
-    _care = ref.read(dailyCareProvider);
-  }
 
   /// A new day: once the loaded day is over, loads the new one for the
   /// ring. After the frame, where provider writes are always allowed.
@@ -301,19 +327,14 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     });
   }
 
-  /// Re-derives today's care; a new mood or next action gets its line,
-  /// unless not to [speak].
-  void _updateCare({bool speak = true}) {
-    if (!mounted) return;
-    final (care, mood, action) = (_care, _careMood, _careAction);
-    _deriveCare();
-    final moodChanged = _careMood != mood;
-    final actionChanged = _careAction != action;
-    // The ring, its glow and the button follow the entries and the clock.
-    if (_care != care || actionChanged) setState(() {});
-    if (!moodChanged && !actionChanged) return;
+  /// His needs moved on (a log, the clock): a new mood or next action gets
+  /// its line. Hidden, he says nothing, and what changed meanwhile is never
+  /// said ([_sayMoodLine]).
+  void _onCare(CareNow? previous, CareNow next) {
+    final moodChanged = previous?.mood != next.mood;
+    if (!moodChanged && previous?.action == next.action) return;
     if (moodChanged) _applyMood();
-    if (speak && _override == null) _sayMoodLine();
+    if (_override == null) _sayMoodLine();
   }
 
   void _setOverride(BuddyMood? mood) {
@@ -321,7 +342,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _applyMood();
   }
 
-  void _applyMood() => _buddy.mood = _override ?? _careMood;
+  void _applyMood() => _buddy.mood = _override ?? _care.mood;
 
   /// His resting line: what he needs next by day, else the [mood]'s line
   /// (empathetic, in love, asleep, or at night); never the line he just
@@ -335,7 +356,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     final byDay = DayParts.isDay(now);
     const moodOnly = {BuddyMood.empathetic, BuddyMood.inLove, BuddyMood.asleep};
     if (byDay && !moodOnly.contains(mood)) {
-      final action = _careAction;
+      final action = _care.action;
       final moreOfTheSame =
           (justLogged != null && justLogged == action.need) ||
           (action == CareAction.drink && _justDrank(now));
@@ -450,7 +471,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       _setOverride(BuddyMood.empathetic);
     }
     _logRefresh = events.lastRefresh;
-    _loggedNeed = _needOf(event.kind);
+    _loggedNeed = careNeedOf(event.kind);
     if (event.kind == EntryKind.drink) _drinkLoggedAt = event.at;
     if (!_followUpPending) {
       _followUpPending = true;
@@ -500,13 +521,6 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _loggedNeed = null;
   }
 
-  static CareNeed _needOf(EntryKind kind) => switch (kind) {
-    EntryKind.meal => CareNeed.food,
-    EntryKind.drink => CareNeed.drink,
-    EntryKind.gutFeeling => CareNeed.gutFeeling,
-    EntryKind.toilet => CareNeed.toilet,
-  };
-
   // --- Cue queue --------------------------------------------------------------
 
   void _say(String line) => _speak(line, duration: _cueLineDuration);
@@ -532,6 +546,11 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       // greeting they replaced is still due.
       if (!_cuePlayed) _sayMoodLine();
       _cuePlayed = false;
+      return;
+    }
+    if (!_homeFree) {
+      // Goes on once Home is free again ([_resume]).
+      _cueRunning = false;
       return;
     }
     _cueRunning = true;
@@ -561,30 +580,54 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
         _say(_saverEarnedLine);
         _holdStage();
       case _Cue.goalReached:
-        _buddy.play(BuddyAction.celebrate);
+        _playThen(BuddyAction.celebrate, _askForNewGoal);
         _setOverride(BuddyMood.inLove);
-        _cueTimer = Timer(
-          buddyActionDuration(BuddyAction.celebrate),
-          () => unawaited(_askForNewGoal()),
-        );
       case _Cue.tipsArrived:
         _buddy.play(BuddyAction.celebrate);
         _say(_tipsArrivedLine);
         _holdStage();
       case _Cue.weeklyTipsOffer:
-        _buddy.play(BuddyAction.wave);
-        _cueTimer = Timer(
-          buddyActionDuration(BuddyAction.wave),
-          () => unawaited(_offerWeeklyTips()),
+        _playThen(BuddyAction.wave, _offerWeeklyTips);
+      case _Cue.firstTipOffer:
+        _playThen(BuddyAction.wave, _offerFirstTip);
+      case _Cue.journeyReward:
+        _playThen(BuddyAction.celebrate, _showJourneyReward);
+      case _Cue.patternsUnlocked:
+        _playThen(BuddyAction.celebrate, _openPatternsUnlocked);
+      case _Cue.firstTipFailed:
+        _say(
+          JourneyCopy.firstTipFailed(
+            weeklyTipsOn: ref.read(weeklyTipsEnabledProvider) == true,
+          ),
         );
+        _holdStage();
     }
   }
 
+  /// Plays [action], then, once it has played, [then] (the cue's sheet or
+  /// page).
+  void _playThen(BuddyAction action, Future<void> Function() then) {
+    _buddy.play(action);
+    _cueTimer = Timer(buddyActionDuration(action), () => unawaited(then()));
+  }
+
+  /// Home is free again (visible, uncovered): the sheet that waited opens,
+  /// or the queue that waited goes on.
+  void _resume() {
+    if (!_homeFree) return;
+    _showDeferredSheet();
+    if (!_cueRunning && _cues.isNotEmpty) _nextCue();
+  }
+
   /// The cue on stage has ended: its announcement counts as shown, and a
-  /// welcome as said (Home's tour waits for it).
+  /// welcome as said (Home's tour waits for it). A reached goal's love ends
+  /// with it, also when its sheet was withdrawn.
   void _markPlayed() {
     if (_playing == _Cue.welcome) {
       ref.read(buddyWelcomeProvider.notifier).markPlayed();
+    }
+    if (_playing == _Cue.goalReached && _override == BuddyMood.inLove) {
+      _setOverride(null);
     }
     final played = _playing?.announcement;
     _playing = null;
@@ -611,17 +654,13 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     unawaited(sheet());
   }
 
-  /// After the goal celebration: offers the next goal, then continues.
-  /// Waits until the hero is visible again if it was hidden meanwhile.
+  /// After the goal celebration: offers the next goal, then continues;
+  /// waits like every cue's sheet ([_deferSheet]).
   Future<void> _askForNewGoal() async {
-    if (!_visible) {
-      _deferredSheet = _askForNewGoal;
-      return;
-    }
+    if (_deferSheet(_askForNewGoal)) return;
     final streak = ref.read(buddyProvider).value?.streak ?? 0;
     int? goal;
-    // With the StreakChip's sheet open the user is picking a goal already.
-    if (!_chipSheetOpen && streakGoalChoices(streak).isNotEmpty) {
+    if (streakGoalChoices(streak).isNotEmpty) {
       goal = await showStreakGoalSheet(
         context,
         currentStreak: streak,
@@ -634,40 +673,129 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _nextCue();
   }
 
-  /// After the wave: offers the weekly tips („Zu den Tipps" opens
-  /// Entdecken), then continues. Waits until the hero is visible again if
-  /// it was hidden meanwhile, and until „Dein Streak" has closed if it is
-  /// open (sheets never stack).
+  /// Whether a cue's sheet or page must wait until Home is free again
+  /// ([_homeFree]: the hero was hidden meanwhile, or something covers Home;
+  /// sheets never stack). Then [show] is deferred.
+  bool _deferSheet(Future<void> Function() show) {
+    if (_homeFree) return false;
+    _deferredSheet = show;
+    return true;
+  }
+
+  /// After the wave: the weekly tips' offer off the journey („Zu den Tipps"
+  /// opens Entdecken), then continues; waits like every cue's sheet
+  /// ([_deferSheet]). On the journey or undecided by now: none.
   Future<void> _offerWeeklyTips() async {
-    if (!_visible || _chipSheetOpen) {
-      _deferredSheet = _offerWeeklyTips;
-      return;
+    if (_deferSheet(_offerWeeklyTips)) return;
+    if (ref.read(journeyProvider) == false) {
+      final open = await showWeeklyTipsOfferSheet(context);
+      if (!mounted) return;
+      if (open) context.go(RoutePaths.discover);
     }
-    final open = await showWeeklyTipsOfferSheet(context);
+    _nextCue();
+  }
+
+  /// After the wave: day 3's offer of a first tip ([offerFirstTip]), then
+  /// continues; waits like every cue's sheet ([_deferSheet]). „Ja, gern"
+  /// started → he says it is on its way, holding the stage; the opt-in
+  /// failed → a SnackBar; not ready yet (the profile loading) → not
+  /// answered, the offer stays pending and comes again ([_endUnshown]);
+  /// „Nein, danke" was answered there. A dismissal here counts as „Nein"
+  /// (the offer doesn't come again), but only while the hero is still
+  /// here: gone, nothing is stored and the offer comes again. Off the
+  /// journey or undecided by now (another user): none.
+  Future<void> _offerFirstTip() async {
+    if (_deferSheet(_offerFirstTip)) return;
+    if (ref.read(journeyProvider) != true) return _nextCue();
+    final outcome = await offerFirstTip(context, ref);
     if (!mounted) return;
-    if (open) context.go(RoutePaths.discover);
+    switch (outcome) {
+      case FirstTipOutcome.started:
+        _say(JourneyCopy.firstTipStarted);
+        _holdStage();
+      case FirstTipOutcome.optInFailed:
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          const SnackBar(content: Text(WeeklyTipsSwitch.failure)),
+        );
+        _nextCue();
+      case FirstTipOutcome.notReady:
+        _endUnshown();
+      case FirstTipOutcome.declined:
+        _nextCue();
+      case FirstTipOutcome.dismissed:
+        unawaited(
+          ref
+              .read(journeyRewardsProvider.notifier)
+              .answerTipOffer(accepted: false),
+        );
+        _nextCue();
+    }
+  }
+
+  /// After the celebration: the newest earned day's reward in its sheet
+  /// ([showJourneyDaySheet]; its primary button opens it), then
+  /// continues; waits like every cue's sheet ([_deferSheet]). No day to
+  /// announce (any more): it ends without one.
+  Future<void> _showJourneyReward() async {
+    if (_deferSheet(_showJourneyReward)) return;
+    final day = ref.read(journeyRewardAnnouncementProvider);
+    if (day == null) return _nextCue();
+    final open = await showJourneyDaySheet(context, day: day);
+    if (!mounted) return;
+    if (open) {
+      await openJourneyReward(context, ref, day, openUrl: widget.openUrl);
+    }
+    if (!mounted) return;
+    _nextCue();
+  }
+
+  /// After the celebration: „Muster frei!" over Home, then continues once
+  /// Home is free again (the page left it, [homeCoveredProvider]); waits
+  /// like every cue's sheet ([_deferSheet]). It counts as shown once the
+  /// first frame after the push has the page on top; a push that never
+  /// shows (redirected elsewhere, the app gone first) leaves it pending, so
+  /// it comes again ([_endUnshown]).
+  Future<void> _openPatternsUnlocked() async {
+    if (_deferSheet(_openPatternsUnlocked)) return;
+    // Covers Home as it is pushed ([_onRoute]).
+    unawaited(context.push(RoutePaths.patternsUnlocked));
+    _afterFrame(
+      () => _topLocation == RoutePaths.patternsUnlocked
+          ? _nextCue()
+          : _endUnshown(),
+    );
+  }
+
+  /// The cue on stage ends without counting as shown: its announcement
+  /// stays pending and is taken again with the next ones
+  /// ([_takeAnnouncements]: a status update, Home shown again).
+  void _endUnshown() {
+    if (_playing?.announcement case final announcement?) {
+      _taken.remove(announcement);
+    }
+    _playing = null;
     _nextCue();
   }
 
   /// The StreakChip's tap: „Dein Streak", where the goal can be set or
-  /// changed. Ignored while a cue's sheet is coming ([_sheetCueOnStage])
-  /// or the sheet is already open, so sheets never stack. An offer that
-  /// came due meanwhile follows once it has closed.
+  /// changed; it covers Home ([HomeCoverNotifier.whileOpen]), so the cues
+  /// wait until it has closed. Ignored while a cue's sheet is coming
+  /// ([_sheetCueOnStage]) or Home is covered (the sheet already open), so
+  /// sheets never stack.
   Future<void> _openStreakSheet() async {
     final status = ref.read(buddyProvider).value;
-    if (status == null || _sheetCueOnStage || _chipSheetOpen) return;
-    _chipSheetOpen = true;
-    try {
-      await openStreakSheetAndSaveGoal(
+    final cover = ref.read(homeCoveredProvider.notifier);
+    if (status == null || _sheetCueOnStage || ref.read(homeCoveredProvider)) {
+      return;
+    }
+    await cover.whileOpen(
+      () => openStreakSheetAndSaveGoal(
         context,
         ref,
         status: status,
         today: _now(),
-      );
-    } finally {
-      _chipSheetOpen = false;
-      _showDeferredSheet();
-    }
+      ),
+    );
   }
 
   // --- UI ---------------------------------------------------------------------
@@ -675,7 +803,8 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   @override
   Widget build(BuildContext context) {
     final status = ref.watch(buddyProvider).value;
-    final action = _careAction;
+    final care = ref.watch(careNowProvider);
+    final action = care.action;
     final name = status?.state.name ?? 'Buddy';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -712,7 +841,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
                   buddyArea: Size.square(buddySide),
                 ),
                 CareRing(
-                  care: _care,
+                  care: care,
                   diameter: diameter,
                   highlight: action.need,
                   onNeed: (need) => openTracker(context, need),

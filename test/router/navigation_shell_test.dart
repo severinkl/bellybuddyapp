@@ -4,9 +4,11 @@ import 'dart:ui' as ui;
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
+import 'package:belly_buddy/models/meal_prefill.dart';
 import 'package:belly_buddy/providers/diary_provider.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
+import 'package:belly_buddy/repositories/recipe_repository.dart';
 import 'package:belly_buddy/router/app_router.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/dashboard/dashboard_screen.dart';
@@ -20,11 +22,14 @@ import 'package:belly_buddy/screens/discover/discover_screen.dart';
 import 'package:belly_buddy/screens/discover/knowledge_screen.dart';
 import 'package:belly_buddy/screens/me/me_screen.dart';
 import 'package:belly_buddy/screens/patterns/patterns_screen.dart';
+import 'package:belly_buddy/screens/recipes/adapt_recipe_screen.dart';
+import 'package:belly_buddy/screens/recipes/collection_recipe_screen.dart';
+import 'package:belly_buddy/screens/recipes/collection_screen.dart';
 import 'package:belly_buddy/screens/recommendations/recommendations_screen.dart';
+import 'package:belly_buddy/screens/trackers/meal/meal_tracker_screen.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
 import 'package:belly_buddy/widgets/log_sheet/log_sheet.dart';
-import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -146,6 +151,28 @@ void main() {
       expect(find.byType(BbBottomNav), findsOneWidget);
     });
 
+    testWidgets('Rezepte opens under Entdecken with the bar', (tester) async {
+      final container = await _pumpShell(tester);
+      await _tap(tester, BbBottomNav.navDiscoverKey);
+
+      unawaited(
+        container.read(routerProvider).push(RoutePaths.discoverRecipes),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        container
+            .read(routerProvider)
+            .routerDelegate
+            .currentConfiguration
+            .last
+            .matchedLocation,
+        RoutePaths.discoverRecipes,
+      );
+      expect(find.byType(CollectionScreen), findsOneWidget);
+      expect(find.byType(BbBottomNav), findsOneWidget);
+    });
+
     testWidgets('tapping Entdecken on Wissen goes back to Entdecken', (
       tester,
     ) async {
@@ -216,8 +243,8 @@ void main() {
       await _tap(tester, BbBottomNav.centerButtonKey);
       expect(find.byType(LogSheet), findsOneWidget);
       expect(find.text('Heute · 12:40'), findsOneWidget);
-      // Breakfast is logged; at 12:40 lunch is next.
-      _expectSelected(tester, CareNeed.food);
+      // Breakfast at 09:00 and nothing else: at 12:40 Trinken is lowest.
+      _expectSelected(tester, CareNeed.drink);
       handle.dispose();
     });
 
@@ -363,6 +390,91 @@ void main() {
         tester.getRect(card).bottom,
         lessThanOrEqualTo(tester.getRect(find.byType(BbBottomNav)).top),
       );
+    });
+
+    testWidgets('the meal tracker takes a MealPrefill, no other extra', (
+      tester,
+    ) async {
+      final container = await _pumpShell(tester);
+      final router = container.read(routerProvider);
+      const prefill = MealPrefill(title: 'Porridge', ingredients: ['Hafer']);
+
+      unawaited(router.push(RoutePaths.mealTracker, extra: prefill));
+      await tester.pumpAndSettle();
+      var screen = tester.widget<MealTrackerScreen>(
+        find.byType(MealTrackerScreen),
+      );
+      expect(screen.initialRecipe, same(prefill));
+      expect(find.widgetWithText(Chip, 'Hafer'), findsOneWidget);
+
+      router.pop();
+      await tester.pumpAndSettle();
+      // What the route took before MealPrefill: now an empty tracker.
+      unawaited(router.push(RoutePaths.mealTracker, extra: testUserRecipe()));
+      await tester.pumpAndSettle();
+      screen = tester.widget<MealTrackerScreen>(find.byType(MealTrackerScreen));
+      expect(screen.initialRecipe, isNull);
+      expect(screen.initialDate, isNull);
+      expect(find.byType(Chip), findsNothing);
+    });
+
+    testWidgets('a collection recipe opens over the bar', (tester) async {
+      final container = await _pumpShell(tester);
+      await _tap(tester, BbBottomNav.navDiscoverKey);
+
+      unawaited(
+        container
+            .read(routerProvider)
+            .push(RoutePaths.collectionRecipeFor('recipe-1')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        container
+            .read(routerProvider)
+            .routerDelegate
+            .currentConfiguration
+            .last
+            .matchedLocation,
+        '/collection/recipe-1',
+      );
+      expect(find.byType(CollectionRecipeScreen), findsOneWidget);
+      expect(find.text('Testrezept'), findsOneWidget);
+      expect(find.byType(BbBottomNav), findsNothing);
+    });
+
+    testWidgets('the adapt screen opens over the bar and sends only when '
+        'asked', (tester) async {
+      final container = await _pumpShell(tester);
+      final router = container.read(routerProvider);
+      final repo =
+          container.read(recipeRepositoryProvider) as FakeRecipeRepository;
+
+      // Opened any other way than the detail's button: it asks first.
+      unawaited(router.push(RoutePaths.collectionRecipeAdaptFor('recipe-1')));
+      await tester.pumpAndSettle();
+
+      expect(
+        router.routerDelegate.currentConfiguration.last.matchedLocation,
+        '/collection/recipe-1/adapt',
+      );
+      expect(find.byType(AdaptRecipeScreen), findsOneWidget);
+      expect(find.byType(BbBottomNav), findsNothing);
+      expect(find.byKey(AdaptRecipeScreen.startKey), findsOneWidget);
+      expect(repo.adaptCalls, 0);
+
+      router.pop();
+      await tester.pumpAndSettle();
+      unawaited(
+        router.push(
+          RoutePaths.collectionRecipeAdaptFor('recipe-1'),
+          extra: true,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(repo.adaptCalls, 1);
+      expect(find.text('Porridge mit Ahornsirup'), findsOneWidget);
     });
 
     testWidgets('the insight card pushes the Muster page over the bar', (

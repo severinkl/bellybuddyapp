@@ -192,11 +192,20 @@ final recommendationProvider =
       RecommendationNotifier.new,
     );
 
-/// The newest loaded tip set while it is unseen: Home's „Neue Tipps" row,
-/// the Entdecken dot and the Buddy's announcement. Null while loading,
-/// failed, empty or seen; an older unseen set behind a seen newest one is
-/// not new.
+/// The newest loaded tip set with tips while it is unseen: Home's „Neue
+/// Tipps" row, the Entdecken dot, the Tipps card's „Neu" and the Buddy's
+/// announcement. Null while
+/// loading, failed, empty or seen; an older unseen set behind a seen newest
+/// one is not new.
+///
+/// A set without tips (core's fallback, e.g. one saved after the first
+/// tip's timeout) is never new: it is skipped as if it weren't there, so
+/// the newest set with tips decides.
 final unseenTipSetProvider = Provider<Recommendation?>((ref) {
-  final newest = ref.watch(recommendationProvider).value?.firstOrNull;
+  final newest = ref
+      .watch(recommendationProvider)
+      .value
+      ?.where((set) => set.recommendations.isNotEmpty)
+      .firstOrNull;
   return newest != null && newest.seenAt == null ? newest : null;
 });

@@ -73,6 +73,31 @@ void main() {
       expect(find.widgetWithText(SnackBar, 'Geht nicht.'), findsOneWidget);
     });
 
+    testWidgets('completes with whether it opened', (tester) async {
+      await tester.pumpWidget(const MaterialApp(home: Scaffold()));
+      final context = tester.element(find.byType(Scaffold));
+      final failing = RecordingUrlOpener()..result = false;
+
+      expect(
+        await openExternalUrl(
+          context,
+          'https://example.com/page',
+          failureMessage: 'Geht nicht.',
+          open: opener.call,
+        ),
+        isTrue,
+      );
+      expect(
+        await openExternalUrl(
+          context,
+          'https://example.com/page',
+          failureMessage: 'Geht nicht.',
+          open: failing.call,
+        ),
+        isFalse,
+      );
+    });
+
     testWidgets('a launch that throws shows the failure message', (
       tester,
     ) async {

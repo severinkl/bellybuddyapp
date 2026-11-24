@@ -44,9 +44,9 @@ class BbPastelThumb extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppConstants.radiusMd),
       ),
       alignment: Alignment.center,
-      child: Icon(
+      child: const Icon(
         Icons.menu_book_outlined,
-        color: AppTheme.foreground.withValues(alpha: 0.45),
+        color: AppTheme.placeholderGlyph,
         size: AppConstants.iconSizeMd,
       ),
     );

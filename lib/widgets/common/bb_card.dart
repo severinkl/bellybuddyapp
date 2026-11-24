@@ -15,6 +15,9 @@ class BbCard extends StatelessWidget {
   /// The border's width, while [showBorder].
   final double borderWidth;
 
+  /// The border's colour, while [showBorder]; [AppTheme.border] when null.
+  final Color? borderColor;
+
   /// Extra constraints on the card, e.g. a minimum height.
   final BoxConstraints? constraints;
 
@@ -27,6 +30,7 @@ class BbCard extends StatelessWidget {
     this.showBorder = true,
     this.radius = AppConstants.radiusLg,
     this.borderWidth = AppConstants.borderWidthSm,
+    this.borderColor,
     this.constraints,
   });
 
@@ -39,7 +43,10 @@ class BbCard extends StatelessWidget {
         color: color ?? AppTheme.card,
         borderRadius: BorderRadius.circular(radius),
         border: showBorder
-            ? Border.all(color: AppTheme.border, width: borderWidth)
+            ? Border.all(
+                color: borderColor ?? AppTheme.border,
+                width: borderWidth,
+              )
             : null,
       ),
       // Transparent Material so descendant ListTiles paint ink/selection on a

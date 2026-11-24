@@ -5,11 +5,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 
 import 'package:belly_buddy/config/app_theme.dart';
+import 'package:belly_buddy/models/insights.dart';
+import 'package:belly_buddy/models/journey_rewards.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
+import 'package:belly_buddy/providers/insights_provider.dart';
+import 'package:belly_buddy/providers/journey_provider.dart';
+import 'package:belly_buddy/providers/journey_rewards_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
+import 'package:belly_buddy/services/journey/journey_rules.dart';
 
 import 'app_host.dart';
 import 'fixtures.dart';
@@ -65,6 +71,69 @@ class _SeededProfileNotifier extends ProfileNotifier {
 /// (no fetch first).
 Override profileProviderSeededWith(UserProfile? profile) =>
     profileProvider.overrideWith(() => _SeededProfileNotifier(profile));
+
+/// An [InsightsNotifier] serving [_insights] as loaded.
+class _SeededInsightsNotifier extends InsightsNotifier {
+  _SeededInsightsNotifier(this._insights);
+  final Insights _insights;
+
+  @override
+  Future<Insights> build() async => _insights;
+}
+
+/// An [Override] for [insightsProvider] that serves [insights] (e.g.
+/// `lockedInsights()`) instead of computing them.
+Override insightsProviderSeededWith(Insights insights) =>
+    insightsProvider.overrideWith(() => _SeededInsightsNotifier(insights));
+
+/// A [JourneyRewardsNotifier] that starts with [_rewards] and keeps its
+/// answers in memory: nothing read, moved on or stored; [set] replaces
+/// them (moved on elsewhere).
+class SeededJourneyRewardsNotifier extends JourneyRewardsNotifier {
+  SeededJourneyRewardsNotifier(this._rewards);
+  final JourneyRewards? _rewards;
+
+  @override
+  JourneyRewards? build() => _rewards;
+
+  void set(JourneyRewards? rewards) => state = rewards;
+
+  @override
+  Future<void> answerTipOffer({required bool accepted}) async {
+    if (state case final r?) state = answerOffer(r, accepted: accepted);
+  }
+
+  @override
+  Future<void> setFirstTip(FirstTipState firstTip) async =>
+      state = state?.copyWith(firstTip: firstTip);
+}
+
+/// An [Override] for [journeyRewardsProvider] that serves [rewards] (null:
+/// no journey) and keeps `answerTipOffer` and `setFirstTip` in memory;
+/// change them through `container.read(journeyRewardsProvider.notifier)`
+/// ([SeededJourneyRewardsNotifier]).
+Override journeyRewardsSeededWith(JourneyRewards? rewards) =>
+    journeyRewardsProvider.overrideWith(
+      () => SeededJourneyRewardsNotifier(rewards),
+    );
+
+/// A [JourneyNotifier] decided as [_journey], nothing read or stored;
+/// [set] changes it (e.g. another user, still undecided).
+class SeededJourneyNotifier extends JourneyNotifier {
+  SeededJourneyNotifier(this._journey);
+  final bool? _journey;
+
+  @override
+  bool? build() => _journey;
+
+  void set(bool? journey) => state = journey;
+}
+
+/// An [Override] for [journeyProvider] that serves [journey] (null:
+/// undecided) instead of deciding it; switch it through
+/// `container.read(journeyProvider.notifier)` ([SeededJourneyNotifier]).
+Override journeySeededWith(bool? journey) =>
+    journeyProvider.overrideWith(() => SeededJourneyNotifier(journey));
 
 /// An [EntriesNotifier] whose [build] returns a pre-seeded [EntriesState] so
 /// widgets that `ref.read(entriesProvider)` in `initState` see the supplied
