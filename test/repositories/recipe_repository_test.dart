@@ -1,6 +1,8 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/repositories/recipe_repository.dart';
 
 import '../helpers/mocks.dart';
@@ -15,32 +17,79 @@ void main() {
     repo = RecipeRepository(recipeService);
   });
 
-  group('fetchAll', () {
-    test('delegates to recipeService.fetchAll and returns list', () async {
+  group('fetchCollection', () {
+    test('delegates to recipeService.fetchCollection', () async {
       final recipes = [
         testRecipe(),
         testRecipe(id: 'recipe-2', title: 'Suppe'),
       ];
-      when(() => recipeService.fetchAll()).thenAnswer((_) async => recipes);
+      when(
+        () => recipeService.fetchCollection(),
+      ).thenAnswer((_) async => recipes);
 
-      final result = await repo.fetchAll();
+      final result = await repo.fetchCollection();
 
-      expect(result, equals(recipes));
-      verify(() => recipeService.fetchAll()).called(1);
+      expect(result, same(recipes));
+      verify(() => recipeService.fetchCollection()).called(1);
+    });
+
+    test('retries a failing read', () async {
+      final logs = <String>[];
+      final original = debugPrint;
+      debugPrint = (message, {wrapWidth}) => logs.add(message ?? '');
+      addTearDown(() => debugPrint = original);
+      var calls = 0;
+      final recipes = [testRecipe()];
+      when(() => recipeService.fetchCollection()).thenAnswer((_) async {
+        if (++calls == 1) throw Exception('backend down');
+        return recipes;
+      });
+
+      // retryAsync waits 2 s before the second attempt.
+      final result = await repo.fetchCollection();
+
+      expect(result, same(recipes));
+      expect(calls, 2);
+      expect(
+        logs,
+        contains('RecipeRepository [ERROR]: fetchCollection (attempt 1/3)'),
+      );
     });
   });
 
-  group('fetchFavoriteIds', () {
-    test('delegates to recipeService.fetchFavoriteIds', () async {
-      final ids = {'recipe-1', 'recipe-2'};
+  group('fetchFavorites', () {
+    test('delegates to recipeService.fetchFavorites', () async {
+      final favorites = [
+        FavoriteRecipe('recipe-1', DateTime.utc(2026, 11, 20)),
+      ];
       when(
-        () => recipeService.fetchFavoriteIds(any()),
-      ).thenAnswer((_) async => ids);
+        () => recipeService.fetchFavorites(any()),
+      ).thenAnswer((_) async => favorites);
 
-      final result = await repo.fetchFavoriteIds(testUserId);
+      final result = await repo.fetchFavorites(testUserId);
 
-      expect(result, equals(ids));
-      verify(() => recipeService.fetchFavoriteIds(testUserId)).called(1);
+      expect(result, same(favorites));
+      verify(() => recipeService.fetchFavorites(testUserId)).called(1);
+    });
+  });
+
+  group('fetchIntoleranceRules', () {
+    test('delegates to recipeService.fetchIntoleranceRules', () async {
+      final rules = testIntoleranceRules();
+      when(
+        () => recipeService.fetchIntoleranceRules(),
+      ).thenAnswer((_) async => rules);
+
+      expect(await repo.fetchIntoleranceRules(), same(rules));
+      verify(() => recipeService.fetchIntoleranceRules()).called(1);
+    });
+
+    test('passes a missing table through as null', () async {
+      when(
+        () => recipeService.fetchIntoleranceRules(),
+      ).thenAnswer((_) async => null);
+
+      expect(await repo.fetchIntoleranceRules(), isNull);
     });
   });
 

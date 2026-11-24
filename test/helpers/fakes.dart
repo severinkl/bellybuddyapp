@@ -10,6 +10,7 @@ import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/knowledge_article.dart';
 import 'package:belly_buddy/models/insight_rules.dart';
 import 'package:belly_buddy/models/insight_source.dart';
+import 'package:belly_buddy/models/intolerance_rules.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/models/recommendation.dart';
@@ -492,21 +493,48 @@ class FakeIngredientRepository implements IngredientRepository {
 
 // -- FakeRecipeRepository --
 class FakeRecipeRepository implements RecipeRepository {
-  List<Recipe> _recipes = [testRecipe()];
-  Set<String> _favorites = {};
+  List<Recipe> collection = [testRecipe()];
+  IntoleranceRules? rules = testIntoleranceRules();
+  List<FavoriteRecipe> favorites = [];
 
-  void seedRecipes(List<Recipe> recipes) => _recipes = recipes;
+  /// Thrown by [fetchCollection] when set.
+  Object? collectionError;
+
+  /// Thrown by [addFavorite] and [removeFavorite] when set.
+  Object? favoriteError;
+
+  /// Recipe ids passed to [addFavorite] / [removeFavorite], failed calls too.
+  final added = <String>[];
+  final removed = <String>[];
 
   @override
-  Future<List<Recipe>> fetchAll() async => _recipes;
+  Future<List<Recipe>> fetchCollection() async {
+    if (collectionError case final error?) throw error;
+    return collection;
+  }
+
   @override
-  Future<Set<String>> fetchFavoriteIds(String userId) async => _favorites;
+  Future<List<FavoriteRecipe>> fetchFavorites(String userId) async => favorites;
+
   @override
-  Future<void> addFavorite(String userId, String recipeId) async =>
-      _favorites = {..._favorites, recipeId};
+  Future<void> addFavorite(String userId, String recipeId) async {
+    added.add(recipeId);
+    if (favoriteError case final error?) throw error;
+    favorites = [FavoriteRecipe(recipeId, DateTime.now()), ...favorites];
+  }
+
   @override
-  Future<void> removeFavorite(String userId, String recipeId) async =>
-      _favorites = _favorites.where((id) => id != recipeId).toSet();
+  Future<void> removeFavorite(String userId, String recipeId) async {
+    removed.add(recipeId);
+    if (favoriteError case final error?) throw error;
+    favorites = [
+      for (final f in favorites)
+        if (f.recipeId != recipeId) f,
+    ];
+  }
+
+  @override
+  Future<IntoleranceRules?> fetchIntoleranceRules() async => rules;
 }
 
 // -- FakeUserRecipeRepository --

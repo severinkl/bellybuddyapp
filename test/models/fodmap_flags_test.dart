@@ -74,5 +74,34 @@ void main() {
       });
       expect(flags.hasAny, isFalse);
     });
+
+    test('has reads a flag by its FODMAP key', () {
+      const flags = FodmapFlags(lactose: true);
+      expect(flags.has('lactose'), isTrue);
+      expect(flags.has('fructans'), isFalse);
+      expect(flags.has('kohl'), isFalse);
+    });
+
+    test('has knows every FODMAP key', () {
+      const all = FodmapFlags(
+        fructans: true,
+        gos: true,
+        lactose: true,
+        fructose: true,
+        sorbitol: true,
+        mannitol: true,
+      );
+      for (final key in [
+        'fructans',
+        'gos',
+        'lactose',
+        'fructose',
+        'sorbitol',
+        'mannitol',
+      ]) {
+        expect(all.has(key), isTrue, reason: key);
+        expect(const FodmapFlags().has(key), isFalse, reason: key);
+      }
+    });
   });
 }

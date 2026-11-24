@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/services/recipe_service.dart';
 
 import '../helpers/fixtures.dart';
@@ -18,21 +20,75 @@ void _stubFilterFuture(MockPostgrestFilterBuilder filter) {
   });
 }
 
-Map<String, dynamic> _recipeRow({
+Map<String, dynamic> _collectionRow({
   String id = 'recipe-1',
   String title = 'Testrezept',
 }) => {
   'id': id,
   'title': title,
   'description': null,
+  'cook_time': '20 Min',
+  'servings': 2,
   'image_url': null,
-  'cook_time': null,
-  'servings': null,
+  'meal_types': ['mittag'],
+  'diet_tags': ['vegan', 'vegetarisch'],
+  'source_name': 'Beispielküche',
+  'source_url': 'https://example.org/$id',
+  'instructions': ['Alles kochen.'],
   'ingredients': <dynamic>[],
-  'instructions': <dynamic>[],
-  'tags': <dynamic>[],
-  'created_at': null,
+  'created_at': '2026-11-24T08:00:00+00:00',
+  'recipe_ingredients': [
+    {
+      'position': 0,
+      'amount_text': '200 g',
+      'name': 'Reis',
+      'allergens': <dynamic>[],
+      'low_at_amount': false,
+      'ingredient': {
+        'id': 'ing-Reis',
+        'name': 'Reis',
+        'fodmap_fructans': false,
+        'fodmap_gos': false,
+        'fodmap_lactose': false,
+        'fodmap_fructose': false,
+        'fodmap_sorbitol': false,
+        'fodmap_mannitol': false,
+      },
+    },
+  ],
 };
+
+/// `client.from(table).select(...)` returning [filter]; the query builder is
+/// returned so tests can verify the select string.
+MockSupabaseQueryBuilder _fromTable(
+  MockSupabaseClient client,
+  String table,
+  MockPostgrestFilterBuilder filter,
+) {
+  final queryBuilder = MockSupabaseQueryBuilder();
+  when(() => client.from(table)).thenAnswer((_) => queryBuilder);
+  when(() => queryBuilder.select(any())).thenAnswer((_) => filter);
+  return queryBuilder;
+}
+
+/// `app_config` select whose `maybeSingle()` resolves with [row].
+({MockSupabaseQueryBuilder query, MockPostgrestFilterBuilder filter})
+_stubRulesRow(MockSupabaseClient client, Map<String, dynamic>? row) {
+  final filter = MockPostgrestFilterBuilder();
+  final query = _fromTable(client, 'app_config', filter);
+  when(() => filter.eq(any(), any())).thenAnswer((_) => filter);
+  when(() => filter.maybeSingle()).thenAnswer((_) => settleMaybeSingle(row));
+  return (query: query, filter: filter);
+}
+
+/// Collects [debugPrint] output (the [AppLogger] lines) for this test.
+List<String> _captureLogs() {
+  final logs = <String>[];
+  final original = debugPrint;
+  debugPrint = (message, {wrapWidth}) => logs.add(message ?? '');
+  addTearDown(() => debugPrint = original);
+  return logs;
+}
 
 void main() {
   late MockSupabaseClient client;
@@ -43,96 +99,177 @@ void main() {
     service = RecipeService(client);
   });
 
-  group('RecipeService.fetchAll', () {
-    test('returns list of Recipe from DB rows', () async {
-      final fb = mockSelectRows(
-        client,
-        table: 'recipes',
-        rows: [
-          _recipeRow(),
-          _recipeRow(id: 'recipe-2', title: 'Zweites Rezept'),
-        ],
+  group('RecipeService.fetchCollection', () {
+    late SettlableFilterBuilder filter;
+    late MockSupabaseQueryBuilder queryBuilder;
+
+    void stubRows(List<Map<String, dynamic>> rows) {
+      filter = SettlableFilterBuilder(Future.value(rows));
+      queryBuilder = _fromTable(client, 'recipes', filter);
+      when(() => filter.isFilter(any(), any())).thenAnswer((_) => filter);
+      when(
+        () => filter.order(
+          any(),
+          ascending: any(named: 'ascending'),
+          referencedTable: any(named: 'referencedTable'),
+        ),
+      ).thenAnswer((_) => filter);
+    }
+
+    test(
+      "fetchCollection selects the contract's columns, hides hidden rows, orders",
+      () async {
+        stubRows([]);
+
+        await service.fetchCollection();
+
+        verify(
+          () => queryBuilder.select(RecipeService.collectionSelect),
+        ).called(1);
+        verify(() => filter.isFilter('hidden', false)).called(1);
+        verify(() => filter.order('created_at', ascending: false)).called(1);
+        verify(
+          () => filter.order(
+            'position',
+            ascending: true,
+            referencedTable: 'recipe_ingredients',
+          ),
+        ).called(1);
+      },
+    );
+
+    test('parses the rows', () async {
+      stubRows([
+        _collectionRow(),
+        _collectionRow(id: 'recipe-2', title: 'Suppe'),
+      ]);
+
+      final result = await service.fetchCollection();
+
+      expect(result.map((r) => r.title), ['Testrezept', 'Suppe']);
+      expect(result.first.mealTypes, [MealType.lunch]);
+      expect(result.first.ingredients.single.amount, '200 g');
+      expect(result.first.ingredients.single.catalogId, 'ing-Reis');
+    });
+
+    test('rethrows a failed read', () async {
+      final logs = _captureLogs();
+      filter = SettlableFilterBuilder(
+        Future<PostgrestList>.error(Exception('offline')),
       );
+      _fromTable(client, 'recipes', filter);
+      when(() => filter.isFilter(any(), any())).thenAnswer((_) => filter);
       when(
-        () => fb.order(any(), ascending: any(named: 'ascending')),
-      ).thenAnswer((_) => fb);
+        () => filter.order(
+          any(),
+          ascending: any(named: 'ascending'),
+          referencedTable: any(named: 'referencedTable'),
+        ),
+      ).thenAnswer((_) => filter);
 
-      final result = await service.fetchAll();
-
-      expect(result, hasLength(2));
-      expect(result.first.id, 'recipe-1');
-      expect(result.first.title, 'Testrezept');
-      expect(result[1].title, 'Zweites Rezept');
-    });
-
-    test('returns empty list when no recipes exist', () async {
-      final fb = mockSelectRows(client, table: 'recipes', rows: []);
-      when(
-        () => fb.order(any(), ascending: any(named: 'ascending')),
-      ).thenAnswer((_) => fb);
-
-      final result = await service.fetchAll();
-
-      expect(result, isEmpty);
-    });
-
-    test('orders by title', () async {
-      final fb = mockSelectRows(client, table: 'recipes', rows: []);
-      when(
-        () => fb.order(any(), ascending: any(named: 'ascending')),
-      ).thenAnswer((_) => fb);
-
-      await service.fetchAll();
-
-      verify(
-        () => fb.order('title', ascending: any(named: 'ascending')),
-      ).called(1);
+      await expectLater(service.fetchCollection(), throwsException);
+      expect(logs, contains('RecipeService [ERROR]: fetchCollection failed'));
     });
   });
 
-  group('RecipeService.fetchFavoriteIds', () {
-    test('returns Set of recipe_id strings', () async {
-      final fb = mockSelectRows(
-        client,
-        table: 'user_favorite_recipes',
-        rows: [
-          {'recipe_id': 'recipe-1'},
-          {'recipe_id': 'recipe-3'},
-        ],
+  group('RecipeService.collectionSelect', () {
+    test('collectionSelect names every contract field', () {
+      for (final field in [
+        'meal_types',
+        'diet_tags',
+        'source_name',
+        'source_url',
+        'instructions',
+        'allergens',
+        'low_at_amount',
+        'ingredient:ingredients(',
+        'fodmap_fructans',
+        'fodmap_mannitol',
+      ]) {
+        expect(RecipeService.collectionSelect, contains(field), reason: field);
+      }
+    });
+  });
+
+  group('RecipeService.fetchFavorites', () {
+    test('fetchFavorites newest first', () async {
+      final filter = SettlableFilterBuilder(
+        Future.value([
+          {'recipe_id': 'recipe-3', 'created_at': '2026-11-23T18:30:00+00:00'},
+          {'recipe_id': 'recipe-1', 'created_at': '2026-11-20T07:00:00+00:00'},
+        ]),
       );
-      when(() => fb.eq(any(), any())).thenAnswer((_) => fb);
+      final queryBuilder = _fromTable(client, 'user_favorite_recipes', filter);
+      when(() => filter.eq(any(), any())).thenAnswer((_) => filter);
+      when(
+        () => filter.order(any(), ascending: any(named: 'ascending')),
+      ).thenAnswer((_) => filter);
 
-      final result = await service.fetchFavoriteIds(testUserId);
+      final result = await service.fetchFavorites(testUserId);
 
-      expect(result, isA<Set<String>>());
-      expect(result, containsAll(['recipe-1', 'recipe-3']));
-      expect(result, hasLength(2));
+      verify(() => queryBuilder.select('recipe_id,created_at')).called(1);
+      verify(() => filter.eq('user_id', testUserId)).called(1);
+      verify(() => filter.order('created_at', ascending: false)).called(1);
+      expect(result.map((f) => f.recipeId), ['recipe-3', 'recipe-1']);
+      expect(result.first.at, DateTime.utc(2026, 11, 23, 18, 30));
+      expect(result.last.at, DateTime.utc(2026, 11, 20, 7));
+    });
+  });
+
+  group('RecipeService.fetchIntoleranceRules', () {
+    test('a row with the published table is parsed', () async {
+      final stub = _stubRulesRow(client, {'value': kTestIntoleranceRulesJson});
+
+      final rules = await service.fetchIntoleranceRules();
+
+      verify(() => stub.query.select('value')).called(1);
+      verify(() => stub.filter.eq('key', 'intolerance_rules')).called(1);
+      verify(() => stub.filter.maybeSingle()).called(1);
+      expect(rules!.byName, hasLength(13));
+      expect(rules['Weizen']!.allergens, {'weizen'});
     });
 
-    test('returns empty set when no favorites', () async {
-      final fb = mockSelectRows(
-        client,
-        table: 'user_favorite_recipes',
-        rows: [],
-      );
-      when(() => fb.eq(any(), any())).thenAnswer((_) => fb);
+    test('no row → null', () async {
+      final logs = _captureLogs();
+      _stubRulesRow(client, null);
 
-      final result = await service.fetchFavoriteIds(testUserId);
-
-      expect(result, isEmpty);
+      expect(await service.fetchIntoleranceRules(), isNull);
+      expect(logs, ['RecipeService [WARN]: intolerance_rules missing']);
     });
 
-    test('filters by user_id', () async {
-      final fb = mockSelectRows(
-        client,
-        table: 'user_favorite_recipes',
-        rows: [],
+    test('a value that is not JSON → null', () async {
+      final logs = _captureLogs();
+      _stubRulesRow(client, {'value': 'kein JSON'});
+
+      expect(await service.fetchIntoleranceRules(), isNull);
+      expect(logs, [
+        'RecipeService [WARN]: intolerance_rules is not a JSON object',
+      ]);
+    });
+
+    test('a value that is not a JSON object → null', () async {
+      final logs = _captureLogs();
+      _stubRulesRow(client, {'value': '["Laktose"]'});
+
+      expect(await service.fetchIntoleranceRules(), isNull);
+      expect(logs, [
+        'RecipeService [WARN]: intolerance_rules is not a JSON object',
+      ]);
+    });
+
+    test('rethrows a failed read', () async {
+      final logs = _captureLogs();
+      final filter = mockSelect(client, table: 'app_config');
+      when(() => filter.eq(any(), any())).thenAnswer((_) => filter);
+      when(() => filter.maybeSingle()).thenAnswer(
+        (_) => SettlableMapNullable(Future.error(Exception('offline'))),
       );
-      when(() => fb.eq(any(), any())).thenAnswer((_) => fb);
 
-      await service.fetchFavoriteIds(testUserId);
-
-      verify(() => fb.eq('user_id', testUserId)).called(1);
+      await expectLater(service.fetchIntoleranceRules(), throwsException);
+      expect(
+        logs,
+        contains('RecipeService [ERROR]: fetchIntoleranceRules failed'),
+      );
     });
   });
 
