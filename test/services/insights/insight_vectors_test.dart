@@ -8,6 +8,7 @@ import 'package:belly_buddy/models/insight_rules.dart';
 import 'package:belly_buddy/models/insight_source.dart';
 import 'package:belly_buddy/models/insights.dart';
 import 'package:belly_buddy/services/insights/insights_engine.dart';
+import 'package:belly_buddy/utils/date_format_utils.dart';
 import 'package:belly_buddy/utils/wall_clock.dart';
 
 /// Core's shared vectors (`backend/tests/fixtures/insights/vectors.json`,
@@ -34,12 +35,9 @@ Map<String, dynamic> _columnJson(DayColumn c) => {
   ],
 };
 
-String _dayKey(DateTime d) =>
-    '${d.year.toString().padLeft(4, '0')}-'
-    '${d.month.toString().padLeft(2, '0')}-'
-    '${d.day.toString().padLeft(2, '0')}';
-
-/// Insights in the vectors' JSON shape.
+/// Insights in the vectors' JSON shape. [Insights.calmDayIngredients] and
+/// [Insights.unlocked] are Dart-only, not in the vectors, so not compared
+/// (`progress.unlocked` is).
 Map<String, dynamic> _toJson(Insights i) => {
   'progress': {
     'active_days': i.progress.activeDays,
@@ -47,11 +45,11 @@ Map<String, dynamic> _toJson(Insights i) => {
     'unlocked': i.progress.unlocked,
   },
   'calendar': {
-    'first_day': _dayKey(i.calendar.first.day),
-    'last_day': _dayKey(i.calendar.last.day),
+    'first_day': formatIsoDate(i.calendar.first.day),
+    'last_day': formatIsoDate(i.calendar.last.day),
     'classes': {
       for (final d in i.calendar)
-        if (d.dayClass != DayClass.none) _dayKey(d.day): d.dayClass.name,
+        if (d.dayClass != DayClass.none) formatIsoDate(d.day): d.dayClass.name,
     },
   },
   'gut_feeling_days': i.gutFeelingDays,
@@ -69,7 +67,7 @@ Map<String, dynamic> _toJson(Insights i) => {
   },
   'journey': [
     for (final j in i.journey)
-      {'day': _dayKey(j.day), 'gut_feeling': j.gutFeeling},
+      {'day': formatIsoDate(j.day), 'gut_feeling': j.gutFeeling},
   ],
 };
 
