@@ -87,25 +87,43 @@ class CareRing extends StatelessWidget {
   /// The text scale all four labels share: the user's, or less where the
   /// longest label would not fit [AppConstants.careNeedWidth].
   static TextScaler _labelScaler(BuildContext context) {
-    final scaler = MediaQuery.textScalerOf(context);
     final style = DefaultTextStyle.of(context).style.merge(_labelStyle);
-    var widest = 0.0;
-    for (final need in CareNeed.values) {
-      final painter = TextPainter(
-        text: TextSpan(text: need.label, style: style),
-        textDirection: TextDirection.ltr,
-        textScaler: scaler,
-        maxLines: 1,
-      )..layout();
-      widest = math.max(widest, painter.width);
-      painter.dispose();
+    double widest(TextScaler scaler) {
+      var widest = 0.0;
+      for (final need in CareNeed.values) {
+        final painter = TextPainter(
+          text: TextSpan(text: need.label, style: style),
+          textDirection: TextDirection.ltr,
+          textScaler: scaler,
+          maxLines: 1,
+        )..layout();
+        widest = math.max(widest, painter.width);
+        painter.dispose();
+      }
+      return widest;
     }
-    if (widest <= AppConstants.careNeedWidth) return scaler;
-    final size = scaler.scale(AppTheme.fontSizeCaptionLG);
-    return TextScaler.linear(
-      size * AppConstants.careNeedWidth / widest / AppTheme.fontSizeCaptionLG,
-    );
+
+    final scaler = MediaQuery.textScalerOf(context);
+    const fit = AppConstants.careNeedWidth;
+    final natural = widest(scaler);
+    if (natural <= fit) return scaler;
+    // Text doesn't narrow quite in step with its size: shrink on until the
+    // longest label fits.
+    var factor =
+        scaler.scale(AppTheme.fontSizeCaptionLG) /
+        AppTheme.fontSizeCaptionLG *
+        fit /
+        natural;
+    var fitted = TextScaler.linear(factor);
+    while (widest(fitted) > fit) {
+      factor *= _labelShrinkStep;
+      fitted = TextScaler.linear(factor);
+    }
+    return fitted;
   }
+
+  /// How much each further step shrinks the labels by ([_labelScaler]).
+  static const _labelShrinkStep = 0.98;
 
   @override
   Widget build(BuildContext context) {
