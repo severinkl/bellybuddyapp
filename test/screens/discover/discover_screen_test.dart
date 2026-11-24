@@ -15,6 +15,7 @@ import 'package:belly_buddy/models/replacement_ingredient.dart';
 import 'package:belly_buddy/models/user_recipe.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/screens/discover/widgets/discover_tips_section.dart';
+import 'package:belly_buddy/screens/discover/widgets/example_tip_card.dart';
 import 'package:belly_buddy/widgets/common/weekly_tips_switch.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/discover_news_provider.dart';
@@ -178,6 +179,25 @@ void main() {
 
       expect(find.byKey(DiscoverScreen.tipsKey), findsOneWidget);
       expect(optIn, findsOneWidget);
+    });
+
+    testWidgets('weekly tips off: the example above the switch', (
+      tester,
+    ) async {
+      await pump(tester, weeklyTips: false);
+
+      final example = find.byKey(ExampleTipCard.cardKey);
+      expect(example, findsOneWidget);
+      expect(
+        tester.getBottomLeft(example).dy,
+        lessThan(tester.getTopLeft(optIn).dy),
+      );
+    });
+
+    testWidgets('on: no example', (tester) async {
+      await pump(tester, weeklyTips: true);
+
+      expect(find.byKey(ExampleTipCard.cardKey), findsNothing);
     });
 
     testWidgets('on, no tips: when the first tips come', (tester) async {

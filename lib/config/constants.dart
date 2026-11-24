@@ -66,6 +66,10 @@ class AppConstants {
   static const double borderWidthMd = 1.5;
   static const double borderWidthLg = 2.0;
 
+  // Dashed outlines
+  static const double dashLength = 6.0;
+  static const double dashGap = 4.0;
+
   // Drag handle
   static const double dragHandleWidth = 40.0;
   static const double dragHandleHeight = 4.0;
