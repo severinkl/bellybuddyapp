@@ -14,7 +14,8 @@ abstract class KnowledgeRepository {
   /// feed is malformed.
   Future<List<KnowledgeArticle>> fetchArticles();
 
-  /// The last good copy, or null when there is none or it is corrupt.
+  /// The last good copy, or null when there is none, it is corrupt or it
+  /// can't be read. Never throws.
   Future<KnowledgeFeed?> readCache();
 
   Future<void> writeCache(KnowledgeFeed feed);
@@ -23,9 +24,16 @@ abstract class KnowledgeRepository {
 class HttpKnowledgeRepository implements KnowledgeRepository {
   static const _log = AppLogger('KnowledgeRepository');
 
-  const HttpKnowledgeRepository(this._service);
+  const HttpKnowledgeRepository(
+    this._service, {
+    Future<SharedPreferences> Function() preferences =
+        SharedPreferences.getInstance,
+  }) : _preferences = preferences;
 
   final KnowledgeFeedService _service;
+
+  /// Opens the preferences the cache lives in.
+  final Future<SharedPreferences> Function() _preferences;
 
   @override
   Future<List<KnowledgeArticle>> fetchArticles() async =>
@@ -33,8 +41,14 @@ class HttpKnowledgeRepository implements KnowledgeRepository {
 
   @override
   Future<KnowledgeFeed?> readCache() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(AppConstants.keyKnowledgeFeedCache);
+    final String? raw;
+    try {
+      final prefs = await _preferences();
+      raw = prefs.getString(AppConstants.keyKnowledgeFeedCache);
+    } on Object catch (e, st) {
+      _log.error('Reading the feed cache failed', e, st);
+      return null;
+    }
     if (raw == null) return null;
     try {
       return KnowledgeFeed.fromJson(jsonDecode(raw) as Map<String, Object?>);
@@ -46,7 +60,7 @@ class HttpKnowledgeRepository implements KnowledgeRepository {
 
   @override
   Future<void> writeCache(KnowledgeFeed feed) async {
-    final prefs = await SharedPreferences.getInstance();
+    final prefs = await _preferences();
     await prefs.setString(
       AppConstants.keyKnowledgeFeedCache,
       jsonEncode(feed.toJson()),
