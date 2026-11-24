@@ -39,6 +39,8 @@ class InsightCopy {
   static const activeDaysLabel = 'Tage mit Einträgen';
   static const gutFeelingEntriesLabel = 'Bauchgefühl-Einträge';
 
+  static const _soonSee = 'dann schau ich nach ersten Mustern.';
+
   static const _soon = 'dann zeig ich dir erste Muster.';
 
   /// The Buddy's line while locked: what is still missing, days first.
@@ -74,6 +76,19 @@ class InsightCopy {
             : 'Noch ein Tag, dann schau ich nach ersten Mustern.',
       _ => 'Noch $g× Bauchgefühl, dann schau ich nach ersten Mustern.',
     };
+  }
+
+  /// The Buddy's line after an entry that made [after]: what is still
+  /// missing, days first; null once nothing is.
+  static String? journeyFeedback(InsightProgress after) {
+    if (after.daysLeft > 0) {
+      final n = after.daysLeft;
+      return 'Notiert! Noch $n ${n == 1 ? 'Tag' : 'Tage'}, $_soonSee';
+    }
+    if (after.gutFeelingsLeft > 0) {
+      return 'Notiert! Noch ${after.gutFeelingsLeft}× Bauchgefühl, $_soonSee';
+    }
+    return null;
   }
 
   /// The journey's counter: „2 von 7 Tagen".

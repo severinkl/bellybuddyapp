@@ -138,6 +138,7 @@ class LogSuccessHero extends StatelessWidget {
                     kind: kind,
                     sentiment: sentiment,
                     foodImageBytes: foodImageBytes,
+                    line: moment.buddyLine,
                   ),
                 ),
               ],

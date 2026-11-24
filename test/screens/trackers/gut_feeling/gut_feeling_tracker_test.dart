@@ -9,7 +9,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:belly_buddy/screens/trackers/gut_feeling/gut_feeling_tracker_screen.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
+import 'package:belly_buddy/models/insight_progress.dart';
+import 'package:belly_buddy/models/insights.dart';
+import 'package:belly_buddy/providers/care_log_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
+import 'package:belly_buddy/providers/insights_provider.dart';
+import 'package:belly_buddy/services/buddy/care_meters.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
@@ -29,6 +34,18 @@ List<Override> _overrides([FakeEntryRepository? entries]) => [
   buddyRepositoryProvider.overrideWithValue(FakeBuddyRepository()),
   currentUserIdProvider.overrideWithValue('test-user'),
 ];
+
+class _LockedInsights extends InsightsNotifier {
+  @override
+  Future<Insights> build() async => const Insights(
+    progress: InsightProgress(activeDays: 2, gutFeelingEntries: 1),
+    calendar: [],
+    goodDays: DayColumn(days: 0),
+    hardDays: DayColumn(days: 0),
+    noticed: [],
+    pick: NothingYetPick(),
+  );
+}
 
 void main() {
   group('GutFeelingTrackerScreen', () {
@@ -179,6 +196,82 @@ void main() {
           matching: find.byType(BuddyReactionView),
         ),
         findsOneWidget,
+      );
+    });
+
+    Future<ProviderContainer> saveWithLine(WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer.test(
+        overrides: [
+          ..._overrides(),
+          buddyClockProvider.overrideWithValue(
+            () => DateTime(2026, 11, 23, 12),
+          ),
+          insightsProvider.overrideWith(_LockedInsights.new),
+          careLogProvider.overrideWithValue(const CareLog()),
+          buddyProvider.overrideWith(
+            () => FakeBuddyNotifier(() => buddyStatus(streak: 4)),
+          ),
+        ],
+      );
+      await container.read(insightsProvider.future);
+      await container.read(buddyProvider.future);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            home: GutFeelingTrackerScreen(initialDate: DateTime(2026, 11, 23)),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 700));
+      await tester.tap(find.text('Weiter'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump();
+      await tester.tap(find.text('Speichern'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1300));
+      return container;
+    }
+
+    testWidgets("the day's first Bauchgefühl, locked: the Buddy says how far "
+        'it is', (tester) async {
+      await saveWithLine(tester);
+
+      const line = 'Notiert! Noch 4 Tage, dann schau ich nach ersten Mustern.';
+      expect(find.text(line), findsOneWidget);
+    });
+
+    testWidgets('fits 375×667 at text scale 1.3 with the line and the ignite '
+        'row', (tester) async {
+      tester.view.physicalSize = const Size(750, 1334);
+      tester.view.devicePixelRatio = 2;
+      tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+      // Test-font glyphs overflow sideways; only the bottom matters here.
+      final errors = <FlutterErrorDetails>[];
+      final previousOnError = FlutterError.onError;
+      FlutterError.onError = errors.add;
+      try {
+        await saveWithLine(tester);
+      } finally {
+        FlutterError.onError = previousOnError;
+      }
+
+      expect(find.byKey(LogSuccessHero.igniteKey), findsOneWidget);
+      expect(
+        tester
+            .widget<LogSuccessHero>(find.byType(LogSuccessHero))
+            .moment
+            .buddyLine,
+        isNotNull,
+      );
+      expect(
+        errors.where((e) => e.exceptionAsString().contains('bottom')),
+        isEmpty,
       );
     });
 

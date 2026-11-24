@@ -76,6 +76,24 @@ void main() {
     });
   });
 
+  group('journeyFeedback', () {
+    test('days first, then Bauchgefühl entries, then nothing', () {
+      expect(
+        InsightCopy.journeyFeedback(_progress(3, 2)),
+        'Notiert! Noch 4 Tage, dann schau ich nach ersten Mustern.',
+      );
+      expect(
+        InsightCopy.journeyFeedback(_progress(6, 2)),
+        'Notiert! Noch 1 Tag, dann schau ich nach ersten Mustern.',
+      );
+      expect(
+        InsightCopy.journeyFeedback(_progress(7, 2)),
+        'Notiert! Noch 1× Bauchgefühl, dann schau ich nach ersten Mustern.',
+      );
+      expect(InsightCopy.journeyFeedback(_progress(7, 3)), isNull);
+    });
+  });
+
   group('lockedLine', () {
     test('days left first, plural and singular', () {
       expect(

@@ -134,6 +134,7 @@ class _GutFeelingTrackerScreenState
       ref,
       kind: EntryKind.gutFeeling,
       trackedAt: entry.trackedAt,
+      sentiment: sentimentForGutFeeling(entry),
     );
     final success = await saveWithFeedback(
       context,
