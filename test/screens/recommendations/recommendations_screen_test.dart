@@ -159,6 +159,64 @@ void main() {
       expect(find.byType(PageView), findsOneWidget);
     });
 
+    testWidgets('a set that arrives while the Tipps are open is marked '
+        'seen', (tester) async {
+      final repo = FakeRecommendationRepository(sets: [_rec('1')]);
+      await tester.pumpWithProviders(
+        const RecommendationsScreen(),
+        overrides: [
+          recommendationRepositoryProvider.overrideWithValue(repo),
+          currentUserIdProvider.overrideWithValue('test-user'),
+        ],
+      );
+      await tester.pumpAndSettle();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(RecommendationsScreen)),
+      );
+      expect(repo.marked, [
+        ['1'],
+      ]);
+
+      // A push brings this week's set while they are open.
+      repo.sets = [_rec('2'), ...repo.sets];
+      await container
+          .read(recommendationProvider.notifier)
+          .fetchRecommendations();
+      await tester.pumpAndSettle();
+
+      expect(repo.marked, [
+        ['1'],
+        ['2'],
+      ]);
+      expect(container.read(unseenTipSetProvider), isNull);
+    });
+
+    testWidgets('a mark that fails is not retried while they stay open', (
+      tester,
+    ) async {
+      final repo = FakeRecommendationRepository(sets: [_rec('1')])
+        ..markError = Exception('offline');
+      await tester.pumpWithProviders(
+        const RecommendationsScreen(),
+        overrides: [
+          recommendationRepositoryProvider.overrideWithValue(repo),
+          currentUserIdProvider.overrideWithValue('test-user'),
+        ],
+      );
+      await tester.pumpAndSettle();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(RecommendationsScreen)),
+      );
+      await container
+          .read(recommendationProvider.notifier)
+          .fetchRecommendations();
+      await tester.pumpAndSettle();
+
+      expect(repo.marked, [
+        ['1'],
+      ]);
+    });
+
     testWidgets('empty state shows mascot + "Noch keine Tipps"', (
       tester,
     ) async {

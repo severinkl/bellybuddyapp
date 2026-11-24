@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/app_theme.dart';
@@ -54,9 +56,21 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
     _controller = PageController();
     Future.microtask(() async {
       await ref.read(recommendationProvider.notifier).fetchRecommendations();
+      if (!mounted) return;
+      // From now on a set that arrives while they are open (a push) is seen
+      // too: each newest set once, so a failing mark isn't retried in a loop.
+      _markedNewestId = ref.read(recommendationProvider).value?.firstOrNull?.id;
+      ref.listenManual<Recommendation?>(unseenTipSetProvider, (_, set) {
+        if (set == null || set.id == _markedNewestId) return;
+        _markedNewestId = set.id;
+        unawaited(_markSeen());
+      });
       await _markSeen();
     });
   }
+
+  /// The newest set [_markSeen] was called for.
+  String? _markedNewestId;
 
   /// Marks the shown sets seen.
   Future<void> _markSeen() async {
