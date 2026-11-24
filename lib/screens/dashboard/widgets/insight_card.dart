@@ -11,12 +11,17 @@ import '../../../services/insights/insight_copy.dart';
 import '../../../widgets/common/bb_card.dart';
 import '../../../widgets/common/insight_progress_row.dart';
 import '../../registration/widgets/step_field_label.dart';
+import 'journey_dots.dart';
 
 /// Home's card on what the Buddy learns about the user's gut; a tap opens
 /// the Muster page (once: a double tap doesn't push it twice).
 ///
-/// - Locked: how much is left until the first patterns, and both progress
-///   bars (days with entries, gut-feeling entries).
+/// - Locked, for a user on the first-patterns [journey]: the Buddy's line,
+///   the 7 [JourneyDots], the [journeyReward] (Stage 3's slot) and the day
+///   and Bauchgefühl counters.
+/// - Locked, otherwise: how much is left until the first patterns, and both
+///   progress bars (days with entries, gut-feeling entries). Hidden while
+///   [journey] is still undecided (null).
 /// - Unlocked, the insights' [Insights.pick]: the top „Fällt mir auf" item,
 ///   else what was often there on good days, else nothing yet; each with
 ///   „kein Befund".
@@ -25,11 +30,22 @@ import '../../registration/widgets/step_field_label.dart';
 /// next user's insights load (the state then still holds the previous
 /// user's value) the card is hidden.
 class InsightCard extends StatelessWidget {
-  const InsightCard({super.key, required this.insights});
+  const InsightCard({
+    super.key,
+    required this.insights,
+    this.journey,
+    this.journeyReward,
+  });
 
   static const cardKey = Key('insight_card');
 
   final AsyncValue<Insights> insights;
+
+  /// Whether this user sees the journey while locked; null: undecided.
+  final bool? journey;
+
+  /// Under the dots of the journey.
+  final Widget? journeyReward;
 
   static const _padding = EdgeInsets.fromLTRB(
     AppConstants.spacingMd,
@@ -44,7 +60,9 @@ class InsightCard extends StatelessWidget {
       AsyncData(:final value) => value,
       _ => null,
     };
-    if (value == null) return const SizedBox.shrink();
+    if (value == null || (!value.unlocked && journey == null)) {
+      return const SizedBox.shrink();
+    }
     void open() {
       final router = GoRouter.of(context);
       // Already on top: the second tap of a double tap, both before the
@@ -73,6 +91,8 @@ class InsightCard extends StatelessWidget {
               padding: _padding,
               child: value.unlocked
                   ? _Unlocked(value.pick)
+                  : journey == true
+                  ? _Journey(value, reward: journeyReward)
                   : _Locked(value.progress),
             ),
           ),
@@ -158,6 +178,57 @@ class _Locked extends StatelessWidget {
       line: InsightCopy.lockedLine(progress),
       locked: true,
       below: [AppConstants.gap12, InsightProgressBars(progress)],
+    );
+  }
+}
+
+/// The first 7 days: the Buddy's line, the dots, [reward], the counters.
+class _Journey extends StatelessWidget {
+  const _Journey(this.insights, {this.reward});
+
+  final Insights insights;
+  final Widget? reward;
+
+  static const _counterStyle = TextStyle(
+    fontSize: AppTheme.fontSizeCaptionLG,
+    height: AppTheme.lineHeightSnug,
+    color: AppTheme.mutedForeground,
+  );
+
+  Widget _counter(List<CopySpan> spans) => Text.rich(
+    TextSpan(
+      style: _counterStyle,
+      children: [
+        for (final (text, strong) in spans)
+          TextSpan(
+            text: text,
+            style: strong ? const TextStyle(fontWeight: FontWeight.w600) : null,
+          ),
+      ],
+    ),
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    final progress = insights.progress;
+    return _Content(
+      title: InsightCopy.learningTitle,
+      line: InsightCopy.journeyLine(progress),
+      locked: true,
+      below: [
+        AppConstants.gap12,
+        JourneyDots(days: insights.journey),
+        if (reward != null) ...[AppConstants.gap8, reward!],
+        AppConstants.gap8,
+        Wrap(
+          spacing: AppConstants.spacingMd,
+          runSpacing: AppConstants.spacingXs,
+          children: [
+            _counter(InsightCopy.journeyDaysSpans(progress)),
+            _counter(InsightCopy.journeyGutFeelingsSpans(progress)),
+          ],
+        ),
+      ],
     );
   }
 }

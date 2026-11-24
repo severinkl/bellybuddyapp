@@ -8,17 +8,25 @@ import 'package:riverpod/src/internals.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:belly_buddy/screens/trackers/gut_feeling/gut_feeling_tracker_screen.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
+import 'package:belly_buddy/providers/buddy_provider.dart';
+import 'package:belly_buddy/providers/care_log_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
+import 'package:belly_buddy/providers/insights_provider.dart';
+import 'package:belly_buddy/services/buddy/care_meters.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
+import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/buddy/buddy_reaction_view.dart';
+import 'package:belly_buddy/widgets/buddy/log_success_hero.dart';
 import 'package:belly_buddy/widgets/common/bb_button.dart';
 import 'package:belly_buddy/widgets/common/bb_success_overlay.dart';
 import 'package:belly_buddy/widgets/common/mascot_image.dart';
 import 'package:belly_buddy/config/constants.dart';
 
 import '../../../helpers/fakes.dart';
+import '../../../helpers/fixtures.dart';
+import '../../../helpers/layout_checks.dart';
 import '../../../helpers/riverpod_helpers.dart';
 
 List<Override> _overrides([FakeEntryRepository? entries]) => [
@@ -144,6 +152,112 @@ void main() {
       expect(find.byType(MascotImage), findsNothing);
     });
 
+    testWidgets('the Bauchgefühl page charges Bauchgefühl', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      // A past day's entry is logged at 12:00; the clock reads 12:00 too.
+      await tester.pumpWithProviders(
+        GutFeelingTrackerScreen(initialDate: DateTime(2026, 11, 23)),
+        overrides: [
+          ..._overrides(),
+          buddyClockProvider.overrideWithValue(
+            () => DateTime(2026, 11, 23, 12),
+          ),
+        ],
+      );
+      await tester.pump(const Duration(milliseconds: 50));
+
+      await tester.tap(find.text('Weiter'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump();
+      await tester.tap(find.text('Speichern'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 700));
+
+      final meter = tester.widget<ChargingMeter>(find.byType(ChargingMeter));
+      expect(meter.need, CareNeed.gutFeeling);
+      expect(meter.from, AppConstants.careMeterFloor);
+      expect(meter.to, 1.0);
+      expect(
+        find.descendant(
+          of: find.byType(LogSuccessHero),
+          matching: find.byType(BuddyReactionView),
+        ),
+        findsOneWidget,
+      );
+    });
+
+    Future<ProviderContainer> saveWithLine(WidgetTester tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer.test(
+        overrides: [
+          ..._overrides(),
+          buddyClockProvider.overrideWithValue(
+            () => DateTime(2026, 11, 23, 12),
+          ),
+          insightsProviderSeededWith(lockedInsights()),
+          careLogProvider.overrideWithValue(const CareLog()),
+          buddyProvider.overrideWith(
+            () => FakeBuddyNotifier(() => buddyStatus(streak: 4)),
+          ),
+        ],
+      );
+      await container.read(insightsProvider.future);
+      await container.read(buddyProvider.future);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            home: GutFeelingTrackerScreen(initialDate: DateTime(2026, 11, 23)),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 700));
+      await tester.tap(find.text('Weiter'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump();
+      await tester.tap(find.text('Speichern'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1300));
+      return container;
+    }
+
+    testWidgets("the day's first Bauchgefühl, locked: the Buddy says how far "
+        'it is', (tester) async {
+      await saveWithLine(tester);
+
+      const line = 'Notiert! Noch 4 Tage, dann schau ich nach ersten Mustern.';
+      expect(find.text(line), findsOneWidget);
+    });
+
+    for (final scale in [1.0, 1.3]) {
+      testWidgets('fits 375×667 at text scale $scale with the line and the '
+          'ignite row', (tester) async {
+        tester.view.physicalSize = const Size(750, 1334);
+        tester.view.devicePixelRatio = 2;
+        tester.platformDispatcher.textScaleFactorTestValue = scale;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+        final errors = await collectFlutterErrors(() => saveWithLine(tester));
+
+        expect(find.byKey(LogSuccessHero.igniteKey), findsOneWidget);
+        expect(
+          tester
+              .widget<LogSuccessHero>(find.byType(LogSuccessHero))
+              .moment
+              .buddyLine,
+          isNotNull,
+        );
+        expectSuccessPageFits(
+          tester,
+          errors,
+          page: find.byType(BbSuccessOverlay),
+        );
+      });
+    }
+
     Future<ProviderContainer> pumpTracker(
       WidgetTester tester,
       FakeEntryRepository entries,
@@ -239,6 +353,53 @@ void main() {
       );
       expect(overlay.calm, isTrue);
       expect(overlay.message, isNot(contains('!')));
+    });
+
+    testWidgets('after a hard day the calm page lights no „Tag n", even on '
+        "today's first entry", (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer.test(
+        overrides: [
+          ..._overrides(),
+          buddyClockProvider.overrideWithValue(
+            () => DateTime(2026, 11, 23, 14),
+          ),
+          buddyProvider.overrideWith(
+            () => FakeBuddyNotifier(() => buddyStatus(streak: 4)),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      await container.read(buddyProvider.future);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            home: GutFeelingTrackerScreen(initialDate: DateTime(2026, 11, 23)),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 700));
+
+      await tapMascot(tester, AppConstants.mascotCramp);
+      await tapMascot(tester, AppConstants.mascotFullness);
+      await goToStimmungAndSave(tester);
+
+      expect(
+        tester.widget<BbSuccessOverlay>(find.byType(BbSuccessOverlay)).calm,
+        isTrue,
+      );
+      // Today's first entry: it does make day 5 …
+      expect(
+        tester
+            .widget<LogSuccessHero>(find.byType(LogSuccessHero))
+            .moment
+            .ignitesDay,
+        5,
+      );
+      // … but the calm page cheers no progress.
+      expect(find.byKey(LogSuccessHero.igniteKey), findsNothing);
+      expect(find.text('Tag 5'), findsNothing);
     });
 
     testWidgets('a good day gets the cheerful success screen', (tester) async {

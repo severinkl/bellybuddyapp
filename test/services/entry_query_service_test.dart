@@ -145,6 +145,24 @@ class _SettledTransform extends MockPostgrestTransformBuilder {
   }) => _future.then(onValue, onError: onError);
 }
 
+/// Transform builder whose `limit` returns [_rows] (or throws) and records
+/// the count.
+class _LimitTransform extends MockPostgrestTransformBuilder {
+  _LimitTransform(this._rows);
+
+  final List<Map<String, dynamic>> _rows;
+  final limits = <int>[];
+
+  @override
+  PostgrestTransformBuilder<PostgrestList> limit(
+    int count, {
+    String? referencedTable,
+  }) {
+    limits.add(count);
+    return _SettledTransform(Future.value(_rows));
+  }
+}
+
 void main() {
   late MockSupabaseClient client;
   late EntryQueryService service;
@@ -215,6 +233,30 @@ void main() {
       verify(() => meal.lt('tracked_at', expectedEnd)).called(1);
     });
 
+    // Under TZ=Europe/Vienna: 25 Oct 2026 has 25 hours, 29 Mar 23.
+    for (final (day, start, end) in [
+      (
+        DateTime(2026, 10, 25, 12),
+        '2026-10-25T00:00:00.000Z',
+        '2026-10-26T00:00:00.000Z',
+      ),
+      (
+        DateTime(2026, 3, 29, 12),
+        '2026-03-29T00:00:00.000Z',
+        '2026-03-30T00:00:00.000Z',
+      ),
+    ]) {
+      test('a DST switch day ($start) ends at the next midnight', () async {
+        final filters = _setupAllTables(client);
+        final meal = filters[0];
+
+        await service.fetchEntriesForDateRange(userId: testUserId, date: day);
+
+        verify(() => meal.gte('tracked_at', start)).called(1);
+        verify(() => meal.lt('tracked_at', end)).called(1);
+      });
+    }
+
     test('ordered=true applies .order() on each table', () async {
       final filters = _setupAllTables(client);
       final meal = filters[0];
@@ -268,6 +310,107 @@ void main() {
       await expectLater(
         service.fetchEntriesForDateRange(userId: testUserId, date: testDate),
         throwsException,
+      );
+    });
+  });
+
+  group('EntryQueryService.fetchLatestBefore', () {
+    final before = DateTime(2026, 11, 23);
+    const tables = ['meal_entries', 'gut_feeling_entries', 'drink_entries'];
+
+    ({
+      Map<String, SettlableFilterBuilder> filters,
+      Map<String, _LimitTransform> limited,
+    })
+    setUpTables(Map<String, List<Map<String, dynamic>>> rows) {
+      final filters = <String, SettlableFilterBuilder>{};
+      final limited = <String, _LimitTransform>{};
+      for (final t in tables) {
+        final qb = MockSupabaseQueryBuilder();
+        final f = SettlableFilterBuilder(
+          Future.value(<Map<String, dynamic>>[]),
+        );
+        final l = _LimitTransform(rows[t] ?? []);
+        when(() => client.from(t)).thenAnswer((_) => qb);
+        when(() => qb.select(any())).thenAnswer((_) => f);
+        when(() => f.eq(any(), any())).thenAnswer((_) => f);
+        when(() => f.lt(any(), any())).thenAnswer((_) => f);
+        when(
+          () => f.order(any(), ascending: any(named: 'ascending')),
+        ).thenAnswer((_) => l);
+        filters[t] = f;
+        limited[t] = l;
+      }
+      return (filters: filters, limited: limited);
+    }
+
+    test(
+      'selects tracked_at before the moment, newest first, one row',
+      () async {
+        final s = setUpTables({});
+
+        await service.fetchLatestBefore(userId: testUserId, before: before);
+
+        for (final t in tables) {
+          verify(() => s.filters[t]!.eq('user_id', testUserId)).called(1);
+          verify(
+            () => s.filters[t]!.lt('tracked_at', '2026-11-23T00:00:00.000Z'),
+          ).called(1);
+          verify(
+            () => s.filters[t]!.order('tracked_at', ascending: false),
+          ).called(1);
+          expect(s.limited[t]!.limits, [1]);
+        }
+        verifyNever(() => client.from('toilet_entries'));
+      },
+    );
+
+    test('maps each table\'s row, null without one', () async {
+      setUpTables({
+        // As PostgREST sends them: the wall clock in the UTC slot.
+        'meal_entries': [
+          {'tracked_at': '2026-11-22T19:00:00+00:00'},
+        ],
+        'drink_entries': [
+          {'tracked_at': '2026-11-22T21:00:00+00:00'},
+        ],
+      });
+
+      final latest = await service.fetchLatestBefore(
+        userId: testUserId,
+        before: before,
+      );
+
+      expect(latest.meal, DateTime(2026, 11, 22, 19));
+      expect(latest.drink, DateTime(2026, 11, 22, 21));
+      expect(latest.gutFeeling, isNull);
+    });
+
+    test('rethrows', () async {
+      final qb = MockSupabaseQueryBuilder();
+      when(() => client.from('meal_entries')).thenAnswer((_) => qb);
+      when(() => qb.select(any())).thenThrow(Exception('db error'));
+      for (final t in ['gut_feeling_entries', 'drink_entries']) {
+        final q = MockSupabaseQueryBuilder();
+        when(() => client.from(t)).thenAnswer((_) => q);
+        when(() => q.select(any())).thenThrow(Exception('db error'));
+      }
+
+      await expectLater(
+        service.fetchLatestBefore(userId: testUserId, before: before),
+        throwsException,
+      );
+    });
+
+    test('LatestEntries has value equality', () {
+      expect(
+        LatestEntries(meal: before),
+        LatestEntries(meal: DateTime(2026, 11, 23)),
+      );
+      expect(LatestEntries(meal: before), isNot(const LatestEntries()));
+      expect(
+        LatestEntries(meal: before).hashCode,
+        LatestEntries(meal: DateTime(2026, 11, 23)).hashCode,
       );
     });
   });

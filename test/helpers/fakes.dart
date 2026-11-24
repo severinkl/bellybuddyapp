@@ -30,6 +30,8 @@ import 'package:belly_buddy/repositories/recommendation_repository.dart';
 import 'package:belly_buddy/repositories/user_recipe_repository.dart';
 import 'package:belly_buddy/services/entry_query_service.dart';
 import 'package:belly_buddy/services/ingredient_service.dart';
+import 'package:belly_buddy/utils/date_format_utils.dart';
+import 'package:belly_buddy/utils/wall_clock.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'fixtures.dart';
@@ -262,7 +264,11 @@ class FakeProfileRepository implements ProfileRepository {
 
 // -- FakeEntryRepository --
 class FakeEntryRepository implements EntryRepository {
-  FakeEntryRepository({this.throwOnUpdate = false, this.throwOnDelete = false});
+  FakeEntryRepository({
+    this.throwOnUpdate = false,
+    this.throwOnDelete = false,
+    this.countInsertsAsActivity = false,
+  });
 
   /// When true, [updateEntry] throws on invocation. Used in tests that verify
   /// the screen stays open and surfaces the error rather than popping.
@@ -270,6 +276,10 @@ class FakeEntryRepository implements EntryRepository {
 
   /// When true, [deleteByType] throws on invocation (a delete that fails).
   final bool throwOnDelete;
+
+  /// When true, [insertEntry] adds the row's local `tracked_at` day to the
+  /// activity days, so the Buddy's refresh after a log sees it.
+  final bool countInsertsAsActivity;
 
   final List<Map<String, dynamic>> _inserted = [];
 
@@ -360,6 +370,12 @@ class FakeEntryRepository implements EntryRepository {
     int? limit,
   }) async => _result.meals;
 
+  @override
+  Future<LatestEntries> fetchLatestBefore({
+    required String userId,
+    required DateTime before,
+  }) async => const LatestEntries();
+
   /// When set, [fetchForDate] throws it (a day that fails to load).
   Object? fetchForDateError;
 
@@ -383,6 +399,10 @@ class FakeEntryRepository implements EntryRepository {
     _inserted.add(data);
     if (table == 'meal_entries') {
       addedMeals.add(MealEntry.fromJson(data));
+    }
+    if (countInsertsAsActivity) {
+      final at = wallClockFromWire(data['tracked_at'] as String);
+      _activityDays = {..._activityDays, startOfDay(at)};
     }
   }
 

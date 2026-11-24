@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import '../../models/gut_feeling_entry.dart';
 import '../../models/insight_progress.dart';
 import '../../models/insight_rules.dart';
@@ -21,6 +23,9 @@ import '../../utils/gut_feeling_rating.dart';
 ///   entry of that class (`[anchor − 24 h, anchor)`) say which ingredients
 ///   were there. Names match trimmed and case-insensitively, and each
 ///   ingredient counts once per day.
+///
+/// The journey holds the latest [InsightRules.daysNeeded] days with any
+/// entry, from the same active-day set as the progress.
 ///
 /// Pure: no I/O and no clock.
 Insights computeInsights(InsightSource source, DateTime now) {
@@ -77,12 +82,18 @@ Insights computeInsights(InsightSource source, DateTime now) {
     names: names,
   );
 
+  final activeDays = {
+    for (final t in source.activityTimes)
+      if (inWindow(t)) _localDay(t),
+  };
+  final sortedDays = activeDays.toList()..sort();
+  final journeyDays = sortedDays.skip(
+    math.max(0, sortedDays.length - InsightRules.daysNeeded),
+  );
+
   return Insights(
     progress: InsightProgress(
-      activeDays: {
-        for (final t in source.activityTimes)
-          if (inWindow(t)) _localDay(t),
-      }.length,
+      activeDays: activeDays.length,
       gutFeelingEntries: gutFeelings.length,
     ),
     calendar: List.unmodifiable(calendar),
@@ -90,6 +101,10 @@ Insights computeInsights(InsightSource source, DateTime now) {
     hardDays: hardDays,
     noticed: List.unmodifiable(noticed),
     pick: _pick(noticed, goodDays),
+    journey: List.unmodifiable([
+      for (final day in journeyDays)
+        JourneyDay(day, gutFeeling: entriesByDay.containsKey(day)),
+    ]),
   );
 }
 

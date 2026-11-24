@@ -15,6 +15,7 @@ import '../utils/logger.dart';
 import '../utils/retry_helper.dart';
 import 'auth_provider.dart' show CurrentUserRef;
 import 'core_providers.dart';
+import 'today_provider.dart';
 
 /// The Buddy's clock. Day boundaries use its local date; tests override it.
 final buddyTodayProvider = Provider<DateTime Function()>((_) => DateTime.now);
@@ -101,7 +102,9 @@ class BuddyStatus {
 }
 
 /// Loads the Buddy, evaluates the streak (savers, refunds, milestones, goal),
-/// persists the result and exposes it; `null` while signed out.
+/// persists the result and exposes it; `null` while signed out. A new day
+/// ([todayProvider]) evaluates it again, watched or not: whether today
+/// counts and the streak are the day's (a tracker reads them as it logs).
 class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
   static const _log = AppLogger('BuddyProvider');
 
@@ -129,6 +132,8 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
   Future<BuddyStatus?> build() async {
     final userId = ref.watch(currentUserIdProvider);
     if (userId == null) return null;
+    // Logged by refresh.
+    ref.listen(todayProvider, (_, _) => refresh().ignore());
     try {
       final status = await _serialized(() => _sync(userId));
       return _withPending(userId, status);

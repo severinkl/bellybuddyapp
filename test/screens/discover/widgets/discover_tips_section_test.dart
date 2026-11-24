@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/screens/discover/widgets/discover_tips_card.dart';
+import 'package:belly_buddy/screens/discover/widgets/example_tip_card.dart';
 import 'package:belly_buddy/screens/discover/widgets/discover_tips_section.dart';
 
 import '../../../helpers/fixtures.dart';
@@ -60,6 +61,16 @@ void main() {
           find.byKey(DiscoverTipsSection.optInKey),
           optIn ? findsOneWidget : findsNothing,
         );
+        final example = find.byKey(ExampleTipCard.cardKey);
+        expect(example, optIn ? findsOneWidget : findsNothing);
+        if (optIn) {
+          expect(
+            tester.getBottomLeft(example).dy,
+            lessThan(
+              tester.getTopLeft(find.byKey(DiscoverTipsSection.optInKey)).dy,
+            ),
+          );
+        }
       });
     }
   }

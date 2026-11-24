@@ -13,6 +13,7 @@ import '../../providers/buddy_welcome_provider.dart';
 import '../../providers/discover_news_provider.dart';
 import '../../providers/entries_provider.dart';
 import '../../providers/insights_provider.dart';
+import '../../providers/journey_provider.dart';
 import '../../providers/upgrade_gate_provider.dart';
 import '../../widgets/common/upgrade_available_dialog.dart';
 import '../../providers/profile_provider.dart';
@@ -152,7 +153,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ref.read(profileProvider.notifier).fetchProfile(),
         ref
             .read(entriesProvider.notifier)
-            .loadEntries(ref.read(buddyClockProvider)()),
+            .loadEntries(ref.read(buddyClockProvider)(), refreshLatest: true),
         ref.read(buddyProvider.notifier).reload(),
         ref.read(insightsProvider.notifier).refresh(),
         // The first load leaves the tips to the app root's sign-in load.
@@ -212,6 +213,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   builder: (_, ref, _) => InsightCard(
                     key: TutorialKeys.insight,
                     insights: ref.watch(insightsProvider),
+                    journey: ref.watch(journeyProvider),
                   ),
                 ),
                 // Only while a tip set is new.

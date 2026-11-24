@@ -10,13 +10,12 @@ import 'package:belly_buddy/providers/upgrade_gate_provider.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/repositories/knowledge_repository.dart';
 import 'package:belly_buddy/repositories/repositories.dart';
-import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
-import 'package:belly_buddy/widgets/buddy/animated_buddy.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show User;
 
+import '../../test/helpers/ambient_animations.dart';
 import '../../test/helpers/fakes.dart';
 import '../../test/helpers/fixtures.dart';
 
@@ -54,11 +53,10 @@ ProviderScope buildTestApp({
   FakeIngredientRepository? ingredientRepo,
   bool weeklyTipsEnabled = false,
 }) {
-  // Animated Buddies (dashboard hero, welcome screen) tick every frame and
-  // the care ring's glow pulses forever, so `pumpAndSettle` would never
-  // settle: render them without ticking and the glow without pulsing.
-  AnimatedBuddy.tickerEnabled = false;
-  CareRing.pulseEnabled = false;
+  // Animated Buddies (dashboard hero, welcome screen) tick every frame, the
+  // care ring's glow pulses and the streak flame wobbles forever, so
+  // `pumpAndSettle` would never settle: hold them still.
+  disableAmbientAnimationsForTests();
 
   final fakeProfileRepo = profileRepo ?? FakeProfileRepository();
   if (seedProfile) {

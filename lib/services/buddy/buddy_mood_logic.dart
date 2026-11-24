@@ -1,27 +1,40 @@
 import 'dart:math';
 
+import '../../config/constants.dart';
 import '../../models/gut_feeling_entry.dart';
 import '../../models/toilet_entry.dart';
 import '../../utils/gut_feeling_rating.dart';
 import '../../widgets/buddy/buddy_actions.dart';
 import '../../widgets/buddy/buddy_pose.dart';
 import 'buddy_copy.dart';
+import 'care_meters.dart';
 import 'daily_care.dart';
 
 enum EntryKind { meal, drink, toilet, gutFeeling }
 
+/// The need an entry of [kind] fills.
+CareNeed careNeedOf(EntryKind kind) => switch (kind) {
+  EntryKind.meal => CareNeed.food,
+  EntryKind.drink => CareNeed.drink,
+  EntryKind.gutFeeling => CareNeed.gutFeeling,
+  EntryKind.toilet => CareNeed.toilet,
+};
+
 enum LogSentiment { good, neutral, bad }
 
-/// The Buddy's resting mood from what was logged today ([care]) at [now].
-BuddyMood deriveBuddyMood(DailyCare care, DateTime now) {
-  final h = now.hour;
-  if (care.entries == 0 && h < 10) return BuddyMood.sleepy;
-  if (care.kindsLogged >= 3) return BuddyMood.energetic;
-  if (care.lastLogAt != null &&
-      now.difference(care.lastLogAt!) < const Duration(hours: 5)) {
-    return BuddyMood.happy;
-  }
-  if (h >= 10 && h < 22) return BuddyMood.hungry;
+/// The Buddy's resting mood from his need meters at [now]: sleepy before
+/// [DayParts.awakeFrom] while nothing is logged today, energetic with every
+/// meter at [AppConstants.careMeterHigh] or more, happy with none under
+/// [AppConstants.careMeterLow], else hungry from [DayParts.awakeFrom] until
+/// [DayParts.nightFrom] and sleepy otherwise.
+BuddyMood deriveBuddyMood(CareLog log, DateTime now) {
+  final minute = DayParts.minuteOf(now);
+  final awake = minute >= DayParts.awakeFrom;
+  if (!log.anyOn(now) && !awake) return BuddyMood.sleepy;
+  final lowest = CareMeters.at(log, now).lowestLevel;
+  if (lowest >= AppConstants.careMeterHigh) return BuddyMood.energetic;
+  if (lowest >= AppConstants.careMeterLow) return BuddyMood.happy;
+  if (awake && minute < DayParts.nightFrom) return BuddyMood.hungry;
   return BuddyMood.sleepy;
 }
 
@@ -93,9 +106,11 @@ BuddyReaction reactionFor(
   }
 }
 
-/// A resting-mood line. Lines quoting the streak („{streak} Tage in Folge")
-/// are only used from a streak of 2 days on. Never [avoid] (the line said
-/// last) while the pool has another.
+/// A resting-mood line; sleepy outside the morning ([DayParts.dayFrom]
+/// until [DayParts.awakeFrom]) means night ([BuddyCopy.sleepyNight]).
+/// Lines quoting the streak („{streak} Tage in Folge") are only used from a
+/// streak of 2 days on. Never [avoid] (the line said last) while the pool
+/// has another.
 String moodLine(
   BuddyMood mood, {
   required String name,
@@ -104,7 +119,9 @@ String moodLine(
   required Random rnd,
   String? avoid,
 }) {
-  final all = mood == BuddyMood.sleepy && (now.hour < 5 || now.hour >= 10)
+  final minute = DayParts.minuteOf(now);
+  final morning = minute >= DayParts.dayFrom && minute < DayParts.awakeFrom;
+  final all = mood == BuddyMood.sleepy && !morning
       ? BuddyCopy.sleepyNight
       : BuddyCopy.mood[mood]!;
   final withoutStreak = [

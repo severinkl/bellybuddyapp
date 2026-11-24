@@ -13,6 +13,7 @@ import 'package:belly_buddy/screens/dashboard/dashboard_screen.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/insight_card.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/journey_dots.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/dashboard_tutorial_steps.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_keys.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_step.dart';
@@ -33,8 +34,10 @@ import 'package:belly_buddy/screens/recommendations/recommendations_screen.dart'
 import 'package:belly_buddy/services/entry_query_service.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/router/route_names.dart';
+import 'package:belly_buddy/services/buddy/care_meters.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
+import 'package:belly_buddy/widgets/buddy/need_meter.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
 import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
 
@@ -43,6 +46,7 @@ import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/riverpod_helpers.dart';
+import '../../helpers/widget_tester_helpers.dart';
 
 /// The app's clock in the insight-card tests, pinned: their entries
 /// ([insightSourceFor]) lie before it, in the insights' window on any date.
@@ -148,6 +152,11 @@ Future<void> _go(WidgetTester tester, GoRouter router, String path) async {
   router.go(path);
   await tester.pumpAndSettle();
 }
+
+/// Essen's level at [now] after a meal at [meal] (its math is
+/// care_meters_test's).
+double _foodAfter(DateTime meal, DateTime now) =>
+    CareMeters.at(CareLog(lastMealAt: meal), now).food;
 
 /// A step's copy with its bold parts in `**`.
 String _markedCopy(TutorialStep step) => step.richText.map((span) {
@@ -341,15 +350,36 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(
-        find.text(
-          'Noch 5 Tage, dann zeig ich dir erste Muster.',
-          skipOffstage: false,
-        ),
-        findsOneWidget,
-      );
+      expect(find.text('2 von 7 Tagen', skipOffstage: false), findsOneWidget);
       // Loaded once on mount: the dashboard's load joins the card's.
       expect(entryRepo.insightSourceCalls, 1);
+    });
+
+    testWidgets("a user past day 7 sees Stage 2's card", (tester) async {
+      SharedPreferences.setMockInitialValues({
+        AppConstants.keyNotificationModalShown: true,
+        '${AppConstants.keyInsightJourneyPrefix}$testUserId': false,
+      });
+      final entryRepo = FakeEntryRepository()
+        ..insightSource = insightSourceFor(
+          activeDays: 2,
+          gutFeelings: 1,
+          now: _insightsNow,
+        );
+      await tester.pumpWithProviders(
+        const DashboardScreen(),
+        overrides: [
+          ..._overrides(entryRepo: entryRepo),
+          buddyClockProvider.overrideWithValue(() => _insightsNow),
+        ],
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(
+        find.text('Tage mit Einträgen', skipOffstage: false),
+        findsOneWidget,
+      );
+      expect(find.byType(JourneyDots, skipOffstage: false), findsNothing);
     });
 
     testWidgets('pull-to-refresh fetches the insights again', (tester) async {
@@ -383,17 +413,17 @@ void main() {
       }
 
       expect(entryRepo.insightSourceCalls, 2);
-      expect(
-        find.text(
-          'Noch 4 Tage, dann zeig ich dir erste Muster.',
-          skipOffstage: false,
-        ),
-        findsOneWidget,
-      );
+      expect(find.text('3 von 7 Tagen', skipOffstage: false), findsOneWidget);
     });
 
     testWidgets('deleting the 3rd gut-feeling entry locks the card again, '
         'without pull-to-refresh', (tester) async {
+      // Past day 7 at the first load would decide against the journey: this
+      // user has it from before.
+      SharedPreferences.setMockInitialValues({
+        AppConstants.keyNotificationModalShown: true,
+        '${AppConstants.keyInsightJourneyPrefix}$testUserId': true,
+      });
       final entryRepo = FakeEntryRepository()
         ..insightSource = insightSourceFor(
           activeDays: 7,
@@ -433,10 +463,7 @@ void main() {
 
       expect(entryRepo.insightSourceCalls, 2);
       expect(
-        find.text(
-          'Noch 1 Bauchgefühl-Eintrag, dann zeig ich dir erste Muster.',
-          skipOffstage: false,
-        ),
+        find.text('Bauchgefühl 2 von 3', skipOffstage: false),
         findsOneWidget,
       );
     });
@@ -489,13 +516,7 @@ void main() {
         ],
       );
       await tester.pump(const Duration(milliseconds: 100));
-      expect(
-        find.text(
-          'Noch 5 Tage, dann zeig ich dir erste Muster.',
-          skipOffstage: false,
-        ),
-        findsOneWidget,
-      );
+      expect(find.text('2 von 7 Tagen', skipOffstage: false), findsOneWidget);
       final container = ProviderScope.containerOf(
         tester.element(find.byType(DashboardScreen)),
       );
@@ -523,13 +544,7 @@ void main() {
         );
       await container.read(insightsProvider.notifier).refresh();
       await tester.pump();
-      expect(
-        find.text(
-          'Noch 6 Tage, dann zeig ich dir erste Muster.',
-          skipOffstage: false,
-        ),
-        findsOneWidget,
-      );
+      expect(find.text('1 von 7 Tagen', skipOffstage: false), findsOneWidget);
     });
 
     testWidgets('390×844 phone: a big Buddy, the ring and its button above '
@@ -602,8 +617,8 @@ void main() {
       ]);
       expect(dashboardTutorialSteps.map(_markedCopy), [
         'Das ist dein **Buddy**! Jeder Eintrag hält euren 🔥 **Streak** am '
-            'Leben. Der **Ring** zeigt, was er heute schon bekommen hat – '
-            'tipp auf eine Blase, um es einzutragen.',
+            'Leben. Seine **Blasen** füllen sich, wenn du einträgst, und '
+            'leeren sich langsam – tipp auf eine, um einzutragen.',
         'Dieser Knopf schlägt dir den **nächsten Eintrag** vor – passend zur '
             'Tageszeit.',
         'Hier trägst du **alles** ein: Essen, Trinken, Bauchgefühl und Klo.',
@@ -737,14 +752,12 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    /// The bordered box [need]'s bubble draws (its shadow falls below it).
-    Rect bubbleBox(WidgetTester tester, CareNeed need) => tester.getRect(
-      find
-          .descendant(
-            of: find.byKey(CareRing.needKey(need)),
-            matching: find.byType(DecoratedBox),
-          )
-          .last,
+    /// The circle of [need]'s meter.
+    Rect meterCircle(WidgetTester tester, CareNeed need) => tester.getRect(
+      find.descendant(
+        of: find.byKey(CareRing.needKey(need)),
+        matching: find.byType(NeedMeter),
+      ),
     );
 
     for (final (name, size, padding) in [
@@ -755,7 +768,7 @@ void main() {
       ),
       ('375×667', const Size(375, 667), const FakeViewPadding(top: 20)),
     ]) {
-      testWidgets('$name: a bubble opens its own tracker, at its centre and '
+      testWidgets('$name: a bubble opens its own tracker, on its meter and '
           'on its lower edge; the button opens the suggested one', (
         tester,
       ) async {
@@ -763,22 +776,19 @@ void main() {
         expect(find.text('🍝 Mittagessen eintragen'), findsOneWidget);
 
         for (final MapEntry(key: need, value: path) in trackers.entries) {
-          final box = bubbleBox(tester, need);
           await tapOpens(
             tester,
             router,
-            box.center,
+            meterCircle(tester, need).center,
             path,
-            reason: '$need centre',
+            reason: '$need meter',
           );
-          // On its shadow, just above the bubble's visual bottom.
+          // Just above the bubble's bottom, under its last line.
+          final bubble = tester.getRect(find.byKey(CareRing.needKey(need)));
           await tapOpens(
             tester,
             router,
-            Offset(
-              box.center.dx,
-              box.bottom + AppConstants.careNeedShadowOffset.dy - 1,
-            ),
+            Offset(bubble.center.dx, bubble.bottom - 1),
             path,
             reason: '$need lower edge',
           );
@@ -797,8 +807,9 @@ void main() {
 
   group('DashboardScreen shows the signed-in user\'s day', () {
     final now = DateTime(2026, 11, 23, 14);
+    final lunchAt = DateTime(2026, 11, 23, 12);
     EntryQueryResult lunchToday() => testEntryQueryResult(
-      meals: [testMealEntry(trackedAt: DateTime(2026, 11, 23, 12))],
+      meals: [testMealEntry(trackedAt: lunchAt)],
       toiletEntries: const [],
       gutFeelings: const [],
       drinks: const [],
@@ -827,8 +838,8 @@ void main() {
       );
       await settle(tester);
 
-      expect(find.text('🍽 1/3'), findsOneWidget);
-      expect(find.text('🍽 0/3'), findsNothing);
+      // Lunch at 12:00, 2 h ago.
+      expect(needMeterLevel(tester, CareNeed.food), _foodAfter(lunchAt, now));
     });
 
     testWidgets('after signing out and in again: Home shows the new day '
@@ -870,21 +881,24 @@ void main() {
         ),
       );
       await settle(tester);
-      expect(find.text('🍽 0/3'), findsOneWidget);
+      expect(
+        needMeterLevel(tester, CareNeed.food),
+        AppConstants.careMeterFloor,
+      );
 
       // Twice: each round leaves the providers in another order.
-      for (final meals in [1, 2]) {
+      for (final meal in [
+        DateTime(2026, 11, 23, 12),
+        DateTime(2026, 11, 23, 13),
+      ]) {
         // Sign-out: Home goes, the app drops the user's entries.
         router.go(RoutePaths.welcome);
         await settle(tester);
         container.invalidate(entriesProvider);
-        // Sign-in: the account has [meals] meals today; Home is built again.
+        // Sign-in: the account has a [meal] today; Home is built again.
         entryRepo.seedResult(
           testEntryQueryResult(
-            meals: [
-              for (var h = 0; h < meals; h++)
-                testMealEntry(trackedAt: DateTime(2026, 11, 23, 8 + h)),
-            ],
+            meals: [testMealEntry(trackedAt: meal)],
             toiletEntries: const [],
             gutFeelings: const [],
             drinks: const [],
@@ -893,7 +907,11 @@ void main() {
         router.go(RoutePaths.dashboard);
         await settle(tester);
 
-        expect(find.text('🍽 $meals/3'), findsOneWidget, reason: '$meals');
+        expect(
+          needMeterLevel(tester, CareNeed.food),
+          _foodAfter(meal, now),
+          reason: '$meal',
+        );
       }
     });
   });

@@ -5,6 +5,8 @@ import 'package:belly_buddy/models/gut_feeling_entry.dart';
 import 'package:belly_buddy/models/ingredient_suggestion.dart' as model;
 import 'package:belly_buddy/models/knowledge_article.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
+import 'package:belly_buddy/models/insight_progress.dart';
+import 'package:belly_buddy/models/insights.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/models/recommendation.dart';
@@ -245,3 +247,23 @@ List<KnowledgeArticle> testKnowledgeArticles() => [
     publishedAt: DateTime.utc(2026, 10, 15, 8),
   ),
 ];
+
+/// Insights from the first days: [activeDays] days with entries and
+/// [gutFeelings] Bauchgefühl entries (locked below InsightRules'
+/// thresholds), the [journey]'s dots, nothing noticed yet.
+Insights lockedInsights({
+  int activeDays = 2,
+  int gutFeelings = 1,
+  List<JourneyDay> journey = const [],
+}) => Insights(
+  progress: InsightProgress(
+    activeDays: activeDays,
+    gutFeelingEntries: gutFeelings,
+  ),
+  calendar: const [],
+  goodDays: const DayColumn(days: 0),
+  hardDays: const DayColumn(days: 0),
+  noticed: const [],
+  pick: const NothingYetPick(),
+  journey: journey,
+);

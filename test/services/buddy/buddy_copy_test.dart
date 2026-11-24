@@ -45,6 +45,14 @@ void main() {
     );
   });
 
+  test('care lines invite, they never say a meal is missing', () {
+    for (final pool in BuddyCopy.care.values) {
+      for (final line in pool) {
+        expect(line, isNot(contains('fehlt')), reason: line);
+      }
+    }
+  });
+
   test('care lines fit the dashboard bubble', () {
     for (final pool in BuddyCopy.care.values) {
       for (final line in pool) {

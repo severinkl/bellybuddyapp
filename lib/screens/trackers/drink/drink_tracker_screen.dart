@@ -4,17 +4,16 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
-import '../../../providers/buddy_events_provider.dart';
 import '../../../providers/drink_tracker_provider.dart';
 import '../../../router/route_names.dart';
 import '../../../services/buddy/buddy_mood_logic.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/drink_helpers.dart';
-import '../../../utils/save_helper.dart';
-import '../../../widgets/buddy/buddy_reaction_view.dart';
+import '../../../widgets/buddy/log_success_hero.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/date_time_chips.dart';
 import '../../../widgets/common/tracker_screen_scaffold.dart';
+import '../entry_logger.dart';
 import 'widgets/drink_search.dart';
 import 'widgets/drink_size_selector.dart';
 import 'widgets/quick_drink_grid.dart';
@@ -30,7 +29,8 @@ class DrinkTrackerScreen extends ConsumerStatefulWidget {
   ConsumerState<DrinkTrackerScreen> createState() => _DrinkTrackerScreenState();
 }
 
-class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
+class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen>
+    with EntryLogger {
   @override
   void initState() {
     super.initState();
@@ -50,16 +50,16 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
     final state = ref.watch(drinkTrackerProvider);
     // selectedAmount is set only for a valid amount (1 to 3000 ml).
     final canSave = state.selectedDrink != null && state.selectedAmount != null;
+    final moment = logMoment;
 
     return TrackerScreenScaffold(
       trackerKey: DrinkTrackerScreen.trackerKey,
       title: 'Was hast du getrunken? \u{1F4A7}',
       showSuccess: state.showSuccess,
       successMessage: 'Getränk gespeichert!',
-      successIllustration: const BuddyReactionView(
-        kind: EntryKind.drink,
-        sentiment: LogSentiment.good,
-      ),
+      successIllustration: moment == null
+          ? null
+          : LogSuccessHero(moment: moment),
       // Closes with true: the opener knows a drink was saved (the meal
       // success screen then closes as well).
       onSuccessDismissed: () => context.canPop()
@@ -230,23 +230,12 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
     );
   }
 
-  Future<void> _save() async {
-    final ok = await saveWithFeedback(
-      context,
-      () => ref.read(drinkTrackerProvider.notifier).save(),
-    );
+  Future<void> _save() => logEntry(
+    kind: EntryKind.drink,
+    trackedAt: ref.read(drinkTrackerProvider).trackedAt,
+    save: ref.read(drinkTrackerProvider.notifier).save,
     // save() is a no-op without a drink and amount; only a stored entry
     // (shown as success) is a log the Buddy reacts to.
-    if (!mounted || !ok || !ref.read(drinkTrackerProvider).showSuccess) return;
-    ref
-        .read(buddyEventsProvider.notifier)
-        .emit(
-          BuddyLogEvent(
-            EntryKind.drink,
-            LogSentiment.good,
-            at: DateTime.now(),
-            trackedAt: ref.read(drinkTrackerProvider).trackedAt,
-          ),
-        );
-  }
+    stored: () => ref.read(drinkTrackerProvider).showSuccess,
+  );
 }

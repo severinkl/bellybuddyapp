@@ -1,14 +1,17 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/services/entry_query_service.dart';
 
+import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
 import '../helpers/mocks.dart';
 import '../helpers/riverpod_helpers.dart';
@@ -22,6 +25,12 @@ void main() {
     registerFallbackValue(testToiletEntry());
     registerFallbackValue(testGutFeelingEntry());
     registerFallbackValue(testDrinkEntry());
+    when(
+      () => mockRepo.fetchLatestBefore(
+        userId: any(named: 'userId'),
+        before: any(named: 'before'),
+      ),
+    ).thenAnswer((_) async => const LatestEntries());
   });
 
   ProviderContainer makeContainer({String? userId = testUserId}) =>
@@ -114,6 +123,319 @@ void main() {
       final state = container.read(entriesProvider);
       expect(state.error, isA<Exception>());
       expect(state.isLoading, isFalse);
+    });
+  });
+
+  group('EntriesNotifier.loadEntries latest before the day', () {
+    void stubDay(Future<EntryQueryResult> Function() answer) => when(
+      () => mockRepo.fetchForDate(
+        userId: any(named: 'userId'),
+        date: any(named: 'date'),
+        ordered: any(named: 'ordered'),
+      ),
+    ).thenAnswer((_) => answer());
+
+    test('loadEntries brings the latest entries before the day', () async {
+      stubDay(() async => testEntryQueryResult());
+      final yesterdayDrink = DateTime(2026, 11, 22, 21);
+      when(
+        () => mockRepo.fetchLatestBefore(
+          userId: any(named: 'userId'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer((_) async => LatestEntries(drink: yesterdayDrink));
+      final container = makeContainer();
+
+      await container
+          .read(entriesProvider.notifier)
+          .loadEntries(DateTime(2026, 11, 23, 14));
+
+      verify(
+        () => mockRepo.fetchLatestBefore(
+          userId: testUserId,
+          before: DateTime(2026, 11, 23),
+        ),
+      ).called(1);
+      expect(
+        container.read(entriesProvider).latestBefore.drink,
+        yesterdayDrink,
+      );
+    });
+
+    test('a failing latest-before query still loads the day', () async {
+      stubDay(() async => testEntryQueryResult());
+      when(
+        () => mockRepo.fetchLatestBefore(
+          userId: any(named: 'userId'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer((_) async => throw Exception('db error'));
+      final container = makeContainer();
+
+      await container
+          .read(entriesProvider.notifier)
+          .loadEntries(DateTime(2026, 11, 23));
+
+      final state = container.read(entriesProvider);
+      expect(state.meals, hasLength(1));
+      expect(state.latestBefore, const LatestEntries());
+      expect(state.error, isNull);
+      expect(state.isLoading, isFalse);
+    });
+
+    test('a failing latest-before query is logged once, by the query '
+        'service', () async {
+      stubDay(() async => testEntryQueryResult());
+      final client = MockSupabaseClient();
+      when(() => client.from(any())).thenThrow(Exception('db error'));
+      final service = EntryQueryService(client);
+      when(
+        () => mockRepo.fetchLatestBefore(
+          userId: any(named: 'userId'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer(
+        (i) => service.fetchLatestBefore(
+          userId: i.namedArguments[#userId] as String,
+          before: i.namedArguments[#before] as DateTime,
+        ),
+      );
+      final logs = <String>[];
+      final originalDebugPrint = debugPrint;
+      debugPrint = (message, {wrapWidth}) => logs.add(message ?? '');
+      addTearDown(() => debugPrint = originalDebugPrint);
+      final container = makeContainer();
+
+      await container
+          .read(entriesProvider.notifier)
+          .loadEntries(DateTime(2026, 11, 23));
+
+      expect(
+        logs.where((l) => l.contains('[ERROR]: fetchLatestBefore failed')),
+        hasLength(1),
+      );
+    });
+
+    test('a superseded load publishes neither', () async {
+      final slowDay = Completer<EntryQueryResult>();
+      final slowLatest = Completer<LatestEntries>();
+      var calls = 0;
+      stubDay(
+        () => ++calls == 1
+            ? slowDay.future
+            : Future.value(testEntryQueryResult(meals: [])),
+      );
+      var latestCalls = 0;
+      when(
+        () => mockRepo.fetchLatestBefore(
+          userId: any(named: 'userId'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer(
+        (_) => ++latestCalls == 1
+            ? slowLatest.future
+            : Future.value(LatestEntries(meal: DateTime(2026, 11, 22, 19))),
+      );
+      final container = makeContainer();
+      final notifier = container.read(entriesProvider.notifier);
+
+      final first = notifier.loadEntries(DateTime(2026, 11, 23));
+      await notifier.loadEntries(DateTime(2026, 11, 23));
+      slowDay.complete(testEntryQueryResult());
+      slowLatest.complete(LatestEntries(drink: DateTime(2026, 11, 20, 8)));
+      await first;
+
+      final state = container.read(entriesProvider);
+      expect(state.meals, isEmpty);
+      expect(state.latestBefore.meal, DateTime(2026, 11, 22, 19));
+      expect(state.latestBefore.drink, isNull);
+    });
+  });
+
+  group('EntriesNotifier: the latest before the day only when it can '
+      'change', () {
+    final day = DateTime(2026, 11, 23);
+
+    /// How often the latest entries before a day were fetched.
+    late int latestCalls;
+
+    setUp(() {
+      latestCalls = 0;
+      when(
+        () => mockRepo.fetchForDate(
+          userId: any(named: 'userId'),
+          date: any(named: 'date'),
+          ordered: any(named: 'ordered'),
+        ),
+      ).thenAnswer((_) async => testEntryQueryResult());
+      when(
+        () => mockRepo.fetchLatestBefore(
+          userId: any(named: 'userId'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer((_) async {
+        latestCalls++;
+        return LatestEntries(drink: DateTime(2026, 11, 22, 21));
+      });
+      when(
+        () => mockRepo.insertEntry(any(), any(), userId: any(named: 'userId')),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockRepo.updateEntry(any(), any(), any()),
+      ).thenAnswer((_) async {});
+      when(() => mockRepo.deleteEntry(any(), any())).thenAnswer((_) async {});
+    });
+
+    /// A container with [day] loaded once.
+    Future<ProviderContainer> loaded() async {
+      final container = makeContainer();
+      await container.read(entriesProvider.notifier).loadEntries(day);
+      expect(latestCalls, 1);
+      return container;
+    }
+
+    /// Lets a write's background reload land.
+    Future<void> settle() => pumpEventQueue();
+
+    test('reloading the same day keeps them', () async {
+      final container = await loaded();
+
+      await container
+          .read(entriesProvider.notifier)
+          .loadEntries(day.add(const Duration(hours: 14)));
+
+      expect(latestCalls, 1);
+      expect(
+        container.read(entriesProvider).latestBefore.drink,
+        DateTime(2026, 11, 22, 21),
+      );
+    });
+
+    test('another day and a pull to refresh fetch them again', () async {
+      final container = await loaded();
+      final notifier = container.read(entriesProvider.notifier);
+
+      await notifier.loadEntries(DateTime(2026, 11, 24));
+      expect(latestCalls, 2);
+      await notifier.loadEntries(DateTime(2026, 11, 24), refreshLatest: true);
+      expect(latestCalls, 3);
+    });
+
+    test('an edit, a move or a delete fetches them again', () async {
+      final container = await loaded();
+      final notifier = container.read(entriesProvider.notifier);
+
+      await notifier.updateMeal(testMealEntry());
+      await settle();
+      expect(latestCalls, 2);
+      await notifier.updateDrinkById(
+        'drink-1',
+        amountMl: 250,
+        trackedAt: DateTime(2026, 11, 20, 9),
+      );
+      await settle();
+      expect(latestCalls, 3);
+      await notifier.deleteMeal('meal-1');
+      await settle();
+      expect(latestCalls, 4);
+    });
+
+    test('an insert dated before the loaded day fetches them again, one on '
+        'the day does not', () async {
+      final container = await loaded();
+      final notifier = container.read(entriesProvider.notifier);
+
+      await notifier.addMeal(
+        testMealEntry(trackedAt: DateTime(2026, 11, 23, 12)),
+      );
+      await settle();
+      expect(latestCalls, 1);
+
+      await notifier.addMeal(
+        testMealEntry(trackedAt: DateTime(2026, 11, 22, 23, 30)),
+      );
+      await settle();
+      expect(latestCalls, 2);
+    });
+
+    test('a failed query keeps the same day\'s, and is tried again', () async {
+      final container = await loaded();
+      final notifier = container.read(entriesProvider.notifier);
+      var fail = true;
+      when(
+        () => mockRepo.fetchLatestBefore(
+          userId: any(named: 'userId'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer((_) async {
+        latestCalls++;
+        if (fail) throw Exception('offline');
+        return LatestEntries(drink: DateTime(2026, 11, 22, 23));
+      });
+
+      // Pull to refresh, offline.
+      await notifier.loadEntries(day, refreshLatest: true);
+      expect(latestCalls, 2);
+      expect(
+        container.read(entriesProvider).latestBefore.drink,
+        DateTime(2026, 11, 22, 21),
+      );
+
+      // An edit's reload, still offline.
+      await notifier.updateMeal(testMealEntry());
+      await settle();
+      expect(latestCalls, 3);
+      expect(
+        container.read(entriesProvider).latestBefore.drink,
+        DateTime(2026, 11, 22, 21),
+      );
+
+      // Online again: the next load fetches them.
+      fail = false;
+      await notifier.loadEntries(day);
+      expect(latestCalls, 4);
+      expect(
+        container.read(entriesProvider).latestBefore.drink,
+        DateTime(2026, 11, 22, 23),
+      );
+    });
+
+    test('a failed query for another day drops the previous day\'s', () async {
+      final container = await loaded();
+      when(
+        () => mockRepo.fetchLatestBefore(
+          userId: any(named: 'userId'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer((_) async => throw Exception('offline'));
+
+      await container
+          .read(entriesProvider.notifier)
+          .loadEntries(DateTime(2026, 11, 24));
+
+      expect(
+        container.read(entriesProvider).latestBefore,
+        const LatestEntries(),
+      );
+    });
+
+    test('a failed query is tried again with the next load', () async {
+      when(
+        () => mockRepo.fetchLatestBefore(
+          userId: any(named: 'userId'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer((_) async {
+        if (++latestCalls == 1) throw Exception('offline');
+        return const LatestEntries();
+      });
+      final container = makeContainer();
+      final notifier = container.read(entriesProvider.notifier);
+
+      await notifier.loadEntries(day);
+      await notifier.loadEntries(day);
+
+      expect(latestCalls, 2);
     });
   });
 
@@ -439,6 +761,65 @@ void main() {
     });
   });
 
+  group('EntriesNotifier refreshes a loaded Buddy', () {
+    late _CountingBuddy buddy;
+
+    setUp(() {
+      buddy = _CountingBuddy();
+      when(
+        () => mockRepo.insertEntry(any(), any(), userId: any(named: 'userId')),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockRepo.updateEntry(any(), any(), any()),
+      ).thenAnswer((_) async {});
+      when(() => mockRepo.deleteByType(any(), any())).thenAnswer((_) async {});
+    });
+
+    ProviderContainer withBuddy() => createContainer(
+      overrides: [
+        entryRepositoryProvider.overrideWithValue(mockRepo),
+        currentUserIdProvider.overrideWithValue(testUserId),
+        buddyProvider.overrideWith(() => buddy),
+      ],
+    );
+
+    test('a delete or a move reloads a loaded Buddy', () async {
+      final container = withBuddy();
+      container.read(buddyProvider);
+      final notifier = container.read(entriesProvider.notifier);
+
+      await notifier.deleteByType('meal', 'm1');
+      expect(buddy.reloads, 1);
+
+      await notifier.updateDrinkById(
+        'drink-1',
+        amountMl: 250,
+        trackedAt: DateTime(2026, 11, 22, 18),
+      );
+      expect(buddy.reloads, 2);
+    });
+
+    test('an insert does not', () async {
+      final container = withBuddy();
+      container.read(buddyProvider);
+
+      await container
+          .read(entriesProvider.notifier)
+          .addDrinkEntry(testDrinkEntry());
+
+      expect(buddy.reloads, 0);
+    });
+
+    test('no Buddy loaded: nothing reloads', () async {
+      final container = withBuddy();
+
+      await container.read(entriesProvider.notifier).deleteByType('meal', 'm1');
+
+      expect(buddy.builds, 0);
+      expect(buddy.reloads, 0);
+    });
+  });
+
   group('EntriesNotifier.reset', () {
     test('clears state back to defaults', () async {
       final result = testEntryQueryResult();
@@ -467,4 +848,19 @@ void main() {
       expect(state.error, isNull);
     });
   });
+}
+
+/// A Buddy that counts its builds and reloads.
+class _CountingBuddy extends FakeBuddyNotifier {
+  int builds = 0;
+  int reloads = 0;
+
+  @override
+  Future<BuddyStatus?> build() {
+    builds++;
+    return super.build();
+  }
+
+  @override
+  Future<void> reload() async => reloads++;
 }

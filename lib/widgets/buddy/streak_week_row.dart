@@ -3,10 +3,11 @@ import 'package:material_ui/material_ui.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../utils/date_format_utils.dart';
+import 'streak_flame.dart';
 
-/// The current local week, Monday to Sunday: one circle per day with a 🔥
-/// on each day in [activeDays] (any time of day counts), today's label in
-/// bold and ringed. Future days stay empty.
+/// The current local week, Monday to Sunday: one circle per day with a
+/// flame ([StreakFlame.mark]) on each day in [activeDays] (any time of day
+/// counts), today's label in bold and ringed. Future days stay empty.
 class StreakWeekRow extends StatelessWidget {
   const StreakWeekRow({
     super.key,
@@ -87,9 +88,8 @@ class _Day extends StatelessWidget {
             ),
           ),
           child: active
-              ? const Text(
-                  '🔥',
-                  style: TextStyle(fontSize: AppTheme.fontSizeSubtitleLG),
+              ? const StreakFlame.mark(
+                  height: AppConstants.streakFlameMarkHeight,
                 )
               : null,
         ),

@@ -6,6 +6,8 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 
+import 'package:belly_buddy/config/constants.dart';
+import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
@@ -23,6 +25,7 @@ import 'package:belly_buddy/screens/dashboard/widgets/weekly_tips_offer_sheet.da
 import 'package:belly_buddy/services/buddy/buddy_copy.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
+import 'package:belly_buddy/services/entry_query_service.dart';
 import 'package:belly_buddy/utils/date_format_utils.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
@@ -34,6 +37,7 @@ import '../../../helpers/app_host.dart';
 import '../../../helpers/fakes.dart';
 import '../../../helpers/fixtures.dart';
 import '../../../helpers/riverpod_helpers.dart';
+import '../../../helpers/widget_tester_helpers.dart';
 
 /// A welcome already set when the hero first reads it.
 class _PresetWelcome extends BuddyWelcomeNotifier {
@@ -91,7 +95,7 @@ class _FakeEntries extends EntriesNotifier {
   EntriesState build() => _initial;
 
   @override
-  Future<void> loadEntries(DateTime date) async {
+  Future<void> loadEntries(DateTime date, {bool refreshLatest = false}) async {
     loaded.add(date);
     state = (next ?? state).copyWith(day: startOfDay(date));
   }
@@ -274,6 +278,15 @@ void main() {
     for (final l in BuddyCopy.care[action]!) BuddyCopy.fill(l, name: 'Bubu'),
   ];
 
+  /// The 22nd with a drink at 12:00 and a Bauchgefühl at 08:00, plus
+  /// [meals]: at 14:00 with nothing eaten he is hungry for lunch, a meal
+  /// makes him happy (Trinken at 43 % is then the lowest).
+  EntriesState beforeLunch({List<MealEntry> meals = const []}) => EntriesState(
+    meals: meals,
+    drinks: [testDrinkEntry(trackedAt: DateTime(2026, 11, 22, 12))],
+    gutFeelings: [testGutFeelingEntry(trackedAt: DateTime(2026, 11, 22, 8))],
+  );
+
   void emit(ProviderContainer c, LogSentiment sentiment, {DateTime? at}) => c
       .read(buddyEventsProvider.notifier)
       .emit(
@@ -330,7 +343,11 @@ void main() {
         tester.widget<CareRing>(find.byType(CareRing)).highlight,
         CareNeed.drink,
       );
-      expect(find.text('🍽 1/3'), findsOneWidget);
+      // Lunch an hour ago: Essen well filled.
+      expect(
+        needMeterLevel(tester, CareNeed.food),
+        greaterThan(AppConstants.careMeterHigh),
+      );
     });
 
     testWidgets('a bad log keeps the empathetic line, not a care line', (
@@ -444,30 +461,36 @@ void main() {
         'then the day (no minute tick needed)', (tester) async {
       await pumpHero(tester);
       final day = DateTime(2026, 11, 22);
-      // Two loads: Riverpod tells the hero and the care in an order that
-      // alternates, so both orders are covered.
-      for (final meals in [1, 2]) {
+      // Two loads: Riverpod tells the hero and the care log in an order
+      // that alternates, so both orders are covered.
+      for (final (meal, level) in [
+        (DateTime(2026, 11, 22, 13), 0.83),
+        (DateTime(2026, 11, 22, 13, 30), 0.915),
+      ]) {
         entries.push(EntriesState(isLoading: true, day: day));
         await tester.pump();
         entries.push(
           EntriesState(
             day: day,
-            meals: [
-              for (var h = 0; h < meals; h++)
-                testMealEntry(trackedAt: DateTime(2026, 11, 22, 8 + h)),
-            ],
+            meals: [testMealEntry(trackedAt: meal)],
           ),
         );
         await tester.pump();
         await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400)); // meter fills
 
-        expect(find.text('🍽 $meals/3'), findsOneWidget, reason: '$meals');
+        expect(
+          needMeterLevel(tester, CareNeed.food),
+          closeTo(level, 0.005),
+          reason: '$meal',
+        );
       }
     });
 
-    testWidgets('a meal logged 1 h ago → happy', (tester) async {
+    testWidgets('meal 1 h ago, drink 2 h ago, Bauchgefühl this morning → '
+        'happy', (tester) async {
       entries = _FakeEntries(
-        EntriesState(
+        beforeLunch(
           meals: [testMealEntry(trackedAt: DateTime(2026, 11, 22, 13))],
         ),
       );
@@ -583,7 +606,7 @@ void main() {
       buddy = _FakeBuddy(() => _status(streak: 0, savers: 0, hasRow: false));
       await pumpHero(tester);
 
-      expect(find.text('🔥 0 Tage'), findsOneWidget);
+      expect(find.text('0 Tage'), findsOneWidget);
       expect(controller(tester).mood, BuddyMood.hungry);
     });
 
@@ -592,7 +615,7 @@ void main() {
     ) async {
       buddy = _FakeBuddy(() => throw Exception('no buddy_state table'));
       entries = _FakeEntries(
-        EntriesState(
+        beforeLunch(
           meals: [testMealEntry(trackedAt: DateTime(2026, 11, 22, 13))],
         ),
       );
@@ -917,7 +940,9 @@ void main() {
     testWidgets('fresh log that counts today → „Danke! 🔥 N Tage"', (
       tester,
     ) async {
+      entries = _FakeEntries(beforeLunch());
       final container = await pumpHero(tester);
+      expect(controller(tester).mood, BuddyMood.hungry);
 
       emit(container, LogSentiment.good);
       buddy.push(_status(streak: 5, todayCounted: true));
@@ -925,7 +950,7 @@ void main() {
       expect(container.read(buddyEventsProvider), isNull);
 
       // The tracker's save reloads today's entries.
-      entries.push(EntriesState(meals: [testMealEntry(trackedAt: now)]));
+      entries.push(beforeLunch(meals: [testMealEntry(trackedAt: now)]));
       await tester.pump();
       expect(controller(tester).mood, BuddyMood.happy);
 
@@ -997,19 +1022,20 @@ void main() {
       tester,
     ) async {
       buddy = _FakeBuddy(() => _status(streak: 5, todayCounted: true));
+      entries = _FakeEntries(beforeLunch());
       final container = await pumpHero(tester);
 
       emit(container, LogSentiment.good);
       await tester.pump();
-      entries.push(EntriesState(meals: [testMealEntry(trackedAt: now)]));
+      entries.push(beforeLunch(meals: [testMealEntry(trackedAt: now)]));
       await tester.pump(const Duration(milliseconds: 600));
       await tick(tester);
 
       final c = controller(tester);
       expect(c.mood, BuddyMood.happy);
       expect(c.bubble, isNot(startsWith('Danke!')));
-      // Lunch logged at 14:00: he asks for a drink next.
-      expect(careLines(CareAction.drink), contains(c.bubble));
+      // Lunch logged at 14:00: no meter under 35 %, he is content.
+      expect(careLines(CareAction.feed), contains(c.bubble));
       await tester.pump(const Duration(seconds: 5));
     });
 
@@ -1021,6 +1047,8 @@ void main() {
       final container = await pumpHero(tester);
       await advance(tester, const Duration(seconds: 3)); // greeting gone
 
+      // Logged now for this morning: the meter stays at the floor.
+      final drankAt = now.subtract(const Duration(hours: 4));
       container
           .read(buddyEventsProvider.notifier)
           .emit(
@@ -1028,20 +1056,24 @@ void main() {
               EntryKind.drink,
               LogSentiment.good,
               at: now,
-              trackedAt: now,
+              trackedAt: drankAt,
             ),
           );
       await tester.pump();
       entries.push(
         EntriesState(
           meals: [lunch],
-          drinks: [testDrinkEntry(trackedAt: now)],
+          drinks: [testDrinkEntry(trackedAt: drankAt)],
         ),
       );
       await tester.pump(const Duration(milliseconds: 600));
       await tick(tester);
 
-      // One glass of six: a drink is still what he asks for next …
+      // Trinken is still the lowest: a drink is what he asks for next …
+      expect(
+        needMeterLevel(tester, CareNeed.drink),
+        AppConstants.careMeterFloor,
+      );
       expect(find.text('💧 Trinken eintragen'), findsOneWidget);
       // … but not now: he thanks for this one.
       final c = controller(tester);
@@ -1063,6 +1095,8 @@ void main() {
       final container = await pumpHero(tester);
       await advance(tester, const Duration(seconds: 3)); // greeting gone
 
+      // Logged now for this morning: the meter stays at the floor.
+      final drankAt = now.subtract(const Duration(hours: 4));
       container
           .read(buddyEventsProvider.notifier)
           .emit(
@@ -1070,14 +1104,14 @@ void main() {
               EntryKind.drink,
               LogSentiment.good,
               at: now,
-              trackedAt: now,
+              trackedAt: drankAt,
             ),
           );
       await tester.pump();
       entries.push(
         EntriesState(
           meals: [lunch],
-          drinks: [testDrinkEntry(trackedAt: now)],
+          drinks: [testDrinkEntry(trackedAt: drankAt)],
         ),
       );
       await tester.pump(const Duration(milliseconds: 600));
@@ -1096,9 +1130,9 @@ void main() {
         await tester.pump(const Duration(milliseconds: 300));
       }
 
-      final drankAt = now;
+      final loggedAt = now;
       for (var i = 0; i < 6; i++) {
-        await tapAt(drankAt.add(Duration(minutes: 5 * i)));
+        await tapAt(loggedAt.add(Duration(minutes: 5 * i)));
         expect(thanks, contains(said.last), reason: 'tap $i');
       }
       // The rotation still never repeats a line right away.
@@ -1107,7 +1141,7 @@ void main() {
       }
 
       // Half an hour on he may be thirsty again.
-      await tapAt(drankAt.add(const Duration(minutes: 31)));
+      await tapAt(loggedAt.add(const Duration(minutes: 31)));
       expect(careLines(CareAction.drink), contains(said.last));
       await tester.pump(const Duration(seconds: 5));
     });
@@ -1130,6 +1164,7 @@ void main() {
     testWidgets('a mood change during the follow-up delay says nothing extra', (
       tester,
     ) async {
+      entries = _FakeEntries(beforeLunch());
       final container = await pumpHero(tester);
       await advance(tester, const Duration(seconds: 3)); // greeting gone
       await tick(tester);
@@ -1139,7 +1174,7 @@ void main() {
       buddy.push(_status(streak: 5, todayCounted: true));
       await tester.pump();
       // The log's entries land while the follow-up waits.
-      entries.push(EntriesState(meals: [testMealEntry(trackedAt: now)]));
+      entries.push(beforeLunch(meals: [testMealEntry(trackedAt: now)]));
       await tick(tester);
 
       // Mood flipped to happy, but the bubble waits for the follow-up.
@@ -1418,7 +1453,7 @@ void main() {
       expect(controller(tester).bubble, isNull);
     });
 
-    testWidgets('resumed the next morning: the ring moves to the new day', (
+    testWidgets("resumed the next morning: yesterday's meal still counts", (
       tester,
     ) async {
       now = DateTime(2026, 11, 22, 21);
@@ -1434,21 +1469,26 @@ void main() {
         ),
       );
       await pumpHero(tester);
-      expect(find.text('🍽 1/3'), findsOneWidget);
+      final evening = needMeterLevel(tester, CareNeed.food)!;
 
       now = DateTime(2026, 11, 23, 8);
-      entries.next = const EntriesState(); // nothing logged yet today
+      // Nothing logged yet today; the load brings yesterday's meal along.
+      entries.next = EntriesState(
+        latestBefore: LatestEntries(meal: DateTime(2026, 11, 22, 19)),
+      );
       returnFromBackground();
       await tester.pump();
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400)); // meter drains
 
       expect(entries.loaded.map(startOfDay), [DateTime(2026, 11, 23)]);
-      expect(find.text('🍽 0/3'), findsOneWidget);
+      // An hour after the night pause: lower than last night, not empty.
+      final morning = needMeterLevel(tester, CareNeed.food)!;
+      expect(morning, lessThan(evening));
+      expect(morning, greaterThan(AppConstants.careMeterFloor));
     });
 
-    testWidgets('open across midnight: the minute tick loads the new day', (
-      tester,
-    ) async {
+    testWidgets('open across midnight: the meters carry over', (tester) async {
       now = DateTime(2026, 11, 22, 23, 59);
       entries = _FakeEntries(
         EntriesState(
@@ -1462,14 +1502,126 @@ void main() {
         ),
       );
       await pumpHero(tester);
-      expect(find.text('🍽 1/3'), findsOneWidget);
+      final beforeMidnight = needMeterLevel(tester, CareNeed.food)!;
+      expect(beforeMidnight, greaterThan(AppConstants.careMeterFloor));
 
+      // The minute tick loads the new day, which brings the meal along as
+      // the latest before it.
       now = DateTime(2026, 11, 23, 0, 0, 30);
+      entries.next = EntriesState(
+        latestBefore: LatestEntries(meal: DateTime(2026, 11, 22, 19)),
+      );
       await tester.pump(const Duration(minutes: 1));
       await tester.pump();
 
       expect(entries.loaded.map(startOfDay), [DateTime(2026, 11, 23)]);
-      expect(find.text('🍽 0/3'), findsOneWidget);
+      expect(needMeterLevel(tester, CareNeed.food), beforeMidnight);
+
+      // The night pause held it; from 07:00 it drains again.
+      now = DateTime(2026, 11, 23, 7, 30);
+      await tester.pump(const Duration(minutes: 1));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(needMeterLevel(tester, CareNeed.food), lessThan(beforeMidnight));
+    });
+
+    testWidgets('the meters drain with the minute tick', (tester) async {
+      entries = _FakeEntries(
+        EntriesState(
+          drinks: [testDrinkEntry(trackedAt: DateTime(2026, 11, 22, 13))],
+        ),
+      );
+      await pumpHero(tester);
+      final before = needMeterLevel(tester, CareNeed.drink)!;
+
+      // Still lunch time and the same mood: only the meter moves.
+      now = DateTime(2026, 11, 22, 14, 59);
+      await tester.pump(const Duration(minutes: 1));
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('🍝 Mittagessen eintragen'), findsOneWidget);
+      expect(needMeterLevel(tester, CareNeed.drink), lessThan(before));
+    });
+
+    for (final (name, meal, from, to, before, after) in [
+      (
+        'at the floor',
+        DateTime(2026, 11, 22, 7),
+        DateTime(2026, 11, 22, 13),
+        DateTime(2026, 11, 22, 14),
+        'zuletzt vor 6 Std',
+        'zuletzt vor 7 Std',
+      ),
+      (
+        'in the night pause',
+        DateTime(2026, 11, 22, 21),
+        DateTime(2026, 11, 22, 22, 30),
+        DateTime(2026, 11, 22, 23, 30),
+        'zuletzt vor 1 Std',
+        'zuletzt vor 2 Std',
+      ),
+    ]) {
+      testWidgets('the minute tick refreshes what a bubble says while its '
+          'meter holds still ($name)', (tester) async {
+        final handle = tester.ensureSemantics();
+        now = from;
+        entries = _FakeEntries(
+          EntriesState(meals: [testMealEntry(trackedAt: meal)]),
+        );
+        await pumpHero(tester);
+        String? spoken() => tester
+            .getSemantics(find.byKey(CareRing.needKey(CareNeed.food)))
+            .value;
+        final level = needMeterLevel(tester, CareNeed.food);
+        expect(spoken(), before);
+
+        now = to;
+        await tester.pump(const Duration(minutes: 1));
+        await tester.pump();
+        expect(spoken(), after);
+        expect(needMeterLevel(tester, CareNeed.food), level);
+        handle.dispose();
+      });
+    }
+
+    testWidgets('dinner logged, Essen lowest late in the evening: a snack, '
+        'not dinner again', (tester) async {
+      // Essen 0.32, Trinken 0.575, Bauchgefühl 0.66.
+      now = DateTime(2026, 11, 22, 21, 30);
+      entries = _FakeEntries(
+        EntriesState(
+          meals: [testMealEntry(trackedAt: DateTime(2026, 11, 22, 17, 30))],
+          drinks: [testDrinkEntry(trackedAt: DateTime(2026, 11, 22, 20))],
+          gutFeelings: [
+            testGutFeelingEntry(trackedAt: DateTime(2026, 11, 22, 12)),
+          ],
+        ),
+      );
+      await pumpHero(tester);
+      await tick(tester);
+
+      expect(find.text('🍎 Snack eintragen'), findsOneWidget);
+      expect(find.text('🍲 Abendessen eintragen'), findsNothing);
+      expect(careLines(CareAction.snack), contains(controller(tester).bubble));
+    });
+
+    testWidgets("Klo's line ages with the clock, though no meter moves", (
+      tester,
+    ) async {
+      now = DateTime(2026, 11, 22, 12);
+      entries = _FakeEntries(
+        EntriesState(
+          toiletEntries: [
+            testToiletEntry(trackedAt: DateTime(2026, 11, 22, 11)),
+          ],
+        ),
+      );
+      await pumpHero(tester);
+      expect(find.text('vor 1 Std'), findsOneWidget);
+
+      // Still lunch time, every meter still at the floor.
+      now = DateTime(2026, 11, 22, 13);
+      await tester.pump(const Duration(minutes: 1));
+      await tester.pump();
+      expect(find.text('vor 2 Std'), findsOneWidget);
     });
 
     testWidgets('the next-action button opens its tracker', (tester) async {
@@ -1485,8 +1637,12 @@ void main() {
     testWidgets('next-action button opens the suggested tracker', (
       tester,
     ) async {
-      // Before 05:00 no meal is due; with nothing logged, a drink is.
-      now = DateTime(2026, 11, 22, 4);
+      // Lunch at 13:00: at 14:00 Trinken is the lowest.
+      entries = _FakeEntries(
+        EntriesState(
+          meals: [testMealEntry(trackedAt: DateTime(2026, 11, 22, 13))],
+        ),
+      );
       await pumpHero(tester);
       expect(find.text('💧 Trinken eintragen'), findsOneWidget);
 

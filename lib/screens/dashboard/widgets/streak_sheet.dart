@@ -121,6 +121,7 @@ class _StreakSheetState extends State<StreakSheet> {
                 streak: streak,
                 weekDays: status.weekDays,
                 today: widget.today,
+                lit: status.todayCounted,
               ),
               AppConstants.gap20,
               _GoalProgress(streak: streak, goal: goal),

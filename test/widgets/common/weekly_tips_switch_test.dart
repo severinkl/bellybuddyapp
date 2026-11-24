@@ -49,11 +49,24 @@ void main() {
       .widget<SwitchListTile>(find.byKey(WeeklyTipsSwitch.switchKey))
       .value;
 
-  testWidgets('shows the title and the sentence', (tester) async {
+  testWidgets('shows the title, the Monday subline and the sentence', (
+    tester,
+  ) async {
     await pump(tester);
 
     expect(find.text('Wöchentliche Tipps'), findsOneWidget);
-    expect(find.text(WeeklyTipsSwitch.sentence), findsOneWidget);
+    expect(find.text('Jeden Montag 2–3 Tipps'), findsOneWidget);
+    expect(
+      find.text(
+        'Dafür schicke ich deine Einträge der letzten Wochen, die Muster '
+        'daraus und deine Bewertungen meiner Tipps an unseren KI-Dienst.',
+      ),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('Mahlzeiten und dein Bauchgefühl der letzten Woche'),
+      findsNothing,
+    );
     expect(isOn(tester), isFalse);
   });
 

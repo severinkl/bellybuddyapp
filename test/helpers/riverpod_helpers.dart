@@ -5,10 +5,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 
 import 'package:belly_buddy/config/app_theme.dart';
+import 'package:belly_buddy/models/insights.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
+import 'package:belly_buddy/providers/insights_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
 
 import 'app_host.dart';
@@ -65,6 +67,20 @@ class _SeededProfileNotifier extends ProfileNotifier {
 /// (no fetch first).
 Override profileProviderSeededWith(UserProfile? profile) =>
     profileProvider.overrideWith(() => _SeededProfileNotifier(profile));
+
+/// An [InsightsNotifier] serving [_insights] as loaded.
+class _SeededInsightsNotifier extends InsightsNotifier {
+  _SeededInsightsNotifier(this._insights);
+  final Insights _insights;
+
+  @override
+  Future<Insights> build() async => _insights;
+}
+
+/// An [Override] for [insightsProvider] that serves [insights] (e.g.
+/// `lockedInsights()`) instead of computing them.
+Override insightsProviderSeededWith(Insights insights) =>
+    insightsProvider.overrideWith(() => _SeededInsightsNotifier(insights));
 
 /// An [EntriesNotifier] whose [build] returns a pre-seeded [EntriesState] so
 /// widgets that `ref.read(entriesProvider)` in `initState` see the supplied

@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
+import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/meal_tracker_provider.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
@@ -16,9 +17,12 @@ import 'package:belly_buddy/repositories/meal_media_repository.dart';
 import 'package:belly_buddy/screens/trackers/meal/meal_tracker_screen.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 import 'package:belly_buddy/widgets/buddy/buddy_reaction_view.dart';
+import 'package:belly_buddy/widgets/buddy/log_success_hero.dart';
+import 'package:belly_buddy/widgets/common/bb_success_overlay.dart';
 import 'package:belly_buddy/widgets/common/mascot_image.dart';
 
 import '../../../helpers/fakes.dart';
+import '../../../helpers/layout_checks.dart';
 import '../../../helpers/riverpod_helpers.dart';
 
 List<Override> _overrides({EntryRepository? entries}) => [
@@ -200,47 +204,60 @@ void main() {
       expect(find.text('Fehler beim Speichern.'), findsOneWidget);
     });
 
-    testWidgets(
-      'success screen fits a 375×667 phone at text scale 1.3 (no vertical '
-      'overflow)',
-      (tester) async {
+    for (final scale in [1.0, 1.3]) {
+      testWidgets('the meal page fits 375×667 at text scale $scale with its '
+          'circle, ignite row, actions and callout', (tester) async {
         SharedPreferences.setMockInitialValues({});
         tester.view.physicalSize = const Size(750, 1334);
         tester.view.devicePixelRatio = 2;
-        tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+        tester.platformDispatcher.textScaleFactorTestValue = scale;
         addTearDown(tester.view.reset);
         addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        final now = DateTime(2026, 11, 23, 14);
 
-        // The test font's square glyphs overflow the action pills sideways;
-        // only overflow at the bottom (content taller than the screen)
-        // matters here.
-        final errors = <FlutterErrorDetails>[];
-        final previousOnError = FlutterError.onError;
-        FlutterError.onError = errors.add;
-        try {
+        final errors = await collectFlutterErrors(() async {
           await tester.pumpWithProviders(
             const MealTrackerScreen(),
-            overrides: _overrides(),
+            overrides: [
+              ..._overrides(),
+              buddyClockProvider.overrideWithValue(() => now),
+              // Today's first entry: the tallest page, with the ignite row.
+              buddyProvider.overrideWith(
+                () => FakeBuddyNotifier(() => buddyStatus(streak: 4)),
+              ),
+            ],
           );
           await tester.pump();
           await tester.pump();
-          ProviderScope.containerOf(
-              tester.element(find.byType(MealTrackerScreen)),
-            ).read(mealTrackerProvider.notifier)
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(MealTrackerScreen)),
+          );
+          await container.read(buddyProvider.future);
+          container.read(mealTrackerProvider.notifier)
+            ..addIngredient('Tomate')
             ..setTitle('Tomatensalat')
-            ..markShowSuccess();
+            ..setTrackedAt(now);
           await tester.pump();
-          await tester.pump(const Duration(milliseconds: 700));
-        } finally {
-          FlutterError.onError = previousOnError;
-        }
+          await tester.ensureVisible(
+            find.byKey(MealTrackerScreen.mealEditSaveKey),
+          );
+          await tester.tap(find.byKey(MealTrackerScreen.mealEditSaveKey));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 1300));
+        });
 
+        expect(find.byType(ChargingMeter), findsOneWidget);
+        expect(find.byKey(LogSuccessHero.igniteKey), findsOneWidget);
         expect(find.byType(BuddyReactionView), findsOneWidget);
-        final vertical = errors
-            .map((e) => e.exceptionAsString())
-            .where((m) => m.contains('overflowed') && m.contains('bottom'));
-        expect(vertical, isEmpty);
-      },
-    );
+        expect(find.text('Trinken eintragen'), findsOneWidget);
+        expect(find.text('Als Rezept speichern'), findsOneWidget);
+        expect(find.text('Tippen zum Fortfahren'), findsOneWidget);
+        expectSuccessPageFits(
+          tester,
+          errors,
+          page: find.byType(BbSuccessOverlay),
+        );
+      });
+    }
   });
 }

@@ -11,7 +11,11 @@ import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/repositories/auth_repository.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
+import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
+import 'package:belly_buddy/services/buddy/care_meters.dart';
+import 'package:belly_buddy/services/buddy/log_moment.dart';
 
+import '../helpers/app_lifecycle.dart';
 import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
 import '../helpers/riverpod_helpers.dart';
@@ -58,6 +62,9 @@ Future<void> settle() async {
 final _user = SwitchableUserId('u1');
 
 void main() {
+  // The day follows the app's foreground (an AppLifecycleListener).
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late _GatedBuddyRepository buddyRepo;
   late FakeEntryRepository entryRepo;
   late DateTime now;
@@ -82,6 +89,65 @@ void main() {
     final status = await c.read(buddyProvider.future);
     return status!;
   }
+
+  group('a new day (todayProvider) re-evaluates him', () {
+    // The app stays open (or in the background) over midnight: back in the
+    // foreground the next morning.
+    Future<BuddyStatus> nextMorning(ProviderContainer c) async {
+      now = DateTime(2026, 11, 23, 7);
+      returnFromBackground();
+      await settle();
+      return c.read(buddyProvider).value!;
+    }
+
+    /// The streak day a meal logged now ignites, with [buddy] as he is.
+    int? firstEntryIgnites(BuddyStatus buddy) => logMomentFor(
+      kind: EntryKind.meal,
+      trackedAt: now,
+      care: const CareLog(),
+      now: now,
+      buddy: buddy,
+    ).ignitesDay;
+
+    test('yesterday counted: today not yet, the streak goes on', () async {
+      entryRepo.seedActivityDays(novDays(21, 22));
+      final c = makeContainer();
+      final evening = await load(c);
+      expect((evening.streak, evening.todayCounted), (2, true));
+
+      final morning = await nextMorning(c);
+
+      expect((morning.streak, morning.todayCounted), (2, false));
+      // The morning's first entry lights day 3.
+      expect(firstEntryIgnites(morning), 3);
+    });
+
+    test('yesterday missed: the streak is over', () async {
+      now = DateTime(2026, 11, 22, 23, 50);
+      entryRepo.seedActivityDays(novDays(20, 21));
+      final c = makeContainer();
+      final evening = await load(c);
+      expect((evening.streak, evening.todayCounted), (2, false));
+
+      final morning = await nextMorning(c);
+
+      expect((morning.streak, morning.todayCounted), (0, false));
+      // The morning's first entry starts over: day 1, not day 3.
+      expect(firstEntryIgnites(morning), 1);
+    });
+
+    test('also while nobody watches him', () async {
+      entryRepo.seedActivityDays(novDays(21, 22));
+      final c = makeContainer();
+      final sub = c.listen(buddyProvider, (_, _) {});
+      await load(c);
+      sub.close();
+
+      final morning = await nextMorning(c);
+
+      expect(morning.todayCounted, isFalse);
+    });
+  });
 
   group('build', () {
     test('no row: hasRow false, streak computed, nothing saved', () async {

@@ -805,4 +805,43 @@ void main() {
     expect(insights, fromDays(hard: spread(3, {'Reis': 3})));
     expect(insights, isNot(fromDays(hard: spread(3, {'Reis': 2}))));
   });
+
+  group('journey', () {
+    DateTime day(int back) => DateTime(2026, 11, 23 - back, 12);
+
+    test('the latest 7 days with entries, oldest first, each marking a '
+        'Bauchgefühl', () {
+      final i = compute(
+        guts: [gut(day(3), 2), gut(day(0), 2)],
+        activity: [
+          for (final b in [9, 5, 3, 1, 0]) day(b),
+        ],
+      );
+
+      expect(i.journey, [
+        JourneyDay(DateTime(2026, 11, 14), gutFeeling: false),
+        JourneyDay(DateTime(2026, 11, 18), gutFeeling: false),
+        JourneyDay(DateTime(2026, 11, 20), gutFeeling: true),
+        JourneyDay(DateTime(2026, 11, 22), gutFeeling: false),
+        JourneyDay(DateTime(2026, 11, 23), gutFeeling: true),
+      ]);
+    });
+
+    test('with 9 active days only the latest 7', () {
+      final i = compute(activity: [for (var b = 0; b < 9; b++) day(b)]);
+
+      expect(i.journey, hasLength(7));
+      expect(i.journey.first.day, DateTime(2026, 11, 17));
+      expect(i.journey.last.day, DateTime(2026, 11, 23));
+    });
+
+    test('its length is the active days, up to 7', () {
+      for (var n = 0; n <= 10; n++) {
+        final i = compute(activity: [for (var b = 0; b < n; b++) day(b)]);
+        expect(i.journey.length, n.clamp(0, 7));
+        expect(i.journey.length, lessThanOrEqualTo(i.progress.activeDays));
+        if (n <= 7) expect(i.journey.length, i.progress.activeDays);
+      }
+    });
+  });
 }

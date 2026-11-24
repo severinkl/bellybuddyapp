@@ -128,6 +128,25 @@ void main() {
       expect(c.read(weeklyTipsOfferDueProvider), isFalse);
       expect(c.read(buddyOffersProvider), isEmpty);
     });
+
+    test(
+      'insights refreshed (holding the value): no offer until done',
+      () async {
+        final c = await loaded();
+        entryRepo.holdInsightSource = true;
+
+        c.invalidate(insightsProvider);
+        final insights = c.read(insightsProvider);
+        expect(insights, isA<AsyncData<Object?>>());
+        expect(insights.isLoading, isTrue);
+        expect(insights.value!.unlocked, isTrue);
+        expect(c.read(weeklyTipsOfferDueProvider), isFalse);
+
+        entryRepo.heldInsightSources.single.complete(entryRepo.insightSource);
+        await c.read(insightsProvider.future);
+        expect(c.read(weeklyTipsOfferDueProvider), isTrue);
+      },
+    );
   });
 
   group('offerStillAppliesProvider (as an offer plays)', () {

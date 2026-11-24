@@ -1,7 +1,12 @@
+import 'dart:math' as math;
+
 import '../../models/insight_progress.dart';
 import '../../models/insight_rules.dart';
 import '../../models/insights.dart';
 import '../../utils/date_format_utils.dart';
+
+/// A part of a line of copy and whether it is set strong.
+typedef CopySpan = (String text, bool strong);
 
 /// German copy for Home's insight card and the Muster page: observations
 /// from the user's own entries, with their counts, never a finding.
@@ -34,6 +39,8 @@ class InsightCopy {
   static const activeDaysLabel = 'Tage mit Einträgen';
   static const gutFeelingEntriesLabel = 'Bauchgefühl-Einträge';
 
+  static const _soonSee = 'dann schau ich nach ersten Mustern.';
+
   static const _soon = 'dann zeig ich dir erste Muster.';
 
   /// The Buddy's line while locked: what is still missing, days first.
@@ -48,6 +55,62 @@ class InsightCopy {
         ? 'Bauchgefühl-Eintrag'
         : gutFeelingEntriesLabel;
     return 'Noch ${p.gutFeelingsLeft} $entries, $_soon';
+  }
+
+  /// The Buddy's line on the journey card (locked only), by the days so far
+  /// (at most [InsightRules.daysNeeded]).
+  static String journeyLine(InsightProgress p) {
+    assert(!p.unlocked, 'Unlocked progress shows the insights instead.');
+    final g = p.gutFeelingsLeft;
+    return switch (math.min(p.activeDays, InsightRules.daysNeeded)) {
+      0 => 'Mit deinem ersten Eintrag fang ich an zu lernen.',
+      1 => 'Tag 1! Ich lerne gerade, was du so isst.',
+      2 => 'Ich sammle, was du isst und wie’s deinem Bauch danach geht.',
+      3 => 'Ich lerne gerade, was dir guttut.',
+      4 => 'Mehr als die Hälfte. Jeder Tag macht das Bild klarer.',
+      5 => 'Jetzt hab ich schon ein paar Tage zum Vergleichen.',
+      6 =>
+        g > 0
+            ? 'Noch ein Tag und $g× Bauchgefühl, $_soonSee'
+            : 'Noch ein Tag, $_soonSee',
+      _ => 'Noch $g× Bauchgefühl, $_soonSee',
+    };
+  }
+
+  /// The Buddy's line after an entry that made [after]: what is still
+  /// missing, days first; null once nothing is.
+  static String? journeyFeedback(InsightProgress after) {
+    if (after.daysLeft > 0) {
+      final n = after.daysLeft;
+      return 'Notiert! Noch $n ${n == 1 ? 'Tag' : 'Tage'}, $_soonSee';
+    }
+    if (after.gutFeelingsLeft > 0) {
+      return 'Notiert! Noch ${after.gutFeelingsLeft}× Bauchgefühl, $_soonSee';
+    }
+    return null;
+  }
+
+  /// The journey's day counter, „2 von 7 Tagen", in parts: the counts are
+  /// strong.
+  static List<CopySpan> journeyDaysSpans(InsightProgress p) => [
+    (math.min(p.activeDays, InsightRules.daysNeeded).toString(), true),
+    (' von ', false),
+    ('${InsightRules.daysNeeded}', true),
+    (' Tagen', false),
+  ];
+
+  /// The journey's Bauchgefühl counter, „Bauchgefühl 1 von 3" with „ ✓"
+  /// once met, in parts: the counts are strong.
+  static List<CopySpan> journeyGutFeelingsSpans(InsightProgress p) {
+    const needed = InsightRules.gutFeelingsNeeded;
+    final n = math.min(p.gutFeelingEntries, needed);
+    return [
+      ('Bauchgefühl ', false),
+      (n.toString(), true),
+      (' von ', false),
+      ('$needed', true),
+      if (n == needed) (' ✓', false),
+    ];
   }
 
   /// „Zwiebel war an 4 von 5 schweren Tagen dabei." (a shown item was there

@@ -43,4 +43,19 @@ void main() {
       }
     });
   }
+
+  test('each care colour has at least 3:1 on the page', () {
+    for (final (name, color) in [
+      ('careFood', AppTheme.careFood),
+      ('careWater', AppTheme.careWater),
+      ('careGut', AppTheme.careGut),
+      ('careLoo', AppTheme.careLoo),
+    ]) {
+      expect(
+        _contrast(color, AppTheme.background),
+        greaterThanOrEqualTo(3.0),
+        reason: name,
+      );
+    }
+  });
 }

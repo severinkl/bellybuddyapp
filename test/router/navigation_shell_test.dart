@@ -216,8 +216,8 @@ void main() {
       await _tap(tester, BbBottomNav.centerButtonKey);
       expect(find.byType(LogSheet), findsOneWidget);
       expect(find.text('Heute · 12:40'), findsOneWidget);
-      // Breakfast is logged; at 12:40 lunch is next.
-      _expectSelected(tester, CareNeed.food);
+      // Breakfast at 09:00 and nothing else: at 12:40 Trinken is lowest.
+      _expectSelected(tester, CareNeed.drink);
       handle.dispose();
     });
 

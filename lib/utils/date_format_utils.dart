@@ -3,9 +3,9 @@ import 'package:intl/intl.dart';
 /// Returns the start of the given day (midnight).
 DateTime startOfDay(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
 
-/// Returns the start of the next day (exclusive end bound for date queries).
-DateTime endOfDay(DateTime dt) =>
-    DateTime(dt.year, dt.month, dt.day).add(const Duration(days: 1));
+/// Returns the start of the next day (exclusive end bound for date queries):
+/// the next calendar midnight, also on a day with 23 or 25 hours.
+DateTime endOfDay(DateTime dt) => addDays(dt, 1);
 
 /// The day [days] calendar days after [d]'s date (before it when negative),
 /// at midnight. Calendar arithmetic, so it never drifts across DST switches

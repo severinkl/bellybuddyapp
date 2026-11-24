@@ -76,12 +76,24 @@ class AppTheme {
   // Streak: a day with an entry (week row circle), the selected goal
   static const Color primarySoft = Color(0xFFF3F7DF);
 
-  // Dashboard care ring: one color per need (Essen, Trinken, Bauchgefühl,
-  // Klo) and the glow around the need he suggests next
-  static const Color careFood = primary;
-  static const Color careWater = Color(0xFF86BFE6);
-  static const Color careGut = Color(0xFFF0A646);
-  static const Color careLoo = Color(0xFFBFAE9F);
+  // Care: one color and one soft tint per need (Essen, Trinken, Bauchgefühl,
+  // Klo), each at least 3:1 on the page, and the glow around the need he
+  // suggests next. The streak flame has a lit color (with a core and a hot
+  // tip), and an ember (lit, core, off) for a day it was not kept.
+  static const Color careFood = Color(0xFFD27A12);
+  static const Color careFoodSoft = Color(0xFFFCEBD5);
+  static const Color careWater = Color(0xFF3A8FCC);
+  static const Color careWaterSoft = Color(0xFFE2F0FA);
+  static const Color careGut = Color(0xFF3A9A48);
+  static const Color careGutSoft = gutFeelingGoodSoft;
+  static const Color careLoo = Color(0xFF9C7350);
+  static const Color careLooSoft = Color(0xFFF1E7DE);
+  static const Color streakFlame = Color(0xFFFF7A2E);
+  static const Color streakFlameCore = buddySparkle;
+  static const Color streakFlameHot = buddyWater;
+  static const Color streakEmber = Color(0xFFF4B996);
+  static const Color streakEmberCore = Color(0xFFF8DDA6);
+  static const Color streakEmberOff = Color(0xFFDDD5CC);
   static const Color careGlow = Color(0x4DB5CC47);
 
   // Notification previews (the reminder step): an iOS banner's colors
@@ -142,9 +154,11 @@ class AppTheme {
     color: mutedForeground,
   );
 
-  // The streak moment's big count („🔥 1 Tag"): flame and number
-  static const double fontSizeStreakFlame = 40;
+  // The streak moment's big count („1 Tag" beside the flame)
   static const double fontSizeStreakCount = 56;
+
+  // The need's emoji in the success page's charging circle
+  static const double fontSizeChargeIcon = 44;
 
   // Stool scale colors
   static const List<Color> stoolColors = [

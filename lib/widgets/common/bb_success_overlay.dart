@@ -170,118 +170,122 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
       },
       child: Container(
         color: bgColor,
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppConstants.spacingXl,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Illustration, mascot or checkmark
-                if (illustration != null)
-                  Flexible(child: illustration)
-                else if (widget.mascotAsset != null)
-                  AnimatedBuilder(
-                    animation: _mascotController,
-                    builder: (context, child) {
-                      return Transform.scale(
-                        scale: _mascotScaleAnimation.value,
-                        child: child,
-                      );
-                    },
-                    child: MascotImage(
-                      assetPath: widget.mascotAsset!,
-                      width: 160,
-                      height: 160,
+        // The page covers the whole screen; its content keeps clear of the
+        // status bar and the home indicator.
+        child: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppConstants.spacingXl,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Illustration, mascot or checkmark
+                  if (illustration != null)
+                    Flexible(child: illustration)
+                  else if (widget.mascotAsset != null)
+                    AnimatedBuilder(
+                      animation: _mascotController,
+                      builder: (context, child) {
+                        return Transform.scale(
+                          scale: _mascotScaleAnimation.value,
+                          child: child,
+                        );
+                      },
+                      child: MascotImage(
+                        assetPath: widget.mascotAsset!,
+                        width: 160,
+                        height: 160,
+                      ),
+                    )
+                  else
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: const BoxDecoration(
+                        color: AppTheme.success,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.check,
+                        color: Colors.white,
+                        size: 40,
+                      ),
                     ),
-                  )
-                else
-                  Container(
-                    width: 80,
-                    height: 80,
-                    decoration: const BoxDecoration(
-                      color: AppTheme.success,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.check,
-                      color: Colors.white,
-                      size: 40,
-                    ),
-                  ),
-                AppConstants.gap24,
+                  AppConstants.gap24,
 
-                // Message + sub-message with slide-up animation
-                SlideTransition(
-                  position: _textSlideAnimation,
-                  child: FadeTransition(
-                    opacity: _textOpacityAnimation,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          widget.message,
-                          style: TextStyle(
-                            fontSize: AppTheme.fontSizeHeadingLG,
-                            fontWeight: FontWeight.w600,
-                            color: textColor,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        if (widget.subMessage != null) ...[
-                          AppConstants.gap8,
+                  // Message + sub-message with slide-up animation
+                  SlideTransition(
+                    position: _textSlideAnimation,
+                    child: FadeTransition(
+                      opacity: _textOpacityAnimation,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
                           Text(
-                            widget.subMessage!,
+                            widget.message,
                             style: TextStyle(
-                              fontSize: AppTheme.fontSizeSubtitle,
-                              color: textColor.withValues(alpha: 0.8),
+                              fontSize: AppTheme.fontSizeHeadingLG,
+                              fontWeight: FontWeight.w600,
+                              color: textColor,
                             ),
                             textAlign: TextAlign.center,
                           ),
+                          if (widget.subMessage != null) ...[
+                            AppConstants.gap8,
+                            Text(
+                              widget.subMessage!,
+                              style: TextStyle(
+                                fontSize: AppTheme.fontSizeSubtitle,
+                                color: textColor.withValues(alpha: 0.8),
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
                         ],
-                      ],
-                    ),
-                  ),
-                ),
-
-                // Action buttons
-                if (widget.actions != null && widget.actions!.isNotEmpty) ...[
-                  AppConstants.gap24,
-                  if (hasHero)
-                    _PillActionButton(children: widget.actions!)
-                  else
-                    Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        for (int i = 0; i < widget.actions!.length; i++) ...[
-                          if (i > 0) AppConstants.gap8,
-                          widget.actions![i],
-                        ],
-                      ],
-                    ),
-                ],
-
-                if (widget.bottomCallout != null) ...[
-                  AppConstants.gap16,
-                  widget.bottomCallout!,
-                ],
-
-                // Tap hint
-                if (hasHero) ...[
-                  const SizedBox(height: AppConstants.spacingXxl),
-                  FadeTransition(
-                    opacity: _textOpacityAnimation,
-                    child: const Text(
-                      'Tippen zum Fortfahren',
-                      style: TextStyle(
-                        fontSize: AppTheme.fontSizeBody,
-                        color: AppTheme.primaryForegroundMuted,
                       ),
                     ),
                   ),
+
+                  // Action buttons
+                  if (widget.actions != null && widget.actions!.isNotEmpty) ...[
+                    AppConstants.gap24,
+                    if (hasHero)
+                      _PillActionButton(children: widget.actions!)
+                    else
+                      Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          for (int i = 0; i < widget.actions!.length; i++) ...[
+                            if (i > 0) AppConstants.gap8,
+                            widget.actions![i],
+                          ],
+                        ],
+                      ),
+                  ],
+
+                  if (widget.bottomCallout != null) ...[
+                    AppConstants.gap16,
+                    widget.bottomCallout!,
+                  ],
+
+                  // Tap hint
+                  if (hasHero) ...[
+                    const SizedBox(height: AppConstants.spacingXxl),
+                    FadeTransition(
+                      opacity: _textOpacityAnimation,
+                      child: const Text(
+                        'Tippen zum Fortfahren',
+                        style: TextStyle(
+                          fontSize: AppTheme.fontSizeBody,
+                          color: AppTheme.primaryForegroundMuted,
+                        ),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ),
