@@ -152,27 +152,45 @@ bool rewardEarned(int day, JourneyRewards r) => day == _patternsDay
     ? r.patternsFreed
     : day >= 1 && day < _patternsDay && day <= r.earnedDay;
 
+/// Whether day 3's reward is the first tip rather than a recipe: once
+/// accepted, and while the offer is open or undecided unless the weekly
+/// tips are on (then it is a recipe). The one rule for day 3's title,
+/// detail, sheet and action.
+bool day3IsTip(JourneyRewards r, {required bool? weeklyTips}) =>
+    switch (r.tipOffer) {
+      TipOffer.accepted => true,
+      TipOffer.declined || TipOffer.skipped => false,
+      TipOffer.offered || null => weeklyTips != true,
+    };
+
+/// Whether day 3's reward waits for the answer to the offer: the tip
+/// ([day3IsTip]), not accepted yet.
+bool day3Pending(JourneyRewards r, {required bool? weeklyTips}) =>
+    r.tipOffer != TipOffer.accepted && day3IsTip(r, weeklyTips: weeklyTips);
+
 /// The recipe [day]'s reward shows and opens: the stored pick of a recipe
 /// day ([JourneyRewards.recipeDays]); null on another day, without a pick,
-/// and on day 3 once the first tip was accepted (a recipe picked while the
-/// offer waited is not the reward then).
-RecipePick? rewardPick(int day, JourneyRewards r) =>
-    day == _tipDay && r.tipOffer == TipOffer.accepted ? null : r.picks[day];
+/// and on day 3 while that is the tip ([day3IsTip]): a recipe picked while
+/// the offer waits is not the reward then.
+RecipePick? rewardPick(
+  int day,
+  JourneyRewards r, {
+  required bool? weeklyTips,
+}) => day == _tipDay && day3IsTip(r, weeklyTips: weeklyTips)
+    ? null
+    : r.picks[day];
 
-/// The title of [day]'s reward (1–7). Day 3 is the tip once accepted, a
-/// recipe once declined or skipped, and before that whatever the weekly
-/// tips make it; day 5 names the user's ingredients only once a stored pick
-/// matched some, and is generic before that and without a match.
+/// The title of [day]'s reward (1–7). Day 3 is the tip or a recipe as
+/// [day3IsTip] says; day 5 names the user's ingredients only once a stored
+/// pick matched some, and is generic before that and without a match.
 String rewardTitle(int day, JourneyRewards r, {required bool? weeklyTips}) =>
     switch (day) {
       1 => JourneyCopy.day1,
       2 => JourneyCopy.day2,
-      3 => switch (r.tipOffer) {
-        TipOffer.accepted => JourneyCopy.day3Tip,
-        TipOffer.declined || TipOffer.skipped => JourneyCopy.day3Recipe,
-        TipOffer.offered || null =>
-          weeklyTips == true ? JourneyCopy.day3Recipe : JourneyCopy.day3Tip,
-      },
+      3 =>
+        day3IsTip(r, weeklyTips: weeklyTips)
+            ? JourneyCopy.day3Tip
+            : JourneyCopy.day3Recipe,
       4 => JourneyCopy.day4,
       5 =>
         r.picks[_calmDay]?.matched.isNotEmpty == true

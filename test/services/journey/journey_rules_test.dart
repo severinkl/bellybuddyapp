@@ -537,25 +537,83 @@ void main() {
     );
 
     test("a recipe day's stored pick", () {
-      expect(rewardPick(1, picked), one);
-      expect(rewardPick(3, picked), three);
-      expect(rewardPick(5, picked), five);
+      expect(rewardPick(1, picked, weeklyTips: false), one);
+      expect(rewardPick(3, picked, weeklyTips: false), three);
+      expect(rewardPick(5, picked, weeklyTips: false), five);
     });
 
     test('none on the other days, nor without a pick', () {
       for (final day in [2, 4, 6, 7]) {
-        expect(rewardPick(day, picked), isNull, reason: '$day');
+        expect(rewardPick(day, picked, weeklyTips: false), isNull);
       }
-      expect(rewardPick(5, const JourneyRewards(earnedDay: 5)), isNull);
+      expect(
+        rewardPick(5, const JourneyRewards(earnedDay: 5), weeklyTips: false),
+        isNull,
+      );
     });
 
-    test('day 3 once the tip was accepted: never the stored recipe', () {
-      final accepted = picked.copyWith(tipOffer: TipOffer.accepted);
-      expect(rewardPick(3, accepted), isNull);
-      expect(rewardPick(1, accepted), one);
-      for (final offer in [TipOffer.offered, TipOffer.skipped]) {
-        expect(rewardPick(3, picked.copyWith(tipOffer: offer)), three);
+    test('day 3: the stored recipe only while it is the reward '
+        '(day3IsTip false)', () {
+      // Built anew: copyWith can't clear the offer.
+      RecipePick? pick(TipOffer? offer, bool? weekly) => rewardPick(
+        3,
+        JourneyRewards(earnedDay: 5, picks: picked.picks, tipOffer: offer),
+        weeklyTips: weekly,
+      );
+      for (final weekly in [true, false, null]) {
+        expect(pick(TipOffer.accepted, weekly), isNull, reason: '$weekly');
+        expect(pick(TipOffer.declined, weekly), three, reason: '$weekly');
+        expect(pick(TipOffer.skipped, weekly), three, reason: '$weekly');
       }
+      // The offer open or undecided: the tip unless the weekly tips are on.
+      for (final offer in [TipOffer.offered, null]) {
+        expect(pick(offer, false), isNull, reason: '$offer');
+        expect(pick(offer, null), isNull, reason: '$offer');
+        expect(pick(offer, true), three, reason: '$offer');
+      }
+      // The other days never depend on it.
+      expect(
+        rewardPick(
+          1,
+          picked.copyWith(tipOffer: TipOffer.accepted),
+          weeklyTips: false,
+        ),
+        one,
+      );
+    });
+  });
+
+  group('day 3', () {
+    test('day3IsTip: accepted, or open / undecided without the weekly '
+        'tips on', () {
+      bool tip(TipOffer? offer, bool? weekly) => day3IsTip(
+        JourneyRewards(earnedDay: 3, tipOffer: offer),
+        weeklyTips: weekly,
+      );
+      for (final weekly in [true, false, null]) {
+        expect(tip(TipOffer.accepted, weekly), isTrue);
+        expect(tip(TipOffer.declined, weekly), isFalse);
+        expect(tip(TipOffer.skipped, weekly), isFalse);
+      }
+      for (final offer in [TipOffer.offered, null]) {
+        expect(tip(offer, false), isTrue);
+        expect(tip(offer, null), isTrue);
+        expect(tip(offer, true), isFalse);
+      }
+    });
+
+    test('day3Pending: the tip, not accepted yet', () {
+      bool pending(TipOffer? offer, bool? weekly) => day3Pending(
+        JourneyRewards(earnedDay: 3, tipOffer: offer),
+        weeklyTips: weekly,
+      );
+      expect(pending(TipOffer.offered, false), isTrue);
+      expect(pending(TipOffer.offered, null), isTrue);
+      expect(pending(null, false), isTrue);
+      expect(pending(TipOffer.offered, true), isFalse);
+      expect(pending(TipOffer.accepted, true), isFalse);
+      expect(pending(TipOffer.declined, false), isFalse);
+      expect(pending(TipOffer.skipped, false), isFalse);
     });
   });
 

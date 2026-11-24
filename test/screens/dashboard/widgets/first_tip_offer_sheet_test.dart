@@ -107,6 +107,7 @@ void main() {
     });
 
     expect(verticalOverflows(errors), isEmpty);
+    expect(errors.where((e) => !e.contains('overflowed')), isEmpty);
     // Without scrolling: as the sheet opened.
     for (final key in [FirstTipOfferSheet.yesKey, FirstTipOfferSheet.noKey]) {
       final rect = tester.getRect(find.byKey(key));

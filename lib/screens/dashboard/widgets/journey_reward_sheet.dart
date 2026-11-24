@@ -8,12 +8,11 @@ import '../../../models/journey_rewards.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../providers/insights_provider.dart';
 import '../../../providers/journey_rewards_provider.dart';
+import '../../../providers/profile_provider.dart';
 import '../../../providers/recipe_collection_provider.dart';
 import '../../../services/journey/journey_copy.dart';
 import '../../../services/journey/journey_rules.dart';
-import '../../../utils/settled_value.dart';
 import '../../../widgets/buddy/buddy_ask_sheet.dart';
-import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/bb_card.dart';
 import '../../patterns/widgets/patterns_preview.dart';
 import '../../recipes/widgets/recipe_list_tile.dart';
@@ -51,6 +50,7 @@ class JourneyRewardSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final rewards = ref.watch(journeyRewardsProvider) ?? const JourneyRewards();
+    final weeklyTips = ref.watch(weeklyTipsEnabledProvider);
     void open() => Navigator.pop(context, true);
     final reward = switch (day) {
       2 => _Reward(
@@ -58,7 +58,7 @@ class JourneyRewardSheet extends ConsumerWidget {
         content: _Article(onTap: open),
         primary: JourneyCopy.readArticle,
       ),
-      3 when rewards.tipOffer == TipOffer.accepted => const _Reward(
+      3 when day3IsTip(rewards, weeklyTips: weeklyTips) => const _Reward(
         line: JourneyCopy.day3TipLine,
         primary: JourneyCopy.toTips,
       ),
@@ -68,39 +68,28 @@ class JourneyRewardSheet extends ConsumerWidget {
         opens: false,
       ),
       6 => _Reward(
+        // The last known count, also while the insights reload.
         line: JourneyCopy.day6Line(
-          ref.watch(insightsProvider).settledValue?.progress.gutFeelingsLeft ??
-              0,
+          ref.watch(insightsProvider).value?.progress.gutFeelingsLeft ?? 0,
         ),
         content: const _PatternsSample(),
         primary: JourneyCopy.okay,
         opens: false,
       ),
-      _ => _recipeReward(rewardPick(day, rewards), onTap: open),
+      _ => _recipeReward(
+        rewardPick(day, rewards, weeklyTips: weeklyTips),
+        onTap: open,
+      ),
     };
     return BuddyAskSheet(
       line: reward.line,
-      actions: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          BbButton(
-            tapKey: primaryKey,
-            label: reward.primary,
-            onPressed: () => Navigator.pop(context, reward.opens),
-          ),
-          if (reward.opens) ...[
-            AppConstants.gap8,
-            TextButton(
-              key: laterKey,
-              onPressed: () => Navigator.pop(context, false),
-              style: TextButton.styleFrom(
-                foregroundColor: AppTheme.mutedForeground,
-              ),
-              child: const Text(JourneyCopy.later),
-            ),
-          ],
-        ],
+      actions: BuddySheetActions(
+        primaryKey: primaryKey,
+        primary: reward.primary,
+        onPrimary: () => Navigator.pop(context, reward.opens),
+        secondaryKey: laterKey,
+        secondary: reward.opens ? JourneyCopy.later : null,
+        onSecondary: reward.opens ? () => Navigator.pop(context, false) : null,
       ),
       child: reward.content,
     );
@@ -130,7 +119,7 @@ class JourneyRewardSheet extends ConsumerWidget {
           _PickCard(pick: pick, onTap: onTap),
           if (matched.isNotEmpty) ...[
             AppConstants.gap12,
-            _Body(JourneyCopy.day5Because(matched)),
+            BuddySheetText(JourneyCopy.day5Because(matched)),
           ],
         ],
       ),
@@ -154,26 +143,6 @@ class _Reward {
   final Widget? content;
   final String primary;
   final bool opens;
-}
-
-/// A text of the sheet, centred and muted.
-class _Body extends StatelessWidget {
-  const _Body(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Text(
-      text,
-      textAlign: TextAlign.center,
-      style: const TextStyle(
-        fontSize: AppTheme.fontSizeBody,
-        height: AppTheme.lineHeightBody,
-        color: AppTheme.mutedForeground,
-      ),
-    );
-  }
 }
 
 /// The picked recipe as a list row, while the collection holds it; else
@@ -216,7 +185,7 @@ class _Article extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const _Body(JourneyCopy.day2Body),
+        const BuddySheetText(JourneyCopy.day2Body),
         AppConstants.gap12,
         _LinkCard(
           icon: Icons.menu_book_outlined,
@@ -293,7 +262,7 @@ class _PatternsSample extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _Body(JourneyCopy.day6Body),
+        BuddySheetText(JourneyCopy.day6Body),
         AppConstants.gap12,
         StepFieldLabel(JourneyCopy.example),
         AppConstants.gap8,

@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -16,27 +14,63 @@ import '../../../services/journey/journey_rules.dart';
 import '../../../utils/url_utils.dart';
 import '../../../widgets/buddy/buddy_ask_sheet.dart';
 import '../../../widgets/common/bb_drag_handle.dart';
+import '../../../widgets/common/weekly_tips_switch.dart';
 import 'journey_reward_actions.dart';
 
-/// Opens „Deine Belohnungen" ([JourneyRewardsSheet]) over the bottom bar;
-/// completes when it closed. Articles open through [openUrl].
+/// Opens „Deine Belohnungen" ([JourneyRewardsSheet]) over the bottom bar,
+/// then what the tapped row gives, from [context] with [ref] (both must
+/// outlive the sheet, e.g. Home's):
+/// - day 3 while its offer is open ([tipOfferDue]): the offer
+///   ([offerFirstTip]); a SnackBar says when the first tip started or the
+///   opt-in failed, and a dismissal here is no „Nein": the Buddy still asks;
+/// - any other: [openJourneyReward], articles through [openUrl].
+///
+/// Completes once that is done.
 Future<void> showJourneyRewardsSheet(
-  BuildContext context, {
+  BuildContext context,
+  WidgetRef ref, {
   UrlOpener openUrl = launchUrl,
-}) => showBuddySheet<void>(
-  context,
-  builder: (_) => JourneyRewardsSheet(openUrl: openUrl),
-);
+}) async {
+  final day = await showBuddySheet<int>(
+    context,
+    builder: (_) => const JourneyRewardsSheet(),
+  );
+  if (day == null || !context.mounted) return;
+  final offersTip = _offersTip(
+    day,
+    ref.read(journeyRewardsProvider),
+    weeklyTips: ref.read(weeklyTipsEnabledProvider),
+  );
+  if (!offersTip) {
+    return openJourneyReward(context, ref, day, openUrl: openUrl);
+  }
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  final message = switch (await offerFirstTip(context, ref)) {
+    FirstTipOutcome.started => JourneyCopy.firstTipStarted,
+    FirstTipOutcome.optInFailed => WeeklyTipsSwitch.failure,
+    FirstTipOutcome.declined || FirstTipOutcome.dismissed => null,
+  };
+  if (message != null) {
+    messenger?.showSnackBar(SnackBar(content: Text(message)));
+  }
+}
+
+/// Whether a tap on [day]'s row opens the first-tip offer: day 3 while
+/// that offer waits for its answer ([tipOfferDue]).
+bool _offersTip(
+  int day,
+  JourneyRewards? rewards, {
+  required bool? weeklyTips,
+}) =>
+    day == 3 && rewards != null && tipOfferDue(rewards, weeklyTips: weeklyTips);
 
 /// „Deine Belohnungen": a row per day of the first 7. An earned one names
-/// its reward and what it gives, and a tap closes the sheet and opens it
-/// ([openJourneyReward]); day 4's saying has nothing to open. A day not
-/// earned yet is locked.
+/// its reward and what it gives, and a tap closes the sheet with its day
+/// ([showJourneyRewardsSheet] then opens it); day 4's saying has nothing to
+/// open, nor has day 3 while its offer waits and the weekly tips are
+/// unknown. A day not earned yet is locked.
 class JourneyRewardsSheet extends ConsumerWidget {
-  const JourneyRewardsSheet({super.key, this.openUrl = launchUrl});
-
-  /// Opens the day-2 article.
-  final UrlOpener openUrl;
+  const JourneyRewardsSheet({super.key});
 
   static Key rowKey(int day) => ValueKey('journey_reward_row_$day');
 
@@ -74,8 +108,8 @@ class JourneyRewardsSheet extends ConsumerWidget {
     );
   }
 
-  /// [day]'s row; a tap on an earned one closes the sheet and opens its
-  /// reward (day 4's saying has nothing to open).
+  /// [day]'s row; a tap on one that opens something closes the sheet with
+  /// [day].
   Widget _row(
     BuildContext context,
     WidgetRef ref,
@@ -84,31 +118,47 @@ class JourneyRewardsSheet extends ConsumerWidget {
     required bool? weeklyTips,
   }) {
     final earned = rewardEarned(day, rewards);
+    final opens =
+        earned &&
+        switch (day) {
+          4 => false,
+          3 when day3Pending(rewards, weeklyTips: weeklyTips) => _offersTip(
+            day,
+            rewards,
+            weeklyTips: weeklyTips,
+          ),
+          _ => true,
+        };
     return _RewardRow(
       key: rowKey(day),
       day: day,
       title: rewardTitle(day, rewards, weeklyTips: weeklyTips),
-      detail: earned ? _detail(day, rewards, ref) : null,
-      onTap: !earned || day == 4
-          ? null
-          : () {
-              Navigator.pop(context);
-              // The sheet's context stays mounted while it slides out.
-              unawaited(openJourneyReward(context, ref, day, openUrl: openUrl));
-            },
+      detail: earned
+          ? _detail(day, rewards, ref, weeklyTips: weeklyTips)
+          : null,
+      onTap: opens ? () => Navigator.pop(context, day) : null,
     );
   }
 
   /// What [day]'s earned reward gives, under its title.
-  String _detail(int day, JourneyRewards rewards, WidgetRef ref) =>
-      switch (day) {
-        2 => '${JourneyCopy.articleTitle} · ${JourneyCopy.articleSource}',
-        3 when rewards.tipOffer == TipOffer.accepted => JourneyCopy.toTips,
-        4 => sayingFor(ref.watch(currentUserIdProvider) ?? ''),
-        6 => JourneyCopy.example,
-        7 => JourneyCopy.toPatterns,
-        _ => rewardPick(day, rewards)?.title ?? JourneyCopy.noRecipe,
-      };
+  String _detail(
+    int day,
+    JourneyRewards rewards,
+    WidgetRef ref, {
+    required bool? weeklyTips,
+  }) => switch (day) {
+    2 => '${JourneyCopy.articleTitle} · ${JourneyCopy.articleSource}',
+    3 when day3IsTip(rewards, weeklyTips: weeklyTips) =>
+      day3Pending(rewards, weeklyTips: weeklyTips)
+          ? JourneyCopy.day3Pending
+          : JourneyCopy.toTips,
+    4 => sayingFor(ref.watch(currentUserIdProvider) ?? ''),
+    6 => JourneyCopy.example,
+    7 => JourneyCopy.toPatterns,
+    _ =>
+      rewardPick(day, rewards, weeklyTips: weeklyTips)?.title ??
+          JourneyCopy.noRecipe,
+  };
 }
 
 /// A day's row: its day circle, [title] and [detail], and a chevron when

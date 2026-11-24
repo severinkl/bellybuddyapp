@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
+import '../common/bb_button.dart';
 import '../common/bb_drag_handle.dart';
 import 'buddy_pose.dart';
 import 'buddy_says.dart';
@@ -93,6 +94,70 @@ class BuddyAskSheet extends StatelessWidget {
             child: actions,
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// A Buddy sheet's [BuddyAskSheet.actions]: the [primary] button, then, if
+/// given, the muted text button [secondary] („Später", „Nein, danke").
+class BuddySheetActions extends StatelessWidget {
+  const BuddySheetActions({
+    super.key,
+    required this.primary,
+    required this.onPrimary,
+    this.primaryKey,
+    this.secondary,
+    this.onSecondary,
+    this.secondaryKey,
+  }) : assert((secondary == null) == (onSecondary == null));
+
+  final String primary;
+  final VoidCallback onPrimary;
+  final Key? primaryKey;
+  final String? secondary;
+  final VoidCallback? onSecondary;
+  final Key? secondaryKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final secondary = this.secondary;
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        BbButton(tapKey: primaryKey, label: primary, onPressed: onPrimary),
+        if (secondary != null) ...[
+          AppConstants.gap8,
+          TextButton(
+            key: secondaryKey,
+            onPressed: onSecondary,
+            style: TextButton.styleFrom(
+              foregroundColor: AppTheme.mutedForeground,
+            ),
+            child: Text(secondary),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+/// Running text in a Buddy sheet, below him: centred and muted.
+class BuddySheetText extends StatelessWidget {
+  const BuddySheetText(this.text, {super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      text,
+      textAlign: TextAlign.center,
+      style: const TextStyle(
+        fontSize: AppTheme.fontSizeBody,
+        height: AppTheme.lineHeightBody,
+        color: AppTheme.mutedForeground,
       ),
     );
   }

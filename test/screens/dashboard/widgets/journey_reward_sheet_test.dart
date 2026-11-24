@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -6,6 +8,7 @@ import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/models/insights.dart';
 import 'package:belly_buddy/models/journey_rewards.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
+import 'package:belly_buddy/providers/insights_provider.dart';
 import 'package:belly_buddy/repositories/recipe_repository.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_sheet.dart';
 import 'package:belly_buddy/screens/patterns/widgets/patterns_preview.dart';
@@ -33,9 +36,27 @@ const _allPicked = JourneyRewards(
   tipOffer: TipOffer.declined,
 );
 
+/// Insights loaded once ([_first], none: never); any later load never
+/// ends.
+class _ReloadingInsights extends InsightsNotifier {
+  _ReloadingInsights(this._first);
+  final Insights? _first;
+  var _loads = 0;
+
+  @override
+  Future<Insights> build() {
+    final first = _first;
+    return _loads++ == 0 && first != null
+        ? Future.value(first)
+        : Completer<Insights>().future;
+  }
+}
+
 void main() {
   /// A page whose „open" button opens [day]'s sheet over [rewards]; each
-  /// result goes to [results]. The collection holds the three picks.
+  /// result goes to [results]. The collection holds the three picks; the
+  /// weekly tips are [weeklyTips]; [insights] are loaded unless
+  /// [insightsNotifier] serves them.
   Future<void> pumpOpener(
     WidgetTester tester, {
     required int day,
@@ -43,6 +64,8 @@ void main() {
     bool afterNo = false,
     List<bool>? results,
     Insights? insights,
+    InsightsNotifier Function()? insightsNotifier,
+    bool weeklyTips = false,
     Size size = const Size(390, 844),
     double textScale = 1,
   }) async {
@@ -66,12 +89,17 @@ void main() {
       ProviderScope(
         overrides: [
           currentUserIdProvider.overrideWithValue(_userId),
-          profileProviderSeededWith(testUserProfile(userId: _userId)),
+          profileProviderSeededWith(
+            testUserProfile(userId: _userId, weeklyTipsEnabled: weeklyTips),
+          ),
           recipeRepositoryProvider.overrideWithValue(recipes),
           journeyRewardsSeededWith(rewards),
-          insightsProviderSeededWith(
-            insights ?? lockedInsights(activeDays: day, gutFeelings: 3),
-          ),
+          if (insightsNotifier != null)
+            insightsProvider.overrideWith(insightsNotifier)
+          else
+            insightsProviderSeededWith(
+              insights ?? lockedInsights(activeDays: day, gutFeelings: 3),
+            ),
         ],
         child: MaterialApp(
           theme: AppTheme.theme,
@@ -274,6 +302,44 @@ void main() {
     expect(results, [true]);
   });
 
+  testWidgets('day 3 while the offer waits: the tip, never the stored '
+      'recipe', (tester) async {
+    for (final offer in [TipOffer.offered, null]) {
+      await tester.pumpWidget(const SizedBox());
+      await pumpOpener(
+        tester,
+        day: 3,
+        // Built anew: copyWith can't clear the offer.
+        rewards: JourneyRewards(
+          earnedDay: 6,
+          picks: _allPicked.picks,
+          tipOffer: offer,
+        ),
+      );
+
+      expect(
+        find.text('Tag 3! Deine Tipps findest du unter Entdecken.'),
+        findsOneWidget,
+        reason: '$offer',
+      );
+      expect(find.text('Kürbissuppe'), findsNothing, reason: '$offer');
+      expect(primary('Zu deinen Tipps'), findsOneWidget, reason: '$offer');
+    }
+  });
+
+  testWidgets('day 3 while the offer waits, with the weekly tips on: the '
+      'recipe', (tester) async {
+    await pumpOpener(
+      tester,
+      day: 3,
+      rewards: _allPicked.copyWith(tipOffer: TipOffer.offered),
+      weeklyTips: true,
+    );
+
+    expect(find.text('Tag 3! Hier ist ein Rezept für dich.'), findsOneWidget);
+    expect(tileOf('Kürbissuppe'), findsOneWidget);
+  });
+
   testWidgets('day 4: the user\'s saying, „Danke!" → false', (tester) async {
     final results = <bool>[];
     await pumpOpener(
@@ -405,6 +471,44 @@ void main() {
     );
   });
 
+  testWidgets('day 6 while the insights reload: the last known count', (
+    tester,
+  ) async {
+    await pumpOpener(
+      tester,
+      day: 6,
+      rewards: _allPicked,
+      insightsNotifier: () =>
+          _ReloadingInsights(lockedInsights(activeDays: 6, gutFeelings: 2)),
+    );
+    const counted =
+        'Noch ein Tag und 1× Bauchgefühl, dann schau ich nach deinen ersten '
+        'Mustern.';
+    expect(find.text(counted), findsOneWidget);
+
+    ProviderScope.containerOf(
+      tester.element(find.byType(JourneyRewardSheet)),
+    ).invalidate(insightsProvider);
+    await tester.pumpAndSettle();
+
+    expect(find.text(counted), findsOneWidget);
+    expect(find.textContaining('Noch ein Tag, dann'), findsNothing);
+  });
+
+  testWidgets('day 6 with no insights at all: no count', (tester) async {
+    await pumpOpener(
+      tester,
+      day: 6,
+      rewards: _allPicked,
+      insightsNotifier: () => _ReloadingInsights(null),
+    );
+
+    expect(
+      find.text('Noch ein Tag, dann schau ich nach deinen ersten Mustern.'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets("each day's buttons on screen at 375×667 @1.3", (tester) async {
     for (var day = 1; day <= 6; day++) {
       // A fresh app per day.
@@ -421,6 +525,11 @@ void main() {
       );
 
       expect(verticalOverflows(errors), isEmpty, reason: 'day $day');
+      expect(
+        errors.where((e) => !e.contains('overflowed')),
+        isEmpty,
+        reason: 'day $day',
+      );
       // Without scrolling: as the sheet opened.
       for (final key in [
         JourneyRewardSheet.primaryKey,

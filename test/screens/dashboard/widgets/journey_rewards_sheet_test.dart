@@ -6,9 +6,14 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:belly_buddy/models/journey_rewards.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
+import 'package:belly_buddy/providers/first_tip_provider.dart';
+import 'package:belly_buddy/providers/journey_rewards_provider.dart';
 import 'package:belly_buddy/repositories/recipe_repository.dart';
 import 'package:belly_buddy/router/route_names.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/first_tip_offer_sheet.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_rewards_sheet.dart';
+import 'package:belly_buddy/widgets/common/weekly_tips_switch.dart';
 
 import '../../../helpers/app_host.dart';
 import '../../../helpers/fakes.dart';
@@ -31,15 +36,21 @@ const _day4 = JourneyRewards(
 
 void main() {
   late RecordingUrlOpener opener;
+  late FakeFirstTipNotifier firstTip;
   late GoRouter router;
 
-  setUp(() => opener = RecordingUrlOpener());
+  setUp(() {
+    opener = RecordingUrlOpener();
+    firstTip = FakeFirstTipNotifier();
+  });
 
   /// Home with an „open" button that opens „Deine Belohnungen" over
-  /// [rewards], the reward pages stubbed.
-  Future<void> pumpRewards(
+  /// [rewards], the reward pages stubbed; the weekly tips are [weeklyTips]
+  /// (null: no profile yet).
+  Future<ProviderContainer> pumpRewards(
     WidgetTester tester,
     JourneyRewards rewards, {
+    bool? weeklyTips = false,
     Size size = const Size(390, 844),
     double textScale = 1,
   }) async {
@@ -52,10 +63,10 @@ void main() {
         GoRoute(
           path: '/',
           builder: (_, _) => Scaffold(
-            body: Builder(
-              builder: (c) => TextButton(
+            body: Consumer(
+              builder: (c, ref, _) => TextButton(
                 onPressed: () =>
-                    showJourneyRewardsSheet(c, openUrl: opener.call),
+                    showJourneyRewardsSheet(c, ref, openUrl: opener.call),
                 child: const Text('open'),
               ),
             ),
@@ -70,19 +81,28 @@ void main() {
       ],
     );
     addTearDown(router.dispose);
+    final container = ProviderContainer.test(
+      overrides: [
+        currentUserIdProvider.overrideWithValue(_userId),
+        profileProviderSeededWith(
+          weeklyTips == null
+              ? null
+              : testUserProfile(userId: _userId, weeklyTipsEnabled: weeklyTips),
+        ),
+        recipeRepositoryProvider.overrideWithValue(FakeRecipeRepository()),
+        journeyRewardsSeededWith(rewards),
+        firstTipProvider.overrideWith(() => firstTip),
+      ],
+    );
     await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          currentUserIdProvider.overrideWithValue(_userId),
-          profileProviderSeededWith(testUserProfile(userId: _userId)),
-          recipeRepositoryProvider.overrideWithValue(FakeRecipeRepository()),
-          journeyRewardsSeededWith(rewards),
-        ],
+      UncontrolledProviderScope(
+        container: container,
         child: germanRouterApp(router, textScale: textScale),
       ),
     );
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
+    return container;
   }
 
   String location() =>
@@ -229,6 +249,123 @@ void main() {
     expect(location(), RoutePaths.recommendations);
   });
 
+  group('row 3 while the offer waits (weekly tips off)', () {
+    final offered = _day4.copyWith(tipOffer: TipOffer.offered);
+
+    /// The list over [offered], row 3 tapped: the list closes, the offer
+    /// opens.
+    Future<ProviderContainer> openOffer(WidgetTester tester) async {
+      final container = await pumpRewards(tester, offered);
+      expect(inRow(3, find.text('Dein erster Tipp')), findsOneWidget);
+      expect(inRow(3, find.text('Wartet auf deine Antwort')), findsOneWidget);
+      expect(inRow(3, find.byIcon(Icons.chevron_right)), findsOneWidget);
+      // The recipe stored meanwhile is not the reward.
+      expect(find.text('Kürbissuppe'), findsNothing);
+      await tapRow(tester, 3);
+      expect(find.byType(JourneyRewardsSheet), findsNothing);
+      expect(find.byType(FirstTipOfferSheet), findsOneWidget);
+      return container;
+    }
+
+    TipOffer? offerOf(ProviderContainer c) =>
+        c.read(journeyRewardsProvider)?.tipOffer;
+
+    testWidgets('yes → the first tip is requested, a SnackBar says so', (
+      tester,
+    ) async {
+      await openOffer(tester);
+      await tester.tap(find.byKey(FirstTipOfferSheet.yesKey));
+      await tester.pumpAndSettle();
+
+      expect(firstTip.accepts, 1);
+      expect(
+        find.text(
+          'Ich mach dir jetzt deinen ersten Tipp. Das dauert einen Moment ✨',
+        ),
+        findsOneWidget,
+      );
+      expect(location(), '/');
+    });
+
+    testWidgets('yes with a failing opt-in → the switch\'s failure', (
+      tester,
+    ) async {
+      firstTip.acceptResult = false;
+      await openOffer(tester);
+      await tester.tap(find.byKey(FirstTipOfferSheet.yesKey));
+      await tester.pumpAndSettle();
+
+      expect(firstTip.accepts, 1);
+      expect(find.text(WeeklyTipsSwitch.failure), findsOneWidget);
+    });
+
+    testWidgets('no → declined, no request, the day-3 recipe sheet', (
+      tester,
+    ) async {
+      final container = await openOffer(tester);
+      await tester.tap(find.byKey(FirstTipOfferSheet.noKey));
+      await tester.pumpAndSettle();
+
+      expect(firstTip.accepts, 0);
+      expect(offerOf(container), TipOffer.declined);
+      expect(
+        find.text('Alles klar! Dann hier ein Rezept für dich.'),
+        findsOneWidget,
+      );
+      expect(find.text('Kürbissuppe'), findsOneWidget);
+
+      await tester.tap(find.byKey(JourneyRewardSheet.primaryKey));
+      await tester.pumpAndSettle();
+      expect(location(), '/collection/r-3');
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('no, then „Später" → declined, nothing opened', (tester) async {
+      final container = await openOffer(tester);
+      await tester.tap(find.byKey(FirstTipOfferSheet.noKey));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(JourneyRewardSheet.laterKey));
+      await tester.pumpAndSettle();
+
+      expect(offerOf(container), TipOffer.declined);
+      expect(location(), '/');
+    });
+
+    testWidgets('dismissed → nothing stored, no request: the Buddy still '
+        'asks', (tester) async {
+      final container = await openOffer(tester);
+      await tester.tapAt(const Offset(10, 10)); // the modal barrier
+      await tester.pumpAndSettle();
+
+      expect(find.byType(FirstTipOfferSheet), findsNothing);
+      expect(firstTip.accepts, 0);
+      expect(offerOf(container), TipOffer.offered);
+      expect(find.byType(JourneyRewardSheet), findsNothing);
+      expect(find.byType(SnackBar), findsNothing);
+      expect(location(), '/');
+    });
+  });
+
+  testWidgets('row 3 while the weekly tips are unknown: waiting, no tap', (
+    tester,
+  ) async {
+    await pumpRewards(
+      tester,
+      _day4.copyWith(tipOffer: TipOffer.offered),
+      weeklyTips: null,
+    );
+
+    expect(inRow(3, find.text('Dein erster Tipp')), findsOneWidget);
+    expect(inRow(3, find.text('Wartet auf deine Antwort')), findsOneWidget);
+    expect(inRow(3, find.byIcon(Icons.chevron_right)), findsNothing);
+    expect(find.text('Kürbissuppe'), findsNothing);
+    await tapRow(tester, 3);
+
+    expect(find.byType(JourneyRewardsSheet), findsOneWidget);
+    expect(find.byType(FirstTipOfferSheet), findsNothing);
+    expect(firstTip.accepts, 0);
+  });
+
   testWidgets('row 4 has no tap', (tester) async {
     await pumpRewards(tester, _day4);
     await tapRow(tester, 4);
@@ -293,6 +430,10 @@ void main() {
     });
 
     expect(verticalOverflows([...errors, ...more]), isEmpty);
+    expect(
+      [...errors, ...more].where((e) => !e.contains('overflowed')),
+      isEmpty,
+    );
     expect(tester.getRect(row(7)).bottom, lessThanOrEqualTo(667));
   });
 }

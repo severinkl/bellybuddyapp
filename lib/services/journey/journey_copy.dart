@@ -41,6 +41,9 @@ abstract final class JourneyCopy {
 
   static const rewardsTitle = 'Deine Belohnungen';
 
+  /// Day 3 in „Deine Belohnungen" while the offer waits for an answer.
+  static const day3Pending = 'Wartet auf deine Antwort';
+
   /// A day of „Deine Belohnungen" not earned yet, to a screen reader.
   static String notYet(int day, String title) =>
       '${dayLabel(day)}: $title, kommt noch';

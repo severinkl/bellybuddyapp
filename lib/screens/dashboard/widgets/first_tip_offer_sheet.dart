@@ -1,9 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
-import '../../../config/app_theme.dart';
-import '../../../config/constants.dart';
 import '../../../widgets/buddy/buddy_ask_sheet.dart';
-import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/weekly_tips_switch.dart';
 
 /// The answer to the day-3 offer of a first tip.
@@ -37,35 +34,15 @@ class FirstTipOfferSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return BuddyAskSheet(
       line: line,
-      actions: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          BbButton(
-            tapKey: yesKey,
-            label: yes,
-            onPressed: () => Navigator.pop(context, FirstTipAnswer.yes),
-          ),
-          AppConstants.gap8,
-          TextButton(
-            key: noKey,
-            onPressed: () => Navigator.pop(context, FirstTipAnswer.no),
-            style: TextButton.styleFrom(
-              foregroundColor: AppTheme.mutedForeground,
-            ),
-            child: const Text(no),
-          ),
-        ],
+      actions: BuddySheetActions(
+        primaryKey: yesKey,
+        primary: yes,
+        onPrimary: () => Navigator.pop(context, FirstTipAnswer.yes),
+        secondaryKey: noKey,
+        secondary: no,
+        onSecondary: () => Navigator.pop(context, FirstTipAnswer.no),
       ),
-      child: const Text(
-        body,
-        textAlign: TextAlign.center,
-        style: TextStyle(
-          fontSize: AppTheme.fontSizeBody,
-          height: AppTheme.lineHeightBody,
-          color: AppTheme.mutedForeground,
-        ),
-      ),
+      child: const BuddySheetText(body),
     );
   }
 }
