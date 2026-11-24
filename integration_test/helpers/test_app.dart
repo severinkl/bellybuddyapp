@@ -164,24 +164,6 @@ Future<void> setNotificationModalShown() async {
   });
 }
 
-/// Removes [userId]'s journey from the preferences: whether they see it
-/// (`insight_journey_<userId>`), its rewards (`journey_rewards_<userId>`)
-/// and every Buddy announcement flag (`buddy_announced_<userId>_*`), so a
-/// flow starts undecided, with nothing earned or announced yet.
-Future<void> clearJourneyPrefs(String userId) async {
-  final prefs = await SharedPreferences.getInstance();
-  final keys = {
-    '${AppConstants.keyInsightJourneyPrefix}$userId',
-    '${AppConstants.keyJourneyRewardsPrefix}$userId',
-  };
-  final announced = '${AppConstants.keyBuddyAnnouncedPrefix}${userId}_';
-  for (final key in prefs.getKeys().toList()) {
-    if (keys.contains(key) || key.startsWith(announced)) {
-      await prefs.remove(key);
-    }
-  }
-}
-
 /// Noon, [daysAgo] local days back.
 DateTime _noon(int daysAgo) {
   final now = DateTime.now();

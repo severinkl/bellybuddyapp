@@ -366,6 +366,7 @@ void main() {
       expect(r.picks[5]!.matched, ['Karotte']);
     });
 
+    // The food rules themselves: food_words_test.
     test('day 5 matches a calm-day food in another spelling, like core: '
         'Eier is Ei, Zwiebel is Zwiebelpulver', () {
       final x = _recipe('x', ['Kartoffel'], title: 'Kartoffelsuppe');
@@ -389,62 +390,6 @@ void main() {
           title: 'Reispfanne mit Ei',
           matched: ['Ei', 'Zwiebelpulver'],
         ),
-      );
-    });
-
-    test('day 5: a free-from food is another food, matched by its own name '
-        'only', () {
-      final plain = _recipe('a', ['Milch', 'Brot'], title: 'Arme Ritter');
-      final free = _recipe('b', [
-        'Laktosefreie Milch',
-        'Glutenfreies Brot',
-      ], title: 'Brotauflauf');
-      expect(_rank([plain, free]).fits.first.recipe.id, 'a');
-
-      final calmFree = fillPicks(
-        const JourneyRewards(earnedDay: 5, picks: _earlier),
-        ranked: _rank([plain, free]),
-        weeklyTips: false,
-        calmKeys: const {'laktosefreie milch', 'glutenfreies brot'},
-      );
-      expect(
-        calmFree.picks[5],
-        const RecipePick(
-          id: 'b',
-          title: 'Brotauflauf',
-          matched: ['Laktosefreie Milch', 'Glutenfreies Brot'],
-        ),
-      );
-
-      final calmPlain = fillPicks(
-        const JourneyRewards(earnedDay: 5, picks: _earlier),
-        ranked: _rank([free]),
-        weeklyTips: false,
-        calmKeys: const {'milch', 'brot'},
-      );
-      expect(
-        calmPlain.picks[5],
-        const RecipePick(id: 'b', title: 'Brotauflauf'),
-      );
-    });
-
-    test('day 5: another food with a similar name is no match', () {
-      final y = _recipe('y', [
-        'Frühlingszwiebelgrün',
-        'Schnittlauch',
-        'Kokosmilch',
-        'Eisbergsalat',
-        'Milchreis',
-      ], title: 'Milchreis mit Kokos');
-      final r = fillPicks(
-        const JourneyRewards(earnedDay: 5, picks: _earlier),
-        ranked: _rank([y]),
-        weeklyTips: false,
-        calmKeys: const {'zwiebel', 'milch', 'eier', 'reis', 'lauch'},
-      );
-      expect(
-        r.picks[5],
-        const RecipePick(id: 'y', title: 'Milchreis mit Kokos'),
       );
     });
 

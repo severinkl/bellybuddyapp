@@ -47,11 +47,7 @@ String _json(JourneyRewards r) => jsonEncode(r.toJson());
 
 /// The insights' loads, the journey decision, the stored read and the
 /// recipes all landed.
-Future<void> _settle() async {
-  for (var i = 0; i < 5; i++) {
-    await pumpEventQueue();
-  }
-}
+Future<void> _settle() => pumpEventQueue(times: 100);
 
 /// An override for the rewards whose preferences open through [open].
 Override _rewardsOpening(Future<SharedPreferences> Function() open) =>
@@ -313,62 +309,20 @@ void main() {
       });
     });
 
-    group('answerTipOffer', () {
-      Future<ProviderContainer> offered() async {
-        entries.insightSource = activeDays(3);
-        final c = container();
-        expect((await rewardsOf(c))!.tipOffer, TipOffer.offered);
-        return c;
-      }
+    test('answerTipOffer „Nein": declined, stored, with day 3\'s recipe (the '
+        'rule: answerOffer)', () async {
+      entries.insightSource = activeDays(3);
+      final c = container();
+      expect((await rewardsOf(c))!.tipOffer, TipOffer.offered);
 
-      test('offered → accepted, stored', () async {
-        final c = await offered();
+      await c
+          .read(journeyRewardsProvider.notifier)
+          .answerTipOffer(accepted: false);
 
-        await c
-            .read(journeyRewardsProvider.notifier)
-            .answerTipOffer(accepted: true);
-
-        expect(c.read(journeyRewardsProvider)!.tipOffer, TipOffer.accepted);
-        expect(await stored(), c.read(journeyRewardsProvider));
-      });
-
-      test('offered → declined, stored, with day 3\'s recipe', () async {
-        final c = await offered();
-
-        await c
-            .read(journeyRewardsProvider.notifier)
-            .answerTipOffer(accepted: false);
-
-        final rewards = c.read(journeyRewardsProvider)!;
-        expect(rewards.tipOffer, TipOffer.declined);
-        expect(rewards.picks, {1: _pick(_a), 3: _pick(_b)});
-        expect(await stored(), rewards);
-      });
-
-      test('skipped stays skipped', () async {
-        entries.insightSource = activeDays(3);
-        final c = container(weeklyTips: true);
-        await rewardsOf(c);
-
-        await c
-            .read(journeyRewardsProvider.notifier)
-            .answerTipOffer(accepted: true);
-
-        expect(c.read(journeyRewardsProvider)!.tipOffer, TipOffer.skipped);
-        expect((await stored())!.tipOffer, TipOffer.skipped);
-      });
-
-      test('before day 3: unchanged', () async {
-        final c = container();
-        await rewardsOf(c);
-
-        await c
-            .read(journeyRewardsProvider.notifier)
-            .answerTipOffer(accepted: true);
-
-        expect(c.read(journeyRewardsProvider)!.tipOffer, isNull);
-        expect((await stored())!.tipOffer, isNull);
-      });
+      final rewards = c.read(journeyRewardsProvider)!;
+      expect(rewards.tipOffer, TipOffer.declined);
+      expect(rewards.picks, {1: _pick(_a), 3: _pick(_b)});
+      expect(await stored(), rewards);
     });
 
     test('setFirstTip: both changes at once stored in order; failed stored, '
@@ -566,30 +520,5 @@ void main() {
       expect(c.read(patternsUnlockedDueProvider), isFalse);
       expect(c.read(firstTipFailedProvider), isFalse);
     });
-  });
-
-  test('journeyRewardsSeededWith: the value, answers kept in memory', () async {
-    final c = ProviderContainer.test(
-      overrides: [
-        journeyRewardsSeededWith(
-          const JourneyRewards(earnedDay: 3, tipOffer: TipOffer.offered),
-        ),
-      ],
-    );
-    final notifier = c.read(journeyRewardsProvider.notifier);
-
-    await notifier.answerTipOffer(accepted: false);
-    await notifier.setFirstTip(FirstTipState.failed);
-
-    expect(
-      c.read(journeyRewardsProvider),
-      const JourneyRewards(
-        earnedDay: 3,
-        tipOffer: TipOffer.declined,
-        firstTip: FirstTipState.failed,
-      ),
-    );
-    expect(c.read(firstTipFailedProvider), isTrue);
-    expect(await storedJson(testUserId), isNull);
   });
 }

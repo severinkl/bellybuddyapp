@@ -235,27 +235,17 @@ void main() {
       expect(line.isFood(FoodName('  ')), isFalse);
     });
 
-    test('isFood: a plural or a processed form is the food, like core; '
-        'another food with a similar name is not', () {
-      final ei = RecipeIngredient(position: 0, name: 'Ei');
+    test('isFood: the catalog name in another spelling too, like core '
+        '(the food rules: food_words_test)', () {
       final gewuerz = RecipeIngredient(
         position: 1,
         name: 'Gewürz',
         catalogId: 'ing-zwiebelpulver',
         catalogName: 'Zwiebelpulver',
       );
-      final kokosmilch = RecipeIngredient(position: 2, name: 'Kokosmilch');
 
-      expect(ei.isFood(FoodName('eier')), isTrue);
       expect(gewuerz.isFood(FoodName('Zwiebeln')), isTrue);
-      expect(kokosmilch.isFood(FoodName('milch')), isFalse);
-      expect(ei.isFood(FoodName('Eisbergsalat')), isFalse);
-      final laktosefrei = RecipeIngredient(
-        position: 3,
-        name: 'Laktosefreie Milch',
-      );
-      expect(laktosefrei.isFood(FoodName('milch')), isFalse);
-      expect(laktosefrei.isFood(FoodName('laktosefreie milch')), isTrue);
+      expect(gewuerz.isFood(FoodName('Frühlingszwiebelgrün')), isFalse);
     });
   });
 

@@ -179,11 +179,9 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   // The notification opt-in modal, not under test here, marked as shown;
-  // each flow starts a new journey, nothing earned or announced.
-  setUp(() async {
-    await setNotificationModalShown();
-    await clearJourneyPrefs(testUserId);
-  });
+  // nothing else stored, so each flow starts a new journey, nothing earned
+  // or announced.
+  setUp(setNotificationModalShown);
 
   testWidgets('day 1: the Buddy gives the first recipe, and the card names '
       "tomorrow's reward and opens „Deine Belohnungen\"", (tester) async {

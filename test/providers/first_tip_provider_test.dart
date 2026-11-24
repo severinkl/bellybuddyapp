@@ -51,11 +51,7 @@ final _set = testRecommendation(
 );
 
 /// The loads and writes in flight all landed.
-Future<void> _settle() async {
-  for (var i = 0; i < 5; i++) {
-    await pumpEventQueue();
-  }
-}
+Future<void> _settle() => pumpEventQueue(times: 100);
 
 /// A [FakeProfileRepository] whose weekly-tips write waits for [gate].
 class _GatedProfileRepository extends FakeProfileRepository {
