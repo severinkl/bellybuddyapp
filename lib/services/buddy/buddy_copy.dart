@@ -138,8 +138,18 @@ class BuddyCopy {
     ],
   };
 
+  /// Right after a log, when what he asks for next is more of the same
+  /// (one glass of six): he thanks for it first instead of the [care] line
+  /// („Ich hab Durst" just after a drink).
+  static const careAfterLog = <CareAction, List<String>>{
+    CareAction.drink: [
+      'Danke fürs Trinken! Ein Glas mehr schadet nie. 💧',
+      'Ahh, das tat gut! Später gern noch eins. 💧',
+    ],
+  };
+
   /// The dashboard's next-action button: the meal the time of day asks
-  /// for, logging a need („💧 Getränk eintragen") or Füttern.
+  /// for, logging a need („💧 Trinken eintragen") or „🍽 Essen eintragen".
   static String careButton(CareAction action) => switch (action) {
     CareAction.breakfast => '🍳 Frühstück eintragen',
     CareAction.lunch => '🍝 Mittagessen eintragen',
@@ -147,7 +157,7 @@ class BuddyCopy {
     CareAction.dinner => '🍲 Abendessen eintragen',
     CareAction.drink => _log(CareNeed.drink),
     CareAction.gutFeeling => _log(CareNeed.gutFeeling),
-    CareAction.feed => '🍎 Füttern',
+    CareAction.feed => '🍽 ${CareNeed.food.logLabel}',
   };
 
   static String _log(CareNeed need) => '${need.emoji} ${need.logLabel}';

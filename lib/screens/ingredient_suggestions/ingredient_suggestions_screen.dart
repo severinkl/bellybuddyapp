@@ -71,7 +71,7 @@ class _IngredientSuggestionsScreenState
     final state = ref.watch(ingredientSuggestionProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Zutaten-Vorschläge')),
+      appBar: AppBar(title: const Text('Alternativen')),
       body: Column(
         children: [
           Padding(
@@ -110,12 +110,7 @@ class _IngredientSuggestionsScreenState
                                 ),
                               ))
                         .toList()
-                      ..sort((a, b) {
-                        if (a.isNew != b.isNew) return a.isNew ? -1 : 1;
-                        return a.ingredientName.toLowerCase().compareTo(
-                          b.ingredientName.toLowerCase(),
-                        );
-                      });
+                      ..sort(IngredientSuggestionGroup.compareNewFirst);
 
                 if (filtered.isEmpty) {
                   return const Center(

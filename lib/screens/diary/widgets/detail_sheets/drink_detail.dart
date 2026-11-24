@@ -1,7 +1,9 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/services.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../config/constants.dart';
 import '../../../../models/drink_entry.dart';
+import '../../../../utils/drink_helpers.dart';
 
 class DrinkDetail extends StatelessWidget {
   final DrinkEntry drink;
@@ -29,14 +31,23 @@ class DrinkDetail extends StatelessWidget {
             ),
           ),
           AppConstants.gap8,
-          TextField(
-            controller: amountController,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: amountController,
+            builder: (context, amount, _) => TextField(
+              controller: amountController,
+              keyboardType: TextInputType.number,
+              scrollPadding: AppConstants.fieldWithHintScrollPadding,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(5),
+              ],
+              decoration: InputDecoration(
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+                ),
+                suffixText: 'ml',
+                errorText: DrinkHelpers.amountError(amount.text),
               ),
-              suffixText: 'ml',
             ),
           ),
         ],

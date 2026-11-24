@@ -97,9 +97,9 @@ class _EmailCaptureStepState extends State<EmailCaptureStep> {
                   const StepFieldLabel(
                     'Deine E-Mail-Adresse',
                     helper:
-                        'Falls du möchtest, kannst du uns hier deine echte '
-                        'E-Mail-Adresse geben. So können wir dich bei wichtigen '
-                        'Mitteilungen erreichen. Dieser Schritt ist optional.',
+                        'Falls du möchtest, gib hier deine echte '
+                        'E-Mail-Adresse an. So erreichen dich wichtige '
+                        'Mitteilungen. Dieser Schritt ist optional.',
                   ),
                   AppConstants.gap16,
                   TextFormField(

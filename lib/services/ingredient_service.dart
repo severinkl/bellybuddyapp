@@ -13,32 +13,56 @@ class IngredientService {
 
   static const _log = AppLogger('IngredientService');
 
+  /// Ingredients whose name contains [query] (ignoring case), best matches
+  /// first ([IngredientSearchResult.rank]): at most [limit].
+  ///
+  /// Two queries, so the best matches are never cut off by the limit: the
+  /// names starting with [query] (alphabetically, so an exact match comes
+  /// first) and a wider set of names containing it.
   Future<List<IngredientSearchResult>> search(
     String query, {
     int limit = 10,
     required String? userId,
   }) async {
     try {
-      final data = await _client
-          .from('ingredients')
-          .select('id, name, added_by_user_id')
-          .ilike('name', '%$query%')
-          .limit(limit);
-      return data
-          .map(
-            (e) => IngredientSearchResult(
+      final rows = await Future.wait([
+        _searchRows('$query%', limit),
+        _searchRows('%$query%', limit * _containsFactor),
+      ]);
+      return IngredientSearchResult.rank(
+        [
+          for (final e in rows.expand((r) => r))
+            IngredientSearchResult(
               id: e['id'] as String,
               name: e['name'] as String,
               isOwn: e['added_by_user_id'] == userId,
             ),
-          )
-          .toList();
+        ],
+        query: query,
+        limit: limit,
+      );
     } catch (e, st) {
       _log.error('search failed', e, st);
       rethrow;
     }
   }
 
+  /// How many more rows the contains query fetches than are shown, so the
+  /// ranking has enough to choose from.
+  static const _containsFactor = 3;
+
+  Future<List<Map<String, dynamic>>> _searchRows(String pattern, int limit) =>
+      _client
+          .from('ingredients')
+          .select('id, name, added_by_user_id')
+          .ilike('name', pattern)
+          .order('name', ascending: true)
+          .limit(limit);
+
+  /// Adds [name] to the catalog as the user's own ingredient, unless it is
+  /// there already. A name taken by a row the user can't see (row level
+  /// security hides other users' and AI-detected ingredients, the unique
+  /// name doesn't) fails with 23505: it is there already too.
   Future<void> insertIfNew(String name, {required String? userId}) async {
     try {
       if (userId == null) return;
@@ -53,11 +77,21 @@ class IngredientService {
         'added_via': 'user',
         'added_by_user_id': userId,
       });
+    } on PostgrestException catch (e, st) {
+      if (e.code == _uniqueViolation) {
+        _log.debug('insertIfNew: "$name" is in the catalog already');
+        return;
+      }
+      _log.error('insertIfNew failed', e, st);
+      rethrow;
     } catch (e, st) {
       _log.error('insertIfNew failed', e, st);
       rethrow;
     }
   }
+
+  /// Postgres' unique_violation.
+  static const _uniqueViolation = '23505';
 
   Future<void> deleteUserIngredient(String id) async {
     try {
@@ -106,7 +140,7 @@ class IngredientService {
     try {
       return await _client
           .from('meal_entries')
-          .select('id, title, tracked_at, image_url')
+          .select('id, title, tracked_at, image_url, ingredients')
           .inFilter('id', mealIds);
     } catch (e, st) {
       _log.error('fetchMealDetails failed', e, st);

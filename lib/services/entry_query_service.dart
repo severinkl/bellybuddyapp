@@ -110,18 +110,20 @@ class EntryQueryService {
     }
   }
 
-  /// Fetches `tracked_at` of every entry (all four tables) since [since]
-  /// and, with [until], before [until], as local wall-clock times.
+  /// Fetches `tracked_at` of every entry in [tables] (default: all four
+  /// entry tables) since [since] and, with [until], before [until], as local
+  /// wall-clock times.
   Future<List<DateTime>> fetchTrackedAtSince({
     required String userId,
     required DateTime since,
     DateTime? until,
+    Iterable<String>? tables,
   }) async {
     try {
       final sinceIso = wallClockToWire(since);
       final untilIso = until == null ? null : wallClockToWire(until);
       final results = await Future.wait(
-        entryTableFor.values.map(
+        (tables ?? entryTableFor.values).map(
           (t) => _fetchTrackedAtTable(t, userId, sinceIso, untilIso),
         ),
       );

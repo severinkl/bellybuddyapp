@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/screens/registration/steps/steps.dart';
+import 'package:belly_buddy/utils/buddy_name.dart';
 
 import '../../helpers/riverpod_helpers.dart';
 
@@ -86,7 +87,7 @@ void main() {
       expect(field(tester).textCapitalization, TextCapitalization.words);
     });
 
-    testWidgets('counts code points like the database, not characters', (
+    testWidgets('counts the characters a person sees, not code points', (
       tester,
     ) async {
       await pumpStep(tester);
@@ -95,21 +96,46 @@ void main() {
       const family = '\u{1F468}\u200D\u{1F469}\u200D\u{1F467}';
       await tester.enterText(find.byKey(BuddyNameStep.fieldKey), family);
       await tester.pump();
-      expect(counter('5/20'), findsOneWidget);
+      expect(counter('1/20'), findsOneWidget);
 
-      // 25 code points: four whole families fit, the fifth is not split.
-      await tester.enterText(find.byKey(BuddyNameStep.fieldKey), family * 5);
+      // A heart with its emoji selector is one character too (two code
+      // points, two UTF-16 units): „Kiwi ❤️❤️❤️❤️❤️❤️❤️" is 12, not 19.
+      const heart = '\u2764\uFE0F';
+      await tester.enterText(
+        find.byKey(BuddyNameStep.fieldKey),
+        'Kiwi ${heart * 7}',
+      );
       await tester.pump();
-      expect(text(tester), family * 4);
-      expect(counter('20/20'), findsOneWidget);
-      expect(AppConstants.isValidBuddyName(text(tester)), isTrue);
+      expect(counter('12/20'), findsOneWidget);
 
-      // Apples are one code point each (two UTF-16 units): 20 fit.
+      // 25 apples: 20 fit, whole ones only.
       await tester.enterText(find.byKey(BuddyNameStep.fieldKey), '');
       await tester.enterText(find.byKey(BuddyNameStep.fieldKey), '🍎' * 25);
       await tester.pump();
       expect(text(tester), '🍎' * 20);
+      expect(counter('20/20'), findsOneWidget);
       expect(AppConstants.isValidBuddyName(text(tester)), isTrue);
+    });
+
+    testWidgets('a name the database cannot store yet says why', (
+      tester,
+    ) async {
+      await pumpStep(tester);
+
+      // 11 characters, but 22 code points: more than the buddy_state check
+      // (char_length <= ${AppConstants.buddyNameMaxCodePoints}) takes.
+      const heart = '\u2764\uFE0F';
+      await tester.enterText(find.byKey(BuddyNameStep.fieldKey), heart * 11);
+      await tester.pump();
+
+      expect(counter('11/20'), findsOneWidget);
+      expect(AppConstants.isValidBuddyName(text(tester)), isFalse);
+      expect(find.text(BuddyNameRules.tooManySymbols), findsOneWidget);
+
+      await tester.enterText(find.byKey(BuddyNameStep.fieldKey), heart * 10);
+      await tester.pump();
+      expect(AppConstants.isValidBuddyName(text(tester)), isTrue);
+      expect(find.text(BuddyNameRules.tooManySymbols), findsNothing);
     });
 
     testWidgets('typing at the limit keeps the name', (tester) async {

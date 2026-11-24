@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
+import '../../providers/recipe_search_provider.dart';
 import '../../providers/user_recipes_provider.dart';
 import '../../router/route_names.dart';
 import '../../widgets/common/bb_async_state.dart';
@@ -29,26 +30,30 @@ class _MyRecipesTabState extends ConsumerState<MyRecipesTab> {
     });
   }
 
+  static const _host = RecipeSearchHost.myRecipes;
+
   @override
   Widget build(BuildContext context) {
-    final async = ref.watch(userRecipesProvider);
+    // The search belongs to this screen (auto-disposed with it): Entdecken's
+    // Meine Rezepte never shows its matches, nor does the meal tracker's
+    // picker share its query.
+    final async = ref.watch(recipeSearchProvider(_host));
     return async.when(
       loading: () => const BbLoadingState(),
       error: (e, _) => BbErrorState(
         message: 'Konnte Rezepte nicht laden',
-        onRetry: () =>
-            ref.read(userRecipesProvider.notifier).fetch(force: true),
+        onRetry: () => ref.read(recipeSearchProvider(_host).notifier).retry(),
       ),
       data: (recipes) {
         final hasActiveQuery = ref
-            .watch(userRecipesProvider.notifier)
+            .read(recipeSearchProvider(_host).notifier)
             .hasActiveQuery;
         if (recipes.isEmpty && !hasActiveQuery) return const _EmptyState();
         return Column(
           children: [
             const Padding(
               padding: AppConstants.paddingMd,
-              child: RecipesSearchField(),
+              child: RecipesSearchField(host: _host),
             ),
             Expanded(
               child: recipes.isEmpty

@@ -8,8 +8,8 @@ class DrinkRepository {
 
   Future<List<Drink>> fetchAll() => _drinkService.fetchAll();
 
-  Future<int> fetchTodayTotal(String userId) =>
-      _drinkService.fetchTodayTotal(userId);
+  Future<int> fetchDayTotal(String userId, DateTime day) =>
+      _drinkService.fetchDayTotal(userId, day);
 
   Future<List<String>> fetchRecentDrinkIds(String userId) =>
       _drinkService.fetchRecentDrinkIds(userId);

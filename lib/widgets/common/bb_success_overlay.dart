@@ -19,6 +19,10 @@ class BbSuccessOverlay extends StatefulWidget {
   /// gracefully (e.g. cap its height with a max constraint).
   final Widget? illustration;
 
+  /// The calm variant, after a hard moment (a bad Bauchgefühl or Klo
+  /// entry): a soft background instead of the bright celebration.
+  final bool calm;
+
   const BbSuccessOverlay({
     super.key,
     required this.message,
@@ -28,6 +32,7 @@ class BbSuccessOverlay extends StatefulWidget {
     this.bottomCallout,
     this.mascotAsset,
     this.illustration,
+    this.calm = false,
   });
 
   @override
@@ -149,10 +154,12 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
   Widget build(BuildContext context) {
     final hasHero = _hasHero;
     final illustration = widget.illustration;
-    final bgColor = hasHero
+    final bgColor = hasHero && !widget.calm
         ? AppTheme.primary.withValues(alpha: 0.95)
+        : widget.calm
+        ? AppTheme.beige.withValues(alpha: 0.95)
         : AppTheme.background.withValues(alpha: 0.95);
-    final textColor = hasHero
+    final textColor = hasHero && !widget.calm
         ? AppTheme.primaryForeground
         : AppTheme.foreground;
 
@@ -265,11 +272,11 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
                   const SizedBox(height: AppConstants.spacingXxl),
                   FadeTransition(
                     opacity: _textOpacityAnimation,
-                    child: Text(
+                    child: const Text(
                       'Tippen zum Fortfahren',
                       style: TextStyle(
                         fontSize: AppTheme.fontSizeBody,
-                        color: textColor.withValues(alpha: 0.6),
+                        color: AppTheme.primaryForegroundMuted,
                       ),
                     ),
                   ),

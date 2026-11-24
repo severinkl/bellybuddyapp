@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/insight_progress.dart';
 import '../models/meal_entry.dart';
 import '../services/entry_crud_service.dart';
 import '../services/entry_query_service.dart';
@@ -39,6 +40,28 @@ class EntryRepository {
       until: until,
     );
     return {for (final t in times) startOfDay(t)};
+  }
+
+  /// Progress toward the first patterns as of [now]: distinct local days
+  /// with any entry and gut-feeling entries in the last
+  /// [InsightProgress.windowDays] local days, today included.
+  Future<InsightProgress> fetchInsightProgress({
+    required String userId,
+    required DateTime now,
+  }) async {
+    final since = addDays(startOfDay(now), -(InsightProgress.windowDays - 1));
+    final (days, gutFeelings) = await (
+      fetchActivityDays(userId: userId, since: since),
+      _queryService.fetchTrackedAtSince(
+        userId: userId,
+        since: since,
+        tables: const ['gut_feeling_entries'],
+      ),
+    ).wait;
+    return InsightProgress(
+      activeDays: days.length,
+      gutFeelingEntries: gutFeelings.length,
+    );
   }
 
   Future<void> insertEntry(

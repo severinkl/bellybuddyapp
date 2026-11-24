@@ -24,9 +24,11 @@ class GutFeelingDetail extends StatefulWidget {
 class _GutFeelingDetailState extends State<GutFeelingDetail> {
   int _gutFeelingTab = 0;
 
-  double _calculateEditAvg() {
-    final es = widget.editState!;
-    return gutFeelingAverage(
+  /// The entry as shown: with the edited values while editing.
+  GutFeelingEntry get _shown {
+    final es = widget.editState;
+    if (!widget.isEditing || es == null) return widget.gut;
+    return widget.gut.copyWith(
       bloating: es.bloating,
       gas: es.gas,
       cramps: es.cramps,
@@ -41,17 +43,19 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
 
   @override
   Widget build(BuildContext context) {
-    final rating = calculateGutFeelingRating(widget.gut);
-    final displayAvg = widget.isEditing ? _calculateEditAvg() : rating.avg;
+    final rating = calculateGutFeelingRating(_shown);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Rating pill + numeric score
+        // Rating pill + the strongest symptom it comes from
         Row(
           children: [
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppConstants.spacing12,
+                vertical: AppConstants.spacing6,
+              ),
               decoration: BoxDecoration(
                 color: rating.color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(AppConstants.radiusRound),
@@ -65,13 +69,15 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
                 ),
               ),
             ),
-            const SizedBox(width: 12),
-            Text(
-              '${displayAvg.toStringAsFixed(1)} / 5.0',
-              style: const TextStyle(
-                fontSize: AppTheme.fontSizeSubtitle,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.mutedForeground,
+            const SizedBox(width: AppConstants.spacing12),
+            Expanded(
+              child: Text(
+                gutFeelingScoreLabel(rating.score),
+                style: const TextStyle(
+                  fontSize: AppTheme.fontSizeBody,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.mutedForeground,
+                ),
               ),
             ),
           ],
@@ -114,7 +120,9 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
             style: TextStyle(
               fontSize: AppTheme.fontSizeBody,
               fontWeight: FontWeight.w600,
-              color: isActive ? Colors.white : AppTheme.mutedForeground,
+              color: isActive
+                  ? AppTheme.primaryForeground
+                  : AppTheme.mutedForeground,
             ),
           ),
         ),
@@ -167,27 +175,27 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
         children: [
           _editSlider(
             AppConstants.stimmungLabels[0],
-            es.stress ?? 3,
+            es.stress,
             es.onStressChanged,
           ),
           _editSlider(
             AppConstants.stimmungLabels[1],
-            es.happiness ?? 3,
+            es.happiness,
             es.onHappinessChanged,
           ),
           _editSlider(
             AppConstants.stimmungLabels[2],
-            es.energy ?? 3,
+            es.energy,
             es.onEnergyChanged,
           ),
           _editSlider(
             AppConstants.stimmungLabels[3],
-            es.focus ?? 3,
+            es.focus,
             es.onFocusChanged,
           ),
           _editSlider(
             AppConstants.stimmungLabels[4],
-            es.bodyFeel ?? 3,
+            es.bodyFeel,
             es.onBodyFeelChanged,
           ),
         ],
@@ -201,7 +209,7 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
         widget.gut.bodyFeel != null;
     if (!hasAny) {
       return const Text(
-        'Keine Stimmungsdaten erfasst',
+        'Keine Stimmungsdaten eingetragen',
         style: TextStyle(color: AppTheme.mutedForeground),
       );
     }
@@ -221,22 +229,30 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
     );
   }
 
-  Widget _editSlider(String label, int value, ValueChanged<int> onChanged) {
-    final color = getValueColor(value);
+  /// A 1-5 slider for [label]. A null [value] (a mood value never set)
+  /// shows as „nicht angegeben" until the slider is moved.
+  Widget _editSlider(String label, int? value, ValueChanged<int> onChanged) {
+    final color = value == null
+        ? AppTheme.mutedForeground
+        : getValueColor(value);
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: AppConstants.spacing12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                label,
-                style: const TextStyle(fontSize: AppTheme.fontSizeBodyLG),
+              // The label wraps, so a long one or „nicht angegeben" fits a
+              // narrow sheet and larger text.
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(fontSize: AppTheme.fontSizeBodyLG),
+                ),
               ),
+              const SizedBox(width: AppConstants.spacingSm),
               Text(
-                '$value / 5',
+                value == null ? 'nicht angegeben' : '$value / 5',
                 style: TextStyle(
                   fontSize: AppTheme.fontSizeBodyLG,
                   fontWeight: FontWeight.w600,
@@ -245,18 +261,32 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
               ),
             ],
           ),
-          SliderTheme(
-            data: SliderThemeData(
-              activeTrackColor: color,
-              thumbColor: color,
-              inactiveTrackColor: color.withValues(alpha: 0.2),
-            ),
-            child: Slider(
-              value: value.toDouble(),
-              min: 1,
-              max: 5,
-              divisions: 4,
-              onChanged: (v) => onChanged(v.round()),
+          // A local overlay for the Slider's value-indicator portal, as in
+          // BbSlider: in the app's overlay its semantics node outlives the
+          // slider's own when the sheet shrinks or scrolls the slider out
+          // of view, and iOS then empties the whole accessibility tree.
+          Overlay.wrap(
+            clipBehavior: Clip.none,
+            child: SliderTheme(
+              data: SliderThemeData(
+                activeTrackColor: color,
+                thumbColor: color,
+                inactiveTrackColor: color.withValues(alpha: 0.2),
+              ),
+              child: Slider(
+                value: (value ?? 1).toDouble(),
+                min: 1,
+                max: 5,
+                divisions: 4,
+                // Read by its name and as „N von 5", not in percent.
+                label: label,
+                showValueIndicator: ShowValueIndicator.never,
+                semanticFormatterCallback: (v) =>
+                    value == null && v.round() == 1
+                    ? 'nicht angegeben'
+                    : '${v.round()} von 5',
+                onChanged: (v) => onChanged(v.round()),
+              ),
             ),
           ),
         ],
@@ -269,12 +299,14 @@ class _GutFeelingDetailState extends State<GutFeelingDetail> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            style: const TextStyle(fontSize: AppTheme.fontSizeBodyLG),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(fontSize: AppTheme.fontSizeBodyLG),
+            ),
           ),
+          const SizedBox(width: AppConstants.spacingSm),
           Text(
             '$value / 5',
             style: TextStyle(

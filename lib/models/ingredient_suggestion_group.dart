@@ -6,11 +6,15 @@ class MealDetail {
   final DateTime trackedAt;
   final String? imageUrl;
 
+  /// The meal's ingredient names.
+  final List<String> ingredients;
+
   const MealDetail({
     required this.id,
     required this.title,
     required this.trackedAt,
     this.imageUrl,
+    this.ingredients = const [],
   });
 }
 
@@ -36,6 +40,40 @@ class IngredientSuggestionGroup {
     this.meals = const [],
     this.replacements = const [],
   });
+
+  /// When the latest of [meals] was eaten; null without meals.
+  DateTime? get latestMeal {
+    DateTime? latest;
+    for (final meal in meals) {
+      if (latest == null || meal.trackedAt.isAfter(latest)) {
+        latest = meal.trackedAt;
+      }
+    }
+    return latest;
+  }
+
+  /// The order of suggestion lists: new groups first; then, with
+  /// [latestMealFirst], by [latestMeal], newest first (groups without meals
+  /// last); then by ingredient name, ignoring case.
+  static int compareNewFirst(
+    IngredientSuggestionGroup a,
+    IngredientSuggestionGroup b, {
+    bool latestMealFirst = false,
+  }) {
+    if (a.isNew != b.isNew) return a.isNew ? -1 : 1;
+    if (latestMealFirst) {
+      final la = a.latestMeal;
+      final lb = b.latestMeal;
+      if (la != lb) {
+        if (la == null) return 1;
+        if (lb == null) return -1;
+        return lb.compareTo(la);
+      }
+    }
+    return a.ingredientName.toLowerCase().compareTo(
+      b.ingredientName.toLowerCase(),
+    );
+  }
 
   IngredientSuggestionGroup copyWith({
     bool? isNew,

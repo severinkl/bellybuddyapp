@@ -1,8 +1,6 @@
-import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
-import '../../../config/app_theme.dart';
-import '../../../config/constants.dart';
+import '../../../utils/buddy_name.dart';
 
 /// Lets the user name the Buddy: a text field prefilled with [value]. The
 /// host shows the Buddy (his bubble asks for the name), adds the padding
@@ -12,9 +10,8 @@ import '../../../config/constants.dart';
 /// are reported through [onChanged]. [onSubmitted] runs on the keyboard's
 /// done action (hosts wire it to their „Weiter").
 ///
-/// The length limit and the counter count Unicode code points, like the
-/// database and [AppConstants.isValidBuddyName] (an emoji family is one
-/// visible character but five code points).
+/// The length limit and the counter count characters as a person sees them
+/// ([BuddyNameRules]); a name the database can't store yet shows why.
 class BuddyNameStep extends StatefulWidget {
   const BuddyNameStep({
     super.key,
@@ -46,23 +43,13 @@ class _BuddyNameStepState extends State<BuddyNameStep> {
     super.dispose();
   }
 
-  /// „n/20" in code points.
+  /// „n/20" in characters as a person sees them.
   Widget _counter(
     BuildContext context, {
     required int currentLength,
     required bool isFocused,
     required int? maxLength,
-  }) => Semantics(
-    container: true,
-    liveRegion: isFocused,
-    child: Text(
-      '${_controller.text.runes.length}/${AppConstants.buddyNameMaxLength}',
-      style: const TextStyle(
-        fontSize: AppTheme.fontSizeCaption,
-        color: AppTheme.mutedForeground,
-      ),
-    ),
-  );
+  }) => BuddyNameRules.counter(_controller.text, isFocused: isFocused);
 
   @override
   Widget build(BuildContext context) {
@@ -74,49 +61,27 @@ class _BuddyNameStepState extends State<BuddyNameStep> {
         TextFormField(
           key: BuddyNameStep.fieldKey,
           controller: _controller,
-          inputFormatters: const [
-            _CodePointLimitFormatter(AppConstants.buddyNameMaxLength),
-          ],
+          inputFormatters: const [BuddyNameLengthFormatter()],
           buildCounter: _counter,
           textCapitalization: TextCapitalization.words,
           textInputAction: TextInputAction.done,
           autocorrect: false,
-          decoration: const InputDecoration(labelText: 'Name'),
-          onChanged: widget.onChanged,
+          decoration: InputDecoration(
+            labelText: 'Name',
+            // An empty name only disables „Weiter"; a name too long for the
+            // database says why.
+            errorText: _controller.text.trim().isEmpty
+                ? null
+                : BuddyNameRules.error(_controller.text),
+            errorMaxLines: 2,
+          ),
+          onChanged: (value) {
+            setState(() {});
+            widget.onChanged(value);
+          },
           onFieldSubmitted: (_) => widget.onSubmitted?.call(),
         ),
       ],
-    );
-  }
-}
-
-/// Caps the text at [max] Unicode code points, cutting only between whole
-/// characters. Typing at the limit keeps the text as it was.
-class _CodePointLimitFormatter extends TextInputFormatter {
-  const _CodePointLimitFormatter(this.max);
-
-  final int max;
-
-  @override
-  TextEditingValue formatEditUpdate(
-    TextEditingValue oldValue,
-    TextEditingValue newValue,
-  ) {
-    if (newValue.text.runes.length <= max) return newValue;
-    if (oldValue.text.runes.length == max && oldValue.selection.isCollapsed) {
-      return oldValue;
-    }
-    final kept = StringBuffer();
-    var count = 0;
-    for (final character in newValue.text.characters) {
-      count += character.runes.length;
-      if (count > max) break;
-      kept.write(character);
-    }
-    final text = kept.toString();
-    return TextEditingValue(
-      text: text,
-      selection: TextSelection.collapsed(offset: text.length),
     );
   }
 }

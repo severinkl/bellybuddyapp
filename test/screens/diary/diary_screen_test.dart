@@ -3,11 +3,13 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
+import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/diary_provider.dart';
 import 'package:belly_buddy/screens/diary/diary_screen.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/utils/date_format_utils.dart';
+import 'package:belly_buddy/widgets/common/mascot_image.dart';
 
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
@@ -61,7 +63,33 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Noch keine Daten für heute.'), findsOneWidget);
+      expect(find.text('Noch keine Einträge für heute.'), findsOneWidget);
+      expect(
+        find.text('Tipp unten aufs Plus, dann tragen wir was ein!'),
+        findsOneWidget,
+      );
+      expect(find.byType(MascotImage), findsOneWidget);
+    });
+
+    testWidgets('VoiceOver reads the day arrows by name', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWithProviders(
+        const DiaryScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getSemantics(find.byIcon(Icons.chevron_left)).label,
+        'Vorheriger Tag',
+      );
+      await tester.tap(find.byIcon(Icons.chevron_left));
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSemantics(find.byIcon(Icons.chevron_right)).label,
+        'Nächster Tag',
+      );
+      semantics.dispose();
     });
 
     testWidgets('renders navigation chevrons', (tester) async {
@@ -194,6 +222,75 @@ void main() {
       final after = container.read(diaryDateProvider);
       final expected = twoDaysAgo.add(const Duration(days: 1));
       expect(isSameDay(after, expected), isTrue);
+    });
+  });
+
+  group('DiaryScreen after midnight (kept alive by the shell)', () {
+    // Today, just before midnight; the clock moves on in each test.
+    final real = DateTime.now();
+    final lateEvening = DateTime(real.year, real.month, real.day, 23, 50);
+    final nextDay = DateTime(real.year, real.month, real.day + 1);
+    late DateTime now;
+
+    Future<ProviderContainer> pumpDiary(WidgetTester tester) async {
+      now = lateEvening;
+      final container = createContainer(
+        overrides: [
+          ..._emptyOverrides(),
+          buddyClockProvider.overrideWithValue(() => now),
+        ],
+      );
+      addTearDown(container.dispose);
+      container.read(diaryDateProvider.notifier).set(startOfDay(lateEvening));
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(home: DiaryScreen()),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(formatDateWeekday(lateEvening)), findsOneWidget);
+      expect(find.byKey(DiaryScreen.nextDayKey), findsNothing);
+      return container;
+    }
+
+    void expectShowsNewToday() {
+      expect(find.text(formatDateWeekday(nextDay)), findsOneWidget);
+      expect(find.text('Noch keine Einträge für heute.'), findsOneWidget);
+      expect(find.byKey(DiaryScreen.nextDayKey), findsNothing);
+    }
+
+    testWidgets('opened on the new today (Tagebuch tab), it shows that day', (
+      tester,
+    ) async {
+      final container = await pumpDiary(tester);
+
+      now = nextDay.add(const Duration(minutes: 10));
+      // As the Tagebuch tab does.
+      container.read(diaryDateProvider.notifier).set(startOfDay(now));
+      await tester.pumpAndSettle();
+
+      expectShowsNewToday();
+      expect(container.read(diaryDateProvider), nextDay);
+    });
+
+    testWidgets('back in the app after midnight, the next day can be '
+        'reached', (tester) async {
+      final container = await pumpDiary(tester);
+
+      now = nextDay.add(const Duration(minutes: 10));
+      tester.binding
+        ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
+        ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pumpAndSettle();
+
+      // Still on the day it showed, now yesterday.
+      expect(find.text('Keine Einträge an diesem Tag.'), findsOneWidget);
+      await tester.tap(find.byKey(DiaryScreen.nextDayKey));
+      await tester.pumpAndSettle();
+
+      expectShowsNewToday();
+      expect(container.read(diaryDateProvider), nextDay);
     });
   });
 }

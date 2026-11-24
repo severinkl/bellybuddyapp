@@ -22,7 +22,7 @@ abstract final class DiaryHelpers {
           id: toilet.id,
           type: DiaryEntryType.toilet,
           trackedAt: toilet.trackedAt,
-          title: 'Toilettengang',
+          title: 'Klo',
           subtitle:
               AppConstants.stoolTypeDescriptions[toilet.stoolType] ?? 'Normal',
           data: ToiletDiaryData(toilet),

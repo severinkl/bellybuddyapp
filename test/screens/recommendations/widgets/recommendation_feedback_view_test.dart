@@ -47,7 +47,7 @@ void main() {
         ],
       );
 
-      expect(find.text('War diese Empfehlung hilfreich?'), findsOneWidget);
+      expect(find.text('War dieser Tipp hilfreich?'), findsOneWidget);
       expect(find.text('Hilfreich'), findsOneWidget);
       expect(find.text('Nicht hilfreich'), findsOneWidget);
       expect(

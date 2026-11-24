@@ -1,6 +1,7 @@
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/rendering.dart';
 import 'package:material_ui/material_ui.dart';
 
 /// The bubble's text widget (whole text; the untyped part transparent).
@@ -120,6 +121,46 @@ void main() {
       }
       expect(seen, containsAll(['H', 'Hi', 'Hi👋🏽', wave]));
       expect(seen, isNot(contains('Hi👋')));
+    });
+
+    testWidgets('a closing emoji never wraps onto a line of its own', (
+      tester,
+    ) async {
+      const thirsty = 'Ich hab Durst – ein Glas Wasser? 💧';
+      await _pumpBubble(tester, say: thirsty, disableAnimations: true);
+      await tester.pump();
+
+      // The emoji is glued to the word before it …
+      expect(_typed(tester), 'Ich hab Durst – ein Glas Wasser?\u00A0💧');
+      // … so wherever the line breaks, „Wasser?" goes along.
+      final paragraph = tester.renderObject<RenderParagraph>(
+        find.descendant(
+          of: find.byType(BuddySpeechBubble),
+          matching: find.byType(RichText),
+        ),
+      );
+      final drop = _typed(tester).indexOf('💧');
+      final word = _typed(tester).indexOf('Wasser');
+      double lineOf(int offset) => paragraph
+          .getOffsetForCaret(TextPosition(offset: offset), Rect.zero)
+          .dy;
+      expect(lineOf(drop), lineOf(word));
+      // Screen readers still get the line as written.
+      final semantics = tester.ensureSemantics();
+      expect(find.bySemanticsLabel(thirsty), findsOneWidget);
+      semantics.dispose();
+    });
+
+    test('glueClosingSymbol glues only a closing run without letters', () {
+      expect(glueClosingSymbol('Prost! 💧'), 'Prost!\u00A0💧');
+      expect(glueClosingSymbol('gerettet 🛡'), 'gerettet\u00A0🛡');
+      expect(glueClosingSymbol('Danke! 🔥 3 Tage'), 'Danke! 🔥 3 Tage');
+      expect(
+        glueClosingSymbol('Ich hab dich so lieb!'),
+        'Ich hab dich so lieb!',
+      );
+      expect(glueClosingSymbol('*schnarch* … zzZ'), '*schnarch* … zzZ');
+      expect(glueClosingSymbol('💧'), '💧');
     });
 
     testWidgets('the text rebuilds only when another character is typed', (

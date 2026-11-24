@@ -40,5 +40,14 @@ void main() {
 
       expect(find.text('Datenschutzerklärung'), findsOneWidget);
     });
+
+    testWidgets('has no Feedback geben row (it lives in the Ich tab)', (
+      tester,
+    ) async {
+      await tester.pumpWithProviders(const SettingsScreen());
+      await tester.pump();
+
+      expect(find.text('Feedback geben'), findsNothing);
+    });
   });
 }

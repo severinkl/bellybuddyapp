@@ -6,24 +6,16 @@ import '../../../config/constants.dart';
 import '../../../widgets/buddy/buddy.dart';
 import '../../../widgets/buddy/buddy_side_header.dart';
 
-/// How the Buddy makes room while the keyboard is open.
-enum BuddyKeyboardStage {
-  /// A smaller Buddy ([AppConstants.buddyWizardCompactSize] tall) with his
-  /// bubble in a [AppConstants.buddyWizardCompactHeaderHeight] header.
-  compact,
-
-  /// No Buddy, so a form and its actions fit above the keyboard.
-  hidden,
-}
-
 /// Hosts the registration steps under the Buddy. A header runs across the
 /// top: the Buddy on the left ([AppConstants.buddyWizardBuddyWidth] wide)
 /// and his speech bubble on the right, its tail pointing at his face. The
 /// bubble asks each step's question, so the steps carry no headline of
 /// their own. [child] (the wizard's pages) fills the rest.
 ///
-/// While [keyboardOpen], the header shrinks as [keyboardStage] says
-/// (animated, instant under reduced motion). [child] gets the rest of the
+/// While [keyboardOpen], or always when [compact], the header is compact: a
+/// smaller Buddy ([AppConstants.buddyWizardCompactSize] tall) with his bubble
+/// in a [AppConstants.buddyWizardCompactHeaderHeight] header (the change is
+/// animated, instant under reduced motion). [child] gets the rest of the
 /// height, but at least [AppConstants.buddyWizardMinStepHeight]; with less
 /// room the header and the step scroll together, so a focused field can
 /// still be scrolled into view.
@@ -39,7 +31,7 @@ class BuddyStepHost extends StatelessWidget {
     required this.name,
     required this.child,
     this.keyboardOpen = false,
-    this.keyboardStage = BuddyKeyboardStage.compact,
+    this.compact = false,
   });
 
   static const headerKey = Key('buddy_step_host_header');
@@ -54,39 +46,34 @@ class BuddyStepHost extends StatelessWidget {
   /// Whether the soft keyboard is showing.
   final bool keyboardOpen;
 
-  /// What the Buddy does while [keyboardOpen].
-  final BuddyKeyboardStage keyboardStage;
+  /// Whether the header stays compact with the keyboard closed too (steps
+  /// whose fields open it right away).
+  final bool compact;
 
-  /// The Buddy's size in the header (null while he is hidden) and the
-  /// header's height.
-  ({Size? buddy, double height}) get _header =>
-      switch ((keyboardOpen, keyboardStage)) {
-        (false, _) => (
-          buddy: BuddySideHeader.defaultBuddySize,
-          height: BuddySideHeader.defaultBuddySize.height,
-        ),
-        (true, BuddyKeyboardStage.compact) => (
+  /// The Buddy's size in the header and the header's height.
+  ({Size buddy, double height}) get _header => keyboardOpen || compact
+      ? (
           buddy: const Size(
             AppConstants.buddyWizardCompactSize * kBuddyStageAspect,
             AppConstants.buddyWizardCompactSize,
           ),
           height: AppConstants.buddyWizardCompactHeaderHeight,
-        ),
-        (true, BuddyKeyboardStage.hidden) => (buddy: null, height: 0),
-      };
+        )
+      : (
+          buddy: BuddySideHeader.defaultBuddySize,
+          height: BuddySideHeader.defaultBuddySize.height,
+        );
 
   @override
   Widget build(BuildContext context) {
     final (:buddy, height: headerHeight) = _header;
-    final header = buddy == null
-        ? const SizedBox(width: double.infinity)
-        : BuddySideHeader(
-            key: headerKey,
-            controller: controller,
-            name: name,
-            buddySize: buddy,
-            height: headerHeight,
-          );
+    final header = BuddySideHeader(
+      key: headerKey,
+      controller: controller,
+      name: name,
+      buddySize: buddy,
+      height: headerHeight,
+    );
     final calm = MediaQuery.disableAnimationsOf(context);
     return LayoutBuilder(
       builder: (context, constraints) {

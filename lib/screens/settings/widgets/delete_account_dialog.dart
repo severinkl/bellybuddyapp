@@ -5,6 +5,17 @@ import '../../../config/constants.dart';
 import '../../../providers/auth_provider.dart';
 import '../../../utils/logger.dart';
 
+/// Whether [typed] confirms the deletion: „LÖSCHEN", trimmed and in any
+/// case, with „Ö" also written „OE" (keyboards without umlauts) or as an O
+/// with a combining diaeresis.
+bool isDeleteConfirmation(String typed) =>
+    typed
+        .trim()
+        .toUpperCase()
+        .replaceAll('O\u0308', 'OE')
+        .replaceAll('Ö', 'OE') ==
+    'LOESCHEN';
+
 /// Shows a confirmation dialog for account deletion.
 ///
 /// Returns `true` if the user confirmed deletion. The actual delete call
@@ -38,7 +49,7 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
     super.dispose();
   }
 
-  bool get _canDelete => _controller.text == _confirmWord;
+  bool get _canDelete => isDeleteConfirmation(_controller.text);
 
   Future<void> _confirmDelete() async {
     final navigator = Navigator.of(context);
@@ -46,6 +57,11 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
     navigator.pop(true);
     try {
       await ref.read(authNotifierProvider.notifier).deleteAccount();
+      // Signed out, the router has moved on to the welcome screen; the
+      // snack bar shows there.
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Dein Konto wurde gelöscht.')),
+      );
     } catch (e, st) {
       _log.error('deleteAccount failed', e, st);
       messenger.showSnackBar(
@@ -91,7 +107,7 @@ class _DeleteAccountDialogState extends ConsumerState<_DeleteAccountDialog> {
             style: TextStyle(fontSize: AppTheme.fontSizeBody),
           ),
           AppConstants.gap12,
-          const _BulletItem('Alle Ernährungstagebuch-Einträge'),
+          const _BulletItem('Alle Tagebuch-Einträge'),
           const _BulletItem('Dein Profil und Einstellungen'),
           const _BulletItem('Alle gespeicherten Rezepte'),
           const _BulletItem('Dein Benutzerkonto'),

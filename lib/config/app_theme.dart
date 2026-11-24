@@ -12,6 +12,10 @@ class AppTheme {
   static const Color cardForeground = Color(0xFF302820);
   static const Color primary = Color(0xFFB5CC47);
   static const Color primaryForeground = Color(0xFF302820);
+
+  /// Secondary text on [primary] (hints): 5:1 on it, where a faded
+  /// [primaryForeground] fell to 3:1.
+  static const Color primaryForegroundMuted = Color(0xFF4B4928);
   static const Color secondary = Color(0xFFEFEBE6);
   static const Color secondaryForeground = Color(0xFF302820);
   static const Color muted = Color(0xFFE8E4DF);
@@ -92,6 +96,14 @@ class AppTheme {
   static const double fontSizeHeadingLG = 24;
   static const double fontSizeDisplay = 28;
   static const double fontSizeDisplayLG = 30;
+
+  // Line heights (multiples of the font size)
+  /// Running text: notes, summaries, explanations.
+  static const double lineHeightBody = 1.4;
+
+  /// Short, dense text: headlines over two lines, speech and tour bubbles,
+  /// previews.
+  static const double lineHeightSnug = 1.35;
 
   // The streak moment's big count („🔥 1 Tag"): flame and number
   static const double fontSizeStreakFlame = 40;
@@ -231,7 +243,9 @@ class AppTheme {
         borderRadius: BorderRadius.circular(AppConstants.radiusRound),
       ),
       side: BorderSide.none,
+      // Without a color the label is painted white on the light chip.
       labelStyle: const TextStyle(
+        color: foreground,
         fontSize: fontSizeBody,
         fontWeight: FontWeight.w500,
       ),

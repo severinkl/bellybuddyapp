@@ -71,14 +71,14 @@ void main() {
       expect(find.text('Speichern'), findsOneWidget);
     });
 
-    testWidgets('renders Getränk tracken button', (tester) async {
+    testWidgets('renders Trinken eintragen button', (tester) async {
       await tester.pumpWithProviders(
         const MealTrackerScreen(),
         overrides: _overrides(),
       );
       await tester.pump();
 
-      expect(find.text('Getränk tracken'), findsOneWidget);
+      expect(find.text('Trinken eintragen'), findsOneWidget);
     });
 
     testWidgets('renders edit icon next to title', (tester) async {
@@ -167,7 +167,7 @@ void main() {
         expect(view.kind, EntryKind.meal);
         expect(view.foodImageBytes, same(photo));
         expect(find.byType(MascotImage), findsNothing);
-        expect(find.text('Getränk hinzufügen'), findsOneWidget);
+        expect(find.text('Trinken eintragen'), findsOneWidget);
         expect(find.text('Als Rezept speichern'), findsOneWidget);
       },
     );

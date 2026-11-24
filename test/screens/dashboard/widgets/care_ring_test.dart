@@ -5,8 +5,13 @@ import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
+import 'package:belly_buddy/utils/gut_feeling_rating.dart';
 
 void main() {
+  var buddyTapsLog = <int>[];
+
+  /// Pumps the ring; the needs its bubbles were tapped for land in the
+  /// returned list, in order.
   Future<List<CareNeed>> pump(
     WidgetTester tester, {
     DailyCare care = const DailyCare(),
@@ -16,6 +21,7 @@ void main() {
     Duration settle = const Duration(milliseconds: 400),
   }) async {
     final tapped = <CareNeed>[];
+    final buddyTaps = <int>[];
     tester.view.physicalSize = size;
     tester.view.devicePixelRatio = 1.0;
     tester.platformDispatcher.textScaleFactorTestValue = textScale;
@@ -36,7 +42,12 @@ void main() {
                   diameter: CareRing.diameterFor(width, size.height),
                   highlight: highlight,
                   onNeed: tapped.add,
-                  buddy: const ColoredBox(color: AppTheme.buddyBody),
+                  buddy: GestureDetector(
+                    key: const Key('buddy_double'),
+                    behavior: HitTestBehavior.opaque,
+                    onTap: () => buddyTaps.add(1),
+                    child: const ColoredBox(color: AppTheme.buddyBody),
+                  ),
                 );
               },
             ),
@@ -45,6 +56,7 @@ void main() {
       ),
     );
     await tester.pump(settle);
+    buddyTapsLog = buddyTaps;
     return tapped;
   }
 
@@ -71,6 +83,26 @@ void main() {
     expect(find.text('Klo'), findsOneWidget);
   });
 
+  testWidgets('Bauchgefühl shows how today\'s latest entry was, not always '
+      'a smile', (tester) async {
+    final shown = <GutFeelingRatingLevel, String>{};
+    for (final level in GutFeelingRatingLevel.values) {
+      await pump(
+        tester,
+        care: DailyCare(gutFeelings: 1, lastGutFeelingLevel: level),
+      );
+      expect(find.text('${level.face} ✓'), findsOneWidget);
+      shown[level] = level.face;
+      final node = tester.getSemantics(
+        find.byKey(CareRing.needKey(CareNeed.gutFeeling)),
+      );
+      expect(node.value, contains(level.label));
+    }
+    expect(shown.values.toSet(), hasLength(4));
+    expect(shown[GutFeelingRatingLevel.schlecht], isNot('🙂'));
+    expect(shown[GutFeelingRatingLevel.mittel], isNot('🙂'));
+  });
+
   testWidgets('nothing logged: open marks for Bauchgefühl and Klo', (
     tester,
   ) async {
@@ -80,27 +112,95 @@ void main() {
     expect(find.text('🧻 –'), findsOneWidget);
   });
 
-  testWidgets('each bubble reports its need', (tester) async {
+  /// The bordered box [need]'s bubble draws (its shadow falls below it).
+  Rect box(WidgetTester tester, CareNeed need) => tester.getRect(
+    find
+        .descendant(
+          of: find.byKey(CareRing.needKey(need)),
+          matching: find.byType(DecoratedBox),
+        )
+        .last,
+  );
+
+  testWidgets('a bubble opens its own need: at its centre and on its lower '
+      'edge', (tester) async {
     final tapped = await pump(tester);
 
     for (final need in CareNeed.values) {
-      await tester.tap(find.byKey(CareRing.needKey(need)));
+      final b = box(tester, need);
+      await tester.tapAt(b.center);
+      // On its shadow, just above the bubble's visual bottom.
+      await tester.tapAt(
+        Offset(
+          b.center.dx,
+          b.bottom + AppConstants.careNeedShadowOffset.dy - 1,
+        ),
+      );
     }
-    expect(tapped, CareNeed.values);
+    expect(tapped, [
+      for (final need in CareNeed.values) ...[need, need],
+    ]);
   });
 
-  testWidgets('bubbles are buttons with a spoken count', (tester) async {
-    final handle = tester.ensureSemantics();
-    await pump(tester, care: const DailyCare(meals: 1));
+  testWidgets('the glow is part of its bubble: it stays inside the ring and '
+      'a tap on it opens the need', (tester) async {
+    final tapped = await pump(tester, highlight: CareNeed.toilet);
 
+    final ring = tester.getRect(find.byType(CareRing));
+    final glow = box(
+      tester,
+      CareNeed.toilet,
+    ).inflate(AppConstants.careNeedGlow);
+    expect(ring.expandToInclude(glow), ring);
     expect(
-      tester.getSemantics(find.byKey(CareRing.needKey(CareNeed.food))),
-      matchesSemantics(
-        label: 'Essen: 1 von 3 Mahlzeiten',
-        hint: 'Mahlzeit eintragen',
-        isButton: true,
-        hasTapAction: true,
-      ),
+      tester
+          .getRect(find.byKey(CareRing.needKey(CareNeed.toilet)))
+          .expandToInclude(glow),
+      tester.getRect(find.byKey(CareRing.needKey(CareNeed.toilet))),
+    );
+
+    await tester.tapAt(Offset(glow.center.dx, glow.bottom - 1));
+    expect(tapped, [CareNeed.toilet]);
+  });
+
+  testWidgets('tapping the Buddy opens no need', (tester) async {
+    final tapped = await pump(tester);
+
+    await tester.tap(find.byKey(const Key('buddy_double')));
+    expect(tapped, isEmpty);
+    expect(buddyTapsLog.length, 1);
+  });
+
+  testWidgets('the ring between the bubbles is no tap target', (tester) async {
+    final tapped = await pump(tester);
+
+    // The ring's top edge, between Essen and Trinken.
+    final ring = tester.getRect(find.byType(CareRing));
+    await tester.tapAt(ring.topCenter + const Offset(0, 4));
+    expect(tapped, isEmpty);
+    expect(buddyTapsLog, isEmpty);
+  });
+
+  testWidgets('bubbles are buttons „<need> eintragen" that speak their count', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await pump(tester, care: const DailyCare(meals: 1, toilets: 2));
+
+    for (final need in CareNeed.values) {
+      expect(
+        tester.getSemantics(find.byKey(CareRing.needKey(need))),
+        isSemantics(label: need.logLabel, isButton: true, hasTapAction: true),
+        reason: '$need',
+      );
+    }
+    expect(
+      tester.getSemantics(find.byKey(CareRing.needKey(CareNeed.food))).value,
+      '1 von 3 Mahlzeiten',
+    );
+    expect(
+      tester.getSemantics(find.byKey(CareRing.needKey(CareNeed.toilet))).value,
+      '2 Einträge heute',
     );
     handle.dispose();
   });

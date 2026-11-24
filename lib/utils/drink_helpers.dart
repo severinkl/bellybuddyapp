@@ -1,3 +1,5 @@
+import 'package:intl/intl.dart';
+
 import '../models/drink.dart';
 
 abstract final class DrinkHelpers {
@@ -61,19 +63,32 @@ abstract final class DrinkHelpers {
     return filtered.take(searchResultLimit).toList();
   }
 
-  /// Parses a custom amount string into a positive int, or null.
+  /// The largest amount one drink entry may have, in ml.
+  static const maxAmountMl = 3000;
+
+  /// Parses a custom amount string into an amount of 1 to [maxAmountMl]
+  /// ml, or null.
   static int? parseAmount(String value) {
     final parsed = int.tryParse(value);
-    return (parsed != null && parsed > 0) ? parsed : null;
+    return (parsed != null && parsed > 0 && parsed <= maxAmountMl)
+        ? parsed
+        : null;
   }
 
+  /// The hint for a typed amount that [parseAmount] refuses; null for an
+  /// empty field or a valid amount.
+  static String? amountError(String value) {
+    if (value.trim().isEmpty || parseAmount(value.trim()) != null) return null;
+    return 'Bitte gib 1 bis $maxAmountMl ml ein.';
+  }
+
+  static final _liters = NumberFormat('0.#', 'de');
+
   /// Formats milliliters as a human-readable string.
-  /// >= 1000 ml → liters (e.g. "1.5 L"), otherwise "250 ml".
+  /// >= 1000 ml → liters with a German decimal comma (e.g. "1,5 L"),
+  /// otherwise "250 ml".
   static String formatAmount(int ml) {
-    if (ml >= 1000) {
-      final liters = (ml / 1000).toStringAsFixed(1);
-      return '${liters.replaceAll('.0', '')} L';
-    }
+    if (ml >= 1000) return '${_liters.format(ml / 1000)} L';
     return '$ml ml';
   }
 }

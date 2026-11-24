@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 
 import '../../../../config/app_theme.dart';
@@ -24,6 +26,9 @@ class DashboardTutorialOverlay extends StatefulWidget {
   /// coordinates (which change with the Überspringen link's position).
   static const advanceKey = Key('tutorial_overlay_advance');
 
+  /// Key on the „Überspringen" pill.
+  static const skipKey = Key('tutorial_overlay_skip');
+
   const DashboardTutorialOverlay({
     super.key,
     required this.steps,
@@ -38,6 +43,9 @@ class DashboardTutorialOverlay extends StatefulWidget {
 class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
     with SingleTickerProviderStateMixin {
   static const _log = AppLogger('TutorialOverlay');
+
+  /// The widest the „Überspringen" pill gets, as a share of the screen.
+  static const _skipMaxWidth = 0.4;
 
   int _index = 0;
   Rect? _targetRect;
@@ -61,8 +69,8 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
   }
 
   /// Scrolls the current step's target into view when it sits in a
-  /// scrollable and is not fully visible (e.g. the feature cards below the
-  /// Buddy hero), then measures it.
+  /// scrollable and is not fully visible (e.g. the insight card below the
+  /// Buddy hero on a small phone), then measures it.
   Future<void> _showStep() async {
     final index = _index;
     final ctx = widget.steps[index].targetKey.currentContext;
@@ -73,6 +81,9 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
         alignment: 0.5,
         duration: AppConstants.animFast,
       );
+      // The scroll lands in a frame's animation phase; slivers only move in
+      // its layout, so measure once that frame is done.
+      await WidgetsBinding.instance.endOfFrame;
       if (!mounted || _finished || index != _index) return;
     }
     _measure();
@@ -103,12 +114,13 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
     final step = widget.steps[_index];
     final ctx = step.targetKey.currentContext;
     final box = ctx?.findRenderObject() as RenderBox?;
-    if (box == null || !box.attached) {
-      // Target not mounted / attached — skip it so we don't get stuck. Log
-      // so a broken key surfaces during development instead of silently
-      // disappearing from the tour.
+    if (box == null || !box.attached || !box.hasSize || box.size.isEmpty) {
+      // Target not mounted / attached, or hidden (e.g. the insight card
+      // while its progress failed to load) — skip it so we don't get stuck
+      // or point at nothing. Log so a broken key surfaces during
+      // development instead of silently disappearing from the tour.
       _log.warn(
-        'step $_index (${step.targetKey.toString()}) skipped: no attached RenderBox',
+        'step $_index (${step.targetKey.toString()}) skipped: no visible RenderBox',
       );
       _advance();
       return;
@@ -190,15 +202,22 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
                     screenSize: screenSize,
                     safe: safe,
                   ),
-                // "Überspringen" link (must sit above the advance layer)
+                // "Überspringen" link (must sit above the advance layer),
+                // top right and at most [_skipMaxWidth] of the width: Home's
+                // top left holds the streak chip, which the first step
+                // spotlights.
                 Positioned(
                   top: safe.top + AppConstants.spacingSm,
-                  left: AppConstants.spacingMd,
+                  right: AppConstants.spacingMd,
                   child: GestureDetector(
+                    key: DashboardTutorialOverlay.skipKey,
                     behavior: HitTestBehavior.opaque,
                     onTap: _finish,
                     child: Container(
-                      constraints: const BoxConstraints(minHeight: 44),
+                      constraints: BoxConstraints(
+                        minHeight: 44,
+                        maxWidth: screenSize.width * _skipMaxWidth,
+                      ),
                       alignment: Alignment.center,
                       padding: const EdgeInsets.symmetric(
                         horizontal: AppConstants.spacingMd,
@@ -210,12 +229,16 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
                           AppConstants.radiusRound,
                         ),
                       ),
-                      child: const Text(
-                        'Überspringen',
-                        style: TextStyle(
-                          fontSize: AppTheme.fontSizeBody,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.foreground,
+                      child: const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'Überspringen',
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontSize: AppTheme.fontSizeBody,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.foreground,
+                          ),
                         ),
                       ),
                     ),
@@ -236,7 +259,7 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
     required EdgeInsets safe,
   }) {
     const horizontalMargin = AppConstants.spacingLg;
-    final maxBubbleWidth = screenSize.width - (horizontalMargin * 2);
+    final bubbleWidth = screenSize.width - (horizontalMargin * 2);
 
     // Decide actual anchor based on available space.
     final spaceAbove = targetRect.top - safe.top;
@@ -249,40 +272,17 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
     }
 
     const gap = AppConstants.spacingLg; // spacing between target and bubble
-    final bubble = TooltipBubble(
-      richText: step.richText,
-      maxWidth: maxBubbleWidth,
-    );
+    final above = anchor == TooltipAnchor.above;
 
-    // Horizontal position: center on target, clamped to screen margins.
-    final bubbleWidth = maxBubbleWidth; // upper bound; actual may be smaller
-    final bubbleCenterX = targetRect.center.dx.clamp(
-      horizontalMargin + bubbleWidth / 2,
-      screenSize.width - horizontalMargin - bubbleWidth / 2,
-    );
-
-    // Vertical position of bubble's top edge:
-    final bubbleTop = anchor == TooltipAnchor.above
-        ? (targetRect.top - gap - _estimatedBubbleHeight)
-        : (targetRect.bottom + gap);
-
-    final bubbleRectApprox = Rect.fromLTWH(
-      bubbleCenterX - bubbleWidth / 2,
-      bubbleTop,
-      bubbleWidth,
-      _estimatedBubbleHeight,
-    );
-
-    // Connector endpoints
+    // Connector endpoints: the target's edge and the bubble's edge one gap
+    // away, where _BubbleLayout puts it (unless it must move on screen).
     final targetAnchor = Offset(
       targetRect.center.dx,
-      anchor == TooltipAnchor.above ? targetRect.top : targetRect.bottom,
+      above ? targetRect.top : targetRect.bottom,
     );
     final bubbleAnchor = Offset(
-      bubbleRectApprox.center.dx,
-      anchor == TooltipAnchor.above
-          ? bubbleRectApprox.bottom
-          : bubbleRectApprox.top,
+      screenSize.width / 2,
+      above ? targetRect.top - gap : targetRect.bottom + gap,
     );
 
     return [
@@ -296,21 +296,74 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
           ),
         ),
       ),
-      Positioned(
-        left: bubbleRectApprox.left,
-        top: bubbleRectApprox.top,
-        width: bubbleRectApprox.width,
-        child: IgnorePointer(child: bubble),
+      Positioned.fill(
+        child: IgnorePointer(
+          child: CustomSingleChildLayout(
+            delegate: _BubbleLayout(
+              edge: bubbleAnchor.dy,
+              above: above,
+              width: bubbleWidth,
+              minTop: safe.top + AppConstants.spacingSm,
+              maxBottom:
+                  screenSize.height - safe.bottom - AppConstants.spacingSm,
+            ),
+            child: TooltipBubble(
+              richText: step.richText,
+              maxWidth: bubbleWidth,
+            ),
+          ),
+        ),
       ),
     ];
   }
 
-  // Rough upper bound — used only for connector-line endpoint math. The
-  // actual bubble sizes itself based on its content; the connector just
-  // needs a reasonable approximation.
-  static const double _estimatedBubbleHeight = 140;
-
   // Minimum vertical space required on the preferred side before we flip
   // the bubble anchor to the opposite side of the target.
   static const double _minAnchorSpace = 140;
+}
+
+/// Places the tooltip bubble at its real height: horizontally centred, its
+/// near edge at [edge] (its bottom when [above], else its top), then moved
+/// back between [minTop] and [maxBottom] when it does not fit there (it may
+/// then cover part of a tall target, but it is always readable).
+class _BubbleLayout extends SingleChildLayoutDelegate {
+  const _BubbleLayout({
+    required this.edge,
+    required this.above,
+    required this.width,
+    required this.minTop,
+    required this.maxBottom,
+  });
+
+  final double edge;
+  final bool above;
+  final double width;
+  final double minTop;
+  final double maxBottom;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
+      BoxConstraints(
+        minWidth: width,
+        maxWidth: width,
+        maxHeight: constraints.maxHeight,
+      );
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) {
+    final top = above ? edge - childSize.height : edge;
+    final maxTop = math.max(minTop, maxBottom - childSize.height);
+    return Offset(
+      (size.width - childSize.width) / 2,
+      top.clamp(minTop, maxTop),
+    );
+  }
+
+  @override
+  bool shouldRelayout(_BubbleLayout old) =>
+      old.edge != edge ||
+      old.above != above ||
+      old.width != width ||
+      old.minTop != minTop ||
+      old.maxBottom != maxBottom;
 }

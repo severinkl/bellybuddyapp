@@ -647,6 +647,48 @@ void main() {
     });
   });
 
+  group('reload', () {
+    test('during the first load: waits for it, no second sync', () async {
+      buddyRepo.store['u1'] = const BuddyState(userId: 'u1');
+      final c = makeContainer();
+      c.listen(buddyProvider, (_, _) {});
+      buddyRepo.gateNext();
+      await settle();
+      expect(c.read(buddyProvider).isLoading, isTrue);
+
+      final reload = c.read(buddyProvider.notifier).reload();
+      buddyRepo.release();
+      await reload;
+
+      expect(c.read(buddyProvider).value, isNotNull);
+      expect(buddyRepo.fetchCount, 1);
+    });
+
+    test('after the first load: refreshes', () async {
+      buddyRepo.store['u1'] = const BuddyState(userId: 'u1');
+      entryRepo.seedActivityDays(novDays(20, 21));
+      final c = makeContainer();
+      expect((await load(c)).todayCounted, isFalse);
+
+      entryRepo.seedActivityDays(novDays(20, 22));
+      await c.read(buddyProvider.notifier).reload();
+
+      expect(c.read(buddyProvider).value!.todayCounted, isTrue);
+    });
+
+    test('never throws: a failed first load or refresh only logs', () async {
+      buddyRepo.throwOnFetch = true;
+      final c = makeContainer();
+      c.listen(buddyProvider, (_, _) {});
+
+      await c.read(buddyProvider.notifier).reload();
+      expect(c.read(buddyProvider).hasError, isTrue);
+
+      await c.read(buddyProvider.notifier).reload();
+      expect(c.read(buddyProvider).hasError, isTrue);
+    });
+  });
+
   group('user switch', () {
     ProviderContainer makeSwitchable() => createContainer(
       overrides: [

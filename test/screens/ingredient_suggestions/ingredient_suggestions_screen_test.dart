@@ -15,14 +15,14 @@ List<Override> _overrides() => [
 
 void main() {
   group('IngredientSuggestionsScreen', () {
-    testWidgets('renders Zutaten-Vorschläge app bar title', (tester) async {
+    testWidgets('the app bar is titled Alternativen', (tester) async {
       await tester.pumpWithProviders(
         const IngredientSuggestionsScreen(),
         overrides: _overrides(),
       );
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('Zutaten-Vorschläge'), findsOneWidget);
+      expect(find.text('Alternativen'), findsOneWidget);
     });
 
     testWidgets('renders search field', (tester) async {

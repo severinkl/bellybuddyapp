@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/screens/recipes/widgets/add_recipe_chooser_sheet.dart';
+import 'package:belly_buddy/widgets/common/bb_drag_handle.dart';
 
 import '../../../helpers/mocks.dart';
 
@@ -36,6 +38,8 @@ void main() {
           currentUserIdProvider.overrideWithValue('user-1'),
         ],
         child: MaterialApp(
+          // The app's theme: its bottom sheets show a drag handle.
+          theme: AppTheme.theme,
           home: Scaffold(
             body: Builder(
               builder: (ctx) => ElevatedButton(
@@ -50,6 +54,18 @@ void main() {
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
   }
+
+  testWidgets('has one drag handle, its own (the theme adds none)', (
+    tester,
+  ) async {
+    await pumpSheet(tester);
+
+    expect(
+      tester.widget<BottomSheet>(find.byType(BottomSheet)).showDragHandle,
+      isFalse,
+    );
+    expect(find.byType(BbDragHandle), findsOneWidget);
+  });
 
   testWidgets('shows both options when sheet is opened', (tester) async {
     await pumpSheet(tester);

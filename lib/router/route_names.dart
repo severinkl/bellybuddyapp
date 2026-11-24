@@ -12,6 +12,8 @@ class RouteNames {
   static const String gutFeelingTracker = 'gut-feeling-tracker';
   static const String drinkTracker = 'drink-tracker';
   static const String diary = 'diary';
+  static const String discover = 'discover';
+  static const String me = 'me';
   static const String settings = 'settings';
   static const String settingsProfile = 'settings-profile';
   static const String settingsNotifications = 'settings-notifications';
@@ -43,6 +45,8 @@ class RoutePaths {
   static const String gutFeelingTracker = '/gut-feeling-tracker';
   static const String drinkTracker = '/drink-tracker';
   static const String diary = '/diary';
+  static const String discover = '/discover';
+  static const String me = '/me';
   static const String settings = '/settings';
   static const String settingsProfile = '/settings/profile';
   static const String settingsNotifications = '/settings/notifications';

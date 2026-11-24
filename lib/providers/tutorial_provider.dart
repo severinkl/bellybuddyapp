@@ -1,20 +1,30 @@
+import 'package:flutter/widgets.dart' show BuildContext;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../providers/core_providers.dart';
 import '../providers/profile_provider.dart';
 import '../repositories/profile_repository.dart';
+import '../router/route_names.dart';
 import '../utils/logger.dart';
 
-/// Action-only notifier for the dashboard onboarding tutorial.
+/// The dashboard onboarding tutorial: whether to show it ([shouldShow]),
+/// marking it seen ([markSeen]) and replaying it from the Ich tab
+/// ([replayFrom]).
 ///
-/// The "seen" state itself lives on [UserProfile.tutorialSeenAt] and is read
-/// via [profileProvider]. This notifier exposes the mutating action
-/// ([markSeen]) and a convenience query ([shouldShow]).
-class TutorialNotifier extends Notifier<void> {
+/// The "seen" state lives on [UserProfile.tutorialSeenAt] and is read via
+/// [profileProvider]. The state here is whether a replay is pending (in
+/// memory only): set by [requestReplay], taken once by [consumeReplay];
+/// Home listens to it. A request belongs to the signed-in user: it ends
+/// with them (sign-out, another user), taken or not.
+class TutorialNotifier extends Notifier<bool> {
   static const _log = AppLogger('TutorialProvider');
 
   @override
-  void build() {}
+  bool build() {
+    ref.watch(currentUserIdProvider);
+    return false;
+  }
 
   /// Whether the overlay should be displayed for the current profile.
   bool shouldShow() {
@@ -37,8 +47,28 @@ class TutorialNotifier extends Notifier<void> {
       _log.error('markSeen failed', e, st);
     }
   }
+
+  /// Asks Home to show the tour again, even when it was seen. Pending until
+  /// [consumeReplay] takes it; a second request before that is the same
+  /// one. Home takes it after its first load, or at once when already
+  /// built — so the caller must then go Home. [replayFrom] does both.
+  void requestReplay() => state = true;
+
+  /// Whether a replay was requested: true exactly once per [requestReplay].
+  bool consumeReplay() {
+    if (!state) return false;
+    state = false;
+    return true;
+  }
+
+  /// „Tutorial wiederholen": requests the replay and goes Home, where the
+  /// tour starts.
+  void replayFrom(BuildContext context) {
+    requestReplay();
+    context.go(RoutePaths.dashboard);
+  }
 }
 
-final tutorialProvider = NotifierProvider<TutorialNotifier, void>(
+final tutorialProvider = NotifierProvider<TutorialNotifier, bool>(
   TutorialNotifier.new,
 );

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../config/constants.dart';
 import '../../../../models/user_recipe.dart';
+import '../../../../providers/recipe_search_provider.dart';
 import '../../../../providers/user_recipes_provider.dart';
 import '../../../../router/route_names.dart';
 import '../../../../widgets/common/bb_drag_handle.dart';
@@ -22,6 +23,8 @@ Future<UserRecipe?> showRecipeSelectorSheet(BuildContext context) {
     context: context,
     useSafeArea: true,
     isScrollControlled: true,
+    // The sheet draws its own handle.
+    showDragHandle: false,
     backgroundColor: AppTheme.card,
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(
@@ -60,25 +63,13 @@ class _RecipeSelectorBody extends ConsumerStatefulWidget {
 }
 
 class _RecipeSelectorBodyState extends ConsumerState<_RecipeSelectorBody> {
-  late final UserRecipesNotifier _notifier;
-
   @override
   void initState() {
     super.initState();
-    // Capture the notifier so dispose() can clear sheet-scoped search
-    // without touching `ref` after deactivation.
-    _notifier = ref.read(userRecipesProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      _notifier.fetch();
+      ref.read(userRecipesProvider.notifier).fetch();
     });
-  }
-
-  @override
-  void dispose() {
-    // Clear sheet-scoped search so the recipes tab isn't pre-filtered.
-    _notifier.setQuery(null);
-    super.dispose();
   }
 
   void _openNewRecipe(BuildContext context) {
@@ -86,13 +77,18 @@ class _RecipeSelectorBodyState extends ConsumerState<_RecipeSelectorBody> {
     context.push(RoutePaths.recipeNew);
   }
 
+  static const _host = RecipeSearchHost.recipePicker;
+
   @override
   Widget build(BuildContext context) {
-    final async = ref.watch(userRecipesProvider);
+    // The sheet's own search, auto-disposed with it.
+    final async = ref.watch(recipeSearchProvider(_host));
     // Snapshot — `build` already re-runs whenever the AsyncValue changes
-    // (which happens after every setQuery → fetch round-trip), so a watch
+    // (which happens after every setQuery → search round-trip), so a watch
     // on the notifier instance would only add a redundant subscription.
-    final hasActiveQuery = _notifier.hasActiveQuery;
+    final hasActiveQuery = ref
+        .read(recipeSearchProvider(_host).notifier)
+        .hasActiveQuery;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -117,7 +113,7 @@ class _RecipeSelectorBodyState extends ConsumerState<_RecipeSelectorBody> {
         ),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: AppConstants.spacingMd),
-          child: RecipesSearchField(),
+          child: RecipesSearchField(host: _host),
         ),
         AppConstants.gap8,
         Expanded(

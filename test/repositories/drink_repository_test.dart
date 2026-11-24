@@ -27,16 +27,17 @@ void main() {
     });
   });
 
-  group('fetchTodayTotal', () {
-    test('delegates to drinkService.fetchTodayTotal', () async {
+  group('fetchDayTotal', () {
+    test('delegates to drinkService.fetchDayTotal', () async {
+      final day = DateTime(2026, 11, 22);
       when(
-        () => drinkService.fetchTodayTotal(any()),
+        () => drinkService.fetchDayTotal(any(), any()),
       ).thenAnswer((_) async => 750);
 
-      final result = await repo.fetchTodayTotal('user-123');
+      final result = await repo.fetchDayTotal('user-123', day);
 
       expect(result, equals(750));
-      verify(() => drinkService.fetchTodayTotal('user-123')).called(1);
+      verify(() => drinkService.fetchDayTotal('user-123', day)).called(1);
     });
   });
 

@@ -222,6 +222,34 @@ void main() {
     });
   });
 
+  group('EntriesNotifier moves an entry', () {
+    test('to the new time as the wall clock, every kind', () async {
+      when(
+        () => mockRepo.updateEntry(any(), any(), any()),
+      ).thenAnswer((_) async {});
+      final notifier = makeContainer().read(entriesProvider.notifier);
+      final moved = DateTime(2026, 11, 23, 23, 30);
+
+      await notifier.updateToiletById('t', stoolType: 3, trackedAt: moved);
+      await notifier.updateDrinkById('d', amountMl: 250, trackedAt: moved);
+      await notifier.updateGutFeelingById(
+        'g',
+        bloating: 0,
+        gas: 0,
+        cramps: 0,
+        fullness: 0,
+        trackedAt: moved,
+      );
+
+      final sent = verify(
+        () => mockRepo.updateEntry(any(), any(), captureAny()),
+      ).captured.cast<Map<String, dynamic>>();
+      expect(sent.map((d) => d['tracked_at']), [
+        for (var i = 0; i < 3; i++) '2026-11-23T23:30:00.000Z',
+      ]);
+    });
+  });
+
   group('EntriesNotifier keeps the loaded day current', () {
     final day = DateTime(2026, 3, 25);
 
@@ -348,6 +376,67 @@ void main() {
         expect(container.read(entriesProvider).isLoading, isFalse);
       },
     );
+  });
+
+  group('entriesRevisionProvider', () {
+    setUp(() {
+      when(
+        () => mockRepo.fetchForDate(
+          userId: any(named: 'userId'),
+          date: any(named: 'date'),
+          ordered: any(named: 'ordered'),
+        ),
+      ).thenAnswer((_) async => testEntryQueryResult());
+      when(
+        () => mockRepo.insertEntry(any(), any(), userId: any(named: 'userId')),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockRepo.updateEntry(any(), any(), any()),
+      ).thenAnswer((_) async {});
+      when(() => mockRepo.deleteEntry(any(), any())).thenAnswer((_) async {});
+      when(() => mockRepo.deleteByType(any(), any())).thenAnswer((_) async {});
+    });
+
+    test('rises once per entry write: log, edit, moved date, delete', () async {
+      final container = makeContainer();
+      final revisions = <int>[];
+      container.listen(
+        entriesRevisionProvider,
+        (_, next) => revisions.add(next),
+      );
+      final notifier = container.read(entriesProvider.notifier);
+
+      await notifier.addMeal(testMealEntry());
+      // A meal edit, also when it moves the meal to another day.
+      await notifier.updateMeal(testMealEntry());
+      await notifier.updateGutFeelingById(
+        'gut-1',
+        bloating: 1,
+        gas: 1,
+        cramps: 1,
+        fullness: 1,
+      );
+      await notifier.deleteByType('meal', 'meal-1');
+      await notifier.deleteToiletEntry('toilet-1');
+
+      expect(revisions, [1, 2, 3, 4, 5]);
+    });
+
+    test('loads and failed writes leave it alone', () async {
+      when(
+        () => mockRepo.deleteByType(any(), any()),
+      ).thenThrow(Exception('offline'));
+      final container = makeContainer();
+      final notifier = container.read(entriesProvider.notifier);
+
+      await notifier.loadEntries(DateTime(2026, 3, 25));
+      await expectLater(
+        notifier.deleteByType('meal', 'meal-1'),
+        throwsA(isA<Exception>()),
+      );
+
+      expect(container.read(entriesRevisionProvider), 0);
+    });
   });
 
   group('EntriesNotifier.reset', () {

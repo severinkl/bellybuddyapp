@@ -72,7 +72,11 @@ class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
     return TrackerScreenScaffold(
       title: 'Am Klo \u{1F4A9} gewesen?',
       showSuccess: savedSentiment != null,
-      successMessage: 'Toilettengang gespeichert!',
+      // After a hard moment no celebration: calm, without the „!".
+      successMessage: savedSentiment == LogSentiment.bad
+          ? 'Klo-Eintrag gespeichert.'
+          : 'Klo-Eintrag gespeichert!',
+      successCalm: savedSentiment == LogSentiment.bad,
       successIllustration: savedSentiment == null
           ? null
           : BuddyReactionView(
@@ -110,11 +114,14 @@ class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
               leftLabel: 'sehr hart',
               centerLabel: 'normal',
               rightLabel: 'flüssig',
+              semanticLabel: 'Konsistenz',
+              semanticValue: (v) =>
+                  '${AppConstants.stoolTypeDescriptions[v]}, $v von 5',
             ),
 
             const Spacer(),
             BbButton(
-              label: 'speichern',
+              label: 'Speichern',
               isLoading: _isSaving,
               onPressed: _save,
             ),

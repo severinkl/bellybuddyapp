@@ -5,14 +5,16 @@ import 'package:material_ui/material_ui.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../services/buddy/daily_care.dart';
-import 'tutorial/tutorial_keys.dart';
+import '../../../services/haptic_service.dart';
 
 /// The Buddy inside a ring of his four daily needs. Each quarter of the ring
 /// fills with today's progress of one need (Trinken top right, Bauchgefühl
-/// bottom right, Klo bottom left, Essen top left), and a tappable bubble in
-/// that corner shows it („🍽 2/3") and opens its tracker. The [highlight]ed
-/// need (the one he suggests next) glows and, unless animations are off,
-/// pulses gently on its own clock (paused while `TickerMode` is off).
+/// bottom right, Klo bottom left, Essen top left), and a bubble in that
+/// corner shows it („🍽 2/3"); tapping a bubble calls [onNeed] with its
+/// need. The ring itself is no tap target (the Buddy has his own). The
+/// [highlight]ed need (the one he suggests next) glows and, unless
+/// animations are off, pulses gently on its own clock (paused while
+/// `TickerMode` is off).
 class CareRing extends StatelessWidget {
   const CareRing({
     super.key,
@@ -23,13 +25,13 @@ class CareRing extends StatelessWidget {
     this.highlight,
   });
 
-  /// A need's bubble: `care_need_<name>`.
+  /// A need's bubble (its whole tap area): `care_need_<name>`.
   static Key needKey(CareNeed need) => ValueKey('care_need_${need.name}');
 
   /// Test seam: while false, the highlighted need glows without pulsing,
   /// so `pumpAndSettle` can settle on screens that show the ring (e.g. the
-  /// dashboard). Set it in a test directory's `flutter_test_config.dart`;
-  /// never change it in app code.
+  /// dashboard). The test root's `flutter_test_config.dart` sets it; never
+  /// change it in app code.
   @visibleForTesting
   static bool pulseEnabled = true;
 
@@ -54,29 +56,21 @@ class CareRing extends StatelessWidget {
   /// Drawn centred inside the ring, [AppConstants.careRingBuddyFactor] of
   /// its diameter square.
   final Widget buddy;
+
+  /// Tapping a need's bubble calls this with the need.
   final ValueChanged<CareNeed> onNeed;
   final CareNeed? highlight;
-
-  /// The tour's targets among the bubbles.
-  static final _tutorialKeys = <CareNeed, GlobalKey>{
-    CareNeed.gutFeeling: TutorialKeys.bauchgefuehl,
-    CareNeed.toilet: TutorialKeys.klo,
-  };
 
   @override
   Widget build(BuildContext context) {
     final calm = MediaQuery.disableAnimationsOf(context);
-    Widget bubble(CareNeed need) {
-      final b = _NeedBubble(
-        key: needKey(need),
-        need: need,
-        care: care,
-        highlighted: need == highlight,
-        onTap: () => onNeed(need),
-      );
-      final tutorialKey = _tutorialKeys[need];
-      return tutorialKey == null ? b : KeyedSubtree(key: tutorialKey, child: b);
-    }
+    Widget bubble(CareNeed need) => _NeedBubble(
+      key: needKey(need),
+      need: need,
+      care: care,
+      highlighted: need == highlight,
+      onTap: () => onNeed(need),
+    );
 
     return SizedBox(
       width: double.infinity,
@@ -186,8 +180,12 @@ class _RingPainter extends CustomPainter {
   bool shouldRepaint(_RingPainter old) => old.progress != progress;
 }
 
-/// A need's corner bubble: its count over its label; filled once met,
-/// ringed and glowing ([_Glow]) while it is the next need.
+/// A need's corner bubble, a button that logs it ([onTap]): its count
+/// over its label; filled once met, ringed and glowing ([_Glow]) while it
+/// is the next need. Its tap area is everything it paints: the box inset
+/// by the glow's reach ([AppConstants.careNeedGlow], which also covers the
+/// shadow below), so the ring's box holds all of it and no tap on the
+/// bubble lands on what sits around the ring.
 class _NeedBubble extends StatelessWidget {
   const _NeedBubble({
     super.key,
@@ -202,8 +200,13 @@ class _NeedBubble extends StatelessWidget {
   final bool highlighted;
   final VoidCallback onTap;
 
+  void _tap() {
+    HapticService.selection();
+    onTap();
+  }
+
   /// Today's count as shown after the need's emoji („2/3") and as spoken
-  /// after its label („2 von 3 Mahlzeiten").
+  /// after the button's label („2 von 3 Mahlzeiten").
   (String, String) get _count => switch (need) {
     CareNeed.food => (
       '${care.meals}/${DailyCare.mealGoal}',
@@ -213,15 +216,21 @@ class _NeedBubble extends StatelessWidget {
       '${care.glasses}/${DailyCare.glassGoal}',
       '${care.glasses} von ${DailyCare.glassGoal} Gläsern',
     ),
-    CareNeed.gutFeeling =>
-      care.isMet(CareNeed.gutFeeling)
-          ? ('✓', 'heute eingetragen')
-          : ('–', 'heute noch offen'),
+    CareNeed.gutFeeling => switch (care.lastGutFeelingLevel) {
+      _ when !care.isMet(CareNeed.gutFeeling) => ('–', 'heute noch offen'),
+      null => ('✓', 'heute eingetragen'),
+      final level => ('✓', 'heute eingetragen, zuletzt ${level.label}'),
+    },
     CareNeed.toilet => (
       care.toilets > 0 ? '${care.toilets}×' : '–',
       '${care.toilets} ${care.toilets == 1 ? 'Eintrag' : 'Einträge'} heute',
     ),
   };
+
+  /// Bauchgefühl, once logged, shows how today's latest entry was.
+  String get _emoji => need == CareNeed.gutFeeling
+      ? care.lastGutFeelingLevel?.face ?? need.emoji
+      : need.emoji;
 
   BoxDecoration get _decoration => BoxDecoration(
     color: care.isMet(need) ? AppTheme.primarySoft : AppTheme.background,
@@ -248,7 +257,7 @@ class _NeedBubble extends StatelessWidget {
         FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(
-            '${need.emoji} $count',
+            '$_emoji $count',
             maxLines: 1,
             style: const TextStyle(
               fontSize: AppTheme.fontSizeSubtitle,
@@ -285,14 +294,17 @@ class _NeedBubble extends StatelessWidget {
     );
     return Semantics(
       button: true,
-      label: '${need.label}: $spoken',
-      hint: need.logLabel,
+      label: need.logLabel,
+      value: spoken,
       excludeSemantics: true,
-      onTap: onTap,
+      onTap: _tap,
       child: GestureDetector(
-        onTap: onTap,
         behavior: HitTestBehavior.opaque,
-        child: highlighted ? _Glow(child: box) : box,
+        onTap: _tap,
+        child: Padding(
+          padding: const EdgeInsets.all(AppConstants.careNeedGlow),
+          child: highlighted ? _Glow(child: box) : box,
+        ),
       ),
     );
   }

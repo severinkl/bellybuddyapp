@@ -11,15 +11,6 @@ const Map<String, String> dietToRecipeTag = {
   'vegan': 'Vegan',
 };
 
-/// Maps registration-style symptom strings to settings-style equivalents.
-const Map<String, String> registrationToSettingsSymptomMap = {
-  'Belastender Durchfall': 'Durchfall',
-  'Nervige Verstopfung': 'Verstopfung',
-  'Unangenehme Blähungen': 'Blähungen',
-  'Übermäßiges Völlegefühl': 'Völlegefühl',
-  'Hartnäckiger Blähbauch ohne Pupsen': 'Blähungen',
-};
-
 /// Returns the set of recipe tags that should be auto-applied as filters
 /// based on the user's diet and intolerances.
 Set<String> getAutoRecipeFilters({

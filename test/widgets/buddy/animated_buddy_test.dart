@@ -3,6 +3,8 @@ import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../helpers/ambient_animations.dart';
+
 const _size = Size(300, 400);
 
 /// Pumps [child] inside a themed [MaterialApp], centred on the screen.
@@ -29,6 +31,9 @@ Offset _globalOf(WidgetTester tester, Offset image, [Size size = _size]) =>
     BuddyLayout(size).toLocal(image);
 
 void main() {
+  // These Buddies must tick: reactions, blinks, waking up.
+  tickBuddiesInTests();
+
   group('AnimatedBuddy', () {
     testWidgets('renders a CustomPaint with a BuddyPainter and ticks', (
       tester,

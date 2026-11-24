@@ -33,8 +33,8 @@ class AnimatedBuddy extends StatefulWidget {
 
   /// Test seam: while false, newly mounted Buddies render their current
   /// frame without starting their ticker, so `pumpAndSettle` can settle on
-  /// screens that show one (e.g. the dashboard). Set it in a test directory's
-  /// `flutter_test_config.dart`; never change it in app code.
+  /// screens that show one (e.g. the dashboard). The test root's
+  /// `flutter_test_config.dart` sets it; never change it in app code.
   @visibleForTesting
   static bool tickerEnabled = true;
 

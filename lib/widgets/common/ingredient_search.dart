@@ -5,6 +5,12 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../models/ingredient_search_result.dart';
 
+/// The „Zutaten" card: the added ingredients as chips, and „+ Hinzufügen",
+/// a search field with the catalog's best matches ([suggestions], ranked by
+/// the search) below it, above the keyboard. A name that isn't in the
+/// catalog is added only explicitly, with its „Name hinzufügen" row:
+/// Return adds an exact catalog match, never the raw text (it points to the
+/// row instead).
 class IngredientSearch extends StatefulWidget {
   final List<String> ingredients;
   final List<IngredientSearchResult> suggestions;
@@ -23,6 +29,9 @@ class IngredientSearch extends StatefulWidget {
     required this.onDeleteIngredient,
   });
 
+  /// The row adding the typed name („Name hinzufügen").
+  static const addTypedKey = Key('ingredient_search_add_typed');
+
   @override
   State<IngredientSearch> createState() => _IngredientSearchState();
 }
@@ -30,19 +39,48 @@ class IngredientSearch extends StatefulWidget {
 class _IngredientSearchState extends State<IngredientSearch> {
   static const _searchDebounce = Duration(milliseconds: 300);
 
+  /// How many catalog matches show at once (they must fit above the
+  /// keyboard).
+  static const _maxSuggestions = 5;
+
   final _controller = TextEditingController();
   final _focusNode = FocusNode();
+  final _suggestionsKey = GlobalKey();
   bool _isAdding = false;
   Timer? _searchDebounceTimer;
+
+  /// Return was pressed before the search answered: an exact match among
+  /// its results is added then.
+  bool _addExactOnResults = false;
+
+  /// Return found no exact match: a hint points to the „hinzufügen" row
+  /// until the text changes.
+  bool _showSubmitHint = false;
 
   @override
   void initState() {
     super.initState();
     _focusNode.addListener(() {
-      if (!_focusNode.hasFocus && _isAdding) {
-        _submitIngredient();
-      }
+      // Leaving an empty field closes it; typed text stays for its rows.
+      if (!_focusNode.hasFocus && _isAdding && _typed.isEmpty) _close();
     });
+  }
+
+  @override
+  void didUpdateWidget(IngredientSearch oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!identical(oldWidget.suggestions, widget.suggestions)) {
+      final exact = _addExactOnResults ? _exactMatch : null;
+      _addExactOnResults = false;
+      if (exact != null) {
+        // Not during this build: adding updates the host.
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _isAdding) _add(exact.name);
+        });
+        return;
+      }
+      _revealSuggestions();
+    }
   }
 
   @override
@@ -63,13 +101,61 @@ class _IngredientSearchState extends State<IngredientSearch> {
     widget.onSearch(value);
   }
 
-  void _submitIngredient() {
-    final value = _controller.text.trim();
-    if (value.isEmpty) return;
-    widget.onAdd(value);
+  String get _typed => _controller.text.trim();
+
+  /// The suggestion named exactly like the typed text (ignoring case).
+  IngredientSearchResult? get _exactMatch {
+    final typed = _typed.toLowerCase();
+    if (typed.isEmpty) return null;
+    for (final s in widget.suggestions) {
+      if (s.name.toLowerCase() == typed) return s;
+    }
+    return null;
+  }
+
+  void _add(String name) {
+    widget.onAdd(name);
+    _close();
+  }
+
+  void _close() {
     _controller.clear();
     _flushSearch('');
-    setState(() => _isAdding = false);
+    setState(() {
+      _isAdding = false;
+      _showSubmitHint = false;
+    });
+  }
+
+  /// Return: adds the exact catalog match; anything else stays in the field
+  /// (keyboard open) to pick a suggestion or its „hinzufügen" row.
+  void _onSubmitted(String value) {
+    final exact = _exactMatch;
+    if (exact != null) {
+      _add(exact.name);
+    } else if (_typed.isEmpty) {
+      _close();
+    } else {
+      // The results may not be in yet: an exact match still gets added.
+      _addExactOnResults = true;
+      setState(() => _showSubmitHint = true);
+      _flushSearch(value);
+    }
+  }
+
+  /// Scrolls the suggestions up above the keyboard once they changed.
+  void _revealSuggestions() {
+    if (!_isAdding) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _suggestionsKey.currentContext;
+      if (!mounted || !_isAdding || ctx == null) return;
+      Scrollable.ensureVisible(
+        ctx,
+        duration: AppConstants.animFast,
+        curve: Curves.easeOut,
+        alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+      );
+    });
   }
 
   void _scrollToField() {
@@ -92,7 +178,14 @@ class _IngredientSearchState extends State<IngredientSearch> {
   Widget build(BuildContext context) {
     final filteredSuggestions = widget.suggestions
         .where((s) => !widget.ingredients.contains(s.name))
+        .take(_maxSuggestions)
         .toList();
+    final typed = _typed;
+    final showAddTyped =
+        _isAdding &&
+        typed.isNotEmpty &&
+        _exactMatch == null &&
+        !widget.ingredients.any((i) => i.toLowerCase() == typed.toLowerCase());
 
     return Container(
       padding: AppConstants.paddingMd,
@@ -120,18 +213,14 @@ class _IngredientSearchState extends State<IngredientSearch> {
                     focusNode: _focusNode,
                     style: const TextStyle(fontSize: AppTheme.fontSizeBody),
                     decoration: InputDecoration(
-                      hintText: 'Mind. 3 Zeichen...',
+                      hintText: 'Zutat suchen…',
                       isDense: true,
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: AppConstants.spacing12,
                         vertical: AppConstants.spacingSm,
                       ),
                       suffixIcon: GestureDetector(
-                        onTap: () {
-                          _controller.clear();
-                          _flushSearch('');
-                          setState(() => _isAdding = false);
-                        },
+                        onTap: _close,
                         child: const Icon(
                           Icons.close,
                           size: AppConstants.iconSizeSm,
@@ -142,8 +231,18 @@ class _IngredientSearchState extends State<IngredientSearch> {
                         minHeight: 32,
                       ),
                     ),
-                    onChanged: _onQueryChanged,
-                    onSubmitted: (_) => _submitIngredient(),
+                    textInputAction: TextInputAction.done,
+                    onChanged: (value) {
+                      _addExactOnResults = false;
+                      // for the „hinzufügen" row and the Return hint
+                      setState(() => _showSubmitHint = false);
+                      _onQueryChanged(value);
+                      _revealSuggestions();
+                    },
+                    // Return must not close the keyboard by itself:
+                    // [_onSubmitted] decides.
+                    onEditingComplete: () {},
+                    onSubmitted: _onSubmitted,
                   ),
                 )
               else
@@ -168,8 +267,24 @@ class _IngredientSearchState extends State<IngredientSearch> {
                 ),
             ],
           ),
-          if (_isAdding && filteredSuggestions.isNotEmpty) ...[
+          if (showAddTyped && _showSubmitHint)
+            Padding(
+              padding: const EdgeInsets.only(top: AppConstants.spacingXs),
+              child: Semantics(
+                liveRegion: true,
+                child: Text(
+                  'Tippe auf „‚$typed‘ hinzufügen“.',
+                  style: const TextStyle(
+                    fontSize: AppTheme.fontSizeCaptionLG,
+                    color: AppTheme.mutedForeground,
+                  ),
+                ),
+              ),
+            ),
+          if (_isAdding &&
+              (filteredSuggestions.isNotEmpty || showAddTyped)) ...[
             Container(
+              key: _suggestionsKey,
               margin: const EdgeInsets.only(top: AppConstants.spacingXs),
               decoration: BoxDecoration(
                 color: AppTheme.card,
@@ -182,28 +297,37 @@ class _IngredientSearchState extends State<IngredientSearch> {
               child: Material(
                 type: MaterialType.transparency,
                 child: Column(
-                  children: filteredSuggestions.map((s) {
-                    return ListTile(
-                      title: Text(s.name),
-                      dense: true,
-                      onTap: () {
-                        widget.onAdd(s.name);
-                        _controller.clear();
-                        _flushSearch('');
-                        setState(() => _isAdding = false);
-                      },
-                      trailing: s.isOwn
-                          ? IconButton(
-                              icon: const Icon(
-                                Icons.delete_outline,
-                                size: AppConstants.iconSizeClose,
-                                color: AppTheme.mutedForeground,
-                              ),
-                              onPressed: () => widget.onDeleteIngredient(s.id),
-                            )
-                          : null,
-                    );
-                  }).toList(),
+                  children: [
+                    for (final s in filteredSuggestions)
+                      ListTile(
+                        title: Text(s.name),
+                        dense: true,
+                        onTap: () => _add(s.name),
+                        trailing: s.isOwn
+                            ? IconButton(
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  size: AppConstants.iconSizeClose,
+                                  color: AppTheme.mutedForeground,
+                                ),
+                                onPressed: () =>
+                                    widget.onDeleteIngredient(s.id),
+                              )
+                            : null,
+                      ),
+                    if (showAddTyped)
+                      ListTile(
+                        key: IngredientSearch.addTypedKey,
+                        leading: const Icon(
+                          Icons.add,
+                          size: AppConstants.iconSizeSm,
+                          color: AppTheme.primary,
+                        ),
+                        title: Text('„$typed“ hinzufügen'),
+                        dense: true,
+                        onTap: () => _add(typed),
+                      ),
+                  ],
                 ),
               ),
             ),

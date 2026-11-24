@@ -93,12 +93,18 @@ final buddyOnboardingGatePendingProvider =
       BuddyOnboardingGatePendingNotifier.new,
     );
 
-/// The locations the Buddy onboarding gate redirects: the shell roots. Every
-/// way back to the app at rest (sign-in, consent, auth routes, tab switches,
-/// leaving the onboarding) goes through one of them, so the gate still
-/// catches the user; pushes from inside the flow (the first-meal step's
-/// trackers and whatever they open) and the wizard are never redirected.
-const buddyOnboardingGatedPaths = {RoutePaths.dashboard, RoutePaths.diary};
+/// The locations the Buddy onboarding gate redirects: the shell roots, the
+/// four tabs. Every way back to the app at rest (sign-in, consent, auth
+/// routes, tab switches, leaving the onboarding) goes through one of them,
+/// so the gate still catches the user; pushes from inside the flow (the
+/// first-meal step's trackers and whatever they open), notification targets
+/// such as `/recommendations` and the wizard are never redirected.
+const buddyOnboardingGatedPaths = {
+  RoutePaths.dashboard,
+  RoutePaths.diary,
+  RoutePaths.discover,
+  RoutePaths.me,
+};
 
 /// The query parameter of `/loading` naming the gated path it holds.
 const _heldPathParam = 'to';

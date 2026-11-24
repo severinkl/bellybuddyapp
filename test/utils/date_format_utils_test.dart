@@ -38,6 +38,31 @@ void main() {
     });
   });
 
+  group('isoWeekOf', () {
+    test('Monday to Sunday share one week', () {
+      expect(isoWeekOf(DateTime(2026, 11, 16)), 47);
+      expect(isoWeekOf(DateTime(2026, 11, 22, 23, 59)), 47);
+      expect(isoWeekOf(DateTime(2026, 11, 23)), 48);
+    });
+
+    test("days around New Year belong to their Thursday's year", () {
+      // 2026 starts on a Thursday, so it has 53 weeks.
+      expect(isoWeekOf(DateTime(2025, 12, 29)), 1);
+      expect(isoWeekOf(DateTime(2026, 1, 1)), 1);
+      expect(isoWeekOf(DateTime(2026, 12, 31)), 53);
+      expect(isoWeekOf(DateTime(2027, 1, 3)), 53);
+      expect(isoWeekOf(DateTime(2027, 1, 4)), 1);
+      // 3 Jan 2021 (a Sunday) is still in 2020's last week.
+      expect(isoWeekOf(DateTime(2021, 1, 3)), 53);
+    });
+
+    test('ignores the switch to summer time', () {
+      // 29 Mar 2026: in Europe/Vienna that day has 23 hours.
+      expect(isoWeekOf(DateTime(2026, 3, 29, 12)), 13);
+      expect(isoWeekOf(DateTime(2026, 3, 30)), 14);
+    });
+  });
+
   group('weekday names', () {
     test('Monday first, the short forms their first two letters', () {
       expect(kWeekdayNames.first, 'Montag');
@@ -216,30 +241,44 @@ void main() {
   });
 
   group('buildTrackedAt', () {
-    test('null returns a value within the current now() window', () {
+    test('null initialDate → now', () {
+      final now = DateTime(2026, 11, 23, 9, 41);
+      expect(buildTrackedAt(null, now: now), now);
+    });
+
+    test('null without now stays within the current now() window', () {
       final before = DateTime.now();
       final result = buildTrackedAt(null);
       final after = DateTime.now();
-
       expect(result.isAtSameMomentAs(before) || result.isAfter(before), isTrue);
       expect(result.isAtSameMomentAs(after) || result.isBefore(after), isTrue);
     });
 
-    test('non-null: date from initialDate, h:m from now, s/ms zeroed', () {
-      final initialDate = DateTime(2020, 1, 5, 23, 59, 45, 123);
-      final before = DateTime.now();
-      final result = buildTrackedAt(initialDate);
-      final after = DateTime.now();
-
-      expect(result.year, 2020);
-      expect(result.month, 1);
-      expect(result.day, 5);
-      // Guard against the internal DateTime.now() crossing a minute (and,
-      // rarely, hour) boundary between `before` and `after`.
-      expect([before.hour, after.hour], contains(result.hour));
-      expect([before.minute, after.minute], contains(result.minute));
-      expect(result.second, 0);
-      expect(result.millisecond, 0);
+    test('today keeps the current clock time', () {
+      final now = DateTime(2026, 11, 23, 9, 41);
+      expect(
+        buildTrackedAt(DateTime(2026, 11, 23), now: now),
+        DateTime(2026, 11, 23, 9, 41),
+      );
     });
+
+    test('a past day defaults to 12:00', () {
+      final now = DateTime(2026, 11, 23, 9, 41);
+      expect(
+        buildTrackedAt(DateTime(2026, 11, 18, 22, 5), now: now),
+        DateTime(2026, 11, 18, 12),
+      );
+    });
+
+    test('is idempotent', () {
+      final now = DateTime(2026, 11, 23, 9, 41);
+      final once = buildTrackedAt(DateTime(2026, 11, 18), now: now);
+      expect(buildTrackedAt(once, now: now), once);
+    });
+  });
+
+  test('formatLogTargetDay', () {
+    expect(formatLogTargetDay(DateTime(2026, 11, 18)), 'Mi, 18. Nov');
+    expect(formatLogTargetDay(DateTime(2026, 3, 2)), 'Mo, 2. Mär');
   });
 }

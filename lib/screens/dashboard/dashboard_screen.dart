@@ -1,29 +1,25 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/buddy_onboarding_gate_provider.dart';
 import '../../providers/buddy_provider.dart';
+import '../../providers/buddy_welcome_provider.dart';
 import '../../providers/entries_provider.dart';
-import '../../providers/ingredient_suggestion_provider.dart';
-import '../../providers/recommendation_provider.dart';
+import '../../providers/insight_progress_provider.dart';
 import '../../providers/upgrade_gate_provider.dart';
-import '../../widgets/common/circle_icon_button.dart';
 import '../../widgets/common/upgrade_available_dialog.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/tutorial_provider.dart';
-import '../../router/route_names.dart';
-import '../../utils/logger.dart';
 import 'widgets/buddy_hero.dart';
-import 'widgets/feature_card.dart';
+import 'widgets/insight_card.dart';
 import 'widgets/notification_opt_in_dialog.dart';
-import 'widgets/today_list.dart';
 import 'widgets/tutorial/show_dashboard_tutorial.dart';
 import 'widgets/tutorial/tutorial_keys.dart';
 
+/// Home: the Buddy hero (streak chip, the Buddy in his care ring, the next
+/// action) and what he is learning about the user's gut ([InsightCard]).
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
@@ -32,12 +28,18 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
-  static const _log = AppLogger('Dashboard');
+  /// The longest the first tour waits for the Buddy's welcome.
+  static const _welcomeWait = Duration(seconds: 8);
 
   // Active tutorial handle; non-null while the overlay is open. Cancelled
   // in dispose() so the OverlayEntry + its AnimationController don't leak
   // if the screen is torn down mid-tour (e.g. sign-out).
   TutorialHandle? _tutorialHandle;
+
+  // Set once the first load is done and no Buddy onboarding takes over.
+  // From then on a replay request starts the tour right away; before, the
+  // post-load path takes it.
+  bool _firstRunDone = false;
 
   @override
   void initState() {
@@ -51,6 +53,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       // gate): no first-run prompts underneath it. They run when the
       // onboarding comes back here.
       if (!mounted || ref.read(buddyOnboardingRequiredProvider)) return;
+      _firstRunDone = true;
       await _maybeShowTutorial();
       if (!mounted) return;
       _maybeShowNotificationModal();
@@ -76,12 +79,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     super.dispose();
   }
 
+  /// Shows the tour to a new user, and again for each replay requested in
+  /// the Ich tab („Tutorial wiederholen"), even when it was seen. The
+  /// request is taken here, so each one shows the tour once.
   Future<void> _maybeShowTutorial() async {
     if (!mounted) return;
-    final shouldShow = ref.read(tutorialProvider.notifier).shouldShow();
-    if (!shouldShow) return;
-    // The Buddy onboarding already welcomed the user: the spotlight tour
-    // starts right away. tutorialSeenAt is persisted at its end.
+    final tutorial = ref.read(tutorialProvider.notifier);
+    // Taken even while a tour is up: that tour answers the request.
+    final replay = tutorial.consumeReplay();
+    if (_tutorialHandle != null) return;
+    if (!replay && !tutorial.shouldShow()) return;
+    // Right after the Buddy onboarding he says his welcome first; the tour
+    // would cover it. At most [_welcomeWait]: a welcome he never gets to say
+    // (Home hidden) holds nothing up. tutorialSeenAt is persisted at the
+    // tour's end.
+    if (!replay) {
+      await ref
+          .read(buddyWelcomeProvider.notifier)
+          .played
+          .timeout(_welcomeWait, onTimeout: () {});
+      if (!mounted || _tutorialHandle != null) return;
+    }
     final handle = showDashboardTutorial(context);
     _tutorialHandle = handle;
     await handle.future;
@@ -90,32 +108,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     await ref.read(tutorialProvider.notifier).markSeen();
   }
 
+  /// Loads what Home shows. Never throws: a part that fails (offline) is
+  /// logged by its provider and Home shows what it has, so the first-run
+  /// prompts and a replay request still follow; pull to refresh tries again.
   Future<void> _loadData() async {
-    await Future.wait<void>([
-      ref.read(profileProvider.notifier).fetchProfile(),
-      ref
-          .read(entriesProvider.notifier)
-          .loadEntries(ref.read(buddyClockProvider)()),
-      ref.read(ingredientSuggestionProvider.notifier).fetchSuggestions(),
-      _refreshBuddy(),
-    ]);
-  }
-
-  /// Re-evaluates the Buddy's streak. Never throws: a missing backend table
-  /// or a network error only hides the streak chip, so pull-to-refresh
-  /// still completes.
-  Future<void> _refreshBuddy() async {
     try {
-      final buddy = ref.read(buddyProvider);
-      if (buddy.isLoading && !buddy.hasValue) {
-        // The first load (started by the hero) is still running; wait for
-        // it instead of syncing twice.
-        await ref.read(buddyProvider.future);
-      } else {
-        await ref.read(buddyProvider.notifier).refresh();
-      }
-    } catch (e, st) {
-      _log.error('Refreshing the Buddy failed', e, st);
+      await Future.wait<void>([
+        ref.read(profileProvider.notifier).fetchProfile(),
+        ref
+            .read(entriesProvider.notifier)
+            .loadEntries(ref.read(buddyClockProvider)()),
+        ref.read(buddyProvider.notifier).reload(),
+        ref.read(insightProgressProvider.notifier).refresh(),
+      ]);
+    } catch (_) {
+      // Logged by entriesProvider, the one part that rethrows.
     }
   }
 
@@ -133,206 +140,45 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     ref.listen<bool>(softNudgePendingProvider, (_, pending) {
       if (pending) _maybeShowSoftNudge();
     });
-    ref.watch(ingredientSuggestionProvider); // rebuild on data changes
-    final newSuggestionCount = ref
-        .read(ingredientSuggestionProvider.notifier)
-        .newCount;
-    final newRecommendationCount =
-        ref
-            .watch(unseenRecommendationCountProvider)
-            .whenOrNull(data: (count) => count) ??
-        0;
-
+    // „Tutorial wiederholen" while Home is already built (the shell keeps
+    // the tab): the Ich tab requests, then goes Home, and the tour starts in
+    // that same frame. Taken in a microtask, not inside this notification;
+    // before the first load is done, the post-load path takes it instead.
+    ref.listen<bool>(tutorialProvider, (_, pending) {
+      if (pending && _firstRunDone) Future.microtask(_maybeShowTutorial);
+    });
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _loadData,
           color: AppTheme.primary,
-          child: CustomScrollView(
+          // Not lazy: every tour target is built and laid out, even below
+          // the fold, for the tour to scroll to.
+          child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            // A short, fixed set of sections, all built and laid out (box
-            // slivers are never lazy), so every tour target below the fold
-            // exists for the tour to scroll to.
-            slivers: [
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppConstants.spacingLg,
-                    AppConstants.spacingSm,
-                    AppConstants.spacingLg,
-                    0,
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // The header icons sit top-right on the hero's streak
-                      // row.
-                      Stack(
-                        children: [
-                          BuddyHero(key: TutorialKeys.buddy),
-                          const Positioned(
-                            top: 0,
-                            right: 0,
-                            child: _DashboardHeader(),
-                          ),
-                        ],
-                      ),
-                      AppConstants.gap24,
-                      const TodayList(),
-                      AppConstants.gap24,
-                    ],
-                  ),
-                ),
-              ),
-              // The „Für dich" section reaches down to the screen's bottom.
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppConstants.spacing12,
-                  ),
-                  child: _ForYouSection(
-                    newSuggestionCount: newSuggestionCount,
-                    newRecommendationCount: newRecommendationCount,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DashboardHeader extends StatelessWidget {
-  const _DashboardHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        CircleIconButton(
-          key: TutorialKeys.feedback,
-          icon: Icons.feedback_outlined,
-          size: AppConstants.iconBadgeLg,
-          onPressed: () => launchUrl(
-            Uri.parse(AppConstants.feedbackFormUrl),
-            mode: LaunchMode.externalApplication,
-          ),
-        ),
-        const SizedBox(width: AppConstants.spacingSm),
-        CircleIconButton(
-          key: TutorialKeys.settings,
-          icon: Icons.settings,
-          size: AppConstants.iconBadgeLg,
-          onPressed: () => context.push(RoutePaths.settings),
-        ),
-      ],
-    );
-  }
-}
-
-class _ForYouSection extends StatelessWidget {
-  final int newSuggestionCount;
-  final int newRecommendationCount;
-
-  const _ForYouSection({
-    required this.newSuggestionCount,
-    required this.newRecommendationCount,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-        AppConstants.spacingMd,
-        AppConstants.spacing20,
-        AppConstants.spacingMd,
-        AppConstants.spacingMd,
-      ),
-      decoration: const BoxDecoration(
-        color: AppTheme.beige,
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppConstants.radiusXl),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(
-              left: AppConstants.spacingXs,
-              bottom: AppConstants.spacingMd,
+            padding: const EdgeInsets.fromLTRB(
+              AppConstants.spacingLg,
+              AppConstants.spacingSm,
+              AppConstants.spacingLg,
+              AppConstants.spacingLg,
             ),
-            child: Text(
-              'Für dich erstellt',
-              style: TextStyle(
-                fontSize: AppTheme.fontSizeTitle,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.foreground,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                BuddyHero(key: TutorialKeys.buddy),
+                AppConstants.gap16,
+                // Only the card rebuilds with its progress.
+                Consumer(
+                  builder: (_, ref, _) => InsightCard(
+                    key: TutorialKeys.insight,
+                    progress: ref.watch(insightProgressProvider),
+                  ),
+                ),
+              ],
             ),
           ),
-          Row(
-            children: [
-              Expanded(
-                child: FeatureCard(
-                  key: TutorialKeys.fuerDich,
-                  imageAsset: AppConstants.fuerDichCard,
-                  label: 'Tipps',
-                  icon: Icons.auto_awesome,
-                  iconColor: AppTheme.foreground,
-                  hasNew: newRecommendationCount > 0,
-                  onTap: () => context.push(RoutePaths.recommendations),
-                ),
-              ),
-              const SizedBox(width: AppConstants.spacing12),
-              Expanded(
-                child: FeatureCard(
-                  key: TutorialKeys.alternativen,
-                  imageAsset: AppConstants.alternativenCard,
-                  label: 'Alternativen',
-                  icon: Icons.eco,
-                  iconColor: AppTheme.foreground,
-                  badgeCount: newSuggestionCount,
-                  onTap: () => context.push(RoutePaths.ingredientSuggestions),
-                ),
-              ),
-            ],
-          ),
-          AppConstants.gap12,
-          Row(
-            children: [
-              Expanded(
-                child: FeatureCard(
-                  key: TutorialKeys.rezepte,
-                  imageAsset: AppConstants.rezepteCard,
-                  label: 'Rezepte',
-                  icon: Icons.restaurant_menu,
-                  iconColor: AppTheme.foreground,
-                  onTap: () => context.push(RoutePaths.recipes),
-                ),
-              ),
-              const SizedBox(width: AppConstants.spacing12),
-              Expanded(
-                child: FeatureCard(
-                  key: TutorialKeys.wissen,
-                  imageAsset: AppConstants.susiPhone,
-                  label: 'Wissen',
-                  icon: Icons.menu_book,
-                  iconColor: AppTheme.foreground,
-                  onTap: () => launchUrl(
-                    Uri.parse('https://www.myfodmap.at/blog'),
-                    mode: LaunchMode.externalApplication,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }

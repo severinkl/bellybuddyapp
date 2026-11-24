@@ -67,7 +67,12 @@ class _NotificationOptInDialogState
   }
 
   Future<void> _dismiss() async {
-    await markNotificationOptInOffered();
+    try {
+      await postponeReminders(ref);
+    } catch (e) {
+      _log.error('failed to postpone notifications', e);
+      await markNotificationOptInOffered();
+    }
     if (!mounted) return;
     Navigator.pop(context, false);
   }
@@ -105,7 +110,7 @@ class _NotificationOptInDialogState
           ),
           AppConstants.gap12,
           const Text(
-            'Erhalte Erinnerungen zum Tracken, eine tägliche '
+            'Erhalte Erinnerungen zum Eintragen, eine tägliche '
             'Zusammenfassung und persönliche Tipps für '
             'dein Wohlbefinden.',
             style: TextStyle(fontSize: AppTheme.fontSizeBody),

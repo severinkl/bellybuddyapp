@@ -31,7 +31,6 @@ List<Override> _overridesFor(List<Recommendation> recommendations) {
   return [
     recommendationRepositoryProvider.overrideWithValue(mock),
     currentUserIdProvider.overrideWithValue('test-user'),
-    recommendationsNoticeSeenProvider.overrideWith((ref) => true),
   ];
 }
 
@@ -62,7 +61,6 @@ void main() {
         overrides: [
           recommendationRepositoryProvider.overrideWithValue(mock),
           currentUserIdProvider.overrideWithValue('test-user'),
-          recommendationsNoticeSeenProvider.overrideWith((ref) => true),
         ],
       );
       await tester.pump();
@@ -86,17 +84,16 @@ void main() {
         overrides: [
           recommendationRepositoryProvider.overrideWithValue(mock),
           currentUserIdProvider.overrideWithValue('test-user'),
-          recommendationsNoticeSeenProvider.overrideWith((ref) => true),
         ],
       );
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('Fehler beim Laden der Empfehlungen.'), findsOneWidget);
+      expect(find.text('Fehler beim Laden der Tipps.'), findsOneWidget);
       expect(find.text('Erneut versuchen'), findsOneWidget);
     });
 
-    testWidgets('empty state shows mascot + "Noch keine Empfehlungen"', (
+    testWidgets('empty state shows mascot + "Noch keine Tipps"', (
       tester,
     ) async {
       await tester.pumpWithProviders(
@@ -106,7 +103,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.textContaining('Noch keine Empfehlungen'), findsOneWidget);
+      expect(find.textContaining('Noch keine Tipps'), findsOneWidget);
       expect(
         find.byKey(RecommendationsScreen.emptyStateRefreshKey),
         findsOneWidget,
@@ -117,7 +114,7 @@ void main() {
     testWidgets(
       'single-recommendation list renders one page with both chevrons disabled',
       (tester) async {
-        // Single rec with no createdAt → title falls back to 'Empfehlungen'.
+        // Single rec with no createdAt → title falls back to 'Tipps'.
         await tester.pumpWithProviders(
           const RecommendationsScreen(),
           overrides: _overridesFor([_rec('1')]),
@@ -146,12 +143,12 @@ void main() {
           ),
         );
         expect(nextBtn.onPressed, isNull);
-        // No createdAt → AppBar falls back to 'Empfehlungen'.
+        // No createdAt → AppBar falls back to 'Tipps'.
         expect(
-          find.descendant(of: appBar, matching: find.text('Empfehlungen')),
+          find.descendant(of: appBar, matching: find.text('Tipps')),
           findsOneWidget,
         );
-        expect(find.textContaining('Empfehlungen ('), findsNothing);
+        expect(find.textContaining('Tipps ('), findsNothing);
       },
     );
 
@@ -272,7 +269,6 @@ void main() {
         overrides: [
           recommendationRepositoryProvider.overrideWithValue(mock),
           currentUserIdProvider.overrideWithValue('test-user'),
-          recommendationsNoticeSeenProvider.overrideWith((ref) => true),
         ],
       );
       addTearDown(container.dispose);
@@ -367,7 +363,6 @@ void main() {
           overrides: [
             recommendationRepositoryProvider.overrideWithValue(mock),
             currentUserIdProvider.overrideWithValue('test-user'),
-            recommendationsNoticeSeenProvider.overrideWith((ref) => true),
           ],
         );
         addTearDown(container.dispose);
@@ -409,7 +404,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
 
-      expect(find.text('War diese Empfehlung hilfreich?'), findsOneWidget);
+      expect(find.text('War dieser Tipp hilfreich?'), findsOneWidget);
       expect(find.text('Hilfreich'), findsOneWidget);
       expect(find.text('Nicht hilfreich'), findsOneWidget);
     });
@@ -445,7 +440,6 @@ void main() {
           overrides: [
             recommendationRepositoryProvider.overrideWithValue(mock),
             currentUserIdProvider.overrideWithValue('test-user'),
-            recommendationsNoticeSeenProvider.overrideWith((ref) => true),
           ],
         );
         addTearDown(container.dispose);
@@ -520,7 +514,6 @@ void main() {
           overrides: [
             recommendationRepositoryProvider.overrideWithValue(repo),
             currentUserIdProvider.overrideWithValue('u'),
-            recommendationsNoticeSeenProvider.overrideWith((ref) => true),
           ],
           child: MaterialApp.router(
             routerConfig: router,
@@ -576,7 +569,6 @@ void main() {
           overrides: [
             recommendationRepositoryProvider.overrideWithValue(repo),
             currentUserIdProvider.overrideWithValue('test-user'),
-            recommendationsNoticeSeenProvider.overrideWith((ref) => true),
           ],
         );
         addTearDown(container.dispose);
@@ -594,7 +586,7 @@ void main() {
         // Index provider confirms we're at 2 (the latest).
         expect(container.read(recommendationIndexProvider), 2);
 
-        // Simulate the user tapping "Empfehlung ausblenden" in the sheet.
+        // Simulate the user tapping "Tipp ausblenden" in the sheet.
         // This is what the sheet's `_hide()` method calls.
         await container
             .read(recommendationProvider.notifier)
@@ -623,7 +615,6 @@ void main() {
         overrides: [
           recommendationRepositoryProvider.overrideWithValue(repo),
           currentUserIdProvider.overrideWithValue('u'),
-          recommendationsNoticeSeenProvider.overrideWith((ref) => true),
         ],
       );
       await tester.pumpAndSettle();
@@ -636,8 +627,8 @@ void main() {
         ),
         findsOneWidget,
       );
-      // The old "Empfehlungen (X von Y)" counter text is gone.
-      expect(find.textContaining('Empfehlungen ('), findsNothing);
+      // The old "(X von Y)" counter text is gone.
+      expect(find.textContaining('Tipps ('), findsNothing);
     });
 
     testWidgets('chevron actions live in the AppBar, not the body', (
@@ -657,7 +648,6 @@ void main() {
         overrides: [
           recommendationRepositoryProvider.overrideWithValue(repo),
           currentUserIdProvider.overrideWithValue('u'),
-          recommendationsNoticeSeenProvider.overrideWith((ref) => true),
         ],
       );
       await tester.pumpAndSettle();
@@ -689,7 +679,7 @@ void main() {
       );
     });
 
-    testWidgets('AppBar title falls back to "Empfehlungen" on empty list', (
+    testWidgets('AppBar title falls back to "Tipps" on empty list', (
       tester,
     ) async {
       final repo = MockRecommendationRepository();
@@ -701,64 +691,45 @@ void main() {
         overrides: [
           recommendationRepositoryProvider.overrideWithValue(repo),
           currentUserIdProvider.overrideWithValue('u'),
-          recommendationsNoticeSeenProvider.overrideWith((ref) => true),
         ],
       );
       await tester.pumpAndSettle();
 
       final appBar = find.byType(AppBar);
       expect(
-        find.descendant(of: appBar, matching: find.text('Empfehlungen')),
+        find.descendant(of: appBar, matching: find.text('Tipps')),
         findsOneWidget,
       );
     });
 
-    testWidgets(
-      'shows the notice dialog on first open and flips the session flag',
-      (tester) async {
-        final mock = MockRecommendationRepository();
-        when(
-          () => mock.fetchByUserId(any()),
-        ).thenAnswer((_) async => [_rec('1')]);
-        when(() => mock.markAllAsSeen(any())).thenAnswer((_) async {});
+    testWidgets('no pause dialog', (tester) async {
+      await tester.pumpWithProviders(
+        const RecommendationsScreen(),
+        overrides: _overridesFor([_rec('1')]),
+      );
+      await tester.pumpAndSettle();
 
-        final container = createContainer(
-          overrides: [
-            recommendationRepositoryProvider.overrideWithValue(mock),
-            currentUserIdProvider.overrideWithValue('test-user'),
-            // NOTE: notice flag NOT overridden — defaults to false so the
-            // dialog should appear.
-          ],
-        );
-        addTearDown(container.dispose);
+      expect(find.text('Danke, dass du dabei bist! 💛'), findsNothing);
+      expect(find.byType(Dialog), findsNothing);
+    });
 
-        await tester.pumpWidget(
-          UncontrolledProviderScope(
-            container: container,
-            child: const MaterialApp(home: RecommendationsScreen()),
-          ),
-        );
-        await tester.pumpAndSettle();
+    testWidgets("the page's list is headed „Tipps\"", (tester) async {
+      await tester.pumpWithProviders(
+        const RecommendationsScreen(),
+        overrides: _overridesFor([
+          _rec('1', createdAt: DateTime.utc(2026, 11, 16, 10)),
+        ]),
+      );
+      await tester.pumpAndSettle();
 
-        // The notice dialog is shown on first open.
-        expect(find.text('Danke, dass du dabei bist! 💛'), findsOneWidget);
-        // And the session flag has been flipped so it won't show again.
-        expect(container.read(recommendationsNoticeSeenProvider), isTrue);
-      },
-    );
-
-    testWidgets(
-      'does not show the notice dialog when the session flag is already set',
-      (tester) async {
-        await tester.pumpWithProviders(
-          const RecommendationsScreen(),
-          overrides: _overridesFor([_rec('1')]),
-        );
-        await tester.pumpAndSettle();
-
-        // _overridesFor sets the notice flag to true → no dialog.
-        expect(find.text('Danke, dass du dabei bist! 💛'), findsNothing);
-      },
-    );
+      expect(
+        find.descendant(
+          of: find.byType(ListView),
+          matching: find.text('Tipps'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Empfehlungen'), findsNothing);
+    });
   });
 }

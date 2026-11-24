@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/drink_entry.dart';
 import 'package:belly_buddy/models/gut_feeling_entry.dart';
+import 'package:belly_buddy/models/insight_progress.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/toilet_entry.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
@@ -15,6 +16,7 @@ import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/services/buddy/streak_engine.dart';
 import 'package:belly_buddy/services/entry_query_service.dart';
+import 'package:belly_buddy/utils/gut_feeling_rating.dart';
 import 'package:belly_buddy/widgets/buddy/buddy_pose.dart';
 
 import '../helpers/fixtures.dart';
@@ -43,14 +45,15 @@ DrinkEntry _drink(String at) => DrinkEntry.fromDbRow({
   'drinks': {'name': 'Wasser'},
 });
 
-GutFeelingEntry _gutFeeling(String at) => GutFeelingEntry.fromJson({
-  'id': 'g$at',
-  'bloating': 0,
-  'gas': 0,
-  'cramps': 0,
-  'fullness': 0,
-  'tracked_at': _wire(at),
-});
+GutFeelingEntry _gutFeeling(String at, {int bloating = 1}) =>
+    GutFeelingEntry.fromJson({
+      'id': 'g$at',
+      'bloating': bloating,
+      'gas': 0,
+      'cramps': 0,
+      'fullness': 0,
+      'tracked_at': _wire(at),
+    });
 
 ToiletEntry _toilet(String at) => ToiletEntry.fromJson({
   'id': 't$at',
@@ -84,22 +87,23 @@ class _Settled extends MockPostgrestTransformBuilder {
   }) => _future.then(onValue, onError: onError);
 }
 
-/// Serves [wallClocks] (as wire values) from `meal_entries` and nothing from
-/// the other tables; returns each table's filter builder.
+/// Serves [wallClocks] (as wire values) from [table] and nothing from the
+/// other entry tables; returns each table's filter builder.
 Map<String, SettlableFilterBuilder> _serveTrackedAt(
   MockSupabaseClient client,
-  List<String> wallClocks,
-) {
+  List<String> wallClocks, {
+  String table = 'meal_entries',
+}) {
   final filters = <String, SettlableFilterBuilder>{};
-  for (final table in entryTableFor.values) {
+  for (final t in entryTableFor.values) {
     final qb = MockSupabaseQueryBuilder();
     final f = SettlableFilterBuilder(Future.value(<Map<String, dynamic>>[]));
-    final rows = table == 'meal_entries'
+    final rows = t == table
         ? [
             for (final w in wallClocks) {'tracked_at': _wire(w)},
           ]
         : <Map<String, dynamic>>[];
-    when(() => client.from(table)).thenAnswer((_) => qb);
+    when(() => client.from(t)).thenAnswer((_) => qb);
     when(() => qb.select(any())).thenAnswer((_) => f);
     when(() => f.eq(any(), any())).thenAnswer((_) => f);
     when(() => f.gte(any(), any())).thenAnswer((_) => f);
@@ -107,7 +111,7 @@ Map<String, SettlableFilterBuilder> _serveTrackedAt(
     when(
       () => f.order(any(), ascending: any(named: 'ascending')),
     ).thenAnswer((_) => _Page(rows));
-    filters[table] = f;
+    filters[t] = f;
   }
   return filters;
 }
@@ -141,6 +145,37 @@ void main() {
       );
 
       expect(care.meals, 0);
+    });
+  });
+
+  group("the day's Bauchgefühl", () {
+    test('a bad 23:30 check-in is the latest of the day', () {
+      final care = DailyCare.fromEntries(
+        EntriesState(
+          gutFeelings: [
+            _gutFeeling('2026-11-23T12:00'),
+            _gutFeeling('2026-11-23T23:30', bloating: 5),
+          ],
+        ),
+        DateTime(2026, 11, 23, 23, 45),
+      );
+
+      expect(care.gutFeelings, 2);
+      expect(care.lastGutFeelingLevel, GutFeelingRatingLevel.schlecht);
+    });
+  });
+
+  group('thirst pause (Buddy hero)', () {
+    test('a drink read back after a restart is in the past, not ahead', () {
+      final now = DateTime(2026, 11, 23, 4, 58);
+      final care = DailyCare.fromEntries(
+        EntriesState(drinks: [_drink('2026-11-23T04:38')]),
+        now,
+      );
+
+      expect(care.lastDrinkAt, DateTime(2026, 11, 23, 4, 38));
+      expect(care.lastDrinkAt!.isAfter(now), isFalse);
+      expect(now.difference(care.lastDrinkAt!), const Duration(minutes: 20));
     });
   });
 
@@ -186,6 +221,41 @@ void main() {
       final later = DateTime(2026, 11, 23, 15, 30);
       expect(deriveBuddyMood(at(happy), happy), BuddyMood.happy);
       expect(deriveBuddyMood(at(later), later), BuddyMood.hungry);
+    });
+  });
+
+  group('Muster progress', () {
+    late MockSupabaseClient client;
+    late EntryRepository repo;
+
+    setUp(() {
+      client = MockSupabaseClient();
+      repo = EntryRepository(MockEntryCrudService(), EntryQueryService(client));
+    });
+
+    test('late check-ins count, each on its own day', () async {
+      final filters = _serveTrackedAt(client, [
+        '2026-11-21T23:30',
+        '2026-11-22T23:30',
+        '2026-11-23T23:30',
+      ], table: 'gut_feeling_entries');
+
+      final progress = await repo.fetchInsightProgress(
+        userId: testUserId,
+        now: DateTime(2026, 11, 23, 23, 45),
+      );
+
+      expect(
+        progress,
+        const InsightProgress(activeDays: 3, gutFeelingEntries: 3),
+      );
+      // The window starts at local midnight 29 days back, as the wall clock.
+      verify(
+        () => filters['gut_feeling_entries']!.gte(
+          'tracked_at',
+          '2026-10-25T00:00:00.000Z',
+        ),
+      ).called(2);
     });
   });
 

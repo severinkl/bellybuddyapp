@@ -14,6 +14,8 @@ class RecipeDetailSheet extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      // The sheet draws its own handle.
+      showDragHandle: false,
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.85,
         minChildSize: 0.5,

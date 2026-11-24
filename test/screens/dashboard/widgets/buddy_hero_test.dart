@@ -1,36 +1,32 @@
 // ignore_for_file: invalid_use_of_internal_member
-import 'dart:async';
 
-import 'package:cupertino_ui/cupertino_ui.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'
-    show GlobalWidgetsLocalizations;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 
-import 'package:belly_buddy/config/app_theme.dart';
-import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/buddy_welcome_provider.dart';
-import 'package:belly_buddy/providers/diary_provider.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
 import 'package:belly_buddy/screens/buddy/streak_goal_picker.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/streak_sheet.dart';
-import 'package:belly_buddy/screens/dashboard/widgets/today_list.dart';
 import 'package:belly_buddy/services/buddy/buddy_copy.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/utils/date_format_utils.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
+import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
 
+import '../../../helpers/ambient_animations.dart';
+import '../../../helpers/app_host.dart';
+import '../../../helpers/fakes.dart';
 import '../../../helpers/fixtures.dart';
 
 /// A welcome already set when the hero first reads it.
@@ -43,11 +39,10 @@ class _PresetWelcome extends BuddyWelcomeNotifier {
   String? build() => _line;
 }
 
-/// [BuddyNotifier] serving a fixed first result; records the hero's calls.
-class _FakeBuddy extends BuddyNotifier {
-  _FakeBuddy(this._initial);
-
-  final FutureOr<BuddyStatus?> Function() _initial;
+/// [FakeBuddyNotifier] that also records the hero's refreshes and shown
+/// announcements.
+class _FakeBuddy extends FakeBuddyNotifier {
+  _FakeBuddy(super.initial);
 
   /// Every announcement the hero marked as shown, in order.
   final List<BuddyAnnouncement> shown = [];
@@ -57,10 +52,6 @@ class _FakeBuddy extends BuddyNotifier {
   /// a slow backend.
   Duration refreshDelay = Duration.zero;
   BuddyStatus? afterRefresh;
-  final List<int?> goals = [];
-
-  @override
-  Future<BuddyStatus?> build() async => _initial();
 
   @override
   Future<void> refresh() async {
@@ -71,16 +62,10 @@ class _FakeBuddy extends BuddyNotifier {
   }
 
   @override
-  Future<void> setStreakGoal(int? goal) async => goals.add(goal);
-
-  @override
   Future<void> markAnnouncementsShown(List<BuddyAnnouncement> announcements) {
     shown.addAll(announcements);
     return super.markAnnouncementsShown(announcements);
   }
-
-  /// Publishes [status] like a finished refresh.
-  void push(BuddyStatus status) => state = AsyncData(status);
 }
 
 /// [EntriesNotifier] with a seeded state; [loadEntries] loads [next] for
@@ -115,8 +100,8 @@ BuddyStatus _status({
   int savers = 1,
   bool hasRow = true,
   List<BuddyAnnouncement> announcements = const [],
-}) => BuddyStatus(
-  state: BuddyState(userId: 'u1', name: 'Bubu', savers: savers),
+}) => buddyStatus(
+  savers: savers,
   hasRow: hasRow,
   streak: streak,
   todayCounted: todayCounted,
@@ -135,11 +120,12 @@ void main() {
   late _FakeBuddy buddy;
   late _FakeEntries entries;
   late ValueNotifier<bool> visible;
+  late GoRouter router;
+
+  // The hero's bubble and actions need ticking Buddies.
+  tickBuddiesInTests();
 
   setUp(() {
-    // This directory's flutter_test_config.dart stops Buddy tickers; the
-    // hero's bubble and actions need them.
-    AnimatedBuddy.tickerEnabled = true;
     now = DateTime(2026, 11, 22, 14);
     buddy = _FakeBuddy(() => _status());
     entries = _FakeEntries(const EntriesState());
@@ -148,15 +134,13 @@ void main() {
 
   tearDown(() {
     visible.dispose();
-    AnimatedBuddy.tickerEnabled = false;
   });
 
-  /// Pumps the hero on `/` of a router with a `/meal-tracker` stub page;
-  /// `TickerMode` follows [visible].
+  /// Pumps the hero on Home (`/dashboard`) of a router with stub pages for
+  /// the Tagebuch and the trackers; `TickerMode` follows [visible].
   Future<ProviderContainer> pumpHero(
     WidgetTester tester, {
     List<Override> extra = const [],
-    bool withTodayList = false,
   }) async {
     final container = ProviderContainer.test(
       overrides: [
@@ -168,22 +152,16 @@ void main() {
       ],
     );
     addTearDown(container.dispose);
-    final router = GoRouter(
+    router = GoRouter(
+      initialLocation: RoutePaths.dashboard,
       routes: [
         GoRoute(
-          path: '/',
+          path: RoutePaths.dashboard,
           builder: (_, _) => Scaffold(
             body: ValueListenableBuilder<bool>(
               valueListenable: visible,
               builder: (_, on, child) => TickerMode(enabled: on, child: child!),
-              child: SingleChildScrollView(
-                child: Column(
-                  children: [
-                    const BuddyHero(),
-                    if (withTodayList) const TodayList(),
-                  ],
-                ),
-              ),
+              child: const SingleChildScrollView(child: BuddyHero()),
             ),
           ),
         ),
@@ -191,33 +169,19 @@ void main() {
           path: RoutePaths.diary,
           builder: (_, _) => const Scaffold(body: Text('diary-page')),
         ),
-        for (final path in [
+        ...stubRoutes([
           RoutePaths.mealTracker,
           RoutePaths.drinkTracker,
           RoutePaths.gutFeelingTracker,
           RoutePaths.toiletTracker,
-        ])
-          GoRoute(
-            path: path,
-            builder: (_, _) => Scaffold(body: Text('page:$path')),
-          ),
+        ]),
       ],
     );
     addTearDown(router.dispose);
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: MaterialApp.router(
-          theme: AppTheme.theme,
-          routerConfig: router,
-          localizationsDelegates: const [
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: const [Locale('de', 'DE')],
-          locale: const Locale('de', 'DE'),
-        ),
+        child: germanRouterApp(router),
       ),
     );
     // Buddy load, first-frame callbacks and a few Buddy ticks.
@@ -225,6 +189,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 50));
     return container;
   }
+
+  /// The path of the router's top page (a pushed tracker included).
+  String location() =>
+      router.routerDelegate.currentConfiguration.last.matchedLocation;
 
   BuddyController controller(WidgetTester tester) =>
       tester.widget<AnimatedBuddy>(find.byType(AnimatedBuddy)).controller;
@@ -325,7 +293,7 @@ void main() {
       await tick(tester);
 
       expect(careLines(CareAction.drink), contains(controller(tester).bubble));
-      expect(find.text('💧 Getränk eintragen'), findsOneWidget);
+      expect(find.text('💧 Trinken eintragen'), findsOneWidget);
       expect(
         tester.widget<CareRing>(find.byType(CareRing)).highlight,
         CareNeed.drink,
@@ -438,6 +406,31 @@ void main() {
       expect(controller(tester).bubble, _saverEarnedLine);
       await tester.pump(const Duration(seconds: 5));
       expect(buddy.shown, [BuddyAnnouncement.saverEarned]);
+    });
+
+    testWidgets('every load reaches the ring at once: its loading step, '
+        'then the day (no minute tick needed)', (tester) async {
+      await pumpHero(tester);
+      final day = DateTime(2026, 11, 22);
+      // Two loads: Riverpod tells the hero and the care in an order that
+      // alternates, so both orders are covered.
+      for (final meals in [1, 2]) {
+        entries.push(EntriesState(isLoading: true, day: day));
+        await tester.pump();
+        entries.push(
+          EntriesState(
+            day: day,
+            meals: [
+              for (var h = 0; h < meals; h++)
+                testMealEntry(trackedAt: DateTime(2026, 11, 22, 8 + h)),
+            ],
+          ),
+        );
+        await tester.pump();
+        await tester.pump();
+
+        expect(find.text('🍽 $meals/3'), findsOneWidget, reason: '$meals');
+      }
     });
 
     testWidgets('a meal logged 1 h ago → happy', (tester) async {
@@ -606,7 +599,8 @@ void main() {
       final c = controller(tester);
       expect(c.currentAction, BuddyAction.hug);
       expect(c.bubble, _saverUsedLine);
-      expect(find.text(_saverUsedLine), findsOneWidget);
+      // Drawn with the shield glued to its word.
+      expect(find.text(glueClosingSymbol(_saverUsedLine)), findsOneWidget);
       // Still pending while it plays: lost if the app closes now.
       expect(buddy.shown, isEmpty);
       expect(container.read(buddyProvider).value!.announcements, [
@@ -824,6 +818,120 @@ void main() {
       // Lunch logged at 14:00: he asks for a drink next.
       expect(careLines(CareAction.drink), contains(c.bubble));
       await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('right after a drink, while he still wants more, he thanks '
+        'for it instead of asking for a drink', (tester) async {
+      buddy = _FakeBuddy(() => _status(streak: 5, todayCounted: true));
+      final lunch = testMealEntry(trackedAt: DateTime(2026, 11, 22, 13));
+      entries = _FakeEntries(EntriesState(meals: [lunch]));
+      final container = await pumpHero(tester);
+      await advance(tester, const Duration(seconds: 3)); // greeting gone
+
+      container
+          .read(buddyEventsProvider.notifier)
+          .emit(
+            BuddyLogEvent(
+              EntryKind.drink,
+              LogSentiment.good,
+              at: now,
+              trackedAt: now,
+            ),
+          );
+      await tester.pump();
+      entries.push(
+        EntriesState(
+          meals: [lunch],
+          drinks: [testDrinkEntry(trackedAt: now)],
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 600));
+      await tick(tester);
+
+      // One glass of six: a drink is still what he asks for next …
+      expect(find.text('💧 Trinken eintragen'), findsOneWidget);
+      // … but not now: he thanks for this one.
+      final c = controller(tester);
+      expect(careLines(CareAction.drink), isNot(contains(c.bubble)));
+      expect(
+        BuddyCopy.careAfterLog[CareAction.drink]!.map(
+          (l) => BuddyCopy.fill(l, name: 'Bubu'),
+        ),
+        contains(c.bubble),
+      );
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('taps in the half hour after a drink never ask for another '
+        'one; later they may again', (tester) async {
+      buddy = _FakeBuddy(() => _status(streak: 5, todayCounted: true));
+      final lunch = testMealEntry(trackedAt: DateTime(2026, 11, 22, 13));
+      entries = _FakeEntries(EntriesState(meals: [lunch]));
+      final container = await pumpHero(tester);
+      await advance(tester, const Duration(seconds: 3)); // greeting gone
+
+      container
+          .read(buddyEventsProvider.notifier)
+          .emit(
+            BuddyLogEvent(
+              EntryKind.drink,
+              LogSentiment.good,
+              at: now,
+              trackedAt: now,
+            ),
+          );
+      await tester.pump();
+      entries.push(
+        EntriesState(
+          meals: [lunch],
+          drinks: [testDrinkEntry(trackedAt: now)],
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 600));
+      await tick(tester);
+      await advance(tester, const Duration(seconds: 6)); // follow-up gone
+
+      final thanks = BuddyCopy.careAfterLog[CareAction.drink]!
+          .map((l) => BuddyCopy.fill(l, name: 'Bubu'))
+          .toList();
+      final said = <String?>[];
+      Future<void> tapAt(DateTime at) async {
+        now = at;
+        await tester.tap(find.byType(AnimatedBuddy));
+        await tick(tester);
+        said.add(controller(tester).bubble);
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+
+      final drankAt = now;
+      for (var i = 0; i < 6; i++) {
+        await tapAt(drankAt.add(Duration(minutes: 5 * i)));
+        expect(thanks, contains(said.last), reason: 'tap $i');
+      }
+      // The rotation still never repeats a line right away.
+      for (var i = 1; i < said.length; i++) {
+        expect(said[i], isNot(said[i - 1]));
+      }
+
+      // Half an hour on he may be thirsty again.
+      await tapAt(drankAt.add(const Duration(minutes: 31)));
+      expect(careLines(CareAction.drink), contains(said.last));
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('tapping the Buddy again and again never repeats the line '
+        'he just said', (tester) async {
+      await pumpHero(tester);
+      final said = <String?>[controller(tester).bubble];
+      for (var i = 0; i < 12; i++) {
+        await tester.tap(find.byType(AnimatedBuddy));
+        await tick(tester);
+        said.add(controller(tester).bubble);
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+      for (var i = 1; i < said.length; i++) {
+        expect(said[i], isNot(said[i - 1]), reason: 'tap $i: ${said[i]}');
+      }
     });
 
     testWidgets('a mood change during the follow-up delay says nothing extra', (
@@ -1070,8 +1178,9 @@ void main() {
       expect(controller(tester).bubble, isNull);
     });
 
-    testWidgets('resumed the next morning: the ring, „Heute" and the diary '
-        'link move to the new day together', (tester) async {
+    testWidgets('resumed the next morning: the ring moves to the new day', (
+      tester,
+    ) async {
       now = DateTime(2026, 11, 22, 21);
       entries = _FakeEntries(
         EntriesState(
@@ -1084,9 +1193,8 @@ void main() {
           ],
         ),
       );
-      final container = await pumpHero(tester, withTodayList: true);
+      await pumpHero(tester);
       expect(find.text('🍽 1/3'), findsOneWidget);
-      expect(find.text('Abendbrot'), findsOneWidget);
 
       now = DateTime(2026, 11, 23, 8);
       entries.next = const EntriesState(); // nothing logged yet today
@@ -1098,14 +1206,6 @@ void main() {
 
       expect(entries.loaded.map(startOfDay), [DateTime(2026, 11, 23)]);
       expect(find.text('🍽 0/3'), findsOneWidget);
-      expect(find.text('Abendbrot'), findsNothing);
-      expect(find.text(TodayList.emptyText), findsOneWidget);
-
-      await tester.ensureVisible(find.byKey(TodayList.diaryLinkKey));
-      await tester.tap(find.byKey(TodayList.diaryLinkKey));
-      await tester.pump();
-      expect(container.read(diaryDateProvider), DateTime(2026, 11, 23));
-      await tester.pump(const Duration(seconds: 5));
     });
 
     testWidgets('open across midnight: the minute tick loads the new day', (
@@ -1123,8 +1223,8 @@ void main() {
           ],
         ),
       );
-      await pumpHero(tester, withTodayList: true);
-      expect(find.text('Abendbrot'), findsOneWidget);
+      await pumpHero(tester);
+      expect(find.text('🍽 1/3'), findsOneWidget);
 
       now = DateTime(2026, 11, 23, 0, 0, 30);
       await tester.pump(const Duration(minutes: 1));
@@ -1132,7 +1232,6 @@ void main() {
 
       expect(entries.loaded.map(startOfDay), [DateTime(2026, 11, 23)]);
       expect(find.text('🍽 0/3'), findsOneWidget);
-      expect(find.text(TodayList.emptyText), findsOneWidget);
     });
 
     testWidgets('the next-action button opens its tracker', (tester) async {
@@ -1145,21 +1244,65 @@ void main() {
       expect(find.text('page:${RoutePaths.mealTracker}'), findsOneWidget);
     });
 
-    for (final (need, path) in [
-      (CareNeed.food, RoutePaths.mealTracker),
-      (CareNeed.drink, RoutePaths.drinkTracker),
-      (CareNeed.gutFeeling, RoutePaths.gutFeelingTracker),
-      (CareNeed.toilet, RoutePaths.toiletTracker),
-    ]) {
-      testWidgets('the ${need.name} bubble opens $path', (tester) async {
-        await pumpHero(tester);
+    testWidgets('next-action button opens the suggested tracker', (
+      tester,
+    ) async {
+      // Before 05:00 no meal is due; with nothing logged, a drink is.
+      now = DateTime(2026, 11, 22, 4);
+      await pumpHero(tester);
+      expect(find.text('💧 Trinken eintragen'), findsOneWidget);
 
+      await tester.tap(find.byKey(BuddyHero.actionKey));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(location(), RoutePaths.drinkTracker);
+      expect(find.text('page:${RoutePaths.drinkTracker}'), findsOneWidget);
+    });
+
+    testWidgets('a bubble opens its own tracker', (tester) async {
+      await pumpHero(tester);
+
+      for (final (need, path) in [
+        (CareNeed.food, RoutePaths.mealTracker),
+        (CareNeed.drink, RoutePaths.drinkTracker),
+        (CareNeed.gutFeeling, RoutePaths.gutFeelingTracker),
+        (CareNeed.toilet, RoutePaths.toiletTracker),
+      ]) {
         await tester.tap(find.byKey(CareRing.needKey(need)));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 500));
-
+        expect(location(), path, reason: '$need');
         expect(find.text('page:$path'), findsOneWidget);
-      });
-    }
+
+        router.pop();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+    });
+
+    testWidgets('tapping the Buddy pokes, no navigation', (tester) async {
+      await pumpHero(tester);
+      await advance(tester, const Duration(seconds: 3)); // greeting gone
+      expect(controller(tester).bubble, isNull);
+
+      await tester.tap(find.byType(AnimatedBuddy));
+      await tick(tester);
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(location(), RoutePaths.dashboard);
+      expect(find.text('diary-page'), findsNothing);
+      // 14:00, nothing eaten: his lunch line.
+      expect(careLines(CareAction.lunch), contains(controller(tester).bubble));
+    });
+
+    testWidgets('no week row on Home: it lives in „Dein Streak"', (
+      tester,
+    ) async {
+      await pumpHero(tester);
+
+      expect(find.byType(StreakChip), findsOneWidget);
+      expect(find.byType(StreakWeekRow), findsNothing);
+    });
   });
 }

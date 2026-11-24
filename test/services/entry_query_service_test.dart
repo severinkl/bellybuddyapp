@@ -388,6 +388,33 @@ void main() {
       expect(meals!.ranges, [(0, 999), (1000, 1999)]);
     });
 
+    test('with tables, queries only those tables', () async {
+      final qb = MockSupabaseQueryBuilder();
+      final f = SettlableFilterBuilder(Future.value(<Map<String, dynamic>>[]));
+      when(() => client.from('gut_feeling_entries')).thenAnswer((_) => qb);
+      when(() => qb.select(any())).thenAnswer((_) => f);
+      when(() => f.eq(any(), any())).thenAnswer((_) => f);
+      when(() => f.gte(any(), any())).thenAnswer((_) => f);
+      when(() => f.order(any(), ascending: any(named: 'ascending'))).thenAnswer(
+        (_) => _PagedTransform([
+          [
+            {'tracked_at': '2026-03-25T12:00:00.000Z'},
+            {'tracked_at': '2026-03-24T12:00:00.000Z'},
+          ],
+        ]),
+      );
+
+      final result = await service.fetchTrackedAtSince(
+        userId: testUserId,
+        since: since,
+        tables: const ['gut_feeling_entries'],
+      );
+
+      expect(result, hasLength(2));
+      verify(() => client.from('gut_feeling_entries')).called(1);
+      verifyNoMoreInteractions(client);
+    });
+
     test('rethrows exceptions from supabase', () async {
       final qb = MockSupabaseQueryBuilder();
       when(() => client.from(any())).thenAnswer((_) => qb);

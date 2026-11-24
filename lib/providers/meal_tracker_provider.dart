@@ -62,6 +62,26 @@ class MealTrackerState {
         imageUrl != s.imageUrl; // cleared or swapped the image
   }
 
+  /// Leaving now would lose something: in edit mode the changes
+  /// ([isDirty]); for a new meal, a draft (title, ingredients or photo) not
+  /// saved yet.
+  bool get hasUnsavedChanges {
+    if (showSuccess) return false;
+    if (seed != null) return isDirty;
+    return title != kDefaultMealTitle ||
+        ingredients.isNotEmpty ||
+        imageBytes != null ||
+        imageUrl != null;
+  }
+
+  /// This is [recipe] as it was put in, unchanged (title, ingredients and
+  /// photo).
+  bool matchesRecipe(UserRecipe recipe) =>
+      title == recipe.title &&
+      _listEq(ingredients, recipe.ingredients) &&
+      imageBytes == null &&
+      imageUrl == recipe.imageUrl;
+
   // Ingredient order is not user-meaningful (chips render in insertion order but
   // mean the same meal regardless), so dirty-tracking uses set equality.
   static bool _listEq(List<String> a, List<String> b) =>

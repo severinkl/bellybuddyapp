@@ -1,17 +1,14 @@
 // ignore_for_file: invalid_use_of_internal_member
 import 'dart:async';
 
-import 'package:cupertino_ui/cupertino_ui.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'
-    show GlobalWidgetsLocalizations;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
-import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/config/buddy_reactions.dart';
 import 'package:belly_buddy/config/constants.dart';
+import 'package:belly_buddy/config/symptom_options.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/buddy/buddy_onboarding_screen.dart';
@@ -31,6 +28,7 @@ import 'package:belly_buddy/widgets/common/bb_scroll_picker.dart';
 import 'package:belly_buddy/widgets/common/bb_social_button.dart';
 import 'package:belly_buddy/widgets/common/mascot_image.dart';
 
+import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/registration_driver.dart';
@@ -237,17 +235,7 @@ Future<_RoutedWizard> _pumpRoutedWizard(
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
-      child: MaterialApp.router(
-        theme: AppTheme.theme,
-        routerConfig: router,
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: const [Locale('de', 'DE')],
-        locale: const Locale('de', 'DE'),
-      ),
+      child: germanRouterApp(router),
     ),
   );
   await tester.pumpAndSettle();
@@ -580,8 +568,8 @@ void main() {
       }
     });
 
-    testWidgets('on a 393×852 phone the consent checkbox shows without '
-        'scrolling, above „Weiter"', (tester) async {
+    testWidgets('on a 393×852 phone the consent checkbox and the privacy '
+        'policy show without scrolling, above „Weiter"', (tester) async {
       _phone(tester, const Size(393, 852));
       tester.view.padding = const FakeViewPadding(top: 59, bottom: 34);
       addTearDown(tester.view.resetPadding);
@@ -599,6 +587,15 @@ void main() {
       expect(
         tester.getRect(checkbox).bottom,
         lessThanOrEqualTo(tester.getRect(next).top),
+      );
+      // The privacy policy is right there too, above the checkbox, not
+      // under the scrolling text.
+      final policy = find.text('Datenschutzerklärung lesen');
+      expect(policy, findsOneWidget);
+      expect(policy.hitTestable(), findsOneWidget);
+      expect(
+        tester.getRect(policy).bottom,
+        lessThanOrEqualTo(tester.getRect(checkbox).top),
       );
 
       // Ticking it right there enables „Weiter".
@@ -674,7 +671,7 @@ void main() {
       await _tapNext(tester); // height & weight
       await tapVisible(find.text('Vegan'));
       await _tapNext(tester);
-      await tapVisible(find.text(kRegistrationSymptoms.last));
+      await tapVisible(find.text(kRegistrationSymptomOptions.last.label));
       await _tapNext(tester);
       await tapVisible(find.text('Gluten'));
 
@@ -741,7 +738,7 @@ void main() {
       await _tapNext(tester);
       expect(_lines('step:symptoms'), contains(buddy.bubble));
 
-      await tester.tap(find.text(kRegistrationSymptoms.first));
+      await tester.tap(find.text(kRegistrationSymptomOptions.first.label));
       await tester.pumpAndSettle();
       await _tapNext(tester);
       expect(_lines('step:intolerances'), contains(buddy.bubble));
@@ -791,6 +788,60 @@ void main() {
       expect(buddy.mood, _line('gender:weiblich').mood);
     });
 
+    testWidgets('deselecting an intolerance takes back its reaction', (
+      tester,
+    ) async {
+      await _pumpWizard(tester);
+      await _walkTo(tester, IntolerancesStep.intolerancesTitleKey);
+      await tester.pump(RegistrationWizardScreen.buddyFollowUpDelay);
+      await tester.pumpAndSettle();
+      final question = _line('step:intolerances').lines.single;
+      expect(_buddy(tester).bubble, question);
+
+      await tester.tap(find.text('Gluten'));
+      await tester.pumpAndSettle();
+      expect(_lines('intolerance:Gluten'), contains(_buddy(tester).bubble));
+
+      await tester.tap(find.text('Gluten'));
+      await tester.pumpAndSettle();
+      expect(_buddy(tester).bubble, question);
+    });
+
+    testWidgets('deselecting an older pick keeps the newer one\'s reaction', (
+      tester,
+    ) async {
+      await _pumpWizard(tester);
+      await _walkTo(tester, IntolerancesStep.intolerancesTitleKey);
+
+      await tester.tap(find.text('Gluten'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Soja'));
+      await tester.pumpAndSettle();
+      final soja = _buddy(tester).bubble;
+      expect(_lines('intolerance:Soja'), contains(soja));
+
+      await tester.tap(find.text('Gluten'));
+      await tester.pumpAndSettle();
+      expect(_buddy(tester).bubble, soja);
+    });
+
+    testWidgets('deselecting a symptom takes back its reaction', (
+      tester,
+    ) async {
+      await _pumpWizard(tester);
+      await _walkTo(tester, SymptomsStep.symptomsTitleKey);
+      final question = _line('step:symptoms').lines.single;
+      const symptom = 'Verstopfung';
+
+      await tester.tap(find.text(symptom));
+      await tester.pumpAndSettle();
+      expect(_lines('symptom:$symptom'), contains(_buddy(tester).bubble));
+
+      await tester.tap(find.text(symptom));
+      await tester.pumpAndSettle();
+      expect(_buddy(tester).bubble, question);
+    });
+
     testWidgets('choosing „vegan" makes the Buddy fall in love', (
       tester,
     ) async {
@@ -830,17 +881,17 @@ void main() {
       await _walkTo(tester, SymptomsStep.symptomsTitleKey);
       final buddy = _buddy(tester);
 
-      await tester.tap(find.text('Nervige Verstopfung'));
+      await tester.tap(find.text('Verstopfung'));
       await tester.pumpAndSettle();
-      expect(_lines('symptom:Nervige Verstopfung'), contains(buddy.bubble));
+      expect(_lines('symptom:Verstopfung'), contains(buddy.bubble));
 
-      await tester.tap(find.text('Unangenehme Blähungen'));
+      await tester.tap(find.text('Blähungen'));
       await tester.pumpAndSettle();
-      expect(_lines('symptom:Unangenehme Blähungen'), contains(buddy.bubble));
+      expect(_lines('symptom:Blähungen'), contains(buddy.bubble));
       expect(buddy.mood, BuddyMood.empathetic);
 
       final id = buddy.bubbleId;
-      await tester.tap(find.text('Nervige Verstopfung'));
+      await tester.tap(find.text('Verstopfung'));
       await tester.pumpAndSettle();
       expect(buddy.bubbleId, id);
     });
@@ -873,11 +924,11 @@ void main() {
       expect(_lines('intolerance:Gluten'), contains(buddy.bubble));
       expect(buddy.currentAction, BuddyAction.think);
 
-      // Deselecting reacts with nothing; leaving with none selected cheers.
-      final id = buddy.bubbleId;
+      // Deselecting takes the reaction back (he asks again); leaving with
+      // none selected cheers.
       await tester.tap(find.text('Gluten'));
       await tester.pumpAndSettle();
-      expect(buddy.bubbleId, id);
+      expect(buddy.bubble, _line('step:intolerances').lines.single);
 
       await _tapNext(tester);
       expect(find.byType(AuthStep), findsOneWidget);
@@ -915,8 +966,71 @@ void main() {
   });
 
   group('After sign-up', () {
-    testWidgets('with the keyboard open on the auth step the Buddy steps '
-        'aside and „Registrieren" stays reachable', (tester) async {
+    testWidgets('on the auth step the Buddy is compact from the start, '
+        'so opening the keyboard moves nothing', (tester) async {
+      _phone(tester, const Size(402, 874));
+      await tester.pumpWithProviders(
+        const RegistrationWizardScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pumpAndSettle();
+
+      await _withTestFontRows(() async {
+        await advanceToAuthStep(tester);
+        expect(
+          _headerHeight(tester),
+          AppConstants.buddyWizardCompactHeaderHeight,
+        );
+        final email = find.byKey(AuthStep.emailFieldKey);
+        final password = find.byKey(BbPasswordField.passwordFieldKey);
+        final emailTop = tester.getRect(email).top;
+        final passwordTop = tester.getRect(password).top;
+
+        await tester.showKeyboard(email);
+        await _openKeyboard(tester, 336);
+
+        expect(
+          _headerHeight(tester),
+          AppConstants.buddyWizardCompactHeaderHeight,
+        );
+        expect(tester.getRect(email).top, closeTo(emailTop, 0.5));
+        expect(tester.getRect(password).top, closeTo(passwordTop, 0.5));
+        expect(password.hitTestable(), findsOneWidget);
+      });
+    });
+
+    testWidgets('„Ungültige E-Mail" goes away once the address is valid', (
+      tester,
+    ) async {
+      _phone(tester, const Size(402, 874));
+      await tester.pumpWithProviders(
+        const RegistrationWizardScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pumpAndSettle();
+
+      await _withTestFontRows(() async {
+        await advanceToAuthStep(tester);
+        final email = find.byKey(AuthStep.emailFieldKey);
+        await tester.enterText(email, 'abc123');
+        await tester.enterText(
+          find.byKey(BbPasswordField.passwordFieldKey),
+          'TestPassword123',
+        );
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.byKey(AuthStep.submitButtonKey));
+        await tester.tap(find.byKey(AuthStep.submitButtonKey));
+        await tester.pumpAndSettle();
+        expect(find.text('Ungültige E-Mail'), findsOneWidget);
+
+        await tester.enterText(email, 'abc123@example.com');
+        await tester.pump();
+        expect(find.text('Ungültige E-Mail'), findsNothing);
+      });
+    });
+
+    testWidgets('with the keyboard open on the auth step „Registrieren" '
+        'stays reachable', (tester) async {
       _phone(tester, const Size(402, 874));
       await tester.pumpWithProviders(
         const RegistrationWizardScreen(),
@@ -935,7 +1049,7 @@ void main() {
         await tester.showKeyboard(find.byKey(BbPasswordField.passwordFieldKey));
         await _openKeyboard(tester, 336);
 
-        expect(find.byType(AnimatedBuddy), findsNothing);
+        expect(find.byType(AnimatedBuddy), findsOneWidget);
         final submit = find.byKey(AuthStep.submitButtonKey);
         expect(submit.hitTestable(), findsOneWidget);
         expect(tester.getRect(submit).bottom, lessThanOrEqualTo(874 - 336));
@@ -949,6 +1063,81 @@ void main() {
         await tester.pumpAndSettle();
         expect(submit.hitTestable(), findsOneWidget);
         expect(tester.getRect(submit).bottom, lessThanOrEqualTo(874 - 336));
+      });
+    });
+
+    testWidgets('on a 393×852 phone with the keyboard open the header stays '
+        'put, no field slips under it, and „Registrieren" shows in full', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(393, 852)
+        ..devicePixelRatio = 1
+        ..padding = const FakeViewPadding(top: 59, bottom: 34)
+        ..viewPadding = const FakeViewPadding(top: 59, bottom: 34);
+      addTearDown(tester.view.reset);
+      await tester.pumpWithProviders(
+        const RegistrationWizardScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pumpAndSettle();
+
+      await _withTestFontRows(() async {
+        await advanceToAuthStep(tester);
+        final email = find.byKey(AuthStep.emailFieldKey);
+        final password = find.byKey(BbPasswordField.passwordFieldKey);
+        final submit = find.byKey(AuthStep.submitButtonKey);
+        final header = find.byKey(BuddyStepHost.headerKey);
+        Rect stepViewport() => tester.getRect(
+          find.ancestor(of: email, matching: find.byType(Scrollable)).first,
+        );
+        double hostScroll() => tester
+            .state<ScrollableState>(
+              find
+                  .ancestor(of: header, matching: find.byType(Scrollable))
+                  .first,
+            )
+            .position
+            .pixels;
+        void expectInStep(Finder f, String what) {
+          final rect = tester.getRect(f);
+          final viewport = stepViewport();
+          expect(rect.top, greaterThanOrEqualTo(viewport.top), reason: what);
+          expect(rect.bottom, lessThanOrEqualTo(viewport.bottom), reason: what);
+          expect(rect.bottom, lessThanOrEqualTo(852 - 336), reason: what);
+        }
+
+        // A typo in the address, then the password with the keyboard open.
+        // (The keyboard covers the bottom safe area: no padding there.)
+        await tester.showKeyboard(email);
+        tester.view.padding = const FakeViewPadding(top: 59);
+        await _openKeyboard(tester, 336);
+        await tester.enterText(email, 'abc');
+        await tester.showKeyboard(password);
+        await tester.enterText(password, 'TestPassword123');
+        await tester.pumpAndSettle();
+        await tester.tap(submit);
+        await tester.pumpAndSettle();
+        expect(find.text('Ungültige E-Mail'), findsOneWidget);
+
+        expect(hostScroll(), 0, reason: 'the header scrolled away');
+        expect(
+          stepViewport().top,
+          greaterThanOrEqualTo(tester.getRect(header).bottom),
+        );
+        expectInStep(email, 'E-Mail');
+        expectInStep(find.text('Ungültige E-Mail'), 'the error');
+        expectInStep(submit, 'Registrieren');
+
+        // The address fixed: still all in view.
+        await tester.showKeyboard(email);
+        await tester.enterText(email, 'abc@example.com');
+        await tester.pumpAndSettle();
+        expect(hostScroll(), 0, reason: 'the header scrolled away');
+        expectInStep(email, 'E-Mail');
+        expectInStep(password, 'Passwort');
+        expectInStep(submit, 'Registrieren');
+        expect(submit.hitTestable(), findsOneWidget);
       });
     });
 

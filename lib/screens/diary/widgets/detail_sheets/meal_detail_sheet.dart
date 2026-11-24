@@ -31,13 +31,11 @@ class MealDetailSheet extends StatelessWidget {
       canEdit: false,
       isEditing: false,
       saving: false,
-      onDeletePressed: () async {
-        Navigator.pop(context);
+      onDelete: () async {
         await parentRef
             .read(entriesProvider.notifier)
             .deleteByType(entry.type.name, entry.id);
-        final date = parentRef.read(diaryDateProvider);
-        parentRef.invalidate(diaryEntriesProvider(date));
+        refreshDiaryDays(parentRef);
       },
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

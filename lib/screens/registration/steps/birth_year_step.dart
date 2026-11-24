@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
+import '../../../utils/profile_limits.dart';
 import '../../../widgets/common/bb_scroll_picker.dart';
 import '../widgets/step_field_label.dart';
 
@@ -13,8 +14,7 @@ class BirthYearStep extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentYear = DateTime.now().year;
-    final years = List.generate(100, (i) => currentYear - 10 - i);
+    final years = ProfileLimits.birthYears(DateTime.now().year);
 
     return Padding(
       padding: AppConstants.wizardStepPadding,
@@ -24,7 +24,7 @@ class BirthYearStep extends StatelessWidget {
           const StepFieldLabel(
             key: birthYearTitleKey,
             'Geburtsjahr',
-            helper: 'Hilft uns, deine Verdauung besser zu analysieren.',
+            helper: 'Hilft mir, deine Verdauung besser zu analysieren.',
           ),
           AppConstants.gap16,
           Expanded(

@@ -17,6 +17,14 @@ import 'core_providers.dart';
 /// The Buddy's clock. Day boundaries use its local date; tests override it.
 final buddyTodayProvider = Provider<DateTime Function()>((_) => DateTime.now);
 
+/// The app's clock for what „now" means on screen (the dashboard hero's
+/// mood and day, event age, the day the dashboard loads, the plus sheet's
+/// time and suggestion, the Tagebuch's today). Follows the Buddy's clock ([buddyTodayProvider])
+/// unless overridden; tests pin it.
+final buddyClockProvider = Provider<DateTime Function()>(
+  (ref) => ref.watch(buddyTodayProvider),
+);
+
 /// One-shot Buddy messages. They stay pending across refreshes until the
 /// dashboard has played them and calls
 /// [BuddyNotifier.markAnnouncementsShown], which sets their flags; each one
@@ -113,6 +121,25 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
     } catch (e, st) {
       _log.error('Loading the Buddy failed', e, st);
       rethrow;
+    }
+  }
+
+  /// [refresh] for a screen's (re)load, e.g. Home's pull-to-refresh: while
+  /// the first load still runs, waits for it instead of syncing twice.
+  /// Never throws: a missing backend table or a network error only hides
+  /// the streak, so the reload still completes.
+  ///
+  /// A write's refresh (a new entry) calls [refresh] itself: a first load
+  /// that fetched before the write would miss it.
+  Future<void> reload() async {
+    try {
+      if (state.isLoading && !state.hasValue) {
+        await future;
+      } else {
+        await refresh();
+      }
+    } catch (_) {
+      // Logged by build / refresh.
     }
   }
 

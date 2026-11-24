@@ -187,4 +187,48 @@ void main() {
       }
     });
   });
+
+  group('BbSuccessOverlay contrast', () {
+    /// WCAG relative luminance of [c].
+    double luminance(Color c) => c.computeLuminance();
+
+    /// WCAG contrast of [fg] (alpha composited) on [bg].
+    double contrast(Color fg, Color bg) {
+      final shown = Color.alphaBlend(fg, bg);
+      final a = luminance(shown), b = luminance(bg);
+      final (hi, lo) = a > b ? (a, b) : (b, a);
+      return (hi + 0.05) / (lo + 0.05);
+    }
+
+    testWidgets('„Tippen zum Fortfahren" reads at ≥ 4.5:1 on the lime', (
+      tester,
+    ) async {
+      await _pumpOverlay(
+        tester,
+        BbSuccessOverlay(
+          message: 'Gespeichert!',
+          subMessage: 'Ist jetzt in deinem Tagebuch eingetragen.',
+          onDismissed: () {},
+          mascotAsset: 'assets/images/mascot/mascot-happy.png',
+        ),
+      );
+
+      final background = tester
+          .widgetList<Container>(find.byType(Container))
+          .map((c) => c.color)
+          .nonNulls
+          .first;
+      for (final text in [
+        'Tippen zum Fortfahren',
+        'Ist jetzt in deinem Tagebuch eingetragen.',
+      ]) {
+        final color = tester.widget<Text>(find.text(text)).style!.color!;
+        expect(
+          contrast(color, Color.alphaBlend(background, Colors.white)),
+          greaterThanOrEqualTo(4.5),
+          reason: text,
+        );
+      }
+    });
+  });
 }

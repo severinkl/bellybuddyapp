@@ -4,6 +4,8 @@ import 'package:integration_test/integration_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/dashboard_tutorial_overlay.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/tutorial/dashboard_tutorial_steps.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tooltip_bubble.dart';
 
 import '../test/helpers/fakes.dart';
 import '../test/helpers/fixtures.dart';
@@ -45,10 +47,22 @@ void main() {
     expect(find.text('Willkommen bei Belly Buddy!'), findsNothing);
     expect(find.text('Überspringen'), findsOneWidget);
 
-    // Advance 11 times (Buddy + 10 feature steps) via the overlay's advance
+    // Advance through the 7 steps (Buddy and ring, next action, plus,
+    // insight card, Tagebuch, Entdecken, Ich) via the overlay's advance
     // gesture — key-based so the test is independent of where the
-    // Überspringen link sits.
-    for (var i = 0; i < 11; i++) {
+    // Überspringen link sits. Each step must show its own bubble: a target
+    // missing on the real Home would be skipped and end the tour early.
+    expect(dashboardTutorialSteps, hasLength(7));
+    for (final step in dashboardTutorialSteps) {
+      final text = step.richText.map((s) => s.toPlainText()).join();
+      expect(
+        find.descendant(
+          of: find.byType(TooltipBubble),
+          matching: find.text(text, findRichText: true),
+        ),
+        findsOneWidget,
+        reason: text,
+      );
       await tester.tap(find.byKey(DashboardTutorialOverlay.advanceKey));
       await tester.pumpAndSettle();
     }

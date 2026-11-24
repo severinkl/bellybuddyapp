@@ -64,7 +64,7 @@ class _StreakChipState extends State<StreakChip>
     final days = '${widget.streak} ${widget.streak == 1 ? 'Tag' : 'Tage'}';
     final label = '🔥 $days';
     final semantics = [
-      'Serie: $days',
+      'Streak: $days',
       if (muted) 'Heute noch offen',
     ].join(', ');
     final color = muted ? AppTheme.mutedForeground : AppTheme.foreground;

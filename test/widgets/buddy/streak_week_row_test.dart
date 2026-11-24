@@ -69,25 +69,4 @@ void main() {
     );
     h.dispose();
   });
-
-  testWidgets('the small size fits a narrow card', (t) async {
-    await t.pumpWidget(
-      MaterialApp(
-        theme: AppTheme.theme,
-        home: Scaffold(
-          body: Center(
-            child: SizedBox(
-              width: 260,
-              child: StreakWeekRow(
-                activeDays: {DateTime(2026, 11, 23)},
-                today: _wednesday,
-                size: StreakWeekRowSize.small,
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-    expect(t.takeException(), isNull);
-  });
 }

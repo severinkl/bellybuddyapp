@@ -2,15 +2,18 @@ import 'dart:async';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' show AsyncData;
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/drink.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
+import 'package:belly_buddy/models/insight_progress.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/models/user_recipe.dart';
+import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/repositories/auth_repository.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/drink_repository.dart';
@@ -236,11 +239,14 @@ class FakeProfileRepository implements ProfileRepository {
 
 // -- FakeEntryRepository --
 class FakeEntryRepository implements EntryRepository {
-  FakeEntryRepository({this.throwOnUpdate = false});
+  FakeEntryRepository({this.throwOnUpdate = false, this.throwOnDelete = false});
 
   /// When true, [updateEntry] throws on invocation. Used in tests that verify
   /// the screen stays open and surfaces the error rather than popping.
   final bool throwOnUpdate;
+
+  /// When true, [deleteByType] throws on invocation (a delete that fails).
+  final bool throwOnDelete;
 
   final List<Map<String, dynamic>> _inserted = [];
 
@@ -286,18 +292,49 @@ class FakeEntryRepository implements EntryRepository {
     }).toSet();
   }
 
+  /// What [fetchInsightProgress] returns.
+  InsightProgress insightProgress = const InsightProgress(
+    activeDays: 0,
+    gutFeelingEntries: 0,
+  );
+
+  /// When set, [fetchInsightProgress] throws it.
+  Object? insightProgressError;
+
+  /// The `now` of every [fetchInsightProgress] call, in order.
+  final List<DateTime> insightProgressFetches = [];
+
+  @override
+  Future<InsightProgress> fetchInsightProgress({
+    required String userId,
+    required DateTime now,
+  }) async {
+    insightProgressFetches.add(now);
+    final error = insightProgressError;
+    if (error != null) throw error;
+    return insightProgress;
+  }
+
   @override
   Future<List<MealEntry>> fetchRecentMeals({
     required String userId,
     int? limit,
   }) async => _result.meals;
 
+  /// When set, [fetchForDate] throws it (a day that fails to load).
+  Object? fetchForDateError;
+
   @override
   Future<EntryQueryResult> fetchForDate({
     required String userId,
     required DateTime date,
     bool ordered = false,
-  }) async => _result;
+  }) async {
+    final error = fetchForDateError;
+    if (error != null) throw error;
+    return _result;
+  }
+
   @override
   Future<void> insertEntry(
     String table,
@@ -325,7 +362,9 @@ class FakeEntryRepository implements EntryRepository {
   @override
   Future<void> deleteEntry(String table, String id) async {}
   @override
-  Future<void> deleteByType(String type, String id) async {}
+  Future<void> deleteByType(String type, String id) async {
+    if (throwOnDelete) throw Exception('fake delete failure');
+  }
 }
 
 // -- FakeDrinkRepository --
@@ -334,13 +373,22 @@ class FakeDrinkRepository implements DrinkRepository {
 
   void seedDrinks(List<Drink> drinks) => _drinks = drinks;
 
+  /// The ids [fetchRecentDrinkIds] returns; null: every seeded drink.
+  List<String>? recentDrinkIds;
+
   @override
   Future<List<Drink>> fetchAll() async => _drinks;
   @override
-  Future<int> fetchTodayTotal(String userId) async => 500;
+  Future<int> fetchDayTotal(String userId, DateTime day) async {
+    dayTotalFetches.add(day);
+    return 500;
+  }
+
+  /// The day of every [fetchDayTotal] call, in order.
+  final List<DateTime> dayTotalFetches = [];
   @override
   Future<List<String>> fetchRecentDrinkIds(String userId) async =>
-      _drinks.map((d) => d.id).toList();
+      recentDrinkIds ?? _drinks.map((d) => d.id).toList();
   @override
   Future<Drink> insertDrink(String name, {required String userId}) async {
     final drink = testDrink(id: 'new-drink', name: name, addedByUserId: userId);
@@ -533,6 +581,12 @@ UserRecipe testUserRecipe({
 class FakeNotificationRepository implements NotificationRepository {
   int syncCount = 0;
 
+  /// What [permissionStatus] reports.
+  NotificationPermission permission = NotificationPermission.granted;
+
+  @override
+  Future<NotificationPermission> permissionStatus() async => permission;
+
   @override
   Future<void> syncNotifications(
     UserProfile profile, {
@@ -587,4 +641,82 @@ class FakeBuddyRepository implements BuddyRepository {
     if (throwOnSave) throw Exception('save failed');
     store[userId] = state.copyWith(userId: userId);
   }
+}
+
+// -- FakeBuddyNotifier --
+
+/// A loaded Buddy status: a [BuddyState] row named [name] with the streak
+/// figures.
+BuddyStatus buddyStatus({
+  String userId = testUserId,
+  String name = 'Bubu',
+  int? goal,
+  int savers = 0,
+  DateTime? onboardingCompletedAt,
+  bool hasRow = true,
+  int streak = 0,
+  bool todayCounted = false,
+  Set<DateTime> weekDays = const {},
+  List<BuddyAnnouncement> announcements = const [],
+}) => BuddyStatus(
+  state: BuddyState(
+    userId: userId,
+    name: name,
+    streakGoal: goal,
+    savers: savers,
+    onboardingCompletedAt: onboardingCompletedAt,
+  ),
+  hasRow: hasRow,
+  streak: streak,
+  todayCounted: todayCounted,
+  weekDays: weekDays,
+  announcements: announcements,
+);
+
+/// [BuddyNotifier] serving [initial] (none: no Buddy) without a backend.
+/// Records names and goals: [setName] publishes the new name like the real
+/// one, or throws while [failRename]; [setStreakGoal] throws while
+/// [failGoal]. [push] publishes a status like a finished refresh.
+class FakeBuddyNotifier extends BuddyNotifier {
+  FakeBuddyNotifier([FutureOr<BuddyStatus?> Function()? initial])
+    : _initial = initial;
+
+  final FutureOr<BuddyStatus?> Function()? _initial;
+
+  bool failRename = false;
+  bool failGoal = false;
+  final List<String> names = [];
+  final List<int?> goals = [];
+
+  /// When set, [setName] / [setStreakGoal] wait for it (a slow save).
+  Future<void>? nameSave, goalSave;
+
+  @override
+  Future<BuddyStatus?> build() async => _initial?.call();
+
+  @override
+  Future<void> setName(String name) async {
+    names.add(name);
+    await nameSave;
+    if (failRename) throw Exception('offline');
+    final s = state.value!;
+    push(
+      BuddyStatus(
+        state: s.state.copyWith(name: name),
+        hasRow: true,
+        streak: s.streak,
+        todayCounted: s.todayCounted,
+        weekDays: s.weekDays,
+      ),
+    );
+  }
+
+  @override
+  Future<void> setStreakGoal(int? goal) async {
+    goals.add(goal);
+    await goalSave;
+    if (failGoal) throw Exception('offline');
+  }
+
+  void push(BuddyStatus? status) => state = AsyncData(status);
 }

@@ -1,13 +1,18 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../providers/buddy_provider.dart';
+import '../../../utils/logger.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/bb_card.dart';
 import '../../../widgets/common/bb_drag_handle.dart';
+import '../../../widgets/common/bb_progress_bar.dart';
 import '../../buddy/streak_goal_picker.dart';
 import '../../buddy/widgets/streak_moment.dart';
+
+const _log = AppLogger('StreakSheet');
 
 /// „Dein Streak" for [status]: the count and this week's row, the goal's
 /// progress, the streak savers, and „Ziel ändern" (the goal list to choose
@@ -20,10 +25,44 @@ Future<int?> showStreakSheet(
 }) {
   return showModalBottomSheet<int>(
     context: context,
+    // Over the whole screen, the bottom bar included: from a tab's own
+    // navigator the sheet slid under the bar, its scrim left the bar
+    // tappable and a tab switch left it open.
+    useRootNavigator: true,
     isScrollControlled: true,
     showDragHandle: false,
     builder: (_) => StreakSheet(status: status, today: today),
   );
+}
+
+/// Opens „Dein Streak" ([showStreakSheet]) and saves the goal chosen there
+/// ([saveStreakGoal]), unless the sheet was dismissed or [context] is gone
+/// by then. A failing save shows a SnackBar.
+Future<void> openStreakSheetAndSaveGoal(
+  BuildContext context,
+  WidgetRef ref, {
+  required BuddyStatus status,
+  required DateTime today,
+}) async {
+  final goal = await showStreakSheet(context, status: status, today: today);
+  if (goal == null || !context.mounted) return;
+  final saved = await saveStreakGoal(ref, goal);
+  if (saved || !context.mounted) return;
+  ScaffoldMessenger.of(context).showSnackBar(
+    const SnackBar(content: Text('Das Ziel konnte nicht gespeichert werden.')),
+  );
+}
+
+/// Sets the Buddy's streak goal to [goal]. Never throws: a failing save is
+/// logged and reported as false.
+Future<bool> saveStreakGoal(WidgetRef ref, int goal) async {
+  try {
+    await ref.read(buddyProvider.notifier).setStreakGoal(goal);
+    return true;
+  } catch (e, st) {
+    _log.error('Saving the new streak goal failed', e, st);
+    return false;
+  }
 }
 
 class StreakSheet extends StatefulWidget {
@@ -153,7 +192,6 @@ class _GoalProgress extends StatelessWidget {
       );
     }
     final reached = streak >= goal;
-    final share = (streak / goal).clamp(0.0, 1.0);
     final note = reached
         ? 'Geschafft! 🎉'
         : '${kStreakGoalLabels[goal] ?? ''} · $streak von $goal';
@@ -180,22 +218,9 @@ class _GoalProgress extends StatelessWidget {
               ],
             ),
             AppConstants.gap8,
-            ClipRRect(
-              borderRadius: BorderRadius.circular(AppConstants.radiusFull),
-              child: SizedBox(
-                height: AppConstants.streakProgressHeight,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    const ColoredBox(color: AppTheme.muted),
-                    FractionallySizedBox(
-                      alignment: Alignment.centerLeft,
-                      widthFactor: share,
-                      child: const ColoredBox(color: AppTheme.primary),
-                    ),
-                  ],
-                ),
-              ),
+            BbProgressBar(
+              value: streak / goal,
+              height: AppConstants.streakProgressHeight,
             ),
           ],
         ),
@@ -233,7 +258,7 @@ class _SaverCard extends StatelessWidget {
                 StreakSheet.saverText,
                 style: TextStyle(
                   fontSize: AppTheme.fontSizeBody,
-                  height: 1.4,
+                  height: AppTheme.lineHeightBody,
                   color: AppTheme.mutedForeground,
                 ),
               ),

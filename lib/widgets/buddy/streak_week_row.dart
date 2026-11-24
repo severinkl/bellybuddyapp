@@ -4,9 +4,6 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../utils/date_format_utils.dart';
 
-/// How big [StreakWeekRow] draws its days.
-enum StreakWeekRowSize { regular, small }
-
 /// The current local week, Monday to Sunday: one circle per day with a 🔥
 /// on each day in [activeDays] (any time of day counts), today's label in
 /// bold and ringed. Future days stay empty.
@@ -15,7 +12,6 @@ class StreakWeekRow extends StatelessWidget {
     super.key,
     required this.activeDays,
     required this.today,
-    this.size = StreakWeekRowSize.regular,
   });
 
   /// Today's circle.
@@ -27,8 +23,6 @@ class StreakWeekRow extends StatelessWidget {
   /// Now; picks the week.
   final DateTime today;
 
-  final StreakWeekRowSize size;
-
   @override
   Widget build(BuildContext context) {
     final day0 = startOfDay(today);
@@ -39,7 +33,6 @@ class StreakWeekRow extends StatelessWidget {
       for (var i = 0; i < 7; i++)
         if (active.contains(days[i])) kWeekdayNames[i],
     ];
-    final small = size == StreakWeekRowSize.small;
     return Semantics(
       label: activeNames.isEmpty
           ? 'Diese Woche noch kein Eintrag'
@@ -54,7 +47,6 @@ class StreakWeekRow extends StatelessWidget {
                   label: kWeekdayShortNames[i],
                   active: active.contains(days[i]),
                   isToday: days[i] == day0,
-                  small: small,
                 ),
               ),
           ],
@@ -70,19 +62,15 @@ class _Day extends StatelessWidget {
     required this.label,
     required this.active,
     required this.isToday,
-    required this.small,
   });
 
   final String label;
   final bool active;
   final bool isToday;
-  final bool small;
 
   @override
   Widget build(BuildContext context) {
-    final circle = small
-        ? AppConstants.streakWeekDaySizeSmall
-        : AppConstants.streakWeekDaySize;
+    const circle = AppConstants.streakWeekDaySize;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -95,29 +83,21 @@ class _Day extends StatelessWidget {
             color: active ? AppTheme.primarySoft : AppTheme.background,
             border: Border.all(
               color: active || isToday ? AppTheme.primary : AppTheme.border,
-              width: small
-                  ? AppConstants.borderWidthMd
-                  : AppConstants.borderWidthLg,
+              width: AppConstants.borderWidthLg,
             ),
           ),
           child: active
-              ? Text(
+              ? const Text(
                   '🔥',
-                  style: TextStyle(
-                    fontSize: small
-                        ? AppTheme.fontSizeCaption
-                        : AppTheme.fontSizeSubtitleLG,
-                  ),
+                  style: TextStyle(fontSize: AppTheme.fontSizeSubtitleLG),
                 )
               : null,
         ),
-        SizedBox(
-          height: small ? AppConstants.spacing2 : AppConstants.spacingXs,
-        ),
+        const SizedBox(height: AppConstants.spacingXs),
         Text(
           label,
           style: TextStyle(
-            fontSize: small ? AppTheme.fontSizeSM : AppTheme.fontSizeCaptionLG,
+            fontSize: AppTheme.fontSizeCaptionLG,
             fontWeight: isToday ? FontWeight.w700 : FontWeight.w500,
             color: isToday ? AppTheme.foreground : AppTheme.mutedForeground,
           ),

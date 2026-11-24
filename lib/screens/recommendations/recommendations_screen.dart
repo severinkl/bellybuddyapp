@@ -14,7 +14,6 @@ import '../../widgets/common/mascot_image.dart';
 import 'widgets/recommendation_card.dart';
 import 'widgets/recommendation_feedback_view.dart';
 import 'widgets/recommendation_summary_card.dart';
-import 'widgets/recommendations_notice_dialog.dart';
 
 class RecommendationsScreen extends ConsumerStatefulWidget {
   const RecommendationsScreen({super.key});
@@ -57,16 +56,6 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
       final notifier = ref.read(recommendationProvider.notifier);
       await notifier.fetchRecommendations();
       await notifier.markAllAsSeen();
-    });
-
-    // Show the "no new recommendations for now" notice once per app session.
-    // The flag lives in memory only, so it resets on cold start. Scheduled
-    // post-frame so the first frame (and the Navigator) is ready.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      if (ref.read(recommendationsNoticeSeenProvider)) return;
-      ref.read(recommendationsNoticeSeenProvider.notifier).state = true;
-      showRecommendationsNoticeDialog(context);
     });
   }
 
@@ -158,7 +147,7 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
           children: [
             SizedBox(height: MediaQuery.of(context).size.height * 0.2),
             BbErrorState(
-              message: 'Fehler beim Laden der Empfehlungen.',
+              message: 'Fehler beim Laden der Tipps.',
               onRetry: () => ref
                   .read(recommendationProvider.notifier)
                   .fetchRecommendations(),
@@ -196,7 +185,7 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
                   horizontal: AppConstants.spacingXl,
                 ),
                 child: Text(
-                  'Noch keine Empfehlungen — sobald Belly Buddy deine Daten analysiert hat, siehst du sie hier.',
+                  'Noch keine Tipps — sobald Belly Buddy deine Daten analysiert hat, siehst du sie hier.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: AppTheme.fontSizeBodyLG,
@@ -233,7 +222,7 @@ class _RecommendationsTitle extends ConsumerWidget {
         .watch(recommendationProvider)
         .maybeWhen(data: (r) => r, orElse: () => const <Recommendation>[]);
 
-    String text = 'Empfehlungen';
+    String text = 'Tipps';
     if (recs.isNotEmpty) {
       final rawIndex = ref.watch(recommendationIndexProvider);
       // Clamp against the current list length: when the user hides the
@@ -377,7 +366,7 @@ class _RecommendationPage extends ConsumerWidget {
           RecommendationSummaryCard(recommendation: recommendation),
           AppConstants.gap20,
           const Text(
-            'Empfehlungen',
+            'Tipps',
             style: TextStyle(
               fontSize: AppTheme.fontSizeTitle,
               fontWeight: FontWeight.w600,

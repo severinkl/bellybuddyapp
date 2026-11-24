@@ -4,27 +4,20 @@ import 'dart:async';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/user_profile.dart';
-import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_onboarding_gate_provider.dart';
+import 'package:belly_buddy/providers/buddy_welcome_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/providers/upgrade_gate_provider.dart';
-import 'package:belly_buddy/repositories/auth_repository.dart';
-import 'package:belly_buddy/repositories/buddy_repository.dart';
-import 'package:belly_buddy/repositories/drink_repository.dart';
-import 'package:belly_buddy/repositories/entry_repository.dart';
-import 'package:belly_buddy/repositories/ingredient_repository.dart';
-import 'package:belly_buddy/repositories/meal_media_repository.dart';
-import 'package:belly_buddy/repositories/notification_repository.dart';
-import 'package:belly_buddy/repositories/profile_repository.dart';
-import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/router/app_router.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/auth/auth_screen.dart';
 import 'package:belly_buddy/screens/buddy/buddy_onboarding_screen.dart';
 import 'package:belly_buddy/screens/dashboard/dashboard_screen.dart';
 import 'package:belly_buddy/screens/diary/diary_screen.dart';
+import 'package:belly_buddy/screens/discover/discover_screen.dart';
 import 'package:belly_buddy/screens/health_consent/health_consent_screen.dart';
 import 'package:belly_buddy/screens/loading_screen.dart';
+import 'package:belly_buddy/screens/me/me_screen.dart';
 import 'package:belly_buddy/screens/recipes/recipe_editor_screen.dart';
 import 'package:belly_buddy/screens/trackers/drink/drink_tracker_screen.dart';
 import 'package:belly_buddy/screens/trackers/meal/meal_tracker_screen.dart';
@@ -33,57 +26,13 @@ import 'package:belly_buddy/screens/upgrade/upgrade_required_screen.dart';
 import 'package:belly_buddy/widgets/buddy/animated_buddy.dart';
 import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'
-    show GlobalWidgetsLocalizations;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:riverpod/src/internals.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../helpers/app_host.dart';
 import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
-
-/// Pared-down app root: owns the upgrade decision like [BellyBuddyApp] and
-/// loads the profile on start when signed in (and on sign-in, resets it on
-/// sign-out, listening after the router like the app), without the splash
-/// overlay.
-class _GateTestHost extends ConsumerStatefulWidget {
-  const _GateTestHost();
-
-  @override
-  ConsumerState<_GateTestHost> createState() => _GateTestHostState();
-}
-
-class _GateTestHostState extends ConsumerState<_GateTestHost> {
-  @override
-  void initState() {
-    super.initState();
-    if (ref.read(isAuthenticatedProvider)) {
-      Future.microtask(() => ref.read(profileProvider.notifier).fetchProfile());
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final router = ref.watch(routerProvider);
-    listenForUpgradeDecision(ref);
-    ref.listen<bool>(isAuthenticatedProvider, (_, signedIn) {
-      final profile = ref.read(profileProvider.notifier);
-      signedIn ? profile.fetchProfile() : profile.reset();
-    });
-    return MaterialApp.router(
-      debugShowCheckedModeBanner: false,
-      routerConfig: router,
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [Locale('de', 'DE')],
-      locale: const Locale('de', 'DE'),
-    );
-  }
-}
 
 const _introLine = 'Hi! Ich bin neu hier — dein Belly Buddy.';
 const _streakTitle = 'Wie viele Tage schaffen wir zusammen?';
@@ -94,26 +43,6 @@ const _optInTitle = 'Bleib auf dem Laufenden!';
 const _tourSkip = 'Überspringen';
 
 final _completedAt = DateTime(2026, 11, 1);
-
-List<Override> _overrides({
-  required FakeProfileRepository profiles,
-  required FakeBuddyRepository buddies,
-  UpgradeDecision decision = UpgradeDecision.ok,
-  FakeAuthRepository? auth,
-}) => [
-  authRepositoryProvider.overrideWithValue(auth ?? FakeAuthRepository()),
-  profileRepositoryProvider.overrideWithValue(profiles),
-  buddyRepositoryProvider.overrideWithValue(buddies),
-  entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
-  drinkRepositoryProvider.overrideWithValue(FakeDrinkRepository()),
-  ingredientRepositoryProvider.overrideWithValue(FakeIngredientRepository()),
-  userRecipeRepositoryProvider.overrideWithValue(FakeUserRecipeRepository()),
-  mealMediaRepositoryProvider.overrideWithValue(FakeMealMediaRepository()),
-  notificationRepositoryProvider.overrideWithValue(
-    FakeNotificationRepository(),
-  ),
-  upgradeDecisionProvider.overrideWith((_) => Future.value(decision)),
-];
 
 String _currentPath(ProviderContainer container) =>
     container.read(routerProvider).routerDelegate.currentConfiguration.uri.path;
@@ -163,17 +92,17 @@ Future<ProviderContainer> _pumpHost(
   _reduceMotion(tester);
 
   final container = ProviderContainer.test(
-    overrides: _overrides(
+    overrides: baseOverrides(
+      auth: auth,
       profiles: profiles,
       buddies: buddies,
       decision: decision,
-      auth: auth,
     ),
   );
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: container,
-      child: const _GateTestHost(),
+      child: const AppTestHost(followAuth: true),
     ),
   );
   if (settle) {
@@ -196,10 +125,11 @@ Future<void> _pumpFrames(
   }
 }
 
-/// Not a single frame of the dashboard (or the diary) so far.
+/// Not a single frame of any tab (Home, Tagebuch, Entdecken, Ich) so far.
 void _expectNoShell(WidgetTester tester) {
-  expect(find.byType(DashboardScreen, skipOffstage: false), findsNothing);
-  expect(find.byType(DiaryScreen, skipOffstage: false), findsNothing);
+  for (final tab in [DashboardScreen, DiaryScreen, DiscoverScreen, MeScreen]) {
+    expect(find.byType(tab, skipOffstage: false), findsNothing, reason: '$tab');
+  }
 }
 
 /// The auth screen's social buttons need more width than 400 px in the
@@ -408,6 +338,26 @@ void main() {
       );
     });
 
+    testWidgets('/me and /discover → /buddy-onboarding when required', (
+      tester,
+    ) async {
+      final container = await _pumpHost(
+        tester,
+        profiles: _profilesWith(testUserProfile()),
+        buddies: FakeBuddyRepository(),
+      );
+      expect(_currentPath(container), RoutePaths.buddyOnboarding);
+
+      final router = container.read(routerProvider);
+      for (final route in [RoutePaths.me, RoutePaths.discover]) {
+        router.go(route);
+        await tester.pumpAndSettle();
+        expect(_currentPath(container), RoutePaths.buddyOnboarding);
+        expect(find.byType(BuddyOnboardingScreen), findsOneWidget);
+      }
+      _expectNoShell(tester);
+    });
+
     testWidgets('a completed Buddy passes the gate', (tester) async {
       final container = await _pumpHost(
         tester,
@@ -473,8 +423,8 @@ void main() {
       expect(find.byType(UpgradeRequiredScreen), findsOneWidget);
     });
 
-    testWidgets('a first-run user gets the spotlight tour right after the '
-        'onboarding, without the old welcome modal', (tester) async {
+    testWidgets('a first-run user is welcomed by the Buddy, then gets the '
+        'spotlight tour, without the old welcome modal', (tester) async {
       final container = await _pumpHost(
         tester,
         profiles: _profilesWith(
@@ -494,6 +444,19 @@ void main() {
       await _pickGoal(tester, '7 Tage');
 
       expect(_currentPath(container), RoutePaths.dashboard);
+      // His welcome first, uncovered …
+      expect(
+        tester
+            .widget<AnimatedBuddy>(find.byType(AnimatedBuddy))
+            .controller
+            .bubble,
+        BuddyWelcomeNotifier.line,
+      );
+      expect(find.text(_tourSkip), findsNothing);
+      // … then the tour.
+      for (var i = 0; i < 50; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
       expect(find.text(_tourSkip), findsOneWidget);
       expect(find.text(_welcomeModalTitle), findsNothing);
     });
@@ -625,6 +588,38 @@ void main() {
       expect(find.byType(DashboardScreen), findsOneWidget);
     });
 
+    testWidgets('discover and me are held on /loading while pending', (
+      tester,
+    ) async {
+      for (final path in [RoutePaths.discover, RoutePaths.me]) {
+        await tester.pumpWidget(const SizedBox.shrink());
+        final buddies = FakeBuddyRepository()
+          ..store[testUserId] = BuddyState(
+            userId: testUserId,
+            onboardingCompletedAt: _completedAt,
+          )
+          ..fetchHold = Completer<void>();
+        final container = await _pumpHost(
+          tester,
+          profiles: _profilesWith(testUserProfile()),
+          buddies: buddies,
+          settle: false,
+        );
+
+        final router = container.read(routerProvider);
+        router.go(path);
+        await _pumpFrames(tester);
+        final held = router.routerDelegate.currentConfiguration.uri;
+        expect(held.path, RoutePaths.loading, reason: path);
+        expect(held.queryParameters['to'], path, reason: path);
+        _expectNoShell(tester);
+
+        buddies.fetchHold!.complete();
+        await tester.pumpAndSettle();
+        expect(_currentPath(container), path);
+      }
+    });
+
     testWidgets('a Buddy that never answers holds the app only briefly '
         '(never blocks it)', (tester) async {
       final buddies = FakeBuddyRepository()..fetchHold = Completer<void>();
@@ -668,5 +663,22 @@ void main() {
       await tester.pumpAndSettle();
       expect(_currentPath(container), RoutePaths.dashboard);
     });
+  });
+
+  test('/recommendations is never gated', () {
+    // A notification tap lands there whatever the gate's state.
+    for (final isRequired in [false, true]) {
+      for (final isPending in [false, true]) {
+        expect(
+          buddyOnboardingRedirect(
+            isRequired: isRequired,
+            isPending: isPending,
+            location: Uri.parse(RoutePaths.recommendations),
+          ),
+          isNull,
+          reason: 'required: $isRequired, pending: $isPending',
+        );
+      }
+    }
   });
 }

@@ -1,8 +1,5 @@
 // ignore_for_file: invalid_use_of_internal_member
-import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'
-    show GlobalWidgetsLocalizations;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
@@ -10,6 +7,8 @@ import 'package:riverpod/src/internals.dart' show Override;
 import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
+
+import 'app_host.dart';
 
 /// Creates a [ProviderContainer] with the given overrides.
 /// Automatically disposes after the test via [ProviderContainer.test].
@@ -49,13 +48,9 @@ extension PumpWithProviders on WidgetTester {
         overrides: overrides,
         child: MaterialApp(
           theme: AppTheme.theme,
-          localizationsDelegates: const [
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: const [Locale('de', 'DE')],
-          locale: const Locale('de', 'DE'),
+          localizationsDelegates: germanLocalizations,
+          supportedLocales: const [germanLocale],
+          locale: germanLocale,
           home: widget,
         ),
       ),

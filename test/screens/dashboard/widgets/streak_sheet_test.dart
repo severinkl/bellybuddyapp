@@ -1,25 +1,22 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:belly_buddy/config/app_theme.dart';
-import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/screens/buddy/streak_goal_picker.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/streak_sheet.dart';
 import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
 
+import '../../../helpers/fakes.dart';
+
 void main() {
   final today = DateTime(2026, 11, 23, 13);
 
   BuddyStatus status({int streak = 3, int? goal = 14, int savers = 1}) =>
-      BuddyStatus(
-        state: BuddyState(
-          userId: 'u1',
-          name: 'Bubu',
-          streakGoal: goal,
-          savers: savers,
-        ),
-        hasRow: true,
+      buddyStatus(
+        goal: goal,
+        savers: savers,
         streak: streak,
         todayCounted: true,
         weekDays: {DateTime(2026, 11, 23)},
@@ -119,5 +116,85 @@ void main() {
     );
 
     expect(tester.takeException(), isNull);
+  });
+
+  group('openStreakSheetAndSaveGoal', () {
+    Future<void> open(WidgetTester tester, FakeBuddyNotifier buddy) async {
+      tester.view.physicalSize = const Size(393, 852);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [buddyProvider.overrideWith(() => buddy)],
+          child: MaterialApp(
+            theme: AppTheme.theme,
+            home: Scaffold(
+              body: Consumer(
+                builder: (context, ref, _) => TextButton(
+                  onPressed: () => openStreakSheetAndSaveGoal(
+                    context,
+                    ref,
+                    status: status(goal: 14, streak: 5),
+                    today: today,
+                  ),
+                  child: const Text('open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> chooseThirty(WidgetTester tester) async {
+      await tester.ensureVisible(find.byKey(StreakSheet.changeGoalKey));
+      await tester.tap(find.byKey(StreakSheet.changeGoalKey));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('30 Tage'));
+      await tester.pump();
+      await tester.tap(find.byKey(StreakGoalChooser.confirmKey));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('saves the chosen goal', (tester) async {
+      final buddy = FakeBuddyNotifier();
+      await open(tester, buddy);
+      expect(find.byType(StreakWeekRow), findsOneWidget);
+
+      await chooseThirty(tester);
+
+      expect(buddy.goals, [30]);
+      expect(
+        find.text('Das Ziel konnte nicht gespeichert werden.'),
+        findsNothing,
+      );
+    });
+
+    testWidgets('dismissed: saves nothing', (tester) async {
+      final buddy = FakeBuddyNotifier();
+      await open(tester, buddy);
+
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Dein Streak'), findsNothing);
+      expect(buddy.goals, isEmpty);
+    });
+
+    testWidgets('a failing save shows the SnackBar', (tester) async {
+      final buddy = FakeBuddyNotifier()..failGoal = true;
+      await open(tester, buddy);
+
+      await chooseThirty(tester);
+
+      expect(buddy.goals, [30]);
+      expect(
+        find.text('Das Ziel konnte nicht gespeichert werden.'),
+        findsOneWidget,
+      );
+    });
   });
 }

@@ -99,6 +99,19 @@ class BuddySpeechBubble extends StatelessWidget {
   }
 }
 
+/// [text] with its closing run of symbols (an emoji like „💧", no letters
+/// or digits) glued to the word before by a no-break space, so a wrap never
+/// leaves it alone on the last line.
+@visibleForTesting
+String glueClosingSymbol(String text) {
+  final match = _closingSymbol.firstMatch(text);
+  if (match == null || _wordChar.hasMatch(match.group(1)!)) return text;
+  return '${text.substring(0, match.start)}\u00A0${match.group(1)}';
+}
+
+final _closingSymbol = RegExp(r' (\S+)$');
+final _wordChar = RegExp(r'[\p{L}\p{N}]', unicode: true);
+
 class _Bubble extends StatefulWidget {
   const _Bubble({
     super.key,
@@ -120,9 +133,12 @@ class _Bubble extends StatefulWidget {
 }
 
 class _BubbleState extends State<_Bubble> with SingleTickerProviderStateMixin {
+  /// The text as drawn ([glueClosingSymbol]).
+  late final String _shownText = glueClosingSymbol(widget.text);
+
   /// Where each character (grapheme) of the text ends, as a string index,
   /// so the typed part is a plain substring.
-  late final List<int> _ends = _characterEnds(widget.text);
+  late final List<int> _ends = _characterEnds(_shownText);
 
   late final AnimationController _typing = AnimationController(
     vsync: this,
@@ -176,8 +192,8 @@ class _BubbleState extends State<_Bubble> with SingleTickerProviderStateMixin {
   /// types.
   Widget _text(BuildContext context, int shown, Widget? _) {
     final cut = shown == 0 ? 0 : _ends[shown - 1];
-    final typed = widget.text.substring(0, cut);
-    final rest = widget.text.substring(cut);
+    final typed = _shownText.substring(0, cut);
+    final rest = _shownText.substring(cut);
     return Text.rich(
       TextSpan(
         children: [
@@ -197,7 +213,7 @@ class _BubbleState extends State<_Bubble> with SingleTickerProviderStateMixin {
         color: AppTheme.foreground,
         fontSize: widget.fontSize,
         fontWeight: FontWeight.w600,
-        height: 1.3,
+        height: AppTheme.lineHeightSnug,
       ),
     );
   }

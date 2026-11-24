@@ -5,7 +5,9 @@ import 'bb_slider.dart';
 import 'mascot_image.dart';
 
 class MoodSliderRow extends StatelessWidget {
-  final int value;
+  /// The rating; null while unset (see [BbSlider.value]): neither mascot
+  /// is highlighted then.
+  final int? value;
   final ValueChanged<int> onChanged;
   final String? leftLabel;
   final String rightLabel;
@@ -27,8 +29,9 @@ class MoodSliderRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const mascotSize = 56.0;
+    final value = this.value;
     final leftActive = value == 1;
-    final rightActive = value > 1;
+    final rightActive = value != null && value > 1;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppConstants.spacing12),
       child: Row(
@@ -53,6 +56,9 @@ class MoodSliderRow extends StatelessWidget {
               onChanged: onChanged,
               rightLabel: rightLabel,
               leftLabel: leftLabel,
+              // The scale runs towards the symptom (or mood) on the right,
+              // as the Tagebuch names it.
+              semanticLabel: rightLabel,
             ),
           ),
           const SizedBox(width: AppConstants.spacing6),

@@ -9,10 +9,14 @@ class CircleIconButton extends StatelessWidget {
   final Color? backgroundColor;
   final VoidCallback? onPressed;
 
+  /// What VoiceOver/TalkBack call the button (the icon says nothing).
+  final String semanticLabel;
+
   const CircleIconButton({
     super.key,
     this.tapKey,
     required this.icon,
+    required this.semanticLabel,
     this.size = AppConstants.iconBadgeMd,
     this.backgroundColor,
     this.onPressed,
@@ -20,6 +24,15 @@ class CircleIconButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      enabled: onPressed != null,
+      label: semanticLabel,
+      child: _button(),
+    );
+  }
+
+  Widget _button() {
     return GestureDetector(
       key: tapKey,
       onTap: onPressed,

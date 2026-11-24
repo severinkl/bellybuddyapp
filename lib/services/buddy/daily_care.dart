@@ -2,16 +2,17 @@ import 'dart:math' as math;
 
 import '../../providers/entries_provider.dart';
 import '../../utils/date_format_utils.dart';
+import '../../utils/gut_feeling_rating.dart';
 
 /// The Buddy's four daily needs, one per tracker; they make up the
 /// dashboard's care ring.
 enum CareNeed {
-  food('🍽', 'Essen', 'Mahlzeit eintragen'),
-  drink('💧', 'Trinken', 'Getränk eintragen'),
-  gutFeeling('🙂', 'Bauchgefühl', 'Bauchgefühl eintragen'),
-  toilet('🧻', 'Klo', 'Klo-Eintrag hinzufügen');
+  food('🍽', 'Essen'),
+  drink('💧', 'Trinken'),
+  gutFeeling('🙂', 'Bauchgefühl'),
+  toilet('🧻', 'Klo');
 
-  const CareNeed(this.emoji, this.label, this.logLabel);
+  const CareNeed(this.emoji, this.label);
 
   /// Its icon in the care ring and the „Heute" list.
   final String emoji;
@@ -19,8 +20,8 @@ enum CareNeed {
   /// Its name in the care ring.
   final String label;
 
-  /// Logging it, as an action („Getränk eintragen").
-  final String logLabel;
+  /// Logging it, as an action („Trinken eintragen").
+  String get logLabel => '$label eintragen';
 }
 
 /// What the dashboard suggests logging next ([nextCareAction]).
@@ -32,7 +33,7 @@ enum CareAction {
   drink(CareNeed.drink),
   gutFeeling(CareNeed.gutFeeling),
 
-  /// Nothing open right now: the plain „Füttern" shortcut.
+  /// Nothing open right now: the plain „Essen eintragen" shortcut.
   feed(null);
 
   const CareAction(this.need);
@@ -55,7 +56,9 @@ class DailyCare {
     this.gutFeelings = 0,
     this.toilets = 0,
     this.lastMealAt,
+    this.lastDrinkAt,
     this.lastLogAt,
+    this.lastGutFeelingLevel,
   });
 
   static const mealGoal = 3;
@@ -76,8 +79,14 @@ class DailyCare {
   /// Local time of today's latest meal.
   final DateTime? lastMealAt;
 
+  /// Local time of today's latest drink.
+  final DateTime? lastDrinkAt;
+
   /// Local time of today's latest entry of any kind.
   final DateTime? lastLogAt;
+
+  /// How today's latest Bauchgefühl was; null before the first one.
+  final GutFeelingRatingLevel? lastGutFeelingLevel;
 
   /// All of today's entries.
   int get entries => meals + drinks + gutFeelings + toilets;
@@ -102,6 +111,15 @@ class DailyCare {
     ];
     final mealTimes = today(s.meals.map((e) => e.trackedAt));
     final gutFeelingTimes = today(s.gutFeelings.map((e) => e.trackedAt));
+    final todaysGutFeelings = [
+      for (final g in s.gutFeelings)
+        if (isSameDay(g.trackedAt, now)) g,
+    ];
+    final lastGutFeeling = todaysGutFeelings.isEmpty
+        ? null
+        : todaysGutFeelings.reduce(
+            (a, b) => a.trackedAt.isAfter(b.trackedAt) ? a : b,
+          );
     final toiletTimes = today(s.toiletEntries.map((e) => e.trackedAt));
     return DailyCare(
       meals: mealTimes.length,
@@ -110,12 +128,16 @@ class DailyCare {
       gutFeelings: gutFeelingTimes.length,
       toilets: toiletTimes.length,
       lastMealAt: latest(mealTimes),
+      lastDrinkAt: latest([for (final d in drinks) d.trackedAt]),
       lastLogAt: latest([
         ...mealTimes,
         for (final d in drinks) d.trackedAt,
         ...gutFeelingTimes,
         ...toiletTimes,
       ]),
+      lastGutFeelingLevel: lastGutFeeling == null
+          ? null
+          : calculateGutFeelingRating(lastGutFeeling).level,
     );
   }
 
@@ -128,7 +150,9 @@ class DailyCare {
       other.gutFeelings == gutFeelings &&
       other.toilets == toilets &&
       other.lastMealAt == lastMealAt &&
-      other.lastLogAt == lastLogAt;
+      other.lastDrinkAt == lastDrinkAt &&
+      other.lastLogAt == lastLogAt &&
+      other.lastGutFeelingLevel == lastGutFeelingLevel;
 
   @override
   int get hashCode => Object.hash(
@@ -138,7 +162,9 @@ class DailyCare {
     gutFeelings,
     toilets,
     lastMealAt,
+    lastDrinkAt,
     lastLogAt,
+    lastGutFeelingLevel,
   );
 
   /// The daily goal of [need]; null for Klo (counted, never a target).

@@ -51,16 +51,6 @@ class SettingsScreen extends StatelessWidget {
                 mode: LaunchMode.externalApplication,
               ),
             ),
-            AppConstants.gap12,
-            BbSettingsItem(
-              icon: Icons.feedback_outlined,
-              title: 'Feedback geben',
-              subtitle: 'Teile uns deine Ideen und Wünsche mit',
-              onTap: () => launchUrl(
-                Uri.parse(AppConstants.feedbackFormUrl),
-                mode: LaunchMode.externalApplication,
-              ),
-            ),
           ],
         ),
       ),

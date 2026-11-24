@@ -73,7 +73,7 @@ void main() {
       expect(find.text('Was hat dir nicht gefallen?'), findsOneWidget);
       expect(find.byType(ChoiceChip), findsNothing);
       expect(find.byType(TextField), findsOneWidget);
-      expect(find.text('Empfehlung ausblenden'), findsOneWidget);
+      expect(find.text('Tipp ausblenden'), findsOneWidget);
       expect(find.text('Fertig'), findsOneWidget);
     });
 
@@ -162,7 +162,7 @@ void main() {
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Empfehlung ausblenden'));
+      await tester.tap(find.text('Tipp ausblenden'));
       await tester.pumpAndSettle();
 
       expect(find.byType(RecommendationDislikeSheet), findsNothing);

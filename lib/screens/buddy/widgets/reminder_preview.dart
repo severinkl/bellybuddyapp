@@ -26,44 +26,56 @@ class ReminderPreview extends StatelessWidget {
 
   static int _hour(String time) => int.tryParse(time.split(':').first) ?? 18;
 
+  /// Minutes since midnight of an „HH:mm" time (unparsable last).
+  static int _minutes(String time) {
+    final parts = time.split(':');
+    final hour = int.tryParse(parts.first);
+    final minute = parts.length > 1 ? int.tryParse(parts[1]) : null;
+    return hour == null || minute == null ? 24 * 60 : hour * 60 + minute;
+  }
+
+  /// The earliest of [times], if any.
+  static String? _earliest(List<String> times) => times.isEmpty
+      ? null
+      : times.reduce((a, b) => _minutes(b) < _minutes(a) ? b : a);
+
   @override
   Widget build(BuildContext context) {
     final p = profile ?? const UserProfile();
-    final meal = p.remindersEnabled && p.mealReminderTimes.isNotEmpty
-        ? p.mealReminderTimes.first
-        : null;
-    final mood = p.dailySummaryEnabled && p.moodReminderTimes.isNotEmpty
-        ? p.moodReminderTimes.first
-        : null;
+    final meal = p.remindersEnabled ? _earliest(p.mealReminderTimes) : null;
+    final mood = p.dailySummaryEnabled ? _earliest(p.moodReminderTimes) : null;
     // The previews show the times; the note says where to change them.
     final note = meal == null && mood == null
         ? 'Wann ich mich melde, stellst du in den Einstellungen ein.'
         : 'Die Zeiten änderst du jederzeit in den Einstellungen.';
+    // In the order of the day.
+    final previews = [
+      if (meal != null)
+        (
+          time: meal,
+          body: ReminderCopy.previewMealBody(_hour(meal), buddyName),
+        ),
+      if (mood != null)
+        (
+          time: mood,
+          body: ReminderCopy.previewMoodBody(_hour(mood), buddyName),
+        ),
+    ]..sort((a, b) => _minutes(a.time).compareTo(_minutes(b.time)));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const StepFieldLabel('So melde ich mich'),
         AppConstants.gap8,
-        if (meal != null) ...[
-          NotificationPreview(
-            time: meal,
-            body: ReminderCopy.previewMealBody(_hour(meal), buddyName),
-          ),
-          AppConstants.gap8,
-        ],
-        if (mood != null) ...[
-          NotificationPreview(
-            time: mood,
-            body: ReminderCopy.previewMoodBody(_hour(mood), buddyName),
-          ),
+        for (final preview in previews) ...[
+          NotificationPreview(time: preview.time, body: preview.body),
           AppConstants.gap8,
         ],
         Text(
           note,
           style: const TextStyle(
             fontSize: AppTheme.fontSizeBody,
-            height: 1.4,
+            height: AppTheme.lineHeightBody,
             color: AppTheme.mutedForeground,
           ),
         ),
@@ -141,7 +153,7 @@ class NotificationPreview extends StatelessWidget {
                 body,
                 style: const TextStyle(
                   fontSize: AppTheme.fontSizeBody,
-                  height: 1.35,
+                  height: AppTheme.lineHeightSnug,
                   color: AppTheme.notificationForeground,
                 ),
               ),
@@ -241,7 +253,7 @@ class ReminderExampleWeek extends StatelessWidget {
                 'sind leichter zu sehen.',
                 style: TextStyle(
                   fontSize: AppTheme.fontSizeCaption,
-                  height: 1.35,
+                  height: AppTheme.lineHeightSnug,
                   color: AppTheme.mutedForeground,
                 ),
               ),

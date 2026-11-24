@@ -28,52 +28,41 @@ void main() {
   });
 
   group('IngredientService.search', () {
-    test('returns list of IngredientSuggestion from DB rows', () async {
-      final fb = mockSelectRows(
-        client,
-        table: 'ingredients',
-        rows: [
-          {'id': 'ing-1', 'name': 'Zwiebel', 'added_by_user_id': 'other-user'},
-          {'id': 'ing-2', 'name': 'Knoblauch', 'added_by_user_id': testUserId},
-        ],
-      );
+    /// Stubs the select chain of both search queries (prefix and
+    /// contains), which resolve with the same [rows].
+    SettlableFilterBuilder stubSearch(List<Map<String, dynamic>> rows) {
+      final fb = mockSelectRows(client, table: 'ingredients', rows: rows);
       when(() => fb.ilike(any(), any())).thenAnswer((_) => fb);
+      when(
+        () => fb.order(any(), ascending: any(named: 'ascending')),
+      ).thenAnswer((_) => fb);
       when(() => fb.limit(any())).thenAnswer((_) => fb);
+      return fb;
+    }
 
-      final result = await service.search('knob', userId: testUserId);
+    test('maps rows to results, once each', () async {
+      stubSearch([
+        {
+          'id': 'ing-1',
+          'name': 'Rote Zwiebel',
+          'added_by_user_id': 'other-user',
+        },
+        {'id': 'ing-2', 'name': 'Zwiebel', 'added_by_user_id': testUserId},
+      ]);
 
-      expect(result, hasLength(2));
-      expect(result[0].id, 'ing-1');
-      expect(result[0].name, 'Zwiebel');
-      expect(result[0].isOwn, isFalse);
-    });
+      final result = await service.search('zwiebel', userId: testUserId);
 
-    test('sets isOwn=true when added_by_user_id matches userId', () async {
-      final fb = mockSelectRows(
-        client,
-        table: 'ingredients',
-        rows: [
-          {'id': 'ing-2', 'name': 'Knoblauch', 'added_by_user_id': testUserId},
-        ],
-      );
-      when(() => fb.ilike(any(), any())).thenAnswer((_) => fb);
-      when(() => fb.limit(any())).thenAnswer((_) => fb);
-
-      final result = await service.search('knob', userId: testUserId);
-
+      // Both queries returned both rows: still one result per row.
+      expect(result.map((r) => r.id), ['ing-2', 'ing-1']);
+      expect(result.first.name, 'Zwiebel');
       expect(result.first.isOwn, isTrue);
+      expect(result.last.isOwn, isFalse);
     });
 
     test('sets isOwn=false when userId is null', () async {
-      final fb = mockSelectRows(
-        client,
-        table: 'ingredients',
-        rows: [
-          {'id': 'ing-1', 'name': 'Zwiebel', 'added_by_user_id': testUserId},
-        ],
-      );
-      when(() => fb.ilike(any(), any())).thenAnswer((_) => fb);
-      when(() => fb.limit(any())).thenAnswer((_) => fb);
+      stubSearch([
+        {'id': 'ing-1', 'name': 'Zwiebel', 'added_by_user_id': testUserId},
+      ]);
 
       final result = await service.search('zwi', userId: null);
 
@@ -81,14 +70,45 @@ void main() {
       expect(result.first.isOwn, isFalse);
     });
 
-    test('passes ilike filter with query wrapped in %', () async {
-      final fb = mockSelectRows(client, table: 'ingredients', rows: []);
-      when(() => fb.ilike(any(), any())).thenAnswer((_) => fb);
-      when(() => fb.limit(any())).thenAnswer((_) => fb);
+    test('asks for names starting with the query (ordered) and for names '
+        'containing it', () async {
+      final fb = stubSearch([]);
 
-      await service.search('abc', userId: testUserId);
+      await service.search('Hafer', userId: testUserId);
 
-      verify(() => fb.ilike('name', '%abc%')).called(1);
+      verify(() => fb.ilike('name', 'Hafer%')).called(1);
+      verify(() => fb.ilike('name', '%Hafer%')).called(1);
+      verify(() => fb.order('name', ascending: true)).called(2);
+    });
+
+    test('ranks exact, then prefix, then word start, then contains', () async {
+      stubSearch([
+        {'id': '1', 'name': 'Hafermilch', 'added_by_user_id': null},
+        {
+          'id': '2',
+          'name': 'glutenfreie Haferflocken',
+          'added_by_user_id': null,
+        },
+        {'id': '3', 'name': 'Haferkleie', 'added_by_user_id': null},
+        {'id': '4', 'name': 'Schafermilch', 'added_by_user_id': null},
+        {'id': '5', 'name': 'Haferflocken', 'added_by_user_id': null},
+      ]);
+
+      final result = await service.search('haferflocken', userId: testUserId);
+
+      expect(result.map((r) => r.name), [
+        'Haferflocken',
+        'glutenfreie Haferflocken',
+      ]);
+
+      final hafer = await service.search('Hafer', userId: testUserId);
+      expect(hafer.map((r) => r.name), [
+        'Haferkleie',
+        'Hafermilch',
+        'Haferflocken',
+        'glutenfreie Haferflocken',
+        'Schafermilch',
+      ]);
     });
   });
 
@@ -140,6 +160,49 @@ void main() {
       expect(captured['name'], 'Zwiebel');
       expect(captured['added_by_user_id'], testUserId);
       expect(captured['added_via'], 'user');
+    });
+  });
+
+  group('IngredientService.insertIfNew on a name the user cannot see', () {
+    // The catalog's unique name can belong to a row the user's row level
+    // security hides (another user's, or an AI-detected one): the insert
+    // then fails with 23505, although the ingredient exists.
+    void stubInsertFailing(Object error) {
+      final queryBuilder = MockSupabaseQueryBuilder();
+      final selectFb = SettlableFilterBuilder(Future.value([]));
+      final insertFb = SettlableFilterBuilder(Future.error(error));
+      when(() => client.from('ingredients')).thenAnswer((_) => queryBuilder);
+      when(() => queryBuilder.select(any())).thenAnswer((_) => selectFb);
+      when(() => selectFb.ilike(any(), any())).thenAnswer((_) => selectFb);
+      when(() => selectFb.limit(any())).thenAnswer((_) => selectFb);
+      when(() => queryBuilder.insert(any())).thenAnswer((_) => insertFb);
+    }
+
+    test('a duplicate name counts as already there', () async {
+      stubInsertFailing(
+        const PostgrestException(
+          message:
+              'duplicate key value violates unique constraint '
+              '"ingredients_name_key"',
+          code: '23505',
+        ),
+      );
+
+      await expectLater(
+        service.insertIfNew('Haferflocken', userId: testUserId),
+        completes,
+      );
+    });
+
+    test('other errors still surface', () async {
+      stubInsertFailing(
+        const PostgrestException(message: 'permission denied', code: '42501'),
+      );
+
+      await expectLater(
+        service.insertIfNew('Haferflocken', userId: testUserId),
+        throwsA(isA<PostgrestException>()),
+      );
     });
   });
 
@@ -255,6 +318,22 @@ void main() {
 
       expect(result, hasLength(1));
       verify(() => fb.inFilter('id', ['meal-1', 'meal-2'])).called(1);
+    });
+
+    test('also loads the meals\' ingredients (to name a suggestion whose '
+        'ingredient row is hidden)', () async {
+      final queryBuilder = MockSupabaseQueryBuilder();
+      final fb = SettlableFilterBuilder(Future.value([]));
+      when(() => client.from('meal_entries')).thenAnswer((_) => queryBuilder);
+      when(() => queryBuilder.select(any())).thenAnswer((_) => fb);
+      when(() => fb.inFilter(any(), any())).thenAnswer((_) => fb);
+
+      await service.fetchMealDetails(['meal-1']);
+
+      final columns =
+          verify(() => queryBuilder.select(captureAny())).captured.single
+              as String;
+      expect(columns.split(RegExp(r',\s*')), contains('ingredients'));
     });
   });
 

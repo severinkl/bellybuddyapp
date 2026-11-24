@@ -75,7 +75,7 @@ class StreakMoment extends StatelessWidget {
           textAlign: TextAlign.center,
           style: TextStyle(
             fontSize: AppTheme.fontSizeSubtitle,
-            height: 1.45,
+            height: AppTheme.lineHeightBody,
             color: AppTheme.mutedForeground,
           ),
         ),
@@ -115,7 +115,7 @@ class StreakGoalWhyCard extends StatelessWidget {
             'Dranbleiben.',
             style: TextStyle(
               fontSize: AppTheme.fontSizeBody,
-              height: 1.45,
+              height: AppTheme.lineHeightBody,
               color: AppTheme.foreground,
             ),
           ),

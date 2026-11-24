@@ -111,6 +111,9 @@ class _AuthStepState extends State<AuthStep> with WidgetsBindingObserver {
               controller: _emailController,
               keyboardType: TextInputType.emailAddress,
               autocorrect: false,
+              // Once „Registrieren" showed an error, it goes away as soon as
+              // the address is fixed.
+              autovalidateMode: AutovalidateMode.onUserInteractionIfError,
               decoration: const InputDecoration(
                 labelText: 'E-Mail',
                 hintText: 'deine@email.de',
@@ -144,7 +147,9 @@ class _AuthStepState extends State<AuthStep> with WidgetsBindingObserver {
                 },
               ),
             ),
-            if (_passwordController.text.isNotEmpty) ...[
+            // Once all are met they make room: with the keyboard open the
+            // address, the password and „Registrieren" then fit together.
+            if (_passwordController.text.isNotEmpty && !_isPasswordValid) ...[
               AppConstants.gap8,
               BbPasswordHint(
                 text: 'Mindestens 8 Zeichen',

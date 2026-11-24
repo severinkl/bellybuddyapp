@@ -9,12 +9,16 @@ import '../../providers/user_recipes_provider.dart';
 import '../../router/navigation_extensions.dart';
 import '../../router/route_names.dart';
 import '../../widgets/common/bb_button.dart';
+import '../../utils/title_color.dart';
 import '../../widgets/common/signed_path_image.dart';
 
 class RecipeDetailScreen extends ConsumerStatefulWidget {
   const RecipeDetailScreen({super.key, required this.recipeId});
 
   final String recipeId;
+
+  /// Stands in for the photo of a recipe without one.
+  static const imagePlaceholderKey = Key('recipe_detail_image_placeholder');
 
   @override
   ConsumerState<RecipeDetailScreen> createState() => _RecipeDetailScreenState();
@@ -44,6 +48,7 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
           backgroundColor: AppTheme.screenBackground,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
+            tooltip: 'Zurück',
             onPressed: () => context.popOrGoDashboard(),
           ),
           title: const Text('Rezept'),
@@ -63,6 +68,7 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
           backgroundColor: AppTheme.screenBackground,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
+            tooltip: 'Zurück',
             onPressed: () => context.popOrGoDashboard(),
           ),
           title: const Text('Rezept'),
@@ -85,16 +91,20 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
         backgroundColor: AppTheme.screenBackground,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
+          tooltip: 'Zurück',
           onPressed: () => context.popOrGoDashboard(),
         ),
-        title: Text(recipe.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+        // The recipe's name is the page's heading below; said once.
+        title: const Text('Rezept'),
         actions: [
           IconButton(
             icon: const Icon(Icons.edit_outlined),
+            tooltip: 'Bearbeiten',
             onPressed: () => context.push(RoutePaths.recipeEditFor(recipe.id)),
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline),
+            tooltip: 'Rezept löschen',
             onPressed: () => _confirmDelete(context, ref, recipe),
           ),
         ],
@@ -109,18 +119,16 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    if (recipe.imageUrl != null) ...[
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(
-                          AppConstants.radiusLg,
-                        ),
-                        child: AspectRatio(
-                          aspectRatio: 16 / 9,
-                          child: SignedPathImage(pathOrUrl: recipe.imageUrl),
-                        ),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.radiusLg,
                       ),
-                      AppConstants.gap16,
-                    ],
+                      child: AspectRatio(
+                        aspectRatio: 16 / 9,
+                        child: _RecipeImage(recipe: recipe),
+                      ),
+                    ),
+                    AppConstants.gap16,
                     Text(
                       recipe.title,
                       style: const TextStyle(
@@ -156,7 +164,7 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
             Padding(
               padding: AppConstants.paddingMd,
               child: BbButton(
-                label: 'Mahlzeit jetzt tracken',
+                label: 'Jetzt als Essen eintragen',
                 onPressed: () =>
                     context.push(RoutePaths.mealTracker, extra: recipe),
               ),
@@ -194,5 +202,34 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
     if (!context.mounted) return;
     await ref.read(userRecipesProvider.notifier).delete(recipe.id);
     if (context.mounted) context.pop();
+  }
+}
+
+/// The recipe's photo, or, without one (or while it can't load), a pastel
+/// placeholder with a book glyph, like the recipe cards.
+class _RecipeImage extends StatelessWidget {
+  const _RecipeImage({required this.recipe});
+
+  final UserRecipe recipe;
+
+  @override
+  Widget build(BuildContext context) {
+    final placeholder = Container(
+      key: RecipeDetailScreen.imagePlaceholderKey,
+      color: pastelForTitle(recipe.title),
+      alignment: Alignment.center,
+      child: Icon(
+        Icons.menu_book_outlined,
+        size: AppConstants.iconSizeLg,
+        color: AppTheme.foreground.withValues(alpha: 0.45),
+      ),
+    );
+    final url = recipe.imageUrl;
+    if (url == null || url.isEmpty) return placeholder;
+    return SignedPathImage(
+      pathOrUrl: url,
+      placeholder: placeholder,
+      errorWidget: placeholder,
+    );
   }
 }

@@ -20,15 +20,10 @@ import '../helpers/fixtures.dart';
 import '../helpers/riverpod_helpers.dart';
 
 BuddyStatus _status({required bool hasRow, DateTime? completedAt}) =>
-    BuddyStatus(
-      state: BuddyState(
-        userId: testUserId,
-        name: 'Bauchi',
-        onboardingCompletedAt: completedAt,
-      ),
+    buddyStatus(
+      name: 'Bauchi',
+      onboardingCompletedAt: completedAt,
       hasRow: hasRow,
-      streak: 0,
-      todayCounted: false,
     );
 
 /// A Buddy repository whose [fetch] blocks until [release] is called.
@@ -140,7 +135,12 @@ void main() {
     );
 
     test('required: the shell roots go to /buddy-onboarding', () {
-      for (final path in [RoutePaths.dashboard, RoutePaths.diary]) {
+      for (final path in [
+        RoutePaths.dashboard,
+        RoutePaths.diary,
+        RoutePaths.discover,
+        RoutePaths.me,
+      ]) {
         expect(
           redirect(path, isRequired: true),
           RoutePaths.buddyOnboarding,
@@ -174,6 +174,8 @@ void main() {
         RoutePaths.buddyOnboarding,
         RoutePaths.dashboard,
         RoutePaths.diary,
+        RoutePaths.discover,
+        RoutePaths.me,
         RoutePaths.mealTracker,
       ]) {
         expect(redirect(path), isNull, reason: path);
@@ -190,6 +192,14 @@ void main() {
         expect(
           redirect(RoutePaths.diary, isRequired: required, isPending: true),
           '/loading?to=%2Fdiary',
+        );
+        expect(
+          redirect(RoutePaths.discover, isRequired: required, isPending: true),
+          '/loading?to=%2Fdiscover',
+        );
+        expect(
+          redirect(RoutePaths.me, isRequired: required, isPending: true),
+          '/loading?to=%2Fme',
         );
       }
     });
@@ -212,6 +222,8 @@ void main() {
         'without one, or for anything else)', () {
       expect(redirect('/loading?to=%2Fdiary'), RoutePaths.diary);
       expect(redirect('/loading?to=%2Fdashboard'), RoutePaths.dashboard);
+      expect(redirect('/loading?to=%2Fdiscover'), RoutePaths.discover);
+      expect(redirect('/loading?to=%2Fme'), RoutePaths.me);
       expect(redirect(RoutePaths.loading), RoutePaths.dashboard);
       expect(redirect('/loading?to=%2Fsettings'), RoutePaths.dashboard);
       expect(

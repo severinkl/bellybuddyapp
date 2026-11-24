@@ -1,9 +1,7 @@
 // ignore_for_file: invalid_use_of_internal_member
 import 'dart:async';
+import 'dart:math' as math;
 
-import 'package:cupertino_ui/cupertino_ui.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'
-    show GlobalWidgetsLocalizations;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -11,8 +9,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/config/constants.dart';
+import 'package:belly_buddy/widgets/buddy/buddy_stage.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
@@ -31,19 +29,29 @@ import 'package:belly_buddy/screens/registration/steps/steps.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
 
+import '../../helpers/ambient_animations.dart';
+import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 
 typedef _Step = BuddyOnboardingStep;
 
-/// Counts permission requests; grants them unless [grant] is false.
+/// Counts permission requests; grants them unless [grant] is false. The OS
+/// permission starts as never asked.
 class _CountingNotifications extends FakeNotificationRepository {
+  _CountingNotifications() {
+    permission = NotificationPermission.notDetermined;
+  }
+
   int permissionRequests = 0;
   bool grant = true;
 
   @override
   Future<bool> requestAllPermissions() async {
     permissionRequests++;
+    permission = grant
+        ? NotificationPermission.granted
+        : NotificationPermission.denied;
     return grant;
   }
 }
@@ -96,7 +104,7 @@ class _FakeMealTracker extends ConsumerWidget {
                   trackedAt: DateTime.now(),
                 ),
               );
-              // The success screen's „Getränk hinzufügen": the drink event
+              // The success screen's „Trinken eintragen": the drink event
               // replaces the meal in the single event slot.
               events.emit(
                 BuddyLogEvent(
@@ -157,6 +165,9 @@ const _noStreakLine = 'Mit deinem nächsten Eintrag startet unser Streak!';
 const _introLine = 'Hi! Ich bin neu hier — dein Belly Buddy.';
 
 void main() {
+  // These Buddies must tick: reactions, blinks, waking up.
+  tickBuddiesInTests();
+
   group('buddyOnboardingSteps', () {
     const after = BuddyOnboardingEntry.afterRegistration;
     const gate = BuddyOnboardingEntry.gate;
@@ -339,17 +350,7 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp.router(
-            theme: AppTheme.theme,
-            routerConfig: router,
-            localizationsDelegates: const [
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: const [Locale('de', 'DE')],
-            locale: const Locale('de', 'DE'),
-          ),
+          child: germanRouterApp(router),
         ),
       );
       await settle(tester);
@@ -504,6 +505,53 @@ void main() {
       expect(h.container.read(buddyWelcomeProvider), BuddyWelcomeNotifier.line);
     });
 
+    testWidgets('„Später" without the OS permission turns the reminders off: '
+        'nothing claims to be on that never arrives', (tester) async {
+      final h = await pumpOnboarding(tester);
+      await tapKey(tester, BuddyOnboardingScreen.mealLaterKey);
+      await pickGoal(tester, '7 Tage');
+
+      await tapKey(tester, BuddyOnboardingScreen.reminderLaterKey);
+
+      expect(h.notifications.permissionRequests, 0);
+      final profile = h.container.read(profileProvider).value!;
+      expect(profile.remindersEnabled, isFalse);
+      expect(profile.dailySummaryEnabled, isFalse);
+      expect(profile.pushEnabled, isFalse);
+      expect(find.text('dashboard-stub'), findsOneWidget);
+    });
+
+    testWidgets('„Später" with the OS permission already given keeps the '
+        'reminders', (tester) async {
+      final h = await pumpOnboarding(tester);
+      h.notifications.permission = NotificationPermission.granted;
+      await tapKey(tester, BuddyOnboardingScreen.mealLaterKey);
+      await pickGoal(tester, '7 Tage');
+
+      await tapKey(tester, BuddyOnboardingScreen.reminderLaterKey);
+
+      final profile = h.container.read(profileProvider).value!;
+      expect(profile.remindersEnabled, isTrue);
+      expect(profile.dailySummaryEnabled, isTrue);
+    });
+
+    testWidgets('„Erinnerungen aktivieren" declined in the OS dialog turns the '
+        'reminders off', (tester) async {
+      final h = await pumpOnboarding(tester);
+      h.notifications.grant = false;
+      await tapKey(tester, BuddyOnboardingScreen.mealLaterKey);
+      await pickGoal(tester, '7 Tage');
+
+      await tapKey(tester, BuddyOnboardingScreen.reminderYesKey);
+
+      expect(h.notifications.permissionRequests, 1);
+      final profile = h.container.read(profileProvider).value!;
+      expect(profile.remindersEnabled, isFalse);
+      expect(profile.dailySummaryEnabled, isFalse);
+      expect(profile.pushEnabled, isFalse);
+      expect(find.text('dashboard-stub'), findsOneWidget);
+    });
+
     testWidgets('after registration without a meal: no streak moment; back '
         'skips it too', (tester) async {
       await pumpOnboarding(tester);
@@ -532,7 +580,10 @@ void main() {
 
       expect(h.notifications.permissionRequests, 1);
       expect(await modalShownPref(), isTrue);
-      expect(h.container.read(profileProvider).value?.pushEnabled, isTrue);
+      final profile = h.container.read(profileProvider).value!;
+      expect(profile.pushEnabled, isTrue);
+      expect(profile.remindersEnabled, isTrue);
+      expect(profile.dailySummaryEnabled, isTrue);
       expect(find.text('dashboard-stub'), findsOneWidget);
       expect(h.stored?.onboardingCompletedAt, isNotNull);
     });
@@ -765,6 +816,45 @@ void main() {
       expect(h.stored?.streakGoal, 7);
       expect(h.stored?.onboardingCompletedAt, isNotNull);
     });
+
+    for (final (phone, size) in [
+      ('402×874', const Size(402, 874)),
+      ('375×667', const Size(375, 667)),
+    ]) {
+      for (final (step, entry, action) in [
+        (
+          'first meal',
+          BuddyOnboardingEntry.afterRegistration,
+          BuddyOnboardingScreen.mealLogKey,
+        ),
+        (
+          'intro',
+          BuddyOnboardingEntry.gate,
+          BuddyOnboardingScreen.introNextKey,
+        ),
+      ]) {
+        testWidgets('$phone, $step: the Buddy fills the step, no big empty '
+            'gap above its button', (tester) async {
+          await pumpOnboarding(tester, entry: entry, screen: size);
+
+          final stage = tester.getRect(find.byType(BuddyStage));
+          final button = tester.getRect(find.byKey(action));
+          // Little room left between him and his button …
+          expect(button.top - stage.bottom, lessThan(size.height * 0.2));
+          // … and he is no smaller than before.
+          expect(
+            stage.height,
+            greaterThanOrEqualTo(
+              math.min(
+                AppConstants.buddyOnboardingHeroStageHeight,
+                size.height * 0.45,
+              ),
+            ),
+          );
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
 
     group('small phone (375×667): actions visible without scrolling', () {
       const phone = Size(375, 667);

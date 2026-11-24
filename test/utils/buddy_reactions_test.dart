@@ -2,7 +2,7 @@ import 'dart:math';
 
 import 'package:belly_buddy/config/buddy_reactions.dart';
 import 'package:belly_buddy/config/constants.dart';
-import 'package:belly_buddy/screens/registration/steps/symptoms_step.dart';
+import 'package:belly_buddy/config/symptom_options.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -17,7 +17,7 @@ void main() {
     'emailCapture:intro',
     for (final g in ['weiblich', 'männlich', 'andere']) 'gender:$g',
     for (final d in ['alles', 'vegetarisch', 'vegan']) 'diet:$d',
-    for (final s in kRegistrationSymptoms) 'symptom:$s',
+    for (final s in kRegistrationSymptomOptions) 'symptom:${s.value}',
     'symptom:none',
     for (final i in AppConstants.intoleranceOptions) 'intolerance:$i',
     'intolerance:none',
@@ -86,6 +86,17 @@ void main() {
     for (final e in kWizardReactions.entries) {
       final has = e.value.lines.any((l) => l.contains('{name}'));
       expect(has, e.key == 'name:confirmed', reason: e.key);
+    }
+  });
+
+  test('the gender reactions acknowledge the answer, they don\'t greet', () {
+    // The Buddy asked „Welches biologische Geschlecht hast du?": a greeting
+    // („Hallo du!", „Schön, dass du da bist!") doesn't answer that.
+    final greeting = RegExp(r'Hallo|kennenzulernen|da bist|freu mich auf uns');
+    for (final g in ['weiblich', 'männlich', 'andere']) {
+      for (final l in wizardReaction('gender:$g')!.lines) {
+        expect(greeting.hasMatch(l), isFalse, reason: 'gender:$g: $l');
+      }
     }
   });
 

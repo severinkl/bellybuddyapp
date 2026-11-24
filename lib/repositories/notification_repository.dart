@@ -64,6 +64,19 @@ class LocalNotificationScheduler implements NotificationScheduler {
   Future<void> cancelAll() => LocalNotificationService.cancelAll();
 }
 
+/// What the OS lets the app do with notifications.
+enum NotificationPermission {
+  /// Notifications are allowed.
+  granted,
+
+  /// Never asked: asking shows the system dialog.
+  notDetermined,
+
+  /// Declined or turned off: asking again shows nothing, only the Settings
+  /// app can allow them.
+  denied,
+}
+
 class NotificationRepository {
   final NotificationScheduler _scheduler;
   static const _log = AppLogger('NotificationRepository');
@@ -122,6 +135,24 @@ class NotificationRepository {
 
   Future<bool> requestPermission() =>
       PushNotificationService.requestPermission();
+
+  /// The OS notification permission, without asking for it. Unknown (the
+  /// check fails) reads as never asked.
+  Future<NotificationPermission> permissionStatus() async {
+    try {
+      return switch (await PushNotificationService.authorizationStatus()) {
+        AuthorizationStatus.authorized ||
+        AuthorizationStatus.provisional => NotificationPermission.granted,
+        AuthorizationStatus.denied ||
+        AuthorizationStatus.deniedPermanently => NotificationPermission.denied,
+        AuthorizationStatus.notDetermined =>
+          NotificationPermission.notDetermined,
+      };
+    } catch (e, st) {
+      _log.error('reading the notification permission failed', e, st);
+      return NotificationPermission.notDetermined;
+    }
+  }
 
   /// Request both local and push notification permissions.
   /// Returns true if the OS permission was granted.

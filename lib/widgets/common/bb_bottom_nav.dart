@@ -1,37 +1,56 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
-import '../../router/route_names.dart';
 import '../../config/constants.dart';
+import '../../providers/buddy_provider.dart';
+import '../../providers/daily_care_provider.dart';
 import '../../providers/diary_provider.dart';
+import '../../providers/entries_provider.dart';
+import '../../services/buddy/daily_care.dart';
 import '../../utils/date_format_utils.dart';
 import '../../screens/dashboard/widgets/tutorial/tutorial_keys.dart';
 import '../../services/haptic_service.dart';
+import '../log_sheet/log_sheet.dart';
 
+/// The bottom bar: Home · Tagebuch · (+) · Entdecken · Ich. The tabs are the
+/// shell's branches (in that order); the plus in the middle opens the
+/// „Eintragen" sheet.
 class BbBottomNav extends ConsumerWidget {
   final StatefulNavigationShell navigationShell;
   static const navHomeKey = Key('bottom_nav_home');
   static const navDiaryKey = Key('bottom_nav_diary');
+  static const navDiscoverKey = Key('bottom_nav_discover');
+  static const navMeKey = Key('bottom_nav_me');
   static const centerButtonKey = Key('bottom_nav_center_button');
+
+  // The shell's branch indices.
+  static const _homeBranch = 0;
+  static const _diaryBranch = 1;
+  static const _discoverBranch = 2;
+  static const _meBranch = 3;
 
   const BbBottomNav({super.key, required this.navigationShell});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = navigationShell.currentIndex;
-    final bottomPadding = MediaQuery.of(context).padding.bottom;
-    final isDiary = currentIndex == 1;
+    final bottomPadding = MediaQuery.paddingOf(context).bottom;
+
+    void goBranch(int index) {
+      HapticService.light();
+      navigationShell.goBranch(index);
+    }
 
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         // Wavy separator
         CustomPaint(
-          size: Size(MediaQuery.of(context).size.width, 20),
-          painter: _WavePainter(
-            backgroundColor: isDiary ? AppTheme.background : AppTheme.beige,
-          ),
+          size: Size(MediaQuery.sizeOf(context).width, 20),
+          painter: const _WavePainter(),
         ),
         // Nav bar
         Container(
@@ -44,56 +63,82 @@ class BbBottomNav extends ConsumerWidget {
           ),
           child: SafeArea(
             top: false,
-            child: SizedBox(
-              height: 64 + (bottomPadding > 0 ? 0 : 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  // Home
-                  _NavItem(
-                    tapKey: navHomeKey,
-                    icon: Icons.home_outlined,
-                    activeIcon: Icons.home,
-                    label: 'Home',
-                    isActive: currentIndex == 0,
-                    onTap: () {
-                      HapticService.light();
-                      navigationShell.goBranch(0);
-                    },
-                  ),
-                  // Central meal tracker button
-                  _CenterButton(
-                    tapKey: centerButtonKey,
-                    onTap: () {
-                      HapticService.light();
-                      // When launched from the diary tab, carry the currently
-                      // viewed day into the meal tracker so the entry lands on
-                      // the same calendar day the user is browsing.
-                      context.push(
-                        RoutePaths.mealTracker,
-                        extra: isDiary ? ref.read(diaryDateProvider) : null,
-                      );
-                    },
-                  ),
-                  // Diary
-                  KeyedSubtree(
-                    key: TutorialKeys.tagebuch,
-                    child: _NavItem(
-                      tapKey: navDiaryKey,
-                      icon: Icons.menu_book_outlined,
-                      activeIcon: Icons.menu_book,
-                      label: 'Tagebuch',
-                      isActive: currentIndex == 1,
-                      onTap: () {
-                        HapticService.light();
-                        ref
-                            .read(diaryDateProvider.notifier)
-                            .set(startOfDay(DateTime.now()));
-                        navigationShell.goBranch(1);
-                      },
+            // A fixed-height bar: its labels follow large text only up to a
+            // point, and shrink to fit what is left of their slot.
+            child: MediaQuery.withClampedTextScaling(
+              maxScaleFactor: AppConstants.bottomNavMaxTextScale,
+              child: SizedBox(
+                height: 64 + (bottomPadding > 0 ? 0 : 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _NavItem(
+                        tapKey: navHomeKey,
+                        icon: Icons.home_outlined,
+                        activeIcon: Icons.home,
+                        label: 'Home',
+                        isActive: currentIndex == _homeBranch,
+                        onTap: () => goBranch(_homeBranch),
+                      ),
                     ),
-                  ),
-                ],
+                    Expanded(
+                      child: KeyedSubtree(
+                        key: TutorialKeys.tagebuch,
+                        child: _NavItem(
+                          tapKey: navDiaryKey,
+                          icon: Icons.menu_book_outlined,
+                          activeIcon: Icons.menu_book,
+                          label: 'Tagebuch',
+                          isActive: currentIndex == _diaryBranch,
+                          onTap: () {
+                            // The tab always opens on today.
+                            ref
+                                .read(diaryDateProvider.notifier)
+                                .set(
+                                  startOfDay(ref.read(buddyClockProvider)()),
+                                );
+                            goBranch(_diaryBranch);
+                          },
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: _CenterButton(
+                        tapKey: centerButtonKey,
+                        onTap: () {
+                          HapticService.light();
+                          _openLogSheet(context, ref);
+                        },
+                      ),
+                    ),
+                    Expanded(
+                      child: KeyedSubtree(
+                        key: TutorialKeys.entdecken,
+                        child: _NavItem(
+                          tapKey: navDiscoverKey,
+                          icon: Icons.explore_outlined,
+                          activeIcon: Icons.explore,
+                          label: 'Entdecken',
+                          isActive: currentIndex == _discoverBranch,
+                          onTap: () => goBranch(_discoverBranch),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: KeyedSubtree(
+                        key: TutorialKeys.ich,
+                        child: _NavItem(
+                          tapKey: navMeKey,
+                          icon: Icons.person_outline,
+                          activeIcon: Icons.person,
+                          label: 'Ich',
+                          isActive: currentIndex == _meBranch,
+                          onTap: () => goBranch(_meBranch),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -101,17 +146,33 @@ class BbBottomNav extends ConsumerWidget {
       ],
     );
   }
+
+  /// Opens the „Eintragen" sheet: on the Tagebuch for the day it shows,
+  /// on the other tabs for now. For today, the need Home suggests next
+  /// ([nextCareAction]) is highlighted, but only while Home holds today's
+  /// entries: before its first load, or still on yesterday after midnight,
+  /// its counts say nothing about today.
+  void _openLogSheet(BuildContext context, WidgetRef ref) {
+    final now = ref.read(buddyClockProvider)();
+    final day = navigationShell.currentIndex == _diaryBranch
+        ? ref.read(diaryDateProvider)
+        : now;
+    final homeDay = ref.read(entriesProvider).day;
+    final suggested =
+        isSameDay(day, now) && homeDay != null && isSameDay(homeDay, now)
+        ? nextCareAction(ref.read(dailyCareProvider), now).need
+        : null;
+    unawaited(showLogSheet(context, day: day, now: now, suggested: suggested));
+  }
 }
 
 class _WavePainter extends CustomPainter {
-  final Color backgroundColor;
-
-  _WavePainter({required this.backgroundColor});
+  const _WavePainter();
 
   @override
   void paint(Canvas canvas, Size size) {
     // Fill background
-    final bgPaint = Paint()..color = backgroundColor;
+    final bgPaint = Paint()..color = AppTheme.background;
     canvas.drawRect(Rect.fromLTWH(0, 0, size.width, size.height), bgPaint);
 
     // Draw wave filled with nav gradient
@@ -139,8 +200,7 @@ class _WavePainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_WavePainter oldDelegate) =>
-      backgroundColor != oldDelegate.backgroundColor;
+  bool shouldRepaint(_WavePainter oldDelegate) => false;
 }
 
 class _NavItem extends StatelessWidget {
@@ -166,20 +226,19 @@ class _NavItem extends StatelessWidget {
       key: tapKey,
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: 80,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              isActive ? activeIcon : icon,
-              color: isActive
-                  ? AppTheme.foreground
-                  : AppTheme.foreground.withValues(alpha: 0.6),
-              size: 32,
-            ),
-            AppConstants.gap4,
-            Text(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            isActive ? activeIcon : icon,
+            color: isActive
+                ? AppTheme.foreground
+                : AppTheme.foreground.withValues(alpha: 0.6),
+            size: 32,
+          ),
+          AppConstants.gap4,
+          Flexible(
+            child: _BarLabel(
               label,
               style: TextStyle(
                 fontSize: AppTheme.fontSizeBody,
@@ -189,8 +248,8 @@ class _NavItem extends StatelessWidget {
                     : AppTheme.foreground.withValues(alpha: 0.6),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -208,7 +267,6 @@ class _CenterButton extends StatelessWidget {
       key: tapKey,
       onTap: onTap,
       child: SizedBox(
-        width: 80,
         height: 64,
         child: Stack(
           clipBehavior: Clip.none,
@@ -218,7 +276,7 @@ class _CenterButton extends StatelessWidget {
             Positioned(
               top: -26,
               child: Container(
-                key: TutorialKeys.essenTracken,
+                key: TutorialKeys.plus,
                 width: 72,
                 height: 72,
                 decoration: const BoxDecoration(
@@ -241,9 +299,11 @@ class _CenterButton extends StatelessWidget {
             ),
             // Label at bottom
             const Positioned(
+              left: 0,
+              right: 0,
               bottom: 0,
-              child: Text(
-                'Essen tracken',
+              child: _BarLabel(
+                'Eintragen',
                 style: TextStyle(
                   fontSize: AppTheme.fontSizeBody,
                   fontWeight: FontWeight.w500,
@@ -253,6 +313,27 @@ class _CenterButton extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// A slot's label: one line, shrunk to fit its slot when needed (five slots
+/// on a narrow phone with large text, or a short bar above the home
+/// indicator).
+class _BarLabel extends StatelessWidget {
+  const _BarLabel(this.label, {required this.style});
+
+  final String label;
+  final TextStyle style;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppConstants.spacing2),
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(label, maxLines: 1, style: style),
       ),
     );
   }
