@@ -21,7 +21,7 @@ const _boldStyle = TextStyle(
 TextSpan _t(String text) => TextSpan(text: text, style: _baseStyle);
 TextSpan _b(String text) => TextSpan(text: text, style: _boldStyle);
 
-/// The 7 tour steps: Home top to bottom (the Buddy and his ring, the
+/// The 7 tour steps: Home top to bottom (the Buddy and his bubbles, the
 /// next-action button), the plus, the insight card, then the tabs.
 final List<TutorialStep> dashboardTutorialSteps = [
   TutorialStep(
@@ -33,10 +33,10 @@ final List<TutorialStep> dashboardTutorialSteps = [
       _b('Buddy'),
       _t('! Jeder Eintrag hält euren 🔥 '),
       _b('Streak'),
-      _t(' am Leben. Der '),
-      _b('Ring'),
+      _t(' am Leben. Seine '),
+      _b('Blasen'),
       _t(
-        ' zeigt, was er heute schon bekommen hat – tipp auf eine Blase, um es einzutragen.',
+        ' füllen sich, wenn du einträgst, und leeren sich langsam – tipp auf eine, um einzutragen.',
       ),
     ],
   ),

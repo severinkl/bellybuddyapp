@@ -1,11 +1,8 @@
-import 'dart:math' as math;
+import '../../config/constants.dart';
+import 'care_meters.dart';
 
-import '../../providers/entries_provider.dart';
-import '../../utils/date_format_utils.dart';
-import '../../utils/gut_feeling_rating.dart';
-
-/// The Buddy's four daily needs, one per tracker; they make up the
-/// dashboard's care ring.
+/// The Buddy's four needs, one per tracker; they make up the dashboard's
+/// care ring.
 enum CareNeed {
   food('🍽', 'Essen'),
   drink('💧', 'Trinken'),
@@ -42,162 +39,10 @@ enum CareAction {
   final CareNeed? need;
 }
 
-/// How many glasses [ml] millilitres of drinks are: [DailyCare.mlPerGlass]
-/// per glass, rounded; any drink counts as at least one glass.
-int glassesForMl(int ml) =>
-    ml <= 0 ? 0 : math.max(1, (ml / DailyCare.mlPerGlass).round());
-
-/// What the user logged today, per need (local day).
-class DailyCare {
-  const DailyCare({
-    this.meals = 0,
-    this.drinks = 0,
-    this.glasses = 0,
-    this.gutFeelings = 0,
-    this.toilets = 0,
-    this.lastMealAt,
-    this.lastDrinkAt,
-    this.lastLogAt,
-    this.lastGutFeelingLevel,
-  });
-
-  static const mealGoal = 3;
-  static const glassGoal = 6;
-  static const gutFeelingGoal = 1;
-  static const mlPerGlass = 250;
-
-  final int meals;
-
-  /// Today's drink entries, whatever their volume.
-  final int drinks;
-
-  /// Today's drinks in glasses ([glassesForMl] of their total volume).
-  final int glasses;
-  final int gutFeelings;
-  final int toilets;
-
-  /// Local time of today's latest meal.
-  final DateTime? lastMealAt;
-
-  /// Local time of today's latest drink.
-  final DateTime? lastDrinkAt;
-
-  /// Local time of today's latest entry of any kind.
-  final DateTime? lastLogAt;
-
-  /// How today's latest Bauchgefühl was; null before the first one.
-  final GutFeelingRatingLevel? lastGutFeelingLevel;
-
-  /// All of today's entries.
-  int get entries => meals + drinks + gutFeelings + toilets;
-
-  /// How many of the four kinds (meal, drink, Bauchgefühl, Klo) have an
-  /// entry today.
-  int get kindsLogged =>
-      [meals, drinks, gutFeelings, toilets].where((n) => n > 0).length;
-
-  factory DailyCare.fromEntries(EntriesState s, DateTime now) {
-    /// The local times of today's entries among [trackedAt].
-    List<DateTime> today(Iterable<DateTime> trackedAt) => [
-      for (final t in trackedAt)
-        if (isSameDay(t.toLocal(), now)) t.toLocal(),
-    ];
-    DateTime? latest(List<DateTime> times) =>
-        times.isEmpty ? null : times.reduce((a, b) => a.isAfter(b) ? a : b);
-
-    final drinks = [
-      for (final d in s.drinks)
-        if (isSameDay(d.trackedAt.toLocal(), now)) d,
-    ];
-    final mealTimes = today(s.meals.map((e) => e.trackedAt));
-    final gutFeelingTimes = today(s.gutFeelings.map((e) => e.trackedAt));
-    final todaysGutFeelings = [
-      for (final g in s.gutFeelings)
-        if (isSameDay(g.trackedAt.toLocal(), now)) g,
-    ];
-    final lastGutFeeling = todaysGutFeelings.isEmpty
-        ? null
-        : todaysGutFeelings.reduce(
-            (a, b) => a.trackedAt.isAfter(b.trackedAt) ? a : b,
-          );
-    final toiletTimes = today(s.toiletEntries.map((e) => e.trackedAt));
-    return DailyCare(
-      meals: mealTimes.length,
-      drinks: drinks.length,
-      glasses: glassesForMl(drinks.fold(0, (sum, d) => sum + d.amountMl)),
-      gutFeelings: gutFeelingTimes.length,
-      toilets: toiletTimes.length,
-      lastMealAt: latest(mealTimes),
-      lastDrinkAt: latest([for (final d in drinks) d.trackedAt.toLocal()]),
-      lastLogAt: latest([
-        ...mealTimes,
-        for (final d in drinks) d.trackedAt.toLocal(),
-        ...gutFeelingTimes,
-        ...toiletTimes,
-      ]),
-      lastGutFeelingLevel: lastGutFeeling == null
-          ? null
-          : calculateGutFeelingRating(lastGutFeeling).level,
-    );
-  }
-
-  @override
-  bool operator ==(Object other) =>
-      other is DailyCare &&
-      other.meals == meals &&
-      other.drinks == drinks &&
-      other.glasses == glasses &&
-      other.gutFeelings == gutFeelings &&
-      other.toilets == toilets &&
-      other.lastMealAt == lastMealAt &&
-      other.lastDrinkAt == lastDrinkAt &&
-      other.lastLogAt == lastLogAt &&
-      other.lastGutFeelingLevel == lastGutFeelingLevel;
-
-  @override
-  int get hashCode => Object.hash(
-    meals,
-    drinks,
-    glasses,
-    gutFeelings,
-    toilets,
-    lastMealAt,
-    lastDrinkAt,
-    lastLogAt,
-    lastGutFeelingLevel,
-  );
-
-  /// The daily goal of [need]; null for Klo (counted, never a target).
-  static int? goalFor(CareNeed need) => switch (need) {
-    CareNeed.food => mealGoal,
-    CareNeed.drink => glassGoal,
-    CareNeed.gutFeeling => gutFeelingGoal,
-    CareNeed.toilet => null,
-  };
-
-  int count(CareNeed need) => switch (need) {
-    CareNeed.food => meals,
-    CareNeed.drink => glasses,
-    CareNeed.gutFeeling => gutFeelings,
-    CareNeed.toilet => toilets,
-  };
-
-  /// 0..1; a need without a goal is full once logged.
-  double progress(CareNeed need) {
-    final goal = goalFor(need);
-    final n = count(need);
-    if (goal == null) return n > 0 ? 1 : 0;
-    return math.min(1, n / goal);
-  }
-
-  bool isMet(CareNeed need) => progress(need) >= 1;
-}
-
 /// The Buddy's day: where its parts start, in minutes after local
 /// midnight.
 abstract final class DayParts {
-  /// Mittagessen is asked for from here (Frühstück before), and a meal
-  /// from here on counts for lunch and the afternoon snack.
+  /// Mittagessen is asked for from here (Frühstück before).
   static const lunchFrom = 10 * 60 + 30;
 
   /// The afternoon snack.
@@ -207,8 +52,8 @@ abstract final class DayParts {
   static const dinnerFrom = 17 * 60;
 
   /// The dashboard Buddy's resting line names his next need by day, from
-  /// [dayFrom] until [nightFrom]. Breakfast is asked for, and counted, from
-  /// [dayFrom] on.
+  /// [dayFrom] until [nightFrom]. Breakfast is asked for from [dayFrom]
+  /// on.
   static const dayFrom = 5 * 60;
   static const nightFrom = 22 * 60;
 
@@ -235,36 +80,20 @@ CareAction? mealSlotAt(DateTime now) {
   return CareAction.dinner;
 }
 
-/// Since when (minutes after midnight) a meal counts for each meal slot:
-/// breakfast from [DayParts.dayFrom] (a late-night meal is none), lunch and
-/// the afternoon snack from [DayParts.lunchFrom], dinner from
-/// [DayParts.dinnerFrom].
-const _mealCountsFrom = {
-  CareAction.breakfast: DayParts.dayFrom,
-  CareAction.lunch: DayParts.lunchFrom,
-  CareAction.snack: DayParts.lunchFrom,
-  CareAction.dinner: DayParts.dinnerFrom,
-};
-
-/// The next thing to log: the meal the time of day asks for (none at night
-/// before [DayParts.dayFrom]) until a meal is logged in its slot (a skipped
-/// breakfast is not asked for at noon), then Trinken under its goal, then
-/// Bauchgefühl, else [CareAction.feed]. Klo never drives it.
-CareAction nextCareAction(DailyCare care, DateTime now) {
-  final slot = mealSlotAt(now);
-  if (slot != null && care.meals < DailyCare.mealGoal) {
-    final from = _mealCountsFrom[slot]!;
-    final slotStart = DateTime(
-      now.year,
-      now.month,
-      now.day,
-      from ~/ 60,
-      from % 60,
-    );
-    final last = care.lastMealAt;
-    if (last == null || last.isBefore(slotStart)) return slot;
-  }
-  if (!care.isMet(CareNeed.drink)) return CareAction.drink;
-  if (!care.isMet(CareNeed.gutFeeling)) return CareAction.gutFeeling;
-  return CareAction.feed;
+/// The next thing to log: the need with the lowest meter
+/// ([CareMeters.lowest]; Klo has none, so it never drives it) once it is
+/// under [AppConstants.careMeterLow]. For Essen that is the meal the time
+/// of day asks for ([mealSlotAt]), at night the plain „Essen eintragen"
+/// ([CareAction.feed]). With no meter that low: [CareAction.feed].
+CareAction nextCareAction(CareLog log, DateTime now) {
+  final m = CareMeters.at(log, now);
+  final lowest = m.lowest;
+  if (m.level(lowest)! >= AppConstants.careMeterLow) return CareAction.feed;
+  return switch (lowest) {
+    CareNeed.food => mealSlotAt(now) ?? CareAction.feed,
+    CareNeed.drink => CareAction.drink,
+    CareNeed.gutFeeling => CareAction.gutFeeling,
+    // Not metered, so never the lowest.
+    CareNeed.toilet => CareAction.feed,
+  };
 }

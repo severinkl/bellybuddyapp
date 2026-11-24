@@ -1,26 +1,39 @@
 import 'dart:math';
 
+import '../../config/constants.dart';
 import '../../models/gut_feeling_entry.dart';
 import '../../models/toilet_entry.dart';
 import '../../utils/gut_feeling_rating.dart';
 import '../../widgets/buddy/buddy_actions.dart';
 import '../../widgets/buddy/buddy_pose.dart';
 import 'buddy_copy.dart';
+import 'care_meters.dart';
 import 'daily_care.dart';
 
 enum EntryKind { meal, drink, toilet, gutFeeling }
 
+/// The need an entry of [kind] fills.
+CareNeed careNeedOf(EntryKind kind) => switch (kind) {
+  EntryKind.meal => CareNeed.food,
+  EntryKind.drink => CareNeed.drink,
+  EntryKind.gutFeeling => CareNeed.gutFeeling,
+  EntryKind.toilet => CareNeed.toilet,
+};
+
 enum LogSentiment { good, neutral, bad }
 
-/// The Buddy's resting mood from what was logged today ([care]) at [now].
-BuddyMood deriveBuddyMood(DailyCare care, DateTime now) {
+/// The Buddy's resting mood from his need meters at [now]: sleepy before
+/// 10:00 while nothing is logged today, energetic with every meter at
+/// [AppConstants.careMeterHigh] or more, happy with none under
+/// [AppConstants.careMeterLow], else hungry by day (10–22) and sleepy at
+/// night.
+BuddyMood deriveBuddyMood(CareLog log, DateTime now) {
   final h = now.hour;
-  if (care.entries == 0 && h < 10) return BuddyMood.sleepy;
-  if (care.kindsLogged >= 3) return BuddyMood.energetic;
-  if (care.lastLogAt != null &&
-      now.difference(care.lastLogAt!) < const Duration(hours: 5)) {
-    return BuddyMood.happy;
-  }
+  if (!log.anyOn(now) && h < 10) return BuddyMood.sleepy;
+  final m = CareMeters.at(log, now);
+  final lowest = m.level(m.lowest)!;
+  if (lowest >= AppConstants.careMeterHigh) return BuddyMood.energetic;
+  if (lowest >= AppConstants.careMeterLow) return BuddyMood.happy;
   if (h >= 10 && h < 22) return BuddyMood.hungry;
   return BuddyMood.sleepy;
 }

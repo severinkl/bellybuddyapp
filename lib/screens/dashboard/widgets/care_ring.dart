@@ -4,21 +4,25 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
+import '../../../services/buddy/care_meters.dart';
 import '../../../services/buddy/daily_care.dart';
 import '../../../services/haptic_service.dart';
+import '../../../widgets/buddy/need_meter.dart';
 
-/// The Buddy inside a ring of his four daily needs. Each quarter of the ring
-/// fills with today's progress of one need (Trinken top right, Bauchgefühl
-/// bottom right, Klo bottom left, Essen top left), and a bubble in that
-/// corner shows it („🍽 2/3"); tapping a bubble calls [onNeed] with its
-/// need. The ring itself is no tap target (the Buddy has his own). The
+/// The Buddy among his four needs, a bubble in each corner (Essen top
+/// left, Trinken top right, Klo bottom left, Bauchgefühl bottom right).
+/// A bubble's meter shows how full its need is at [now] ([CareMeters]
+/// from [log]); Klo has no meter and says when it was last instead
+/// ([CareCopy.looLine]). Tapping a bubble calls [onNeed] with its need;
+/// the space between them is no tap target (the Buddy has his own). The
 /// [highlight]ed need (the one he suggests next) glows and, unless
 /// animations are off, pulses gently on its own clock (paused while
 /// `TickerMode` is off).
 class CareRing extends StatelessWidget {
   const CareRing({
     super.key,
-    required this.care,
+    required this.log,
+    required this.now,
     required this.diameter,
     required this.buddy,
     required this.onNeed,
@@ -50,11 +54,22 @@ class CareRing extends StatelessWidget {
         AppConstants.careRingMaxDiameter,
       );
 
-  final DailyCare care;
+  /// A bubble's meter on a ring of [diameter].
+  static double meterSizeFor(double diameter) =>
+      (diameter * AppConstants.careMeterFactor).clamp(
+        AppConstants.careMeterMinSize,
+        AppConstants.careMeterMaxSize,
+      );
+
+  /// When each need was last logged.
+  final CareLog log;
+
+  /// The moment the meters show.
+  final DateTime now;
   final double diameter;
 
-  /// Drawn centred inside the ring, [AppConstants.careRingBuddyFactor] of
-  /// its diameter square.
+  /// Drawn centred, [AppConstants.careRingBuddyFactor] of [diameter]
+  /// square.
   final Widget buddy;
 
   /// Tapping a need's bubble calls this with the need.
@@ -63,11 +78,19 @@ class CareRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final calm = MediaQuery.disableAnimationsOf(context);
+    final meters = CareMeters.at(log, now);
+    final meterSize = meterSizeFor(diameter);
     Widget bubble(CareNeed need) => _NeedBubble(
       key: needKey(need),
       need: need,
-      care: care,
+      level: meters.level(need),
+      // Bauchgefühl shows how today's latest entry was.
+      emoji: need == CareNeed.gutFeeling
+          ? log.lastGutFeelingLevel?.face ?? need.emoji
+          : need.emoji,
+      line: need == CareNeed.toilet ? CareCopy.looLine(log, now) : null,
+      spoken: CareCopy.spoken(need, log, now),
+      meterSize: meterSize,
       highlighted: need == highlight,
       onTap: () => onNeed(need),
     );
@@ -78,20 +101,6 @@ class CareRing extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
-          SizedBox.square(
-            dimension: diameter,
-            // The Buddy and the glow next to it repaint every frame; the
-            // ring only while its progress animates.
-            child: RepaintBoundary(
-              child: TweenAnimationBuilder<_Progress>(
-                tween: _ProgressTween(end: _progressOf(care)),
-                duration: calm ? Duration.zero : AppConstants.animMedium,
-                curve: Curves.easeOut,
-                builder: (_, progress, _) =>
-                    CustomPaint(painter: _RingPainter(progress)),
-              ),
-            ),
-          ),
           SizedBox.square(
             dimension: diameter * AppConstants.careRingBuddyFactor,
             child: buddy,
@@ -106,97 +115,39 @@ class CareRing extends StatelessWidget {
   }
 }
 
-/// The ring quarters' progress (0..1), clockwise from the top: Trinken,
-/// Bauchgefühl, Klo, Essen. A record compares by value, so a rebuild with
-/// unchanged progress doesn't start the fill animation again.
-typedef _Progress = (double, double, double, double);
-
-_Progress _progressOf(DailyCare care) => (
-  care.progress(CareNeed.drink),
-  care.progress(CareNeed.gutFeeling),
-  care.progress(CareNeed.toilet),
-  care.progress(CareNeed.food),
-);
-
-/// Lerps the four quarters' progress.
-class _ProgressTween extends Tween<_Progress> {
-  _ProgressTween({required _Progress end}) : super(end: end);
-
-  @override
-  _Progress lerp(double t) {
-    final (a1, a2, a3, a4) = begin ?? end!;
-    final (b1, b2, b3, b4) = end!;
-    double at(double a, double b) => a + (b - a) * t;
-    return (at(a1, b1), at(a2, b2), at(a3, b3), at(a4, b4));
-  }
-}
-
-class _RingPainter extends CustomPainter {
-  _RingPainter(this.progress);
-
-  final _Progress progress;
-
-  static const _colors = [
-    AppTheme.careWater,
-    AppTheme.careGut,
-    AppTheme.careLoo,
-    AppTheme.careFood,
-  ];
-
-  static final Paint _paint = Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = AppConstants.careRingStroke;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const stroke = AppConstants.careRingStroke;
-    final rect = Rect.fromLTWH(
-      stroke / 2,
-      stroke / 2,
-      size.width - stroke,
-      size.height - stroke,
-    );
-    const gap = AppConstants.careRingGapDegrees * math.pi / 180;
-    const sweep = math.pi / 2 - gap;
-    final (p1, p2, p3, p4) = progress;
-    final quarters = [p1, p2, p3, p4];
-    for (var i = 0; i < 4; i++) {
-      final start = -math.pi / 2 + i * math.pi / 2 + gap / 2;
-      canvas.drawArc(rect, start, sweep, false, _paint..color = AppTheme.muted);
-      final p = quarters[i].clamp(0.0, 1.0);
-      if (p > 0) {
-        canvas.drawArc(
-          rect,
-          start,
-          sweep * p,
-          false,
-          _paint..color = _colors[i],
-        );
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(_RingPainter old) => old.progress != progress;
-}
-
-/// A need's corner bubble, a button that logs it ([onTap]): its count
-/// over its label; filled once met, ringed and glowing ([_Glow]) while it
-/// is the next need. Its tap area is everything it paints: the box inset
-/// by the glow's reach ([AppConstants.careNeedGlow], which also covers the
-/// shadow below), so the ring's box holds all of it and no tap on the
-/// bubble lands on what sits around the ring.
+/// A need's corner bubble, a button that logs it ([onTap]): its meter
+/// (glowing ([_Glow]) while it is the next need) over its label and, for
+/// Klo, when it was last ([line]). A new [level] fills or drains the meter
+/// over [AppConstants.animMedium] (at once with animations off); the same
+/// level again doesn't move it. Its tap area is everything it paints: the
+/// bubble inset by the glow's reach ([AppConstants.careNeedGlow]), so the
+/// ring's box holds all of it and no tap on the bubble lands on what sits
+/// around the ring.
 class _NeedBubble extends StatelessWidget {
   const _NeedBubble({
     super.key,
     required this.need,
-    required this.care,
+    required this.level,
+    required this.emoji,
+    required this.line,
+    required this.spoken,
+    required this.meterSize,
     required this.highlighted,
     required this.onTap,
   });
 
   final CareNeed need;
-  final DailyCare care;
+
+  /// Its meter's level; null for Klo, which has none.
+  final double? level;
+  final String emoji;
+
+  /// A second line under the label (Klo's „vor 3 Std").
+  final String? line;
+
+  /// The button's semantics value: when it was last.
+  final String spoken;
+  final double meterSize;
   final bool highlighted;
   final VoidCallback onTap;
 
@@ -205,93 +156,38 @@ class _NeedBubble extends StatelessWidget {
     onTap();
   }
 
-  /// Today's count as shown after the need's emoji („2/3") and as spoken
-  /// after the button's label („2 von 3 Mahlzeiten").
-  (String, String) get _count => switch (need) {
-    CareNeed.food => (
-      '${care.meals}/${DailyCare.mealGoal}',
-      '${care.meals} von ${DailyCare.mealGoal} Mahlzeiten',
-    ),
-    CareNeed.drink => (
-      '${care.glasses}/${DailyCare.glassGoal}',
-      '${care.glasses} von ${DailyCare.glassGoal} Gläsern',
-    ),
-    CareNeed.gutFeeling => switch (care.lastGutFeelingLevel) {
-      _ when !care.isMet(CareNeed.gutFeeling) => ('–', 'heute noch offen'),
-      null => ('✓', 'heute eingetragen'),
-      final level => ('✓', 'heute eingetragen, zuletzt ${level.label}'),
-    },
-    CareNeed.toilet => (
-      care.toilets > 0 ? '${care.toilets}×' : '–',
-      '${care.toilets} ${care.toilets == 1 ? 'Eintrag' : 'Einträge'} heute',
-    ),
-  };
-
-  /// Bauchgefühl, once logged, shows how today's latest entry was.
-  String get _emoji => need == CareNeed.gutFeeling
-      ? care.lastGutFeelingLevel?.face ?? need.emoji
-      : need.emoji;
-
-  BoxDecoration get _decoration => BoxDecoration(
-    color: care.isMet(need) ? AppTheme.primarySoft : AppTheme.background,
-    borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-    border: Border.all(
-      color: highlighted ? AppTheme.primary : AppTheme.border,
-      width: AppConstants.borderWidthLg,
-    ),
-    boxShadow: [
-      BoxShadow(
-        color: highlighted ? AppTheme.primary : AppTheme.border,
-        offset: AppConstants.careNeedShadowOffset,
-      ),
-    ],
-  );
-
   @override
   Widget build(BuildContext context) {
-    final (count, spoken) = _count;
-    final content = Column(
-      mainAxisSize: MainAxisSize.min,
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            '$_emoji $count',
-            maxLines: 1,
-            style: const TextStyle(
-              fontSize: AppTheme.fontSizeSubtitle,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.foreground,
-              fontFeatures: [FontFeature.tabularFigures()],
-            ),
-          ),
-        ),
-        FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            need.label,
-            maxLines: 1,
-            style: const TextStyle(
-              fontSize: AppTheme.fontSizeCaption,
-              color: AppTheme.mutedForeground,
-            ),
-          ),
-        ),
-      ],
+    final icon = Text(
+      emoji,
+      style: const TextStyle(fontSize: AppTheme.fontSizeHeading),
     );
-    final box = Container(
-      width: AppConstants.careNeedWidth,
-      constraints: const BoxConstraints(
-        minHeight: AppConstants.careNeedMinHeight,
-      ),
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppConstants.spacingXs,
-        vertical: AppConstants.spacing6,
-      ),
-      decoration: _decoration,
-      child: content,
-    );
+    // The glow goes inside the tween: when it moves on (the need just
+    // logged), the tween keeps its place and the meter still fills.
+    Widget meterAt(double? l, Widget child) {
+      final meter = NeedMeter(
+        need: need,
+        level: l,
+        size: meterSize,
+        child: child,
+      );
+      return highlighted ? _Glow(child: meter) : meter;
+    }
+
+    final l = level;
+    final meter = l == null
+        ? meterAt(null, icon)
+        : TweenAnimationBuilder<double>(
+            tween: Tween(end: l),
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : AppConstants.animMedium,
+            curve: Curves.easeOut,
+            builder: (_, value, child) => meterAt(value, child!),
+            child: icon,
+          );
+    final line = this.line;
+
     return Semantics(
       button: true,
       label: need.logLabel,
@@ -303,16 +199,50 @@ class _NeedBubble extends StatelessWidget {
         onTap: _tap,
         child: Padding(
           padding: const EdgeInsets.all(AppConstants.careNeedGlow),
-          child: highlighted ? _Glow(child: box) : box,
+          child: SizedBox(
+            width: AppConstants.careNeedWidth,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                meter,
+                AppConstants.gap4,
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Text(
+                    need.label,
+                    maxLines: 1,
+                    style: const TextStyle(
+                      fontSize: AppTheme.fontSizeCaptionLG,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.foreground,
+                    ),
+                  ),
+                ),
+                if (line != null)
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      line,
+                      maxLines: 1,
+                      style: const TextStyle(
+                        fontSize: AppTheme.fontSizeCaption,
+                        color: AppTheme.mutedForeground,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 }
 
-/// The next need's glow around its bubble ([child]), painted under it. It
-/// breathes once per [AppConstants.careNeedPulse] on its own clock (paused
-/// while `TickerMode` is off) and stays full while animations are off.
+/// The next need's glow, a circle around its meter ([child]), painted
+/// under it. It breathes once per [AppConstants.careNeedPulse] on its own
+/// clock (paused while `TickerMode` is off) and stays full while
+/// animations are off.
 class _Glow extends StatefulWidget {
   const _Glow({required this.child});
 
@@ -355,23 +285,26 @@ class _GlowState extends State<_Glow> with SingleTickerProviderStateMixin {
   double get _pulse =>
       _still ? 1 : 0.5 + 0.5 * math.sin(_clock.value * 2 * math.pi);
 
+  // Its own layer: the pulse repaints every frame, the rest of Home not.
   @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-    animation: _clock,
-    builder: (_, child) => DecoratedBox(
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-        boxShadow: [
-          BoxShadow(
-            color: AppTheme.careGlow,
-            spreadRadius:
-                AppConstants.careNeedGlow *
-                (_glowMin + (1 - _glowMin) * _pulse),
-          ),
-        ],
+  Widget build(BuildContext context) => RepaintBoundary(
+    child: AnimatedBuilder(
+      animation: _clock,
+      builder: (_, child) => DecoratedBox(
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: AppTheme.careGlow,
+              spreadRadius:
+                  AppConstants.careNeedGlow *
+                  (_glowMin + (1 - _glowMin) * _pulse),
+            ),
+          ],
+        ),
+        child: child,
       ),
-      child: child,
+      child: widget.child,
     ),
-    child: widget.child,
   );
 }

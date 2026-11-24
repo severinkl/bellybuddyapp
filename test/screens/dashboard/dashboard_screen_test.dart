@@ -35,6 +35,7 @@ import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
+import 'package:belly_buddy/widgets/buddy/need_meter.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
 import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
 
@@ -150,6 +151,16 @@ Future<void> _go(WidgetTester tester, GoRouter router, String path) async {
 }
 
 /// A step's copy with its bold parts in `**`.
+/// The level the ring's meter of [need] shows (null for Klo).
+double? _meter(WidgetTester tester, CareNeed need) => tester
+    .widget<NeedMeter>(
+      find.descendant(
+        of: find.byKey(CareRing.needKey(need)),
+        matching: find.byType(NeedMeter),
+      ),
+    )
+    .level;
+
 String _markedCopy(TutorialStep step) => step.richText.map((span) {
   final text = span.toPlainText();
   final bold = (span as TextSpan).style?.fontWeight == FontWeight.w700;
@@ -602,8 +613,8 @@ void main() {
       ]);
       expect(dashboardTutorialSteps.map(_markedCopy), [
         'Das ist dein **Buddy**! Jeder Eintrag hält euren 🔥 **Streak** am '
-            'Leben. Der **Ring** zeigt, was er heute schon bekommen hat – '
-            'tipp auf eine Blase, um es einzutragen.',
+            'Leben. Seine **Blasen** füllen sich, wenn du einträgst, und '
+            'leeren sich langsam – tipp auf eine, um einzutragen.',
         'Dieser Knopf schlägt dir den **nächsten Eintrag** vor – passend zur '
             'Tageszeit.',
         'Hier trägst du **alles** ein: Essen, Trinken, Bauchgefühl und Klo.',
@@ -737,14 +748,12 @@ void main() {
       await tester.pumpAndSettle();
     }
 
-    /// The bordered box [need]'s bubble draws (its shadow falls below it).
-    Rect bubbleBox(WidgetTester tester, CareNeed need) => tester.getRect(
-      find
-          .descendant(
-            of: find.byKey(CareRing.needKey(need)),
-            matching: find.byType(DecoratedBox),
-          )
-          .last,
+    /// The circle of [need]'s meter.
+    Rect meterCircle(WidgetTester tester, CareNeed need) => tester.getRect(
+      find.descendant(
+        of: find.byKey(CareRing.needKey(need)),
+        matching: find.byType(NeedMeter),
+      ),
     );
 
     for (final (name, size, padding) in [
@@ -755,7 +764,7 @@ void main() {
       ),
       ('375×667', const Size(375, 667), const FakeViewPadding(top: 20)),
     ]) {
-      testWidgets('$name: a bubble opens its own tracker, at its centre and '
+      testWidgets('$name: a bubble opens its own tracker, on its meter and '
           'on its lower edge; the button opens the suggested one', (
         tester,
       ) async {
@@ -763,22 +772,19 @@ void main() {
         expect(find.text('🍝 Mittagessen eintragen'), findsOneWidget);
 
         for (final MapEntry(key: need, value: path) in trackers.entries) {
-          final box = bubbleBox(tester, need);
           await tapOpens(
             tester,
             router,
-            box.center,
+            meterCircle(tester, need).center,
             path,
-            reason: '$need centre',
+            reason: '$need meter',
           );
-          // On its shadow, just above the bubble's visual bottom.
+          // Just above the bubble's bottom, under its last line.
+          final bubble = tester.getRect(find.byKey(CareRing.needKey(need)));
           await tapOpens(
             tester,
             router,
-            Offset(
-              box.center.dx,
-              box.bottom + AppConstants.careNeedShadowOffset.dy - 1,
-            ),
+            Offset(bubble.center.dx, bubble.bottom - 1),
             path,
             reason: '$need lower edge',
           );
@@ -827,8 +833,8 @@ void main() {
       );
       await settle(tester);
 
-      expect(find.text('🍽 1/3'), findsOneWidget);
-      expect(find.text('🍽 0/3'), findsNothing);
+      // Lunch at 12:00, 2 h ago.
+      expect(_meter(tester, CareNeed.food), closeTo(0.66, 0.005));
     });
 
     testWidgets('after signing out and in again: Home shows the new day '
@@ -870,21 +876,21 @@ void main() {
         ),
       );
       await settle(tester);
-      expect(find.text('🍽 0/3'), findsOneWidget);
+      expect(_meter(tester, CareNeed.food), AppConstants.careMeterFloor);
 
       // Twice: each round leaves the providers in another order.
-      for (final meals in [1, 2]) {
+      for (final (meal, level) in [
+        (DateTime(2026, 11, 23, 12), 0.66),
+        (DateTime(2026, 11, 23, 13), 0.83),
+      ]) {
         // Sign-out: Home goes, the app drops the user's entries.
         router.go(RoutePaths.welcome);
         await settle(tester);
         container.invalidate(entriesProvider);
-        // Sign-in: the account has [meals] meals today; Home is built again.
+        // Sign-in: the account has a [meal] today; Home is built again.
         entryRepo.seedResult(
           testEntryQueryResult(
-            meals: [
-              for (var h = 0; h < meals; h++)
-                testMealEntry(trackedAt: DateTime(2026, 11, 23, 8 + h)),
-            ],
+            meals: [testMealEntry(trackedAt: meal)],
             toiletEntries: const [],
             gutFeelings: const [],
             drinks: const [],
@@ -893,7 +899,11 @@ void main() {
         router.go(RoutePaths.dashboard);
         await settle(tester);
 
-        expect(find.text('🍽 $meals/3'), findsOneWidget, reason: '$meals');
+        expect(
+          _meter(tester, CareNeed.food),
+          closeTo(level, 0.005),
+          reason: '$meal',
+        );
       }
     });
   });

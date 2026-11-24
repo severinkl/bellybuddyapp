@@ -6,7 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/buddy_provider.dart';
-import '../../providers/daily_care_provider.dart';
+import '../../providers/care_log_provider.dart';
 import '../../providers/diary_provider.dart';
 import '../../providers/discover_news_provider.dart';
 import '../../providers/entries_provider.dart';
@@ -159,7 +159,7 @@ class BbBottomNav extends ConsumerWidget {
   /// on the other tabs for now. For today, the need Home suggests next
   /// ([nextCareAction]) is highlighted, but only while Home holds today's
   /// entries: before its first load, or still on yesterday after midnight,
-  /// its counts say nothing about today.
+  /// its meters say nothing about today.
   void _openLogSheet(BuildContext context, WidgetRef ref) {
     final now = ref.read(buddyClockProvider)();
     final day = navigationShell.currentIndex == _diaryBranch
@@ -168,7 +168,7 @@ class BbBottomNav extends ConsumerWidget {
     final homeDay = ref.read(entriesProvider).day;
     final suggested =
         isSameDay(day, now) && homeDay != null && isSameDay(homeDay, now)
-        ? nextCareAction(ref.read(dailyCareProvider), now).need
+        ? nextCareAction(ref.read(careLogProvider), now).need
         : null;
     unawaited(showLogSheet(context, day: day, now: now, suggested: suggested));
   }

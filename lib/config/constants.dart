@@ -126,23 +126,22 @@ class AppConstants {
   static const double careMeterStrokeShare = 0.085;
 
   // Dashboard care ring: its diameter (at most this, this share of the
-  // width and of the screen height, at least the minimum), stroke, the gap
-  // between its four segments, and the Buddy's box inside it
+  // width and of the screen height, at least the minimum) and the Buddy's
+  // box inside it
   static const double careRingMaxDiameter = 260.0;
   static const double careRingMinDiameter = 170.0;
   static const double careRingWidthFactor = 0.72;
   static const double careRingHeightFactor = 0.3;
-  static const double careRingStroke = 13.0;
-  static const double careRingGapDegrees = 6.0;
   static const double careRingBuddyFactor = 0.74;
 
-  // Its need bubbles (Essen n/3 …): size, the next need's glow (also the
-  // margin of each bubble's tap area, so it must reach past the shadow's
-  // offset), its pulse
+  // Its need bubbles: a bubble's meter (this share of the ring's diameter,
+  // within min and max), the bubble's width, the next need's glow around
+  // its meter (also the margin of each bubble's tap area) and its pulse
+  static const double careMeterFactor = 0.27;
+  static const double careMeterMinSize = 48.0;
+  static const double careMeterMaxSize = 72.0;
   static const double careNeedWidth = 88.0;
-  static const double careNeedMinHeight = 62.0;
   static const double careNeedGlow = 5.0;
-  static const Offset careNeedShadowOffset = Offset(0, 3);
   static const Duration careNeedPulse = Duration(milliseconds: 1400);
 
   // „Dein Streak" sheet: the goal progress bar
