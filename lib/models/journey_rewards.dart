@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart' show listEquals, mapEquals;
 
 import '../utils/json_values.dart';
+import 'insight_rules.dart';
 
 /// The day-3 offer of a first tip.
 enum TipOffer {
@@ -80,14 +81,18 @@ class JourneyRewards {
     this.firstTip,
   });
 
-  /// [json] when it is a map with an int `earned`; null otherwise. A pick
-  /// of another shape is skipped, and an unknown answer reads null.
+  /// The days whose reward is a recipe, in the order they are picked.
+  static const recipeDays = [1, 3, 5];
+
+  /// [json] when it is a map with an int `earned` (clamped to 0–7); null
+  /// otherwise. A pick of another shape, or under another day than
+  /// [recipeDays], is skipped, and an unknown answer reads null.
   static JourneyRewards? fromJson(Object? json) {
     if (json is! Map) return null;
     final earned = json['earned'];
     if (earned is! int) return null;
     return JourneyRewards(
-      earnedDay: earned,
+      earnedDay: earned.clamp(0, InsightRules.daysNeeded),
       patternsFreed: json['freed'] == true,
       picks: _picksFrom(json['picks']),
       tipOffer: TipOffer.values.asNameMap()[json['tipOffer']],
@@ -101,7 +106,7 @@ class JourneyRewards {
   /// The first patterns were unlocked once (the day-7 reward).
   final bool patternsFreed;
 
-  /// The recipe rewards, by day (1, 3, 5).
+  /// The recipe rewards, by day (one of [recipeDays]).
   final Map<int, RecipePick> picks;
 
   /// The day-3 offer; null while day 3 isn't decided.
@@ -162,14 +167,19 @@ class JourneyRewards {
       'firstTip: ${firstTip?.name})';
 }
 
-/// The picks stored in [json], by day; entries of another shape skipped.
+/// The picks stored in [json], by day; entries of another shape, or under
+/// another day than [JourneyRewards.recipeDays], skipped.
 Map<int, RecipePick> _picksFrom(Object? json) {
   final picks = <int, RecipePick>{};
   if (json is Map) {
     for (final MapEntry(:key, :value) in json.entries) {
       final day = key is String ? int.tryParse(key) : null;
       final pick = RecipePick.fromJson(value);
-      if (day != null && pick != null) picks[day] = pick;
+      if (day != null &&
+          JourneyRewards.recipeDays.contains(day) &&
+          pick != null) {
+        picks[day] = pick;
+      }
     }
   }
   return Map.unmodifiable(picks);

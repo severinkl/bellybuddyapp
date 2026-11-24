@@ -18,10 +18,11 @@ abstract final class JourneyCopy {
 
   static const day4 = 'Ein Spruch von mir';
 
-  /// Day 5 with a recipe matching calm-day ingredients …
+  /// Day 5 once its stored recipe matched calm-day ingredients …
   static const day5 = 'Ein Rezept mit deinen Zutaten';
 
-  /// … and without one, so the copy never claims a match.
+  /// … and otherwise, also before day 5's recipe is picked, so the copy
+  /// never claims a match before one exists.
   static const day5Generic = 'Noch ein Rezept für dich';
 
   static const day6 = 'Eine Vorschau auf deine Muster';

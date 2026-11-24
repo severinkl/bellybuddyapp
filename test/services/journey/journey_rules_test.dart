@@ -518,17 +518,52 @@ void main() {
       const r = JourneyRewards(earnedDay: 7);
       expect(
         [
-          for (final day in [1, 2, 4, 5, 6, 7])
+          for (final day in [1, 2, 4, 6, 7])
             rewardTitle(day, r, weeklyTips: null),
         ],
         [
           'Dein erstes Rezept',
           'Ein Wissen-Häppchen',
           'Ein Spruch von mir',
-          'Ein Rezept mit deinen Zutaten',
           'Eine Vorschau auf deine Muster',
           'Deine ersten Muster',
         ],
+      );
+    });
+
+    test('day 5 claims the ingredients only once a matched pick is stored', () {
+      String title(JourneyRewards r) => rewardTitle(5, r, weeklyTips: false);
+      expect(
+        title(const JourneyRewards(earnedDay: 4)),
+        'Noch ein Rezept für dich',
+        reason: 'before day 5',
+      );
+      expect(
+        title(const JourneyRewards(earnedDay: 5, picks: _earlier)),
+        'Noch ein Rezept für dich',
+        reason: 'earned without a pick',
+      );
+      expect(
+        title(
+          const JourneyRewards(
+            earnedDay: 5,
+            picks: {5: RecipePick(id: 'x', title: 'Kartoffelsuppe')},
+          ),
+        ),
+        'Noch ein Rezept für dich',
+        reason: 'a generic pick',
+      );
+      expect(
+        title(
+          const JourneyRewards(
+            earnedDay: 5,
+            picks: {
+              5: RecipePick(id: 'y', title: 'Reispfanne', matched: ['Reis']),
+            },
+          ),
+        ),
+        'Ein Rezept mit deinen Zutaten',
+        reason: 'a matched pick',
       );
     });
   });
@@ -569,6 +604,17 @@ void main() {
           'Heute: Ein Wissen-Häppchen',
           day: 2,
           earned: true,
+        ),
+      );
+    });
+
+    test('day 4 yesterday: day 5 waits without claiming a match', () {
+      expect(
+        line(4, journey: _journeyUntil(_yesterday, 4)),
+        const JourneyRewardLine(
+          'Heute wartet: Noch ein Rezept für dich',
+          day: 5,
+          earned: false,
         ),
       );
     });

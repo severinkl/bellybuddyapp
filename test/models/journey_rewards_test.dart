@@ -94,6 +94,24 @@ void main() {
         5: const RecipePick(id: 'c', title: 'Karottensalat'),
       });
     });
+
+    test('earned is clamped to 0–7', () {
+      expect(JourneyRewards.fromJson({'earned': -3})!.earnedDay, 0);
+      expect(JourneyRewards.fromJson({'earned': 12})!.earnedDay, 7);
+      expect(JourneyRewards.fromJson({'earned': 7})!.earnedDay, 7);
+    });
+
+    test('picks only under the recipe days 1, 3 and 5', () {
+      final read = JourneyRewards.fromJson({
+        'earned': 7,
+        'picks': {
+          for (final day in ['0', '1', '2', '3', '4', '5', '6', '7'])
+            day: {'id': 'r$day', 'title': 'Rezept $day'},
+        },
+      });
+      expect(read!.picks.keys, unorderedEquals([1, 3, 5]));
+      expect(read.picks[1], const RecipePick(id: 'r1', title: 'Rezept 1'));
+    });
   });
 
   group('RecipePick JSON', () {

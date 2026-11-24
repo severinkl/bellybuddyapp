@@ -10,9 +10,6 @@ import '../recipes/recipe_fit.dart';
 import '../recipes/recipe_ranking.dart';
 import 'journey_copy.dart';
 
-/// The days whose reward is a recipe, in the order they are picked.
-const _recipeDays = [1, 3, 5];
-
 /// The day of the first-tip offer.
 const _tipDay = 3;
 
@@ -67,7 +64,7 @@ JourneyRewards fillPicks(
 }) {
   if (!ranked.checked) return r;
   final picks = {...r.picks};
-  for (final day in _recipeDays) {
+  for (final day in JourneyRewards.recipeDays) {
     if (day > r.earnedDay || picks.containsKey(day)) continue;
     if (day == _tipDay &&
         (r.tipOffer == null || r.tipOffer == TipOffer.accepted)) {
@@ -150,7 +147,8 @@ bool rewardEarned(int day, JourneyRewards r) => day == _patternsDay
 
 /// The title of [day]'s reward (1–7). Day 3 is the tip once accepted, a
 /// recipe once declined or skipped, and before that whatever the weekly
-/// tips make it; day 5 is generic when its pick matched nothing.
+/// tips make it; day 5 names the user's ingredients only once a stored pick
+/// matched some, and is generic before that and without a match.
 String rewardTitle(int day, JourneyRewards r, {required bool? weeklyTips}) =>
     switch (day) {
       1 => JourneyCopy.day1,
@@ -163,9 +161,9 @@ String rewardTitle(int day, JourneyRewards r, {required bool? weeklyTips}) =>
       },
       4 => JourneyCopy.day4,
       5 =>
-        r.picks[_calmDay]?.matched.isEmpty == true
-            ? JourneyCopy.day5Generic
-            : JourneyCopy.day5,
+        r.picks[_calmDay]?.matched.isNotEmpty == true
+            ? JourneyCopy.day5
+            : JourneyCopy.day5Generic,
       6 => JourneyCopy.day6,
       7 => JourneyCopy.day7,
       _ => throw ArgumentError.value(day, 'day', 'not a journey day'),
