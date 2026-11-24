@@ -41,26 +41,6 @@ final _profile = testUserProfile(
   weeklyTipsEnabled: false,
 );
 
-/// Meals of today, 2 and 4 days ago: the last is out of the 3 days.
-final _today = testMealEntry(
-  id: 'today',
-  trackedAt: DateTime(2026, 11, 24, 8),
-  title: 'Porridge',
-  ingredients: ['Haferflocken'],
-);
-final _twoDaysAgo = testMealEntry(
-  id: 'two',
-  trackedAt: DateTime(2026, 11, 22, 19),
-  title: 'Risotto',
-  ingredients: ['Arborio'],
-);
-final _fourDaysAgo = testMealEntry(
-  id: 'four',
-  trackedAt: DateTime(2026, 11, 20, 12),
-  title: 'Zwiebelsuppe',
-  ingredients: ['Zwiebel'],
-);
-
 /// A saved set with two tips.
 final _set = testRecommendation(
   id: 'first',
@@ -74,15 +54,6 @@ final _set = testRecommendation(
 Future<void> _settle() async {
   for (var i = 0; i < 5; i++) {
     await pumpEventQueue();
-  }
-}
-
-/// No line of [logs] names a meal's title or ingredient.
-void _expectNoMeals(List<String> logs) {
-  for (final meal in [_today, _twoDaysAgo, _fourDaysAgo]) {
-    for (final word in [meal.title, ...meal.ingredients]) {
-      expect(logs.join('\n'), isNot(contains(word)), reason: word);
-    }
   }
 }
 
@@ -108,19 +79,16 @@ void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
     profiles = _GatedProfileRepository()..seedProfile(_profile);
-    entries = FakeEntryRepository()
-      ..recentMeals = [_today, _twoDaysAgo, _fourDaysAgo];
+    entries = FakeEntryRepository();
     tips = FakeRecommendationRepository();
   });
 
   /// A container with [rewards] seeded (in memory), or with the stored
-  /// rewards when [storedRewards]; with [_profile] loaded, or no profile;
-  /// the app's clock pinned to [now] (default [_now]).
+  /// rewards when [storedRewards]; with [_profile] loaded, or no profile.
   ProviderContainer container({
     JourneyRewards? rewards = _offered,
     bool noProfile = false,
     bool storedRewards = false,
-    DateTime? now,
     List<Override> overrides = const [],
   }) => ProviderContainer.test(
     overrides: [
@@ -129,7 +97,7 @@ void main() {
       profileProviderSeededWith(noProfile ? null : _profile),
       entryRepositoryProvider.overrideWithValue(entries),
       recommendationRepositoryProvider.overrideWithValue(tips),
-      buddyClockProvider.overrideWithValue(() => now ?? _now),
+      buddyClockProvider.overrideWithValue(() => _now),
       if (!storedRewards) journeyRewardsSeededWith(rewards),
       ...overrides,
     ],
@@ -145,8 +113,7 @@ void main() {
       c.read(profileProvider).value?.weeklyTipsEnabled;
 
   group('accept', () {
-    test('opt-in first, then one request with the profile and the last 3 '
-        'days\' meals', () async {
+    test('opt-in first, then one request with the profile', () async {
       final optIn = Completer<void>();
       final aiCall = Completer<void>();
       profiles.gate = optIn;
@@ -162,8 +129,7 @@ void main() {
 
       final accepted = accept(c);
       await _settle();
-      // The opt-in write is on its way: nothing read, asked or answered.
-      expect(entries.recentMealsSince, isEmpty);
+      // The opt-in write is on its way: nothing asked or answered.
       expect(tips.firstTipRequests, isEmpty);
       expect(rewardsOf(c), _offered);
 
@@ -178,12 +144,9 @@ void main() {
         (TipOffer.accepted, null),
         (TipOffer.accepted, FirstTipState.requested),
       ]);
-      // 3 calendar days back, at the same wall-clock time.
-      expect(entries.recentMealsSince, [DateTime(2026, 11, 21, 14)]);
       final request = tips.firstTipRequests.single;
       expect(request.intolerances, ['Fruktose']);
       expect(request.diet, 'vegetarisch');
-      expect(request.meals, [_today, _twoDaysAgo]);
 
       aiCall.complete();
       await _settle();
@@ -204,7 +167,6 @@ void main() {
 
       expect(profiles.weeklyTipsWrites, [true]);
       expect(weeklyTipsOf(c), isFalse);
-      expect(entries.recentMealsSince, isEmpty);
       expect(tips.firstTipRequests, isEmpty);
       expect(rewardsOf(c), _offered);
     });
@@ -260,28 +222,6 @@ void main() {
       expect(profiles.weeklyTipsWrites, [true]);
       expect(rewardsOf(c)!.firstTip, FirstTipState.done);
     });
-
-    test('the 3 days are calendar days: across the autumn-DST Sunday the '
-        'bound keeps the wall clock', () async {
-      // Under TZ=Europe/Vienna, 25 Oct 2026 has 25 hours: 72 hours before
-      // Tuesday 14:00 is Saturday 15:00, not 14:00.
-      final at1430 = testMealEntry(
-        id: 'in',
-        trackedAt: DateTime(2026, 10, 24, 14, 30),
-      );
-      final at1330 = testMealEntry(
-        id: 'out',
-        trackedAt: DateTime(2026, 10, 24, 13, 30),
-      );
-      entries.recentMeals = [at1430, at1330];
-      final c = container(now: DateTime(2026, 10, 27, 14));
-
-      expect(await accept(c), isTrue);
-      await _settle();
-
-      expect(entries.recentMealsSince, [DateTime(2026, 10, 24, 14)]);
-      expect(tips.firstTipRequests.single.meals, [at1430]);
-    });
   });
 
   group('the request fails', () {
@@ -318,13 +258,12 @@ void main() {
         expect(logs.where((line) => line.contains('First tip failed')), [
           contains(logged),
         ]);
-        _expectNoMeals(logs);
       });
     }
 
     test('timeout: failed, still opted in, one request', () {
       fakeAsync((async) {
-        final logs = captureLogs();
+        captureLogs();
         tips.firstTipGate = Completer<void>(); // never answers
         final c = container();
         bool? accepted;
@@ -340,59 +279,20 @@ void main() {
         expect(weeklyTipsOf(c), isTrue);
         expect(tips.firstTipRequests, hasLength(1));
         expect(tips.fetchCount, 0);
-        _expectNoMeals(logs);
       });
     });
 
-    test('a meals read that never ends: failed after the timeout, and no '
-        'request after it', () {
-      fakeAsync((async) {
-        captureLogs();
-        final read = Completer<void>();
-        entries.recentMealsGate = read; // hangs
-        final c = container();
-        accept(c);
-        async.flushMicrotasks();
+    test('any other error: failed, logged with its type', () async {
+      final logs = captureLogs();
+      tips.firstTipError = StateError('broken');
+      final c = container();
 
-        async.elapse(AppConstants.firstTipTimeout - const Duration(seconds: 1));
-        expect(rewardsOf(c)!.firstTip, FirstTipState.requested);
+      expect(await accept(c), isTrue);
+      await _settle();
 
-        async.elapse(const Duration(seconds: 2));
-        expect(rewardsOf(c)!.firstTip, FirstTipState.failed);
-
-        // The read ends late: the request it would start is dropped.
-        read.complete();
-        async.flushMicrotasks();
-        expect(tips.firstTipRequests, isEmpty);
-        expect(rewardsOf(c)!.firstTip, FirstTipState.failed);
-        expect(weeklyTipsOf(c), isTrue);
-      });
+      await expectFailedOnce(c);
+      expect(logs, contains('FirstTip [ERROR]: First tip failed (StateError)'));
     });
-
-    test(
-      'any other error (the meals read fails): failed, no request',
-      () async {
-        final logs = captureLogs();
-        entries.recentMealsError = Exception('offline');
-        final c = container();
-
-        expect(await accept(c), isTrue);
-        await _settle();
-
-        expect(rewardsOf(c)!.firstTip, FirstTipState.failed);
-        expect(weeklyTipsOf(c), isTrue);
-        expect(tips.firstTipRequests, isEmpty);
-        expect(
-          logs,
-          contains('FirstTip [ERROR]: First tip failed (_Exception)'),
-        );
-        _expectNoMeals(logs);
-
-        expect(await accept(c), isTrue);
-        await _settle();
-        expect(entries.recentMealsSince, hasLength(1));
-      },
-    );
 
     test('200 without tips: failed, the set stamped seen', () async {
       captureLogs();

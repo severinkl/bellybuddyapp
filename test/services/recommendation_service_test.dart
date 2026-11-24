@@ -47,13 +47,6 @@ Map<String, dynamic> _item(String ingredient) => {
   'recipe_title': null,
 };
 
-/// The meal the first-tip tests send: late in the evening, wall clock.
-final _meal = testMealEntry(
-  trackedAt: DateTime(2026, 11, 23, 23, 30),
-  title: 'Zwiebelsuppe',
-  ingredients: ['Zwiebel', 'Brot'],
-);
-
 void main() {
   late MockSupabaseClient client;
   late RecommendationService service;
@@ -186,14 +179,14 @@ void main() {
     Future<FirstTipResult> request() => service.requestFirstTip(
       intolerances: ['Fruktose', 'Laktose'],
       diet: 'vegetarisch',
-      meals: [_meal],
     );
 
     Matcher failsWith(int? status) => throwsA(
       isA<FirstTipException>().having((e) => e.status, 'status', status),
     );
 
-    test('the body is exactly intolerances, diet and recentMeals', () async {
+    test('the body is exactly intolerances and diet (core reads the meals '
+        'itself)', () async {
       stubAnswer({
         'id': 'set-1',
         'summary': 'Brief',
@@ -212,29 +205,18 @@ void main() {
       expect(captured.single, {
         'intolerances': ['Fruktose', 'Laktose'],
         'diet': 'vegetarisch',
-        'recentMeals': [
-          {
-            'title': 'Zwiebelsuppe',
-            'ingredients': ['Zwiebel', 'Brot'],
-            'tracked_at': '2026-11-23T23:30:00.000Z',
-          },
-        ],
       });
     });
 
     test('no diet: sent as null', () async {
       stubAnswer({'id': 'set-1', 'recommendations': <dynamic>[]});
 
-      await service.requestFirstTip(intolerances: [], diet: null, meals: []);
+      await service.requestFirstTip(intolerances: [], diet: null);
 
       final captured = verify(
         () => functions.invoke(any(), body: captureAny(named: 'body')),
       ).captured;
-      expect(captured.single, {
-        'intolerances': <String>[],
-        'diet': null,
-        'recentMeals': <Object>[],
-      });
+      expect(captured.single, {'intolerances': <String>[], 'diet': null});
     });
 
     test('answer with id and 2 items → ok', () async {

@@ -18,7 +18,6 @@ class _FakeEntryRepository extends Fake implements EntryRepository {
   Future<List<MealEntry>> fetchRecentMeals({
     required String userId,
     int? limit,
-    DateTime? since,
   }) async => [];
 }
 

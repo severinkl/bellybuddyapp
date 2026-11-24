@@ -1,11 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/first_tip.dart';
-import '../models/meal_entry.dart';
 import '../models/recommendation.dart';
 import '../providers/core_providers.dart';
 import '../utils/logger.dart';
-import '../utils/wall_clock.dart';
 
 class RecommendationService {
   final SupabaseClient _client;
@@ -19,7 +17,7 @@ class RecommendationService {
 
   /// Asks core for the day-3 first tip ([firstTipFunction]); core saves the
   /// set it makes. The body is exactly the profile's [intolerances] and
-  /// [diet] and the [meals]' title, ingredients and wall-clock `tracked_at`.
+  /// [diet]: without `recentMeals`, core reads the last days' meals itself.
   /// Only the answer's `id` and its number of tips are read.
   ///
   /// Every failure is a [FirstTipException]: an error answer with its
@@ -28,24 +26,12 @@ class RecommendationService {
   Future<FirstTipResult> requestFirstTip({
     required List<String> intolerances,
     required String? diet,
-    required List<MealEntry> meals,
   }) async {
     final Object? data;
     try {
       final response = await _client.functions.invoke(
         firstTipFunction,
-        body: {
-          'intolerances': intolerances,
-          'diet': diet,
-          'recentMeals': [
-            for (final meal in meals)
-              {
-                'title': meal.title,
-                'ingredients': meal.ingredients,
-                'tracked_at': wallClockToWire(meal.trackedAt),
-              },
-          ],
-        },
+        body: {'intolerances': intolerances, 'diet': diet},
       );
       data = response.data;
     } on FunctionsFetchException {

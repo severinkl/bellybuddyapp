@@ -368,34 +368,11 @@ class FakeEntryRepository implements EntryRepository {
     return insightSource;
   }
 
-  /// What [fetchRecentMeals] serves, filtered by its `since`; null: the
-  /// seeded result's meals.
-  List<MealEntry>? recentMeals;
-
-  /// The `since` of every [fetchRecentMeals] call, in order.
-  final List<DateTime?> recentMealsSince = [];
-
-  /// When set, [fetchRecentMeals] waits for it (a slow read).
-  Completer<void>? recentMealsGate;
-
-  /// Thrown by [fetchRecentMeals] when set (after [recentMealsGate]).
-  Object? recentMealsError;
-
   @override
   Future<List<MealEntry>> fetchRecentMeals({
     required String userId,
     int? limit,
-    DateTime? since,
-  }) async {
-    recentMealsSince.add(since);
-    await recentMealsGate?.future;
-    if (recentMealsError case final error?) throw error;
-    final meals = recentMeals ?? _result.meals;
-    return [
-      for (final m in meals)
-        if (since == null || !m.trackedAt.isBefore(since)) m,
-    ];
-  }
+  }) async => _result.meals;
 
   @override
   Future<LatestEntries> fetchLatestBefore({
@@ -753,8 +730,7 @@ class FakeRecommendationRepository implements RecommendationRepository {
   Completer<void>? firstTipGate;
 
   /// Every [requestFirstTip], in order.
-  final List<({List<String> intolerances, String? diet, List<MealEntry> meals})>
-  firstTipRequests = [];
+  final List<({List<String> intolerances, String? diet})> firstTipRequests = [];
 
   /// Asked as each [requestFirstTip] arrives: whether the user is opted in
   /// to the weekly tips on the server then (e.g. the stored profile of a
@@ -769,14 +745,9 @@ class FakeRecommendationRepository implements RecommendationRepository {
   Future<FirstTipResult> requestFirstTip({
     required List<String> intolerances,
     required String? diet,
-    required List<MealEntry> meals,
   }) async {
     firstTipRequestOptIns.add(optedIn?.call());
-    firstTipRequests.add((
-      intolerances: intolerances,
-      diet: diet,
-      meals: meals,
-    ));
+    firstTipRequests.add((intolerances: intolerances, diet: diet));
     await firstTipGate?.future;
     if (firstTipError case final error?) throw error;
     final set = firstTipSet;

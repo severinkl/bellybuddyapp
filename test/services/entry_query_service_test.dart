@@ -174,52 +174,6 @@ void main() {
     service = EntryQueryService(client);
   });
 
-  group('EntryQueryService.fetchRecentMeals', () {
-    SettlableFilterBuilder setUpMeals() {
-      final meals = mockSelectRows(
-        client,
-        table: 'meal_entries',
-        rows: [_mealRow()],
-      );
-      when(() => meals.eq(any(), any())).thenAnswer((_) => meals);
-      when(() => meals.gte(any(), any())).thenAnswer((_) => meals);
-      when(
-        () => meals.order(any(), ascending: any(named: 'ascending')),
-      ).thenAnswer((_) => meals);
-      return meals;
-    }
-
-    test(
-      'fetchRecentMeals since filters tracked_at ≥ the wall clock',
-      () async {
-        final meals = setUpMeals();
-        final since = DateTime(2026, 11, 21, 14, 5);
-
-        final result = await service.fetchRecentMeals(
-          userId: testUserId,
-          since: since,
-        );
-
-        expect(result.single.id, 'meal-1');
-        verify(() => meals.eq('user_id', testUserId)).called(1);
-        // The local wall clock in the UTC slot, like every tracked_at bound.
-        expect(wallClockToWire(since), '2026-11-21T14:05:00.000Z');
-        verify(() => meals.gte('tracked_at', wallClockToWire(since))).called(1);
-        verify(() => meals.order('tracked_at', ascending: false)).called(1);
-      },
-    );
-
-    test('without since: no lower bound', () async {
-      final meals = setUpMeals();
-
-      final result = await service.fetchRecentMeals(userId: testUserId);
-
-      expect(result.single.id, 'meal-1');
-      verifyNever(() => meals.gte(any(), any()));
-      verify(() => meals.order('tracked_at', ascending: false)).called(1);
-    });
-  });
-
   group('EntryQueryService.fetchEntriesForDateRange', () {
     test('returns EntryQueryResult with all 4 entry types', () async {
       _setupAllTables(client);

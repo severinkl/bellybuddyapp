@@ -325,10 +325,7 @@ class AppConstants {
   static const Duration knowledgeFeedMaxAge = Duration(hours: 6);
   static const Duration knowledgeFeedTimeout = Duration(seconds: 10);
 
-  /// The day-3 first tip: it sends the meals of the last [firstTipMealsDays]
-  /// calendar days (back to the same wall-clock time), and reading them and
-  /// its one request together may take [firstTipTimeout].
-  static const int firstTipMealsDays = 3;
+  /// The day-3 first tip's one request may take this long.
   static const Duration firstTipTimeout = Duration(seconds: 60);
 
   // Apple "Hide My Email" relay address suffix (includes the leading `@`).

@@ -6,11 +6,9 @@ import '../config/constants.dart';
 import '../models/first_tip.dart';
 import '../models/journey_rewards.dart';
 import '../models/user_profile.dart';
-import '../repositories/entry_repository.dart';
 import '../repositories/recommendation_repository.dart';
 import '../utils/logger.dart';
 import 'auth_provider.dart';
-import 'buddy_provider.dart';
 import 'journey_rewards_provider.dart';
 import 'profile_provider.dart';
 import 'recommendation_provider.dart';
@@ -70,48 +68,21 @@ class FirstTipNotifier extends Notifier<void> {
     return true;
   }
 
-  /// The one request: the meals of the last [AppConstants.firstTipMealsDays]
-  /// calendar days, then the tip, both together at most
-  /// [AppConstants.firstTipTimeout]: a read that hangs fails too, and once
-  /// failed no request follows. Done with a saved set holding tips, and the
-  /// sets reload; failed otherwise, and a saved set without tips is stamped
-  /// seen. Dropped once another user is signed in.
+  /// The one request, with the profile's intolerances and diet (core reads
+  /// the last days' meals itself), at most [AppConstants.firstTipTimeout].
+  /// Done with a saved set holding tips, and the sets reload; failed
+  /// otherwise, and a saved set without tips is stamped seen. Dropped once
+  /// another user is signed in.
   Future<void> _request(String userId, UserProfile profile) async {
-    // Set as the time is up: a read ending later starts no request.
-    var over = false;
-    Future<FirstTipResult?> ask() async {
-      final n = ref.read(buddyClockProvider)();
-      // Wall-clock fields, so a DST switch between doesn't move the bound.
-      final since = DateTime(
-        n.year,
-        n.month,
-        n.day - AppConstants.firstTipMealsDays,
-        n.hour,
-        n.minute,
-        n.second,
-      );
-      final meals = await ref
-          .read(entryRepositoryProvider)
-          .fetchRecentMeals(userId: userId, since: since);
-      if (over || !_stillFor(userId)) return null;
-      return ref
+    try {
+      final result = await ref
           .read(recommendationRepositoryProvider)
           .requestFirstTip(
             intolerances: profile.intolerances,
             diet: profile.diet,
-            meals: meals,
-          );
-    }
-
-    try {
-      final result = await ask().timeout(
-        AppConstants.firstTipTimeout,
-        onTimeout: () {
-          over = true;
-          throw TimeoutException(null, AppConstants.firstTipTimeout);
-        },
-      );
-      if (result == null || !_stillFor(userId)) return;
+          )
+          .timeout(AppConstants.firstTipTimeout);
+      if (!_stillFor(userId)) return;
       if (result.ok) {
         await _set(FirstTipState.done);
         if (!_stillFor(userId)) return;

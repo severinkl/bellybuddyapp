@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/first_tip.dart';
-import '../models/meal_entry.dart';
 import '../models/recommendation.dart';
 import '../services/recommendation_service.dart';
 import '../utils/logger.dart';
@@ -19,11 +18,9 @@ class RecommendationRepository {
   Future<FirstTipResult> requestFirstTip({
     required List<String> intolerances,
     required String? diet,
-    required List<MealEntry> meals,
   }) => _recommendationService.requestFirstTip(
     intolerances: intolerances,
     diet: diet,
-    meals: meals,
   );
 
   Future<List<Recommendation>> fetchByUserId(String userId) => retryAsync(

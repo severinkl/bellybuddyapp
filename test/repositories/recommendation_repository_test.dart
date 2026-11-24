@@ -36,17 +36,13 @@ void main() {
   });
 
   group('requestFirstTip', () {
-    Future<FirstTipResult> request() => repo.requestFirstTip(
-      intolerances: ['Fruktose'],
-      diet: null,
-      meals: [testMealEntry()],
-    );
+    Future<FirstTipResult> request() =>
+        repo.requestFirstTip(intolerances: ['Fruktose'], diet: null);
 
     void stub(Future<FirstTipResult> Function() answer) => when(
       () => recommendationService.requestFirstTip(
         intolerances: any(named: 'intolerances'),
         diet: any(named: 'diet'),
-        meals: any(named: 'meals'),
       ),
     ).thenAnswer((_) => answer());
 
@@ -60,7 +56,6 @@ void main() {
         () => recommendationService.requestFirstTip(
           intolerances: ['Fruktose'],
           diet: null,
-          meals: [testMealEntry()],
         ),
       ).called(1);
     });
@@ -73,7 +68,6 @@ void main() {
         () => recommendationService.requestFirstTip(
           intolerances: any(named: 'intolerances'),
           diet: any(named: 'diet'),
-          meals: any(named: 'meals'),
         ),
       ).called(1);
     });
