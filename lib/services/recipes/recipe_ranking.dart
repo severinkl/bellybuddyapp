@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../config/constants.dart';
 import '../../models/insights.dart';
 import '../../models/recipe.dart';
+import '../../utils/food_words.dart';
 import '../../utils/german_list.dart';
 import '../../utils/ingredient_key.dart';
 import 'recipe_fit.dart';
@@ -51,13 +52,26 @@ class RankingSignals {
 
 /// 2 per good food that one of [recipe]'s lines is
 /// ([RecipeIngredient.isFood]: also in another spelling, like core), minus
-/// 3 per noticed one; each food once, however many lines are it. 0 for an
-/// older recipe.
-int recipeScore(Recipe recipe, RankingSignals signals) {
-  bool inRecipe(String food) =>
-      recipe.ingredients.any((line) => line.isFood(food));
-  return 2 * signals.good.where(inRecipe).length -
-      3 * signals.noticed.where(inRecipe).length;
+/// 3 per noticed one; each food once, however many lines are it and however
+/// many spellings the signals have for it. 0 for an older recipe.
+int recipeScore(Recipe recipe, RankingSignals signals) =>
+    _SignalFoods(signals).score(recipe);
+
+/// [RankingSignals] read once per ranking: their names by food
+/// ([foodGroups]).
+class _SignalFoods {
+  _SignalFoods(RankingSignals signals)
+    : good = foodGroups(signals.good),
+      noticed = foodGroups(signals.noticed);
+
+  final List<List<FoodName>> good, noticed;
+
+  /// [recipeScore].
+  int score(Recipe recipe) {
+    bool inRecipe(List<FoodName> food) =>
+        recipe.ingredients.any((line) => food.any(line.isFood));
+    return 2 * good.where(inRecipe).length - 3 * noticed.where(inRecipe).length;
+  }
 }
 
 /// The collection for one user ([rankRecipes]).
@@ -98,13 +112,10 @@ RankedRecipes rankRecipes(
   required RankingSignals signals,
 }) {
   final kept = recipes.where((r) => fitsDiet(r, diet)).toList();
+  final foods = _SignalFoods(signals);
   final scored = [
     for (final fit in kept.map(user.fit))
-      (
-        fit: fit,
-        score: recipeScore(fit.recipe, signals),
-        kritisch: fit.kritischCount,
-      ),
+      (fit: fit, score: foods.score(fit.recipe), kritisch: fit.kritischCount),
   ]..sort(_compare);
   return RankedRecipes(
     fits: List.unmodifiable([for (final s in scored) s.fit]),

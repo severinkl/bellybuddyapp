@@ -1,20 +1,84 @@
-import 'ingredient_key.dart';
+/// Whether [a] and [b] name the same food ([FoodName.isSame]).
+bool sameFood(String a, String b) => FoodName.of(a).isSame(FoodName.of(b));
 
-/// Whether [a] and [b] name the same food: the same [ingredientKey] (not
-/// blank), or a shared word of [foodWords] („Eier" and „Ei",
-/// „Zwiebelpulver" and „Zwiebeln"; not „Kokosmilch" and „Milch"). How the
-/// app matches recipe lines against foods, like core.
-bool sameFood(String a, String b) {
-  final key = ingredientKey(a);
-  return (key.isNotEmpty && key == ingredientKey(b)) ||
-      foodWords(a).any(foodWords(b).contains);
+/// [names] by food: names that are the same food ([FoodName.isSame]), also
+/// through another („Öl" and „Knoblauch" through „Öl mit Knoblauch"),
+/// share a group, so a food written in several spellings counts once.
+List<List<FoodName>> foodGroups(Iterable<String> names) {
+  final groups = <List<FoodName>>[];
+  for (final food in names.map(FoodName.of)) {
+    final joined = [
+      for (final group in groups)
+        if (group.any(food.isSame)) group,
+    ];
+    groups.removeWhere(joined.contains);
+    groups.add([for (final group in joined) ...group, food]);
+  }
+  return groups;
 }
 
+/// A food name read the two ways core compares names (bellybuddy-core
+/// `backend/app/domain/tip_recipes.py`): its [key] ([matchKey]) and its
+/// [words] ([foodWords]).
+class FoodName {
+  FoodName._(this.name)
+    : key = matchKey(name),
+      words = Set.unmodifiable(_foodWords(name));
+
+  /// [name] read once: the same instance again for the same name. The app
+  /// compares the same few hundred names (the collection's lines, the
+  /// diary's ingredients) on every ranking; past [_memoLimit] names the
+  /// kept ones start over.
+  factory FoodName.of(String name) {
+    final known = _memo[name];
+    if (known != null) return known;
+    if (_memo.length >= _memoLimit) _memo.clear();
+    return _memo[name] = FoodName._(name);
+  }
+
+  final String name;
+
+  /// [matchKey] of [name].
+  final String key;
+
+  /// [foodWords] of [name], unmodifiable.
+  final Set<String> words;
+
+  /// Whether this and [other] are the same food: the same [key] (not
+  /// empty), or a shared word („Eier" and „Ei", „Zwiebelpulver" and
+  /// „Zwiebeln", „Kokos Milch" and „Kokosmilch"; not „Kokosmilch" and
+  /// „Milch", nor „Laktosefreie Milch" and „Milch"). How core finds an
+  /// avoided food among a recipe's lines.
+  bool isSame(FoodName other) =>
+      (key.isNotEmpty && key == other.key) || words.any(other.words.contains);
+}
+
+final _memo = <String, FoodName>{};
+
+/// More names than the collection and a diary hold.
+const _memoLimit = 4096;
+
+/// How core matches names exactly (`match_key`): folded ([_fold]), without
+/// a bracketed note unless it says the food is free from something
+/// ([_freeFrom]: „Milch (laktosefrei)" is „milchlaktosefrei"), and without
+/// whitespace or hyphens („Knoblauch-Öl" is „knoblauchol"). Empty for a
+/// name of a bracketed note only. Not the insights' `ingredientKey`.
+String matchKey(String name) => _fold(
+  name.replaceAllMapped(
+    _note,
+    (note) => _freeFrom.hasMatch(_fold(note[1]!)) ? ' ${note[1]} ' : ' ',
+  ),
+).replaceAll(_spaceOrHyphen, '');
+
+/// Whitespace as Python's `\s` reads a str, and hyphens.
+final _spaceOrHyphen = RegExp(
+  r'[\t\n\v\f\r\x1c-\x1f \x85\xa0\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000-]+',
+);
+
 /// The words of [name] that name the food, in their base form: core's
-/// `food_words` (bellybuddy-core `backend/app/domain/tip_recipes.py`, core
-/// #12), ported step by step and table by table, so the app and core agree
-/// on which recipe line is which food. Two names are the same food when
-/// their sets share a word.
+/// `food_words` (core #12, 04d17e8 and dd3c42e), ported step by step and
+/// table by table, so the app and core agree on which recipe line is which
+/// food. Two names are the same food when their sets share a word.
 ///
 /// The name is folded ([_fold]), without a bracketed note or an „ohne …"
 /// tail, a hyphenated word read joined („Knoblauch-Öl" is „knoblauchol"),
@@ -25,7 +89,7 @@ bool sameFood(String a, String b) {
 /// „ei"; „Frühlingszwiebelgrün", „Kokosmilch" and „Eisbergsalat" are words
 /// of their own. Empty for a name without a letter a–z, and for a
 /// free-from food ([_freeFrom]): „Laktosefreie Milch" is no „Milch", it
-/// matches its own name only (by its `ingredientKey`, [sameFood]).
+/// matches only by its [matchKey] ([FoodName.isSame]).
 ///
 /// Known limits, precision first (a missed spelling only costs a ranking
 /// point or a named line; a wrong match would name a food the user did not
@@ -36,21 +100,8 @@ bool sameFood(String a, String b) {
 /// - irregular plurals outside [_irregular] are missed („Ananasse");
 /// - an unknown adjective before a food is a word of its own.
 ///
-/// The same unmodifiable set for the same name: the app compares the same
-/// few hundred names (the collection's lines, the diary's ingredients) on
-/// every ranking, so the sets are kept (up to [_memoLimit] names).
-Set<String> foodWords(String name) {
-  final known = _memo[name];
-  if (known != null) return known;
-  if (_memo.length >= _memoLimit) _memo.clear();
-  return _memo[name] = Set.unmodifiable(_foodWords(name));
-}
-
-final _memo = <String, Set<String>>{};
-
-/// More names than the collection and a diary hold; past it the kept sets
-/// start over.
-const _memoLimit = 4096;
+/// The same unmodifiable set for the same name ([FoodName.of]).
+Set<String> foodWords(String name) => FoodName.of(name).words;
 
 Set<String> _foodWords(String name) {
   if (_freeFrom.hasMatch(_fold(name))) return {};
@@ -77,8 +128,8 @@ Set<String> _foodWords(String name) {
 /// food than the plain one (core's `FREE_FROM`, dd3c42e).
 final _freeFrom = RegExp(r'(?:laktose|gluten|weizen|fru[kc]tose)frei');
 
-/// A bracketed note („Gemüsebrühe (low-FODMAP)").
-final _note = RegExp(r'\([^)]*\)');
+/// A bracketed note („Gemüsebrühe (low-FODMAP)"), its text the group.
+final _note = RegExp(r'\(([^)]*)\)');
 
 /// „ohne" as a whole word (Python's `\bohne\b` on a folded name).
 final _ohne = RegExp(r'(?<![\p{L}\p{N}_])ohne(?![\p{L}\p{N}_])', unicode: true);
@@ -89,9 +140,10 @@ final _word = RegExp(r'[a-z]+(?:-[a-z]+)*');
 /// A combining mark, as a decomposed „ü" carries it.
 final _mark = RegExp(r'\p{M}', unicode: true);
 
-/// [name] as core's `allergens.fold` makes it: lower case, ß as ss, and
-/// every letter as its NFKD form without combining marks („Crème" is
-/// „creme").
+/// [name] as core's `allergens.fold` makes it, as far as Dart can: lower
+/// case, ß as ss, the precomposed letters of [_folded] as their letters
+/// a–z („Crème" is „creme"), and combining marks dropped (a decomposed „ü"
+/// is „u").
 String _fold(String name) => name
     .toLowerCase()
     .replaceAll('ß', 'ss')
@@ -100,11 +152,13 @@ String _fold(String name) => name
     .join()
     .replaceAll(_mark, '');
 
-/// The letters NFKD turns into letters a–z once their marks are dropped,
-/// by what they become: Latin-1 Supplement, Latin Extended-A, -B and
-/// Additional, and the Latin ligatures, lower case (generated with Python's
-/// `unicodedata`). Dart has no NFKD; any other character stays and, not
-/// being a–z, separates words, as in core.
+/// The precomposed letters that core's NFKD turns into letters a–z once
+/// the marks are dropped, by what they become: the lower-case Latin letters
+/// with a diacritic of Latin-1 Supplement, Latin Extended-A, -B and
+/// Additional, and the Latin ligatures (generated with Python's
+/// `unicodedata`). Dart has no NFKD: other compatibility forms that core
+/// folds (fullwidth letters, superscripts) stay as they are and, not being
+/// a–z, separate words where core reads one.
 final Map<String, String> _folded = {
   for (final MapEntry(key: letter, value: forms) in _accented.entries)
     for (final form in forms.split('')) form: letter,

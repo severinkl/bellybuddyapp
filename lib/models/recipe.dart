@@ -77,14 +77,14 @@ class RecipeIngredient {
 
   bool get mapped => catalogId != null;
 
-  /// Whether the line is the food [food] (a name, or an `ingredientKey`
-  /// as the insights key the diary's ingredients): its name or catalog
-  /// name is that food ([sameFood], as core matches recipe lines: „Ei" is
-  /// „Eier", „Zwiebelpulver" „Zwiebel"; „Kokosmilch" and „Laktosefreie
-  /// Milch" are no „Milch").
-  bool isFood(String food) {
+  /// Whether the line is [food]: its name or catalog name is the same food
+  /// ([FoodName.isSame]: the same match key or a shared food word). A line
+  /// „Ei" is the food „Eier", a line „Zwiebelpulver" the food „Zwiebel"; a
+  /// line „Kokosmilch" or „Laktosefreie Milch" is no „Milch".
+  bool isFood(FoodName food) {
     final catalog = catalogName;
-    return sameFood(name, food) || (catalog != null && sameFood(catalog, food));
+    return food.isSame(FoodName.of(name)) ||
+        (catalog != null && food.isSame(FoodName.of(catalog)));
   }
 }
 

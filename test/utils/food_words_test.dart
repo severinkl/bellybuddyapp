@@ -104,6 +104,19 @@ const _otherFoods = [
   ('Joghurt', 'Laktosefrei-Joghurt'),
 ];
 
+/// Core's `test_match_key` (dd3c42e).
+const _matchKeys = {
+  'Knoblauchöl': 'knoblauchol',
+  'Knoblauch-Öl': 'knoblauchol',
+  '  Laktosefreie   Milch ': 'laktosefreiemilch',
+  'Gemüsebrühe (low-FODMAP)': 'gemusebruhe',
+  // a bracketed free-from note stays: lactose-free milk is not milk
+  'Milch (laktosefrei)': 'milchlaktosefrei',
+  'Brot (Glutenfrei)': 'brotglutenfrei',
+  'Frühlingszwiebel (nur das Grün)': 'fruhlingszwiebel',
+  'Weißkohl': 'weisskohl',
+};
+
 /// Core's `test_a_free_from_food_has_no_food_words`.
 const _freeFromFoods = [
   'Laktosefreie Milch',
@@ -222,6 +235,21 @@ void main() {
     });
   });
 
+  group('matchKey', () {
+    test('core cases', () {
+      for (final MapEntry(key: name, value: key) in _matchKeys.entries) {
+        expect(matchKey(name), key, reason: name);
+      }
+    });
+
+    test("Python's whitespace goes, other characters stay", () {
+      expect(matchKey('Kokos\u00a0Milch\u2009(Dose)'), 'kokosmilch');
+      expect(matchKey('Laktosefreie Milch (1,5 %)'), 'laktosefreiemilch');
+      expect(matchKey('Milch 1,5 %'), 'milch1,5%');
+      expect(matchKey('(Notiz)'), '');
+    });
+  });
+
   group('sameFood', () {
     test('a shared food word', () {
       expect(sameFood('eier', 'Ei'), isTrue);
@@ -236,15 +264,24 @@ void main() {
       expect(sameFood('reis', 'Milchreis'), isFalse);
     });
 
-    test('a free-from name only by its exact key', () {
+    test("a free-from food only by core's match key", () {
       expect(sameFood('Laktosefreie Milch', 'laktosefreie milch'), isTrue);
-      expect(sameFood('Laktosefreie Milch', 'Milch'), isFalse);
-      expect(sameFood('milch', 'Laktosefreie Milch'), isFalse);
-      expect(sameFood('glutenfreies Brot', 'Brot'), isFalse);
       expect(
         sameFood('Laktosefreie Milch', 'Laktosefreie Milch (1,5 %)'),
-        isFalse,
+        isTrue,
       );
+      expect(sameFood('Laktosefreie  Milch', 'Laktosefreie-Milch'), isTrue);
+      expect(sameFood('Milch (laktosefrei)', 'milch (Laktosefrei)'), isTrue);
+      expect(sameFood('Laktosefreie Milch', 'Milch'), isFalse);
+      expect(sameFood('milch', 'Laktosefreie Milch'), isFalse);
+      expect(sameFood('Milch (laktosefrei)', 'Milch'), isFalse);
+      expect(sameFood('Milch', 'Milch (laktosefrei)'), isFalse);
+      expect(sameFood('glutenfreies Brot', 'Brot'), isFalse);
+    });
+
+    test('the match key also joins what the words keep apart', () {
+      expect(sameFood('Kokos Milch', 'Kokosmilch'), isTrue);
+      expect(sameFood('Knoblauch-Öl', 'Knoblauchöl'), isTrue);
     });
 
     test('the same key without food words still matches; blank never', () {
@@ -252,6 +289,46 @@ void main() {
       expect(sameFood('', ''), isFalse);
       expect(sameFood('  ', ' '), isFalse);
       expect(sameFood('Reis', ''), isFalse);
+      expect(sameFood('(Notiz)', '(Notiz)'), isFalse);
     });
+  });
+
+  group('FoodName', () {
+    test('read once: the same instance for the same name', () {
+      final zwiebeln = FoodName.of('Zwiebeln');
+      expect(FoodName.of('Zwiebeln'), same(zwiebeln));
+      expect(zwiebeln.name, 'Zwiebeln');
+      expect(zwiebeln.key, 'zwiebeln');
+      expect(zwiebeln.words, {'zwiebel'});
+      expect(zwiebeln.isSame(FoodName.of('rote Zwiebel')), isTrue);
+    });
+  });
+
+  group('foodGroups', () {
+    test('the names of one food share a group, also through another', () {
+      final groups = foodGroups([
+        'zwiebel',
+        'reis',
+        'zwiebeln',
+        'öl mit knoblauch',
+        'rote zwiebel',
+        'knoblauch',
+        'öl',
+        'milchreis',
+      ]);
+      expect(
+        [
+          for (final group in groups) {for (final food in group) food.name},
+        ],
+        unorderedEquals([
+          {'zwiebel', 'zwiebeln', 'rote zwiebel'},
+          {'reis'},
+          {'öl mit knoblauch', 'knoblauch', 'öl'},
+          {'milchreis'},
+        ]),
+      );
+    });
+
+    test('none for no names', () => expect(foodGroups(const []), isEmpty));
   });
 }

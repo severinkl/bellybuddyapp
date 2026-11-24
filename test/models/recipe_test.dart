@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:belly_buddy/models/recipe.dart';
+import 'package:belly_buddy/utils/food_words.dart';
 
 Map<String, dynamic> _catalogRow({
   required String id,
@@ -97,23 +98,23 @@ void main() {
       expect(reis.catalogId, 'ing-reis');
       expect(reis.catalogName, 'Reis');
       expect(reis.mapped, isTrue);
-      expect(reis.isFood('risottoreis'), isTrue);
-      expect(reis.isFood('Reis'), isTrue);
-      expect(reis.isFood('Milchreis'), isFalse);
+      expect(reis.isFood(FoodName.of('risottoreis')), isTrue);
+      expect(reis.isFood(FoodName.of('Reis')), isTrue);
+      expect(reis.isFood(FoodName.of('Milchreis')), isFalse);
 
       final knoblauch = recipe.ingredients[1];
       expect(knoblauch.position, 1);
       expect(knoblauch.fodmaps!.fructans, isTrue);
       expect(knoblauch.lowAtAmount, isFalse);
-      expect(knoblauch.isFood('knoblauch'), isTrue);
+      expect(knoblauch.isFood(FoodName.of('knoblauch')), isTrue);
 
       final obst = recipe.ingredients[2];
       expect(obst.mapped, isFalse);
       expect(obst.fodmaps, isNull);
       expect(obst.amount, isNull);
       expect(obst.catalogName, isNull);
-      expect(obst.isFood('obst nach wahl'), isTrue);
-      expect(obst.isFood('Obst'), isTrue);
+      expect(obst.isFood(FoodName.of('obst nach wahl')), isTrue);
+      expect(obst.isFood(FoodName.of('Obst')), isTrue);
 
       expect(recipe.detailMeta, '35 Min · 2 Portionen');
       expect(recipe.listMeta, '35 Min · Mittag');
@@ -229,9 +230,9 @@ void main() {
         catalogName: '  ',
       );
 
-      expect(line.isFood('KNOBLAUCH'), isTrue);
-      expect(line.isFood(''), isFalse);
-      expect(line.isFood('  '), isFalse);
+      expect(line.isFood(FoodName.of('KNOBLAUCH')), isTrue);
+      expect(line.isFood(FoodName.of('')), isFalse);
+      expect(line.isFood(FoodName.of('  ')), isFalse);
     });
 
     test('isFood: a plural or a processed form is the food, like core; '
@@ -245,16 +246,16 @@ void main() {
       );
       const kokosmilch = RecipeIngredient(position: 2, name: 'Kokosmilch');
 
-      expect(ei.isFood('eier'), isTrue);
-      expect(gewuerz.isFood('Zwiebeln'), isTrue);
-      expect(kokosmilch.isFood('milch'), isFalse);
-      expect(ei.isFood('Eisbergsalat'), isFalse);
+      expect(ei.isFood(FoodName.of('eier')), isTrue);
+      expect(gewuerz.isFood(FoodName.of('Zwiebeln')), isTrue);
+      expect(kokosmilch.isFood(FoodName.of('milch')), isFalse);
+      expect(ei.isFood(FoodName.of('Eisbergsalat')), isFalse);
       const laktosefrei = RecipeIngredient(
         position: 3,
         name: 'Laktosefreie Milch',
       );
-      expect(laktosefrei.isFood('milch'), isFalse);
-      expect(laktosefrei.isFood('laktosefreie milch'), isTrue);
+      expect(laktosefrei.isFood(FoodName.of('milch')), isFalse);
+      expect(laktosefrei.isFood(FoodName.of('laktosefreie milch')), isTrue);
     });
   });
 

@@ -6,6 +6,7 @@ import '../../models/journey_rewards.dart';
 import '../../models/recipe.dart';
 import '../../utils/date_format_utils.dart';
 import '../../utils/distinct_by_name.dart';
+import '../../utils/food_words.dart';
 import '../recipes/recipe_fit.dart';
 import '../recipes/recipe_ranking.dart';
 import 'journey_copy.dart';
@@ -97,8 +98,9 @@ RecipePick? pickJourneyRecipe(
       if (!exclude.contains(fit.recipe.id)) fit,
   ];
   if (goodKeys.isNotEmpty) {
+    final good = [for (final key in goodKeys) FoodName.of(key)];
     for (final fit in order.where(passesForYou)) {
-      final matched = _matchedLines(fit.recipe, goodKeys);
+      final matched = _matchedLines(fit.recipe, good);
       if (matched.isNotEmpty) {
         return RecipePick(
           id: fit.recipe.id,
@@ -113,14 +115,14 @@ RecipePick? pickJourneyRecipe(
   return RecipePick(id: first.id, title: first.title);
 }
 
-/// The names of [recipe]'s lines that are one of the foods [keys], as the
-/// recipe spells them, in recipe order, each once (case ignored), at most
+/// The names of [recipe]'s lines that are one of [foods], as the recipe
+/// spells them, in recipe order, each once (case ignored), at most
 /// [_maxMatched].
-List<String> _matchedLines(Recipe recipe, Set<String> keys) =>
+List<String> _matchedLines(Recipe recipe, List<FoodName> foods) =>
     List.unmodifiable(
       distinctByName([
         for (final line in recipe.ingredients)
-          if (keys.any(line.isFood)) line.name.trim(),
+          if (foods.any(line.isFood)) line.name.trim(),
       ], (name) => name).take(_maxMatched),
     );
 

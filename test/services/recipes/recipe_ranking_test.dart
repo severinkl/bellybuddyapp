@@ -153,6 +153,33 @@ void main() {
       );
     });
 
+    test('a food in several spellings counts once', () {
+      final recipe = testRecipe(
+        ingredients: [testLine('Zwiebel'), testLine('Ei', position: 1)],
+      );
+      expect(
+        recipeScore(
+          recipe,
+          const RankingSignals(good: {'zwiebel', 'zwiebeln', 'rote zwiebel'}),
+        ),
+        2,
+      );
+      expect(
+        recipeScore(recipe, const RankingSignals(noticed: {'ei', 'eier'})),
+        -3,
+      );
+      expect(
+        recipeScore(
+          recipe,
+          const RankingSignals(
+            good: {'zwiebel', 'zwiebeln', 'reis'},
+            noticed: {'ei', 'eier', 'milch'},
+          ),
+        ),
+        -1,
+      );
+    });
+
     test('a free-from food is another food: only its own name counts', () {
       final milch = testRecipe(ingredients: [testLine('Milch')]);
       final laktosefrei = testRecipe(
