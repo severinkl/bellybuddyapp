@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:belly_buddy/models/meal_entry.dart';
@@ -15,7 +14,6 @@ import 'package:belly_buddy/repositories/meal_media_repository.dart';
 import 'package:belly_buddy/screens/recipes/recipe_editor_screen.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_steps_editor.dart';
-import 'package:belly_buddy/services/recipes/recipe_copy.dart';
 import 'package:belly_buddy/services/user_recipe_service.dart';
 import 'package:belly_buddy/widgets/common/editable_app_bar_title.dart';
 import 'package:belly_buddy/widgets/common/ingredient_search.dart';
@@ -380,7 +378,7 @@ void main() {
 
     Future<void> verifyUpdate(
       WidgetTester tester, {
-      List<String>? instructions,
+      List<String> instructions = const [],
       List<String?>? amounts,
     }) async {
       final call = verify(
@@ -447,7 +445,9 @@ void main() {
       ).called(1);
     });
 
-    testWidgets('edit without touching the steps sends none', (tester) async {
+    testWidgets('edit without touching the steps sends them as they are', (
+      tester,
+    ) async {
       await tall(tester);
       final recipe = testUserRecipe(
         id: 'rec-1',
@@ -458,7 +458,7 @@ void main() {
 
       await save(tester);
 
-      await verifyUpdate(tester);
+      await verifyUpdate(tester, instructions: const ['Kochen.', 'Essen.']);
     });
 
     testWidgets('edited steps are sent', (tester) async {
@@ -578,7 +578,7 @@ void main() {
       expect(find.text('Kochen.'), findsOneWidget);
       expect(find.text('Neu'), findsNothing);
       await save(tester);
-      await verifyUpdate(tester);
+      await verifyUpdate(tester, instructions: const ['Kochen.']);
     });
 
     testWidgets('a template sends no amounts', (tester) async {
@@ -589,102 +589,6 @@ void main() {
       await save(tester);
 
       await verifyUpdate(tester);
-    });
-
-    group('a backend that keeps no steps', () {
-      /// The editor pushed on a page that stays when it pops.
-      Future<void> pushEditor(WidgetTester tester, {String? recipeId}) async {
-        await tall(tester);
-        final router = GoRouter(
-          routes: [
-            GoRoute(
-              path: '/',
-              builder: (_, _) => const Scaffold(body: Text('page:home')),
-            ),
-            GoRoute(
-              path: '/edit',
-              builder: (_, _) => RecipeEditorScreen(
-                recipeId: recipeId,
-                initialMeal: recipeId == null
-                    ? testMealEntry(title: 'Reis', ingredients: const ['Reis'])
-                    : null,
-              ),
-            ),
-          ],
-        );
-        addTearDown(router.dispose);
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              userRecipeRepositoryProvider.overrideWithValue(repo),
-              mealMediaRepositoryProvider.overrideWithValue(mediaRepo),
-              ingredientRepositoryProvider.overrideWithValue(
-                FakeIngredientRepository(),
-              ),
-              currentUserIdProvider.overrideWithValue(testUserId),
-            ],
-            child: MaterialApp.router(routerConfig: router),
-          ),
-        );
-        unawaited(router.push('/edit'));
-        await tester.pumpAndSettle();
-      }
-
-      Future<void> typeStep(WidgetTester tester, String text) async {
-        if (find.byKey(RecipeStepsEditor.fieldKey(0)).evaluate().isEmpty) {
-          await tester.tap(find.byKey(RecipeStepsEditor.addKey));
-          await tester.pump();
-        }
-        await tester.enterText(find.byKey(RecipeStepsEditor.fieldKey(0)), text);
-      }
-
-      testWidgets('create: saved, and the steps said to be left out', (
-        tester,
-      ) async {
-        when(() => repo.fetchForUser(any())).thenAnswer((_) async => []);
-        await pushEditor(tester);
-        await typeStep(tester, 'Kochen.');
-        await save(tester);
-
-        expect(find.text('page:home'), findsOneWidget);
-        expect(find.text(RecipeCopy.stepsNotSaved), findsOneWidget);
-      });
-
-      testWidgets('update: saved, and the steps said to be left out', (
-        tester,
-      ) async {
-        final recipe = testUserRecipe(id: 'rec-1');
-        when(() => repo.fetchForUser(any())).thenAnswer((_) async => [recipe]);
-        await pushEditor(tester, recipeId: 'rec-1');
-        await typeStep(tester, 'Kochen.');
-        await save(tester);
-
-        expect(find.text('page:home'), findsOneWidget);
-        expect(find.text(RecipeCopy.stepsNotSaved), findsOneWidget);
-      });
-
-      testWidgets('steps kept: nothing said', (tester) async {
-        when(() => repo.fetchForUser(any())).thenAnswer((_) async => []);
-        when(
-          () => repo.create(
-            userId: any(named: 'userId'),
-            title: any(named: 'title'),
-            ingredients: any(named: 'ingredients'),
-            imageUrl: any(named: 'imageUrl'),
-            instructions: any(named: 'instructions'),
-            ingredientAmounts: any(named: 'ingredientAmounts'),
-            adaptedFromRecipeId: any(named: 'adaptedFromRecipeId'),
-          ),
-        ).thenAnswer(
-          (_) async => testUserRecipe(instructions: const ['Kochen.']),
-        );
-        await pushEditor(tester);
-        await typeStep(tester, 'Kochen.');
-        await save(tester);
-
-        expect(find.text('page:home'), findsOneWidget);
-        expect(find.text(RecipeCopy.stepsNotSaved), findsNothing);
-      });
     });
 
     testWidgets('too long: a message, no save', (tester) async {

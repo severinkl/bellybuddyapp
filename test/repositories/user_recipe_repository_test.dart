@@ -80,6 +80,8 @@ void main() {
         title: 'New',
         ingredients: const ['x'],
         imageUrl: null,
+        instructions: const ['Kochen'],
+        ingredientAmounts: const ['2 EL'],
       );
 
       expect(result, recipe);
@@ -89,6 +91,8 @@ void main() {
           title: 'New',
           ingredients: ['x'],
           imageUrl: null,
+          instructions: ['Kochen'],
+          ingredientAmounts: ['2 EL'],
         ),
       ).called(1);
     });

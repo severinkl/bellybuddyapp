@@ -122,7 +122,7 @@ void main() {
 
     const dup = PostgrestException(message: 'dup', code: '23505');
 
-    test('create without steps sends only the old columns', () async {
+    test('create without steps sends every column, none left out', () async {
       stub(results: [row()]);
       await service.create(
         userId: 'u1',
@@ -130,11 +130,14 @@ void main() {
         ingredients: const ['Reis'],
         imageUrl: null,
       );
-      expect(inserts.single.keys.toSet(), {
-        'user_id',
-        'title',
-        'ingredients',
-        'image_url',
+      expect(inserts.single, {
+        'user_id': 'u1',
+        'title': 'T',
+        'ingredients': ['Reis'],
+        'image_url': null,
+        'instructions': <String>[],
+        'ingredient_amounts': null,
+        'adapted_from_recipe_id': null,
       });
     });
 
@@ -153,15 +156,7 @@ void main() {
       expect(inserts.single['adapted_from_recipe_id'], 'src-1');
     });
 
-    test('update without steps or amounts leaves them out', () async {
-      stub(results: [row()]);
-      await service.update(id: 'rec-1', title: 'T', ingredients: const ['A']);
-      expect(updates, hasLength(1));
-      expect(updates.single.containsKey('instructions'), isFalse);
-      expect(updates.single.containsKey('ingredient_amounts'), isFalse);
-    });
-
-    test('update: amounts kept gives one write', () async {
+    test('update writes ingredients, steps and amounts at once', () async {
       stub(
         results: [
           row(amounts: ['2 EL', null]),
@@ -175,81 +170,60 @@ void main() {
         ingredientAmounts: const ['2 EL', null],
       );
       expect(updates, hasLength(1));
-      expect(updates.single['instructions'], ['Kochen']);
-      expect(updates.single['ingredient_amounts'], ['2 EL', null]);
-      expect(r.amountOf(0), '2 EL');
-    });
-
-    test('update: amounts the trigger dropped are written again', () async {
-      stub(
-        results: [
-          row(),
-          row(amounts: ['2 EL', null]),
-        ],
-      );
-      final r = await service.update(
-        id: 'rec-1',
-        title: 'T',
-        ingredients: const ['Reis', 'Salz'],
-        ingredientAmounts: const ['2 EL', null],
-      );
-      expect(updates, hasLength(2));
-      expect(updates[1], {
+      expect(updates.single, {
+        'title': 'T',
+        'ingredients': ['Reis', 'Salz'],
+        'image_url': null,
+        'updated_at': isA<String>(),
+        'instructions': ['Kochen'],
         'ingredient_amounts': ['2 EL', null],
       });
       expect(r.amountOf(0), '2 EL');
     });
 
-    /// PostgREST's answer on a backend without core #11's [column].
-    PostgrestException missing(String column) => PostgrestException(
-      message:
-          "Could not find the '$column' column of 'user_recipes' in the "
-          'schema cache',
-      code: 'PGRST204',
-    );
-    const oldColumns = {'user_id', 'title', 'ingredients', 'image_url'};
-
-    test('create on a backend without steps: saved once more without '
-        'them', () async {
-      stub(results: [missing('instructions'), row()]);
-      final saved = await service.create(
-        userId: 'u1',
-        title: 'T',
-        ingredients: const ['Reis', 'Salz'],
-        instructions: const ['Kochen'],
-        ingredientAmounts: const ['2 EL', null],
-        adaptedFromRecipeId: 'src-1',
-      );
-      expect(inserts, hasLength(2));
-      expect(inserts[0]['instructions'], ['Kochen']);
-      expect(inserts[1].keys.toSet(), oldColumns);
-      expect(saved.instructions, isEmpty);
-    });
-
-    test('update on a backend without steps: saved once more without them, '
-        'no second amounts write', () async {
-      stub(results: [missing('ingredient_amounts'), row()]);
-      final saved = await service.update(
+    test('update without amounts or steps clears them in that write', () async {
+      stub(results: [row()]);
+      await service.update(
         id: 'rec-1',
         title: 'T',
-        ingredients: const ['Reis', 'Salz'],
-        instructions: const ['Kochen'],
-        ingredientAmounts: const ['2 EL', null],
+        ingredients: const ['A'],
+        instructions: const [],
+        ingredientAmounts: null,
       );
-      expect(updates, hasLength(2));
-      expect(updates[0]['instructions'], ['Kochen']);
-      expect(updates[1].keys.toSet(), {
-        'title',
-        'ingredients',
-        'image_url',
-        'updated_at',
-      });
-      expect(saved.instructions, isEmpty);
+      expect(updates, hasLength(1));
+      expect(updates.single, containsPair('ingredient_amounts', null));
+      expect(updates.single, containsPair('instructions', <String>[]));
     });
 
-    test('another missing column, or none of the new ones sent, '
-        'rethrows', () async {
-      stub(results: [missing('image_url')]);
+    test(
+      'update: the row read back is the answer, never a second write',
+      () async {
+        stub(
+          results: [
+            row(),
+            row(amounts: ['2 EL', null]),
+          ],
+        );
+        final r = await service.update(
+          id: 'rec-1',
+          title: 'T',
+          ingredients: const ['Reis', 'Salz'],
+          instructions: const [],
+          ingredientAmounts: const ['2 EL', null],
+        );
+        expect(updates, hasLength(1));
+        expect(r.ingredientAmounts, isNull);
+      },
+    );
+
+    test('a PostgREST error is rethrown, nothing sent again', () async {
+      const missing = PostgrestException(
+        message:
+            "Could not find the 'instructions' column of 'user_recipes' in "
+            'the schema cache',
+        code: 'PGRST204',
+      );
+      stub(results: [missing]);
       await expectLater(
         service.create(
           userId: 'u1',
@@ -261,9 +235,15 @@ void main() {
       );
       expect(inserts, hasLength(1));
 
-      stub(results: [missing('instructions')]);
+      stub(results: [missing]);
       await expectLater(
-        service.update(id: 'rec-1', title: 'T', ingredients: const ['A']),
+        service.update(
+          id: 'rec-1',
+          title: 'T',
+          ingredients: const ['A'],
+          instructions: const ['Kochen'],
+          ingredientAmounts: null,
+        ),
         throwsA(isA<PostgrestException>()),
       );
       expect(updates, hasLength(1));
@@ -276,7 +256,13 @@ void main() {
         throwsA(isA<DuplicateRecipeTitleException>()),
       );
       await expectLater(
-        service.update(id: 'rec-1', title: 'T', ingredients: const ['A']),
+        service.update(
+          id: 'rec-1',
+          title: 'T',
+          ingredients: const ['A'],
+          instructions: const [],
+          ingredientAmounts: null,
+        ),
         throwsA(isA<DuplicateRecipeTitleException>()),
       );
     });

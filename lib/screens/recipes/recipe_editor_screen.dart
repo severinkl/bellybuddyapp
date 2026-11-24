@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show listEquals;
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,7 +11,6 @@ import '../../providers/core_providers.dart';
 import '../../providers/ingredient_autocomplete_provider.dart';
 import '../../providers/user_recipes_provider.dart';
 import '../../repositories/meal_media_repository.dart';
-import '../../services/recipes/recipe_copy.dart';
 import '../../services/user_recipe_service.dart';
 import '../../utils/logger.dart';
 import '../../utils/save_helper.dart';
@@ -50,9 +48,8 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
   String? _imageFileName;
   bool _isSaving = false;
 
-  /// The steps' raw texts as typed; [_loadedSteps] are the saved recipe's.
+  /// The steps' raw texts as typed.
   List<String> _steps = [];
-  List<String> _loadedSteps = [];
 
   /// Ingredient name → its amount, from the loaded recipe; an ingredient
   /// added here has none.
@@ -90,7 +87,6 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
       _ingredients = List<String>.from(recipe.ingredients);
       _imageUrl = recipe.imageUrl;
       _steps = List<String>.from(recipe.instructions);
-      _loadedSteps = recipe.instructions;
       _amounts.clear();
       for (var i = 0; i < recipe.ingredients.length; i++) {
         _amounts[recipe.ingredients[i]] = recipe.amountOf(i);
@@ -138,32 +134,25 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
       }
 
       final notifier = ref.read(userRecipesProvider.notifier);
-      final sentSteps = _isEditMode && listEquals(steps, _loadedSteps)
-          ? null
-          : steps;
-      final saved = _isEditMode
-          ? await notifier.update(
-              id: widget.recipeId!,
-              title: title,
-              ingredients: _ingredients,
-              imageUrl: resolvedImageUrl,
-              instructions: sentSteps,
-              ingredientAmounts: _amountsToSend(),
-            )
-          : await notifier.create(
-              title: title,
-              ingredients: _ingredients,
-              imageUrl: resolvedImageUrl,
-              instructions: steps,
-            );
-
-      if (!mounted) return;
-      if (saved.lostSteps(sentSteps)) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text(RecipeCopy.stepsNotSaved)));
+      if (_isEditMode) {
+        await notifier.update(
+          id: widget.recipeId!,
+          title: title,
+          ingredients: _ingredients,
+          imageUrl: resolvedImageUrl,
+          instructions: steps,
+          ingredientAmounts: _amountsToSend(),
+        );
+      } else {
+        await notifier.create(
+          title: title,
+          ingredients: _ingredients,
+          imageUrl: resolvedImageUrl,
+          instructions: steps,
+        );
       }
-      context.pop();
+
+      if (mounted) context.pop();
     } on DuplicateRecipeTitleException {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -186,8 +175,8 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
     }
   }
 
-  /// The amounts aligned with the ingredients that are left, or null when
-  /// none has one (nor had: a recipe without amounts sends none).
+  /// The amounts aligned with the ingredients that are left, saved with
+  /// them in one write; null when none has one.
   List<String?>? _amountsToSend() {
     final amounts = [for (final name in _ingredients) _amounts[name]];
     return amounts.every((a) => a == null) ? null : amounts;

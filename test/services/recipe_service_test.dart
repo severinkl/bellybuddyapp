@@ -244,7 +244,7 @@ void main() {
       verify(() => stub.query.select('value')).called(1);
       verify(() => stub.filter.eq('key', 'intolerance_rules')).called(1);
       verify(() => stub.filter.maybeSingle()).called(1);
-      expect(rules!.byName, hasLength(13));
+      expect(rules!.byName, hasLength(15));
       expect(rules['Weizen']!.allergens, {'weizen'});
     });
 

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io' show SocketException;
 
 // ignore_for_file: invalid_use_of_internal_member
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,7 +7,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:url_launcher/url_launcher.dart';
 
@@ -738,18 +738,12 @@ void main() {
       expect(mine(find.text('Laden…')), findsNothing);
     });
 
-    testWidgets('a backend without the collection: no own recipes still '
-        'offers the first one, with a quiet line and a retry', (tester) async {
-      // Before core #11: the collection's and the favourites' reads fail.
+    testWidgets('saved recipes offline: no own recipes still offers the '
+        'first one, with a quiet line and a retry', (tester) async {
+      // Offline: the collection's and the favourites' reads fail.
       collection
-        ..collectionError = const PostgrestException(
-          message: 'column recipes.meal_types does not exist',
-          code: '42703',
-        )
-        ..favoritesError = const PostgrestException(
-          message: 'offline',
-          code: 'PGRST000',
-        );
+        ..collectionError = const SocketException('Failed host lookup')
+        ..favoritesError = const SocketException('Failed host lookup');
       await pump(tester);
 
       expect(mine(find.text('Noch keine Rezepte.')), findsOneWidget);

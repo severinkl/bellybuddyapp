@@ -166,8 +166,7 @@ class _AdaptRecipeScreenState extends ConsumerState<AdaptRecipeScreen> {
     );
   }
 
-  /// Saves [adapted] as an own recipe once; a failure says so, and so do
-  /// steps the backend couldn't keep.
+  /// Saves [adapted] as an own recipe once; a failure says so.
   Future<void> _save(AdaptedRecipe adapted) async {
     if (_saving) return;
     setState(() => _saving = true);
@@ -189,20 +188,17 @@ class _AdaptRecipeScreenState extends ConsumerState<AdaptRecipeScreen> {
       _saving = false;
       _saved = saved;
     });
-    final message = switch (saved) {
-      // Trying again changes nothing: said so.
-      null when tooLong => RecipeCopy.adaptTooLong,
-      null => RecipeCopy.adaptSaveFailed,
-      // A backend without core #11's columns kept the rest only.
-      _ when saved.lostSteps([for (final step in adapted.steps) step.text]) =>
-        RecipeCopy.stepsNotSaved,
-      _ => null,
-    };
-    if (message != null) {
-      messenger
-        ..hideCurrentSnackBar()
-        ..showSnackBar(SnackBar(content: Text(message)));
-    }
+    if (saved != null) return;
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          content: Text(
+            // Trying again changes nothing: said so.
+            tooLong ? RecipeCopy.adaptTooLong : RecipeCopy.adaptSaveFailed,
+          ),
+        ),
+      );
   }
 
   /// Back to the recipe's detail: popped, or opened when nothing is below.

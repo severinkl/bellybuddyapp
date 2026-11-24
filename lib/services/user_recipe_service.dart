@@ -21,9 +21,6 @@ class RecipeTooLongException implements Exception {
 
 const _pgUniqueViolation = '23505';
 
-/// PostgREST: a column the request names isn't in the table.
-const _pgrstMissingColumn = 'PGRST204';
-
 class UserRecipeService {
   UserRecipeService(this._client);
 
@@ -76,17 +73,19 @@ class UserRecipeService {
     String? adaptedFromRecipeId,
   }) async {
     try {
-      // The core #11 columns are only sent when used, and dropped on a
-      // backend without them ([_saveWithFallback]).
-      final (data, _) = await _saveWithFallback({
-        'user_id': userId,
-        'title': title,
-        'ingredients': ingredients,
-        'image_url': imageUrl,
-        if (instructions.isNotEmpty) 'instructions': instructions,
-        'ingredient_amounts': ?ingredientAmounts,
-        'adapted_from_recipe_id': ?adaptedFromRecipeId,
-      }, (row) => _client.from(_table).insert(row).select().single());
+      final data = await _client
+          .from(_table)
+          .insert({
+            'user_id': userId,
+            'title': title,
+            'ingredients': ingredients,
+            'image_url': imageUrl,
+            'instructions': instructions,
+            'ingredient_amounts': ingredientAmounts,
+            'adapted_from_recipe_id': adaptedFromRecipeId,
+          })
+          .select()
+          .single();
       return UserRecipe.fromJson(data);
     } on PostgrestException catch (e, st) {
       if (e.code == _pgUniqueViolation) {
@@ -100,48 +99,31 @@ class UserRecipeService {
     }
   }
 
+  /// Saves the whole recipe in one write. [ingredientAmounts] are aligned
+  /// with [ingredients] (null: none), so the two always change together.
   Future<UserRecipe> update({
     required String id,
     required String title,
     required List<String> ingredients,
     String? imageUrl,
-    List<String>? instructions,
-    List<String?>? ingredientAmounts,
+    required List<String> instructions,
+    required List<String?>? ingredientAmounts,
   }) async {
     try {
-      final (data, withoutNewColumns) = await _saveWithFallback(
-        {
-          'title': title,
-          'ingredients': ingredients,
-          'image_url': imageUrl,
-          'updated_at': DateTime.now().toUtc().toIso8601String(),
-          'instructions': ?instructions,
-          'ingredient_amounts': ?ingredientAmounts,
-        },
-        (row) =>
-            _client.from(_table).update(row).eq('id', id).select().single(),
-      );
-      final saved = UserRecipe.fromJson(data);
-      if (withoutNewColumns ||
-          ingredientAmounts == null ||
-          saved.ingredientAmounts != null) {
-        return saved;
-      }
-      // Core's trigger nulls the amounts when an update changes
-      // `ingredients` but not them (an unchanged array counts as not sent),
-      // so an older app that edits only `ingredients` can't leave them
-      // misaligned; write them once more so they stick. Should this second
-      // write fail, the recipe stays saved without amounts and the error
-      // reaches the editor. Drop this write once core drops the trigger,
-      // which it can after `minimum_supported_version` excludes the apps
-      // that don't send amounts.
-      final again = await _client
+      final data = await _client
           .from(_table)
-          .update({'ingredient_amounts': ingredientAmounts})
+          .update({
+            'title': title,
+            'ingredients': ingredients,
+            'image_url': imageUrl,
+            'updated_at': DateTime.now().toUtc().toIso8601String(),
+            'instructions': instructions,
+            'ingredient_amounts': ingredientAmounts,
+          })
           .eq('id', id)
           .select()
           .single();
-      return UserRecipe.fromJson(again);
+      return UserRecipe.fromJson(data);
     } on PostgrestException catch (e, st) {
       if (e.code == _pgUniqueViolation) {
         throw const DuplicateRecipeTitleException();
@@ -151,39 +133,6 @@ class UserRecipeService {
     } catch (e, st) {
       _log.error('update failed', e, st);
       rethrow;
-    }
-  }
-
-  /// The columns core #11 added: steps, amounts and the origin.
-  static const _newColumns = {
-    'instructions',
-    'ingredient_amounts',
-    'adapted_from_recipe_id',
-  };
-
-  /// Saves [row] with [save]. On a backend without core #11's columns
-  /// (PostgREST names one as missing), saves once more without them: the
-  /// rest is kept, the steps and amounts are not (the returned record says
-  /// so, and the row read back has none).
-  Future<(PostgrestMap, bool withoutNewColumns)> _saveWithFallback(
-    Map<String, Object?> row,
-    Future<PostgrestMap> Function(Map<String, Object?> row) save,
-  ) async {
-    try {
-      return (await save(row), false);
-    } on PostgrestException catch (e) {
-      final missingNew =
-          e.code == _pgrstMissingColumn &&
-          _newColumns.any((c) => e.message.contains("'$c'"));
-      if (!missingNew || !row.keys.any(_newColumns.contains)) rethrow;
-      _log.warn('${e.message}: saved without steps and amounts');
-      return (
-        await save({
-          for (final MapEntry(:key, :value) in row.entries)
-            if (!_newColumns.contains(key)) key: value,
-        }),
-        true,
-      );
     }
   }
 
