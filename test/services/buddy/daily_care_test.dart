@@ -92,6 +92,33 @@ void main() {
       expect(at(12, log, 45), CareAction.lunch);
     });
 
+    test('Essen lowest after a meal in this slot: a snack, not the slot '
+        'again', () {
+      // Essen 0.32, Trinken 0.575, Bauchgefühl 0.66.
+      final dinner = CareLog(
+        lastMealAt: t(17, 30),
+        lastDrinkAt: t(20),
+        lastGutFeelingAt: t(12),
+      );
+      expect(at(21, dinner, 30), CareAction.snack);
+      // Essen 0.348, Trinken 0.62, Bauchgefühl 0.79.
+      final lunch = CareLog(
+        lastMealAt: t(11),
+        lastDrinkAt: t(13, 30),
+        lastGutFeelingAt: t(9),
+      );
+      expect(at(14, lunch, 50), CareAction.snack);
+    });
+
+    test('Essen lowest after a meal in an earlier slot: this slot', () {
+      final log = CareLog(
+        lastMealAt: t(13),
+        lastDrinkAt: t(18),
+        lastGutFeelingAt: t(12),
+      );
+      expect(at(19, log), CareAction.dinner);
+    });
+
     test('ties go Essen, Trinken, Bauchgefühl', () {
       // Trinken and Bauchgefühl both at the floor: Trinken.
       expect(at(14, CareLog(lastMealAt: t(13))), CareAction.drink);

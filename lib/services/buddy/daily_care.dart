@@ -80,17 +80,43 @@ CareAction? mealSlotAt(DateTime now) {
   return CareAction.dinner;
 }
 
+/// Where each meal slot ([mealSlotAt]) starts, in minutes after midnight.
+const _slotFrom = {
+  CareAction.breakfast: DayParts.dayFrom,
+  CareAction.lunch: DayParts.lunchFrom,
+  CareAction.snack: DayParts.snackFrom,
+  CareAction.dinner: DayParts.dinnerFrom,
+};
+
+/// The meal to ask for when Essen is low at [now]: the one the time of day
+/// asks for ([mealSlotAt]), or a snack once a meal is logged in that slot
+/// (he never says a logged meal is still to come). At night the plain
+/// „Essen eintragen" ([CareAction.feed]).
+CareAction _mealAt(CareLog log, DateTime now) {
+  final slot = mealSlotAt(now);
+  if (slot == null) return CareAction.feed;
+  final from = _slotFrom[slot]!;
+  final slotStart = DateTime(
+    now.year,
+    now.month,
+    now.day,
+    from ~/ 60,
+    from % 60,
+  );
+  final last = log.lastMealAt;
+  return last != null && !last.isBefore(slotStart) ? CareAction.snack : slot;
+}
+
 /// The next thing to log: the need with the lowest meter
 /// ([CareMeters.lowest]; Klo has none, so it never drives it) once it is
-/// under [AppConstants.careMeterLow]. For Essen that is the meal the time
-/// of day asks for ([mealSlotAt]), at night the plain „Essen eintragen"
-/// ([CareAction.feed]). With no meter that low: [CareAction.feed].
+/// under [AppConstants.careMeterLow]. For Essen that is a meal
+/// ([_mealAt]). With no meter that low: [CareAction.feed].
 CareAction nextCareAction(CareLog log, DateTime now) {
   final m = CareMeters.at(log, now);
   final lowest = m.lowest;
   if (m.level(lowest)! >= AppConstants.careMeterLow) return CareAction.feed;
   return switch (lowest) {
-    CareNeed.food => mealSlotAt(now) ?? CareAction.feed,
+    CareNeed.food => _mealAt(log, now),
     CareNeed.drink => CareAction.drink,
     CareNeed.gutFeeling => CareAction.gutFeeling,
     // Not metered, so never the lowest.

@@ -1532,10 +1532,74 @@ void main() {
       await pumpHero(tester);
       expect(meter(tester, CareNeed.drink), closeTo(0.717, 0.005));
 
-      now = DateTime(2026, 11, 22, 15);
+      // Still lunch time and the same mood: only the meter moves.
+      now = DateTime(2026, 11, 22, 14, 59);
       await tester.pump(const Duration(minutes: 1));
       await tester.pump(const Duration(milliseconds: 400));
-      expect(meter(tester, CareNeed.drink), closeTo(0.433, 0.005));
+      expect(find.text('🍝 Mittagessen eintragen'), findsOneWidget);
+      expect(meter(tester, CareNeed.drink), closeTo(0.438, 0.005));
+    });
+
+    for (final (name, meal, from, to, before, after) in [
+      (
+        'at the floor',
+        DateTime(2026, 11, 22, 7),
+        DateTime(2026, 11, 22, 13),
+        DateTime(2026, 11, 22, 14),
+        'zuletzt vor 6 Std',
+        'zuletzt vor 7 Std',
+      ),
+      (
+        'in the night pause',
+        DateTime(2026, 11, 22, 21),
+        DateTime(2026, 11, 22, 22, 30),
+        DateTime(2026, 11, 22, 23, 30),
+        'zuletzt vor 1 Std',
+        'zuletzt vor 2 Std',
+      ),
+    ]) {
+      testWidgets('the minute tick refreshes what a bubble says while its '
+          'meter holds still ($name)', (tester) async {
+        final handle = tester.ensureSemantics();
+        now = from;
+        entries = _FakeEntries(
+          EntriesState(meals: [testMealEntry(trackedAt: meal)]),
+        );
+        await pumpHero(tester);
+        String? spoken() => tester
+            .getSemantics(find.byKey(CareRing.needKey(CareNeed.food)))
+            .value;
+        final level = meter(tester, CareNeed.food);
+        expect(spoken(), before);
+
+        now = to;
+        await tester.pump(const Duration(minutes: 1));
+        await tester.pump();
+        expect(spoken(), after);
+        expect(meter(tester, CareNeed.food), level);
+        handle.dispose();
+      });
+    }
+
+    testWidgets('dinner logged, Essen lowest late in the evening: a snack, '
+        'not dinner again', (tester) async {
+      // Essen 0.32, Trinken 0.575, Bauchgefühl 0.66.
+      now = DateTime(2026, 11, 22, 21, 30);
+      entries = _FakeEntries(
+        EntriesState(
+          meals: [testMealEntry(trackedAt: DateTime(2026, 11, 22, 17, 30))],
+          drinks: [testDrinkEntry(trackedAt: DateTime(2026, 11, 22, 20))],
+          gutFeelings: [
+            testGutFeelingEntry(trackedAt: DateTime(2026, 11, 22, 12)),
+          ],
+        ),
+      );
+      await pumpHero(tester);
+      await tick(tester);
+
+      expect(find.text('🍎 Snack eintragen'), findsOneWidget);
+      expect(find.text('🍲 Abendessen eintragen'), findsNothing);
+      expect(careLines(CareAction.snack), contains(controller(tester).bubble));
     });
 
     testWidgets("Klo's line ages with the clock, though no meter moves", (

@@ -109,10 +109,10 @@ class BuddyCopy {
   static const care = <CareAction, List<String>>{
     CareAction.breakfast: [
       "Guten Morgen! Was gab's zum Frühstück? 🍳",
-      'Frühstück fehlt mir noch – mein Bauch knurrt!',
+      'Lust auf Frühstück? ☕',
     ],
     CareAction.lunch: [
-      'Mittag fehlt mir noch! 🍝',
+      'Lust auf Mittagessen? 🍝',
       "Mahlzeit! Was gab's bei dir zu Mittag?",
     ],
     CareAction.snack: [
@@ -121,7 +121,7 @@ class BuddyCopy {
     ],
     CareAction.dinner: [
       "Was gab's zum Abendessen? 🍲",
-      'Abendessen fehlt mir noch!',
+      'Zeit fürs Abendessen? 🍲',
     ],
     CareAction.drink: [
       'Hast du Durst? 💧',

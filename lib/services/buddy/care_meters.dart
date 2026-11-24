@@ -231,7 +231,8 @@ abstract final class CareCopy {
       ? careAgo(log.lastToiletAt!, now)
       : notToday;
 
-  /// A bubble's semantics value.
+  /// A bubble's semantics value; Bauchgefühl's also names how today's
+  /// latest one was („zuletzt vor 2 Std, Mittel").
   static String spoken(CareNeed need, CareLog log, DateTime now) {
     if (need == CareNeed.toilet) {
       return log.loggedOn(need, now)
@@ -239,6 +240,9 @@ abstract final class CareCopy {
           : notToday;
     }
     final last = log.lastAt(need);
-    return last == null ? notYet : 'zuletzt ${careAgo(last, now)}';
+    if (last == null) return notYet;
+    final ago = 'zuletzt ${careAgo(last, now)}';
+    final level = need == CareNeed.gutFeeling ? log.lastGutFeelingLevel : null;
+    return level == null ? ago : '$ago, ${level.label}';
   }
 }

@@ -313,16 +313,13 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// line, unless not to [speak].
   void _updateCare({bool speak = true}) {
     if (!mounted) return;
-    final (care, meters, loo) = (_care, _meters, _looLine);
+    final (care, meters, said) = (_care, _meters, _said);
     final (mood, action) = (_careMood, _careAction);
     _deriveCare();
     final moodChanged = _careMood != mood;
     final actionChanged = _careAction != action;
     // The ring, its glow and the button follow the log and the clock.
-    if (_care != care ||
-        _meters != meters ||
-        _looLine != loo ||
-        actionChanged) {
+    if (_care != care || _meters != meters || _said != said || actionChanged) {
       setState(() {});
     }
     if (!moodChanged && !actionChanged) return;
@@ -330,9 +327,12 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     if (speak && _override == null) _sayMoodLine();
   }
 
-  /// What Klo's bubble says at [_careAt] („vor 3 Std"); it ages with the
-  /// clock like the meters drain.
-  String get _looLine => CareCopy.looLine(_care, _careAt);
+  /// What the bubbles say at [_careAt] (Klo's „vor 3 Std", each one's
+  /// „zuletzt …"): it ages with the clock even where no meter moves (at the
+  /// floor, in the night pause).
+  String get _said => [
+    for (final need in CareNeed.values) CareCopy.spoken(need, _care, _careAt),
+  ].join('\n');
 
   void _setOverride(BuddyMood? mood) {
     _override = mood;

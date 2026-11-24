@@ -154,6 +154,7 @@ void main() {
   testWidgets("Bauchgefühl shows today's latest level, not always a smile", (
     tester,
   ) async {
+    final handle = tester.ensureSemantics();
     final shown = <GutFeelingRatingLevel, String>{};
     for (final level in GutFeelingRatingLevel.values) {
       await pump(
@@ -167,8 +168,13 @@ void main() {
         ),
         findsOneWidget,
       );
+      final node = tester.getSemantics(
+        find.byKey(CareRing.needKey(CareNeed.gutFeeling)),
+      );
+      expect(node.value, 'zuletzt vor 6 Std, ${level.label}');
       shown[level] = level.face;
     }
+    handle.dispose();
     expect(shown.values.toSet(), hasLength(4));
     expect(shown[GutFeelingRatingLevel.schlecht], isNot('🙂'));
     expect(shown[GutFeelingRatingLevel.mittel], isNot('🙂'));
@@ -267,6 +273,23 @@ void main() {
     expect(tester.hasRunningAnimations, isTrue);
     await tester.pump(const Duration(milliseconds: 400));
     expect(meter(tester, CareNeed.food), closeTo(0.915, 0.005));
+  });
+
+  testWidgets('a later minute updates what a bubble says without moving a '
+      'meter at the floor', (tester) async {
+    final handle = tester.ensureSemantics();
+    // Breakfast at 07:00: Essen at the floor from 12:00 on.
+    final log = CareLog(lastMealAt: _t(7));
+    String? value() =>
+        tester.getSemantics(find.byKey(CareRing.needKey(CareNeed.food))).value;
+    await pump(tester, log: log, now: _t(13));
+    expect(value(), 'zuletzt vor 6 Std');
+
+    await pump(tester, log: log, now: _t(14), settle: Duration.zero);
+    expect(value(), 'zuletzt vor 7 Std');
+    expect(meter(tester, CareNeed.food), AppConstants.careMeterFloor);
+    expect(tester.hasRunningAnimations, isFalse);
+    handle.dispose();
   });
 
   testWidgets('the meter just logged still fills while its glow moves on', (

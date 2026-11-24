@@ -285,5 +285,27 @@ void main() {
         'zuletzt vor 3 Std',
       );
     });
+    test('spoken Bauchgefühl names how it was', () {
+      expect(
+        CareCopy.spoken(
+          CareNeed.gutFeeling,
+          CareLog(
+            lastGutFeelingAt: _t(12),
+            lastGutFeelingLevel: GutFeelingRatingLevel.mittel,
+          ),
+          now,
+        ),
+        'zuletzt vor 2 Std, Mittel',
+      );
+      // Only yesterday's: no level of today.
+      expect(
+        CareCopy.spoken(
+          CareNeed.gutFeeling,
+          CareLog(lastGutFeelingAt: _t(20, 0, 22)),
+          now,
+        ),
+        'zuletzt gestern',
+      );
+    });
   });
 }

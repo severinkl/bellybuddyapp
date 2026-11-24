@@ -164,10 +164,10 @@ class _NeedBubble extends StatelessWidget {
     );
     // The glow goes inside the tween: when it moves on (the need just
     // logged), the tween keeps its place and the meter still fills.
-    Widget meterAt(double? l, Widget child) {
+    Widget meterAt(double? shown, Widget child) {
       final meter = NeedMeter(
         need: need,
-        level: l,
+        level: shown,
         size: meterSize,
         child: child,
       );
