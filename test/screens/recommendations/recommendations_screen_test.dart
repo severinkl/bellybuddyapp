@@ -1065,7 +1065,7 @@ void main() {
 
       expect(
         router.routerDelegate.currentConfiguration.last.matchedLocation,
-        '/collection/r-1',
+        RoutePaths.collectionRecipeFor('r-1'),
       );
       expect(find.text('page:${RoutePaths.collectionRecipe}'), findsOneWidget);
       // Pushed over the Tipps.

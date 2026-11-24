@@ -74,7 +74,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       router.routerDelegate.currentConfiguration.last.matchedLocation,
-      '/collection/r-1',
+      RoutePaths.collectionRecipeFor('r-1'),
     );
     handle.dispose();
   });

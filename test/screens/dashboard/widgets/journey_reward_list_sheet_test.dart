@@ -187,7 +187,7 @@ void main() {
     await tapRow(tester, 1);
 
     expect(find.byType(JourneyRewardListSheet), findsNothing);
-    expect(location(), '/collection/r-1');
+    expect(location(), RoutePaths.collectionRecipeFor('r-1'));
   });
 
   testWidgets('row 1 without a pick says so and opens the recipes', (
@@ -234,7 +234,7 @@ void main() {
     await pumpRewards(tester, _day4);
     await tapRow(tester, 3);
 
-    expect(location(), '/collection/r-3');
+    expect(location(), RoutePaths.collectionRecipeFor('r-3'));
   });
 
   testWidgets('row 3 accepted opens the Tipps', (tester) async {
@@ -316,7 +316,7 @@ void main() {
 
       await tester.tap(find.byKey(JourneyDaySheet.primaryKey));
       await tester.pumpAndSettle();
-      expect(location(), '/collection/r-3');
+      expect(location(), RoutePaths.collectionRecipeFor('r-3'));
       expect(find.byType(SnackBar), findsNothing);
     });
 
@@ -384,7 +384,7 @@ void main() {
     expect(inRow(5, find.text('Karotten-Reis')), findsOneWidget);
     await tapRow(tester, 5);
 
-    expect(location(), '/collection/r-5');
+    expect(location(), RoutePaths.collectionRecipeFor('r-5'));
   });
 
   testWidgets('row 6 opens Muster', (tester) async {

@@ -99,7 +99,7 @@ void main() {
           picks: {1: RecipePick(id: 'r1', title: 'Apfel-Reis')},
         ),
       );
-      expect(location(), '/collection/r1');
+      expect(location(), RoutePaths.collectionRecipeFor('r1'));
       expect(cover.left, hasLength(1));
       var closed = false;
       unawaited(cover.left.single!.whenComplete(() => closed = true));
