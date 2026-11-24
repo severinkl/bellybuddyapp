@@ -17,6 +17,10 @@ import '../../../utils/url_utils.dart';
 import 'first_tip_offer_sheet.dart';
 import 'journey_reward_sheet.dart';
 
+/// Told that a reward leaves Home: for [page], a page pushed over it
+/// (completing once that page is closed), or with null for another tab.
+typedef LeavingHome = void Function(Future<void>? page);
+
 /// Opens what [day]'s reward gives, from [context]:
 /// - 1, 3 and 5: the picked recipe ([rewardPick]), else the recipes;
 /// - 2: the article, in the in-app browser through [openUrl] (a SnackBar
@@ -26,15 +30,22 @@ import 'journey_reward_sheet.dart';
 /// - 4: nothing (the saying is the reward);
 /// - 6 and 7: Muster.
 ///
-/// Navigations are not awaited.
+/// Navigations are not awaited; [onLeave] hears of each as it starts. The
+/// article (over the app) and day 4 never leave Home.
 Future<void> openJourneyReward(
   BuildContext context,
   WidgetRef ref,
   int day, {
   UrlOpener openUrl = launchUrl,
+  LeavingHome? onLeave,
 }) async {
   final rewards = ref.read(journeyRewardsProvider) ?? const JourneyRewards();
   final weeklyTips = ref.read(weeklyTipsEnabledProvider);
+  void push(Future<void> page) {
+    onLeave?.call(page);
+    unawaited(page);
+  }
+
   switch (day) {
     case 2:
       await openExternalUrl(
@@ -45,15 +56,16 @@ Future<void> openJourneyReward(
         open: openUrl,
       );
     case 3 when day3IsTip(rewards, weeklyTips: weeklyTips):
-      unawaited(context.push(RoutePaths.recommendations));
+      push(context.push(RoutePaths.recommendations));
     case 1 || 3 || 5:
       if (rewardPick(day, rewards, weeklyTips: weeklyTips) case final pick?) {
-        unawaited(context.openRecipe(pick.id));
+        push(context.openRecipe(pick.id));
       } else {
+        onLeave?.call(null);
         context.go(RoutePaths.discoverRecipes);
       }
     case 6 || 7:
-      unawaited(context.push(RoutePaths.patterns));
+      push(context.push(RoutePaths.patterns));
   }
 }
 
@@ -80,14 +92,16 @@ enum FirstTipOutcome {
 ///   [FirstTipOutcome.optInFailed] when that failed;
 /// - „Nein, danke" answers the offer so, then gives day 3's recipe
 ///   ([showJourneyRewardSheet] after „Nein"; its primary button opens it):
-///   [FirstTipOutcome.declined];
+///   [FirstTipOutcome.declined]; opening it leaves Home ([onLeave], as
+///   [openJourneyReward]);
 /// - a dismissal stores nothing: [FirstTipOutcome.dismissed].
 ///
 /// The caller presents the outcome. Nothing is requested before „Ja".
 Future<FirstTipOutcome> offerFirstTip(
   BuildContext context,
-  WidgetRef ref,
-) async {
+  WidgetRef ref, {
+  LeavingHome? onLeave,
+}) async {
   final answer = await showFirstTipOfferSheet(context);
   if (answer == null || !context.mounted) return FirstTipOutcome.dismissed;
   switch (answer) {
@@ -102,7 +116,7 @@ Future<FirstTipOutcome> offerFirstTip(
       if (context.mounted &&
           await showJourneyRewardSheet(context, day: 3, afterNo: true) &&
           context.mounted) {
-        await openJourneyReward(context, ref, 3);
+        await openJourneyReward(context, ref, 3, onLeave: onLeave);
       }
       return FirstTipOutcome.declined;
   }

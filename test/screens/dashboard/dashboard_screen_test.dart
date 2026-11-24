@@ -1165,8 +1165,8 @@ void main() {
       );
 
       // He celebrates, then gives day 1's recipe.
-      await tester.pump(const Duration(seconds: 2));
-      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(buddyActionDuration(BuddyAction.celebrate));
+      await tester.pump();
       expect(find.byType(JourneyRewardSheet), findsOneWidget);
       expect(find.text(JourneyCopy.day1Line), findsOneWidget);
     });

@@ -6,6 +6,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../config/constants.dart';
 import '../../../providers/buddy_events_provider.dart';
@@ -26,6 +27,7 @@ import '../../../services/buddy/daily_care.dart';
 import '../../../services/journey/journey_copy.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/logger.dart';
+import '../../../utils/url_utils.dart';
 import '../../../widgets/buddy/buddy.dart';
 import '../../../widgets/buddy/streak_chip.dart';
 import '../../../widgets/common/bb_button.dart';
@@ -94,7 +96,10 @@ _Cue _cueFor(BuddyAnnouncement a) => switch (a) {
 /// Buddy's announcements. Without a Buddy status (loading, error, signed
 /// out) the Buddy still shows, named 'Buddy', without the streak chip.
 class BuddyHero extends ConsumerStatefulWidget {
-  const BuddyHero({super.key});
+  const BuddyHero({super.key, this.openUrl = launchUrl});
+
+  /// Opens day 2's article (a reward); tests record it.
+  final UrlOpener openUrl;
 
   /// The next-action button under the ring.
   static const actionKey = Key('buddy_hero_next_action');
@@ -202,8 +207,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// it, the weekly-tips offer's wave): from its start until it closed.
   bool get _sheetCueOnStage => _playing?.endsInSheet ?? false;
 
-  /// A cue opened a page over Home („Muster frei!"): the next cue waits
-  /// until Home is shown again.
+  /// A cue left Home („Muster frei!", a reward it opened, as a page over
+  /// it or another tab): the next cue waits until Home is shown again
+  /// ([_leaveHome]).
   bool _awayFromHome = false;
 
   /// The StreakChip's „Dein Streak" sheet is open.
@@ -583,6 +589,23 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     if (!_cueRunning && _cues.isNotEmpty) _nextCue();
   }
 
+  /// A cue leaves Home for [page] (null: another tab): the next cue waits
+  /// until Home is shown again ([_awayFromHome]). Home is hidden only once
+  /// the page's transition has ended, so [page] closing also ends the wait,
+  /// should Home still be visible then (closed during its transition).
+  void _leaveHome(Future<void>? page) {
+    _awayFromHome = true;
+    page?.whenComplete(() => _afterFrame(_backOnHome)).ignore();
+  }
+
+  /// After a page closed: back on a visible Home, the queue goes on
+  /// (hidden, it goes on once shown).
+  void _backOnHome() {
+    if (!_visible) return;
+    _awayFromHome = false;
+    _resumeCues();
+  }
+
   /// The cue on stage has ended: its announcement counts as shown, and a
   /// welcome as said (Home's tour waits for it).
   void _markPlayed() {
@@ -671,7 +694,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// „Nein" (the offer doesn't come again), but only while the hero is
   /// still here: gone, nothing is stored and the offer comes again.
   Future<void> _offerFirstTip() async {
-    final outcome = await offerFirstTip(context, ref);
+    final outcome = await offerFirstTip(context, ref, onLeave: _leaveHome);
     if (!mounted) return;
     switch (outcome) {
       case FirstTipOutcome.started:
@@ -704,18 +727,25 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     if (day == null) return _nextCue();
     final open = await showJourneyRewardSheet(context, day: day);
     if (!mounted) return;
-    if (open) await openJourneyReward(context, ref, day);
+    if (open) {
+      await openJourneyReward(
+        context,
+        ref,
+        day,
+        openUrl: widget.openUrl,
+        onLeave: _leaveHome,
+      );
+    }
     if (!mounted) return;
     _nextCue();
   }
 
   /// After the celebration: „Muster frei!" over Home, then continues once
-  /// Home is shown again ([_awayFromHome]); waits like every cue's sheet
+  /// Home is shown again ([_leaveHome]); waits like every cue's sheet
   /// ([_deferSheet]).
   Future<void> _openPatternsUnlocked() async {
     if (_deferSheet(_openPatternsUnlocked)) return;
-    unawaited(context.push(RoutePaths.patternsUnlocked));
-    _awayFromHome = true;
+    _leaveHome(context.push(RoutePaths.patternsUnlocked));
     _nextCue();
   }
 

@@ -13,6 +13,7 @@ import 'package:belly_buddy/providers/buddy_offers_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/insights_provider.dart';
 import 'package:belly_buddy/providers/journey_provider.dart';
+import 'package:belly_buddy/providers/journey_rewards_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
@@ -48,12 +49,28 @@ void main() {
     tips = FakeRecommendationRepository();
   });
 
+  /// Pumps the event queue until the journey is decided and, on it, its
+  /// rewards are read: both land a few microtask hops after the insights.
+  Future<void> untilJourneySettled(ProviderContainer c) async {
+    bool settled() => switch (c.read(journeyProvider)) {
+      true => c.read(journeyRewardsProvider) != null,
+      false => true,
+      null => false,
+    };
+    for (var rounds = 0; !settled(); rounds++) {
+      if (rounds == 20) fail('the journey never settled');
+      await pumpEventQueue();
+    }
+  }
+
   /// A container whose weekly tips are [weeklyTips] (null: profile not
-  /// known), with the offers listened to, the insights and tips loaded and
-  /// the journey decided (and its rewards read).
+  /// known), with the offers listened to, the insights and tips loaded and,
+  /// unless [journeyUndecided], the journey settled
+  /// ([untilJourneySettled]).
   Future<ProviderContainer> loaded({
     bool? weeklyTips = false,
     List<Override> overrides = const [],
+    bool journeyUndecided = false,
   }) async {
     final c = ProviderContainer.test(
       overrides: [
@@ -74,9 +91,7 @@ void main() {
     c.listen(buddyOffersProvider, (_, _) {});
     await c.read(insightsProvider.future);
     await c.read(recommendationProvider.notifier).fetchRecommendations();
-    for (var i = 0; i < 5; i++) {
-      await pumpEventQueue();
-    }
+    if (!journeyUndecided) await untilJourneySettled(c);
     return c;
   }
 
@@ -208,7 +223,10 @@ void main() {
   group('buddyOffersProvider on the journey', () {
     test('journey undecided: no weekly-tips offer', () async {
       // Unlocked and off: today's rule would offer it.
-      final c = await loaded(overrides: [journeySeededWith(null)]);
+      final c = await loaded(
+        overrides: [journeySeededWith(null)],
+        journeyUndecided: true,
+      );
 
       expect(c.read(insightsProvider).value!.unlocked, isTrue);
       expect(c.read(weeklyTipsOfferDueProvider), isFalse);
@@ -430,7 +448,7 @@ void main() {
     });
 
     test('weeklyTipsOffer for a journey user: until the offer is answered '
-        '(here or in „Deine Belohnungen")', () {
+        '(here or in „Deine Belohnungen"); never once skipped', () {
       bool applies(TipOffer? offer) => container(
         weeklyTips: false,
         journey: true,
@@ -441,6 +459,7 @@ void main() {
       expect(applies(null), isTrue);
       expect(applies(TipOffer.declined), isFalse);
       expect(applies(TipOffer.accepted), isFalse);
+      expect(applies(TipOffer.skipped), isFalse);
       // The rewards not read yet: never withdrawn meanwhile.
       expect(
         container(

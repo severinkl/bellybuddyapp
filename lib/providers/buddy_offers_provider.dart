@@ -85,11 +85,18 @@ final offerStillAppliesProvider = Provider.family<bool, BuddyAnnouncement>(
     BuddyAnnouncement.weeklyTipsOffer =>
       ref.watch(weeklyTipsEnabledProvider) != true &&
           switch (ref.watch(journeyProvider)) {
+            // Answered, or skipped (never offered): done.
             true => switch (ref.watch(journeyRewardsProvider)?.tipOffer) {
-              TipOffer.accepted || TipOffer.declined => false,
-              TipOffer.offered || TipOffer.skipped || null => true,
+              TipOffer.accepted ||
+              TipOffer.declined ||
+              TipOffer.skipped => false,
+              TipOffer.offered || null => true,
             },
             false => true,
+            // Null only before the first decision (signed out, a new
+            // user's insights still loading); nothing offers it before
+            // then, so this drops at most a previous user's cue (its flag
+            // is that user's).
             null => false,
           },
     BuddyAnnouncement.saverUsed ||

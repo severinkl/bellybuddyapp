@@ -158,6 +158,9 @@ void main() {
   late JourneyRewards? rewards;
   late FakeFirstTipNotifier firstTip;
 
+  /// The links the hero opened (day 2's article).
+  late RecordingUrlOpener opener;
+
   // The hero's bubble and actions need ticking Buddies.
   tickBuddiesInTests();
 
@@ -172,6 +175,7 @@ void main() {
     journey = false;
     rewards = null;
     firstTip = FakeFirstTipNotifier();
+    opener = RecordingUrlOpener();
   });
 
   tearDown(() {
@@ -219,7 +223,9 @@ void main() {
               child: ValueListenableBuilder<bool>(
                 valueListenable: heroShown,
                 builder: (_, shown, _) => shown
-                    ? const SingleChildScrollView(child: BuddyHero())
+                    ? SingleChildScrollView(
+                        child: BuddyHero(openUrl: opener.call),
+                      )
                     : const SizedBox.shrink(),
               ),
             ),
@@ -262,6 +268,12 @@ void main() {
 
   BuddyController controller(WidgetTester tester) =>
       tester.widget<AnimatedBuddy>(find.byType(AnimatedBuddy)).controller;
+
+  /// What he says, also while a page covers Home.
+  String? bubbleBehind(WidgetTester tester) => tester
+      .widget<AnimatedBuddy>(find.byType(AnimatedBuddy, skipOffstage: false))
+      .controller
+      .bubble;
 
   /// Lets a pending `say()` reach the bubble (the controller notifies on
   /// its next tick).
@@ -1020,6 +1032,67 @@ void main() {
         expect(buddy.shown, [BuddyAnnouncement.journeyReward]);
       });
 
+      testWidgets('a reward that opens a page: the next cue waits until Home '
+          'is back', (tester) async {
+        journey = true;
+        rewards = day1;
+        buddy = _FakeBuddy(
+          () => _status(
+            announcements: const [
+              BuddyAnnouncement.journeyReward,
+              BuddyAnnouncement.firstTipFailed,
+            ],
+          ),
+        );
+        await pumpHero(tester);
+        await afterCelebration(tester);
+
+        await closeOffer(tester, JourneyRewardSheet.primaryKey);
+        expect(location(), RoutePaths.collectionRecipeFor('r1'));
+
+        await advance(tester, const Duration(seconds: 6));
+        expect(bubbleBehind(tester), isNot(JourneyCopy.firstTipFailed));
+        expect(buddy.shown, [BuddyAnnouncement.journeyReward]);
+
+        router.pop();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        await tick(tester);
+
+        expect(location(), RoutePaths.dashboard);
+        expect(controller(tester).bubble, JourneyCopy.firstTipFailed);
+        await tester.pump(const Duration(seconds: 4));
+        expect(buddy.shown, [
+          BuddyAnnouncement.journeyReward,
+          BuddyAnnouncement.firstTipFailed,
+        ]);
+      });
+
+      testWidgets('day 2: the article opens over the app, the next cue goes '
+          'on', (tester) async {
+        journey = true;
+        rewards = const JourneyRewards(earnedDay: 2);
+        buddy = _FakeBuddy(
+          () => _status(
+            announcements: const [
+              BuddyAnnouncement.journeyReward,
+              BuddyAnnouncement.firstTipFailed,
+            ],
+          ),
+        );
+        await pumpHero(tester);
+        await afterCelebration(tester);
+        expect(find.text(JourneyCopy.day2Line), findsOneWidget);
+
+        await closeOffer(tester, JourneyRewardSheet.primaryKey);
+        await tick(tester);
+
+        expect(opener.urls, [Uri.parse(JourneyCopy.articleUrl)]);
+        expect(location(), RoutePaths.dashboard);
+        expect(controller(tester).bubble, JourneyCopy.firstTipFailed);
+        expect(buddy.shown, [BuddyAnnouncement.journeyReward]);
+      });
+
       testWidgets('„Später" stays on Home and marks it shown', (tester) async {
         journey = true;
         rewards = day1;
@@ -1212,6 +1285,35 @@ void main() {
         expect(buddy.shown, [BuddyAnnouncement.weeklyTipsOffer]);
       });
 
+      testWidgets('no, then the recipe: the next cue waits until Home is '
+          'back', (tester) async {
+        unseenTipSet = testRecommendation();
+        buddy = _FakeBuddy(
+          () => _status(
+            announcements: const [
+              BuddyAnnouncement.weeklyTipsOffer,
+              BuddyAnnouncement.tipsArrived,
+            ],
+          ),
+        );
+        await pumpHero(tester);
+        await afterWave(tester);
+        await closeOffer(tester, FirstTipOfferSheet.noKey);
+        await closeOffer(tester, JourneyRewardSheet.primaryKey);
+        expect(location(), RoutePaths.collectionRecipeFor('r3'));
+
+        await advance(tester, const Duration(seconds: 6));
+        expect(bubbleBehind(tester), isNot(_tipsArrivedLine));
+        expect(buddy.shown, [BuddyAnnouncement.weeklyTipsOffer]);
+
+        router.pop();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        await tick(tester);
+
+        expect(controller(tester).bubble, _tipsArrivedLine);
+      });
+
       testWidgets('dismissed → declined, no second sheet, no accept', (
         tester,
       ) async {
@@ -1367,6 +1469,31 @@ void main() {
           BuddyAnnouncement.patternsUnlocked,
           BuddyAnnouncement.firstTipFailed,
         ]);
+      });
+
+      testWidgets('„Muster frei!" closed during its transition (Home never '
+          'hidden): the next cue still comes', (tester) async {
+        buddy = _FakeBuddy(
+          () => _status(
+            announcements: const [
+              BuddyAnnouncement.patternsUnlocked,
+              BuddyAnnouncement.firstTipFailed,
+            ],
+          ),
+        );
+        await pumpHero(tester);
+        // The celebration ends: pushed, its transition just begun.
+        await tester.pump(buddyActionDuration(BuddyAction.celebrate));
+        await tester.pump();
+        expect(location(), RoutePaths.patternsUnlocked);
+
+        router.pop();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        await tick(tester);
+
+        expect(location(), RoutePaths.dashboard);
+        expect(controller(tester).bubble, JourneyCopy.firstTipFailed);
       });
 
       testWidgets('patternsUnlocked waits while the hero is hidden', (
