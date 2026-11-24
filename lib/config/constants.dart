@@ -184,6 +184,15 @@ class AppConstants {
   static const int recipeStepsMax = 50;
   static const int recipeStepsMaxChars = 20000;
 
+  // The „geändert" legend's swatch above a recipe's changed steps
+  static const double recipeChangedSwatchWidth = 16.0;
+  static const double recipeChangedSwatchHeight = 10.0;
+
+  // „Für mich anpassen": the Buddy's stage (bubble slot + Buddy) while he
+  // asks or works, and his height beside his note or a failure
+  static const double adaptBuddyStageHeight = 260.0;
+  static const double adaptBuddyBesideHeight = 88.0;
+
   /// Entdecken: how many recipes „Für dich" shows.
   static const int recipeForYouCount = 3;
 

@@ -17,10 +17,10 @@ import '../../services/recipes/recipe_fit.dart';
 import '../../utils/url_utils.dart';
 import '../../widgets/common/bb_async_state.dart';
 import '../../widgets/common/bb_button.dart';
-import '../../widgets/common/bb_card.dart';
 import 'widgets/fit_badge_view.dart';
 import 'widgets/ingredient_line_view.dart';
 import 'widgets/recipe_image.dart';
+import 'widgets/recipe_page_parts.dart';
 import 'widgets/recipe_steps.dart';
 
 /// A recipe of the collection (`/collection/:id`): how each ingredient fits
@@ -107,7 +107,7 @@ class _RecipeBody extends StatelessWidget {
     final recipe = fit.recipe;
     final meta = recipe.detailMeta;
     final source = recipe.sourceUrl;
-    final sourceName = _sourceNameOf(recipe);
+    final sourceName = recipe.sourceLabel;
     return SingleChildScrollView(
       padding: AppConstants.paddingMd,
       child: Column(
@@ -132,7 +132,7 @@ class _RecipeBody extends StatelessWidget {
               ),
             ),
           ),
-          if (meta.isNotEmpty) ...[AppConstants.gap8, _Meta(meta)],
+          if (meta.isNotEmpty) ...[AppConstants.gap8, RecipeMetaLine(meta)],
           if (fit.badge case final badge?) ...[
             AppConstants.gap8,
             Align(
@@ -144,7 +144,7 @@ class _RecipeBody extends StatelessWidget {
           _IngredientsCard(fit: fit),
           if (recipe.instructions.isNotEmpty) ...[
             AppConstants.gap16,
-            _Card(
+            RecipeSectionCard(
               title: 'Zubereitung',
               children: [RecipeSteps(steps: recipe.instructions)],
             ),
@@ -153,97 +153,6 @@ class _RecipeBody extends StatelessWidget {
             AppConstants.gap8,
             _SourceLink(url: source, name: sourceName, openUrl: openUrl),
           ],
-        ],
-      ),
-    );
-  }
-
-  /// The source's name, else its site; null without a link to open.
-  static String? _sourceNameOf(Recipe recipe) {
-    final url = recipe.sourceUrl;
-    if (url == null) return null;
-    final name = recipe.sourceName?.trim() ?? '';
-    if (name.isNotEmpty) return name;
-    final host = Uri.tryParse(url.trim())?.host ?? '';
-    return host.isEmpty ? null : host;
-  }
-}
-
-/// „35 Min · 2 Portionen" behind a clock.
-class _Meta extends StatelessWidget {
-  const _Meta(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        const Icon(
-          Icons.schedule,
-          size: AppConstants.iconSizeSm,
-          color: AppTheme.mutedForeground,
-        ),
-        const SizedBox(width: AppConstants.spacing6),
-        Flexible(
-          child: Text(
-            text,
-            style: const TextStyle(
-              fontSize: AppTheme.fontSizeBodyLG,
-              color: AppTheme.mutedForeground,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-/// A white card with a heading and, at its right, a muted [trailing].
-class _Card extends StatelessWidget {
-  const _Card({required this.title, this.trailing, required this.children});
-
-  final String title;
-  final String? trailing;
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    return BbCard(
-      color: Colors.white,
-      showBorder: false,
-      radius: AppConstants.radiusRound,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Wrap(
-            alignment: WrapAlignment.spaceBetween,
-            crossAxisAlignment: WrapCrossAlignment.end,
-            spacing: AppConstants.spacingSm,
-            children: [
-              Semantics(
-                header: true,
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontSize: AppTheme.fontSizeTitle,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.foreground,
-                  ),
-                ),
-              ),
-              if (trailing case final trailing?)
-                Text(
-                  trailing,
-                  style: const TextStyle(
-                    fontSize: AppTheme.fontSizeCaptionLG,
-                    color: AppTheme.mutedForeground,
-                  ),
-                ),
-            ],
-          ),
-          AppConstants.gap8,
-          ...children,
         ],
       ),
     );
@@ -262,9 +171,11 @@ class _IngredientsCard extends StatelessWidget {
     final recipe = fit.recipe;
     final servings = recipe.servingsLabel;
     final kritisch = {for (final l in fit.kritisch) l.line.name}.toList();
-    return _Card(
+    return RecipeSectionCard(
       title: 'Zutaten',
-      trailing: servings == null ? null : 'für $servings',
+      trailing: servings == null
+          ? null
+          : Text('für $servings', style: RecipeSectionCard.captionStyle),
       children: [
         ..._lines(),
         if (kritisch.isNotEmpty) ...[
@@ -353,54 +264,16 @@ class _SourceLink extends StatelessWidget {
   Widget build(BuildContext context) {
     return Align(
       alignment: AlignmentDirectional.centerStart,
-      child: Semantics(
-        link: true,
-        child: InkWell(
-          key: CollectionRecipeScreen.sourceKey,
-          borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-          onTap: () => openExternalUrl(
-            context,
-            url,
-            failureMessage: CollectionRecipeScreen.sourceFailed,
-            open: openUrl,
-            mode: LaunchMode.inAppBrowserView,
-          ),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              minHeight: kMinInteractiveDimension,
-            ),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppConstants.spacingXs,
-              ),
-              child: Align(
-                alignment: AlignmentDirectional.centerStart,
-                widthFactor: 1,
-                child: Text.rich(
-                  TextSpan(
-                    style: const TextStyle(
-                      fontSize: AppTheme.fontSizeBody,
-                      color: AppTheme.mutedForeground,
-                    ),
-                    children: [
-                      const TextSpan(text: 'Quelle: '),
-                      TextSpan(
-                        text: name,
-                        style: const TextStyle(
-                          color: AppTheme.foreground,
-                          fontWeight: FontWeight.w500,
-                          decoration: TextDecoration.underline,
-                          decorationColor: AppTheme.border,
-                        ),
-                      ),
-                      const TextSpan(text: ' ›'),
-                    ],
-                  ),
-                  semanticsLabel: 'Quelle: $name',
-                ),
-              ),
-            ),
-          ),
+      child: RecipeLinkLine(
+        key: CollectionRecipeScreen.sourceKey,
+        lead: 'Quelle: ',
+        name: name,
+        onTap: () => openExternalUrl(
+          context,
+          url,
+          failureMessage: CollectionRecipeScreen.sourceFailed,
+          open: openUrl,
+          mode: LaunchMode.inAppBrowserView,
         ),
       ),
     );

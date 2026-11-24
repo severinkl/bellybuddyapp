@@ -43,6 +43,9 @@ abstract final class RecipeCopy {
   static const tagSaved = 'Gemerkt';
   static const tagAdapted = 'Angepasst';
 
+  /// The pill on an adapted recipe's picture.
+  static const adaptedForYou = 'Für dich angepasst';
+
   /// Below „Für mich anpassen": which ingredients the Buddy swaps.
   static String adaptHint(List<String> names) =>
       'Ich tausche ${joinGerman(names)} und schreibe die Schritte passend um.';

@@ -47,7 +47,8 @@ class BbButton extends StatelessWidget {
             children: [
               Icon(icon, size: 20),
               const SizedBox(width: 8),
-              Text(label),
+              // A long label wraps instead of overflowing the button.
+              Flexible(child: Text(label, textAlign: TextAlign.center)),
             ],
           )
         : Text(label);

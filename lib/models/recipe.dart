@@ -152,6 +152,15 @@ class Recipe {
     final n => '$n Portionen',
   };
 
+  /// The source's name, else its site (the link's host); null when
+  /// neither is known.
+  String? get sourceLabel {
+    final name = sourceName?.trim() ?? '';
+    if (name.isNotEmpty) return name;
+    final host = Uri.tryParse(sourceUrl?.trim() ?? '')?.host ?? '';
+    return host.isEmpty ? null : host;
+  }
+
   /// „35 Min · 2 Portionen".
   String get detailMeta => [cookTime, servingsLabel].nonNulls.join(' · ');
 

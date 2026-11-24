@@ -151,6 +151,26 @@ void main() {
       expect(recipe.listMeta, '');
     });
 
+    test('sourceLabel: the name, else the site, else null', () {
+      Recipe source({String? name, String? url}) => Recipe.fromJson({
+        ..._contractRow(),
+        'source_name': name,
+        'source_url': url,
+      });
+
+      expect(
+        source(name: 'Reizdarmblog', url: 'https://x.de/a').sourceLabel,
+        'Reizdarmblog',
+      );
+      expect(
+        source(name: '  ', url: 'https://www.reizdarmblog.de/a').sourceLabel,
+        'www.reizdarmblog.de',
+      );
+      expect(source(name: 'Reizdarmblog').sourceLabel, 'Reizdarmblog');
+      expect(source(url: 'keine url').sourceLabel, isNull);
+      expect(source().sourceLabel, isNull);
+    });
+
     test('a numeric or blank cook_time', () {
       expect(
         Recipe.fromJson({..._contractRow(), 'cook_time': 25}).cookTime,

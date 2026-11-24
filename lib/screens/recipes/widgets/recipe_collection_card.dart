@@ -13,9 +13,12 @@ enum RecipeCardTag { saved, adapted }
 
 /// „Gemerkt" (the heart) or „Angepasst" (the sparkle).
 class RecipeTagPill extends StatelessWidget {
-  const RecipeTagPill(this.tag, {super.key});
+  const RecipeTagPill(this.tag, {super.key, this.label});
 
   final RecipeCardTag tag;
+
+  /// Said instead of the tag's word (e.g. „Für dich angepasst").
+  final String? label;
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +44,7 @@ class RecipeTagPill extends StatelessWidget {
             ),
             const SizedBox(width: AppConstants.spacingXs),
             Text(
-              saved ? RecipeCopy.tagSaved : RecipeCopy.tagAdapted,
+              label ?? (saved ? RecipeCopy.tagSaved : RecipeCopy.tagAdapted),
               style: TextStyle(
                 fontSize: AppTheme.fontSizeSM,
                 fontWeight: FontWeight.w600,

@@ -7,6 +7,7 @@ import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/providers/diary_provider.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
+import 'package:belly_buddy/repositories/recipe_repository.dart';
 import 'package:belly_buddy/router/app_router.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/dashboard/dashboard_screen.dart';
@@ -20,6 +21,7 @@ import 'package:belly_buddy/screens/discover/discover_screen.dart';
 import 'package:belly_buddy/screens/discover/knowledge_screen.dart';
 import 'package:belly_buddy/screens/me/me_screen.dart';
 import 'package:belly_buddy/screens/patterns/patterns_screen.dart';
+import 'package:belly_buddy/screens/recipes/adapt_recipe_screen.dart';
 import 'package:belly_buddy/screens/recipes/collection_recipe_screen.dart';
 import 'package:belly_buddy/screens/recipes/collection_screen.dart';
 import 'package:belly_buddy/screens/recommendations/recommendations_screen.dart';
@@ -412,6 +414,40 @@ void main() {
       expect(find.byType(CollectionRecipeScreen), findsOneWidget);
       expect(find.text('Testrezept'), findsOneWidget);
       expect(find.byType(BbBottomNav), findsNothing);
+    });
+
+    testWidgets('the adapt screen opens over the bar and sends only when '
+        'asked', (tester) async {
+      final container = await _pumpShell(tester);
+      final router = container.read(routerProvider);
+      final repo =
+          container.read(recipeRepositoryProvider) as FakeRecipeRepository;
+
+      // Opened any other way than the detail's button: it asks first.
+      unawaited(router.push(RoutePaths.collectionRecipeAdaptFor('recipe-1')));
+      await tester.pumpAndSettle();
+
+      expect(
+        router.routerDelegate.currentConfiguration.last.matchedLocation,
+        '/collection/recipe-1/adapt',
+      );
+      expect(find.byType(AdaptRecipeScreen), findsOneWidget);
+      expect(find.byType(BbBottomNav), findsNothing);
+      expect(find.byKey(AdaptRecipeScreen.startKey), findsOneWidget);
+      expect(repo.adaptCalls, 0);
+
+      router.pop();
+      await tester.pumpAndSettle();
+      unawaited(
+        router.push(
+          RoutePaths.collectionRecipeAdaptFor('recipe-1'),
+          extra: true,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(repo.adaptCalls, 1);
+      expect(find.text('Porridge mit Ahornsirup'), findsOneWidget);
     });
 
     testWidgets('the insight card pushes the Muster page over the bar', (

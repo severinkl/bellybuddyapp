@@ -328,6 +328,16 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) =>
             CollectionRecipeScreen(recipeId: state.pathParameters['id']!),
       ),
+      // „Für mich anpassen": sends only when pushed with `extra: true` (the
+      // detail's button); opened any other way, it asks first.
+      GoRoute(
+        path: RoutePaths.collectionRecipeAdapt,
+        name: RouteNames.collectionRecipeAdapt,
+        builder: (context, state) => AdaptRecipeScreen(
+          recipeId: state.pathParameters['id']!,
+          requested: state.extra == true,
+        ),
+      ),
       GoRoute(
         path: RoutePaths.upgradeRequired,
         name: RouteNames.upgradeRequired,
