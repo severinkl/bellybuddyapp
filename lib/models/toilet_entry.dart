@@ -1,5 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../utils/wall_clock.dart';
+
 part 'toilet_entry.freezed.dart';
 part 'toilet_entry.g.dart';
 
@@ -8,9 +10,16 @@ abstract class ToiletEntry with _$ToiletEntry {
   const factory ToiletEntry({
     required String id,
     @JsonKey(name: 'user_id') String? userId,
-    @JsonKey(name: 'tracked_at') required DateTime trackedAt,
+
+    /// When the user logged it: local wall-clock time, not an instant (see
+    /// `utils/wall_clock.dart`).
+    @JsonKey(name: 'tracked_at')
+    @WallClockConverter()
+    required DateTime trackedAt,
     @JsonKey(name: 'stool_type') required int stoolType,
     String? notes,
+
+    /// When the row was created: a real instant (server `now()`).
     @JsonKey(name: 'created_at') DateTime? createdAt,
   }) = _ToiletEntry;
 
