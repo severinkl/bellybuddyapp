@@ -29,16 +29,20 @@ abstract final class RecipeCopy {
   /// The Buddy swapped this ingredient (after the new name).
   static const swapped = 'getauscht';
 
-  /// The Buddy left this ingredient out (after its struck name).
+  /// The Buddy left this ingredient out (after its struck name, and to
+  /// screen readers).
   static const removed = 'weggelassen';
 
   /// Screen-reader fragments of an ingredient line and a step.
   static String swappedSemantics(String from, String to) =>
       '$from getauscht gegen $to';
-  static const removedSemantics = 'weggelassen';
   static const kritischSemantics = 'für dich kritisch';
   static const fitsSemantics = 'passt';
   static const stepChanged = 'geändert';
+
+  /// A failure trying again may fix (e.g. „Merken" offline).
+  static const failed =
+      'Das hat gerade nicht geklappt. Versuch es bitte nochmal.';
 
   /// When a recipe's source didn't open.
   static const sourceFailed = 'Die Quelle konnte nicht geöffnet werden.';
@@ -79,8 +83,7 @@ abstract final class RecipeCopy {
   static String adaptFailed(AdaptFailure f) => switch (f) {
     AdaptFailure.later =>
       'Ich bin gerade ausgelastet. Versuch es bitte später nochmal.',
-    AdaptFailure.failed =>
-      'Das hat gerade nicht geklappt. Versuch es bitte nochmal.',
+    AdaptFailure.failed => failed,
     AdaptFailure.nothingToAdapt => 'Hier muss ich für dich nichts tauschen.',
     AdaptFailure.cannotJudge =>
       'Ob ich hier etwas tauschen muss, kann ich nicht prüfen: Mir fehlen '
@@ -89,5 +92,5 @@ abstract final class RecipeCopy {
 
   /// When saving an adapted recipe in „Meine Rezepte" failed.
   static const adaptSaveFailed =
-      'Speichern hat nicht geklappt. Bitte versuch es nochmal.';
+      'Speichern hat nicht geklappt. Versuch es bitte nochmal.';
 }

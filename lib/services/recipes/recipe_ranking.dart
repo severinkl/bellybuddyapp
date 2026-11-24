@@ -77,7 +77,8 @@ class RankedRecipes {
   /// The recipes that fit the [diet], best first.
   final List<RecipeFit> fits;
 
-  /// Whether the fits are judged ([RecipeFit.checked]).
+  /// Whether the intolerance table and the user's intolerances are known
+  /// ([RecipeFit.checked]); otherwise no fit has marks or a badge.
   final bool checked;
 
   /// The user's intolerances the catalog can't judge.

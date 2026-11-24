@@ -199,7 +199,7 @@ class UserIntolerances {
 
   const UserIntolerances._({
     required this.checked,
-    List<({String name, IntoleranceRule rule})> judgeable = const [],
+    List<_NamedRule> judgeable = const [],
     this.selfCheck = const [],
   }) : _judgeable = judgeable;
 
@@ -211,7 +211,7 @@ class UserIntolerances {
 
   /// The rules that decide the lines, in profile order; intolerances
   /// missing from the table hit nothing.
-  final List<({String name, IntoleranceRule rule})> _judgeable;
+  final List<_NamedRule> _judgeable;
 
   RecipeFit fit(Recipe recipe) {
     if (!checked) return RecipeFit(recipe: recipe, checked: false);
@@ -266,3 +266,6 @@ class UserIntolerances {
         rule.fodmaps.any(fodmaps.has);
   }
 }
+
+/// An intolerance of the user and its rule.
+typedef _NamedRule = ({String name, IntoleranceRule rule});

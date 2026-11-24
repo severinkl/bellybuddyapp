@@ -157,7 +157,7 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
                       trailing: recipe.instructions.isEmpty
                           ? const Text(
                               'optional',
-                              style: RecipeSectionCard.captionStyle,
+                              style: AppTheme.captionMutedStyle,
                             )
                           : null,
                       children: [
@@ -246,10 +246,10 @@ class _RecipeImage extends StatelessWidget {
       key: RecipeDetailScreen.imagePlaceholderKey,
       color: pastelForTitle(recipe.title),
       alignment: Alignment.center,
-      child: Icon(
+      child: const Icon(
         Icons.menu_book_outlined,
         size: AppConstants.iconSizeLg,
-        color: AppTheme.foreground.withValues(alpha: 0.45),
+        color: AppTheme.placeholderGlyph,
       ),
     );
     final url = recipe.imageUrl;

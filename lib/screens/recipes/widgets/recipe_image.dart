@@ -44,7 +44,7 @@ class RecipePlaceholder extends StatelessWidget {
           child: Icon(
             iconOf(mealType),
             size: AppConstants.iconSizeLg,
-            color: AppTheme.foreground.withValues(alpha: 0.45),
+            color: AppTheme.placeholderGlyph,
           ),
         ),
       ),

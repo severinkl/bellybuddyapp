@@ -58,7 +58,7 @@ class _RecipeStepsEditorState extends State<RecipeStepsEditor> {
     final full = _controllers.length >= AppConstants.recipeStepsMax;
     return RecipeSectionCard(
       title: 'Zubereitung',
-      trailing: const Text('optional', style: RecipeSectionCard.captionStyle),
+      trailing: const Text('optional', style: AppTheme.captionMutedStyle),
       children: [
         for (var i = 0; i < _controllers.length; i++)
           Padding(

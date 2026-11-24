@@ -45,7 +45,7 @@ class RecipePageHead extends StatelessWidget {
         ClipRRect(
           borderRadius: BorderRadius.circular(AppConstants.radiusLg),
           child: AspectRatio(
-            aspectRatio: 16 / 9,
+            aspectRatio: AppConstants.recipePageImageAspect,
             child: Stack(
               fit: StackFit.expand,
               children: [
@@ -92,7 +92,7 @@ class RecipePageHead extends StatelessWidget {
 
 /// A white card of a recipe page („Zutaten", „Zubereitung") with a heading
 /// and, at its right, „für [servings]" or a [trailing] (in
-/// [captionStyle]).
+/// [AppTheme.captionMutedStyle]).
 class RecipeSectionCard extends StatelessWidget {
   const RecipeSectionCard({
     super.key,
@@ -101,12 +101,6 @@ class RecipeSectionCard extends StatelessWidget {
     this.trailing,
     required this.children,
   });
-
-  /// The muted style of a [trailing] text.
-  static const captionStyle = TextStyle(
-    fontSize: AppTheme.fontSizeCaptionLG,
-    color: AppTheme.mutedForeground,
-  );
 
   final String title;
 
@@ -118,7 +112,10 @@ class RecipeSectionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final trailing = switch (servings) {
-      final servings? => Text('für $servings', style: captionStyle),
+      final servings? => Text(
+        'für $servings',
+        style: AppTheme.captionMutedStyle,
+      ),
       null => this.trailing,
     };
     return BbCard(

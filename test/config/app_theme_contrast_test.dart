@@ -58,4 +58,11 @@ void main() {
       );
     }
   });
+
+  test('placeholderGlyph is the foreground at 45 %', () {
+    expect(
+      AppTheme.placeholderGlyph,
+      AppTheme.foreground.withValues(alpha: 0.45),
+    );
+  });
 }

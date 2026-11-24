@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import '../utils/json_values.dart';
 import 'fodmap_flags.dart';
 
 /// What one intolerance (a `profiles.intolerances` value) reacts to.
@@ -43,10 +44,10 @@ class IntoleranceRules {
       for (final MapEntry(:key, value: entry) in decoded.entries)
         if (entry is Map<String, dynamic>)
           key: IntoleranceRule(
-            fodmaps: _strings(
+            fodmaps: jsonStrings(
               entry['fodmaps'],
             ).where(FodmapFlags.keys.contains).toSet(),
-            allergens: _strings(entry['allergens']).toSet(),
+            allergens: jsonStrings(entry['allergens']).toSet(),
             judgeable: entry['judgeable'] != false,
           ),
     });
@@ -54,6 +55,3 @@ class IntoleranceRules {
 
   IntoleranceRule? operator [](String intolerance) => byName[intolerance];
 }
-
-Iterable<String> _strings(Object? value) =>
-    value is List ? value.whereType<String>() : const [];

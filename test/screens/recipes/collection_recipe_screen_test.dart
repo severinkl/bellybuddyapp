@@ -400,7 +400,7 @@ void main() {
 
       expect(repo.added, ['recipe-1']);
       expect(inSave(find.text('Merken')), findsOneWidget);
-      expect(find.text(CollectionRecipeScreen.saveFailed), findsOneWidget);
+      expect(find.text(RecipeCopy.failed), findsOneWidget);
       expect(find.text(CollectionRecipeScreen.saved), findsNothing);
     });
 

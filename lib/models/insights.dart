@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show setEquals;
+
 import 'insight_progress.dart';
 import 'insight_rules.dart';
 
@@ -291,7 +293,7 @@ class Insights {
       _listEquals(other.noticed, noticed) &&
       other.pick == pick &&
       _listEquals(other.journey, journey) &&
-      _setEquals(other.calmDayIngredients, calmDayIngredients);
+      setEquals(other.calmDayIngredients, calmDayIngredients);
 
   @override
   int get hashCode => Object.hash(
@@ -320,6 +322,3 @@ bool _listEquals<T>(List<T> a, List<T> b) {
   }
   return true;
 }
-
-bool _setEquals<T>(Set<T> a, Set<T> b) =>
-    identical(a, b) || (a.length == b.length && a.containsAll(b));

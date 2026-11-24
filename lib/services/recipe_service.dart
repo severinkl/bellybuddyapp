@@ -31,7 +31,7 @@ class RecipeService {
           // RLS hides hidden recipes from users, but admins still read them.
           .isFilter('hidden', false)
           .order('created_at', ascending: false)
-          // PostgREST orders descending unless told otherwise.
+          // The client's order() is descending unless told otherwise.
           .order(
             'position',
             ascending: true,

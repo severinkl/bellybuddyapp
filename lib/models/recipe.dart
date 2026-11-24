@@ -1,3 +1,4 @@
+import '../utils/json_values.dart';
 import '../utils/url_utils.dart';
 import 'fodmap_flags.dart';
 
@@ -41,12 +42,12 @@ class RecipeIngredient {
     final catalog = json['ingredient'] as Map<String, dynamic>?;
     return RecipeIngredient(
       position: (json['position'] as num).toInt(),
-      amount: _blankToNull(json['amount_text'] as String?),
+      amount: trimmedOrNull(json['amount_text']),
       name: json['name'] as String,
       catalogId: catalog?['id'] as String?,
       catalogName: catalog?['name'] as String?,
       fodmaps: catalog == null ? null : FodmapFlags.fromDbRow(catalog),
-      allergens: _strings(json['allergens']).toSet(),
+      allergens: jsonStrings(json['allergens']).toSet(),
       lowAtAmount: json['low_at_amount'] as bool? ?? false,
     );
   }
@@ -102,7 +103,9 @@ class Recipe {
 
   /// Reads a row of `RecipeService.collectionSelect`.
   factory Recipe.fromJson(Map<String, dynamic> json) {
-    final mealKeys = _strings(json['meal_types']).map(MealType.fromKey).toSet();
+    final mealKeys = jsonStrings(
+      json['meal_types'],
+    ).map(MealType.fromKey).toSet();
     final lines = [
       for (final row in (json['recipe_ingredients'] as List?) ?? const [])
         RecipeIngredient.fromJson(row as Map<String, dynamic>),
@@ -112,16 +115,16 @@ class Recipe {
       id: json['id'] as String,
       title: json['title'] as String,
       description: json['description'] as String?,
-      cookTime: _blankToNull(json['cook_time']?.toString()),
+      cookTime: trimmedOrNull(json['cook_time']?.toString()),
       servings: (json['servings'] as num?)?.toInt(),
       imageUrl: json['image_url'] as String?,
       mealTypes: MealType.values.where(mealKeys.contains).toList(),
-      dietTags: _strings(json['diet_tags']).toSet(),
+      dietTags: jsonStrings(json['diet_tags']).toSet(),
       sourceName: json['source_name'] as String?,
       sourceUrl: json['source_url'] as String?,
-      instructions: _strings(json['instructions']).toList(),
+      instructions: jsonStrings(json['instructions']).toList(),
       ingredients: lines,
-      legacyIngredients: _strings(json['ingredients']).toList(),
+      legacyIngredients: jsonStrings(json['ingredients']).toList(),
       createdAt: createdAt == null ? null : DateTime.parse(createdAt),
     );
   }
@@ -184,11 +187,3 @@ class FavoriteRecipe {
   final String recipeId;
   final DateTime at;
 }
-
-String? _blankToNull(String? value) {
-  final trimmed = value?.trim();
-  return trimmed == null || trimmed.isEmpty ? null : trimmed;
-}
-
-Iterable<String> _strings(Object? value) =>
-    value is List ? value.whereType<String>() : const [];

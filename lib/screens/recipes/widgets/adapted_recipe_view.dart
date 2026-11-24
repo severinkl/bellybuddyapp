@@ -224,10 +224,7 @@ class _ChangedLegend extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppConstants.spacing6),
-          const Text(
-            RecipeCopy.stepChanged,
-            style: RecipeSectionCard.captionStyle,
-          ),
+          const Text(RecipeCopy.stepChanged, style: AppTheme.captionMutedStyle),
         ],
       ),
     );

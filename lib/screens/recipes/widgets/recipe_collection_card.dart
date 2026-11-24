@@ -95,7 +95,7 @@ class RecipeCardShell extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             AspectRatio(
-              aspectRatio: 1.1,
+              aspectRatio: AppConstants.recipeCardImageAspect,
               child: Stack(
                 fit: StackFit.expand,
                 children: [

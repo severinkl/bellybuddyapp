@@ -84,10 +84,10 @@ class _PastelMonogram extends StatelessWidget {
       alignment: Alignment.center,
       child: Text(
         letter,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: AppTheme.fontSizeTitleLG,
           fontWeight: FontWeight.w300,
-          color: AppTheme.foreground.withValues(alpha: 0.45),
+          color: AppTheme.placeholderGlyph,
         ),
       ),
     );

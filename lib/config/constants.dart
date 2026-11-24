@@ -175,8 +175,11 @@ class AppConstants {
   // Entdecken: a recipe card's width in the Meine Rezepte row
   static const double discoverRecipeCardWidth = 148.0;
 
-  // Rezepte: a list row's thumbnail, an ingredient line's mark and amount
-  // column, and the most steps and characters a recipe's steps may have
+  // Rezepte: a recipe page's and a card's picture (width / height), a list
+  // row's thumbnail, an ingredient line's mark and amount column, and the
+  // most steps and characters a recipe's steps may have
+  static const double recipePageImageAspect = 16 / 9;
+  static const double recipeCardImageAspect = 1.1;
   static const double recipeListThumbSize = 88.0;
   static const double recipeMarkSize = 24.0;
   static const double recipeNeutralDotSize = 6.0;

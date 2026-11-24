@@ -58,7 +58,7 @@ class IngredientLineView extends StatelessWidget {
           : swap;
     }
     final head = [?amount, name].join(' ');
-    if (removed) return '$head, ${RecipeCopy.removedSemantics}';
+    if (removed) return '$head, ${RecipeCopy.removed}';
     return switch (mark) {
       LineMark.kritisch =>
         '$head, ${RecipeCopy.kritischSemantics}, '

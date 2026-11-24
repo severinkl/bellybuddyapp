@@ -39,8 +39,6 @@ class CollectionRecipeScreen extends ConsumerWidget {
 
   static const saved = 'Gemerkt. Du findest es unter „Meine Rezepte".';
   static const unsaved = 'Nicht mehr gemerkt.';
-  static const saveFailed =
-      'Das hat gerade nicht geklappt. Bitte versuch es nochmal.';
 
   final String recipeId;
 
@@ -279,7 +277,7 @@ class _ActionBar extends ConsumerWidget {
     final wasSaved = favorites.isSaved(recipe.id);
     final ok = await favorites.toggle(recipe.id);
     final message = switch ((ok, wasSaved)) {
-      (false, _) => CollectionRecipeScreen.saveFailed,
+      (false, _) => RecipeCopy.failed,
       (true, true) => CollectionRecipeScreen.unsaved,
       (true, false) => CollectionRecipeScreen.saved,
     };

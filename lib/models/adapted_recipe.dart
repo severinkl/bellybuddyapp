@@ -1,3 +1,5 @@
+import '../utils/json_values.dart';
+
 /// One ingredient of an `adapt-recipe` answer.
 class AdaptedIngredient {
   const AdaptedIngredient({
@@ -11,9 +13,9 @@ class AdaptedIngredient {
   /// without a `name`.
   factory AdaptedIngredient.fromJson(Map<String, dynamic> json) =>
       AdaptedIngredient(
-        amount: _blankToNull(json['amount']),
+        amount: trimmedOrNull(json['amount']),
         name: _string(json, 'name').trim(),
-        replaces: _blankToNull(json['replaces']),
+        replaces: trimmedOrNull(json['replaces']),
         unknown: json['status'] == 'unbekannt',
       );
 
@@ -76,7 +78,7 @@ class AdaptedRecipe {
       ingredients: ingredients,
       removed: [
         for (final name in _list(json, 'removed', optional: true))
-          ?_blankToNull(name),
+          ?trimmedOrNull(name),
       ],
       steps: [
         for (final item in _list(json, 'steps', optional: true))
@@ -162,8 +164,3 @@ Map<String, dynamic> _map(Object? item, String key) => switch (item) {
   final Map<String, dynamic> value => value,
   _ => throw FormatException('adapt: an entry of "$key" is not an object'),
 };
-
-String? _blankToNull(Object? value) {
-  final trimmed = value is String ? value.trim() : null;
-  return trimmed == null || trimmed.isEmpty ? null : trimmed;
-}

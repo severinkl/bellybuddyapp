@@ -7,6 +7,14 @@ class AppTheme {
   // Core colors (from HSL CSS variables)
   static const Color background = Color(0xFFFFFFFF);
   static const Color foreground = Color(0xFF302820);
+
+  /// A placeholder's glyph or monogram on its pastel: [foreground] at 45 %.
+  static const Color placeholderGlyph = Color.from(
+    alpha: 0.45,
+    red: 0x30 / 255,
+    green: 0x28 / 255,
+    blue: 0x20 / 255,
+  );
   static const Color beige = Color(0xFFF5EFE7);
   static const Color card = Color(0xFFF9F7F4);
   static const Color cardForeground = Color(0xFF302820);

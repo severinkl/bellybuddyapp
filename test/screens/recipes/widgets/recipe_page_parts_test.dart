@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/screens/recipes/widgets/fit_badge_view.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_collection_card.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_page_parts.dart';
@@ -92,7 +93,7 @@ void main() {
       expect(find.text('für 2 Portionen'), findsOneWidget);
       expect(
         tester.widget<Text>(find.text('für 2 Portionen')).style,
-        RecipeSectionCard.captionStyle,
+        AppTheme.captionMutedStyle,
       );
     });
 
