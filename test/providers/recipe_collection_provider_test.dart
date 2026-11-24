@@ -242,6 +242,47 @@ void main() {
       expect(c.read(recipeCollectionProvider).hasError, isTrue);
     });
 
+    for (final failed in [true, false]) {
+      test(
+        'refresh reloads rules that ${failed ? 'failed' : 'were missing'}',
+        () async {
+          if (failed) {
+            repo.rulesError = StateError('offline');
+          } else {
+            repo.rules = null;
+          }
+          final c = make();
+          c.listen(rankedRecipesProvider, (_, _) {});
+          await c.read(recipeCollectionProvider.future);
+          await c
+              .read(intoleranceRulesProvider.future)
+              .then((_) {}, onError: (_) {});
+          expect(c.read(rankedRecipesProvider).requireValue.checked, isFalse);
+
+          repo
+            ..rulesError = null
+            ..rules = testIntoleranceRules();
+          await c.read(recipeCollectionProvider.notifier).refresh();
+          await c.read(intoleranceRulesProvider.future);
+
+          expect(repo.rulesFetches, 2);
+          expect(c.read(rankedRecipesProvider).requireValue.checked, isTrue);
+        },
+      );
+    }
+
+    test('refresh keeps loaded rules', () async {
+      final c = make();
+      c.listen(rankedRecipesProvider, (_, _) {});
+      await c.read(recipeCollectionProvider.future);
+      await c.read(intoleranceRulesProvider.future);
+
+      await c.read(recipeCollectionProvider.notifier).refresh();
+
+      expect(repo.rulesFetches, 1);
+      expect(c.read(intoleranceRulesProvider).isLoading, isFalse);
+    });
+
     test('refresh picks up new recipes', () async {
       final c = make();
       await c.read(recipeCollectionProvider.future);

@@ -62,12 +62,11 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
 
   /// Loads tips, alternatives, recipes and articles. The first load keeps
   /// the tips and Alternativen the app root loaded; [refresh] reloads them,
-  /// and what is cached (the recipes, the collection with the saved ones
-  /// and its intolerance table, the articles).
+  /// and what is cached (the recipes, the collection with the saved ones,
+  /// the articles).
   Future<void> _load({bool refresh = false}) async {
     if (!mounted) return;
     final news = ref.read(discoverNewsProvider.notifier);
-    if (refresh) ref.invalidate(intoleranceRulesProvider);
     await Future.wait([
       if (refresh) news.refresh() else news.ensureLoaded(),
       ref.read(userRecipesProvider.notifier).fetch(force: refresh),

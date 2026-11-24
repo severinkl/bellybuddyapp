@@ -76,7 +76,8 @@ class CollectionRecipeScreen extends ConsumerWidget {
         ),
         AsyncError() => BbErrorState(
           message: 'Konnte das Rezept nicht laden',
-          onRetry: () => _retry(ref),
+          onRetry: () =>
+              unawaited(ref.read(recipeCollectionProvider.notifier).refresh()),
         ),
         AsyncLoading() => const Center(child: CircularProgressIndicator()),
       },
@@ -85,13 +86,6 @@ class CollectionRecipeScreen extends ConsumerWidget {
         _ => null,
       },
     );
-  }
-
-  /// Loads the collection again, and the intolerance table with it (a
-  /// failed load leaves the recipe unchecked).
-  void _retry(WidgetRef ref) {
-    unawaited(ref.read(recipeCollectionProvider.notifier).refresh());
-    ref.invalidate(intoleranceRulesProvider);
   }
 }
 

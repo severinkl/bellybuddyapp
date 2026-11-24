@@ -442,6 +442,23 @@ void main() {
     expect(find.text('1 Zutat ist für dich kritisch'), findsOneWidget);
   });
 
+  testWidgets('retry reloads rules that failed too', (tester) async {
+    repo
+      ..collectionError = StateError('offline')
+      ..rulesError = StateError('offline');
+    await pump(tester);
+    expect(find.byType(BbErrorState), findsOneWidget);
+
+    repo
+      ..collectionError = null
+      ..rulesError = null;
+    await tester.tap(find.text('Erneut versuchen'));
+    await tester.pumpAndSettle();
+
+    expect(repo.rulesFetches, 2);
+    expect(find.text('1 Zutat ist für dich kritisch'), findsOneWidget);
+  });
+
   testWidgets('loading → spinner', (tester) async {
     final gated = _GatedCollection();
     repo = gated;

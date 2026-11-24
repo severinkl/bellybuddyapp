@@ -26,11 +26,16 @@ class RecipeCollectionNotifier extends AsyncNotifier<List<Recipe>> {
     return ref.read(recipeRepositoryProvider).fetchCollection();
   }
 
-  /// Fetches again. A failure keeps the data on show (logged); without
-  /// data, the error stays.
+  /// Fetches again, and the intolerance table when it failed or was missing
+  /// (a loaded one stays). A failure keeps the data on show (logged);
+  /// without data, the error stays.
   Future<void> refresh() async {
     final userId = ref.read(currentUserIdProvider);
     if (userId == null) return;
+    final rules = ref.read(intoleranceRulesProvider);
+    if (rules.hasError || (rules.hasValue && rules.value == null)) {
+      ref.invalidate(intoleranceRulesProvider);
+    }
     try {
       final recipes = await ref
           .read(recipeRepositoryProvider)

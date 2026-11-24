@@ -37,10 +37,8 @@ class _CollectionScreenState extends ConsumerState<CollectionScreen> {
   MealType? _mealType;
   bool _fitsOnly = false;
 
-  Future<void> _refresh() async {
-    ref.invalidate(intoleranceRulesProvider);
-    await ref.read(recipeCollectionProvider.notifier).refresh();
-  }
+  Future<void> _refresh() =>
+      ref.read(recipeCollectionProvider.notifier).refresh();
 
   void _back() =>
       context.canPop() ? context.pop() : context.go(RoutePaths.discover);

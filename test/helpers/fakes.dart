@@ -504,6 +504,9 @@ class FakeRecipeRepository implements RecipeRepository {
   /// Thrown by [addFavorite] and [removeFavorite] when set.
   Object? favoriteError;
 
+  /// Thrown by [fetchIntoleranceRules] when set.
+  Object? rulesError;
+
   /// Recipe ids passed to [addFavorite] / [removeFavorite], failed calls too.
   final added = <String>[];
   final removed = <String>[];
@@ -546,6 +549,7 @@ class FakeRecipeRepository implements RecipeRepository {
   @override
   Future<IntoleranceRules?> fetchIntoleranceRules() async {
     rulesFetches++;
+    if (rulesError case final error?) throw error;
     return rules;
   }
 

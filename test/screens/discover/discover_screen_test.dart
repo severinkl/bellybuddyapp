@@ -13,6 +13,7 @@ import 'package:belly_buddy/models/knowledge_article.dart';
 import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/repositories/recipe_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
+import 'package:belly_buddy/screens/recipes/widgets/fit_badge_view.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_collection_card.dart';
 import 'package:belly_buddy/services/recipes/recipe_copy.dart';
 import 'package:belly_buddy/models/recommendation.dart';
@@ -727,15 +728,19 @@ void main() {
       expect(mine(find.text('Eigenes')), findsOneWidget);
     });
 
-    testWidgets('pull to refresh reloads the collection and the rules', (
+    testWidgets('pull to refresh reloads the collection and failed rules', (
       tester,
     ) async {
-      await pump(tester);
+      collection.rulesError = StateError('offline');
+      await pump(tester, intolerances: const ['Fruktose']);
       expect(forYou(find.text('Testrezept')), findsOneWidget);
+      expect(forYou(find.byType(FitBadgeView)), findsNothing);
       final rules = collection.rulesFetches;
       final favorites = collection.favoritesFetches;
 
-      collection.collection = [testRecipe(id: 'n', title: 'Neues Rezept')];
+      collection
+        ..rulesError = null
+        ..collection = [testRecipe(id: 'n', title: 'Neues Rezept')];
       await tester.fling(
         find.byType(RefreshIndicator),
         const Offset(0, 400),
@@ -745,6 +750,7 @@ void main() {
 
       expect(forYou(find.text('Neues Rezept')), findsOneWidget);
       expect(forYou(find.text('Testrezept')), findsNothing);
+      expect(forYou(find.byType(FitBadgeView)), findsOneWidget);
       expect(collection.rulesFetches, rules + 1);
       expect(collection.favoritesFetches, favorites + 1);
     });
