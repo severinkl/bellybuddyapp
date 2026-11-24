@@ -14,6 +14,7 @@ import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/providers/insights_provider.dart';
 import 'package:belly_buddy/providers/journey_rewards_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
+import 'package:belly_buddy/services/journey/journey_rules.dart';
 
 import 'app_host.dart';
 import 'fixtures.dart';
@@ -95,11 +96,7 @@ class _SeededJourneyRewardsNotifier extends JourneyRewardsNotifier {
 
   @override
   Future<void> answerTipOffer({required bool accepted}) async {
-    if (state case final r? when r.tipOffer == TipOffer.offered) {
-      state = r.copyWith(
-        tipOffer: accepted ? TipOffer.accepted : TipOffer.declined,
-      );
-    }
+    if (state case final r?) state = answerOffer(r, accepted: accepted);
   }
 
   @override

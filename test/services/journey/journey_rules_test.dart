@@ -474,6 +474,35 @@ void main() {
     });
   });
 
+  group('answerOffer', () {
+    const offered = JourneyRewards(earnedDay: 3, tipOffer: TipOffer.offered);
+
+    test('offered → accepted or declined', () {
+      expect(
+        answerOffer(offered, accepted: true),
+        offered.copyWith(tipOffer: TipOffer.accepted),
+      );
+      expect(
+        answerOffer(offered, accepted: false),
+        offered.copyWith(tipOffer: TipOffer.declined),
+      );
+    });
+
+    test('undecided or answered: itself', () {
+      for (final offer in [
+        null,
+        TipOffer.accepted,
+        TipOffer.declined,
+        TipOffer.skipped,
+      ]) {
+        final r = JourneyRewards(earnedDay: 3, tipOffer: offer);
+        for (final accepted in [true, false]) {
+          expect(identical(answerOffer(r, accepted: accepted), r), isTrue);
+        }
+      }
+    });
+  });
+
   group('rewardEarned', () {
     test('days 1–6 up to the earned day', () {
       const r = JourneyRewards(earnedDay: 4);

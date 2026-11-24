@@ -1,6 +1,8 @@
 // ignore_for_file: invalid_use_of_internal_member
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
@@ -51,6 +53,21 @@ Future<void> _settle() async {
     await pumpEventQueue();
   }
 }
+
+/// What the logger prints during the test (and nothing on the console).
+List<String> _captureLogs() {
+  final logs = <String>[];
+  final print = debugPrint;
+  debugPrint = (message, {wrapWidth}) => logs.add(message ?? '');
+  addTearDown(() => debugPrint = print);
+  return logs;
+}
+
+/// An override for the rewards whose preferences open through [open].
+Override _rewardsOpening(Future<SharedPreferences> Function() open) =>
+    journeyRewardsProvider.overrideWith(
+      () => JourneyRewardsNotifier(preferences: open),
+    );
 
 void main() {
   // The insights' new-day signal (an AppLifecycleListener) needs the binding.
@@ -344,15 +361,99 @@ void main() {
       ('JSON of another shape', '{"earned": "zwei"}'),
       ('not a string', 42),
     ]) {
-      test('unreadable stored JSON starts afresh ($name)', () async {
+      test('unreadable stored JSON starts afresh, stored ($name)', () async {
         SharedPreferences.setMockInitialValues({'journey_rewards_u1': value});
+        final logs = _captureLogs();
 
         final rewards = await rewardsOf(container());
 
         expect(rewards, JourneyRewards(earnedDay: 2, picks: {1: _pick(_a)}));
         expect(await stored(), rewards);
+        expect(logs, [
+          startsWith(
+            'JourneyRewards [WARN]: Stored journey rewards unreadable',
+          ),
+        ]);
       });
     }
+
+    test('preferences that can\'t be opened: kept in memory only, the stored '
+        'rewards never overwritten until a later read succeeds', () async {
+      final kept = _json(JourneyRewards(earnedDay: 5, picks: {1: _pick(_b)}));
+      SharedPreferences.setMockInitialValues({
+        'insight_journey_u1': true,
+        'journey_rewards_u1': kept,
+      });
+      final logs = _captureLogs();
+      var opens = 0;
+      final c = container(
+        overrides: [
+          _rewardsOpening(() async {
+            if (opens++ == 0) throw StateError('locked');
+            return SharedPreferences.getInstance();
+          }),
+        ],
+      );
+
+      final rewards = await rewardsOf(c);
+      await c
+          .read(journeyRewardsProvider.notifier)
+          .setFirstTip(FirstTipState.failed);
+
+      expect(rewards, JourneyRewards(earnedDay: 2, picks: {1: _pick(_a)}));
+      expect(c.read(firstTipFailedProvider), isTrue);
+      expect(
+        (await SharedPreferences.getInstance()).getString('journey_rewards_u1'),
+        kept,
+      );
+      expect(
+        logs.first,
+        'JourneyRewards [ERROR]: Opening the journey rewards failed',
+      );
+
+      final restarted = await rewardsOf(container());
+      expect(restarted!.earnedDay, 5);
+      expect(restarted.picks[1], _pick(_b));
+    });
+
+    test('a switch while the read is pending: the previous user\'s rewards '
+        'land nowhere', () async {
+      final u1 = _json(const JourneyRewards(earnedDay: 5));
+      SharedPreferences.setMockInitialValues({
+        'insight_journey_u1': true,
+        'insight_journey_u2': true,
+        'journey_rewards_u1': u1,
+        'journey_rewards_u2': _json(const JourneyRewards(earnedDay: 4)),
+      });
+      final held = Completer<void>();
+      var opens = 0;
+      final c = container(
+        overrides: [
+          _rewardsOpening(() async {
+            if (opens++ == 0) await held.future;
+            return SharedPreferences.getInstance();
+          }),
+        ],
+      );
+      final seen = <int?>[];
+      c.listen(journeyRewardsProvider, (_, next) => seen.add(next?.earnedDay));
+      await _settle();
+      expect(opens, 1);
+      expect(c.read(journeyRewardsProvider), isNull);
+
+      _user.set(c, 'u2');
+      await _settle();
+      held.complete();
+      await _settle();
+
+      expect(c.read(journeyRewardsProvider)!.earnedDay, 4);
+      expect(seen, isNot(contains(5)));
+      expect((await stored('u2'))!.earnedDay, 4);
+      expect(
+        (await SharedPreferences.getInstance()).getString('journey_rewards_u1'),
+        u1,
+      );
+    });
 
     test('another user reads their own key; the previous user\'s rewards '
         'never show for them', () async {

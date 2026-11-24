@@ -24,14 +24,29 @@ import 'recipe_collection_provider.dart';
 /// Moved on by the settled insights, the weekly tips and the checked
 /// recipes ([advanceRewards], [fillPicks]), so nothing is ever taken away:
 /// the earned day never goes down and a stored pick never changes. Stored
-/// only when changed, one write after another; a read or write that fails
-/// is logged (an unreadable value starts afresh, a failed write still
-/// applies in memory).
+/// only when changed, one write after another. Failures are logged:
+/// - an unreadable stored value starts afresh, stored;
+/// - preferences that can't be opened leave the rewards in memory only,
+///   unstored, so they never overwrite the stored ones (a later read, after
+///   a restart or another user, brings those back);
+/// - a failed write still applies in memory.
 class JourneyRewardsNotifier extends Notifier<JourneyRewards?> {
+  JourneyRewardsNotifier({
+    Future<SharedPreferences> Function() preferences =
+        SharedPreferences.getInstance,
+  }) : _preferences = preferences;
+
   static const _log = AppLogger('JourneyRewards');
+
+  /// Opens the preferences the rewards live in.
+  final Future<SharedPreferences> Function() _preferences;
 
   /// The user whose rewards [state] holds; null until they are read.
   String? _userId;
+
+  /// Whether [state] stays in memory: the stored rewards couldn't be read,
+  /// and must not be overwritten.
+  bool _unstored = false;
 
   /// The latest settled insights of this build's user.
   Insights? _insights;
@@ -42,6 +57,7 @@ class JourneyRewardsNotifier extends Notifier<JourneyRewards?> {
   @override
   JourneyRewards? build() {
     _userId = null;
+    _unstored = false;
     _insights = null;
     final userId = ref.watch(currentUserIdProvider);
     if (userId == null || ref.watch(journeyProvider) != true) return null;
@@ -61,11 +77,8 @@ class JourneyRewardsNotifier extends Notifier<JourneyRewards?> {
 
   /// Answers the day-3 offer: [TipOffer.offered] becomes accepted or
   /// declined; any other offer stays. Completes once stored.
-  Future<void> answerTipOffer({required bool accepted}) => _apply(
-    (r) => r.tipOffer == TipOffer.offered
-        ? r.copyWith(tipOffer: accepted ? TipOffer.accepted : TipOffer.declined)
-        : r,
-  );
+  Future<void> answerTipOffer({required bool accepted}) =>
+      _apply((r) => answerOffer(r, accepted: accepted));
 
   /// Sets the state of the first tip ([firstTip]). Completes once stored.
   Future<void> setFirstTip(FirstTipState firstTip) =>
@@ -74,9 +87,9 @@ class JourneyRewardsNotifier extends Notifier<JourneyRewards?> {
   static JourneyRewards _same(JourneyRewards r) => r;
 
   /// Every change: [change] applied to the read rewards, then [_moved];
-  /// stored when that changed them. Nothing before they are read, or once
-  /// another user is signed in. Completes once the rewards as now are
-  /// stored.
+  /// stored when that changed them (unless [_unstored]). Nothing before
+  /// they are read, or once another user is signed in. Completes once the
+  /// rewards as now are stored.
   Future<void> _apply(JourneyRewards Function(JourneyRewards) change) {
     final userId = _userId;
     if (userId == null || !ref.isCurrentUser(userId)) return _writes;
@@ -85,7 +98,7 @@ class JourneyRewardsNotifier extends Notifier<JourneyRewards?> {
     final next = _moved(change(current));
     if (next == current) return _writes;
     state = next;
-    return _store(userId, next);
+    return _unstored ? _writes : _store(userId, next);
   }
 
   /// [r] moved on by the settled insights and the weekly tips, with the
@@ -109,7 +122,7 @@ class JourneyRewardsNotifier extends Notifier<JourneyRewards?> {
   }
 
   /// Reads [userId]'s stored rewards, once the pending writes landed, and
-  /// moves them on.
+  /// moves them on ([_apply]).
   Future<void> _load(String userId) async {
     final opRef = ref;
     await _writes;
@@ -117,25 +130,33 @@ class JourneyRewardsNotifier extends Notifier<JourneyRewards?> {
     final stored = await _read(userId);
     if (!opRef.isCurrentUser(userId)) return;
     _userId = userId;
-    final next = _moved(stored);
-    state = next;
-    if (next != stored) await _store(userId, next);
+    _unstored = stored == null;
+    state = stored ?? const JourneyRewards();
+    await _apply(_same);
   }
 
-  /// [userId]'s stored rewards; none when nothing is stored, and when it
-  /// can't be read.
-  Future<JourneyRewards> _read(String userId) async {
+  /// [userId]'s stored rewards: none when nothing is stored, and when the
+  /// stored value is unreadable; null when the preferences can't be opened.
+  Future<JourneyRewards?> _read(String userId) async {
+    final SharedPreferences prefs;
     try {
-      final prefs = await SharedPreferences.getInstance();
+      prefs = await _preferences();
+    } catch (e, st) {
+      _log.error('Opening the journey rewards failed', e, st);
+      return null;
+    }
+    try {
       final raw = prefs.getString(_key(userId));
       if (raw == null) return const JourneyRewards();
-      final rewards = JourneyRewards.fromJson(jsonDecode(raw));
-      if (rewards == null) _log.warn('Stored journey rewards unreadable');
-      return rewards ?? const JourneyRewards();
-    } catch (e, st) {
-      _log.error('Reading the journey rewards failed', e, st);
-      return const JourneyRewards();
+      if (JourneyRewards.fromJson(jsonDecode(raw)) case final rewards?) {
+        return rewards;
+      }
+      _log.warn('Stored journey rewards unreadable: another shape');
+    } catch (e) {
+      // Not a string, or not JSON. The value itself is never logged.
+      _log.warn('Stored journey rewards unreadable: ${e.runtimeType}');
     }
+    return const JourneyRewards();
   }
 
   /// Stores [rewards] for [userId] after the writes before it.
@@ -143,7 +164,7 @@ class JourneyRewardsNotifier extends Notifier<JourneyRewards?> {
     final key = _key(userId), json = jsonEncode(rewards.toJson());
     return _writes = _writes.then((_) async {
       try {
-        final prefs = await SharedPreferences.getInstance();
+        final prefs = await _preferences();
         await prefs.setString(key, json);
       } catch (e, st) {
         _log.error('Storing the journey rewards failed', e, st);

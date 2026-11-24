@@ -132,6 +132,13 @@ int? announcementDay(JourneyRewards r) {
   return day;
 }
 
+/// [r] with the day-3 offer answered: [TipOffer.offered] becomes accepted
+/// or declined; [r] itself while undecided or once answered.
+JourneyRewards answerOffer(JourneyRewards r, {required bool accepted}) =>
+    r.tipOffer == TipOffer.offered
+    ? r.copyWith(tipOffer: accepted ? TipOffer.accepted : TipOffer.declined)
+    : r;
+
 /// Whether the day-3 offer of a first tip is waiting for an answer: earned,
 /// offered and still unanswered, with the weekly tips known to be off.
 bool tipOfferDue(JourneyRewards r, {required bool? weeklyTips}) =>
