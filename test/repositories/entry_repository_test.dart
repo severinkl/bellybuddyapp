@@ -1,7 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
-import 'package:belly_buddy/models/insight_progress.dart';
+import 'package:belly_buddy/models/insight_rules.dart';
+import 'package:belly_buddy/models/insight_source.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 
 import '../helpers/mocks.dart';
@@ -155,69 +156,61 @@ void main() {
     );
   });
 
-  group('fetchInsightProgress', () {
-    test(
-      'fetchInsightProgress counts distinct days and gut entries in 30 days',
-      () async {
-        final now = DateTime(2026, 11, 23, 9);
-        DateTime daysAgo(int days, int hour) =>
-            DateTime(2026, 11, 23 - days, hour);
-        // Meal, drink and Klo entries; gut-feeling entries are entries too.
-        final others = [
-          daysAgo(1, 8),
-          daysAgo(1, 12),
-          daysAgo(1, 19),
-          daysAgo(5, 10),
-        ];
-        final gutFeelings = [daysAgo(1, 9), daysAgo(1, 20), daysAgo(40, 9)];
-        // The backend's view: only rows since `since`, of the asked tables.
-        when(
-          () => queryService.fetchTrackedAtSince(
-            userId: any(named: 'userId'),
-            since: any(named: 'since'),
-            until: any(named: 'until'),
-            tables: any(named: 'tables'),
-          ),
-        ).thenAnswer((inv) async {
-          final since = inv.namedArguments[#since] as DateTime;
-          final tables = inv.namedArguments[#tables] as Iterable<String>?;
-          final rows = tables == null
-              ? [...others, ...gutFeelings]
-              : [
-                  if (tables.contains('gut_feeling_entries')) ...gutFeelings,
-                  if (tables.length > 1) ...others,
-                ];
-          return [
-            for (final t in rows)
-              if (!t.isBefore(since)) t,
-          ];
-        });
+  group('fetchInsightSource', () {
+    test('fetchInsightSource window', () async {
+      const source = InsightSource(
+        meals: [],
+        gutFeelings: [],
+        activityTimes: [],
+      );
+      when(
+        () => queryService.fetchInsightSource(
+          userId: any(named: 'userId'),
+          since: any(named: 'since'),
+          mealsSince: any(named: 'mealsSince'),
+        ),
+      ).thenAnswer((_) async => source);
 
-        final progress = await repo.fetchInsightProgress(
+      final result = await repo.fetchInsightSource(
+        userId: 'user-123',
+        now: DateTime(2026, 11, 23, 9, 41),
+      );
+
+      expect(result, same(source));
+      verify(
+        () => queryService.fetchInsightSource(
           userId: 'user-123',
-          now: now,
-        );
+          since: DateTime(2026, 10, 25),
+          mealsSince: DateTime(2026, 10, 24),
+        ),
+      ).called(1);
+    });
 
-        expect(
-          progress,
-          const InsightProgress(activeDays: 2, gutFeelingEntries: 2),
-        );
-        // The window: 30 local days, today included.
-        final windowStart = DateTime(2026, 10, 25);
-        verify(
-          () => queryService.fetchTrackedAtSince(
-            userId: 'user-123',
-            since: windowStart,
-          ),
-        ).called(1);
-        verify(
-          () => queryService.fetchTrackedAtSince(
-            userId: 'user-123',
-            since: windowStart,
-            tables: ['gut_feeling_entries'],
-          ),
-        ).called(1);
-      },
-    );
+    test('meals reach back as far as the insights look before an '
+        'entry', () async {
+      when(
+        () => queryService.fetchInsightSource(
+          userId: any(named: 'userId'),
+          since: any(named: 'since'),
+          mealsSince: any(named: 'mealsSince'),
+        ),
+      ).thenAnswer(
+        (_) async =>
+            const InsightSource(meals: [], gutFeelings: [], activityTimes: []),
+      );
+
+      await repo.fetchInsightSource(
+        userId: 'user-123',
+        now: DateTime(2026, 11, 23, 9, 41),
+      );
+
+      verify(
+        () => queryService.fetchInsightSource(
+          userId: 'user-123',
+          since: DateTime(2026, 10, 25),
+          mealsSince: DateTime(2026, 10, 25).subtract(InsightRules.mealsBefore),
+        ),
+      ).called(1);
+    });
   });
 }

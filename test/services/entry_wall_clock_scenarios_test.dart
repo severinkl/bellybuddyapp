@@ -8,6 +8,7 @@ import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/drink_entry.dart';
 import 'package:belly_buddy/models/gut_feeling_entry.dart';
 import 'package:belly_buddy/models/insight_progress.dart';
+import 'package:belly_buddy/models/insights.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/toilet_entry.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
@@ -16,6 +17,7 @@ import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/services/buddy/streak_engine.dart';
 import 'package:belly_buddy/services/entry_query_service.dart';
+import 'package:belly_buddy/services/insights/insights_engine.dart';
 import 'package:belly_buddy/utils/gut_feeling_rating.dart';
 import 'package:belly_buddy/widgets/buddy/buddy_pose.dart';
 
@@ -68,6 +70,14 @@ class _Page extends MockPostgrestTransformBuilder {
   final List<Map<String, dynamic>> _rows;
 
   @override
+  PostgrestTransformBuilder<PostgrestList> order(
+    String column, {
+    bool ascending = false,
+    bool nullsFirst = false,
+    String? referencedTable,
+  }) => this;
+
+  @override
   PostgrestTransformBuilder<PostgrestList> range(
     int from,
     int to, {
@@ -87,22 +97,16 @@ class _Settled extends MockPostgrestTransformBuilder {
   }) => _future.then(onValue, onError: onError);
 }
 
-/// Serves [wallClocks] (as wire values) from [table] and nothing from the
-/// other entry tables; returns each table's filter builder.
-Map<String, SettlableFilterBuilder> _serveTrackedAt(
+/// Serves [rows] per entry table (none for a table left out); returns
+/// each table's filter builder.
+Map<String, SettlableFilterBuilder> _serveRows(
   MockSupabaseClient client,
-  List<String> wallClocks, {
-  String table = 'meal_entries',
-}) {
+  Map<String, List<Map<String, dynamic>>> rows,
+) {
   final filters = <String, SettlableFilterBuilder>{};
   for (final t in entryTableFor.values) {
     final qb = MockSupabaseQueryBuilder();
     final f = SettlableFilterBuilder(Future.value(<Map<String, dynamic>>[]));
-    final rows = t == table
-        ? [
-            for (final w in wallClocks) {'tracked_at': _wire(w)},
-          ]
-        : <Map<String, dynamic>>[];
     when(() => client.from(t)).thenAnswer((_) => qb);
     when(() => qb.select(any())).thenAnswer((_) => f);
     when(() => f.eq(any(), any())).thenAnswer((_) => f);
@@ -110,11 +114,33 @@ Map<String, SettlableFilterBuilder> _serveTrackedAt(
     when(() => f.lt(any(), any())).thenAnswer((_) => f);
     when(
       () => f.order(any(), ascending: any(named: 'ascending')),
-    ).thenAnswer((_) => _Page(rows));
+    ).thenAnswer((_) => _Page(rows[t] ?? const []));
     filters[t] = f;
   }
   return filters;
 }
+
+/// Serves [wallClocks] (as wire values) from [table] and nothing from the
+/// other entry tables; returns each table's filter builder.
+Map<String, SettlableFilterBuilder> _serveTrackedAt(
+  MockSupabaseClient client,
+  List<String> wallClocks, {
+  String table = 'meal_entries',
+}) => _serveRows(client, {
+  table: [
+    for (final w in wallClocks) {'tracked_at': _wire(w)},
+  ],
+});
+
+/// A `gut_feeling_entries` row at [at] whose gut score is [score].
+Map<String, dynamic> _gutRow(String at, int score) => {
+  'id': 'g$at',
+  'tracked_at': _wire(at),
+  'bloating': score,
+  'gas': score,
+  'cramps': score,
+  'fullness': score,
+};
 
 void main() {
   group('Pflege-Ring', () {
@@ -224,38 +250,88 @@ void main() {
     });
   });
 
-  group('Muster progress', () {
+  group('Muster (insights)', () {
     late MockSupabaseClient client;
     late EntryRepository repo;
+    final now = DateTime(2026, 11, 23, 23, 45);
 
     setUp(() {
       client = MockSupabaseClient();
       repo = EntryRepository(MockEntryCrudService(), EntryQueryService(client));
     });
 
-    test('late check-ins count, each on its own day', () async {
-      final filters = _serveTrackedAt(client, [
-        '2026-11-21T23:30',
-        '2026-11-22T23:30',
-        '2026-11-23T23:30',
-      ], table: 'gut_feeling_entries');
+    Future<Insights> insights() async => computeInsights(
+      await repo.fetchInsightSource(userId: testUserId, now: now),
+      now,
+    );
 
-      final progress = await repo.fetchInsightProgress(
-        userId: testUserId,
-        now: DateTime(2026, 11, 23, 23, 45),
+    test("a bad 23:30 check-in is today's, on today's calendar day", () async {
+      _serveRows(client, {
+        'gut_feeling_entries': [_gutRow('2026-11-23T23:30', 5)],
+      });
+
+      final result = await insights();
+
+      expect(result.calendar.last.day, DateTime(2026, 11, 23));
+      expect(result.calendar.last.dayClass, DayClass.hard);
+      expect(
+        result.progress,
+        const InsightProgress(activeDays: 1, gutFeelingEntries: 1),
       );
+    });
+
+    test('a 23:30 check-in the day before the window stays out', () async {
+      _serveRows(client, {
+        'gut_feeling_entries': [
+          _gutRow('2026-10-24T23:30', 5),
+          _gutRow('2026-10-25T00:15', 1),
+        ],
+      });
+
+      final result = await insights();
+
+      expect(result.calendar.first.day, DateTime(2026, 10, 25));
+      expect(result.calendar.first.dayClass, DayClass.good);
+      expect(result.progress.gutFeelingEntries, 1);
+    });
+
+    test('late entries of every kind count, each on its own day', () async {
+      _serveRows(client, {
+        'meal_entries': [
+          {'tracked_at': _wire('2026-11-20T23:30'), 'ingredients': <String>[]},
+        ],
+        'drink_entries': [
+          {'tracked_at': _wire('2026-11-21T23:30')},
+        ],
+        'toilet_entries': [
+          {'tracked_at': _wire('2026-11-22T23:30')},
+        ],
+        'gut_feeling_entries': [_gutRow('2026-11-23T23:30', 1)],
+      });
+
+      expect((await insights()).progress.activeDays, 4);
+    });
+
+    test('the window is sent as the wall clock', () async {
+      final filters = _serveRows(client, const {});
+
+      await insights();
 
       expect(
-        progress,
-        const InsightProgress(activeDays: 3, gutFeelingEntries: 3),
+        verify(
+          () => filters['meal_entries']!.gte('tracked_at', captureAny()),
+        ).captured.single,
+        '2026-10-24T00:00:00.000Z',
       );
-      // The window starts at local midnight 29 days back, as the wall clock.
-      verify(
-        () => filters['gut_feeling_entries']!.gte(
-          'tracked_at',
-          '2026-10-25T00:00:00.000Z',
-        ),
-      ).called(2);
+      for (final t in [
+        'gut_feeling_entries',
+        'toilet_entries',
+        'drink_entries',
+      ]) {
+        verify(
+          () => filters[t]!.gte('tracked_at', '2026-10-25T00:00:00.000Z'),
+        ).called(1);
+      }
     });
   });
 

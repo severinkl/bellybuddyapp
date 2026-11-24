@@ -5,6 +5,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:belly_buddy/services/entry_query_service.dart';
+import 'package:belly_buddy/utils/wall_clock.dart';
 
 import '../helpers/fixtures.dart';
 import '../helpers/mocks.dart';
@@ -100,12 +101,24 @@ List<MockPostgrestFilterBuilder> _setupAllTables(
 }
 
 /// Transform builder whose `range` returns successive pages and records the
-/// requested ranges.
+/// requested ranges, and the orders added after the first one.
 class _PagedTransform extends MockPostgrestTransformBuilder {
   _PagedTransform(this._pages);
 
   final List<List<Map<String, dynamic>>> _pages;
   final ranges = <(int, int)>[];
+  final orders = <(String, {bool ascending})>[];
+
+  @override
+  PostgrestTransformBuilder<PostgrestList> order(
+    String column, {
+    bool ascending = false,
+    bool nullsFirst = false,
+    String? referencedTable,
+  }) {
+    orders.add((column, ascending: ascending));
+    return this;
+  }
 
   @override
   PostgrestTransformBuilder<PostgrestList> range(
@@ -388,6 +401,44 @@ void main() {
       expect(meals!.ranges, [(0, 999), (1000, 1999)]);
     });
 
+    test(
+      'pages in a total order: by tracked_at, then by the unique id',
+      () async {
+        final filters = <String, SettlableFilterBuilder>{};
+        final paged = <String, _PagedTransform>{};
+        for (final t in [
+          'meal_entries',
+          'toilet_entries',
+          'gut_feeling_entries',
+          'drink_entries',
+        ]) {
+          final qb = MockSupabaseQueryBuilder();
+          final f = SettlableFilterBuilder(
+            Future.value(<Map<String, dynamic>>[]),
+          );
+          final p = _PagedTransform([<Map<String, dynamic>>[]]);
+          when(() => client.from(t)).thenAnswer((_) => qb);
+          when(() => qb.select(any())).thenAnswer((_) => f);
+          when(() => f.eq(any(), any())).thenAnswer((_) => f);
+          when(() => f.gte(any(), any())).thenAnswer((_) => f);
+          when(
+            () => f.order(any(), ascending: any(named: 'ascending')),
+          ).thenAnswer((_) => p);
+          filters[t] = f;
+          paged[t] = p;
+        }
+
+        await service.fetchTrackedAtSince(userId: testUserId, since: since);
+
+        for (final t in filters.keys) {
+          verify(
+            () => filters[t]!.order('tracked_at', ascending: false),
+          ).called(1);
+          expect(paged[t]!.orders, [('id', ascending: false)], reason: t);
+        }
+      },
+    );
+
     test('with tables, queries only those tables', () async {
       final qb = MockSupabaseQueryBuilder();
       final f = SettlableFilterBuilder(Future.value(<Map<String, dynamic>>[]));
@@ -424,6 +475,213 @@ void main() {
         service.fetchTrackedAtSince(userId: testUserId, since: since),
         throwsException,
       );
+    });
+  });
+
+  group('EntryQueryService.fetchInsightSource', () {
+    final since = DateTime(2026, 10, 25);
+    final mealsSince = DateTime(2026, 10, 24);
+    const tables = [
+      'meal_entries',
+      'toilet_entries',
+      'gut_feeling_entries',
+      'drink_entries',
+    ];
+
+    Map<String, dynamic> gutRow(String at) => {..._gutRow(), 'tracked_at': at};
+
+    /// Mocks every table; [pages] gives each table's pages.
+    (
+      Map<String, MockSupabaseQueryBuilder>,
+      Map<String, SettlableFilterBuilder>,
+      Map<String, _PagedTransform>,
+    )
+    mockTables(Map<String, List<List<Map<String, dynamic>>>> pages) {
+      final builders = <String, MockSupabaseQueryBuilder>{};
+      final filters = <String, SettlableFilterBuilder>{};
+      final paged = <String, _PagedTransform>{};
+      for (final t in tables) {
+        final qb = MockSupabaseQueryBuilder();
+        final f = SettlableFilterBuilder(
+          Future.value(<Map<String, dynamic>>[]),
+        );
+        final p = _PagedTransform(pages[t] ?? [<Map<String, dynamic>>[]]);
+        when(() => client.from(t)).thenAnswer((_) => qb);
+        when(() => qb.select(any())).thenAnswer((_) => f);
+        when(() => f.eq(any(), any())).thenAnswer((_) => f);
+        when(() => f.gte(any(), any())).thenAnswer((_) => f);
+        when(
+          () => f.order(any(), ascending: any(named: 'ascending')),
+        ).thenAnswer((_) => p);
+        builders[t] = qb;
+        filters[t] = f;
+        paged[t] = p;
+      }
+      return (builders, filters, paged);
+    }
+
+    test(
+      'fetchInsightSource selects each table once with its columns',
+      () async {
+        final (builders, filters, _) = mockTables({});
+
+        await service.fetchInsightSource(
+          userId: testUserId,
+          since: since,
+          mealsSince: mealsSince,
+        );
+
+        verify(
+          () => builders['meal_entries']!.select('tracked_at, ingredients'),
+        ).called(1);
+        verify(() => builders['gut_feeling_entries']!.select('*')).called(1);
+        verify(
+          () => builders['toilet_entries']!.select('tracked_at'),
+        ).called(1);
+        verify(() => builders['drink_entries']!.select('tracked_at')).called(1);
+        for (final t in tables) {
+          verify(() => filters[t]!.eq('user_id', testUserId)).called(1);
+          verify(() => filters[t]!.gte('tracked_at', any())).called(1);
+        }
+      },
+    );
+
+    test('fetches meals 24 h before the window', () async {
+      final (_, filters, _) = mockTables({});
+
+      await service.fetchInsightSource(
+        userId: testUserId,
+        since: since,
+        mealsSince: mealsSince,
+      );
+
+      // Local times, sent as the wall clock in the UTC slot.
+      verify(
+        () => filters['meal_entries']!.gte(
+          'tracked_at',
+          wallClockToWire(mealsSince),
+        ),
+      ).called(1);
+      for (final t in tables.where((t) => t != 'meal_entries')) {
+        verify(
+          () => filters[t]!.gte('tracked_at', wallClockToWire(since)),
+        ).called(1);
+      }
+    });
+
+    test('paginates every table', () async {
+      List<Map<String, dynamic>> full(Map<String, dynamic> row) =>
+          List.generate(EntryQueryService.trackedAtPageSize, (_) => row);
+      final short = [
+        for (final r in [1, 2, 3])
+          {'tracked_at': '2026-11-0${r}T12:00:00.000Z'},
+      ];
+      final fullRow = {'tracked_at': '2026-11-10T12:00:00.000Z'};
+      final gutShort = [
+        for (final r in [1, 2, 3]) gutRow('2026-11-0${r}T12:00:00.000Z'),
+      ];
+      final (_, _, paged) = mockTables({
+        'meal_entries': [full(fullRow), short],
+        'toilet_entries': [full(fullRow), short],
+        'drink_entries': [full(fullRow), short],
+        'gut_feeling_entries': [
+          full(gutRow('2026-11-10T12:00:00.000Z')),
+          gutShort,
+        ],
+      });
+
+      final result = await service.fetchInsightSource(
+        userId: testUserId,
+        since: since,
+        mealsSince: mealsSince,
+      );
+
+      expect(result.meals, hasLength(1003));
+      expect(result.gutFeelings, hasLength(1003));
+      expect(result.activityTimes, hasLength(4 * 1003));
+      for (final t in tables) {
+        expect(paged[t]!.ranges, [(0, 999), (1000, 1999)]);
+      }
+    });
+
+    test('pages every table by tracked_at, then by the unique id', () async {
+      final (_, filters, paged) = mockTables({});
+
+      await service.fetchInsightSource(
+        userId: testUserId,
+        since: since,
+        mealsSince: mealsSince,
+      );
+
+      for (final t in tables) {
+        verify(
+          () => filters[t]!.order('tracked_at', ascending: false),
+        ).called(1);
+        expect(paged[t]!.orders, [('id', ascending: false)], reason: t);
+      }
+    });
+
+    test('meals before since are not activity', () async {
+      // Wall-clock times; `since` is the night the clocks go back, where
+      // adding a Duration lands on an ambiguous hour.
+      final early = DateTime(2026, 10, 24, 22);
+      final inside = DateTime(2026, 10, 25, 3);
+      mockTables({
+        'meal_entries': [
+          [
+            {
+              'tracked_at': wallClockToWire(inside),
+              'ingredients': ['Reis'],
+            },
+            {'tracked_at': wallClockToWire(early), 'ingredients': null},
+          ],
+        ],
+      });
+
+      final result = await service.fetchInsightSource(
+        userId: testUserId,
+        since: since,
+        mealsSince: mealsSince,
+      );
+
+      expect(result.meals.map((m) => m.trackedAt), [inside, early]);
+      expect(result.meals.first.ingredients, ['Reis']);
+      expect(result.meals.last.ingredients, isEmpty);
+      expect(result.activityTimes, [inside]);
+    });
+
+    test('activity holds the wall-clock times of all four tables', () async {
+      mockTables({
+        'meal_entries': [
+          [
+            {'tracked_at': '2026-11-01T08:00:00.000Z', 'ingredients': []},
+          ],
+        ],
+        'toilet_entries': [
+          [
+            {'tracked_at': '2026-11-02T08:00:00.000Z'},
+          ],
+        ],
+        'gut_feeling_entries': [
+          [gutRow('2026-11-03T08:00:00.000Z')],
+        ],
+        'drink_entries': [
+          [
+            {'tracked_at': '2026-11-04T08:00:00.000Z'},
+          ],
+        ],
+      });
+
+      final result = await service.fetchInsightSource(
+        userId: testUserId,
+        since: since,
+        mealsSince: mealsSince,
+      );
+
+      expect(result.activityTimes.toSet(), {
+        for (final d in [1, 2, 3, 4]) DateTime(2026, 11, d, 8),
+      });
+      expect(result.gutFeelings.single.trackedAt, DateTime(2026, 11, 3, 8));
     });
   });
 }

@@ -15,6 +15,7 @@ import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tooltip_bubble.da
 import 'package:belly_buddy/screens/diary/diary_screen.dart';
 import 'package:belly_buddy/screens/discover/discover_screen.dart';
 import 'package:belly_buddy/screens/me/me_screen.dart';
+import 'package:belly_buddy/screens/patterns/patterns_screen.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
 import 'package:belly_buddy/widgets/log_sheet/log_sheet.dart';
@@ -232,6 +233,42 @@ void main() {
         tester.getRect(card).bottom,
         lessThanOrEqualTo(tester.getRect(find.byType(BbBottomNav)).top),
       );
+    });
+
+    testWidgets('the insight card pushes the Muster page over the bar', (
+      tester,
+    ) async {
+      await _pumpShell(tester);
+
+      final card = find.byKey(InsightCard.cardKey);
+      await tester.ensureVisible(card);
+      await tester.pumpAndSettle();
+      await tester.tap(card);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(PatternsScreen), findsOneWidget);
+      expect(find.byType(BbBottomNav), findsNothing);
+    });
+
+    testWidgets('a double tap on the insight card pushes the Muster page '
+        'once', (tester) async {
+      final container = await _pumpShell(tester);
+
+      final card = find.byKey(InsightCard.cardKey);
+      await tester.ensureVisible(card);
+      await tester.pumpAndSettle();
+      // Both taps before the next frame (e.g. a slow one).
+      await tester.tap(card);
+      await tester.tap(card);
+      await tester.pumpAndSettle();
+      expect(find.byType(PatternsScreen), findsOneWidget);
+
+      // One back leads Home.
+      container.read(routerProvider).pop();
+      await tester.pumpAndSettle();
+      expect(find.byType(PatternsScreen), findsNothing);
+      expect(find.byType(BbBottomNav), findsOneWidget);
+      expect(_currentPath(container), RoutePaths.dashboard);
     });
 
     testWidgets('the tour spotlights all 7 targets and keeps its bubbles on '

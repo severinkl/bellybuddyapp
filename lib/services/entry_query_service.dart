@@ -5,6 +5,7 @@ import '../models/meal_entry.dart';
 import '../models/toilet_entry.dart';
 import '../models/gut_feeling_entry.dart';
 import '../models/drink_entry.dart';
+import '../models/insight_source.dart';
 import '../providers/core_providers.dart';
 import '../utils/date_format_utils.dart';
 import '../utils/logger.dart';
@@ -124,7 +125,13 @@ class EntryQueryService {
       final untilIso = until == null ? null : wallClockToWire(until);
       final results = await Future.wait(
         (tables ?? entryTableFor.values).map(
-          (t) => _fetchTrackedAtTable(t, userId, sinceIso, untilIso),
+          (t) => _fetchPaged(
+            t,
+            'tracked_at',
+            userId,
+            sinceIso,
+            untilIso: untilIso,
+          ),
         ),
       );
       return [
@@ -138,23 +145,85 @@ class EntryQueryService {
     }
   }
 
-  Future<List<Map<String, dynamic>>> _fetchTrackedAtTable(
+  /// The insight window's data in one select per table: meals (with their
+  /// ingredients) since [mealsSince], gut feelings, Klo and drink entries
+  /// since [since]. Meals before [since] only serve as lookback and are not
+  /// activity.
+  Future<InsightSource> fetchInsightSource({
+    required String userId,
+    required DateTime since,
+    required DateTime mealsSince,
+  }) async {
+    try {
+      final sinceIso = wallClockToWire(since);
+      final mealsSinceIso = wallClockToWire(mealsSince);
+      final results = await Future.wait([
+        _fetchPaged(
+          'meal_entries',
+          'tracked_at, ingredients',
+          userId,
+          mealsSinceIso,
+        ),
+        _fetchPaged('gut_feeling_entries', '*', userId, sinceIso),
+        _fetchPaged('toilet_entries', 'tracked_at', userId, sinceIso),
+        _fetchPaged('drink_entries', 'tracked_at', userId, sinceIso),
+      ]);
+      DateTime trackedAt(Map<String, dynamic> row) =>
+          wallClockFromWire(row['tracked_at'] as String);
+      final meals = [
+        for (final row in results[0])
+          InsightMeal(
+            trackedAt: trackedAt(row),
+            ingredients: [
+              for (final i
+                  in (row['ingredients'] as List<dynamic>?) ?? const [])
+                i as String,
+            ],
+          ),
+      ];
+      final gutFeelings = [
+        for (final row in results[1]) GutFeelingEntry.fromJson(row),
+      ];
+      return InsightSource(
+        meals: meals,
+        gutFeelings: gutFeelings,
+        activityTimes: [
+          for (final m in meals)
+            if (!m.trackedAt.isBefore(since)) m.trackedAt,
+          for (final g in results[1]) trackedAt(g),
+          for (final rows in results.skip(2))
+            for (final row in rows) trackedAt(row),
+        ],
+      );
+    } catch (e, st) {
+      _log.error('fetchInsightSource failed', e, st);
+      rethrow;
+    }
+  }
+
+  /// Every row of [table] for [userId] with `tracked_at` since [sinceIso]
+  /// (and before [untilIso]), page by page. The pages follow a total order
+  /// (`tracked_at`, then the unique `id`), so rows sharing a `tracked_at`
+  /// across a page boundary are neither repeated nor skipped.
+  Future<List<Map<String, dynamic>>> _fetchPaged(
     String table,
+    String columns,
     String userId,
-    String sinceIso,
+    String sinceIso, {
     String? untilIso,
-  ) async {
+  }) async {
     final all = <Map<String, dynamic>>[];
     var from = 0;
     while (true) {
       var query = _client
           .from(table)
-          .select('tracked_at')
+          .select(columns)
           .eq('user_id', userId)
           .gte('tracked_at', sinceIso);
       if (untilIso != null) query = query.lt('tracked_at', untilIso);
       final page = await query
           .order('tracked_at', ascending: false)
+          .order('id', ascending: false)
           .range(from, from + trackedAtPageSize - 1);
       all.addAll(page.cast<Map<String, dynamic>>());
       if (page.length < trackedAtPageSize) return all;

@@ -7,7 +7,8 @@ import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/drink.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
-import 'package:belly_buddy/models/insight_progress.dart';
+import 'package:belly_buddy/models/insight_rules.dart';
+import 'package:belly_buddy/models/insight_source.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/models/recommendation.dart';
@@ -292,27 +293,43 @@ class FakeEntryRepository implements EntryRepository {
     }).toSet();
   }
 
-  /// What [fetchInsightProgress] returns.
-  InsightProgress insightProgress = const InsightProgress(
-    activeDays: 0,
-    gutFeelingEntries: 0,
+  /// What [fetchInsightSource] returns.
+  InsightSource insightSource = const InsightSource(
+    meals: [],
+    gutFeelings: [],
+    activityTimes: [],
   );
 
-  /// When set, [fetchInsightProgress] throws it.
-  Object? insightProgressError;
+  /// When set, [fetchInsightSource] throws it.
+  Object? insightSourceError;
 
-  /// The `now` of every [fetchInsightProgress] call, in order.
-  final List<DateTime> insightProgressFetches = [];
+  /// How often [fetchInsightSource] was called.
+  int insightSourceCalls = 0;
+
+  /// The `userId` and `now` of each [fetchInsightSource] call, in order.
+  final insightSourceRequests = <({String userId, DateTime now})>[];
+
+  /// While true, each [fetchInsightSource] call waits for its own completer,
+  /// added to [heldInsightSources], so overlapping fetches can finish in any
+  /// order.
+  bool holdInsightSource = false;
+  final heldInsightSources = <Completer<InsightSource>>[];
 
   @override
-  Future<InsightProgress> fetchInsightProgress({
+  Future<InsightSource> fetchInsightSource({
     required String userId,
     required DateTime now,
   }) async {
-    insightProgressFetches.add(now);
-    final error = insightProgressError;
+    insightSourceCalls++;
+    insightSourceRequests.add((userId: userId, now: now));
+    if (holdInsightSource) {
+      final held = Completer<InsightSource>();
+      heldInsightSources.add(held);
+      return held.future;
+    }
+    final error = insightSourceError;
     if (error != null) throw error;
-    return insightProgress;
+    return insightSource;
   }
 
   @override
@@ -719,4 +736,30 @@ class FakeBuddyNotifier extends BuddyNotifier {
   }
 
   void push(BuddyStatus? status) => state = AsyncData(status);
+}
+
+/// An [InsightSource] with [activeDays] distinct active days and
+/// [gutFeelings] gut-feeling entries, one per day at 09:00 on the days
+/// before [now]'s, so all of them are in the insights' window as of [now].
+/// Pass the clock the insights compute with ([buddyClockProvider]): pin it
+/// to a fixed [now], never pair a fixed [now] with the real clock.
+InsightSource insightSourceFor({
+  required int activeDays,
+  required int gutFeelings,
+  required DateTime now,
+}) {
+  assert(
+    activeDays < InsightRules.windowDays &&
+        gutFeelings < InsightRules.windowDays,
+  );
+  DateTime dayBefore(int i) =>
+      DateTime(now.year, now.month, now.day - 1 - i, 9);
+  return InsightSource(
+    meals: const [],
+    gutFeelings: [
+      for (var i = 0; i < gutFeelings; i++)
+        testGutFeelingEntry(trackedAt: dayBefore(i)),
+    ],
+    activityTimes: [for (var i = 0; i < activeDays; i++) dayBefore(i)],
+  );
 }

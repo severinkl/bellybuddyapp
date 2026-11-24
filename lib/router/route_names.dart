@@ -19,6 +19,7 @@ class RouteNames {
   static const String settingsNotifications = 'settings-notifications';
   static const String settingsAccount = 'settings-account';
   static const String recommendations = 'recommendations';
+  static const String patterns = 'patterns';
   static const String ingredientSuggestions = 'ingredient-suggestions';
   static const String recipes = 'recipes';
   static const String recipeNew = 'recipe_new';
@@ -52,6 +53,7 @@ class RoutePaths {
   static const String settingsNotifications = '/settings/notifications';
   static const String settingsAccount = '/settings/account';
   static const String recommendations = '/recommendations';
+  static const String patterns = '/patterns';
   static const String ingredientSuggestions = '/ingredient-suggestions';
   static const String recipes = '/recipes';
   static const String recipeNew = '/recipe/new';

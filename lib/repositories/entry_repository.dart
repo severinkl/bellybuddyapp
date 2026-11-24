@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../models/insight_progress.dart';
+import '../models/insight_rules.dart';
+import '../models/insight_source.dart';
 import '../models/meal_entry.dart';
 import '../services/entry_crud_service.dart';
 import '../services/entry_query_service.dart';
@@ -42,25 +43,18 @@ class EntryRepository {
     return {for (final t in times) startOfDay(t)};
   }
 
-  /// Progress toward the first patterns as of [now]: distinct local days
-  /// with any entry and gut-feeling entries in the last
-  /// [InsightProgress.windowDays] local days, today included.
-  Future<InsightProgress> fetchInsightProgress({
+  /// The last [InsightRules.windowDays] local days as of [now], today
+  /// included, with meals reaching [InsightRules.mealsBefore] further back
+  /// (a meal the evening before still counts for the first day's entries).
+  Future<InsightSource> fetchInsightSource({
     required String userId,
     required DateTime now,
-  }) async {
-    final since = addDays(startOfDay(now), -(InsightProgress.windowDays - 1));
-    final (days, gutFeelings) = await (
-      fetchActivityDays(userId: userId, since: since),
-      _queryService.fetchTrackedAtSince(
-        userId: userId,
-        since: since,
-        tables: const ['gut_feeling_entries'],
-      ),
-    ).wait;
-    return InsightProgress(
-      activeDays: days.length,
-      gutFeelingEntries: gutFeelings.length,
+  }) {
+    final since = addDays(startOfDay(now), -(InsightRules.windowDays - 1));
+    return _queryService.fetchInsightSource(
+      userId: userId,
+      since: since,
+      mealsSince: since.subtract(InsightRules.mealsBefore),
     );
   }
 

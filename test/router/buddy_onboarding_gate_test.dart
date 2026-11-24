@@ -681,4 +681,20 @@ void main() {
       }
     }
   });
+
+  test('/patterns is never gated', () {
+    for (final isRequired in [false, true]) {
+      for (final isPending in [false, true]) {
+        expect(
+          buddyOnboardingRedirect(
+            isRequired: isRequired,
+            isPending: isPending,
+            location: Uri.parse(RoutePaths.patterns),
+          ),
+          isNull,
+          reason: 'required: $isRequired, pending: $isPending',
+        );
+      }
+    }
+  });
 }

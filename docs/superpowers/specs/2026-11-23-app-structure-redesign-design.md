@@ -136,14 +136,17 @@ Tap targets: chip, Buddy, the four need bubbles (→ their trackers), button, in
 
 Fetch with pagination. Recompute after any entry write; the entries reload mechanism from PR #83 already fires on writes. Cache for the session.
 
-**Classification.** Uses the existing `calculateGutFeelingRating`:
-- **hard ("schwer")** = level `schlecht` (average > 3.5, higher = worse).
-- **good ("gut")** = levels `spiGut` or `gut` (average ≤ 2.5).
+**Classification.** Uses the existing rating (`gutFeelingScore` and `gutFeelingLevelFor`, as in `calculateGutFeelingRating`):
+- An entry's **score** is its worst gut symptom (Blähbauch, Blähungen, Krämpfe, Völlegefühl), 1 to 5, higher = worse. The mood values never count.
+- **hard ("schwer")** = level `schlecht` (score > 3.5).
+- **good ("gut")** = levels `spiGut` or `gut` (score ≤ 2.5).
 - **medium** = `durchschnittlich`.
 
 The brainstorm question said "Schnitt ≤ 2 von 5". That was a wording slip about the scale's direction. The decision is "the existing Schlecht category".
 
-A **day's class** comes from the average rating of that day's gut-feeling entries, mapped with the same thresholds. Days without a gut-feeling entry are "kein Eintrag".
+A **day's class** comes from the mean of that day's entries' scores, mapped with the same thresholds and exact at 1.5, 2.5 and 3.5. A day with one entry scoring 4 or 5 is "schwer"; a day with a 1 and a 5 (mean 3) is "mittel". Days without a gut-feeling entry are "kein Eintrag".
+
+*Changed 2026-11-23 after QA: the score is the worst gut symptom per entry; mood excluded. Before, each entry's rating was the average of all its values, mood included.*
 
 **Unlock.** At least **7 distinct days with any entry** in the window **and at least 3 gut-feeling entries** in the window.
 - The locked card shows both progress bars, e.g. "Tage mit Einträgen 2 von 7" and "Bauchgefühl-Einträge 1 von 3".

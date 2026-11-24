@@ -1,19 +1,16 @@
 import 'dart:math' as math;
 
+import 'insight_rules.dart';
+
 /// How far the user is toward the first patterns („Muster"): they unlock
-/// with [daysNeeded] distinct local days with any entry and
-/// [gutFeelingsNeeded] gut-feeling entries in the last [windowDays] local
-/// days, today included.
+/// with [InsightRules.daysNeeded] distinct local days with any entry and
+/// [InsightRules.gutFeelingsNeeded] gut-feeling entries in the last
+/// [InsightRules.windowDays] local days, today included.
 class InsightProgress {
   const InsightProgress({
     required this.activeDays,
     required this.gutFeelingEntries,
   });
-
-  /// The window's length in local calendar days, today included.
-  static const windowDays = 30;
-  static const daysNeeded = 7;
-  static const gutFeelingsNeeded = 3;
 
   /// Distinct local days in the window with any entry.
   final int activeDays;
@@ -24,10 +21,11 @@ class InsightProgress {
   bool get unlocked => daysLeft == 0 && gutFeelingsLeft == 0;
 
   /// Days with entries still missing (never negative).
-  int get daysLeft => math.max(0, daysNeeded - activeDays);
+  int get daysLeft => math.max(0, InsightRules.daysNeeded - activeDays);
 
   /// Gut-feeling entries still missing (never negative).
-  int get gutFeelingsLeft => math.max(0, gutFeelingsNeeded - gutFeelingEntries);
+  int get gutFeelingsLeft =>
+      math.max(0, InsightRules.gutFeelingsNeeded - gutFeelingEntries);
 
   @override
   bool operator ==(Object other) =>

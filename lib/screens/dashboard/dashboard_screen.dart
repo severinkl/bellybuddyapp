@@ -7,7 +7,7 @@ import '../../providers/buddy_onboarding_gate_provider.dart';
 import '../../providers/buddy_provider.dart';
 import '../../providers/buddy_welcome_provider.dart';
 import '../../providers/entries_provider.dart';
-import '../../providers/insight_progress_provider.dart';
+import '../../providers/insights_provider.dart';
 import '../../providers/upgrade_gate_provider.dart';
 import '../../widgets/common/upgrade_available_dialog.dart';
 import '../../providers/profile_provider.dart';
@@ -119,7 +119,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             .read(entriesProvider.notifier)
             .loadEntries(ref.read(buddyClockProvider)()),
         ref.read(buddyProvider.notifier).reload(),
-        ref.read(insightProgressProvider.notifier).refresh(),
+        ref.read(insightsProvider.notifier).refresh(),
       ]);
     } catch (_) {
       // Logged by entriesProvider, the one part that rethrows.
@@ -168,11 +168,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               children: [
                 BuddyHero(key: TutorialKeys.buddy),
                 AppConstants.gap16,
-                // Only the card rebuilds with its progress.
+                // Only the card rebuilds with the insights. It shows only
+                // AsyncData: after a user change, the value of a loading or
+                // failed state is still the previous user's.
                 Consumer(
                   builder: (_, ref, _) => InsightCard(
                     key: TutorialKeys.insight,
-                    progress: ref.watch(insightProgressProvider),
+                    insights: ref.watch(insightsProvider),
                   ),
                 ),
               ],

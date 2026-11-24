@@ -12,6 +12,7 @@ import '../../../providers/buddy_provider.dart';
 import '../../../providers/buddy_welcome_provider.dart';
 import '../../../providers/daily_care_provider.dart';
 import '../../../providers/entries_provider.dart';
+import '../../../providers/today_provider.dart';
 import '../../../router/tracker_routes.dart';
 import '../../../services/buddy/buddy_copy.dart';
 import '../../../services/buddy/buddy_mood_logic.dart';
@@ -54,14 +55,13 @@ _Cue _cueFor(BuddyAnnouncement a) =>
 /// The mood follows today's entries (re-derived on every change and every
 /// minute); his resting line names what he needs next ([BuddyCopy.care]),
 /// except while empathetic, in love, asleep or at night. Every write
-/// reloads [entriesProvider]; the hero moves it on to the new day once his
-/// clock has passed midnight (minute tick, resume, shown again), and the
-/// ring shows its day. Everything it says waits until it is
-/// visible (`TickerMode` on, i.e. the dashboard is not under the splash or
-/// covered by another route or tab): the first line, the follow-up to a
-/// fresh [BuddyLogEvent] and the Buddy's announcements. Without a Buddy
-/// status (loading, error, signed out) the Buddy still shows, named
-/// 'Buddy', without the streak chip.
+/// reloads [entriesProvider]; the hero moves it on to the new day when the
+/// day changes ([todayProvider]), and the ring shows its day. Everything it
+/// says waits until it is visible (`TickerMode` on, i.e. the dashboard is
+/// not under the splash or covered by another route or tab): the first
+/// line, the follow-up to a fresh [BuddyLogEvent] and the Buddy's
+/// announcements. Without a Buddy status (loading, error, signed out) the
+/// Buddy still shows, named 'Buddy', without the streak chip.
 class BuddyHero extends ConsumerStatefulWidget {
   const BuddyHero({super.key});
 
@@ -196,6 +196,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     // value (dependents are told in subscription order), which left the
     // ring on an empty day after a load until the next minute tick.
     ref.listenManual(dailyCareProvider, (_, _) => _updateCare());
+    ref.listenManual(todayProvider, (_, _) => _followDay());
     ref.listenManual(buddyEventsProvider, (_, event) {
       if (event != null) _afterFrame(_consumeEvent);
     });
@@ -264,13 +265,12 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _care = ref.read(dailyCareProvider);
   }
 
-  /// Once the loaded day is over by his clock (midnight passed, or the app
-  /// slept through it), loads the new one for the ring. After the frame:
-  /// this may run while the entries notify.
+  /// A new day: once the loaded day is over, loads the new one for the
+  /// ring. After the frame, where provider writes are always allowed.
   void _followDay() {
     bool over() {
       final day = ref.read(entriesProvider).day;
-      return day != null && !isSameDay(day, _careAt);
+      return day != null && !isSameDay(day, ref.read(todayProvider));
     }
 
     if (!over()) return;
@@ -285,7 +285,6 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     if (!mounted) return;
     final (care, mood, action) = (_care, _careMood, _careAction);
     _deriveCare();
-    _followDay();
     final moodChanged = _careMood != mood;
     final actionChanged = _careAction != action;
     // The ring, its glow and the button follow the entries and the clock.
@@ -437,10 +436,12 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     }
   });
 
-  /// Loads the entries of [_careAt]'s day.
+  /// Loads today's entries.
   Future<void> _loadToday() async {
     try {
-      await ref.read(entriesProvider.notifier).loadEntries(_careAt);
+      await ref
+          .read(entriesProvider.notifier)
+          .loadEntries(ref.read(todayProvider));
     } catch (e, st) {
       _log.error("Loading today's entries failed", e, st);
     }

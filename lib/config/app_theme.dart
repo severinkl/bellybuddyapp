@@ -47,6 +47,17 @@ class AppTheme {
   static const Color gutFeelingNeutral = Color(0xFFE6B800);
   static const Color gutFeelingBad = Color(0xFFD93636);
 
+  // Muster calendar: a day's cell, a light tint of its class's colour
+  // above, and the class's icon (in the cells, the legend and the day
+  // cards): darker shades with at least 3:1 on the tint, the page and the
+  // card (WCAG 1.4.11; schwer's colour already has it)
+  static const Color gutFeelingGoodSoft = Color(0xFFE5F5E5);
+  static const Color gutFeelingNeutralSoft = Color(0xFFFCF4D6);
+  static const Color gutFeelingBadSoft = Color(0xFFF9E1E1);
+  static const Color gutFeelingGoodIcon = Color(0xFF2E8B2E);
+  static const Color gutFeelingNeutralIcon = Color(0xFF9A7A00);
+  static const Color gutFeelingBadIcon = gutFeelingBad;
+
   // Buddy mascot colors
   static const Color buddyOutline = Color(0xFF0D0D0F);
   static const Color buddyBody = Color(0xFFFFABB6);
@@ -104,6 +115,22 @@ class AppTheme {
   /// Short, dense text: headlines over two lines, speech and tour bubbles,
   /// previews.
   static const double lineHeightSnug = 1.35;
+
+  // Named text styles
+  /// Short body text in lists and cards (a column's items, „Fällt mir
+  /// auf"'s rows).
+  static const TextStyle bodyStyle = TextStyle(
+    fontSize: fontSizeBody,
+    height: lineHeightSnug,
+    color: foreground,
+  );
+
+  /// [bodyStyle], muted: labels, empty states, uncertain rows.
+  static const TextStyle bodyMutedStyle = TextStyle(
+    fontSize: fontSizeBody,
+    height: lineHeightSnug,
+    color: mutedForeground,
+  );
 
   // The streak moment's big count („🔥 1 Tag"): flame and number
   static const double fontSizeStreakFlame = 40;
