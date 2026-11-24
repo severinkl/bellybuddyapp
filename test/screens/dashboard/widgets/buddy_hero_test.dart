@@ -87,6 +87,28 @@ class _FakeBuddy extends FakeBuddyNotifier {
     shown.addAll(announcements);
     return super.markAnnouncementsShown(announcements);
   }
+
+  /// Whether [setStreakGoal] publishes the new goal, as the real one does
+  /// (the pending announcements kept).
+  bool publishGoals = false;
+
+  @override
+  Future<void> setStreakGoal(int? goal) async {
+    await super.setStreakGoal(goal);
+    final s = state.value;
+    if (!publishGoals || s == null) return;
+    push(
+      BuddyStatus(
+        state: s.state.copyWith(streakGoal: goal),
+        hasRow: true,
+        streak: s.streak,
+        todayCounted: s.todayCounted,
+        weekDays: s.weekDays,
+        announcements: s.announcements,
+        announcementKeys: s.announcementKeys,
+      ),
+    );
+  }
 }
 
 /// [EntriesNotifier] with a seeded state; [loadEntries] loads [next] for
@@ -117,16 +139,20 @@ class _FakeEntries extends EntriesNotifier {
 
 BuddyStatus _status({
   int streak = 4,
+  int? goal,
   bool todayCounted = false,
   int savers = 1,
   bool hasRow = true,
   List<BuddyAnnouncement> announcements = const [],
+  Map<BuddyAnnouncement, String> announcementKeys = const {},
 }) => buddyStatus(
   savers: savers,
   hasRow: hasRow,
   streak: streak,
+  goal: goal,
   todayCounted: todayCounted,
   announcements: announcements,
+  announcementKeys: announcementKeys,
 );
 
 const _saverUsedLine = 'Puh! Dein Streak-Saver hat uns gestern gerettet 🛡';
@@ -693,6 +719,44 @@ void main() {
       expect(find.text(_goalTitle), findsOneWidget);
       await chooseGoal(tester, '14 Tage');
       expect(buddy.goals, [14]);
+      expect(buddy.shown, [BuddyAnnouncement.goalReached]);
+    });
+
+    testWidgets('a goal reached while „Dein Streak" is open, and a new goal '
+        'picked there: no celebration, nor a second goal sheet', (
+      tester,
+    ) async {
+      buddy = _FakeBuddy(() => _status(streak: 7, goal: 7))
+        ..publishGoals = true;
+      await pumpHero(tester);
+      await openSheet(tester);
+
+      buddy.push(
+        _status(
+          streak: 7,
+          goal: 7,
+          announcements: const [BuddyAnnouncement.goalReached],
+          announcementKeys: {
+            BuddyAnnouncement.goalReached: '${testUserId}_goalReached_7',
+          },
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 3));
+      expect(buddy.shown, isEmpty);
+
+      await openGoalList(tester);
+      await chooseGoal(tester, '14 Tage');
+      expect(buddy.goals, [14]);
+      await tester.pump();
+      await tester.pump();
+      await tick(tester);
+
+      expect(find.text(_sheetTitle), findsNothing);
+      expect(controller(tester).currentAction, isNot(BuddyAction.celebrate));
+      expect(controller(tester).mood, isNot(BuddyMood.inLove));
+      await afterCelebration(tester);
+      expect(find.text(_goalTitle), findsNothing);
       expect(buddy.shown, [BuddyAnnouncement.goalReached]);
     });
 
@@ -2332,6 +2396,46 @@ void main() {
 
       await chooseGoal(tester, '30 Tage');
       expect(buddy.goals, [30]);
+    });
+
+    testWidgets('a goal picked elsewhere while its sheet waited (Home '
+        'hidden): no goal sheet, his love ends', (tester) async {
+      Map<BuddyAnnouncement, String> keys(int goal) => {
+        BuddyAnnouncement.goalReached: '${testUserId}_goalReached_$goal',
+      };
+      buddy = _FakeBuddy(
+        () => _status(
+          streak: 7,
+          goal: 7,
+          announcements: const [BuddyAnnouncement.goalReached],
+          announcementKeys: keys(7),
+        ),
+      );
+      await pumpHero(tester);
+      await tick(tester);
+      expect(controller(tester).currentAction, BuddyAction.celebrate);
+      visible.value = false;
+      await tester.pump();
+      await afterCelebration(tester);
+      expect(find.text(_goalTitle), findsNothing);
+
+      // „Dein Streak" on the Ich tab: a new goal.
+      buddy.push(
+        _status(
+          streak: 7,
+          goal: 14,
+          announcements: const [BuddyAnnouncement.goalReached],
+          announcementKeys: keys(7),
+        ),
+      );
+      visible.value = true;
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text(_goalTitle), findsNothing);
+      expect(controller(tester).mood, isNot(BuddyMood.inLove));
+      expect(buddy.shown, [BuddyAnnouncement.goalReached]);
     });
 
     testWidgets('the offer sheet waits while the hero is hidden', (

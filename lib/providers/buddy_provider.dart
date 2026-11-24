@@ -100,6 +100,16 @@ class BuddyStatus {
   /// once it is shown.
   final Map<BuddyAnnouncement, String> announcementKeys;
 
+  /// The goal the pending [BuddyAnnouncement.goalReached] was announced for
+  /// (its flag's suffix); null while none is pending. A goal picked since
+  /// keeps the announcement's flag but not [state]'s goal.
+  int? get reachedGoal {
+    const marker = '_goalReached_';
+    final key = announcementKeys[BuddyAnnouncement.goalReached];
+    final at = key?.lastIndexOf(marker) ?? -1;
+    return at < 0 ? null : int.tryParse(key!.substring(at + marker.length));
+  }
+
   BuddyStatus copyWith({
     List<BuddyAnnouncement>? announcements,
     Map<BuddyAnnouncement, String>? announcementKeys,

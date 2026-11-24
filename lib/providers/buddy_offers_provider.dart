@@ -84,7 +84,9 @@ final buddyOffersProvider = Provider<Map<BuddyAnnouncement, String>>((ref) {
 /// 3). While the journey is undecided neither applies:
 /// that is only before the first decision (signed out, a new user's
 /// insights still loading), so this drops at most a previous user's cue
-/// (its flag is that user's). The others always apply.
+/// (its flag is that user's). A reached goal applies while it is still
+/// the goal: one picked meanwhile (in „Dein Streak") withdraws it. The
+/// others always apply.
 final offerStillAppliesProvider = Provider.family<bool, BuddyAnnouncement>(
   (ref, announcement) => switch (announcement) {
     BuddyAnnouncement.tipsArrived => ref.watch(unseenTipSetProvider) != null,
@@ -92,15 +94,23 @@ final offerStillAppliesProvider = Provider.family<bool, BuddyAnnouncement>(
       ref.watch(weeklyTipsEnabledProvider) != true &&
           ref.watch(journeyProvider) == false,
     BuddyAnnouncement.firstTipOffer => _firstTipOfferApplies(ref),
+    BuddyAnnouncement.goalReached => _goalStillApplies(ref),
     BuddyAnnouncement.saverUsed ||
     BuddyAnnouncement.streakBroken ||
     BuddyAnnouncement.saverEarned ||
-    BuddyAnnouncement.goalReached ||
     BuddyAnnouncement.journeyReward ||
     BuddyAnnouncement.patternsUnlocked ||
     BuddyAnnouncement.firstTipFailed => true,
   },
 );
+
+/// [offerStillAppliesProvider] of a reached goal: the goal it was announced
+/// for ([BuddyStatus.reachedGoal]) is still the goal; unknown, it applies.
+bool _goalStillApplies(Ref ref) {
+  final status = ref.watch(buddyProvider).value;
+  final reached = status?.reachedGoal;
+  return reached == null || status!.state.streakGoal == reached;
+}
 
 /// [offerStillAppliesProvider] of the first-tip offer: on the journey,
 /// while day 3 still waits for it ([Day3.waiting], [Day3.offerOpen]); its

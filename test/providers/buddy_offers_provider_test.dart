@@ -474,12 +474,14 @@ void main() {
       bool? weeklyTips,
       bool? journey = false,
       JourneyRewards? rewards,
+      BuddyStatus? buddy,
     }) => ProviderContainer.test(
       overrides: [
         unseenTipSetProvider.overrideWithValue(unseen),
         weeklyTipsEnabledProvider.overrideWithValue(weeklyTips),
         journeySeededWith(journey),
         journeyRewardsSeededWith(rewards),
+        buddyProvider.overrideWith(() => FakeBuddyNotifier(() => buddy)),
       ],
     );
 
@@ -547,6 +549,35 @@ void main() {
       expect(applies(BuddyAnnouncement.firstTipOffer, true), isTrue);
       expect(applies(BuddyAnnouncement.firstTipOffer, false), isFalse);
       expect(applies(BuddyAnnouncement.firstTipOffer, null), isFalse);
+    });
+
+    test('goalReached: while the goal it was announced for is still the '
+        'goal', () async {
+      Future<bool> applies(int? goal, {bool flagged = true}) async {
+        final c = container(
+          buddy: buddyStatus(
+            streak: 7,
+            goal: goal,
+            announcements: const [BuddyAnnouncement.goalReached],
+            announcementKeys: {
+              if (flagged)
+                BuddyAnnouncement.goalReached: flag(
+                  BuddyAnnouncement.goalReached,
+                  '7',
+                ),
+            },
+          ),
+        );
+        await c.read(buddyProvider.future);
+        return c.read(offerStillAppliesProvider(BuddyAnnouncement.goalReached));
+      }
+
+      expect(await applies(7), isTrue);
+      // A new goal picked while it waited, or none.
+      expect(await applies(14), isFalse);
+      expect(await applies(null), isFalse);
+      // Its goal unknown: it applies.
+      expect(await applies(14, flagged: false), isTrue);
     });
 
     test('the others always', () {

@@ -616,10 +616,14 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   }
 
   /// The cue on stage has ended: its announcement counts as shown, and a
-  /// welcome as said (Home's tour waits for it).
+  /// welcome as said (Home's tour waits for it). A reached goal's love ends
+  /// with it, also when its sheet was withdrawn.
   void _markPlayed() {
     if (_playing == _Cue.welcome) {
       ref.read(buddyWelcomeProvider.notifier).markPlayed();
+    }
+    if (_playing == _Cue.goalReached && _override == BuddyMood.inLove) {
+      _setOverride(null);
     }
     final played = _playing?.announcement;
     _playing = null;

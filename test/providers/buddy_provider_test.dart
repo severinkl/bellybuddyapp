@@ -484,6 +484,29 @@ void main() {
         BuddyAnnouncement.goalReached,
       ]);
     });
+
+    test('a goal picked while goalReached is pending: it keeps the goal it '
+        'was announced for', () async {
+      buddyRepo.store['u1'] = const BuddyState(
+        userId: 'u1',
+        savers: 2,
+        lastMilestone: 7,
+        streakGoal: 7,
+      );
+      entryRepo.seedActivityDays(novDays(16, 22));
+      final c = makeContainer();
+      final status = await load(c);
+      expect(status.announcements, [BuddyAnnouncement.goalReached]);
+      expect(status.reachedGoal, 7);
+
+      await c.read(buddyProvider.notifier).setStreakGoal(14);
+      await c.read(buddyProvider.notifier).refresh();
+
+      final after = c.read(buddyProvider).value!;
+      expect(after.announcements, [BuddyAnnouncement.goalReached]);
+      expect(after.reachedGoal, 7);
+      expect(after.state.streakGoal, 14);
+    });
   });
 
   group('offerAnnouncement', () {

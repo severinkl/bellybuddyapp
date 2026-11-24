@@ -908,6 +908,7 @@ BuddyStatus buddyStatus({
   bool todayCounted = false,
   Set<DateTime> weekDays = const {},
   List<BuddyAnnouncement> announcements = const [],
+  Map<BuddyAnnouncement, String> announcementKeys = const {},
 }) => BuddyStatus(
   state: BuddyState(
     userId: userId,
@@ -921,6 +922,7 @@ BuddyStatus buddyStatus({
   todayCounted: todayCounted,
   weekDays: weekDays,
   announcements: announcements,
+  announcementKeys: announcementKeys,
 );
 
 /// [BuddyNotifier] serving [initial] (none: no Buddy) without a backend.
