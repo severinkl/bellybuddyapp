@@ -1652,6 +1652,40 @@ void main() {
         ]);
       });
 
+      testWidgets('then the open day-3 offer: its sheet waits until Home is '
+          'back from „Muster frei!"', (tester) async {
+        rewards = const JourneyRewards(
+          earnedDay: 7,
+          patternsFreed: true,
+          tipOffer: TipOffer.offered,
+        );
+        buddy = _FakeBuddy(
+          () => _status(
+            announcements: const [
+              BuddyAnnouncement.patternsUnlocked,
+              BuddyAnnouncement.weeklyTipsOffer,
+            ],
+          ),
+        );
+        await pumpHero(tester);
+        await afterCelebration(tester);
+        expect(location(), RoutePaths.patternsUnlocked);
+
+        await tester.pump(const Duration(seconds: 6));
+        expect(find.byType(FirstTipOfferSheet), findsNothing);
+        expect(buddy.shown, [BuddyAnnouncement.patternsUnlocked]);
+
+        router.pop();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        await tick(tester);
+        expect(location(), RoutePaths.dashboard);
+
+        await afterWave(tester);
+        expect(find.byType(FirstTipOfferSheet), findsOneWidget);
+        expect(firstTip.accepts, 0);
+      });
+
       testWidgets('„Muster frei!" closed during its transition (Home never '
           'hidden): the next cue still comes', (tester) async {
         buddy = _FakeBuddy(

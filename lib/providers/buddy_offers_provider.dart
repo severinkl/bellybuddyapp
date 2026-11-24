@@ -51,8 +51,11 @@ final weeklyTipsOfferDueProvider = Provider<bool>((ref) {
 /// - `journeyReward` for the newest earned day of 1–6
 ///   ([journeyRewardAnnouncementProvider]), once per day: a newer day
 ///   replaces a pending older one;
-/// - `weeklyTipsOffer` while it is due ([weeklyTipsOfferDueProvider]);
 /// - `patternsUnlocked` once the journey's first patterns were unlocked;
+/// - `weeklyTipsOffer` while it is due ([weeklyTipsOfferDueProvider]): after
+///   „Muster frei!", so a journey user who reaches day 7 with the day-3
+///   offer still open sees the celebration first and the offer once back
+///   on Home;
 /// - `firstTipFailed` once the day-3 first tip failed.
 final buddyOffersProvider = Provider<Map<BuddyAnnouncement, String>>((ref) {
   final set = ref.watch(unseenTipSetProvider);
@@ -61,11 +64,11 @@ final buddyOffersProvider = Provider<Map<BuddyAnnouncement, String>>((ref) {
     if (set != null) BuddyAnnouncement.tipsArrived: set.id,
     if (day != null)
       BuddyAnnouncement.journeyReward: '$journeyRewardSuffix$day',
-    if (ref.watch(weeklyTipsOfferDueProvider))
-      BuddyAnnouncement.weeklyTipsOffer: weeklyTipsOfferSuffix,
     if (ref.watch(patternsUnlockedDueProvider) &&
         ref.watch(journeyProvider) == true)
       BuddyAnnouncement.patternsUnlocked: onceSuffix,
+    if (ref.watch(weeklyTipsOfferDueProvider))
+      BuddyAnnouncement.weeklyTipsOffer: weeklyTipsOfferSuffix,
     if (ref.watch(firstTipFailedProvider))
       BuddyAnnouncement.firstTipFailed: onceSuffix,
   };

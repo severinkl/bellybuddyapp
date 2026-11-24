@@ -378,6 +378,30 @@ void main() {
       expect(await pending(restarted), isEmpty);
     });
 
+    test('day 7 with the day-3 offer still open: „Muster frei!" before the '
+        'offer, after new tips, and queued in that order', () async {
+      SharedPreferences.setMockInitialValues({
+        '${AppConstants.keyInsightJourneyPrefix}$testUserId': true,
+      });
+      // An unseen set with a tip: „Neue Tipps" stays first.
+      tips = FakeRecommendationRepository(sets: [testRecommendation()]);
+      final c = await loaded();
+
+      expect(c.read(insightsProvider).value!.unlocked, isTrue);
+      expect(c.read(journeyRewardsProvider)!.tipOffer, TipOffer.offered);
+      expect(c.read(buddyOffersProvider).keys.toList(), [
+        BuddyAnnouncement.tipsArrived,
+        BuddyAnnouncement.patternsUnlocked,
+        BuddyAnnouncement.weeklyTipsOffer,
+      ]);
+      await offerAll(c);
+      expect(await pending(c), [
+        BuddyAnnouncement.tipsArrived,
+        BuddyAnnouncement.patternsUnlocked,
+        BuddyAnnouncement.weeklyTipsOffer,
+      ]);
+    });
+
     test('journey false: no reward, no patternsUnlocked', () async {
       // Unlocked past day 7 before this release: no celebration either.
       final c = await loaded(weeklyTips: true);
