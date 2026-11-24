@@ -14,13 +14,18 @@ void main() {
       expect(mealSlotAt(DateTime(2026, 11, 23, 15)), CareAction.snack);
       expect(mealSlotAt(DateTime(2026, 11, 23, 16, 59)), CareAction.snack);
       expect(mealSlotAt(DateTime(2026, 11, 23, 17)), CareAction.dinner);
-      expect(mealSlotAt(DateTime(2026, 11, 23, 23)), CareAction.dinner);
+      expect(mealSlotAt(DateTime(2026, 11, 23, 21, 59)), CareAction.dinner);
     });
 
     test('none before the day starts (05:00): no breakfast at night', () {
       expect(mealSlotAt(DateTime(2026, 11, 23, 0, 30)), isNull);
       expect(mealSlotAt(DateTime(2026, 11, 23, 4, 59)), isNull);
       expect(mealSlotAt(DateTime(2026, 11, 23, 5)), CareAction.breakfast);
+    });
+
+    test('none once the night starts (22:00): no dinner at night', () {
+      expect(mealSlotAt(DateTime(2026, 11, 23, 22)), isNull);
+      expect(mealSlotAt(DateTime(2026, 11, 23, 23, 59)), isNull);
     });
   });
 
@@ -50,6 +55,22 @@ void main() {
 
     test('nothing logged at night: Essen eintragen', () {
       expect(at(2, const CareLog()), CareAction.feed);
+    });
+
+    test('Essen lowest from 22:00: Essen eintragen, no dinner or snack', () {
+      // Essen at the floor, Trinken and Bauchgefühl full.
+      final noMeal = CareLog(lastDrinkAt: t(21, 30), lastGutFeelingAt: t(21));
+      expect(at(22, noMeal), CareAction.feed);
+      expect(at(23, noMeal, 59), CareAction.feed);
+      // Dinner logged: no snack at night either.
+      final dinner = CareLog(
+        lastMealAt: t(17, 30),
+        lastDrinkAt: t(21, 30),
+        lastGutFeelingAt: t(21),
+      );
+      expect(at(21, dinner, 59), CareAction.snack);
+      expect(at(22, dinner), CareAction.feed);
+      expect(at(23, dinner, 59), CareAction.feed);
     });
 
     test('the lowest meter wins, Klo never does', () {

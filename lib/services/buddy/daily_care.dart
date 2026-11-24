@@ -81,13 +81,13 @@ abstract final class DayParts {
   }
 }
 
-/// The meal the time of day asks for: none before [DayParts.dayFrom],
+/// The meal the time of day asks for: none at night ([DayParts.isDay]),
 /// Frühstück until [DayParts.lunchFrom], Mittagessen until
 /// [DayParts.snackFrom], a snack until [DayParts.dinnerFrom], then
-/// Abendessen.
+/// Abendessen until [DayParts.nightFrom].
 CareAction? mealSlotAt(DateTime now) {
+  if (!DayParts.isDay(now)) return null;
   final minute = DayParts.minuteOf(now);
-  if (minute < DayParts.dayFrom) return null;
   if (minute < DayParts.lunchFrom) return CareAction.breakfast;
   if (minute < DayParts.snackFrom) return CareAction.lunch;
   if (minute < DayParts.dinnerFrom) return CareAction.snack;
