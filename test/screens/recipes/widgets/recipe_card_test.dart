@@ -52,4 +52,15 @@ void main() {
 
     expect(find.text('?'), findsOneWidget);
   });
+
+  testWidgets('an adapted own recipe shows Angepasst', (tester) async {
+    final recipe = testUserRecipe().copyWith(adaptedFromRecipeId: 'recipe-1');
+    await pump(tester, RecipeCard(recipe: recipe, onTap: () {}));
+    expect(find.text('Angepasst'), findsOneWidget);
+  });
+
+  testWidgets('a plain own recipe has no tag', (tester) async {
+    await pump(tester, RecipeCard(recipe: testUserRecipe(), onTap: () {}));
+    expect(find.text('Angepasst'), findsNothing);
+  });
 }

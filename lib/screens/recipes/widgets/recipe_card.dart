@@ -5,6 +5,7 @@ import '../../../config/constants.dart';
 import '../../../models/user_recipe.dart';
 import '../../../utils/title_color.dart';
 import '../../../widgets/common/signed_path_image.dart';
+import 'recipe_collection_card.dart';
 
 class RecipeCard extends StatelessWidget {
   const RecipeCard({super.key, required this.recipe, required this.onTap});
@@ -24,7 +25,21 @@ class RecipeCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            AspectRatio(aspectRatio: 1.1, child: _Image(recipe: recipe)),
+            AspectRatio(
+              aspectRatio: 1.1,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  _Image(recipe: recipe),
+                  if (recipe.isAdapted)
+                    const Positioned(
+                      top: AppConstants.spacingSm,
+                      left: AppConstants.spacingSm,
+                      child: RecipeTagPill(RecipeCardTag.adapted),
+                    ),
+                ],
+              ),
+            ),
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: AppConstants.spacingMd,
