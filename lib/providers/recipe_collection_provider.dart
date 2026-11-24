@@ -19,7 +19,8 @@ const _log = AppLogger('RecipeCollection');
 const _favLog = AppLogger('RecipeFavorites');
 
 /// The visible recipe collection; empty while signed out. A failed load
-/// stays an error (no automatic retries); [refresh] keeps what is shown.
+/// stays an error (no automatic retries) until [refresh]; a refresh keeps
+/// what is shown.
 class RecipeCollectionNotifier extends AsyncNotifier<List<Recipe>>
     with UserScopedRefresh<List<Recipe>> {
   @override
@@ -28,9 +29,8 @@ class RecipeCollectionNotifier extends AsyncNotifier<List<Recipe>>
     return ref.read(recipeRepositoryProvider).fetchCollection();
   }
 
-  /// Fetches again, and the intolerance table when it failed or was missing
-  /// (a loaded one stays). A failure keeps the data on show (logged);
-  /// without data, the error stays.
+  /// Fetches again ([refreshWith]), and the intolerance table when it
+  /// failed or was missing (a loaded one stays).
   Future<void> refresh() {
     final rules = ref.read(intoleranceRulesProvider);
     if (ref.read(currentUserIdProvider) != null &&
@@ -107,7 +107,7 @@ class RecipeFavoritesNotifier extends AsyncNotifier<List<FavoriteRecipe>>
     }
   }
 
-  /// Fetches again, keeping the data on show when it fails.
+  /// Fetches again ([refreshWith]).
   Future<void> refresh() =>
       refreshWith(ref.read(recipeRepositoryProvider).fetchFavorites, _favLog);
 }
