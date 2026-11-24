@@ -11,7 +11,11 @@ import '../../../services/haptic_service.dart';
 import '../../../widgets/buddy/need_meter.dart';
 
 /// The Buddy among his four needs, a bubble in each corner (Essen top
-/// left, Trinken top right, Klo bottom left, Bauchgefühl bottom right).
+/// left, Trinken top right, Klo bottom left, Bauchgefühl bottom right):
+/// a column of two bubbles on each side of him, at least [diameter] tall
+/// and taller where large text needs it, so no bubble ever covers another.
+/// The four labels share one size, shrunk together where the longest
+/// would not fit its bubble.
 /// A bubble's meter shows how full its need is ([care]'s [CareMeters]);
 /// Klo has no meter and says when it was last instead
 /// ([CareCopy.looLine]). Tapping a bubble calls [onNeed] with its need;
@@ -73,9 +77,40 @@ class CareRing extends StatelessWidget {
   final ValueChanged<CareNeed> onNeed;
   final CareNeed? highlight;
 
+  /// The labels' style; [_labelScaler] fits the longest into a bubble.
+  static const _labelStyle = TextStyle(
+    fontSize: AppTheme.fontSizeCaptionLG,
+    fontWeight: FontWeight.w600,
+    color: AppTheme.foreground,
+  );
+
+  /// The text scale all four labels share: the user's, or less where the
+  /// longest label would not fit [AppConstants.careNeedWidth].
+  static TextScaler _labelScaler(BuildContext context) {
+    final scaler = MediaQuery.textScalerOf(context);
+    final style = DefaultTextStyle.of(context).style.merge(_labelStyle);
+    var widest = 0.0;
+    for (final need in CareNeed.values) {
+      final painter = TextPainter(
+        text: TextSpan(text: need.label, style: style),
+        textDirection: TextDirection.ltr,
+        textScaler: scaler,
+        maxLines: 1,
+      )..layout();
+      widest = math.max(widest, painter.width);
+      painter.dispose();
+    }
+    if (widest <= AppConstants.careNeedWidth) return scaler;
+    final size = scaler.scale(AppTheme.fontSizeCaptionLG);
+    return TextScaler.linear(
+      size * AppConstants.careNeedWidth / widest / AppTheme.fontSizeCaptionLG,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final meterSize = meterSizeFor(diameter);
+    final labelScaler = _labelScaler(context);
     Widget bubble(CareNeed need) => _NeedBubble(
       key: needKey(need),
       need: need,
@@ -87,25 +122,35 @@ class CareRing extends StatelessWidget {
       line: need == CareNeed.toilet ? care.looLine : null,
       spoken: care.spoken(need),
       meterSize: meterSize,
+      labelScaler: labelScaler,
       highlighted: need == highlight,
       onTap: () => onNeed(need),
     );
+    Widget side(CareNeed top, CareNeed bottom) => Column(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [bubble(top), bubble(bottom)],
+    );
 
-    return SizedBox(
-      width: double.infinity,
-      height: diameter,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          SizedBox.square(
-            dimension: diameter * AppConstants.careRingBuddyFactor,
-            child: buddy,
-          ),
-          Positioned(top: 0, left: 0, child: bubble(CareNeed.food)),
-          Positioned(top: 0, right: 0, child: bubble(CareNeed.drink)),
-          Positioned(bottom: 0, left: 0, child: bubble(CareNeed.toilet)),
-          Positioned(bottom: 0, right: 0, child: bubble(CareNeed.gutFeeling)),
-        ],
+    return ConstrainedBox(
+      constraints: BoxConstraints(minHeight: diameter),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            side(CareNeed.food, CareNeed.toilet),
+            // His square, narrower where the bubbles leave less room (he
+            // is drawn narrower than tall, so his height stays).
+            Expanded(
+              child: Center(
+                child: SizedBox.square(
+                  dimension: diameter * AppConstants.careRingBuddyFactor,
+                  child: buddy,
+                ),
+              ),
+            ),
+            side(CareNeed.drink, CareNeed.gutFeeling),
+          ],
+        ),
       ),
     );
   }
@@ -128,6 +173,7 @@ class _NeedBubble extends StatelessWidget {
     required this.line,
     required this.spoken,
     required this.meterSize,
+    required this.labelScaler,
     required this.highlighted,
     required this.onTap,
   });
@@ -144,6 +190,9 @@ class _NeedBubble extends StatelessWidget {
   /// The button's semantics value: when it was last.
   final String spoken;
   final double meterSize;
+
+  /// The text scale all four labels share ([CareRing._labelScaler]).
+  final TextScaler labelScaler;
   final bool highlighted;
   final VoidCallback onTap;
 
@@ -202,17 +251,11 @@ class _NeedBubble extends StatelessWidget {
               children: [
                 meter,
                 AppConstants.gap4,
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  child: Text(
-                    need.label,
-                    maxLines: 1,
-                    style: const TextStyle(
-                      fontSize: AppTheme.fontSizeCaptionLG,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.foreground,
-                    ),
-                  ),
+                Text(
+                  need.label,
+                  maxLines: 1,
+                  textScaler: labelScaler,
+                  style: CareRing._labelStyle,
                 ),
                 if (line != null)
                   FittedBox(

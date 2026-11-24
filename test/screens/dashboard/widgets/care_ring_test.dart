@@ -1,3 +1,4 @@
+import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -443,13 +444,27 @@ void main() {
     });
   });
 
-  for (final (name, size) in [
-    ('iPhone 17 Pro', const Size(393, 852)),
-    ('small phone', const Size(375, 667)),
+  /// The text scale each need's label is drawn at.
+  List<double> labelScales(WidgetTester tester) => [
+    for (final need in CareNeed.values)
+      tester
+          .renderObject<RenderParagraph>(
+            find.descendant(
+              of: find.byKey(CareRing.needKey(need)),
+              matching: find.text(need.label),
+            ),
+          )
+          .textScaler
+          .scale(1),
+  ];
+
+  for (final (name, size, scale) in [
+    ('iPhone 17 Pro', const Size(393, 852), 1.3),
+    ('small phone', const Size(375, 667), 1.3),
+    ('small phone', const Size(375, 667), 2.0),
   ]) {
-    testWidgets('$name at text scale 1.3: no overflow, bubbles apart', (
-      tester,
-    ) async {
+    testWidgets('$name at text scale $scale: no overflow, bubbles apart, the '
+        'labels at one size', (tester) async {
       await pump(
         tester,
         log: CareLog(
@@ -458,22 +473,46 @@ void main() {
           lastGutFeelingAt: _t(8),
         ),
         size: size,
-        textScale: 1.3,
+        textScale: scale,
       );
 
       expect(tester.takeException(), isNull);
       // Klo's second line at its longest.
       expect(find.text('heute noch nicht'), findsOneWidget);
+      for (final (top, bottom) in [
+        (CareNeed.food, CareNeed.toilet),
+        (CareNeed.drink, CareNeed.gutFeeling),
+      ]) {
+        expect(
+          bubble(tester, bottom).top,
+          greaterThanOrEqualTo(bubble(tester, top).bottom),
+          reason: '$top over $bottom',
+        );
+      }
+      final scales = labelScales(tester);
+      expect(scales.toSet(), hasLength(1));
+      expect(scales.first, lessThanOrEqualTo(scale));
+      for (final need in CareNeed.values) {
+        expect(
+          tester.getSize(find.text(need.label)).width,
+          lessThanOrEqualTo(AppConstants.careNeedWidth),
+          reason: '$need',
+        );
+      }
+      // The ring grows instead; the Buddy keeps his height.
+      final ring = tester.getRect(find.byType(CareRing));
       expect(
-        bubble(tester, CareNeed.food).overlaps(bubble(tester, CareNeed.toilet)),
-        isFalse,
+        ring.height,
+        greaterThanOrEqualTo(
+          CareRing.diameterFor(size.width - 32, size.height),
+        ),
       );
       expect(
-        bubble(
-          tester,
-          CareNeed.drink,
-        ).overlaps(bubble(tester, CareNeed.gutFeeling)),
-        isFalse,
+        tester.getSize(find.byKey(const Key('buddy_double'))).height,
+        moreOrLessEquals(
+          CareRing.diameterFor(size.width - 32, size.height) *
+              AppConstants.careRingBuddyFactor,
+        ),
       );
     });
   }

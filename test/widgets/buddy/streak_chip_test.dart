@@ -48,6 +48,17 @@ void main() {
     expect(flame.lit, isTrue);
   });
 
+  testWidgets('the flame grows with the text scale', (t) async {
+    t.platformDispatcher.textScaleFactorTestValue = 1.3;
+    addTearDown(t.platformDispatcher.clearTextScaleFactorTestValue);
+    await t.pumpWidget(_wrap(const StreakChip(streak: 4, todayCounted: true)));
+
+    expect(
+      t.widget<StreakFlame>(find.byType(StreakFlame)).height,
+      moreOrLessEquals(AppConstants.streakFlameChipHeight * 1.3),
+    );
+  });
+
   testWidgets('semantics unchanged', (t) async {
     final h = t.ensureSemantics();
     await t.pumpWidget(_wrap(const StreakChip(streak: 4, todayCounted: false)));
