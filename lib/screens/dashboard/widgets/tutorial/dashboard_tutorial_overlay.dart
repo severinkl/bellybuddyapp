@@ -226,7 +226,7 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
                     child: Container(
                       key: _skipBox,
                       constraints: BoxConstraints(
-                        minHeight: 44,
+                        minHeight: AppConstants.minTapTarget,
                         maxWidth: screenSize.width * _skipMaxWidth,
                       ),
                       alignment: Alignment.center,

@@ -50,6 +50,9 @@ class AppConstants {
   static const double iconBadgeLg = 48.0;
   static const double iconBadgeXl = 56.0;
 
+  /// The smallest tap target (Apple's 44 pt).
+  static const double minTapTarget = 44.0;
+
   // Border radius
   static const double radiusXs = 4.0;
   static const double radiusSm = 8.0;
@@ -282,6 +285,7 @@ class AppConstants {
 
   // Image sizes
   static const double mealImageHeight = 180.0;
+  static const double mascotSizeSm = 80.0;
   static const double mascotSizeMd = 96.0;
   static const double mascotSizeLg = 160.0;
 

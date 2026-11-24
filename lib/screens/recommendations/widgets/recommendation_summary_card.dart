@@ -40,10 +40,10 @@ class RecommendationSummaryCard extends StatelessWidget {
         children: [
           const MascotImage(
             assetPath: AppConstants.mascotProfessor,
-            width: 80,
-            height: 80,
+            width: AppConstants.mascotSizeSm,
+            height: AppConstants.mascotSizeSm,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: AppConstants.spacing12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -72,7 +72,7 @@ class RecommendationSummaryCard extends StatelessWidget {
                       color: AppTheme.mutedForeground,
                     ),
                   ),
-                  const SizedBox(height: 2),
+                  const SizedBox(height: AppConstants.spacing2),
                   Text(
                     formatAnalysisDateRange(recommendation.createdAt!),
                     style: const TextStyle(

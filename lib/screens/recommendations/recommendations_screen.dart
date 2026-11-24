@@ -200,8 +200,8 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
             children: [
               const MascotImage(
                 assetPath: AppConstants.mascotHappy,
-                width: 96,
-                height: 96,
+                width: AppConstants.mascotSizeMd,
+                height: AppConstants.mascotSizeMd,
               ),
               AppConstants.gap16,
               const Padding(
