@@ -756,12 +756,22 @@ class FakeRecommendationRepository implements RecommendationRepository {
   final List<({List<String> intolerances, String? diet, List<MealEntry> meals})>
   firstTipRequests = [];
 
+  /// Asked as each [requestFirstTip] arrives: whether the user is opted in
+  /// to the weekly tips on the server then (e.g. the stored profile of a
+  /// [FakeProfileRepository]).
+  bool Function()? optedIn;
+
+  /// What [optedIn] answered at each [requestFirstTip], in order; null
+  /// while it is unset.
+  final List<bool?> firstTipRequestOptIns = [];
+
   @override
   Future<FirstTipResult> requestFirstTip({
     required List<String> intolerances,
     required String? diet,
     required List<MealEntry> meals,
   }) async {
+    firstTipRequestOptIns.add(optedIn?.call());
     firstTipRequests.add((
       intolerances: intolerances,
       diet: diet,

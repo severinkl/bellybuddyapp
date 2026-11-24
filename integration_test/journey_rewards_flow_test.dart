@@ -19,6 +19,7 @@ import 'package:belly_buddy/screens/recommendations/widgets/recommendation_card.
 import 'package:belly_buddy/services/insights/insight_copy.dart';
 import 'package:belly_buddy/services/journey/journey_copy.dart';
 import 'package:belly_buddy/widgets/buddy/animated_buddy.dart';
+import 'package:belly_buddy/widgets/buddy/buddy_actions.dart';
 import 'package:belly_buddy/widgets/buddy/buddy_speech_bubble.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -155,6 +156,17 @@ Future<void> _pumpUntilSheet(WidgetTester tester, Type sheet) async {
   await tester.pumpAndSettle();
 }
 
+/// Longer than any cue the Buddy plays before his sheet or page (the wave
+/// before an offer, the celebration before a reward or „Muster frei!"),
+/// with 2 s to spare on a loaded device: a sheet still missing after it
+/// isn't coming.
+final _cueBeforeSheet =
+    [
+      buddyActionDuration(BuddyAction.wave),
+      buddyActionDuration(BuddyAction.celebrate),
+    ].reduce((a, b) => a > b ? a : b) +
+    const Duration(seconds: 2);
+
 /// The card's reward line, scrolled into view, with [text].
 Future<void> _expectRewardLine(WidgetTester tester, String text) async {
   final line = find.byKey(JourneyRewardLineView.lineKey);
@@ -229,7 +241,10 @@ void main() {
     final request = Completer<void>();
     final tipsRepo = FakeRecommendationRepository()
       ..firstTipSet = _firstTipSet()
-      ..firstTipGate = request;
+      ..firstTipGate = request
+      // The weekly tips as stored on the server when a request arrives:
+      // only a write that succeeded counts.
+      ..optedIn = () => profileRepo.storedProfile?.weeklyTipsEnabled ?? false;
     await tester.pumpWidget(
       _app(
         entryRepo: _entries(activeDays: 3, gutFeelings: 1),
@@ -258,8 +273,9 @@ void main() {
     expect(find.byType(FirstTipOfferSheet), findsNothing);
     expect(profileRepo.weeklyTipsWrites, [true]);
     expect(_heroBubble(tester), JourneyCopy.firstTipStarted);
-    // One request, after the opt-in, with the profile's intolerances and
-    // diet; its answer is held until here.
+    // One request, made once the opt-in was stored, with the profile's
+    // intolerances and diet; its answer is held until here.
+    expect(tipsRepo.firstTipRequestOptIns, [true]);
     final [sent] = tipsRepo.firstTipRequests;
     expect(sent.intolerances, ['Fruktose']);
     expect(sent.diet, 'vegetarisch');
@@ -302,7 +318,8 @@ void main() {
   });
 
   testWidgets('day 3, „Nein, danke": a recipe instead; after a restart no '
-      'offer, no request, and the card names day 4', (tester) async {
+      'offer, no request, the card names day 4 and „Deine Belohnungen" '
+      "keeps day 3's recipe", (tester) async {
     final entryRepo = _entries(activeDays: 3, gutFeelings: 1);
     final profileRepo = _profile();
     final tipsRepo = FakeRecommendationRepository()
@@ -341,8 +358,7 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
-    // Longer than a cue's wave or celebration before its sheet.
-    await tester.pump(const Duration(seconds: 4));
+    await tester.pump(_cueBeforeSheet);
     await tester.pumpAndSettle();
 
     expect(find.byType(DashboardScreen), findsOneWidget);
@@ -351,30 +367,41 @@ void main() {
     await _expectRewardLine(tester, 'Heute wartet: Ein Spruch von mir');
     expect(tipsRepo.firstTipRequests, isEmpty);
     expect(profileRepo.weeklyTipsWrites, isEmpty);
+
+    // Day 3's recipe is kept; day 4 is next, locked.
+    await tester.tapVisible(find.byKey(JourneyRewardLineView.lineKey));
+    expect(find.text(JourneyCopy.rewardsTitle), findsOneWidget);
+    expect(_inRow(3, find.text('Ein Rezept für dich')), findsOneWidget);
+    expect(_inRow(3, find.text(_hirseBowl)), findsOneWidget);
+    expect(_inRow(4, find.text('Ein Spruch von mir')), findsOneWidget);
+    expect(_inRow(4, find.byIcon(Icons.lock_outline)), findsOneWidget);
   });
 
-  testWidgets('day 7: „Muster frei!" → „Muster ansehen" → the Muster page, '
-      'unlocked', (tester) async {
+  testWidgets('day 7 with the day-3 offer still open: „Muster frei!" → '
+      '„Muster ansehen" → the Muster page, unlocked; back on Home the offer '
+      'follows', (tester) async {
     final prefs = await SharedPreferences.getInstance();
     // On the journey since before: with 7 days it wouldn't start now.
     await prefs.setBool(
       '${AppConstants.keyInsightJourneyPrefix}$testUserId',
       true,
     );
+    final tipsRepo = FakeRecommendationRepository();
+    // The weekly tips off and the day-3 offer never answered on this
+    // device: both are due, the celebration first.
     await tester.pumpWidget(
       _app(
         entryRepo: _entries(activeDays: 7, gutFeelings: 3),
-        // The weekly tips on: day 3 has no offer to make first (an open one
-        // would come before „Muster frei!").
-        profileRepo: _profile(weeklyTips: true),
+        recommendationRepo: tipsRepo,
       ),
     );
     await tester.pumpAndSettle();
 
-    // He celebrates first; the page follows on a timer.
+    // He celebrates first; the page follows on a timer, before the offer.
     await pumpUntilFound(tester, find.byType(PatternsUnlockedScreen));
     await tester.pumpAndSettle();
     expect(find.text('Muster frei!'), findsOneWidget);
+    expect(find.byType(FirstTipOfferSheet), findsNothing);
 
     final open = find.byKey(PatternsUnlockedScreen.openKey);
     expect(
@@ -387,5 +414,34 @@ void main() {
     expect(find.byType(PatternsScreen), findsOneWidget);
     expect(find.byType(PatternsUnlocked), findsOneWidget);
     expect(find.text(InsightCopy.lockedTitle), findsNothing);
+    // The offer waits while the Muster page covers Home.
+    await tester.pump(_cueBeforeSheet);
+    await tester.pumpAndSettle();
+    expect(find.byType(FirstTipOfferSheet), findsNothing);
+
+    await _back(tester, PatternsScreen);
+    expect(find.byType(DashboardScreen), findsOneWidget);
+
+    // Back on Home: he waves, then asks.
+    await _pumpUntilSheet(tester, FirstTipOfferSheet);
+    expect(
+      find.text(
+        glueClosingSymbol(
+          'Ich hab genug für deinen ersten Tipp! Soll ich ihn dir machen? ✨',
+        ),
+      ),
+      findsOneWidget,
+    );
+    await tester.tapVisible(find.byKey(FirstTipOfferSheet.noKey));
+    expect(
+      find.text('Alles klar! Dann hier ein Rezept für dich.'),
+      findsOneWidget,
+    );
+    await tester.tapVisible(find.byKey(JourneyRewardSheet.laterKey));
+
+    expect(find.byType(JourneyRewardSheet), findsNothing);
+    expect(find.byType(PatternsUnlockedScreen), findsNothing);
+    expect(find.byType(DashboardScreen), findsOneWidget);
+    expect(tipsRepo.firstTipRequests, isEmpty);
   });
 }
