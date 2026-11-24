@@ -194,6 +194,10 @@ void main() {
   /// The links the hero opened (day 2's article).
   late RecordingUrlOpener opener;
 
+  /// Whether the router sends „Muster frei!" elsewhere (to the Tagebuch),
+  /// as a gate's redirect does.
+  late bool redirectUnlocked;
+
   // The hero's bubble and actions need ticking Buddies.
   tickBuddiesInTests();
 
@@ -209,6 +213,7 @@ void main() {
     rewards = null;
     firstTip = FakeFirstTipNotifier();
     opener = RecordingUrlOpener();
+    redirectUnlocked = false;
   });
 
   tearDown(() {
@@ -247,6 +252,11 @@ void main() {
     addTearDown(container.dispose);
     router = GoRouter(
       initialLocation: RoutePaths.dashboard,
+      redirect: (_, state) =>
+          redirectUnlocked &&
+              state.matchedLocation == RoutePaths.patternsUnlocked
+          ? RoutePaths.diary
+          : null,
       routes: [
         GoRoute(
           path: RoutePaths.dashboard,
@@ -1927,6 +1937,78 @@ void main() {
 
         expect(location(), RoutePaths.dashboard);
         expect(controller(tester).bubble, _firstTipFailedLine);
+      });
+
+      testWidgets('marked shown once the page showed, not as it is pushed', (
+        tester,
+      ) async {
+        buddy = _FakeBuddy(
+          () => _status(
+            announcements: const [BuddyAnnouncement.patternsUnlocked],
+          ),
+        );
+        await pumpHero(tester);
+        // The celebration ends and pushes the page; no frame yet.
+        await tester.binding.delayed(
+          buddyActionDuration(BuddyAction.celebrate),
+        );
+        expect(buddy.shown, isEmpty);
+
+        await tester.pump();
+        expect(location(), RoutePaths.patternsUnlocked);
+        expect(buddy.shown, [BuddyAnnouncement.patternsUnlocked]);
+      });
+
+      testWidgets('a push that never shows (redirected): still pending, it '
+          'comes again once Home is back', (tester) async {
+        redirectUnlocked = true;
+        buddy = _FakeBuddy(
+          () => _status(
+            announcements: const [BuddyAnnouncement.patternsUnlocked],
+          ),
+        );
+        final container = await pumpHero(tester);
+        await afterCelebration(tester);
+        expect(location(), RoutePaths.diary);
+        await tester.pump(const Duration(seconds: 1));
+        expect(buddy.shown, isEmpty);
+        expect(container.read(buddyProvider).value!.announcements, [
+          BuddyAnnouncement.patternsUnlocked,
+        ]);
+
+        redirectUnlocked = false;
+        router.pop();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        await tick(tester);
+        expect(location(), RoutePaths.dashboard);
+        expect(controller(tester).currentAction, BuddyAction.celebrate);
+        await afterCelebration(tester);
+
+        expect(location(), RoutePaths.patternsUnlocked);
+        expect(buddy.shown, [BuddyAnnouncement.patternsUnlocked]);
+      });
+
+      testWidgets('the hero gone before the page showed (the app closing): '
+          'still pending', (tester) async {
+        buddy = _FakeBuddy(
+          () => _status(
+            announcements: const [BuddyAnnouncement.patternsUnlocked],
+          ),
+        );
+        final container = await pumpHero(tester);
+        await tester.binding.delayed(
+          buddyActionDuration(BuddyAction.celebrate),
+        );
+        heroShown.value = false;
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(find.byType(BuddyHero), findsNothing);
+        expect(buddy.shown, isEmpty);
+        expect(container.read(buddyProvider).value!.announcements, [
+          BuddyAnnouncement.patternsUnlocked,
+        ]);
       });
 
       testWidgets('patternsUnlocked waits while the hero is hidden', (

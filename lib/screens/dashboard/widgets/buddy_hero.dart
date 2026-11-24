@@ -287,10 +287,13 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// a `go` to Home, even on its way in while Home was never hidden), what
   /// left Home no longer covers it ([HomeCoverNotifier.homeShown]).
   void _onRoute() {
-    final top = _router?.routerDelegate.currentConfiguration.lastOrNull;
-    if (top?.matchedLocation != RoutePaths.dashboard) return;
+    if (_topLocation != RoutePaths.dashboard) return;
     _afterFrame(ref.read(homeCoveredProvider.notifier).homeShown);
   }
+
+  /// The path of the router's top route.
+  String? get _topLocation =>
+      _router?.routerDelegate.currentConfiguration.lastOrNull?.matchedLocation;
 
   /// Runs [fn] only while the hero is visible: nothing is said or played
   /// while the dashboard is hidden.
@@ -746,12 +749,30 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   /// After the celebration: „Muster frei!" over Home, then continues once
   /// Home is free again (the page left it, [homeCoveredProvider]); waits
-  /// like every cue's sheet ([_deferSheet]).
+  /// like every cue's sheet ([_deferSheet]). It counts as shown once the
+  /// first frame after the push has the page on top; a push that never
+  /// shows (redirected elsewhere, the app gone first) leaves it pending, so
+  /// it comes again ([_endUnshown]).
   Future<void> _openPatternsUnlocked() async {
     if (_deferSheet(_openPatternsUnlocked)) return;
     ref
         .read(homeCoveredProvider.notifier)
         .leftHome(context.push(RoutePaths.patternsUnlocked));
+    _afterFrame(
+      () => _topLocation == RoutePaths.patternsUnlocked
+          ? _nextCue()
+          : _endUnshown(),
+    );
+  }
+
+  /// The cue on stage ends without counting as shown: its announcement
+  /// stays pending and is taken again with the next ones
+  /// ([_takeAnnouncements]: a status update, Home shown again).
+  void _endUnshown() {
+    if (_playing?.announcement case final announcement?) {
+      _taken.remove(announcement);
+    }
+    _playing = null;
     _nextCue();
   }
 
