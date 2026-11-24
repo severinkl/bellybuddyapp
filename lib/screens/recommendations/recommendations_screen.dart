@@ -59,11 +59,15 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
       await ref.read(recommendationProvider.notifier).fetchRecommendations();
       if (!mounted) return;
       // From now on a set that arrives while they are open (a push) is seen
-      // too: each newest set once, so a failing mark isn't retried in a loop.
-      _markedNewestId = ref.read(recommendationProvider).value?.firstOrNull?.id;
-      ref.listenManual<Recommendation?>(unseenTipSetProvider, (_, set) {
-        if (set == null || set.id == _markedNewestId) return;
-        _markedNewestId = set.id;
+      // too, also one without tips: each newest set once, so a failing mark
+      // isn't retried in a loop.
+      _markedNewestId = _newestId(ref.read(recommendationProvider));
+      ref.listenManual<String?>(recommendationProvider.select(_newestId), (
+        _,
+        id,
+      ) {
+        if (id == null || id == _markedNewestId) return;
+        _markedNewestId = id;
         unawaited(_markSeen());
       });
       await _markSeen();
@@ -72,6 +76,10 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
 
   /// The newest set [_markSeen] was called for.
   String? _markedNewestId;
+
+  /// The id of the newest loaded set, with or without tips.
+  static String? _newestId(AsyncValue<List<Recommendation>> sets) =>
+      sets.value?.firstOrNull?.id;
 
   /// Marks the shown sets seen.
   Future<void> _markSeen() async {

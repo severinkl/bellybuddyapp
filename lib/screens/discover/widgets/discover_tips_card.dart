@@ -4,12 +4,15 @@ import 'package:material_ui/material_ui.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/recommendation.dart';
+import '../../../providers/recommendation_provider.dart';
 import '../../../widgets/common/bb_card.dart';
 import 'discover_section.dart';
 
-/// The newest tip set: „Neu" while it is unseen, its ISO week, how many
-/// tips, two lines of its summary. No tips: a line, not tappable.
-class DiscoverTipsCard extends StatelessWidget {
+/// The newest tip set: its ISO week, how many tips, two lines of its
+/// summary, and „Neu" while there is a new set ([unseenTipSetProvider], as
+/// for Home's row and the Buddy: a set without tips is never new). No
+/// tips: a line, not tappable.
+class DiscoverTipsCard extends ConsumerWidget {
   const DiscoverTipsCard({super.key, required this.tips, required this.onTap});
 
   /// The card (or the line in its place).
@@ -19,7 +22,8 @@ class DiscoverTipsCard extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isNew = ref.watch(unseenTipSetProvider) != null;
     final list = tips.value;
     if (list == null) return DiscoverNote.pending(tips, 'Tipps', key: cardKey);
     if (list.isEmpty) {
@@ -36,7 +40,7 @@ class DiscoverTipsCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              if (newest.seenAt == null) ...[
+              if (isNew) ...[
                 const DiscoverPill('Neu'),
                 const SizedBox(width: AppConstants.spacingSm),
               ],

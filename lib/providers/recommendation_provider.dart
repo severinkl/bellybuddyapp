@@ -193,7 +193,8 @@ final recommendationProvider =
     );
 
 /// The newest loaded tip set with tips while it is unseen: Home's „Neue
-/// Tipps" row, the Entdecken dot and the Buddy's announcement. Null while
+/// Tipps" row, the Entdecken dot, the Tipps card's „Neu" and the Buddy's
+/// announcement. Null while
 /// loading, failed, empty or seen; an older unseen set behind a seen newest
 /// one is not new.
 ///

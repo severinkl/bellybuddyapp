@@ -201,6 +201,40 @@ void main() {
       expect(container.read(unseenTipSetProvider), isNull);
     });
 
+    testWidgets('a set without tips that arrives while the Tipps are open '
+        'is marked seen too', (tester) async {
+      final repo = FakeRecommendationRepository(sets: [_rec('1')]);
+      await tester.pumpWithProviders(
+        const RecommendationsScreen(),
+        overrides: [
+          recommendationRepositoryProvider.overrideWithValue(repo),
+          currentUserIdProvider.overrideWithValue('test-user'),
+        ],
+      );
+      await tester.pumpAndSettle();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(RecommendationsScreen)),
+      );
+
+      repo.sets = [
+        testRecommendation(id: '2', recommendations: const []),
+        ...repo.sets,
+      ];
+      await container
+          .read(recommendationProvider.notifier)
+          .fetchRecommendations();
+      await tester.pumpAndSettle();
+
+      expect(repo.marked, [
+        ['1'],
+        ['2'],
+      ]);
+      expect(
+        container.read(recommendationProvider).value!.first.seenAt,
+        isNotNull,
+      );
+    });
+
     testWidgets('a mark that fails is not retried while they stay open', (
       tester,
     ) async {
