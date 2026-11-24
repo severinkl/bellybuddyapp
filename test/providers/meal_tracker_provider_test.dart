@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:belly_buddy/models/meal_entry.dart';
+import 'package:belly_buddy/models/meal_prefill.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/diary_provider.dart';
 import 'package:belly_buddy/providers/meal_tracker_provider.dart';
@@ -39,6 +40,38 @@ void main() {
           currentUserIdProvider.overrideWithValue(userId),
         ],
       );
+
+  group('MealTrackerNotifier.prefillFromRecipe', () {
+    const prefill = MealPrefill(
+      title: 'Porridge',
+      ingredients: ['Hafer', 'Banane'],
+      imageUrl: 'https://example.com/p.jpg',
+    );
+
+    test('takes title, ingredients and image of the prefill', () {
+      final container = makeContainer();
+      container.read(mealTrackerProvider.notifier).prefillFromRecipe(prefill);
+      final state = container.read(mealTrackerProvider);
+      expect(state.title, 'Porridge');
+      expect(state.ingredients, ['Hafer', 'Banane']);
+      expect(state.imageUrl, 'https://example.com/p.jpg');
+    });
+
+    test('matchesRecipe holds until the meal is changed', () {
+      final container = makeContainer();
+      final notifier = container.read(mealTrackerProvider.notifier)
+        ..prefillFromRecipe(prefill);
+      expect(
+        container.read(mealTrackerProvider).matchesRecipe(prefill),
+        isTrue,
+      );
+      notifier.addIngredient('Zimt');
+      expect(
+        container.read(mealTrackerProvider).matchesRecipe(prefill),
+        isFalse,
+      );
+    });
+  });
 
   group('MealTrackerNotifier.setTitle', () {
     test('updates title in state', () {

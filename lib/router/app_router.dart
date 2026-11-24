@@ -2,7 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../models/meal_entry.dart';
-import '../models/user_recipe.dart';
+import '../models/meal_prefill.dart';
 import '../providers/auth_provider.dart';
 import '../providers/buddy_onboarding_gate_provider.dart';
 import '../providers/health_consent_provider.dart';
@@ -165,6 +165,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                     name: RouteNames.knowledge,
                     builder: (context, state) => const KnowledgeScreen(),
                   ),
+                  GoRoute(
+                    path: 'recipes',
+                    name: RouteNames.discoverRecipes,
+                    builder: (context, state) => const CollectionScreen(),
+                  ),
                 ],
               ),
             ],
@@ -187,7 +192,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: RouteNames.mealTracker,
         builder: (context, state) {
           final extra = state.extra;
-          if (extra is UserRecipe) {
+          if (extra is MealPrefill) {
             return MealTrackerScreen(initialRecipe: extra);
           }
           if (extra is DateTime) {
@@ -315,6 +320,23 @@ final routerProvider = Provider<GoRouter>((ref) {
           final id = state.pathParameters['id']!;
           return RecipeEditorScreen(recipeId: id);
         },
+      ),
+      // A recipe of the collection, pushed over the shell (no bar).
+      GoRoute(
+        path: RoutePaths.collectionRecipe,
+        name: RouteNames.collectionRecipe,
+        builder: (context, state) =>
+            CollectionRecipeScreen(recipeId: state.pathParameters['id']!),
+      ),
+      // „Für mich anpassen": sends only when pushed with `extra: true` (the
+      // detail's button); opened any other way, it asks first.
+      GoRoute(
+        path: RoutePaths.collectionRecipeAdapt,
+        name: RouteNames.collectionRecipeAdapt,
+        builder: (context, state) => AdaptRecipeScreen(
+          recipeId: state.pathParameters['id']!,
+          requested: state.extra == true,
+        ),
       ),
       GoRoute(
         path: RoutePaths.upgradeRequired,

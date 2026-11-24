@@ -1,6 +1,6 @@
 // ignore_for_file: invalid_use_of_internal_member
 import 'package:belly_buddy/models/meal_entry.dart';
-import 'package:belly_buddy/models/user_recipe.dart';
+import 'package:belly_buddy/models/meal_prefill.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
@@ -22,7 +22,7 @@ import '../../../helpers/riverpod_helpers.dart';
 /// Builds a 2-route GoRouter so the tracker screen (reached via /edit) can
 /// `context.pop()` back to a sentinel home screen. This lets tests assert on
 /// the pop behaviour without mocking the navigator directly.
-GoRouter _buildRouter(String? mealId, {UserRecipe? recipe}) {
+GoRouter _buildRouter(String? mealId, {MealPrefill? recipe}) {
   return GoRouter(
     initialLocation: '/home',
     routes: [
@@ -43,7 +43,7 @@ Future<void> _pumpEditScreen(
   WidgetTester tester, {
   required String? mealId,
   required List<Override> overrides,
-  UserRecipe? recipe,
+  MealPrefill? recipe,
 }) async {
   final router = _buildRouter(mealId, recipe: recipe);
   await tester.pumpWidget(
@@ -465,7 +465,7 @@ void main() {
         tester,
         mealId: null,
         overrides: overrides(),
-        recipe: testUserRecipe(title: 'Porridge', ingredients: const ['Hafer']),
+        recipe: const MealPrefill(title: 'Porridge', ingredients: ['Hafer']),
       );
 
       await tester.tap(find.byIcon(Icons.arrow_back));
@@ -482,7 +482,7 @@ void main() {
         tester,
         mealId: null,
         overrides: overrides(),
-        recipe: testUserRecipe(title: 'Porridge', ingredients: const ['Hafer']),
+        recipe: const MealPrefill(title: 'Porridge', ingredients: ['Hafer']),
       );
       containerOf(
         tester,

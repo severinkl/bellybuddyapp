@@ -1,9 +1,12 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
+import '../../models/meal_prefill.dart';
 import '../../models/user_recipe.dart';
 import '../../providers/user_recipes_provider.dart';
 import '../../router/navigation_extensions.dart';
@@ -11,6 +14,11 @@ import '../../router/route_names.dart';
 import '../../widgets/common/bb_button.dart';
 import '../../utils/title_color.dart';
 import '../../widgets/common/signed_path_image.dart';
+import '../../providers/recipe_collection_provider.dart';
+import 'widgets/ingredient_line_view.dart';
+import 'widgets/recipe_collection_card.dart';
+import 'widgets/recipe_page_parts.dart';
+import 'widgets/recipe_steps.dart';
 
 class RecipeDetailScreen extends ConsumerStatefulWidget {
   const RecipeDetailScreen({super.key, required this.recipeId});
@@ -85,6 +93,10 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
       );
     }
 
+    final hasAmounts = [
+      for (var i = 0; i < recipe.ingredients.length; i++) recipe.amountOf(i),
+    ].any((a) => a != null);
+
     return Scaffold(
       backgroundColor: AppTheme.screenBackground,
       appBar: AppBar(
@@ -119,44 +131,59 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(
-                        AppConstants.radiusLg,
-                      ),
-                      child: AspectRatio(
-                        aspectRatio: 16 / 9,
-                        child: _RecipeImage(recipe: recipe),
-                      ),
+                    RecipePageHead(
+                      image: _RecipeImage(recipe: recipe),
+                      tag: recipe.isAdapted ? RecipeCardTag.adapted : null,
+                      title: recipe.title,
                     ),
-                    AppConstants.gap16,
-                    Text(
-                      recipe.title,
-                      style: const TextStyle(
-                        fontSize: AppTheme.fontSizeDisplay,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.foreground,
-                      ),
-                    ),
+                    if (recipe.adaptedFromRecipeId case final originalId?)
+                      _OriginalLink(recipeId: originalId),
                     AppConstants.gap16,
                     if (recipe.ingredients.isNotEmpty) ...[
-                      const Text(
-                        'Zutaten',
-                        style: TextStyle(
-                          fontSize: AppTheme.fontSizeSubtitle,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.foreground,
-                        ),
-                      ),
-                      AppConstants.gap8,
-                      Wrap(
-                        spacing: AppConstants.spacingSm,
-                        runSpacing: AppConstants.spacingSm,
+                      RecipeSectionCard(
+                        title: 'Zutaten',
                         children: [
-                          for (final ingredient in recipe.ingredients)
-                            Chip(label: Text(ingredient)),
+                          for (var i = 0; i < recipe.ingredients.length; i++)
+                            IngredientLineView(
+                              amount: recipe.amountOf(i),
+                              name: recipe.ingredients[i],
+                              amountColumn: hasAmounts,
+                            ),
                         ],
                       ),
+                      AppConstants.gap16,
                     ],
+                    RecipeSectionCard(
+                      title: 'Zubereitung',
+                      trailing: recipe.instructions.isEmpty
+                          ? const Text(
+                              'optional',
+                              style: AppTheme.captionMutedStyle,
+                            )
+                          : null,
+                      children: [
+                        if (recipe.instructions.isEmpty) ...[
+                          const Text(
+                            'Noch keine Schritte.',
+                            style: TextStyle(
+                              fontSize: AppTheme.fontSizeBody,
+                              color: AppTheme.mutedForeground,
+                            ),
+                          ),
+                          Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            child: TextButton.icon(
+                              onPressed: () => context.push(
+                                RoutePaths.recipeEditFor(recipe.id),
+                              ),
+                              icon: const Icon(Icons.add),
+                              label: const Text('Schritte hinzufügen'),
+                            ),
+                          ),
+                        ] else
+                          RecipeSteps(steps: recipe.instructions),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -165,8 +192,10 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
               padding: AppConstants.paddingMd,
               child: BbButton(
                 label: 'Jetzt als Essen eintragen',
-                onPressed: () =>
-                    context.push(RoutePaths.mealTracker, extra: recipe),
+                onPressed: () => context.push(
+                  RoutePaths.mealTracker,
+                  extra: MealPrefill.ofUserRecipe(recipe),
+                ),
               ),
             ),
           ],
@@ -218,10 +247,10 @@ class _RecipeImage extends StatelessWidget {
       key: RecipeDetailScreen.imagePlaceholderKey,
       color: pastelForTitle(recipe.title),
       alignment: Alignment.center,
-      child: Icon(
+      child: const Icon(
         Icons.menu_book_outlined,
         size: AppConstants.iconSizeLg,
-        color: AppTheme.foreground.withValues(alpha: 0.45),
+        color: AppTheme.placeholderGlyph,
       ),
     );
     final url = recipe.imageUrl;
@@ -230,6 +259,28 @@ class _RecipeImage extends StatelessWidget {
       pathOrUrl: url,
       placeholder: placeholder,
       errorWidget: placeholder,
+    );
+  }
+}
+
+/// „Original: <title> ›" for an adapted recipe whose original is still in
+/// the collection; nothing otherwise.
+class _OriginalLink extends ConsumerWidget {
+  const _OriginalLink({required this.recipeId});
+
+  final String recipeId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final original = ref.watch(collectionRecipeProvider(recipeId)).value;
+    if (original == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: AppConstants.spacingSm),
+      child: RecipeLinkLine(
+        lead: 'Original: ',
+        name: original.title,
+        onTap: () => unawaited(context.openRecipe(recipeId)),
+      ),
     );
   }
 }

@@ -5,6 +5,7 @@
 // infinite rebuild loop). We therefore test the _saveAsRecipe logic at the
 // notifier level and keep UI-visibility assertions as SKIP markers.
 // ignore_for_file: invalid_use_of_internal_member
+import 'package:belly_buddy/models/adapted_recipe.dart';
 import 'package:belly_buddy/models/user_recipe.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
@@ -41,6 +42,9 @@ class _FakeUserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>>
     required String title,
     required List<String> ingredients,
     String? imageUrl,
+    List<String> instructions = const [],
+    List<String?>? ingredientAmounts,
+    String? adaptedFromRecipeId,
   }) async {
     if (shouldThrow) throw Exception('fake create error');
     final recipe = testUserRecipe(
@@ -63,7 +67,13 @@ class _FakeUserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>>
     required String title,
     required List<String> ingredients,
     String? imageUrl,
+    List<String>? instructions,
+    List<String?>? ingredientAmounts,
   }) async => testUserRecipe(id: id, title: title, ingredients: ingredients);
+
+  @override
+  Future<UserRecipe> createAdapted(AdaptedRecipe adapted) =>
+      throw UnimplementedError();
 
   @override
   Future<void> delete(String id) async {}

@@ -175,6 +175,33 @@ class AppConstants {
   // Entdecken: a recipe card's width in the Meine Rezepte row
   static const double discoverRecipeCardWidth = 148.0;
 
+  // Rezepte: a recipe page's and a card's picture (width / height), a list
+  // row's thumbnail, an ingredient line's mark and amount column, and the
+  // most steps and characters a recipe's steps may have
+  static const double recipePageImageAspect = 16 / 9;
+  static const double recipeCardImageAspect = 1.1;
+  static const double recipeListThumbSize = 88.0;
+  static const double recipeMarkSize = 24.0;
+  static const double recipeNeutralDotSize = 6.0;
+  static const double recipeAmountWidth = 64.0;
+  static const int recipeStepsMax = 50;
+  static const int recipeStepsMaxChars = 20000;
+
+  /// Core's limit on an own recipe's amounts, all together.
+  static const int recipeAmountsMaxChars = 5000;
+
+  // The „geändert" legend's swatch above a recipe's changed steps
+  static const double recipeChangedSwatchWidth = 16.0;
+  static const double recipeChangedSwatchHeight = 10.0;
+
+  // „Für mich anpassen": the Buddy's stage (bubble slot + Buddy) while he
+  // asks or works, and his height beside his note or a failure
+  static const double adaptBuddyStageHeight = 260.0;
+  static const double adaptBuddyBesideHeight = 88.0;
+
+  /// Entdecken: how many recipes „Für dich" shows.
+  static const int recipeForYouCount = 3;
+
   // Wissen: an article's square thumbnail
   static const double knowledgeThumbSize = 64.0;
 

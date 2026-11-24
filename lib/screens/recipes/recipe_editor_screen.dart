@@ -18,6 +18,7 @@ import '../../widgets/common/bb_button.dart';
 import '../../widgets/common/editable_app_bar_title.dart';
 import '../../widgets/common/ingredient_search.dart';
 import '../trackers/meal/widgets/meal_image_section.dart';
+import 'widgets/recipe_steps_editor.dart';
 
 class RecipeEditorScreen extends ConsumerStatefulWidget {
   const RecipeEditorScreen({super.key, this.recipeId, this.initialMeal})
@@ -46,6 +47,14 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
   Uint8List? _imageBytes; // freshly picked local bytes
   String? _imageFileName;
   bool _isSaving = false;
+
+  /// The steps' raw texts as typed.
+  List<String> _steps = [];
+
+  /// Ingredient name → its amount, from the loaded recipe; an ingredient
+  /// added here has none.
+  final Map<String, String?> _amounts = {};
+  bool _prefilled = false;
 
   bool get _isEditMode => widget.recipeId != null;
 
@@ -77,6 +86,12 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
       _title = recipe.title;
       _ingredients = List<String>.from(recipe.ingredients);
       _imageUrl = recipe.imageUrl;
+      _steps = List<String>.from(recipe.instructions);
+      _amounts.clear();
+      for (var i = 0; i < recipe.ingredients.length; i++) {
+        _amounts[recipe.ingredients[i]] = recipe.amountOf(i);
+      }
+      _prefilled = true;
     });
   }
 
@@ -86,6 +101,20 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
 
     final title = _title.trim();
     if (title.isEmpty || _ingredients.isEmpty) return;
+
+    final steps = [
+      for (final text in _steps.map((t) => t.trim()))
+        if (text.isNotEmpty) text,
+    ];
+    if (steps.fold<int>(0, (sum, s) => sum + s.length) >
+        AppConstants.recipeStepsMaxChars) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Die Zubereitung ist zu lang. Bitte kürze sie.'),
+        ),
+      );
+      return;
+    }
 
     setState(() => _isSaving = true);
     try {
@@ -111,12 +140,15 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
           title: title,
           ingredients: _ingredients,
           imageUrl: resolvedImageUrl,
+          instructions: steps,
+          ingredientAmounts: _amountsToSend(),
         );
       } else {
         await notifier.create(
           title: title,
           ingredients: _ingredients,
           imageUrl: resolvedImageUrl,
+          instructions: steps,
         );
       }
 
@@ -141,6 +173,13 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  /// The amounts aligned with the ingredients that are left, saved with
+  /// them in one write; null when none has one.
+  List<String?>? _amountsToSend() {
+    final amounts = [for (final name in _ingredients) _amounts[name]];
+    return amounts.every((a) => a == null) ? null : amounts;
   }
 
   @override
@@ -213,11 +252,19 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
                             _ingredients = _ingredients
                                 .where((i) => i != name)
                                 .toList();
+                            // Added again, it is a new line without one.
+                            _amounts.remove(name);
                           }),
                           onDeleteIngredient:
                               autocompleteNotifier.deleteUserIngredient,
                         );
                       },
+                    ),
+                    AppConstants.gap16,
+                    RecipeStepsEditor(
+                      key: ValueKey('steps_$_prefilled'),
+                      initial: _steps,
+                      onChanged: (steps) => _steps = steps,
                     ),
                   ],
                 ),

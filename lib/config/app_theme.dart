@@ -7,6 +7,14 @@ class AppTheme {
   // Core colors (from HSL CSS variables)
   static const Color background = Color(0xFFFFFFFF);
   static const Color foreground = Color(0xFF302820);
+
+  /// A placeholder's glyph or monogram on its pastel: [foreground] at 45 %.
+  static const Color placeholderGlyph = Color.from(
+    alpha: 0.45,
+    red: 0x30 / 255,
+    green: 0x28 / 255,
+    blue: 0x20 / 255,
+  );
   static const Color beige = Color(0xFFF5EFE7);
   static const Color card = Color(0xFFF9F7F4);
   static const Color cardForeground = Color(0xFF302820);
@@ -75,6 +83,15 @@ class AppTheme {
 
   // Streak: a day with an entry (week row circle), the selected goal
   static const Color primarySoft = Color(0xFFF3F7DF);
+
+  // Rezepte: the illustration background per meal type (the placeholder of a
+  // recipe without a photo), and the mark of a step the Buddy changed
+  static const Color recipeTintBreakfast = Color(0xFFFCF1CF);
+  static const Color recipeTintLunch = Color(0xFFEEF4D2);
+  static const Color recipeTintDinner = Color(0xFFFBE6CF);
+  static const Color recipeTintSnack = Color(0xFFF3EADF);
+  static const Color recipeTintOther = Color(0xFFEAD9CB);
+  static const Color recipeChanged = Color(0xFFE2EDA9);
 
   // Care: one color and one soft tint per need (Essen, Trinken, Bauchgefühl,
   // Klo), each at least 3:1 on the page, and the glow around the need he

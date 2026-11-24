@@ -4,6 +4,7 @@ import 'package:integration_test/integration_test.dart';
 
 import 'package:belly_buddy/screens/dashboard/dashboard_screen.dart';
 import 'package:belly_buddy/screens/discover/discover_screen.dart';
+import 'package:belly_buddy/screens/discover/widgets/discover_recipes_section.dart';
 import 'package:belly_buddy/screens/recipes/recipes_screen.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
@@ -17,12 +18,13 @@ import '../test/helpers/widget_tester_helpers.dart';
 import 'helpers/test_app.dart';
 
 /// Entdecken → Meine Rezepte → „Alle ›". The link only shows while the
-/// user has recipes (no links to empty screens).
+/// user has recipes (no links to empty screens); the section's header has
+/// its own „Alle ›" to the collection.
 Future<void> _openRecipesTab(WidgetTester tester) async {
   await tester.tap(find.byKey(BbBottomNav.navDiscoverKey));
   await tester.pumpAndSettle();
   final all = find.descendant(
-    of: find.byKey(DiscoverScreen.recipesKey),
+    of: find.byKey(DiscoverRecipesSection.mineKey),
     matching: find.text('Alle ›'),
   );
   await tester.tapVisible(all);
@@ -74,7 +76,7 @@ void main() {
   });
 
   testWidgets(
-    'without recipes, Entdecken offers the first one and no „Alle ›"',
+    'without own recipes, Meine Rezepte offers the first one and no „Alle ›"',
     (tester) async {
       await tester.pumpWidget(buildTestApp());
       await tester.pumpAndSettle();
@@ -82,23 +84,21 @@ void main() {
       await tester.tap(find.byKey(BbBottomNav.navDiscoverKey));
       await tester.pumpAndSettle();
 
-      final recipes = find.byKey(DiscoverScreen.recipesKey);
+      // Meine Rezepte; the collection's „Für dich" above has recipes.
+      final mine = find.byKey(DiscoverRecipesSection.mineKey);
       expect(
-        find.descendant(
-          of: recipes,
-          matching: find.text('Noch keine Rezepte.'),
-        ),
+        find.descendant(of: mine, matching: find.text('Noch keine Rezepte.')),
         findsOneWidget,
       );
       expect(
         find.descendant(
-          of: recipes,
+          of: mine,
           matching: find.text('Erstes Rezept erstellen'),
         ),
         findsOneWidget,
       );
       expect(
-        find.descendant(of: recipes, matching: find.text('Alle ›')),
+        find.descendant(of: mine, matching: find.text('Alle ›')),
         findsNothing,
       );
     },

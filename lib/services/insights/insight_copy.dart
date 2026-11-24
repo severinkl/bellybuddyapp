@@ -4,6 +4,7 @@ import '../../models/insight_progress.dart';
 import '../../models/insight_rules.dart';
 import '../../models/insights.dart';
 import '../../utils/date_format_utils.dart';
+import '../../utils/german_list.dart';
 
 /// A part of a line of copy and whether it is set strong.
 typedef CopySpan = (String text, bool strong);
@@ -136,7 +137,7 @@ class InsightCopy {
   /// „An guten Tagen gab's oft Haferflocken, Reis und Karotte."
   static String goodDaysLine(DayColumn goodDays) {
     final names = [for (final item in goodDays.often) item.name];
-    return "An guten Tagen gab's oft ${_joined(names)}.";
+    return "An guten Tagen gab's oft ${joinGerman(names)}.";
   }
 
   /// „6 gute Tage in den letzten 30".
@@ -236,9 +237,4 @@ class InsightCopy {
   static const dayDefinitions =
       'Schwerer Tag = Bauchgefühl „Schlecht"; guter Tag = „Gut" oder '
       '„Sehr gut".';
-
-  /// „A", „A und B", „A, B und C".
-  static String _joined(List<String> items) => items.length < 2
-      ? items.join()
-      : '${items.sublist(0, items.length - 1).join(', ')} und ${items.last}';
 }

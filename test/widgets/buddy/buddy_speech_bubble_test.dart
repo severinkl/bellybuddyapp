@@ -1,3 +1,4 @@
+import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,6 +22,7 @@ Future<BuddyController> _pumpBubble(
   String? say,
   bool disableAnimations = false,
   BuddyBubbleTail tail = const BuddyBubbleTail.down(),
+  int? maxLines = AppConstants.buddyBubbleMaxLines,
 }) async {
   final controller = BuddyController();
   addTearDown(controller.dispose);
@@ -31,7 +33,11 @@ Future<BuddyController> _pumpBubble(
       child: MaterialApp(
         home: Scaffold(
           body: Center(
-            child: BuddySpeechBubble(controller: controller, tail: tail),
+            child: BuddySpeechBubble(
+              controller: controller,
+              tail: tail,
+              maxLines: maxLines,
+            ),
           ),
         ),
       ),
@@ -183,6 +189,38 @@ void main() {
     testWidgets('text starts aligned left', (tester) async {
       await _pumpBubble(tester, say: line);
       expect(_text(tester).textAlign, TextAlign.start);
+    });
+
+    testWidgets('a long text ends in … after buddyBubbleMaxLines lines', (
+      tester,
+    ) async {
+      await _pumpBubble(tester, say: List.filled(12, line).join(' '));
+      final paragraph = tester.renderObject<RenderParagraph>(
+        find.descendant(
+          of: find.byType(BuddySpeechBubble),
+          matching: find.byType(RichText),
+        ),
+      );
+      expect(paragraph.didExceedMaxLines, isTrue);
+    });
+
+    testWidgets('without maxLines, a long text is shown whole', (tester) async {
+      final long = List.filled(12, line).join(' ');
+      await _pumpBubble(tester, say: long, maxLines: null);
+      final paragraph = tester.renderObject<RenderParagraph>(
+        find.descendant(
+          of: find.byType(BuddySpeechBubble),
+          matching: find.byType(RichText),
+        ),
+      );
+      expect(paragraph.didExceedMaxLines, isFalse);
+      expect(_text(tester).maxLines, isNull);
+      expect(
+        tester.getSize(find.byType(BuddySpeechBubble)).height,
+        greaterThan(
+          AppConstants.buddyBubbleMaxLines * AppTheme.fontSizeBodyLG * 2,
+        ),
+      );
     });
   });
 

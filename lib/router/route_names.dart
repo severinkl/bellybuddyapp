@@ -14,6 +14,7 @@ class RouteNames {
   static const String diary = 'diary';
   static const String discover = 'discover';
   static const String knowledge = 'knowledge';
+  static const String discoverRecipes = 'discover-recipes';
   static const String me = 'me';
   static const String settings = 'settings';
   static const String settingsProfile = 'settings-profile';
@@ -26,6 +27,8 @@ class RouteNames {
   static const String recipeNew = 'recipe_new';
   static const String recipeDetail = 'recipe_detail';
   static const String recipeEdit = 'recipe_edit';
+  static const String collectionRecipe = 'collection-recipe';
+  static const String collectionRecipeAdapt = 'collection-recipe-adapt';
   static const String upgradeRequired = 'upgrade-required';
   static const String healthConsent = 'health-consent';
   static const String buddyOnboarding = 'buddy-onboarding';
@@ -49,6 +52,7 @@ class RoutePaths {
   static const String diary = '/diary';
   static const String discover = '/discover';
   static const String knowledge = '/discover/knowledge';
+  static const String discoverRecipes = '/discover/recipes';
   static const String me = '/me';
   static const String settings = '/settings';
   static const String settingsProfile = '/settings/profile';
@@ -63,6 +67,12 @@ class RoutePaths {
   static const String recipeEdit = '/recipe/:id/edit';
   static String recipeDetailFor(String id) => '/recipe/$id';
   static String recipeEditFor(String id) => '/recipe/$id/edit';
+
+  /// A recipe of the collection; `/recipe/:id` is an own recipe.
+  static const String collectionRecipe = '/collection/:id';
+  static const String collectionRecipeAdapt = '/collection/:id/adapt';
+  static String collectionRecipeFor(String id) => '/collection/$id';
+  static String collectionRecipeAdaptFor(String id) => '/collection/$id/adapt';
   static const String upgradeRequired = '/upgrade-required';
   static const String healthConsent = '/health-consent';
   static const String buddyOnboarding = '/buddy-onboarding';

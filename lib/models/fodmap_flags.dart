@@ -16,11 +16,33 @@ abstract class FodmapFlags with _$FodmapFlags {
 
   const FodmapFlags._();
 
+  /// The FODMAP keys: the catalog's `fodmap_*` columns without the prefix.
+  static const keys = {
+    'fructans',
+    'gos',
+    'lactose',
+    'fructose',
+    'sorbitol',
+    'mannitol',
+  };
+
   factory FodmapFlags.fromJson(Map<String, dynamic> json) =>
       _$FodmapFlagsFromJson(json);
 
   bool get hasAny =>
       fructans || gos || lactose || fructose || sorbitol || mannitol;
+
+  /// Whether the flag named by FODMAP [key] (see [keys]) is set; false for an
+  /// unknown key.
+  bool has(String key) => switch (key) {
+    'fructans' => fructans,
+    'gos' => gos,
+    'lactose' => lactose,
+    'fructose' => fructose,
+    'sorbitol' => sorbitol,
+    'mannitol' => mannitol,
+    _ => false,
+  };
 
   List<String> get warnings {
     final result = <String>[];

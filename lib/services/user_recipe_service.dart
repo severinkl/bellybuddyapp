@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../config/constants.dart';
 import '../models/user_recipe.dart';
 import '../utils/logger.dart';
 
@@ -9,6 +10,13 @@ import '../utils/logger.dart';
 /// `user_recipes_user_id_title_norm_uniq` index.
 class DuplicateRecipeTitleException implements Exception {
   const DuplicateRecipeTitleException();
+}
+
+/// Thrown before saving a recipe whose steps or amounts are longer than
+/// core allows ([AppConstants.recipeStepsMaxChars],
+/// [AppConstants.recipeAmountsMaxChars]): core would refuse it every time.
+class RecipeTooLongException implements Exception {
+  const RecipeTooLongException();
 }
 
 const _pgUniqueViolation = '23505';
@@ -60,6 +68,9 @@ class UserRecipeService {
     required String title,
     required List<String> ingredients,
     String? imageUrl,
+    List<String> instructions = const [],
+    List<String?>? ingredientAmounts,
+    String? adaptedFromRecipeId,
   }) async {
     try {
       final data = await _client
@@ -69,6 +80,9 @@ class UserRecipeService {
             'title': title,
             'ingredients': ingredients,
             'image_url': imageUrl,
+            'instructions': instructions,
+            'ingredient_amounts': ingredientAmounts,
+            'adapted_from_recipe_id': adaptedFromRecipeId,
           })
           .select()
           .single();
@@ -85,11 +99,15 @@ class UserRecipeService {
     }
   }
 
+  /// Saves the whole recipe in one write. [ingredientAmounts] are aligned
+  /// with [ingredients] (null: none), so the two always change together.
   Future<UserRecipe> update({
     required String id,
     required String title,
     required List<String> ingredients,
     String? imageUrl,
+    required List<String> instructions,
+    required List<String?>? ingredientAmounts,
   }) async {
     try {
       final data = await _client
@@ -99,6 +117,8 @@ class UserRecipeService {
             'ingredients': ingredients,
             'image_url': imageUrl,
             'updated_at': DateTime.now().toUtc().toIso8601String(),
+            'instructions': instructions,
+            'ingredient_amounts': ingredientAmounts,
           })
           .eq('id', id)
           .select()
@@ -133,17 +153,18 @@ class UserRecipeService {
   // `unicode: true`, which would drop umlauts (Möhren → Mhren).
   static final _tsqueryStripRx = RegExp(r'[^\p{L}\p{N}_]', unicode: true);
 
+  /// The words of a free-form query, each without what isn't a letter,
+  /// digit or underscore; none for a blank one.
+  static List<String> queryTokens(String query) => query
+      .trim()
+      .split(_whitespaceRx)
+      .map((t) => t.replaceAll(_tsqueryStripRx, ''))
+      .where((t) => t.isNotEmpty)
+      .toList();
+
   /// Converts a free-form user query into a tsquery string with prefix-match
   /// per token (`token:*`) joined by `&` so multi-word queries narrow.
   /// Exposed for tests; not part of the public API.
-  static String buildTsQuery(String query) {
-    final tokens = query
-        .trim()
-        .split(_whitespaceRx)
-        .map((t) => t.replaceAll(_tsqueryStripRx, ''))
-        .where((t) => t.isNotEmpty)
-        .toList();
-    if (tokens.isEmpty) return '';
-    return tokens.map((t) => '$t:*').join(' & ');
-  }
+  static String buildTsQuery(String query) =>
+      queryTokens(query).map((t) => '$t:*').join(' & ');
 }

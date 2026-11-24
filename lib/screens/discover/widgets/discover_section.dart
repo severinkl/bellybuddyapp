@@ -98,16 +98,20 @@ class DiscoverPill extends StatelessWidget {
 
 /// The header's „Alle ›" link to a section's full screen.
 class DiscoverAllLink extends StatelessWidget {
-  const DiscoverAllLink({super.key, required this.onTap});
+  const DiscoverAllLink({super.key, required this.onTap, this.semanticsLabel});
 
   final VoidCallback onTap;
+
+  /// What a screen reader says instead of „Alle ›", for a second link in
+  /// a section („Alle meine Rezepte").
+  final String? semanticsLabel;
 
   @override
   Widget build(BuildContext context) {
     return TextButton(
       onPressed: onTap,
       style: TextButton.styleFrom(foregroundColor: AppTheme.foreground),
-      child: const Text('Alle ›'),
+      child: Text('Alle ›', semanticsLabel: semanticsLabel),
     );
   }
 }

@@ -35,7 +35,8 @@ User? _buildTestUser() {
 /// done for the test user, so existing users pass the Buddy onboarding gate
 /// and land on the dashboard; a new user (no profile) has no Buddy yet.
 /// [weeklyTipsEnabled] goes into the seeded profile. The blog articles are
-/// [testKnowledgeArticles] (no network).
+/// [testKnowledgeArticles] (no network). The recipe collection is
+/// [recipeRepo] (default: one recipe that fits everyone).
 ProviderScope buildTestApp({
   bool authenticated = true,
   bool seedProfile = true,
@@ -47,6 +48,7 @@ ProviderScope buildTestApp({
   FakeProfileRepository? profileRepo,
   FakeEntryRepository? entryRepo,
   FakeDrinkRepository? drinkRepo,
+  FakeRecipeRepository? recipeRepo,
   FakeUserRecipeRepository? userRecipeRepo,
   FakeBuddyRepository? buddyRepo,
   FakeRecommendationRepository? recommendationRepo,
@@ -131,7 +133,9 @@ ProviderScope buildTestApp({
       ingredientRepositoryProvider.overrideWithValue(
         ingredientRepo ?? FakeIngredientRepository(),
       ),
-      recipeRepositoryProvider.overrideWithValue(FakeRecipeRepository()),
+      recipeRepositoryProvider.overrideWithValue(
+        recipeRepo ?? FakeRecipeRepository(),
+      ),
       userRecipeRepositoryProvider.overrideWithValue(
         userRecipeRepo ?? FakeUserRecipeRepository(),
       ),

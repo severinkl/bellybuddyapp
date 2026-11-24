@@ -4,12 +4,14 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' show AsyncData;
 import 'package:belly_buddy/config/constants.dart';
+import 'package:belly_buddy/models/adapted_recipe.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/drink.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/knowledge_article.dart';
 import 'package:belly_buddy/models/insight_rules.dart';
 import 'package:belly_buddy/models/insight_source.dart';
+import 'package:belly_buddy/models/intolerance_rules.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/models/recommendation.dart';
@@ -492,22 +494,107 @@ class FakeIngredientRepository implements IngredientRepository {
 
 // -- FakeRecipeRepository --
 class FakeRecipeRepository implements RecipeRepository {
-  List<Recipe> _recipes = [testRecipe()];
-  Set<String> _favorites = {};
+  List<Recipe> collection = [testRecipe()];
+  IntoleranceRules? rules = testIntoleranceRules();
+  List<FavoriteRecipe> favorites = [];
 
-  void seedRecipes(List<Recipe> recipes) => _recipes = recipes;
+  /// Thrown by [fetchCollection] when set.
+  Object? collectionError;
+
+  /// Thrown by [addFavorite] and [removeFavorite] when set.
+  Object? favoriteError;
+
+  /// Thrown by [fetchFavorites] when set.
+  Object? favoritesError;
+
+  /// Thrown by [fetchIntoleranceRules] when set.
+  Object? rulesError;
+
+  /// Recipe ids passed to [addFavorite] / [removeFavorite], failed calls too.
+  final added = <String>[];
+  final removed = <String>[];
+
+  /// How often the rules, the favourites and the collection were fetched.
+  int rulesFetches = 0;
+  int favoritesFetches = 0;
+  int collectionFetches = 0;
 
   @override
-  Future<List<Recipe>> fetchAll() async => _recipes;
+  Future<List<Recipe>> fetchCollection() async {
+    collectionFetches++;
+    if (collectionError case final error?) throw error;
+    return collection;
+  }
+
   @override
-  Future<Set<String>> fetchFavoriteIds(String userId) async => _favorites;
+  Future<List<FavoriteRecipe>> fetchFavorites(String userId) async {
+    favoritesFetches++;
+    if (favoritesError case final error?) throw error;
+    return favorites;
+  }
+
   @override
-  Future<void> addFavorite(String userId, String recipeId) async =>
-      _favorites = {..._favorites, recipeId};
+  Future<void> addFavorite(String userId, String recipeId) async {
+    added.add(recipeId);
+    if (favoriteError case final error?) throw error;
+    favorites = [FavoriteRecipe(recipeId, DateTime.now()), ...favorites];
+  }
+
   @override
-  Future<void> removeFavorite(String userId, String recipeId) async =>
-      _favorites = _favorites.where((id) => id != recipeId).toSet();
+  Future<void> removeFavorite(String userId, String recipeId) async {
+    removed.add(recipeId);
+    if (favoriteError case final error?) throw error;
+    favorites = [
+      for (final f in favorites)
+        if (f.recipeId != recipeId) f,
+    ];
+  }
+
+  @override
+  Future<IntoleranceRules?> fetchIntoleranceRules() async {
+    rulesFetches++;
+    if (rulesError case final error?) throw error;
+    return rules;
+  }
+
+  /// Answers [adapt]; by default [testAdaptedRecipe] for the recipe.
+  Future<AdaptedRecipe> Function(String recipeId)? onAdapt;
+
+  /// How often [adapt] was called.
+  int adaptCalls = 0;
+
+  @override
+  Future<AdaptedRecipe> adapt(String recipeId) async {
+    adaptCalls++;
+    return await onAdapt?.call(recipeId) ??
+        testAdaptedRecipe(recipeId: recipeId);
+  }
 }
+
+/// An `adapt-recipe` answer: Honig swapped for Ahornsirup, the second step
+/// changed for it.
+AdaptedRecipe testAdaptedRecipe({
+  String recipeId = 'recipe-1',
+  String title = 'Porridge mit Ahornsirup',
+  List<AdaptedIngredient> ingredients = const [
+    AdaptedIngredient(amount: '50 g', name: 'Haferflocken'),
+    AdaptedIngredient(amount: '200 ml', name: 'Haferdrink'),
+    AdaptedIngredient(amount: '1 EL', name: 'Ahornsirup', replaces: 'Honig'),
+  ],
+  List<String> removed = const [],
+  List<AdaptedStep> steps = const [
+    AdaptedStep('Haferflocken im Haferdrink aufkochen.'),
+    AdaptedStep('Mit Ahornsirup süßen.', changed: true),
+  ],
+  String note = 'Ich hab Honig gegen Ahornsirup getauscht.',
+}) => AdaptedRecipe(
+  recipeId: recipeId,
+  title: title,
+  ingredients: ingredients,
+  removed: removed,
+  steps: steps,
+  note: note,
+);
 
 // -- FakeUserRecipeRepository --
 class FakeUserRecipeRepository implements UserRecipeRepository {
@@ -539,6 +626,9 @@ class FakeUserRecipeRepository implements UserRecipeRepository {
     required String title,
     required List<String> ingredients,
     String? imageUrl,
+    List<String> instructions = const [],
+    List<String?>? ingredientAmounts,
+    String? adaptedFromRecipeId,
   }) async {
     final created = testUserRecipe(
       id: 'rec-${_recipes.length + 1}',
@@ -546,6 +636,9 @@ class FakeUserRecipeRepository implements UserRecipeRepository {
       title: title,
       ingredients: ingredients,
       imageUrl: imageUrl,
+      instructions: instructions,
+      ingredientAmounts: ingredientAmounts,
+      adaptedFromRecipeId: adaptedFromRecipeId,
     );
     _recipes.add(created);
     return created;
@@ -557,15 +650,21 @@ class FakeUserRecipeRepository implements UserRecipeRepository {
     required String title,
     required List<String> ingredients,
     String? imageUrl,
+    required List<String> instructions,
+    required List<String?>? ingredientAmounts,
   }) async {
     final i = _recipes.indexWhere((r) => r.id == id);
     if (i < 0) throw StateError('UserRecipe $id not found');
+    final old = _recipes[i];
     final next = testUserRecipe(
       id: id,
-      userId: _recipes[i].userId,
+      userId: old.userId,
       title: title,
       ingredients: ingredients,
       imageUrl: imageUrl,
+      instructions: instructions,
+      ingredientAmounts: ingredientAmounts,
+      adaptedFromRecipeId: old.adaptedFromRecipeId,
     );
     _recipes[i] = next;
     return next;
@@ -654,6 +753,9 @@ UserRecipe testUserRecipe({
   String title = 'Curry mit Reis',
   List<String> ingredients = const ['Reis', 'Curry'],
   String? imageUrl,
+  List<String> instructions = const [],
+  List<String?>? ingredientAmounts,
+  String? adaptedFromRecipeId,
   DateTime? createdAt,
 }) => UserRecipe(
   id: id,
@@ -661,6 +763,9 @@ UserRecipe testUserRecipe({
   title: title,
   ingredients: ingredients,
   imageUrl: imageUrl,
+  instructions: instructions,
+  ingredientAmounts: ingredientAmounts,
+  adaptedFromRecipeId: adaptedFromRecipeId,
   createdAt: createdAt ?? DateTime.utc(2026, 4, 24),
   updatedAt: createdAt ?? DateTime.utc(2026, 4, 24),
 );

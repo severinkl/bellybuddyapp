@@ -4,20 +4,22 @@ import '../utils/logger.dart';
 ///
 /// Calls [fn] up to [maxAttempts] times. On failure, waits
 /// `backoff * attempt` before retrying. Rethrows the last error
-/// if all attempts fail.
+/// if all attempts fail, and at once when [retryIf] says another attempt
+/// can't help (e.g. a schema or permission error).
 Future<T> retryAsync<T>(
   Future<T> Function() fn, {
   int maxAttempts = 3,
   Duration backoff = const Duration(seconds: 2),
   AppLogger? log,
   String? label,
+  bool Function(Object error)? retryIf,
 }) async {
   for (var attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       return await fn();
     } catch (e) {
       log?.error('${label ?? 'retryAsync'} (attempt $attempt/$maxAttempts)', e);
-      if (attempt >= maxAttempts) rethrow;
+      if (attempt >= maxAttempts || !(retryIf?.call(e) ?? true)) rethrow;
       await Future.delayed(backoff * attempt);
     }
   }

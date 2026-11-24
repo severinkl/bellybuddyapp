@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -63,6 +65,111 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byKey(const Key('dashboard-page')), findsOneWidget);
+    });
+  });
+
+  group('BellyBuddyNavigation.popOr', () {
+    testWidgets('goes to the location when nothing is below', (tester) async {
+      final router = GoRouter(
+        initialLocation: RoutePaths.mealTracker,
+        routes: [
+          GoRoute(
+            path: RoutePaths.discover,
+            builder: (_, _) => const Text('discover'),
+          ),
+          GoRoute(
+            path: RoutePaths.mealTracker,
+            builder: (context, _) => Scaffold(
+              body: TextButton(
+                onPressed: () => context.popOr(RoutePaths.discover),
+                child: const Text('leave'),
+              ),
+            ),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('leave'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('discover'), findsOneWidget);
+    });
+
+    testWidgets('pops when something is below', (tester) async {
+      final router = GoRouter(
+        initialLocation: RoutePaths.dashboard,
+        routes: [
+          GoRoute(
+            path: RoutePaths.dashboard,
+            builder: (context, _) => const _DashboardPage(),
+          ),
+          GoRoute(
+            path: RoutePaths.discover,
+            builder: (_, _) => const Text('discover'),
+          ),
+          GoRoute(
+            path: RoutePaths.mealTracker,
+            builder: (context, _) => Scaffold(
+              body: TextButton(
+                onPressed: () => context.popOr(RoutePaths.discover),
+                child: const Text('leave'),
+              ),
+            ),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpAndSettle();
+      unawaited(router.push(RoutePaths.mealTracker));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('leave'));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('dashboard-page')), findsOneWidget);
+      expect(find.text('discover'), findsNothing);
+    });
+  });
+
+  group('BellyBuddyNavigation.openRecipe', () {
+    testWidgets('openRecipe pushes /collection/<id>', (tester) async {
+      final router = GoRouter(
+        initialLocation: RoutePaths.dashboard,
+        routes: [
+          GoRoute(
+            path: RoutePaths.dashboard,
+            builder: (context, _) => Scaffold(
+              body: ElevatedButton(
+                key: const Key('open-recipe'),
+                onPressed: () => context.openRecipe('abc'),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+          GoRoute(
+            path: RoutePaths.collectionRecipe,
+            builder: (_, state) => Text('recipe:${state.pathParameters['id']}'),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('open-recipe')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('recipe:abc'), findsOneWidget);
+      expect(
+        router.routerDelegate.currentConfiguration.last.matchedLocation,
+        '/collection/abc',
+      );
+      // Pushed over the page it was opened from.
+      expect(router.canPop(), isTrue);
     });
   });
 }
