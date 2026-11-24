@@ -313,6 +313,11 @@ class AppConstants {
   static const Duration knowledgeFeedMaxAge = Duration(hours: 6);
   static const Duration knowledgeFeedTimeout = Duration(seconds: 10);
 
+  /// The day-3 first tip: it sends the meals since now minus
+  /// [firstTipMealsWindow], and its one request may take [firstTipTimeout].
+  static const Duration firstTipMealsWindow = Duration(days: 3);
+  static const Duration firstTipTimeout = Duration(seconds: 60);
+
   // Apple "Hide My Email" relay address suffix (includes the leading `@`).
   // See the Sign in with Apple docs — this domain is stable since iOS 13.
   static const String appleRelayEmailSuffix = '@privaterelay.appleid.com';

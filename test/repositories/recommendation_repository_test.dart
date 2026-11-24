@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:belly_buddy/models/first_tip.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/repositories/recommendation_repository.dart';
 
@@ -31,6 +32,50 @@ void main() {
 
       expect(result, equals(recs));
       verify(() => recommendationService.fetchByUserId(testUserId)).called(1);
+    });
+  });
+
+  group('requestFirstTip', () {
+    Future<FirstTipResult> request() => repo.requestFirstTip(
+      intolerances: ['Fruktose'],
+      diet: null,
+      meals: [testMealEntry()],
+    );
+
+    void stub(Future<FirstTipResult> Function() answer) => when(
+      () => recommendationService.requestFirstTip(
+        intolerances: any(named: 'intolerances'),
+        diet: any(named: 'diet'),
+        meals: any(named: 'meals'),
+      ),
+    ).thenAnswer((_) => answer());
+
+    test('delegates to the service', () async {
+      stub(() async => const FirstTipResult(id: 'set-1', tips: 2));
+
+      final result = await request();
+
+      expect(result.ok, isTrue);
+      verify(
+        () => recommendationService.requestFirstTip(
+          intolerances: ['Fruktose'],
+          diet: null,
+          meals: [testMealEntry()],
+        ),
+      ).called(1);
+    });
+
+    test('a failure is rethrown, never retried', () async {
+      stub(() => Future.error(const FirstTipException(500)));
+
+      await expectLater(request(), throwsA(isA<FirstTipException>()));
+      verify(
+        () => recommendationService.requestFirstTip(
+          intolerances: any(named: 'intolerances'),
+          diet: any(named: 'diet'),
+          meals: any(named: 'meals'),
+        ),
+      ).called(1);
     });
   });
 

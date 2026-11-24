@@ -16,7 +16,12 @@ class EntryRepository {
   Future<List<MealEntry>> fetchRecentMeals({
     required String userId,
     int? limit,
-  }) => _queryService.fetchRecentMeals(userId: userId, limit: limit);
+    DateTime? since,
+  }) => _queryService.fetchRecentMeals(
+    userId: userId,
+    limit: limit,
+    since: since,
+  );
 
   Future<EntryQueryResult> fetchForDate({
     required String userId,

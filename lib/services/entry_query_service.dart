@@ -54,16 +54,22 @@ class EntryQueryService {
   final SupabaseClient _client;
   EntryQueryService(this._client);
 
+  /// The user's meals, newest first: at most [limit], and with [since] only
+  /// those logged since then (a wall-clock bound, see [wallClockToWire]).
   Future<List<MealEntry>> fetchRecentMeals({
     required String userId,
     int? limit,
+    DateTime? since,
   }) async {
     try {
-      var query = _client
+      var filtered = _client
           .from('meal_entries')
           .select()
-          .eq('user_id', userId)
-          .order('tracked_at', ascending: false);
+          .eq('user_id', userId);
+      if (since != null) {
+        filtered = filtered.gte('tracked_at', wallClockToWire(since));
+      }
+      final query = filtered.order('tracked_at', ascending: false);
       final data = limit != null ? await query.limit(limit) : await query;
       return data.map((e) => MealEntry.fromJson(e)).toList();
     } catch (e, st) {

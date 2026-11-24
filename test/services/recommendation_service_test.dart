@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestList;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:belly_buddy/models/first_tip.dart';
 import 'package:belly_buddy/services/recommendation_service.dart';
 
 import '../helpers/fixtures.dart';
@@ -33,6 +35,33 @@ void _stubFilterFuture(MockPostgrestFilterBuilder filter, {Object? error}) {
     return answer.then((v) => onValue(v), onError: onError);
   });
 }
+
+/// What the logger prints during the test (and nothing on the console).
+List<String> _captureLogs() {
+  final logs = <String>[];
+  final original = debugPrint;
+  debugPrint = (message, {wrapWidth}) => logs.add(message ?? '');
+  addTearDown(() => debugPrint = original);
+  return logs;
+}
+
+/// An item of a `diet-recommendations` answer.
+Map<String, dynamic> _item(String ingredient) => {
+  'type': 'try',
+  'ingredient': ingredient,
+  'reason': 'Grund',
+  'alternative': null,
+  'focus': false,
+  'recipe_id': null,
+  'recipe_title': null,
+};
+
+/// The meal the first-tip tests send: late in the evening, wall clock.
+final _meal = testMealEntry(
+  trackedAt: DateTime(2026, 11, 23, 23, 30),
+  title: 'Zwiebelsuppe',
+  ingredients: ['Zwiebel', 'Brot'],
+);
 
 void main() {
   late MockSupabaseClient client;
@@ -145,6 +174,178 @@ void main() {
         service.markSeen(testUserId, ['rec-1']),
         throwsException,
       );
+    });
+  });
+
+  group('RecommendationService.requestFirstTip', () {
+    late MockFunctionsClient functions;
+
+    setUp(() {
+      functions = mockFunctions(client);
+    });
+
+    void stubAnswer(Object? data) => when(
+      () => functions.invoke(any(), body: any(named: 'body')),
+    ).thenAnswer((_) async => FunctionResponse(data: data, status: 200));
+
+    void stubThrow(Object error) => when(
+      () => functions.invoke(any(), body: any(named: 'body')),
+    ).thenThrow(error);
+
+    Future<FirstTipResult> request() => service.requestFirstTip(
+      intolerances: ['Fruktose', 'Laktose'],
+      diet: 'vegetarisch',
+      meals: [_meal],
+    );
+
+    Matcher failsWith(int? status) => throwsA(
+      isA<FirstTipException>().having((e) => e.status, 'status', status),
+    );
+
+    test('the body is exactly intolerances, diet and recentMeals', () async {
+      stubAnswer({
+        'id': 'set-1',
+        'summary': 'Brief',
+        'recommendations': [_item('Reis')],
+      });
+
+      await request();
+
+      final captured = verify(
+        () => functions.invoke(
+          RecommendationService.firstTipFunction,
+          body: captureAny(named: 'body'),
+        ),
+      ).captured;
+      expect(RecommendationService.firstTipFunction, 'diet-recommendations');
+      expect(captured.single, {
+        'intolerances': ['Fruktose', 'Laktose'],
+        'diet': 'vegetarisch',
+        'recentMeals': [
+          {
+            'title': 'Zwiebelsuppe',
+            'ingredients': ['Zwiebel', 'Brot'],
+            'tracked_at': '2026-11-23T23:30:00.000Z',
+          },
+        ],
+      });
+    });
+
+    test('no diet: sent as null', () async {
+      stubAnswer({'id': 'set-1', 'recommendations': <dynamic>[]});
+
+      await service.requestFirstTip(intolerances: [], diet: null, meals: []);
+
+      final captured = verify(
+        () => functions.invoke(any(), body: captureAny(named: 'body')),
+      ).captured;
+      expect(captured.single, {
+        'intolerances': <String>[],
+        'diet': null,
+        'recentMeals': <Object>[],
+      });
+    });
+
+    test('answer with id and 2 items → ok', () async {
+      stubAnswer({
+        'id': 'set-1',
+        'summary': 'Mir ist aufgefallen, …',
+        'recommendations': [_item('Reis'), _item('Hafer')],
+        'created_at': '2026-11-24T10:00:00+00:00',
+      });
+
+      final result = await request();
+
+      expect(result.id, 'set-1');
+      expect(result.tips, 2);
+      expect(result.ok, isTrue);
+    });
+
+    test('200 fallback without items → tips 0, not ok', () async {
+      stubAnswer({
+        'id': 'set-2',
+        'summary': 'Leider konnte keine Analyse durchgeführt werden.',
+        'recommendations': <dynamic>[],
+        'created_at': '2026-11-24T10:00:00+00:00',
+      });
+
+      final result = await request();
+
+      expect(result.id, 'set-2');
+      expect(result.tips, 0);
+      expect(result.ok, isFalse);
+    });
+
+    test('no id → not ok', () async {
+      // Saving the set failed: core answers without `id`.
+      stubAnswer({
+        'summary': 'Mir ist aufgefallen, …',
+        'recommendations': [_item('Reis'), _item('Hafer')],
+      });
+
+      final result = await request();
+
+      expect(result.id, isNull);
+      expect(result.tips, 2);
+      expect(result.ok, isFalse);
+    });
+
+    test('429 → FirstTipException(429)', () async {
+      _captureLogs();
+      stubThrow(
+        const FunctionsHttpException(
+          status: 429,
+          details: {'error': 'Rate limit exceeded. Please try again later.'},
+        ),
+      );
+
+      await expectLater(request(), failsWith(429));
+    });
+
+    test('500 → FirstTipException(500); the log names the status, never '
+        'the meals', () async {
+      final logs = _captureLogs();
+      stubThrow(
+        const FunctionsHttpException(
+          status: 500,
+          details: {'error': 'Failed to generate recommendations'},
+        ),
+      );
+
+      await expectLater(request(), failsWith(500));
+      expect(logs, isNotEmpty);
+      expect(logs.first, contains('500'));
+      for (final line in logs) {
+        expect(line, isNot(contains('Zwiebel')));
+        expect(line, isNot(contains('Brot')));
+      }
+    });
+
+    test('transport → FirstTipException(null)', () async {
+      _captureLogs();
+      stubThrow(const FunctionsFetchException(details: 'offline'));
+
+      await expectLater(request(), failsWith(null));
+    });
+
+    test('a non-map answer → FirstTipException(null)', () async {
+      final logs = _captureLogs();
+      stubAnswer('Zwiebelsuppe mit Brot');
+
+      await expectLater(request(), failsWith(null));
+      for (final line in logs) {
+        expect(line, isNot(contains('Zwiebel')));
+      }
+    });
+
+    test('an id that is not a string → FirstTipException(null)', () async {
+      _captureLogs();
+      stubAnswer({
+        'id': 7,
+        'recommendations': [_item('Reis')],
+      });
+
+      await expectLater(request(), failsWith(null));
     });
   });
 }

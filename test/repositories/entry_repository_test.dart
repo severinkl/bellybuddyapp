@@ -23,6 +23,35 @@ void main() {
     repo = EntryRepository(crudService, queryService);
   });
 
+  group('fetchRecentMeals', () {
+    test('passes the limit and since to the query service', () async {
+      final since = DateTime(2026, 11, 21, 14);
+      final meals = [testMealEntry()];
+      when(
+        () => queryService.fetchRecentMeals(
+          userId: any(named: 'userId'),
+          limit: any(named: 'limit'),
+          since: any(named: 'since'),
+        ),
+      ).thenAnswer((_) async => meals);
+
+      final result = await repo.fetchRecentMeals(
+        userId: 'user-123',
+        limit: 20,
+        since: since,
+      );
+
+      expect(result, meals);
+      verify(
+        () => queryService.fetchRecentMeals(
+          userId: 'user-123',
+          limit: 20,
+          since: since,
+        ),
+      ).called(1);
+    });
+  });
+
   group('fetchForDate', () {
     test('delegates to queryService.fetchEntriesForDateRange', () async {
       final date = DateTime(2026, 3, 25);
