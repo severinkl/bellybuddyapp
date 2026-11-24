@@ -285,6 +285,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: RouteNames.patterns,
         builder: (context, state) => const PatternsScreen(),
       ),
+      // Day 7's celebration; the Buddy pushes it when the patterns unlock.
+      GoRoute(
+        path: RoutePaths.patternsUnlocked,
+        name: RouteNames.patternsUnlocked,
+        builder: (context, state) => const PatternsUnlockedScreen(),
+      ),
       GoRoute(
         path: RoutePaths.ingredientSuggestions,
         name: RouteNames.ingredientSuggestions,
