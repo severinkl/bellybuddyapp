@@ -5,6 +5,7 @@ import 'package:belly_buddy/models/insight_progress.dart';
 import 'package:belly_buddy/models/insight_source.dart';
 import 'package:belly_buddy/models/insights.dart';
 import 'package:belly_buddy/services/insights/insights_engine.dart';
+import 'package:belly_buddy/utils/wall_clock.dart';
 
 final now = DateTime(2026, 11, 23, 20);
 
@@ -57,7 +58,7 @@ Insights compute({
   List<DateTime> activity = const [],
   DateTime? at,
 }) => computeInsights(
-  InsightSource(meals: meals, gutFeelings: guts, activityInstants: activity),
+  InsightSource(meals: meals, gutFeelings: guts, activityTimes: activity),
   at ?? now,
 );
 
@@ -191,11 +192,11 @@ void main() {
       );
     });
 
-    test('UTC instants count on their local day', () {
-      // Just after local midnight: in any zone east of UTC this is still
-      // the previous day in UTC.
-      final justAfterMidnight = DateTime(2026, 11, 23, 0, 30).toUtc();
-      final justBefore = DateTime(2026, 11, 22, 23, 30).toUtc();
+    test('entries count on the day of their wall-clock time', () {
+      // `tracked_at` as PostgREST sends it; under TZ=Europe/Vienna an
+      // instant reading would move 23:30 to the next day.
+      final justAfterMidnight = wallClockFromWire('2026-11-23T00:30:00+00:00');
+      final justBefore = wallClockFromWire('2026-11-22T23:30:00+00:00');
       final insights = compute(
         activity: [justBefore, justAfterMidnight],
         guts: [gut(justAfterMidnight, 5)],

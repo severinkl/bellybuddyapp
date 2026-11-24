@@ -161,7 +161,7 @@ void main() {
       const source = InsightSource(
         meals: [],
         gutFeelings: [],
-        activityInstants: [],
+        activityTimes: [],
       );
       when(
         () => queryService.fetchInsightSource(
@@ -195,11 +195,8 @@ void main() {
           mealsSince: any(named: 'mealsSince'),
         ),
       ).thenAnswer(
-        (_) async => const InsightSource(
-          meals: [],
-          gutFeelings: [],
-          activityInstants: [],
-        ),
+        (_) async =>
+            const InsightSource(meals: [], gutFeelings: [], activityTimes: []),
       );
 
       await repo.fetchInsightSource(

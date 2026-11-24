@@ -5,6 +5,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:belly_buddy/services/entry_query_service.dart';
+import 'package:belly_buddy/utils/wall_clock.dart';
 
 import '../helpers/fixtures.dart';
 import '../helpers/mocks.dart';
@@ -554,15 +555,16 @@ void main() {
         mealsSince: mealsSince,
       );
 
+      // Local times, sent as the wall clock in the UTC slot.
       verify(
         () => filters['meal_entries']!.gte(
           'tracked_at',
-          mealsSince.toUtc().toIso8601String(),
+          wallClockToWire(mealsSince),
         ),
       ).called(1);
       for (final t in tables.where((t) => t != 'meal_entries')) {
         verify(
-          () => filters[t]!.gte('tracked_at', since.toUtc().toIso8601String()),
+          () => filters[t]!.gte('tracked_at', wallClockToWire(since)),
         ).called(1);
       }
     });
@@ -596,7 +598,7 @@ void main() {
 
       expect(result.meals, hasLength(1003));
       expect(result.gutFeelings, hasLength(1003));
-      expect(result.activityInstants, hasLength(4 * 1003));
+      expect(result.activityTimes, hasLength(4 * 1003));
       for (final t in tables) {
         expect(paged[t]!.ranges, [(0, 999), (1000, 1999)]);
       }
@@ -619,17 +621,19 @@ void main() {
       }
     });
 
-    test('meal instants before since are not activity', () async {
-      final early = since.subtract(const Duration(hours: 2)).toUtc();
-      final inside = since.add(const Duration(hours: 3)).toUtc();
+    test('meals before since are not activity', () async {
+      // Wall-clock times; `since` is the night the clocks go back, where
+      // adding a Duration lands on an ambiguous hour.
+      final early = DateTime(2026, 10, 24, 22);
+      final inside = DateTime(2026, 10, 25, 3);
       mockTables({
         'meal_entries': [
           [
             {
-              'tracked_at': inside.toIso8601String(),
+              'tracked_at': wallClockToWire(inside),
               'ingredients': ['Reis'],
             },
-            {'tracked_at': early.toIso8601String(), 'ingredients': null},
+            {'tracked_at': wallClockToWire(early), 'ingredients': null},
           ],
         ],
       });
@@ -643,10 +647,10 @@ void main() {
       expect(result.meals.map((m) => m.trackedAt), [inside, early]);
       expect(result.meals.first.ingredients, ['Reis']);
       expect(result.meals.last.ingredients, isEmpty);
-      expect(result.activityInstants, [inside]);
+      expect(result.activityTimes, [inside]);
     });
 
-    test('activity holds the instants of all four tables', () async {
+    test('activity holds the wall-clock times of all four tables', () async {
       mockTables({
         'meal_entries': [
           [
@@ -674,14 +678,10 @@ void main() {
         mealsSince: mealsSince,
       );
 
-      expect(result.activityInstants.toSet(), {
-        for (final d in [1, 2, 3, 4])
-          DateTime.parse('2026-11-0${d}T08:00:00.000Z'),
+      expect(result.activityTimes.toSet(), {
+        for (final d in [1, 2, 3, 4]) DateTime(2026, 11, d, 8),
       });
-      expect(
-        result.gutFeelings.single.trackedAt,
-        DateTime.parse('2026-11-03T08:00:00.000Z'),
-      );
+      expect(result.gutFeelings.single.trackedAt, DateTime(2026, 11, 3, 8));
     });
   });
 }

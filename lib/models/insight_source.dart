@@ -13,7 +13,7 @@ class InsightSource {
   const InsightSource({
     required this.meals,
     required this.gutFeelings,
-    required this.activityInstants,
+    required this.activityTimes,
   });
 
   /// Meals from 24 h before the window start on.
@@ -22,6 +22,7 @@ class InsightSource {
   /// Gut-feeling entries in the window.
   final List<GutFeelingEntry> gutFeelings;
 
-  /// `tracked_at` of every entry of all four tables inside the window.
-  final List<DateTime> activityInstants;
+  /// `tracked_at` of every entry of all four tables inside the window, as
+  /// local wall-clock times.
+  final List<DateTime> activityTimes;
 }

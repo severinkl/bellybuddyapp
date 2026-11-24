@@ -36,11 +36,7 @@ class _UserId extends Notifier<String?> {
 
 final _userIdProvider = NotifierProvider<_UserId, String?>(_UserId.new);
 
-const _noEntries = InsightSource(
-  meals: [],
-  gutFeelings: [],
-  activityInstants: [],
-);
+const _noEntries = InsightSource(meals: [], gutFeelings: [], activityTimes: []);
 
 void main() {
   // The day signal's AppLifecycleListener needs the binding.
@@ -287,7 +283,7 @@ void main() {
     final source = InsightSource(
       meals: const [],
       gutFeelings: const [],
-      activityInstants: [DateTime(2026, 10, 25, 12), DateTime(2026, 11, 23, 9)],
+      activityTimes: [DateTime(2026, 10, 25, 12), DateTime(2026, 11, 23, 9)],
     );
     final beforeMidnight = DateTime(2026, 11, 23, 23, 59, 30);
 
@@ -441,7 +437,7 @@ void main() {
     final source = InsightSource(
       meals: const [],
       gutFeelings: const [],
-      activityInstants: [DateTime(2026, 10, 25, 12), DateTime(2026, 11, 23, 9)],
+      activityTimes: [DateTime(2026, 10, 25, 12), DateTime(2026, 11, 23, 9)],
     );
     final beforeMidnight = DateTime(2026, 11, 23, 23, 59, 30);
 
