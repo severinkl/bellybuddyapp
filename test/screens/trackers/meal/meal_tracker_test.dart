@@ -139,10 +139,13 @@ void main() {
           tester.element(find.byType(MealTrackerScreen)),
         );
         final photo = Uint8List.fromList(_onePixelPng);
+        // Backdated: the event carries the entry's time, not the save's.
+        final lastNight = DateTime(2026, 11, 21, 20);
         container.read(mealTrackerProvider.notifier)
           ..addIngredient('Tomate')
           ..setTitle('Tomatensalat')
-          ..setImage(photo, 'salat.jpg');
+          ..setImage(photo, 'salat.jpg')
+          ..setTrackedAt(lastNight);
         await tester.pump();
 
         await tester.ensureVisible(
@@ -156,6 +159,7 @@ void main() {
         final event = container.read(buddyEventsProvider);
         expect(event?.kind, EntryKind.meal);
         expect(event?.sentiment, LogSentiment.good);
+        expect(event?.trackedAt, lastNight);
         expect(find.text('Mahlzeit gespeichert!'), findsOneWidget);
         final view = tester.widget<BuddyReactionView>(
           find.byType(BuddyReactionView),

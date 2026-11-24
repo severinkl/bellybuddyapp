@@ -6,11 +6,21 @@ import 'buddy_provider.dart';
 
 /// Something the user just logged in a tracker; the Buddy reacts to it.
 class BuddyLogEvent {
-  const BuddyLogEvent(this.kind, this.sentiment, {required this.at});
+  const BuddyLogEvent(
+    this.kind,
+    this.sentiment, {
+    required this.at,
+    required this.trackedAt,
+  });
 
   final EntryKind kind;
   final LogSentiment sentiment;
+
+  /// When it was saved (the dashboard skips the follow-up to an old one).
   final DateTime at;
+
+  /// The entry's own time, which the tracker may have set to another day.
+  final DateTime trackedAt;
 }
 
 /// Holds the latest unconsumed [BuddyLogEvent].

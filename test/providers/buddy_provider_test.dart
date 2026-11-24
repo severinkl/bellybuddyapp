@@ -128,6 +128,22 @@ void main() {
       expect(status.state.savedDays, [nov(21)]);
     });
 
+    test('weekDays: this week\'s counted days, entries and saved days', () {
+      // Sunday 22 Nov; the week runs Mon 16 – Sun 22.
+      buddyRepo.store['u1'] = const BuddyState(userId: 'u1', savers: 1);
+      entryRepo.seedActivityDays({nov(15), ...novDays(18, 20), nov(22)});
+
+      return load(makeContainer()).then((status) {
+        // 21 is filled by the saver; 15 belongs to last week.
+        expect(status.weekDays, novDays(18, 22));
+      });
+    });
+
+    test('weekDays: empty without entries', () async {
+      final status = await load(makeContainer());
+      expect(status.weekDays, isEmpty);
+    });
+
     test('existing row without changes is not saved', () async {
       buddyRepo.store['u1'] = const BuddyState(userId: 'u1', savers: 1);
       entryRepo.seedActivityDays(novDays(20, 22));
@@ -541,19 +557,19 @@ void main() {
   });
 
   group('completeOnboarding', () {
-    test('twice: savers +1 and timestamp only once', () async {
+    test('twice: the timestamp only once, never a saver', () async {
       final c = makeContainer();
       await load(c);
       final notifier = c.read(buddyProvider.notifier);
 
-      expect(await notifier.completeOnboarding(), isTrue);
+      await notifier.completeOnboarding();
       final completedAt = buddyRepo.store['u1']!.onboardingCompletedAt;
       expect(completedAt, now);
-      expect(buddyRepo.store['u1']!.savers, 1);
+      expect(buddyRepo.store['u1']!.savers, 0);
 
       now = DateTime(2026, 11, 22, 15);
-      expect(await notifier.completeOnboarding(), isFalse);
-      expect(buddyRepo.store['u1']!.savers, 1);
+      await notifier.completeOnboarding();
+      expect(buddyRepo.store['u1']!.savers, 0);
       expect(buddyRepo.store['u1']!.onboardingCompletedAt, completedAt);
 
       final status = c.read(buddyProvider).value!;
@@ -570,36 +586,18 @@ void main() {
 
       final stored = buddyRepo.store['u1']!;
       expect(stored.lastMilestone, 21);
-      expect(stored.savers, 1);
+      expect(stored.savers, 0);
       expect(c.read(buddyProvider).value!.announcements, isEmpty);
     });
 
-    test('gift saver is capped at 2', () async {
+    test('keeps the savers a user already earned', () async {
       buddyRepo.store['u1'] = const BuddyState(userId: 'u1', savers: 2);
       final c = makeContainer();
       await load(c);
 
-      expect(
-        await c.read(buddyProvider.notifier).completeOnboarding(),
-        isFalse,
-      );
+      await c.read(buddyProvider.notifier).completeOnboarding();
 
       expect(buddyRepo.store['u1']!.savers, 2);
-      expect(buddyRepo.store['u1']!.onboardingCompletedAt, now);
-    });
-
-    test('grantGiftSaver: false grants no saver', () async {
-      final c = makeContainer();
-      await load(c);
-
-      expect(
-        await c
-            .read(buddyProvider.notifier)
-            .completeOnboarding(grantGiftSaver: false),
-        isFalse,
-      );
-
-      expect(buddyRepo.store['u1']!.savers, 0);
       expect(buddyRepo.store['u1']!.onboardingCompletedAt, now);
     });
 
@@ -618,7 +616,6 @@ void main() {
       final status = c.read(buddyProvider).value!;
       expect(status.hasRow, isTrue);
       expect(status.state.onboardingCompletedAt, now);
-      expect(buddyRepo.store['u1']!.savers, 1);
     });
   });
 

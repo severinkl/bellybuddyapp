@@ -33,11 +33,13 @@ void main() {
       ),
     );
 
-    testWidgets('shows the title and the prefilled name', (tester) async {
+    testWidgets('shows the prefilled name and no headline (the Buddy asks)', (
+      tester,
+    ) async {
       await pumpStep(tester);
 
       expect(find.byKey(BuddyNameStep.titleKey), findsOneWidget);
-      expect(find.text('Wie soll ich heißen?'), findsOneWidget);
+      expect(find.text('Wie soll ich heißen?'), findsNothing);
       expect(
         find.descendant(
           of: find.byKey(BuddyNameStep.fieldKey),

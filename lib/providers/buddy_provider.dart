@@ -34,6 +34,7 @@ class BuddyStatus {
     required this.hasRow,
     required this.streak,
     required this.todayCounted,
+    this.weekDays = const {},
     this.announcements = const [],
     this.announcementKeys = const {},
   });
@@ -52,6 +53,10 @@ class BuddyStatus {
   /// Whether today already has an entry.
   final bool todayCounted;
 
+  /// The counted days (an entry or a saved day) of the current local week,
+  /// Monday to today, at local midnight. Feeds the streak week row.
+  final Set<DateTime> weekDays;
+
   /// Announcements not yet played, in the order they arose.
   final List<BuddyAnnouncement> announcements;
 
@@ -67,6 +72,7 @@ class BuddyStatus {
     hasRow: hasRow,
     streak: streak,
     todayCounted: todayCounted,
+    weekDays: weekDays,
     announcements: announcements ?? this.announcements,
     announcementKeys: announcementKeys ?? this.announcementKeys,
   );
@@ -159,23 +165,16 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
   Future<void> setStreakGoal(int? goal) =>
       _mutate('setStreakGoal', (s) => s.copyWith(streakGoal: goal));
 
-  /// Marks the Buddy onboarding as done and grants the gift saver (capped at
-  /// [maxStreakSavers]). Idempotent: once `onboardingCompletedAt` is set,
-  /// nothing changes. Creates the row if missing. Completes with whether a
-  /// saver was actually added (not with a full stock, without
-  /// [grantGiftSaver] or when the onboarding was already completed).
-  Future<bool> completeOnboarding({bool grantGiftSaver = true}) async {
+  /// Marks the Buddy onboarding as done. Idempotent: once
+  /// `onboardingCompletedAt` is set, nothing changes. Creates the row if
+  /// missing. Grants no streak saver: savers are only earned at streak
+  /// milestones.
+  Future<void> completeOnboarding() async {
     final now = ref.read(buddyTodayProvider)();
-    var granted = false;
     await _mutate('completeOnboarding', (s) {
       if (s.onboardingCompletedAt != null) return s;
-      final savers = grantGiftSaver
-          ? math.min(maxStreakSavers, s.savers + 1)
-          : s.savers;
-      granted = savers > s.savers;
-      return s.copyWith(onboardingCompletedAt: now, savers: savers);
+      return s.copyWith(onboardingCompletedAt: now);
     });
-    return granted;
   }
 
   /// Records that the UI has played [shown]: drops them from the pending
@@ -315,9 +314,25 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
       hasRow: hasRow || change != null,
       streak: evaluation.streak,
       todayCounted: evaluation.todayCounted,
+      weekDays: _weekDays(today, await firstWindow, next.savedDays),
       announcements: announcements.keys.toList(),
       announcementKeys: announcements,
     );
+  }
+
+  /// The days from this week's Monday to [today] with an entry
+  /// ([activity]) or saved ([saved]).
+  static Set<DateTime> _weekDays(
+    DateTime today,
+    Set<DateTime> activity,
+    List<DateTime> saved,
+  ) {
+    final monday = mondayOf(today);
+    final tomorrow = addDays(today, 1);
+    return {
+      for (final day in activity.followedBy(saved))
+        if (!day.isBefore(monday) && day.isBefore(tomorrow)) startOfDay(day),
+    };
   }
 
   /// Evaluates [state] over a window of activity days ([firstWindow]: the

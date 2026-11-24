@@ -129,10 +129,20 @@ void main() {
   });
 
   group('buddyOnboardingRedirect', () {
+    String? redirect(
+      String location, {
+      bool isRequired = false,
+      bool isPending = false,
+    }) => buddyOnboardingRedirect(
+      isRequired: isRequired,
+      isPending: isPending,
+      location: Uri.parse(location),
+    );
+
     test('required: the shell roots go to /buddy-onboarding', () {
       for (final path in [RoutePaths.dashboard, RoutePaths.diary]) {
         expect(
-          buddyOnboardingRedirect(isRequired: true, path: path),
+          redirect(path, isRequired: true),
           RoutePaths.buddyOnboarding,
           reason: path,
         );
@@ -154,28 +164,65 @@ void main() {
         RoutePaths.auth,
         '/meal-tracker/some-id',
       ]) {
-        expect(
-          buddyOnboardingRedirect(isRequired: true, path: path),
-          isNull,
-          reason: path,
-        );
+        expect(redirect(path, isRequired: true), isNull, reason: path);
       }
     });
 
     test('not required: nothing moves, not even away from the onboarding '
-        '(it completes at the gift and leaves by itself)', () {
+        '(it completes on its last step and leaves by itself)', () {
       for (final path in [
         RoutePaths.buddyOnboarding,
         RoutePaths.dashboard,
         RoutePaths.diary,
         RoutePaths.mealTracker,
       ]) {
+        expect(redirect(path), isNull, reason: path);
+      }
+    });
+
+    test('pending: the shell roots wait on /loading, remembering where '
+        'they were going', () {
+      for (final required in [false, true]) {
         expect(
-          buddyOnboardingRedirect(isRequired: false, path: path),
-          isNull,
-          reason: path,
+          redirect(RoutePaths.dashboard, isRequired: required, isPending: true),
+          '/loading?to=%2Fdashboard',
+        );
+        expect(
+          redirect(RoutePaths.diary, isRequired: required, isPending: true),
+          '/loading?to=%2Fdiary',
         );
       }
+    });
+
+    test('pending: everything else stays, /loading too', () {
+      for (final path in [
+        RoutePaths.loading,
+        '/loading?to=%2Fdiary',
+        RoutePaths.buddyOnboarding,
+        RoutePaths.registration,
+        RoutePaths.mealTracker,
+        RoutePaths.settings,
+        RoutePaths.auth,
+      ]) {
+        expect(redirect(path, isPending: true), isNull, reason: path);
+      }
+    });
+
+    test('known: /loading returns to the held shell root (the dashboard '
+        'without one, or for anything else)', () {
+      expect(redirect('/loading?to=%2Fdiary'), RoutePaths.diary);
+      expect(redirect('/loading?to=%2Fdashboard'), RoutePaths.dashboard);
+      expect(redirect(RoutePaths.loading), RoutePaths.dashboard);
+      expect(redirect('/loading?to=%2Fsettings'), RoutePaths.dashboard);
+      expect(
+        redirect('/loading?to=https%3A%2F%2Fexample.com'),
+        RoutePaths.dashboard,
+      );
+      // The gate then checks the held root itself.
+      expect(
+        redirect(RoutePaths.diary, isRequired: true),
+        RoutePaths.buddyOnboarding,
+      );
     });
 
     test('the gated paths are exactly the shell branch roots', () {
@@ -326,6 +373,134 @@ void main() {
       await container.read(profileProvider.notifier).fetchProfile();
 
       expect(container.read(buddyOnboardingRequiredProvider), isFalse);
+    });
+  });
+
+  group('buddyOnboardingGatePendingProvider', () {
+    ({ProviderContainer container, FakeAuthRepository auth}) containerFor({
+      bool signedIn = true,
+      UserProfile? profile,
+      FakeBuddyRepository? buddyRepo,
+    }) {
+      final profiles = FakeProfileRepository();
+      if (profile != null) profiles.seedProfile(profile);
+      final auth = FakeAuthRepository(signedIn: signedIn);
+      final container = createContainer(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(auth),
+          profileRepositoryProvider.overrideWithValue(profiles),
+          entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
+          buddyRepositoryProvider.overrideWithValue(
+            buddyRepo ?? FakeBuddyRepository(),
+          ),
+        ],
+      );
+      container.listen(buddyOnboardingGatePendingProvider, (_, _) {});
+      return (container: container, auth: auth);
+    }
+
+    bool pending(ProviderContainer c) =>
+        c.read(buddyOnboardingGatePendingProvider);
+
+    test('signed out: false', () {
+      final (:container, auth: _) = containerFor(signedIn: false);
+      expect(pending(container), isFalse);
+    });
+
+    test('true while the profile and then the Buddy load; false once both '
+        'are known', () async {
+      final buddyRepo = FakeBuddyRepository()..fetchHold = Completer<void>();
+      final (:container, auth: _) = containerFor(
+        profile: testUserProfile(),
+        buddyRepo: buddyRepo,
+      );
+      expect(pending(container), isTrue);
+
+      await container.read(profileProvider.notifier).fetchProfile();
+      await Future<void>.delayed(Duration.zero);
+      expect(container.read(buddyProvider).isLoading, isTrue);
+      expect(pending(container), isTrue);
+
+      buddyRepo.fetchHold!.complete();
+      await container.read(buddyProvider.future);
+      expect(pending(container), isFalse);
+      expect(container.read(buddyOnboardingRequiredProvider), isTrue);
+    });
+
+    test('a profile the gate never applies to settles it without loading '
+        'the Buddy', () async {
+      for (final profile in [
+        testUserProfile().copyWith(diet: null),
+        testUserProfile(hasHealthConsent: false),
+        null,
+      ]) {
+        final buddyRepo = FakeBuddyRepository();
+        final (:container, auth: _) = containerFor(
+          profile: profile,
+          buddyRepo: buddyRepo,
+        );
+        await container.read(profileProvider.notifier).fetchProfile();
+        await Future<void>.delayed(Duration.zero);
+        expect(pending(container), isFalse, reason: '$profile');
+        expect(buddyRepo.fetchCount, 0, reason: '$profile');
+      }
+    });
+
+    test(
+      'a failed load settles it (never blocks on a backend error)',
+      () async {
+        final (:container, auth: _) = containerFor(
+          profile: testUserProfile(),
+          buddyRepo: FakeBuddyRepository()..throwOnFetch = true,
+        );
+        await container.read(profileProvider.notifier).fetchProfile();
+        await expectLater(
+          container.read(buddyProvider.future),
+          throwsA(anything),
+        );
+        expect(pending(container), isFalse);
+      },
+    );
+
+    test('settles once: a later profile reload never holds again', () async {
+      final (:container, auth: _) = containerFor(profile: testUserProfile());
+      await container.read(profileProvider.notifier).fetchProfile();
+      await container.read(buddyProvider.future);
+      expect(pending(container), isFalse);
+
+      final reload = container.read(profileProvider.notifier).fetchProfile();
+      expect(container.read(profileProvider).isLoading, isTrue);
+      expect(pending(container), isFalse);
+      await reload;
+      expect(pending(container), isFalse);
+    });
+
+    test('release: stops holding at once', () {
+      final (:container, auth: _) = containerFor(profile: testUserProfile());
+      expect(pending(container), isTrue);
+
+      container.read(buddyOnboardingGatePendingProvider.notifier).release();
+      expect(pending(container), isFalse);
+    });
+
+    test('a new sign-in starts over', () async {
+      final (:container, :auth) = containerFor(profile: testUserProfile());
+      await container.read(profileProvider.notifier).fetchProfile();
+      await container.read(buddyProvider.future);
+      expect(pending(container), isFalse);
+
+      await auth.signOut();
+      await Future<void>.delayed(Duration.zero);
+      container.read(profileProvider.notifier).reset();
+      expect(pending(container), isFalse);
+
+      await auth.signInWithEmail('sevi@example.com', 'geheim123');
+      await Future<void>.delayed(Duration.zero);
+      final load = container.read(profileProvider.notifier).fetchProfile();
+      expect(pending(container), isTrue);
+      await load;
+      await container.read(buddyProvider.future);
+      expect(pending(container), isFalse);
     });
   });
 }

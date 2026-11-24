@@ -11,6 +11,12 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
   static const _log = AppLogger('ProfileProvider');
   bool _busy = false;
 
+  /// The user whose profile the last fetch (or update) loaded; null before
+  /// the first one and after [reset]. Tells the state of the signed-in user
+  /// apart from one left over from before a sign-in (sign-out's `null`).
+  String? get loadedFor => _loadedFor;
+  String? _loadedFor;
+
   @override
   AsyncValue<UserProfile?> build() => const AsyncValue.loading();
 
@@ -27,6 +33,7 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
     state = const AsyncValue.loading();
     try {
       final userId = _resolveUserId();
+      _loadedFor = userId;
       if (userId == null) {
         state = const AsyncValue.data(null);
         return;
@@ -66,6 +73,7 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
     if (userId == null) throw Exception('Not authenticated');
 
     // Optimistic update — revert on failure
+    _loadedFor = userId;
     state = AsyncValue.data(profile.copyWith(userId: userId));
 
     try {
@@ -101,6 +109,7 @@ class ProfileNotifier extends Notifier<AsyncValue<UserProfile?>> {
   }
 
   void reset() {
+    _loadedFor = null;
     state = const AsyncValue.data(null);
   }
 }

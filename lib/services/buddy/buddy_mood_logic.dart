@@ -2,54 +2,21 @@ import 'dart:math';
 
 import '../../models/gut_feeling_entry.dart';
 import '../../models/toilet_entry.dart';
-import '../../providers/entries_provider.dart';
 import '../../utils/gut_feeling_rating.dart';
 import '../../widgets/buddy/buddy_actions.dart';
 import '../../widgets/buddy/buddy_pose.dart';
 import 'buddy_copy.dart';
+import 'daily_care.dart';
 
 enum EntryKind { meal, drink, toilet, gutFeeling }
 
 enum LogSentiment { good, neutral, bad }
 
-/// What the user logged today (local time).
-class TodayCare {
-  const TodayCare({this.count = 0, this.kinds = const {}, this.lastLogAt});
-
-  final int count;
-  final Set<EntryKind> kinds;
-  final DateTime? lastLogAt;
-
-  factory TodayCare.fromEntries(EntriesState s, DateTime now) {
-    bool isToday(DateTime t) {
-      final l = t.toLocal();
-      return l.year == now.year && l.month == now.month && l.day == now.day;
-    }
-
-    var count = 0;
-    final kinds = <EntryKind>{};
-    DateTime? last;
-    void add(EntryKind kind, Iterable<DateTime> times) {
-      for (final t in times.where(isToday)) {
-        count++;
-        kinds.add(kind);
-        final l = t.toLocal();
-        if (last == null || l.isAfter(last!)) last = l;
-      }
-    }
-
-    add(EntryKind.meal, s.meals.map((e) => e.trackedAt));
-    add(EntryKind.drink, s.drinks.map((e) => e.trackedAt));
-    add(EntryKind.toilet, s.toiletEntries.map((e) => e.trackedAt));
-    add(EntryKind.gutFeeling, s.gutFeelings.map((e) => e.trackedAt));
-    return TodayCare(count: count, kinds: kinds, lastLogAt: last);
-  }
-}
-
-BuddyMood deriveBuddyMood(TodayCare care, DateTime now) {
+/// The Buddy's resting mood from what was logged today ([care]) at [now].
+BuddyMood deriveBuddyMood(DailyCare care, DateTime now) {
   final h = now.hour;
-  if (care.count == 0 && h < 10) return BuddyMood.sleepy;
-  if (care.kinds.length >= 3) return BuddyMood.energetic;
+  if (care.entries == 0 && h < 10) return BuddyMood.sleepy;
+  if (care.kindsLogged >= 3) return BuddyMood.energetic;
   if (care.lastLogAt != null &&
       now.difference(care.lastLogAt!) < const Duration(hours: 5)) {
     return BuddyMood.happy;

@@ -63,6 +63,19 @@ void main() {
     });
   });
 
+  group('previews', () {
+    test('a fixed Buddy-voiced line from the real pools, with his name', () {
+      final meal = ReminderCopy.previewMealBody(18, 'Bauchi');
+      expect(meal, '🍲 Bauchi ist gespannt auf dein Abendessen!');
+      expect(ReminderCopy.previewMealBody(18, 'Bauchi'), meal);
+
+      final mood = ReminderCopy.previewMoodBody(20, 'Bauchi');
+      expect(mood, '🤷 Bauchi fragt: Wie war dein Bauchgefühl heute?');
+      // Midday has no mood pool: the evening one is used.
+      expect(ReminderCopy.previewMoodBody(13, 'Bauchi'), mood);
+    });
+  });
+
   group('pool integrity', () {
     test('every meal pool is non-empty', () {
       for (final entry in ReminderCopy.mealPools.entries) {

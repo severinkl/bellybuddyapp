@@ -25,6 +25,7 @@ class WelcomeScreen extends ConsumerStatefulWidget {
   static const signInButtonKey = Key('welcome_sign_in_button');
   static const buddyAreaKey = Key('welcome_buddy_area');
   static const hintKey = Key('welcome_wake_hint');
+  static const startHintKey = Key('welcome_start_hint');
 
   @override
   ConsumerState<WelcomeScreen> createState() => _WelcomeScreenState();
@@ -33,7 +34,7 @@ class WelcomeScreen extends ConsumerStatefulWidget {
 class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
     with SingleTickerProviderStateMixin {
   static const _lines = [
-    'Hi! Ich bin dein Bauch-Buddy.',
+    'Hi! Ich bin dein Belly Buddy.',
     'Ich helfe dir herauszufinden, was deinem Bauch guttut.',
     'Lass uns uns kennenlernen!',
   ];
@@ -60,6 +61,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
 
   static const _hintPulse = Duration(milliseconds: 1400);
 
+  /// A tap on the area starts the sign-up only once the last line has been
+  /// up this long: a quick tap meant to skip a line must not start it.
+  static const _startGrace = Duration(milliseconds: 800);
+
   final _buddy = BuddyController(mood: BuddyMood.asleep);
   late final AnimationController _pulse = AnimationController(
     vsync: this,
@@ -71,6 +76,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   int _line = -1;
   Timer? _timer;
   bool _calm = false;
+
+  /// A tap on the area starts the sign-up ([_startGrace] after the last
+  /// line).
+  bool _startArmed = false;
 
   @override
   void didChangeDependencies() {
@@ -128,7 +137,9 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
       _phase = last ? _Phase.ready : _Phase.talking;
     });
     _syncPulse();
-    if (!last) _timer = Timer(_linePace, () => _showLine(i + 1));
+    _timer = last
+        ? Timer(_startGrace, () => _startArmed = true)
+        : Timer(_linePace, () => _showLine(i + 1));
   }
 
   void _onAreaTap() {
@@ -137,11 +148,15 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
         _wake();
       case _Phase.talking:
         _showLine(_line + 1);
-      case _Phase.waking:
       case _Phase.ready:
+        if (_startArmed) _start();
+      case _Phase.waking:
         break;
     }
   }
+
+  /// Starts the registration, from „Los geht's" or a tap on the awake Buddy.
+  void _start() => context.go(RoutePaths.registration);
 
   /// The Buddy as large as the area allows at its natural proportions, with
   /// the bubble slot right above it, centred: a stretched stage would park
@@ -181,10 +196,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                   behavior: HitTestBehavior.opaque,
                   excludeFromSemantics: true,
                   onTap: _onAreaTap,
-                  // The story owns taps until the button shows; then the
-                  // Buddy can be poked.
+                  // The area owns every tap: it wakes the Buddy, skips
+                  // through the story, and once he is awake (his last line
+                  // settled) starts like „Los geht's".
                   child: IgnorePointer(
-                    ignoring: _phase != _Phase.ready,
                     child: LayoutBuilder(builder: _buildStage),
                   ),
                 ),
@@ -208,10 +223,25 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
                   ),
                   child: switch (_phase) {
                     _Phase.asleep => _WakeHint(onTap: _wake, pulse: _pulse),
-                    _Phase.ready => BbButton(
-                      key: WelcomeScreen.registrationButtonKey,
-                      label: "Los geht's",
-                      onPressed: () => context.go(RoutePaths.registration),
+                    _Phase.ready => Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text(
+                          key: WelcomeScreen.startHintKey,
+                          "Tipp mich an, dann geht's los",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: AppTheme.fontSizeBodyLG,
+                            color: AppTheme.mutedForeground,
+                          ),
+                        ),
+                        AppConstants.gap16,
+                        BbButton(
+                          key: WelcomeScreen.registrationButtonKey,
+                          label: "Los geht's",
+                          onPressed: _start,
+                        ),
+                      ],
                     ),
                     _Phase.waking || _Phase.talking => const SizedBox.shrink(),
                   },

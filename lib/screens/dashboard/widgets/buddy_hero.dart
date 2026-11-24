@@ -10,25 +10,33 @@ import 'package:material_ui/material_ui.dart';
 import '../../../config/constants.dart';
 import '../../../providers/buddy_events_provider.dart';
 import '../../../providers/buddy_provider.dart';
+import '../../../providers/buddy_welcome_provider.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../router/route_names.dart';
+import '../../../services/buddy/buddy_copy.dart';
 import '../../../services/buddy/buddy_mood_logic.dart';
+import '../../../services/buddy/daily_care.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/logger.dart';
 import '../../../widgets/buddy/buddy.dart';
 import '../../../widgets/buddy/streak_chip.dart';
+import '../../../widgets/buddy/streak_week_row.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../buddy/streak_goal_picker.dart';
+import 'care_ring.dart';
+import 'streak_sheet.dart';
 
-/// The hero's clock (mood, event age). Follows the Buddy's clock
-/// ([buddyTodayProvider]) unless overridden; tests pin it.
+/// The dashboard's clock (the hero's mood and day, event age, the day the
+/// dashboard loads). Follows the Buddy's clock ([buddyTodayProvider])
+/// unless overridden; tests pin it.
 final buddyClockProvider = Provider<DateTime Function()>(
   (ref) => ref.watch(buddyTodayProvider),
 );
 
-/// Lines the hero plays one after another: the follow-up after a log and
-/// the [BuddyAnnouncement]s.
+/// Lines the hero plays one after another: the onboarding's welcome (ahead
+/// of all others), the follow-up after a log and the [BuddyAnnouncement]s.
 enum _Cue {
+  welcome(null),
   followUp(null),
   saverUsed(BuddyAnnouncement.saverUsed),
   streakBroken(BuddyAnnouncement.streakBroken),
@@ -44,20 +52,27 @@ enum _Cue {
 _Cue _cueFor(BuddyAnnouncement a) =>
     _Cue.values.firstWhere((cue) => cue.announcement == a);
 
-/// The Buddy at the top of the dashboard: streak chip, the animated Buddy
-/// with its speech bubble, and the „🍎 Füttern" shortcut to the meal
-/// tracker.
+/// The Buddy at the top of the dashboard: the streak chip (opens „Dein
+/// Streak") over this week's row, his speech bubble, the Buddy inside the
+/// [CareRing] of his four daily needs, and a button for the next thing to
+/// log ([nextCareAction]).
 ///
 /// The mood follows today's entries (re-derived on every change and every
-/// minute). Everything it says waits until it is visible (`TickerMode` on,
-/// i.e. the dashboard is not under the splash or covered by another route
-/// or tab): the first mood line, the follow-up to a fresh [BuddyLogEvent]
-/// (which also reloads today's entries) and the Buddy's announcements.
-/// Without a Buddy status (loading, error, signed out) the Buddy still
-/// shows, named 'Buddy', without the streak chip. Its height is a share of
-/// the screen height, clamped.
+/// minute); his resting line names what he needs next ([BuddyCopy.care]),
+/// except while empathetic, in love, asleep or at night. Every write
+/// reloads [entriesProvider]; the hero moves it on to the new day once his
+/// clock has passed midnight (minute tick, resume, shown again), and the
+/// ring and „Heute" both show its day. Everything it says waits until it is
+/// visible (`TickerMode` on, i.e. the dashboard is not under the splash or
+/// covered by another route or tab): the first line, the follow-up to a
+/// fresh [BuddyLogEvent] and the Buddy's announcements. Without a Buddy
+/// status (loading, error, signed out) the Buddy still shows, named
+/// 'Buddy', without the streak chip and week row.
 class BuddyHero extends ConsumerStatefulWidget {
   const BuddyHero({super.key});
+
+  /// The next-action button under the ring.
+  static const actionKey = Key('buddy_hero_next_action');
 
   @override
   ConsumerState<BuddyHero> createState() => _BuddyHeroState();
@@ -84,15 +99,23 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   static const _streakBrokenLine = 'Neuer Anlauf — ich bin dabei!';
   static const _saverEarnedLine = 'Du hast einen Streak-Saver verdient! 🛡';
   static const _newGoalTitle = "Wir haben's geschafft! Neues Ziel?";
-  static const _changeGoalTitle = 'Neues Streak-Ziel';
 
   late final BuddyController _buddy;
   late final AppLifecycleListener _lifecycle;
   final math.Random _rnd = math.Random();
   Timer? _moodTimer;
 
+  /// Today's care, derived from the loaded day's entries (see
+  /// [_deriveCare]): re-derived on every entries change, every minute and
+  /// on resume. The ring, his mood and the next action all follow it.
+  late DailyCare _care;
+  late DateTime _careAt;
+
   /// Mood derived from today's entries.
-  late BuddyMood _careMood;
+  BuddyMood get _careMood => deriveBuddyMood(_care, _careAt);
+
+  /// What he needs next, from today's entries and the time of day.
+  CareAction get _careAction => nextCareAction(_care, _careAt);
 
   /// Temporary mood on top of [_careMood] (empathetic after a bad log for
   /// this dashboard visit, in love while celebrating a reached goal).
@@ -118,9 +141,13 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// The Buddy refresh of the latest log ([BuddyEventsNotifier.lastRefresh]).
   Future<void>? _logRefresh;
 
-  /// Whether the first mood line was said (or replaced by announcements).
-  /// Waits for the Buddy status (real name and streak) and visibility.
+  /// Whether the first mood line was said (or replaced by the welcome or
+  /// announcements). Waits for the Buddy status (real name and streak) and
+  /// visibility.
   bool _greeted = false;
+
+  /// The line of [_Cue.welcome] ([buddyWelcomeProvider]'s, once taken).
+  String _welcome = BuddyWelcomeNotifier.line;
 
   /// `TickerMode` of the hero (false until the first dependency update).
   bool _visible = false;
@@ -131,7 +158,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// From a reached goal's celebration until its sheet has closed.
   bool _goalCelebrating = false;
 
-  /// The StreakChip's goal sheet is open.
+  /// The StreakChip's „Dein Streak" sheet is open.
   bool _chipSheetOpen = false;
 
   /// The local day for which "today counted" was already thanked for or
@@ -143,11 +170,14 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   @override
   void initState() {
     super.initState();
-    _careMood = _deriveCareMood();
+    _deriveCare();
     _buddy = BuddyController(mood: _careMood);
-    _moodTimer = Timer.periodic(_moodInterval, (_) => _updateCareMood());
+    // Hidden, the hero skips the minute ticks; it catches up once visible.
+    _moodTimer = Timer.periodic(_moodInterval, (_) {
+      if (_visible) _updateCare();
+    });
     _lifecycle = AppLifecycleListener(onResume: _onResume);
-    ref.listenManual(entriesProvider, (_, _) => _updateCareMood());
+    ref.listenManual(entriesProvider, (_, _) => _updateCare());
     ref.listenManual(buddyEventsProvider, (_, event) {
       if (event != null) _afterFrame(_consumeEvent);
     });
@@ -166,6 +196,8 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _visible = visible;
     if (visible) {
       _afterFrame(() {
+        // What changed while hidden was never said; it isn't now either.
+        _updateCare(speak: false);
         _consumeEvent();
         _takeAnnouncements();
         _maybeGreet();
@@ -202,27 +234,49 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   }
 
   void _onResume() {
-    _updateCareMood();
+    _updateCare();
     _afterFrame(_consumeEvent);
   }
 
   // --- Mood -----------------------------------------------------------------
 
-  BuddyMood _deriveCareMood() {
-    final now = _now();
-    return deriveBuddyMood(
-      TodayCare.fromEntries(ref.read(entriesProvider), now),
-      now,
-    );
+  /// The care of the loaded day — the day „Heute" shows too — or of
+  /// [_careAt]'s before the first load.
+  void _deriveCare() {
+    _careAt = _now();
+    final entries = ref.read(entriesProvider);
+    _care = DailyCare.fromEntries(entries, entries.day ?? _careAt);
   }
 
-  void _updateCareMood() {
+  /// Once the loaded day is over by his clock (midnight passed, or the app
+  /// slept through it), loads the new one; the ring and „Heute" switch
+  /// together. After the frame: this may run while the entries notify.
+  void _followDay() {
+    bool over() {
+      final day = ref.read(entriesProvider).day;
+      return day != null && !isSameDay(day, _careAt);
+    }
+
+    if (!over()) return;
+    _afterFrame(() {
+      if (over()) unawaited(_loadToday());
+    });
+  }
+
+  /// Re-derives today's care; a new mood or next action gets its line,
+  /// unless not to [speak].
+  void _updateCare({bool speak = true}) {
     if (!mounted) return;
-    final care = _deriveCareMood();
-    if (care == _careMood) return;
-    _careMood = care;
-    _applyMood();
-    if (_override == null) _sayMoodLine();
+    final (care, mood, action) = (_care, _careMood, _careAction);
+    _deriveCare();
+    _followDay();
+    final moodChanged = _careMood != mood;
+    final actionChanged = _careAction != action;
+    // The ring, its glow and the button follow the entries and the clock.
+    if (_care != care || actionChanged) setState(() {});
+    if (!moodChanged && !actionChanged) return;
+    if (moodChanged) _applyMood();
+    if (speak && _override == null) _sayMoodLine();
   }
 
   void _setOverride(BuddyMood? mood) {
@@ -232,13 +286,25 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   void _applyMood() => _buddy.mood = _override ?? _careMood;
 
+  /// His resting line: what he needs next by day, else the [mood]'s line
+  /// (empathetic, in love, asleep, or at night).
   String _moodLine(BuddyMood mood) {
     final status = ref.read(buddyProvider).value;
+    final name = status?.state.name ?? 'Buddy';
+    final now = _now();
+    final byDay = DayParts.isDay(now);
+    const moodOnly = {BuddyMood.empathetic, BuddyMood.inLove, BuddyMood.asleep};
+    if (byDay && !moodOnly.contains(mood)) {
+      return BuddyCopy.fill(
+        BuddyCopy.pick(BuddyCopy.care[_careAction]!, _rnd),
+        name: name,
+      );
+    }
     return moodLine(
       mood,
-      name: status?.state.name ?? 'Buddy',
+      name: name,
       streak: status?.streak ?? 0,
-      now: _now(),
+      now: now,
       rnd: _rnd,
     );
   }
@@ -250,8 +316,12 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   }
 
   /// The first mood line, once the Buddy status is known and the hero is
-  /// visible. Pending announcements speak first instead.
+  /// visible. A pending welcome or announcements greet instead.
   void _maybeGreet() => _whenVisible(() {
+    if (_takeWelcome()) {
+      if (!_cueRunning) _nextCue();
+      return;
+    }
     if (_greeted) return;
     final buddy = ref.read(buddyProvider);
     if (buddy.isLoading && !buddy.hasValue) return; // first load running
@@ -259,6 +329,18 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _greeted = true;
     _sayMoodLine();
   });
+
+  /// Takes the onboarding's pending welcome ([buddyWelcomeProvider]) ahead
+  /// of every queued cue: it greets, and a log's follow-up or the
+  /// announcements wait for it. False if none is pending.
+  bool _takeWelcome() {
+    final line = ref.read(buddyWelcomeProvider.notifier).take();
+    if (line == null) return false;
+    _welcome = line;
+    _greeted = true;
+    _cues.addFirst(_Cue.welcome);
+    return true;
+  }
 
   // --- Buddy status -----------------------------------------------------------
 
@@ -315,16 +397,14 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       _followUpPending = true;
       _enqueue(const [_Cue.followUp]);
     }
-    unawaited(_reloadEntries());
   });
 
-  /// Trackers don't refresh [entriesProvider]; reload today so the mood
-  /// reflects the new entry.
-  Future<void> _reloadEntries() async {
+  /// Loads the entries of [_careAt]'s day.
+  Future<void> _loadToday() async {
     try {
-      await ref.read(entriesProvider.notifier).loadEntries(_now());
+      await ref.read(entriesProvider.notifier).loadEntries(_careAt);
     } catch (e, st) {
-      _log.error("Reloading today's entries failed", e, st);
+      _log.error("Loading today's entries failed", e, st);
     }
   }
 
@@ -364,6 +444,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   void _enqueue(Iterable<_Cue> cues) {
     _cues.addAll(cues);
+    _takeWelcome();
     if (!_cueRunning) _nextCue();
   }
 
@@ -383,6 +464,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _cueRunning = true;
     final cue = _playing = _cues.removeFirst();
     switch (cue) {
+      case _Cue.welcome:
+        _say(_welcome);
+        _holdStage();
       case _Cue.followUp:
         _cueTimer = Timer(
           _followUpDelay,
@@ -446,20 +530,16 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _nextCue();
   }
 
-  /// The StreakChip's tap: sets or changes the streak goal. Ignored while a
-  /// reached goal is celebrated (its own sheet follows) or the sheet is
-  /// already open, so sheets never stack.
-  Future<void> _changeGoal() async {
-    if (_goalCelebrating || _chipSheetOpen) return;
-    final streak = ref.read(buddyProvider).value?.streak ?? 0;
+  /// The StreakChip's tap: „Dein Streak", where the goal can be set or
+  /// changed. Ignored while a reached goal is celebrated (its own sheet
+  /// follows) or the sheet is already open, so sheets never stack.
+  Future<void> _openStreakSheet() async {
+    final status = ref.read(buddyProvider).value;
+    if (status == null || _goalCelebrating || _chipSheetOpen) return;
     _chipSheetOpen = true;
     final int? goal;
     try {
-      goal = await showStreakGoalSheet(
-        context,
-        currentStreak: streak,
-        title: _changeGoalTitle,
-      );
+      goal = await showStreakSheet(context, status: status, today: _now());
     } finally {
       _chipSheetOpen = false;
     }
@@ -477,52 +557,83 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   // --- UI ---------------------------------------------------------------------
 
+  void _open(CareNeed need) => context.push(switch (need) {
+    CareNeed.food => RoutePaths.mealTracker,
+    CareNeed.drink => RoutePaths.drinkTracker,
+    CareNeed.gutFeeling => RoutePaths.gutFeelingTracker,
+    CareNeed.toilet => RoutePaths.toiletTracker,
+  });
+
   @override
   Widget build(BuildContext context) {
     final status = ref.watch(buddyProvider).value;
-    final height =
-        (MediaQuery.sizeOf(context).height * AppConstants.buddyHeroHeightFactor)
-            .clamp(
-              AppConstants.buddyHeroMinHeight,
-              AppConstants.buddyHeroMaxHeight,
-            );
-    return SizedBox(
-      width: double.infinity,
-      height: height,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // As tall as the dashboard's header icons, which sit on its right.
-          SizedBox(
-            height: AppConstants.iconBadgeLg,
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: status == null
-                  ? null
-                  : StreakChip(
-                      streak: status.streak,
-                      savers: status.state.savers,
-                      todayCounted: status.todayCounted,
-                      onTap: streakGoalChoices(status.streak).isEmpty
-                          ? null
-                          : () => unawaited(_changeGoal()),
-                    ),
-            ),
+    final now = _now();
+    final action = _careAction;
+    final name = status?.state.name ?? 'Buddy';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // As tall as the dashboard's header icons, which sit on its right.
+        SizedBox(
+          height: AppConstants.iconBadgeLg,
+          child: Align(
+            alignment: Alignment.centerLeft,
+            child: status == null
+                ? null
+                : StreakChip(
+                    streak: status.streak,
+                    todayCounted: status.todayCounted,
+                    onTap: () => unawaited(_openStreakSheet()),
+                  ),
           ),
-          Expanded(
-            child: BuddyStage(
-              controller: _buddy,
-              name: status?.state.name ?? 'Buddy',
-              onPoke: _sayMoodLine,
-            ),
-          ),
+        ),
+        if (status != null) ...[
           AppConstants.gap8,
-          BbButton(
-            label: '🍎 Füttern',
-            onPressed: () => context.push(RoutePaths.mealTracker),
+          StreakWeekRow(
+            activeDays: status.weekDays,
+            today: now,
+            size: StreakWeekRowSize.small,
           ),
         ],
-      ),
+        AppConstants.gap8,
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final width = constraints.maxWidth;
+            final diameter = CareRing.diameterFor(
+              width,
+              MediaQuery.sizeOf(context).height,
+            );
+            final buddySide = diameter * AppConstants.careRingBuddyFactor;
+            return Column(
+              children: [
+                BuddyBubbleSlot(
+                  controller: _buddy,
+                  width: width,
+                  buddyArea: Size.square(buddySide),
+                ),
+                CareRing(
+                  care: _care,
+                  diameter: diameter,
+                  highlight: action.need,
+                  onNeed: _open,
+                  buddy: AnimatedBuddy(
+                    controller: _buddy,
+                    name: name,
+                    onPoke: _sayMoodLine,
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+        AppConstants.gap12,
+        BbButton(
+          tapKey: BuddyHero.actionKey,
+          label: BuddyCopy.careButton(action),
+          onPressed: () => _open(action.need ?? CareNeed.food),
+        ),
+      ],
     );
   }
 }

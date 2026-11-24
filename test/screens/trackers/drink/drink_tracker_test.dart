@@ -174,9 +174,12 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 200));
 
+      // Backdated: the event carries the entry's time, not the save's.
+      final lastNight = DateTime(2026, 11, 21, 20);
       container.read(drinkTrackerProvider.notifier)
         ..toggleDrink(testDrink())
-        ..selectAmount(250);
+        ..selectAmount(250)
+        ..setTrackedAt(lastNight);
       await tester.pump();
       await tester.ensureVisible(find.text('speichern'));
       await tester.tap(find.text('speichern'));
@@ -187,6 +190,7 @@ void main() {
       final event = container.read(buddyEventsProvider);
       expect(event?.kind, EntryKind.drink);
       expect(event?.sentiment, LogSentiment.good);
+      expect(event?.trackedAt, lastNight);
       expect(find.text('Getränk gespeichert!'), findsOneWidget);
       final view = tester.widget<BuddyReactionView>(
         find.byType(BuddyReactionView),

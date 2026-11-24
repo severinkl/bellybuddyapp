@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import '../../widgets/buddy/buddy_pose.dart';
+import 'daily_care.dart';
 
 /// German copy pools for the Buddy. Placeholders: `{name}`, `{streak}`.
 class BuddyCopy {
@@ -102,6 +103,54 @@ class BuddyCopy {
       'Du musst nicht alles allein tragen.',
     ],
   };
+
+  /// The dashboard's resting line for what he needs next
+  /// ([nextCareAction]); [CareAction.feed] when nothing is open.
+  static const care = <CareAction, List<String>>{
+    CareAction.breakfast: [
+      "Guten Morgen! Was gab's zum Frühstück? 🍳",
+      'Frühstück fehlt mir noch – mein Bauch knurrt!',
+    ],
+    CareAction.lunch: [
+      'Mittag fehlt mir noch! 🍝',
+      "Mahlzeit! Was gab's bei dir zu Mittag?",
+    ],
+    CareAction.snack: [
+      'Ein kleiner Snack für zwischendurch? 🍎',
+      'Ich hätte Lust auf einen Snack!',
+    ],
+    CareAction.dinner: [
+      "Was gab's zum Abendessen? 🍲",
+      'Abendessen fehlt mir noch!',
+    ],
+    CareAction.drink: [
+      'Ich hab Durst – ein Glas Wasser? 💧',
+      'Schluck für Schluck: Was hast du getrunken?',
+    ],
+    CareAction.gutFeeling: [
+      "Wie geht's deinem Bauch heute? 🙂",
+      'Erzähl mir, wie sich dein Bauch anfühlt.',
+    ],
+    CareAction.feed: [
+      'Alles erledigt – ich bin rundum zufrieden! 💚',
+      'Heute hast du toll für uns gesorgt!',
+      'Ring voll, Bauch glücklich – danke dir!',
+    ],
+  };
+
+  /// The dashboard's next-action button: the meal the time of day asks
+  /// for, logging a need („💧 Getränk eintragen") or Füttern.
+  static String careButton(CareAction action) => switch (action) {
+    CareAction.breakfast => '🍳 Frühstück eintragen',
+    CareAction.lunch => '🍝 Mittagessen eintragen',
+    CareAction.snack => '🍎 Snack eintragen',
+    CareAction.dinner => '🍲 Abendessen eintragen',
+    CareAction.drink => _log(CareNeed.drink),
+    CareAction.gutFeeling => _log(CareNeed.gutFeeling),
+    CareAction.feed => '🍎 Füttern',
+  };
+
+  static String _log(CareNeed need) => '${need.emoji} ${need.logLabel}';
 
   /// Sleepy lines for late evening / night (hour < 5 or >= 10).
   static const sleepyNight = [

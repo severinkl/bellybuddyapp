@@ -55,11 +55,16 @@ class FacePose {
     this.lean = 0,
     this.rumble = 0,
     this.zzz = 0,
+    this.gazeWander = 1,
   });
 
   final double lidTop, lidTilt, lidBottom, pupil, heart, smile, open;
   final double mouthWidth, brow, browTilt, blush, nervousFx, sway, breath;
   final double breathRate, shake, hop, hearts, gazeY, lean, rumble, zzz;
+
+  /// How far the idle eyes glance around (1: freely; 0: straight ahead, at
+  /// the viewer).
+  final double gazeWander;
 
   static FacePose forMood(BuddyMood m) => switch (m) {
     BuddyMood.happy => const FacePose(),
@@ -93,8 +98,8 @@ class FacePose {
       breathRate: 0.22,
       gazeY: 0.6,
     ),
+    // A clear 😍: eyes wide open, heart pupils fixed on the viewer.
     BuddyMood.inLove => const FacePose(
-      lidTop: 0.1,
       pupil: 1.05,
       heart: 1,
       smile: 0.9,
@@ -105,6 +110,8 @@ class FacePose {
       breath: 0.022,
       breathRate: 0.4,
       hearts: 1,
+      gazeY: 0,
+      gazeWander: 0,
     ),
     BuddyMood.zen => const FacePose(
       lidTop: 0.92,
@@ -183,7 +190,7 @@ class FacePose {
   List<double> get _v => [
     lidTop, lidTilt, lidBottom, pupil, heart, smile, open, mouthWidth, //
     brow, browTilt, blush, nervousFx, sway, breath, breathRate, shake, //
-    hop, hearts, gazeY, lean, rumble, zzz,
+    hop, hearts, gazeY, lean, rumble, zzz, gazeWander,
   ];
 
   static FacePose _from(List<double> v) => FacePose(
@@ -209,6 +216,7 @@ class FacePose {
     lean: v[19],
     rumble: v[20],
     zzz: v[21],
+    gazeWander: v[22],
   );
 
   static FacePose lerp(FacePose a, FacePose b, double k) {
@@ -241,6 +249,7 @@ class FacePose {
     double? lean,
     double? rumble,
     double? zzz,
+    double? gazeWander,
   }) => FacePose(
     lidTop: lidTop ?? this.lidTop,
     lidTilt: lidTilt ?? this.lidTilt,
@@ -264,6 +273,7 @@ class FacePose {
     lean: lean ?? this.lean,
     rumble: rumble ?? this.rumble,
     zzz: zzz ?? this.zzz,
+    gazeWander: gazeWander ?? this.gazeWander,
   );
 
   bool closeTo(FacePose other, {double eps = 1e-3}) {

@@ -17,10 +17,10 @@ import '../../providers/profile_provider.dart';
 import '../../providers/tutorial_provider.dart';
 import '../../router/route_names.dart';
 import '../../utils/logger.dart';
-import '../../widgets/common/tracker_card.dart';
 import 'widgets/buddy_hero.dart';
 import 'widgets/feature_card.dart';
 import 'widgets/notification_opt_in_dialog.dart';
+import 'widgets/today_list.dart';
 import 'widgets/tutorial/show_dashboard_tutorial.dart';
 import 'widgets/tutorial/tutorial_keys.dart';
 
@@ -93,7 +93,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   Future<void> _loadData() async {
     await Future.wait<void>([
       ref.read(profileProvider.notifier).fetchProfile(),
-      ref.read(entriesProvider.notifier).loadEntries(DateTime.now()),
+      ref
+          .read(entriesProvider.notifier)
+          .loadEntries(ref.read(buddyClockProvider)()),
       ref.read(ingredientSuggestionProvider.notifier).fetchSuggestions(),
       _refreshBuddy(),
     ]);
@@ -149,6 +151,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           color: AppTheme.primary,
           child: CustomScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
+            // A short, fixed set of sections, all built and laid out (box
+            // slivers are never lazy), so every tour target below the fold
+            // exists for the tour to scroll to.
             slivers: [
               SliverToBoxAdapter(
                 child: Padding(
@@ -158,29 +163,29 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     AppConstants.spacingLg,
                     0,
                   ),
-                  // The header icons sit top-right on the hero's streak row.
-                  child: Stack(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      BuddyHero(key: TutorialKeys.buddy),
-                      const Positioned(
-                        top: 0,
-                        right: 0,
-                        child: _DashboardHeader(),
+                      // The header icons sit top-right on the hero's streak
+                      // row.
+                      Stack(
+                        children: [
+                          BuddyHero(key: TutorialKeys.buddy),
+                          const Positioned(
+                            top: 0,
+                            right: 0,
+                            child: _DashboardHeader(),
+                          ),
+                        ],
                       ),
+                      AppConstants.gap24,
+                      const TodayList(),
+                      AppConstants.gap24,
                     ],
                   ),
                 ),
               ),
-              const SliverToBoxAdapter(child: AppConstants.gap24),
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppConstants.spacing12,
-                  ),
-                  child: _TrackerCards(),
-                ),
-              ),
-              const SliverToBoxAdapter(child: AppConstants.gap32),
+              // The „Für dich" section reaches down to the screen's bottom.
               SliverFillRemaining(
                 hasScrollBody: false,
                 child: Padding(
@@ -224,35 +229,6 @@ class _DashboardHeader extends StatelessWidget {
           icon: Icons.settings,
           size: AppConstants.iconBadgeLg,
           onPressed: () => context.push(RoutePaths.settings),
-        ),
-      ],
-    );
-  }
-}
-
-class _TrackerCards extends StatelessWidget {
-  const _TrackerCards();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: TrackerCard(
-            key: TutorialKeys.bauchgefuehl,
-            svgPath: AppConstants.logoSvg,
-            label: 'Bauchgefühl',
-            onTap: () => context.push(RoutePaths.gutFeelingTracker),
-          ),
-        ),
-        const SizedBox(width: AppConstants.spacing12),
-        Expanded(
-          child: TrackerCard(
-            key: TutorialKeys.klo,
-            svgPath: AppConstants.toiletPaperSvg,
-            label: 'Klo',
-            onTap: () => context.push(RoutePaths.toiletTracker),
-          ),
         ),
       ],
     );

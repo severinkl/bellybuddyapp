@@ -29,6 +29,23 @@ void main() {
     });
   });
 
+  group('mondayOf', () {
+    test("the week's Monday at midnight, across a month end", () {
+      // 23 Nov 2026 is a Monday.
+      expect(mondayOf(DateTime(2026, 11, 23, 9)), DateTime(2026, 11, 23));
+      expect(mondayOf(DateTime(2026, 11, 29, 23, 59)), DateTime(2026, 11, 23));
+      expect(mondayOf(DateTime(2026, 12, 2)), DateTime(2026, 11, 30));
+    });
+  });
+
+  group('weekday names', () {
+    test('Monday first, the short forms their first two letters', () {
+      expect(kWeekdayNames.first, 'Montag');
+      expect(kWeekdayNames.last, 'Sonntag');
+      expect(kWeekdayShortNames, ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So']);
+    });
+  });
+
   group('formatIsoDate', () {
     test('zero-pads to yyyy-MM-dd and ignores the time', () {
       expect(formatIsoDate(DateTime(2026, 3, 5, 23, 59)), '2026-03-05');

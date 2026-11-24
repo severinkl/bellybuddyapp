@@ -33,7 +33,11 @@ final List<TutorialStep> dashboardTutorialSteps = [
       _b('Buddy'),
       _t('! Jeder Eintrag hält eure 🔥 '),
       _b('Serie'),
-      _t(' am Leben. Mit „🍎 Füttern“ trackst du direkt eine Mahlzeit.'),
+      _t(' am Leben. Der '),
+      _b('Ring'),
+      _t(
+        ' zeigt, was er heute noch braucht, und der große Knopf schlägt dir den nächsten Eintrag vor.',
+      ),
     ],
   ),
   TutorialStep(

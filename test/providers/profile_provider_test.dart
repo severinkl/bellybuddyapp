@@ -156,6 +156,21 @@ void main() {
   });
 
   group('ProfileNotifier.reset', () {
+    test('forgets whose profile it held', () async {
+      when(
+        () => mockRepo.getProfile(any()),
+      ).thenAnswer((_) async => testUserProfile());
+
+      final container = makeContainer();
+      final notifier = container.read(profileProvider.notifier);
+      expect(notifier.loadedFor, isNull);
+      await notifier.fetchProfile();
+      expect(notifier.loadedFor, testUserId);
+
+      notifier.reset();
+      expect(notifier.loadedFor, isNull);
+    });
+
     test('sets state to data(null)', () async {
       final profile = testUserProfile();
       when(() => mockRepo.getProfile(any())).thenAnswer((_) async => profile);

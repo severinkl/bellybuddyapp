@@ -19,6 +19,7 @@ import 'package:belly_buddy/screens/health_consent/widgets/health_consent_conten
 import 'package:belly_buddy/screens/registration/registration_wizard_screen.dart';
 import 'package:belly_buddy/screens/registration/steps/steps.dart';
 import 'package:belly_buddy/screens/registration/steps/email_capture_step.dart';
+import 'package:belly_buddy/screens/registration/widgets/buddy_step_host.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/repositories/auth_repository.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
@@ -86,8 +87,12 @@ Future<void> _withTestFontRows(Future<void> Function() body) async {
   }
 }
 
-double _stageHeight(WidgetTester tester) =>
-    tester.getSize(find.byType(BuddyStage)).height;
+/// The header above the steps (the Buddy and his bubble).
+double _headerHeight(WidgetTester tester) =>
+    tester.getSize(find.byKey(BuddyStepHost.headerKey)).height;
+
+/// The full header's height: the Buddy's, at his header width.
+const _fullHeader = AppConstants.buddyWizardBuddyWidth / kBuddyStageAspect;
 
 Future<void> _pumpWizard(WidgetTester tester) async {
   _tallView(tester);
@@ -98,9 +103,9 @@ Future<void> _pumpWizard(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-/// The wizard's Buddy (one stage hosts every step).
+/// The wizard's Buddy (one header hosts every step).
 BuddyController _buddy(WidgetTester tester) =>
-    tester.widget<BuddyStage>(find.byType(BuddyStage)).controller;
+    tester.widget<AnimatedBuddy>(find.byType(AnimatedBuddy)).controller;
 
 BuddyLine _line(String key) => kWizardReactions[key]!;
 
@@ -364,7 +369,7 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(find.byType(BuddyStage), findsOneWidget);
+      expect(find.byKey(BuddyStepHost.headerKey), findsOneWidget);
       expect(find.byType(AnimatedBuddy), findsOneWidget);
       expect(registrationNextEnabled(tester), isTrue);
       // He asks for his name right away.
@@ -407,7 +412,10 @@ void main() {
       expect(buddy.mood, confirmed.mood);
       expect(buddy.currentAction, confirmed.action);
       // The Buddy is called by his new name.
-      expect(tester.widget<BuddyStage>(find.byType(BuddyStage)).name, 'Bauchi');
+      expect(
+        tester.widget<AnimatedBuddy>(find.byType(AnimatedBuddy)).name,
+        'Bauchi',
+      );
     });
 
     testWidgets(
@@ -469,23 +477,44 @@ void main() {
     });
   });
 
-  group('Stage size', () {
-    testWidgets('the Buddy grows with the screen', (tester) async {
-      _phone(tester, const Size(402, 874));
+  group('Header', () {
+    testWidgets('the Buddy stands left of his bubble, right under the '
+        'progress bar, and no headline repeats his question', (tester) async {
+      _phone(tester, const Size(393, 852));
       await tester.pumpWithProviders(
         const RegistrationWizardScreen(),
         overrides: _overrides(),
       );
       await tester.pumpAndSettle();
+      await confirmRegistrationBuddyName(tester);
+      await acceptRegistrationHealthConsent(tester);
+      await tester.pump(RegistrationWizardScreen.buddyFollowUpDelay);
+      await tester.pumpAndSettle();
 
-      expect(_stageHeight(tester), greaterThanOrEqualTo(220));
-      expect(
-        _stageHeight(tester),
-        lessThanOrEqualTo(AppConstants.buddyWizardMaxSize),
-      );
+      expect(_headerHeight(tester), closeTo(_fullHeader, 0.5));
+      final buddy = tester.getRect(find.byType(AnimatedBuddy));
+      final bubble = tester.getRect(find.byType(BuddySpeechBubble));
+      final header = tester.getRect(find.byKey(BuddyStepHost.headerKey));
+      expect(buddy.width, AppConstants.buddyWizardBuddyWidth);
+      expect(buddy.top, header.top);
+      expect(bubble.left, greaterThanOrEqualTo(buddy.right));
+      expect(bubble.top, greaterThanOrEqualTo(header.top));
+      expect(bubble.bottom, lessThanOrEqualTo(header.bottom));
+      // Right under the progress bar.
+      final progress = tester.getRect(find.byType(LinearProgressIndicator));
+      expect(header.top - progress.bottom, lessThanOrEqualTo(8));
+
+      // The bubble asks; the step only labels its input.
+      final question = _line('step:birthYear').lines.single;
+      expect(_buddy(tester).bubble, question);
+      expect(find.text(question), findsOneWidget);
+      expect(find.text('Wann wurdest du geboren?'), findsNothing);
+      expect(find.text('GEBURTSJAHR'), findsOneWidget);
     });
 
-    testWidgets('a short screen keeps the smallest stage', (tester) async {
+    testWidgets('a short screen keeps the full header and scrolls', (
+      tester,
+    ) async {
       _phone(tester, const Size(320, 480));
       await tester.pumpWithProviders(
         const RegistrationWizardScreen(),
@@ -493,12 +522,12 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(_stageHeight(tester), AppConstants.buddyWizardSize);
+      expect(_headerHeight(tester), closeTo(_fullHeader, 0.5));
+      expect(tester.takeException(), isNull);
     });
 
-    testWidgets('with the keyboard open he shrinks to a bubble-less Buddy', (
-      tester,
-    ) async {
+    testWidgets('with the keyboard open the header shrinks to a smaller '
+        'Buddy who keeps his bubble', (tester) async {
       _phone(tester, const Size(402, 874));
       await tester.pumpWithProviders(
         const RegistrationWizardScreen(),
@@ -509,21 +538,73 @@ void main() {
       await tester.showKeyboard(find.byKey(BuddyNameStep.fieldKey));
       await _openKeyboard(tester, 336);
 
-      expect(_stageHeight(tester), AppConstants.buddyWizardCompactSize);
-      expect(tester.getSize(find.byType(AnimatedBuddy)).height, greaterThan(0));
-      final bubbleSlot = find.ancestor(
-        of: find.byType(BuddySpeechBubble),
-        matching: find.byType(FittedBox),
+      expect(
+        _headerHeight(tester),
+        AppConstants.buddyWizardCompactHeaderHeight,
       );
-      expect(tester.getSize(bubbleSlot).height, 0);
+      expect(
+        tester.getSize(find.byType(AnimatedBuddy)).height,
+        AppConstants.buddyWizardCompactSize,
+      );
+      expect(tester.getSize(find.byType(BuddySpeechBubble)).height, isNonZero);
       final field = find.byKey(BuddyNameStep.fieldKey);
       expect(field.hitTestable(), findsOneWidget);
       expect(tester.getRect(field).bottom, lessThanOrEqualTo(874 - 336));
 
-      // Closing the keyboard brings the full stage back.
+      // Closing the keyboard brings the full header back.
       tester.view.resetViewInsets();
       await tester.pumpAndSettle();
-      expect(_stageHeight(tester), greaterThanOrEqualTo(220));
+      expect(_headerHeight(tester), closeTo(_fullHeader, 0.5));
+    });
+
+    testWidgets('on a 393×852 phone all nine intolerances and „Weiter" show '
+        'without scrolling', (tester) async {
+      _phone(tester, const Size(393, 852));
+      tester.view.padding = const FakeViewPadding(top: 59, bottom: 34);
+      addTearDown(tester.view.resetPadding);
+      await tester.pumpWithProviders(
+        const RegistrationWizardScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pumpAndSettle();
+      await _walkTo(tester, IntolerancesStep.intolerancesTitleKey);
+
+      final next = find.byKey(RegistrationWizardScreen.nextButtonKey);
+      expect(next.hitTestable(), findsOneWidget);
+      final nextTop = tester.getRect(next).top;
+      expect(AppConstants.intoleranceOptions, hasLength(9));
+      for (final option in AppConstants.intoleranceOptions) {
+        final chip = find.text(option);
+        expect(chip.hitTestable(), findsOneWidget, reason: option);
+        expect(tester.getRect(chip).bottom, lessThan(nextTop), reason: option);
+      }
+    });
+
+    testWidgets('on a 393×852 phone the consent checkbox shows without '
+        'scrolling, above „Weiter"', (tester) async {
+      _phone(tester, const Size(393, 852));
+      tester.view.padding = const FakeViewPadding(top: 59, bottom: 34);
+      addTearDown(tester.view.resetPadding);
+      await tester.pumpWithProviders(
+        const RegistrationWizardScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pumpAndSettle();
+      await confirmRegistrationBuddyName(tester);
+
+      expect(find.byKey(HealthConsentStep.titleKey), findsOneWidget);
+      final checkbox = find.byKey(HealthConsentContent.checkboxKey);
+      expect(checkbox.hitTestable(), findsOneWidget);
+      final next = find.byKey(RegistrationWizardScreen.nextButtonKey);
+      expect(
+        tester.getRect(checkbox).bottom,
+        lessThanOrEqualTo(tester.getRect(next).top),
+      );
+
+      // Ticking it right there enables „Weiter".
+      await tester.tap(checkbox);
+      await tester.pump();
+      expect(registrationNextEnabled(tester), isTrue);
     });
   });
 
@@ -547,11 +628,14 @@ void main() {
       tester.view.viewInsets = const FakeViewPadding(bottom: 336);
       addTearDown(tester.view.resetViewInsets);
       await tester.pump();
-      expect(_stageHeight(tester), AppConstants.buddyWizardCompactSize);
+      expect(
+        _headerHeight(tester),
+        AppConstants.buddyWizardCompactHeaderHeight,
+      );
 
       tester.view.resetViewInsets();
       await tester.pump();
-      expect(_stageHeight(tester), greaterThanOrEqualTo(220));
+      expect(_headerHeight(tester), closeTo(_fullHeader, 0.5));
 
       await confirmRegistrationBuddyName(tester);
       await acceptRegistrationHealthConsent(tester);
@@ -597,11 +681,40 @@ void main() {
       // Overflows would have failed the test on the way. (The auth step's
       // social buttons are too wide for 375 px in the test font, as before.)
       expect(find.byKey(IntolerancesStep.intolerancesTitleKey), findsOneWidget);
-      expect(find.byType(BuddyStage), findsOneWidget);
+      expect(find.byType(AnimatedBuddy), findsOneWidget);
     });
   });
 
   group('Buddy reactions', () {
+    testWidgets('a reaction stays up until the next line (no headline to '
+        'fall back on)', (tester) async {
+      _phone(tester, const Size(402, 874));
+      await tester.pumpWithProviders(
+        const RegistrationWizardScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pumpAndSettle();
+      await _walkTo(tester, GenderStep.genderTitleKey);
+      await tester.pump(RegistrationWizardScreen.buddyFollowUpDelay);
+      await tester.pumpAndSettle();
+
+      // Ticking, so the Buddy's clock (and any bubble timeout) runs.
+      AnimatedBuddy.tickerEnabled = true;
+      addTearDown(() => AnimatedBuddy.tickerEnabled = false);
+      await tester.tap(find.byKey(GenderStep.genderWeiblichKey));
+      await tester.pump();
+      final reaction = _buddy(tester).bubble;
+      expect(_lines('gender:weiblich'), contains(reaction));
+
+      for (var i = 0; i < 20; i++) {
+        await tester.pump(const Duration(milliseconds: 500));
+      }
+      expect(_buddy(tester).bubble, reaction);
+      expect(find.text(reaction!), findsOneWidget);
+      // Unmount while ticking, so no ticker outlives the test.
+      await tester.pumpWidget(const SizedBox());
+    });
+
     testWidgets('every step introduces itself, the auth step too', (
       tester,
     ) async {
@@ -797,7 +910,7 @@ void main() {
         await _tapNext(tester);
       }
       expect(find.byType(AuthStep), findsOneWidget);
-      expect(find.byType(BuddyStage), findsOneWidget);
+      expect(find.byType(AnimatedBuddy), findsOneWidget);
     });
   });
 
@@ -813,7 +926,7 @@ void main() {
 
       await _withTestFontRows(() async {
         await advanceToAuthStep(tester);
-        expect(find.byType(BuddyStage), findsOneWidget);
+        expect(find.byType(AnimatedBuddy), findsOneWidget);
 
         await tester.enterText(
           find.byKey(AuthStep.emailFieldKey),
@@ -822,7 +935,7 @@ void main() {
         await tester.showKeyboard(find.byKey(BbPasswordField.passwordFieldKey));
         await _openKeyboard(tester, 336);
 
-        expect(find.byType(BuddyStage), findsNothing);
+        expect(find.byType(AnimatedBuddy), findsNothing);
         final submit = find.byKey(AuthStep.submitButtonKey);
         expect(submit.hitTestable(), findsOneWidget);
         expect(tester.getRect(submit).bottom, lessThanOrEqualTo(874 - 336));

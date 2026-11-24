@@ -11,17 +11,20 @@ import '../../config/constants.dart';
 import '../../models/user_profile.dart';
 import '../../providers/buddy_events_provider.dart';
 import '../../providers/buddy_provider.dart';
+import '../../providers/buddy_welcome_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../router/route_names.dart';
 import '../../services/buddy/buddy_mood_logic.dart';
-import '../../services/buddy/streak_engine.dart' show maxStreakSavers;
+import '../../utils/date_format_utils.dart';
 import '../../utils/logger.dart';
 import '../../widgets/buddy/buddy.dart';
+import '../../widgets/buddy/buddy_side_header.dart';
 import '../../widgets/common/bb_button.dart';
 import '../registration/steps/buddy_name_step.dart';
 import 'streak_goal_picker.dart';
-import 'widgets/gift_reveal.dart';
+import 'widgets/reminder_preview.dart';
+import 'widgets/streak_moment.dart';
 
 /// Where `/buddy-onboarding` was opened from.
 enum BuddyOnboardingEntry {
@@ -32,11 +35,20 @@ enum BuddyOnboardingEntry {
   gate,
 }
 
-enum BuddyOnboardingStep { intro, name, streakGoal, reminder, firstMeal, gift }
+enum BuddyOnboardingStep {
+  intro,
+  name,
+  firstMeal,
+  streakMoment,
+  streakGoal,
+  reminder,
+}
 
 /// The steps for [entry]: the intro and naming only for a gate user without
-/// a Buddy row ([hasRow]), the reminder ask only while push is off
-/// ([remindersAlreadyOn]), the first meal only right after registration.
+/// a Buddy row ([hasRow]), the first meal only right after registration,
+/// then the streak moment and the goal, and the reminder ask only while
+/// push is off ([remindersAlreadyOn]). The last step's answer completes
+/// the onboarding and opens the dashboard.
 List<BuddyOnboardingStep> buddyOnboardingSteps({
   required BuddyOnboardingEntry entry,
   required bool hasRow,
@@ -46,17 +58,27 @@ List<BuddyOnboardingStep> buddyOnboardingSteps({
     BuddyOnboardingStep.intro,
     BuddyOnboardingStep.name,
   ],
-  BuddyOnboardingStep.streakGoal,
-  if (!remindersAlreadyOn) BuddyOnboardingStep.reminder,
   if (entry == BuddyOnboardingEntry.afterRegistration)
     BuddyOnboardingStep.firstMeal,
-  BuddyOnboardingStep.gift,
+  BuddyOnboardingStep.streakMoment,
+  BuddyOnboardingStep.streakGoal,
+  if (!remindersAlreadyOn) BuddyOnboardingStep.reminder,
 ];
 
+/// The Buddy's line on the streak moment for [streak] days.
+String streakMomentLine(int streak) => switch (streak) {
+  <= 0 => 'Mit deinem nächsten Eintrag startet unser Streak!',
+  1 => 'Tag 1! Unser Streak ist geboren.',
+  _ => 'Unser Streak: $streak Tage! Weiter so.',
+};
+
 /// The Buddy-hosted sequence after sign-up (or for existing users via the
-/// gate): streak goal, reminder ask, first meal and a gift (one
-/// Streak-Saver), which completes the Buddy onboarding. One Buddy stays on
-/// top across all steps; system back returns to the previous step.
+/// gate): first meal, the streak moment („Tag 1! Unser Streak ist
+/// geboren."), the streak goal and the reminder ask; the last answer
+/// completes the Buddy onboarding and opens the dashboard, where the Buddy
+/// welcomes the user. Right after sign-up without an entry today the streak
+/// moment is skipped. One Buddy stays on top across all steps; system back
+/// returns to the previous step.
 class BuddyOnboardingScreen extends ConsumerStatefulWidget {
   const BuddyOnboardingScreen({
     super.key,
@@ -71,7 +93,8 @@ class BuddyOnboardingScreen extends ConsumerStatefulWidget {
   static const reminderLaterKey = Key('buddy_onboarding_reminder_later');
   static const mealLogKey = Key('buddy_onboarding_meal_log');
   static const mealLaterKey = Key('buddy_onboarding_meal_later');
-  static const finishKey = Key('buddy_onboarding_finish');
+  static const momentNextKey = Key('buddy_onboarding_moment_next');
+  static const goalConfirmKey = Key('buddy_onboarding_goal_confirm');
 
   @override
   ConsumerState<BuddyOnboardingScreen> createState() =>
@@ -81,52 +104,93 @@ class BuddyOnboardingScreen extends ConsumerStatefulWidget {
 class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
   static const _log = AppLogger('BuddyOnboarding');
 
-  static const _introLine = 'Hi! Ich bin neu hier — dein Bauch-Buddy.';
-  static const _thanksLine = 'Mmmh! Danke!';
+  /// The steps whose bubble sits beside a small Buddy above a list
+  /// (Layout 1); the others show him centred under his bubble.
+  static const _sideSteps = {
+    BuddyOnboardingStep.streakGoal,
+    BuddyOnboardingStep.reminder,
+  };
 
-  static const _giftSaverText =
-      'Ein Streak-Saver! Der rettet unseren Streak, falls du mal einen Tag '
-      'vergisst.';
-  static const _giftSaversFullText =
-      'Deine Schutzschilde sind schon voll – du bist bestens gerüstet!';
-  static const _giftNoSaverText = "Du bist bestens gerüstet – los geht's!";
-  static const _giftSaverCard = '🛡 Streak-Saver';
-  static const _giftSaversFullCard = '🛡 Schutzschilde voll';
-  static const _giftNoSaverCard = '🛡 Bestens gerüstet';
-
-  /// Reactions stay long enough to read across a step change.
+  /// Reactions stay this long (long enough to read across a step change),
+  /// then the Buddy asks the step's question again
+  /// ([BuddyController.sayThenRest]).
   static const _reactionHold = Duration(seconds: 4);
 
+  /// The steps with little content below the Buddy: he gets a bigger
+  /// stage ([AppConstants.buddyOnboardingHeroStageHeight]).
+  static const _heroSteps = {
+    BuddyOnboardingStep.intro,
+    BuddyOnboardingStep.firstMeal,
+    BuddyOnboardingStep.streakMoment,
+  };
+
   /// The stage never takes more than this share of the height (small
-  /// screens, open keyboard), so the step content keeps room.
+  /// screens, open keyboard), so the step content keeps room; the bigger
+  /// stage of [_heroSteps] at most [_maxHeroStageShare].
   static const double _maxStageShare = 0.33;
+  static const double _maxHeroStageShare = 0.45;
+
+  /// The stage's height on [step] in a [height] tall screen.
+  static double _stageHeight(BuddyOnboardingStep step, double height) =>
+      _heroSteps.contains(step)
+      ? math.min(
+          AppConstants.buddyOnboardingHeroStageHeight,
+          height * _maxHeroStageShare,
+        )
+      : math.min(
+          AppConstants.buddyOnboardingStageHeight,
+          height * _maxStageShare,
+        );
 
   final BuddyController _buddy = BuddyController();
   final math.Random _rnd = math.Random();
   final ScrollController _scroll = ScrollController();
-
-  /// The gift's text, scrolled into view once it shows.
-  final GlobalKey _giftTextKey = GlobalKey();
 
   /// Fixed once the Buddy and the profile have loaded.
   List<BuddyOnboardingStep>? _steps;
   int _index = 0;
   String _name = 'Buddy';
 
-  /// A meal was logged while the first-meal step showed.
+  /// A meal was logged while the meal tracker was open from the first-meal
+  /// step.
   bool _mealLogged = false;
+
+  /// Something was logged for today (by the entry's date) during the
+  /// onboarding: today counts, even before the Buddy's streak has refreshed.
+  bool _loggedToday = false;
+
+  /// The goal tapped on the goal step; until then the stored goal or the
+  /// Buddy's tip shows as selected ([_selectedGoal]).
+  int? _goal;
 
   /// A step action is running (saving, permission dialog, meal tracker).
   bool _busy = false;
-  bool _giftOpened = false;
-  Future<bool>? _completion;
-
-  /// Whether completing the onboarding added the gift saver; null until it
-  /// has completed. The gift's text waits for it.
-  bool? _saverGranted;
   bool _calm = false;
 
   BuddyOnboardingStep get _step => _steps![_index];
+
+  DateTime _today() => ref.read(buddyTodayProvider)();
+
+  /// The streak the moment shows: a log made during the onboarding counts
+  /// at once, before the Buddy's refresh lands.
+  int _momentStreak(BuddyStatus? status) =>
+      math.max(status?.streak ?? 0, _loggedToday ? 1 : 0);
+
+  /// This week's counted days, with today once something was logged.
+  Set<DateTime> _momentWeek(BuddyStatus? status) => {
+    ...?status?.weekDays,
+    if (_loggedToday) startOfDay(_today()),
+  };
+
+  /// Right after sign-up, the streak moment waits for a first entry.
+  bool _skips(BuddyOnboardingStep step) =>
+      step == BuddyOnboardingStep.streakMoment &&
+      widget.entry == BuddyOnboardingEntry.afterRegistration &&
+      _momentStreak(ref.read(buddyProvider).value) == 0;
+
+  /// The steps shown, in order (the progress dots).
+  List<BuddyOnboardingStep> get _shownSteps =>
+      _steps!.where((s) => !_skips(s)).toList();
 
   @override
   void initState() {
@@ -134,7 +198,11 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
     // Listen rather than read the single event slot after the tracker pops:
     // a drink logged from the meal's success screen replaces the meal there.
     ref.listenManual(buddyEventsProvider, (_, event) {
-      if (event?.kind == EntryKind.meal &&
+      if (event == null) return;
+      // The entry's own date: a meal backdated to yesterday is no log for
+      // today, however recently it was saved.
+      if (isSameDay(event.trackedAt, _today())) _loggedToday = true;
+      if (event.kind == EntryKind.meal &&
           _steps != null &&
           _step == BuddyOnboardingStep.firstMeal) {
         _mealLogged = true;
@@ -190,36 +258,71 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
     _enter(_steps![index]);
   }
 
+  /// The next shown step, or — after the last one — completes the
+  /// onboarding.
   void _advance() {
-    if (_index < _steps!.length - 1) _goTo(_index + 1);
+    var next = _index + 1;
+    while (next < _steps!.length && _skips(_steps![next])) {
+      next++;
+    }
+    if (next < _steps!.length) {
+      _goTo(next);
+    } else {
+      unawaited(_finish());
+    }
   }
 
-  /// System back: the previous step; nothing on the first one, while busy
-  /// or once the gift is open.
+  /// System back: the previous shown step; nothing on the first one or
+  /// while busy.
   void _back() {
-    if (_steps == null || _index == 0 || _busy || _giftOpened) return;
-    _goTo(_index - 1);
+    if (_steps == null || _busy) return;
+    var prev = _index - 1;
+    while (prev >= 0 && _skips(_steps![prev])) {
+      prev--;
+    }
+    if (prev >= 0) _goTo(prev);
   }
 
-  /// Sets the Buddy up for [step].
+  /// Sets the Buddy up for [step]: his mood, and he asks its question.
   void _enter(BuddyOnboardingStep step) {
-    _mealLogged = false;
+    _ask(step);
     switch (step) {
       case BuddyOnboardingStep.intro:
         _buddy
           ..mood = BuddyMood.happy
-          ..play(BuddyAction.wakeUp)
-          // Up until the next line replaces it.
-          ..say(_introLine, duration: null);
+          ..play(BuddyAction.wakeUp);
       case BuddyOnboardingStep.firstMeal:
         _buddy.mood = BuddyMood.hungry;
+      case BuddyOnboardingStep.streakMoment:
+        _buddy.mood = BuddyMood.happy;
+        if (_momentStreak(ref.read(buddyProvider).value) > 0) {
+          _buddy.play(BuddyAction.celebrate);
+        }
       case BuddyOnboardingStep.name:
       case BuddyOnboardingStep.streakGoal:
       case BuddyOnboardingStep.reminder:
-      case BuddyOnboardingStep.gift:
         _buddy.mood = BuddyMood.happy;
     }
   }
+
+  /// What the Buddy asks on [step]. His bubble carries it; the steps have
+  /// no headline of their own.
+  String _question(BuddyOnboardingStep step) => switch (step) {
+    BuddyOnboardingStep.intro => 'Hi! Ich bin neu hier — dein Belly Buddy.',
+    BuddyOnboardingStep.name => 'Wie soll ich heißen?',
+    BuddyOnboardingStep.firstMeal =>
+      'Ich hab Hunger! Was hast du zuletzt gegessen?',
+    BuddyOnboardingStep.streakMoment => streakMomentLine(
+      _momentStreak(ref.read(buddyProvider).value),
+    ),
+    BuddyOnboardingStep.streakGoal => 'Wie viele Tage schaffen wir zusammen?',
+    BuddyOnboardingStep.reminder =>
+      'Darf ich mich melden, wenn ich Hunger hab?',
+  };
+
+  /// The Buddy asks [step]'s question. It stays until the next step's
+  /// replaces it and comes back after a reaction.
+  void _ask(BuddyOnboardingStep step) => _buddy.rest(_question(step));
 
   /// Whether [step] is showing and free for a new action. The outgoing step
   /// stays tappable while it fades out, so every handler checks this.
@@ -275,12 +378,23 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
     _advance();
     final reaction = wizardReaction('name:confirmed');
     if (reaction != null) {
-      _buddy.react(reaction, name: name, rnd: _rnd, duration: _reactionHold);
+      _buddy.react(reaction, name: name, rnd: _rnd, hold: _reactionHold);
     }
   }
 
-  void _pickGoal(int goal) {
+  /// The goal selected on the goal step: the tapped one, else the stored
+  /// one, else the Buddy's tip — whichever is still open.
+  int? _selectedGoal(BuddyStatus? status) => streakGoalSelection(
+    streakGoalChoices(status?.streak ?? 0),
+    _goal ?? status?.state.streakGoal,
+  );
+
+  /// „Ziel festlegen": saves the selected goal (in the background) and goes
+  /// on.
+  void _confirmGoal() {
     if (!_ready(BuddyOnboardingStep.streakGoal)) return;
+    final goal = _selectedGoal(ref.read(buddyProvider).value);
+    if (goal == null) return;
     final buddy = ref.read(buddyProvider.notifier);
     unawaited(
       _logErrors('Saving the streak goal', () => buddy.setStreakGoal(goal)),
@@ -322,45 +436,26 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
 
   Future<void> _logMeal() async {
     if (!_ready(BuddyOnboardingStep.firstMeal)) return;
+    _mealLogged = false;
     _setBusy(true);
     await context.push<void>(RoutePaths.mealTracker);
     if (!mounted) return;
     _setBusy(false);
     if (!_mealLogged || _step != BuddyOnboardingStep.firstMeal) return;
+    // The tracker's success screen already showed him eating; the streak
+    // moment celebrates.
     _advance();
-    _buddy
-      ..mood = BuddyMood.happy
-      ..play(BuddyAction.eat)
-      ..say(_thanksLine, duration: _reactionHold);
   }
 
   void _mealLater() {
     if (_ready(BuddyOnboardingStep.firstMeal)) _advance();
   }
 
-  void _onGiftOpened() {
-    if (_giftOpened) return;
-    setState(() => _giftOpened = true);
-    _buddy
-      ..mood = BuddyMood.inLove
-      ..play(BuddyAction.celebrate);
-    _completion = _complete();
+  void _momentNext() {
+    if (_ready(BuddyOnboardingStep.streakMoment)) _advance();
   }
 
-  /// Small screens: brings the gift's text into view once it shows.
-  void _revealGiftText() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final text = _giftTextKey.currentContext;
-      if (!mounted || text == null) return;
-      Scrollable.ensureVisible(
-        text,
-        duration: _calm ? Duration.zero : AppConstants.animMedium,
-        alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
-      );
-    });
-  }
-
-  /// Completes the onboarding and grants the gift saver; false on failure.
+  /// Completes the onboarding; false on failure.
   Future<bool> _complete() async {
     final buddy = ref.read(buddyProvider.notifier);
     // Push was already on, so the reminder ask was skipped: the dashboard's
@@ -369,11 +464,7 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
       await _markRemindersAsked();
     }
     try {
-      final granted = await buddy.completeOnboarding(grantGiftSaver: true);
-      if (mounted) {
-        setState(() => _saverGranted = granted);
-        _revealGiftText();
-      }
+      await buddy.completeOnboarding();
       return true;
     } catch (e, st) {
       _log.error('Completing the Buddy onboarding failed', e, st);
@@ -381,17 +472,19 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
     }
   }
 
+  /// After the last step: completes the onboarding and opens the
+  /// dashboard, where the Buddy welcomes the user. On failure the step
+  /// stays and its answer can be tapped again (completing is idempotent).
   Future<void> _finish() async {
-    if (!_ready(BuddyOnboardingStep.gift) || !_giftOpened) return;
+    if (!mounted || _busy) return;
     _setBusy(true);
-    final ok = await (_completion ??= _complete());
+    final ok = await _complete();
     if (!mounted) return;
     if (ok) {
+      ref.read(buddyWelcomeProvider.notifier).set(BuddyWelcomeNotifier.line);
       context.go(RoutePaths.dashboard);
       return;
     }
-    // Try again on the next tap (completeOnboarding is idempotent).
-    _completion = null;
     _setBusy(false);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
@@ -434,38 +527,42 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
     BuddyStatus? status,
     double height,
   ) {
-    final stageHeight = math.min(
-      AppConstants.buddyOnboardingStageHeight,
-      height * _maxStageShare,
-    );
+    final step = _step;
+    final shown = _shownSteps;
     final switchDuration = _calm ? Duration.zero : AppConstants.animMedium;
-    final actions = _buildActions(_step);
+    final name = status?.state.name ?? _name;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         AppConstants.gap16,
-        _ProgressDots(count: steps.length, index: _index, calm: _calm),
-        SizedBox(
-          height: stageHeight,
-          child: BuddyStage(
-            controller: _buddy,
-            name: status?.state.name ?? _name,
-          ),
+        _ProgressDots(
+          count: shown.length,
+          index: math.max(0, shown.indexOf(step)),
+          calm: _calm,
         ),
+        // One Buddy at a time (his widget ticks the controller): beside his
+        // bubble above a list, else centred under it.
+        if (_sideSteps.contains(step)) ...[
+          AppConstants.gap8,
+          BuddySideHeader(
+            controller: _buddy,
+            name: name,
+            buddySize: BuddySideHeader.defaultBuddySize,
+          ),
+        ] else
+          SizedBox(
+            height: _stageHeight(step, height),
+            child: BuddyStage(controller: _buddy, name: name),
+          ),
         Expanded(
           child: SingleChildScrollView(
             controller: _scroll,
-            padding: const EdgeInsets.fromLTRB(
-              AppConstants.spacingLg,
-              AppConstants.spacingSm,
-              AppConstants.spacingLg,
-              AppConstants.spacingMd,
-            ),
+            padding: AppConstants.wizardStepPadding,
             child: AnimatedSwitcher(
               duration: switchDuration,
               child: KeyedSubtree(
-                key: ValueKey(_step),
-                child: _buildContent(_step, status),
+                key: ValueKey(step),
+                child: _buildContent(step, status, name),
               ),
             ),
           ),
@@ -475,18 +572,20 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
         AnimatedSwitcher(
           duration: switchDuration,
           child: KeyedSubtree(
-            key: ValueKey((_step, _giftOpened)),
-            child: actions.isEmpty
-                ? const SizedBox.shrink()
-                : Padding(
-                    padding: const EdgeInsets.fromLTRB(
-                      AppConstants.spacingLg,
-                      AppConstants.spacingSm,
-                      AppConstants.spacingLg,
-                      AppConstants.spacingMd,
-                    ),
-                    child: _StepColumn(children: actions),
-                  ),
+            key: ValueKey(step),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppConstants.spacingLg,
+                AppConstants.spacingSm,
+                AppConstants.spacingLg,
+                AppConstants.spacingMd,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: _buildActions(step),
+              ),
+            ),
           ),
         ),
       ],
@@ -494,72 +593,46 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
   }
 
   /// What the step shows below the Buddy (scrolls when tight).
-  Widget _buildContent(BuddyOnboardingStep step, BuddyStatus? status) {
+  Widget _buildContent(
+    BuddyOnboardingStep step,
+    BuddyStatus? status,
+    String name,
+  ) {
     return switch (step) {
-      // The Buddy's greeting is the whole content.
-      BuddyOnboardingStep.intro => const SizedBox.shrink(),
+      // The Buddy's line is the whole content; the buttons below answer.
+      BuddyOnboardingStep.intro ||
+      BuddyOnboardingStep.firstMeal => const SizedBox.shrink(),
       BuddyOnboardingStep.name => BuddyNameStep(
         value: _name,
         onChanged: (v) => setState(() => _name = v),
         onSubmitted: _confirmName,
       ),
-      BuddyOnboardingStep.streakGoal => _StepColumn(
+      BuddyOnboardingStep.streakMoment => StreakMoment(
+        streak: _momentStreak(status),
+        weekDays: _momentWeek(status),
+        today: _today(),
+      ),
+      BuddyOnboardingStep.streakGoal => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _StepTitle('Wie viele Tage schaffen wir zusammen?'),
+          const StreakGoalWhyCard(),
           AppConstants.gap16,
           StreakGoalPicker(
             currentStreak: status?.streak ?? 0,
-            onSelected: _pickGoal,
+            selected: _selectedGoal(status),
+            // Once confirmed, the choice is made.
+            onChanged: _busy ? null : (g) => setState(() => _goal = g),
           ),
         ],
       ),
-      BuddyOnboardingStep.reminder => const _StepTitle(
-        'Darf ich dich erinnern, wenn ich Hunger habe?',
-      ),
-      BuddyOnboardingStep.firstMeal => const _StepTitle(
-        'Ich hab Hunger! Was hast du zuletzt gegessen?',
-      ),
-      BuddyOnboardingStep.gift => _StepColumn(
-        children: [
-          const _StepTitle('Ein Geschenk für dich!'),
-          AppConstants.gap16,
-          Center(
-            child: GiftReveal(
-              onOpened: _onGiftOpened,
-              cardLabel: _saverGranted == null ? null : _giftCopy(status).card,
-            ),
-          ),
-          if (_giftOpened && _saverGranted != null) ...[
-            AppConstants.gap16,
-            Text(
-              key: _giftTextKey,
-              _giftCopy(status).text,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: AppTheme.fontSizeBodyLG,
-                color: AppTheme.foreground,
-              ),
-            ),
-          ],
-        ],
+      BuddyOnboardingStep.reminder => ReminderPreview(
+        buddyName: name,
+        profile: ref.watch(profileProvider).value,
       ),
     };
   }
 
-  /// What the opened gift's card and text say: the Streak-Saver only when
-  /// one was added.
-  ({String card, String text}) _giftCopy(BuddyStatus? status) {
-    if (_saverGranted ?? false) {
-      return (card: _giftSaverCard, text: _giftSaverText);
-    }
-    final full = (status?.state.savers ?? 0) >= maxStreakSavers;
-    return full
-        ? (card: _giftSaversFullCard, text: _giftSaversFullText)
-        : (card: _giftNoSaverCard, text: _giftNoSaverText);
-  }
-
-  /// The step's buttons for the fixed bottom slot; empty when the content
-  /// itself is the action (goal cards, the closed gift).
+  /// The step's buttons for the fixed bottom slot.
   List<Widget> _buildActions(BuddyOnboardingStep step) {
     return switch (step) {
       BuddyOnboardingStep.intro => [
@@ -579,20 +652,6 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
           onPressed: _nameValid ? _confirmName : null,
         ),
       ],
-      BuddyOnboardingStep.streakGoal => const [],
-      BuddyOnboardingStep.reminder => [
-        BbButton(
-          key: BuddyOnboardingScreen.reminderYesKey,
-          label: 'Ja, gerne',
-          isLoading: _busy,
-          onPressed: _remindersYes,
-        ),
-        AppConstants.gap8,
-        _LaterButton(
-          key: BuddyOnboardingScreen.reminderLaterKey,
-          onPressed: _busy ? null : _remindersLater,
-        ),
-      ],
       BuddyOnboardingStep.firstMeal => [
         BbButton(
           key: BuddyOnboardingScreen.mealLogKey,
@@ -605,47 +664,38 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
           onPressed: _busy ? null : _mealLater,
         ),
       ],
-      BuddyOnboardingStep.gift => [
-        if (_giftOpened)
-          BbButton(
-            key: BuddyOnboardingScreen.finishKey,
-            label: "Los geht's",
-            isLoading: _busy,
-            onPressed: _finish,
-          ),
+      BuddyOnboardingStep.streakMoment => [
+        BbButton(
+          key: BuddyOnboardingScreen.momentNextKey,
+          label: 'Weiter',
+          icon: Icons.arrow_forward,
+          isLoading: _busy,
+          onPressed: _momentNext,
+        ),
+      ],
+      BuddyOnboardingStep.streakGoal => [
+        BbButton(
+          key: BuddyOnboardingScreen.goalConfirmKey,
+          label: 'Ziel festlegen',
+          isLoading: _busy,
+          onPressed: _confirmGoal,
+        ),
+      ],
+      BuddyOnboardingStep.reminder => [
+        BbButton(
+          key: BuddyOnboardingScreen.reminderYesKey,
+          label: 'Erinnerungen aktivieren',
+          isLoading: _busy,
+          onPressed: _remindersYes,
+        ),
+        AppConstants.gap8,
+        _LaterButton(
+          key: BuddyOnboardingScreen.reminderLaterKey,
+          onPressed: _busy ? null : _remindersLater,
+        ),
       ],
     };
   }
-}
-
-class _StepColumn extends StatelessWidget {
-  const _StepColumn({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) => Column(
-    mainAxisSize: MainAxisSize.min,
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: children,
-  );
-}
-
-class _StepTitle extends StatelessWidget {
-  const _StepTitle(this.text);
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) => Text(
-    text,
-    textAlign: TextAlign.center,
-    style: const TextStyle(
-      fontSize: AppTheme.fontSizeHeadingLG,
-      fontWeight: FontWeight.w700,
-      color: AppTheme.foreground,
-    ),
-  );
 }
 
 class _LaterButton extends StatelessWidget {

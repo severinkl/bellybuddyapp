@@ -25,6 +25,7 @@ class RouteNames {
   static const String upgradeRequired = 'upgrade-required';
   static const String healthConsent = 'health-consent';
   static const String buddyOnboarding = 'buddy-onboarding';
+  static const String loading = 'loading';
 }
 
 class RoutePaths {
@@ -57,4 +58,5 @@ class RoutePaths {
   static const String upgradeRequired = '/upgrade-required';
   static const String healthConsent = '/health-consent';
   static const String buddyOnboarding = '/buddy-onboarding';
+  static const String loading = '/loading';
 }

@@ -94,10 +94,6 @@ class _RegistrationWizardScreenState
     _emailCaptureStep: 'emailCapture:intro',
   };
 
-  /// How long the Buddy's lines stay; every step also has its own title.
-  static const _introHold = Duration(seconds: 6);
-  static const _reactionHold = Duration(seconds: 4);
-
   // The Buddy, his name (saved after sign-up) and his pending lines.
   String _buddyName = 'Buddy';
   late final BuddyController _buddy;
@@ -132,7 +128,7 @@ class _RegistrationWizardScreenState
     super.initState();
     _buddy = BuddyController();
     final intro = _introFor(_nameStep);
-    if (intro != null) _react(intro, hold: _introHold);
+    if (intro != null) _react(intro);
   }
 
   static BuddyLine? _introFor(int step) {
@@ -160,14 +156,14 @@ class _RegistrationWizardScreenState
     final intro = _introFor(step);
     if (farewell == null) {
       // Every step has an intro, and reacting cancels the pending lines.
-      if (intro != null) _react(intro, hold: _introHold);
+      if (intro != null) _react(intro);
       return;
     }
     _react(farewell);
     if (intro != null) {
       _followUp = Timer(
         RegistrationWizardScreen.buddyFollowUpDelay,
-        () => _react(intro, hold: _introHold),
+        () => _react(intro),
       );
     }
   }
@@ -180,10 +176,12 @@ class _RegistrationWizardScreenState
   }
 
   /// Plays [line]: its mood and action, and one of its texts with `{name}`
-  /// filled in. Replaces any line still waiting.
-  void _react(BuddyLine line, {Duration hold = _reactionHold}) {
+  /// filled in. Replaces any line still waiting. Lines stay up until the
+  /// next one: the bubble asks each step's question (the steps have no
+  /// headline), and a reaction stays next to the step's label.
+  void _react(BuddyLine line) {
     _cancelPendingLines();
-    _buddy.react(line, name: _name, rnd: _rnd, duration: hold);
+    _buddy.react(line, name: _name, rnd: _rnd, duration: null);
   }
 
   void _reactTo(String key) {
@@ -518,7 +516,7 @@ class _RegistrationWizardScreenState
                   physics: const NeverScrollableScrollPhysics(),
                   children: [
                     SingleChildScrollView(
-                      padding: AppConstants.paddingLg,
+                      padding: AppConstants.wizardStepPadding,
                       child: BuddyNameStep(
                         value: _buddyName,
                         onChanged: (v) => setState(() => _buddyName = v),

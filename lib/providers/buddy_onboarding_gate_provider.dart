@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../config/constants.dart';
 import '../models/user_profile.dart';
 import '../router/route_names.dart';
 import 'auth_provider.dart';
@@ -48,6 +49,50 @@ final buddyOnboardingRequiredProvider = Provider<bool>((ref) {
   return _buddyPending(ref.watch(buddyProvider));
 });
 
+/// Whether [buddyOnboardingRequiredProvider] has its answer for the
+/// signed-in user: their profile has loaded (or failed) — not one left over
+/// from before the sign-in — and where the gate can apply to it, the Buddy
+/// has loaded (or failed). Watches the Buddy only then, like the gate.
+final _gateInputsKnownProvider = Provider<bool>((ref) {
+  final userId = ref.watch(currentUserIdProvider);
+  final profile = ref.watch(profileProvider);
+  if (profile.isLoading ||
+      ref.read(profileProvider.notifier).loadedFor != userId) {
+    return false;
+  }
+  if (!_profileReady(profile)) return true;
+  return !ref.watch(buddyProvider).isLoading;
+});
+
+/// True from sign-in (or an app start with a session) until the gate knows
+/// whether the user has to go through the Buddy onboarding. Meanwhile the
+/// router holds the shell roots on `/loading`, so a user the gate is about
+/// to send to the onboarding never sees a frame of the dashboard first.
+///
+/// Settles once per signed-in user: later profile or Buddy reloads never
+/// hold the app again. A failed load settles it like a loaded one (the
+/// gate never blocks on a backend error), and the loading screen
+/// [release]s it after [AppConstants.buddyGateMaxWait] at the latest.
+class BuddyOnboardingGatePendingNotifier extends Notifier<bool> {
+  @override
+  bool build() {
+    if (ref.watch(currentUserIdProvider) == null) return false;
+    final known = ref.listen<bool>(_gateInputsKnownProvider, (_, known) {
+      if (known) release();
+    });
+    return !known.read();
+  }
+
+  /// Stops holding: the app goes on as if no onboarding were due (the gate
+  /// still redirects once it knows better).
+  void release() => state = false;
+}
+
+final buddyOnboardingGatePendingProvider =
+    NotifierProvider<BuddyOnboardingGatePendingNotifier, bool>(
+      BuddyOnboardingGatePendingNotifier.new,
+    );
+
 /// The locations the Buddy onboarding gate redirects: the shell roots. Every
 /// way back to the app at rest (sign-in, consent, auth routes, tab switches,
 /// leaving the onboarding) goes through one of them, so the gate still
@@ -55,15 +100,36 @@ final buddyOnboardingRequiredProvider = Provider<bool>((ref) {
 /// trackers and whatever they open) and the wizard are never redirected.
 const buddyOnboardingGatedPaths = {RoutePaths.dashboard, RoutePaths.diary};
 
-/// The redirect for [path]: `/buddy-onboarding` while the onboarding
-/// [isRequired] and [path] is gated, otherwise null (stay).
+/// The query parameter of `/loading` naming the gated path it holds.
+const _heldPathParam = 'to';
+
+/// The redirect for [location], or null (stay). A gated path waits on
+/// `/loading` (remembering itself) while the gate [isPending], then goes
+/// to `/buddy-onboarding` while the onboarding [isRequired]. `/loading`
+/// stays while pending, then returns to the held path (the dashboard by
+/// default), which the gate checks again.
 ///
-/// Deliberately nothing the other way: the onboarding completes when the
-/// gift opens, before the user has read it, and the screen moves on to the
-/// dashboard by itself.
+/// Deliberately nothing away from the onboarding: it completes on its last
+/// step's answer, and the screen moves on to the dashboard by itself.
 String? buddyOnboardingRedirect({
   required bool isRequired,
-  required String path,
-}) => isRequired && buddyOnboardingGatedPaths.contains(path)
-    ? RoutePaths.buddyOnboarding
-    : null;
+  required bool isPending,
+  required Uri location,
+}) {
+  final path = location.path;
+  if (path == RoutePaths.loading) {
+    if (isPending) return null;
+    final held = location.queryParameters[_heldPathParam];
+    return buddyOnboardingGatedPaths.contains(held)
+        ? held
+        : RoutePaths.dashboard;
+  }
+  if (!buddyOnboardingGatedPaths.contains(path)) return null;
+  if (isPending) {
+    return Uri(
+      path: RoutePaths.loading,
+      queryParameters: {_heldPathParam: path},
+    ).toString();
+  }
+  return isRequired ? RoutePaths.buddyOnboarding : null;
+}

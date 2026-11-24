@@ -55,6 +55,22 @@ class AppTheme {
   static const Color buddyFoodLeaf = Color(0xFF6E8B2A);
   static const Color buddyShadow = Color(0x140D0D0F);
 
+  // Streak: a day with an entry (week row circle), the selected goal
+  static const Color primarySoft = Color(0xFFF3F7DF);
+
+  // Dashboard care ring: one color per need (Essen, Trinken, Bauchgefühl,
+  // Klo) and the glow around the need he suggests next
+  static const Color careFood = primary;
+  static const Color careWater = Color(0xFF86BFE6);
+  static const Color careGut = Color(0xFFF0A646);
+  static const Color careLoo = Color(0xFFBFAE9F);
+  static const Color careGlow = Color(0x4DB5CC47);
+
+  // Notification previews (the reminder step): an iOS banner's colors
+  static const Color notificationCard = Color(0xFFEFEFF4);
+  static const Color notificationForeground = Color(0xFF1C1C1E);
+  static const Color notificationMuted = Color(0xFF6C6C70);
+
   // Shadow
   static const Color shadow = Color(0x20000000);
 
@@ -76,6 +92,10 @@ class AppTheme {
   static const double fontSizeHeadingLG = 24;
   static const double fontSizeDisplay = 28;
   static const double fontSizeDisplayLG = 30;
+
+  // The streak moment's big count („🔥 1 Tag"): flame and number
+  static const double fontSizeStreakFlame = 40;
+  static const double fontSizeStreakCount = 56;
 
   // Stool scale colors
   static const List<Color> stoolColors = [

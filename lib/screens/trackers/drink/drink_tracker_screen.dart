@@ -233,7 +233,12 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
     ref
         .read(buddyEventsProvider.notifier)
         .emit(
-          BuddyLogEvent(EntryKind.drink, LogSentiment.good, at: DateTime.now()),
+          BuddyLogEvent(
+            EntryKind.drink,
+            LogSentiment.good,
+            at: DateTime.now(),
+            trackedAt: ref.read(drinkTrackerProvider).trackedAt,
+          ),
         );
   }
 }

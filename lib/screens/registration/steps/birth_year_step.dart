@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../widgets/common/bb_scroll_picker.dart';
+import '../widgets/step_field_label.dart';
 
 class BirthYearStep extends StatelessWidget {
   final int? value;
@@ -16,29 +17,16 @@ class BirthYearStep extends StatelessWidget {
     final years = List.generate(100, (i) => currentYear - 10 - i);
 
     return Padding(
-      padding: AppConstants.paddingLg,
+      padding: AppConstants.wizardStepPadding,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
+          const StepFieldLabel(
             key: birthYearTitleKey,
-            'Wann wurdest du geboren?',
-            style: TextStyle(
-              fontSize: AppTheme.fontSizeHeadingLG,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.foreground,
-            ),
-            textAlign: TextAlign.center,
+            'Geburtsjahr',
+            helper: 'Hilft uns, deine Verdauung besser zu analysieren.',
           ),
-          AppConstants.gap8,
-          const Text(
-            'Diese Information hilft uns dabei, deine Verdauung besser zu analysieren.',
-            style: TextStyle(
-              fontSize: AppTheme.fontSizeBodyLG,
-              color: AppTheme.mutedForeground,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          AppConstants.gap24,
+          AppConstants.gap16,
           Expanded(
             child: Container(
               padding: AppConstants.paddingMd,

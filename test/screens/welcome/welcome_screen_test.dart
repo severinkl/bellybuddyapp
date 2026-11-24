@@ -7,7 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
-const _line1 = 'Hi! Ich bin dein Bauch-Buddy.';
+const _line1 = 'Hi! Ich bin dein Belly Buddy.';
 const _line2 = 'Ich helfe dir herauszufinden, was deinem Bauch guttut.';
 const _line3 = 'Lass uns uns kennenlernen!';
 const _hint = 'Tippe, um ihn zu wecken';
@@ -166,12 +166,16 @@ void main() {
       expect(find.text(_line3), findsNothing);
       expect(find.byKey(WelcomeScreen.registrationButtonKey), findsNothing);
 
+      expect(find.byKey(WelcomeScreen.startHintKey), findsNothing);
+
       await tester.pump(_step);
       expect(find.text(_line3), findsOneWidget);
       await tester.pump(const Duration(milliseconds: 500));
       expect(find.byKey(WelcomeScreen.registrationButtonKey), findsOneWidget);
       expect(find.text(_letsGo), findsOneWidget);
       expect(find.byKey(WelcomeScreen.signInButtonKey), findsOneWidget);
+      // Awake, he tells the user that a tap on him starts too.
+      expect(find.text("Tipp mich an, dann geht's los"), findsOneWidget);
 
       // The last line stays up next to the button.
       await tester.pump(const Duration(seconds: 10));
@@ -210,6 +214,63 @@ void main() {
 
       expect(_path(router), RoutePaths.registration);
       expect(find.text('registration-page'), findsOneWidget);
+    });
+
+    testWidgets('once awake, tapping the Buddy starts like „Los geht\'s"', (
+      tester,
+    ) async {
+      final router = await _pump(tester);
+      await tester.tap(find.byKey(WelcomeScreen.buddyAreaKey));
+      for (var i = 0; i < 4; i++) {
+        await tester.pump(_step);
+      }
+      expect(find.byKey(WelcomeScreen.registrationButtonKey), findsOneWidget);
+
+      await tester.tap(find.byKey(WelcomeScreen.buddyAreaKey));
+      await _settleNavigation(tester);
+
+      expect(_path(router), RoutePaths.registration);
+      expect(find.text('registration-page'), findsOneWidget);
+    });
+
+    testWidgets('tapping fast through the story does not start the flow '
+        'by accident; a tap once the last line has settled does', (
+      tester,
+    ) async {
+      final router = await _pump(tester);
+      await tester.tap(find.byKey(WelcomeScreen.buddyAreaKey));
+      await tester.pump(_step);
+      expect(find.text(_line1), findsOneWidget);
+
+      // Skipping quickly: line 2, line 3, and one tap too many.
+      for (final line in [_line2, _line3]) {
+        await tester.tap(find.byKey(WelcomeScreen.buddyAreaKey));
+        await tester.pump(const Duration(milliseconds: 150));
+        expect(find.text(line), findsOneWidget);
+      }
+      await tester.tap(find.byKey(WelcomeScreen.buddyAreaKey));
+      await _settleNavigation(tester);
+      expect(_path(router), RoutePaths.welcome);
+      expect(find.text(_line3), findsOneWidget);
+
+      await tester.tap(find.byKey(WelcomeScreen.buddyAreaKey));
+      await _settleNavigation(tester);
+      expect(_path(router), RoutePaths.registration);
+    });
+
+    testWidgets('tapping the Buddy mid-story does not start the flow', (
+      tester,
+    ) async {
+      final router = await _pump(tester);
+      await tester.tap(find.byKey(WelcomeScreen.buddyAreaKey));
+      await tester.pump(_step);
+      expect(find.text(_line1), findsOneWidget);
+
+      await tester.tap(find.byKey(WelcomeScreen.buddyAreaKey));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text(_line2), findsOneWidget);
+      expect(_path(router), isNot(RoutePaths.registration));
     });
 
     testWidgets('„Ich habe schon ein Konto" opens the sign-in right away', (

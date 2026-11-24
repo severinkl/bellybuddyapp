@@ -52,6 +52,7 @@ class AppConstants {
   static const double radiusFull = 100.0;
 
   // Border widths
+  static const double borderWidthSm = 0.5;
   static const double borderWidthMd = 1.5;
   static const double borderWidthLg = 2.0;
 
@@ -60,40 +61,97 @@ class AppConstants {
   static const double dragHandleHeight = 4.0;
   static const double dragHandleRadius = 2.0;
 
-  // Buddy speech bubble: the slot above the Buddy (two lines at body size)
-  // and the bubble's widest width
-  static const double buddyBubbleHeight = 72.0;
+  // Buddy speech bubble (comic style): the slot above the Buddy (two lines
+  // plus tail and shadow), the bubble's widest width and its line limit
+  static const double buddyBubbleHeight = 76.0;
   static const double buddyBubbleMaxWidth = 280.0;
+  static const int buddyBubbleMaxLines = 4;
+
+  // Its tail (base width, length), the side tail's middle below the
+  // bubble's top, and the flat shadow's offset
+  static const double buddyBubbleTailBase = 24.0;
+  static const double buddyBubbleTailLength = 12.0;
+  static const double buddyBubbleSideTailTop = 34.0;
+  static const Offset buddyBubbleShadowOffset = Offset(3, 4);
+
+  // Typewriter reveal: per character, at most this long in total
+  static const Duration buddyBubbleCharDelay = Duration(milliseconds: 30);
+  static const Duration buddyBubbleTypeMax = Duration(milliseconds: 1200);
 
   // Streak chip / goal sheet
   static const double streakChipPopScale = 1.25;
   static const double streakSheetBuddyHeight = 220.0;
 
-  // Dashboard Buddy hero (streak row, bubble, Buddy, „Füttern" button):
-  // this share of the screen height, clamped
-  static const double buddyHeroHeightFactor = 0.47;
-  static const double buddyHeroMinHeight = 340.0;
-  static const double buddyHeroMaxHeight = 440.0;
+  // Streak week row (Mo–So): day circle, regular and small
+  static const double streakWeekDaySize = 36.0;
+  static const double streakWeekDaySizeSmall = 26.0;
+
+  // A streak goal's row in the goal list
+  static const double streakGoalRowHeight = 56.0;
+
+  // Reminder step: the notification preview's corner radius and app icon,
+  // the example week's label column and dots
+  static const double notificationPreviewRadius = 20.0;
+  static const double notificationPreviewIconSize = 22.0;
+  static const double reminderExampleLabelWidth = 112.0;
+  static const double reminderExampleDotSize = 16.0;
+
+  // Dashboard care ring: its diameter (at most this, this share of the
+  // width and of the screen height, at least the minimum), stroke, the gap
+  // between its four segments, and the Buddy's box inside it
+  static const double careRingMaxDiameter = 260.0;
+  static const double careRingMinDiameter = 170.0;
+  static const double careRingWidthFactor = 0.72;
+  static const double careRingHeightFactor = 0.3;
+  static const double careRingStroke = 13.0;
+  static const double careRingGapDegrees = 6.0;
+  static const double careRingBuddyFactor = 0.74;
+
+  // Its need bubbles (Essen n/3 …): size, the next need's glow, its pulse
+  static const double careNeedWidth = 88.0;
+  static const double careNeedMinHeight = 62.0;
+  static const double careNeedGlow = 5.0;
+  static const Offset careNeedShadowOffset = Offset(0, 3);
+  static const Duration careNeedPulse = Duration(milliseconds: 1400);
+
+  // Dashboard „Heute" list: rows shown at most, a row's height and time
+  // column
+  static const int todayListMaxItems = 5;
+  static const double todayRowHeight = 40.0;
+  static const double todayRowTimeWidth = 44.0;
+
+  // „Dein Streak" sheet: the goal progress bar
+  static const double streakProgressHeight = 10.0;
 
   // Buddy reaction on the tracker success screens (bubble slot + Buddy)
   static const double buddyReactionSize = 220.0;
 
-  // Buddy onboarding (/buddy-onboarding): stage (bubble slot + Buddy),
-  // progress dots and the gift box (box, lid and sparkle area)
+  // Buddy onboarding (/buddy-onboarding): stage (bubble slot + Buddy) and
+  // progress dots
   static const double buddyOnboardingStageHeight = 240.0;
+  // … and on steps with little content below him (intro, first meal,
+  // streak moment) a bigger one
+  static const double buddyOnboardingHeroStageHeight = 340.0;
   static const double progressDotSize = 8.0;
   static const double progressDotActiveWidth = 24.0;
-  static const double giftRevealSize = 160.0;
 
-  // Registration wizard: the Buddy stage (bubble slot + Buddy) above every
-  // step takes this share of the screen height, clamped; with the keyboard
-  // open a compact Buddy without bubble. Below it a step keeps at least the
-  // min height (on shorter screens the host scrolls instead).
-  static const double buddyWizardHeightFactor = 0.26;
-  static const double buddyWizardSize = 150.0;
-  static const double buddyWizardMaxSize = 240.0;
+  // Registration wizard: above every step a header with the Buddy on the
+  // left (this wide; his height follows) and his bubble on the right; with
+  // the keyboard open a compact header (the Buddy this tall). Below it a
+  // step keeps at least the min height (on shorter screens the host
+  // scrolls instead).
+  static const double buddyWizardBuddyWidth = 124.0;
   static const double buddyWizardCompactSize = 72.0;
+  static const double buddyWizardCompactHeaderHeight = 100.0;
   static const double buddyWizardMinStepHeight = 280.0;
+
+  // Padding of a wizard step below the header
+  static const wizardStepPadding = EdgeInsets.fromLTRB(
+    spacingLg,
+    spacingSm,
+    spacingLg,
+    spacingMd,
+  );
 
   // Scroll clearance (space below content to clear fixed bottom bars)
   static const double bottomBarClearance = 128.0;
@@ -193,6 +251,11 @@ class AppConstants {
   static const Duration autoAdvanceDuration = Duration(seconds: 4);
   static const Duration debounceDuration = Duration(milliseconds: 800);
 
+  /// The longest the app waits on its loading screen for the Buddy
+  /// onboarding gate's answer after sign-in or app start; then it goes on
+  /// as if no onboarding were due (a hanging backend never blocks the app).
+  static const Duration buddyGateMaxWait = Duration(seconds: 3);
+
   // Animation durations
   static const Duration animFast = Duration(milliseconds: 150);
   static const Duration animNormal = Duration(milliseconds: 200);
@@ -201,6 +264,7 @@ class AppConstants {
   static const Duration animSlower = Duration(milliseconds: 600);
 
   // Asset paths
+  static const String appIconPath = 'assets/images/app-icon.png';
   static const String mascotBasePath = 'assets/images/mascot';
   static const String imagesBasePath = 'assets/images';
   static const String iconsBasePath = 'assets/images/icons';

@@ -303,3 +303,7 @@ const List<BuddyEyeSpec> kBuddyEyes = [
 const Offset kBuddyMouthCenter = Offset(466, 764);
 const double kBuddyMouthTilt = 0.127;
 const Offset kBuddyEyeMid = Offset(467, 550);
+
+/// Middle of the face (between the eyes and the mouth); speech bubbles
+/// point their tails here.
+const Offset kBuddyFaceCenter = Offset(466.5, 657);

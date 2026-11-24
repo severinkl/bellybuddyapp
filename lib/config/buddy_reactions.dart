@@ -20,18 +20,30 @@ class BuddyLine {
 /// Plays [BuddyLine]s on a Buddy.
 extension BuddyLineReaction on BuddyController {
   /// Plays [line]: its mood and action, and one of its texts with `{name}`
-  /// filled in, shown for [duration] (null: until the next `say`).
+  /// filled in, shown for [duration] (null: until the next `say`) — or,
+  /// with [hold], for that long before the resting line comes back
+  /// ([BuddyController.sayThenRest]).
   void react(
     BuddyLine line, {
     required String name,
     required Random rnd,
-    required Duration? duration,
+    Duration? duration,
+    Duration? hold,
   }) {
+    assert(
+      duration == null || hold == null,
+      'A held line returns to the resting line; it has no duration.',
+    );
     final mood = line.mood;
     final action = line.action;
     if (mood != null) this.mood = mood;
     if (action != null) play(action);
-    say(BuddyCopy.fill(line.pick(rnd), name: name), duration: duration);
+    final text = BuddyCopy.fill(line.pick(rnd), name: name);
+    if (hold != null) {
+      sayThenRest(text, hold: hold);
+    } else {
+      say(text, duration: duration);
+    }
   }
 }
 
@@ -63,8 +75,8 @@ const Map<String, BuddyLine> kWizardReactions = {
   'auth:intro': BuddyLine(
     mood: BuddyMood.happy,
     lines: [
+      'Fast geschafft! Leg dir noch ein Konto an.',
       'Damit ich mir alles merken kann, brauchst du ein Konto.',
-      'Fast geschafft! Ein Konto, und ich merk mir alles.',
     ],
   ),
   'emailCapture:intro': BuddyLine(
@@ -73,7 +85,7 @@ const Map<String, BuddyLine> kWizardReactions = {
   ),
   'birthYear:any': BuddyLine(
     action: BuddyAction.nodYes,
-    lines: ['Perfekt, danke!', 'Alles klar, notiert!'],
+    lines: ['Perfekt, danke!', 'Ah, ein guter Jahrgang!'],
   ),
   'heightWeight:any': BuddyLine(
     action: BuddyAction.nodYes,
@@ -111,13 +123,16 @@ const Map<String, BuddyLine> kWizardReactions = {
   ),
   'symptom:Belastender Durchfall': BuddyLine(
     mood: BuddyMood.empathetic,
-    lines: ['Oh je, das ist wirklich belastend.', 'Das tut mir leid für dich.'],
+    lines: [
+      'Oh je, das ist wirklich belastend.',
+      'Das tut mir leid. Gut, dass du es mir sagst.',
+    ],
   ),
   'symptom:Nervige Verstopfung': BuddyLine(
     mood: BuddyMood.empathetic,
     lines: [
       'Puh, das nervt wirklich. Ich bin bei dir.',
-      'Das ist echt lästig, das tut mir leid.',
+      'Echt lästig! Da schauen wir gemeinsam genauer hin.',
     ],
   ),
   'symptom:Unangenehme Blähungen': BuddyLine(
@@ -131,7 +146,7 @@ const Map<String, BuddyLine> kWizardReactions = {
     mood: BuddyMood.empathetic,
     lines: [
       'Oje, so ein Völlegefühl ist wirklich unangenehm.',
-      'Ich fühl mit dir, das drückt.',
+      'Das drückt ganz schön, oder? Ich versteh dich.',
     ],
   ),
   'symptom:Hartnäckiger Blähbauch ohne Pupsen': BuddyLine(
@@ -149,64 +164,64 @@ const Map<String, BuddyLine> kWizardReactions = {
   'intolerance:Laktose': BuddyLine(
     action: BuddyAction.think,
     lines: [
-      'Notiert! Darauf passen wir zusammen auf.',
-      'Alles klar, das merk ich mir!',
+      'Laktose, check! Bei Milch und Joghurt bin ich ab jetzt hellwach.',
+      'Okay, Laktose! Milchiges haben wir ab jetzt zusammen im Blick.',
     ],
   ),
   'intolerance:Gluten': BuddyLine(
     action: BuddyAction.think,
     lines: [
-      'Gluten, notiert! Wir behalten das im Blick.',
-      'Alles klar, das merk ich mir!',
+      'Gluten, notiert! Brot und Nudeln behalte ich für dich im Auge.',
+      'Gluten auch? Kein Problem, wir finden trotzdem Leckeres!',
     ],
   ),
   'intolerance:Fruktose': BuddyLine(
     action: BuddyAction.think,
     lines: [
-      'Fruktose, verstanden! Das merk ich mir.',
-      'Alles klar, das merk ich mir!',
+      'Fruktose, oh! Beim Obst gucke ich ab jetzt zweimal hin.',
+      'Fruchtzucker, alles klar – da bin ich wachsam!',
     ],
   ),
   'intolerance:Histamin': BuddyLine(
     action: BuddyAction.think,
     lines: [
-      'Histamin, notiert! Darauf achten wir gemeinsam.',
-      'Alles klar, das merk ich mir!',
+      'Histamin, verstanden! Das hab ich bei jeder Mahlzeit dabei.',
+      'Histamin – okay! Da bin ich ganz Ohr. Äh, ganz Bauch.',
     ],
   ),
   'intolerance:Sorbit': BuddyLine(
     action: BuddyAction.think,
     lines: [
-      'Sorbit, verstanden! Das merk ich mir.',
-      'Alles klar, das merk ich mir!',
+      'Sorbit versteckt sich gern – ich helf dir beim Aufspüren!',
+      'Sorbit, check! Kaugummi & Co. kommen auf meinen Radar.',
     ],
   ),
   'intolerance:Nüsse': BuddyLine(
     action: BuddyAction.think,
     lines: [
-      'Nüsse, notiert! Darauf passen wir auf.',
-      'Alles klar, das merk ich mir!',
+      'Nüsse, notiert! Ich halte für dich die Augen offen.',
+      'Nüsse also! Danke, dass du mir das sagst.',
     ],
   ),
   'intolerance:Eier': BuddyLine(
     action: BuddyAction.think,
     lines: [
-      'Eier, notiert! Das behalte ich im Kopf.',
-      'Alles klar, das merk ich mir!',
+      'Eier, alles klar! Auch die versteckten in Teig und Soßen.',
+      'Eier also – gut zu wissen, ich pass mit auf!',
     ],
   ),
   'intolerance:Soja': BuddyLine(
     action: BuddyAction.think,
     lines: [
-      'Soja, verstanden! Das merk ich mir.',
-      'Alles klar, das merk ich mir!',
+      'Soja, check! Das steckt oft da, wo man es nicht erwartet.',
+      'Okay, Soja! Das steht ab jetzt auf meinem Zettel.',
     ],
   ),
   'intolerance:Weizen': BuddyLine(
     action: BuddyAction.think,
     lines: [
-      'Weizen, notiert! Wir behalten das im Blick.',
-      'Alles klar, das merk ich mir!',
+      'Weizen, notiert! Brötchen und Gebäck hab ich auf dem Schirm.',
+      'Weizen auch? Gut zu wissen, danke dir!',
     ],
   ),
   'intolerance:none': BuddyLine(
@@ -220,7 +235,7 @@ const Map<String, BuddyLine> kWizardReactions = {
   ),
   'step:gender': BuddyLine(
     mood: BuddyMood.happy,
-    lines: ['Wie darf ich dich ansprechen?'],
+    lines: ['Welches biologische Geschlecht hast du?'],
   ),
   'step:heightWeight': BuddyLine(
     mood: BuddyMood.happy,
@@ -236,6 +251,6 @@ const Map<String, BuddyLine> kWizardReactions = {
   ),
   'step:intolerances': BuddyLine(
     mood: BuddyMood.happy,
-    lines: ['Gibt es etwas, das du nicht verträgst?'],
+    lines: ['Wurden dir Unverträglichkeiten diagnostiziert?'],
   ),
 };
