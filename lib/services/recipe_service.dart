@@ -13,6 +13,9 @@ class RecipeService {
 
   static const _log = AppLogger('RecipeService');
 
+  /// Postgres' unique violation: the row is already there.
+  static const _pgUniqueViolation = '23505';
+
   /// Core's collection select: the recipes, their lines and each line's
   /// catalog FODMAP flags (the API contract of core PR #11). `ingredients` is
   /// the text column the older recipes show instead of lines.
@@ -65,12 +68,21 @@ class RecipeService {
     }
   }
 
+  /// Saves [recipeId] for [userId]. Already saved (another device, or a
+  /// write that landed before its answer got lost) counts as done.
   Future<void> addFavorite(String userId, String recipeId) async {
     try {
       await _client.from('user_favorite_recipes').insert({
         'user_id': userId,
         'recipe_id': recipeId,
       });
+    } on PostgrestException catch (e, st) {
+      if (e.code == _pgUniqueViolation) {
+        _log.debug('addFavorite: already saved');
+        return;
+      }
+      _log.error('addFavorite failed', e, st);
+      rethrow;
     } catch (e, st) {
       _log.error('addFavorite failed', e, st);
       rethrow;

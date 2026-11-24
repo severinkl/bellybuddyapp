@@ -317,6 +317,42 @@ void main() {
 
       await expectLater(service.addFavorite(testUserId, 'recipe-1'), completes);
     });
+
+    void insertFails(PostgrestException error) {
+      final queryBuilder = MockSupabaseQueryBuilder();
+      when(
+        () => client.from('user_favorite_recipes'),
+      ).thenAnswer((_) => queryBuilder);
+      when(
+        () => queryBuilder.insert(any()),
+      ).thenAnswer((_) => SettlableFilterBuilder(Future.error(error)));
+    }
+
+    test(
+      'already saved (23505, e.g. on another device) counts as saved',
+      () async {
+        final logs = _captureLogs();
+        insertFails(
+          const PostgrestException(message: 'duplicate key', code: '23505'),
+        );
+
+        await expectLater(
+          service.addFavorite(testUserId, 'recipe-1'),
+          completes,
+        );
+        expect(logs.where((l) => l.contains('[ERROR]')), isEmpty);
+      },
+    );
+
+    test('another failure rethrows', () async {
+      _captureLogs();
+      insertFails(const PostgrestException(message: 'denied', code: '42501'));
+
+      await expectLater(
+        service.addFavorite(testUserId, 'recipe-1'),
+        throwsA(isA<PostgrestException>()),
+      );
+    });
   });
 
   group('RecipeService.removeFavorite', () {
