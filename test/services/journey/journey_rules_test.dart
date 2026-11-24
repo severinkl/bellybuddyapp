@@ -891,6 +891,19 @@ void main() {
       );
     });
 
+    test('the first tip failed: „bleiben eingeschaltet" only while the '
+        'weekly tips are on', () {
+      expect(
+        JourneyCopy.firstTipFailed(weeklyTipsOn: true),
+        'Dein erster Tipp hat gerade nicht geklappt. Die wöchentlichen Tipps '
+        'bleiben eingeschaltet.',
+      );
+      expect(
+        JourneyCopy.firstTipFailed(weeklyTipsOn: false),
+        'Dein erster Tipp hat gerade nicht geklappt.',
+      );
+    });
+
     test('day 6 counts the missing Bauchgefühl entries', () {
       expect(
         JourneyCopy.day6Line(2),

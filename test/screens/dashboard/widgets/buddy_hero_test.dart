@@ -138,6 +138,10 @@ const _sheetTitle = 'Dein Streak';
 const _rewardsButton = Key('open_rewards');
 const _pickTitle = 'Neues Streak-Ziel';
 
+/// The first tip's failure line while the weekly tips are off (the hero's
+/// default here).
+final _firstTipFailedLine = JourneyCopy.firstTipFailed(weeklyTipsOn: false);
+
 void main() {
   late DateTime now;
   late _FakeBuddy buddy;
@@ -1129,7 +1133,7 @@ void main() {
         expect(location(), RoutePaths.collectionRecipeFor('r1'));
 
         await advance(tester, const Duration(seconds: 6));
-        expect(bubbleBehind(tester), isNot(JourneyCopy.firstTipFailed));
+        expect(bubbleBehind(tester), isNot(_firstTipFailedLine));
         expect(buddy.shown, [BuddyAnnouncement.journeyReward]);
 
         router.pop();
@@ -1138,7 +1142,7 @@ void main() {
         await tick(tester);
 
         expect(location(), RoutePaths.dashboard);
-        expect(controller(tester).bubble, JourneyCopy.firstTipFailed);
+        expect(controller(tester).bubble, _firstTipFailedLine);
         await tester.pump(const Duration(seconds: 4));
         expect(buddy.shown, [
           BuddyAnnouncement.journeyReward,
@@ -1167,7 +1171,7 @@ void main() {
 
         expect(opener.urls, [Uri.parse(JourneyCopy.articleUrl)]);
         expect(location(), RoutePaths.dashboard);
-        expect(controller(tester).bubble, JourneyCopy.firstTipFailed);
+        expect(controller(tester).bubble, _firstTipFailedLine);
         expect(buddy.shown, [BuddyAnnouncement.journeyReward]);
       });
 
@@ -1261,7 +1265,7 @@ void main() {
         );
         await tester.pump();
         await advance(tester, const Duration(seconds: 1));
-        expect(bubbleBehind(tester), isNot(JourneyCopy.firstTipFailed));
+        expect(bubbleBehind(tester), isNot(_firstTipFailedLine));
         expect(buddy.shown, isEmpty);
 
         await tester.tapAt(const Offset(10, 10)); // the list's barrier
@@ -1269,7 +1273,7 @@ void main() {
         await tester.pump();
         await tick(tester);
 
-        expect(controller(tester).bubble, JourneyCopy.firstTipFailed);
+        expect(controller(tester).bubble, _firstTipFailedLine);
         await tester.pump(const Duration(seconds: 4));
         expect(buddy.shown, [BuddyAnnouncement.firstTipFailed]);
       });
@@ -1720,7 +1724,7 @@ void main() {
         await tick(tester);
 
         expect(location(), RoutePaths.dashboard);
-        expect(controller(tester).bubble, JourneyCopy.firstTipFailed);
+        expect(controller(tester).bubble, _firstTipFailedLine);
         await tester.pump(const Duration(seconds: 4));
         expect(buddy.shown, [
           BuddyAnnouncement.patternsUnlocked,
@@ -1784,7 +1788,7 @@ void main() {
         await tick(tester);
 
         expect(location(), RoutePaths.dashboard);
-        expect(controller(tester).bubble, JourneyCopy.firstTipFailed);
+        expect(controller(tester).bubble, _firstTipFailedLine);
       });
 
       testWidgets('patternsUnlocked waits while the hero is hidden', (
@@ -1850,7 +1854,7 @@ void main() {
       final container = await pumpHero(tester);
       await tick(tester);
 
-      expect(controller(tester).bubble, JourneyCopy.firstTipFailed);
+      expect(controller(tester).bubble, _firstTipFailedLine);
       expect(buddy.shown, isEmpty);
 
       await tester.pump(const Duration(seconds: 4));
@@ -1859,6 +1863,31 @@ void main() {
       await tester.pump(const Duration(seconds: 5));
       expect(buddy.shown, [BuddyAnnouncement.firstTipFailed]);
     });
+
+    for (final (weekly, line) in [
+      (true, JourneyCopy.firstTipFailed(weeklyTipsOn: true)),
+      (false, JourneyCopy.firstTipFailed(weeklyTipsOn: false)),
+      (null, JourneyCopy.firstTipFailed(weeklyTipsOn: false)),
+    ]) {
+      testWidgets('firstTipFailed, the weekly tips $weekly: says they stay on '
+          'only when they are', (tester) async {
+        journey = true;
+        weeklyTips = weekly;
+        rewards = const JourneyRewards(
+          earnedDay: 3,
+          tipOffer: TipOffer.accepted,
+          firstTip: FirstTipState.failed,
+        );
+        buddy = _FakeBuddy(
+          () =>
+              _status(announcements: const [BuddyAnnouncement.firstTipFailed]),
+        );
+        await pumpHero(tester);
+        await tick(tester);
+
+        expect(controller(tester).bubble, line);
+      });
+    }
 
     testWidgets('fresh log that counts today → „Danke! 🔥 N Tage"', (
       tester,

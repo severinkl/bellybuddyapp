@@ -18,6 +18,7 @@ import '../../../providers/entries_provider.dart';
 import '../../../providers/home_cover_provider.dart';
 import '../../../providers/journey_provider.dart';
 import '../../../providers/journey_rewards_provider.dart';
+import '../../../providers/profile_provider.dart';
 import '../../../providers/today_provider.dart';
 import '../../../router/route_names.dart';
 import '../../../router/tracker_routes.dart';
@@ -590,7 +591,11 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       case _Cue.patternsUnlocked:
         _playThen(BuddyAction.celebrate, _openPatternsUnlocked);
       case _Cue.firstTipFailed:
-        _say(JourneyCopy.firstTipFailed);
+        _say(
+          JourneyCopy.firstTipFailed(
+            weeklyTipsOn: ref.read(weeklyTipsEnabledProvider) == true,
+          ),
+        );
         _holdStage();
     }
   }

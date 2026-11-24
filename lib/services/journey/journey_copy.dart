@@ -104,9 +104,14 @@ abstract final class JourneyCopy {
 
   static const firstTipStarted =
       'Ich mach dir jetzt deinen ersten Tipp. Das dauert einen Moment ✨';
-  static const firstTipFailed =
-      'Dein erster Tipp hat gerade nicht geklappt. Die wöchentlichen Tipps '
-      'bleiben eingeschaltet.';
+
+  /// The first tip failed; that the weekly tips stay on only while they
+  /// are known to be ([weeklyTipsOn]).
+  static String firstTipFailed({required bool weeklyTipsOn}) => weeklyTipsOn
+      ? '$_firstTipFailed Die wöchentlichen Tipps bleiben eingeschaltet.'
+      : _firstTipFailed;
+
+  static const _firstTipFailed = 'Dein erster Tipp hat gerade nicht geklappt.';
 
   // Buttons.
 
