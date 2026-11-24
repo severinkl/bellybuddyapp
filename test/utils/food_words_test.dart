@@ -1,150 +1,48 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:belly_buddy/utils/food_words.dart';
 
-/// The cases of core's `food_words` tests, kept in step with them:
-/// bellybuddy-core `backend/tests/domain/test_tip_recipes.py`
-/// (`test_food_words_name_the_food_whatever_the_spelling`,
-/// `test_food_words_find_the_food_in_its_processed_form`,
-/// `test_food_words_keep_other_foods_apart`,
-/// `test_a_free_from_food_has_no_food_words`; core #12, 04d17e8 and
-/// dd3c42e, the free-from ruling of 2026-11-24).
-const _sameFood = [
-  ('Zwiebeln', 'Zwiebel'),
-  ('rote Zwiebel', 'Zwiebel'),
-  ('Zwiebel, gehackt', 'Zwiebeln'),
-  ('Rote Zwiebeln (fein gewürfelt)', 'zwiebel'),
-  ('Tomaten', 'Tomate'),
-  ('Gehackte Tomaten aus der Dose', 'Tomate'),
-  ('Haselnüsse', 'Haselnuss'),
-  ('Weiße Bohnen', 'Bohne'),
-  ('Gemüsebrühwürfel ohne Zwiebel und Knoblauch', 'Gemüsebrühwürfel'),
-  // irregular plurals (the table), also at a compound's end
-  ('Eier', 'Ei'),
-  ('Eiern', 'Ei'),
-  ('Rühreier', 'Rührei'),
-  ('Hühnereier', 'Hühnerei'),
-  ('Kräuter', 'Kraut'),
-  ('Gemischte Kräuter', 'Kräuter'),
-  ('Nüsse', 'Nuss'),
-  ('Walnüssen', 'Walnuss'),
-  ('Äpfel', 'Apfel'),
-  ('Hühner', 'Huhn'),
-  ('Maiskörner', 'Maiskorn'),
-  ('Kürbisse', 'Kürbis'),
-  ('Hokkaido-Kürbisse', 'Hokkaido-Kürbis'),
-  ('Lachse', 'Lachs'),
-  ('Gänse', 'Gans'),
-];
+/// Core's shared food-words cases (bellybuddy-core
+/// `backend/tests/fixtures/recipes/food_words.json`, copied byte for byte;
+/// both change together, core first): the case lists of its `food_words`
+/// and `match_key` tests, and `names`, each name with its match key and its
+/// sorted food words as core computes them.
+final Map<String, dynamic> _shared =
+    jsonDecode(File('test/fixtures/recipes/food_words.json').readAsStringSync())
+        as Map<String, dynamic>;
 
-const _processed = [
-  ('Zwiebelpulver', 'Zwiebeln'),
-  ('Knoblauchpulver', 'Knoblauch'),
-  ('Knoblauchgranulat', 'Knoblauch'),
-  ('Knoblauchsalz', 'Knoblauch'),
-  ('Knoblauchzehen', 'Knoblauch'),
-  ('Apfelsaft', 'Äpfel'),
-  ('Zitronensaft', 'Zitrone'),
-  ('Agavendicksaft', 'Agavensirup'),
-  ('Weizenmehl', 'Weizen'),
-  ('Weizengrieß', 'Weizen'),
-  ('Haferflocken', 'Hafer'),
-  ('Erdnussmus', 'Erdnüsse'),
-  ('Erdnussbutter', 'Erdnuss'),
-  ('Apfelmus', 'Apfel'),
-  ('Tomatenmark', 'Tomaten'),
-  ('Tamarindenpaste', 'Tamarinde'),
-  ('Kürbispüree', 'Kürbis'),
-  ('Vanilleextrakt', 'Vanilleschote'),
-  ('Rote Chilischote', 'Chili'),
-  ('Fenchelknolle', 'Fenchel'),
-  ('Lauchstangen', 'Lauch'),
-  ('Brokkoliröschen', 'Brokkoli'),
-  ('Zwiebel-Pulver', 'Zwiebel'),
-];
-
-const _otherFoods = [
-  ('Zwiebel', 'Frühlingszwiebelgrün'),
-  ('Zwiebel', 'Frühlingszwiebel (nur das Grün)'),
-  ('Knoblauch', 'Knoblauch-Öl'),
-  ('rote Zwiebel', 'Rote Paprika'),
-  ('Milch', 'Kokosmilch light'),
-  ('Zwiebel', 'Gemüsebrühwürfel ohne Zwiebel und Knoblauch'),
-  // compounds that are another food, also with the suffix allowlist and
-  // the plural table
-  ('Zwiebeln', 'Frühlingszwiebelgrün'),
-  ('Zwiebelpulver', 'Frühlingszwiebel'),
-  ('Knoblauch', 'Knoblauchöl'),
-  ('Reis', 'Milchreis'), // the rice of a rice pudding stays a food of its own
-  ('Milch', 'Milchreis'),
-  ('Milch', 'Kokosmilch'),
-  ('Mandeln', 'Mandelmilch'),
-  ('Lauch', 'Schnittlauch'),
-  ('Zwiebel', 'Schnittlauch'),
-  ('Ei', 'Eisbergsalat'),
-  ('Eier', 'Eisbergsalat'),
-  ('Eier', 'Eiweißpulver'),
-  ('Ei', 'Salbei'),
-  ('Paprika', 'Paprikapulver'), // the spice, not the vegetable
-  ('Kakao', 'Kakaobutter'),
-  ('Kürbis', 'Kürbiskerne'),
-  ('Apfel', 'Granatapfelsaft'),
-  ('Apfel', 'Apfelessig'),
-  ('Erdnuss', 'Erdnussöl'),
-  ('Soja', 'Sojasprossen'),
-  ('Mehl', 'Weizenmehl'),
-  ('Saft', 'Apfelsaft'),
-  // a free-from food is another food (the Tausch-Tipp Milch → laktosefreie
-  // Milch; ruling of 2026-11-24)
-  ('Milch', 'Laktosefreie Milch'),
-  ('Milch', 'Milch (laktosefrei)'),
-  ('Brot', 'Glutenfreies Brot'),
-  ('Brot', 'Brot (glutenfrei)'),
-  ('Hafer', 'Haferflocken (glutenfrei)'),
-  ('Joghurt', 'Laktosefrei-Joghurt'),
-];
-
-/// Core's `test_match_key` (dd3c42e).
-const _matchKeys = {
-  'Knoblauchöl': 'knoblauchol',
-  'Knoblauch-Öl': 'knoblauchol',
-  '  Laktosefreie   Milch ': 'laktosefreiemilch',
-  'Gemüsebrühe (low-FODMAP)': 'gemusebruhe',
-  // a bracketed free-from note stays: lactose-free milk is not milk
-  'Milch (laktosefrei)': 'milchlaktosefrei',
-  'Brot (Glutenfrei)': 'brotglutenfrei',
-  'Frühlingszwiebel (nur das Grün)': 'fruhlingszwiebel',
-  'Weißkohl': 'weisskohl',
-};
-
-/// Core's `test_a_free_from_food_has_no_food_words`.
-const _freeFromFoods = [
-  'Laktosefreie Milch',
-  'laktosefreier Joghurt',
-  'Laktosefreies Eis',
-  'mit laktosefreiem Quark',
-  'aus laktosefreien Milchprodukten',
-  'Milch, laktosefrei',
-  'Milch (laktosefrei)',
-  'Laktosefrei-Joghurt',
-  'Glutenfreies Brot',
-  'Brot (glutenfrei)',
-  'Weizenfreie Nudeln',
-  'Fruktosefreier Sirup',
-  'Fructosefreier Sirup',
+/// The `[name, other]` pairs of the shared list [key].
+List<(String, String)> _pairs(String key) => [
+  for (final pair in _shared[key] as List)
+    (pair[0] as String, pair[1] as String),
 ];
 
 void main() {
-  group('foodWords (core cases)', () {
-    test('name the food whatever the spelling', () {
-      for (final (name, same) in _sameFood) {
+  group("core's shared cases", () {
+    test('match_key: the key core gives', () {
+      final cases = _pairs('match_key');
+      expect(cases, isNotEmpty);
+      for (final (name, key) in cases) {
+        expect(matchKey(name), key, reason: name);
+      }
+    });
+
+    test('same_food: the same, non-empty food words', () {
+      final cases = _pairs('same_food');
+      expect(cases, isNotEmpty);
+      for (final (name, same) in cases) {
         expect(foodWords(name), foodWords(same), reason: '$name = $same');
         expect(foodWords(name), isNotEmpty, reason: name);
       }
     });
 
-    test('find the food in its processed form', () {
-      for (final (processed, food) in _processed) {
+    test('processed: the food in its processed form, or a part of it', () {
+      final cases = _pairs('processed');
+      expect(cases, isNotEmpty);
+      for (final (processed, food) in cases) {
         expect(
           foodWords(processed).intersection(foodWords(food)),
           isNotEmpty,
@@ -153,12 +51,35 @@ void main() {
       }
     });
 
-    test('keep other foods apart', () {
-      for (final (name, other) in _otherFoods) {
+    test('apart: other foods share no word', () {
+      final cases = _pairs('apart');
+      expect(cases, isNotEmpty);
+      for (final (name, other) in cases) {
         expect(
           foodWords(name).intersection(foodWords(other)),
           isEmpty,
           reason: '$name is not $other',
+        );
+      }
+    });
+
+    test('free_from: a free-from food has no food words', () {
+      final names = (_shared['free_from'] as List).cast<String>();
+      expect(names, isNotEmpty);
+      for (final name in names) {
+        expect(foodWords(name), isEmpty, reason: name);
+      }
+    });
+
+    test("names: every name's key and food words, as core gives them", () {
+      final names = _shared['names'] as Map<String, dynamic>;
+      expect(names, isNotEmpty);
+      for (final MapEntry(key: name, value: expected) in names.entries) {
+        expect(matchKey(name), expected['key'], reason: name);
+        expect(
+          foodWords(name).toList()..sort(),
+          expected['words'],
+          reason: name,
         );
       }
     });
@@ -214,12 +135,6 @@ void main() {
   });
 
   group('foodWords: a free-from food has none (ruling 2026-11-24)', () {
-    test('core cases: any inflection, a bracketed note, a compound', () {
-      for (final name in _freeFromFoods) {
-        expect(foodWords(name), isEmpty, reason: name);
-      }
-    });
-
     test('anywhere in the name, also after „ohne"', () {
       for (final name in [
         'Laktosefreimilch',
@@ -235,12 +150,6 @@ void main() {
   });
 
   group('matchKey', () {
-    test('core cases', () {
-      for (final MapEntry(key: name, value: key) in _matchKeys.entries) {
-        expect(matchKey(name), key, reason: name);
-      }
-    });
-
     test("Python's whitespace goes, other characters stay", () {
       expect(matchKey('Kokos\u00a0Milch\u2009(Dose)'), 'kokosmilch');
       expect(matchKey('Laktosefreie Milch (1,5 %)'), 'laktosefreiemilch');
