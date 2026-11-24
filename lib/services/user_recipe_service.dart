@@ -60,8 +60,13 @@ class UserRecipeService {
     required String title,
     required List<String> ingredients,
     String? imageUrl,
+    List<String> instructions = const [],
+    List<String?>? ingredientAmounts,
+    String? adaptedFromRecipeId,
   }) async {
     try {
+      // The core #11 columns are only sent when used, so a backend
+      // without them keeps working.
       final data = await _client
           .from(_table)
           .insert({
@@ -69,6 +74,9 @@ class UserRecipeService {
             'title': title,
             'ingredients': ingredients,
             'image_url': imageUrl,
+            if (instructions.isNotEmpty) 'instructions': instructions,
+            'ingredient_amounts': ?ingredientAmounts,
+            'adapted_from_recipe_id': ?adaptedFromRecipeId,
           })
           .select()
           .single();
@@ -90,6 +98,8 @@ class UserRecipeService {
     required String title,
     required List<String> ingredients,
     String? imageUrl,
+    List<String>? instructions,
+    List<String?>? ingredientAmounts,
   }) async {
     try {
       final data = await _client
@@ -99,11 +109,25 @@ class UserRecipeService {
             'ingredients': ingredients,
             'image_url': imageUrl,
             'updated_at': DateTime.now().toUtc().toIso8601String(),
+            'instructions': ?instructions,
+            'ingredient_amounts': ?ingredientAmounts,
           })
           .eq('id', id)
           .select()
           .single();
-      return UserRecipe.fromJson(data);
+      final saved = UserRecipe.fromJson(data);
+      if (ingredientAmounts == null || saved.ingredientAmounts != null) {
+        return saved;
+      }
+      // The trigger nulls the amounts when `ingredients` changes in an
+      // update without them; write them once more so they stick.
+      final again = await _client
+          .from(_table)
+          .update({'ingredient_amounts': ingredientAmounts})
+          .eq('id', id)
+          .select()
+          .single();
+      return UserRecipe.fromJson(again);
     } on PostgrestException catch (e, st) {
       if (e.code == _pgUniqueViolation) {
         throw const DuplicateRecipeTitleException();

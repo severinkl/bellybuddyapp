@@ -52,6 +52,9 @@ class UserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>> {
     required String title,
     required List<String> ingredients,
     String? imageUrl,
+    List<String> instructions = const [],
+    List<String?>? ingredientAmounts,
+    String? adaptedFromRecipeId,
   }) async {
     final userId = ref.read(currentUserIdProvider);
     if (userId == null) {
@@ -64,6 +67,9 @@ class UserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>> {
           title: title,
           ingredients: ingredients,
           imageUrl: imageUrl,
+          instructions: instructions,
+          ingredientAmounts: ingredientAmounts,
+          adaptedFromRecipeId: adaptedFromRecipeId,
         );
     await fetch(force: true);
     return recipe;
@@ -74,6 +80,8 @@ class UserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>> {
     required String title,
     required List<String> ingredients,
     String? imageUrl,
+    List<String>? instructions,
+    List<String?>? ingredientAmounts,
   }) async {
     final recipe = await ref
         .read(userRecipeRepositoryProvider)
@@ -82,6 +90,8 @@ class UserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>> {
           title: title,
           ingredients: ingredients,
           imageUrl: imageUrl,
+          instructions: instructions,
+          ingredientAmounts: ingredientAmounts,
         );
     await fetch(force: true);
     return recipe;

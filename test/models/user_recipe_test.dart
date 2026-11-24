@@ -30,5 +30,46 @@ void main() {
       expect(r.imageUrl, isNull);
       expect(r.ingredients, isEmpty);
     });
+
+    test('reads amounts, steps and origin; null amounts stay null', () {
+      final r = UserRecipe.fromJson({
+        'id': 'r',
+        'user_id': 'u',
+        'title': 'T',
+        'ingredients': ['Reis', 'Salz'],
+        'ingredient_amounts': ['2 EL', null],
+        'instructions': ['Kochen'],
+        'adapted_from_recipe_id': 'src-1',
+      });
+      expect(r.amountOf(0), '2 EL');
+      expect(r.amountOf(1), isNull);
+      expect(r.amountOf(5), isNull);
+      expect(r.instructions, ['Kochen']);
+      expect(r.isAdapted, isTrue);
+    });
+
+    test('a row from before core #11 has no steps, amounts or origin', () {
+      final r = UserRecipe.fromJson({
+        'id': 'r',
+        'user_id': 'u',
+        'title': 'T',
+        'ingredients': ['Reis'],
+      });
+      expect(r.instructions, isEmpty);
+      expect(r.ingredientAmounts, isNull);
+      expect(r.amountOf(0), isNull);
+      expect(r.isAdapted, isFalse);
+    });
+
+    test('misaligned amounts give no amount', () {
+      final r = UserRecipe.fromJson({
+        'id': 'r',
+        'user_id': 'u',
+        'title': 'T',
+        'ingredients': ['Reis', 'Salz'],
+        'ingredient_amounts': ['2 EL'],
+      });
+      expect(r.amountOf(0), isNull);
+    });
   });
 }

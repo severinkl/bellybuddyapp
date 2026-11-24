@@ -55,6 +55,9 @@ void main() {
           title: any(named: 'title'),
           ingredients: any(named: 'ingredients'),
           imageUrl: any(named: 'imageUrl'),
+          instructions: any(named: 'instructions'),
+          ingredientAmounts: any(named: 'ingredientAmounts'),
+          adaptedFromRecipeId: any(named: 'adaptedFromRecipeId'),
         ),
       ).thenAnswer((_) async => testUserRecipe());
 
@@ -76,6 +79,46 @@ void main() {
       verify(
         () => repo.fetchForUser(testUserId),
       ).called(2); // initial + refresh
+    });
+  });
+
+  group('create with steps', () {
+    test('passes steps and amounts to the repository and refetches', () async {
+      when(() => repo.fetchForUser(any())).thenAnswer((_) async => []);
+      when(
+        () => repo.create(
+          userId: any(named: 'userId'),
+          title: any(named: 'title'),
+          ingredients: any(named: 'ingredients'),
+          imageUrl: any(named: 'imageUrl'),
+          instructions: any(named: 'instructions'),
+          ingredientAmounts: any(named: 'ingredientAmounts'),
+          adaptedFromRecipeId: any(named: 'adaptedFromRecipeId'),
+        ),
+      ).thenAnswer((_) async => testUserRecipe());
+
+      final container = makeContainer();
+      await container
+          .read(userRecipesProvider.notifier)
+          .create(
+            title: 'New',
+            ingredients: const ['a'],
+            instructions: const ['A'],
+            ingredientAmounts: const ['1 EL'],
+          );
+
+      verify(
+        () => repo.create(
+          userId: testUserId,
+          title: 'New',
+          ingredients: ['a'],
+          imageUrl: null,
+          instructions: ['A'],
+          ingredientAmounts: ['1 EL'],
+          adaptedFromRecipeId: null,
+        ),
+      ).called(1);
+      verify(() => repo.fetchForUser(testUserId)).called(1);
     });
   });
 

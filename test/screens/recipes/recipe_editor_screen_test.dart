@@ -67,6 +67,9 @@ void main() {
           title: any(named: 'title'),
           ingredients: any(named: 'ingredients'),
           imageUrl: any(named: 'imageUrl'),
+          instructions: any(named: 'instructions'),
+          ingredientAmounts: any(named: 'ingredientAmounts'),
+          adaptedFromRecipeId: any(named: 'adaptedFromRecipeId'),
         ),
       ).thenAnswer((_) async => newRecipe);
       when(() => repo.fetchForUser(any())).thenAnswer((_) async => [newRecipe]);
@@ -100,6 +103,9 @@ void main() {
           title: 'Eiersalat',
           ingredients: any(named: 'ingredients'),
           imageUrl: any(named: 'imageUrl'),
+          instructions: any(named: 'instructions'),
+          ingredientAmounts: any(named: 'ingredientAmounts'),
+          adaptedFromRecipeId: any(named: 'adaptedFromRecipeId'),
         ),
       ).called(1);
     });
@@ -128,6 +134,9 @@ void main() {
           title: any(named: 'title'),
           ingredients: any(named: 'ingredients'),
           imageUrl: any(named: 'imageUrl'),
+          instructions: any(named: 'instructions'),
+          ingredientAmounts: any(named: 'ingredientAmounts'),
+          adaptedFromRecipeId: any(named: 'adaptedFromRecipeId'),
         ),
       );
     });
@@ -141,6 +150,9 @@ void main() {
             title: any(named: 'title'),
             ingredients: any(named: 'ingredients'),
             imageUrl: any(named: 'imageUrl'),
+            instructions: any(named: 'instructions'),
+            ingredientAmounts: any(named: 'ingredientAmounts'),
+            adaptedFromRecipeId: any(named: 'adaptedFromRecipeId'),
           ),
         ).thenThrow(const DuplicateRecipeTitleException());
 
@@ -210,6 +222,8 @@ void main() {
           title: any(named: 'title'),
           ingredients: any(named: 'ingredients'),
           imageUrl: any(named: 'imageUrl'),
+          instructions: any(named: 'instructions'),
+          ingredientAmounts: any(named: 'ingredientAmounts'),
         ),
       ).thenAnswer((_) async => updated);
 
@@ -234,6 +248,8 @@ void main() {
           title: 'Rote Linsensuppe',
           ingredients: any(named: 'ingredients'),
           imageUrl: any(named: 'imageUrl'),
+          instructions: any(named: 'instructions'),
+          ingredientAmounts: any(named: 'ingredientAmounts'),
         ),
       ).called(1);
     });
@@ -287,6 +303,9 @@ void main() {
             title: any(named: 'title'),
             ingredients: any(named: 'ingredients'),
             imageUrl: any(named: 'imageUrl'),
+            instructions: any(named: 'instructions'),
+            ingredientAmounts: any(named: 'ingredientAmounts'),
+            adaptedFromRecipeId: any(named: 'adaptedFromRecipeId'),
           ),
         ).thenAnswer(
           (_) async => testUserRecipe(
@@ -306,6 +325,9 @@ void main() {
             title: 'Linseneintopf',
             ingredients: const ['Linsen', 'Tomaten'],
             imageUrl: any(named: 'imageUrl'),
+            instructions: any(named: 'instructions'),
+            ingredientAmounts: any(named: 'ingredientAmounts'),
+            adaptedFromRecipeId: any(named: 'adaptedFromRecipeId'),
           ),
         ).called(1);
       },

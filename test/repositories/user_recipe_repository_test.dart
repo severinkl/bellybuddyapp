@@ -36,6 +36,9 @@ void main() {
           title: any(named: 'title'),
           ingredients: any(named: 'ingredients'),
           imageUrl: any(named: 'imageUrl'),
+          instructions: any(named: 'instructions'),
+          ingredientAmounts: any(named: 'ingredientAmounts'),
+          adaptedFromRecipeId: any(named: 'adaptedFromRecipeId'),
         ),
       ).thenAnswer((_) async => recipe);
 
@@ -67,6 +70,8 @@ void main() {
           title: any(named: 'title'),
           ingredients: any(named: 'ingredients'),
           imageUrl: any(named: 'imageUrl'),
+          instructions: any(named: 'instructions'),
+          ingredientAmounts: any(named: 'ingredientAmounts'),
         ),
       ).thenAnswer((_) async => recipe);
 

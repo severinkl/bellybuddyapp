@@ -32,6 +32,9 @@ class _FakeUserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>>
     required String title,
     required List<String> ingredients,
     String? imageUrl,
+    List<String> instructions = const [],
+    List<String?>? ingredientAmounts,
+    String? adaptedFromRecipeId,
   }) => throw UnimplementedError();
 
   @override
@@ -40,6 +43,8 @@ class _FakeUserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>>
     required String title,
     required List<String> ingredients,
     String? imageUrl,
+    List<String>? instructions,
+    List<String?>? ingredientAmounts,
   }) => throw UnimplementedError();
 
   @override

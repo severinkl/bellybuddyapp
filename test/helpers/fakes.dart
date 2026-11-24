@@ -567,6 +567,9 @@ class FakeUserRecipeRepository implements UserRecipeRepository {
     required String title,
     required List<String> ingredients,
     String? imageUrl,
+    List<String> instructions = const [],
+    List<String?>? ingredientAmounts,
+    String? adaptedFromRecipeId,
   }) async {
     final created = testUserRecipe(
       id: 'rec-${_recipes.length + 1}',
@@ -574,6 +577,9 @@ class FakeUserRecipeRepository implements UserRecipeRepository {
       title: title,
       ingredients: ingredients,
       imageUrl: imageUrl,
+      instructions: instructions,
+      ingredientAmounts: ingredientAmounts,
+      adaptedFromRecipeId: adaptedFromRecipeId,
     );
     _recipes.add(created);
     return created;
@@ -585,15 +591,21 @@ class FakeUserRecipeRepository implements UserRecipeRepository {
     required String title,
     required List<String> ingredients,
     String? imageUrl,
+    List<String>? instructions,
+    List<String?>? ingredientAmounts,
   }) async {
     final i = _recipes.indexWhere((r) => r.id == id);
     if (i < 0) throw StateError('UserRecipe $id not found');
+    final old = _recipes[i];
     final next = testUserRecipe(
       id: id,
-      userId: _recipes[i].userId,
+      userId: old.userId,
       title: title,
       ingredients: ingredients,
       imageUrl: imageUrl,
+      instructions: instructions ?? old.instructions,
+      ingredientAmounts: ingredientAmounts,
+      adaptedFromRecipeId: old.adaptedFromRecipeId,
     );
     _recipes[i] = next;
     return next;
@@ -682,6 +694,9 @@ UserRecipe testUserRecipe({
   String title = 'Curry mit Reis',
   List<String> ingredients = const ['Reis', 'Curry'],
   String? imageUrl,
+  List<String> instructions = const [],
+  List<String?>? ingredientAmounts,
+  String? adaptedFromRecipeId,
   DateTime? createdAt,
 }) => UserRecipe(
   id: id,
@@ -689,6 +704,9 @@ UserRecipe testUserRecipe({
   title: title,
   ingredients: ingredients,
   imageUrl: imageUrl,
+  instructions: instructions,
+  ingredientAmounts: ingredientAmounts,
+  adaptedFromRecipeId: adaptedFromRecipeId,
   createdAt: createdAt ?? DateTime.utc(2026, 4, 24),
   updatedAt: createdAt ?? DateTime.utc(2026, 4, 24),
 );

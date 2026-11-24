@@ -17,11 +17,17 @@ class UserRecipeRepository {
     required String title,
     required List<String> ingredients,
     String? imageUrl,
+    List<String> instructions = const [],
+    List<String?>? ingredientAmounts,
+    String? adaptedFromRecipeId,
   }) => _service.create(
     userId: userId,
     title: title,
     ingredients: ingredients,
     imageUrl: imageUrl,
+    instructions: instructions,
+    ingredientAmounts: ingredientAmounts,
+    adaptedFromRecipeId: adaptedFromRecipeId,
   );
 
   Future<UserRecipe> update({
@@ -29,11 +35,15 @@ class UserRecipeRepository {
     required String title,
     required List<String> ingredients,
     String? imageUrl,
+    List<String>? instructions,
+    List<String?>? ingredientAmounts,
   }) => _service.update(
     id: id,
     title: title,
     ingredients: ingredients,
     imageUrl: imageUrl,
+    instructions: instructions,
+    ingredientAmounts: ingredientAmounts,
   );
 
   Future<void> delete(String id) => _service.delete(id);
