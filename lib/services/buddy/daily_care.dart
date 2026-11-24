@@ -113,7 +113,7 @@ class DailyCare {
     final gutFeelingTimes = today(s.gutFeelings.map((e) => e.trackedAt));
     final todaysGutFeelings = [
       for (final g in s.gutFeelings)
-        if (isSameDay(g.trackedAt.toLocal(), now)) g,
+        if (isSameDay(g.trackedAt, now)) g,
     ];
     final lastGutFeeling = todaysGutFeelings.isEmpty
         ? null
@@ -128,7 +128,7 @@ class DailyCare {
       gutFeelings: gutFeelingTimes.length,
       toilets: toiletTimes.length,
       lastMealAt: latest(mealTimes),
-      lastDrinkAt: latest([for (final d in drinks) d.trackedAt.toLocal()]),
+      lastDrinkAt: latest([for (final d in drinks) d.trackedAt]),
       lastLogAt: latest([
         ...mealTimes,
         for (final d in drinks) d.trackedAt,

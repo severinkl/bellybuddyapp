@@ -172,7 +172,8 @@ void main() {
                       repo.updateEntry(any(), _entryOf(type).id, captureAny()),
                 ).captured.single
                 as Map<String, dynamic>;
-        expect(DateTime.parse(data['tracked_at'] as String), moved);
+        // The wall clock in the UTC slot (see utils/wall_clock.dart).
+        expect(data['tracked_at'], '2026-03-22T08:15:00.000Z');
         expect(find.text('Speichern'), findsNothing);
       });
     }

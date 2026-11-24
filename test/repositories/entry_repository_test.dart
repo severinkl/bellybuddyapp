@@ -189,7 +189,7 @@ void main() {
                 ];
           return [
             for (final t in rows)
-              if (!t.isBefore(since)) t.toUtc(),
+              if (!t.isBefore(since)) t,
           ];
         });
 
