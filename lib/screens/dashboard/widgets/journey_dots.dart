@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
+import '../../../models/insight_rules.dart';
 import '../../../models/insights.dart';
 import '../../../widgets/buddy/buddy_controller.dart';
 import '../../../widgets/buddy/buddy_painter.dart';
@@ -19,7 +20,7 @@ class JourneyDots extends StatefulWidget {
   /// The latest active days, oldest first (at most [slots]).
   final List<JourneyDay> days;
 
-  static const slots = 7;
+  static const slots = InsightRules.daysNeeded;
 
   static Key dotKey(int i) => Key('journey_dot_$i');
   static const buddyKey = Key('journey_buddy');

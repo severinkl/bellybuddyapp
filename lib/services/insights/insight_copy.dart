@@ -58,11 +58,11 @@ class InsightCopy {
   }
 
   /// The Buddy's line on the journey card (locked only), by the days so far
-  /// (at most 7).
+  /// (at most [InsightRules.daysNeeded]).
   static String journeyLine(InsightProgress p) {
     assert(!p.unlocked, 'Unlocked progress shows the insights instead.');
     final g = p.gutFeelingsLeft;
-    return switch (math.min(p.activeDays, 7)) {
+    return switch (math.min(p.activeDays, InsightRules.daysNeeded)) {
       0 => 'Mit deinem ersten Eintrag fang ich an zu lernen.',
       1 => 'Tag 1! Ich lerne gerade, was du so isst.',
       2 => 'Ich sammle, was du isst und wie’s deinem Bauch danach geht.',
@@ -71,10 +71,9 @@ class InsightCopy {
       5 => 'Jetzt hab ich schon ein paar Tage zum Vergleichen.',
       6 =>
         g > 0
-            ? 'Noch ein Tag und $g× Bauchgefühl, dann schau ich nach ersten '
-                  'Mustern.'
-            : 'Noch ein Tag, dann schau ich nach ersten Mustern.',
-      _ => 'Noch $g× Bauchgefühl, dann schau ich nach ersten Mustern.',
+            ? 'Noch ein Tag und $g× Bauchgefühl, $_soonSee'
+            : 'Noch ein Tag, $_soonSee',
+      _ => 'Noch $g× Bauchgefühl, $_soonSee',
     };
   }
 
@@ -91,35 +90,28 @@ class InsightCopy {
     return null;
   }
 
-  /// The journey's counter: „2 von 7 Tagen".
-  static String journeyDays(InsightProgress p) => _plain(journeyDaysSpans(p));
-
-  /// The journey's counter: „Bauchgefühl 1 von 3", with „ ✓" once met.
-  static String journeyGutFeelings(InsightProgress p) =>
-      _plain(journeyGutFeelingsSpans(p));
-
-  /// [journeyDays] in parts: the counts are strong.
+  /// The journey's day counter, „2 von 7 Tagen", in parts: the counts are
+  /// strong.
   static List<CopySpan> journeyDaysSpans(InsightProgress p) => [
-    (math.min(p.activeDays, 7).toString(), true),
+    (math.min(p.activeDays, InsightRules.daysNeeded).toString(), true),
     (' von ', false),
-    ('7', true),
+    ('${InsightRules.daysNeeded}', true),
     (' Tagen', false),
   ];
 
-  /// [journeyGutFeelings] in parts: the counts are strong.
+  /// The journey's Bauchgefühl counter, „Bauchgefühl 1 von 3" with „ ✓"
+  /// once met, in parts: the counts are strong.
   static List<CopySpan> journeyGutFeelingsSpans(InsightProgress p) {
-    final n = math.min(p.gutFeelingEntries, 3);
+    const needed = InsightRules.gutFeelingsNeeded;
+    final n = math.min(p.gutFeelingEntries, needed);
     return [
       ('Bauchgefühl ', false),
       (n.toString(), true),
       (' von ', false),
-      ('3', true),
-      if (n == 3) (' ✓', false),
+      ('$needed', true),
+      if (n == needed) (' ✓', false),
     ];
   }
-
-  static String _plain(List<CopySpan> spans) =>
-      [for (final (text, _) in spans) text].join();
 
   /// „Zwiebel war an 4 von 5 schweren Tagen dabei." (a shown item was there
   /// on at least [InsightRules.minNoticedHard] hard days, so always

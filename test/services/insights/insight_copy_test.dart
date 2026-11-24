@@ -62,17 +62,35 @@ void main() {
       );
     });
 
-    test('the counters cap at 7 and 3', () {
-      expect(InsightCopy.journeyDays(_progress(9, 1)), '7 von 7 Tagen');
-      expect(InsightCopy.journeyDays(_progress(2, 1)), '2 von 7 Tagen');
+    test('the counters cap at 7 and 3; their counts are strong', () {
+      String plain(List<CopySpan> spans) =>
+          [for (final (text, _) in spans) text].join();
+      List<String> strong(List<CopySpan> spans) => [
+        for (final (text, isStrong) in spans)
+          if (isStrong) text,
+      ];
+
       expect(
-        InsightCopy.journeyGutFeelings(_progress(2, 1)),
+        plain(InsightCopy.journeyDaysSpans(_progress(9, 1))),
+        '7 von 7 Tagen',
+      );
+      expect(
+        plain(InsightCopy.journeyDaysSpans(_progress(2, 1))),
+        '2 von 7 Tagen',
+      );
+      expect(strong(InsightCopy.journeyDaysSpans(_progress(2, 1))), ['2', '7']);
+      expect(
+        plain(InsightCopy.journeyGutFeelingsSpans(_progress(2, 1))),
         'Bauchgefühl 1 von 3',
       );
       expect(
-        InsightCopy.journeyGutFeelings(_progress(2, 4)),
+        plain(InsightCopy.journeyGutFeelingsSpans(_progress(2, 4))),
         'Bauchgefühl 3 von 3 ✓',
       );
+      expect(strong(InsightCopy.journeyGutFeelingsSpans(_progress(2, 4))), [
+        '3',
+        '3',
+      ]);
     });
   });
 

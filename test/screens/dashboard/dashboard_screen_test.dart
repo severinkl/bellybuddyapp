@@ -14,8 +14,6 @@ import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/insight_card.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_dots.dart';
-import 'package:belly_buddy/models/insight_progress.dart';
-import 'package:belly_buddy/services/insights/insight_copy.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/dashboard_tutorial_steps.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_keys.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_step.dart';
@@ -355,15 +353,7 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(
-        find.text(
-          InsightCopy.journeyDays(
-            const InsightProgress(activeDays: 2, gutFeelingEntries: 0),
-          ),
-          skipOffstage: false,
-        ),
-        findsOneWidget,
-      );
+      expect(find.text('2 von 7 Tagen', skipOffstage: false), findsOneWidget);
       // Loaded once on mount: the dashboard's load joins the card's.
       expect(entryRepo.insightSourceCalls, 1);
     });
@@ -426,15 +416,7 @@ void main() {
       }
 
       expect(entryRepo.insightSourceCalls, 2);
-      expect(
-        find.text(
-          InsightCopy.journeyDays(
-            const InsightProgress(activeDays: 3, gutFeelingEntries: 0),
-          ),
-          skipOffstage: false,
-        ),
-        findsOneWidget,
-      );
+      expect(find.text('3 von 7 Tagen', skipOffstage: false), findsOneWidget);
     });
 
     testWidgets('deleting the 3rd gut-feeling entry locks the card again, '
@@ -537,15 +519,7 @@ void main() {
         ],
       );
       await tester.pump(const Duration(milliseconds: 100));
-      expect(
-        find.text(
-          InsightCopy.journeyDays(
-            const InsightProgress(activeDays: 2, gutFeelingEntries: 0),
-          ),
-          skipOffstage: false,
-        ),
-        findsOneWidget,
-      );
+      expect(find.text('2 von 7 Tagen', skipOffstage: false), findsOneWidget);
       final container = ProviderScope.containerOf(
         tester.element(find.byType(DashboardScreen)),
       );
@@ -573,15 +547,7 @@ void main() {
         );
       await container.read(insightsProvider.notifier).refresh();
       await tester.pump();
-      expect(
-        find.text(
-          InsightCopy.journeyDays(
-            const InsightProgress(activeDays: 1, gutFeelingEntries: 0),
-          ),
-          skipOffstage: false,
-        ),
-        findsOneWidget,
-      );
+      expect(find.text('1 von 7 Tagen', skipOffstage: false), findsOneWidget);
     });
 
     testWidgets('390×844 phone: a big Buddy, the ring and its button above '
