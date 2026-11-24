@@ -29,15 +29,18 @@ class RecipeCollectionNotifier extends AsyncNotifier<List<Recipe>> {
   /// Fetches again. A failure keeps the data on show (logged); without
   /// data, the error stays.
   Future<void> refresh() async {
-    if (ref.read(currentUserIdProvider) == null) return;
+    final userId = ref.read(currentUserIdProvider);
+    if (userId == null) return;
     try {
       final recipes = await ref
           .read(recipeRepositoryProvider)
           .fetchCollection();
-      state = AsyncData(recipes);
+      if (ref.isCurrentUser(userId)) state = AsyncData(recipes);
     } catch (e, st) {
       _log.error('refresh failed', e, st);
-      if (!state.hasValue) state = AsyncError(e, st);
+      if (ref.isCurrentUser(userId) && !state.hasValue) {
+        state = AsyncError(e, st);
+      }
     }
   }
 }
@@ -65,24 +68,25 @@ class RecipeFavoritesNotifier extends AsyncNotifier<List<FavoriteRecipe>> {
   }
 
   bool isSaved(String recipeId) =>
-      state.value?.any((f) => f.recipeId == recipeId) ?? false;
+      state.settledValue?.any((f) => f.recipeId == recipeId) ?? false;
 
   /// Saves [recipeId], or removes it when saved; shown at once. Returns
-  /// false, with the change taken back, when the write fails.
+  /// false, with the change taken back, when the write fails, and false
+  /// without a change while the favourites aren't loaded.
   Future<bool> toggle(String recipeId) async {
     final userId = ref.read(currentUserIdProvider);
-    if (userId == null) return false;
-    final current = state.value ?? const <FavoriteRecipe>[];
-    final removed = current.where((f) => f.recipeId == recipeId).toList();
-    final adding = removed.isEmpty;
+    final current = state.settledValue;
+    if (userId == null || current == null) return false;
+    final index = current.indexWhere((f) => f.recipeId == recipeId);
+    final removed = index < 0 ? null : current[index];
     state = AsyncData([
-      if (adding) FavoriteRecipe(recipeId, DateTime.now()),
+      if (removed == null) FavoriteRecipe(recipeId, DateTime.now()),
       for (final f in current)
         if (f.recipeId != recipeId) f,
     ]);
     final repo = ref.read(recipeRepositoryProvider);
     try {
-      if (adding) {
+      if (removed == null) {
         await repo.addFavorite(userId, recipeId);
       } else {
         await repo.removeFavorite(userId, recipeId);
@@ -90,17 +94,16 @@ class RecipeFavoritesNotifier extends AsyncNotifier<List<FavoriteRecipe>> {
       return true;
     } catch (e, st) {
       _favLog.error('toggle favourite failed', e, st);
-      // Take back only this recipe's change; other toggles stay.
-      final now = state.value ?? const <FavoriteRecipe>[];
-      state = AsyncData(
-        adding
-              ? [
-                  for (final f in now)
-                    if (f.recipeId != recipeId) f,
-                ]
-              : [...removed, ...now.where((f) => f.recipeId != recipeId)]
-          ..sort((a, b) => b.at.compareTo(a.at)),
-      );
+      // Take back only this recipe's change; other toggles stay. Nothing
+      // to take back once another user is signed in.
+      if (ref.isCurrentUser(userId)) {
+        final now = [
+          for (final f in state.value ?? const <FavoriteRecipe>[])
+            if (f.recipeId != recipeId) f,
+        ];
+        if (removed != null) now.insert(index.clamp(0, now.length), removed);
+        state = AsyncData(now);
+      }
       return false;
     }
   }
@@ -110,12 +113,15 @@ class RecipeFavoritesNotifier extends AsyncNotifier<List<FavoriteRecipe>> {
     final userId = ref.read(currentUserIdProvider);
     if (userId == null) return;
     try {
-      state = AsyncData(
-        await ref.read(recipeRepositoryProvider).fetchFavorites(userId),
-      );
+      final favorites = await ref
+          .read(recipeRepositoryProvider)
+          .fetchFavorites(userId);
+      if (ref.isCurrentUser(userId)) state = AsyncData(favorites);
     } catch (e, st) {
       _favLog.error('refresh favourites failed', e, st);
-      if (!state.hasValue) state = AsyncError(e, st);
+      if (ref.isCurrentUser(userId) && !state.hasValue) {
+        state = AsyncError(e, st);
+      }
     }
   }
 }
@@ -131,23 +137,30 @@ final rankingSignalsProvider = Provider<RankingSignals>(
   (ref) => RankingSignals.of(ref.watch(insightsProvider).settledValue),
 );
 
+/// The collection, as loading while it reloads (e.g. for another user):
+/// the data it still holds may be the previous user's.
+AsyncValue<List<Recipe>> _settledCollection(Ref ref) {
+  final collection = ref.watch(recipeCollectionProvider);
+  return collection.hasValue && collection.isLoading
+      ? const AsyncLoading()
+      : collection;
+}
+
 /// The collection for this user: their diet applied, ranked, each recipe
 /// with its fit.
 final rankedRecipesProvider = Provider<AsyncValue<RankedRecipes>>((ref) {
   final profile = ref.watch(profileProvider).value;
   final rules = ref.watch(intoleranceRulesProvider).value;
   final signals = ref.watch(rankingSignalsProvider);
-  return ref
-      .watch(recipeCollectionProvider)
-      .whenData(
-        (recipes) => rankRecipes(
-          recipes,
-          diet: profile?.diet,
-          rules: rules,
-          intolerances: profile?.intolerances,
-          signals: signals,
-        ),
-      );
+  return _settledCollection(ref).whenData(
+    (recipes) => rankRecipes(
+      recipes,
+      diet: profile?.diet,
+      rules: rules,
+      intolerances: profile?.intolerances,
+      signals: signals,
+    ),
+  );
 });
 
 /// How the recipe [id] fits the user, diet ignored; null for an unknown id.
@@ -157,7 +170,7 @@ final recipeFitProvider = Provider.family<AsyncValue<RecipeFit?>, String>((
 ) {
   final profile = ref.watch(profileProvider).value;
   final rules = ref.watch(intoleranceRulesProvider).value;
-  return ref.watch(recipeCollectionProvider).whenData((recipes) {
+  return _settledCollection(ref).whenData((recipes) {
     for (final recipe in recipes) {
       if (recipe.id == id) {
         return fitOf(recipe, rules: rules, intolerances: profile?.intolerances);
@@ -177,8 +190,8 @@ final forYouRecipesProvider = Provider<AsyncValue<List<RecipeFit>>>(
 /// The saved recipes still in the collection, newest saved first; empty
 /// while either list has no data.
 final savedRecipesProvider = Provider<List<SavedRecipe>>((ref) {
-  final recipes = ref.watch(recipeCollectionProvider).value;
-  final favorites = ref.watch(recipeFavoritesProvider).value;
+  final recipes = ref.watch(recipeCollectionProvider).settledValue;
+  final favorites = ref.watch(recipeFavoritesProvider).settledValue;
   if (recipes == null || favorites == null) return const [];
   final byId = {for (final r in recipes) r.id: r};
   return [

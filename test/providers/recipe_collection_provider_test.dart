@@ -1,3 +1,4 @@
+// ignore_for_file: invalid_use_of_internal_member
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,7 +9,9 @@ import 'package:belly_buddy/models/insights.dart';
 import 'package:belly_buddy/models/intolerance_rules.dart';
 import 'package:belly_buddy/models/my_recipe_item.dart';
 import 'package:belly_buddy/models/recipe.dart';
+import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/models/user_recipe.dart';
+import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/providers/insights_provider.dart';
 import 'package:belly_buddy/providers/recipe_collection_provider.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
@@ -28,6 +31,51 @@ class _OwnRecipes extends UserRecipesNotifier {
   AsyncValue<List<UserRecipe>> build() => _value;
 }
 
+class _Profile extends ProfileNotifier {
+  _Profile(this._value);
+  final AsyncValue<UserProfile?> _value;
+
+  @override
+  AsyncValue<UserProfile?> build() => _value;
+}
+
+/// Per-user favourites and collection, each fetch held until released.
+/// Delegates to [_inner], but a favourite write waits for [_gate] first.
+class _SlowFavRepo extends FakeRecipeRepository {
+  _SlowFavRepo(this._inner, this._gate);
+  final FakeRecipeRepository _inner;
+  final Future<void> _gate;
+
+  @override
+  Future<List<FavoriteRecipe>> fetchFavorites(String userId) =>
+      _inner.fetchFavorites(userId);
+
+  @override
+  Future<void> addFavorite(String userId, String recipeId) async {
+    await _gate;
+    await _inner.addFavorite(userId, recipeId);
+  }
+}
+
+class _GatedRepo extends FakeRecipeRepository {
+  final favGates = <String, Completer<List<FavoriteRecipe>>>{};
+  final collectionGates = <Completer<List<Recipe>>>[];
+  final favCalls = <String>[];
+
+  @override
+  Future<List<FavoriteRecipe>> fetchFavorites(String userId) {
+    favCalls.add(userId);
+    return (favGates[userId] = Completer()).future;
+  }
+
+  @override
+  Future<List<Recipe>> fetchCollection() {
+    final c = Completer<List<Recipe>>();
+    collectionGates.add(c);
+    return c.future;
+  }
+}
+
 void main() {
   late FakeRecipeRepository repo;
   final vegan = testRecipe(id: 'vegan', title: 'Vegan');
@@ -41,13 +89,15 @@ void main() {
     RankingSignals signals = const RankingSignals(),
     String? diet = 'vegan',
     List<String> intolerances = const ['Fruktose'],
+    Override? profile,
   }) {
     final c = ProviderContainer(
       overrides: [
         recipeRepositoryProvider.overrideWithValue(repo),
-        profileProviderSeededWith(
-          testUserProfile(intolerances: intolerances, diet: diet),
-        ),
+        profile ??
+            profileProviderSeededWith(
+              testUserProfile(intolerances: intolerances, diet: diet),
+            ),
         rankingSignalsProvider.overrideWithValue(signals),
         currentUserIdProvider.overrideWithValue(userId),
         ...overrides,
@@ -91,7 +141,7 @@ void main() {
       expect(ranked.fits.first.badge, isNotNull);
     });
 
-    test('rules fail: unchecked, no throw', () async {
+    test('rules missing: unchecked', () async {
       repo.rules = null;
       final c = make();
       await c.read(recipeCollectionProvider.future);
@@ -99,14 +149,37 @@ void main() {
       expect(c.read(rankedRecipesProvider).requireValue.checked, isFalse);
     });
 
-    test('rules throwing leave the fits unchecked', () async {
+    test('rules fail: unchecked, no throw', () async {
       final c = make(
         overrides: [
           intoleranceRulesProvider.overrideWith((ref) => throw StateError('x')),
         ],
       );
+      c.listen(rankedRecipesProvider, (_, _) {});
       await c.read(recipeCollectionProvider.future);
+      await expectLater(
+        c.read(intoleranceRulesProvider.future),
+        throwsStateError,
+      );
+      expect(c.read(intoleranceRulesProvider).hasError, isTrue);
       expect(c.read(rankedRecipesProvider).requireValue.checked, isFalse);
+    });
+
+    test('profile in error or loading: unchecked, diet not applied', () async {
+      for (final profile in [
+        AsyncValue<UserProfile?>.error(StateError('x'), StackTrace.empty),
+        const AsyncValue<UserProfile?>.loading(),
+      ]) {
+        final c = make(
+          profile: profileProvider.overrideWith(() => _Profile(profile)),
+        );
+        await c.read(recipeCollectionProvider.future);
+        await c.read(intoleranceRulesProvider.future);
+        final ranked = c.read(rankedRecipesProvider).requireValue;
+        expect(ranked.checked, isFalse);
+        expect(ranked.hiddenByDiet, 0);
+        expect(ranked.fits, hasLength(2));
+      }
     });
   });
 
@@ -143,6 +216,120 @@ void main() {
     test('signed out: empty, no fetch', () async {
       repo.collectionError = StateError('must not be called');
       final c = make(userId: null);
+      expect(await c.read(recipeCollectionProvider.future), isEmpty);
+    });
+  });
+
+  group('user change', () {
+    final user = SwitchableUserId('A');
+
+    test('favourites: B never sees A, late results are dropped', () async {
+      final gated = _GatedRepo();
+      final c = ProviderContainer(
+        overrides: [
+          recipeRepositoryProvider.overrideWithValue(gated),
+          user.override,
+        ],
+      );
+      addTearDown(c.dispose);
+      c.listen(recipeFavoritesProvider, (_, _) {});
+      gated.favGates['A']!.complete([FavoriteRecipe('x', DateTime(2026))]);
+      await c.read(recipeFavoritesProvider.future);
+      final n = c.read(recipeFavoritesProvider.notifier);
+      expect(n.isSaved('x'), isTrue);
+
+      // A refreshes; before it lands, B signs in.
+      final refreshing = n.refresh();
+      await Future<void>.delayed(Duration.zero);
+      user.set(c, 'B');
+      await Future<void>.delayed(Duration.zero);
+      expect(c.read(recipeFavoritesProvider).isLoading, isTrue);
+      expect(n.isSaved('x'), isFalse, reason: 'A\'s data is not B\'s');
+      expect(await n.toggle('y'), isFalse, reason: 'nothing settled yet');
+
+      gated.favGates['A']!.complete([FavoriteRecipe('a-late', DateTime(2026))]);
+      await refreshing;
+      expect(c.read(recipeFavoritesProvider).isLoading, isTrue);
+
+      gated.favGates['B']!.complete([FavoriteRecipe('b', DateTime(2026))]);
+      await c.read(recipeFavoritesProvider.future);
+      expect(
+        c.read(recipeFavoritesProvider).requireValue.map((f) => f.recipeId),
+        ['b'],
+      );
+    });
+
+    test('a failed toggle of A does not touch B', () async {
+      final fake = FakeRecipeRepository()..favoriteError = StateError('x');
+      final slow = Completer<void>();
+      final repo = _SlowFavRepo(fake, slow.future);
+      final c = ProviderContainer(
+        overrides: [
+          recipeRepositoryProvider.overrideWithValue(repo),
+          user.override,
+        ],
+      );
+      addTearDown(c.dispose);
+      c.listen(recipeFavoritesProvider, (_, _) {});
+      await c.read(recipeFavoritesProvider.future);
+      final n = c.read(recipeFavoritesProvider.notifier);
+      final toggling = n.toggle('y');
+      await Future<void>.delayed(Duration.zero);
+      fake.favorites = [FavoriteRecipe('b', DateTime(2026))];
+      user.set(c, 'B');
+      await c.read(recipeFavoritesProvider.future);
+      slow.complete();
+      expect(await toggling, isFalse);
+      expect(
+        c.read(recipeFavoritesProvider).requireValue.map((f) => f.recipeId),
+        ['b'],
+      );
+    });
+
+    test(
+      'collection: late refresh of A is dropped, reload is loading',
+      () async {
+        final gated = _GatedRepo();
+        final c = ProviderContainer(
+          overrides: [
+            recipeRepositoryProvider.overrideWithValue(gated),
+            user.override,
+          ],
+        );
+        addTearDown(c.dispose);
+        c.listen(recipeCollectionProvider, (_, _) {});
+        c.listen(rankedRecipesProvider, (_, _) {});
+        gated.collectionGates[0].complete([vegan]);
+        await c.read(recipeCollectionProvider.future);
+
+        final refreshing = c.read(recipeCollectionProvider.notifier).refresh();
+        await Future<void>.delayed(Duration.zero);
+        user.set(c, 'B');
+        await Future<void>.delayed(Duration.zero);
+        expect(c.read(rankedRecipesProvider), isA<AsyncLoading>());
+        expect(c.read(recipeFitProvider('vegan')), isA<AsyncLoading>());
+
+        gated.collectionGates[2].complete([meat]);
+        await c.read(recipeCollectionProvider.future);
+        gated.collectionGates[1].complete([vegan]);
+        await refreshing;
+        expect(c.read(recipeCollectionProvider).requireValue, [meat]);
+      },
+    );
+
+    test('signed out: favourites and collection are empty', () async {
+      final c = ProviderContainer(
+        overrides: [
+          recipeRepositoryProvider.overrideWithValue(repo),
+          user.override,
+        ],
+      );
+      addTearDown(c.dispose);
+      c.listen(recipeFavoritesProvider, (_, _) {});
+      c.listen(recipeCollectionProvider, (_, _) {});
+      await c.read(recipeCollectionProvider.future);
+      user.set(c, null);
+      expect(await c.read(recipeFavoritesProvider.future), isEmpty);
       expect(await c.read(recipeCollectionProvider.future), isEmpty);
     });
   });
@@ -271,6 +458,25 @@ void main() {
       final s = c.read(rankingSignalsProvider);
       expect(s.good, isEmpty);
       expect(s.noticed, isEmpty);
+    });
+
+    test('reloading insights: empty', () async {
+      final c = ProviderContainer(
+        overrides: [
+          insightsProviderSeededWith(lockedInsights().copyWithCalm({'reis'})),
+        ],
+      );
+      addTearDown(c.dispose);
+      c.listen(rankingSignalsProvider, (_, _) {});
+      await c.read(insightsProvider.future);
+      expect(c.read(rankingSignalsProvider).good, {'reis'});
+      // A reload keeps the data but is loading: nothing decides on it.
+      final notifier = c.read(insightsProvider.notifier);
+      notifier.state = const AsyncLoading<Insights>().copyWithPrevious(
+        c.read(insightsProvider),
+      );
+      expect(c.read(insightsProvider).hasValue, isTrue);
+      expect(c.read(rankingSignalsProvider).good, isEmpty);
     });
 
     test('locked insights: calm-day keys', () async {
