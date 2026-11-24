@@ -37,6 +37,12 @@ class _MyRecipesTabState extends ConsumerState<MyRecipesTab> {
 
   static const _host = RecipeSearchHost.myRecipes;
 
+  /// Loads the saved recipes again: the collection and the favourites.
+  Future<void> _reloadSaved() => Future.wait([
+    ref.read(recipeCollectionProvider.notifier).refresh(),
+    ref.read(recipeFavoritesProvider.notifier).refresh(),
+  ]);
+
   @override
   Widget build(BuildContext context) {
     // The search belongs to this screen (auto-disposed with it): Entdecken's
@@ -64,11 +70,15 @@ class _MyRecipesTabState extends ConsumerState<MyRecipesTab> {
               saved,
         ]);
         if (recipes.isEmpty && !hasActiveQuery) {
-          // Saved recipes may still be on their way.
-          final loading =
-              ref.watch(recipeCollectionProvider).isLoading ||
-              ref.watch(recipeFavoritesProvider).isLoading;
-          return loading ? const BbLoadingState() : const _EmptyState();
+          // Saved recipes may still be on their way, or have failed.
+          return switch (ref.watch(savedRecipesStateProvider)) {
+            AsyncLoading() => const BbLoadingState(),
+            AsyncError() => BbErrorState(
+              message: 'Konnte Rezepte nicht laden',
+              onRetry: () => unawaited(_reloadSaved()),
+            ),
+            _ => const _EmptyState(),
+          };
         }
         return Column(
           children: [

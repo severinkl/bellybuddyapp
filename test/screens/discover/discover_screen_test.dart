@@ -1,3 +1,5 @@
+import 'dart:async';
+
 // ignore_for_file: invalid_use_of_internal_member
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -716,6 +718,38 @@ void main() {
       expect(find.text('page:${RoutePaths.collectionRecipe}'), findsOneWidget);
     });
 
+    testWidgets('saved only, while they load: Laden…, no empty state', (
+      tester,
+    ) async {
+      final gated = _GatedFavorites()
+        ..collection = [testRecipe(id: 'g', title: 'Gemerktes')]
+        ..favorites = [FavoriteRecipe('g', DateTime(2026, 11, 20))];
+      collection = gated;
+      await pump(tester);
+
+      expect(mine(find.text('Laden…')), findsOneWidget);
+      expect(mine(find.text('Noch keine Rezepte.')), findsNothing);
+      expect(mine(find.text('Erstes Rezept erstellen')), findsNothing);
+
+      gated.load.complete();
+      await tester.pumpAndSettle();
+      expect(mine(find.text('Gemerktes')), findsOneWidget);
+      expect(mine(find.text('Laden…')), findsNothing);
+    });
+
+    testWidgets('no own recipes and the saved ones failed: says so', (
+      tester,
+    ) async {
+      collection.favoritesError = StateError('offline');
+      await pump(tester);
+
+      expect(
+        mine(find.text('Rezepte konnten nicht geladen werden.')),
+        findsOneWidget,
+      );
+      expect(mine(find.text('Erstes Rezept erstellen')), findsNothing);
+    });
+
     testWidgets('collection fails: own recipes still shown', (tester) async {
       collection.collectionError = Exception('404');
       await pump(tester, myRecipes: [testUserRecipe(title: 'Eigenes')]);
@@ -932,4 +966,15 @@ void main() {
     expect(tester.takeException(), isNull);
     expect(find.byKey(DiscoverScreen.knowledgeKey), findsOneWidget);
   });
+}
+
+/// The favourites answer once [load] completes.
+class _GatedFavorites extends FakeRecipeRepository {
+  final load = Completer<void>();
+
+  @override
+  Future<List<FavoriteRecipe>> fetchFavorites(String userId) async {
+    await load.future;
+    return super.fetchFavorites(userId);
+  }
 }

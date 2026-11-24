@@ -714,6 +714,71 @@ void main() {
       expect((items[2] as OwnRecipe).recipe.id, 'o1');
     });
 
+    group('no own recipes', () {
+      ProviderContainer noOwn() => make(
+        overrides: [
+          userRecipesProvider.overrideWith(
+            () => _OwnRecipes(const AsyncData([])),
+          ),
+        ],
+      );
+
+      test('the saved ones loading: loading', () async {
+        final gated = _GatedRepo();
+        repo = gated;
+        final c = noOwn();
+        c.listen(myRecipeItemsProvider, (_, _) {});
+        gated.collectionGates.single.complete([vegan]);
+        await c.read(recipeCollectionProvider.future);
+
+        expect(c.read(myRecipeItemsProvider), isA<AsyncLoading>());
+        gated.favGates[testUserId]!.complete([
+          FavoriteRecipe('vegan', DateTime(2026)),
+        ]);
+        await c.read(recipeFavoritesProvider.future);
+        expect(c.read(myRecipeItemsProvider).requireValue, hasLength(1));
+      });
+
+      test('the saved ones failed: the error', () async {
+        repo.favoritesError = StateError('offline');
+        final c = noOwn();
+        c.listen(myRecipeItemsProvider, (_, _) {});
+        await c.read(recipeCollectionProvider.future);
+        await c
+            .read(recipeFavoritesProvider.future)
+            .then((_) {}, onError: (_) {});
+
+        expect(c.read(myRecipeItemsProvider), isA<AsyncError>());
+      });
+
+      test('none saved: empty', () async {
+        final c = noOwn();
+        c.listen(myRecipeItemsProvider, (_, _) {});
+        await c.read(recipeCollectionProvider.future);
+        await c.read(recipeFavoritesProvider.future);
+
+        expect(c.read(myRecipeItemsProvider).requireValue, isEmpty);
+      });
+    });
+
+    test('own recipes and the saved ones failed: the own ones', () async {
+      repo.favoritesError = StateError('offline');
+      final c = make(
+        overrides: [
+          userRecipesProvider.overrideWith(
+            () => _OwnRecipes(AsyncData([testUserRecipe(id: 'o1')])),
+          ),
+        ],
+      );
+      c.listen(myRecipeItemsProvider, (_, _) {});
+      await c.read(recipeCollectionProvider.future);
+      await c
+          .read(recipeFavoritesProvider.future)
+          .then((_) {}, onError: (_) {});
+
+      expect(c.read(myRecipeItemsProvider).requireValue, hasLength(1));
+    });
+
     test('own recipes loading: loading', () {
       final c = make(
         overrides: [

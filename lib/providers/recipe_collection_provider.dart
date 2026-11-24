@@ -231,11 +231,36 @@ final savedRecipesProvider = Provider<List<SavedRecipe>>((ref) {
   ];
 });
 
+/// How far the saved recipes are: loading while the collection or the
+/// favourites (re)load, the error when either failed, else data (then
+/// [savedRecipesProvider] holds them).
+final savedRecipesStateProvider = Provider<AsyncValue<void>>((ref) {
+  final parts = [
+    ref.watch(recipeCollectionProvider),
+    ref.watch(recipeFavoritesProvider),
+  ];
+  if (parts.any((p) => p.isLoading)) return const AsyncLoading();
+  for (final p in parts) {
+    if (p.hasError) return AsyncError(p.error!, p.stackTrace!);
+  }
+  return const AsyncData(null);
+});
+
 /// „Meine Rezepte": own and saved recipes together, newest first. Waits on
-/// the own recipes only; saved ones join when they are there.
+/// the own recipes; saved ones join when they are there. Without own
+/// recipes the list is the saved ones, so it waits, and fails, with them:
+/// never „Noch keine Rezepte" for a user whose saved ones haven't come.
 final myRecipeItemsProvider = Provider<AsyncValue<List<MyRecipeItem>>>((ref) {
   final saved = ref.watch(savedRecipesProvider);
-  return ref
-      .watch(userRecipesProvider)
-      .whenData((own) => mergeMyRecipes(own, saved));
+  final own = ref.watch(userRecipesProvider);
+  if (own case AsyncData(value: [])) {
+    switch (ref.watch(savedRecipesStateProvider)) {
+      case AsyncError(:final error, :final stackTrace):
+        return AsyncError(error, stackTrace);
+      case AsyncLoading():
+        return const AsyncLoading();
+      case _:
+    }
+  }
+  return own.whenData((own) => mergeMyRecipes(own, saved));
 });

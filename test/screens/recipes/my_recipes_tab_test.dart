@@ -174,4 +174,20 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(RecipeCollectionCard), findsOneWidget);
   });
+
+  testWidgets('no own recipes and the saved ones failed: an error, retried', (
+    tester,
+  ) async {
+    saved('g', 'Gemerktes Curry');
+    collection.favoritesError = StateError('offline');
+    await pump(tester, recipes: const []);
+
+    expect(find.text('Noch keine Rezepte'), findsNothing);
+    expect(find.text('Konnte Rezepte nicht laden'), findsOneWidget);
+
+    collection.favoritesError = null;
+    await tester.tap(find.text('Erneut versuchen'));
+    await tester.pumpAndSettle();
+    expect(find.byType(RecipeCollectionCard), findsOneWidget);
+  });
 }

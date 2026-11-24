@@ -8,6 +8,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/recipe_search_provider.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
+import 'package:belly_buddy/repositories/recipe_repository.dart';
 import 'package:belly_buddy/screens/recipes/my_recipes_tab.dart';
 import 'package:belly_buddy/screens/recipes/recipes_screen.dart';
 import 'package:belly_buddy/screens/trackers/meal/widgets/recipe_selector_sheet.dart';
@@ -33,6 +34,8 @@ void main() {
       ProviderScope(
         overrides: [
           userRecipeRepositoryProvider.overrideWithValue(repo),
+          // No saved recipes (a failing collection is an error now).
+          recipeRepositoryProvider.overrideWithValue(FakeRecipeRepository()),
           currentUserIdProvider.overrideWithValue(testUserId),
         ],
         child: const MaterialApp(home: RecipesScreen()),
