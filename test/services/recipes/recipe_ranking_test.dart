@@ -263,6 +263,22 @@ void main() {
       expect(signals.good, isEmpty);
       expect(signals.noticed, isEmpty);
     });
+
+    test('compare by value, so equal insights do not re-rank', () {
+      const a = RankingSignals(good: {'reis'}, noticed: {'zwiebel'});
+      // Equal sets, not the same ones.
+      final names = ['reis', 'zwiebel'];
+      final b = RankingSignals(good: {names[0]}, noticed: {names[1]});
+
+      expect(a, b);
+      expect(a.hashCode, b.hashCode);
+      expect(a, isNot(const RankingSignals(good: {'reis'})));
+      expect(
+        a,
+        isNot(const RankingSignals(good: {'zwiebel'}, noticed: {'reis'})),
+      );
+      expect(RankingSignals.of(null), const RankingSignals());
+    });
   });
 
   group('pickForYou', () {

@@ -99,13 +99,13 @@ final class SelfCheckBadge extends FitBadge {
 
 /// How a collection recipe fits the user ([fitOf]).
 class RecipeFit {
-  const RecipeFit({
+  RecipeFit({
     required this.recipe,
     required this.checked,
     this.lines = const [],
     this.selfCheck = const [],
     this.judged = false,
-  });
+  }) : kritischCount = lines.where((l) => l.mark == LineMark.kritisch).length;
 
   final Recipe recipe;
 
@@ -130,7 +130,9 @@ class RecipeFit {
       if (l.mark == LineMark.kritisch) l,
   ];
 
-  int get kritischCount => kritisch.length;
+  /// How many [lines] are kritisch; counted once, as the ranking compares it
+  /// often.
+  final int kritischCount;
 
   /// Null while unchecked, and while an unjudged recipe has no kritisch
   /// line: nothing that reads like a verdict.

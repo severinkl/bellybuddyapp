@@ -271,6 +271,23 @@ void main() {
     });
   });
 
+  test('kritischCount counts the kritisch lines once', () {
+    final fit = RecipeFit(
+      recipe: testRecipe(),
+      checked: true,
+      judged: true,
+      lines: [
+        LineFit(_honig, LineMark.kritisch, because: const ['Fruktose']),
+        LineFit(_reis, LineMark.fits),
+        LineFit(_knoblauch, LineMark.kritisch, because: const ['Fruktose']),
+      ],
+    );
+
+    expect(fit.kritischCount, 2);
+    expect(fit.kritisch.map((l) => l.line.name), ['Honig', 'Knoblauch']);
+    expect(fit.badge, const KritischBadge(2));
+  });
+
   group('badges', () {
     test('compare by value', () {
       final histamin = SelfCheckBadge(List.of(['Histamin']));

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 import '../../config/constants.dart';
 import '../../models/insights.dart';
 import '../../models/recipe.dart';
@@ -31,6 +33,18 @@ class RankingSignals {
   }
 
   final Set<String> good, noticed;
+
+  @override
+  bool operator ==(Object other) =>
+      other is RankingSignals &&
+      setEquals(other.good, good) &&
+      setEquals(other.noticed, noticed);
+
+  @override
+  int get hashCode => Object.hash(
+    Object.hashAllUnordered(good),
+    Object.hashAllUnordered(noticed),
+  );
 }
 
 /// Whether [recipe] fits the profile's [diet] (`alles`, `vegetarisch`,
