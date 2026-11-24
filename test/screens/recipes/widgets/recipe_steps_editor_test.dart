@@ -1,0 +1,78 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
+
+import 'package:belly_buddy/config/constants.dart';
+import 'package:belly_buddy/screens/recipes/widgets/recipe_steps_editor.dart';
+
+void main() {
+  late List<String> latest;
+
+  Future<void> pump(WidgetTester tester, List<String> initial) async {
+    latest = initial;
+    tester.view.physicalSize = const Size(800, 4000);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SingleChildScrollView(
+            child: RecipeStepsEditor(
+              initial: initial,
+              onChanged: (steps) => latest = steps,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  testWidgets('shows the header, optional, the initial steps and a hint', (
+    tester,
+  ) async {
+    await pump(tester, const ['Kochen.']);
+
+    expect(find.text('Zubereitung'), findsOneWidget);
+    expect(find.text('optional'), findsOneWidget);
+    expect(find.text('Kochen.'), findsOneWidget);
+    expect(find.text('1'), findsOneWidget);
+    expect(
+      tester
+          .widget<TextField>(find.byKey(RecipeStepsEditor.fieldKey(0)))
+          .decoration
+          ?.hintText,
+      'Schritt beschreiben',
+    );
+  });
+
+  testWidgets('add, type and remove steps; onChanged gets the raw texts', (
+    tester,
+  ) async {
+    await pump(tester, const []);
+
+    await tester.tap(find.byKey(RecipeStepsEditor.addKey));
+    await tester.tap(find.byKey(RecipeStepsEditor.addKey));
+    await tester.pump();
+    await tester.enterText(find.byKey(RecipeStepsEditor.fieldKey(0)), 'Eins ');
+    await tester.enterText(find.byKey(RecipeStepsEditor.fieldKey(1)), 'Zwei');
+    expect(latest, ['Eins ', 'Zwei']);
+
+    await tester.tap(find.byKey(RecipeStepsEditor.removeKey(0)));
+    await tester.pump();
+    expect(latest, ['Zwei']);
+    expect(find.byKey(RecipeStepsEditor.fieldKey(1)), findsNothing);
+    expect(find.text('Zwei'), findsOneWidget);
+  });
+
+  testWidgets('the remove button is named for screen readers', (tester) async {
+    await pump(tester, const ['a']);
+    final remove = find.byKey(RecipeStepsEditor.removeKey(0));
+    expect(tester.widget<IconButton>(remove).tooltip, 'Schritt entfernen');
+  });
+
+  testWidgets('add is disabled at the most steps', (tester) async {
+    await pump(tester, List.filled(AppConstants.recipeStepsMax, 'x'));
+
+    final add = find.byKey(RecipeStepsEditor.addKey);
+    expect(tester.widget<TextButton>(add).onPressed, isNull);
+  });
+}

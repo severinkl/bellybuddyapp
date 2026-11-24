@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +14,11 @@ import '../../router/route_names.dart';
 import '../../widgets/common/bb_button.dart';
 import '../../utils/title_color.dart';
 import '../../widgets/common/signed_path_image.dart';
+import '../../providers/recipe_collection_provider.dart';
+import 'widgets/ingredient_line_view.dart';
+import 'widgets/recipe_collection_card.dart';
+import 'widgets/recipe_page_parts.dart';
+import 'widgets/recipe_steps.dart';
 
 class RecipeDetailScreen extends ConsumerStatefulWidget {
   const RecipeDetailScreen({super.key, required this.recipeId});
@@ -86,6 +93,10 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
       );
     }
 
+    final hasAmounts = [
+      for (var i = 0; i < recipe.ingredients.length; i++) recipe.amountOf(i),
+    ].any((a) => a != null);
+
     return Scaffold(
       backgroundColor: AppTheme.screenBackground,
       appBar: AppBar(
@@ -139,25 +150,63 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
                       ),
                     ),
                     AppConstants.gap16,
-                    if (recipe.ingredients.isNotEmpty) ...[
-                      const Text(
-                        'Zutaten',
-                        style: TextStyle(
-                          fontSize: AppTheme.fontSizeSubtitle,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.foreground,
+                    if (recipe.isAdapted) ...[
+                      AppConstants.gap8,
+                      const Align(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: RecipeTagPill(
+                          RecipeCardTag.adapted,
+                          label: 'Für dich angepasst',
                         ),
                       ),
-                      AppConstants.gap8,
-                      Wrap(
-                        spacing: AppConstants.spacingSm,
-                        runSpacing: AppConstants.spacingSm,
+                    ],
+                    if (recipe.adaptedFromRecipeId case final originalId?)
+                      _OriginalLink(recipeId: originalId),
+                    AppConstants.gap16,
+                    if (recipe.ingredients.isNotEmpty)
+                      RecipeSectionCard(
+                        title: 'Zutaten',
                         children: [
-                          for (final ingredient in recipe.ingredients)
-                            Chip(label: Text(ingredient)),
+                          for (var i = 0; i < recipe.ingredients.length; i++)
+                            IngredientLineView(
+                              amount: recipe.amountOf(i),
+                              name: recipe.ingredients[i],
+                              amountColumn: hasAmounts,
+                            ),
                         ],
                       ),
-                    ],
+                    AppConstants.gap16,
+                    RecipeSectionCard(
+                      title: 'Zubereitung',
+                      trailing: recipe.instructions.isEmpty
+                          ? const Text(
+                              'optional',
+                              style: RecipeSectionCard.captionStyle,
+                            )
+                          : null,
+                      children: [
+                        if (recipe.instructions.isEmpty) ...[
+                          const Text(
+                            'Noch keine Schritte.',
+                            style: TextStyle(
+                              fontSize: AppTheme.fontSizeBody,
+                              color: AppTheme.mutedForeground,
+                            ),
+                          ),
+                          Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            child: TextButton.icon(
+                              onPressed: () => context.push(
+                                RoutePaths.recipeEditFor(recipe.id),
+                              ),
+                              icon: const Icon(Icons.add),
+                              label: const Text('Schritte hinzufügen'),
+                            ),
+                          ),
+                        ] else
+                          RecipeSteps(steps: recipe.instructions),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -233,6 +282,28 @@ class _RecipeImage extends StatelessWidget {
       pathOrUrl: url,
       placeholder: placeholder,
       errorWidget: placeholder,
+    );
+  }
+}
+
+/// „Original: <title> ›" for an adapted recipe whose original is still in
+/// the collection; nothing otherwise.
+class _OriginalLink extends ConsumerWidget {
+  const _OriginalLink({required this.recipeId});
+
+  final String recipeId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final original = ref.watch(recipeFitProvider(recipeId)).value?.recipe;
+    if (original == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: AppConstants.spacingXs),
+      child: RecipeLinkLine(
+        lead: 'Original: ',
+        name: original.title,
+        onTap: () => unawaited(context.openRecipe(recipeId)),
+      ),
     );
   }
 }
