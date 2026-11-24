@@ -16,7 +16,6 @@ import '../../widgets/common/bb_async_state.dart';
 import '../../widgets/common/mascot_image.dart';
 import 'widgets/add_recipe_chooser_sheet.dart';
 import 'widgets/recipe_card.dart';
-import 'widgets/recipe_collection_card.dart';
 import 'widgets/recipes_search_field.dart';
 
 class MyRecipesTab extends ConsumerStatefulWidget {
@@ -95,22 +94,12 @@ class _MyRecipesTabState extends ConsumerState<MyRecipesTab> {
                             childAspectRatio: 0.78,
                           ),
                       itemCount: recipes.length,
-                      itemBuilder: (context, i) {
-                        return switch (recipes[i]) {
-                          OwnRecipe(:final recipe) => RecipeCard(
-                            recipe: recipe,
-                            onTap: () => context.push(
-                              RoutePaths.recipeDetailFor(recipe.id),
-                            ),
-                          ),
-                          SavedRecipe(:final recipe) => RecipeCollectionCard(
-                            recipe: recipe,
-                            tag: RecipeCardTag.saved,
-                            onTap: () =>
-                                unawaited(context.openRecipe(recipe.id)),
-                          ),
-                        };
-                      },
+                      itemBuilder: (context, i) => MyRecipeCard(
+                        item: recipes[i],
+                        onOpenOwn: (recipe) =>
+                            context.push(RoutePaths.recipeDetailFor(recipe.id)),
+                        onOpenSaved: (id) => unawaited(context.openRecipe(id)),
+                      ),
                     ),
             ),
           ],

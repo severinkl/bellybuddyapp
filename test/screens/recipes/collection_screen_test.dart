@@ -71,7 +71,7 @@ void main() {
   }
 
   Finder tile(String title) => find.byWidgetPredicate(
-    (w) => w is RecipeListTile && w.fit.recipe.title == title,
+    (w) => w is RecipeListTile && w.recipe.title == title,
   );
 
   testWidgets('chips filter by meal type', (tester) async {

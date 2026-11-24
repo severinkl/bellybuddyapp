@@ -141,17 +141,11 @@ class DiscoverRecipesSection extends StatelessWidget {
           ),
           final items => _CardRow([
             for (final item in items.take(shown))
-              switch (item) {
-                OwnRecipe(:final recipe) => RecipeCard(
-                  recipe: recipe,
-                  onTap: () => onOpenOwn(recipe),
-                ),
-                SavedRecipe(:final recipe) => RecipeCollectionCard(
-                  recipe: recipe,
-                  tag: RecipeCardTag.saved,
-                  onTap: () => onOpenRecipe(recipe.id),
-                ),
-              },
+              MyRecipeCard(
+                item: item,
+                onOpenOwn: onOpenOwn,
+                onOpenSaved: onOpenRecipe,
+              ),
           ]),
         },
       ],

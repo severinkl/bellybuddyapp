@@ -148,7 +148,8 @@ class _CollectionScreenState extends ConsumerState<CollectionScreen> {
             Padding(
               padding: const EdgeInsets.only(bottom: AppConstants.spacingSm),
               child: RecipeListTile(
-                fit: fit,
+                recipe: fit.recipe,
+                badge: fit.badge,
                 onTap: () => unawaited(context.openRecipe(fit.recipe.id)),
               ),
             ),

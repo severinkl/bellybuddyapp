@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
+import '../../../models/recipe.dart';
 import '../../../services/recipes/recipe_fit.dart';
 import '../../../widgets/common/bb_card.dart';
 import 'fit_badge_view.dart';
@@ -10,16 +11,21 @@ import 'recipe_image.dart';
 /// A collection recipe as a list row: thumbnail, title, time and meal
 /// type, and how it fits the user.
 class RecipeListTile extends StatelessWidget {
-  const RecipeListTile({super.key, required this.fit, required this.onTap});
+  const RecipeListTile({
+    super.key,
+    required this.recipe,
+    this.badge,
+    required this.onTap,
+  });
 
-  final RecipeFit fit;
+  final Recipe recipe;
+  final FitBadge? badge;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final recipe = fit.recipe;
     final meta = recipe.listMeta;
-    final badge = fit.badge;
+    final badge = this.badge;
     return BbCard(
       onTap: onTap,
       padding: const EdgeInsets.all(AppConstants.spacingSm),

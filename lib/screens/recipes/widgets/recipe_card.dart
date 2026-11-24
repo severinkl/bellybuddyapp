@@ -1,12 +1,14 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../../config/app_theme.dart';
-import '../../../config/constants.dart';
+import '../../../models/my_recipe_item.dart';
 import '../../../models/user_recipe.dart';
 import '../../../utils/title_color.dart';
 import '../../../widgets/common/signed_path_image.dart';
 import 'recipe_collection_card.dart';
 
+/// An own recipe as a card: its photo (or a monogram), „Angepasst" when
+/// the Buddy adapted it, the title and its first ingredients.
 class RecipeCard extends StatelessWidget {
   const RecipeCard({super.key, required this.recipe, required this.onTap});
 
@@ -14,70 +16,43 @@ class RecipeCard extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final subtitle = recipe.ingredients.take(3).join(' · ');
-    return Material(
-      color: AppTheme.card,
-      borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            AspectRatio(
-              aspectRatio: 1.1,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  _Image(recipe: recipe),
-                  if (recipe.isAdapted)
-                    const Positioned(
-                      top: AppConstants.spacingSm,
-                      left: AppConstants.spacingSm,
-                      child: RecipeTagPill(RecipeCardTag.adapted),
-                    ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppConstants.spacingMd,
-                vertical: AppConstants.spacingSm,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    recipe.title.isEmpty ? 'Ohne Namen' : recipe.title,
-                    style: const TextStyle(
-                      fontSize: AppTheme.fontSizeBody,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.foreground,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (subtitle.isNotEmpty) ...[
-                    AppConstants.gap4,
-                    Text(
-                      subtitle,
-                      style: const TextStyle(
-                        fontSize: AppTheme.fontSizeCaption,
-                        color: AppTheme.mutedForeground,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => RecipeCardShell(
+    image: _Image(recipe: recipe),
+    tag: recipe.isAdapted ? RecipeCardTag.adapted : null,
+    title: recipe.title.isEmpty ? 'Ohne Namen' : recipe.title,
+    subtitle: recipe.ingredients.take(3).join(' · '),
+    onTap: onTap,
+  );
+}
+
+/// An entry of „Meine Rezepte": an own recipe's card, or a saved one's with
+/// the heart.
+class MyRecipeCard extends StatelessWidget {
+  const MyRecipeCard({
+    super.key,
+    required this.item,
+    required this.onOpenOwn,
+    required this.onOpenSaved,
+  });
+
+  final MyRecipeItem item;
+  final ValueChanged<UserRecipe> onOpenOwn;
+
+  /// A saved collection recipe, by id.
+  final ValueChanged<String> onOpenSaved;
+
+  @override
+  Widget build(BuildContext context) => switch (item) {
+    OwnRecipe(:final recipe) => RecipeCard(
+      recipe: recipe,
+      onTap: () => onOpenOwn(recipe),
+    ),
+    SavedRecipe(:final recipe) => RecipeCollectionCard(
+      recipe: recipe,
+      tag: RecipeCardTag.saved,
+      onTap: () => onOpenSaved(recipe.id),
+    ),
+  };
 }
 
 class _Image extends StatelessWidget {

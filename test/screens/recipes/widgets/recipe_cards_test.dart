@@ -97,27 +97,14 @@ void main() {
   });
 
   group('RecipeListTile', () {
-    RecipeFit fit(FitBadge? badge) => badge == null
-        ? RecipeFit(recipe: recipe, checked: false)
-        : RecipeFit(
-            recipe: recipe,
-            checked: true,
-            judged: true,
-            selfCheck: badge is SelfCheckBadge ? badge.intolerances : const [],
-            lines: [
-              if (badge is KritischBadge)
-                for (var i = 0; i < badge.count; i++)
-                  LineFit(testLine('x$i'), LineMark.kritisch),
-            ],
-          );
-
     testWidgets('title, meta and badge', (tester) async {
       var tapped = false;
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
             body: RecipeListTile(
-              fit: fit(const FitsBadge()),
+              recipe: recipe,
+              badge: const FitsBadge(),
               onTap: () => tapped = true,
             ),
           ),
@@ -131,11 +118,11 @@ void main() {
       expect(tapped, isTrue);
     });
 
-    testWidgets('no badge while unchecked', (tester) async {
+    testWidgets('no badge: none shown', (tester) async {
       await tester.pumpWidget(
         MaterialApp(
           home: Scaffold(
-            body: RecipeListTile(fit: fit(null), onTap: () {}),
+            body: RecipeListTile(recipe: recipe, onTap: () {}),
           ),
         ),
       );
@@ -165,7 +152,7 @@ void main() {
                     SelfCheckBadge(['Histamin']),
                     FitsBadge(),
                   ])
-                    RecipeListTile(fit: fit(badge), onTap: () {}),
+                    RecipeListTile(recipe: recipe, badge: badge, onTap: () {}),
                 ],
               ),
             ),
