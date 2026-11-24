@@ -231,6 +231,24 @@ void main() {
       expect(state.requireValue, before);
     });
 
+    test('refresh without data is loading meanwhile, then data', () async {
+      final gated = _GatedRepo();
+      repo = gated;
+      final c = make();
+      c.listen(recipeCollectionProvider, (_, _) {});
+      gated.collectionGates[0].completeError(StateError('offline'));
+      await expectLater(
+        c.read(recipeCollectionProvider.future),
+        throwsStateError,
+      );
+
+      final refreshing = c.read(recipeCollectionProvider.notifier).refresh();
+      expect(c.read(recipeCollectionProvider), isA<AsyncLoading>());
+      gated.collectionGates[1].complete([vegan]);
+      await refreshing;
+      expect(c.read(recipeCollectionProvider).requireValue, [vegan]);
+    });
+
     test('refresh without data leaves the error', () async {
       repo.collectionError = StateError('offline');
       final c = make();

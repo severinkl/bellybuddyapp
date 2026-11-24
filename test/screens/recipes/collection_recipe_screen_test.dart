@@ -395,13 +395,69 @@ void main() {
       repo.favoriteError = StateError('offline');
       await pump(tester);
 
-      await tester.tap(find.byKey(CollectionRecipeScreen.saveKey));
-      await tester.pumpAndSettle();
+      final logs = <String>[];
+      final print = debugPrint;
+      debugPrint = (message, {wrapWidth}) => logs.add(message ?? '');
+      try {
+        await tester.tap(find.byKey(CollectionRecipeScreen.saveKey));
+        await tester.pumpAndSettle();
+      } finally {
+        debugPrint = print;
+      }
 
       expect(repo.added, ['recipe-1']);
       expect(inSave(find.text('Merken')), findsOneWidget);
       expect(find.text(RecipeCopy.failed), findsOneWidget);
       expect(find.text(CollectionRecipeScreen.saved), findsNothing);
+      expect(
+        logs,
+        contains('RecipeFavorites [ERROR]: toggle favourite failed'),
+      );
+    });
+
+    testWidgets('Gemerkt at once, while the write is still on its way', (
+      tester,
+    ) async {
+      final held = _HeldFavoriteWrite()..collection = [recipe()];
+      repo = held;
+      await pump(tester);
+
+      await tester.tap(find.byKey(CollectionRecipeScreen.saveKey));
+      await tester.pump();
+
+      expect(held.added, ['recipe-1']);
+      expect(inSave(find.text('Gemerkt')), findsOneWidget);
+      expect(find.text(CollectionRecipeScreen.saved), findsNothing);
+
+      held.write.complete();
+      await tester.pumpAndSettle();
+      expect(inSave(find.text('Gemerkt')), findsOneWidget);
+      expect(find.text(CollectionRecipeScreen.saved), findsOneWidget);
+    });
+
+    testWidgets('Merken while the saved recipes load waits for them', (
+      tester,
+    ) async {
+      final gated = _GatedFavorites()
+        ..collection = [recipe()]
+        ..favorites = [FavoriteRecipe('recipe-1', DateTime(2026, 11, 20))];
+      repo = gated;
+      await pump(tester);
+      expect(inSave(find.text('Merken')), findsOneWidget);
+
+      await tester.tap(find.byKey(CollectionRecipeScreen.saveKey));
+      await tester.pump();
+      expect(gated.removed, isEmpty);
+      expect(gated.added, isEmpty);
+
+      gated.load.complete();
+      await tester.pumpAndSettle();
+
+      // It was saved: the tap takes it back, no failure.
+      expect(gated.removed, ['recipe-1']);
+      expect(gated.added, isEmpty);
+      expect(find.text(RecipeCopy.failed), findsNothing);
+      expect(find.text(CollectionRecipeScreen.unsaved), findsOneWidget);
     });
 
     testWidgets('after a failed load, fetches the saved recipes first', (
@@ -456,6 +512,25 @@ void main() {
     expect(find.byType(BbErrorState), findsNothing);
     expect(find.text('Reis mit Honig'), findsOneWidget);
     expect(find.text('1 Zutat ist für dich kritisch'), findsOneWidget);
+  });
+
+  testWidgets('retry shows the spinner while it loads', (tester) async {
+    final held = _HeldCollectionRetry()
+      ..collection = [recipe()]
+      ..collectionError = StateError('x');
+    repo = held;
+    await pump(tester);
+    expect(find.byType(BbErrorState), findsOneWidget);
+
+    held.collectionError = null;
+    await tester.tap(find.text('Erneut versuchen'));
+    await tester.pump();
+    expect(find.byType(BbErrorState), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+
+    held.retry.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('Reis mit Honig'), findsOneWidget);
   });
 
   testWidgets('retry reloads rules that failed too', (tester) async {
@@ -535,6 +610,41 @@ void main() {
 class _GatedCollection extends FakeRecipeRepository {
   @override
   Future<List<Recipe>> fetchCollection() => Completer<List<Recipe>>().future;
+}
+
+/// The collection's first fetch answers at once; later ones wait for
+/// [retry].
+class _HeldCollectionRetry extends FakeRecipeRepository {
+  final retry = Completer<void>();
+  var _fetches = 0;
+
+  @override
+  Future<List<Recipe>> fetchCollection() async {
+    if (++_fetches > 1) await retry.future;
+    return super.fetchCollection();
+  }
+}
+
+/// A favourite write held until [write] completes.
+class _HeldFavoriteWrite extends FakeRecipeRepository {
+  final write = Completer<void>();
+
+  @override
+  Future<void> addFavorite(String userId, String recipeId) async {
+    added.add(recipeId);
+    await write.future;
+  }
+}
+
+/// The favourites answer once [load] completes.
+class _GatedFavorites extends FakeRecipeRepository {
+  final load = Completer<void>();
+
+  @override
+  Future<List<FavoriteRecipe>> fetchFavorites(String userId) async {
+    await load.future;
+    return super.fetchFavorites(userId);
+  }
 }
 
 /// The first favourites fetch fails, later ones answer.
