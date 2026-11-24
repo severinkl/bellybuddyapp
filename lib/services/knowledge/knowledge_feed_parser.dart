@@ -6,8 +6,10 @@ import '../../models/knowledge_article.dart';
 import '../../utils/url_utils.dart';
 
 /// Parses the myfodmap blog RSS 2.0 feed into articles, newest first
-/// (undated last). Unusable items are skipped. Throws [FormatException] when
-/// [xml] is not a well-formed RSS document.
+/// (undated last), each link once (its newest item). Unusable items are
+/// skipped. Throws [FormatException] when [xml] is not a well-formed RSS
+/// document, or when it has items and none is usable (a feed broken
+/// otherwise must not replace a good copy with nothing).
 List<KnowledgeArticle> parseKnowledgeFeed(String xml) {
   final XmlDocument doc;
   try {
@@ -22,10 +24,10 @@ List<KnowledgeArticle> parseKnowledgeFeed(String xml) {
     throw const FormatException('Not an RSS feed');
   }
 
-  final articles = <KnowledgeArticle>[];
-  for (final item in channel.findElements('item')) {
-    final article = _parseItem(item);
-    if (article != null) articles.add(article);
+  final items = channel.findElements('item').toList();
+  final articles = [for (final item in items) ?_parseItem(item)];
+  if (items.isNotEmpty && articles.isEmpty) {
+    throw const FormatException('No usable item in the feed');
   }
 
   // List.sort is not stable; order by (date desc, original index).
@@ -43,7 +45,11 @@ List<KnowledgeArticle> parseKnowledgeFeed(String xml) {
       }
       return x.$1.compareTo(y.$1);
     });
-  return [for (final e in indexed) e.$2];
+  final links = <Uri>{};
+  return [
+    for (final (_, article) in indexed)
+      if (links.add(article.link)) article,
+  ];
 }
 
 /// Trims [raw] and strips leading emoji/symbols; null when nothing is left.

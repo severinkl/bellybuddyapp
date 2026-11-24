@@ -63,6 +63,27 @@ void main() {
     expect(feed.articles.single.title, 'Hallo');
   });
 
+  test('a feed none of whose items is usable keeps the cached copy', () async {
+    final cached = KnowledgeFeed(
+      articles: testKnowledgeArticles(),
+      fetchedAt: DateTime.utc(2026, 11, 1),
+    );
+    await _repo().writeCache(cached);
+    final repo = _repo('''<?xml version="1.0"?>
+<rss version="2.0"><channel>
+<item><title>Ohne Link</title></item>
+</channel></rss>''');
+
+    final container = ProviderContainer.test(
+      overrides: [knowledgeRepositoryProvider.overrideWithValue(repo)],
+    );
+    final feed = await container.read(knowledgeFeedProvider.future);
+
+    expect(feed.articles, cached.articles);
+    expect(feed.offline, isTrue);
+    expect((await repo.readCache())!.articles, cached.articles);
+  });
+
   test('fetchArticles parses the service\'s feed', () async {
     final articles = await _repo(_xml).fetchArticles();
     expect(articles.single.title, 'Hallo');

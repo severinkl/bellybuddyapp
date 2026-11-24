@@ -2,15 +2,22 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:belly_buddy/services/knowledge/knowledge_feed_parser.dart';
 
+/// [_item]'s default link: the blog's address for its title.
+const _titleLink = 'title-link';
+
 String _item({
   String title = 'Die Zeitumstellung',
-  String? link = 'https://www.myfodmap.at/die-zeitumstellung',
+  String? link = _titleLink,
   String? category = ' Gesund verdauen',
   String? pubDate = 'Thu, 27 Mar 2025 23:00:00 GMT',
   String? enclosure = 'https://static.wixstatic.com/media/file.png',
 }) =>
     '<item><title><![CDATA[$title]]></title>'
-    '${link == null ? '' : '<link>$link</link>'}'
+    '${switch (link) {
+      null => '',
+      _titleLink => '<link>https://www.myfodmap.at/${title.toLowerCase().replaceAll(RegExp('[^a-z0-9]+'), '-')}</link>',
+      _ => '<link>$link</link>',
+    }}'
     '${category == null ? '' : '<category><![CDATA[$category]]></category>'}'
     '${pubDate == null ? '' : '<pubDate>$pubDate</pubDate>'}'
     '${enclosure == null ? '' : '<enclosure url="$enclosure" type="image/png"/>'}'
@@ -103,8 +110,39 @@ void main() {
     expect(articles.map((a) => a.title), ['neu', 'D', 'A', 'C', 'B', 'Y', 'X']);
   });
 
+  test('an article listed twice shows once, the newest', () {
+    const link = 'https://www.myfodmap.at/suppe';
+    final articles = parseKnowledgeFeed(
+      _feed([
+        _item(
+          title: 'Suppe',
+          link: link,
+          pubDate: 'Mon, 01 Jan 2024 10:00:00 GMT',
+        ),
+        _item(title: 'Andere', pubDate: null),
+        _item(
+          title: 'Suppe neu',
+          link: link,
+          pubDate: 'Wed, 01 Jan 2025 10:00:00 GMT',
+        ),
+        _item(title: 'Suppe undatiert', link: link, pubDate: null),
+      ]),
+    );
+    expect(articles.map((a) => a.title), ['Suppe neu', 'Andere']);
+  });
+
   test('an empty channel is no error', () {
     expect(parseKnowledgeFeed('<rss><channel></channel></rss>'), isEmpty);
+  });
+
+  test('items none of which is usable throw FormatException (the last good '
+      'copy stays)', () {
+    expect(
+      () => parseKnowledgeFeed(
+        _feed([_item(title: 'nolink', link: null), _item(title: '')]),
+      ),
+      throwsFormatException,
+    );
   });
 
   test('truncated XML throws FormatException', () {
