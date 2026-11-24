@@ -8,101 +8,66 @@ import 'tutorial_step.dart';
 const _baseStyle = TextStyle(
   fontSize: AppTheme.fontSizeBody,
   color: AppTheme.foreground,
-  height: 1.35,
+  height: AppTheme.lineHeightSnug,
 );
 
 const _boldStyle = TextStyle(
   fontSize: AppTheme.fontSizeBody,
   color: AppTheme.foreground,
   fontWeight: FontWeight.w700,
-  height: 1.35,
+  height: AppTheme.lineHeightSnug,
 );
 
 TextSpan _t(String text) => TextSpan(text: text, style: _baseStyle);
 TextSpan _b(String text) => TextSpan(text: text, style: _boldStyle);
 
-/// The 10 tutorial steps, in the fixed order shown by the mockups in
-/// `Anleitung Homescreen/` (filenames 1.png–10.png).
+/// The 7 tour steps: Home top to bottom (the Buddy and his ring, the
+/// next-action button), the plus, the insight card, then the tabs.
 final List<TutorialStep> dashboardTutorialSteps = [
   TutorialStep(
-    targetKey: TutorialKeys.bauchgefuehl,
+    targetKey: TutorialKeys.buddy,
     targetRadius: AppConstants.radiusLg,
     preferredAnchor: TooltipAnchor.below,
     richText: [
-      _t('Tracke deine '),
-      _b('Beschwerden und deine Befindlichkeit'),
+      _t('Das ist dein '),
+      _b('Buddy'),
+      _t('! Jeder Eintrag hält euren 🔥 '),
+      _b('Streak'),
+      _t(' am Leben. Der '),
+      _b('Ring'),
       _t(
-        ' hier, um uns zu helfen, einen Zusammenhang zwischen deiner Ernährung und deinem Wohlbefinden herauszufinden.',
+        ' zeigt, was er heute schon bekommen hat – tipp auf eine Blase, um es einzutragen.',
       ),
     ],
   ),
   TutorialStep(
-    targetKey: TutorialKeys.klo,
+    targetKey: TutorialKeys.nextAction,
     targetRadius: AppConstants.radiusLg,
-    preferredAnchor: TooltipAnchor.below,
+    preferredAnchor: TooltipAnchor.above,
     richText: [
-      _t(
-        "Wann, wie oft und in welcher Form du auf's Klo gehst, ist ebenfalls eine sehr wichtige Information. Hier kannst du ",
-      ),
-      _b('deinen Stuhlgang tracken'),
-      _t('.'),
+      _t('Dieser Knopf schlägt dir den '),
+      _b('nächsten Eintrag'),
+      _t(' vor – passend zur Tageszeit.'),
     ],
   ),
   TutorialStep(
-    targetKey: TutorialKeys.essenTracken,
+    targetKey: TutorialKeys.plus,
     targetRadius: AppConstants.radiusFull,
     preferredAnchor: TooltipAnchor.above,
     richText: [
-      _t('Tracke '),
-      _b('Speisen und Getränke'),
-      _t(
-        ', die du zu dir nimmst. Je regelmäßiger du das tust, desto besser können wir dir Tipps für mehr Wohlbefinden geben.',
-      ),
+      _t('Hier trägst du '),
+      _b('alles'),
+      _t(' ein: Essen, Trinken, Bauchgefühl und Klo.'),
     ],
   ),
   TutorialStep(
-    targetKey: TutorialKeys.fuerDich,
-    targetRadius: AppConstants.radiusLg,
+    targetKey: TutorialKeys.insight,
+    targetRadius: AppConstants.radiusRound,
     preferredAnchor: TooltipAnchor.above,
     richText: [
-      _t('Hol dir 1 x pro Tag Feedback zu '),
-      _b('deinen Speisen und Getränken'),
-      _t(
-        ' und erfahre, was du in Zukunft anders machen kannst, um dich wohler zu fühlen.',
-      ),
-    ],
-  ),
-  TutorialStep(
-    targetKey: TutorialKeys.alternativen,
-    targetRadius: AppConstants.radiusLg,
-    preferredAnchor: TooltipAnchor.above,
-    richText: [
-      _t('Alle besser '),
-      _b('verträglichen Lebensmittel-Alternativen'),
-      _t(' basierend auf deinen Speisen findest du hier.'),
-    ],
-  ),
-  TutorialStep(
-    targetKey: TutorialKeys.wissen,
-    targetRadius: AppConstants.radiusLg,
-    preferredAnchor: TooltipAnchor.above,
-    richText: [
-      _t(
-        'Du willst mehr über die Themen Verdauung, ungeniert Pupsen und Co erfahren? ',
-      ),
-      _b("Hier geht's zum Blog!"),
-    ],
-  ),
-  TutorialStep(
-    targetKey: TutorialKeys.rezepte,
-    targetRadius: AppConstants.radiusLg,
-    preferredAnchor: TooltipAnchor.above,
-    richText: [
-      _t('Hier findest du '),
-      _b('deine gespeicherten Rezepte'),
-      _t(
-        '. Speicher Mahlzeiten als Rezept, um sie später schneller wieder einzutragen.',
-      ),
+      _t('Sobald genug Einträge da sind, zeig ich dir hier, '),
+      _b('was mir an deinem Bauch auffällt'),
+      _t('.'),
     ],
   ),
   TutorialStep(
@@ -110,28 +75,33 @@ final List<TutorialStep> dashboardTutorialSteps = [
     targetRadius: AppConstants.radiusMd,
     preferredAnchor: TooltipAnchor.above,
     richText: [
-      _t('Was hast du wann gegessen und wie ist es dir dabei gegangen? Eine '),
-      _b('Übersicht'),
-      _t(' über alle deine erfassten Daten findest du hier.'),
+      _t('Im '),
+      _b('Tagebuch'),
+      _t(' siehst du alle deine Einträge, Tag für Tag.'),
     ],
   ),
   TutorialStep(
-    targetKey: TutorialKeys.feedback,
-    targetRadius: AppConstants.radiusFull,
-    preferredAnchor: TooltipAnchor.below,
+    targetKey: TutorialKeys.entdecken,
+    targetRadius: AppConstants.radiusMd,
+    preferredAnchor: TooltipAnchor.above,
     richText: [
-      _b('Fragen und Feedback zur App'),
-      _t(' kannst du uns hier ganz einfach schicken.'),
+      _t('Unter '),
+      _b('Entdecken'),
+      _t(
+        ' findest du Tipps, Alternativen, deine Rezepte und Wissen rund um die Verdauung.',
+      ),
     ],
   ),
   TutorialStep(
-    targetKey: TutorialKeys.settings,
-    targetRadius: AppConstants.radiusFull,
-    preferredAnchor: TooltipAnchor.below,
+    targetKey: TutorialKeys.ich,
+    targetRadius: AppConstants.radiusMd,
+    preferredAnchor: TooltipAnchor.above,
     richText: [
-      _t('Alle '),
-      _b('Einstellungen'),
-      _t(' zu deinem Profil kannst du hier einsehen und bearbeiten.'),
+      _t('Unter '),
+      _b('Ich'),
+      _t(
+        ' kannst du mich umbenennen, dein Streak-Ziel ändern und alles einstellen.',
+      ),
     ],
   ),
 ];

@@ -1,9 +1,19 @@
 import 'package:belly_buddy/screens/screens.dart';
+import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
+import 'package:belly_buddy/widgets/log_sheet/log_sheet.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
 import 'helpers/test_app.dart';
+
+/// Taps the plus in the bar, then [need] in the „Eintragen" sheet.
+Future<void> _logVia(WidgetTester tester, CareNeed need) async {
+  await tester.tap(find.byKey(BbBottomNav.centerButtonKey));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(LogSheet.optionKey(need)));
+  await tester.pumpAndSettle();
+}
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -12,36 +22,39 @@ void main() {
     await setNotificationModalShown();
   });
 
-  testWidgets('can open drink tracker', (tester) async {
+  testWidgets('Trinken in the „Eintragen" sheet opens the drink tracker', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildTestApp());
     await tester.pumpAndSettle();
 
-    // should find the drink tracker button on the dashboard and tap it
-    final drinkTrackerButton = find.byKey(BbBottomNav.centerButtonKey);
-    expect(drinkTrackerButton, findsOneWidget);
-    await tester.tap(drinkTrackerButton);
-    await tester.pumpAndSettle();
+    await _logVia(tester, CareNeed.drink);
 
-    expect(find.byKey(MealTrackerScreen.drinkTrackerButtonKey), findsOneWidget);
+    expect(find.byType(DrinkTrackerScreen), findsOneWidget);
+    expect(find.byType(MealTrackerScreen), findsNothing);
   });
 
-  testWidgets('drink tracker shows drink options when open', (tester) async {
+  testWidgets('the meal tracker hands over with „Trinken eintragen"', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildTestApp());
     await tester.pumpAndSettle();
 
-    // should find the drink tracker button on the dashboard and tap it
-    final centerButtonKey = find.byKey(BbBottomNav.centerButtonKey);
-    expect(centerButtonKey, findsOneWidget);
-    await tester.tap(centerButtonKey);
-    await tester.pumpAndSettle();
+    await _logVia(tester, CareNeed.food);
+    expect(find.byType(MealTrackerScreen), findsOneWidget);
 
-    expect(find.byKey(MealTrackerScreen.drinkTrackerButtonKey), findsOneWidget);
-
-    final drinkTrackerButtonKey = find.byKey(
-      MealTrackerScreen.drinkTrackerButtonKey,
+    final drinkButton = find.byKey(MealTrackerScreen.drinkTrackerButtonKey);
+    expect(drinkButton, findsOneWidget);
+    expect(
+      find.descendant(
+        of: drinkButton,
+        matching: find.text('Trinken eintragen'),
+      ),
+      findsOneWidget,
     );
-    expect(drinkTrackerButtonKey, findsOneWidget);
-    await tester.tap(drinkTrackerButtonKey);
+    await tester.ensureVisible(drinkButton);
+    await tester.pumpAndSettle();
+    await tester.tap(drinkButton);
     await tester.pumpAndSettle();
 
     expect(find.byType(DrinkTrackerScreen), findsOneWidget);

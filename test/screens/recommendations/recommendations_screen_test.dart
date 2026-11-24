@@ -18,6 +18,7 @@ import 'package:belly_buddy/screens/recommendations/recommendations_screen.dart'
 import 'package:belly_buddy/utils/date_format_utils.dart';
 import 'package:belly_buddy/widgets/common/bb_async_state.dart';
 
+import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/mocks.dart';
 import '../../helpers/riverpod_helpers.dart';
@@ -27,11 +28,10 @@ List<Override> _overridesFor(List<Recommendation> recommendations) {
   when(
     () => mock.fetchByUserId(any()),
   ).thenAnswer((_) async => recommendations);
-  when(() => mock.markAllAsSeen(any())).thenAnswer((_) async {});
+  when(() => mock.markSeen(any(), any())).thenAnswer((_) async {});
   return [
     recommendationRepositoryProvider.overrideWithValue(mock),
     currentUserIdProvider.overrideWithValue('test-user'),
-    recommendationsNoticeSeenProvider.overrideWith((ref) => true),
   ];
 }
 
@@ -55,14 +55,13 @@ void main() {
       final mock = MockRecommendationRepository();
       final completer = Completer<List<Recommendation>>();
       when(() => mock.fetchByUserId(any())).thenAnswer((_) => completer.future);
-      when(() => mock.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => mock.markSeen(any(), any())).thenAnswer((_) async {});
 
       await tester.pumpWithProviders(
         const RecommendationsScreen(),
         overrides: [
           recommendationRepositoryProvider.overrideWithValue(mock),
           currentUserIdProvider.overrideWithValue('test-user'),
-          recommendationsNoticeSeenProvider.overrideWith((ref) => true),
         ],
       );
       await tester.pump();
@@ -79,24 +78,146 @@ void main() {
       when(
         () => mock.fetchByUserId(any()),
       ).thenAnswer((_) async => throw Exception('boom'));
-      when(() => mock.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => mock.markSeen(any(), any())).thenAnswer((_) async {});
 
       await tester.pumpWithProviders(
         const RecommendationsScreen(),
         overrides: [
           recommendationRepositoryProvider.overrideWithValue(mock),
           currentUserIdProvider.overrideWithValue('test-user'),
-          recommendationsNoticeSeenProvider.overrideWith((ref) => true),
         ],
       );
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('Fehler beim Laden der Empfehlungen.'), findsOneWidget);
+      expect(find.text('Fehler beim Laden der Tipps.'), findsOneWidget);
       expect(find.text('Erneut versuchen'), findsOneWidget);
     });
 
-    testWidgets('empty state shows mascot + "Noch keine Empfehlungen"', (
+    testWidgets('a failed reload (offline resume) keeps the open set: title '
+        'and page', (tester) async {
+      final recs = [
+        _rec('2', createdAt: DateTime(2026, 4, 22)),
+        _rec('1', createdAt: DateTime(2026, 4, 20)),
+      ];
+      final mock = MockRecommendationRepository();
+      when(() => mock.fetchByUserId(any())).thenAnswer((_) async => recs);
+      when(() => mock.markSeen(any(), any())).thenAnswer((_) async {});
+      await tester.pumpWithProviders(
+        const RecommendationsScreen(),
+        overrides: [
+          recommendationRepositoryProvider.overrideWithValue(mock),
+          currentUserIdProvider.overrideWithValue('test-user'),
+        ],
+      );
+      await tester.pumpAndSettle();
+      final title = find.descendant(
+        of: find.byType(AppBar),
+        matching: find.text(formatDateWeekdayShort(recs[0].createdAt!)),
+      );
+      expect(title, findsOneWidget);
+
+      // The resume refresh reloads them, offline.
+      when(
+        () => mock.fetchByUserId(any()),
+      ).thenAnswer((_) async => throw Exception('offline'));
+      await ProviderScope.containerOf(
+        tester.element(find.byType(RecommendationsScreen)),
+      ).read(recommendationProvider.notifier).fetchRecommendations();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Fehler beim Laden der Tipps.'), findsNothing);
+      expect(find.byType(PageView), findsOneWidget);
+      expect(title, findsOneWidget);
+      final prevBtn = tester.widget<IconButton>(
+        find.byKey(RecommendationsScreen.previousRecommendationKey),
+      );
+      expect(prevBtn.onPressed, isNotNull);
+    });
+
+    testWidgets('opening marks the shown set seen; a failed mark leaves it '
+        'new, quietly', (tester) async {
+      final repo = FakeRecommendationRepository(sets: [_rec('1')])
+        ..markError = Exception('offline');
+      await tester.pumpWithProviders(
+        const RecommendationsScreen(),
+        overrides: [
+          recommendationRepositoryProvider.overrideWithValue(repo),
+          currentUserIdProvider.overrideWithValue('test-user'),
+        ],
+      );
+      await tester.pumpAndSettle();
+
+      expect(repo.marked, [
+        ['1'],
+      ]);
+      expect(tester.takeException(), isNull);
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(RecommendationsScreen)),
+      );
+      expect(container.read(unseenTipSetProvider)?.id, '1');
+      expect(find.byType(PageView), findsOneWidget);
+    });
+
+    testWidgets('a set that arrives while the Tipps are open is marked '
+        'seen', (tester) async {
+      final repo = FakeRecommendationRepository(sets: [_rec('1')]);
+      await tester.pumpWithProviders(
+        const RecommendationsScreen(),
+        overrides: [
+          recommendationRepositoryProvider.overrideWithValue(repo),
+          currentUserIdProvider.overrideWithValue('test-user'),
+        ],
+      );
+      await tester.pumpAndSettle();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(RecommendationsScreen)),
+      );
+      expect(repo.marked, [
+        ['1'],
+      ]);
+
+      // A push brings this week's set while they are open.
+      repo.sets = [_rec('2'), ...repo.sets];
+      await container
+          .read(recommendationProvider.notifier)
+          .fetchRecommendations();
+      await tester.pumpAndSettle();
+
+      expect(repo.marked, [
+        ['1'],
+        ['2'],
+      ]);
+      expect(container.read(unseenTipSetProvider), isNull);
+    });
+
+    testWidgets('a mark that fails is not retried while they stay open', (
+      tester,
+    ) async {
+      final repo = FakeRecommendationRepository(sets: [_rec('1')])
+        ..markError = Exception('offline');
+      await tester.pumpWithProviders(
+        const RecommendationsScreen(),
+        overrides: [
+          recommendationRepositoryProvider.overrideWithValue(repo),
+          currentUserIdProvider.overrideWithValue('test-user'),
+        ],
+      );
+      await tester.pumpAndSettle();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(RecommendationsScreen)),
+      );
+      await container
+          .read(recommendationProvider.notifier)
+          .fetchRecommendations();
+      await tester.pumpAndSettle();
+
+      expect(repo.marked, [
+        ['1'],
+      ]);
+    });
+
+    testWidgets('empty state shows mascot + "Noch keine Tipps"', (
       tester,
     ) async {
       await tester.pumpWithProviders(
@@ -106,7 +227,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.textContaining('Noch keine Empfehlungen'), findsOneWidget);
+      expect(find.textContaining('Noch keine Tipps'), findsOneWidget);
       expect(
         find.byKey(RecommendationsScreen.emptyStateRefreshKey),
         findsOneWidget,
@@ -117,7 +238,7 @@ void main() {
     testWidgets(
       'single-recommendation list renders one page with both chevrons disabled',
       (tester) async {
-        // Single rec with no createdAt → title falls back to 'Empfehlungen'.
+        // Single rec with no createdAt → title falls back to 'Tipps'.
         await tester.pumpWithProviders(
           const RecommendationsScreen(),
           overrides: _overridesFor([_rec('1')]),
@@ -146,12 +267,12 @@ void main() {
           ),
         );
         expect(nextBtn.onPressed, isNull);
-        // No createdAt → AppBar falls back to 'Empfehlungen'.
+        // No createdAt → AppBar falls back to 'Tipps'.
         expect(
-          find.descendant(of: appBar, matching: find.text('Empfehlungen')),
+          find.descendant(of: appBar, matching: find.text('Tipps')),
           findsOneWidget,
         );
-        expect(find.textContaining('Empfehlungen ('), findsNothing);
+        expect(find.textContaining('Tipps ('), findsNothing);
       },
     );
 
@@ -266,13 +387,12 @@ void main() {
       ];
       final mock = MockRecommendationRepository();
       when(() => mock.fetchByUserId(any())).thenAnswer((_) async => recs);
-      when(() => mock.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => mock.markSeen(any(), any())).thenAnswer((_) async {});
 
       final container = createContainer(
         overrides: [
           recommendationRepositoryProvider.overrideWithValue(mock),
           currentUserIdProvider.overrideWithValue('test-user'),
-          recommendationsNoticeSeenProvider.overrideWith((ref) => true),
         ],
       );
       addTearDown(container.dispose);
@@ -361,13 +481,12 @@ void main() {
         ];
         final mock = MockRecommendationRepository();
         when(() => mock.fetchByUserId(any())).thenAnswer((_) async => recs);
-        when(() => mock.markAllAsSeen(any())).thenAnswer((_) async {});
+        when(() => mock.markSeen(any(), any())).thenAnswer((_) async {});
 
         final container = createContainer(
           overrides: [
             recommendationRepositoryProvider.overrideWithValue(mock),
             currentUserIdProvider.overrideWithValue('test-user'),
-            recommendationsNoticeSeenProvider.overrideWith((ref) => true),
           ],
         );
         addTearDown(container.dispose);
@@ -409,7 +528,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       await tester.pumpAndSettle();
 
-      expect(find.text('War diese Empfehlung hilfreich?'), findsOneWidget);
+      expect(find.text('War dieser Tipp hilfreich?'), findsOneWidget);
       expect(find.text('Hilfreich'), findsOneWidget);
       expect(find.text('Nicht hilfreich'), findsOneWidget);
     });
@@ -439,13 +558,12 @@ void main() {
           callCount++;
           return callCount == 1 ? initial : afterRefresh;
         });
-        when(() => mock.markAllAsSeen(any())).thenAnswer((_) async {});
+        when(() => mock.markSeen(any(), any())).thenAnswer((_) async {});
 
         final container = createContainer(
           overrides: [
             recommendationRepositoryProvider.overrideWithValue(mock),
             currentUserIdProvider.overrideWithValue('test-user'),
-            recommendationsNoticeSeenProvider.overrideWith((ref) => true),
           ],
         );
         addTearDown(container.dispose);
@@ -496,7 +614,7 @@ void main() {
       when(
         () => repo.fetchByUserId(any()),
       ).thenAnswer((_) async => [testRecommendation(id: '1')]);
-      when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => repo.markSeen(any(), any())).thenAnswer((_) async {});
 
       // Build a 2-route GoRouter so context.pop() has a real navigator stack
       // to pop back to. The sentinel home screen lets us assert that the pop
@@ -520,7 +638,6 @@ void main() {
           overrides: [
             recommendationRepositoryProvider.overrideWithValue(repo),
             currentUserIdProvider.overrideWithValue('u'),
-            recommendationsNoticeSeenProvider.overrideWith((ref) => true),
           ],
           child: MaterialApp.router(
             routerConfig: router,
@@ -563,7 +680,7 @@ void main() {
         when(
           () => repo.fetchByUserId(any()),
         ).thenAnswer((_) async => [_rec('3'), _rec('2'), _rec('1')]);
-        when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+        when(() => repo.markSeen(any(), any())).thenAnswer((_) async {});
         when(
           () => repo.updateFeedback(
             id: any(named: 'id'),
@@ -576,7 +693,6 @@ void main() {
           overrides: [
             recommendationRepositoryProvider.overrideWithValue(repo),
             currentUserIdProvider.overrideWithValue('test-user'),
-            recommendationsNoticeSeenProvider.overrideWith((ref) => true),
           ],
         );
         addTearDown(container.dispose);
@@ -594,7 +710,7 @@ void main() {
         // Index provider confirms we're at 2 (the latest).
         expect(container.read(recommendationIndexProvider), 2);
 
-        // Simulate the user tapping "Empfehlung ausblenden" in the sheet.
+        // Simulate the user tapping "Tipp ausblenden" in the sheet.
         // This is what the sheet's `_hide()` method calls.
         await container
             .read(recommendationProvider.notifier)
@@ -616,14 +732,13 @@ void main() {
       );
       final repo = MockRecommendationRepository();
       when(() => repo.fetchByUserId(any())).thenAnswer((_) async => [rec]);
-      when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => repo.markSeen(any(), any())).thenAnswer((_) async {});
 
       await tester.pumpWithProviders(
         const RecommendationsScreen(),
         overrides: [
           recommendationRepositoryProvider.overrideWithValue(repo),
           currentUserIdProvider.overrideWithValue('u'),
-          recommendationsNoticeSeenProvider.overrideWith((ref) => true),
         ],
       );
       await tester.pumpAndSettle();
@@ -636,8 +751,8 @@ void main() {
         ),
         findsOneWidget,
       );
-      // The old "Empfehlungen (X von Y)" counter text is gone.
-      expect(find.textContaining('Empfehlungen ('), findsNothing);
+      // The old "(X von Y)" counter text is gone.
+      expect(find.textContaining('Tipps ('), findsNothing);
     });
 
     testWidgets('chevron actions live in the AppBar, not the body', (
@@ -650,14 +765,13 @@ void main() {
       ];
       final repo = MockRecommendationRepository();
       when(() => repo.fetchByUserId(any())).thenAnswer((_) async => recs);
-      when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => repo.markSeen(any(), any())).thenAnswer((_) async {});
 
       await tester.pumpWithProviders(
         const RecommendationsScreen(),
         overrides: [
           recommendationRepositoryProvider.overrideWithValue(repo),
           currentUserIdProvider.overrideWithValue('u'),
-          recommendationsNoticeSeenProvider.overrideWith((ref) => true),
         ],
       );
       await tester.pumpAndSettle();
@@ -689,76 +803,57 @@ void main() {
       );
     });
 
-    testWidgets('AppBar title falls back to "Empfehlungen" on empty list', (
+    testWidgets('AppBar title falls back to "Tipps" on empty list', (
       tester,
     ) async {
       final repo = MockRecommendationRepository();
       when(() => repo.fetchByUserId(any())).thenAnswer((_) async => []);
-      when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => repo.markSeen(any(), any())).thenAnswer((_) async {});
 
       await tester.pumpWithProviders(
         const RecommendationsScreen(),
         overrides: [
           recommendationRepositoryProvider.overrideWithValue(repo),
           currentUserIdProvider.overrideWithValue('u'),
-          recommendationsNoticeSeenProvider.overrideWith((ref) => true),
         ],
       );
       await tester.pumpAndSettle();
 
       final appBar = find.byType(AppBar);
       expect(
-        find.descendant(of: appBar, matching: find.text('Empfehlungen')),
+        find.descendant(of: appBar, matching: find.text('Tipps')),
         findsOneWidget,
       );
     });
 
-    testWidgets(
-      'shows the notice dialog on first open and flips the session flag',
-      (tester) async {
-        final mock = MockRecommendationRepository();
-        when(
-          () => mock.fetchByUserId(any()),
-        ).thenAnswer((_) async => [_rec('1')]);
-        when(() => mock.markAllAsSeen(any())).thenAnswer((_) async {});
+    testWidgets('no pause dialog', (tester) async {
+      await tester.pumpWithProviders(
+        const RecommendationsScreen(),
+        overrides: _overridesFor([_rec('1')]),
+      );
+      await tester.pumpAndSettle();
 
-        final container = createContainer(
-          overrides: [
-            recommendationRepositoryProvider.overrideWithValue(mock),
-            currentUserIdProvider.overrideWithValue('test-user'),
-            // NOTE: notice flag NOT overridden — defaults to false so the
-            // dialog should appear.
-          ],
-        );
-        addTearDown(container.dispose);
+      expect(find.text('Danke, dass du dabei bist! 💛'), findsNothing);
+      expect(find.byType(Dialog), findsNothing);
+    });
 
-        await tester.pumpWidget(
-          UncontrolledProviderScope(
-            container: container,
-            child: const MaterialApp(home: RecommendationsScreen()),
-          ),
-        );
-        await tester.pumpAndSettle();
+    testWidgets("the page's list is headed „Tipps\"", (tester) async {
+      await tester.pumpWithProviders(
+        const RecommendationsScreen(),
+        overrides: _overridesFor([
+          _rec('1', createdAt: DateTime.utc(2026, 11, 16, 10)),
+        ]),
+      );
+      await tester.pumpAndSettle();
 
-        // The notice dialog is shown on first open.
-        expect(find.text('Danke, dass du dabei bist! 💛'), findsOneWidget);
-        // And the session flag has been flipped so it won't show again.
-        expect(container.read(recommendationsNoticeSeenProvider), isTrue);
-      },
-    );
-
-    testWidgets(
-      'does not show the notice dialog when the session flag is already set',
-      (tester) async {
-        await tester.pumpWithProviders(
-          const RecommendationsScreen(),
-          overrides: _overridesFor([_rec('1')]),
-        );
-        await tester.pumpAndSettle();
-
-        // _overridesFor sets the notice flag to true → no dialog.
-        expect(find.text('Danke, dass du dabei bist! 💛'), findsNothing);
-      },
-    );
+      expect(
+        find.descendant(
+          of: find.byType(ListView),
+          matching: find.text('Tipps'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Empfehlungen'), findsNothing);
+    });
   });
 }

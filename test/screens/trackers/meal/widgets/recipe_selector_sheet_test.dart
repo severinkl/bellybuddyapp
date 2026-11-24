@@ -5,37 +5,27 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:belly_buddy/models/user_recipe.dart';
+import 'package:belly_buddy/providers/recipe_search_provider.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/trackers/meal/widgets/recipe_selector_sheet.dart';
 
 import '../../../../helpers/fakes.dart';
 
+/// The search under test (Meine Rezepte's).
+final _search = recipeSearchProvider(RecipeSearchHost.recipePicker);
+
 class _FakeUserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>>
     implements UserRecipesNotifier {
   _FakeUserRecipesNotifier(this._recipes);
 
   final List<UserRecipe> _recipes;
-  String? _query;
-  final List<String?> setQueryCalls = [];
 
   @override
   AsyncValue<List<UserRecipe>> build() => AsyncValue.data(_recipes);
 
   @override
   Future<void> fetch({bool force = false}) async {}
-
-  @override
-  void setQuery(String? q) {
-    setQueryCalls.add(q);
-    _query = q;
-  }
-
-  @override
-  String? get activeQuery => _query;
-
-  @override
-  bool get hasActiveQuery => _query != null;
 
   @override
   Future<UserRecipe> create({
@@ -162,13 +152,17 @@ void main() {
     expect(find.text('Neues Rezept erstellen'), findsOneWidget);
   });
 
-  testWidgets('dismissing the sheet clears the active query', (tester) async {
-    final notifier = await _pumpSheet(tester, recipes: const []);
+  testWidgets('dismissing the sheet ends its search', (tester) async {
+    await _pumpSheet(tester, recipes: const []);
+    final container = ProviderScope.containerOf(
+      tester.element(find.text('open')),
+    );
+    expect(container.read(_search.exists), isTrue);
 
     // Dismiss the modal sheet by tapping the barrier scrim above it.
     await tester.tapAt(const Offset(20, 20));
     await tester.pumpAndSettle();
 
-    expect(notifier.setQueryCalls, contains(null));
+    expect(container.read(_search.exists), isFalse);
   });
 }

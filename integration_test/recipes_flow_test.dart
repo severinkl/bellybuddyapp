@@ -3,26 +3,36 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
 import 'package:belly_buddy/screens/dashboard/dashboard_screen.dart';
-import 'package:belly_buddy/screens/dashboard/widgets/feature_card.dart';
+import 'package:belly_buddy/screens/discover/discover_screen.dart';
 import 'package:belly_buddy/screens/recipes/recipes_screen.dart';
+import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
 import 'package:belly_buddy/widgets/common/bb_success_overlay.dart';
 import 'package:belly_buddy/widgets/common/editable_app_bar_title.dart';
 import 'package:belly_buddy/widgets/common/ingredient_search.dart';
+import 'package:belly_buddy/widgets/log_sheet/log_sheet.dart';
 
 import '../test/helpers/fakes.dart';
+import '../test/helpers/widget_tester_helpers.dart';
 import 'helpers/test_app.dart';
 
+/// Entdecken → Meine Rezepte → „Alle ›". The link only shows while the
+/// user has recipes (no links to empty screens).
 Future<void> _openRecipesTab(WidgetTester tester) async {
-  final rezepteCard = find.widgetWithText(FeatureCard, 'Rezepte');
-  await tester.ensureVisible(rezepteCard);
+  await tester.tap(find.byKey(BbBottomNav.navDiscoverKey));
   await tester.pumpAndSettle();
-  await tester.tap(rezepteCard);
-  await tester.pumpAndSettle();
+  final all = find.descendant(
+    of: find.byKey(DiscoverScreen.recipesKey),
+    matching: find.text('Alle ›'),
+  );
+  await tester.tapVisible(all);
 }
 
+/// The plus in the bar → Essen in the „Eintragen" sheet.
 Future<void> _openMealTracker(WidgetTester tester) async {
   await tester.tap(find.byKey(BbBottomNav.centerButtonKey));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(LogSheet.optionKey(CareNeed.food)));
   await tester.pumpAndSettle();
 }
 
@@ -31,8 +41,13 @@ Future<void> _enterTitleAndIngredient(
   required String title,
   required String ingredient,
 }) async {
+  // The meal tracker shows its title as a label until it is tapped (a new
+  // recipe's editor opens it for editing; the tap just focuses it there).
+  final titleWidget = find.byType(EditableAppBarTitle);
+  await tester.tap(titleWidget);
+  await tester.pumpAndSettle();
   final titleField = find.descendant(
-    of: find.byType(EditableAppBarTitle),
+    of: titleWidget,
     matching: find.byType(TextField),
   );
   await tester.enterText(titleField, title);
@@ -59,22 +74,33 @@ void main() {
   });
 
   testWidgets(
-    'tapping the Rezepte feature card opens the recipes screen with the empty state',
+    'without recipes, Entdecken offers the first one and no „Alle ›"',
     (tester) async {
       await tester.pumpWidget(buildTestApp());
       await tester.pumpAndSettle();
 
-      final rezepteCard = find.widgetWithText(FeatureCard, 'Rezepte');
-      expect(rezepteCard, findsOneWidget);
-
-      await tester.ensureVisible(rezepteCard);
-      await tester.pumpAndSettle();
-      await tester.tap(rezepteCard);
+      await tester.tap(find.byKey(BbBottomNav.navDiscoverKey));
       await tester.pumpAndSettle();
 
-      expect(find.byType(RecipesScreen), findsOneWidget);
-      expect(find.text('Noch keine Rezepte'), findsOneWidget);
-      expect(find.text('Erstes Rezept erstellen'), findsOneWidget);
+      final recipes = find.byKey(DiscoverScreen.recipesKey);
+      expect(
+        find.descendant(
+          of: recipes,
+          matching: find.text('Noch keine Rezepte.'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: recipes,
+          matching: find.text('Erstes Rezept erstellen'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: recipes, matching: find.text('Alle ›')),
+        findsNothing,
+      );
     },
   );
 
@@ -91,11 +117,7 @@ void main() {
       await tester.pumpWidget(buildTestApp(userRecipeRepo: repo));
       await tester.pumpAndSettle();
 
-      final rezepteCard = find.widgetWithText(FeatureCard, 'Rezepte');
-      await tester.ensureVisible(rezepteCard);
-      await tester.pumpAndSettle();
-      await tester.tap(rezepteCard);
-      await tester.pumpAndSettle();
+      await _openRecipesTab(tester);
 
       expect(find.byType(RecipesScreen), findsOneWidget);
       expect(find.text('Curry mit Reis'), findsOneWidget);
@@ -112,10 +134,12 @@ void main() {
     await tester.pumpWidget(buildTestApp(userRecipeRepo: repo));
     await tester.pumpAndSettle();
 
-    await _openRecipesTab(tester);
-    expect(find.text('Noch keine Rezepte'), findsOneWidget);
-
-    await tester.tap(find.text('Erstes Rezept erstellen'));
+    await tester.tap(find.byKey(BbBottomNav.navDiscoverKey));
+    await tester.pumpAndSettle();
+    final first = find.text('Erstes Rezept erstellen');
+    await tester.ensureVisible(first);
+    await tester.pumpAndSettle();
+    await tester.tap(first);
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Neu erstellen'));
@@ -130,9 +154,15 @@ void main() {
     await tester.tap(find.text('Speichern'));
     await tester.pumpAndSettle();
 
-    // Back on the recipes grid with the new recipe.
-    expect(find.byType(RecipesScreen), findsOneWidget);
-    expect(find.text('Eiersalat'), findsOneWidget);
+    // Back on Entdecken with the new recipe in Meine Rezepte.
+    expect(find.byType(DiscoverScreen), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(DiscoverScreen.recipesKey),
+        matching: find.text('Eiersalat'),
+      ),
+      findsOneWidget,
+    );
 
     // Round-trip via the fake repo.
     final stored = await repo.fetchForUser('test-user-id');

@@ -46,10 +46,35 @@ void main() {
     );
     await pumpDetail(tester, recipes: [recipe], id: 'rec-1');
 
-    // Title appears in AppBar and in the scrollable body (spec requirement)
-    expect(find.text('Linseneintopf'), findsAtLeastNWidgets(2));
+    // The title shows once, as the page's heading.
+    expect(find.text('Linseneintopf'), findsOneWidget);
+    expect(
+      find.descendant(of: find.byType(AppBar), matching: find.text('Rezept')),
+      findsOneWidget,
+    );
     expect(find.text('Linsen'), findsOneWidget);
-    expect(find.text('Mahlzeit jetzt tracken'), findsOneWidget);
+    expect(find.text('Jetzt als Essen eintragen'), findsOneWidget);
+  });
+
+  testWidgets('VoiceOver reads ←, ✎ and 🗑 by name', (tester) async {
+    final semantics = tester.ensureSemantics();
+    final recipe = testUserRecipe(id: 'rec-1', title: 'Linseneintopf');
+    await pumpDetail(tester, recipes: [recipe], id: 'rec-1');
+
+    // VoiceOver reads an icon button's tooltip as its label.
+    String spoken(IconData icon) =>
+        tester.getSemantics(find.byIcon(icon)).tooltip;
+    expect(spoken(Icons.arrow_back), 'Zurück');
+    expect(spoken(Icons.edit_outlined), 'Bearbeiten');
+    expect(spoken(Icons.delete_outline), 'Rezept löschen');
+    semantics.dispose();
+  });
+
+  testWidgets('a recipe without a photo shows a placeholder', (tester) async {
+    final recipe = testUserRecipe(id: 'rec-1', title: 'Linseneintopf');
+    await pumpDetail(tester, recipes: [recipe], id: 'rec-1');
+
+    expect(find.byKey(RecipeDetailScreen.imagePlaceholderKey), findsOneWidget);
   });
 
   testWidgets('shows not-found when recipe id is missing', (tester) async {

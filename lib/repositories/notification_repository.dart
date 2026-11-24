@@ -12,6 +12,7 @@ abstract class NotificationScheduler {
   Future<void> scheduleMealReminders({
     required List<String> mealReminderTimes,
     required String timezone,
+    String? buddyName,
   });
 
   Future<void> cancelMealReminders();
@@ -19,6 +20,7 @@ abstract class NotificationScheduler {
   Future<void> scheduleMoodReminders({
     required List<String> moodReminderTimes,
     required String timezone,
+    String? buddyName,
   });
 
   Future<void> cancelMoodReminders();
@@ -32,9 +34,11 @@ class LocalNotificationScheduler implements NotificationScheduler {
   Future<void> scheduleMealReminders({
     required List<String> mealReminderTimes,
     required String timezone,
+    String? buddyName,
   }) => LocalNotificationService.scheduleMealReminders(
     mealReminderTimes: mealReminderTimes,
     timezone: timezone,
+    buddyName: buddyName,
   );
 
   @override
@@ -45,9 +49,11 @@ class LocalNotificationScheduler implements NotificationScheduler {
   Future<void> scheduleMoodReminders({
     required List<String> moodReminderTimes,
     required String timezone,
+    String? buddyName,
   }) => LocalNotificationService.scheduleMoodReminders(
     moodReminderTimes: moodReminderTimes,
     timezone: timezone,
+    buddyName: buddyName,
   );
 
   @override
@@ -58,6 +64,19 @@ class LocalNotificationScheduler implements NotificationScheduler {
   Future<void> cancelAll() => LocalNotificationService.cancelAll();
 }
 
+/// What the OS lets the app do with notifications.
+enum NotificationPermission {
+  /// Notifications are allowed.
+  granted,
+
+  /// Never asked: asking shows the system dialog.
+  notDetermined,
+
+  /// Declined or turned off: asking again shows nothing, only the Settings
+  /// app can allow them.
+  denied,
+}
+
 class NotificationRepository {
   final NotificationScheduler _scheduler;
   static const _log = AppLogger('NotificationRepository');
@@ -65,14 +84,19 @@ class NotificationRepository {
   NotificationRepository(this._scheduler);
 
   /// Schedules or cancels local notifications based on the user's profile
-  /// settings. Uses the device timezone (set during initialization).
-  Future<void> syncNotifications(UserProfile profile) async {
+  /// settings. When [buddyName] is set, reminder bodies use Buddy-voiced copy.
+  /// Uses the device timezone (set during initialization).
+  Future<void> syncNotifications(
+    UserProfile profile, {
+    String? buddyName,
+  }) async {
     final timezone = tz.local.name;
 
     if (profile.remindersEnabled && profile.mealReminderTimes.isNotEmpty) {
       await _scheduler.scheduleMealReminders(
         mealReminderTimes: profile.mealReminderTimes,
         timezone: timezone,
+        buddyName: buddyName,
       );
     } else {
       await _scheduler.cancelMealReminders();
@@ -82,6 +106,7 @@ class NotificationRepository {
       await _scheduler.scheduleMoodReminders(
         moodReminderTimes: profile.moodReminderTimes,
         timezone: timezone,
+        buddyName: buddyName,
       );
     } else {
       await _scheduler.cancelMoodReminders();
@@ -110,6 +135,24 @@ class NotificationRepository {
 
   Future<bool> requestPermission() =>
       PushNotificationService.requestPermission();
+
+  /// The OS notification permission, without asking for it. Unknown (the
+  /// check fails) reads as never asked.
+  Future<NotificationPermission> permissionStatus() async {
+    try {
+      return switch (await PushNotificationService.authorizationStatus()) {
+        AuthorizationStatus.authorized ||
+        AuthorizationStatus.provisional => NotificationPermission.granted,
+        AuthorizationStatus.denied ||
+        AuthorizationStatus.deniedPermanently => NotificationPermission.denied,
+        AuthorizationStatus.notDetermined =>
+          NotificationPermission.notDetermined,
+      };
+    } catch (e, st) {
+      _log.error('reading the notification permission failed', e, st);
+      return NotificationPermission.notDetermined;
+    }
+  }
 
   /// Request both local and push notification permissions.
   /// Returns true if the OS permission was granted.

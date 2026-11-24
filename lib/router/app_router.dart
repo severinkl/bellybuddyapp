@@ -4,13 +4,13 @@ import 'package:go_router/go_router.dart';
 import '../models/meal_entry.dart';
 import '../models/user_recipe.dart';
 import '../providers/auth_provider.dart';
+import '../providers/buddy_onboarding_gate_provider.dart';
 import '../providers/health_consent_provider.dart';
 import '../providers/upgrade_gate_provider.dart';
 import '../utils/logger.dart';
 import '../screens/screens.dart';
 import '../config/app_theme.dart';
 import '../widgets/common/bb_bottom_nav.dart';
-import '../widgets/common/swipeable_pages.dart';
 import 'route_names.dart';
 
 class _RouterRefreshNotifier extends ChangeNotifier {
@@ -18,6 +18,8 @@ class _RouterRefreshNotifier extends ChangeNotifier {
     ref.listen(isAuthenticatedProvider, (_, _) => notifyListeners());
     ref.listen(hardGateActiveProvider, (_, _) => notifyListeners());
     ref.listen(healthConsentRequiredProvider, (_, _) => notifyListeners());
+    ref.listen(buddyOnboardingRequiredProvider, (_, _) => notifyListeners());
+    ref.listen(buddyOnboardingGatePendingProvider, (_, _) => notifyListeners());
   }
 }
 
@@ -76,6 +78,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       }
       if (path == RoutePaths.healthConsent) return RoutePaths.dashboard;
 
+      // Buddy onboarding gate: a signed-in user with a complete, consented
+      // profile whose Buddy onboarding isn't done (users from before the
+      // Buddy, or the app was killed mid-onboarding) is sent from the shell
+      // roots to /buddy-onboarding; pushes from inside the flow stay. Until
+      // the gate knows (profile and Buddy loading after sign-in or app
+      // start), the shell roots wait on /loading, so no dashboard frame
+      // shows before the onboarding. No redirect away once it is done: the
+      // onboarding completes on its last step and leaves for the dashboard
+      // itself.
+      final buddyRedirect = buddyOnboardingRedirect(
+        isRequired: ref.read(buddyOnboardingRequiredProvider),
+        isPending: ref.read(buddyOnboardingGatePendingProvider),
+        location: state.uri,
+      );
+      if (buddyRedirect != null) return buddyRedirect;
+
       // Authenticated on auth route → dashboard
       // NOTE: /registration is NOT in isAuthRoute — user stays there to finish
       // saving profile after signup before being redirected
@@ -105,17 +123,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const RegistrationWizardScreen(),
       ),
 
-      // Shell route for bottom nav with swipe navigation
+      // The four tabs (Home · Tagebuch · Entdecken · Ich) under the bottom
+      // bar; the plus in its middle opens the „Eintragen" sheet. No swipe
+      // between tabs: the Tagebuch swipes between days.
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) {
           return Scaffold(
-            backgroundColor: AppTheme.beige,
-            body: SwipeablePages(
-              currentIndex: navigationShell.currentIndex,
-              pageCount: 2,
-              onPageChanged: (index) => navigationShell.goBranch(index),
-              child: navigationShell,
-            ),
+            backgroundColor: AppTheme.background,
+            body: navigationShell,
             bottomNavigationBar: BbBottomNav(navigationShell: navigationShell),
           );
         },
@@ -135,6 +150,31 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: RoutePaths.diary,
                 name: RouteNames.diary,
                 builder: (context, state) => const DiaryScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.discover,
+                name: RouteNames.discover,
+                builder: (context, state) => const DiscoverScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'knowledge',
+                    name: RouteNames.knowledge,
+                    builder: (context, state) => const KnowledgeScreen(),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: RoutePaths.me,
+                name: RouteNames.me,
+                builder: (context, state) => const MeScreen(),
               ),
             ],
           ),
@@ -234,6 +274,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: RouteNames.recommendations,
         builder: (context, state) => const RecommendationsScreen(),
       ),
+      // The Muster page behind Home's insight card.
+      GoRoute(
+        path: RoutePaths.patterns,
+        name: RouteNames.patterns,
+        builder: (context, state) => const PatternsScreen(),
+      ),
       GoRoute(
         path: RoutePaths.ingredientSuggestions,
         name: RouteNames.ingredientSuggestions,
@@ -279,6 +325,23 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.healthConsent,
         name: RouteNames.healthConsent,
         builder: (_, _) => const HealthConsentScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.loading,
+        name: RouteNames.loading,
+        builder: (_, _) => const LoadingScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.buddyOnboarding,
+        name: RouteNames.buddyOnboarding,
+        builder: (context, state) {
+          final extra = state.extra;
+          return BuddyOnboardingScreen(
+            entry: extra is BuddyOnboardingEntry
+                ? extra
+                : BuddyOnboardingEntry.gate,
+          );
+        },
       ),
     ],
   );

@@ -17,6 +17,16 @@ class AppConstants {
   static const double spacingXl = 32.0;
   static const double spacingXxl = 48.0;
 
+  /// The scroll padding of a text field with a hint line under it: below
+  /// the caret it scrolls the field's bottom, the hint and a margin clear
+  /// of the keyboard (the default 20 can leave the hint cut off).
+  static const EdgeInsets fieldWithHintScrollPadding = EdgeInsets.fromLTRB(
+    spacing20,
+    spacing20,
+    spacing20,
+    72,
+  );
+
   // Spacing widgets
   static const gap4 = SizedBox(height: 4);
   static const gap6 = SizedBox(height: 6);
@@ -52,12 +62,125 @@ class AppConstants {
   static const double radiusFull = 100.0;
 
   // Border widths
+  static const double borderWidthSm = 0.5;
   static const double borderWidthMd = 1.5;
+  static const double borderWidthLg = 2.0;
 
   // Drag handle
   static const double dragHandleWidth = 40.0;
   static const double dragHandleHeight = 4.0;
   static const double dragHandleRadius = 2.0;
+
+  // Buddy speech bubble (comic style): the slot above the Buddy (two lines
+  // plus tail and shadow), the bubble's widest width and its line limit
+  static const double buddyBubbleHeight = 76.0;
+  static const double buddyBubbleMaxWidth = 280.0;
+  static const int buddyBubbleMaxLines = 4;
+
+  // Its tail (base width, length), the side tail's middle below the
+  // bubble's top, and the flat shadow's offset
+  static const double buddyBubbleTailBase = 24.0;
+  static const double buddyBubbleTailLength = 12.0;
+  static const double buddyBubbleSideTailTop = 34.0;
+  static const Offset buddyBubbleShadowOffset = Offset(3, 4);
+
+  // Typewriter reveal: per character, at most this long in total
+  static const Duration buddyBubbleCharDelay = Duration(milliseconds: 30);
+  static const Duration buddyBubbleTypeMax = Duration(milliseconds: 1200);
+
+  // Streak chip / goal sheet
+  static const double streakChipPopScale = 1.25;
+  static const double streakSheetBuddyHeight = 220.0;
+
+  // Streak week row (Mo–So): day circle
+  static const double streakWeekDaySize = 36.0;
+
+  // A streak goal's row in the goal list
+  static const double streakGoalRowHeight = 56.0;
+
+  // The Eintragen sheet's option height; the diary's empty-day Buddy
+  static const double logSheetOptionHeight = 96.0;
+  static const double diaryEmptyBuddySize = 96.0;
+
+  // Reminder step: the notification preview's corner radius and app icon,
+  // the example week's label column and dots
+  static const double notificationPreviewRadius = 20.0;
+  static const double notificationPreviewIconSize = 22.0;
+  static const double reminderExampleLabelWidth = 112.0;
+  static const double reminderExampleDotSize = 16.0;
+
+  // Dashboard care ring: its diameter (at most this, this share of the
+  // width and of the screen height, at least the minimum), stroke, the gap
+  // between its four segments, and the Buddy's box inside it
+  static const double careRingMaxDiameter = 260.0;
+  static const double careRingMinDiameter = 170.0;
+  static const double careRingWidthFactor = 0.72;
+  static const double careRingHeightFactor = 0.3;
+  static const double careRingStroke = 13.0;
+  static const double careRingGapDegrees = 6.0;
+  static const double careRingBuddyFactor = 0.74;
+
+  // Its need bubbles (Essen n/3 …): size, the next need's glow (also the
+  // margin of each bubble's tap area, so it must reach past the shadow's
+  // offset), its pulse
+  static const double careNeedWidth = 88.0;
+  static const double careNeedMinHeight = 62.0;
+  static const double careNeedGlow = 5.0;
+  static const Offset careNeedShadowOffset = Offset(0, 3);
+  static const Duration careNeedPulse = Duration(milliseconds: 1400);
+
+  // „Dein Streak" sheet: the goal progress bar
+  static const double streakProgressHeight = 10.0;
+
+  // Home's insight card: its progress bars
+  static const double insightProgressHeight = 7.0;
+
+  // Muster page: how blurred the locked state's sample preview is
+  static const double patternsPreviewBlur = 5.0;
+
+  // Entdecken: a recipe card's width in the Meine Rezepte row
+  static const double discoverRecipeCardWidth = 148.0;
+
+  // Wissen: an article's square thumbnail
+  static const double knowledgeThumbSize = 64.0;
+
+  // Ich: the Buddy in the header
+  static const double meBuddySize = 112.0;
+
+  // Buddy reaction on the tracker success screens (bubble slot + Buddy)
+  static const double buddyReactionSize = 220.0;
+
+  // Buddy onboarding (/buddy-onboarding): stage (bubble slot + Buddy) and
+  // progress dots
+  static const double buddyOnboardingStageHeight = 240.0;
+  // … and on steps with little content below him (intro, first meal,
+  // streak moment) a bigger one
+  static const double buddyOnboardingHeroStageHeight = 340.0;
+  // … and on steps with nothing below him (intro, first meal) he grows into
+  // the free height up to this, centred in it
+  static const double buddyOnboardingHeroStageMaxHeight = 460.0;
+  static const double progressDotSize = 8.0;
+  static const double progressDotActiveWidth = 24.0;
+
+  // Registration wizard: above every step a header with the Buddy on the
+  // left (this wide; his height follows) and his bubble on the right; with
+  // the keyboard open a compact header (the Buddy this tall). Below it a
+  // step keeps at least the min height (on shorter screens the host
+  // scrolls instead). The min height leaves a 393×852 phone with the
+  // keyboard open a fixed header: a field scrolled into view never pushes
+  // the Buddy's bubble off the top.
+  static const double buddyWizardBuddyWidth = 124.0;
+  static const double buddyWizardCompactSize = 72.0;
+  static const double buddyWizardCompactHeaderHeight = 100.0;
+  static const double buddyWizardMinStepHeight = 220.0;
+
+  // Padding of a wizard step below the header
+  static const wizardStepPadding = EdgeInsets.fromLTRB(
+    spacingLg,
+    spacingSm,
+    spacingLg,
+    spacingMd,
+  );
 
   // Scroll clearance (space below content to clear fixed bottom bars)
   static const double bottomBarClearance = 128.0;
@@ -66,7 +189,6 @@ class AppConstants {
   static const double mealImageHeight = 180.0;
   static const double mascotSizeMd = 96.0;
   static const double mascotSizeLg = 160.0;
-  static const double featureCardHeight = 128.0;
 
   // Divider
   static const double dividerThickness = 0.5;
@@ -100,12 +222,44 @@ class AppConstants {
   /// gate again.
   static const String privacyPolicyVersion = '2026-11-22';
 
+  /// The myfodmap blog feed behind Wissen, how long a fetched copy counts as
+  /// fresh, and how long a fetch may take.
+  static const String knowledgeFeedUrl =
+      'https://www.myfodmap.at/blog-feed.xml';
+  static const Duration knowledgeFeedMaxAge = Duration(hours: 6);
+  static const Duration knowledgeFeedTimeout = Duration(seconds: 10);
+
   // Apple "Hide My Email" relay address suffix (includes the leading `@`).
   // See the Sign in with Apple docs — this domain is stable since iOS 13.
   static const String appleRelayEmailSuffix = '@privaterelay.appleid.com';
 
   // SharedPreferences keys
   static const String keyNotificationModalShown = 'notification_modal_shown';
+  static const String keyKnowledgeFeedCache = 'knowledge_feed_cache_v1';
+  static const String keyBuddyStatePrefix = 'buddy_state_';
+
+  /// Prefix of the Buddy announcement flags
+  /// (`buddy_announced_<userId>_<kind>_<yyyy-MM-dd | goal>`), set once an
+  /// announcement was shown, so each one shows only once.
+  static const String keyBuddyAnnouncedPrefix = 'buddy_announced_';
+
+  /// Maximum length of the Buddy's name, in characters as a person sees
+  /// them (grapheme clusters: an emoji is one).
+  static const int buddyNameMaxLength = 20;
+
+  /// What the `buddy_state.name` check takes: the database counts code
+  /// points up to 400 (core 0011), so 20 emojis fit, even long ZWJ ones.
+  static const int buddyNameMaxCodePoints = 400;
+
+  /// Whether [name] is a valid Buddy name: 1 to [buddyNameMaxLength]
+  /// characters after trimming, and storable ([buddyNameMaxCodePoints]).
+  static bool isValidBuddyName(String name) {
+    final trimmed = name.trim();
+    final length = trimmed.characters.length;
+    return length > 0 &&
+        length <= buddyNameMaxLength &&
+        trimmed.runes.length <= buddyNameMaxCodePoints;
+  }
 
   /// App Store numeric ID for Belly Buddy, used by the upgrade screen and
   /// dialog to open the store listing (App Store Connect → App Information →
@@ -135,11 +289,28 @@ class AppConstants {
   // Bottom nav
   static const double bottomNavCenterButtonSize = 80.0;
 
+  /// The largest text scale the bottom bar's labels follow; above it they
+  /// stay this size (like iOS's own tab bars), so five slots keep fitting.
+  static const double bottomNavMaxTextScale = 1.3;
+
+  /// The diameter of the news dot on a bottom-bar icon.
+  static const double navBadgeSize = 10.0;
+
   // Durations
   static const Duration pressScaleDuration = Duration(milliseconds: 100);
   static const Duration successOverlayDuration = Duration(milliseconds: 1500);
   static const Duration autoAdvanceDuration = Duration(seconds: 4);
   static const Duration debounceDuration = Duration(milliseconds: 800);
+
+  /// Back in the foreground, the tips and Alternativen load again only once
+  /// their last load is at least this old (pushes and pull to refresh load
+  /// regardless).
+  static const Duration discoverNewsForegroundInterval = Duration(minutes: 5);
+
+  /// The longest the app waits on its loading screen for the Buddy
+  /// onboarding gate's answer after sign-in or app start; then it goes on
+  /// as if no onboarding were due (a hanging backend never blocks the app).
+  static const Duration buddyGateMaxWait = Duration(seconds: 3);
 
   // Animation durations
   static const Duration animFast = Duration(milliseconds: 150);
@@ -149,6 +320,7 @@ class AppConstants {
   static const Duration animSlower = Duration(milliseconds: 600);
 
   // Asset paths
+  static const String appIconPath = 'assets/images/app-icon.png';
   static const String mascotBasePath = 'assets/images/mascot';
   static const String imagesBasePath = 'assets/images';
   static const String iconsBasePath = 'assets/images/icons';
@@ -181,9 +353,6 @@ class AppConstants {
   // Other images
   static const String susiPhone = '$imagesBasePath/susi-phone.png';
   static const String fuerDichCard = '$imagesBasePath/fuer-dich-card.png';
-  static const String alternativenCard =
-      '$imagesBasePath/alternativen-card.jpg';
-  static const String rezepteCard = '$imagesBasePath/rezepte-card.jpg';
   static const String logoSvg = '$imagesBasePath/logo.svg';
   static const String toiletPaperIcon = '$iconsBasePath/toilet-paper-icon.png';
   static const String toiletPaperSvg = '$iconsBasePath/toilet-paper-3.svg';
@@ -210,17 +379,7 @@ class AppConstants {
     'Weizen',
   ];
 
-  // Symptom options (used in registration + settings)
-  static const List<String> symptomOptions = [
-    'Blähungen',
-    'Bauchschmerzen',
-    'Durchfall',
-    'Verstopfung',
-    'Übelkeit',
-    'Sodbrennen',
-    'Krämpfe',
-    'Völlegefühl',
-  ];
+  // Symptom options: kSymptomOptions in symptom_options.dart.
 
   // Drink sizes
   static const List<int> drinkSizes = [250, 330, 500, 1000];

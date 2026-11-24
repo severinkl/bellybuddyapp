@@ -90,4 +90,15 @@ void main() {
       expect(profile.privacyPolicyVersion, isNull);
     });
   });
+
+  group('UserProfile.weeklyTipsEnabled', () {
+    test('is false when the key is missing', () {
+      expect(UserProfile.fromJson(const {}).weeklyTipsEnabled, isFalse);
+    });
+
+    test('reads weekly_tips_enabled', () {
+      final profile = UserProfile.fromJson(const {'weekly_tips_enabled': true});
+      expect(profile.weeklyTipsEnabled, isTrue);
+    });
+  });
 }

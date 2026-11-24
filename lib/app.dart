@@ -1,16 +1,15 @@
 import 'dart:async';
 
 import 'package:belly_buddy/providers/splash_screen_provider.dart';
-import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'
-    show GlobalWidgetsLocalizations;
 import 'package:sentry_flutter/sentry_flutter.dart';
+import 'config/app_localizations.dart';
 import 'config/app_theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/diary_provider.dart';
+import 'providers/discover_news_provider.dart';
 import 'providers/entries_provider.dart';
 import 'providers/ingredient_suggestion_provider.dart';
 import 'providers/notification_provider.dart';
@@ -96,9 +95,8 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
         }
       }
 
-      // Refresh dashboard badge counts
-      ref.invalidate(unseenRecommendationCountProvider);
-      ref.read(ingredientSuggestionProvider.notifier).fetchSuggestions();
+      // New tips or Alternativen may have arrived.
+      unawaited(ref.read(discoverNewsProvider.notifier).pushArrived(route));
     });
 
     // Handle initial message (app opened from terminated state via notification)
@@ -128,6 +126,8 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
 
     // Activate notification sync provider
     ref.watch(notificationSyncProvider);
+    // Keeps the tips and the Alternativen loaded (sign-in, foreground).
+    ref.watch(discoverNewsProvider);
 
     // Owns the upgrade decision for the whole app lifetime (not the splash),
     // so a slow app_config fetch that resolves after the splash is gone still
@@ -150,7 +150,6 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
         ref.invalidate(entriesProvider);
         ref.invalidate(diaryEntriesProvider);
         ref.invalidate(recommendationProvider);
-        ref.invalidate(unseenRecommendationCountProvider);
         ref.invalidate(ingredientSuggestionProvider);
         Sentry.configureScope((scope) => scope.setUser(null));
       }
@@ -163,17 +162,15 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.theme,
       routerConfig: router,
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
+      localizationsDelegates: appLocalizationsDelegates,
       supportedLocales: const [Locale('de', 'DE')],
       locale: const Locale('de', 'DE'),
       builder: (context, child) {
         return Stack(
           children: [
-            child!,
+            // Nothing animates (and the dashboard Buddy says nothing) under
+            // the splash.
+            TickerMode(enabled: !_showSplash, child: child!),
             if (_showSplash)
               SplashScreen(
                 onComplete: () {

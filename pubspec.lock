@@ -306,7 +306,7 @@ packages:
     source: hosted
     version: "3.0.0"
   fake_async:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: fake_async
       sha256: "5368f224a74523e8d2e7399ea1638b37aecfca824a3cc4dfdf77bf1fa905ac44"
@@ -688,7 +688,7 @@ packages:
     source: hosted
     version: "0.15.7"
   http:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: http
       sha256: "87721a4a50b19c7f1d49001e51409bddc46303966ce89a65af4f4e6004896412"
@@ -1313,14 +1313,6 @@ packages:
     description: flutter
     source: sdk
     version: "0.0.0"
-  smooth_page_indicator:
-    dependency: "direct main"
-    description:
-      name: smooth_page_indicator
-      sha256: ab2253be8d65ed7a341a43fe62d5cfba404b5969c23bc998964fe5aa8aae465c
-      url: "https://pub.dev"
-    source: hosted
-    version: "3.0.0"
   source_gen:
     dependency: transitive
     description:
@@ -1690,7 +1682,7 @@ packages:
     source: hosted
     version: "1.1.0"
   xml:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: xml
       sha256: "67f0aff7be013d107995e9b75bf4e7f2c3ef2dfdb2c8e68024bba0a7fd5756a4"

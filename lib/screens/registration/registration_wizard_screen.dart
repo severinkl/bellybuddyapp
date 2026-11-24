@@ -1,18 +1,27 @@
+import 'dart:async';
+import 'dart:math';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../config/app_theme.dart';
+import '../../config/buddy_reactions.dart';
 import '../../config/constants.dart';
+import '../../models/buddy_state.dart';
 import '../../models/user_profile.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/buddy_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../repositories/auth_repository.dart';
 import '../../router/route_names.dart';
 import '../../services/haptic_service.dart';
 import '../../utils/logger.dart';
+import '../../widgets/buddy/buddy.dart';
 import '../../widgets/common/bb_button.dart';
+import '../buddy/buddy_onboarding_screen.dart' show BuddyOnboardingEntry;
 import 'steps/auth_step.dart';
+import 'steps/buddy_name_step.dart';
 import 'steps/email_capture_step.dart';
 import 'steps/birth_year_step.dart';
 import 'steps/gender_step.dart';
@@ -21,11 +30,24 @@ import 'steps/height_weight_step.dart';
 import 'steps/diet_step.dart';
 import 'steps/symptoms_step.dart';
 import 'steps/intolerances_step.dart';
+import 'widgets/buddy_step_host.dart';
 
+/// The registration wizard, hosted by the Buddy: the user names him first,
+/// gives the health consent, answers the profile questions (he reacts to
+/// every answer) and signs up. Afterwards the profile and his name are
+/// saved and the Buddy onboarding (`/buddy-onboarding`) takes over.
 class RegistrationWizardScreen extends ConsumerStatefulWidget {
   const RegistrationWizardScreen({super.key});
 
   static const nextButtonKey = Key('registration_next_button');
+
+  /// After a reaction to leaving a step (the name, „no symptoms", „no
+  /// intolerances"), the next step's intro line waits this long.
+  static const buddyFollowUpDelay = Duration(seconds: 3);
+
+  /// The Buddy reacts to a scroll picker (birth year, height/weight) once it
+  /// has rested this long, not on every item scrolled past.
+  static const buddyPickerSettle = AppConstants.debounceDuration;
 
   @override
   ConsumerState<RegistrationWizardScreen> createState() =>
@@ -35,18 +57,53 @@ class RegistrationWizardScreen extends ConsumerStatefulWidget {
 class _RegistrationWizardScreenState
     extends ConsumerState<RegistrationWizardScreen> {
   static const _log = AppLogger('Registration');
+
+  /// How long the wizard waits to learn whether the account already has a
+  /// Buddy before it moves on.
+  static const _buddyLookupTimeout = Duration(seconds: 4);
   final _pageController = PageController();
   int _currentStep = 0;
   bool _isSaving = false;
   String? _authError;
 
-  // Wizard page indices. The health consent comes first so no health data
-  // is collected before the user has explicitly consented (GDPR Art. 9).
-  static const _consentStep = 0;
-  static const _genderStep = 2;
-  static const _dietStep = 4;
-  static const _authStep = 7;
-  static const _emailCaptureStep = 8;
+  // Wizard page indices. The Buddy's name comes first; the health consent
+  // follows right after it, so no health data is collected before the user
+  // has explicitly consented (GDPR Art. 9).
+  static const _nameStep = 0;
+  static const _consentStep = 1;
+  static const _birthYearStep = 2;
+  static const _genderStep = 3;
+  static const _heightWeightStep = 4;
+  static const _dietStep = 5;
+  static const _symptomsStep = 6;
+  static const _intolerancesStep = 7;
+  static const _authStep = 8;
+  static const _emailCaptureStep = 9;
+
+  /// The Buddy's line when a step appears (catalog keys).
+  static const _introKeys = {
+    _nameStep: 'name:intro',
+    _consentStep: 'consent:intro',
+    _birthYearStep: 'step:birthYear',
+    _genderStep: 'step:gender',
+    _heightWeightStep: 'step:heightWeight',
+    _dietStep: 'step:diet',
+    _symptomsStep: 'step:symptoms',
+    _intolerancesStep: 'step:intolerances',
+    _authStep: 'auth:intro',
+    _emailCaptureStep: 'emailCapture:intro',
+  };
+
+  // The Buddy, his name (saved after sign-up) and his pending lines.
+  String _buddyName = 'Buddy';
+  late final BuddyController _buddy;
+  final _rnd = Random();
+  Timer? _followUp;
+  Timer? _pickerSettle;
+
+  /// The catalog key of the multi-select pick the bubble reacts to (until
+  /// the next line).
+  String? _shownPick;
 
   // Form state
   bool _healthConsentChecked = false;
@@ -64,22 +121,133 @@ class _RegistrationWizardScreenState
 
   // Dynamic: the email-capture step is only present for OAuth sign-ins that
   // didn't return a usable real email (Apple Hide-My-Email or empty).
-  int get _totalSteps => _showEmailCapture ? 9 : 8;
+  int get _totalSteps =>
+      (_showEmailCapture ? _emailCaptureStep : _authStep) + 1;
 
   bool _showEmailCapture = false;
   String? _capturedEmail;
 
-  void _goToStep(int step) {
+  @override
+  void initState() {
+    super.initState();
+    _buddy = BuddyController();
+    final intro = _introFor(_nameStep);
+    if (intro != null) _react(intro);
+  }
+
+  static BuddyLine? _introFor(int step) {
+    final key = _introKeys[step];
+    return key == null ? null : wizardReaction(key);
+  }
+
+  /// The typed name as it will be saved (trimmed).
+  String get _name => _buddyName.trim();
+
+  /// Same rule as [BuddyNotifier.setName].
+  bool get _nameValid => AppConstants.isValidBuddyName(_buddyName);
+
+  /// Shows [step]; the Buddy introduces it. A [farewell] reaction to the
+  /// step being left goes first, and the intro follows after
+  /// [RegistrationWizardScreen.buddyFollowUpDelay].
+  void _goToStep(int step, {BuddyLine? farewell}) {
     _pageController.animateToPage(
       step,
       duration: AppConstants.animMedium,
       curve: Curves.easeInOut,
     );
     setState(() => _currentStep = step);
+
+    final intro = _introFor(step);
+    if (farewell == null) {
+      // Every step has an intro, and reacting cancels the pending lines.
+      if (intro != null) _react(intro);
+      return;
+    }
+    _react(farewell);
+    if (intro != null) {
+      _followUp = Timer(
+        RegistrationWizardScreen.buddyFollowUpDelay,
+        () => _react(intro),
+      );
+    }
+  }
+
+  void _cancelPendingLines() {
+    _followUp?.cancel();
+    _followUp = null;
+    _pickerSettle?.cancel();
+    _pickerSettle = null;
+  }
+
+  /// Plays [line]: its mood and action, and one of its texts with `{name}`
+  /// filled in. Replaces any line still waiting. Lines stay up until the
+  /// next one: the bubble asks each step's question (the steps have no
+  /// headline), and a reaction stays next to the step's label.
+  void _react(BuddyLine line) {
+    _cancelPendingLines();
+    _shownPick = null;
+    _buddy.react(line, name: _name, rnd: _rnd, duration: null);
+  }
+
+  void _reactTo(String key) {
+    final line = wizardReaction(key);
+    if (line != null) _react(line);
+  }
+
+  /// Reacts to [step]'s scroll picker once it rests.
+  void _reactWhenSettled(String step) {
+    _pickerSettle?.cancel();
+    _pickerSettle = Timer(
+      RegistrationWizardScreen.buddyPickerSettle,
+      () => _reactTo(wizardKey(step)),
+    );
+  }
+
+  /// The newest of [selected] that isn't in [previous], if any.
+  static String? _newest(List<String> selected, List<String> previous) {
+    final added = selected.where((s) => !previous.contains(s));
+    return added.isEmpty ? null : added.last;
+  }
+
+  void _onSymptomsChanged(List<String> symptoms) {
+    final previous = _symptoms;
+    setState(() => _symptoms = symptoms);
+    _reactToPicks('symptom', _symptomsStep, previous, symptoms);
+  }
+
+  void _onIntolerancesChanged(List<String> intolerances) {
+    final previous = _intolerances;
+    setState(() => _intolerances = intolerances);
+    _reactToPicks('intolerance', _intolerancesStep, previous, intolerances);
+  }
+
+  /// On a multi-select [step] (catalog [group]): the Buddy reacts to the
+  /// newest pick. Taking back the pick he is reacting to takes his reaction
+  /// back too: he asks the step's question again.
+  void _reactToPicks(
+    String group,
+    int step,
+    List<String> previous,
+    List<String> selected,
+  ) {
+    final added = _newest(selected, previous);
+    if (added != null) {
+      final key = wizardKey(group, added);
+      _reactTo(key);
+      _shownPick = key;
+      return;
+    }
+    final shown = _shownPick;
+    if (shown == null || selected.any((s) => wizardKey(group, s) == shown)) {
+      return;
+    }
+    final intro = _introFor(step);
+    if (intro != null) _react(intro);
   }
 
   bool get _canAdvance {
     return switch (_currentStep) {
+      _nameStep => _nameValid, // The Buddy needs a name
       _consentStep => _healthConsentChecked, // Explicit consent is mandatory
       _genderStep => _gender != null, // Gender is mandatory
       _dietStep => _diet != null, // Diet is mandatory
@@ -87,13 +255,26 @@ class _RegistrationWizardScreenState
     };
   }
 
+  /// The Buddy's reaction to leaving the current step, if any.
+  BuddyLine? get _farewell => switch (_currentStep) {
+    _nameStep => wizardReaction('name:confirmed'),
+    _symptomsStep when _symptoms.isEmpty => wizardReaction(
+      wizardKey('symptom', 'none'),
+    ),
+    _intolerancesStep when _intolerances.isEmpty => wizardReaction(
+      wizardKey('intolerance', 'none'),
+    ),
+    _ => null,
+  };
+
   void _next() {
     if (_currentStep < _totalSteps - 1 && _canAdvance) {
       HapticService.light();
+      FocusManager.instance.primaryFocus?.unfocus();
       if (_currentStep == _consentStep) {
         _healthConsentAt = DateTime.now().toUtc();
       }
-      _goToStep(_currentStep + 1);
+      _goToStep(_currentStep + 1, farewell: _farewell);
     }
   }
 
@@ -139,6 +320,56 @@ class _RegistrationWizardScreenState
     await ref.read(profileProvider.notifier).createProfile(profile);
   }
 
+  /// Every sign-up path ends here once the user is authenticated: saves the
+  /// profile, then hands over to the Buddy onboarding.
+  ///
+  /// An account that already has a Buddy (an OAuth sign-in into an existing
+  /// account) keeps its name: it goes to the dashboard once its onboarding
+  /// is done, else to the onboarding as the gate shows it. The same when
+  /// that can't be told (one read, at most [_buddyLookupTimeout]): the
+  /// name is never overwritten, and the gate's onboarding asks for one if
+  /// there is no Buddy yet. Otherwise the typed name is saved in the
+  /// background (one attempt; a failure is logged, not shown) and the
+  /// onboarding's later writes queue behind it.
+  Future<void> _completeRegistration() async {
+    await _createProfile();
+    if (!mounted) return;
+    final buddy = ref.read(buddyProvider.notifier);
+    final BuddyState? row;
+    try {
+      row = await buddy.fetchStoredRow().timeout(_buddyLookupTimeout);
+    } catch (e, st) {
+      _log.error('looking up the Buddy after sign-in failed', e, st);
+      if (mounted) _openOnboardingFromGate();
+      return;
+    }
+    if (!mounted) return;
+    if (row != null) {
+      if (row.onboardingCompletedAt != null) {
+        context.go(RoutePaths.dashboard);
+      } else {
+        _openOnboardingFromGate();
+      }
+      return;
+    }
+    unawaited(_saveName(buddy));
+    context.go(
+      RoutePaths.buddyOnboarding,
+      extra: BuddyOnboardingEntry.afterRegistration,
+    );
+  }
+
+  void _openOnboardingFromGate() =>
+      context.go(RoutePaths.buddyOnboarding, extra: BuddyOnboardingEntry.gate);
+
+  Future<void> _saveName(BuddyNotifier buddy) async {
+    try {
+      await buddy.setName(_name);
+    } catch (e, st) {
+      _log.error('saving the Buddy name failed', e, st);
+    }
+  }
+
   Future<void> _handleEmailSignUp(String email, String password) async {
     setState(() {
       _isSaving = true;
@@ -148,8 +379,7 @@ class _RegistrationWizardScreenState
       await ref
           .read(authNotifierProvider.notifier)
           .signUpWithEmail(email, password);
-      await _createProfile();
-      if (mounted) context.go(RoutePaths.dashboard);
+      await _completeRegistration();
     } catch (e) {
       _log.error('email sign-up failed', e);
       if (mounted) {
@@ -225,8 +455,7 @@ class _RegistrationWizardScreenState
       });
       return;
     }
-    await _createProfile();
-    if (mounted) context.go(RoutePaths.dashboard);
+    await _completeRegistration();
   }
 
   Future<void> _handleEmailCaptureSubmit() async {
@@ -238,8 +467,7 @@ class _RegistrationWizardScreenState
       _authError = null;
     });
     try {
-      await _createProfile();
-      if (mounted) context.go(RoutePaths.dashboard);
+      await _completeRegistration();
     } catch (e) {
       _log.error('profile create after email capture failed', e);
       if (mounted) {
@@ -266,12 +494,20 @@ class _RegistrationWizardScreenState
 
   @override
   void dispose() {
+    _cancelPendingLines();
+    _buddy.dispose();
     _pageController.dispose();
     super.dispose();
   }
 
+  /// Steps laid out as a plain column scroll when they don't fit below the
+  /// Buddy.
+  static Widget _scrollable(Widget step) => SingleChildScrollView(child: step);
+
   @override
   Widget build(BuildContext context) {
+    // Read above the Scaffold: its body's MediaQuery has the inset removed.
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
     return Scaffold(
       body: SafeArea(
         child: Column(
@@ -294,67 +530,106 @@ class _RegistrationWizardScreenState
                 ),
               ),
             ),
-            // Steps
+            // Steps, under the Buddy
             Expanded(
-              child: PageView(
-                controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  HealthConsentStep(
-                    checked: _healthConsentChecked,
-                    onChanged: (v) => setState(() => _healthConsentChecked = v),
-                  ),
-                  BirthYearStep(
-                    value: _birthYear,
-                    onChanged: (v) => setState(() => _birthYear = v),
-                  ),
-                  GenderStep(
-                    value: _gender,
-                    onChanged: (v) => setState(() => _gender = v),
-                  ),
-                  HeightWeightStep(
-                    height: _height,
-                    weight: _weight,
-                    onHeightChanged: (v) => setState(() => _height = v),
-                    onWeightChanged: (v) => setState(() => _weight = v),
-                  ),
-                  DietStep(
-                    value: _diet,
-                    onChanged: (v) => setState(() => _diet = v),
-                  ),
-                  SymptomsStep(
-                    selected: _symptoms,
-                    onChanged: (v) => setState(() => _symptoms = v),
-                  ),
-                  IntolerancesStep(
-                    selected: _intolerances,
-                    onChanged: (v) => setState(() => _intolerances = v),
-                    triggers: _triggers,
-                    onTriggersChanged: (intolerance, t) => setState(
-                      () => _triggers = {..._triggers, intolerance: t},
+              child: BuddyStepHost(
+                controller: _buddy,
+                name: _nameValid ? _name : 'Buddy',
+                keyboardOpen: keyboardOpen,
+                // The sign-up forms open the keyboard right away: their
+                // header is compact from the start, so nothing jumps (and no
+                // field moves under a tap) when it opens.
+                compact: _currentStep >= _authStep,
+                child: PageView(
+                  controller: _pageController,
+                  physics: const NeverScrollableScrollPhysics(),
+                  children: [
+                    SingleChildScrollView(
+                      padding: AppConstants.wizardStepPadding,
+                      child: BuddyNameStep(
+                        value: _buddyName,
+                        onChanged: (v) => setState(() => _buddyName = v),
+                        onSubmitted: _next,
+                      ),
                     ),
-                  ),
-                  AuthStep(
-                    isLoading: _isSaving,
-                    error: _authError,
-                    onEmailSignUp: _handleEmailSignUp,
-                    onGoogleSignUp: _handleGoogleSignUp,
-                    onAppleSignUp: _handleAppleSignUp,
-                  ),
-                  if (_showEmailCapture)
-                    EmailCaptureStep(
-                      value: _capturedEmail,
+                    HealthConsentStep(
+                      checked: _healthConsentChecked,
+                      onChanged: (v) =>
+                          setState(() => _healthConsentChecked = v),
+                    ),
+                    BirthYearStep(
+                      value: _birthYear,
+                      onChanged: (v) {
+                        setState(() => _birthYear = v);
+                        _reactWhenSettled('birthYear');
+                      },
+                    ),
+                    _scrollable(
+                      GenderStep(
+                        value: _gender,
+                        onChanged: (v) {
+                          setState(() => _gender = v);
+                          _reactTo(wizardKey('gender', v));
+                        },
+                      ),
+                    ),
+                    HeightWeightStep(
+                      height: _height,
+                      weight: _weight,
+                      onHeightChanged: (v) {
+                        setState(() => _height = v);
+                        _reactWhenSettled('heightWeight');
+                      },
+                      onWeightChanged: (v) {
+                        setState(() => _weight = v);
+                        _reactWhenSettled('heightWeight');
+                      },
+                    ),
+                    _scrollable(
+                      DietStep(
+                        value: _diet,
+                        onChanged: (v) {
+                          setState(() => _diet = v);
+                          _reactTo(wizardKey('diet', v));
+                        },
+                      ),
+                    ),
+                    _scrollable(
+                      SymptomsStep(
+                        selected: _symptoms,
+                        onChanged: _onSymptomsChanged,
+                      ),
+                    ),
+                    IntolerancesStep(
+                      selected: _intolerances,
+                      onChanged: _onIntolerancesChanged,
+                      triggers: _triggers,
+                      onTriggersChanged: (intolerance, t) => setState(
+                        () => _triggers = {..._triggers, intolerance: t},
+                      ),
+                    ),
+                    AuthStep(
                       isLoading: _isSaving,
                       error: _authError,
-                      // Plain assignment: the wizard only reads _capturedEmail
-                      // at submit time, so per-keystroke rebuilds of the entire
-                      // wizard tree are pure waste. The step drives its own
-                      // button-enabled state via its internal controller.
-                      onChanged: (v) => _capturedEmail = v,
-                      onSubmit: _handleEmailCaptureSubmit,
-                      onSkip: _handleEmailCaptureSkip,
+                      onEmailSignUp: _handleEmailSignUp,
+                      onGoogleSignUp: _handleGoogleSignUp,
+                      onAppleSignUp: _handleAppleSignUp,
                     ),
-                ],
+                    if (_showEmailCapture)
+                      EmailCaptureStep(
+                        value: _capturedEmail,
+                        isLoading: _isSaving,
+                        error: _authError,
+                        // Plain assignment: the wizard only reads _capturedEmail
+                        // at submit time, so per-keystroke rebuilds of the entire
+                        // wizard tree are pure waste. The step drives its own
+                        // button-enabled state via its internal controller.
+                        onChanged: (v) => _capturedEmail = v,
+                        onSubmit: _handleEmailCaptureSubmit,
+                        onSkip: _handleEmailCaptureSkip,
+                      ),
+                  ],
+                ),
               ),
             ),
             // Next button — only shown on pre-auth pages (not AuthStep, not EmailCaptureStep)

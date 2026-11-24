@@ -4,6 +4,8 @@ import 'package:integration_test/integration_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/dashboard_tutorial_overlay.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/tutorial/dashboard_tutorial_steps.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tooltip_bubble.dart';
 
 import '../test/helpers/fakes.dart';
 import '../test/helpers/fixtures.dart';
@@ -33,23 +35,34 @@ void main() {
       buildTestApp(
         authenticated: true,
         seedProfile: false,
+        // Back from the Buddy onboarding: the gate lets the dashboard show.
+        seedBuddy: true,
         profileRepo: profileRepo,
       ),
     );
     await tester.pumpAndSettle();
 
-    // Welcome modal is the first tutorial stage on first launch. Dismiss it
-    // via the CTA so the spotlight tour renders behind it.
-    expect(find.text('Willkommen bei Belly Buddy!'), findsOneWidget);
-    await tester.tap(find.text("Los geht's"));
-    await tester.pumpAndSettle();
-
-    // Tour is visible after the welcome modal is dismissed.
+    // The Buddy onboarding did the welcoming: the spotlight tour starts
+    // right away, with no welcome modal in front of it.
+    expect(find.text('Willkommen bei Belly Buddy!'), findsNothing);
     expect(find.text('Überspringen'), findsOneWidget);
 
-    // Advance 10 times via the overlay's advance gesture — key-based so
-    // the test is independent of where the Überspringen link sits.
-    for (var i = 0; i < 10; i++) {
+    // Advance through the 7 steps (Buddy and ring, next action, plus,
+    // insight card, Tagebuch, Entdecken, Ich) via the overlay's advance
+    // gesture — key-based so the test is independent of where the
+    // Überspringen link sits. Each step must show its own bubble: a target
+    // missing on the real Home would be skipped and end the tour early.
+    expect(dashboardTutorialSteps, hasLength(7));
+    for (final step in dashboardTutorialSteps) {
+      final text = step.richText.map((s) => s.toPlainText()).join();
+      expect(
+        find.descendant(
+          of: find.byType(TooltipBubble),
+          matching: find.text(text, findRichText: true),
+        ),
+        findsOneWidget,
+        reason: text,
+      );
       await tester.tap(find.byKey(DashboardTutorialOverlay.advanceKey));
       await tester.pumpAndSettle();
     }

@@ -1,26 +1,33 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
+import '../../providers/buddy_offers_provider.dart';
+import '../../providers/buddy_onboarding_gate_provider.dart';
+import '../../providers/buddy_provider.dart';
+import '../../providers/buddy_welcome_provider.dart';
+import '../../providers/discover_news_provider.dart';
 import '../../providers/entries_provider.dart';
-import '../../providers/ingredient_suggestion_provider.dart';
-import '../../providers/recommendation_provider.dart';
+import '../../providers/insights_provider.dart';
 import '../../providers/upgrade_gate_provider.dart';
-import '../../widgets/common/circle_icon_button.dart';
 import '../../widgets/common/upgrade_available_dialog.dart';
 import '../../providers/profile_provider.dart';
-import '../../providers/tutorial_provider.dart';
+import '../../providers/recommendation_provider.dart';
 import '../../router/route_names.dart';
-import '../../widgets/common/tracker_card.dart';
-import 'widgets/feature_card.dart';
+import '../../providers/tutorial_provider.dart';
+import 'widgets/buddy_hero.dart';
+import 'widgets/insight_card.dart';
 import 'widgets/notification_opt_in_dialog.dart';
+import 'widgets/tips_row.dart';
 import 'widgets/tutorial/show_dashboard_tutorial.dart';
 import 'widgets/tutorial/tutorial_keys.dart';
-import 'widgets/welcome_modal.dart';
 
+/// Home: the Buddy hero (streak chip, the Buddy in his care ring, the next
+/// action) and what he is learning about the user's gut ([InsightCard]).
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
@@ -29,10 +36,18 @@ class DashboardScreen extends ConsumerStatefulWidget {
 }
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  /// The longest the first tour waits for the Buddy's welcome.
+  static const _welcomeWait = Duration(seconds: 8);
+
   // Active tutorial handle; non-null while the overlay is open. Cancelled
   // in dispose() so the OverlayEntry + its AnimationController don't leak
   // if the screen is torn down mid-tour (e.g. sign-out).
   TutorialHandle? _tutorialHandle;
+
+  // Set once the first load is done and no Buddy onboarding takes over.
+  // From then on a replay request starts the tour right away; before, the
+  // post-load path takes it.
+  bool _firstRunDone = false;
 
   @override
   void initState() {
@@ -42,6 +57,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // guaranteed to be AsyncData (or AsyncError).
     Future.microtask(() async {
       await _loadData();
+      // A pending Buddy onboarding is about to replace the dashboard (router
+      // gate): no first-run prompts underneath it. They run when the
+      // onboarding comes back here.
+      if (!mounted || ref.read(buddyOnboardingRequiredProvider)) return;
+      _firstRunDone = true;
       await _maybeShowTutorial();
       if (!mounted) return;
       _maybeShowNotificationModal();
@@ -50,6 +70,33 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // the user signed in after the decision resolved). If it resolves later,
     // the listener in build() picks it up instead.
     WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowSoftNudge());
+    // New tips and the weekly-tips offer, whenever they apply: offered to
+    // the Buddy in a microtask, never during a build. He queues each once.
+    ref.listenManual<Map<BuddyAnnouncement, String>>(
+      buddyOffersProvider,
+      (_, offers) => Future.microtask(() => _offerToBuddy(offers)),
+      fireImmediately: true,
+    );
+    // He drops an offer while he has no status (his load failed): once he
+    // has one (or another user's), the offers go to him again.
+    ref.listenManual<String?>(
+      buddyProvider.select((buddy) => buddy.value?.state.userId),
+      (previous, userId) {
+        if (userId == null || userId == previous) return;
+        Future.microtask(() {
+          if (mounted) _offerToBuddy(ref.read(buddyOffersProvider));
+        });
+      },
+    );
+  }
+
+  /// Hands each of [offers] to the Buddy ([BuddyNotifier.offerAnnouncement]).
+  void _offerToBuddy(Map<BuddyAnnouncement, String> offers) {
+    if (!mounted) return;
+    final buddy = ref.read(buddyProvider.notifier);
+    for (final MapEntry(key: kind, value: suffix) in offers.entries) {
+      unawaited(buddy.offerAnnouncement(kind, suffix: suffix));
+    }
   }
 
   /// Shows the "update available" dialog if a soft nudge is pending. The flag
@@ -67,15 +114,27 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     super.dispose();
   }
 
+  /// Shows the tour to a new user, and again for each replay requested in
+  /// the Ich tab („Tutorial wiederholen"), even when it was seen. The
+  /// request is taken here, so each one shows the tour once.
   Future<void> _maybeShowTutorial() async {
     if (!mounted) return;
-    final shouldShow = ref.read(tutorialProvider.notifier).shouldShow();
-    if (!shouldShow) return;
-    // Welcome modal is the first stage of the tutorial. Dismissing it
-    // (tap "Los geht's") falls through to the spotlight tour, and
-    // tutorialSeenAt is only persisted at the end of the spotlight.
-    await showWelcomeModal(context);
-    if (!mounted) return;
+    final tutorial = ref.read(tutorialProvider.notifier);
+    // Taken even while a tour is up: that tour answers the request.
+    final replay = tutorial.consumeReplay();
+    if (_tutorialHandle != null) return;
+    if (!replay && !tutorial.shouldShow()) return;
+    // Right after the Buddy onboarding he says his welcome first; the tour
+    // would cover it. At most [_welcomeWait]: a welcome he never gets to say
+    // (Home hidden) holds nothing up. tutorialSeenAt is persisted at the
+    // tour's end.
+    if (!replay) {
+      await ref
+          .read(buddyWelcomeProvider.notifier)
+          .played
+          .timeout(_welcomeWait, onTimeout: () {});
+      if (!mounted || _tutorialHandle != null) return;
+    }
     final handle = showDashboardTutorial(context);
     _tutorialHandle = handle;
     await handle.future;
@@ -84,12 +143,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     await ref.read(tutorialProvider.notifier).markSeen();
   }
 
-  Future<void> _loadData() async {
-    await Future.wait<void>([
-      ref.read(profileProvider.notifier).fetchProfile(),
-      ref.read(entriesProvider.notifier).loadEntries(DateTime.now()),
-      ref.read(ingredientSuggestionProvider.notifier).fetchSuggestions(),
-    ]);
+  /// Loads what Home shows. Never throws: a part that fails (offline) is
+  /// logged by its provider and Home shows what it has, so the first-run
+  /// prompts and a replay request still follow; pull to refresh tries again.
+  Future<void> _loadData({bool refreshTips = false}) async {
+    try {
+      await Future.wait<void>([
+        ref.read(profileProvider.notifier).fetchProfile(),
+        ref
+            .read(entriesProvider.notifier)
+            .loadEntries(ref.read(buddyClockProvider)()),
+        ref.read(buddyProvider.notifier).reload(),
+        ref.read(insightsProvider.notifier).refresh(),
+        // The first load leaves the tips to the app root's sign-in load.
+        if (refreshTips) ref.read(discoverNewsProvider.notifier).refresh(),
+      ]);
+    } catch (_) {
+      // Logged by entriesProvider, the one part that rethrows.
+    }
   }
 
   Future<void> _maybeShowNotificationModal() async {
@@ -106,222 +177,63 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     ref.listen<bool>(softNudgePendingProvider, (_, pending) {
       if (pending) _maybeShowSoftNudge();
     });
-    ref.watch(ingredientSuggestionProvider); // rebuild on data changes
-    final newSuggestionCount = ref
-        .read(ingredientSuggestionProvider.notifier)
-        .newCount;
-    final newRecommendationCount =
-        ref
-            .watch(unseenRecommendationCountProvider)
-            .whenOrNull(data: (count) => count) ??
-        0;
-
+    // „Tutorial wiederholen" while Home is already built (the shell keeps
+    // the tab): the Ich tab requests, then goes Home, and the tour starts in
+    // that same frame. Taken in a microtask, not inside this notification;
+    // before the first load is done, the post-load path takes it instead.
+    ref.listen<bool>(tutorialProvider, (_, pending) {
+      if (pending && _firstRunDone) Future.microtask(_maybeShowTutorial);
+    });
     return Scaffold(
       backgroundColor: AppTheme.background,
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: _loadData,
+          onRefresh: () => _loadData(refreshTips: true),
           color: AppTheme.primary,
-          child: CustomScrollView(
+          // Not lazy: every tour target is built and laid out, even below
+          // the fold, for the tour to scroll to.
+          child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            slivers: [
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    AppConstants.spacingLg,
-                    AppConstants.spacingLg,
-                    AppConstants.spacingLg,
-                    0,
-                  ),
-                  child: _DashboardHeader(),
-                ),
-              ),
-              const SliverToBoxAdapter(child: AppConstants.gap24),
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(
-                    horizontal: AppConstants.spacing12,
-                  ),
-                  child: _TrackerCards(),
-                ),
-              ),
-              const SliverToBoxAdapter(child: AppConstants.gap32),
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppConstants.spacing12,
-                  ),
-                  child: _ForYouSection(
-                    newSuggestionCount: newSuggestionCount,
-                    newRecommendationCount: newRecommendationCount,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _DashboardHeader extends StatelessWidget {
-  const _DashboardHeader();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        CircleIconButton(
-          key: TutorialKeys.feedback,
-          icon: Icons.feedback_outlined,
-          size: AppConstants.iconBadgeLg,
-          onPressed: () => launchUrl(
-            Uri.parse(AppConstants.feedbackFormUrl),
-            mode: LaunchMode.externalApplication,
-          ),
-        ),
-        const SizedBox(width: AppConstants.spacingSm),
-        CircleIconButton(
-          key: TutorialKeys.settings,
-          icon: Icons.settings,
-          size: AppConstants.iconBadgeLg,
-          onPressed: () => context.push(RoutePaths.settings),
-        ),
-      ],
-    );
-  }
-}
-
-class _TrackerCards extends StatelessWidget {
-  const _TrackerCards();
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Expanded(
-          child: TrackerCard(
-            key: TutorialKeys.bauchgefuehl,
-            svgPath: AppConstants.logoSvg,
-            label: 'Bauchgefühl',
-            onTap: () => context.push(RoutePaths.gutFeelingTracker),
-          ),
-        ),
-        const SizedBox(width: AppConstants.spacing12),
-        Expanded(
-          child: TrackerCard(
-            key: TutorialKeys.klo,
-            svgPath: AppConstants.toiletPaperSvg,
-            label: 'Klo',
-            onTap: () => context.push(RoutePaths.toiletTracker),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _ForYouSection extends StatelessWidget {
-  final int newSuggestionCount;
-  final int newRecommendationCount;
-
-  const _ForYouSection({
-    required this.newSuggestionCount,
-    required this.newRecommendationCount,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(
-        AppConstants.spacingMd,
-        AppConstants.spacing20,
-        AppConstants.spacingMd,
-        AppConstants.spacingMd,
-      ),
-      decoration: const BoxDecoration(
-        color: AppTheme.beige,
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppConstants.radiusXl),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Padding(
-            padding: EdgeInsets.only(
-              left: AppConstants.spacingXs,
-              bottom: AppConstants.spacingMd,
+            padding: const EdgeInsets.fromLTRB(
+              AppConstants.spacingLg,
+              AppConstants.spacingSm,
+              AppConstants.spacingLg,
+              AppConstants.spacingLg,
             ),
-            child: Text(
-              'Für dich erstellt',
-              style: TextStyle(
-                fontSize: AppTheme.fontSizeTitle,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.foreground,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                BuddyHero(key: TutorialKeys.buddy),
+                AppConstants.gap16,
+                // Only the card rebuilds with the insights. It shows only
+                // AsyncData: after a user change, the value of a loading or
+                // failed state is still the previous user's.
+                Consumer(
+                  builder: (_, ref, _) => InsightCard(
+                    key: TutorialKeys.insight,
+                    insights: ref.watch(insightsProvider),
+                  ),
+                ),
+                // Only while a tip set is new.
+                Consumer(
+                  builder: (context, ref, _) {
+                    final set = ref.watch(unseenTipSetProvider);
+                    if (set == null) return const SizedBox.shrink();
+                    return Column(
+                      children: [
+                        AppConstants.gap12,
+                        TipsRow(
+                          set: set,
+                          onTap: () => context.push(RoutePaths.recommendations),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+              ],
             ),
           ),
-          Row(
-            children: [
-              Expanded(
-                child: FeatureCard(
-                  key: TutorialKeys.fuerDich,
-                  imageAsset: AppConstants.fuerDichCard,
-                  label: 'Tipps',
-                  icon: Icons.auto_awesome,
-                  iconColor: AppTheme.foreground,
-                  hasNew: newRecommendationCount > 0,
-                  onTap: () => context.push(RoutePaths.recommendations),
-                ),
-              ),
-              const SizedBox(width: AppConstants.spacing12),
-              Expanded(
-                child: FeatureCard(
-                  key: TutorialKeys.alternativen,
-                  imageAsset: AppConstants.alternativenCard,
-                  label: 'Alternativen',
-                  icon: Icons.eco,
-                  iconColor: AppTheme.foreground,
-                  badgeCount: newSuggestionCount,
-                  onTap: () => context.push(RoutePaths.ingredientSuggestions),
-                ),
-              ),
-            ],
-          ),
-          AppConstants.gap12,
-          Row(
-            children: [
-              Expanded(
-                child: FeatureCard(
-                  key: TutorialKeys.rezepte,
-                  imageAsset: AppConstants.rezepteCard,
-                  label: 'Rezepte',
-                  icon: Icons.restaurant_menu,
-                  iconColor: AppTheme.foreground,
-                  onTap: () => context.push(RoutePaths.recipes),
-                ),
-              ),
-              const SizedBox(width: AppConstants.spacing12),
-              Expanded(
-                child: FeatureCard(
-                  key: TutorialKeys.wissen,
-                  imageAsset: AppConstants.susiPhone,
-                  label: 'Wissen',
-                  icon: Icons.menu_book,
-                  iconColor: AppTheme.foreground,
-                  onTap: () => launchUrl(
-                    Uri.parse('https://www.myfodmap.at/blog'),
-                    mode: LaunchMode.externalApplication,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
+        ),
       ),
     );
   }

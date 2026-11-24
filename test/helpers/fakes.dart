@@ -2,18 +2,26 @@ import 'dart:async';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart' show AsyncData;
 import 'package:belly_buddy/config/constants.dart';
+import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/drink.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
+import 'package:belly_buddy/models/knowledge_article.dart';
+import 'package:belly_buddy/models/insight_rules.dart';
+import 'package:belly_buddy/models/insight_source.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/models/user_recipe.dart';
+import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/repositories/auth_repository.dart';
+import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/drink_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
+import 'package:belly_buddy/repositories/knowledge_repository.dart';
 import 'package:belly_buddy/repositories/meal_media_repository.dart';
 import 'package:belly_buddy/repositories/notification_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
@@ -199,14 +207,34 @@ class FakeProfileRepository implements ProfileRepository {
   @override
   Future<void> createProfile(String userId, UserProfile profile) async =>
       _profile = profile.copyWith(userId: userId);
+
+  /// Like the real one: leaves the weekly tips (setWeeklyTips' column) alone.
   @override
   Future<void> updateProfile(String userId, UserProfile profile) async =>
-      _profile = profile.copyWith(userId: userId);
+      _profile = profile.copyWith(
+        userId: userId,
+        weeklyTipsEnabled:
+            _profile?.weeklyTipsEnabled ?? profile.weeklyTipsEnabled,
+      );
   @override
   Future<void> updateTutorialSeenAt(String userId, DateTime? value) async {
     _tutorialUpdateCalled = true;
     _lastTutorialSeenAt = value;
     _profile = _profile?.copyWith(tutorialSeenAt: value);
+  }
+
+  /// When set, [setWeeklyTips] throws it instead of writing.
+  Object? weeklyTipsError;
+
+  /// The values [setWeeklyTips] was called with, in order.
+  final List<bool> weeklyTipsWrites = [];
+
+  @override
+  Future<void> setWeeklyTips(String userId, bool enabled) async {
+    weeklyTipsWrites.add(enabled);
+    final error = weeklyTipsError;
+    if (error != null) throw error;
+    _profile = _profile?.copyWith(weeklyTipsEnabled: enabled);
   }
 
   /// Number of [acceptHealthConsent] calls, for tests.
@@ -234,11 +262,14 @@ class FakeProfileRepository implements ProfileRepository {
 
 // -- FakeEntryRepository --
 class FakeEntryRepository implements EntryRepository {
-  FakeEntryRepository({this.throwOnUpdate = false});
+  FakeEntryRepository({this.throwOnUpdate = false, this.throwOnDelete = false});
 
   /// When true, [updateEntry] throws on invocation. Used in tests that verify
   /// the screen stays open and surfaces the error rather than popping.
   final bool throwOnUpdate;
+
+  /// When true, [deleteByType] throws on invocation (a delete that fails).
+  final bool throwOnDelete;
 
   final List<Map<String, dynamic>> _inserted = [];
 
@@ -256,18 +287,93 @@ class FakeEntryRepository implements EntryRepository {
 
   void seedResult(EntryQueryResult result) => _result = result;
 
+  Set<DateTime> _activityDays = {};
+
+  /// Number of [fetchActivityDays] calls.
+  int activityDaysFetchCount = 0;
+
+  /// The range of every [fetchActivityDays] call, in order.
+  final List<({DateTime since, DateTime? until})> activityDaysFetches = [];
+
+  void seedActivityDays(Set<DateTime> days) => _activityDays = days;
+
+  @override
+  Future<Set<DateTime>> fetchActivityDays({
+    required String userId,
+    required DateTime since,
+    DateTime? until,
+  }) async {
+    activityDaysFetchCount++;
+    activityDaysFetches.add((since: since, until: until));
+    final from = DateTime(since.year, since.month, since.day);
+    final to = until == null
+        ? null
+        : DateTime(until.year, until.month, until.day);
+    return _activityDays.where((d) {
+      final day = DateTime(d.year, d.month, d.day);
+      return !day.isBefore(from) && (to == null || day.isBefore(to));
+    }).toSet();
+  }
+
+  /// What [fetchInsightSource] returns.
+  InsightSource insightSource = const InsightSource(
+    meals: [],
+    gutFeelings: [],
+    activityTimes: [],
+  );
+
+  /// When set, [fetchInsightSource] throws it.
+  Object? insightSourceError;
+
+  /// How often [fetchInsightSource] was called.
+  int insightSourceCalls = 0;
+
+  /// The `userId` and `now` of each [fetchInsightSource] call, in order.
+  final insightSourceRequests = <({String userId, DateTime now})>[];
+
+  /// While true, each [fetchInsightSource] call waits for its own completer,
+  /// added to [heldInsightSources], so overlapping fetches can finish in any
+  /// order.
+  bool holdInsightSource = false;
+  final heldInsightSources = <Completer<InsightSource>>[];
+
+  @override
+  Future<InsightSource> fetchInsightSource({
+    required String userId,
+    required DateTime now,
+  }) async {
+    insightSourceCalls++;
+    insightSourceRequests.add((userId: userId, now: now));
+    if (holdInsightSource) {
+      final held = Completer<InsightSource>();
+      heldInsightSources.add(held);
+      return held.future;
+    }
+    final error = insightSourceError;
+    if (error != null) throw error;
+    return insightSource;
+  }
+
   @override
   Future<List<MealEntry>> fetchRecentMeals({
     required String userId,
     int? limit,
   }) async => _result.meals;
 
+  /// When set, [fetchForDate] throws it (a day that fails to load).
+  Object? fetchForDateError;
+
   @override
   Future<EntryQueryResult> fetchForDate({
     required String userId,
     required DateTime date,
     bool ordered = false,
-  }) async => _result;
+  }) async {
+    final error = fetchForDateError;
+    if (error != null) throw error;
+    return _result;
+  }
+
   @override
   Future<void> insertEntry(
     String table,
@@ -295,7 +401,9 @@ class FakeEntryRepository implements EntryRepository {
   @override
   Future<void> deleteEntry(String table, String id) async {}
   @override
-  Future<void> deleteByType(String type, String id) async {}
+  Future<void> deleteByType(String type, String id) async {
+    if (throwOnDelete) throw Exception('fake delete failure');
+  }
 }
 
 // -- FakeDrinkRepository --
@@ -304,13 +412,22 @@ class FakeDrinkRepository implements DrinkRepository {
 
   void seedDrinks(List<Drink> drinks) => _drinks = drinks;
 
+  /// The ids [fetchRecentDrinkIds] returns; null: every seeded drink.
+  List<String>? recentDrinkIds;
+
   @override
   Future<List<Drink>> fetchAll() async => _drinks;
   @override
-  Future<int> fetchTodayTotal(String userId) async => 500;
+  Future<int> fetchDayTotal(String userId, DateTime day) async {
+    dayTotalFetches.add(day);
+    return 500;
+  }
+
+  /// The day of every [fetchDayTotal] call, in order.
+  final List<DateTime> dayTotalFetches = [];
   @override
   Future<List<String>> fetchRecentDrinkIds(String userId) async =>
-      _drinks.map((d) => d.id).toList();
+      recentDrinkIds ?? _drinks.map((d) => d.id).toList();
   @override
   Future<Drink> insertDrink(String name, {required String userId}) async {
     final drink = testDrink(id: 'new-drink', name: name, addedByUserId: userId);
@@ -325,6 +442,12 @@ class FakeDrinkRepository implements DrinkRepository {
 
 // -- FakeIngredientRepository --
 class FakeIngredientRepository implements IngredientRepository {
+  /// [groups] are the suggestion groups it answers with; by default one new.
+  FakeIngredientRepository({List<IngredientSuggestionGroup>? groups})
+    : groups = groups ?? [testSuggestionGroup()];
+
+  final List<IngredientSuggestionGroup> groups;
+
   @override
   Future<List<IngredientSearchResult>> search(
     String query, {
@@ -338,7 +461,7 @@ class FakeIngredientRepository implements IngredientRepository {
   @override
   Future<List<IngredientSuggestionGroup>> fetchSuggestionGroups(
     String userId,
-  ) async => [testSuggestionGroup()];
+  ) async => groups;
   @override
   Future<void> markAllSeen(List<String> ids) async {}
   @override
@@ -436,14 +559,37 @@ class FakeUserRecipeRepository implements UserRecipeRepository {
 
 // -- FakeRecommendationRepository --
 class FakeRecommendationRepository implements RecommendationRepository {
+  /// [sets], newest first; by default one set, seen on 1.11.2026, so
+  /// nothing is new.
+  FakeRecommendationRepository({List<Recommendation>? sets})
+    : sets = sets ?? [testRecommendation(seenAt: DateTime.utc(2026, 11))];
+
+  List<Recommendation> sets;
+  int fetchCount = 0;
+
   @override
-  Future<List<Recommendation>> fetchByUserId(String userId) async => [
-    testRecommendation(),
-  ];
+  Future<List<Recommendation>> fetchByUserId(String userId) async {
+    fetchCount++;
+    return sets;
+  }
+
+  /// Thrown by [markSeen] when set.
+  Object? markError;
+
+  /// The ids of every [markSeen], in order.
+  final List<List<String>> marked = [];
+
   @override
-  Future<int> countUnseen(String userId) async => 0;
-  @override
-  Future<void> markAllAsSeen(String userId) async {}
+  Future<void> markSeen(String userId, List<String> ids) async {
+    marked.add(ids);
+    if (markError case final error?) throw error;
+    final now = DateTime.now().toUtc();
+    sets = [
+      for (final s in sets)
+        s.seenAt == null && ids.contains(s.id) ? s.copyWith(seenAt: now) : s,
+    ];
+  }
+
   @override
   Future<void> updateFeedback({
     required String id,
@@ -503,8 +649,17 @@ UserRecipe testUserRecipe({
 class FakeNotificationRepository implements NotificationRepository {
   int syncCount = 0;
 
+  /// What [permissionStatus] reports.
+  NotificationPermission permission = NotificationPermission.granted;
+
   @override
-  Future<void> syncNotifications(UserProfile profile) async => syncCount++;
+  Future<NotificationPermission> permissionStatus() async => permission;
+
+  @override
+  Future<void> syncNotifications(
+    UserProfile profile, {
+    String? buddyName,
+  }) async => syncCount++;
   @override
   Future<void> cancelAll() async {}
   @override
@@ -521,4 +676,203 @@ class FakeNotificationRepository implements NotificationRepository {
   Future<bool> requestAllPermissions() async => true;
   @override
   Future<void> clearToken() async {}
+}
+
+class FakeBuddyRepository implements BuddyRepository {
+  final Map<String, BuddyState> store = {};
+  int fetchCount = 0;
+  int saveCount = 0;
+  bool throwOnFetch = false;
+  bool throwOnSave = false;
+
+  /// When set, [save] throws it (a refusal like the database's checks).
+  Object? saveError;
+
+  /// While set and not completed, every [fetch] (or [save]) waits for it
+  /// (a slow or hanging backend).
+  Completer<void>? fetchHold;
+  Completer<void>? saveHold;
+
+  /// The `retry` argument of every [fetch], in order.
+  final List<bool> fetchRetries = [];
+
+  @override
+  Future<BuddyState?> fetch(String userId, {bool retry = true}) async {
+    fetchCount++;
+    fetchRetries.add(retry);
+    if (fetchHold case final hold?) await hold.future;
+    if (throwOnFetch) throw Exception('fetch failed');
+    return store[userId];
+  }
+
+  @override
+  Future<void> save(String userId, BuddyState state) async {
+    saveCount++;
+    if (saveHold case final hold?) await hold.future;
+    if (throwOnSave) throw Exception('save failed');
+    if (saveError case final error?) throw error;
+    store[userId] = state.copyWith(userId: userId);
+  }
+}
+
+// -- FakeBuddyNotifier --
+
+/// A loaded Buddy status: a [BuddyState] row named [name] with the streak
+/// figures.
+BuddyStatus buddyStatus({
+  String userId = testUserId,
+  String name = 'Bubu',
+  int? goal,
+  int savers = 0,
+  DateTime? onboardingCompletedAt,
+  bool hasRow = true,
+  int streak = 0,
+  bool todayCounted = false,
+  Set<DateTime> weekDays = const {},
+  List<BuddyAnnouncement> announcements = const [],
+}) => BuddyStatus(
+  state: BuddyState(
+    userId: userId,
+    name: name,
+    streakGoal: goal,
+    savers: savers,
+    onboardingCompletedAt: onboardingCompletedAt,
+  ),
+  hasRow: hasRow,
+  streak: streak,
+  todayCounted: todayCounted,
+  weekDays: weekDays,
+  announcements: announcements,
+);
+
+/// [BuddyNotifier] serving [initial] (none: no Buddy) without a backend.
+/// Records names and goals: [setName] publishes the new name like the real
+/// one, or throws while [failRename]; [setStreakGoal] throws while
+/// [failGoal]. [push] publishes a status like a finished refresh.
+class FakeBuddyNotifier extends BuddyNotifier {
+  FakeBuddyNotifier([FutureOr<BuddyStatus?> Function()? initial])
+    : _initial = initial;
+
+  final FutureOr<BuddyStatus?> Function()? _initial;
+
+  bool failRename = false;
+
+  /// When set, [setName] throws it (instead of [failRename]'s error).
+  Object? renameError;
+  bool failGoal = false;
+  final List<String> names = [];
+  final List<int?> goals = [];
+
+  /// When set, [setName] / [setStreakGoal] wait for it (a slow save).
+  Future<void>? nameSave, goalSave;
+
+  @override
+  Future<BuddyStatus?> build() async => _initial?.call();
+
+  @override
+  Future<void> setName(String name) async {
+    names.add(name);
+    await nameSave;
+    if (renameError case final error?) throw error;
+    if (failRename) throw Exception('offline');
+    final s = state.value!;
+    push(
+      BuddyStatus(
+        state: s.state.copyWith(name: name),
+        hasRow: true,
+        streak: s.streak,
+        todayCounted: s.todayCounted,
+        weekDays: s.weekDays,
+      ),
+    );
+  }
+
+  @override
+  Future<void> setStreakGoal(int? goal) async {
+    goals.add(goal);
+    await goalSave;
+    if (failGoal) throw Exception('offline');
+  }
+
+  void push(BuddyStatus? status) => state = AsyncData(status);
+}
+
+/// An [InsightSource] with [activeDays] distinct active days and
+/// [gutFeelings] gut-feeling entries, one per day at 09:00 on the days
+/// before [now]'s, so all of them are in the insights' window as of [now].
+/// Pass the clock the insights compute with ([buddyClockProvider]): pin it
+/// to a fixed [now], never pair a fixed [now] with the real clock.
+InsightSource insightSourceFor({
+  required int activeDays,
+  required int gutFeelings,
+  required DateTime now,
+}) {
+  assert(
+    activeDays < InsightRules.windowDays &&
+        gutFeelings < InsightRules.windowDays,
+  );
+  DateTime dayBefore(int i) =>
+      DateTime(now.year, now.month, now.day - 1 - i, 9);
+  return InsightSource(
+    meals: const [],
+    gutFeelings: [
+      for (var i = 0; i < gutFeelings; i++)
+        testGutFeelingEntry(trackedAt: dayBefore(i)),
+    ],
+    activityTimes: [for (var i = 0; i < activeDays; i++) dayBefore(i)],
+  );
+}
+
+class FakeKnowledgeRepository implements KnowledgeRepository {
+  FakeKnowledgeRepository({List<KnowledgeArticle>? articles, this.cache})
+    : articles = articles ?? testKnowledgeArticles();
+
+  /// What [fetchArticles] answers (as they were when the call began).
+  List<KnowledgeArticle> articles;
+
+  /// Thrown by [fetchArticles] when set (as it was when the call began).
+  Object? fetchError;
+  int fetchCount = 0;
+
+  /// While set and not completed, [fetchArticles] waits for it (a slow
+  /// feed); a call keeps the hold it began with.
+  Completer<void>? fetchHold;
+
+  /// The in-memory cache.
+  KnowledgeFeed? cache;
+
+  /// Every feed passed to [writeCache].
+  final List<KnowledgeFeed> written = [];
+
+  @override
+  Future<List<KnowledgeArticle>> fetchArticles() async {
+    fetchCount++;
+    final (error, result) = (fetchError, articles);
+    if (fetchHold case final hold?) await hold.future;
+    if (error != null) throw error;
+    return result;
+  }
+
+  @override
+  Future<KnowledgeFeed?> readCache() async => cache;
+
+  @override
+  Future<void> writeCache(KnowledgeFeed feed) async {
+    written.add(feed);
+    cache = feed;
+  }
+}
+
+/// A [UrlOpener] that records each launch ([urls], [modes]) and answers
+/// [result].
+class RecordingUrlOpener {
+  final urls = <Uri>[];
+  final modes = <LaunchMode>[];
+  bool result = true;
+
+  Future<bool> call(Uri url, {LaunchMode mode = LaunchMode.platformDefault}) {
+    urls.add(url);
+    modes.add(mode);
+    return Future.value(result);
+  }
 }

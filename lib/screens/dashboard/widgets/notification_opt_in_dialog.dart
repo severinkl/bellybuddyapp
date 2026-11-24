@@ -1,10 +1,9 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
+import '../../../providers/notification_provider.dart';
 import '../../../providers/profile_provider.dart';
-import '../../../repositories/notification_repository.dart';
 import '../../../utils/logger.dart';
 import '../../../widgets/common/mascot_image.dart';
 
@@ -46,15 +45,7 @@ class _NotificationOptInDialogState
     setState(() => _loading = true);
 
     try {
-      final granted = await ref
-          .read(notificationRepositoryProvider)
-          .requestAllPermissions();
-
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(AppConstants.keyNotificationModalShown, true);
-      await ref
-          .read(profileProvider.notifier)
-          .updateProfile(profile.copyWith(pushEnabled: granted));
+      final granted = await enableReminders(ref);
 
       navigator.pop(granted);
 
@@ -76,8 +67,12 @@ class _NotificationOptInDialogState
   }
 
   Future<void> _dismiss() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(AppConstants.keyNotificationModalShown, true);
+    try {
+      await postponeReminders(ref);
+    } catch (e) {
+      _log.error('failed to postpone notifications', e);
+      await markNotificationOptInOffered();
+    }
     if (!mounted) return;
     Navigator.pop(context, false);
   }
@@ -115,7 +110,7 @@ class _NotificationOptInDialogState
           ),
           AppConstants.gap12,
           const Text(
-            'Erhalte Erinnerungen zum Tracken, eine tägliche '
+            'Erhalte Erinnerungen zum Eintragen, eine tägliche '
             'Zusammenfassung und persönliche Tipps für '
             'dein Wohlbefinden.',
             style: TextStyle(fontSize: AppTheme.fontSizeBody),

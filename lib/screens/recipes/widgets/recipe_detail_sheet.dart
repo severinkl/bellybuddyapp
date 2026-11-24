@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/recipe.dart';
 import '../../../config/constants.dart';
+import '../../../widgets/common/bb_drag_handle.dart';
 
 class RecipeDetailSheet extends StatelessWidget {
   final Recipe recipe;
@@ -13,6 +14,8 @@ class RecipeDetailSheet extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       useSafeArea: true,
+      // The sheet draws its own handle.
+      showDragHandle: false,
       builder: (context) => DraggableScrollableSheet(
         initialChildSize: 0.85,
         minChildSize: 0.5,
@@ -30,16 +33,7 @@ class RecipeDetailSheet extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Center(
-            child: Container(
-              width: AppConstants.dragHandleWidth,
-              height: AppConstants.spacingXs,
-              decoration: BoxDecoration(
-                color: AppTheme.muted,
-                borderRadius: BorderRadius.circular(AppConstants.spacing2),
-              ),
-            ),
-          ),
+          const BbDragHandle(),
           AppConstants.gap16,
           Text(
             recipe.title,

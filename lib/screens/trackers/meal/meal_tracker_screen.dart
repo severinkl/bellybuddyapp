@@ -5,16 +5,19 @@ import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/meal_entry.dart';
 import '../../../models/user_recipe.dart';
+import '../../../providers/buddy_events_provider.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../providers/ingredient_autocomplete_provider.dart';
 import '../../../providers/meal_tracker_provider.dart';
 import '../../../providers/user_recipes_provider.dart';
 import '../../../router/navigation_extensions.dart';
 import '../../../router/route_names.dart';
+import '../../../services/buddy/buddy_mood_logic.dart';
 import '../../../services/user_recipe_service.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/logger.dart';
 import '../../../utils/save_helper.dart';
+import '../../../widgets/buddy/buddy_reaction_view.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/date_time_chips.dart';
 import '../../../widgets/common/editable_app_bar_title.dart';
@@ -150,8 +153,23 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     // error SnackBar on failure, and keeping the screen lets the user retry.
     // Create mode stays on the success overlay regardless (failure leaves the
     // user on the form, same behavior as before).
-    if (!mounted) return;
-    if (widget.mealId != null && ok) context.popOrGoDashboard();
+    if (!mounted || !ok) return;
+    if (widget.mealId != null) {
+      context.popOrGoDashboard();
+      return;
+    }
+    // A new log (not an edit): the Buddy reacts on the success screen and
+    // the dashboard picks the event up.
+    ref
+        .read(buddyEventsProvider.notifier)
+        .emit(
+          BuddyLogEvent(
+            EntryKind.meal,
+            LogSentiment.good,
+            at: DateTime.now(),
+            trackedAt: ref.read(mealTrackerProvider).trackedAt,
+          ),
+        );
   }
 
   bool _canSave(MealTrackerState state) {
@@ -167,6 +185,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         appBar: AppBar(
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
             onPressed: () => context.popOrGoDashboard(),
           ),
           title: const Text('Mahlzeit'),
@@ -184,7 +203,11 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     }
 
     final state = ref.watch(mealTrackerProvider);
-    final canPop = widget.mealId == null || !state.isDirty;
+    // A meal started from a recipe and left unchanged has nothing to lose.
+    final recipe = widget.initialRecipe;
+    final canPop =
+        !state.hasUnsavedChanges ||
+        (recipe != null && state.matchesRecipe(recipe));
 
     return PopScope(
       canPop: canPop,
@@ -207,11 +230,14 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         ),
         showSuccess: state.showSuccess,
         successMessage: 'Mahlzeit gespeichert!',
-        successMascotAsset: AppConstants.mascotCool,
+        successIllustration: BuddyReactionView(
+          kind: EntryKind.meal,
+          sentiment: LogSentiment.good,
+          foodImageBytes: state.imageBytes,
+        ),
         successActions: [
           GestureDetector(
-            onTap: () =>
-                context.push(RoutePaths.drinkTracker, extra: state.trackedAt),
+            onTap: () => _logDrinkAfterMeal(state.trackedAt),
             child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -222,7 +248,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
                 ),
                 SizedBox(width: AppConstants.spacingSm),
                 Text(
-                  'Getränk hinzufügen',
+                  'Trinken eintragen',
                   style: TextStyle(color: AppTheme.info),
                 ),
               ],
@@ -232,12 +258,31 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         successBottomCallout: state.showSuccess
             ? _buildSaveAsRecipeBottom(state)
             : null,
-        onSuccessDismissed: widget.initialRecipe != null
-            ? () => context.go(RoutePaths.dashboard)
-            : null,
+        onSuccessDismissed: _dismissSuccess,
         body: _buildBody(state),
       ),
     );
+  }
+
+  /// Leaves the success screen: to Home after a meal from a recipe,
+  /// otherwise back where the meal was started.
+  void _dismissSuccess() {
+    if (widget.initialRecipe != null) {
+      context.go(RoutePaths.dashboard);
+    } else {
+      context.popOrGoDashboard();
+    }
+  }
+
+  /// „Trinken eintragen" on the success screen. Once the drink is saved
+  /// (the drink tracker closes with true), the meal's success screen is
+  /// done too, so the user lands where they came from.
+  Future<void> _logDrinkAfterMeal(DateTime trackedAt) async {
+    final saved = await context.push<bool>(
+      RoutePaths.drinkTracker,
+      extra: trackedAt,
+    );
+    if (saved == true && mounted) _dismissSuccess();
   }
 
   /// Watches userRecipesProvider so the UI rebuilds if the recipe list
@@ -255,7 +300,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         children: [
           if (!saved) ...[
             const Text(
-              'Speicher diese Mahlzeit als Rezept, um sie später schneller wieder einzutragen.',
+              'Speichere diese Mahlzeit als Rezept, um sie später schneller wieder einzutragen.',
               style: TextStyle(
                 fontSize: AppTheme.fontSizeCaption,
                 color: AppTheme.mutedForeground,
@@ -407,13 +452,13 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
             },
           ),
           AppConstants.gap16,
-          // "Getränk tracken" button
+          // "Trinken eintragen" button
           OutlinedButton.icon(
             key: MealTrackerScreen.drinkTrackerButtonKey,
             onPressed: () =>
                 context.push(RoutePaths.drinkTracker, extra: state.trackedAt),
             icon: const Icon(Icons.water_drop_outlined),
-            label: const Text('Getränk tracken'),
+            label: const Text('Trinken eintragen'),
             style: OutlinedButton.styleFrom(
               backgroundColor: Colors.white,
               foregroundColor: AppTheme.info,

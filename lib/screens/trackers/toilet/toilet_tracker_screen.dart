@@ -4,10 +4,13 @@ import 'package:uuid/uuid.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/toilet_entry.dart';
+import '../../../providers/buddy_events_provider.dart';
 import '../../../providers/diary_provider.dart';
 import '../../../providers/entries_provider.dart';
+import '../../../services/buddy/buddy_mood_logic.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/save_helper.dart';
+import '../../../widgets/buddy/buddy_reaction_view.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/bb_slider.dart';
 import '../../../widgets/common/date_time_chips.dart';
@@ -27,7 +30,9 @@ class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
   int _stoolType = 3;
   late DateTime _trackedAt = buildTrackedAt(widget.initialDate);
   bool _isSaving = false;
-  bool _showSuccess = false;
+
+  /// Set once the entry is saved; shows the success screen.
+  LogSentiment? _savedSentiment;
 
   Future<void> _save() async {
     setState(() => _isSaving = true);
@@ -43,7 +48,18 @@ class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
     if (mounted) {
       if (success) {
         ref.invalidate(diaryEntriesProvider(startOfDay(_trackedAt)));
-        setState(() => _showSuccess = true);
+        final sentiment = sentimentForToilet(entry);
+        ref
+            .read(buddyEventsProvider.notifier)
+            .emit(
+              BuddyLogEvent(
+                EntryKind.toilet,
+                sentiment,
+                at: DateTime.now(),
+                trackedAt: entry.trackedAt,
+              ),
+            );
+        setState(() => _savedSentiment = sentiment);
       } else {
         setState(() => _isSaving = false);
       }
@@ -52,11 +68,21 @@ class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final savedSentiment = _savedSentiment;
     return TrackerScreenScaffold(
       title: 'Am Klo \u{1F4A9} gewesen?',
-      showSuccess: _showSuccess,
-      successMessage: 'Toilettengang gespeichert!',
-      successMascotAsset: AppConstants.mascotWink,
+      showSuccess: savedSentiment != null,
+      // After a hard moment no celebration: calm, without the „!".
+      successMessage: savedSentiment == LogSentiment.bad
+          ? 'Klo-Eintrag gespeichert.'
+          : 'Klo-Eintrag gespeichert!',
+      successCalm: savedSentiment == LogSentiment.bad,
+      successIllustration: savedSentiment == null
+          ? null
+          : BuddyReactionView(
+              kind: EntryKind.toilet,
+              sentiment: savedSentiment,
+            ),
       body: Padding(
         padding: AppConstants.paddingLg,
         child: Column(
@@ -88,11 +114,14 @@ class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
               leftLabel: 'sehr hart',
               centerLabel: 'normal',
               rightLabel: 'flüssig',
+              semanticLabel: 'Konsistenz',
+              semanticValue: (v) =>
+                  '${AppConstants.stoolTypeDescriptions[v]}, $v von 5',
             ),
 
             const Spacer(),
             BbButton(
-              label: 'speichern',
+              label: 'Speichern',
               isLoading: _isSaving,
               onPressed: _save,
             ),

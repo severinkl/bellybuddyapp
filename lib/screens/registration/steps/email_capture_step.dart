@@ -4,7 +4,7 @@ import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../widgets/common/bb_auth_banner.dart';
 import '../../../widgets/common/bb_button.dart';
-import '../../../widgets/common/mascot_image.dart';
+import '../widgets/step_field_label.dart';
 
 /// Wizard step that asks the user for a real email when OAuth didn't give
 /// us one (Apple second-sign-in) or gave us an Apple relay address. Pure
@@ -85,7 +85,7 @@ class _EmailCaptureStepState extends State<EmailCaptureStep> {
     // overflowed by a few pixels once the keyboard shrank the viewport
     // (reported with constraints h=477 on iPhone 17 simulator).
     return Padding(
-      padding: AppConstants.paddingLg,
+      padding: AppConstants.wizardStepPadding,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -94,36 +94,14 @@ class _EmailCaptureStepState extends State<EmailCaptureStep> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  AppConstants.gap24,
-                  const Center(
-                    child: MascotImage(
-                      assetPath: AppConstants.mascotZen,
-                      width: 120,
-                      height: 120,
-                    ),
+                  const StepFieldLabel(
+                    'Deine E-Mail-Adresse',
+                    helper:
+                        'Falls du möchtest, gib hier deine echte '
+                        'E-Mail-Adresse an. So erreichen dich wichtige '
+                        'Mitteilungen. Dieser Schritt ist optional.',
                   ),
                   AppConstants.gap16,
-                  const Text(
-                    'Deine E-Mail-Adresse',
-                    style: TextStyle(
-                      fontSize: AppTheme.fontSizeHeadingLG,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.foreground,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  AppConstants.gap8,
-                  const Text(
-                    'Falls du möchtest, kannst du uns hier deine echte '
-                    'E-Mail-Adresse geben. So können wir dich bei wichtigen '
-                    'Mitteilungen erreichen. Dieser Schritt ist optional.',
-                    style: TextStyle(
-                      fontSize: AppTheme.fontSizeBodyLG,
-                      color: AppTheme.mutedForeground,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  AppConstants.gap24,
                   TextFormField(
                     key: EmailCaptureStep.emailFieldKey,
                     controller: _controller,

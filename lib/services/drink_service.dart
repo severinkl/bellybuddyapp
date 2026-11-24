@@ -4,6 +4,7 @@ import '../models/drink.dart';
 import '../providers/core_providers.dart';
 import '../utils/date_format_utils.dart';
 import '../utils/logger.dart';
+import '../utils/wall_clock.dart';
 
 class DrinkService {
   final SupabaseClient _client;
@@ -22,18 +23,18 @@ class DrinkService {
     }
   }
 
-  Future<int> fetchTodayTotal(String userId) async {
+  /// The ml the user drank on [day]'s local day.
+  Future<int> fetchDayTotal(String userId, DateTime day) async {
     try {
-      final now = DateTime.now();
       final data = await _client
           .from('drink_entries')
           .select('amount_ml')
           .eq('user_id', userId)
-          .gte('tracked_at', startOfDay(now).toIso8601String())
-          .lt('tracked_at', endOfDay(now).toIso8601String());
+          .gte('tracked_at', wallClockToWire(startOfDay(day)))
+          .lt('tracked_at', wallClockToWire(endOfDay(day)));
       return data.fold<int>(0, (sum, e) => sum + (e['amount_ml'] as int));
     } catch (e, st) {
-      _log.error('fetchTodayTotal failed', e, st);
+      _log.error('fetchDayTotal failed', e, st);
       rethrow;
     }
   }

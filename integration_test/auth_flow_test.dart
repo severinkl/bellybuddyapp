@@ -1,10 +1,12 @@
 import 'package:belly_buddy/screens/auth/auth_screen.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
 import 'package:belly_buddy/screens/welcome/welcome_screen.dart';
 import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 
 import 'helpers/test_app.dart';
+import 'helpers/welcome_driver.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
@@ -18,9 +20,10 @@ void main() {
       buildTestApp(authenticated: false, dynamicAuth: true),
     );
 
-    await tester.pumpAndSettle();
+    await pumpUntilWelcome(tester);
 
-    expect(find.byKey(WelcomeScreen.registrationButtonKey), findsOneWidget);
+    expect(find.byKey(WelcomeScreen.buddyAreaKey), findsOneWidget);
+    expect(find.byKey(WelcomeScreen.signInButtonKey), findsOneWidget);
   });
 
   testWidgets('login shows error message when credentials are invalid', (
@@ -35,7 +38,7 @@ void main() {
       ),
     );
 
-    await tester.pumpAndSettle();
+    await pumpUntilWelcome(tester);
 
     await tester.tap(find.byKey(WelcomeScreen.signInButtonKey));
     await tester.pumpAndSettle();
@@ -64,10 +67,9 @@ void main() {
       buildTestApp(authenticated: false, dynamicAuth: true),
     );
 
-    await tester.pumpAndSettle();
+    await pumpUntilWelcome(tester);
 
     expect(find.byKey(WelcomeScreen.signInButtonKey), findsOneWidget);
-    expect(find.byKey(WelcomeScreen.registrationButtonKey), findsOneWidget);
 
     await tester.tap(find.byKey(WelcomeScreen.signInButtonKey));
     await tester.pumpAndSettle();
@@ -89,6 +91,9 @@ void main() {
     await tester.tap(find.byKey(AuthScreen.submitLoginButtonKey));
     await tester.pumpAndSettle();
 
+    // Signed in: Home with the Buddy's next-action button and the bar.
+    expect(find.byKey(BuddyHero.actionKey), findsOneWidget);
     expect(find.byKey(BbBottomNav.centerButtonKey), findsOneWidget);
+    expect(find.text('Für dich erstellt'), findsNothing);
   });
 }

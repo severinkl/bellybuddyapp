@@ -63,6 +63,33 @@ void main() {
     });
   });
 
+  group('previews', () {
+    test('a fixed Buddy-voiced line from the real pools, with his name', () {
+      final meal = ReminderCopy.previewMealBody(18, 'Bauchi');
+      expect(meal, '🍲 Bauchi ist gespannt auf dein Abendessen!');
+      expect(ReminderCopy.previewMealBody(18, 'Bauchi'), meal);
+
+      final mood = ReminderCopy.previewMoodBody(20, 'Bauchi');
+      expect(mood, '🤷 Bauchi fragt: Wie war dein Bauchgefühl heute?');
+      // Midday has no mood pool: the evening one is used.
+      expect(ReminderCopy.previewMoodBody(13, 'Bauchi'), mood);
+    });
+  });
+
+  test('says „Abendessen", not the northern „Abendbrot"', () {
+    final pools = [
+      ReminderCopy.mealPools,
+      ReminderCopy.buddyMealPools,
+      ReminderCopy.moodPools,
+      ReminderCopy.buddyMoodPools,
+    ];
+    for (final pool in pools) {
+      for (final line in pool.values.expand((l) => l)) {
+        expect(line, isNot(contains('Abendbrot')));
+      }
+    }
+  });
+
   group('pool integrity', () {
     test('every meal pool is non-empty', () {
       for (final entry in ReminderCopy.mealPools.entries) {
@@ -92,6 +119,53 @@ void main() {
     test('no mood line appears in more than one slot', () {
       final all = ReminderCopy.moodPools.values.expand((p) => p).toList();
       expect(all.toSet().length, all.length);
+    });
+  });
+
+  group('Buddy pools', () {
+    test('meal: >=4 per slot, name substituted, no placeholders', () {
+      for (final slot in TimeSlot.values) {
+        expect(
+          ReminderCopy.buddyMealPools[slot]!.length,
+          greaterThanOrEqualTo(4),
+        );
+      }
+      for (var hour = 0; hour < 24; hour++) {
+        for (var seed = 0; seed < 20; seed++) {
+          final body = ReminderCopy.pickMealBody(
+            hour,
+            Random(seed),
+            buddyName: 'Pünktchen',
+          );
+          expect(body, contains('Pünktchen'));
+          expect(body, isNot(contains('{')));
+          expect(body, isNot(matches(RegExp(r'\d+ Tage'))));
+        }
+      }
+    });
+
+    test('mood: >=4 per slot, name substituted, midday falls back', () {
+      for (final pool in ReminderCopy.buddyMoodPools.values) {
+        expect(pool.length, greaterThanOrEqualTo(4));
+      }
+      for (var hour = 0; hour < 24; hour++) {
+        for (var seed = 0; seed < 20; seed++) {
+          final body = ReminderCopy.pickMoodBody(
+            hour,
+            Random(seed),
+            buddyName: 'Pünktchen',
+          );
+          expect(body, contains('Pünktchen'));
+          expect(body, isNot(contains('{')));
+        }
+      }
+    });
+
+    test('without a name the classic pools are used', () {
+      final meal = ReminderCopy.pickMealBody(12, Random(1));
+      expect(ReminderCopy.mealPools[TimeSlot.midday], contains(meal));
+      final mood = ReminderCopy.pickMoodBody(8, Random(1));
+      expect(ReminderCopy.moodPools[TimeSlot.morning], contains(mood));
     });
   });
 }

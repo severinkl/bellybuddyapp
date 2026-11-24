@@ -1,27 +1,28 @@
 // ignore_for_file: invalid_use_of_internal_member
 import 'package:belly_buddy/models/meal_entry.dart';
+import 'package:belly_buddy/models/user_recipe.dart';
+import 'package:belly_buddy/providers/user_recipes_provider.dart';
+import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/meal_tracker_provider.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/repositories/meal_media_repository.dart';
 import 'package:belly_buddy/screens/trackers/meal/meal_tracker_screen.dart';
-import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'
-    show GlobalWidgetsLocalizations;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 
+import '../../../helpers/app_host.dart';
 import '../../../helpers/fakes.dart';
 import '../../../helpers/riverpod_helpers.dart';
 
 /// Builds a 2-route GoRouter so the tracker screen (reached via /edit) can
 /// `context.pop()` back to a sentinel home screen. This lets tests assert on
 /// the pop behaviour without mocking the navigator directly.
-GoRouter _buildRouter(String mealId) {
+GoRouter _buildRouter(String? mealId, {UserRecipe? recipe}) {
   return GoRouter(
     initialLocation: '/home',
     routes: [
@@ -31,7 +32,8 @@ GoRouter _buildRouter(String mealId) {
       ),
       GoRoute(
         path: '/edit',
-        builder: (_, _) => MealTrackerScreen(mealId: mealId),
+        builder: (_, _) =>
+            MealTrackerScreen(mealId: mealId, initialRecipe: recipe),
       ),
     ],
   );
@@ -39,23 +41,15 @@ GoRouter _buildRouter(String mealId) {
 
 Future<void> _pumpEditScreen(
   WidgetTester tester, {
-  required String mealId,
+  required String? mealId,
   required List<Override> overrides,
+  UserRecipe? recipe,
 }) async {
-  final router = _buildRouter(mealId);
+  final router = _buildRouter(mealId, recipe: recipe);
   await tester.pumpWidget(
     UncontrolledProviderScope(
       container: ProviderContainer.test(overrides: overrides),
-      child: MaterialApp.router(
-        routerConfig: router,
-        localizationsDelegates: const [
-          GlobalMaterialLocalizations.delegate,
-          GlobalWidgetsLocalizations.delegate,
-          GlobalCupertinoLocalizations.delegate,
-        ],
-        supportedLocales: const [Locale('de', 'DE')],
-        locale: const Locale('de', 'DE'),
-      ),
+      child: germanRouterApp(router),
     ),
   );
   // Push from home → edit so the tracker screen has something to pop back to.
@@ -236,6 +230,8 @@ void main() {
         );
         expect(fakeEntries.addedMeals, isEmpty);
         expect(find.text('home-sentinel'), findsOneWidget);
+        // Edits are not new logs: the Buddy does not react.
+        expect(container.read(buddyEventsProvider), isNull);
       },
     );
 
@@ -413,6 +409,90 @@ void main() {
       expect(find.text('Änderungen verwerfen?'), findsNothing);
       expect(find.byType(MealTrackerScreen), findsNothing);
       expect(find.text('home-sentinel'), findsOneWidget);
+    });
+  });
+
+  group('MealTrackerScreen new meal', () {
+    List<Override> overrides() => [
+      entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
+      ingredientRepositoryProvider.overrideWithValue(
+        FakeIngredientRepository(),
+      ),
+      mealMediaRepositoryProvider.overrideWithValue(FakeMealMediaRepository()),
+      userRecipeRepositoryProvider.overrideWithValue(
+        FakeUserRecipeRepository(),
+      ),
+      currentUserIdProvider.overrideWithValue('user-1'),
+    ];
+
+    ProviderContainer containerOf(WidgetTester tester) =>
+        ProviderScope.containerOf(
+          tester.element(find.byType(MealTrackerScreen)),
+          listen: false,
+        );
+
+    testWidgets('back with an ingredient added asks before discarding', (
+      tester,
+    ) async {
+      await _pumpEditScreen(tester, mealId: null, overrides: overrides());
+      containerOf(
+        tester,
+      ).read(mealTrackerProvider.notifier).addIngredient('Haferflocken');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Änderungen verwerfen?'), findsOneWidget);
+      await tester.tap(find.text('Verwerfen'));
+      await tester.pumpAndSettle();
+      expect(find.text('home-sentinel'), findsOneWidget);
+    });
+
+    testWidgets('back from an empty new meal leaves silently', (tester) async {
+      await _pumpEditScreen(tester, mealId: null, overrides: overrides());
+
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Änderungen verwerfen?'), findsNothing);
+      expect(find.text('home-sentinel'), findsOneWidget);
+    });
+
+    testWidgets('back from an unchanged meal started from a recipe leaves '
+        'silently', (tester) async {
+      await _pumpEditScreen(
+        tester,
+        mealId: null,
+        overrides: overrides(),
+        recipe: testUserRecipe(title: 'Porridge', ingredients: const ['Hafer']),
+      );
+
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Änderungen verwerfen?'), findsNothing);
+      expect(find.text('home-sentinel'), findsOneWidget);
+    });
+
+    testWidgets('a meal started from a recipe and then changed asks', (
+      tester,
+    ) async {
+      await _pumpEditScreen(
+        tester,
+        mealId: null,
+        overrides: overrides(),
+        recipe: testUserRecipe(title: 'Porridge', ingredients: const ['Hafer']),
+      );
+      containerOf(
+        tester,
+      ).read(mealTrackerProvider.notifier).addIngredient('Banane');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Änderungen verwerfen?'), findsOneWidget);
     });
   });
 }

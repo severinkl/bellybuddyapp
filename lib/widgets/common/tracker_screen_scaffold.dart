@@ -11,6 +11,12 @@ class TrackerScreenScaffold extends StatelessWidget {
   final String successMessage;
   final String? successSubMessage;
   final String? successMascotAsset;
+
+  /// Replaces the success mascot (see [BbSuccessOverlay.illustration]).
+  final Widget? successIllustration;
+
+  /// The calm success screen (see [BbSuccessOverlay.calm]).
+  final bool successCalm;
   final Widget body;
   final List<Widget>? appBarActions;
   final List<Widget>? successActions;
@@ -27,6 +33,8 @@ class TrackerScreenScaffold extends StatelessWidget {
     required this.body,
     this.successSubMessage,
     this.successMascotAsset,
+    this.successIllustration,
+    this.successCalm = false,
     this.appBarActions,
     this.successActions,
     this.successBottomCallout,
@@ -39,8 +47,10 @@ class TrackerScreenScaffold extends StatelessWidget {
       return BbSuccessOverlay(
         message: successMessage,
         subMessage:
-            successSubMessage ?? 'Dein Eintrag wurde erfolgreich erfasst.',
+            successSubMessage ?? 'Ist jetzt in deinem Tagebuch eingetragen.',
         mascotAsset: successMascotAsset,
+        illustration: successIllustration,
+        calm: successCalm,
         onDismissed: onSuccessDismissed ?? context.popOrGoDashboard,
         actions: successActions,
         bottomCallout: successBottomCallout,
@@ -55,6 +65,7 @@ class TrackerScreenScaffold extends StatelessWidget {
         backgroundColor: AppTheme.screenBackground,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
           // Route through Navigator.maybePop so enclosing PopScope widgets
           // (e.g. the meal tracker's discard-changes guard) can intercept the
           // pop. Falls back to go_router's context.pop when no PopScope blocks.

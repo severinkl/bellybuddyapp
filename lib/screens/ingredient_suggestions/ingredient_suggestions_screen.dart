@@ -21,12 +21,21 @@ class _IngredientSuggestionsScreenState
     extends ConsumerState<IngredientSuggestionsScreen> {
   String _searchQuery = '';
 
+  /// The groups (by ingredient) that were new when the screen opened: they
+  /// keep „Neu" while it is open, though opening marks them seen.
+  Set<String> _newOnOpening = const {};
+
   @override
   void initState() {
     super.initState();
     Future.microtask(() async {
       final notifier = ref.read(ingredientSuggestionProvider.notifier);
       await notifier.fetchSuggestions();
+      if (!mounted) return;
+      _newOnOpening = {
+        for (final g in ref.read(ingredientSuggestionProvider).value ?? [])
+          if (g.isNew) g.ingredientId,
+      };
       await notifier.markAllNewAsSeen();
     });
   }
@@ -71,7 +80,7 @@ class _IngredientSuggestionsScreenState
     final state = ref.watch(ingredientSuggestionProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Zutaten-Vorschläge')),
+      appBar: AppBar(title: const Text('Alternativen')),
       body: Column(
         children: [
           Padding(
@@ -101,21 +110,16 @@ class _IngredientSuggestionsScreenState
               ),
               data: (groups) {
                 _precacheImages(groups);
-                final filtered =
-                    (_searchQuery.isEmpty
-                            ? groups
-                            : groups.where(
-                                (g) => g.ingredientName.toLowerCase().contains(
-                                  _searchQuery.toLowerCase(),
-                                ),
-                              ))
-                        .toList()
-                      ..sort((a, b) {
-                        if (a.isNew != b.isNew) return a.isNew ? -1 : 1;
-                        return a.ingredientName.toLowerCase().compareTo(
-                          b.ingredientName.toLowerCase(),
-                        );
-                      });
+                final filtered = [
+                  for (final g in groups)
+                    if (_searchQuery.isEmpty ||
+                        g.ingredientName.toLowerCase().contains(
+                          _searchQuery.toLowerCase(),
+                        ))
+                      _newOnOpening.contains(g.ingredientId)
+                          ? g.copyWith(isNew: true)
+                          : g,
+                ]..sort(IngredientSuggestionGroup.compareNewFirst);
 
                 if (filtered.isEmpty) {
                   return const Center(

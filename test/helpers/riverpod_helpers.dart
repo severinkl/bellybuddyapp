@@ -1,15 +1,18 @@
 // ignore_for_file: invalid_use_of_internal_member
-import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'
-    show GlobalWidgetsLocalizations;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 
 import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
+import 'package:belly_buddy/models/user_profile.dart';
+import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
+import 'package:belly_buddy/providers/profile_provider.dart';
+
+import 'app_host.dart';
+import 'fixtures.dart';
 
 /// Creates a [ProviderContainer] with the given overrides.
 /// Automatically disposes after the test via [ProviderContainer.test].
@@ -17,6 +20,51 @@ import 'package:belly_buddy/providers/entries_provider.dart';
 ProviderContainer createContainer({List<Override> overrides = const []}) {
   return ProviderContainer.test(overrides: overrides);
 }
+
+/// A value a test switches while its container lives (the signed-in user,
+/// a setting): override the provider under test with
+/// `ref.watch(switchableProvider)`, then call [set].
+class Switchable<T> extends Notifier<T> {
+  Switchable(this._initial);
+  final T _initial;
+
+  @override
+  T build() => _initial;
+
+  void set(T value) => state = value;
+}
+
+/// The signed-in user's id, switchable (a sign-out, another user):
+/// [override] makes [currentUserIdProvider] follow it; [set] switches it in
+/// a container.
+class SwitchableUserId {
+  SwitchableUserId([String? initial = testUserId])
+    : _id = NotifierProvider<Switchable<String?>, String?>(
+        () => Switchable(initial),
+      );
+
+  final NotifierProvider<Switchable<String?>, String?> _id;
+
+  Override get override =>
+      currentUserIdProvider.overrideWith((ref) => ref.watch(_id));
+
+  void set(ProviderContainer container, String? id) =>
+      container.read(_id.notifier).set(id);
+}
+
+/// A [ProfileNotifier] that starts with [_profile] loaded.
+class _SeededProfileNotifier extends ProfileNotifier {
+  _SeededProfileNotifier(this._profile);
+  final UserProfile? _profile;
+
+  @override
+  AsyncValue<UserProfile?> build() => AsyncValue.data(_profile);
+}
+
+/// An [Override] for [profileProvider] that starts with [profile] loaded
+/// (no fetch first).
+Override profileProviderSeededWith(UserProfile? profile) =>
+    profileProvider.overrideWith(() => _SeededProfileNotifier(profile));
 
 /// An [EntriesNotifier] whose [build] returns a pre-seeded [EntriesState] so
 /// widgets that `ref.read(entriesProvider)` in `initState` see the supplied
@@ -49,13 +97,9 @@ extension PumpWithProviders on WidgetTester {
         overrides: overrides,
         child: MaterialApp(
           theme: AppTheme.theme,
-          localizationsDelegates: const [
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: const [Locale('de', 'DE')],
-          locale: const Locale('de', 'DE'),
+          localizationsDelegates: germanLocalizations,
+          supportedLocales: const [germanLocale],
+          locale: germanLocale,
           home: widget,
         ),
       ),

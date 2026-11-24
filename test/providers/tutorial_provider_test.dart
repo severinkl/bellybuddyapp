@@ -85,4 +85,57 @@ void main() {
       expect(fakeRepo.tutorialUpdateCalled, isFalse);
     });
   });
+
+  group('TutorialNotifier replay', () {
+    test('consumeReplay is false without a request', () {
+      final c = makeContainer();
+
+      expect(c.read(tutorialProvider.notifier).consumeReplay(), isFalse);
+      expect(c.read(tutorialProvider), isFalse);
+    });
+
+    test('consumeReplay is true once', () {
+      final c = makeContainer();
+      final tutorial = c.read(tutorialProvider.notifier);
+
+      tutorial.requestReplay();
+      expect(c.read(tutorialProvider), isTrue);
+
+      expect(tutorial.consumeReplay(), isTrue);
+      expect(c.read(tutorialProvider), isFalse);
+      expect(tutorial.consumeReplay(), isFalse);
+
+      // Each new request is taken once again.
+      tutorial
+        ..requestReplay()
+        ..requestReplay();
+      expect(tutorial.consumeReplay(), isTrue);
+      expect(tutorial.consumeReplay(), isFalse);
+    });
+
+    test('a pending replay ends with its user (sign-out, another user)', () {
+      final user = SwitchableUserId();
+      final c = createContainer(
+        overrides: [
+          profileRepositoryProvider.overrideWithValue(fakeRepo),
+          user.override,
+        ],
+      );
+      // Kept alive like Home's listener keeps it.
+      c.listen(tutorialProvider, (_, _) {});
+
+      // Requested, then signed out before Home took it.
+      c.read(tutorialProvider.notifier).requestReplay();
+      user.set(c, null);
+      expect(c.read(tutorialProvider), isFalse);
+
+      // The next user gets no tour they never asked for.
+      user.set(c, 'other-user');
+      expect(c.read(tutorialProvider.notifier).consumeReplay(), isFalse);
+
+      // Their own request still works.
+      c.read(tutorialProvider.notifier).requestReplay();
+      expect(c.read(tutorialProvider.notifier).consumeReplay(), isTrue);
+    });
+  });
 }

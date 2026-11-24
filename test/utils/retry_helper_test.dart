@@ -63,4 +63,9 @@ void main() {
       // If we get here, label param was accepted without error
     });
   });
+
+  test('noRetry never retries', () {
+    expect(noRetry(0, Exception('offline')), isNull);
+    expect(noRetry(5, StateError('down')), isNull);
+  });
 }

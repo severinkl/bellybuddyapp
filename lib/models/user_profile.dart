@@ -1,5 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import '../utils/reminder_times_converter.dart';
+import '../utils/symptoms_converter.dart';
 
 part 'user_profile.freezed.dart';
 part 'user_profile.g.dart';
@@ -13,7 +14,8 @@ abstract class UserProfile with _$UserProfile {
     int? height,
     int? weight,
     String? diet,
-    @Default([]) List<String> symptoms,
+    // Canonical values (kSymptomOptions); older spellings are read as them.
+    @SymptomsConverter() @Default([]) List<String> symptoms,
     @Default([]) List<String> intolerances,
     @JsonKey(name: 'auth_method') String? authMethod,
     @JsonKey(name: 'meal_reminder_times')
@@ -47,12 +49,27 @@ abstract class UserProfile with _$UserProfile {
     // ProfileRepository.acceptHealthConsent, never by profile updates.
     @JsonKey(name: 'health_consent_at') DateTime? healthConsentAt,
     @JsonKey(name: 'privacy_policy_version') String? privacyPolicyVersion,
+    // Opt-in to the weekly AI tips. Written only by
+    // ProfileRepository.setWeeklyTips, never by profile updates.
+    @JsonKey(name: 'weekly_tips_enabled')
+    @Default(false)
+    bool weeklyTipsEnabled,
   }) = _UserProfile;
 
   const UserProfile._();
 
   factory UserProfile.fromJson(Map<String, dynamic> json) =>
       _$UserProfileFromJson(json);
+
+  /// Whether any notification is on: a meal or Bauchgefühl reminder, tips.
+  /// These say what the user wants; they only arrive while the OS allows
+  /// notifications (see `NotificationPermission`).
+  bool get anyNotificationOn =>
+      remindersEnabled || dailySummaryEnabled || pushEnabled;
+
+  /// This profile with every notification [on] (or off).
+  UserProfile withNotifications(bool on) =>
+      copyWith(remindersEnabled: on, dailySummaryEnabled: on, pushEnabled: on);
 
   bool get isComplete =>
       birthYear != null &&

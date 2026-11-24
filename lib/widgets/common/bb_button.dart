@@ -54,6 +54,7 @@ class BbButton extends StatelessWidget {
 
     if (isOutlined) {
       return OutlinedButton(
+        key: tapKey,
         onPressed: effectiveOnPressed,
         style: isDestructive
             ? OutlinedButton.styleFrom(

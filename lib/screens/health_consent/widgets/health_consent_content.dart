@@ -1,13 +1,14 @@
 import 'package:material_ui/material_ui.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
-import '../../../utils/logger.dart';
+import '../../../utils/url_utils.dart';
 
-/// The GDPR Art. 9 health-data consent text, the privacy policy link and the
-/// explicit-consent checkbox. Shared by the post-login [HealthConsentScreen]
-/// and the registration wizard's consent step so both ask for the same
-/// consent with the same wording.
+/// The GDPR Art. 9 health-data consent text and (unless [showCheckbox] is
+/// false) the privacy policy link and the explicit-consent checkbox. Shared by
+/// the post-login [HealthConsentScreen] and the registration wizard's
+/// consent step so both ask for the same consent with the same wording; the
+/// wizard pins the [HealthConsentPrivacyLink] and the [HealthConsentCheckbox]
+/// below the scrolling text instead ([showCheckbox] false).
 class HealthConsentContent extends StatelessWidget {
   /// Whether the consent checkbox is ticked.
   final bool checked;
@@ -15,44 +16,21 @@ class HealthConsentContent extends StatelessWidget {
   /// Called with the new checkbox value; null disables the checkbox.
   final ValueChanged<bool>? onChanged;
 
-  static const checkboxKey = Key('health_consent_checkbox');
-  static const consentText =
-      'Ich willige ausdrücklich ein, dass meine Gesundheitsdaten wie '
-      'beschrieben verarbeitet werden.';
+  /// Whether the privacy policy link and the checkbox follow the text.
+  final bool showCheckbox;
 
-  static const _log = AppLogger('HealthConsentContent');
+  static const checkboxKey = HealthConsentCheckbox.checkboxKey;
+  static const consentText = HealthConsentCheckbox.consentText;
 
   const HealthConsentContent({
     super.key,
     required this.checked,
     required this.onChanged,
+    this.showCheckbox = true,
   });
-
-  Future<void> _openPrivacyPolicy(BuildContext context) async {
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    var opened = false;
-    try {
-      opened = await launchUrl(
-        Uri.parse(AppConstants.privacyPolicyUrl),
-        mode: LaunchMode.externalApplication,
-      );
-    } catch (e, st) {
-      _log.error('opening privacy policy failed', e, st);
-    }
-    if (!opened) {
-      messenger?.showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Die Datenschutzerklärung konnte nicht geöffnet werden.',
-          ),
-        ),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
-    final onChanged = this.onChanged;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -87,47 +65,89 @@ class HealthConsentContent extends StatelessWidget {
             color: AppTheme.mutedForeground,
           ),
         ),
-        AppConstants.gap8,
-        Align(
-          alignment: Alignment.centerLeft,
-          child: TextButton.icon(
-            onPressed: () => _openPrivacyPolicy(context),
-            icon: const Icon(Icons.open_in_new, size: AppConstants.iconSizeXs),
-            label: const Text('Datenschutzerklärung lesen'),
+        if (showCheckbox) ...[
+          AppConstants.gap8,
+          const HealthConsentPrivacyLink(),
+          AppConstants.gap8,
+          HealthConsentCheckbox(checked: checked, onChanged: onChanged),
+        ],
+      ],
+    );
+  }
+}
+
+/// „Datenschutzerklärung lesen": opens the privacy policy.
+class HealthConsentPrivacyLink extends StatelessWidget {
+  const HealthConsentPrivacyLink({super.key});
+
+  Future<void> _open(BuildContext context) => openExternalUrl(
+    context,
+    AppConstants.privacyPolicyUrl,
+    failureMessage: 'Die Datenschutzerklärung konnte nicht geöffnet werden.',
+  );
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: TextButton.icon(
+        onPressed: () => _open(context),
+        icon: const Icon(Icons.open_in_new, size: AppConstants.iconSizeXs),
+        label: const Text('Datenschutzerklärung lesen'),
+      ),
+    );
+  }
+}
+
+/// The explicit-consent checkbox with its statement.
+class HealthConsentCheckbox extends StatelessWidget {
+  const HealthConsentCheckbox({
+    super.key,
+    required this.checked,
+    required this.onChanged,
+  });
+
+  /// Whether the box is ticked.
+  final bool checked;
+
+  /// Called with the new value; null disables the checkbox.
+  final ValueChanged<bool>? onChanged;
+
+  static const checkboxKey = Key('health_consent_checkbox');
+  static const consentText =
+      'Ich willige ausdrücklich ein, dass meine Gesundheitsdaten wie '
+      'beschrieben verarbeitet werden.';
+
+  @override
+  Widget build(BuildContext context) {
+    final onChanged = this.onChanged;
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+      onTap: onChanged == null ? null : () => onChanged(!checked),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Checkbox(
+            key: checkboxKey,
+            value: checked,
+            activeColor: AppTheme.primary,
+            onChanged: onChanged == null ? null : (v) => onChanged(v ?? false),
           ),
-        ),
-        AppConstants.gap8,
-        InkWell(
-          borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-          onTap: onChanged == null ? null : () => onChanged(!checked),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Checkbox(
-                key: checkboxKey,
-                value: checked,
-                activeColor: AppTheme.primary,
-                onChanged: onChanged == null
-                    ? null
-                    : (v) => onChanged(v ?? false),
-              ),
-              const Expanded(
-                child: Padding(
-                  padding: EdgeInsets.only(top: AppConstants.spacing12),
-                  child: Text(
-                    consentText,
-                    style: TextStyle(
-                      fontSize: AppTheme.fontSizeBody,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.foreground,
-                    ),
-                  ),
+          const Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(top: AppConstants.spacing12),
+              child: Text(
+                consentText,
+                style: TextStyle(
+                  fontSize: AppTheme.fontSizeBody,
+                  fontWeight: FontWeight.w500,
+                  color: AppTheme.foreground,
                 ),
               ),
-            ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

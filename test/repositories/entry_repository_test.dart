@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:belly_buddy/models/insight_rules.dart';
+import 'package:belly_buddy/models/insight_source.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 
 import '../helpers/mocks.dart';
@@ -117,6 +119,98 @@ void main() {
       await repo.deleteByType('meal', 'entry-id-1');
 
       verify(() => crudService.deleteByType('meal', 'entry-id-1')).called(1);
+    });
+  });
+
+  group('fetchActivityDays', () {
+    test(
+      'maps wall-clock times to their dates and dedupes same days',
+      () async {
+        final since = DateTime(2026, 11, 1);
+        when(
+          () => queryService.fetchTrackedAtSince(
+            userId: any(named: 'userId'),
+            since: any(named: 'since'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            DateTime(2026, 11, 21, 23, 59),
+            DateTime(2026, 11, 21, 0, 1),
+            DateTime(2026, 11, 22, 8),
+          ],
+        );
+
+        final days = await repo.fetchActivityDays(
+          userId: 'user-123',
+          since: since,
+        );
+
+        expect(days, {DateTime(2026, 11, 21), DateTime(2026, 11, 22)});
+        verify(
+          () => queryService.fetchTrackedAtSince(
+            userId: 'user-123',
+            since: since,
+          ),
+        ).called(1);
+      },
+    );
+  });
+
+  group('fetchInsightSource', () {
+    test('fetchInsightSource window', () async {
+      const source = InsightSource(
+        meals: [],
+        gutFeelings: [],
+        activityTimes: [],
+      );
+      when(
+        () => queryService.fetchInsightSource(
+          userId: any(named: 'userId'),
+          since: any(named: 'since'),
+          mealsSince: any(named: 'mealsSince'),
+        ),
+      ).thenAnswer((_) async => source);
+
+      final result = await repo.fetchInsightSource(
+        userId: 'user-123',
+        now: DateTime(2026, 11, 23, 9, 41),
+      );
+
+      expect(result, same(source));
+      verify(
+        () => queryService.fetchInsightSource(
+          userId: 'user-123',
+          since: DateTime(2026, 10, 25),
+          mealsSince: DateTime(2026, 10, 24),
+        ),
+      ).called(1);
+    });
+
+    test('meals reach back as far as the insights look before an '
+        'entry', () async {
+      when(
+        () => queryService.fetchInsightSource(
+          userId: any(named: 'userId'),
+          since: any(named: 'since'),
+          mealsSince: any(named: 'mealsSince'),
+        ),
+      ).thenAnswer(
+        (_) async =>
+            const InsightSource(meals: [], gutFeelings: [], activityTimes: []),
+      );
+
+      await repo.fetchInsightSource(
+        userId: 'user-123',
+        now: DateTime(2026, 11, 23, 9, 41),
+      );
+
+      verify(
+        () => queryService.fetchInsightSource(
+          userId: 'user-123',
+          since: DateTime(2026, 10, 25),
+          mealsSince: DateTime(2026, 10, 25).subtract(InsightRules.mealsBefore),
+        ),
+      ).called(1);
     });
   });
 }

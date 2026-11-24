@@ -2,6 +2,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../providers/diary_provider.dart';
 import '../../../../providers/entries_provider.dart';
+import '../../../../utils/drink_helpers.dart';
+import '../../../../utils/save_helper.dart';
 import 'detail_sheet_scaffold.dart';
 import 'drink_detail.dart';
 
@@ -26,14 +28,16 @@ class DrinkDetailSheet extends StatefulWidget {
 class _DrinkDetailSheetState extends State<DrinkDetailSheet> {
   bool _isEditing = false;
   bool _saving = false;
-  late TextEditingController _amountController;
+  late final TextEditingController _amountController;
+  late DateTime _trackedAt;
 
   @override
   void initState() {
     super.initState();
-    _amountController = TextEditingController(
-      text: widget.data.drink.amountMl.toString(),
-    );
+    _amountController = TextEditingController()
+      // Speichern follows whether the typed amount is valid.
+      ..addListener(() => setState(() {}));
+    _resetEditState();
   }
 
   @override
@@ -44,24 +48,32 @@ class _DrinkDetailSheetState extends State<DrinkDetailSheet> {
 
   void _resetEditState() {
     _amountController.text = widget.data.drink.amountMl.toString();
+    _trackedAt = widget.data.drink.trackedAt;
   }
 
+  /// The typed amount, or null when it isn't 1 to 3000 ml.
+  int? get _amountMl => DrinkHelpers.parseAmount(_amountController.text);
+
   Future<void> _save() async {
+    final drink = widget.data.drink;
     setState(() => _saving = true);
-    try {
+    final movedTo = _trackedAt == drink.trackedAt ? null : _trackedAt;
+    final ok = await saveWithFeedback(context, () async {
       await widget.parentRef
           .read(entriesProvider.notifier)
           .updateDrinkById(
             widget.entry.id,
-            amountMl:
-                int.tryParse(_amountController.text) ??
-                widget.data.drink.amountMl,
+            amountMl: _amountMl!,
+            notes: drink.notes,
+            trackedAt: movedTo,
           );
-      final date = widget.parentRef.read(diaryDateProvider);
-      widget.parentRef.invalidate(diaryEntriesProvider(date));
-      if (mounted) Navigator.pop(context);
-    } finally {
-      if (mounted) setState(() => _saving = false);
+      refreshDiaryDays(widget.parentRef, movedTo: movedTo);
+    });
+    if (!mounted) return;
+    if (ok) {
+      Navigator.pop(context);
+    } else {
+      setState(() => _saving = false);
     }
   }
 
@@ -69,24 +81,23 @@ class _DrinkDetailSheetState extends State<DrinkDetailSheet> {
   Widget build(BuildContext context) {
     return DetailSheetScaffold(
       title: widget.entry.title,
-      trackedAt: widget.entry.trackedAt,
+      trackedAt: _trackedAt,
       scrollController: widget.scrollController,
       canEdit: true,
       isEditing: _isEditing,
       saving: _saving,
       onEditPressed: () => setState(() => _isEditing = true),
-      onCancelPressed: () {
+      onCancelPressed: () => setState(() {
         _resetEditState();
-        setState(() => _isEditing = false);
-      },
-      onSavePressed: _save,
-      onDeletePressed: () async {
-        Navigator.pop(context);
+        _isEditing = false;
+      }),
+      onSavePressed: _amountMl == null ? null : _save,
+      onTrackedAtChanged: (dt) => setState(() => _trackedAt = dt),
+      onDelete: () async {
         await widget.parentRef
             .read(entriesProvider.notifier)
             .deleteByType(widget.entry.type.name, widget.entry.id);
-        final date = widget.parentRef.read(diaryDateProvider);
-        widget.parentRef.invalidate(diaryEntriesProvider(date));
+        refreshDiaryDays(widget.parentRef);
       },
       content: DrinkDetail(
         drink: widget.data.drink,

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:timezone/timezone.dart' as tz;
 import '../config/constants.dart';
 import '../models/user_profile.dart';
 import '../services/auth_service.dart';
@@ -11,7 +12,38 @@ class ProfileRepository {
   final AuthService _authService;
   static const _log = AppLogger('ProfileRepository');
 
-  ProfileRepository(this._profileService, this._authService);
+  ProfileRepository(
+    this._profileService,
+    this._authService, {
+    String? Function()? deviceTimezone,
+  }) : _deviceTimezone = deviceTimezone ?? _localTimezone;
+
+  /// The device's IANA time zone, written with every create and update so
+  /// the profile follows the device; null while unknown.
+  final String? Function() _deviceTimezone;
+
+  /// The zone `LocalNotificationService.initialize` set from
+  /// flutter_timezone (the reminders use it too). Before that the package
+  /// has none, or its default UTC, which says nothing about the device.
+  static String? _localTimezone() {
+    try {
+      final name = tz.local.name;
+      return name == 'UTC' ? null : name;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Puts the device's time zone into [data], or leaves the column alone
+  /// while it is unknown.
+  void _applyDeviceTimezone(Map<String, dynamic> data) {
+    final timezone = _deviceTimezone();
+    if (timezone == null) {
+      data.remove('timezone');
+    } else {
+      data['timezone'] = timezone;
+    }
+  }
 
   Future<UserProfile?> getProfile(String userId) async {
     return retryAsync(
@@ -32,8 +64,13 @@ class ProfileRepository {
     // sending an explicit value suppresses the DB DEFAULT. This strips
     // unconditionally — if registration ever collects user-picked times,
     // guard the removes or those inputs will be dropped silently.
+    // Weekly tips are written only by setWeeklyTips; the column may not
+    // exist yet (migration 0009).
+    data.remove('weekly_tips_enabled');
     data.remove('meal_reminder_times');
     data.remove('mood_reminder_times');
+    // Not the model's default (Europe/Berlin): the device's own zone.
+    _applyDeviceTimezone(data);
     data.removeWhere((key, value) => value == null);
     await _profileService.upsert(data);
   }
@@ -50,6 +87,10 @@ class ProfileRepository {
     // UserProfile must neither clear nor forge it.
     data.remove('health_consent_at');
     data.remove('privacy_policy_version');
+    // Written only by setWeeklyTips: a stale profile must not flip the
+    // opt-in, and a backend without migration 0009 must still accept this.
+    data.remove('weekly_tips_enabled');
+    _applyDeviceTimezone(data);
     await _profileService.update(userId, data);
   }
 
@@ -63,6 +104,11 @@ class ProfileRepository {
       'privacy_policy_version': AppConstants.privacyPolicyVersion,
     });
     return acceptedAt;
+  }
+
+  /// Switches the weekly AI tips on or off. Touches only that column.
+  Future<void> setWeeklyTips(String userId, bool enabled) async {
+    await _profileService.update(userId, {'weekly_tips_enabled': enabled});
   }
 
   Future<void> updateTutorialSeenAt(String userId, DateTime? value) async {

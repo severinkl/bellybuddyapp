@@ -1,0 +1,115 @@
+// ignore_for_file: invalid_use_of_internal_member
+import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:riverpod/src/internals.dart' show Override;
+
+import 'package:belly_buddy/providers/core_providers.dart';
+import 'package:belly_buddy/repositories/auth_repository.dart';
+import 'package:belly_buddy/repositories/profile_repository.dart';
+import 'package:belly_buddy/screens/settings/widgets/delete_account_dialog.dart';
+
+import '../../helpers/fakes.dart';
+import '../../helpers/riverpod_helpers.dart';
+
+class _CountingAuthRepository extends FakeAuthRepository {
+  int deletes = 0;
+  bool fail = false;
+
+  @override
+  Future<void> deleteAccount() async {
+    deletes++;
+    if (fail) throw Exception('delete failed');
+  }
+}
+
+void main() {
+  late _CountingAuthRepository auth;
+
+  List<Override> overrides() => [
+    authRepositoryProvider.overrideWithValue(auth),
+    profileRepositoryProvider.overrideWithValue(FakeProfileRepository()),
+    currentUserIdProvider.overrideWithValue(null),
+  ];
+
+  setUp(() => auth = _CountingAuthRepository());
+
+  Future<void> openDialog(WidgetTester tester) async {
+    await tester.pumpWithProviders(
+      Scaffold(
+        body: Builder(
+          builder: (context) => TextButton(
+            onPressed: () => showDeleteAccountDialog(context),
+            child: const Text('open'),
+          ),
+        ),
+      ),
+      overrides: overrides(),
+    );
+    await tester.tap(find.text('open'));
+    await tester.pumpAndSettle();
+  }
+
+  ElevatedButton deleteButton(WidgetTester tester) =>
+      tester.widget<ElevatedButton>(find.byType(ElevatedButton));
+
+  group('isDeleteConfirmation', () {
+    test('accepts LÖSCHEN, LOESCHEN and lowercase, trimmed', () {
+      for (final typed in [
+        'LÖSCHEN',
+        'LOESCHEN',
+        'löschen',
+        'loeschen',
+        'Löschen',
+        ' LÖSCHEN ',
+        // „Ö" typed as O plus a combining diaeresis.
+        'LÖSCHEN',
+      ]) {
+        expect(isDeleteConfirmation(typed), isTrue, reason: typed);
+      }
+    });
+
+    test('rejects anything else', () {
+      for (final typed in ['', 'LOSCHEN', 'LÖSCHE', 'LÖSCHEN!', 'DELETE']) {
+        expect(isDeleteConfirmation(typed), isFalse, reason: typed);
+      }
+    });
+  });
+
+  testWidgets('a lowercase „loeschen" enables the delete button', (
+    tester,
+  ) async {
+    await openDialog(tester);
+    expect(deleteButton(tester).onPressed, isNull);
+
+    await tester.enterText(find.byType(TextField), 'loeschen');
+    await tester.pump();
+
+    expect(deleteButton(tester).onPressed, isNotNull);
+  });
+
+  testWidgets('after deleting, „Dein Konto wurde gelöscht." shows', (
+    tester,
+  ) async {
+    await openDialog(tester);
+    await tester.enterText(find.byType(TextField), 'LÖSCHEN');
+    await tester.pump();
+    await tester.tap(find.byType(ElevatedButton));
+    await tester.pumpAndSettle();
+
+    expect(auth.deletes, 1);
+    expect(find.text('Dein Konto wurde gelöscht.'), findsOneWidget);
+    expect(find.text('Fehler beim Löschen.'), findsNothing);
+  });
+
+  testWidgets('a failed deletion says so and nothing else', (tester) async {
+    auth.fail = true;
+    await openDialog(tester);
+    await tester.enterText(find.byType(TextField), 'LÖSCHEN');
+    await tester.pump();
+    await tester.tap(find.byType(ElevatedButton));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Fehler beim Löschen.'), findsOneWidget);
+    expect(find.text('Dein Konto wurde gelöscht.'), findsNothing);
+  });
+}

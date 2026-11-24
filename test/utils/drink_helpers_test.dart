@@ -120,6 +120,28 @@ void main() {
     test('empty string returns null', () {
       expect(DrinkHelpers.parseAmount(''), null);
     });
+
+    test('caps at maxAmountMl', () {
+      expect(DrinkHelpers.maxAmountMl, 3000);
+      expect(DrinkHelpers.parseAmount('3000'), 3000);
+      expect(DrinkHelpers.parseAmount('3001'), null);
+      expect(DrinkHelpers.parseAmount('999999'), null);
+    });
+  });
+
+  group('amountError', () {
+    test('no error for an empty field or a valid amount', () {
+      expect(DrinkHelpers.amountError(''), isNull);
+      expect(DrinkHelpers.amountError('1'), isNull);
+      expect(DrinkHelpers.amountError('3000'), isNull);
+    });
+
+    test('names the allowed range otherwise', () {
+      const message = 'Bitte gib 1 bis 3000 ml ein.';
+      expect(DrinkHelpers.amountError('0'), message);
+      expect(DrinkHelpers.amountError('3001'), message);
+      expect(DrinkHelpers.amountError('99999'), message);
+    });
   });
 
   group('formatAmount', () {
@@ -132,7 +154,7 @@ void main() {
     });
 
     test('1500 shows 1.5 L', () {
-      expect(DrinkHelpers.formatAmount(1500), '1.5 L');
+      expect(DrinkHelpers.formatAmount(1500), '1,5 L');
     });
 
     test('2000 shows 2 L without .0', () {

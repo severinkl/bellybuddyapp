@@ -2,6 +2,8 @@ import 'package:material_ui/material_ui.dart';
 import '../../../config/app_theme.dart';
 import '../../../widgets/common/bb_selection_button.dart';
 import '../../../config/constants.dart';
+import '../../../config/symptom_options.dart';
+import '../widgets/step_field_label.dart';
 
 class SymptomsStep extends StatelessWidget {
   final List<String> selected;
@@ -14,48 +16,36 @@ class SymptomsStep extends StatelessWidget {
     required this.onChanged,
   });
 
-  static const _options = [
-    'Belastender Durchfall',
-    'Nervige Verstopfung',
-    'Unangenehme Blähungen',
-    'Übermäßiges Völlegefühl',
-    'Hartnäckiger Blähbauch ohne Pupsen',
-  ];
-
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: AppConstants.paddingLg,
+      padding: AppConstants.wizardStepPadding,
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AppConstants.gap24,
-          const Text(
+          const StepFieldLabel(
             key: symptomsTitleKey,
-            'Welche Beschwerden nerven dich?',
-            style: TextStyle(
-              fontSize: AppTheme.fontSizeHeadingLG,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.foreground,
-            ),
-            textAlign: TextAlign.center,
+            'Beschwerden',
+            helper: 'Mehrfachauswahl möglich.',
           ),
-          AppConstants.gap32,
-          ..._options.map((option) {
-            final isSelected = selected.contains(option);
+          AppConstants.gap16,
+          ...kRegistrationSymptomOptions.map((option) {
+            final isSelected = selected.contains(option.value);
             return BbSelectionButton(
-              label: option,
+              label: option.label,
               isSelected: isSelected,
               onPressed: () {
                 final newSelected = List<String>.from(selected);
                 if (isSelected) {
-                  newSelected.remove(option);
+                  newSelected.remove(option.value);
                 } else {
-                  newSelected.add(option);
+                  newSelected.add(option.value);
                 }
                 onChanged(newSelected);
               },
+              // Checkboxes: several symptoms can be picked.
               leading: Icon(
-                isSelected ? Icons.check_circle : Icons.circle_outlined,
+                isSelected ? Icons.check_box : Icons.check_box_outline_blank,
                 color: isSelected ? AppTheme.primary : AppTheme.mutedForeground,
                 size: 20,
               ),

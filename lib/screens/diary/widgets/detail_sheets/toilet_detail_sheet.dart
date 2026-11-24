@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../providers/diary_provider.dart';
 import '../../../../providers/entries_provider.dart';
+import '../../../../utils/save_helper.dart';
 import 'detail_sheet_scaffold.dart';
 import 'toilet_detail.dart';
 
@@ -27,28 +28,39 @@ class _ToiletDetailSheetState extends State<ToiletDetailSheet> {
   bool _isEditing = false;
   bool _saving = false;
   late int _stoolType;
+  late DateTime _trackedAt;
 
   @override
   void initState() {
     super.initState();
-    _stoolType = widget.data.toilet.stoolType;
+    _resetEditState();
   }
 
   void _resetEditState() {
     _stoolType = widget.data.toilet.stoolType;
+    _trackedAt = widget.data.toilet.trackedAt;
   }
 
   Future<void> _save() async {
     setState(() => _saving = true);
-    try {
+    final movedTo = _trackedAt == widget.data.toilet.trackedAt
+        ? null
+        : _trackedAt;
+    final ok = await saveWithFeedback(context, () async {
       await widget.parentRef
           .read(entriesProvider.notifier)
-          .updateToiletById(widget.entry.id, stoolType: _stoolType);
-      final date = widget.parentRef.read(diaryDateProvider);
-      widget.parentRef.invalidate(diaryEntriesProvider(date));
-      if (mounted) Navigator.pop(context);
-    } finally {
-      if (mounted) setState(() => _saving = false);
+          .updateToiletById(
+            widget.entry.id,
+            stoolType: _stoolType,
+            trackedAt: movedTo,
+          );
+      refreshDiaryDays(widget.parentRef, movedTo: movedTo);
+    });
+    if (!mounted) return;
+    if (ok) {
+      Navigator.pop(context);
+    } else {
+      setState(() => _saving = false);
     }
   }
 
@@ -56,24 +68,23 @@ class _ToiletDetailSheetState extends State<ToiletDetailSheet> {
   Widget build(BuildContext context) {
     return DetailSheetScaffold(
       title: widget.entry.title,
-      trackedAt: widget.entry.trackedAt,
+      trackedAt: _trackedAt,
       scrollController: widget.scrollController,
       canEdit: true,
       isEditing: _isEditing,
       saving: _saving,
       onEditPressed: () => setState(() => _isEditing = true),
-      onCancelPressed: () {
+      onCancelPressed: () => setState(() {
         _resetEditState();
-        setState(() => _isEditing = false);
-      },
+        _isEditing = false;
+      }),
       onSavePressed: _save,
-      onDeletePressed: () async {
-        Navigator.pop(context);
+      onTrackedAtChanged: (dt) => setState(() => _trackedAt = dt),
+      onDelete: () async {
         await widget.parentRef
             .read(entriesProvider.notifier)
             .deleteByType(widget.entry.type.name, widget.entry.id);
-        final date = widget.parentRef.read(diaryDateProvider);
-        widget.parentRef.invalidate(diaryEntriesProvider(date));
+        refreshDiaryDays(widget.parentRef);
       },
       content: ToiletDetail(
         toilet: widget.data.toilet,

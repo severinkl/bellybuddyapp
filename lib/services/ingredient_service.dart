@@ -13,46 +13,61 @@ class IngredientService {
 
   static const _log = AppLogger('IngredientService');
 
+  /// Ingredients whose name contains [query] (ignoring case), best matches
+  /// first ([IngredientSearchResult.rank]): at most [limit].
+  ///
+  /// Two queries, so the best matches are never cut off by the limit: the
+  /// names starting with [query] (alphabetically, so an exact match comes
+  /// first) and a wider set of names containing it.
   Future<List<IngredientSearchResult>> search(
     String query, {
     int limit = 10,
     required String? userId,
   }) async {
     try {
-      final data = await _client
-          .from('ingredients')
-          .select('id, name, added_by_user_id')
-          .ilike('name', '%$query%')
-          .limit(limit);
-      return data
-          .map(
-            (e) => IngredientSearchResult(
+      final rows = await Future.wait([
+        _searchRows('$query%', limit),
+        _searchRows('%$query%', limit * _containsFactor),
+      ]);
+      return IngredientSearchResult.rank(
+        [
+          for (final e in rows.expand((r) => r))
+            IngredientSearchResult(
               id: e['id'] as String,
               name: e['name'] as String,
               isOwn: e['added_by_user_id'] == userId,
             ),
-          )
-          .toList();
+        ],
+        query: query,
+        limit: limit,
+      );
     } catch (e, st) {
       _log.error('search failed', e, st);
       rethrow;
     }
   }
 
-  Future<void> insertIfNew(String name, {required String? userId}) async {
-    try {
-      if (userId == null) return;
-      final existing = await _client
+  /// How many more rows the contains query fetches than are shown, so the
+  /// ranking has enough to choose from.
+  static const _containsFactor = 3;
+
+  Future<List<Map<String, dynamic>>> _searchRows(String pattern, int limit) =>
+      _client
           .from('ingredients')
-          .select('id')
-          .ilike('name', name)
-          .limit(1);
-      if (existing.isNotEmpty) return;
-      await _client.from('ingredients').insert({
-        'name': name,
-        'added_via': 'user',
-        'added_by_user_id': userId,
-      });
+          .select('id, name, added_by_user_id')
+          .ilike('name', pattern)
+          .order('name', ascending: true)
+          .limit(limit);
+
+  /// Adds [name] to the catalog as the user's own ingredient, unless the
+  /// user can read it already (own or shared): `ensure_ingredient` (core
+  /// 0011) decides, and never fails on a duplicate. The returned id is not
+  /// needed. Errors: 22023 for an empty or too long name; PGRST202 before
+  /// the backend has the function.
+  Future<void> insertIfNew(String name, {required String? userId}) async {
+    if (userId == null) return;
+    try {
+      await _client.rpc('ensure_ingredient', params: {'p_name': name});
     } catch (e, st) {
       _log.error('insertIfNew failed', e, st);
       rethrow;
@@ -106,7 +121,7 @@ class IngredientService {
     try {
       return await _client
           .from('meal_entries')
-          .select('id, title, tracked_at, image_url')
+          .select('id, title, tracked_at, image_url, ingredients')
           .inFilter('id', mealIds);
     } catch (e, st) {
       _log.error('fetchMealDetails failed', e, st);

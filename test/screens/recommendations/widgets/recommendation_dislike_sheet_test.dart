@@ -48,7 +48,7 @@ void main() {
     ) async {
       final repo = MockRecommendationRepository();
       when(() => repo.fetchByUserId(any())).thenAnswer((_) async => []);
-      when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => repo.markSeen(any(), any())).thenAnswer((_) async {});
       when(
         () => repo.updateFeedback(
           id: any(named: 'id'),
@@ -73,14 +73,14 @@ void main() {
       expect(find.text('Was hat dir nicht gefallen?'), findsOneWidget);
       expect(find.byType(ChoiceChip), findsNothing);
       expect(find.byType(TextField), findsOneWidget);
-      expect(find.text('Empfehlung ausblenden'), findsOneWidget);
+      expect(find.text('Tipp ausblenden'), findsOneWidget);
       expect(find.text('Fertig'), findsOneWidget);
     });
 
     testWidgets('Fertig pops without calling the repo', (tester) async {
       final repo = MockRecommendationRepository();
       when(() => repo.fetchByUserId(any())).thenAnswer((_) async => []);
-      when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => repo.markSeen(any(), any())).thenAnswer((_) async {});
 
       final rec = testRecommendation(
         id: 'r1',
@@ -119,7 +119,7 @@ void main() {
           ).copyWith(state: RecommendationState.disliked),
         ],
       );
-      when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => repo.markSeen(any(), any())).thenAnswer((_) async {});
       when(
         () => repo.updateFeedback(
           id: any(named: 'id'),
@@ -162,7 +162,7 @@ void main() {
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Empfehlung ausblenden'));
+      await tester.tap(find.text('Tipp ausblenden'));
       await tester.pumpAndSettle();
 
       expect(find.byType(RecommendationDislikeSheet), findsNothing);
@@ -183,7 +183,7 @@ void main() {
           id: 'r1',
         ).copyWith(state: RecommendationState.disliked);
         when(() => repo.fetchByUserId(any())).thenAnswer((_) async => [rec]);
-        when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+        when(() => repo.markSeen(any(), any())).thenAnswer((_) async {});
         when(
           () => repo.updateFeedback(
             id: any(named: 'id'),
@@ -244,7 +244,7 @@ void main() {
     ) async {
       final repo = MockRecommendationRepository();
       when(() => repo.fetchByUserId(any())).thenAnswer((_) async => []);
-      when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => repo.markSeen(any(), any())).thenAnswer((_) async {});
 
       final rec = testRecommendation(id: 'r1').copyWith(
         state: RecommendationState.disliked,

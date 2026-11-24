@@ -64,4 +64,7 @@ firebase.json
 # Git worktrees
 .worktrees/
 
+# Local Buddy review renders
+tool/buddy_frames/frames/
+
 sentry.properties

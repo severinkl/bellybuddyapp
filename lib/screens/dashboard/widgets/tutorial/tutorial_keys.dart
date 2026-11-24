@@ -1,20 +1,18 @@
 import 'package:flutter/widgets.dart';
 
-/// Global keys attached to the 10 dashboard elements highlighted in the
-/// onboarding tour. Referenced both by the dashboard/bottom-nav widgets
-/// (at construction time) and by the tutorial overlay (to resolve each
-/// target's render box).
+/// Global keys on the 7 elements the tour highlights: the Buddy hero, its
+/// next-action button and the insight card on Home, then the bar's plus,
+/// Tagebuch, Entdecken and Ich. Referenced by the dashboard and bottom-bar
+/// widgets (at construction time) and by the tutorial overlay (to resolve
+/// each target's render box).
 class TutorialKeys {
   TutorialKeys._();
 
-  static final bauchgefuehl = GlobalKey(debugLabel: 'tutorial.bauchgefuehl');
-  static final klo = GlobalKey(debugLabel: 'tutorial.klo');
-  static final essenTracken = GlobalKey(debugLabel: 'tutorial.essenTracken');
-  static final fuerDich = GlobalKey(debugLabel: 'tutorial.fuerDich');
-  static final alternativen = GlobalKey(debugLabel: 'tutorial.alternativen');
-  static final wissen = GlobalKey(debugLabel: 'tutorial.wissen');
-  static final rezepte = GlobalKey(debugLabel: 'tutorial.rezepte');
+  static final buddy = GlobalKey(debugLabel: 'tutorial.buddy');
+  static final nextAction = GlobalKey(debugLabel: 'tutorial.nextAction');
+  static final plus = GlobalKey(debugLabel: 'tutorial.plus');
+  static final insight = GlobalKey(debugLabel: 'tutorial.insight');
   static final tagebuch = GlobalKey(debugLabel: 'tutorial.tagebuch');
-  static final feedback = GlobalKey(debugLabel: 'tutorial.feedback');
-  static final settings = GlobalKey(debugLabel: 'tutorial.settings');
+  static final entdecken = GlobalKey(debugLabel: 'tutorial.entdecken');
+  static final ich = GlobalKey(debugLabel: 'tutorial.ich');
 }

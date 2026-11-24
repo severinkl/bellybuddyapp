@@ -7,6 +7,53 @@ DateTime startOfDay(DateTime dt) => DateTime(dt.year, dt.month, dt.day);
 DateTime endOfDay(DateTime dt) =>
     DateTime(dt.year, dt.month, dt.day).add(const Duration(days: 1));
 
+/// The day [days] calendar days after [d]'s date (before it when negative),
+/// at midnight. Calendar arithmetic, so it never drifts across DST switches
+/// the way adding `Duration(days: …)` does.
+DateTime addDays(DateTime d, int days) =>
+    DateTime(d.year, d.month, d.day + days);
+
+/// The Monday of [d]'s week, at midnight.
+DateTime mondayOf(DateTime d) => addDays(d, 1 - d.weekday);
+
+/// The ISO 8601 week number of [d]'s date (1–53): weeks start on Monday,
+/// and a week belongs to the year its Thursday falls in. Pass a local time
+/// for the user's week.
+int isoWeekOf(DateTime d) {
+  final thursday = addDays(d, DateTime.thursday - d.weekday);
+  // Counted in UTC, so a DST switch never shortens a day.
+  final dayOfYear = DateTime.utc(
+    thursday.year,
+    thursday.month,
+    thursday.day,
+  ).difference(DateTime.utc(thursday.year)).inDays;
+  return dayOfYear ~/ 7 + 1;
+}
+
+/// The German weekday names, Monday first (index: `weekday - 1`).
+const kWeekdayNames = [
+  'Montag',
+  'Dienstag',
+  'Mittwoch',
+  'Donnerstag',
+  'Freitag',
+  'Samstag',
+  'Sonntag',
+];
+
+/// Their two-letter short forms, Monday first („Mo" … „So").
+final List<String> kWeekdayShortNames = List.unmodifiable([
+  for (final name in kWeekdayNames) name.substring(0, 2),
+]);
+
+/// Formats [d]'s date as ISO 'yyyy-MM-dd' (e.g. a Postgres `date`).
+String formatIsoDate(DateTime d) {
+  final y = d.year.toString().padLeft(4, '0');
+  final m = d.month.toString().padLeft(2, '0');
+  final day = d.day.toString().padLeft(2, '0');
+  return '$y-$m-$day';
+}
+
 /// Formats a DateTime as a German relative time string (e.g. "vor 5 Min.")
 String formatTimeAgo(DateTime dt) {
   final diff = DateTime.now().difference(dt);
@@ -70,15 +117,43 @@ String formatDateShort(DateTime dt) {
 bool isSameDay(DateTime a, DateTime b) =>
     a.year == b.year && a.month == b.month && a.day == b.day;
 
-/// Returns [initialDate] at the current wall-clock time, or [DateTime.now()] if null.
-DateTime buildTrackedAt(DateTime? initialDate) {
-  if (initialDate == null) return DateTime.now();
-  final now = DateTime.now();
+/// The moment an entry for [initialDate] is logged at: [now] when null; on
+/// today the current clock time (h:m of [now]); on any other day 12:00.
+/// [now] defaults to [DateTime.now()]. Idempotent.
+DateTime buildTrackedAt(DateTime? initialDate, {DateTime? now}) {
+  final current = now ?? DateTime.now();
+  if (initialDate == null) return current;
+  final sameDay = isSameDay(initialDate, current);
   return DateTime(
     initialDate.year,
     initialDate.month,
     initialDate.day,
-    now.hour,
-    now.minute,
+    sameDay ? current.hour : 12,
+    sameDay ? current.minute : 0,
   );
 }
+
+/// The months' three-letter short forms, January first („Jan" … „Dez").
+const List<String> kMonthShortNames = [
+  'Jan',
+  'Feb',
+  'Mär',
+  'Apr',
+  'Mai',
+  'Jun',
+  'Jul',
+  'Aug',
+  'Sep',
+  'Okt',
+  'Nov',
+  'Dez',
+];
+
+/// [day] as „Mi, 18. Nov".
+String formatLogTargetDay(DateTime day) =>
+    '${kWeekdayShortNames[day.weekday - 1]}, ${day.day}. '
+    '${kMonthShortNames[day.month - 1]}';
+
+/// [d] as „28. Mär 2025".
+String formatDayMonthYear(DateTime d) =>
+    '${d.day}. ${kMonthShortNames[d.month - 1]} ${d.year}';

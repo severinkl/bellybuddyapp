@@ -8,10 +8,15 @@ class DateTimeChips extends StatelessWidget {
     super.key,
     required this.value,
     required this.onChanged,
+    this.chipColor = AppTheme.background,
   });
 
   final DateTime value;
   final ValueChanged<DateTime> onChanged;
+
+  /// The chips' fill; the default suits the tinted tracker screens, a
+  /// white sheet needs a tinted one.
+  final Color chipColor;
 
   Future<void> _pickDate(BuildContext context) async {
     final date = await showDatePicker(
@@ -42,19 +47,24 @@ class DateTimeChips extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Side by side when they fit; on a narrow sheet or with larger text the
+    // time moves below the date instead of overflowing.
     return Center(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        spacing: AppConstants.spacingSm,
+        runSpacing: AppConstants.spacingSm,
         children: [
           _DateTimeChip(
             label: DateFormat('dd.MM.yyyy').format(value),
             icon: Icons.calendar_today_outlined,
+            color: chipColor,
             onTap: () => _pickDate(context),
           ),
-          const SizedBox(width: AppConstants.spacingSm),
           _DateTimeChip(
             label: DateFormat('HH:mm').format(value),
             icon: Icons.access_time_outlined,
+            color: chipColor,
             onTap: () => _pickTime(context),
           ),
         ],
@@ -66,11 +76,13 @@ class DateTimeChips extends StatelessWidget {
 class _DateTimeChip extends StatelessWidget {
   final String label;
   final IconData icon;
+  final Color color;
   final VoidCallback onTap;
 
   const _DateTimeChip({
     required this.label,
     required this.icon,
+    required this.color,
     required this.onTap,
   });
 
@@ -84,7 +96,7 @@ class _DateTimeChip extends StatelessWidget {
           vertical: AppConstants.spacing10,
         ),
         decoration: BoxDecoration(
-          color: AppTheme.background,
+          color: color,
           borderRadius: BorderRadius.circular(AppConstants.radiusXl),
         ),
         child: Row(

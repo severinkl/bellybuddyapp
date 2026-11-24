@@ -449,4 +449,52 @@ void main() {
       verify(() => mockMealMediaRepo.triggerSuggestionRefresh()).called(1);
     });
   });
+
+  group('MealTrackerState.hasUnsavedChanges', () {
+    test('a fresh new meal has nothing to lose', () {
+      expect(MealTrackerState().hasUnsavedChanges, isFalse);
+    });
+
+    test('a new meal with an ingredient, title or photo has a draft', () {
+      expect(
+        MealTrackerState(ingredients: const ['Reis']).hasUnsavedChanges,
+        isTrue,
+      );
+      expect(MealTrackerState(title: 'Bowl').hasUnsavedChanges, isTrue);
+      expect(
+        MealTrackerState(imageBytes: Uint8List(1)).hasUnsavedChanges,
+        isTrue,
+      );
+    });
+
+    test('a saved meal has nothing to lose', () {
+      expect(
+        MealTrackerState(
+          ingredients: const ['Reis'],
+          showSuccess: true,
+        ).hasUnsavedChanges,
+        isFalse,
+      );
+    });
+
+    test('in edit mode it follows isDirty', () {
+      final meal = MealEntry(
+        id: 'm',
+        trackedAt: DateTime(2026, 4, 10),
+        title: 'Pasta',
+        ingredients: const ['Nudeln'],
+      );
+      final seeded = MealTrackerState(
+        seed: meal,
+        title: meal.title,
+        ingredients: meal.ingredients,
+        trackedAt: meal.trackedAt,
+      );
+      expect(seeded.hasUnsavedChanges, isFalse);
+      expect(
+        seeded.copyWith(ingredients: ['Nudeln', 'Speck']).hasUnsavedChanges,
+        isTrue,
+      );
+    });
+  });
 }

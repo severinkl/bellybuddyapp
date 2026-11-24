@@ -8,6 +8,7 @@ import '../../../config/constants.dart';
 import '../../../repositories/meal_media_repository.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/url_utils.dart';
+import 'ingredient_placeholder.dart';
 
 class SuggestionDetailModal extends StatelessWidget {
   final IngredientSuggestionGroup group;
@@ -79,7 +80,7 @@ class SuggestionDetailModal extends StatelessWidget {
                           style: const TextStyle(
                             fontSize: AppTheme.fontSizeBody,
                             color: AppTheme.foreground,
-                            height: 1.4,
+                            height: AppTheme.lineHeightBody,
                           ),
                         ),
                       ),
@@ -92,7 +93,7 @@ class SuggestionDetailModal extends StatelessWidget {
               // Meals section
               if (group.meals.isNotEmpty) ...[
                 Text(
-                  'Gefunden in ${group.mealCount} ${group.mealCount == 1 ? 'Speise' : 'Speisen'}',
+                  'Gefunden in ${group.mealCount} ${group.mealCount == 1 ? 'Mahlzeit' : 'Mahlzeiten'}',
                   style: const TextStyle(
                     fontSize: AppTheme.fontSizeSubtitle,
                     fontWeight: FontWeight.w600,
@@ -327,17 +328,5 @@ class _IngredientImage extends StatelessWidget {
     return _fallback();
   }
 
-  Widget _fallback() {
-    return Container(
-      width: size,
-      height: size,
-      decoration: const BoxDecoration(
-        color: AppTheme.muted,
-        shape: BoxShape.circle,
-      ),
-      child: Center(
-        child: Text('\u{1F96C}', style: TextStyle(fontSize: size * 0.45)),
-      ),
-    );
-  }
+  Widget _fallback() => IngredientPlaceholder(size: size);
 }

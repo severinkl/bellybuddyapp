@@ -12,6 +12,10 @@ class AppTheme {
   static const Color cardForeground = Color(0xFF302820);
   static const Color primary = Color(0xFFB5CC47);
   static const Color primaryForeground = Color(0xFF302820);
+
+  /// Secondary text on [primary] (hints): 5:1 on it, where a faded
+  /// [primaryForeground] fell to 3:1.
+  static const Color primaryForegroundMuted = Color(0xFF4B4928);
   static const Color secondary = Color(0xFFEFEBE6);
   static const Color secondaryForeground = Color(0xFF302820);
   static const Color muted = Color(0xFFE8E4DF);
@@ -35,6 +39,9 @@ class AppTheme {
   static const Color navGradientStart = Color(0xFFFFB5C1);
   static const Color navGradientEnd = Color(0xFFFFD5C1);
 
+  /// The dot on a bottom-bar tab that holds news.
+  static const Color navBadge = Color(0xFFE8456F);
+
   // Tracker screen background (light blush tint of gradient)
   static const Color screenBackground = Color(0xFFF2D9DD);
 
@@ -42,6 +49,45 @@ class AppTheme {
   static const Color gutFeelingGood = Color(0xFF40BF40);
   static const Color gutFeelingNeutral = Color(0xFFE6B800);
   static const Color gutFeelingBad = Color(0xFFD93636);
+
+  // Muster calendar: a day's cell, a light tint of its class's colour
+  // above, and the class's icon (in the cells, the legend and the day
+  // cards): darker shades with at least 3:1 on the tint, the page and the
+  // card (WCAG 1.4.11; schwer's colour already has it)
+  static const Color gutFeelingGoodSoft = Color(0xFFE5F5E5);
+  static const Color gutFeelingNeutralSoft = Color(0xFFFCF4D6);
+  static const Color gutFeelingBadSoft = Color(0xFFF9E1E1);
+  static const Color gutFeelingGoodIcon = Color(0xFF2E8B2E);
+  static const Color gutFeelingNeutralIcon = Color(0xFF9A7A00);
+  static const Color gutFeelingBadIcon = gutFeelingBad;
+
+  // Buddy mascot colors
+  static const Color buddyOutline = Color(0xFF0D0D0F);
+  static const Color buddyBody = Color(0xFFFFABB6);
+  static const Color buddyTongue = Color(0xFFE8456F);
+  static const Color buddyBlush = Color(0xFFFF7F95);
+  static const Color buddySparkle = Color(0xFFFFC83D);
+  static const Color buddyHeart = Color(0xFFE8456F);
+  static const Color buddyWater = Color(0xFF6EC6F0);
+  static const Color buddyFood = Color(0xFFB5CC47);
+  static const Color buddyFoodLeaf = Color(0xFF6E8B2A);
+  static const Color buddyShadow = Color(0x140D0D0F);
+
+  // Streak: a day with an entry (week row circle), the selected goal
+  static const Color primarySoft = Color(0xFFF3F7DF);
+
+  // Dashboard care ring: one color per need (Essen, Trinken, Bauchgefühl,
+  // Klo) and the glow around the need he suggests next
+  static const Color careFood = primary;
+  static const Color careWater = Color(0xFF86BFE6);
+  static const Color careGut = Color(0xFFF0A646);
+  static const Color careLoo = Color(0xFFBFAE9F);
+  static const Color careGlow = Color(0x4DB5CC47);
+
+  // Notification previews (the reminder step): an iOS banner's colors
+  static const Color notificationCard = Color(0xFFEFEFF4);
+  static const Color notificationForeground = Color(0xFF1C1C1E);
+  static const Color notificationMuted = Color(0xFF6C6C70);
 
   // Shadow
   static const Color shadow = Color(0x20000000);
@@ -64,6 +110,41 @@ class AppTheme {
   static const double fontSizeHeadingLG = 24;
   static const double fontSizeDisplay = 28;
   static const double fontSizeDisplayLG = 30;
+
+  // Line heights (multiples of the font size)
+  /// Running text: notes, summaries, explanations.
+  static const double lineHeightBody = 1.4;
+
+  /// Short, dense text: headlines over two lines, speech and tour bubbles,
+  /// previews.
+  static const double lineHeightSnug = 1.35;
+
+  // Named text styles
+  /// Short body text in lists and cards (a column's items, „Fällt mir
+  /// auf"'s rows).
+  static const TextStyle bodyStyle = TextStyle(
+    fontSize: fontSizeBody,
+    height: lineHeightSnug,
+    color: foreground,
+  );
+
+  /// [bodyStyle], muted: labels, empty states, uncertain rows.
+  static const TextStyle bodyMutedStyle = TextStyle(
+    fontSize: fontSizeBody,
+    height: lineHeightSnug,
+    color: mutedForeground,
+  );
+
+  /// Small muted text: a caption, a tile's meta line, a switch's
+  /// explanation.
+  static const TextStyle captionMutedStyle = TextStyle(
+    fontSize: fontSizeCaptionLG,
+    color: mutedForeground,
+  );
+
+  // The streak moment's big count („🔥 1 Tag"): flame and number
+  static const double fontSizeStreakFlame = 40;
+  static const double fontSizeStreakCount = 56;
 
   // Stool scale colors
   static const List<Color> stoolColors = [
@@ -199,7 +280,9 @@ class AppTheme {
         borderRadius: BorderRadius.circular(AppConstants.radiusRound),
       ),
       side: BorderSide.none,
+      // Without a color the label is painted white on the light chip.
       labelStyle: const TextStyle(
+        color: foreground,
         fontSize: fontSizeBody,
         fontWeight: FontWeight.w500,
       ),

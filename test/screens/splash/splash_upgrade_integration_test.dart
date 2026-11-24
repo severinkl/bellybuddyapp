@@ -13,14 +13,12 @@ import 'package:belly_buddy/router/app_router.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/splash/splash_screen.dart';
 import 'package:belly_buddy/screens/upgrade/upgrade_required_screen.dart';
-import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'
-    show GlobalWidgetsLocalizations;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 
+import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
 
 /// Pared-down test host that mirrors the real [BellyBuddyApp]: the app root
@@ -47,17 +45,13 @@ class _SplashTestHostState extends ConsumerState<_SplashTestHost> {
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       routerConfig: router,
-      localizationsDelegates: const [
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      supportedLocales: const [Locale('de', 'DE')],
-      locale: const Locale('de', 'DE'),
+      localizationsDelegates: germanLocalizations,
+      supportedLocales: const [germanLocale],
+      locale: germanLocale,
       builder: (context, child) {
         return Stack(
           children: [
-            child!,
+            TickerMode(enabled: !_showSplash, child: child!),
             if (_showSplash)
               SplashScreen(
                 onComplete: () {

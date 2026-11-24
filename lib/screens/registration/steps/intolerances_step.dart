@@ -1,9 +1,8 @@
 import 'package:material_ui/material_ui.dart';
-import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../widgets/common/bb_chip_selector.dart';
 import '../../../widgets/common/intolerance_trigger_modal.dart';
-import '../../../widgets/common/mascot_image.dart';
+import '../widgets/step_field_label.dart';
 
 class IntolerancesStep extends StatelessWidget {
   final List<String> selected;
@@ -25,37 +24,18 @@ class IntolerancesStep extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       child: Padding(
-        padding: AppConstants.paddingLg,
+        padding: AppConstants.wizardStepPadding,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            AppConstants.gap24,
-            const MascotImage(
-              assetPath: AppConstants.mascotNervous,
-              width: 120,
-              height: 120,
+            const StepFieldLabel(
+              key: intolerancesTitleKey,
+              'Ärztlich diagnostiziert',
+              helper: 'Hilft mir bei der Analyse deiner Mahlzeiten.',
             ),
             AppConstants.gap16,
-            const Text(
-              key: intolerancesTitleKey,
-              'Wurden dir Unverträglichkeiten diagnostiziert?',
-              style: TextStyle(
-                fontSize: AppTheme.fontSizeHeadingLG,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.foreground,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            AppConstants.gap8,
-            const Text(
-              'Gib hier ärztlich diagnostizierte Unverträglichkeiten an. Diese Angaben helfen uns bei der personalisierten Analyse deiner Mahlzeiten.',
-              style: TextStyle(
-                fontSize: AppTheme.fontSizeBodyLG,
-                color: AppTheme.mutedForeground,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            AppConstants.gap32,
             BbChipSelector(
+              alignment: WrapAlignment.start,
               options: AppConstants.intoleranceOptions,
               selected: selected,
               onChanged: (newSelected) {

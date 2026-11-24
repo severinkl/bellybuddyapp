@@ -16,11 +16,12 @@ class TutorialHandle {
   const TutorialHandle({required this.future, required this.cancel});
 }
 
-/// Inserts the [DashboardTutorialOverlay] into the root Overlay using the
-/// 10 predefined steps. Returns a [TutorialHandle] whose [TutorialHandle.cancel]
-/// removes the overlay and completes the future — callers should invoke it
-/// from their `dispose()` to avoid leaking the overlay + its animation
-/// controller if the host widget is unmounted mid-tour.
+/// Inserts the [DashboardTutorialOverlay] into the root Overlay with the
+/// [dashboardTutorialSteps]. Returns a [TutorialHandle] whose
+/// [TutorialHandle.cancel] removes the overlay and completes the future —
+/// callers should invoke it from their `dispose()` to avoid leaking the
+/// overlay + its animation controller if the host widget is unmounted
+/// mid-tour.
 TutorialHandle showDashboardTutorial(BuildContext context) {
   final completer = Completer<void>();
   late final OverlayEntry entry;

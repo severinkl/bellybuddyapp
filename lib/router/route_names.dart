@@ -12,11 +12,15 @@ class RouteNames {
   static const String gutFeelingTracker = 'gut-feeling-tracker';
   static const String drinkTracker = 'drink-tracker';
   static const String diary = 'diary';
+  static const String discover = 'discover';
+  static const String knowledge = 'knowledge';
+  static const String me = 'me';
   static const String settings = 'settings';
   static const String settingsProfile = 'settings-profile';
   static const String settingsNotifications = 'settings-notifications';
   static const String settingsAccount = 'settings-account';
   static const String recommendations = 'recommendations';
+  static const String patterns = 'patterns';
   static const String ingredientSuggestions = 'ingredient-suggestions';
   static const String recipes = 'recipes';
   static const String recipeNew = 'recipe_new';
@@ -24,6 +28,8 @@ class RouteNames {
   static const String recipeEdit = 'recipe_edit';
   static const String upgradeRequired = 'upgrade-required';
   static const String healthConsent = 'health-consent';
+  static const String buddyOnboarding = 'buddy-onboarding';
+  static const String loading = 'loading';
 }
 
 class RoutePaths {
@@ -41,11 +47,15 @@ class RoutePaths {
   static const String gutFeelingTracker = '/gut-feeling-tracker';
   static const String drinkTracker = '/drink-tracker';
   static const String diary = '/diary';
+  static const String discover = '/discover';
+  static const String knowledge = '/discover/knowledge';
+  static const String me = '/me';
   static const String settings = '/settings';
   static const String settingsProfile = '/settings/profile';
   static const String settingsNotifications = '/settings/notifications';
   static const String settingsAccount = '/settings/account';
   static const String recommendations = '/recommendations';
+  static const String patterns = '/patterns';
   static const String ingredientSuggestions = '/ingredient-suggestions';
   static const String recipes = '/recipes';
   static const String recipeNew = '/recipe/new';
@@ -55,4 +65,6 @@ class RoutePaths {
   static String recipeEditFor(String id) => '/recipe/$id/edit';
   static const String upgradeRequired = '/upgrade-required';
   static const String healthConsent = '/health-consent';
+  static const String buddyOnboarding = '/buddy-onboarding';
+  static const String loading = '/loading';
 }
