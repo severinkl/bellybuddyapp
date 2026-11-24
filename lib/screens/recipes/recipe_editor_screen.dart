@@ -255,6 +255,8 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
                             _ingredients = _ingredients
                                 .where((i) => i != name)
                                 .toList();
+                            // Added again, it is a new line without one.
+                            _amounts.remove(name);
                           }),
                           onDeleteIngredient:
                               autocompleteNotifier.deleteUserIngredient,

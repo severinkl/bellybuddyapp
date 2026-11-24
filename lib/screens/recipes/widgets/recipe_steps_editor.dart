@@ -71,26 +71,32 @@ class _RecipeStepsEditorState extends State<RecipeStepsEditor> {
                     top: AppConstants.spacing12,
                     right: AppConstants.spacing10,
                   ),
-                  child: Text(
-                    '${i + 1}',
-                    style: const TextStyle(
-                      fontSize: AppTheme.fontSizeBody,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.mutedForeground,
+                  // Said with its field instead („Schritt 2").
+                  child: ExcludeSemantics(
+                    child: Text(
+                      '${i + 1}',
+                      style: const TextStyle(
+                        fontSize: AppTheme.fontSizeBody,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.mutedForeground,
+                      ),
                     ),
                   ),
                 ),
                 Expanded(
-                  child: TextField(
-                    key: RecipeStepsEditor.fieldKey(i),
-                    controller: _controllers[i],
-                    minLines: 1,
-                    maxLines: null,
-                    keyboardType: TextInputType.multiline,
-                    textCapitalization: TextCapitalization.sentences,
-                    onChanged: (_) => _emit(),
-                    decoration: const InputDecoration(
-                      hintText: 'Schritt beschreiben',
+                  child: Semantics(
+                    label: 'Schritt ${i + 1}',
+                    child: TextField(
+                      key: RecipeStepsEditor.fieldKey(i),
+                      controller: _controllers[i],
+                      minLines: 1,
+                      maxLines: null,
+                      keyboardType: TextInputType.multiline,
+                      textCapitalization: TextCapitalization.sentences,
+                      onChanged: (_) => _emit(),
+                      decoration: const InputDecoration(
+                        hintText: 'Schritt beschreiben',
+                      ),
                     ),
                   ),
                 ),

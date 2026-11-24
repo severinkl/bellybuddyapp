@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/meal_prefill.dart';
 import 'package:belly_buddy/models/user_recipe.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
@@ -12,6 +13,7 @@ import 'package:belly_buddy/repositories/recipe_repository.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/recipes/widgets/ingredient_line_view.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_collection_card.dart';
+import 'package:belly_buddy/screens/recipes/widgets/recipe_page_parts.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_steps.dart';
 import 'package:belly_buddy/screens/recipes/recipe_detail_screen.dart';
 
@@ -130,6 +132,27 @@ void main() {
       isSemantics(label: 'Linseneintopf', isHeader: true),
     );
     semantics.dispose();
+  });
+
+  testWidgets('without ingredients: one gap above Zubereitung', (tester) async {
+    final recipe = testUserRecipe(
+      id: 'rec-1',
+      title: 'Linseneintopf',
+      ingredients: const [],
+    );
+    await pumpDetail(tester, recipes: [recipe], id: 'rec-1');
+
+    expect(find.text('Zutaten'), findsNothing);
+    final title = tester.getBottomLeft(find.text('Linseneintopf')).dy;
+    final card = tester
+        .getTopLeft(
+          find.ancestor(
+            of: find.text('Zubereitung'),
+            matching: find.byType(RecipeSectionCard),
+          ),
+        )
+        .dy;
+    expect(card - title, AppConstants.spacingMd);
   });
 
   testWidgets('a recipe without a photo shows a placeholder', (tester) async {

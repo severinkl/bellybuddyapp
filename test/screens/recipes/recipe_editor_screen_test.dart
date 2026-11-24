@@ -1,17 +1,22 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:belly_buddy/models/meal_entry.dart';
+import 'package:belly_buddy/models/user_recipe.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
+import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/repositories/meal_media_repository.dart';
 import 'package:belly_buddy/screens/recipes/recipe_editor_screen.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_steps_editor.dart';
 import 'package:belly_buddy/services/user_recipe_service.dart';
 import 'package:belly_buddy/widgets/common/editable_app_bar_title.dart';
+import 'package:belly_buddy/widgets/common/ingredient_search.dart';
 
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
@@ -41,6 +46,9 @@ void main() {
         overrides: [
           userRecipeRepositoryProvider.overrideWithValue(repo),
           mealMediaRepositoryProvider.overrideWithValue(mediaRepo),
+          ingredientRepositoryProvider.overrideWithValue(
+            FakeIngredientRepository(),
+          ),
           currentUserIdProvider.overrideWithValue(testUserId),
         ],
         child: MaterialApp(
@@ -491,6 +499,86 @@ void main() {
       await verifyUpdate(tester, amounts: const ['2 EL', null]);
     });
 
+    testWidgets('a re-added ingredient comes back without its amount', (
+      tester,
+    ) async {
+      await tall(tester);
+      final recipe = testUserRecipe(
+        id: 'rec-1',
+        ingredients: const ['Knoblauchöl', 'Reis'],
+        ingredientAmounts: const ['2 EL', '200 g'],
+      );
+      await pumpEditor(tester, recipeId: 'rec-1', recipes: [recipe]);
+
+      await tester.tap(
+        find.descendant(
+          of: find.widgetWithText(Chip, 'Reis'),
+          matching: find.byIcon(Icons.cancel),
+        ),
+      );
+      await tester.pump();
+      tester
+          .widget<IngredientSearch>(find.byType(IngredientSearch))
+          .onAdd('Reis');
+      await tester.pump();
+      expect(find.widgetWithText(Chip, 'Reis'), findsOneWidget);
+      await save(tester);
+
+      // „Reis" is a new line now: the 200 g were for the one taken out.
+      await verifyUpdate(tester, amounts: const ['2 EL', null]);
+    });
+
+    testWidgets('clearing every step sends none left', (tester) async {
+      await tall(tester);
+      final recipe = testUserRecipe(
+        id: 'rec-1',
+        instructions: const ['Kochen.', 'Essen.'],
+      );
+      await pumpEditor(tester, recipeId: 'rec-1', recipes: [recipe]);
+
+      await tester.tap(find.byKey(RecipeStepsEditor.removeKey(1)));
+      await tester.pump();
+      await tester.enterText(find.byKey(RecipeStepsEditor.fieldKey(0)), '  ');
+      await save(tester);
+
+      await verifyUpdate(tester, instructions: const []);
+    });
+
+    testWidgets('steps typed before the recipe loads give way to its steps', (
+      tester,
+    ) async {
+      await tall(tester);
+      final recipe = testUserRecipe(
+        id: 'rec-1',
+        instructions: const ['Kochen.'],
+      );
+      final load = Completer<List<UserRecipe>>();
+      when(() => repo.fetchForUser(any())).thenAnswer((_) => load.future);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            userRecipeRepositoryProvider.overrideWithValue(repo),
+            mealMediaRepositoryProvider.overrideWithValue(mediaRepo),
+            currentUserIdProvider.overrideWithValue(testUserId),
+          ],
+          child: const MaterialApp(home: RecipeEditorScreen(recipeId: 'rec-1')),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.byKey(RecipeStepsEditor.addKey));
+      await tester.pump();
+      await tester.enterText(find.byKey(RecipeStepsEditor.fieldKey(0)), 'Neu');
+
+      load.complete([recipe]);
+      await tester.pumpAndSettle();
+
+      // The form shows the recipe as saved, and saves what it shows.
+      expect(find.text('Kochen.'), findsOneWidget);
+      expect(find.text('Neu'), findsNothing);
+      await save(tester);
+      await verifyUpdate(tester);
+    });
+
     testWidgets('a template sends no amounts', (tester) async {
       await tall(tester);
       final recipe = testUserRecipe(id: 'rec-1');
@@ -580,6 +668,7 @@ void main() {
         await tester.pumpAndSettle();
       });
       expect(verticalOverflows(errors), isEmpty);
+      expect(errors, isEmpty);
     });
   });
 }

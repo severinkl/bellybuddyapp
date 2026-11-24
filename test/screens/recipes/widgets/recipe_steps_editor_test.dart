@@ -63,6 +63,19 @@ void main() {
     expect(find.text('Zwei'), findsOneWidget);
   });
 
+  testWidgets('screen readers hear each field as „Schritt N"', (tester) async {
+    final semantics = tester.ensureSemantics();
+    await pump(tester, const ['Kochen.', 'Essen.']);
+
+    expect(
+      tester.getSemantics(find.byKey(RecipeStepsEditor.fieldKey(1))),
+      isSemantics(label: 'Schritt 2', isTextField: true, value: 'Essen.'),
+    );
+    // The visible number isn't said apart from its field.
+    expect(find.bySemanticsLabel('2'), findsNothing);
+    semantics.dispose();
+  });
+
   testWidgets('the remove button is named for screen readers', (tester) async {
     await pump(tester, const ['a']);
     final remove = find.byKey(RecipeStepsEditor.removeKey(0));

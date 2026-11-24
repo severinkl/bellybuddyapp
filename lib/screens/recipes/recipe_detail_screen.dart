@@ -139,7 +139,7 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
                     if (recipe.adaptedFromRecipeId case final originalId?)
                       _OriginalLink(recipeId: originalId),
                     AppConstants.gap16,
-                    if (recipe.ingredients.isNotEmpty)
+                    if (recipe.ingredients.isNotEmpty) ...[
                       RecipeSectionCard(
                         title: 'Zutaten',
                         children: [
@@ -151,7 +151,8 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
                             ),
                         ],
                       ),
-                    AppConstants.gap16,
+                      AppConstants.gap16,
+                    ],
                     RecipeSectionCard(
                       title: 'Zubereitung',
                       trailing: recipe.instructions.isEmpty
