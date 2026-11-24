@@ -67,6 +67,7 @@ void main() {
           const JourneyRewards(),
           insights: lockedInsights(activeDays: 2),
           weeklyTips: null,
+          today: _today,
         ).earnedDay,
         2,
       );
@@ -75,6 +76,7 @@ void main() {
           const JourneyRewards(),
           insights: lockedInsights(activeDays: 9),
           weeklyTips: null,
+          today: _today,
         ).earnedDay,
         7,
       );
@@ -86,9 +88,34 @@ void main() {
           const JourneyRewards(earnedDay: 4),
           insights: lockedInsights(activeDays: 2),
           weeklyTips: null,
+          today: _today,
         ).earnedDay,
         4,
       );
+    });
+
+    test('earnedOn: the day the earned day last rose', () {
+      final risen = advanceRewards(
+        JourneyRewards(earnedDay: 2, earnedOn: _yesterday),
+        insights: lockedInsights(activeDays: 3),
+        weeklyTips: true,
+        today: _today,
+      );
+      expect(risen.earnedDay, 3);
+      expect(risen.earnedOn, _today);
+
+      // No rise (the same, fewer or capped active days): kept.
+      for (final active in [3, 1]) {
+        expect(
+          advanceRewards(
+            risen,
+            insights: lockedInsights(activeDays: active),
+            weeklyTips: true,
+            today: DateTime(2026, 11, 26),
+          ).earnedOn,
+          _today,
+        );
+      }
     });
 
     test('patterns freed once unlocked, kept after', () {
@@ -98,6 +125,7 @@ void main() {
         const JourneyRewards(earnedDay: 6),
         insights: unlocked,
         weeklyTips: null,
+        today: _today,
       );
       expect(freed.patternsFreed, isTrue);
       expect(freed.earnedDay, 7);
@@ -105,6 +133,7 @@ void main() {
         freed,
         insights: lockedInsights(activeDays: 5, gutFeelings: 2),
         weeklyTips: null,
+        today: _today,
       );
       expect(lockedAgain.patternsFreed, isTrue);
       expect(lockedAgain.earnedDay, 7);
@@ -117,6 +146,7 @@ void main() {
           const JourneyRewards(),
           insights: day3,
           weeklyTips: null,
+          today: _today,
         ).tipOffer,
         isNull,
       );
@@ -125,6 +155,7 @@ void main() {
           const JourneyRewards(),
           insights: day3,
           weeklyTips: false,
+          today: _today,
         ).tipOffer,
         TipOffer.offered,
       );
@@ -133,6 +164,7 @@ void main() {
           const JourneyRewards(),
           insights: lockedInsights(activeDays: 2),
           weeklyTips: false,
+          today: _today,
         ).tipOffer,
         isNull,
         reason: 'not before day 3',
@@ -145,6 +177,7 @@ void main() {
           const JourneyRewards(),
           insights: lockedInsights(activeDays: 3),
           weeklyTips: true,
+          today: _today,
         ).tipOffer,
         TipOffer.skipped,
       );
@@ -157,6 +190,7 @@ void main() {
             JourneyRewards(earnedDay: 3, tipOffer: answer),
             insights: lockedInsights(activeDays: 4),
             weeklyTips: answer == TipOffer.skipped ? false : true,
+            today: _today,
           ).tipOffer,
           answer,
         );
@@ -175,6 +209,7 @@ void main() {
           stored,
           insights: lockedInsights(activeDays: 4),
           weeklyTips: true,
+          today: _today,
         ),
         stored,
       );
@@ -183,6 +218,7 @@ void main() {
           const JourneyRewards(),
           insights: lockedInsights(activeDays: 0, gutFeelings: 0),
           weeklyTips: null,
+          today: _today,
         ),
         const JourneyRewards(),
       );
@@ -778,16 +814,20 @@ void main() {
   });
 
   group('rewardLine', () {
+    /// The line on [today] (default [_today]) for [earned], earned on
+    /// [earnedOn], with the active days of [journey] unless [activeDays].
     String? line(
       int earned, {
       required List<JourneyDay> journey,
+      DateTime? earnedOn,
+      int? activeDays,
       int gutFeelings = 1,
       bool? weeklyTips = false,
       DateTime? today,
     }) => rewardLine(
-      JourneyRewards(earnedDay: earned),
+      JourneyRewards(earnedDay: earned, earnedOn: earnedOn),
       insights: lockedInsights(
-        activeDays: journey.length,
+        activeDays: activeDays ?? journey.length,
         gutFeelings: gutFeelings,
         journey: journey,
       ),
@@ -804,8 +844,43 @@ void main() {
 
     test('day 2 filled today', () {
       expect(
-        line(2, journey: _journeyUntil(_today, 2)),
+        line(2, journey: _journeyUntil(_today, 2), earnedOn: _today),
         'Heute: Ein Wissen-Häppchen',
+      );
+    });
+
+    test('the 30-day window slid below the earned day: never an old reward '
+        'as „Heute"', () {
+      final longAgo = DateTime(2026, 10, 20);
+      // Day 4 earned long ago; 3 active days left, today's among them.
+      expect(
+        line(4, journey: _journeyUntil(_today, 3), earnedOn: longAgo),
+        'Bald: Noch ein Rezept für dich',
+      );
+      // Before today's entry: it earns nothing yet either …
+      expect(
+        line(4, journey: _journeyUntil(_yesterday, 2), earnedOn: longAgo),
+        'Bald: Noch ein Rezept für dich',
+      );
+      // … unless it is the one more day that does.
+      expect(
+        line(4, journey: _journeyUntil(_yesterday, 4), earnedOn: longAgo),
+        'Heute wartet: Noch ein Rezept für dich',
+      );
+    });
+
+    test('earned today, today not filled (a back-dated entry): the next one '
+        'waits', () {
+      expect(
+        line(3, journey: _journeyUntil(_yesterday, 3), earnedOn: _today),
+        'Heute wartet: Ein Spruch von mir',
+      );
+    });
+
+    test('earned before the update (no earnedOn): never „Heute"', () {
+      expect(
+        line(2, journey: _journeyUntil(_today, 2)),
+        'Bald: Dein erster Tipp',
       );
     });
 
@@ -835,6 +910,7 @@ void main() {
           ],
           // The day of a 23:45 clock on that Sunday ([todayProvider]).
           today: startOfDay(DateTime(2026, 10, 25, 23, 45)),
+          earnedOn: DateTime(2026, 10, 25),
         ),
         'Heute: Ein Wissen-Häppchen',
       );
@@ -842,7 +918,12 @@ void main() {
 
     test('day 6 filled', () {
       expect(
-        line(6, journey: _journeyUntil(_today, 6), gutFeelings: 3),
+        line(
+          6,
+          journey: _journeyUntil(_today, 6),
+          gutFeelings: 3,
+          earnedOn: _today,
+        ),
         'Heute: Eine Vorschau auf deine Muster',
       );
     });

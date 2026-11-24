@@ -24,9 +24,9 @@ const _patternsDay = InsightRules.daysNeeded;
 const _maxMatched = 3;
 
 /// [r] moved on by [insights] and the weekly tips ([weeklyTips], null while
-/// unknown):
+/// unknown) on [today] (the local day):
 /// - the earned day follows the active days, at most [_patternsDay], and
-///   never goes down;
+///   never goes down; a rise notes [today] (`earnedOn`);
 /// - the patterns are freed once [insights] are unlocked, and stay freed;
 /// - from day 3 the offer is decided once the weekly tips are known: off →
 ///   [TipOffer.offered], on → [TipOffer.skipped].
@@ -36,6 +36,7 @@ JourneyRewards advanceRewards(
   JourneyRewards r, {
   required Insights insights,
   required bool? weeklyTips,
+  required DateTime today,
 }) {
   final earnedDay = math.max(
     r.earnedDay,
@@ -43,6 +44,7 @@ JourneyRewards advanceRewards(
   );
   final next = r.copyWith(
     earnedDay: earnedDay,
+    earnedOn: earnedDay > r.earnedDay ? startOfDay(today) : null,
     patternsFreed: r.patternsFreed || insights.unlocked,
     tipOffer: r.tipOffer == null && earnedDay >= _tipDay && weeklyTips != null
         ? (weeklyTips ? TipOffer.skipped : TipOffer.offered)
@@ -252,10 +254,17 @@ String sayingFor(String userId) {
 }
 
 /// The reward line below the journey's counters on [today] (the local
-/// day): today's reward („Heute: …") once today's dot is filled (the
-/// journey's last day is [today]), else the next one („Heute wartet: …").
-/// Day 7 is „Bald: …" unless today's entry alone could unlock it (no
-/// Bauchgefühl missing). None once the [insights] are unlocked.
+/// day), never an old reward as today's:
+/// - today's reward („Heute: …") once today's dot is filled (the journey's
+///   last day is [today]) and today raised the earned day to it
+///   (`earnedOn`);
+/// - else the next one: „Heute wartet: …" when today's first entry would
+///   earn it (one active day more than the earned day; day 7 also without
+///   a Bauchgefühl missing), „Bald: …" otherwise (today's dot already
+///   filled, the 30-day window slid below the earned day, Bauchgefühl
+///   entries missing).
+///
+/// None once the [insights] are unlocked.
 String? rewardLine(
   JourneyRewards r, {
   required Insights insights,
@@ -266,15 +275,15 @@ String? rewardLine(
   final n = r.earnedDay;
   final journey = insights.journey;
   final filled = journey.isNotEmpty && isSameDay(journey.last.day, today);
-  if (filled && n >= 1 && n < _patternsDay) {
+  final earnedToday = r.earnedOn != null && isSameDay(r.earnedOn!, today);
+  if (filled && earnedToday && n >= 1 && n < _patternsDay) {
     return JourneyCopy.today(rewardTitle(n, r, weeklyTips: weeklyTips));
   }
-  final next = filled ? _patternsDay : math.min(n + 1, _patternsDay);
-  if (next == _patternsDay) {
-    final waiting = !filled && insights.progress.gutFeelingsLeft == 0;
-    return waiting
-        ? JourneyCopy.waiting(JourneyCopy.day7)
-        : JourneyCopy.soon(JourneyCopy.day7);
-  }
-  return JourneyCopy.waiting(rewardTitle(next, r, weeklyTips: weeklyTips));
+  final next = math.min(n + 1, _patternsDay);
+  final waiting =
+      !filled &&
+      insights.progress.activeDays + 1 > n &&
+      (next < _patternsDay || insights.progress.gutFeelingsLeft == 0);
+  final title = rewardTitle(next, r, weeklyTips: weeklyTips);
+  return waiting ? JourneyCopy.waiting(title) : JourneyCopy.soon(title);
 }

@@ -8,16 +8,17 @@ import 'package:belly_buddy/models/journey_rewards.dart';
 Object? _stored(Map<String, Object?> json) => jsonDecode(jsonEncode(json));
 
 void main() {
-  const full = JourneyRewards(
+  final full = JourneyRewards(
     earnedDay: 5,
     patternsFreed: true,
-    picks: {
+    picks: const {
       1: RecipePick(id: 'a', title: 'Reispfanne'),
       3: RecipePick(id: 'b', title: 'Kartoffelsuppe'),
       5: RecipePick(id: 'c', title: 'Karottensalat', matched: ['Karotte']),
     },
     tipOffer: TipOffer.declined,
     firstTip: FirstTipState.failed,
+    earnedOn: DateTime(2026, 11, 20),
   );
 
   group('JourneyRewards JSON', () {
@@ -36,6 +37,7 @@ void main() {
         },
         'tipOffer': 'declined',
         'firstTip': 'failed',
+        'earnedOn': '2026-11-20',
       });
       expect(JourneyRewards.fromJson(_stored(full.toJson())), full);
     });
@@ -48,8 +50,27 @@ void main() {
         'picks': <String, Object?>{},
         'tipOffer': null,
         'firstTip': null,
+        'earnedOn': null,
       });
       expect(JourneyRewards.fromJson(_stored(fresh.toJson())), fresh);
+    });
+
+    test('earnedOn: a wall-clock date; stored before it existed, or of '
+        'another shape, it reads null', () {
+      final read = JourneyRewards.fromJson({
+        'earned': 2,
+        'earnedOn': '2026-03-29',
+      });
+      expect(read!.earnedOn, DateTime(2026, 3, 29));
+      expect(read.earnedOn!.isUtc, isFalse);
+      for (final other in [null, 20261120, '2026-11-20T10:00:00Z', 'gestern']) {
+        expect(
+          JourneyRewards.fromJson({'earned': 2, 'earnedOn': other})!.earnedOn,
+          isNull,
+          reason: '$other',
+        );
+      }
+      expect(JourneyRewards.fromJson({'earned': 2})!.earnedOn, isNull);
     });
 
     test('another shape reads null', () {
@@ -161,6 +182,7 @@ void main() {
       expect(full.copyWith(picks: const {}), isNot(full));
       expect(full.copyWith(tipOffer: TipOffer.offered), isNot(full));
       expect(full.copyWith(firstTip: FirstTipState.done), isNot(full));
+      expect(full.copyWith(earnedOn: DateTime(2026, 11, 21)), isNot(full));
       expect(
         const RecipePick(id: 'c', title: 'C', matched: ['Reis']),
         isNot(const RecipePick(id: 'c', title: 'C', matched: ['Karotte'])),
@@ -174,6 +196,7 @@ void main() {
       expect(next.picks, full.picks);
       expect(next.tipOffer, TipOffer.declined);
       expect(next.firstTip, FirstTipState.failed);
+      expect(next.earnedOn, DateTime(2026, 11, 20));
     });
   });
 }

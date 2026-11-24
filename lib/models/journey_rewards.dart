@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show listEquals, mapEquals;
 
+import '../utils/date_format_utils.dart';
 import '../utils/json_values.dart';
 import 'insight_rules.dart';
 
@@ -79,6 +80,7 @@ class JourneyRewards {
     this.picks = const {},
     this.tipOffer,
     this.firstTip,
+    this.earnedOn,
   });
 
   /// The days whose reward is a recipe, in the order they are picked.
@@ -86,7 +88,9 @@ class JourneyRewards {
 
   /// [json] when it is a map with an int `earned` (clamped to 0–7); null
   /// otherwise. A pick of another shape, or under another day than
-  /// [recipeDays], is skipped, and an unknown answer reads null.
+  /// [recipeDays], is skipped, and an unknown answer reads null, as does
+  /// an `earnedOn` that is no `yyyy-MM-dd` date (or stored before it
+  /// existed).
   static JourneyRewards? fromJson(Object? json) {
     if (json is! Map) return null;
     final earned = json['earned'];
@@ -97,6 +101,7 @@ class JourneyRewards {
       picks: _picksFrom(json['picks']),
       tipOffer: TipOffer.values.asNameMap()[json['tipOffer']],
       firstTip: FirstTipState.values.asNameMap()[json['firstTip']],
+      earnedOn: _dateFrom(json['earnedOn']),
     );
   }
 
@@ -115,18 +120,25 @@ class JourneyRewards {
   /// The first tip after [TipOffer.accepted]; null before.
   final FirstTipState? firstTip;
 
+  /// The local day [earnedDay] last rose (a wall-clock date, at midnight);
+  /// null before the first rise, and for rewards stored before it was
+  /// kept. Today's reward is the earned day's only on that day.
+  final DateTime? earnedOn;
+
   JourneyRewards copyWith({
     int? earnedDay,
     bool? patternsFreed,
     Map<int, RecipePick>? picks,
     TipOffer? tipOffer,
     FirstTipState? firstTip,
+    DateTime? earnedOn,
   }) => JourneyRewards(
     earnedDay: earnedDay ?? this.earnedDay,
     patternsFreed: patternsFreed ?? this.patternsFreed,
     picks: picks ?? this.picks,
     tipOffer: tipOffer ?? this.tipOffer,
     firstTip: firstTip ?? this.firstTip,
+    earnedOn: earnedOn ?? this.earnedOn,
   );
 
   Map<String, Object?> toJson() => {
@@ -138,6 +150,10 @@ class JourneyRewards {
     },
     'tipOffer': tipOffer?.name,
     'firstTip': firstTip?.name,
+    'earnedOn': switch (earnedOn) {
+      final day? => formatIsoDate(day),
+      null => null,
+    },
   };
 
   @override
@@ -147,7 +163,8 @@ class JourneyRewards {
       other.patternsFreed == patternsFreed &&
       mapEquals(other.picks, picks) &&
       other.tipOffer == tipOffer &&
-      other.firstTip == firstTip;
+      other.firstTip == firstTip &&
+      other.earnedOn == earnedOn;
 
   @override
   int get hashCode => Object.hash(
@@ -158,14 +175,29 @@ class JourneyRewards {
     ),
     tipOffer,
     firstTip,
+    earnedOn,
   );
 
   @override
   String toString() =>
       'JourneyRewards(earnedDay: $earnedDay, patternsFreed: $patternsFreed, '
       'picks: $picks, tipOffer: ${tipOffer?.name}, '
-      'firstTip: ${firstTip?.name})';
+      'firstTip: ${firstTip?.name}, '
+      'earnedOn: ${earnedOn == null ? null : formatIsoDate(earnedOn!)})';
 }
+
+/// A stored `yyyy-MM-dd` date as the local day, at midnight; null for any
+/// other value.
+DateTime? _dateFrom(Object? json) {
+  final match = json is String ? _isoDate.firstMatch(json) : null;
+  if (match == null) return null;
+  final [year, month, day] = [
+    for (var i = 1; i <= 3; i++) int.parse(match[i]!),
+  ];
+  return DateTime(year, month, day);
+}
+
+final _isoDate = RegExp(r'^(\d{4})-(\d{2})-(\d{2})$');
 
 /// The picks stored in [json], by day; entries of another shape, or under
 /// another day than [JourneyRewards.recipeDays], skipped.

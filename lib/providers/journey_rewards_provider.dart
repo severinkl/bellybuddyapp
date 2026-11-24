@@ -132,6 +132,7 @@ class JourneyRewardsNotifier extends Notifier<JourneyRewards?> {
       r,
       insights: insights,
       weeklyTips: weeklyTips,
+      today: ref.read(todayProvider),
     );
     if (!picksMissing(advanced)) return advanced;
     final ranked = ref.read(rankedRecipesProvider).settledValue;

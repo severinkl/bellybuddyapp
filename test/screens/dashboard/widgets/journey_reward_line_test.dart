@@ -54,6 +54,12 @@ final _unlocked = Insights(
 
 final _line = find.byKey(JourneyRewardLineView.lineKey);
 
+/// Day 2, earned today ([_day2Today]).
+final _day2EarnedToday = JourneyRewards(
+  earnedDay: 2,
+  earnedOn: DateTime(2026, 11, 23),
+);
+
 void main() {
   /// The line alone on a page of a router with the reward pages stubbed,
   /// over [insights] and the [rewards] (null: the real rewards, e.g. none
@@ -112,11 +118,7 @@ void main() {
   testWidgets('„Heute: Ein Wissen-Häppchen" → tap → „Deine Belohnungen"', (
     tester,
   ) async {
-    await pumpLine(
-      tester,
-      insights: _day2Today,
-      rewards: const JourneyRewards(earnedDay: 2),
-    );
+    await pumpLine(tester, insights: _day2Today, rewards: _day2EarnedToday);
 
     expect(_line, findsOneWidget);
     expect(
@@ -146,11 +148,7 @@ void main() {
   });
 
   testWidgets('a double tap opens „Deine Belohnungen" once', (tester) async {
-    await pumpLine(
-      tester,
-      insights: _day2Today,
-      rewards: const JourneyRewards(earnedDay: 2),
-    );
+    await pumpLine(tester, insights: _day2Today, rewards: _day2EarnedToday);
 
     await tester.tap(_line);
     await tester.tap(_line);
@@ -183,11 +181,7 @@ void main() {
     tester,
   ) async {
     final handle = tester.ensureSemantics();
-    await pumpLine(
-      tester,
-      insights: _day2Today,
-      rewards: const JourneyRewards(earnedDay: 2),
-    );
+    await pumpLine(tester, insights: _day2Today, rewards: _day2EarnedToday);
 
     expect(
       tester.getSemantics(_line),

@@ -43,6 +43,14 @@ final _b = testRecipe(
 
 RecipePick _pick(Recipe r) => RecipePick(id: r.id, title: r.title);
 
+/// What 2 active days give afresh on [_now]'s day: day 2, earned today,
+/// with day 1's recipe.
+final _freshDay2 = JourneyRewards(
+  earnedDay: 2,
+  picks: {1: _pick(_a)},
+  earnedOn: DateTime(2026, 11, 17),
+);
+
 String _json(JourneyRewards r) => jsonEncode(r.toJson());
 
 /// The insights' loads, the journey decision, the stored read and the
@@ -74,6 +82,7 @@ void main() {
 
   ProviderContainer container({
     bool weeklyTips = false,
+    DateTime? now,
     List<Override> overrides = const [],
   }) => ProviderContainer.test(
     overrides: [
@@ -86,7 +95,7 @@ void main() {
           weeklyTipsEnabled: weeklyTips,
         ),
       ),
-      buddyClockProvider.overrideWithValue(() => _now),
+      buddyClockProvider.overrideWithValue(() => now ?? _now),
       ...overrides,
     ],
   );
@@ -145,7 +154,7 @@ void main() {
 
       final rewards = await rewardsOf(c);
 
-      expect(rewards, JourneyRewards(earnedDay: 2, picks: {1: _pick(_a)}));
+      expect(rewards, _freshDay2);
       expect(await storedJson(), rewards!.toJson());
     });
 
@@ -361,7 +370,7 @@ void main() {
 
         final rewards = await rewardsOf(container());
 
-        expect(rewards, JourneyRewards(earnedDay: 2, picks: {1: _pick(_a)}));
+        expect(rewards, _freshDay2);
         expect(await stored(), rewards);
         expect(logs, [
           startsWith(
@@ -394,7 +403,7 @@ void main() {
           .read(journeyRewardsProvider.notifier)
           .setFirstTip(FirstTipState.failed);
 
-      expect(rewards, JourneyRewards(earnedDay: 2, picks: {1: _pick(_a)}));
+      expect(rewards, _freshDay2);
       expect(c.read(firstTipFailedProvider), isTrue);
       expect(
         (await SharedPreferences.getInstance()).getString('journey_rewards_u1'),
@@ -487,6 +496,32 @@ void main() {
       expect(c.read(journeyRewardAnnouncementProvider), 2);
       expect(c.read(patternsUnlockedDueProvider), isFalse);
       expect(c.read(firstTipFailedProvider), isFalse);
+    });
+
+    test('restart: the reward earned today stays „Heute" that day (earnedOn is '
+        'stored); the next day the next one waits', () async {
+      entries.insightSource = InsightSource(
+        meals: const [],
+        gutFeelings: const [],
+        activityTimes: [DateTime(2026, 11, 16, 9), DateTime(2026, 11, 17, 9)],
+      );
+      await rewardsOf(container());
+      expect((await stored())!.earnedOn, DateTime(2026, 11, 17));
+
+      final restarted = container();
+      await rewardsOf(restarted);
+      expect(
+        restarted.read(journeyRewardLineProvider),
+        'Heute: Ein Wissen-Häppchen',
+      );
+
+      final nextDay = container(now: DateTime(2026, 11, 18, 8));
+      await rewardsOf(nextDay);
+      expect(
+        nextDay.read(journeyRewardLineProvider),
+        'Heute wartet: Dein erster Tipp',
+      );
+      expect((await stored())!.earnedOn, DateTime(2026, 11, 17));
     });
 
     test('unlocked: no line, the patterns due', () async {

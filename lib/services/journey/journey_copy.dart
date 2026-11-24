@@ -28,13 +28,14 @@ abstract final class JourneyCopy {
   static const day6 = 'Eine Vorschau auf deine Muster';
   static const day7 = 'Deine ersten Muster';
 
-  /// The reward line once today's dot is filled …
+  /// The reward line once today's dot is filled and earned today's
+  /// reward …
   static String today(String title) => 'Heute: $title';
 
-  /// … before today's first entry …
+  /// … before today's first entry, which would earn the next one …
   static String waiting(String title) => 'Heute wartet: $title';
 
-  /// … and for day 7 while it needs more than today's entry.
+  /// … and for the next one while it needs more than today's entry.
   static String soon(String title) => 'Bald: $title';
 
   static String dayLabel(int day) => 'Tag $day';
