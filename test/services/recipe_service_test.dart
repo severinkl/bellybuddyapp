@@ -194,21 +194,19 @@ void main() {
   });
 
   group('RecipeService.collectionSelect', () {
-    test('collectionSelect names every contract field', () {
-      for (final field in [
-        'meal_types',
-        'diet_tags',
-        'source_name',
-        'source_url',
-        'instructions',
-        'allergens',
-        'low_at_amount',
-        'ingredient:ingredients(',
-        'fodmap_fructans',
-        'fodmap_mannitol',
-      ]) {
-        expect(RecipeService.collectionSelect, contains(field), reason: field);
-      }
+    test("collectionSelect is the contract's select, plus `ingredients`", () {
+      // core's plan 2026-11-24-round4-stage2-recipes-core.md, „API contract
+      // for the app"; `ingredients` is the older recipes' text column.
+      expect(
+        RecipeService.collectionSelect,
+        'id,title,description,cook_time,servings,image_url,meal_types,'
+        'diet_tags,source_name,source_url,instructions,ingredients,'
+        'created_at,'
+        'recipe_ingredients(position,amount_text,name,allergens,'
+        'low_at_amount,'
+        'ingredient:ingredients(id,name,fodmap_fructans,fodmap_gos,'
+        'fodmap_lactose,fodmap_fructose,fodmap_sorbitol,fodmap_mannitol))',
+      );
     });
   });
 

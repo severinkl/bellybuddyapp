@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
+import 'package:belly_buddy/models/meal_prefill.dart';
 import 'package:belly_buddy/providers/diary_provider.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
@@ -25,10 +26,10 @@ import 'package:belly_buddy/screens/recipes/adapt_recipe_screen.dart';
 import 'package:belly_buddy/screens/recipes/collection_recipe_screen.dart';
 import 'package:belly_buddy/screens/recipes/collection_screen.dart';
 import 'package:belly_buddy/screens/recommendations/recommendations_screen.dart';
+import 'package:belly_buddy/screens/trackers/meal/meal_tracker_screen.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
 import 'package:belly_buddy/widgets/log_sheet/log_sheet.dart';
-import 'package:cupertino_ui/cupertino_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -389,6 +390,32 @@ void main() {
         tester.getRect(card).bottom,
         lessThanOrEqualTo(tester.getRect(find.byType(BbBottomNav)).top),
       );
+    });
+
+    testWidgets('the meal tracker takes a MealPrefill, no other extra', (
+      tester,
+    ) async {
+      final container = await _pumpShell(tester);
+      final router = container.read(routerProvider);
+      const prefill = MealPrefill(title: 'Porridge', ingredients: ['Hafer']);
+
+      unawaited(router.push(RoutePaths.mealTracker, extra: prefill));
+      await tester.pumpAndSettle();
+      var screen = tester.widget<MealTrackerScreen>(
+        find.byType(MealTrackerScreen),
+      );
+      expect(screen.initialRecipe, same(prefill));
+      expect(find.widgetWithText(Chip, 'Hafer'), findsOneWidget);
+
+      router.pop();
+      await tester.pumpAndSettle();
+      // What the route took before MealPrefill: now an empty tracker.
+      unawaited(router.push(RoutePaths.mealTracker, extra: testUserRecipe()));
+      await tester.pumpAndSettle();
+      screen = tester.widget<MealTrackerScreen>(find.byType(MealTrackerScreen));
+      expect(screen.initialRecipe, isNull);
+      expect(screen.initialDate, isNull);
+      expect(find.byType(Chip), findsNothing);
     });
 
     testWidgets('a collection recipe opens over the bar', (tester) async {

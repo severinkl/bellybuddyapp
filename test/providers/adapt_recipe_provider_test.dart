@@ -123,9 +123,12 @@ void main() {
     final started = scoped.read(provider.notifier).start();
 
     sub.close();
-    await Future<void>.delayed(Duration.zero);
+    await scoped.pump();
+    // Disposed while the call is out: closing the screen ends it.
+    expect(scoped.read(provider.exists), isFalse);
     answer.complete(testAdaptedRecipe());
 
     await expectLater(started, completes);
+    expect(scoped.read(provider.exists), isFalse);
   });
 }
