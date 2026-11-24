@@ -47,7 +47,9 @@ class LogMoment {
 ///
 /// The Buddy says how far the first patterns are ([LogMoment.buddyLine])
 /// after today's first good or neutral Bauchgefühl while [insights] are
-/// locked, but not when this entry unlocks them.
+/// locked, but not when this entry unlocks them. Today adds an active day
+/// unless the insights count it already (their journey ends today), so a
+/// refresh of theirs that lags behind the care log never miscounts.
 LogMoment logMomentFor({
   required EntryKind kind,
   required DateTime trackedAt,
@@ -71,6 +73,8 @@ LogMoment logMomentFor({
   final progress = insights == null || insights.unlocked
       ? null
       : insights.progress;
+  final lastActive = insights?.journey.lastOrNull?.day;
+  final countedToday = lastActive != null && isSameDay(lastActive, now);
   return LogMoment(
     kind: kind,
     sentiment: sentiment,
@@ -85,7 +89,7 @@ LogMoment logMomentFor({
             progress != null
         ? InsightCopy.journeyFeedback(
             InsightProgress(
-              activeDays: progress.activeDays + (firstToday ? 1 : 0),
+              activeDays: progress.activeDays + (countedToday ? 0 : 1),
               gutFeelingEntries: progress.gutFeelingEntries + 1,
             ),
           )

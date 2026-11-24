@@ -138,12 +138,41 @@ void main() {
       );
     });
 
-    test('on a day that already counts, the days stay', () {
+    /// Locked insights whose journey ends on [lastDay].
+    Insights journeyTo(DateTime lastDay) => lockedInsights(
+      activeDays: 2,
+      gutFeelings: 1,
+      journey: [
+        JourneyDay(DateTime(2026, 11, 20), gutFeeling: true),
+        JourneyDay(lastDay, gutFeeling: false),
+      ],
+    );
+
+    test('on a day the insights already count, the days stay', () {
       expect(
         line(
-          insights: insights(2, 1),
+          insights: journeyTo(DateTime(2026, 11, 23)),
           care: CareLog(lastMealAt: _t(8)),
         ),
+        'Notiert! Noch 5 Tage, dann schau ich nach ersten Mustern.',
+      );
+    });
+
+    test("insights that don't count today's earlier meal yet (their refresh "
+        'failed): today is one more day', () {
+      expect(
+        line(
+          insights: journeyTo(DateTime(2026, 11, 22)),
+          care: CareLog(lastMealAt: _t(8)),
+        ),
+        'Notiert! Noch 4 Tage, dann schau ich nach ersten Mustern.',
+      );
+    });
+
+    test('insights that count today while Home has not loaded it: the days '
+        'stay', () {
+      expect(
+        line(insights: journeyTo(DateTime(2026, 11, 23))),
         'Notiert! Noch 5 Tage, dann schau ich nach ersten Mustern.',
       );
     });
