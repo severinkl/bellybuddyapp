@@ -15,9 +15,6 @@ import 'recommendation_provider.dart';
 /// [BuddyAnnouncement.firstTipFailed].
 const onceSuffix = 'once';
 
-/// The flag suffix of [BuddyAnnouncement.weeklyTipsOffer].
-const weeklyTipsOfferSuffix = onceSuffix;
-
 /// The flag suffix of [BuddyAnnouncement.journeyReward], followed by the
 /// day: `day<n>`, once per journey day.
 const journeyRewardSuffix = 'day';
@@ -50,7 +47,8 @@ final firstTipOfferDueProvider = Provider<bool>((ref) {
 /// - `journeyReward` for the newest earned day of 1–6
 ///   ([journeyRewardAnnouncementProvider]), once per day: a newer day
 ///   replaces a pending older one;
-/// - `patternsUnlocked` once the journey's first patterns were unlocked;
+/// - `patternsUnlocked` once the journey's first patterns were unlocked
+///   ([patternsUnlockedDueProvider]; never off the journey: no rewards);
 /// - `firstTipOffer` while it is due ([firstTipOfferDueProvider]): after
 ///   „Muster frei!", so a journey user who reaches day 7 with the day-3
 ///   offer still open sees the celebration first and the offer once back
@@ -64,13 +62,12 @@ final buddyOffersProvider = Provider<Map<BuddyAnnouncement, String>>((ref) {
     if (set != null) BuddyAnnouncement.tipsArrived: set.id,
     if (day != null)
       BuddyAnnouncement.journeyReward: '$journeyRewardSuffix$day',
-    if (ref.watch(patternsUnlockedDueProvider) &&
-        ref.watch(journeyProvider) == true)
+    if (ref.watch(patternsUnlockedDueProvider))
       BuddyAnnouncement.patternsUnlocked: onceSuffix,
     if (ref.watch(firstTipOfferDueProvider))
       BuddyAnnouncement.firstTipOffer: onceSuffix,
     if (ref.watch(weeklyTipsOfferDueProvider))
-      BuddyAnnouncement.weeklyTipsOffer: weeklyTipsOfferSuffix,
+      BuddyAnnouncement.weeklyTipsOffer: onceSuffix,
     if (ref.watch(firstTipFailedProvider))
       BuddyAnnouncement.firstTipFailed: onceSuffix,
   };
@@ -83,7 +80,8 @@ final buddyOffersProvider = Provider<Map<BuddyAnnouncement, String>>((ref) {
 /// (re)loading never withdraws a one-time offer (and so never has it marked
 /// shown unplayed). The weekly-tips offer applies off the journey only, the
 /// first-tip offer on it only, until day 3's offer was answered (e.g. in
-/// „Deine Belohnungen"). While the journey is undecided neither applies:
+/// „Deine Belohnungen") or skipped (the weekly tips were already on at day
+/// 3). While the journey is undecided neither applies:
 /// that is only before the first decision (signed out, a new user's
 /// insights still loading), so this drops at most a previous user's cue
 /// (its flag is that user's). The others always apply.

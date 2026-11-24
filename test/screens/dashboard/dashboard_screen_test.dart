@@ -1298,7 +1298,7 @@ void main() {
         expect(
           container.read(buddyOffersProvider),
           gutFeelings == 3
-              ? {BuddyAnnouncement.weeklyTipsOffer: weeklyTipsOfferSuffix}
+              ? {BuddyAnnouncement.weeklyTipsOffer: onceSuffix}
               : isEmpty,
           reason: '$gutFeelings gut-feeling entries',
         );
