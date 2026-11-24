@@ -262,7 +262,11 @@ class FakeProfileRepository implements ProfileRepository {
 
 // -- FakeEntryRepository --
 class FakeEntryRepository implements EntryRepository {
-  FakeEntryRepository({this.throwOnUpdate = false, this.throwOnDelete = false});
+  FakeEntryRepository({
+    this.throwOnUpdate = false,
+    this.throwOnDelete = false,
+    this.countInsertsAsActivity = false,
+  });
 
   /// When true, [updateEntry] throws on invocation. Used in tests that verify
   /// the screen stays open and surfaces the error rather than popping.
@@ -270,6 +274,10 @@ class FakeEntryRepository implements EntryRepository {
 
   /// When true, [deleteByType] throws on invocation (a delete that fails).
   final bool throwOnDelete;
+
+  /// When true, [insertEntry] adds the row's local `tracked_at` day to the
+  /// activity days, so the Buddy's refresh after a log sees it.
+  final bool countInsertsAsActivity;
 
   final List<Map<String, dynamic>> _inserted = [];
 
@@ -398,6 +406,10 @@ class FakeEntryRepository implements EntryRepository {
     _inserted.add(data);
     if (table == 'meal_entries') {
       addedMeals.add(MealEntry.fromJson(data));
+    }
+    if (countInsertsAsActivity) {
+      final at = DateTime.parse(data['tracked_at'] as String).toLocal();
+      _activityDays = {..._activityDays, DateTime(at.year, at.month, at.day)};
     }
   }
 
