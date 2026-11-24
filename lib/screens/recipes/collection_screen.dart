@@ -74,6 +74,8 @@ class _CollectionScreenState extends ConsumerState<CollectionScreen> {
       onRefresh: _refresh,
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
+        // Scrolling the results puts the search's keyboard away.
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         padding: AppConstants.paddingMd,
         children: [
           TextField(

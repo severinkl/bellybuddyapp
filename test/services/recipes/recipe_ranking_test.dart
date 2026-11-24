@@ -399,6 +399,11 @@ void main() {
       expect(filterRecipes(ranked, query: 'tofu'), isEmpty);
     });
 
+    test('query: umlauts in any case', () {
+      expect(_ids(filterRecipes(ranked, query: 'GEMÜSE')), ['pfanne']);
+      expect(_ids(filterRecipes(ranked, query: 'gemüsepfanne')), ['pfanne']);
+    });
+
     test('all together', () {
       expect(
         _ids(

@@ -162,6 +162,82 @@ void main() {
     expect(tile('Suppe'), findsNothing);
   });
 
+  group('search', () {
+    setUp(() {
+      repo.collection = [
+        testRecipe(
+          id: 'a',
+          title: 'Möhrensuppe',
+          ingredients: [testLine('Möhren')],
+        ),
+        testRecipe(
+          id: 'b',
+          title: 'Ofengemüse',
+          ingredients: [testLine('Süßkartoffel')],
+        ),
+        const Recipe(
+          id: 'c',
+          title: 'Altes Rezept',
+          mealTypes: [MealType.lunch],
+          legacyIngredients: ['200 g Basmatireis'],
+        ),
+      ];
+    });
+
+    Future<void> search(WidgetTester tester, String query) async {
+      await tester.enterText(find.byKey(CollectionScreen.searchKey), query);
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('umlauts in any case', (tester) async {
+      await pump(tester);
+
+      await search(tester, 'MÖHREN');
+      expect(tile('Möhrensuppe'), findsOneWidget);
+      expect(find.byType(RecipeListTile), findsOneWidget);
+
+      await search(tester, 'süß');
+      expect(tile('Ofengemüse'), findsOneWidget);
+      expect(find.byType(RecipeListTile), findsOneWidget);
+    });
+
+    testWidgets('spaces around the query are ignored; blank shows all', (
+      tester,
+    ) async {
+      await pump(tester);
+
+      await search(tester, '  ofen  ');
+      expect(tile('Ofengemüse'), findsOneWidget);
+      expect(find.byType(RecipeListTile), findsOneWidget);
+
+      await search(tester, '   ');
+      expect(find.byType(RecipeListTile), findsNWidgets(3));
+    });
+
+    testWidgets("an older recipe's text lines are searched", (tester) async {
+      await pump(tester);
+
+      await search(tester, 'basmati');
+      expect(tile('Altes Rezept'), findsOneWidget);
+      expect(find.byType(RecipeListTile), findsOneWidget);
+    });
+
+    testWidgets('scrolling the list puts the keyboard away', (tester) async {
+      await pump(tester);
+      await tester.tap(find.byKey(CollectionScreen.searchKey));
+      await tester.pump();
+      expect(tester.testTextInput.isVisible, isTrue);
+
+      await tester.drag(
+        find.byType(RecipeListTile).first,
+        const Offset(0, -200),
+      );
+      await tester.pumpAndSettle();
+
+      expect(tester.testTextInput.isVisible, isFalse);
+    });
+  });
+
   testWidgets('count line: singular and plural', (tester) async {
     repo.collection = [testRecipe()];
     await pump(tester);
