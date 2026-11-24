@@ -8,6 +8,7 @@ import 'package:riverpod/src/internals.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:belly_buddy/screens/trackers/toilet/toilet_tracker_screen.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
+import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
@@ -173,6 +174,55 @@ void main() {
         tester.widget<BbSuccessOverlay>(find.byType(BbSuccessOverlay)).calm,
         isTrue,
       );
+    });
+
+    testWidgets("the calm page lights no „Tag n\", even on today's first "
+        'entry', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final day = DateTime(2026, 11, 23);
+      final container = ProviderContainer.test(
+        overrides: [
+          ..._overrides(),
+          buddyClockProvider.overrideWithValue(
+            () => DateTime(2026, 11, 23, 14),
+          ),
+          buddyProvider.overrideWith(
+            () => FakeBuddyNotifier(() => buddyStatus(streak: 4)),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      await container.read(buddyProvider.future);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(home: ToiletTrackerScreen(initialDate: day)),
+        ),
+      );
+
+      await tester.tapAt(
+        tester.getTopLeft(find.byType(Slider)) + const Offset(24, 24),
+      );
+      await tester.pump();
+      await tester.tap(find.text('Speichern'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 700));
+
+      expect(
+        tester.widget<BbSuccessOverlay>(find.byType(BbSuccessOverlay)).calm,
+        isTrue,
+      );
+      // Today's first entry: it does make day 5 …
+      expect(
+        tester
+            .widget<LogSuccessHero>(find.byType(LogSuccessHero))
+            .moment
+            .ignitesDay,
+        5,
+      );
+      // … but the calm page cheers no progress.
+      expect(find.byKey(LogSuccessHero.igniteKey), findsNothing);
+      expect(find.text('Tag 5'), findsNothing);
     });
   });
 }

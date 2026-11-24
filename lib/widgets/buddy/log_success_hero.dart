@@ -52,6 +52,11 @@ class ChargingMeter extends StatelessWidget {
 /// (none for Klo), the flame igniting next to „Tag n" when the entry is
 /// today's first, and the Buddy reacting ([BuddyReactionView]), who gets
 /// the height left over.
+///
+/// The calm page after a hard moment ([LogSentiment.bad]) cheers no
+/// progress: it shows no ignite row. The hero is laid out at least
+/// [AppConstants.logSuccessHeroMinHeight] tall and scaled down into a
+/// shorter slot, so the Buddy keeps a body there.
 class LogSuccessHero extends StatelessWidget {
   const LogSuccessHero({
     super.key,
@@ -74,84 +79,72 @@ class LogSuccessHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final from = moment.from;
     final to = moment.to;
-    final day = moment.ignitesDay;
+    final day = sentiment == LogSentiment.bad ? null : moment.ignitesDay;
     return LayoutBuilder(
-      builder: (context, constraints) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (from != null && to != null)
-            ChargingMeter(
-              need: moment.need,
-              from: from,
-              to: to,
-              size: math.min(
-                AppConstants.careChargeSize,
-                constraints.maxHeight * AppConstants.careChargeHeightShare,
-              ),
+      builder: (context, constraints) {
+        final height = math.max(
+          constraints.maxHeight,
+          AppConstants.logSuccessHeroMinHeight,
+        );
+        // The same tree at any height, so the reaction never restarts.
+        return FittedBox(
+          fit: BoxFit.scaleDown,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: constraints.maxWidth,
+              maxHeight: height,
             ),
-          // Also the room the flame's ignite burst draws into above it.
-          AppConstants.gap8,
-          if (day != null) ...[
-            Row(
-              key: igniteKey,
+            child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                StreakFlame(
-                  streak: day,
-                  lit: true,
-                  height: AppConstants.streakFlameIgniteHeight,
-                  igniteOnMount: true,
-                ),
-                const SizedBox(width: AppConstants.spacingSm),
-                Text(
-                  'Tag $day',
-                  style: const TextStyle(
-                    fontSize: AppTheme.fontSizeTitleLG,
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.primaryForeground,
+                if (from != null && to != null)
+                  ChargingMeter(
+                    need: moment.need,
+                    from: from,
+                    to: to,
+                    size: math.min(
+                      AppConstants.careChargeSize,
+                      height * AppConstants.careChargeHeightShare,
+                    ),
+                  ),
+                // Also the room the flame's ignite burst draws into above it.
+                AppConstants.gap8,
+                if (day != null) ...[
+                  Row(
+                    key: igniteKey,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      StreakFlame(
+                        streak: day,
+                        lit: true,
+                        height: AppConstants.streakFlameIgniteHeight,
+                        igniteOnMount: true,
+                      ),
+                      const SizedBox(width: AppConstants.spacingSm),
+                      Text(
+                        'Tag $day',
+                        style: const TextStyle(
+                          fontSize: AppTheme.fontSizeTitleLG,
+                          fontWeight: FontWeight.w700,
+                          color: AppTheme.primaryForeground,
+                        ),
+                      ),
+                    ],
+                  ),
+                  AppConstants.gap8,
+                ],
+                Flexible(
+                  child: BuddyReactionView(
+                    kind: kind,
+                    sentiment: sentiment,
+                    foodImageBytes: foodImageBytes,
                   ),
                 ),
               ],
             ),
-            AppConstants.gap8,
-          ],
-          Flexible(
-            child: _ScaledBelowBubble(
-              child: BuddyReactionView(
-                kind: kind,
-                sentiment: sentiment,
-                foodImageBytes: foodImageBytes,
-              ),
-            ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
-}
-
-/// The Buddy's stage in the height left to it, at most
-/// [AppConstants.buddyReactionSize]. Below its bubble's height
-/// ([AppConstants.buddyBubbleHeight]) the stage would overflow, so there
-/// it is laid out at that height and scaled down to fit. The tree stays
-/// the same either way, so the reaction never restarts.
-class _ScaledBelowBubble extends StatelessWidget {
-  const _ScaledBelowBubble({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) => FittedBox(
-      fit: BoxFit.scaleDown,
-      child: SizedBox(
-        width: constraints.maxWidth,
-        height: constraints.maxHeight.clamp(
-          AppConstants.buddyBubbleHeight,
-          AppConstants.buddyReactionSize,
-        ),
-        child: child,
-      ),
-    ),
-  );
 }

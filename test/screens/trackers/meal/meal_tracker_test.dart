@@ -16,6 +16,7 @@ import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/repositories/meal_media_repository.dart';
 import 'package:belly_buddy/screens/trackers/meal/meal_tracker_screen.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
+import 'package:belly_buddy/widgets/buddy/animated_buddy.dart';
 import 'package:belly_buddy/widgets/buddy/buddy_reaction_view.dart';
 import 'package:belly_buddy/widgets/buddy/log_success_hero.dart';
 import 'package:belly_buddy/widgets/common/mascot_image.dart';
@@ -256,6 +257,11 @@ void main() {
         expect(find.byType(ChargingMeter), findsOneWidget);
         expect(find.byKey(LogSuccessHero.igniteKey), findsOneWidget);
         expect(find.byType(BuddyReactionView), findsOneWidget);
+        // Drawn with a body, not just his bubble.
+        expect(
+          tester.getRect(find.byType(AnimatedBuddy)).height,
+          greaterThanOrEqualTo(24),
+        );
         expect(find.text('Trinken eintragen'), findsOneWidget);
         expect(find.text('Als Rezept speichern'), findsOneWidget);
         expect(find.text('Tippen zum Fortfahren'), findsOneWidget);

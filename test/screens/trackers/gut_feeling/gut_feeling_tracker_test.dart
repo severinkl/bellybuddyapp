@@ -8,6 +8,7 @@ import 'package:riverpod/src/internals.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:belly_buddy/screens/trackers/gut_feeling/gut_feeling_tracker_screen.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
+import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
@@ -148,9 +149,15 @@ void main() {
 
     testWidgets('the Bauchgefühl page charges Bauchgefühl', (tester) async {
       SharedPreferences.setMockInitialValues({});
+      // A past day's entry is logged at 12:00; the clock reads 12:00 too.
       await tester.pumpWithProviders(
-        const GutFeelingTrackerScreen(),
-        overrides: _overrides(),
+        GutFeelingTrackerScreen(initialDate: DateTime(2026, 11, 23)),
+        overrides: [
+          ..._overrides(),
+          buddyClockProvider.overrideWithValue(
+            () => DateTime(2026, 11, 23, 12),
+          ),
+        ],
       );
       await tester.pump(const Duration(milliseconds: 50));
 
@@ -164,8 +171,8 @@ void main() {
 
       final meter = tester.widget<ChargingMeter>(find.byType(ChargingMeter));
       expect(meter.need, CareNeed.gutFeeling);
-      // Logged now (the real clock: a few ms of drain at most).
-      expect(meter.to, closeTo(1.0, 0.005));
+      expect(meter.from, AppConstants.careMeterFloor);
+      expect(meter.to, 1.0);
       expect(
         find.descendant(
           of: find.byType(LogSuccessHero),
@@ -270,6 +277,53 @@ void main() {
       );
       expect(overlay.calm, isTrue);
       expect(overlay.message, isNot(contains('!')));
+    });
+
+    testWidgets('after a hard day the calm page lights no „Tag n", even on '
+        "today's first entry", (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final container = ProviderContainer.test(
+        overrides: [
+          ..._overrides(),
+          buddyClockProvider.overrideWithValue(
+            () => DateTime(2026, 11, 23, 14),
+          ),
+          buddyProvider.overrideWith(
+            () => FakeBuddyNotifier(() => buddyStatus(streak: 4)),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+      await container.read(buddyProvider.future);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            home: GutFeelingTrackerScreen(initialDate: DateTime(2026, 11, 23)),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 700));
+
+      await tapMascot(tester, AppConstants.mascotCramp);
+      await tapMascot(tester, AppConstants.mascotFullness);
+      await goToStimmungAndSave(tester);
+
+      expect(
+        tester.widget<BbSuccessOverlay>(find.byType(BbSuccessOverlay)).calm,
+        isTrue,
+      );
+      // Today's first entry: it does make day 5 …
+      expect(
+        tester
+            .widget<LogSuccessHero>(find.byType(LogSuccessHero))
+            .moment
+            .ignitesDay,
+        5,
+      );
+      // … but the calm page cheers no progress.
+      expect(find.byKey(LogSuccessHero.igniteKey), findsNothing);
+      expect(find.text('Tag 5'), findsNothing);
     });
 
     testWidgets('a good day gets the cheerful success screen', (tester) async {
