@@ -21,6 +21,7 @@ import 'package:belly_buddy/screens/discover/knowledge_screen.dart';
 import 'package:belly_buddy/screens/me/me_screen.dart';
 import 'package:belly_buddy/screens/patterns/patterns_screen.dart';
 import 'package:belly_buddy/screens/recipes/collection_recipe_screen.dart';
+import 'package:belly_buddy/screens/recipes/collection_screen.dart';
 import 'package:belly_buddy/screens/recommendations/recommendations_screen.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
@@ -144,6 +145,28 @@ void main() {
         RoutePaths.knowledge,
       );
       expect(find.byType(KnowledgeScreen), findsOneWidget);
+      expect(find.byType(BbBottomNav), findsOneWidget);
+    });
+
+    testWidgets('Rezepte opens under Entdecken with the bar', (tester) async {
+      final container = await _pumpShell(tester);
+      await _tap(tester, BbBottomNav.navDiscoverKey);
+
+      unawaited(
+        container.read(routerProvider).push(RoutePaths.discoverRecipes),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        container
+            .read(routerProvider)
+            .routerDelegate
+            .currentConfiguration
+            .last
+            .matchedLocation,
+        RoutePaths.discoverRecipes,
+      );
+      expect(find.byType(CollectionScreen), findsOneWidget);
       expect(find.byType(BbBottomNav), findsOneWidget);
     });
 

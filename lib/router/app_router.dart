@@ -165,6 +165,11 @@ final routerProvider = Provider<GoRouter>((ref) {
                     name: RouteNames.knowledge,
                     builder: (context, state) => const KnowledgeScreen(),
                   ),
+                  GoRoute(
+                    path: 'recipes',
+                    name: RouteNames.discoverRecipes,
+                    builder: (context, state) => const CollectionScreen(),
+                  ),
                 ],
               ),
             ],
