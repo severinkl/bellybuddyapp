@@ -575,44 +575,31 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
         _say(_saverEarnedLine);
         _holdStage();
       case _Cue.goalReached:
-        _buddy.play(BuddyAction.celebrate);
+        _playThen(BuddyAction.celebrate, _askForNewGoal);
         _setOverride(BuddyMood.inLove);
-        _cueTimer = Timer(
-          buddyActionDuration(BuddyAction.celebrate),
-          () => unawaited(_askForNewGoal()),
-        );
       case _Cue.tipsArrived:
         _buddy.play(BuddyAction.celebrate);
         _say(_tipsArrivedLine);
         _holdStage();
       case _Cue.weeklyTipsOffer:
-        _buddy.play(BuddyAction.wave);
-        _cueTimer = Timer(
-          buddyActionDuration(BuddyAction.wave),
-          () => unawaited(_offerWeeklyTips()),
-        );
+        _playThen(BuddyAction.wave, _offerWeeklyTips);
       case _Cue.firstTipOffer:
-        _buddy.play(BuddyAction.wave);
-        _cueTimer = Timer(
-          buddyActionDuration(BuddyAction.wave),
-          () => unawaited(_offerFirstTip()),
-        );
+        _playThen(BuddyAction.wave, _offerFirstTip);
       case _Cue.journeyReward:
-        _buddy.play(BuddyAction.celebrate);
-        _cueTimer = Timer(
-          buddyActionDuration(BuddyAction.celebrate),
-          () => unawaited(_showJourneyReward()),
-        );
+        _playThen(BuddyAction.celebrate, _showJourneyReward);
       case _Cue.patternsUnlocked:
-        _buddy.play(BuddyAction.celebrate);
-        _cueTimer = Timer(
-          buddyActionDuration(BuddyAction.celebrate),
-          () => unawaited(_openPatternsUnlocked()),
-        );
+        _playThen(BuddyAction.celebrate, _openPatternsUnlocked);
       case _Cue.firstTipFailed:
         _say(JourneyCopy.firstTipFailed);
         _holdStage();
     }
+  }
+
+  /// Plays [action], then, once it has played, [then] (the cue's sheet or
+  /// page).
+  void _playThen(BuddyAction action, Future<void> Function() then) {
+    _buddy.play(action);
+    _cueTimer = Timer(buddyActionDuration(action), () => unawaited(then()));
   }
 
   /// Home is free again (visible, uncovered): the sheet that waited opens,
