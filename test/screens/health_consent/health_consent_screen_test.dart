@@ -35,19 +35,21 @@ void main() {
       ..seedProfile(testUserProfile(hasHealthConsent: false));
   });
 
-  /// The screen with the seeded profile loaded, as the router shows it.
+  /// The screen once the seeded profile is loaded, as the router shows it.
   Future<void> pumpScreen(WidgetTester tester) async {
+    final overrides = [
+      authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
+      profileRepositoryProvider.overrideWithValue(profiles),
+    ];
+    await tester.pumpWithProviders(const SizedBox(), overrides: overrides);
+    await ProviderScope.containerOf(
+      tester.element(find.byType(MaterialApp)),
+    ).read(profileProvider.notifier).fetchProfile();
+    // The same scope, now with the screen.
     await tester.pumpWithProviders(
       const HealthConsentScreen(),
-      overrides: [
-        authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
-        profileRepositoryProvider.overrideWithValue(profiles),
-      ],
+      overrides: overrides,
     );
-    await ProviderScope.containerOf(
-      tester.element(find.byType(HealthConsentScreen)),
-    ).read(profileProvider.notifier).fetchProfile();
-    await tester.pump();
   }
 
   ElevatedButton acceptButton(WidgetTester tester) => tester

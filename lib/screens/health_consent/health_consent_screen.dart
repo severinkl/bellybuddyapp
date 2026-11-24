@@ -41,10 +41,13 @@ class _HealthConsentScreenState extends ConsumerState<HealthConsentScreen> {
   bool _consentChecked = false;
   bool _isSaving = false;
 
-  /// Whether [HealthConsentScreen.policyUpdated] shows. Once shown it stays:
-  /// the accepted consent makes the profile current while the screen is
-  /// still leaving, and the text must not jump then.
-  bool _policyUpdated = false;
+  /// Whether [HealthConsentScreen.policyUpdated] shows, as the profile was
+  /// when the screen came (the gate shows it only for a loaded profile).
+  /// Read once: the accepted consent makes the profile current while the
+  /// screen is still leaving, and the text must not jump then.
+  late final bool _policyUpdated = consentedToOlderPolicy(
+    ref.read(profileProvider).value,
+  );
 
   Future<void> _accept() async {
     if (_isSaving) return;
@@ -85,11 +88,6 @@ class _HealthConsentScreenState extends ConsumerState<HealthConsentScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (ref.watch(
-      profileProvider.select((p) => consentedToOlderPolicy(p.value)),
-    )) {
-      _policyUpdated = true;
-    }
     return PopScope(
       canPop: false,
       child: Scaffold(
