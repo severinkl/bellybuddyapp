@@ -13,6 +13,8 @@ import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 import 'package:belly_buddy/widgets/buddy/buddy_reaction_view.dart';
+import 'package:belly_buddy/widgets/buddy/log_success_hero.dart';
+import 'package:belly_buddy/widgets/buddy/need_meter.dart';
 import 'package:belly_buddy/widgets/common/bb_success_overlay.dart';
 import 'package:belly_buddy/widgets/common/mascot_image.dart';
 
@@ -118,6 +120,29 @@ void main() {
       expect(
         tester.widget<BbSuccessOverlay>(find.byType(BbSuccessOverlay)).calm,
         isFalse,
+      );
+    });
+
+    testWidgets('the Klo success page has no circle', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await tester.pumpWithProviders(
+        const ToiletTrackerScreen(),
+        overrides: _overrides(),
+      );
+
+      await tester.tap(find.text('Speichern'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 700));
+
+      expect(find.byType(LogSuccessHero), findsOneWidget);
+      expect(find.byType(ChargingMeter), findsNothing);
+      expect(find.byType(NeedMeter), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byType(LogSuccessHero),
+          matching: find.byType(BuddyReactionView),
+        ),
+        findsOneWidget,
       );
     });
 

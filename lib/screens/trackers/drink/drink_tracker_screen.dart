@@ -6,12 +6,14 @@ import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../providers/buddy_events_provider.dart';
 import '../../../providers/drink_tracker_provider.dart';
+import '../../../providers/log_moment.dart';
 import '../../../router/route_names.dart';
 import '../../../services/buddy/buddy_mood_logic.dart';
+import '../../../services/buddy/log_moment.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/drink_helpers.dart';
 import '../../../utils/save_helper.dart';
-import '../../../widgets/buddy/buddy_reaction_view.dart';
+import '../../../widgets/buddy/log_success_hero.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/date_time_chips.dart';
 import '../../../widgets/common/tracker_screen_scaffold.dart';
@@ -31,6 +33,9 @@ class DrinkTrackerScreen extends ConsumerStatefulWidget {
 }
 
 class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
+  /// What the drink does, as it is saved; the success page shows it.
+  LogMoment? _moment;
+
   @override
   void initState() {
     super.initState();
@@ -50,16 +55,20 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
     final state = ref.watch(drinkTrackerProvider);
     // selectedAmount is set only for a valid amount (1 to 3000 ml).
     final canSave = state.selectedDrink != null && state.selectedAmount != null;
+    final moment = _moment;
 
     return TrackerScreenScaffold(
       trackerKey: DrinkTrackerScreen.trackerKey,
       title: 'Was hast du getrunken? \u{1F4A7}',
       showSuccess: state.showSuccess,
       successMessage: 'Getränk gespeichert!',
-      successIllustration: const BuddyReactionView(
-        kind: EntryKind.drink,
-        sentiment: LogSentiment.good,
-      ),
+      successIllustration: moment == null
+          ? null
+          : LogSuccessHero(
+              moment: moment,
+              kind: EntryKind.drink,
+              sentiment: LogSentiment.good,
+            ),
       // Closes with true: the opener knows a drink was saved (the meal
       // success screen then closes as well).
       onSuccessDismissed: () => context.canPop()
@@ -231,6 +240,11 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
   }
 
   Future<void> _save() async {
+    _moment = captureLogMoment(
+      ref,
+      kind: EntryKind.drink,
+      trackedAt: ref.read(drinkTrackerProvider).trackedAt,
+    );
     final ok = await saveWithFeedback(
       context,
       () => ref.read(drinkTrackerProvider.notifier).save(),

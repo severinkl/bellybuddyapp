@@ -8,16 +8,18 @@ import '../../../models/user_recipe.dart';
 import '../../../providers/buddy_events_provider.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../providers/ingredient_autocomplete_provider.dart';
+import '../../../providers/log_moment.dart';
 import '../../../providers/meal_tracker_provider.dart';
 import '../../../providers/user_recipes_provider.dart';
 import '../../../router/navigation_extensions.dart';
 import '../../../router/route_names.dart';
 import '../../../services/buddy/buddy_mood_logic.dart';
+import '../../../services/buddy/log_moment.dart';
 import '../../../services/user_recipe_service.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/logger.dart';
 import '../../../utils/save_helper.dart';
-import '../../../widgets/buddy/buddy_reaction_view.dart';
+import '../../../widgets/buddy/log_success_hero.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/date_time_chips.dart';
 import '../../../widgets/common/editable_app_bar_title.dart';
@@ -70,6 +72,9 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
   bool _mealNotFound = false;
   bool _savedAsRecipe = false;
   bool _savingAsRecipe = false;
+
+  /// What a new meal does, as it is saved; the success page shows it.
+  LogMoment? _moment;
 
   @override
   void initState() {
@@ -147,6 +152,13 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
       }
     }
 
+    if (widget.mealId == null) {
+      _moment = captureLogMoment(
+        ref,
+        kind: EntryKind.meal,
+        trackedAt: ref.read(mealTrackerProvider).trackedAt,
+      );
+    }
     final ok = await saveWithFeedback(context, () => notifier.save());
 
     // Edit mode: pop only on success — saveWithFeedback already surfaced the
@@ -203,6 +215,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     }
 
     final state = ref.watch(mealTrackerProvider);
+    final moment = _moment;
     // A meal started from a recipe and left unchanged has nothing to lose.
     final recipe = widget.initialRecipe;
     final canPop =
@@ -230,11 +243,14 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         ),
         showSuccess: state.showSuccess,
         successMessage: 'Mahlzeit gespeichert!',
-        successIllustration: BuddyReactionView(
-          kind: EntryKind.meal,
-          sentiment: LogSentiment.good,
-          foodImageBytes: state.imageBytes,
-        ),
+        successIllustration: moment == null
+            ? null
+            : LogSuccessHero(
+                moment: moment,
+                kind: EntryKind.meal,
+                sentiment: LogSentiment.good,
+                foodImageBytes: state.imageBytes,
+              ),
         successActions: [
           GestureDetector(
             onTap: () => _logDrinkAfterMeal(state.trackedAt),

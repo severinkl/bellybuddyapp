@@ -177,6 +177,12 @@ class AppConstants {
   // Buddy reaction on the tracker success screens (bubble slot + Buddy)
   static const double buddyReactionSize = 220.0;
 
+  // The success page's charging circle: at most this size and this share
+  // of the page's slot for it, and how long it charges
+  static const double careChargeSize = 120.0;
+  static const double careChargeHeightShare = 0.3;
+  static const Duration careChargeDuration = Duration(milliseconds: 1200);
+
   // Buddy onboarding (/buddy-onboarding): stage (bubble slot + Buddy) and
   // progress dots
   static const double buddyOnboardingStageHeight = 240.0;

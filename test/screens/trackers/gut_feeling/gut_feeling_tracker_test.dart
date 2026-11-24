@@ -12,7 +12,9 @@ import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
+import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/buddy/buddy_reaction_view.dart';
+import 'package:belly_buddy/widgets/buddy/log_success_hero.dart';
 import 'package:belly_buddy/widgets/common/bb_button.dart';
 import 'package:belly_buddy/widgets/common/bb_success_overlay.dart';
 import 'package:belly_buddy/widgets/common/mascot_image.dart';
@@ -142,6 +144,35 @@ void main() {
       expect(view.kind, EntryKind.gutFeeling);
       expect(view.sentiment, LogSentiment.good);
       expect(find.byType(MascotImage), findsNothing);
+    });
+
+    testWidgets('the Bauchgefühl page charges Bauchgefühl', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await tester.pumpWithProviders(
+        const GutFeelingTrackerScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pump(const Duration(milliseconds: 50));
+
+      await tester.tap(find.text('Weiter'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.pump();
+      await tester.tap(find.text('Speichern'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 700));
+
+      final meter = tester.widget<ChargingMeter>(find.byType(ChargingMeter));
+      expect(meter.need, CareNeed.gutFeeling);
+      // Logged now (the real clock: a few ms of drain at most).
+      expect(meter.to, closeTo(1.0, 0.005));
+      expect(
+        find.descendant(
+          of: find.byType(LogSuccessHero),
+          matching: find.byType(BuddyReactionView),
+        ),
+        findsOneWidget,
+      );
     });
 
     Future<ProviderContainer> pumpTracker(

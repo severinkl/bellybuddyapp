@@ -1,0 +1,102 @@
+import 'package:flutter_test/flutter_test.dart';
+
+import 'package:belly_buddy/services/buddy/care_meters.dart';
+import 'package:belly_buddy/services/buddy/daily_care.dart';
+import 'package:belly_buddy/services/buddy/log_moment.dart';
+
+import '../../helpers/fakes.dart';
+
+DateTime _t(int h, [int d = 23]) => DateTime(2026, 11, d, h);
+
+final _now = _t(14);
+
+void main() {
+  group('logMomentFor: the level before and with the entry', () {
+    test('drink last at 13:00, logged now: from 0.717 to full', () {
+      final m = logMomentFor(
+        need: CareNeed.drink,
+        trackedAt: _now,
+        care: CareLog(lastDrinkAt: _t(13)),
+        now: _now,
+      );
+      expect(m.need, CareNeed.drink);
+      expect(m.from, closeTo(0.717, 0.005));
+      expect(m.to, closeTo(1.0, 0.005));
+    });
+
+    test('a back-dated entry older than the last changes nothing', () {
+      final m = logMomentFor(
+        need: CareNeed.drink,
+        trackedAt: _t(11),
+        care: CareLog(lastDrinkAt: _t(13)),
+        now: _now,
+      );
+      expect(m.from, closeTo(0.717, 0.005));
+      expect(m.to, m.from);
+    });
+
+    test('an entry for later today charges to full', () {
+      final m = logMomentFor(
+        need: CareNeed.drink,
+        trackedAt: _t(18),
+        care: CareLog(lastDrinkAt: _t(13)),
+        now: _now,
+      );
+      expect(m.to, 1.0);
+    });
+
+    test('Klo has no level', () {
+      final m = logMomentFor(
+        need: CareNeed.toilet,
+        trackedAt: _now,
+        care: CareLog(lastToiletAt: _t(9)),
+        now: _now,
+      );
+      expect(m.need, CareNeed.toilet);
+      expect(m.from, isNull);
+      expect(m.to, isNull);
+    });
+  });
+
+  group('logMomentFor: the day the entry ignites', () {
+    LogMoment moment({
+      DateTime? trackedAt,
+      CareLog care = const CareLog(),
+      bool withStatus = true,
+      int streak = 4,
+      bool todayCounted = false,
+    }) => logMomentFor(
+      need: CareNeed.food,
+      trackedAt: trackedAt ?? _now,
+      care: care,
+      now: _now,
+      buddy: withStatus
+          ? buddyStatus(streak: streak, todayCounted: todayCounted)
+          : null,
+    );
+
+    test("today's first entry makes the streak one longer", () {
+      expect(moment().ignitesDay, 5);
+    });
+
+    test('a day already counted ignites nothing', () {
+      expect(moment(todayCounted: true).ignitesDay, isNull);
+    });
+
+    test('an entry dated yesterday ignites nothing', () {
+      expect(moment(trackedAt: _t(20, 22)).ignitesDay, isNull);
+    });
+
+    test('an entry already logged today ignites nothing', () {
+      expect(moment(care: CareLog(lastToiletAt: _t(8))).ignitesDay, isNull);
+    });
+
+    test('without a status nothing ignites', () {
+      expect(moment(withStatus: false).ignitesDay, isNull);
+    });
+
+    test('no streak yet: day 1', () {
+      expect(moment(streak: 0).ignitesDay, 1);
+    });
+  });
+}

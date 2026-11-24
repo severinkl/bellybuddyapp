@@ -7,12 +7,14 @@ import '../../../models/gut_feeling_entry.dart';
 import '../../../providers/buddy_events_provider.dart';
 import '../../../providers/diary_provider.dart';
 import '../../../providers/entries_provider.dart';
+import '../../../providers/log_moment.dart';
 import '../../../router/navigation_extensions.dart';
 import '../../../services/buddy/buddy_mood_logic.dart';
+import '../../../services/buddy/log_moment.dart';
 import '../../../services/haptic_service.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/save_helper.dart';
-import '../../../widgets/buddy/buddy_reaction_view.dart';
+import '../../../widgets/buddy/log_success_hero.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/bb_success_overlay.dart';
 import '../../../widgets/common/date_time_chips.dart';
@@ -39,6 +41,9 @@ class _GutFeelingTrackerScreenState
 
   /// Set once the entry is saved; shows the success screen.
   LogSentiment? _savedSentiment;
+
+  /// What the entry does, as it is saved; the success page shows it.
+  LogMoment? _moment;
 
   // Bauchgefuehl values
   int _bloating = 1;
@@ -125,6 +130,11 @@ class _GutFeelingTrackerScreenState
       focus: _focus,
       bodyFeel: _bodyFeel,
     );
+    _moment = captureLogMoment(
+      ref,
+      kind: EntryKind.gutFeeling,
+      trackedAt: entry.trackedAt,
+    );
     final success = await saveWithFeedback(
       context,
       () => ref.read(entriesProvider.notifier).addGutFeeling(entry),
@@ -171,16 +181,20 @@ class _GutFeelingTrackerScreenState
   Widget build(BuildContext context) {
     final savedSentiment = _savedSentiment;
     if (savedSentiment != null) {
+      final moment = _moment;
       // After a hard day no celebration: calm, without the „!".
       final hardDay = savedSentiment == LogSentiment.bad;
       return BbSuccessOverlay(
         message: hardDay ? 'Eintrag gespeichert.' : 'Eintrag gespeichert!',
         calm: hardDay,
         subMessage: 'Ist jetzt in deinem Tagebuch eingetragen.',
-        illustration: BuddyReactionView(
-          kind: EntryKind.gutFeeling,
-          sentiment: savedSentiment,
-        ),
+        illustration: moment == null
+            ? null
+            : LogSuccessHero(
+                moment: moment,
+                kind: EntryKind.gutFeeling,
+                sentiment: savedSentiment,
+              ),
         onDismissed: context.popOrGoDashboard,
       );
     }

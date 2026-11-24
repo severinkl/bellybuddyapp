@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
+import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/meal_tracker_provider.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
@@ -16,6 +17,7 @@ import 'package:belly_buddy/repositories/meal_media_repository.dart';
 import 'package:belly_buddy/screens/trackers/meal/meal_tracker_screen.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 import 'package:belly_buddy/widgets/buddy/buddy_reaction_view.dart';
+import 'package:belly_buddy/widgets/buddy/log_success_hero.dart';
 import 'package:belly_buddy/widgets/common/mascot_image.dart';
 
 import '../../../helpers/fakes.dart';
@@ -201,8 +203,8 @@ void main() {
     });
 
     testWidgets(
-      'success screen fits a 375×667 phone at text scale 1.3 (no vertical '
-      'overflow)',
+      'the meal page fits 375×667 at text scale 1.3 with its circle, actions '
+      'and callout',
       (tester) async {
         SharedPreferences.setMockInitialValues({});
         tester.view.physicalSize = const Size(750, 1334);
@@ -210,6 +212,7 @@ void main() {
         tester.platformDispatcher.textScaleFactorTestValue = 1.3;
         addTearDown(tester.view.reset);
         addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        final now = DateTime(2026, 11, 23, 14);
 
         // The test font's square glyphs overflow the action pills sideways;
         // only overflow at the bottom (content taller than the screen)
@@ -220,22 +223,42 @@ void main() {
         try {
           await tester.pumpWithProviders(
             const MealTrackerScreen(),
-            overrides: _overrides(),
+            overrides: [
+              ..._overrides(),
+              buddyClockProvider.overrideWithValue(() => now),
+              // Today's first entry: the tallest page, with the ignite row.
+              buddyProvider.overrideWith(
+                () => FakeBuddyNotifier(() => buddyStatus(streak: 4)),
+              ),
+            ],
           );
           await tester.pump();
           await tester.pump();
-          ProviderScope.containerOf(
-              tester.element(find.byType(MealTrackerScreen)),
-            ).read(mealTrackerProvider.notifier)
+          final container = ProviderScope.containerOf(
+            tester.element(find.byType(MealTrackerScreen)),
+          );
+          await container.read(buddyProvider.future);
+          container.read(mealTrackerProvider.notifier)
+            ..addIngredient('Tomate')
             ..setTitle('Tomatensalat')
-            ..markShowSuccess();
+            ..setTrackedAt(now);
           await tester.pump();
-          await tester.pump(const Duration(milliseconds: 700));
+          await tester.ensureVisible(
+            find.byKey(MealTrackerScreen.mealEditSaveKey),
+          );
+          await tester.tap(find.byKey(MealTrackerScreen.mealEditSaveKey));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 1300));
         } finally {
           FlutterError.onError = previousOnError;
         }
 
+        expect(find.byType(ChargingMeter), findsOneWidget);
+        expect(find.byKey(LogSuccessHero.igniteKey), findsOneWidget);
         expect(find.byType(BuddyReactionView), findsOneWidget);
+        expect(find.text('Trinken eintragen'), findsOneWidget);
+        expect(find.text('Als Rezept speichern'), findsOneWidget);
+        expect(find.text('Tippen zum Fortfahren'), findsOneWidget);
         final vertical = errors
             .map((e) => e.exceptionAsString())
             .where((m) => m.contains('overflowed') && m.contains('bottom'));

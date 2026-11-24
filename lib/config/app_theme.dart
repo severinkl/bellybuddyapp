@@ -157,6 +157,9 @@ class AppTheme {
   // The streak moment's big count („1 Tag" beside the flame)
   static const double fontSizeStreakCount = 56;
 
+  // The need's emoji in the success page's charging circle
+  static const double fontSizeChargeIcon = 44;
+
   // Stool scale colors
   static const List<Color> stoolColors = [
     Color(0xFF1A6B37), // Type 1: HSL(142, 76%, 25%)
