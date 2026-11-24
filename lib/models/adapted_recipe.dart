@@ -54,14 +54,18 @@ class AdaptedRecipe {
     this.note = '',
   });
 
-  /// Reads the 200 answer. A [FormatException] without `recipe_id`, a title
-  /// or ingredients, or with an entry that isn't one.
+  /// Reads the 200 answer, trimmed, with blank ingredient names, removed
+  /// names and steps dropped: what the app shows and saves is clean from
+  /// here on. A [FormatException] without `recipe_id`, a title or
+  /// ingredients, or with an entry that isn't one.
   factory AdaptedRecipe.fromJson(Map<String, dynamic> json) {
     final title = _string(json, 'title').trim();
     if (title.isEmpty) throw const FormatException('adapt: blank title');
     final ingredients = [
       for (final item in _list(json, 'ingredients'))
-        AdaptedIngredient.fromJson(_map(item, 'ingredients')),
+        if (AdaptedIngredient.fromJson(_map(item, 'ingredients'))
+            case final ingredient when ingredient.name.isNotEmpty)
+          ingredient,
     ];
     if (ingredients.isEmpty) {
       throw const FormatException('adapt: no ingredients');
@@ -70,14 +74,15 @@ class AdaptedRecipe {
       recipeId: _string(json, 'recipe_id'),
       title: title,
       ingredients: ingredients,
-      removed: _list(
-        json,
-        'removed',
-        optional: true,
-      ).whereType<String>().toList(),
+      removed: [
+        for (final name in _list(json, 'removed', optional: true))
+          ?_blankToNull(name),
+      ],
       steps: [
         for (final item in _list(json, 'steps', optional: true))
-          AdaptedStep._fromJson(_map(item, 'steps')),
+          if (AdaptedStep._fromJson(_map(item, 'steps')) case final step
+              when step.text.isNotEmpty)
+            step,
       ],
       note: switch (json['note']) {
         final String note => note.trim(),

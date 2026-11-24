@@ -108,8 +108,8 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
     if (title.isEmpty || _ingredients.isEmpty) return;
 
     final steps = [
-      for (final text in _steps)
-        if (text.trim().isNotEmpty) text.trim(),
+      for (final text in _steps.map((t) => t.trim()))
+        if (text.isNotEmpty) text,
     ];
     if (steps.fold<int>(0, (sum, s) => sum + s.length) >
         AppConstants.recipeStepsMaxChars) {

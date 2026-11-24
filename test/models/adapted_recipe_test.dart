@@ -84,6 +84,34 @@ void main() {
       expect(ingredient.unknown, isFalse);
     });
 
+    test('blank names and steps are dropped, the rest trimmed', () {
+      final json = _contractExample()
+        ..['title'] = '  Risotto  '
+        ..['ingredients'] = [
+          {'amount': ' 200 g ', 'name': ' Risottoreis ', 'status': 'ok'},
+          {'amount': '1 EL', 'name': '   ', 'status': 'ok'},
+          {'name': 'Salz', 'status': 'ok'},
+        ]
+        ..['removed'] = [' Zwiebel ', '  ', 3]
+        ..['steps'] = [
+          {'text': '  Erhitze das Öl.  ', 'changed': true},
+          {'text': '   ', 'changed': true},
+          {'text': 'Gib den Reis dazu.'},
+        ];
+
+      final adapted = AdaptedRecipe.fromJson(json);
+
+      expect(adapted.title, 'Risotto');
+      expect(adapted.ingredients.map((i) => i.name), ['Risottoreis', 'Salz']);
+      expect(adapted.ingredients.map((i) => i.amount), ['200 g', null]);
+      expect(adapted.removed, ['Zwiebel']);
+      expect(adapted.steps.map((s) => s.text), [
+        'Erhitze das Öl.',
+        'Gib den Reis dazu.',
+      ]);
+      expect(adapted.steps.map((s) => s.changed), [true, false]);
+    });
+
     test('without removed, steps and note: empty', () {
       final json = _contractExample()
         ..remove('removed')
@@ -110,6 +138,12 @@ void main() {
             'an ingredient without a name',
             (json) => json['ingredients'] = [
               {'amount': '1 EL', 'status': 'ok'},
+            ],
+          ),
+          (
+            'only blank ingredient names',
+            (json) => json['ingredients'] = [
+              {'amount': '1 EL', 'name': ' ', 'status': 'ok'},
             ],
           ),
           ('no recipe_id', (json) => json.remove('recipe_id')),

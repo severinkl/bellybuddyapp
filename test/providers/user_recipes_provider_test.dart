@@ -276,7 +276,7 @@ void main() {
             adapted(
               ingredients: const [
                 AdaptedIngredient(name: 'Risottoreis'),
-                AdaptedIngredient(amount: ' ', name: 'Salz'),
+                AdaptedIngredient(name: 'Salz'),
               ],
             ),
           );
@@ -294,12 +294,9 @@ void main() {
           .read(userRecipesProvider.notifier)
           .createAdapted(
             adapted(
+              // fromJson drops blank steps and trims the rest.
               steps: [
-                const AdaptedStep(
-                  '  Erhitze das Knoblauchöl.  ',
-                  changed: true,
-                ),
-                const AdaptedStep('   '),
+                const AdaptedStep('Erhitze das Knoblauchöl.', changed: true),
                 for (var i = 1; i <= AppConstants.recipeStepsMax; i++)
                   AdaptedStep('Schritt $i'),
               ],
@@ -328,10 +325,9 @@ void main() {
           .createAdapted(
             adapted(
               ingredients: const [
-                AdaptedIngredient(amount: '200 g', name: ' Reis '),
+                AdaptedIngredient(amount: '200 g', name: 'Reis'),
                 AdaptedIngredient(name: 'Salz'),
                 AdaptedIngredient(amount: '1 Tasse', name: 'reis'),
-                AdaptedIngredient(amount: '1 EL', name: '  '),
                 AdaptedIngredient(amount: '1 Prise', name: 'SALZ'),
               ],
             ),

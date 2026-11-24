@@ -1,3 +1,4 @@
+import '../utils/distinct_by_name.dart';
 import 'adapted_recipe.dart';
 import 'recipe.dart';
 import 'user_recipe.dart';
@@ -41,11 +42,6 @@ class MealPrefill {
   final List<String> ingredients;
   final String? imageUrl;
 
-  static List<String> _distinct(Iterable<String> names) {
-    final seen = <String>{};
-    return [
-      for (final name in names.map((n) => n.trim()))
-        if (name.isNotEmpty && seen.add(name.toLowerCase())) name,
-    ];
-  }
+  static List<String> _distinct(Iterable<String> names) =>
+      distinctByName([for (final name in names) name.trim()], (n) => n);
 }

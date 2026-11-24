@@ -6,6 +6,7 @@ import '../models/user_recipe.dart';
 import '../providers/core_providers.dart';
 import '../repositories/user_recipe_repository.dart';
 import '../services/user_recipe_service.dart';
+import '../utils/distinct_by_name.dart';
 import '../utils/logger.dart';
 
 final userRecipeServiceProvider = Provider<UserRecipeService>((ref) {
@@ -99,30 +100,23 @@ class UserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>> {
     return recipe;
   }
 
-  /// Saves [adapted] as an own recipe: the names trimmed and de-duplicated
-  /// case-insensitively (the first and its amount kept), the amounts aligned
-  /// (none when every one is null), the non-blank steps up to
-  /// [AppConstants.recipeStepsMax], the original as its origin, no photo.
+  /// Saves [adapted] (clean since [AdaptedRecipe.fromJson]) as an own
+  /// recipe: the names de-duplicated case-insensitively (the first and its
+  /// amount kept), the amounts aligned (none when every one is null), the
+  /// steps up to [AppConstants.recipeStepsMax], the original as its origin,
+  /// no photo.
   ///
   /// When the title is taken, tries „<title> (angepasst)", then
   /// „(angepasst 2)" … „(angepasst 9)"; after that the
   /// [DuplicateRecipeTitleException] is rethrown.
   Future<UserRecipe> createAdapted(AdaptedRecipe adapted) async {
-    final names = <String>[];
-    final amounts = <String?>[];
-    final seen = <String>{};
-    for (final ingredient in adapted.ingredients) {
-      final name = ingredient.name.trim();
-      if (name.isEmpty || !seen.add(name.toLowerCase())) continue;
-      final amount = ingredient.amount?.trim();
-      names.add(name);
-      amounts.add(amount == null || amount.isEmpty ? null : amount);
-    }
+    final kept = distinctByName(adapted.ingredients, (i) => i.name);
+    final amounts = [for (final i in kept) i.amount];
     final steps = [
-      for (final step in adapted.steps)
-        if (step.text.trim() case final text when text.isNotEmpty) text,
-    ].take(AppConstants.recipeStepsMax).toList();
-    final title = adapted.title.trim();
+      for (final step in adapted.steps.take(AppConstants.recipeStepsMax))
+        step.text,
+    ];
+    final title = adapted.title;
     for (var attempt = 0; ; attempt++) {
       try {
         return await create(
@@ -131,7 +125,7 @@ class UserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>> {
             1 => '$title (angepasst)',
             _ => '$title (angepasst $attempt)',
           },
-          ingredients: names,
+          ingredients: [for (final i in kept) i.name],
           instructions: steps,
           ingredientAmounts: amounts.every((a) => a == null) ? null : amounts,
           adaptedFromRecipeId: adapted.recipeId,
