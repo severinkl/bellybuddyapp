@@ -263,6 +263,56 @@ void main() {
       );
     });
 
+    group('the ranking is followed only while a pick is missing', () {
+      /// The collection reloaded (e.g. pulled to refresh elsewhere): whether
+      /// the rewards still followed it, i.e. it was fetched again.
+      Future<bool> follows(ProviderContainer c) async {
+        final fetches = recipes.collectionFetches;
+        c.invalidate(recipeCollectionProvider);
+        await _settle();
+        return recipes.collectionFetches > fetches;
+      }
+
+      test('day 2: day 3 and 5 still to pick → followed', () async {
+        final c = container();
+        expect((await rewardsOf(c))!.picks.keys, [1]);
+
+        expect(await follows(c), isTrue);
+      });
+
+      test('all picks made → no longer followed', () async {
+        recipes.collection = [
+          _a,
+          _b,
+          testRecipe(
+            id: 'c',
+            title: 'Couscous',
+            ingredients: [testLine('Karotte')],
+          ),
+        ];
+        entries.insightSource = activeDays(5);
+        final c = container();
+        expect((await rewardsOf(c))!.picks.keys, unorderedEquals([1, 3, 5]));
+
+        expect(await follows(c), isFalse);
+      });
+
+      test('all picks stored → the collection is not reloaded', () async {
+        SharedPreferences.setMockInitialValues({
+          'journey_rewards_u1': _json(
+            JourneyRewards(
+              earnedDay: 2,
+              picks: {1: _pick(_a), 3: _pick(_b), 5: _pick(_a)},
+            ),
+          ),
+        });
+        final c = container();
+        await rewardsOf(c);
+
+        expect(await follows(c), isFalse);
+      });
+    });
+
     group('answerTipOffer', () {
       Future<ProviderContainer> offered() async {
         entries.insightSource = activeDays(3);

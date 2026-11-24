@@ -507,6 +507,45 @@ void main() {
     });
   });
 
+  group('picksMissing', () {
+    const pick = RecipePick(id: 'x', title: 'X');
+
+    test('while a recipe day has no pick, earned or not', () {
+      expect(picksMissing(const JourneyRewards()), isTrue);
+      expect(
+        picksMissing(
+          const JourneyRewards(earnedDay: 7, picks: {1: pick, 3: pick}),
+        ),
+        isTrue,
+      );
+      expect(
+        picksMissing(const JourneyRewards(picks: {1: pick, 3: pick, 5: pick})),
+        isFalse,
+      );
+    });
+
+    test('day 3 not once the tip was accepted', () {
+      expect(
+        picksMissing(
+          const JourneyRewards(
+            picks: {1: pick, 5: pick},
+            tipOffer: TipOffer.accepted,
+          ),
+        ),
+        isFalse,
+      );
+      expect(
+        picksMissing(
+          const JourneyRewards(
+            picks: {1: pick, 5: pick},
+            tipOffer: TipOffer.declined,
+          ),
+        ),
+        isTrue,
+      );
+    });
+  });
+
   group('announcementDay', () {
     // Day 3: see the day-3 table.
     test('0 and 7 → null; 1, 2, 4, 5, 6 → themselves', () {

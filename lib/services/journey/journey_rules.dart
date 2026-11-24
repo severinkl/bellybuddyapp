@@ -119,6 +119,15 @@ JourneyRewards fillPicks(
       : r.copyWith(picks: Map.unmodifiable(picks));
 }
 
+/// Whether a recipe day still lacks its pick, so [fillPicks] may still
+/// change [r]: day 3 not once the tip was accepted. Picks never go, so once
+/// false it stays false.
+bool picksMissing(JourneyRewards r) => JourneyRewards.recipeDays.any(
+  (day) =>
+      !r.picks.containsKey(day) &&
+      !(day == _tipDay && r.tipOffer == TipOffer.accepted),
+);
+
 /// A recipe of [ranked] in „Für dich" order ([pickForYou]) that is not in
 /// [exclude]: the first that [passesForYou] with a line that is one of the
 /// foods [goodKeys] (`RecipeIngredient.isFood`: also in another spelling,

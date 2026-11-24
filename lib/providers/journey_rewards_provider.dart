@@ -8,6 +8,7 @@ import '../config/constants.dart';
 import '../models/insights.dart';
 import '../models/journey_rewards.dart';
 import '../services/journey/journey_rules.dart';
+import '../services/recipes/recipe_ranking.dart';
 import '../utils/logger.dart';
 import '../utils/settled_value.dart';
 import 'auth_provider.dart';
@@ -22,7 +23,8 @@ import 'today_provider.dart';
 /// while [journeyProvider] isn't true, and until the stored value is read.
 ///
 /// Moved on by the settled insights, the weekly tips and the checked
-/// recipes ([advanceRewards], [fillPicks]), so nothing is ever taken away:
+/// recipes ([advanceRewards], [fillPicks]; the ranking only while a pick is
+/// missing, [picksMissing]), so nothing is ever taken away:
 /// the earned day never goes down and a stored pick never changes. Stored
 /// only when changed, one write after another. Failures are logged:
 /// - an unreadable stored value starts afresh, stored;
@@ -54,11 +56,16 @@ class JourneyRewardsNotifier extends Notifier<JourneyRewards?> {
   /// The writes, one after another, so an older one never lands last.
   Future<void> _writes = Future.value();
 
+  /// The ranking's subscription, while a recipe day still lacks its pick
+  /// ([picksMissing]); closed for good once none does.
+  ProviderSubscription<AsyncValue<RankedRecipes>>? _ranking;
+
   @override
   JourneyRewards? build() {
     _userId = null;
     _unstored = false;
     _insights = null;
+    _ranking = null;
     final userId = ref.watch(currentUserIdProvider);
     if (userId == null || ref.watch(journeyProvider) != true) return null;
     ref
@@ -69,8 +76,11 @@ class JourneyRewardsNotifier extends Notifier<JourneyRewards?> {
           unawaited(_apply(_same));
         }
       }, fireImmediately: true)
-      ..listen(weeklyTipsEnabledProvider, (_, _) => unawaited(_apply(_same)))
-      ..listen(rankedRecipesProvider, (_, _) => unawaited(_apply(_same)));
+      ..listen(weeklyTipsEnabledProvider, (_, _) => unawaited(_apply(_same)));
+    _ranking = ref.listen(
+      rankedRecipesProvider,
+      (_, _) => unawaited(_apply(_same)),
+    );
     unawaited(_load(userId));
     return null;
   }
@@ -97,13 +107,23 @@ class JourneyRewardsNotifier extends Notifier<JourneyRewards?> {
     if (current == null) return _writes;
     final next = _moved(change(current));
     if (next == current) return _writes;
-    state = next;
+    _set(next);
     return _unstored ? _writes : _store(userId, next);
   }
 
+  /// Holds [rewards]; the ranking is no longer followed once no pick is
+  /// missing.
+  void _set(JourneyRewards rewards) {
+    state = rewards;
+    if (!picksMissing(rewards)) {
+      _ranking?.close();
+      _ranking = null;
+    }
+  }
+
   /// [r] moved on by the settled insights and the weekly tips, with the
-  /// recipes picked from the settled ranking; [r] until the insights
-  /// settled (day 5 needs their calm-day ingredients).
+  /// recipes picked from the settled ranking while a pick is missing; [r]
+  /// until the insights settled (day 5 needs their calm-day ingredients).
   JourneyRewards _moved(JourneyRewards r) {
     final insights = _insights;
     if (insights == null) return r;
@@ -113,6 +133,7 @@ class JourneyRewardsNotifier extends Notifier<JourneyRewards?> {
       insights: insights,
       weeklyTips: weeklyTips,
     );
+    if (!picksMissing(advanced)) return advanced;
     final ranked = ref.read(rankedRecipesProvider).settledValue;
     if (ranked == null) return advanced;
     return fillPicks(
@@ -133,7 +154,7 @@ class JourneyRewardsNotifier extends Notifier<JourneyRewards?> {
     if (!opRef.isCurrentUser(userId)) return;
     _userId = userId;
     _unstored = stored == null;
-    state = stored ?? const JourneyRewards();
+    _set(stored ?? const JourneyRewards());
     await _apply(_same);
   }
 
