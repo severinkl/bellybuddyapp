@@ -98,7 +98,9 @@ void main() {
           find.descendant(of: meter, matching: find.byType(NeedMeter)),
         )
         .level;
-    expect(level, 1.0);
+    // Full: the drink filled it up. A real clock under load may stop the
+    // charge a hair short of 1.0 (0.9999984 seen).
+    expect(level, closeTo(1.0, 1e-3));
     expect(find.text(_tapToContinue), findsOneWidget);
 
     await _continue(tester);
