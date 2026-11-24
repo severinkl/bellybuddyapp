@@ -6,11 +6,13 @@ import 'package:riverpod/src/internals.dart' show Override;
 
 import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/models/insights.dart';
+import 'package:belly_buddy/models/journey_rewards.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/providers/insights_provider.dart';
+import 'package:belly_buddy/providers/journey_rewards_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
 
 import 'app_host.dart';
@@ -81,6 +83,36 @@ class _SeededInsightsNotifier extends InsightsNotifier {
 /// `lockedInsights()`) instead of computing them.
 Override insightsProviderSeededWith(Insights insights) =>
     insightsProvider.overrideWith(() => _SeededInsightsNotifier(insights));
+
+/// A [JourneyRewardsNotifier] that starts with [_rewards] and keeps its
+/// answers in memory: nothing read, moved on or stored.
+class _SeededJourneyRewardsNotifier extends JourneyRewardsNotifier {
+  _SeededJourneyRewardsNotifier(this._rewards);
+  final JourneyRewards? _rewards;
+
+  @override
+  JourneyRewards? build() => _rewards;
+
+  @override
+  Future<void> answerTipOffer({required bool accepted}) async {
+    if (state case final r? when r.tipOffer == TipOffer.offered) {
+      state = r.copyWith(
+        tipOffer: accepted ? TipOffer.accepted : TipOffer.declined,
+      );
+    }
+  }
+
+  @override
+  Future<void> setFirstTip(FirstTipState firstTip) async =>
+      state = state?.copyWith(firstTip: firstTip);
+}
+
+/// An [Override] for [journeyRewardsProvider] that serves [rewards] (null:
+/// no journey) and keeps `answerTipOffer` and `setFirstTip` in memory.
+Override journeyRewardsSeededWith(JourneyRewards? rewards) =>
+    journeyRewardsProvider.overrideWith(
+      () => _SeededJourneyRewardsNotifier(rewards),
+    );
 
 /// An [EntriesNotifier] whose [build] returns a pre-seeded [EntriesState] so
 /// widgets that `ref.read(entriesProvider)` in `initState` see the supplied

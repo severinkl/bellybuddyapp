@@ -326,6 +326,10 @@ class AppConstants {
   /// the first-patterns journey (`insight_journey_<userId>`, a bool).
   static const String keyInsightJourneyPrefix = 'insight_journey_';
 
+  /// Prefix of the rewards of the first 7 days, per user and device
+  /// (`journey_rewards_<userId>`, the JSON of a `JourneyRewards`).
+  static const String keyJourneyRewardsPrefix = 'journey_rewards_';
+
   /// Prefix of the Buddy announcement flags
   /// (`buddy_announced_<userId>_<kind>_<yyyy-MM-dd | goal>`), set once an
   /// announcement was shown, so each one shows only once.
