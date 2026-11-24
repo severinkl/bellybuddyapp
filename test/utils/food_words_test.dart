@@ -201,6 +201,42 @@ void main() {
     });
   });
 
+  group('sameFood, not through processing (the day-5 copy)', () {
+    bool strict(String a, String b) => sameFood(a, b, viaProcessing: false);
+
+    test("core's processed pairs: the food, but not this way", () {
+      final cases = _pairs('processed');
+      for (final (processed, food) in cases) {
+        expect(sameFood(processed, food), isTrue, reason: processed);
+        expect(strict(processed, food), isFalse, reason: processed);
+        expect(strict(food, processed), isFalse, reason: processed);
+      }
+    });
+
+    test("core's same-food pairs stay the same", () {
+      for (final (name, same) in _pairs('same_food')) {
+        expect(strict(name, same), isTrue, reason: '$name = $same');
+      }
+    });
+
+    test('plural, irregular plural and the same key: the same; a processed '
+        'form or part: not', () {
+      expect(strict('Eier', 'Ei'), isTrue);
+      expect(strict('Rote Zwiebeln', 'zwiebel'), isTrue);
+      expect(strict('Äpfel', 'Apfel'), isTrue);
+      expect(strict('Apfelsäfte', 'Apfelsaft'), isTrue);
+      expect(strict('Zwiebelpulver', 'zwiebelpulver'), isTrue);
+      expect(strict('Apfel', 'Apfelsaft'), isFalse);
+      expect(strict('Zwiebel', 'Zwiebelpulver'), isFalse);
+      expect(strict('Knoblauch', 'Knoblauchzehen'), isFalse);
+    });
+
+    test('free-from foods as before: only by the key', () {
+      expect(strict('Laktosefreie Milch', 'laktosefreie milch'), isTrue);
+      expect(strict('Laktosefreie Milch', 'Milch'), isFalse);
+    });
+  });
+
   group('FoodName', () {
     test('its name, key and words', () {
       final zwiebeln = FoodName('Zwiebeln');

@@ -86,10 +86,12 @@ class RecipeIngredient {
 
   /// Whether the line is [food]: its name or catalog name is the same food
   /// ([FoodName.isSame]: the same match key or a shared food word). A line
-  /// „Ei" is the food „Eier", a line „Zwiebelpulver" the food „Zwiebel"; a
-  /// line „Kokosmilch" or „Laktosefreie Milch" is no „Milch".
-  bool isFood(FoodName food) =>
-      food.isSame(_food) || (_catalogFood?.isSame(food) ?? false);
+  /// „Ei" is the food „Eier", a line „Zwiebelpulver" the food „Zwiebel"
+  /// (not without [viaProcessing]); a line „Kokosmilch" or „Laktosefreie
+  /// Milch" is no „Milch".
+  bool isFood(FoodName food, {bool viaProcessing = true}) =>
+      food.isSame(_food, viaProcessing: viaProcessing) ||
+      (_catalogFood?.isSame(food, viaProcessing: viaProcessing) ?? false);
 }
 
 /// A recipe of the curated collection (`recipes`).

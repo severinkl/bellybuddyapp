@@ -131,8 +131,10 @@ bool picksMissing(JourneyRewards r) => JourneyRewards.recipeDays.any(
 /// A recipe of [ranked] in „Für dich" order ([pickForYou]) that is not in
 /// [exclude]: the first that [passesForYou] with a line that is one of the
 /// foods [goodKeys] (`RecipeIngredient.isFood`: also in another spelling,
-/// like core), naming those lines, else the first, naming none. Null when
-/// none is left.
+/// like core, but never through processing: the copy names those lines as
+/// eaten, and „Apfelsaft" is not the „Apfel" the user logged), naming those
+/// lines, else the first, naming none. Null when none is left. The ranking
+/// keeps the broader match.
 RecipePick? pickJourneyRecipe(
   List<RecipeFit> ranked, {
   Set<String> exclude = const {},
@@ -160,14 +162,15 @@ RecipePick? pickJourneyRecipe(
   return RecipePick(id: first.id, title: first.title);
 }
 
-/// The names of [recipe]'s lines that are one of [foods], as the recipe
-/// spells them, in recipe order, each once (case ignored), at most
-/// [_maxMatched].
+/// The names of [recipe]'s lines that are one of [foods], not through
+/// processing, as the recipe spells them, in recipe order, each once (case
+/// ignored), at most [_maxMatched].
 List<String> _matchedLines(Recipe recipe, List<FoodName> foods) =>
     List.unmodifiable(
       distinctByName([
         for (final line in recipe.ingredients)
-          if (foods.any(line.isFood)) line.name.trim(),
+          if (foods.any((food) => line.isFood(food, viaProcessing: false)))
+            line.name.trim(),
       ], (name) => name).take(_maxMatched),
     );
 

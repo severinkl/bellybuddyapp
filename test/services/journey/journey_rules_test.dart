@@ -367,8 +367,9 @@ void main() {
     });
 
     // The food rules themselves: food_words_test.
-    test('day 5 matches a calm-day food in another spelling, like core: '
-        'Eier is Ei, Zwiebel is Zwiebelpulver', () {
+    test('day 5 matches a calm-day food in another spelling: Eier is Ei; '
+        'never a processed form the user did not log (Zwiebelpulver for '
+        'Zwiebel)', () {
       final x = _recipe('x', ['Kartoffel'], title: 'Kartoffelsuppe');
       final y = _recipe('y', [
         'Reis',
@@ -385,12 +386,22 @@ void main() {
       );
       expect(
         r.picks[5],
-        const RecipePick(
-          id: 'y',
-          title: 'Reispfanne mit Ei',
-          matched: ['Ei', 'Zwiebelpulver'],
-        ),
+        const RecipePick(id: 'y', title: 'Reispfanne mit Ei', matched: ['Ei']),
       );
+    });
+
+    test('day 5: Apfelsaft is not the Apfel the user ate (no match, the '
+        'generic title)', () {
+      final x = _recipe('x', ['Kartoffel'], title: 'Kartoffelsuppe');
+      final y = _recipe('y', ['Apfelsaft', 'Hafer'], title: 'Apfel-Porridge');
+      final r = fillPicks(
+        const JourneyRewards(earnedDay: 5, picks: _earlier),
+        ranked: _rank([x, y]),
+        weeklyTips: false,
+        calmKeys: const {'apfel'},
+      );
+      expect(r.picks[5]!.matched, isEmpty);
+      expect(rewardTitle(5, r, weeklyTips: false), 'Noch ein Rezept für dich');
     });
 
     test('unchecked ranking: no pick', () {

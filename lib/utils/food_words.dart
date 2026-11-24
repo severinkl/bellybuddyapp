@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart' show visibleForTesting;
 
-/// Whether [a] and [b] name the same food ([FoodName.isSame]).
+/// Whether [a] and [b] name the same food ([FoodName.isSame], with
+/// [viaProcessing]).
 @visibleForTesting
-bool sameFood(String a, String b) => FoodName(a).isSame(FoodName(b));
+bool sameFood(String a, String b, {bool viaProcessing = true}) =>
+    FoodName(a).isSame(FoodName(b), viaProcessing: viaProcessing);
 
 /// [names] by food: names that are the same food ([FoodName.isSame]), also
 /// through another („Öl" and „Knoblauch" through „Öl mit Knoblauch"),
@@ -25,9 +27,17 @@ List<List<FoodName>> foodGroups(Iterable<String> names) {
 /// [words] ([foodWords]). Read once where it is kept: a recipe line holds
 /// its own (`RecipeIngredient`), a ranking reads its signals once.
 class FoodName {
-  FoodName(this.name)
-    : key = matchKey(name),
-      words = Set.unmodifiable(_foodWords(name));
+  factory FoodName(String name) {
+    final (:words, :own) = _readWords(name);
+    return FoodName._(
+      name,
+      matchKey(name),
+      Set.unmodifiable(words),
+      Set.unmodifiable(own),
+    );
+  }
+
+  FoodName._(this.name, this.key, this.words, this._ownWords);
 
   final String name;
 
@@ -37,13 +47,27 @@ class FoodName {
   /// [foodWords] of [name], unmodifiable.
   final Set<String> words;
 
+  /// [words] without the food a compound with a processing end names too
+  /// („Apfelsaft" is „apfelsaft" only, not „apfel").
+  final Set<String> _ownWords;
+
   /// Whether this and [other] are the same food: the same [key] (not
   /// empty), or a shared word („Eier" and „Ei", „Zwiebelpulver" and
   /// „Zwiebeln", „Kokos Milch" and „Kokosmilch"; not „Kokosmilch" and
   /// „Milch", nor „Laktosefreie Milch" and „Milch"). How core finds an
   /// avoided food among a recipe's lines.
-  bool isSame(FoodName other) =>
-      (key.isNotEmpty && key == other.key) || words.any(other.words.contains);
+  ///
+  /// Without [viaProcessing], a compound with a processing end is only
+  /// itself („Apfelsaft" is no „Apfel", „Knoblauchzehen" no „Knoblauch";
+  /// „Eier" is still „Ei"): what names a food the user logged must not name
+  /// one they never did. The app's own rule; core always goes through
+  /// processing.
+  bool isSame(FoodName other, {bool viaProcessing = true}) {
+    if (key.isNotEmpty && key == other.key) return true;
+    return viaProcessing
+        ? words.any(other.words.contains)
+        : _ownWords.any(other._ownWords.contains);
+  }
 }
 
 /// How core matches names exactly (`match_key`): folded ([_fold]), without
@@ -88,19 +112,30 @@ final _spaceOrHyphen = RegExp(
 /// - irregular plurals outside [_irregular] are missed („Ananasse");
 /// - an unknown adjective before a food is a word of its own.
 @visibleForTesting
-Set<String> foodWords(String name) => _foodWords(name);
+Set<String> foodWords(String name) => _readWords(name).words;
 
-Set<String> _foodWords(String name) {
-  if (_freeFrom.hasMatch(_fold(name))) return {};
+/// [foodWords] of [name], and `own`: the same without the foods that
+/// compounds with a processing end name too ([FoodName.isSame] without
+/// processing).
+({Set<String> words, Set<String> own}) _readWords(String name) {
+  if (_freeFrom.hasMatch(_fold(name))) return (words: {}, own: {});
   final folded = _fold(name.replaceAll(_note, ' '));
   final ohne = _ohne.firstMatch(folded);
   final text = ohne == null ? folded : folded.substring(0, ohne.start);
-  final words = <String>[];
+  final words = <String>[], own = <String>[];
   for (final match in _word.allMatches(text)) {
     final word = match[0]!.replaceAll('-', '');
-    words.add(_baseForm(word));
+    final base = _baseForm(word);
+    words.add(base);
+    own.add(base);
     if (_processedFood(word) case final food?) words.add(_baseForm(food));
   }
+  return (words: _named(words), own: _named(own));
+}
+
+/// [words] without qualifiers ([_qualifiers]); all of them when they are
+/// qualifiers only.
+Set<String> _named(List<String> words) {
   final named = {
     for (final word in words)
       if (!_qualifiers.contains(word)) word,
