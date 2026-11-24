@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../models/recommendation.dart';
+import '../../providers/recipe_collection_provider.dart';
 import '../../providers/recommendation_index_provider.dart';
 import '../../providers/recommendation_provider.dart';
 import '../../router/navigation_extensions.dart';
@@ -382,8 +383,13 @@ class _RecommendationPage extends ConsumerWidget {
     final letter = recommendation.isLetter;
     return RefreshIndicator(
       color: AppTheme.primary,
-      onRefresh: () =>
-          ref.read(recommendationProvider.notifier).fetchRecommendations(),
+      // The tips, and a collection that failed to load: its recipe links
+      // show only once it has.
+      onRefresh: () => Future.wait([
+        ref.read(recommendationProvider.notifier).fetchRecommendations(),
+        if (ref.read(recipeCollectionProvider).hasError)
+          ref.read(recipeCollectionProvider.notifier).refresh(),
+      ]),
       child: ListView(
         padding: AppConstants.paddingMd,
         children: [

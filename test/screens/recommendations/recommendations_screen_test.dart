@@ -990,6 +990,19 @@ void main() {
       expect(other.showBorder, isFalse);
     });
 
+    testWidgets('„Dein Wochenbrief" is a header, read normally', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await pumpTips(tester, letterSet());
+
+      expect(
+        tester.getSemantics(find.text(letterLabel)),
+        matchesSemantics(label: 'Dein Wochenbrief', isHeader: true),
+      );
+      handle.dispose();
+    });
+
     testWidgets('an old set renders as today', (tester) async {
       final old = Recommendation.fromJson({
         'id': 'old',
@@ -1091,6 +1104,42 @@ void main() {
       expect(find.byKey(TipRecipeLink.keyFor('r-1')), findsNothing);
       expect(find.textContaining('Passendes Rezept'), findsNothing);
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('pulled to refresh: a failed collection loads again, the '
+        'link shows', (tester) async {
+      collection.collectionError = Exception('offline');
+      await pumpTips(tester, letterSet());
+      expect(find.byKey(TipRecipeLink.keyFor('r-1')), findsNothing);
+      final fetches = collection.collectionFetches;
+
+      collection.collectionError = null;
+      await tester.fling(
+        find.byType(ListView).first,
+        const Offset(0, 400),
+        1000,
+      );
+      await tester.pumpAndSettle();
+
+      expect(collection.collectionFetches, fetches + 1);
+      expect(find.text(link), findsOneWidget);
+    });
+
+    testWidgets('pulled to refresh: a loaded collection is not fetched '
+        'again', (tester) async {
+      await pumpTips(tester, letterSet());
+      expect(find.text(link), findsOneWidget);
+      final fetches = collection.collectionFetches;
+
+      await tester.fling(
+        find.byType(ListView).first,
+        const Offset(0, 400),
+        1000,
+      );
+      await tester.pumpAndSettle();
+
+      expect(collection.collectionFetches, fetches);
+      expect(find.text(link), findsOneWidget);
     });
 
     testWidgets("recipe_title missing: the collection's title", (tester) async {

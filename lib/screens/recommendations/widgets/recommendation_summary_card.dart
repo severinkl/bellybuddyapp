@@ -50,10 +50,14 @@ class RecommendationSummaryCard extends StatelessWidget {
               children: [
                 if (recommendation.summary case final summary?) ...[
                   if (letter) ...[
-                    Text(
-                      StepFieldLabel.capitals(_letterLabel),
-                      semanticsLabel: _letterLabel,
-                      style: StepFieldLabel.style,
+                    Semantics(
+                      container: true,
+                      header: true,
+                      child: Text(
+                        StepFieldLabel.capitals(_letterLabel),
+                        semanticsLabel: _letterLabel,
+                        style: StepFieldLabel.style,
+                      ),
                     ),
                     AppConstants.gap4,
                   ],
