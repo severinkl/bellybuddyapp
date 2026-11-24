@@ -133,10 +133,11 @@ bool picksMissing(JourneyRewards r) => JourneyRewards.recipeDays.any(
 /// A recipe of [ranked] in „Für dich" order ([pickForYou]) that is not in
 /// [exclude]: the first that [passesForYou] with a line that is one of the
 /// foods [goodKeys] (`RecipeIngredient.isFood`: also in another spelling,
-/// like core, but never through processing: the copy names those lines as
-/// eaten, and „Apfelsaft" is not the „Apfel" the user logged), naming those
+/// like core, or a part of the food, but never through processing: the
+/// copy names those lines as eaten, and „Apfelsaft" is not the „Apfel" the
+/// user logged, while „Knoblauchzehen" are their „Knoblauch"), naming those
 /// lines, else the first, naming none. Null when none is left. The ranking
-/// keeps the broader match.
+/// keeps core's broader match.
 RecipePick? pickJourneyRecipe(
   List<RecipeFit> ranked, {
   Set<String> exclude = const {},

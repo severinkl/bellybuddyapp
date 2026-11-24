@@ -47,8 +47,10 @@ class FoodName {
   /// [foodWords] of [name], unmodifiable.
   final Set<String> words;
 
-  /// [words] without the food a compound with a processing end names too
-  /// („Apfelsaft" is „apfelsaft" only, not „apfel").
+  /// The words [isSame] compares without processing: [words] without the
+  /// food a processed compound names too („Apfelsaft" is „apfelsaft" only),
+  /// with the food a part of it names, also by the app's own part ends
+  /// ([_partEnds]: „Gurkenscheiben" is „gurk" too).
   final Set<String> _ownWords;
 
   /// Whether this and [other] are the same food: the same [key] (not
@@ -57,11 +59,13 @@ class FoodName {
   /// „Milch", nor „Laktosefreie Milch" and „Milch"). How core finds an
   /// avoided food among a recipe's lines.
   ///
-  /// Without [viaProcessing], a compound with a processing end is only
-  /// itself („Apfelsaft" is no „Apfel", „Knoblauchzehen" no „Knoblauch";
-  /// „Eier" is still „Ei"): what names a food the user logged must not name
-  /// one they never did. The app's own rule; core always goes through
-  /// processing.
+  /// Without [viaProcessing], a processed compound is only itself
+  /// („Apfelsaft" is no „Apfel", „Zwiebelpulver" no „Zwiebel"), while a
+  /// part or piece is still its food („Knoblauchzehen", „Gurkenscheiben",
+  /// „Zwiebelringe"; [_partEnds]) and „Eier" still „Ei": what names a food
+  /// the user logged must not name one they never ate. The app's own rule
+  /// for day 5's copy; core (and the ranking) go through every processing
+  /// end.
   bool isSame(FoodName other, {bool viaProcessing = true}) {
     if (key.isNotEmpty && key == other.key) return true;
     return viaProcessing
@@ -115,8 +119,8 @@ final _spaceOrHyphen = RegExp(
 Set<String> foodWords(String name) => _readWords(name).words;
 
 /// [foodWords] of [name], and `own`: the same without the foods that
-/// compounds with a processing end name too ([FoodName.isSame] without
-/// processing).
+/// compounds with a processing end name too, with those that a part of a
+/// food names ([_partFood]; [FoodName.isSame] without processing).
 ({Set<String> words, Set<String> own}) _readWords(String name) {
   if (_freeFrom.hasMatch(_fold(name))) return (words: {}, own: {});
   final folded = _fold(name.replaceAll(_note, ' '));
@@ -129,6 +133,7 @@ Set<String> foodWords(String name) => _readWords(name).words;
     words.add(base);
     own.add(base);
     if (_processedFood(word) case final food?) words.add(_baseForm(food));
+    if (_partFood(word) case final food?) own.add(_baseForm(food));
   }
   return (words: _named(words), own: _named(own));
 }
@@ -333,6 +338,60 @@ const _notProcessed = {'paprikapulver', 'kakaobutter'};
 String? _processedFood(String word) {
   if (_notProcessed.contains(word)) return null;
   for (final end in _processedLongestFirst) {
+    if (word.endsWith(end)) {
+      final food = word.length - end.length;
+      return food >= 3 ? word.substring(0, food) : null;
+    }
+  }
+  return null;
+}
+
+/// What a food is cut or split into, or one of its parts, as the end of a
+/// compound, folded: core's part ends (the second half of
+/// [_processedEnds]) and the app's own pieces („Salatblätter",
+/// „Ananasstücke", „Gurkenscheiben", „Tofuwürfel", „Zwiebelringe",
+/// „Apfelspalten"). Only for [FoodName.isSame] without processing (day 5):
+/// a piece of a food is that food, its processed form is not.
+const _partEnds = [
+  'zehe',
+  'zehen',
+  'schote',
+  'schoten',
+  'knolle',
+  'knollen',
+  'stange',
+  'stangen',
+  'roschen',
+  'blatt',
+  'blatter',
+  'blattern',
+  'stuck',
+  'stucke',
+  'stucken',
+  'scheibe',
+  'scheiben',
+  'wurfel',
+  'wurfeln',
+  'ring',
+  'ringe',
+  'ringen',
+  'spalte',
+  'spalten',
+];
+
+/// Longest first, so „ringe" wins over „ring".
+final _partLongestFirst = [..._partEnds]..sort((a, b) => b.length - a.length);
+
+/// Compounds with a part end that are not a piece of the food before it:
+/// ice cubes are no ice cream.
+const _notParts = {'eiswurfel', 'eiswurfeln'};
+
+/// The food of a folded compound [word] that ends in a part end
+/// ([_partEnds]), with at least 3 letters before it („gurkenscheiben" is
+/// „gurken"); null for any other word.
+String? _partFood(String word) {
+  if (_notParts.contains(word)) return null;
+  for (final end in _partLongestFirst) {
     if (word.endsWith(end)) {
       final food = word.length - end.length;
       return food >= 3 ? word.substring(0, food) : null;

@@ -204,12 +204,29 @@ void main() {
   group('sameFood, not through processing (the day-5 copy)', () {
     bool strict(String a, String b) => sameFood(a, b, viaProcessing: false);
 
-    test("core's processed pairs: the food, but not this way", () {
+    /// Core's shared processed pairs whose compound is a part of its food,
+    /// not a processed form.
+    const parts = {
+      'Knoblauchzehen',
+      'Rote Chilischote',
+      'Fenchelknolle',
+      'Lauchstangen',
+      'Brokkoliröschen',
+    };
+
+    test("core's processed pairs: a part is its food, a processed form "
+        'not', () {
       final cases = _pairs('processed');
-      for (final (processed, food) in cases) {
-        expect(sameFood(processed, food), isTrue, reason: processed);
-        expect(strict(processed, food), isFalse, reason: processed);
-        expect(strict(food, processed), isFalse, reason: processed);
+      expect(
+        cases.map((pair) => pair.$1),
+        containsAll(parts),
+        reason: 'the part cases are still in the fixture',
+      );
+      for (final (compound, food) in cases) {
+        final isPart = parts.contains(compound);
+        expect(sameFood(compound, food), isTrue, reason: compound);
+        expect(strict(compound, food), isPart, reason: compound);
+        expect(strict(food, compound), isPart, reason: compound);
       }
     });
 
@@ -220,7 +237,7 @@ void main() {
     });
 
     test('plural, irregular plural and the same key: the same; a processed '
-        'form or part: not', () {
+        'form: not', () {
       expect(strict('Eier', 'Ei'), isTrue);
       expect(strict('Rote Zwiebeln', 'zwiebel'), isTrue);
       expect(strict('Äpfel', 'Apfel'), isTrue);
@@ -228,7 +245,35 @@ void main() {
       expect(strict('Zwiebelpulver', 'zwiebelpulver'), isTrue);
       expect(strict('Apfel', 'Apfelsaft'), isFalse);
       expect(strict('Zwiebel', 'Zwiebelpulver'), isFalse);
-      expect(strict('Knoblauch', 'Knoblauchzehen'), isFalse);
+      expect(strict('Erdnüsse', 'Erdnussbutter'), isFalse);
+      expect(strict('Tomaten', 'Tomatenmark'), isFalse);
+    });
+
+    test("a part or piece is its food, also by the app's own part ends", () {
+      for (final (food, part) in [
+        ('Knoblauch', 'Knoblauchzehen'),
+        ('Knoblauch', 'Knoblauchzehe'),
+        ('Lauch', 'Lauchstange'),
+        ('Salat', 'Salatblätter'),
+        ('Lorbeer', 'Lorbeerblatt'),
+        ('Ananas', 'Ananasstücke'),
+        ('Gurke', 'Gurkenscheiben'),
+        ('Tofu', 'Tofuwürfel'),
+        ('Zwiebeln', 'Zwiebelringe'),
+        ('Apfel', 'Apfelspalten'),
+        ('Kartoffeln', 'Kartoffelspalten'),
+      ]) {
+        expect(strict(food, part), isTrue, reason: '$part is $food');
+        expect(strict(part, food), isTrue, reason: '$part is $food');
+      }
+      // Core's relation (the ranking) is unchanged: only its own parts.
+      expect(sameFood('Gurke', 'Gurkenscheiben'), isFalse);
+      expect(sameFood('Knoblauch', 'Knoblauchzehen'), isTrue);
+    });
+
+    test('ice cubes are no ice cream; too short a food is none', () {
+      expect(strict('Eis', 'Eiswürfel'), isFalse);
+      expect(strict('He', 'Hering'), isFalse);
     });
 
     test('free-from foods as before: only by the key', () {

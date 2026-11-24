@@ -426,6 +426,30 @@ void main() {
       );
     });
 
+    test('day 5 names a part of a food the user ate: Knoblauchzehen for '
+        'Knoblauch, Gurkenscheiben for Gurke', () {
+      final x = _recipe('x', ['Kartoffel'], title: 'Kartoffelsuppe');
+      final y = _recipe('y', [
+        'Knoblauchzehen',
+        'Gurkenscheiben',
+        'Apfelsaft',
+      ], title: 'Gurkensalat');
+      final r = fillPicks(
+        const JourneyRewards(earnedDay: 5, picks: _earlier),
+        ranked: _rank([x, y]),
+        weeklyTips: false,
+        calmKeys: const {'knoblauch', 'gurke', 'apfel'},
+      );
+      expect(
+        r.picks[5],
+        const RecipePick(
+          id: 'y',
+          title: 'Gurkensalat',
+          matched: ['Knoblauchzehen', 'Gurkenscheiben'],
+        ),
+      );
+    });
+
     test('day 5: Apfelsaft is not the Apfel the user ate (no match, the '
         'generic title)', () {
       final x = _recipe('x', ['Kartoffel'], title: 'Kartoffelsuppe');
