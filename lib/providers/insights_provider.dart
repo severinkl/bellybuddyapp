@@ -6,7 +6,9 @@ import '../models/insight_source.dart';
 import '../models/insights.dart';
 import '../repositories/entry_repository.dart';
 import '../services/insights/insights_engine.dart';
+import '../utils/coalesced_runner.dart';
 import '../utils/logger.dart';
+import '../utils/retry_helper.dart';
 import 'auth_provider.dart';
 import 'buddy_provider.dart';
 import 'entries_provider.dart';
@@ -50,13 +52,9 @@ class InsightsNotifier extends AsyncNotifier<Insights> {
   /// applies.
   int _appliedSeq = 0;
 
-  /// The ref of the build whose [_refetch] runs; another write or new day
-  /// for it meanwhile only marks [_again].
-  Ref? _refetching;
-
-  /// Something changed after the running [_refetch] fetched: it fetches
-  /// once more.
-  bool _again = false;
+  /// The [_refetch]es, coalesced per build (its ref): another write or new
+  /// day for it meanwhile asks for one more.
+  final _refetches = CoalescedRunner();
 
   @override
   Future<Insights> build() async {
@@ -102,26 +100,15 @@ class InsightsNotifier extends AsyncNotifier<Insights> {
   ///
   /// Coalesced: while this runs, more writes only ask for one more fetch
   /// after the running one, so a burst of writes fetches at most twice.
-  Future<void> _refetch() async {
+  Future<void> _refetch() {
     final opRef = ref;
-    if (identical(_refetching, opRef)) {
-      _again = true;
-      return;
-    }
-    _refetching = opRef;
-    try {
-      do {
-        while (opRef.mounted && state.isLoading) {
-          await _loadDone();
-        }
-        // A rebuild (another user) meanwhile loads on its own, after this.
-        if (!opRef.mounted) return;
-        _again = false;
-        await _fetchAndApply();
-      } while (_again);
-    } finally {
-      if (identical(_refetching, opRef)) _refetching = null;
-    }
+    return _refetches.run(key: opRef, () async {
+      while (opRef.mounted && state.isLoading) {
+        await _loadDone();
+      }
+      // A rebuild (another user) meanwhile loads on its own, after this.
+      if (opRef.mounted) await _fetchAndApply();
+    });
   }
 
   Future<void> _loadDone() async {
@@ -138,9 +125,7 @@ class InsightsNotifier extends AsyncNotifier<Insights> {
     final seq = ++_seq;
     try {
       final insights = await _compute(userId);
-      if (seq > _appliedSeq &&
-          opRef.mounted &&
-          opRef.read(currentUserIdProvider) == userId) {
+      if (seq > _appliedSeq && opRef.isCurrentUser(userId)) {
         _appliedSeq = seq;
         state = AsyncData(insights);
       }
@@ -159,13 +144,10 @@ class InsightsNotifier extends AsyncNotifier<Insights> {
   }
 }
 
-/// No automatic rebuild retries: a failed load stays an error until the
-/// next entry write, new day or refresh.
-Duration? _noRetry(int retryCount, Object error) => null;
-
 /// What the Buddy noticed in the last 30 days of entries: Home's card and
-/// the Muster page.
+/// the Muster page. No automatic rebuild retries: a failed load stays an
+/// error until the next entry write, new day or refresh.
 final insightsProvider = AsyncNotifierProvider<InsightsNotifier, Insights>(
   InsightsNotifier.new,
-  retry: _noRetry,
+  retry: noRetry,
 );

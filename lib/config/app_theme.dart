@@ -39,6 +39,9 @@ class AppTheme {
   static const Color navGradientStart = Color(0xFFFFB5C1);
   static const Color navGradientEnd = Color(0xFFFFD5C1);
 
+  /// The dot on a bottom-bar tab that holds news.
+  static const Color navBadge = Color(0xFFE8456F);
+
   // Tracker screen background (light blush tint of gradient)
   static const Color screenBackground = Color(0xFFF2D9DD);
 
@@ -129,6 +132,13 @@ class AppTheme {
   static const TextStyle bodyMutedStyle = TextStyle(
     fontSize: fontSizeBody,
     height: lineHeightSnug,
+    color: mutedForeground,
+  );
+
+  /// Small muted text: a caption, a tile's meta line, a switch's
+  /// explanation.
+  static const TextStyle captionMutedStyle = TextStyle(
+    fontSize: fontSizeCaptionLG,
     color: mutedForeground,
   );
 

@@ -5,6 +5,8 @@ import 'package:belly_buddy/screens/health_consent/widgets/health_consent_conten
 import 'package:belly_buddy/screens/registration/registration_wizard_screen.dart';
 import 'package:belly_buddy/screens/registration/steps/steps.dart';
 
+import 'widget_tester_helpers.dart';
+
 /// Drives the registration wizard from the Buddy's name (step 0) up to and
 /// including AuthStep (step 8). The name step keeps whatever name was typed
 /// (prefilled „Buddy"); Consent (step 1), Gender (step 3) and Diet (step 5)
@@ -26,7 +28,7 @@ Future<void> advanceToAuthStep(WidgetTester tester) async {
   await tester.pumpAndSettle();
 
   expect(find.byKey(GenderStep.genderTitleKey), findsOneWidget);
-  await _tapVisible(tester, find.byKey(GenderStep.genderMaennlichKey));
+  await tester.tapVisible(find.byKey(GenderStep.genderMaennlichKey));
   await tester.tap(nextButton);
   await tester.pumpAndSettle();
 
@@ -35,7 +37,7 @@ Future<void> advanceToAuthStep(WidgetTester tester) async {
   await tester.pumpAndSettle();
 
   expect(find.byKey(DietStep.dietTitleKey), findsOneWidget);
-  await _tapVisible(tester, find.byKey(DietStep.dietAllesKey));
+  await tester.tapVisible(find.byKey(DietStep.dietAllesKey));
   await tester.tap(nextButton);
   await tester.pumpAndSettle();
 
@@ -45,14 +47,6 @@ Future<void> advanceToAuthStep(WidgetTester tester) async {
 
   expect(find.byKey(IntolerancesStep.intolerancesTitleKey), findsOneWidget);
   await tester.tap(nextButton);
-  await tester.pumpAndSettle();
-}
-
-/// Scrolls [finder] into view (small screens) and taps it.
-Future<void> _tapVisible(WidgetTester tester, Finder finder) async {
-  await tester.ensureVisible(finder);
-  await tester.pumpAndSettle();
-  await tester.tap(finder);
   await tester.pumpAndSettle();
 }
 

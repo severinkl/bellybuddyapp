@@ -9,6 +9,7 @@ import 'config/app_localizations.dart';
 import 'config/app_theme.dart';
 import 'providers/auth_provider.dart';
 import 'providers/diary_provider.dart';
+import 'providers/discover_news_provider.dart';
 import 'providers/entries_provider.dart';
 import 'providers/ingredient_suggestion_provider.dart';
 import 'providers/notification_provider.dart';
@@ -94,9 +95,8 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
         }
       }
 
-      // Refresh dashboard badge counts
-      ref.invalidate(unseenRecommendationCountProvider);
-      ref.read(ingredientSuggestionProvider.notifier).fetchSuggestions();
+      // New tips or Alternativen may have arrived.
+      unawaited(ref.read(discoverNewsProvider.notifier).pushArrived(route));
     });
 
     // Handle initial message (app opened from terminated state via notification)
@@ -126,6 +126,8 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
 
     // Activate notification sync provider
     ref.watch(notificationSyncProvider);
+    // Keeps the tips and the Alternativen loaded (sign-in, foreground).
+    ref.watch(discoverNewsProvider);
 
     // Owns the upgrade decision for the whole app lifetime (not the splash),
     // so a slow app_config fetch that resolves after the splash is gone still
@@ -148,7 +150,6 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
         ref.invalidate(entriesProvider);
         ref.invalidate(diaryEntriesProvider);
         ref.invalidate(recommendationProvider);
-        ref.invalidate(unseenRecommendationCountProvider);
         ref.invalidate(ingredientSuggestionProvider);
         Sentry.configureScope((scope) => scope.setUser(null));
       }

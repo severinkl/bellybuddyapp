@@ -2,9 +2,13 @@ import 'package:belly_buddy/app.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/config/splash_screen_config.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
+import 'package:belly_buddy/models/gut_feeling_entry.dart';
+import 'package:belly_buddy/models/insight_source.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/splash_screen_provider.dart';
+import 'package:belly_buddy/providers/upgrade_gate_provider.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
+import 'package:belly_buddy/repositories/knowledge_repository.dart';
 import 'package:belly_buddy/repositories/repositories.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
 import 'package:belly_buddy/widgets/buddy/animated_buddy.dart';
@@ -31,6 +35,8 @@ User? _buildTestUser() {
 /// [seedBuddy] (default: [seedProfile]) stores a Buddy whose onboarding is
 /// done for the test user, so existing users pass the Buddy onboarding gate
 /// and land on the dashboard; a new user (no profile) has no Buddy yet.
+/// [weeklyTipsEnabled] goes into the seeded profile. The blog articles are
+/// [testKnowledgeArticles] (no network).
 ProviderScope buildTestApp({
   bool authenticated = true,
   bool seedProfile = true,
@@ -44,6 +50,9 @@ ProviderScope buildTestApp({
   FakeDrinkRepository? drinkRepo,
   FakeUserRecipeRepository? userRecipeRepo,
   FakeBuddyRepository? buddyRepo,
+  FakeRecommendationRepository? recommendationRepo,
+  FakeIngredientRepository? ingredientRepo,
+  bool weeklyTipsEnabled = false,
 }) {
   // Animated Buddies (dashboard hero, welcome screen) tick every frame and
   // the care ring's glow pulses forever, so `pumpAndSettle` would never
@@ -53,7 +62,9 @@ ProviderScope buildTestApp({
 
   final fakeProfileRepo = profileRepo ?? FakeProfileRepository();
   if (seedProfile) {
-    fakeProfileRepo.seedProfile(testUserProfile());
+    fakeProfileRepo.seedProfile(
+      testUserProfile(weeklyTipsEnabled: weeklyTipsEnabled),
+    );
   }
 
   final fakeBuddyRepo = buddyRepo ?? FakeBuddyRepository();
@@ -120,21 +131,26 @@ ProviderScope buildTestApp({
         drinkRepo ?? FakeDrinkRepository(),
       ),
       ingredientRepositoryProvider.overrideWithValue(
-        FakeIngredientRepository(),
+        ingredientRepo ?? FakeIngredientRepository(),
       ),
       recipeRepositoryProvider.overrideWithValue(FakeRecipeRepository()),
       userRecipeRepositoryProvider.overrideWithValue(
         userRecipeRepo ?? FakeUserRecipeRepository(),
       ),
       recommendationRepositoryProvider.overrideWithValue(
-        FakeRecommendationRepository(),
+        recommendationRepo ?? FakeRecommendationRepository(),
       ),
+      knowledgeRepositoryProvider.overrideWithValue(FakeKnowledgeRepository()),
       mealMediaRepositoryProvider.overrideWithValue(FakeMealMediaRepository()),
       notificationRepositoryProvider.overrideWithValue(
         FakeNotificationRepository(),
       ),
       buddyRepositoryProvider.overrideWithValue(fakeBuddyRepo),
       splashConfigProvider.overrideWithValue(SplashConfig.test),
+      // No app_config backend: no upgrade gate.
+      upgradeDecisionProvider.overrideWith(
+        (_) => Future.value(UpgradeDecision.ok),
+      ),
     ],
     child: const BellyBuddyApp(),
   );
@@ -144,4 +160,46 @@ Future<void> setNotificationModalShown() async {
   SharedPreferences.setMockInitialValues({
     AppConstants.keyNotificationModalShown: true,
   });
+}
+
+/// Noon, [daysAgo] local days back.
+DateTime _noon(int daysAgo) {
+  final now = DateTime.now();
+  return DateTime(now.year, now.month, now.day - daysAgo, 12);
+}
+
+GutFeelingEntry _gut(int daysAgo, {required int value}) => GutFeelingEntry(
+  id: 'gut-$daysAgo',
+  trackedAt: _noon(daysAgo),
+  bloating: value,
+  gas: value,
+  cramps: value,
+  fullness: value,
+);
+
+/// An insight source past the unlock: five hard days (Zwiebel in the meal
+/// before 4 of them) and six good days without it.
+InsightSource unlockedInsightSource() {
+  const hardDaysAgo = [2, 4, 6, 8, 10];
+  const goodDaysAgo = [3, 5, 7, 9, 11, 13];
+  final gutFeelings = [
+    for (final d in hardDaysAgo) _gut(d, value: 5),
+    for (final d in goodDaysAgo) _gut(d, value: 1),
+  ];
+  return InsightSource(
+    meals: [
+      for (final d in hardDaysAgo.take(4))
+        InsightMeal(
+          trackedAt: _noon(d).subtract(const Duration(hours: 3)),
+          ingredients: const ['Zwiebel'],
+        ),
+      for (final d in goodDaysAgo)
+        InsightMeal(
+          trackedAt: _noon(d).subtract(const Duration(hours: 3)),
+          ingredients: const ['Reis'],
+        ),
+    ],
+    gutFeelings: gutFeelings,
+    activityTimes: [for (final g in gutFeelings) g.trackedAt],
+  );
 }

@@ -153,3 +153,7 @@ const List<String> kMonthShortNames = [
 String formatLogTargetDay(DateTime day) =>
     '${kWeekdayShortNames[day.weekday - 1]}, ${day.day}. '
     '${kMonthShortNames[day.month - 1]}';
+
+/// [d] as „28. Mär 2025".
+String formatDayMonthYear(DateTime d) =>
+    '${d.day}. ${kMonthShortNames[d.month - 1]} ${d.year}';

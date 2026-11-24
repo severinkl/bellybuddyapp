@@ -19,6 +19,10 @@ dependencies:
   # State management
   flutter_riverpod: ^3.5.0
 
+  # RSS parsing and fetching
+  xml: ^7.0.1
+  http: ^1.6.0
+
   # Routing
   go_router: ^18.1.4
 

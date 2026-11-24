@@ -8,6 +8,7 @@ import '../../config/constants.dart';
 import '../../providers/buddy_provider.dart';
 import '../../providers/daily_care_provider.dart';
 import '../../providers/diary_provider.dart';
+import '../../providers/discover_news_provider.dart';
 import '../../providers/entries_provider.dart';
 import '../../services/buddy/daily_care.dart';
 import '../../utils/date_format_utils.dart';
@@ -24,6 +25,7 @@ class BbBottomNav extends ConsumerWidget {
   static const navDiaryKey = Key('bottom_nav_diary');
   static const navDiscoverKey = Key('bottom_nav_discover');
   static const navMeKey = Key('bottom_nav_me');
+  static const discoverBadgeKey = Key('bottom_nav_discover_badge');
   static const centerButtonKey = Key('bottom_nav_center_button');
 
   // The shell's branch indices.
@@ -41,7 +43,11 @@ class BbBottomNav extends ConsumerWidget {
 
     void goBranch(int index) {
       HapticService.light();
-      navigationShell.goBranch(index);
+      // Tapping the tab already shown returns to its first screen.
+      navigationShell.goBranch(
+        index,
+        initialLocation: index == navigationShell.currentIndex,
+      );
     }
 
     return Column(
@@ -119,6 +125,8 @@ class BbBottomNav extends ConsumerWidget {
                           icon: Icons.explore_outlined,
                           activeIcon: Icons.explore,
                           label: 'Entdecken',
+                          badge: ref.watch(discoverBadgeProvider),
+                          badgeKey: discoverBadgeKey,
                           isActive: currentIndex == _discoverBranch,
                           onTap: () => goBranch(_discoverBranch),
                         ),
@@ -211,6 +219,12 @@ class _NavItem extends StatelessWidget {
   final bool isActive;
   final VoidCallback onTap;
 
+  /// Whether a dot on the icon says there is something new.
+  final bool badge;
+
+  /// The dot's key.
+  final Key? badgeKey;
+
   const _NavItem({
     this.tapKey,
     required this.icon,
@@ -218,6 +232,8 @@ class _NavItem extends StatelessWidget {
     required this.label,
     required this.isActive,
     required this.onTap,
+    this.badge = false,
+    this.badgeKey,
   });
 
   @override
@@ -229,12 +245,43 @@ class _NavItem extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            isActive ? activeIcon : icon,
-            color: isActive
-                ? AppTheme.foreground
-                : AppTheme.foreground.withValues(alpha: 0.6),
-            size: 32,
+          // Always a Stack, so the dot coming or going keeps the icon.
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Icon(
+                isActive ? activeIcon : icon,
+                color: isActive
+                    ? AppTheme.foreground
+                    : AppTheme.foreground.withValues(alpha: 0.6),
+                size: AppConstants.iconSizeLg,
+              ),
+              if (badge)
+                Positioned(
+                  top: 0,
+                  right: 0,
+                  child: Semantics(
+                    label: 'Neues',
+                    child: SizedBox(
+                      key: badgeKey,
+                      width: AppConstants.navBadgeSize,
+                      height: AppConstants.navBadgeSize,
+                      child: const DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: AppTheme.navBadge,
+                          shape: BoxShape.circle,
+                          border: Border.fromBorderSide(
+                            BorderSide(
+                              color: Colors.white,
+                              width: AppConstants.borderWidthLg,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+            ],
           ),
           AppConstants.gap4,
           Flexible(

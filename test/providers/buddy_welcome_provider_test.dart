@@ -3,25 +3,16 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_welcome_provider.dart';
 
+import '../helpers/riverpod_helpers.dart';
+
 /// The signed-in user's id, switchable.
-class _UserId extends Notifier<String?> {
-  @override
-  String? build() => 'u1';
-
-  void set(String? id) => state = id;
-}
-
-final _userIdProvider = NotifierProvider<_UserId, String?>(_UserId.new);
+final _user = SwitchableUserId('u1');
 
 void main() {
-  ProviderContainer makeContainer() => ProviderContainer.test(
-    overrides: [
-      currentUserIdProvider.overrideWith((ref) => ref.watch(_userIdProvider)),
-    ],
-  );
+  ProviderContainer makeContainer() =>
+      ProviderContainer.test(overrides: [_user.override]);
 
   test('take returns the pending line once', () {
     final c = makeContainer();
@@ -37,7 +28,7 @@ void main() {
       final c = makeContainer();
       c.read(buddyWelcomeProvider.notifier).set(BuddyWelcomeNotifier.line);
 
-      c.read(_userIdProvider.notifier).set(next);
+      _user.set(c, next);
 
       expect(c.read(buddyWelcomeProvider), isNull);
     });
@@ -74,7 +65,7 @@ void main() {
         ..set(BuddyWelcomeNotifier.line);
       final played = welcome.played;
 
-      c.read(_userIdProvider.notifier).set(null);
+      _user.set(c, null);
       c.read(buddyWelcomeProvider);
 
       await expectLater(played, completes);

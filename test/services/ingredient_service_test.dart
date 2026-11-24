@@ -113,95 +113,41 @@ void main() {
   });
 
   group('IngredientService.insertIfNew', () {
-    test('returns early without inserting when userId is null', () async {
-      // No mocks set up — if any DB call were made, the test would throw.
+    test('returns early without a call when userId is null', () async {
       await service.insertIfNew('Zwiebel', userId: null);
+      verifyNever(() => client.rpc(any(), params: any(named: 'params')));
       verifyNever(() => client.from(any()));
     });
 
-    test('skips insert when matching ingredient already exists', () async {
-      // Use a single queryBuilder so we can verify insert was never called on it.
-      final queryBuilder = MockSupabaseQueryBuilder();
-      final selectFb = SettlableFilterBuilder(
-        Future.value([
-          {'id': 'ing-existing'},
-        ]),
-      );
-
-      when(() => client.from('ingredients')).thenAnswer((_) => queryBuilder);
-      when(() => queryBuilder.select(any())).thenAnswer((_) => selectFb);
-      when(() => selectFb.ilike(any(), any())).thenAnswer((_) => selectFb);
-      when(() => selectFb.limit(any())).thenAnswer((_) => selectFb);
+    test('calls ensure_ingredient with the name', () async {
+      when(
+        () => client.rpc('ensure_ingredient', params: any(named: 'params')),
+      ).thenAnswer((_) => SettlableFilterBuilder(Future.value([])));
 
       await service.insertIfNew('Zwiebel', userId: testUserId);
 
-      // Insert should NOT have been called on the queryBuilder
-      verifyNever(() => queryBuilder.insert(any()));
+      verify(
+        () => client.rpc('ensure_ingredient', params: {'p_name': 'Zwiebel'}),
+      ).called(1);
+      verifyNever(() => client.from(any()));
     });
 
-    test('inserts when no existing ingredient found', () async {
-      // Use a single queryBuilder for both select (first call) and insert (second call).
-      final queryBuilder = MockSupabaseQueryBuilder();
-      final selectFb = SettlableFilterBuilder(Future.value([]));
-      final insertFb = MockPostgrestFilterBuilder();
-
-      when(() => client.from('ingredients')).thenAnswer((_) => queryBuilder);
-      when(() => queryBuilder.select(any())).thenAnswer((_) => selectFb);
-      when(() => selectFb.ilike(any(), any())).thenAnswer((_) => selectFb);
-      when(() => selectFb.limit(any())).thenAnswer((_) => selectFb);
-      when(() => queryBuilder.insert(any())).thenAnswer((_) => insertFb);
-      _stubFilterFuture(insertFb);
-
-      await service.insertIfNew('Zwiebel', userId: testUserId);
-
-      final captured =
-          verify(() => queryBuilder.insert(captureAny())).captured.single
-              as Map<String, dynamic>;
-      expect(captured['name'], 'Zwiebel');
-      expect(captured['added_by_user_id'], testUserId);
-      expect(captured['added_via'], 'user');
-    });
-  });
-
-  group('IngredientService.insertIfNew on a name the user cannot see', () {
-    // The catalog's unique name can belong to a row the user's row level
-    // security hides (another user's, or an AI-detected one): the insert
-    // then fails with 23505, although the ingredient exists.
-    void stubInsertFailing(Object error) {
-      final queryBuilder = MockSupabaseQueryBuilder();
-      final selectFb = SettlableFilterBuilder(Future.value([]));
-      final insertFb = SettlableFilterBuilder(Future.error(error));
-      when(() => client.from('ingredients')).thenAnswer((_) => queryBuilder);
-      when(() => queryBuilder.select(any())).thenAnswer((_) => selectFb);
-      when(() => selectFb.ilike(any(), any())).thenAnswer((_) => selectFb);
-      when(() => selectFb.limit(any())).thenAnswer((_) => selectFb);
-      when(() => queryBuilder.insert(any())).thenAnswer((_) => insertFb);
-    }
-
-    test('a duplicate name counts as already there', () async {
-      stubInsertFailing(
-        const PostgrestException(
-          message:
-              'duplicate key value violates unique constraint '
-              '"ingredients_name_key"',
-          code: '23505',
+    test('errors surface', () async {
+      when(
+        () => client.rpc('ensure_ingredient', params: any(named: 'params')),
+      ).thenAnswer(
+        (_) => SettlableFilterBuilder(
+          Future.error(
+            const PostgrestException(message: 'empty name', code: '22023'),
+          ),
         ),
       );
 
       await expectLater(
-        service.insertIfNew('Haferflocken', userId: testUserId),
-        completes,
-      );
-    });
-
-    test('other errors still surface', () async {
-      stubInsertFailing(
-        const PostgrestException(message: 'permission denied', code: '42501'),
-      );
-
-      await expectLater(
-        service.insertIfNew('Haferflocken', userId: testUserId),
-        throwsA(isA<PostgrestException>()),
+        service.insertIfNew('Zwiebel', userId: testUserId),
+        throwsA(
+          isA<PostgrestException>().having((e) => e.code, 'code', '22023'),
+        ),
       );
     });
   });

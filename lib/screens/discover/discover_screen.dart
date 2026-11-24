@@ -7,20 +7,26 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
+import '../../providers/discover_news_provider.dart';
 import '../../providers/ingredient_suggestion_provider.dart';
+import '../../providers/knowledge_provider.dart';
+import '../../providers/profile_provider.dart';
 import '../../providers/recommendation_provider.dart';
 import '../../providers/user_recipes_provider.dart';
 import '../../router/route_names.dart';
 import '../../utils/url_utils.dart';
 import 'widgets/discover_alternatives_section.dart';
-import 'widgets/discover_knowledge_card.dart';
+import 'widgets/discover_knowledge_section.dart';
 import 'widgets/discover_recipes_section.dart';
 import 'widgets/discover_section.dart';
 import 'widgets/discover_tips_card.dart';
+import 'widgets/discover_tips_section.dart';
+import 'widgets/knowledge_article_tile.dart';
 
 /// The Entdecken tab: the hub over the app's content. Top to bottom:
 /// Tipps (the newest recommendation set), Alternativen (the newest
-/// ingredient suggestions), Meine Rezepte and Wissen (the myfodmap blog).
+/// ingredient suggestions), Meine Rezepte and Wissen (the newest myfodmap
+/// blog articles).
 /// A section with nothing in it says so and links nowhere.
 class DiscoverScreen extends ConsumerStatefulWidget {
   const DiscoverScreen({super.key, this.openUrl = launchUrl});
@@ -34,10 +40,10 @@ class DiscoverScreen extends ConsumerStatefulWidget {
   /// The Meine Rezepte section, with its „+" and „Alle ›".
   static const recipesKey = DiscoverRecipesSection.sectionKey;
 
-  /// The Wissen card; opens the blog.
-  static const knowledgeKey = DiscoverKnowledgeCard.cardKey;
+  /// The Wissen section, with its „Alle ›".
+  static const knowledgeKey = DiscoverKnowledgeSection.sectionKey;
 
-  /// How the Wissen card opens the blog; tests pass a fake.
+  /// How a Wissen article opens; tests pass a fake.
   final UrlOpener openUrl;
 
   @override
@@ -51,45 +57,30 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     Future.microtask(_load);
   }
 
-  /// Loads tips, alternatives and recipes; [refresh] also reloads what is
-  /// cached (the recipes and the unseen-tips count).
+  /// Loads tips, alternatives, recipes and articles. The first load keeps
+  /// the tips and Alternativen the app root loaded; [refresh] reloads them,
+  /// and what is cached (the recipes and the articles).
   Future<void> _load({bool refresh = false}) async {
     if (!mounted) return;
-    if (refresh) ref.invalidate(unseenRecommendationCountProvider);
+    final news = ref.read(discoverNewsProvider.notifier);
     await Future.wait([
-      ref.read(recommendationProvider.notifier).fetchRecommendations(),
-      ref.read(ingredientSuggestionProvider.notifier).fetchSuggestions(),
+      if (refresh) news.refresh() else news.ensureLoaded(),
       ref.read(userRecipesProvider.notifier).fetch(force: refresh),
+      if (refresh)
+        ref.read(knowledgeFeedProvider.notifier).refresh()
+      else
+        ref.read(knowledgeFeedProvider.notifier).refreshIfStale(),
     ]);
   }
 
-  Future<void> _openBlog() => openExternalUrl(
-    context,
-    AppConstants.blogUrl,
-    failureMessage: 'Der Blog konnte nicht geöffnet werden.',
-    open: widget.openUrl,
-  );
-
   @override
   Widget build(BuildContext context) {
-    // More unseen tips than before (a tips push refreshed the count): a new
-    // set arrived, so load it, or „Neu" would mark the previous one.
-    ref.listen<AsyncValue<int>>(unseenRecommendationCountProvider, (
-      previous,
-      next,
-    ) {
-      final before = previous?.value;
-      if (before != null && (next.value ?? 0) > before) {
-        unawaited(
-          ref.read(recommendationProvider.notifier).fetchRecommendations(),
-        );
-      }
-    });
     final tips = ref.watch(recommendationProvider);
-    final unseenTips = ref.watch(unseenRecommendationCountProvider).value ?? 0;
+    final weeklyTips = ref.watch(weeklyTipsEnabledProvider);
     final groups = ref.watch(ingredientSuggestionProvider);
     final newGroups = ref.watch(newIngredientSuggestionCountProvider);
     final recipes = ref.watch(userRecipesProvider);
+    final knowledge = ref.watch(knowledgeFeedProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -110,10 +101,10 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
             children: [
               DiscoverSection(
                 title: 'Tipps',
-                child: DiscoverTipsCard(
+                child: DiscoverTipsSection(
                   tips: tips,
-                  unseen: unseenTips > 0,
-                  onTap: () => context.push(RoutePaths.recommendations),
+                  weeklyTips: weeklyTips,
+                  onOpen: () => context.push(RoutePaths.recommendations),
                 ),
               ),
               AppConstants.gap24,
@@ -130,9 +121,12 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                     context.push(RoutePaths.recipeDetailFor(recipe.id)),
               ),
               AppConstants.gap24,
-              DiscoverSection(
-                title: 'Wissen',
-                child: DiscoverKnowledgeCard(onTap: _openBlog),
+              DiscoverKnowledgeSection(
+                feed: knowledge,
+                onOpenAll: () => context.push(RoutePaths.knowledge),
+                onOpen: (article) => unawaited(
+                  openArticle(context, article, open: widget.openUrl),
+                ),
               ),
             ],
           ),

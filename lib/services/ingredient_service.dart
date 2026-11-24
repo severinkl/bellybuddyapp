@@ -59,39 +59,20 @@ class IngredientService {
           .order('name', ascending: true)
           .limit(limit);
 
-  /// Adds [name] to the catalog as the user's own ingredient, unless it is
-  /// there already. A name taken by a row the user can't see (row level
-  /// security hides other users' and AI-detected ingredients, the unique
-  /// name doesn't) fails with 23505: it is there already too.
+  /// Adds [name] to the catalog as the user's own ingredient, unless the
+  /// user can read it already (own or shared): `ensure_ingredient` (core
+  /// 0011) decides, and never fails on a duplicate. The returned id is not
+  /// needed. Errors: 22023 for an empty or too long name; PGRST202 before
+  /// the backend has the function.
   Future<void> insertIfNew(String name, {required String? userId}) async {
+    if (userId == null) return;
     try {
-      if (userId == null) return;
-      final existing = await _client
-          .from('ingredients')
-          .select('id')
-          .ilike('name', name)
-          .limit(1);
-      if (existing.isNotEmpty) return;
-      await _client.from('ingredients').insert({
-        'name': name,
-        'added_via': 'user',
-        'added_by_user_id': userId,
-      });
-    } on PostgrestException catch (e, st) {
-      if (e.code == _uniqueViolation) {
-        _log.debug('insertIfNew: "$name" is in the catalog already');
-        return;
-      }
-      _log.error('insertIfNew failed', e, st);
-      rethrow;
+      await _client.rpc('ensure_ingredient', params: {'p_name': name});
     } catch (e, st) {
       _log.error('insertIfNew failed', e, st);
       rethrow;
     }
   }
-
-  /// Postgres' unique_violation.
-  static const _uniqueViolation = '23505';
 
   Future<void> deleteUserIngredient(String id) async {
     try {

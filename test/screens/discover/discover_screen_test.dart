@@ -7,18 +7,24 @@ import 'package:mocktail/mocktail.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:url_launcher/url_launcher.dart';
 
-import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
+import 'package:belly_buddy/models/knowledge_article.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/models/recommendation_item.dart';
 import 'package:belly_buddy/models/replacement_ingredient.dart';
 import 'package:belly_buddy/models/user_recipe.dart';
+import 'package:belly_buddy/repositories/profile_repository.dart';
+import 'package:belly_buddy/screens/discover/widgets/discover_tips_section.dart';
+import 'package:belly_buddy/widgets/common/weekly_tips_switch.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
+import 'package:belly_buddy/providers/discover_news_provider.dart';
 import 'package:belly_buddy/providers/ingredient_suggestion_provider.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
+import 'package:belly_buddy/repositories/knowledge_repository.dart';
 import 'package:belly_buddy/repositories/recommendation_repository.dart';
+import 'package:belly_buddy/screens/discover/widgets/knowledge_article_tile.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/discover/discover_screen.dart';
 import 'package:belly_buddy/screens/recipes/recipes_screen.dart';
@@ -28,6 +34,8 @@ import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/mocks.dart';
+import '../../helpers/riverpod_helpers.dart';
+import '../../helpers/widget_tester_helpers.dart';
 
 const _item = RecommendationItem(
   type: 'try',
@@ -51,47 +59,38 @@ IngredientSuggestionGroup _group(
   ],
 );
 
-/// The launched URL and mode, from [DiscoverScreen.openUrl].
-class _Launches {
-  final urls = <Uri>[];
-  final modes = <LaunchMode>[];
-  bool result = true;
-
-  Future<bool> call(Uri url, {LaunchMode mode = LaunchMode.platformDefault}) {
-    urls.add(url);
-    modes.add(mode);
-    return Future.value(result);
-  }
-}
-
 void main() {
+  late FakeProfileRepository profileRepo;
   late MockRecommendationRepository recommendations;
   late MockIngredientRepository ingredients;
   late MockUserRecipeRepository recipes;
-  late _Launches launches;
+  late RecordingUrlOpener launches;
+  late FakeKnowledgeRepository knowledge;
 
   setUp(() {
     recommendations = MockRecommendationRepository();
     ingredients = MockIngredientRepository();
     recipes = MockUserRecipeRepository();
-    launches = _Launches();
+    launches = RecordingUrlOpener();
+    knowledge = FakeKnowledgeRepository();
+    profileRepo = FakeProfileRepository();
   });
 
   Future<void> pump(
     WidgetTester tester, {
     List<Recommendation> tips = const [],
-    int unseenTips = 0,
     List<IngredientSuggestionGroup> groups = const [],
     List<UserRecipe> myRecipes = const [],
     double textScale = 1,
     bool realRecipesScreen = false,
+    // null: the profile is still unknown.
+    bool? weeklyTips,
+    // Whether the app root keeps the news loaded, as in the app.
+    bool appRoot = false,
   }) async {
     when(
       () => recommendations.fetchByUserId(any()),
     ).thenAnswer((_) async => tips);
-    when(
-      () => recommendations.countUnseen(any()),
-    ).thenAnswer((_) async => unseenTips);
     when(
       () => ingredients.fetchSuggestionGroups(any()),
     ).thenAnswer((_) async => groups);
@@ -117,6 +116,7 @@ void main() {
           RoutePaths.ingredientSuggestions,
           if (!realRecipesScreen) RoutePaths.recipes,
           RoutePaths.recipeDetail,
+          RoutePaths.knowledge,
         ]),
       ],
     );
@@ -127,11 +127,26 @@ void main() {
       recommendationRepositoryProvider.overrideWithValue(recommendations),
       ingredientRepositoryProvider.overrideWithValue(ingredients),
       userRecipeRepositoryProvider.overrideWithValue(recipes),
+      knowledgeRepositoryProvider.overrideWithValue(knowledge),
+      profileRepositoryProvider.overrideWithValue(profileRepo),
+      if (weeklyTips != null)
+        profileProviderSeededWith(
+          testUserProfile(weeklyTipsEnabled: weeklyTips),
+        ),
     ];
+    final app = germanRouterApp(router, textScale: textScale);
     await tester.pumpWidget(
       ProviderScope(
         overrides: overrides,
-        child: germanRouterApp(router, textScale: textScale),
+        child: appRoot
+            ? Consumer(
+                builder: (_, ref, child) {
+                  ref.watch(discoverNewsProvider);
+                  return child!;
+                },
+                child: app,
+              )
+            : app,
       ),
     );
     await tester.pumpAndSettle();
@@ -140,12 +155,63 @@ void main() {
   Finder inSection(Key section, Finder matching) =>
       find.descendant(of: find.byKey(section), matching: matching);
 
-  Future<void> tapVisible(WidgetTester tester, Finder finder) async {
-    await tester.ensureVisible(finder);
-    await tester.pumpAndSettle();
-    await tester.tap(finder);
-    await tester.pumpAndSettle();
-  }
+  group('weekly tips opt-in', () {
+    final optIn = find.byKey(DiscoverTipsSection.optInKey);
+    final someTips = [
+      testRecommendation(
+        id: 'new',
+        recommendations: const [_item],
+        createdAt: DateTime.utc(2026, 11, 16, 10),
+      ),
+    ];
+
+    testWidgets('off, no tips: only the opt-in', (tester) async {
+      await pump(tester, weeklyTips: false);
+
+      expect(optIn, findsOneWidget);
+      expect(find.text('Noch keine Tipps.'), findsNothing);
+      expect(find.byKey(DiscoverScreen.tipsKey), findsNothing);
+    });
+
+    testWidgets('off, with tips: set card and opt-in', (tester) async {
+      await pump(tester, weeklyTips: false, tips: someTips);
+
+      expect(find.byKey(DiscoverScreen.tipsKey), findsOneWidget);
+      expect(optIn, findsOneWidget);
+    });
+
+    testWidgets('on, no tips: when the first tips come', (tester) async {
+      await pump(tester, weeklyTips: true);
+
+      expect(find.text(DiscoverTipsSection.emptyWhileOn), findsOneWidget);
+      expect(find.byKey(WeeklyTipsSwitch.switchKey), findsNothing);
+    });
+
+    testWidgets('on, with tips: no switch', (tester) async {
+      await pump(tester, weeklyTips: true, tips: someTips);
+
+      expect(find.byKey(DiscoverScreen.tipsKey), findsOneWidget);
+      expect(find.byKey(WeeklyTipsSwitch.switchKey), findsNothing);
+    });
+
+    testWidgets('profile unknown: no switch', (tester) async {
+      await pump(tester);
+
+      expect(find.byKey(WeeklyTipsSwitch.switchKey), findsNothing);
+      expect(find.text('Noch keine Tipps.'), findsOneWidget);
+    });
+
+    testWidgets('turning it on shows when the first tips come', (tester) async {
+      profileRepo.seedProfile(testUserProfile());
+      await pump(tester, weeklyTips: false);
+
+      await tester.tapVisible(find.byKey(WeeklyTipsSwitch.switchKey));
+
+      expect(profileRepo.weeklyTipsWrites, [true]);
+      expect(find.text(DiscoverTipsSection.emptyWhileOn), findsOneWidget);
+      expect(find.byKey(WeeklyTipsSwitch.switchKey), findsNothing);
+    });
+  });
 
   testWidgets('loads tips, alternatives and recipes when opened', (
     tester,
@@ -156,7 +222,15 @@ void main() {
     verify(() => ingredients.fetchSuggestionGroups(testUserId)).called(1);
     verify(() => recipes.fetchForUser(testUserId)).called(1);
     // Only the Tipps screen marks tips as seen.
-    verifyNever(() => recommendations.markAllAsSeen(any()));
+    verifyNever(() => recommendations.markSeen(any(), any()));
+  });
+
+  testWidgets('opened right after sign-in: the tips and Alternativen load '
+      'once, with the app root\'s sign-in load', (tester) async {
+    await pump(tester, appRoot: true);
+
+    verify(() => recommendations.fetchByUserId(testUserId)).called(1);
+    verify(() => ingredients.fetchSuggestionGroups(testUserId)).called(1);
   });
 
   testWidgets('four sections in order', (tester) async {
@@ -170,7 +244,9 @@ void main() {
     expect(tops.toSet(), hasLength(4));
   });
 
-  testWidgets('Tipps card shows the newest set', (tester) async {
+  testWidgets('Tipps card shows the newest set, „Neu" while unseen', (
+    tester,
+  ) async {
     await pump(
       tester,
       tips: [
@@ -185,9 +261,9 @@ void main() {
           summary: 'Ältere Tipps.',
           recommendations: const [_item],
           createdAt: DateTime.utc(2026, 11, 9, 10),
+          seenAt: DateTime.utc(2026, 11, 10, 7),
         ),
       ],
-      unseenTips: 1,
     );
 
     final card = find.byKey(DiscoverScreen.tipsKey);
@@ -201,7 +277,7 @@ void main() {
     expect(find.text('Woche 46'), findsNothing);
     expect(find.text('Ältere Tipps.'), findsNothing);
 
-    await tapVisible(tester, card);
+    await tester.tapVisible(card);
     expect(find.text('page:${RoutePaths.recommendations}'), findsOneWidget);
   });
 
@@ -214,12 +290,36 @@ void main() {
         testRecommendation(
           recommendations: const [_item],
           createdAt: DateTime.utc(2026, 11, 16, 10),
+          seenAt: DateTime.utc(2026, 11, 16, 18),
         ),
       ],
     );
 
     expect(inSection(DiscoverScreen.tipsKey, find.text('Neu')), findsNothing);
     expect(find.text('1 Tipp'), findsOneWidget);
+  });
+
+  testWidgets('„Neu" goes once the Tipps are marked seen, while Entdecken '
+      'stays open underneath', (tester) async {
+    when(() => recommendations.markSeen(any(), any())).thenAnswer((_) async {});
+    await pump(
+      tester,
+      tips: [
+        testRecommendation(
+          recommendations: const [_item],
+          createdAt: DateTime.utc(2026, 11, 16, 10),
+        ),
+      ],
+    );
+    expect(inSection(DiscoverScreen.tipsKey, find.text('Neu')), findsOneWidget);
+
+    final container = ProviderScope.containerOf(
+      tester.element(find.byType(DiscoverScreen)),
+    );
+    await container.read(recommendationProvider.notifier).markAllAsSeen();
+    await tester.pump();
+
+    expect(inSection(DiscoverScreen.tipsKey, find.text('Neu')), findsNothing);
   });
 
   testWidgets('a tips push brings the new set to the card, as „Neu"', (
@@ -230,12 +330,13 @@ void main() {
       summary: 'Ältere Tipps.',
       recommendations: const [_item],
       createdAt: DateTime.utc(2026, 11, 9, 10),
+      seenAt: DateTime.utc(2026, 11, 10, 7),
     );
     await pump(tester, tips: [lastWeek]);
     expect(find.text('Woche 46'), findsOneWidget);
     expect(inSection(DiscoverScreen.tipsKey, find.text('Neu')), findsNothing);
 
-    // A new set arrives; the push handler refreshes the unseen count.
+    // A new set arrives; the push handler refreshes the news.
     when(() => recommendations.fetchByUserId(any())).thenAnswer(
       (_) async => [
         testRecommendation(
@@ -247,10 +348,9 @@ void main() {
         lastWeek,
       ],
     );
-    when(() => recommendations.countUnseen(any())).thenAnswer((_) async => 1);
-    ProviderScope.containerOf(
+    await ProviderScope.containerOf(
       tester.element(find.byType(DiscoverScreen)),
-    ).invalidate(unseenRecommendationCountProvider);
+    ).read(discoverNewsProvider.notifier).refresh();
     await tester.pumpAndSettle();
 
     expect(inSection(DiscoverScreen.tipsKey, find.text('Neu')), findsOneWidget);
@@ -259,11 +359,47 @@ void main() {
     expect(find.text('Woche 46'), findsNothing);
   });
 
+  testWidgets('a failed refresh (offline resume) keeps the set card and the '
+      'Alternativen', (tester) async {
+    await pump(
+      tester,
+      tips: [
+        testRecommendation(
+          recommendations: const [_item, _item],
+          createdAt: DateTime.utc(2026, 11, 16, 10),
+        ),
+      ],
+      groups: [
+        _group('Zwiebel', isNew: true, lastMeal: DateTime(2026, 11, 20)),
+      ],
+    );
+
+    when(
+      () => recommendations.fetchByUserId(any()),
+    ).thenAnswer((_) => Future.error(Exception('offline')));
+    when(
+      () => ingredients.fetchSuggestionGroups(any()),
+    ).thenAnswer((_) => Future.error(Exception('offline')));
+    await ProviderScope.containerOf(
+      tester.element(find.byType(DiscoverScreen)),
+    ).read(discoverNewsProvider.notifier).refresh();
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('konnten nicht geladen werden'), findsNothing);
+    expect(inSection(DiscoverScreen.tipsKey, find.text('Neu')), findsOneWidget);
+    expect(find.text('Woche 47'), findsOneWidget);
+    expect(find.text('Zwiebel'), findsOneWidget);
+    expect(
+      inSection(DiscoverScreen.alternativesKey, find.text('1 neu')),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('no tips', (tester) async {
     await pump(tester);
 
     expect(find.text('Noch keine Tipps.'), findsOneWidget);
-    await tapVisible(tester, find.byKey(DiscoverScreen.tipsKey));
+    await tester.tapVisible(find.byKey(DiscoverScreen.tipsKey));
     expect(find.text('page:${RoutePaths.recommendations}'), findsNothing);
     expect(find.byType(DiscoverScreen), findsOneWidget);
   });
@@ -300,8 +436,7 @@ void main() {
       findsOneWidget,
     );
 
-    await tapVisible(
-      tester,
+    await tester.tapVisible(
       inSection(DiscoverScreen.alternativesKey, find.text('Alle ›')),
     );
     expect(
@@ -406,8 +541,7 @@ void main() {
     expect(find.text('Rezept 6'), findsOneWidget);
     expect(find.text('Rezept 7'), findsNothing);
 
-    await tapVisible(
-      tester,
+    await tester.tapVisible(
       inSection(DiscoverScreen.recipesKey, find.text('Alle ›')),
     );
     expect(find.text('page:${RoutePaths.recipes}'), findsOneWidget);
@@ -425,8 +559,7 @@ void main() {
       ],
     );
 
-    await tapVisible(
-      tester,
+    await tester.tapVisible(
       inSection(DiscoverScreen.recipesKey, find.text('Alle ›')),
     );
     await tester.enterText(find.byType(TextField), 'zzz');
@@ -449,8 +582,7 @@ void main() {
   testWidgets("Meine Rezepte's + opens the chooser", (tester) async {
     await pump(tester, myRecipes: [testUserRecipe()]);
 
-    await tapVisible(
-      tester,
+    await tester.tapVisible(
       inSection(DiscoverScreen.recipesKey, find.byIcon(Icons.add)),
     );
     expect(find.text('Rezept hinzufügen'), findsOneWidget);
@@ -459,7 +591,7 @@ void main() {
   testWidgets('a recipe card opens that recipe', (tester) async {
     await pump(tester, myRecipes: [testUserRecipe(id: 'r1')]);
 
-    await tapVisible(tester, find.byType(RecipeCard));
+    await tester.tapVisible(find.byType(RecipeCard));
     expect(find.text('page:${RoutePaths.recipeDetail}'), findsOneWidget);
   });
 
@@ -471,32 +603,83 @@ void main() {
       inSection(DiscoverScreen.recipesKey, find.text('Alle ›')),
       findsNothing,
     );
-    await tapVisible(tester, find.text('Erstes Rezept erstellen'));
+    await tester.tapVisible(find.text('Erstes Rezept erstellen'));
     expect(find.text('Rezept hinzufügen'), findsOneWidget);
   });
 
-  testWidgets('Wissen opens the blog', (tester) async {
+  Finder tilesIn(Key section) =>
+      inSection(section, find.byType(KnowledgeArticleTile));
+
+  testWidgets('Wissen previews the newest 3 and Alle ›', (tester) async {
     await pump(tester);
 
-    expect(find.text('Wissen rund um die Verdauung'), findsOneWidget);
-    expect(find.text('Artikel aus dem myfodmap-Blog'), findsOneWidget);
-    await tapVisible(tester, find.byKey(DiscoverScreen.knowledgeKey));
+    expect(tilesIn(DiscoverScreen.knowledgeKey), findsNWidgets(3));
+    for (final t in [
+      'Was ist FODMAP?',
+      'Suppe für kalte Tage',
+      'Mein Weg zum Bauchgefühl',
+    ]) {
+      expect(find.text(t), findsOneWidget, reason: t);
+    }
+    expect(find.text('Ballaststoffe verstehen'), findsNothing);
 
-    expect(launches.urls, [Uri.parse(AppConstants.blogUrl)]);
-    expect(launches.modes, [LaunchMode.externalApplication]);
-    expect(AppConstants.blogUrl, 'https://www.myfodmap.at/blog');
+    await tester.tapVisible(
+      inSection(DiscoverScreen.knowledgeKey, find.text('Alle ›')),
+    );
+    expect(find.text('page:${RoutePaths.knowledge}'), findsOneWidget);
   });
 
-  testWidgets('a blog that does not open says so', (tester) async {
-    launches.result = false;
+  testWidgets('a fresh copy of the articles: opening fetches none', (
+    tester,
+  ) async {
+    knowledge = FakeKnowledgeRepository(
+      cache: KnowledgeFeed(
+        articles: testKnowledgeArticles(),
+        fetchedAt: DateTime.now(),
+      ),
+    );
     await pump(tester);
 
-    await tapVisible(tester, find.byKey(DiscoverScreen.knowledgeKey));
-    expect(find.text('Der Blog konnte nicht geöffnet werden.'), findsOneWidget);
+    expect(knowledge.fetchCount, 0);
+    expect(tilesIn(DiscoverScreen.knowledgeKey), findsNWidgets(3));
   });
 
-  testWidgets('pull to refresh reloads all three', (tester) async {
+  testWidgets('an article opens in the in-app browser', (tester) async {
     await pump(tester);
+
+    await tester.tapVisible(
+      find.byKey(KnowledgeArticleTile.keyFor(knowledge.articles.first)),
+    );
+
+    expect(launches.urls, [knowledge.articles.first.link]);
+    expect(launches.modes, [LaunchMode.inAppBrowserView]);
+  });
+
+  testWidgets('no copy and offline', (tester) async {
+    knowledge.fetchError = Exception('offline');
+    await pump(tester);
+
+    expect(find.text('Artikel konnten nicht geladen werden.'), findsOneWidget);
+    expect(
+      inSection(DiscoverScreen.knowledgeKey, find.text('Alle ›')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('no articles', (tester) async {
+    knowledge = FakeKnowledgeRepository(articles: const []);
+    await pump(tester);
+
+    expect(find.text('Gerade keine Artikel.'), findsOneWidget);
+    expect(
+      inSection(DiscoverScreen.knowledgeKey, find.text('Alle ›')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('pull to refresh reloads all four', (tester) async {
+    await pump(tester);
+    final feedFetches = knowledge.fetchCount;
 
     await tester.fling(
       find.byType(RefreshIndicator),
@@ -506,9 +689,9 @@ void main() {
     await tester.pumpAndSettle();
 
     verify(() => recommendations.fetchByUserId(testUserId)).called(2);
-    verify(() => recommendations.countUnseen(testUserId)).called(2);
     verify(() => ingredients.fetchSuggestionGroups(testUserId)).called(2);
     verify(() => recipes.fetchForUser(testUserId)).called(2);
+    expect(knowledge.fetchCount, feedFetches + 1);
   });
 
   testWidgets('fits a 375×667 phone at text scale 1.3', (tester) async {
@@ -529,7 +712,6 @@ void main() {
           createdAt: DateTime.utc(2026, 11, 16, 10),
         ),
       ],
-      unseenTips: 1,
       groups: [
         for (final name in ['Zwiebel', 'Knoblauch', 'Weizen'])
           _group(name, isNew: true, lastMeal: DateTime(2026, 11, 20)),

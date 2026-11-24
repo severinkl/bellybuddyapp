@@ -7,6 +7,7 @@ import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/drink.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
+import 'package:belly_buddy/models/knowledge_article.dart';
 import 'package:belly_buddy/models/insight_rules.dart';
 import 'package:belly_buddy/models/insight_source.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
@@ -20,6 +21,7 @@ import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/drink_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
+import 'package:belly_buddy/repositories/knowledge_repository.dart';
 import 'package:belly_buddy/repositories/meal_media_repository.dart';
 import 'package:belly_buddy/repositories/notification_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
@@ -205,14 +207,34 @@ class FakeProfileRepository implements ProfileRepository {
   @override
   Future<void> createProfile(String userId, UserProfile profile) async =>
       _profile = profile.copyWith(userId: userId);
+
+  /// Like the real one: leaves the weekly tips (setWeeklyTips' column) alone.
   @override
   Future<void> updateProfile(String userId, UserProfile profile) async =>
-      _profile = profile.copyWith(userId: userId);
+      _profile = profile.copyWith(
+        userId: userId,
+        weeklyTipsEnabled:
+            _profile?.weeklyTipsEnabled ?? profile.weeklyTipsEnabled,
+      );
   @override
   Future<void> updateTutorialSeenAt(String userId, DateTime? value) async {
     _tutorialUpdateCalled = true;
     _lastTutorialSeenAt = value;
     _profile = _profile?.copyWith(tutorialSeenAt: value);
+  }
+
+  /// When set, [setWeeklyTips] throws it instead of writing.
+  Object? weeklyTipsError;
+
+  /// The values [setWeeklyTips] was called with, in order.
+  final List<bool> weeklyTipsWrites = [];
+
+  @override
+  Future<void> setWeeklyTips(String userId, bool enabled) async {
+    weeklyTipsWrites.add(enabled);
+    final error = weeklyTipsError;
+    if (error != null) throw error;
+    _profile = _profile?.copyWith(weeklyTipsEnabled: enabled);
   }
 
   /// Number of [acceptHealthConsent] calls, for tests.
@@ -420,6 +442,12 @@ class FakeDrinkRepository implements DrinkRepository {
 
 // -- FakeIngredientRepository --
 class FakeIngredientRepository implements IngredientRepository {
+  /// [groups] are the suggestion groups it answers with; by default one new.
+  FakeIngredientRepository({List<IngredientSuggestionGroup>? groups})
+    : groups = groups ?? [testSuggestionGroup()];
+
+  final List<IngredientSuggestionGroup> groups;
+
   @override
   Future<List<IngredientSearchResult>> search(
     String query, {
@@ -433,7 +461,7 @@ class FakeIngredientRepository implements IngredientRepository {
   @override
   Future<List<IngredientSuggestionGroup>> fetchSuggestionGroups(
     String userId,
-  ) async => [testSuggestionGroup()];
+  ) async => groups;
   @override
   Future<void> markAllSeen(List<String> ids) async {}
   @override
@@ -531,14 +559,37 @@ class FakeUserRecipeRepository implements UserRecipeRepository {
 
 // -- FakeRecommendationRepository --
 class FakeRecommendationRepository implements RecommendationRepository {
+  /// [sets], newest first; by default one set, seen on 1.11.2026, so
+  /// nothing is new.
+  FakeRecommendationRepository({List<Recommendation>? sets})
+    : sets = sets ?? [testRecommendation(seenAt: DateTime.utc(2026, 11))];
+
+  List<Recommendation> sets;
+  int fetchCount = 0;
+
   @override
-  Future<List<Recommendation>> fetchByUserId(String userId) async => [
-    testRecommendation(),
-  ];
+  Future<List<Recommendation>> fetchByUserId(String userId) async {
+    fetchCount++;
+    return sets;
+  }
+
+  /// Thrown by [markSeen] when set.
+  Object? markError;
+
+  /// The ids of every [markSeen], in order.
+  final List<List<String>> marked = [];
+
   @override
-  Future<int> countUnseen(String userId) async => 0;
-  @override
-  Future<void> markAllAsSeen(String userId) async {}
+  Future<void> markSeen(String userId, List<String> ids) async {
+    marked.add(ids);
+    if (markError case final error?) throw error;
+    final now = DateTime.now().toUtc();
+    sets = [
+      for (final s in sets)
+        s.seenAt == null && ids.contains(s.id) ? s.copyWith(seenAt: now) : s,
+    ];
+  }
+
   @override
   Future<void> updateFeedback({
     required String id,
@@ -634,6 +685,9 @@ class FakeBuddyRepository implements BuddyRepository {
   bool throwOnFetch = false;
   bool throwOnSave = false;
 
+  /// When set, [save] throws it (a refusal like the database's checks).
+  Object? saveError;
+
   /// While set and not completed, every [fetch] (or [save]) waits for it
   /// (a slow or hanging backend).
   Completer<void>? fetchHold;
@@ -656,6 +710,7 @@ class FakeBuddyRepository implements BuddyRepository {
     saveCount++;
     if (saveHold case final hold?) await hold.future;
     if (throwOnSave) throw Exception('save failed');
+    if (saveError case final error?) throw error;
     store[userId] = state.copyWith(userId: userId);
   }
 }
@@ -701,6 +756,9 @@ class FakeBuddyNotifier extends BuddyNotifier {
   final FutureOr<BuddyStatus?> Function()? _initial;
 
   bool failRename = false;
+
+  /// When set, [setName] throws it (instead of [failRename]'s error).
+  Object? renameError;
   bool failGoal = false;
   final List<String> names = [];
   final List<int?> goals = [];
@@ -715,6 +773,7 @@ class FakeBuddyNotifier extends BuddyNotifier {
   Future<void> setName(String name) async {
     names.add(name);
     await nameSave;
+    if (renameError case final error?) throw error;
     if (failRename) throw Exception('offline');
     final s = state.value!;
     push(
@@ -762,4 +821,58 @@ InsightSource insightSourceFor({
     ],
     activityTimes: [for (var i = 0; i < activeDays; i++) dayBefore(i)],
   );
+}
+
+class FakeKnowledgeRepository implements KnowledgeRepository {
+  FakeKnowledgeRepository({List<KnowledgeArticle>? articles, this.cache})
+    : articles = articles ?? testKnowledgeArticles();
+
+  /// What [fetchArticles] answers (as they were when the call began).
+  List<KnowledgeArticle> articles;
+
+  /// Thrown by [fetchArticles] when set (as it was when the call began).
+  Object? fetchError;
+  int fetchCount = 0;
+
+  /// While set and not completed, [fetchArticles] waits for it (a slow
+  /// feed); a call keeps the hold it began with.
+  Completer<void>? fetchHold;
+
+  /// The in-memory cache.
+  KnowledgeFeed? cache;
+
+  /// Every feed passed to [writeCache].
+  final List<KnowledgeFeed> written = [];
+
+  @override
+  Future<List<KnowledgeArticle>> fetchArticles() async {
+    fetchCount++;
+    final (error, result) = (fetchError, articles);
+    if (fetchHold case final hold?) await hold.future;
+    if (error != null) throw error;
+    return result;
+  }
+
+  @override
+  Future<KnowledgeFeed?> readCache() async => cache;
+
+  @override
+  Future<void> writeCache(KnowledgeFeed feed) async {
+    written.add(feed);
+    cache = feed;
+  }
+}
+
+/// A [UrlOpener] that records each launch ([urls], [modes]) and answers
+/// [result].
+class RecordingUrlOpener {
+  final urls = <Uri>[];
+  final modes = <LaunchMode>[];
+  bool result = true;
+
+  Future<bool> call(Uri url, {LaunchMode mode = LaunchMode.platformDefault}) {
+    urls.add(url);
+    modes.add(mode);
+    return Future.value(result);
+  }
 }

@@ -371,4 +371,37 @@ void main() {
       ).called(1);
     });
   });
+
+  group('weekly tips opt-in', () {
+    test('create and update never send weekly_tips_enabled', () async {
+      final profile = testUserProfile(weeklyTipsEnabled: true);
+      when(() => authService.detectAuthMethod()).thenReturn('email');
+      when(() => profileService.upsert(any())).thenAnswer((_) async {});
+      when(() => profileService.update(any(), any())).thenAnswer((_) async {});
+
+      await repo.createProfile('user-123', profile);
+      await repo.updateProfile('user-123', profile);
+
+      final upserted =
+          verify(() => profileService.upsert(captureAny())).captured.single
+              as Map<String, dynamic>;
+      final updated =
+          verify(
+                () => profileService.update('user-123', captureAny()),
+              ).captured.single
+              as Map<String, dynamic>;
+      expect(upserted.containsKey('weekly_tips_enabled'), isFalse);
+      expect(updated.containsKey('weekly_tips_enabled'), isFalse);
+    });
+
+    test('setWeeklyTips writes only that column', () async {
+      when(() => profileService.update(any(), any())).thenAnswer((_) async {});
+
+      await repo.setWeeklyTips('user-123', true);
+
+      verify(
+        () => profileService.update('user-123', {'weekly_tips_enabled': true}),
+      ).called(1);
+    });
+  });
 }

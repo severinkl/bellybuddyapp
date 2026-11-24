@@ -4,15 +4,18 @@ import 'dart:math' as math;
 
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../config/constants.dart';
 import '../../../providers/buddy_events_provider.dart';
+import '../../../providers/buddy_offers_provider.dart';
 import '../../../providers/buddy_provider.dart';
 import '../../../providers/buddy_welcome_provider.dart';
 import '../../../providers/daily_care_provider.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../providers/today_provider.dart';
+import '../../../router/route_names.dart';
 import '../../../router/tracker_routes.dart';
 import '../../../services/buddy/buddy_copy.dart';
 import '../../../services/buddy/buddy_mood_logic.dart';
@@ -26,6 +29,7 @@ import '../../buddy/streak_goal_picker.dart';
 import 'care_ring.dart';
 import 'streak_sheet.dart';
 import 'tutorial/tutorial_keys.dart';
+import 'weekly_tips_offer_sheet.dart';
 
 /// Lines the hero plays one after another: the onboarding's welcome (ahead
 /// of all others), the follow-up after a log and the [BuddyAnnouncement]s.
@@ -35,16 +39,27 @@ enum _Cue {
   saverUsed(BuddyAnnouncement.saverUsed),
   streakBroken(BuddyAnnouncement.streakBroken),
   saverEarned(BuddyAnnouncement.saverEarned),
-  goalReached(BuddyAnnouncement.goalReached);
+  goalReached(BuddyAnnouncement.goalReached, endsInSheet: true),
+  tipsArrived(BuddyAnnouncement.tipsArrived),
+  weeklyTipsOffer(BuddyAnnouncement.weeklyTipsOffer, endsInSheet: true);
 
-  const _Cue(this.announcement);
+  const _Cue(this.announcement, {this.endsInSheet = false});
 
   /// The announcement this cue plays, if any.
   final BuddyAnnouncement? announcement;
+
+  /// Whether the cue ends in a sheet (the new goal, the weekly-tips offer).
+  final bool endsInSheet;
 }
 
-_Cue _cueFor(BuddyAnnouncement a) =>
-    _Cue.values.firstWhere((cue) => cue.announcement == a);
+_Cue _cueFor(BuddyAnnouncement a) => switch (a) {
+  BuddyAnnouncement.saverUsed => _Cue.saverUsed,
+  BuddyAnnouncement.streakBroken => _Cue.streakBroken,
+  BuddyAnnouncement.saverEarned => _Cue.saverEarned,
+  BuddyAnnouncement.goalReached => _Cue.goalReached,
+  BuddyAnnouncement.tipsArrived => _Cue.tipsArrived,
+  BuddyAnnouncement.weeklyTipsOffer => _Cue.weeklyTipsOffer,
+};
 
 /// The Buddy at the top of the dashboard: the streak chip (opens „Dein
 /// Streak"), his speech bubble, the Buddy inside the [CareRing] of his four
@@ -93,6 +108,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   static const _streakBrokenLine = 'Neuer Anlauf — ich bin dabei!';
   static const _saverEarnedLine = 'Du hast einen Streak-Saver verdient! 🛡';
   static const _newGoalTitle = "Wir haben's geschafft! Neues Ziel?";
+  static const _tipsArrivedLine = 'Neue Tipps sind da! ✨';
 
   late final BuddyController _buddy;
 
@@ -126,9 +142,12 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// pending in [buddyProvider] meanwhile and must not be queued twice.
   final Set<BuddyAnnouncement> _taken = {};
 
-  /// From a cue's start until its line has been up long enough (incl. the
-  /// goal sheet); mood lines wait meanwhile.
+  /// From a cue's start until its line has been up long enough (incl. its
+  /// sheet); mood lines wait meanwhile.
   bool _cueRunning = false;
+
+  /// A cue of the running queue played (not every one was withdrawn).
+  bool _cuePlayed = false;
 
   /// A log's follow-up is queued and not said yet.
   bool _followUpPending = false;
@@ -166,11 +185,14 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// `TickerMode` of the hero (false until the first dependency update).
   bool _visible = false;
 
-  /// The new-goal sheet is due but the hero was hidden; shown once visible.
-  bool _goalSheetDeferred = false;
+  /// A cue's sheet (the new goal, the weekly-tips offer) that came due
+  /// while the hero was hidden (or, the offer, while „Dein Streak" was
+  /// open); shown once visible (once it has closed).
+  Future<void> Function()? _deferredSheet;
 
-  /// From a reached goal's celebration until its sheet has closed.
-  bool _goalCelebrating = false;
+  /// A cue that ends in a sheet is on stage (a reached goal's celebration,
+  /// the weekly-tips offer's wave): from its start until its sheet closed.
+  bool get _sheetCueOnStage => _playing?.endsInSheet ?? false;
 
   /// The StreakChip's „Dein Streak" sheet is open.
   bool _chipSheetOpen = false;
@@ -220,7 +242,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
         _consumeEvent();
         _takeAnnouncements();
         _maybeGreet();
-        if (_goalSheetDeferred) unawaited(_askForNewGoal());
+        _showDeferredSheet();
       });
     } else if (_override == BuddyMood.empathetic) {
       // Leaving the dashboard ends this visit's empathy.
@@ -506,10 +528,18 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _markPlayed();
     if (_cues.isEmpty) {
       _cueRunning = false;
+      // All withdrawn (a lone „Neue Tipps" whose set was opened): the
+      // greeting they replaced is still due.
+      if (!_cuePlayed) _sayMoodLine();
+      _cuePlayed = false;
       return;
     }
     _cueRunning = true;
     final cue = _playing = _cues.removeFirst();
+    // Withdrawn meanwhile (the set opened, the weekly tips switched on): it
+    // ends unplayed.
+    if (!_stillApplies(cue)) return _nextCue();
+    _cuePlayed = true;
     switch (cue) {
       case _Cue.welcome:
         _say(_welcome);
@@ -531,12 +561,21 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
         _say(_saverEarnedLine);
         _holdStage();
       case _Cue.goalReached:
-        _goalCelebrating = true;
         _buddy.play(BuddyAction.celebrate);
         _setOverride(BuddyMood.inLove);
         _cueTimer = Timer(
           buddyActionDuration(BuddyAction.celebrate),
           () => unawaited(_askForNewGoal()),
+        );
+      case _Cue.tipsArrived:
+        _buddy.play(BuddyAction.celebrate);
+        _say(_tipsArrivedLine);
+        _holdStage();
+      case _Cue.weeklyTipsOffer:
+        _buddy.play(BuddyAction.wave);
+        _cueTimer = Timer(
+          buddyActionDuration(BuddyAction.wave),
+          () => unawaited(_offerWeeklyTips()),
         );
     }
   }
@@ -556,14 +595,29 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     );
   }
 
+  /// Whether [cue]'s announcement still applies ([offerStillAppliesProvider]).
+  bool _stillApplies(_Cue? cue) => switch (cue?.announcement) {
+    final a? => ref.read(offerStillAppliesProvider(a)),
+    null => true,
+  };
+
+  /// Shows the sheet that waited, if any (it checks again whether it may).
+  /// Withdrawn while it waited, its cue ends without it.
+  void _showDeferredSheet() {
+    final sheet = _deferredSheet;
+    if (sheet == null || !mounted) return;
+    _deferredSheet = null;
+    if (!_stillApplies(_playing)) return _nextCue();
+    unawaited(sheet());
+  }
+
   /// After the goal celebration: offers the next goal, then continues.
   /// Waits until the hero is visible again if it was hidden meanwhile.
   Future<void> _askForNewGoal() async {
     if (!_visible) {
-      _goalSheetDeferred = true;
+      _deferredSheet = _askForNewGoal;
       return;
     }
-    _goalSheetDeferred = false;
     final streak = ref.read(buddyProvider).value?.streak ?? 0;
     int? goal;
     // With the StreakChip's sheet open the user is picking a goal already.
@@ -575,18 +629,33 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       );
       if (!mounted) return;
     }
-    _goalCelebrating = false;
     _setOverride(null);
     if (goal != null) unawaited(saveStreakGoal(ref, goal));
     _nextCue();
   }
 
+  /// After the wave: offers the weekly tips („Zu den Tipps" opens
+  /// Entdecken), then continues. Waits until the hero is visible again if
+  /// it was hidden meanwhile, and until „Dein Streak" has closed if it is
+  /// open (sheets never stack).
+  Future<void> _offerWeeklyTips() async {
+    if (!_visible || _chipSheetOpen) {
+      _deferredSheet = _offerWeeklyTips;
+      return;
+    }
+    final open = await showWeeklyTipsOfferSheet(context);
+    if (!mounted) return;
+    if (open) context.go(RoutePaths.discover);
+    _nextCue();
+  }
+
   /// The StreakChip's tap: „Dein Streak", where the goal can be set or
-  /// changed. Ignored while a reached goal is celebrated (its own sheet
-  /// follows) or the sheet is already open, so sheets never stack.
+  /// changed. Ignored while a cue's sheet is coming ([_sheetCueOnStage])
+  /// or the sheet is already open, so sheets never stack. An offer that
+  /// came due meanwhile follows once it has closed.
   Future<void> _openStreakSheet() async {
     final status = ref.read(buddyProvider).value;
-    if (status == null || _goalCelebrating || _chipSheetOpen) return;
+    if (status == null || _sheetCueOnStage || _chipSheetOpen) return;
     _chipSheetOpen = true;
     try {
       await openStreakSheetAndSaveGoal(
@@ -597,6 +666,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       );
     } finally {
       _chipSheetOpen = false;
+      _showDeferredSheet();
     }
   }
 

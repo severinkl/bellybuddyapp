@@ -11,6 +11,7 @@ import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/utils/date_format_utils.dart';
 import 'package:belly_buddy/widgets/common/mascot_image.dart';
 
+import '../../helpers/app_lifecycle.dart';
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/riverpod_helpers.dart';
@@ -279,9 +280,7 @@ void main() {
       final container = await pumpDiary(tester);
 
       now = nextDay.add(const Duration(minutes: 10));
-      tester.binding
-        ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
-        ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      returnFromBackground();
       await tester.pumpAndSettle();
 
       // Still on the day it showed, now yesterday.

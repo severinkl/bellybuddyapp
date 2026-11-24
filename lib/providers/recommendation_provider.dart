@@ -1,17 +1,41 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/recommendation.dart';
-import '../providers/core_providers.dart';
 import '../repositories/recommendation_repository.dart';
+import '../utils/coalesced_runner.dart';
 import '../utils/logger.dart';
+import 'auth_provider.dart';
 
 class RecommendationNotifier
     extends Notifier<AsyncValue<List<Recommendation>>> {
   static const _log = AppLogger('RecommendationNotifier');
 
-  @override
-  AsyncValue<List<Recommendation>> build() => const AsyncValue.loading();
+  /// The sets [markAllAsSeen] stamped, by id, with their stamp. A fetch that
+  /// started before the server stored the mark still returns them unseen;
+  /// they keep the stamp.
+  final _seenLocally = <String, DateTime>{};
 
-  Future<void> fetchRecommendations() async {
+  /// The loads, coalesced per user.
+  final _fetches = CoalescedRunner();
+
+  @override
+  AsyncValue<List<Recommendation>> build() {
+    _seenLocally.clear();
+    return const AsyncValue.loading();
+  }
+
+  /// Loads the sets. A failed reload keeps the loaded ones as they are (it
+  /// is only logged), so an offline resume blanks neither the open Tipps
+  /// nor Entdecken nor Home; only a first load shows the error.
+  ///
+  /// Coalesced per user: a call while a load runs (a push, a pull to
+  /// refresh, a screen opening) makes exactly one more after it and
+  /// completes once that one is done. Never throws.
+  Future<void> fetchRecommendations() {
+    final userId = ref.read(currentUserIdProvider);
+    return _fetches.run(key: userId, () => _fetch(userId));
+  }
+
+  Future<void> _fetch(String? userId) async {
     // Only flip to loading when we have no cached data. On re-entry / refresh
     // we keep the previous list visible so the PageView doesn't dismount —
     // remounting resets scroll position to initialPage 0 and the "open
@@ -19,28 +43,72 @@ class RecommendationNotifier
     if (!state.hasValue) {
       state = const AsyncValue.loading();
     }
+    if (userId == null) {
+      _log.debug('fetchRecommendations: no user');
+      state = const AsyncValue.data([]);
+      return;
+    }
     try {
-      final userId = ref.read(currentUserIdProvider);
-      if (userId == null) {
-        _log.debug('fetchRecommendations: no user');
-        state = const AsyncValue.data([]);
-        return;
-      }
-
-      final recommendations = await ref
+      final sets = await ref
           .read(recommendationRepositoryProvider)
           .fetchByUserId(userId);
-      state = AsyncValue.data(recommendations);
+      if (ref.isCurrentUser(userId)) state = AsyncValue.data(_keepSeen(sets));
     } catch (e, st) {
-      state = AsyncValue.error(e, st);
+      _log.error('fetchRecommendations failed', e, st);
+      if (ref.isCurrentUser(userId) && !state.hasValue) {
+        state = AsyncValue.error(e, st);
+      }
     }
   }
 
+  /// [sets] with the stamps [markAllAsSeen] gave them.
+  List<Recommendation> _keepSeen(List<Recommendation> sets) => [
+    for (final set in sets)
+      switch (_seenLocally[set.id]) {
+        final seenAt? when set.seenAt == null => set.copyWith(seenAt: seenAt),
+        _ => set,
+      },
+  ];
+
+  /// Marks the loaded sets seen: here at once, so „Neu" and whatever
+  /// follows [unseenTipSetProvider] go as the Tipps open, then on the server
+  /// (only these: a set that arrived since stays new). A failed write takes
+  /// the stamps back, so the sets show as new again like on the server, and
+  /// rethrows.
   Future<void> markAllAsSeen() async {
     final userId = ref.read(currentUserIdProvider);
     if (userId == null) return;
-    await ref.read(recommendationRepositoryProvider).markAllAsSeen(userId);
-    ref.invalidate(unseenRecommendationCountProvider);
+    final sets = state.value ?? const <Recommendation>[];
+    final ids = [
+      for (final set in sets)
+        if (set.seenAt == null) set.id,
+    ];
+    if (ids.isEmpty) return;
+    final now = DateTime.now().toUtc();
+    for (final id in ids) {
+      _seenLocally[id] = now;
+    }
+    state = AsyncValue.data(_keepSeen(sets));
+    try {
+      await ref.read(recommendationRepositoryProvider).markSeen(userId, ids);
+    } catch (_) {
+      if (!ref.mounted) rethrow;
+      final ours = [
+        for (final id in ids)
+          if (_seenLocally[id] == now) id,
+      ];
+      ours.forEach(_seenLocally.remove);
+      final current = state.value;
+      if (ref.isCurrentUser(userId) && current != null) {
+        state = AsyncValue.data([
+          for (final set in current)
+            ours.contains(set.id) && set.seenAt == now
+                ? set.copyWith(seenAt: null)
+                : set,
+        ]);
+      }
+      rethrow;
+    }
   }
 
   Future<void> setRecommendationState({
@@ -124,8 +192,11 @@ final recommendationProvider =
       RecommendationNotifier.new,
     );
 
-final unseenRecommendationCountProvider = FutureProvider<int>((ref) async {
-  final userId = ref.watch(currentUserIdProvider);
-  if (userId == null) return 0;
-  return ref.read(recommendationRepositoryProvider).countUnseen(userId);
+/// The newest loaded tip set while it is unseen: Home's „Neue Tipps" row,
+/// the Entdecken dot and the Buddy's announcement. Null while loading,
+/// failed, empty or seen; an older unseen set behind a seen newest one is
+/// not new.
+final unseenTipSetProvider = Provider<Recommendation?>((ref) {
+  final newest = ref.watch(recommendationProvider).value?.firstOrNull;
+  return newest != null && newest.seenAt == null ? newest : null;
 });

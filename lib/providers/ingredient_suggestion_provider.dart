@@ -1,45 +1,74 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/ingredient_suggestion_group.dart';
-import '../providers/core_providers.dart';
 import '../repositories/ingredient_repository.dart';
+import '../utils/coalesced_runner.dart';
 import '../utils/logger.dart';
+import 'auth_provider.dart';
 
 class IngredientSuggestionNotifier
     extends Notifier<AsyncValue<List<IngredientSuggestionGroup>>> {
   static const _log = AppLogger('IngredientSuggestions');
 
-  /// Whether [markAllNewAsSeen] marked the loaded groups seen;
-  /// [newIngredientSuggestionCountProvider] is 0 then. Cleared when groups
-  /// load again: the server no longer marks the seen ones new, so what is
-  /// new then is new since.
-  bool _markedSeen = false;
+  /// The suggestion ids [markAllNewAsSeen] marked seen. A fetch that
+  /// started before the server stored them still has their groups new;
+  /// they stay seen.
+  final _seenIds = <String>{};
+
+  /// The loads, coalesced per user.
+  final _fetches = CoalescedRunner();
 
   @override
-  AsyncValue<List<IngredientSuggestionGroup>> build() =>
-      const AsyncValue.loading();
+  AsyncValue<List<IngredientSuggestionGroup>> build() {
+    _seenIds.clear();
+    return const AsyncValue.loading();
+  }
 
-  Future<void> fetchSuggestions() async {
-    state = const AsyncValue.loading();
+  /// Loads the groups; while some are loaded, they stay until the new ones
+  /// are in. A failed reload keeps them as they are (it is only logged), so
+  /// an offline resume blanks neither the open Alternativen nor Entdecken;
+  /// only a first load shows the error.
+  ///
+  /// Coalesced per user: a call while a load runs (a push, a pull to
+  /// refresh, a screen opening) makes exactly one more after it and
+  /// completes once that one is done. Never throws.
+  Future<void> fetchSuggestions() {
+    final userId = ref.read(currentUserIdProvider);
+    return _fetches.run(key: userId, () => _fetch(userId));
+  }
+
+  Future<void> _fetch(String? userId) async {
+    if (!state.hasValue) state = const AsyncValue.loading();
+    if (userId == null) {
+      state = const AsyncValue.data([]);
+      return;
+    }
     try {
-      final userId = ref.read(currentUserIdProvider);
-      if (userId == null) {
-        state = const AsyncValue.data([]);
-        return;
-      }
-
       final repo = ref.read(ingredientRepositoryProvider);
       final groups = await repo.fetchSuggestionGroups(userId);
-      _markedSeen = false;
-      state = AsyncValue.data(groups);
+      if (ref.isCurrentUser(userId)) state = AsyncValue.data(_keepSeen(groups));
     } catch (e, st) {
       _log.error('fetchSuggestions failed', e, st);
-      state = AsyncValue.error(e, st);
+      if (ref.isCurrentUser(userId) && !state.hasValue) {
+        state = AsyncValue.error(e, st);
+      }
     }
   }
 
-  /// Marks the new groups seen in the backend. The list keeps their
-  /// `isNew` (the Alternativen screen still shows „Neu" while open), but
-  /// [newIngredientSuggestionCountProvider] drops to 0.
+  /// Whether [markAllNewAsSeen] marked all of [group]'s suggestions seen
+  /// while it still reads new; one with a suggestion added since stays new.
+  bool _markedSeen(IngredientSuggestionGroup group) =>
+      group.isNew && group.suggestionIds.every(_seenIds.contains);
+
+  /// [groups] with those [markAllNewAsSeen] marked no longer new.
+  List<IngredientSuggestionGroup> _keepSeen(
+    List<IngredientSuggestionGroup> groups,
+  ) => groups.any(_markedSeen)
+      ? [for (final g in groups) _markedSeen(g) ? g.copyWith(isNew: false) : g]
+      : groups;
+
+  /// Marks the new groups seen: in the list at once (so „n neu" and the
+  /// Entdecken dot go as the Alternativen open), then in the backend. If
+  /// the backend fails, they are new again.
   Future<void> markAllNewAsSeen() async {
     final groups = state.whenOrNull(data: (g) => g);
     if (groups == null) return;
@@ -50,13 +79,21 @@ class IngredientSuggestionNotifier
         .toList();
     if (unseenIds.isEmpty) return;
 
+    _seenIds.addAll(unseenIds);
+    state = AsyncValue.data(_keepSeen(groups));
     try {
       await ref.read(ingredientRepositoryProvider).markAllSeen(unseenIds);
-      _markedSeen = true;
-      // The list is unchanged; tell the count it changed.
-      ref.notifyListeners();
     } catch (e, st) {
       _log.error('markAllNewAsSeen failed', e, st);
+      _seenIds.removeAll(unseenIds);
+      if (!ref.mounted) return;
+      final marked = unseenIds.toSet();
+      state = state.whenData(
+        (current) => [
+          for (final g in current)
+            g.suggestionIds.any(marked.contains) ? g.copyWith(isNew: true) : g,
+        ],
+      );
     }
   }
 
@@ -81,13 +118,9 @@ final ingredientSuggestionProvider =
     >(IngredientSuggestionNotifier.new);
 
 /// How many suggestion groups are new, for Entdecken's „n neu": 0 while
-/// loading or failed, and once [IngredientSuggestionNotifier.markAllNewAsSeen]
-/// marked them seen, until groups load again.
+/// loading or failed, and for the groups
+/// [IngredientSuggestionNotifier.markAllNewAsSeen] marked seen.
 final newIngredientSuggestionCountProvider = Provider<int>((ref) {
-  final groups = ref.watch(ingredientSuggestionProvider);
-  if (ref.read(ingredientSuggestionProvider.notifier)._markedSeen) {
-    return 0;
-  }
-  return groups.whenOrNull(data: (list) => list.where((g) => g.isNew).length) ??
-      0;
+  final groups = ref.watch(ingredientSuggestionProvider).value ?? const [];
+  return groups.where((g) => g.isNew).length;
 });

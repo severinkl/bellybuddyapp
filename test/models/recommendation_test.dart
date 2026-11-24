@@ -90,5 +90,49 @@ void main() {
       expect(rec.dislikeComment, 'Kein Kommentar');
       expect(rec.ratedAt, DateTime.utc(2026, 4, 22, 13));
     });
+
+    test('fromJson reads seen_at', () {
+      final seen = Recommendation.fromJson({
+        'id': 'rec-1',
+        'seen_at': '2026-11-16T08:30:00Z',
+      });
+      final unseen = Recommendation.fromJson({'id': 'rec-2', 'seen_at': null});
+
+      expect(seen.seenAt, DateTime.utc(2026, 11, 16, 8, 30));
+      expect(unseen.seenAt, isNull);
+    });
+  });
+
+  group('labels', () {
+    const item = RecommendationItem(
+      type: 'try',
+      ingredient: 'Reis',
+      reason: '',
+    );
+
+    test('weekLabel: its local ISO week; null while the date is unknown', () {
+      expect(
+        Recommendation(
+          id: 'r',
+          createdAt: DateTime.utc(2026, 11, 16, 10),
+        ).weekLabel,
+        'Woche 47',
+      );
+      expect(const Recommendation(id: 'r').weekLabel, isNull);
+    });
+
+    test('tipCountLabel: „1 Tipp", „n Tipps"', () {
+      expect(
+        const Recommendation(id: 'r', recommendations: [item]).tipCountLabel,
+        '1 Tipp',
+      );
+      expect(
+        const Recommendation(
+          id: 'r',
+          recommendations: [item, item, item],
+        ).tipCountLabel,
+        '3 Tipps',
+      );
+    });
   });
 }

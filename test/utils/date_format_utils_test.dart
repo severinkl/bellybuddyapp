@@ -281,4 +281,9 @@ void main() {
     expect(formatLogTargetDay(DateTime(2026, 11, 18)), 'Mi, 18. Nov');
     expect(formatLogTargetDay(DateTime(2026, 3, 2)), 'Mo, 2. Mär');
   });
+
+  test('formatDayMonthYear', () {
+    expect(formatDayMonthYear(DateTime(2025, 3, 28)), '28. Mär 2025');
+    expect(formatDayMonthYear(DateTime(2025, 12, 1)), '1. Dez 2025');
+  });
 }

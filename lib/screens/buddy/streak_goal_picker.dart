@@ -4,8 +4,8 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../services/haptic_service.dart';
 import '../../widgets/buddy/buddy.dart';
+import '../../widgets/buddy/buddy_ask_sheet.dart';
 import '../../widgets/common/bb_button.dart';
-import '../../widgets/common/bb_drag_handle.dart';
 
 const List<int> kStreakGoalOptions = [7, 14, 30, 50, 100];
 
@@ -282,67 +282,14 @@ Future<int?> showStreakGoalSheet(
   BuildContext context, {
   required int currentStreak,
   required String title,
-}) {
-  return showModalBottomSheet<int>(
-    context: context,
-    // Over the bottom bar too (it opens from Home's tab).
-    useRootNavigator: true,
-    isScrollControlled: true,
-    showDragHandle: false,
-    builder: (_) =>
-        _StreakGoalSheet(currentStreak: currentStreak, title: title),
-  );
-}
-
-class _StreakGoalSheet extends StatefulWidget {
-  const _StreakGoalSheet({required this.currentStreak, required this.title});
-
-  final int currentStreak;
-  final String title;
-
-  @override
-  State<_StreakGoalSheet> createState() => _StreakGoalSheetState();
-}
-
-class _StreakGoalSheetState extends State<_StreakGoalSheet> {
-  final BuddyController _buddy = BuddyController(mood: BuddyMood.inLove);
-
-  @override
-  void initState() {
-    super.initState();
-    // The Buddy asks; the sheet has no title of its own.
-    _buddy.say(widget.title, duration: null);
-  }
-
-  @override
-  void dispose() {
-    _buddy.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: AppConstants.paddingLg,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const BbDragHandle(color: AppTheme.border),
-            AppConstants.gap16,
-            SizedBox(
-              height: AppConstants.streakSheetBuddyHeight,
-              child: BuddyStage(controller: _buddy),
-            ),
-            AppConstants.gap16,
-            StreakGoalChooser(
-              currentStreak: widget.currentStreak,
-              onConfirmed: (g) => Navigator.pop(context, g),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+}) => showBuddySheet<int>(
+  context,
+  builder: (context) => BuddyAskSheet(
+    line: title,
+    mood: BuddyMood.inLove,
+    child: StreakGoalChooser(
+      currentStreak: currentStreak,
+      onConfirmed: (g) => Navigator.pop(context, g),
+    ),
+  ),
+);

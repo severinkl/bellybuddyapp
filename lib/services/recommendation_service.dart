@@ -26,30 +26,20 @@ class RecommendationService {
     }
   }
 
-  Future<int> countUnseen(String userId) async {
-    try {
-      final result = await _client
-          .from('recommendations')
-          .select()
-          .eq('user_id', userId)
-          .isFilter('seen_at', null)
-          .count(CountOption.exact);
-      return result.count;
-    } catch (e, st) {
-      _log.error('countUnseen failed', e, st);
-      return 0;
-    }
-  }
-
-  Future<void> markAllAsSeen(String userId) async {
+  /// Stamps the sets [ids] of [userId] seen, those not seen yet; a set
+  /// that arrived since they were loaded stays new. Rethrows on failure.
+  Future<void> markSeen(String userId, List<String> ids) async {
+    if (ids.isEmpty) return;
     try {
       await _client
           .from('recommendations')
           .update({'seen_at': DateTime.now().toUtc().toIso8601String()})
           .eq('user_id', userId)
+          .inFilter('id', ids)
           .isFilter('seen_at', null);
     } catch (e, st) {
-      _log.error('markAllAsSeen failed', e, st);
+      _log.error('markSeen failed', e, st);
+      rethrow;
     }
   }
 

@@ -13,6 +13,7 @@ class RouteNames {
   static const String drinkTracker = 'drink-tracker';
   static const String diary = 'diary';
   static const String discover = 'discover';
+  static const String knowledge = 'knowledge';
   static const String me = 'me';
   static const String settings = 'settings';
   static const String settingsProfile = 'settings-profile';
@@ -47,6 +48,7 @@ class RoutePaths {
   static const String drinkTracker = '/drink-tracker';
   static const String diary = '/diary';
   static const String discover = '/discover';
+  static const String knowledge = '/discover/knowledge';
   static const String me = '/me';
   static const String settings = '/settings';
   static const String settingsProfile = '/settings/profile';

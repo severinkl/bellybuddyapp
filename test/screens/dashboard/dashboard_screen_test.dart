@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/user_profile.dart';
+import 'package:belly_buddy/router/app_router.dart';
 import 'package:belly_buddy/screens/dashboard/dashboard_screen.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
@@ -16,15 +17,19 @@ import 'package:belly_buddy/screens/dashboard/widgets/tutorial/dashboard_tutoria
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_keys.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_step.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
+import 'package:belly_buddy/providers/buddy_offers_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/buddy_welcome_provider.dart';
 import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
+import 'package:belly_buddy/repositories/recommendation_repository.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/tips_row.dart';
 import 'package:belly_buddy/providers/insights_provider.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
+import 'package:belly_buddy/screens/recommendations/recommendations_screen.dart';
 import 'package:belly_buddy/services/entry_query_service.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/router/route_names.dart';
@@ -33,32 +38,30 @@ import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
 import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
 
+import '../../helpers/app_lifecycle.dart';
 import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/riverpod_helpers.dart';
 
-/// The signed-in user's id, switchable (sign-in as another user).
-class _UserId extends Notifier<String?> {
-  @override
-  String? build() => testUserId;
-
-  void set(String? id) => state = id;
-}
-
-final _userIdProvider = NotifierProvider<_UserId, String?>(_UserId.new);
-
 /// The app's clock in the insight-card tests, pinned: their entries
 /// ([insightSourceFor]) lie before it, in the insights' window on any date.
 final _insightsNow = DateTime(2026, 11, 23, 14);
+
+/// The signed-in user's id, switchable (sign-in as another user).
+final _user = SwitchableUserId();
 
 List<Override> _overrides({
   FakeBuddyRepository? buddyRepo,
   FakeEntryRepository? entryRepo,
   FakeProfileRepository? profileRepo,
+  FakeRecommendationRepository? recommendationRepo,
   UserProfile? profile,
   bool switchableUser = false,
 }) => [
+  recommendationRepositoryProvider.overrideWithValue(
+    recommendationRepo ?? FakeRecommendationRepository(),
+  ),
   profileRepositoryProvider.overrideWithValue(
     profileRepo ??
         (profile == null
@@ -69,7 +72,7 @@ List<Override> _overrides({
   ingredientRepositoryProvider.overrideWithValue(FakeIngredientRepository()),
   buddyRepositoryProvider.overrideWithValue(buddyRepo ?? FakeBuddyRepository()),
   if (switchableUser)
-    currentUserIdProvider.overrideWith((ref) => ref.watch(_userIdProvider))
+    _user.override
   else
     currentUserIdProvider.overrideWithValue(testUserId),
   isAuthenticatedProvider.overrideWithValue(true),
@@ -157,7 +160,113 @@ const _tourSkip = 'Überspringen';
 const _welcomeModalTitle = 'Willkommen bei Belly Buddy!';
 const _optInTitle = 'Bleib auf dem Laufenden!';
 
+/// Home in the app: the real router and shell under [AppTestHost], whose
+/// root keeps the tips loaded (its sign-in load brings [tips]'s sets).
+Future<ProviderContainer> _pumpHome(
+  WidgetTester tester, {
+  FakeRecommendationRepository? tips,
+}) async {
+  final container = ProviderContainer.test(
+    overrides: baseOverrides(tips: tips),
+  );
+  await tester.pumpWidget(
+    UncontrolledProviderScope(container: container, child: const AppTestHost()),
+  );
+  await _settleFirstRun(tester);
+  return container;
+}
+
+/// A tip set that nobody opened yet.
+FakeRecommendationRepository _unseenTips() => FakeRecommendationRepository(
+  sets: [testRecommendation(createdAt: DateTime(2026, 11, 16))],
+);
+
 void main() {
+  // No opt-in dialog over Home and no Buddy announcement flags set; a test
+  // that needs other prefs sets its own.
+  setUp(
+    () => SharedPreferences.setMockInitialValues({
+      AppConstants.keyNotificationModalShown: true,
+    }),
+  );
+
+  group('DashboardScreen Neue Tipps row', () {
+    testWidgets('an unseen tip set shows the row under the insight card', (
+      tester,
+    ) async {
+      await _pumpHome(tester, tips: _unseenTips());
+
+      expect(find.byKey(TipsRow.rowKey), findsOneWidget);
+      expect(find.text('✨ Neue Tipps · Woche 47'), findsOneWidget);
+      expect(
+        tester.getRect(find.byKey(TipsRow.rowKey)).top,
+        greaterThanOrEqualTo(
+          tester.getRect(find.byKey(InsightCard.cardKey)).bottom,
+        ),
+      );
+    });
+
+    testWidgets('tapping it opens the Tipps', (tester) async {
+      // Tall and wide: the row clear of the bar, the Tipps laid out for the
+      // width of a real font.
+      tester.view
+        ..physicalSize = const Size(800, 1200)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final container = await _pumpHome(tester, tips: _unseenTips());
+
+      await tester.tap(find.byKey(TipsRow.rowKey));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(
+        container
+            .read(routerProvider)
+            .routerDelegate
+            .currentConfiguration
+            .last
+            .matchedLocation,
+        RoutePaths.recommendations,
+      );
+      expect(find.byType(RecommendationsScreen), findsOneWidget);
+    });
+
+    testWidgets('no row when every set is seen', (tester) async {
+      await _pumpHome(tester);
+
+      expect(find.byKey(TipsRow.rowKey, skipOffstage: false), findsNothing);
+    });
+
+    testWidgets('pull-to-refresh brings tips that came since', (tester) async {
+      final repo = FakeRecommendationRepository();
+      await _pumpHome(tester, tips: repo);
+      expect(find.byKey(TipsRow.rowKey, skipOffstage: false), findsNothing);
+
+      repo.sets = [testRecommendation(createdAt: DateTime(2026, 11, 16))];
+      await tester.fling(
+        find.byType(RefreshIndicator),
+        const Offset(0, 400),
+        1000,
+      );
+      await _settleFirstRun(tester);
+
+      expect(find.byKey(TipsRow.rowKey), findsOneWidget);
+    });
+
+    testWidgets('fits 375×667 at text scale 1.3 with the row', (tester) async {
+      tester.view.physicalSize = const Size(375, 667);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await _pumpHome(tester, tips: _unseenTips());
+
+      expect(find.byKey(TipsRow.rowKey), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
   group('DashboardScreen', () {
     testWidgets('renders the care ring with all four needs', (tester) async {
       await tester.pumpWithProviders(
@@ -351,18 +460,14 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       expect(entryRepo.insightSourceCalls, 1);
 
-      void resume() => tester.binding
-        ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
-        ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-
       // The same day: nothing.
-      resume();
+      returnFromBackground();
       await tester.pump();
       expect(entryRepo.insightSourceCalls, 1);
 
       // The device slept past midnight; its timer stood still.
       now = DateTime(2026, 11, 24, 7);
-      resume();
+      returnFromBackground();
       await tester.pump();
       expect(entryRepo.insightSourceCalls, 2);
       expect(entryRepo.insightSourceRequests.last.now, now);
@@ -398,7 +503,7 @@ void main() {
 
       // The next user's insights load: no card meanwhile.
       entryRepo.holdInsightSource = true;
-      container.read(_userIdProvider.notifier).set('u2');
+      _user.set(container, 'u2');
       await tester.pump();
       expect(entryRepo.insightSourceRequests.last.userId, 'u2');
       expect(card, findsNothing);
@@ -563,12 +668,6 @@ void main() {
   });
 
   group('DashboardScreen taps on a phone', () {
-    setUp(() {
-      SharedPreferences.setMockInitialValues({
-        AppConstants.keyNotificationModalShown: true,
-      });
-    });
-
     const trackers = {
       CareNeed.food: RoutePaths.mealTracker,
       CareNeed.drink: RoutePaths.drinkTracker,
@@ -697,12 +796,6 @@ void main() {
   });
 
   group('DashboardScreen shows the signed-in user\'s day', () {
-    setUp(() {
-      SharedPreferences.setMockInitialValues({
-        AppConstants.keyNotificationModalShown: true,
-      });
-    });
-
     final now = DateTime(2026, 11, 23, 14);
     EntryQueryResult lunchToday() => testEntryQueryResult(
       meals: [testMealEntry(trackedAt: DateTime(2026, 11, 23, 12))],
@@ -806,12 +899,6 @@ void main() {
   });
 
   group('DashboardScreen first run', () {
-    setUp(() {
-      SharedPreferences.setMockInitialValues({
-        AppConstants.keyNotificationModalShown: true,
-      });
-    });
-
     testWidgets('a new user gets the spotlight tour directly, without a '
         'welcome modal', (tester) async {
       await tester.pumpWithProviders(
@@ -909,12 +996,6 @@ void main() {
   });
 
   group('DashboardScreen tour replay', () {
-    setUp(() {
-      SharedPreferences.setMockInitialValues({
-        AppConstants.keyNotificationModalShown: true,
-      });
-    });
-
     testWidgets('replay from Ich starts the tour on Home once', (tester) async {
       final profileRepo = FakeProfileRepository()
         ..seedProfile(testUserProfile());
@@ -990,6 +1071,95 @@ void main() {
 
       expect(find.text(_tourSkip), findsOneWidget);
       expect(container.read(tutorialProvider), isFalse);
+    });
+  });
+
+  group('DashboardScreen Buddy offers', () {
+    ProviderContainer containerOf(WidgetTester tester) =>
+        ProviderScope.containerOf(tester.element(find.byType(DashboardScreen)));
+
+    testWidgets('an unseen tip set is offered to the Buddy', (tester) async {
+      final container = await _pumpHome(tester, tips: _unseenTips());
+
+      final status = container.read(buddyProvider).value!;
+      expect(status.announcements, [BuddyAnnouncement.tipsArrived]);
+      expect(
+        status.announcementKeys[BuddyAnnouncement.tipsArrived],
+        endsWith('_rec-1'),
+      );
+    });
+
+    testWidgets('an offer made while the Buddy failed to load comes once he '
+        'loads', (tester) async {
+      final buddies = onboardedBuddyRepository()..throwOnFetch = true;
+      final container = ProviderContainer.test(
+        overrides: baseOverrides(tips: _unseenTips(), buddies: buddies),
+      );
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const AppTestHost(),
+        ),
+      );
+      await _settleFirstRun(tester);
+      expect(container.read(buddyOffersProvider), isNotEmpty);
+      expect(container.read(buddyProvider).hasValue, isFalse);
+
+      buddies.throwOnFetch = false;
+      await container.read(buddyProvider.notifier).reload();
+      await _settleFirstRun(tester);
+
+      expect(container.read(buddyProvider).value!.announcements, [
+        BuddyAnnouncement.tipsArrived,
+      ]);
+    });
+
+    testWidgets('repeated offers queue it once', (tester) async {
+      final entryRepo = FakeEntryRepository()
+        ..insightSource = insightSourceFor(
+          activeDays: 7,
+          gutFeelings: 3,
+          now: _insightsNow,
+        );
+      await tester.pumpWithProviders(
+        const DashboardScreen(),
+        overrides: [
+          ..._overrides(entryRepo: entryRepo, profile: testUserProfile()),
+          buddyClockProvider.overrideWithValue(() => _insightsNow),
+        ],
+      );
+      await _settleFirstRun(tester);
+      final container = containerOf(tester);
+      expect(container.read(buddyProvider).value!.announcements, [
+        BuddyAnnouncement.weeklyTipsOffer,
+      ]);
+
+      // The insights recompute after each write: unlocked, locked again,
+      // unlocked again, so the offer comes once more.
+      for (final gutFeelings in [3, 2, 3]) {
+        entryRepo.insightSource = insightSourceFor(
+          activeDays: 7,
+          gutFeelings: gutFeelings,
+          now: _insightsNow,
+        );
+        await container
+            .read(entriesProvider.notifier)
+            .deleteByType('gutFeeling', 'gut-1');
+        await tester.pump(const Duration(milliseconds: 100));
+        // Locked again (2 gut-feeling entries), the offer is withdrawn.
+        expect(
+          container.read(buddyOffersProvider),
+          gutFeelings == 3
+              ? {BuddyAnnouncement.weeklyTipsOffer: weeklyTipsOfferSuffix}
+              : isEmpty,
+          reason: '$gutFeelings gut-feeling entries',
+        );
+      }
+
+      expect(entryRepo.insightSourceCalls, 4);
+      expect(container.read(buddyProvider).value!.announcements, [
+        BuddyAnnouncement.weeklyTipsOffer,
+      ]);
     });
   });
 }

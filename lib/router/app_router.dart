@@ -159,6 +159,13 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: RoutePaths.discover,
                 name: RouteNames.discover,
                 builder: (context, state) => const DiscoverScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'knowledge',
+                    name: RouteNames.knowledge,
+                    builder: (context, state) => const KnowledgeScreen(),
+                  ),
+                ],
               ),
             ],
           ),

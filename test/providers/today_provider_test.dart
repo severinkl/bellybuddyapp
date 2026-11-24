@@ -1,18 +1,15 @@
 import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:material_ui/material_ui.dart';
 
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/today_provider.dart';
 
-void main() {
-  // The provider's AppLifecycleListener needs the binding.
-  final binding = TestWidgetsFlutterBinding.ensureInitialized();
+import '../helpers/app_lifecycle.dart';
 
-  void resume() => binding
-    ..handleAppLifecycleStateChanged(AppLifecycleState.inactive)
-    ..handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+void main() {
+  // The foreground signal's AppLifecycleListener needs the binding.
+  TestWidgetsFlutterBinding.ensureInitialized();
 
   final beforeMidnight = DateTime(2026, 11, 23, 23, 59, 30);
 
@@ -79,7 +76,7 @@ void main() {
         );
 
         asleep = const Duration(hours: 8);
-        resume();
+        returnFromBackground();
         expect(days, [DateTime(2026, 11, 24)]);
 
         // Nothing when the late timer would have fired …
@@ -92,13 +89,27 @@ void main() {
       });
     });
 
+    test('an inactive blip past midnight (Control Center): nothing', () {
+      fakeAsync((async) {
+        var asleep = Duration.zero;
+        final (_, days) = makeContainer(
+          () => beforeMidnight.add(async.elapsed + asleep),
+        );
+
+        asleep = const Duration(hours: 8);
+        inactiveBlip();
+
+        expect(days, isEmpty);
+      });
+    });
+
     test('the same day: nothing', () {
       fakeAsync((async) {
         final (_, days) = makeContainer(
           () => DateTime(2026, 11, 23, 14).add(async.elapsed),
         );
 
-        resume();
+        returnFromBackground();
         async.flushMicrotasks();
 
         expect(days, isEmpty);
@@ -116,7 +127,7 @@ void main() {
         sub.pause();
 
         asleep = const Duration(hours: 8);
-        resume();
+        returnFromBackground();
         expect(heard, isEmpty);
 
         sub.resume();
@@ -131,7 +142,7 @@ void main() {
       expect(async.pendingTimers, hasLength(1));
 
       c.dispose();
-      resume();
+      returnFromBackground();
 
       expect(async.pendingTimers, isEmpty);
     });

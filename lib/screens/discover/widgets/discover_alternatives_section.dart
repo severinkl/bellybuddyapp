@@ -4,7 +4,6 @@ import 'package:material_ui/material_ui.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/ingredient_suggestion_group.dart';
-import '../../../widgets/common/bb_card.dart';
 import 'discover_section.dart';
 
 /// The newest [shown] suggestion groups (new first, then by their latest
@@ -58,29 +57,11 @@ class DiscoverAlternativesSection extends StatelessWidget {
         [] => const DiscoverNote(
           'Noch keine Alternativen – sie entstehen nach deinen Mahlzeiten.',
         ),
-        final items => Semantics(
-          button: true,
-          child: BbCard(
-            onTap: onOpen,
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppConstants.spacingMd,
-              vertical: AppConstants.spacingXs,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (final (i, group) in _newest(items).indexed) ...[
-                  if (i > 0)
-                    const Divider(
-                      height: AppConstants.dividerThickness,
-                      thickness: AppConstants.dividerThickness,
-                      color: AppTheme.border,
-                    ),
-                  _AlternativeRow(group: group),
-                ],
-              ],
-            ),
-          ),
+        final items => DiscoverListCard(
+          onTap: onOpen,
+          children: [
+            for (final group in _newest(items)) _AlternativeRow(group: group),
+          ],
         ),
       },
     );

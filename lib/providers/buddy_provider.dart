@@ -12,6 +12,8 @@ import '../repositories/entry_repository.dart';
 import '../services/buddy/streak_engine.dart';
 import '../utils/date_format_utils.dart';
 import '../utils/logger.dart';
+import '../utils/retry_helper.dart';
+import 'auth_provider.dart' show CurrentUserRef;
 import 'core_providers.dart';
 
 /// The Buddy's clock. Day boundaries use its local date; tests override it.
@@ -33,7 +35,18 @@ final buddyClockProvider = Provider<DateTime Function()>(
 /// after a restart, `streakBroken` and `goalReached` come again while their
 /// cause still holds, but `saverUsed` and `saverEarned` (produced only by
 /// the evaluation that saved the change) are gone.
-enum BuddyAnnouncement { saverUsed, streakBroken, saverEarned, goalReached }
+///
+/// The streak evaluation produces the first four. The last two are offered
+/// from outside ([BuddyNotifier.offerAnnouncement], by Home while they
+/// apply): `tipsArrived` once per tip set, `weeklyTipsOffer` once ever.
+enum BuddyAnnouncement {
+  saverUsed,
+  streakBroken,
+  saverEarned,
+  goalReached,
+  tipsArrived,
+  weeklyTipsOffer,
+}
 
 /// The signed-in user's Buddy after today's streak evaluation.
 class BuddyStatus {
@@ -69,7 +82,8 @@ class BuddyStatus {
   final List<BuddyAnnouncement> announcements;
 
   /// The SharedPreferences flag of each pending announcement
-  /// (`<prefix><userId>_<kind>_<yyyy-MM-dd | goal>`), set once it is shown.
+  /// (`<prefix><userId>_<kind>_<yyyy-MM-dd | goal | offer suffix>`), set
+  /// once it is shown.
   final Map<BuddyAnnouncement, String> announcementKeys;
 
   BuddyStatus copyWith({
@@ -238,6 +252,50 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
       }
     } catch (e, st) {
       _log.error('Storing the announcement flags failed', e, st);
+    }
+  }
+
+  /// Queues [kind], an announcement offered from outside the streak
+  /// evaluation, once per user and [suffix] (its flag is
+  /// `<prefix><userId>_<kind>_<suffix>`). Waits for a running load. Does
+  /// nothing while signed out or without a status, when the user changed
+  /// meanwhile, when the flag is set or was marked shown this session, or
+  /// when the same flag is already pending. [kind] pending with another
+  /// suffix keeps its place and takes the new flag (a newer tip set).
+  /// Never throws; flags that can't be read queue it anyway.
+  Future<void> offerAnnouncement(
+    BuddyAnnouncement kind, {
+    required String suffix,
+  }) async {
+    try {
+      final userId = ref.read(currentUserIdProvider);
+      if (userId == null) return;
+      final key = _announcementKey(userId, kind, suffix);
+      if (await _flagged(key)) return;
+      while (ref.mounted && state.isLoading) {
+        try {
+          await future;
+        } catch (_) {
+          // Logged by build; the state checks below see the failure.
+        }
+      }
+      // After the last await: the state as it is now.
+      if (!ref.isCurrentUser(userId)) return;
+      final status = state.value;
+      if (status == null || status.state.userId != userId) return;
+      if (_shownKeys.contains(key) || status.announcementKeys[kind] == key) {
+        return;
+      }
+      state = AsyncData(
+        status.copyWith(
+          announcements: status.announcements.contains(kind)
+              ? status.announcements
+              : [...status.announcements, kind],
+          announcementKeys: {...status.announcementKeys, kind: key},
+        ),
+      );
+    } catch (e, st) {
+      _log.error('Offering $kind failed', e, st);
     }
   }
 
@@ -420,20 +478,38 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
     };
     final keys = {
       for (final MapEntry(key: kind, value: suffix) in suffixes.entries)
-        kind:
-            '${AppConstants.keyBuddyAnnouncedPrefix}${userId}_${kind.name}_'
-            '$suffix',
+        kind: _announcementKey(userId, kind, suffix),
     };
     if (keys.isEmpty) return keys;
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      keys.removeWhere((_, key) => prefs.getBool(key) ?? false);
-    } catch (e, st) {
-      // Better to repeat a message than to lose a one-shot one.
-      _log.error('Announcement flags unavailable', e, st);
-    }
-    return keys;
+    final flags = await _flags();
+    return {
+      for (final MapEntry(key: kind, value: key) in keys.entries)
+        if (!(flags?.getBool(key) ?? false)) kind: key,
+    };
   }
+
+  /// Whether the flag [key] is set; false when the flags can't be read.
+  Future<bool> _flagged(String key) async =>
+      (await _flags())?.getBool(key) ?? false;
+
+  /// The announcement flags; null (logged) when they can't be read, and
+  /// then every flag reads as unset: better to repeat a message than to
+  /// lose a one-shot one.
+  Future<SharedPreferences?> _flags() async {
+    try {
+      return await SharedPreferences.getInstance();
+    } catch (e, st) {
+      _log.error('Announcement flags unavailable', e, st);
+      return null;
+    }
+  }
+
+  /// The SharedPreferences flag of [kind] for [userId] and [suffix].
+  static String _announcementKey(
+    String userId,
+    BuddyAnnouncement kind,
+    String suffix,
+  ) => '${AppConstants.keyBuddyAnnouncedPrefix}${userId}_${kind.name}_$suffix';
 
   /// Sets [fresh] as the state unless the user changed meanwhile.
   void _publish(Ref opRef, String userId, BuddyStatus fresh) {
@@ -469,9 +545,7 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
 /// No automatic rebuild retries: the repository already retries the fetch,
 /// and a missing table or offline backend should surface as an [AsyncError]
 /// right away (the UI degrades); the next refresh recovers.
-Duration? _noRetry(int retryCount, Object error) => null;
-
 final buddyProvider = AsyncNotifierProvider<BuddyNotifier, BuddyStatus?>(
   BuddyNotifier.new,
-  retry: _noRetry,
+  retry: noRetry,
 );

@@ -65,7 +65,7 @@ void main() {
       when(
         () => repo.fetchByUserId(any()),
       ).thenAnswer((_) async => [testRecommendation(id: 'r1')]);
-      when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => repo.markSeen(any(), any())).thenAnswer((_) async {});
       when(
         () => repo.updateFeedback(
           id: any(named: 'id'),
@@ -140,7 +140,7 @@ void main() {
       final repo = MockRecommendationRepository();
       final rec = testRecommendation(id: 'r1');
       when(() => repo.fetchByUserId(any())).thenAnswer((_) async => [rec]);
-      when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => repo.markSeen(any(), any())).thenAnswer((_) async {});
       when(
         () => repo.updateFeedback(
           id: any(named: 'id'),
@@ -222,7 +222,7 @@ void main() {
       when(
         () => repo.fetchByUserId(any()),
       ).thenAnswer((_) async => [testRecommendation(id: 'r1')]);
-      when(() => repo.markAllAsSeen(any())).thenAnswer((_) async {});
+      when(() => repo.markSeen(any(), any())).thenAnswer((_) async {});
       when(
         () => repo.updateFeedback(
           id: any(named: 'id'),

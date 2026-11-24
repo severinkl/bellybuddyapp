@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
 import '../config/app_theme.dart';
 import '../config/constants.dart';
@@ -10,17 +11,17 @@ import '../config/constants.dart';
 /// Its length is counted in characters as a person sees them (grapheme
 /// clusters: „❤️" or an emoji family is one), up to
 /// [AppConstants.buddyNameMaxLength]; the fields don't take more. A name
-/// must also fit the database's check, which still counts code points
-/// ([AppConstants.buddyNameMaxCodePoints]); a name of many emojis can pass
-/// the first limit and not the second, and is then refused with
-/// [tooManySymbols].
+/// must also fit the database's check, which counts code points up to
+/// [AppConstants.buddyNameMaxCodePoints] (core 0011); a name of 20 very long
+/// characters can pass the first limit and not the second, and is then
+/// refused with [tooManySymbols].
 abstract final class BuddyNameRules {
   /// The error for an empty name.
   static const empty =
       'Bitte gib einen Namen mit 1 bis ${AppConstants.buddyNameMaxLength} '
       'Zeichen ein.';
 
-  /// The error for a name the database can't store yet.
+  /// The error for a name the database can't store.
   static const tooManySymbols =
       'So viele Emojis passen leider nicht. Bitte kürze den Namen.';
 
@@ -38,6 +39,15 @@ abstract final class BuddyNameRules {
     }
     return null;
   }
+
+  /// Whether [error], from saving a name, is the database's name check
+  /// refusing it: a backend counting fewer code points than the app (before
+  /// core 0011: 20) refuses a name of many emojis, which [tooManySymbols]
+  /// explains.
+  static bool refusedAsTooLong(Object error) =>
+      error is PostgrestException &&
+      error.code == '23514' &&
+      error.message.contains('buddy_state_name_check');
 
   /// The „n/20" counter of a name field showing [text].
   static Widget counter(String text, {required bool isFocused}) => Semantics(

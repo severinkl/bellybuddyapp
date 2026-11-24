@@ -1,9 +1,9 @@
 import 'dart:async';
 
-import 'package:flutter/widgets.dart' show AppLifecycleListener;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../utils/date_format_utils.dart';
+import 'app_foreground_provider.dart';
 import 'buddy_provider.dart';
 
 /// Today by the app's clock ([buddyClockProvider]): the local date, at
@@ -12,7 +12,8 @@ import 'buddy_provider.dart';
 ///
 /// Moves on at local midnight (one timer to the next, armed by the
 /// calendar so a DST change can't shift it) and, since timers stand still
-/// while an iOS device sleeps, when the app is back in the foreground.
+/// while an iOS device sleeps, when the app is back in the foreground
+/// ([appForegroundProvider]).
 /// Unchanged otherwise, so a listener hears of a new day once; a paused one
 /// hears of the latest once it resumes (Riverpod replays it).
 class TodayNotifier extends Notifier<DateTime> {
@@ -21,11 +22,9 @@ class TodayNotifier extends Notifier<DateTime> {
   @override
   DateTime build() {
     final clock = ref.watch(buddyClockProvider);
-    final lifecycle = AppLifecycleListener(onResume: _check);
-    ref.onDispose(() {
-      _midnight?.cancel();
-      lifecycle.dispose();
-    });
+    ref
+      ..listen(appForegroundProvider, (_, _) => _check())
+      ..onDispose(() => _midnight?.cancel());
     return _arm(clock());
   }
 

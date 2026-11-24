@@ -3,6 +3,7 @@ import 'package:belly_buddy/models/drink.dart';
 import 'package:belly_buddy/models/drink_entry.dart';
 import 'package:belly_buddy/models/gut_feeling_entry.dart';
 import 'package:belly_buddy/models/ingredient_suggestion.dart' as model;
+import 'package:belly_buddy/models/knowledge_article.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/recipe.dart';
@@ -47,6 +48,7 @@ UserProfile testUserProfile({
   DateTime? healthConsentAt,
   String? privacyPolicyVersion,
   bool hasHealthConsent = true,
+  bool weeklyTipsEnabled = false,
 }) => UserProfile(
   userId: userId ?? testUserId,
   birthYear: birthYear ?? 1990,
@@ -71,6 +73,7 @@ UserProfile testUserProfile({
   privacyPolicyVersion:
       privacyPolicyVersion ??
       (hasHealthConsent ? AppConstants.privacyPolicyVersion : null),
+  weeklyTipsEnabled: weeklyTipsEnabled,
 );
 
 MealEntry testMealEntry({
@@ -150,11 +153,13 @@ Recommendation testRecommendation({
   String? summary,
   List<RecommendationItem>? recommendations,
   DateTime? createdAt,
+  DateTime? seenAt,
 }) => Recommendation(
   id: id ?? 'rec-1',
   summary: summary ?? 'Tipp: Mehr Wasser trinken.',
   recommendations: recommendations ?? [],
   createdAt: createdAt,
+  seenAt: seenAt,
 );
 
 EntryQueryResult testEntryQueryResult({
@@ -211,3 +216,32 @@ IngredientSuggestionGroup testSuggestionGroup({
   isNew: isNew,
   suggestionIds: suggestionIds ?? ['sug-1', 'sug-2'],
 );
+
+/// Four blog articles without images, newest first: two „Gesund verdauen",
+/// one „Rezepte", one „Persönliches".
+List<KnowledgeArticle> testKnowledgeArticles() => [
+  KnowledgeArticle(
+    title: 'Was ist FODMAP?',
+    link: Uri.parse('https://www.myfodmap.at/was-ist-fodmap'),
+    category: 'Gesund verdauen',
+    publishedAt: DateTime.utc(2026, 11, 20, 8),
+  ),
+  KnowledgeArticle(
+    title: 'Suppe für kalte Tage',
+    link: Uri.parse('https://www.myfodmap.at/suppe'),
+    category: 'Rezepte',
+    publishedAt: DateTime.utc(2026, 11, 10, 8),
+  ),
+  KnowledgeArticle(
+    title: 'Mein Weg zum Bauchgefühl',
+    link: Uri.parse('https://www.myfodmap.at/mein-weg'),
+    category: 'Persönliches',
+    publishedAt: DateTime.utc(2026, 10, 28, 8),
+  ),
+  KnowledgeArticle(
+    title: 'Ballaststoffe verstehen',
+    link: Uri.parse('https://www.myfodmap.at/ballaststoffe'),
+    category: 'Gesund verdauen',
+    publishedAt: DateTime.utc(2026, 10, 15, 8),
+  ),
+];

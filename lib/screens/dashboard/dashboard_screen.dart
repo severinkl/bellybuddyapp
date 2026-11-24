@@ -1,20 +1,28 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
+import '../../providers/buddy_offers_provider.dart';
 import '../../providers/buddy_onboarding_gate_provider.dart';
 import '../../providers/buddy_provider.dart';
 import '../../providers/buddy_welcome_provider.dart';
+import '../../providers/discover_news_provider.dart';
 import '../../providers/entries_provider.dart';
 import '../../providers/insights_provider.dart';
 import '../../providers/upgrade_gate_provider.dart';
 import '../../widgets/common/upgrade_available_dialog.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/recommendation_provider.dart';
+import '../../router/route_names.dart';
 import '../../providers/tutorial_provider.dart';
 import 'widgets/buddy_hero.dart';
 import 'widgets/insight_card.dart';
 import 'widgets/notification_opt_in_dialog.dart';
+import 'widgets/tips_row.dart';
 import 'widgets/tutorial/show_dashboard_tutorial.dart';
 import 'widgets/tutorial/tutorial_keys.dart';
 
@@ -62,6 +70,33 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     // the user signed in after the decision resolved). If it resolves later,
     // the listener in build() picks it up instead.
     WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowSoftNudge());
+    // New tips and the weekly-tips offer, whenever they apply: offered to
+    // the Buddy in a microtask, never during a build. He queues each once.
+    ref.listenManual<Map<BuddyAnnouncement, String>>(
+      buddyOffersProvider,
+      (_, offers) => Future.microtask(() => _offerToBuddy(offers)),
+      fireImmediately: true,
+    );
+    // He drops an offer while he has no status (his load failed): once he
+    // has one (or another user's), the offers go to him again.
+    ref.listenManual<String?>(
+      buddyProvider.select((buddy) => buddy.value?.state.userId),
+      (previous, userId) {
+        if (userId == null || userId == previous) return;
+        Future.microtask(() {
+          if (mounted) _offerToBuddy(ref.read(buddyOffersProvider));
+        });
+      },
+    );
+  }
+
+  /// Hands each of [offers] to the Buddy ([BuddyNotifier.offerAnnouncement]).
+  void _offerToBuddy(Map<BuddyAnnouncement, String> offers) {
+    if (!mounted) return;
+    final buddy = ref.read(buddyProvider.notifier);
+    for (final MapEntry(key: kind, value: suffix) in offers.entries) {
+      unawaited(buddy.offerAnnouncement(kind, suffix: suffix));
+    }
   }
 
   /// Shows the "update available" dialog if a soft nudge is pending. The flag
@@ -111,7 +146,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   /// Loads what Home shows. Never throws: a part that fails (offline) is
   /// logged by its provider and Home shows what it has, so the first-run
   /// prompts and a replay request still follow; pull to refresh tries again.
-  Future<void> _loadData() async {
+  Future<void> _loadData({bool refreshTips = false}) async {
     try {
       await Future.wait<void>([
         ref.read(profileProvider.notifier).fetchProfile(),
@@ -120,6 +155,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             .loadEntries(ref.read(buddyClockProvider)()),
         ref.read(buddyProvider.notifier).reload(),
         ref.read(insightsProvider.notifier).refresh(),
+        // The first load leaves the tips to the app root's sign-in load.
+        if (refreshTips) ref.read(discoverNewsProvider.notifier).refresh(),
       ]);
     } catch (_) {
       // Logged by entriesProvider, the one part that rethrows.
@@ -151,7 +188,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       backgroundColor: AppTheme.background,
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: _loadData,
+          onRefresh: () => _loadData(refreshTips: true),
           color: AppTheme.primary,
           // Not lazy: every tour target is built and laid out, even below
           // the fold, for the tour to scroll to.
@@ -176,6 +213,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     key: TutorialKeys.insight,
                     insights: ref.watch(insightsProvider),
                   ),
+                ),
+                // Only while a tip set is new.
+                Consumer(
+                  builder: (context, ref, _) {
+                    final set = ref.watch(unseenTipSetProvider);
+                    if (set == null) return const SizedBox.shrink();
+                    return Column(
+                      children: [
+                        AppConstants.gap12,
+                        TipsRow(
+                          set: set,
+                          onTap: () => context.push(RoutePaths.recommendations),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),

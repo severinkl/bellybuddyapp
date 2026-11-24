@@ -13,7 +13,8 @@ typedef UrlOpener = Future<bool> Function(Uri url, {LaunchMode mode});
 
 const _log = AppLogger('ExternalUrl');
 
-/// Opens [url] in an external app (the browser) with [open]. When that
+/// Opens [url] with [open] — in an external app (the browser) unless [mode]
+/// says otherwise. When that
 /// fails — the launch throws or reports false — shows [failureMessage] in a
 /// SnackBar on [context]'s messenger, if there is one.
 Future<void> openExternalUrl(
@@ -21,11 +22,12 @@ Future<void> openExternalUrl(
   String url, {
   required String failureMessage,
   UrlOpener open = launchUrl,
+  LaunchMode mode = LaunchMode.externalApplication,
 }) async {
   final messenger = ScaffoldMessenger.maybeOf(context);
   var opened = false;
   try {
-    opened = await open(Uri.parse(url), mode: LaunchMode.externalApplication);
+    opened = await open(Uri.parse(url), mode: mode);
   } catch (e, st) {
     _log.error('Opening $url failed', e, st);
   }

@@ -19,6 +19,14 @@ final currentUserIdProvider = Provider<String?>((ref) {
   return ref.watch(currentUserProvider)?.id;
 });
 
+extension CurrentUserRef on Ref {
+  /// Whether [userId] is still the signed-in user (null: still signed out),
+  /// after an await, and the provider still there: what was fetched for a
+  /// previous user lands nowhere.
+  bool isCurrentUser(String? userId) =>
+      mounted && read(currentUserIdProvider) == userId;
+}
+
 /// Whether user is authenticated — reactive
 final isAuthenticatedProvider = Provider<bool>((ref) {
   final authState = ref.watch(authStateProvider);

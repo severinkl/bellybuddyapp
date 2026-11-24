@@ -5,6 +5,7 @@ export 'dashboard/dashboard_screen.dart';
 export 'not_found_screen.dart';
 export 'diary/diary_screen.dart';
 export 'discover/discover_screen.dart';
+export 'discover/knowledge_screen.dart';
 export 'health_consent/health_consent_screen.dart';
 export 'ingredient_suggestions/ingredient_suggestions_screen.dart';
 export 'loading_screen.dart';

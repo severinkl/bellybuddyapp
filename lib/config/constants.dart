@@ -141,6 +141,9 @@ class AppConstants {
   // Entdecken: a recipe card's width in the Meine Rezepte row
   static const double discoverRecipeCardWidth = 148.0;
 
+  // Wissen: an article's square thumbnail
+  static const double knowledgeThumbSize = 64.0;
+
   // Ich: the Buddy in the header
   static const double meBuddySize = 112.0;
 
@@ -209,9 +212,6 @@ class AppConstants {
   static const String resetPasswordRedirectUrl =
       'https://app.bellybuddy.at/reset-password';
 
-  /// The myfodmap blog: Entdecken's „Wissen" opens it.
-  static const String blogUrl = 'https://www.myfodmap.at/blog';
-
   /// Public privacy policy (Datenschutzerklärung) of the Belly Buddy web app.
   static const String privacyPolicyUrl =
       'https://app.bellybuddy.at/datenschutz';
@@ -222,12 +222,20 @@ class AppConstants {
   /// gate again.
   static const String privacyPolicyVersion = '2026-11-22';
 
+  /// The myfodmap blog feed behind Wissen, how long a fetched copy counts as
+  /// fresh, and how long a fetch may take.
+  static const String knowledgeFeedUrl =
+      'https://www.myfodmap.at/blog-feed.xml';
+  static const Duration knowledgeFeedMaxAge = Duration(hours: 6);
+  static const Duration knowledgeFeedTimeout = Duration(seconds: 10);
+
   // Apple "Hide My Email" relay address suffix (includes the leading `@`).
   // See the Sign in with Apple docs — this domain is stable since iOS 13.
   static const String appleRelayEmailSuffix = '@privaterelay.appleid.com';
 
   // SharedPreferences keys
   static const String keyNotificationModalShown = 'notification_modal_shown';
+  static const String keyKnowledgeFeedCache = 'knowledge_feed_cache_v1';
   static const String keyBuddyStatePrefix = 'buddy_state_';
 
   /// Prefix of the Buddy announcement flags
@@ -239,9 +247,9 @@ class AppConstants {
   /// them (grapheme clusters: an emoji is one).
   static const int buddyNameMaxLength = 20;
 
-  /// What the `buddy_state.name` check (`char_length`, code points) takes.
-  /// Raise it once core relaxes the check, so 20 emojis fit too.
-  static const int buddyNameMaxCodePoints = 20;
+  /// What the `buddy_state.name` check takes: the database counts code
+  /// points up to 400 (core 0011), so 20 emojis fit, even long ZWJ ones.
+  static const int buddyNameMaxCodePoints = 400;
 
   /// Whether [name] is a valid Buddy name: 1 to [buddyNameMaxLength]
   /// characters after trimming, and storable ([buddyNameMaxCodePoints]).
@@ -285,11 +293,19 @@ class AppConstants {
   /// stay this size (like iOS's own tab bars), so five slots keep fitting.
   static const double bottomNavMaxTextScale = 1.3;
 
+  /// The diameter of the news dot on a bottom-bar icon.
+  static const double navBadgeSize = 10.0;
+
   // Durations
   static const Duration pressScaleDuration = Duration(milliseconds: 100);
   static const Duration successOverlayDuration = Duration(milliseconds: 1500);
   static const Duration autoAdvanceDuration = Duration(seconds: 4);
   static const Duration debounceDuration = Duration(milliseconds: 800);
+
+  /// Back in the foreground, the tips and Alternativen load again only once
+  /// their last load is at least this old (pushes and pull to refresh load
+  /// regardless).
+  static const Duration discoverNewsForegroundInterval = Duration(minutes: 5);
 
   /// The longest the app waits on its loading screen for the Buddy
   /// onboarding gate's answer after sign-in or app start; then it goes on

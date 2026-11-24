@@ -49,6 +49,11 @@ abstract class UserProfile with _$UserProfile {
     // ProfileRepository.acceptHealthConsent, never by profile updates.
     @JsonKey(name: 'health_consent_at') DateTime? healthConsentAt,
     @JsonKey(name: 'privacy_policy_version') String? privacyPolicyVersion,
+    // Opt-in to the weekly AI tips. Written only by
+    // ProfileRepository.setWeeklyTips, never by profile updates.
+    @JsonKey(name: 'weekly_tips_enabled')
+    @Default(false)
+    bool weeklyTipsEnabled,
   }) = _UserProfile;
 
   const UserProfile._();

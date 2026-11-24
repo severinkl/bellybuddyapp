@@ -114,11 +114,11 @@ void main() {
     });
 
     test('a pending replay ends with its user (sign-out, another user)', () {
-      final user = NotifierProvider<_User, String?>(_User.new);
+      final user = SwitchableUserId();
       final c = createContainer(
         overrides: [
           profileRepositoryProvider.overrideWithValue(fakeRepo),
-          currentUserIdProvider.overrideWith((ref) => ref.watch(user)),
+          user.override,
         ],
       );
       // Kept alive like Home's listener keeps it.
@@ -126,11 +126,11 @@ void main() {
 
       // Requested, then signed out before Home took it.
       c.read(tutorialProvider.notifier).requestReplay();
-      c.read(user.notifier).set(null);
+      user.set(c, null);
       expect(c.read(tutorialProvider), isFalse);
 
       // The next user gets no tour they never asked for.
-      c.read(user.notifier).set('other-user');
+      user.set(c, 'other-user');
       expect(c.read(tutorialProvider.notifier).consumeReplay(), isFalse);
 
       // Their own request still works.
@@ -138,12 +138,4 @@ void main() {
       expect(c.read(tutorialProvider.notifier).consumeReplay(), isTrue);
     });
   });
-}
-
-/// The signed-in user's id, settable.
-class _User extends Notifier<String?> {
-  @override
-  String? build() => testUserId;
-
-  void set(String? id) => state = id;
 }

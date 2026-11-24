@@ -13,6 +13,7 @@ import 'package:belly_buddy/widgets/common/ingredient_search.dart';
 import 'package:belly_buddy/widgets/log_sheet/log_sheet.dart';
 
 import '../test/helpers/fakes.dart';
+import '../test/helpers/widget_tester_helpers.dart';
 import 'helpers/test_app.dart';
 
 /// Entdecken → Meine Rezepte → „Alle ›". The link only shows while the
@@ -24,10 +25,7 @@ Future<void> _openRecipesTab(WidgetTester tester) async {
     of: find.byKey(DiscoverScreen.recipesKey),
     matching: find.text('Alle ›'),
   );
-  await tester.ensureVisible(all);
-  await tester.pumpAndSettle();
-  await tester.tap(all);
-  await tester.pumpAndSettle();
+  await tester.tapVisible(all);
 }
 
 /// The plus in the bar → Essen in the „Eintragen" sheet.
@@ -43,8 +41,13 @@ Future<void> _enterTitleAndIngredient(
   required String title,
   required String ingredient,
 }) async {
+  // The meal tracker shows its title as a label until it is tapped (a new
+  // recipe's editor opens it for editing; the tap just focuses it there).
+  final titleWidget = find.byType(EditableAppBarTitle);
+  await tester.tap(titleWidget);
+  await tester.pumpAndSettle();
   final titleField = find.descendant(
-    of: find.byType(EditableAppBarTitle),
+    of: titleWidget,
     matching: find.byType(TextField),
   );
   await tester.enterText(titleField, title);
