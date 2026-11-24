@@ -6,6 +6,7 @@ import '../../models/insight_rules.dart';
 import '../../models/insight_source.dart';
 import '../../models/insights.dart';
 import '../../utils/date_format_utils.dart';
+import '../../utils/german_list.dart';
 import '../../utils/gut_feeling_rating.dart';
 
 /// What the last [InsightRules.windowDays] local days of [source] show,
@@ -300,21 +301,6 @@ bool _reaches(int count, int of, InsightShare share) =>
     count * share.denominator >= of * share.numerator;
 
 /// The higher of [a] and [b] first, then by key (the name without case) in
-/// German order ([_germanOrder]).
+/// German order ([germanOrder]).
 int _higherFirstThenName(int a, int b, String keyA, String keyB) =>
-    a != b ? b - a : _germanOrder(keyA, keyB);
-
-/// Lower-case keys in German dictionary order (DIN 5007-1): ä, ö, ü as a,
-/// o, u and ß as ss, so „Äpfel" sorts with the A's, not after „Zwiebel".
-/// Keys equal that way (e.g. „masse", „maße") fall back to their code
-/// units, so the order stays total and the same whatever the input order.
-int _germanOrder(String keyA, String keyB) {
-  final folded = _foldUmlauts(keyA).compareTo(_foldUmlauts(keyB));
-  return folded != 0 ? folded : keyA.compareTo(keyB);
-}
-
-String _foldUmlauts(String key) => key
-    .replaceAll('ä', 'a')
-    .replaceAll('ö', 'o')
-    .replaceAll('ü', 'u')
-    .replaceAll('ß', 'ss');
+    a != b ? b - a : germanOrder(keyA, keyB);

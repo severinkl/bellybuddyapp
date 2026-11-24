@@ -176,13 +176,19 @@ void main() {
       expect(_ids(ranked.fits), ['new', 'old', 'none']);
     });
 
-    test('then by title', () {
+    test('then by title in German order, case ignored, then id', () {
       final at = DateTime(2026, 11, 1);
       final ranked = _rank([
-        testRecipe(id: 'b', title: 'Bohnen', createdAt: at),
-        testRecipe(id: 'a', title: 'Apfel', createdAt: at),
+        testRecipe(id: '1', title: 'Zucchini-Suppe', createdAt: at),
+        testRecipe(id: '2', title: 'Bohnen', createdAt: at),
+        testRecipe(id: '3', title: 'Äpfel im Ofen', createdAt: at),
+        testRecipe(id: '4', title: 'apfelmus', createdAt: at),
+        testRecipe(id: '6', title: 'Bohnen', createdAt: at),
+        testRecipe(id: '5', title: 'Bohnen', createdAt: at),
       ]);
-      expect(_ids(ranked.fits), ['a', 'b']);
+      // By code unit „Bohnen" < „Zucchini…" < „apfelmus" < „Äpfel…"; in
+      // German „äpfel im ofen" reads as „apfel im ofen", before „apfelmus".
+      expect(_ids(ranked.fits), ['3', '4', '2', '5', '6', '1']);
     });
 
     test('checked and selfCheck as for the user', () {

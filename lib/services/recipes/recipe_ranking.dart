@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import '../../config/constants.dart';
 import '../../models/insights.dart';
 import '../../models/recipe.dart';
+import '../../utils/german_list.dart';
 import 'recipe_fit.dart';
 
 /// What the user's entries say about ingredients, for the ranking: keys
@@ -90,8 +91,9 @@ class RankedRecipes {
 
 /// [recipes] that fit [diet], each with its fit, best first: by
 /// [recipeScore] (higher first), fewer kritisch ingredients, newer
-/// `created_at` (without one last), then title (and id, so the order is the
-/// same on every run).
+/// `created_at` (without one last; imported recipes often share one), then
+/// title in German order, case ignored (and id, so the order is the same on
+/// every run).
 RankedRecipes rankRecipes(
   List<Recipe> recipes, {
   required String? diet,
@@ -129,7 +131,7 @@ int _compare(_Scored a, _Scored b) {
     final newer = atB.compareTo(atA);
     if (newer != 0) return newer;
   }
-  final title = ra.title.compareTo(rb.title);
+  final title = germanOrder(ra.title.toLowerCase(), rb.title.toLowerCase());
   return title != 0 ? title : ra.id.compareTo(rb.id);
 }
 
