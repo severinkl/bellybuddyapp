@@ -360,6 +360,21 @@ class FakeEntryRepository implements EntryRepository {
     int? limit,
   }) async => _result.meals;
 
+  /// What [fetchLatestBefore] returns.
+  LatestEntries latestBefore = const LatestEntries();
+
+  /// The `before` of each [fetchLatestBefore] call, in order.
+  final List<DateTime> latestBeforeRequests = [];
+
+  @override
+  Future<LatestEntries> fetchLatestBefore({
+    required String userId,
+    required DateTime before,
+  }) async {
+    latestBeforeRequests.add(before);
+    return latestBefore;
+  }
+
   /// When set, [fetchForDate] throws it (a day that fails to load).
   Object? fetchForDateError;
 

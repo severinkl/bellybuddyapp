@@ -1,8 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/services/buddy/care_meters.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
+import 'package:belly_buddy/services/entry_query_service.dart';
 import 'package:belly_buddy/utils/gut_feeling_rating.dart';
+
+import '../../helpers/fixtures.dart';
 
 const _h3 = Duration(hours: 3);
 
@@ -94,6 +98,102 @@ void main() {
     });
     test('across midnight', () {
       expect(careAgo(_t(23, 50, 22), _t(0, 30)), 'vor 40 Min');
+    });
+  });
+
+  group('CareLog.fromEntries', () {
+    final day = DateTime(2026, 11, 23);
+
+    test('the latest of today and the latest before today', () {
+      final log = CareLog.fromEntries(
+        EntriesState(
+          day: day,
+          meals: [
+            testMealEntry(trackedAt: _t(8)),
+            testMealEntry(id: 'm2', trackedAt: _t(7)),
+          ],
+          latestBefore: LatestEntries(meal: _t(19, 0, 22)),
+        ),
+        day,
+      );
+      expect(log.lastMealAt, _t(8));
+    });
+
+    test('only the latest before today', () {
+      final log = CareLog.fromEntries(
+        EntriesState(
+          day: day,
+          latestBefore: LatestEntries(
+            meal: _t(19, 0, 22),
+            drink: _t(21, 0, 22),
+            gutFeeling: _t(9, 0, 22),
+          ),
+        ),
+        day,
+      );
+      expect(log.lastMealAt, _t(19, 0, 22));
+      expect(log.lastDrinkAt, _t(21, 0, 22));
+      expect(log.lastGutFeelingAt, _t(9, 0, 22));
+      expect(log.lastToiletAt, isNull);
+    });
+
+    test('converts UTC tracked_at to local', () {
+      final utc = DateTime.utc(2026, 11, 23, 7);
+      final log = CareLog.fromEntries(
+        EntriesState(
+          day: day,
+          drinks: [testDrinkEntry(trackedAt: utc)],
+          latestBefore: LatestEntries(meal: DateTime.utc(2026, 11, 22, 18)),
+        ),
+        day,
+      );
+      expect(log.lastDrinkAt, utc.toLocal());
+      expect(log.lastDrinkAt!.isUtc, isFalse);
+      expect(log.lastMealAt, DateTime.utc(2026, 11, 22, 18).toLocal());
+      expect(log.lastMealAt!.isUtc, isFalse);
+    });
+
+    test('Klo comes from the list of today only', () {
+      final log = CareLog.fromEntries(
+        EntriesState(
+          day: day,
+          toiletEntries: [testToiletEntry(trackedAt: _t(6))],
+          latestBefore: LatestEntries(meal: _t(19, 0, 22)),
+        ),
+        day,
+      );
+      expect(log.lastToiletAt, _t(6));
+      expect(
+        CareLog.fromEntries(EntriesState(day: day), day).lastToiletAt,
+        isNull,
+      );
+    });
+
+    test('the Bauchgefühl level is of the day, null for only yesterday', () {
+      final worst = testGutFeelingEntry(
+        trackedAt: _t(9),
+        bloating: 5,
+        gas: 5,
+        cramps: 5,
+        fullness: 5,
+      );
+      final withToday = CareLog.fromEntries(
+        EntriesState(day: day, gutFeelings: [worst]),
+        day,
+      );
+      expect(withToday.lastGutFeelingLevel, GutFeelingRatingLevel.schlecht);
+      expect(withToday.lastGutFeelingAt, _t(9));
+
+      final yesterdayOnly = CareLog.fromEntries(
+        EntriesState(
+          day: day,
+          gutFeelings: [worst.copyWith(trackedAt: _t(20, 0, 22))],
+          latestBefore: LatestEntries(gutFeeling: _t(20, 0, 22)),
+        ),
+        day,
+      );
+      expect(yesterdayOnly.lastGutFeelingLevel, isNull);
+      expect(yesterdayOnly.lastGutFeelingAt, _t(20, 0, 22));
     });
   });
 

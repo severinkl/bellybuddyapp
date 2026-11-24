@@ -22,6 +22,12 @@ void main() {
     registerFallbackValue(testToiletEntry());
     registerFallbackValue(testGutFeelingEntry());
     registerFallbackValue(testDrinkEntry());
+    when(
+      () => mockRepo.fetchLatestBefore(
+        userId: any(named: 'userId'),
+        before: any(named: 'before'),
+      ),
+    ).thenAnswer((_) async => const LatestEntries());
   });
 
   ProviderContainer makeContainer({String? userId = testUserId}) =>
@@ -114,6 +120,99 @@ void main() {
       final state = container.read(entriesProvider);
       expect(state.error, isA<Exception>());
       expect(state.isLoading, isFalse);
+    });
+  });
+
+  group('EntriesNotifier.loadEntries latest before the day', () {
+    void stubDay(Future<EntryQueryResult> Function() answer) => when(
+      () => mockRepo.fetchForDate(
+        userId: any(named: 'userId'),
+        date: any(named: 'date'),
+        ordered: any(named: 'ordered'),
+      ),
+    ).thenAnswer((_) => answer());
+
+    test('loadEntries brings the latest entries before the day', () async {
+      stubDay(() async => testEntryQueryResult());
+      final yesterdayDrink = DateTime(2026, 11, 22, 21);
+      when(
+        () => mockRepo.fetchLatestBefore(
+          userId: any(named: 'userId'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer((_) async => LatestEntries(drink: yesterdayDrink));
+      final container = makeContainer();
+
+      await container
+          .read(entriesProvider.notifier)
+          .loadEntries(DateTime(2026, 11, 23, 14));
+
+      verify(
+        () => mockRepo.fetchLatestBefore(
+          userId: testUserId,
+          before: DateTime(2026, 11, 23),
+        ),
+      ).called(1);
+      expect(
+        container.read(entriesProvider).latestBefore.drink,
+        yesterdayDrink,
+      );
+    });
+
+    test('a failing latest-before query still loads the day', () async {
+      stubDay(() async => testEntryQueryResult());
+      when(
+        () => mockRepo.fetchLatestBefore(
+          userId: any(named: 'userId'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer((_) async => throw Exception('db error'));
+      final container = makeContainer();
+
+      await container
+          .read(entriesProvider.notifier)
+          .loadEntries(DateTime(2026, 11, 23));
+
+      final state = container.read(entriesProvider);
+      expect(state.meals, hasLength(1));
+      expect(state.latestBefore, const LatestEntries());
+      expect(state.error, isNull);
+      expect(state.isLoading, isFalse);
+    });
+
+    test('a superseded load publishes neither', () async {
+      final slowDay = Completer<EntryQueryResult>();
+      final slowLatest = Completer<LatestEntries>();
+      var calls = 0;
+      stubDay(
+        () => ++calls == 1
+            ? slowDay.future
+            : Future.value(testEntryQueryResult(meals: [])),
+      );
+      var latestCalls = 0;
+      when(
+        () => mockRepo.fetchLatestBefore(
+          userId: any(named: 'userId'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer(
+        (_) => ++latestCalls == 1
+            ? slowLatest.future
+            : Future.value(LatestEntries(meal: DateTime(2026, 11, 22, 19))),
+      );
+      final container = makeContainer();
+      final notifier = container.read(entriesProvider.notifier);
+
+      final first = notifier.loadEntries(DateTime(2026, 11, 23));
+      await notifier.loadEntries(DateTime(2026, 11, 23));
+      slowDay.complete(testEntryQueryResult());
+      slowLatest.complete(LatestEntries(drink: DateTime(2026, 11, 20, 8)));
+      await first;
+
+      final state = container.read(entriesProvider);
+      expect(state.meals, isEmpty);
+      expect(state.latestBefore.meal, DateTime(2026, 11, 22, 19));
+      expect(state.latestBefore.drink, isNull);
     });
   });
 

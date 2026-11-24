@@ -28,6 +28,11 @@ class EntryRepository {
     ordered: ordered,
   );
 
+  Future<LatestEntries> fetchLatestBefore({
+    required String userId,
+    required DateTime before,
+  }) => _queryService.fetchLatestBefore(userId: userId, before: before);
+
   /// Local calendar days (date-only) with at least one entry since [since]
   /// (and, with [until], before [until]).
   Future<Set<DateTime>> fetchActivityDays({

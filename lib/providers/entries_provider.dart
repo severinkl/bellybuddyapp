@@ -5,6 +5,7 @@ import '../models/gut_feeling_entry.dart';
 import '../models/drink_entry.dart';
 import '../providers/core_providers.dart';
 import '../repositories/entry_repository.dart';
+import '../services/entry_query_service.dart';
 import '../utils/date_format_utils.dart';
 import '../utils/logger.dart';
 
@@ -18,6 +19,10 @@ class EntriesState {
   final bool isLoading;
   final Object? error;
 
+  /// The latest meal, drink and Bauchgefühl before [day]; the Buddy's
+  /// meters reach back over midnight with them.
+  final LatestEntries latestBefore;
+
   /// The local day (its midnight) loaded last, set as its load starts;
   /// null until the first load.
   final DateTime? day;
@@ -29,6 +34,7 @@ class EntriesState {
     this.drinks = const [],
     this.isLoading = false,
     this.error,
+    this.latestBefore = const LatestEntries(),
     this.day,
   });
 
@@ -39,6 +45,7 @@ class EntriesState {
     List<DrinkEntry>? drinks,
     bool? isLoading,
     Object? error,
+    LatestEntries? latestBefore,
     DateTime? day,
   }) {
     return EntriesState(
@@ -48,6 +55,7 @@ class EntriesState {
       drinks: drinks ?? this.drinks,
       isLoading: isLoading ?? this.isLoading,
       error: error,
+      latestBefore: latestBefore ?? this.latestBefore,
       day: day ?? this.day,
     );
   }
@@ -80,9 +88,17 @@ class EntriesNotifier extends Notifier<EntriesState> {
         return;
       }
 
-      final result = await ref
-          .read(entryRepositoryProvider)
-          .fetchForDate(userId: userId, date: date, ordered: true);
+      final repo = ref.read(entryRepositoryProvider);
+      // Both start now. The day's error is the load's error, so the pair is
+      // not awaited as one ((a, b).wait would wrap it).
+      final dayFuture = repo.fetchForDate(
+        userId: userId,
+        date: date,
+        ordered: true,
+      );
+      final latestFuture = _fetchLatestBefore(repo, userId, startOfDay(date));
+      final result = await dayFuture;
+      final latestBefore = await latestFuture;
       if (!_isLatest(load)) return;
 
       state = state.copyWith(
@@ -90,12 +106,28 @@ class EntriesNotifier extends Notifier<EntriesState> {
         toiletEntries: result.toiletEntries,
         gutFeelings: result.gutFeelings,
         drinks: result.drinks,
+        latestBefore: latestBefore,
         isLoading: false,
       );
     } catch (e, st) {
       _log.error('loadEntries failed for $date', e, st);
       if (_isLatest(load)) state = state.copyWith(isLoading: false, error: e);
       rethrow;
+    }
+  }
+
+  /// The latest entries before [before]; a failing query is logged and
+  /// gives none, so the day itself still loads.
+  Future<LatestEntries> _fetchLatestBefore(
+    EntryRepository repo,
+    String userId,
+    DateTime before,
+  ) async {
+    try {
+      return await repo.fetchLatestBefore(userId: userId, before: before);
+    } catch (e, st) {
+      _log.error('fetchLatestBefore failed before $before', e, st);
+      return const LatestEntries();
     }
   }
 

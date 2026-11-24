@@ -1,4 +1,6 @@
 import '../../config/constants.dart';
+import '../../providers/entries_provider.dart';
+import '../../models/gut_feeling_entry.dart';
 import '../../utils/date_format_utils.dart';
 import '../../utils/gut_feeling_rating.dart';
 import 'daily_care.dart';
@@ -86,6 +88,42 @@ class CareLog {
     this.lastToiletAt,
     this.lastGutFeelingLevel,
   });
+
+  /// The log as [s] shows it at [day]: each need's latest entry of the
+  /// loaded day or, failing that, of the days before ([EntriesState
+  /// .latestBefore]). Klo has only the loaded day's.
+  factory CareLog.fromEntries(EntriesState s, DateTime day) {
+    DateTime? latest(Iterable<DateTime> times) {
+      DateTime? last;
+      for (final t in times) {
+        final local = t.toLocal();
+        if (last == null || local.isAfter(last)) last = local;
+      }
+      return last;
+    }
+
+    final lastGutFeeling =
+        [
+          for (final g in s.gutFeelings)
+            if (isSameDay(g.trackedAt.toLocal(), day)) g,
+        ].fold<GutFeelingEntry?>(
+          null,
+          (a, b) => a == null || b.trackedAt.isAfter(a.trackedAt) ? b : a,
+        );
+    final before = s.latestBefore;
+    return CareLog(
+      lastMealAt: latest([...s.meals.map((e) => e.trackedAt), ?before.meal]),
+      lastDrinkAt: latest([...s.drinks.map((e) => e.trackedAt), ?before.drink]),
+      lastGutFeelingAt: latest([
+        ...s.gutFeelings.map((e) => e.trackedAt),
+        ?before.gutFeeling,
+      ]),
+      lastToiletAt: latest(s.toiletEntries.map((e) => e.trackedAt)),
+      lastGutFeelingLevel: lastGutFeeling == null
+          ? null
+          : calculateGutFeelingRating(lastGutFeeling).level,
+    );
+  }
 
   final DateTime? lastMealAt;
   final DateTime? lastDrinkAt;
