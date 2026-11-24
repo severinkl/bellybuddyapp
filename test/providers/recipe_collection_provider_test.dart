@@ -739,16 +739,19 @@ void main() {
         expect(c.read(myRecipeItemsProvider).requireValue, hasLength(1));
       });
 
-      test('the saved ones failed: the error', () async {
+      test('the saved ones failed: empty, the failure in the saved state '
+          '(„Erstes Rezept erstellen" stays)', () async {
         repo.favoritesError = StateError('offline');
         final c = noOwn();
         c.listen(myRecipeItemsProvider, (_, _) {});
+        c.listen(savedRecipesStateProvider, (_, _) {});
         await c.read(recipeCollectionProvider.future);
         await c
             .read(recipeFavoritesProvider.future)
             .then((_) {}, onError: (_) {});
 
-        expect(c.read(myRecipeItemsProvider), isA<AsyncError>());
+        expect(c.read(myRecipeItemsProvider).requireValue, isEmpty);
+        expect(c.read(savedRecipesStateProvider), isA<AsyncError>());
       });
 
       test('none saved: empty', () async {

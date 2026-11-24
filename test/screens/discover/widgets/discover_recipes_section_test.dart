@@ -6,6 +6,7 @@ import 'package:belly_buddy/models/my_recipe_item.dart';
 import 'package:belly_buddy/screens/discover/widgets/discover_recipes_section.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_card.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_collection_card.dart';
+import 'package:belly_buddy/services/recipes/recipe_copy.dart';
 import 'package:belly_buddy/services/recipes/recipe_fit.dart';
 
 import '../../../helpers/fakes.dart';
@@ -15,6 +16,7 @@ void main() {
     WidgetTester tester, {
     AsyncValue<List<RecipeFit>> forYou = const AsyncData([]),
     AsyncValue<List<MyRecipeItem>> mine = const AsyncData([]),
+    VoidCallback? onRetrySaved,
   }) => tester.pumpWidget(
     MaterialApp(
       home: Scaffold(
@@ -26,6 +28,7 @@ void main() {
             onOpenMine: () {},
             onOpenRecipe: (_) {},
             onOpenOwn: (_) {},
+            onRetrySaved: onRetrySaved,
           ),
         ),
       ),
@@ -67,5 +70,22 @@ void main() {
       findsNWidgets(DiscoverRecipesSection.shown),
     );
     expect(find.byType(RecipeCollectionCard), findsNothing);
+  });
+
+  testWidgets('saved ones failed: the create offer stays, with a quiet line '
+      'and its retry', (tester) async {
+    var retries = 0;
+    await pump(tester, onRetrySaved: () => retries++);
+
+    expect(find.text('Erstes Rezept erstellen'), findsOneWidget);
+    expect(find.text(RecipeCopy.savedFailed), findsOneWidget);
+    await tester.tap(find.text(RecipeCopy.retry));
+    expect(retries, 1);
+  });
+
+  testWidgets('no retry given: no quiet line', (tester) async {
+    await pump(tester);
+
+    expect(find.text(RecipeCopy.savedFailed), findsNothing);
   });
 }

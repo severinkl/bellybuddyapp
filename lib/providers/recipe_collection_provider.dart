@@ -246,21 +246,26 @@ final savedRecipesStateProvider = Provider<AsyncValue<void>>((ref) {
   return const AsyncData(null);
 });
 
+/// Loads the saved recipes again: the collection and the favourites
+/// („Meine Rezepte"'s retry after they failed).
+Future<void> refreshSavedRecipes(WidgetRef ref) => Future.wait([
+  ref.read(recipeCollectionProvider.notifier).refresh(),
+  ref.read(recipeFavoritesProvider.notifier).refresh(),
+]);
+
 /// „Meine Rezepte": own and saved recipes together, newest first. Waits on
 /// the own recipes; saved ones join when they are there. Without own
-/// recipes the list is the saved ones, so it waits, and fails, with them:
-/// never „Noch keine Rezepte" for a user whose saved ones haven't come.
+/// recipes the list is the saved ones, so it waits for them: never „Noch
+/// keine Rezepte" flashing for a user whose saved ones are on their way.
+/// Failed, they are left out (the screens add a quiet line), so „Erstes
+/// Rezept erstellen" stays, e.g. on a backend without the collection.
 final myRecipeItemsProvider = Provider<AsyncValue<List<MyRecipeItem>>>((ref) {
   final saved = ref.watch(savedRecipesProvider);
   final own = ref.watch(userRecipesProvider);
-  if (own case AsyncData(value: [])) {
-    switch (ref.watch(savedRecipesStateProvider)) {
-      case AsyncError(:final error, :final stackTrace):
-        return AsyncError(error, stackTrace);
-      case AsyncLoading():
-        return const AsyncLoading();
-      case _:
-    }
+  if (own case AsyncData(
+    value: [],
+  ) when ref.watch(savedRecipesStateProvider).isLoading) {
+    return const AsyncLoading();
   }
   return own.whenData((own) => mergeMyRecipes(own, saved));
 });

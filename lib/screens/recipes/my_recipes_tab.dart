@@ -17,6 +17,7 @@ import '../../widgets/common/mascot_image.dart';
 import 'widgets/add_recipe_chooser_sheet.dart';
 import 'widgets/recipe_card.dart';
 import 'widgets/recipes_search_field.dart';
+import 'widgets/saved_recipes_failed_note.dart';
 
 class MyRecipesTab extends ConsumerStatefulWidget {
   const MyRecipesTab({super.key});
@@ -36,12 +37,6 @@ class _MyRecipesTabState extends ConsumerState<MyRecipesTab> {
   }
 
   static const _host = RecipeSearchHost.myRecipes;
-
-  /// Loads the saved recipes again: the collection and the favourites.
-  Future<void> _reloadSaved() => Future.wait([
-    ref.read(recipeCollectionProvider.notifier).refresh(),
-    ref.read(recipeFavoritesProvider.notifier).refresh(),
-  ]);
 
   @override
   Widget build(BuildContext context) {
@@ -66,16 +61,17 @@ class _MyRecipesTabState extends ConsumerState<MyRecipesTab> {
           for (final saved in ref.watch(savedRecipesProvider))
             if (query == null || titleMatches(saved.recipe.title, query)) saved,
         ]);
+        // Failed saved recipes leave the rest usable (e.g. a backend
+        // without the collection): a quiet line with a retry.
+        final saved = ref.watch(savedRecipesStateProvider);
+        final retrySaved = saved.hasError
+            ? () => unawaited(refreshSavedRecipes(ref))
+            : null;
         if (recipes.isEmpty && !hasActiveQuery) {
-          // Saved recipes may still be on their way, or have failed.
-          return switch (ref.watch(savedRecipesStateProvider)) {
-            AsyncLoading() => const BbLoadingState(),
-            AsyncError() => BbErrorState(
-              message: 'Konnte Rezepte nicht laden',
-              onRetry: () => unawaited(_reloadSaved()),
-            ),
-            _ => const _EmptyState(),
-          };
+          // Saved recipes may still be on their way.
+          return saved.isLoading
+              ? const BbLoadingState()
+              : _EmptyState(onRetrySaved: retrySaved);
         }
         return Column(
           children: [
@@ -83,6 +79,16 @@ class _MyRecipesTabState extends ConsumerState<MyRecipesTab> {
               padding: AppConstants.paddingMd,
               child: RecipesSearchField(host: _host),
             ),
+            if (retrySaved != null)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppConstants.spacingMd,
+                  0,
+                  AppConstants.spacingMd,
+                  AppConstants.spacingSm,
+                ),
+                child: SavedRecipesFailedNote(onRetry: retrySaved),
+              ),
             Expanded(
               child: recipes.isEmpty
                   ? const _EmptySearchResults()
@@ -138,7 +144,11 @@ class _EmptySearchResults extends StatelessWidget {
 }
 
 class _EmptyState extends StatelessWidget {
-  const _EmptyState();
+  const _EmptyState({this.onRetrySaved});
+
+  /// Set while the saved recipes couldn't be loaded: a quiet line under
+  /// the offer.
+  final VoidCallback? onRetrySaved;
 
   @override
   Widget build(BuildContext context) {
@@ -177,6 +187,10 @@ class _EmptyState extends StatelessWidget {
               onPressed: () => showAddRecipeChooserSheet(context),
               child: const Text('Erstes Rezept erstellen'),
             ),
+            if (onRetrySaved case final retry?) ...[
+              AppConstants.gap16,
+              SavedRecipesFailedNote(onRetry: retry, centered: true),
+            ],
           ],
         ),
       ),

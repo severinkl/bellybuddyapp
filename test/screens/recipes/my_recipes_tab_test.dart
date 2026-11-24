@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/models/recipe.dart';
@@ -12,6 +13,7 @@ import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/screens/recipes/my_recipes_tab.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_card.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipes_search_field.dart';
+import 'package:belly_buddy/services/recipes/recipe_copy.dart';
 
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
@@ -238,19 +240,43 @@ void main() {
     expect(find.byType(RecipeCollectionCard), findsOneWidget);
   });
 
-  testWidgets('no own recipes and the saved ones failed: an error, retried', (
-    tester,
-  ) async {
+  testWidgets('a backend without the collection: no own recipes still '
+      'offers the first one, with a quiet line and a retry', (tester) async {
     saved('g', 'Gemerktes Curry');
-    collection.favoritesError = StateError('offline');
+    // Before core #11: the collection's and the favourites' reads fail.
+    collection
+      ..collectionError = const PostgrestException(
+        message: 'column recipes.meal_types does not exist',
+        code: '42703',
+      )
+      ..favoritesError = const PostgrestException(
+        message: 'offline',
+        code: 'PGRST000',
+      );
     await pump(tester, recipes: const []);
 
-    expect(find.text('Noch keine Rezepte'), findsNothing);
-    expect(find.text('Konnte Rezepte nicht laden'), findsOneWidget);
+    expect(find.text('Noch keine Rezepte'), findsOneWidget);
+    expect(find.text('Erstes Rezept erstellen'), findsOneWidget);
+    expect(find.text(RecipeCopy.savedFailed), findsOneWidget);
 
-    collection.favoritesError = null;
-    await tester.tap(find.text('Erneut versuchen'));
+    collection
+      ..collectionError = null
+      ..favoritesError = null;
+    await tester.tap(find.text(RecipeCopy.retry));
     await tester.pumpAndSettle();
     expect(find.byType(RecipeCollectionCard), findsOneWidget);
+    expect(find.text(RecipeCopy.savedFailed), findsNothing);
+  });
+
+  testWidgets('own recipes and the saved ones failed: the own ones and the '
+      'quiet line', (tester) async {
+    collection.favoritesError = StateError('offline');
+    await pump(
+      tester,
+      recipes: [testUserRecipe(id: 'a', title: 'Eigenes')],
+    );
+
+    expect(find.byType(RecipeCard), findsOneWidget);
+    expect(find.text(RecipeCopy.savedFailed), findsOneWidget);
   });
 }

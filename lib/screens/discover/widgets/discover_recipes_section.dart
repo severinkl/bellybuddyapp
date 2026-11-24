@@ -10,6 +10,7 @@ import '../../../widgets/common/bb_card.dart';
 import '../../recipes/widgets/add_recipe_chooser_sheet.dart';
 import '../../recipes/widgets/recipe_card.dart';
 import '../../recipes/widgets/recipe_collection_card.dart';
+import '../../recipes/widgets/saved_recipes_failed_note.dart';
 import 'discover_section.dart';
 
 /// Entdecken's „Rezepte": „Für dich" (the collection's top picks) and
@@ -24,6 +25,7 @@ class DiscoverRecipesSection extends StatelessWidget {
     required this.onOpenMine,
     required this.onOpenRecipe,
     required this.onOpenOwn,
+    this.onRetrySaved,
   });
 
   /// The section, with its „Alle ›" to the collection.
@@ -50,6 +52,10 @@ class DiscoverRecipesSection extends StatelessWidget {
   /// A collection recipe, by id.
   final ValueChanged<String> onOpenRecipe;
   final ValueChanged<UserRecipe> onOpenOwn;
+
+  /// Set while the saved recipes couldn't be loaded: „Meine Rezepte" shows
+  /// what it has, with a quiet line and this retry under it.
+  final VoidCallback? onRetrySaved;
 
   @override
   Widget build(BuildContext context) {
@@ -148,6 +154,10 @@ class DiscoverRecipesSection extends StatelessWidget {
               ),
           ]),
         },
+        if ((items, onRetrySaved) case (_?, final retry?)) ...[
+          AppConstants.gap8,
+          SavedRecipesFailedNote(onRetry: retry),
+        ],
       ],
     );
   }

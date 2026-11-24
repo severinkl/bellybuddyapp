@@ -89,6 +89,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     final newGroups = ref.watch(newIngredientSuggestionCountProvider);
     final forYou = ref.watch(forYouRecipesProvider);
     final mine = ref.watch(myRecipeItemsProvider);
+    final savedFailed = ref.watch(savedRecipesStateProvider).hasError;
     final knowledge = ref.watch(knowledgeFeedProvider);
 
     return Scaffold(
@@ -131,6 +132,9 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
                 onOpenRecipe: (id) => unawaited(context.openRecipe(id)),
                 onOpenOwn: (recipe) =>
                     context.push(RoutePaths.recipeDetailFor(recipe.id)),
+                onRetrySaved: savedFailed
+                    ? () => unawaited(refreshSavedRecipes(ref))
+                    : null,
               ),
               AppConstants.gap24,
               DiscoverKnowledgeSection(

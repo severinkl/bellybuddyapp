@@ -113,6 +113,12 @@ abstract final class RecipeCopy {
       'Das Rezept ist zu lang zum Speichern. Als Essen eintragen kannst du '
       'es trotzdem.';
 
+  /// The quiet line in „Meine Rezepte" when the saved recipes couldn't be
+  /// loaded (the own ones and „Erstes Rezept erstellen" stay), and its
+  /// retry.
+  static const savedFailed = 'Gemerkte Rezepte konnten nicht geladen werden.';
+  static const retry = 'Nochmal versuchen';
+
   /// When saving an adapted recipe in „Meine Rezepte" failed.
   static const adaptSaveFailed =
       'Speichern hat nicht geklappt. Versuch es bitte nochmal.';
