@@ -236,6 +236,32 @@ void main() {
 
       expect(tester.testTextInput.isVisible, isFalse);
     });
+
+    testWidgets('the query stays in the field after scrolling it away', (
+      tester,
+    ) async {
+      repo.collection = [
+        for (var i = 0; i < 40; i++) testRecipe(id: 'r$i', title: 'Suppe $i'),
+      ];
+      await pump(tester);
+      await search(tester, 'Suppe');
+
+      // Far enough that the lazy list drops the field, then back.
+      await tester.drag(find.byType(ListView), const Offset(0, -4000));
+      await tester.pumpAndSettle();
+      expect(find.byKey(CollectionScreen.searchKey), findsNothing);
+      await tester.drag(find.byType(ListView), const Offset(0, 8000));
+      await tester.pumpAndSettle();
+
+      final field = tester.widget<EditableText>(
+        find.descendant(
+          of: find.byKey(CollectionScreen.searchKey),
+          matching: find.byType(EditableText),
+        ),
+      );
+      expect(field.controller.text, 'Suppe');
+      expect(find.byType(RecipeListTile), findsWidgets);
+    });
   });
 
   testWidgets('count line: singular and plural', (tester) async {

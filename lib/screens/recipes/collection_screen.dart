@@ -32,9 +32,18 @@ class CollectionScreen extends ConsumerStatefulWidget {
 }
 
 class _CollectionScreenState extends ConsumerState<CollectionScreen> {
+  /// Held here: the lazy list drops the field once it scrolls away, and the
+  /// query it filters by must still show when it comes back.
+  final _search = TextEditingController();
   String _query = '';
   MealType? _mealType;
   bool _fitsOnly = false;
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
 
   Future<void> _refresh() =>
       ref.read(recipeCollectionProvider.notifier).refresh();
@@ -80,6 +89,7 @@ class _CollectionScreenState extends ConsumerState<CollectionScreen> {
         children: [
           TextField(
             key: CollectionScreen.searchKey,
+            controller: _search,
             decoration: InputDecoration(
               hintText: 'Rezept oder Zutat suchen',
               prefixIcon: const Icon(Icons.search),
