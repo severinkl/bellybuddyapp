@@ -179,6 +179,7 @@ class AppConstants {
   // column, and the most steps and characters a recipe's steps may have
   static const double recipeListThumbSize = 88.0;
   static const double recipeMarkSize = 24.0;
+  static const double recipeNeutralDotSize = 6.0;
   static const double recipeAmountWidth = 64.0;
   static const int recipeStepsMax = 50;
   static const int recipeStepsMaxChars = 20000;

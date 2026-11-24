@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:belly_buddy/config/app_theme.dart';
+import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/fodmap_flags.dart';
 import 'package:belly_buddy/models/meal_prefill.dart';
 import 'package:belly_buddy/models/recipe.dart';
@@ -178,12 +179,46 @@ void main() {
   });
 
   testWidgets('Histamin user', (tester) async {
+    final semantics = tester.ensureSemantics();
     await pump(tester, intolerances: const ['Histamin']);
 
     expect(find.text('Histamin bitte selbst prüfen'), findsOneWidget);
     expect(find.text('Passt zu dir'), findsNothing);
     expect(find.text('Honig — für dich kritisch'), findsNothing);
     expect(find.byKey(CollectionRecipeScreen.adaptKey), findsNothing);
+    // No ✓ and no „passt": that would read like a verdict on Histamin.
+    expect(find.byIcon(Icons.check), findsNothing);
+    expect(find.bySemanticsLabel(RegExp(r'\bpasst\b')), findsNothing);
+    expect(inLine('Reis', find.byKey(IngredientLineView.neutralKey)), findsOne);
+    expect(tester.getSemantics(line('Reis')).label, '200 g Reis');
+    semantics.dispose();
+  });
+
+  testWidgets('Laktose and Histamin user', (tester) async {
+    final quark = testLine(
+      'Quark',
+      position: 1,
+      amount: '250 g',
+      fodmaps: const FodmapFlags(lactose: true),
+    );
+    repo.collection = [
+      recipe(ingredients: [reis, quark]),
+    ];
+    await pump(tester, intolerances: const ['Laktose', 'Histamin']);
+
+    expect(find.text('Quark — für dich kritisch'), findsOneWidget);
+    expect(find.text('wegen Laktose'), findsOneWidget);
+    expect(
+      inLine('Quark', find.byIcon(Icons.warning_amber_rounded)),
+      findsOneWidget,
+    );
+    expect(inLine('Reis', find.byKey(IngredientLineView.neutralKey)), findsOne);
+    expect(find.byIcon(Icons.check), findsNothing);
+    expect(find.text('1 Zutat ist für dich kritisch'), findsOneWidget);
+    expect(
+      find.text('Ich tausche Quark und schreibe die Schritte passend um.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('rules missing: no badge, no marks, no adapt button', (
@@ -217,11 +252,32 @@ void main() {
 
     expect(line('2 Karotten'), findsOneWidget);
     expect(line('1 Zwiebel'), findsOneWidget);
+    // No amounts: the text lines start at the left, without the column.
+    expect(
+      tester.getTopLeft(find.text('2 Karotten')).dx,
+      tester.getTopLeft(line('2 Karotten')).dx,
+    );
     expect(find.byIcon(Icons.check), findsNothing);
     expect(find.byIcon(Icons.warning_amber_rounded), findsNothing);
     expect(find.byKey(CollectionRecipeScreen.adaptKey), findsNothing);
     expect(find.text('Zubereitung'), findsNothing);
     expect(find.byKey(CollectionRecipeScreen.sourceKey), findsNothing);
+  });
+
+  testWidgets('lines without amounts start at the left', (tester) async {
+    repo.collection = [
+      recipe(ingredients: [testLine('Reis'), testLine('Salz', position: 1)]),
+    ];
+    await pump(tester);
+
+    for (final name in ['Reis', 'Salz']) {
+      expect(
+        tester.getTopLeft(find.text(name)).dx -
+            tester.getTopLeft(line(name)).dx,
+        AppConstants.recipeMarkSize + AppConstants.spacing10,
+        reason: name,
+      );
+    }
   });
 
   testWidgets('steps numbered', (tester) async {

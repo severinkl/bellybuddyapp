@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:belly_buddy/config/app_theme.dart';
+import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/screens/recipes/widgets/ingredient_line_view.dart';
 import 'package:belly_buddy/services/recipes/recipe_fit.dart';
 
@@ -70,6 +71,66 @@ void main() {
     );
     expect(find.byIcon(Icons.help_outline), findsOneWidget);
     expect(find.text('nicht im Katalog'), findsOneWidget);
+  });
+
+  testWidgets('neutral: a dot, no verdict', (tester) async {
+    await pump(
+      tester,
+      const IngredientLineView(
+        amount: '200 g',
+        name: 'Reis',
+        mark: LineMark.neutral,
+      ),
+    );
+    expect(find.byType(Icon), findsNothing);
+    expect(find.byKey(IngredientLineView.neutralKey), findsOneWidget);
+    expect(find.text('Reis'), findsOneWidget);
+    expect(find.text('200 g'), findsOneWidget);
+  });
+
+  testWidgets('neutral lines line up with marked ones', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          body: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              IngredientLineView(name: 'Reis', mark: LineMark.neutral),
+              IngredientLineView(
+                name: 'Quark',
+                mark: LineMark.kritisch,
+                because: ['Laktose'],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+    expect(
+      tester.getTopLeft(find.text('Reis')).dx,
+      tester.getTopLeft(find.text('Quark — für dich kritisch')).dx,
+    );
+  });
+
+  testWidgets('without the amount column, the name starts at the left', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      const IngredientLineView(name: '2 Karotten', amountColumn: false),
+    );
+    expect(
+      tester.getTopLeft(find.text('2 Karotten')).dx,
+      tester.getTopLeft(find.byType(IngredientLineView)).dx,
+    );
+
+    // With the column (the default), the name sits right of it.
+    await pump(tester, const IngredientLineView(name: '2 Karotten'));
+    expect(
+      tester.getTopLeft(find.text('2 Karotten')).dx -
+          tester.getTopLeft(find.byType(IngredientLineView)).dx,
+      AppConstants.recipeAmountWidth,
+    );
   });
 
   testWidgets('no mark: no mark icon', (tester) async {
@@ -152,6 +213,16 @@ void main() {
         const IngredientLineView(name: 'Zimt', mark: LineMark.unknown),
       ),
       'Zimt, nicht im Katalog',
+    );
+    expect(
+      await label(
+        const IngredientLineView(
+          amount: '200 g',
+          name: 'Reis',
+          mark: LineMark.neutral,
+        ),
+      ),
+      '200 g Reis',
     );
     handle.dispose();
   });

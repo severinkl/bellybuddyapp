@@ -6,8 +6,13 @@ import 'recipe_copy.dart';
 
 /// How one ingredient line fits the user.
 enum LineMark {
-  /// Nothing of the user's intolerances (✓).
+  /// Nothing of the user's intolerances (✓), all of which the catalog can
+  /// judge.
   fits,
+
+  /// Nothing of the intolerances the catalog can judge, while the user has
+  /// one it can't (Histamin): no ✓, which would read like a verdict on it.
+  neutral,
 
   /// Hits one of the user's intolerances (⚠ „— für dich kritisch").
   kritisch,
@@ -156,7 +161,9 @@ RecipeFit fitOf(
 /// An ingredient is kritisch, as in core's `critical_hits`, when it carries
 /// an allergen of one of the judgeable rules, or when its catalog row has a
 /// FODMAP flag of one of them and the stated amount is not low-FODMAP. An
-/// unmapped line has no flags, so only its allergens count.
+/// unmapped line has no flags, so only its allergens count. The other lines
+/// are [LineMark.fits], or [LineMark.neutral] while an intolerance can't be
+/// judged.
 class UserIntolerances {
   factory UserIntolerances(
     IntoleranceRules? rules,
@@ -224,7 +231,7 @@ class UserIntolerances {
     if (!line.mapped && _judgeable.any((r) => r.rule.fodmaps.isNotEmpty)) {
       return LineFit(line, LineMark.unknown);
     }
-    return LineFit(line, LineMark.fits);
+    return LineFit(line, selfCheck.isEmpty ? LineMark.fits : LineMark.neutral);
   }
 
   static bool _hits(IntoleranceRule rule, RecipeIngredient line) {

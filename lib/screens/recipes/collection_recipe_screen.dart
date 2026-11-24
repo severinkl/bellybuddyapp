@@ -305,19 +305,24 @@ class _IngredientsCard extends StatelessWidget {
   }
 
   /// The lines, marked once the fit is checked; an older recipe's text
-  /// lines unmarked.
+  /// lines unmarked. The amounts' column only when a line has an amount.
   List<Widget> _lines() {
     final recipe = fit.recipe;
     if (recipe.isLegacy) {
       return [
         for (final text in recipe.legacyIngredients)
-          IngredientLineView(name: text),
+          IngredientLineView(name: text, amountColumn: false),
       ];
     }
+    final amounts = recipe.ingredients.any((l) => l.amount != null);
     if (!fit.checked) {
       return [
         for (final line in recipe.ingredients)
-          IngredientLineView(amount: line.amount, name: line.name),
+          IngredientLineView(
+            amount: line.amount,
+            name: line.name,
+            amountColumn: amounts,
+          ),
       ];
     }
     return [
@@ -327,6 +332,7 @@ class _IngredientsCard extends StatelessWidget {
           name: l.line.name,
           mark: l.mark,
           because: l.because,
+          amountColumn: amounts,
         ),
     ];
   }

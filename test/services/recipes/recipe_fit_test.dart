@@ -126,7 +126,8 @@ void main() {
       final fit = _fit([_reis, _honig, _drachenfrucht], ['Histamin']);
 
       expect(fit.kritischCount, 0);
-      expect(fit.lines.map((l) => l.mark), everyElement(LineMark.fits));
+      // No ✓: it would read like a verdict on Histamin.
+      expect(fit.lines.map((l) => l.mark), everyElement(LineMark.neutral));
       expect(fit.selfCheck, ['Histamin']);
       expect(fit.judged, isTrue);
       expect(fit.badge, const SelfCheckBadge(['Histamin']));
@@ -137,11 +138,35 @@ void main() {
     test('Histamin and Fruktose', () {
       final fit = _fit([_reis, _honig], ['Histamin', 'Fruktose']);
 
-      expect(_marks(fit)['Honig'], LineMark.kritisch);
+      expect(_marks(fit), {
+        'Reis': LineMark.neutral,
+        'Honig': LineMark.kritisch,
+      });
       expect(fit.kritisch.single.because, ['Fruktose']);
       expect(fit.selfCheck, ['Histamin']);
       expect(fit.badge, const KritischBadge(1));
       expect(fit.passtZuMir, isFalse);
+    });
+
+    test('Laktose and Histamin', () {
+      final fit = _fit(
+        [_quark, _joghurt, _drachenfrucht],
+        ['Laktose', 'Histamin'],
+      );
+
+      expect(_marks(fit), {
+        'Quark': LineMark.kritisch,
+        'Laktosefreier Joghurt': LineMark.neutral,
+        'Drachenfrucht': LineMark.unknown,
+      });
+      expect(fit.kritisch.single.because, ['Laktose']);
+      expect(fit.badge, const KritischBadge(1));
+
+      // Nothing kritisch: still no ✓, and the self-check badge.
+      final calm = _fit([_joghurt, _reis], ['Laktose', 'Histamin']);
+      expect(calm.lines.map((l) => l.mark), everyElement(LineMark.neutral));
+      expect(calm.badge, const SelfCheckBadge(['Histamin']));
+      expect(calm.passtZuMir, isTrue);
     });
 
     test('no intolerances', () {

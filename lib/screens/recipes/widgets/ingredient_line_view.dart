@@ -5,8 +5,9 @@ import '../../../config/constants.dart';
 import '../../../services/recipes/recipe_copy.dart';
 import '../../../services/recipes/recipe_fit.dart';
 
-/// One ingredient line: a mark (✓ / ⚠ / ?) for how it fits the user, the
-/// amount, and the name with what the Buddy changed (a swap, a removal).
+/// One ingredient line: a mark (✓ / ⚠ / ? / a neutral dot) for how it fits
+/// the user, the amount, and the name with what the Buddy changed (a swap,
+/// a removal).
 class IngredientLineView extends StatelessWidget {
   const IngredientLineView({
     super.key,
@@ -17,10 +18,19 @@ class IngredientLineView extends StatelessWidget {
     this.replaces,
     this.removed = false,
     this.note,
-  });
+    this.amountColumn = true,
+  }) : assert(amountColumn || amount == null);
+
+  /// The dot of a [LineMark.neutral] line.
+  static const neutralKey = Key('ingredient_neutral');
 
   final String? amount;
   final String name;
+
+  /// Whether the amounts' column is there; false when no line of the list
+  /// has an amount (an older recipe's text lines), so the names start at
+  /// the left.
+  final bool amountColumn;
 
   /// Null shows no mark (an own recipe, or nothing judged).
   final LineMark? mark;
@@ -50,7 +60,7 @@ class IngredientLineView extends StatelessWidget {
             '${RecipeCopy.because(because)}',
       LineMark.fits => '$head, ${RecipeCopy.fitsSemantics}',
       LineMark.unknown => '$head, ${RecipeCopy.notInCatalog}',
-      null => head,
+      LineMark.neutral || null => head,
     };
   }
 
@@ -64,16 +74,17 @@ class IngredientLineView extends StatelessWidget {
           _Mark(mark!),
           const SizedBox(width: AppConstants.spacing10),
         ],
-        SizedBox(
-          width: AppConstants.recipeAmountWidth,
-          child: Text(
-            amount ?? '',
-            style: const TextStyle(
-              fontSize: AppTheme.fontSizeBody,
-              color: AppTheme.mutedForeground,
+        if (amountColumn)
+          SizedBox(
+            width: AppConstants.recipeAmountWidth,
+            child: Text(
+              amount ?? '',
+              style: const TextStyle(
+                fontSize: AppTheme.fontSizeBody,
+                color: AppTheme.mutedForeground,
+              ),
             ),
           ),
-        ),
         Expanded(child: _nameBlock()),
       ],
     );
@@ -190,6 +201,8 @@ class _Mark extends StatelessWidget {
         null,
         null,
       ),
+      // A plain bullet: no verdict.
+      LineMark.neutral => (null, AppTheme.mutedForeground, null, null),
     };
     return Container(
       width: AppConstants.recipeMarkSize,
@@ -201,7 +214,17 @@ class _Mark extends StatelessWidget {
             ? null
             : Border.all(color: border, width: AppConstants.borderWidthMd),
       ),
-      child: Icon(icon, size: AppConstants.iconSizeXs, color: color),
+      child: icon == null
+          ? Center(
+              child: DecoratedBox(
+                key: IngredientLineView.neutralKey,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+                child: const SizedBox.square(
+                  dimension: AppConstants.recipeNeutralDotSize,
+                ),
+              ),
+            )
+          : Icon(icon, size: AppConstants.iconSizeXs, color: color),
     );
   }
 }
