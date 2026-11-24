@@ -1,5 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../config/constants.dart';
 import '../models/user_recipe.dart';
 import '../utils/logger.dart';
 
@@ -9,6 +10,13 @@ import '../utils/logger.dart';
 /// `user_recipes_user_id_title_norm_uniq` index.
 class DuplicateRecipeTitleException implements Exception {
   const DuplicateRecipeTitleException();
+}
+
+/// Thrown before saving a recipe whose steps or amounts are longer than
+/// core allows ([AppConstants.recipeStepsMaxChars],
+/// [AppConstants.recipeAmountsMaxChars]): core would refuse it every time.
+class RecipeTooLongException implements Exception {
+  const RecipeTooLongException();
 }
 
 const _pgUniqueViolation = '23505';

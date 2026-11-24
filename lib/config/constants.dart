@@ -187,6 +187,9 @@ class AppConstants {
   static const int recipeStepsMax = 50;
   static const int recipeStepsMaxChars = 20000;
 
+  /// Core's limit on an own recipe's amounts, all together.
+  static const int recipeAmountsMaxChars = 5000;
+
   // The „geändert" legend's swatch above a recipe's changed steps
   static const double recipeChangedSwatchWidth = 16.0;
   static const double recipeChangedSwatchHeight = 10.0;

@@ -108,6 +108,11 @@ abstract final class RecipeCopy {
       'Die Schritte kann ich gerade noch nicht speichern – der Rest ist '
       'gespeichert.';
 
+  /// When an adapted recipe is longer than an own recipe may be.
+  static const adaptTooLong =
+      'Das Rezept ist zu lang zum Speichern. Als Essen eintragen kannst du '
+      'es trotzdem.';
+
   /// When saving an adapted recipe in „Meine Rezepte" failed.
   static const adaptSaveFailed =
       'Speichern hat nicht geklappt. Versuch es bitte nochmal.';

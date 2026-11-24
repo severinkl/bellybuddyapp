@@ -184,6 +184,54 @@ void main() {
       note: 'Ich hab Knoblauch gegen Knoblauchöl getauscht.',
     );
 
+    group("over core's limits: refused before sending", () {
+      Future<void> expectRefused(AdaptedRecipe recipe) async {
+        final container = makeContainer();
+        await expectLater(
+          container.read(userRecipesProvider.notifier).createAdapted(recipe),
+          throwsA(isA<RecipeTooLongException>()),
+        );
+        expect(saved, isEmpty);
+      }
+
+      test('the steps', () async {
+        final half = 'x' * (AppConstants.recipeStepsMaxChars ~/ 2);
+        await expectRefused(
+          adapted(steps: [AdaptedStep(half), AdaptedStep('$half!')]),
+        );
+      });
+
+      test('the amounts', () async {
+        final half = 'x' * (AppConstants.recipeAmountsMaxChars ~/ 2);
+        await expectRefused(
+          adapted(
+            ingredients: [
+              AdaptedIngredient(amount: half, name: 'Reis'),
+              AdaptedIngredient(amount: '$half!', name: 'Salz'),
+            ],
+          ),
+        );
+      });
+
+      test('at the limits: saved', () async {
+        final container = makeContainer();
+        await container
+            .read(userRecipesProvider.notifier)
+            .createAdapted(
+              adapted(
+                ingredients: [
+                  AdaptedIngredient(
+                    amount: 'x' * AppConstants.recipeAmountsMaxChars,
+                    name: 'Reis',
+                  ),
+                ],
+                steps: [AdaptedStep('x' * AppConstants.recipeStepsMaxChars)],
+              ),
+            );
+        expect(saved, hasLength(1));
+      });
+    });
+
     test('duplicate title', () async {
       final container = makeContainer();
       final notifier = container.read(userRecipesProvider.notifier);

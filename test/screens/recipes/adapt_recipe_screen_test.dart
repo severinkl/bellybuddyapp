@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:belly_buddy/config/app_theme.dart';
+import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/adapted_recipe.dart';
 import 'package:belly_buddy/models/fodmap_flags.dart';
 import 'package:belly_buddy/models/meal_prefill.dart';
@@ -686,6 +687,23 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text(RecipeCopy.stepsNotSaved), findsNothing);
+    });
+
+    testWidgets('too long to save: says so, nothing sent', (tester) async {
+      answer(
+        answer: testAdaptedRecipe(
+          steps: [AdaptedStep('x' * (AppConstants.recipeStepsMaxChars + 1))],
+        ),
+      );
+      await pump(tester);
+
+      await tester.tap(find.byKey(AdaptRecipeScreen.saveKey));
+      await tester.pumpAndSettle();
+
+      expect(find.text(RecipeCopy.adaptTooLong), findsOneWidget);
+      expect(find.text(RecipeCopy.adaptSaveFailed), findsNothing);
+      expect(inSave(find.text('In Meine Rezepte speichern')), findsOneWidget);
+      expect(await userRecipes.fetchForUser(testUserId), isEmpty);
     });
 
     testWidgets('save fails → SnackBar', (tester) async {

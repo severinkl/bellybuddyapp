@@ -16,6 +16,7 @@ import '../../providers/user_recipes_provider.dart';
 import '../../router/navigation_extensions.dart';
 import '../../router/route_names.dart';
 import '../../services/recipes/recipe_copy.dart';
+import '../../services/user_recipe_service.dart';
 import '../../utils/logger.dart';
 import '../../utils/url_utils.dart';
 import '../../widgets/buddy/buddy_pose.dart';
@@ -172,10 +173,14 @@ class _AdaptRecipeScreenState extends ConsumerState<AdaptRecipeScreen> {
     setState(() => _saving = true);
     final messenger = ScaffoldMessenger.of(context);
     UserRecipe? saved;
+    var tooLong = false;
     try {
       saved = await ref
           .read(userRecipesProvider.notifier)
           .createAdapted(adapted);
+    } on RecipeTooLongException {
+      _log.warn('the adapted recipe is too long to save');
+      tooLong = true;
     } catch (e, st) {
       _log.error('saving the adapted recipe failed', e, st);
     }
@@ -185,6 +190,8 @@ class _AdaptRecipeScreenState extends ConsumerState<AdaptRecipeScreen> {
       _saved = saved;
     });
     final message = switch (saved) {
+      // Trying again changes nothing: said so.
+      null when tooLong => RecipeCopy.adaptTooLong,
       null => RecipeCopy.adaptSaveFailed,
       // A backend without core #11's columns kept the rest only.
       _ when saved.lostSteps([for (final step in adapted.steps) step.text]) =>

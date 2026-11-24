@@ -109,6 +109,10 @@ class UserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>> {
   /// When the title is taken, tries „<title> (angepasst)", then
   /// „(angepasst 2)" … „(angepasst 9)"; after that the
   /// [DuplicateRecipeTitleException] is rethrown.
+  ///
+  /// Steps or amounts longer than core allows throw a
+  /// [RecipeTooLongException] before anything is sent: core would refuse
+  /// them every time.
   Future<UserRecipe> createAdapted(AdaptedRecipe adapted) async {
     final kept = distinctByName(adapted.ingredients, (i) => i.name);
     final amounts = [for (final i in kept) i.amount];
@@ -116,6 +120,10 @@ class UserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>> {
       for (final step in adapted.steps.take(AppConstants.recipeStepsMax))
         step.text,
     ];
+    if (_chars(steps) > AppConstants.recipeStepsMaxChars ||
+        _chars(amounts) > AppConstants.recipeAmountsMaxChars) {
+      throw const RecipeTooLongException();
+    }
     final title = adapted.title;
     for (var attempt = 0; ; attempt++) {
       try {
@@ -138,6 +146,10 @@ class UserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>> {
 
   /// The plain title, then „(angepasst)" and „(angepasst 2)" … „(angepasst 9)".
   static const _adaptedTitleAttempts = 10;
+
+  /// The characters of [texts] together, as the editor counts them.
+  static int _chars(Iterable<String?> texts) =>
+      texts.fold(0, (sum, t) => sum + (t?.length ?? 0));
 
   Future<void> delete(String id) async {
     await ref.read(userRecipeRepositoryProvider).delete(id);
