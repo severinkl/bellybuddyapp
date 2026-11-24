@@ -378,7 +378,7 @@ void main() {
 
     Future<void> verifyUpdate(
       WidgetTester tester, {
-      List<String>? instructions,
+      List<String> instructions = const [],
       List<String?>? amounts,
     }) async {
       final call = verify(
@@ -445,7 +445,9 @@ void main() {
       ).called(1);
     });
 
-    testWidgets('edit without touching the steps sends none', (tester) async {
+    testWidgets('edit without touching the steps sends them as they are', (
+      tester,
+    ) async {
       await tall(tester);
       final recipe = testUserRecipe(
         id: 'rec-1',
@@ -456,7 +458,7 @@ void main() {
 
       await save(tester);
 
-      await verifyUpdate(tester);
+      await verifyUpdate(tester, instructions: const ['Kochen.', 'Essen.']);
     });
 
     testWidgets('edited steps are sent', (tester) async {
@@ -576,7 +578,7 @@ void main() {
       expect(find.text('Kochen.'), findsOneWidget);
       expect(find.text('Neu'), findsNothing);
       await save(tester);
-      await verifyUpdate(tester);
+      await verifyUpdate(tester, instructions: const ['Kochen.']);
     });
 
     testWidgets('a template sends no amounts', (tester) async {

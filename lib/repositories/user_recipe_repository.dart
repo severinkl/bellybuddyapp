@@ -35,8 +35,8 @@ class UserRecipeRepository {
     required String title,
     required List<String> ingredients,
     String? imageUrl,
-    List<String>? instructions,
-    List<String?>? ingredientAmounts,
+    required List<String> instructions,
+    required List<String?>? ingredientAmounts,
   }) => _service.update(
     id: id,
     title: title,

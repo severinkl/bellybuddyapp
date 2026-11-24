@@ -78,13 +78,15 @@ class UserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>> {
     return recipe;
   }
 
+  /// Saves the recipe as the editor shows it: [ingredientAmounts] aligned
+  /// with [ingredients] (null: none), and every step.
   Future<UserRecipe> update({
     required String id,
     required String title,
     required List<String> ingredients,
     String? imageUrl,
-    List<String>? instructions,
-    List<String?>? ingredientAmounts,
+    required List<String> instructions,
+    required List<String?>? ingredientAmounts,
   }) async {
     final recipe = await ref
         .read(userRecipeRepositoryProvider)

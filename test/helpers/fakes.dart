@@ -650,8 +650,8 @@ class FakeUserRecipeRepository implements UserRecipeRepository {
     required String title,
     required List<String> ingredients,
     String? imageUrl,
-    List<String>? instructions,
-    List<String?>? ingredientAmounts,
+    required List<String> instructions,
+    required List<String?>? ingredientAmounts,
   }) async {
     final i = _recipes.indexWhere((r) => r.id == id);
     if (i < 0) throw StateError('UserRecipe $id not found');
@@ -662,7 +662,7 @@ class FakeUserRecipeRepository implements UserRecipeRepository {
       title: title,
       ingredients: ingredients,
       imageUrl: imageUrl,
-      instructions: instructions ?? old.instructions,
+      instructions: instructions,
       ingredientAmounts: ingredientAmounts,
       adaptedFromRecipeId: old.adaptedFromRecipeId,
     );
