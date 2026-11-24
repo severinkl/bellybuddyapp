@@ -294,7 +294,8 @@ void main() {
       expect(logs, contains('FirstTip [ERROR]: First tip failed (StateError)'));
     });
 
-    test('200 without tips: failed, the set stamped seen', () async {
+    test('200 without tips: failed, nothing stamped (never „new": the tips '
+        'skip an empty set)', () async {
       captureLogs();
       tips.firstTipSet = testRecommendation(
         id: 'empty',
@@ -307,13 +308,10 @@ void main() {
       await _settle();
 
       await expectFailedOnce(c);
-      expect(tips.marked, [
-        ['empty'],
-      ]);
-      expect(tips.sets.first.seenAt, isNotNull);
+      expect(tips.marked, isEmpty);
     });
 
-    test('an answer without id: failed, nothing to stamp', () async {
+    test('an answer without id: failed', () async {
       captureLogs();
       final c = container();
 
@@ -322,23 +320,6 @@ void main() {
 
       await expectFailedOnce(c);
       expect(tips.marked, isEmpty);
-    });
-
-    test('a failed stamp is only logged', () async {
-      final logs = captureLogs();
-      tips
-        ..firstTipSet = testRecommendation(id: 'empty', recommendations: [])
-        ..markError = Exception('offline');
-      final c = container();
-
-      expect(await accept(c), isTrue);
-      await _settle();
-
-      await expectFailedOnce(c);
-      expect(tips.marked, [
-        ['empty'],
-      ]);
-      expect(logs, contains(startsWith('FirstTip [ERROR]')));
     });
   });
 

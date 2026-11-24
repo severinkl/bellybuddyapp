@@ -71,8 +71,9 @@ class FirstTipNotifier extends Notifier<void> {
   /// The one request, with the profile's intolerances and diet (core reads
   /// the last days' meals itself), at most [AppConstants.firstTipTimeout].
   /// Done with a saved set holding tips, and the sets reload; failed
-  /// otherwise, and a saved set without tips is stamped seen. Dropped once
-  /// another user is signed in.
+  /// otherwise (a saved set without tips is never „new":
+  /// `unseenTipSetProvider` skips it). Dropped once another user is signed
+  /// in.
   Future<void> _request(String userId, UserProfile profile) async {
     try {
       final result = await ref
@@ -96,9 +97,6 @@ class FirstTipNotifier extends Notifier<void> {
         '${result.id == null ? 'not saved' : 'saved'}',
       );
       await _set(FirstTipState.failed);
-      if (result.id case final id? when _stillFor(userId)) {
-        await _stampSeen(userId, id);
-      }
     } on FirstTipException catch (e) {
       _log.error('First tip failed (${e.status ?? 'no status'})');
       await _failFor(userId);
@@ -117,15 +115,6 @@ class FirstTipNotifier extends Notifier<void> {
   /// Notes the failure, unless another user signed in meanwhile.
   Future<void> _failFor(String userId) async {
     if (_stillFor(userId)) await _set(FirstTipState.failed);
-  }
-
-  /// Stamps the empty set [id] seen; a failure is only logged.
-  Future<void> _stampSeen(String userId, String id) async {
-    try {
-      await ref.read(recommendationRepositoryProvider).markSeen(userId, [id]);
-    } catch (e, st) {
-      _log.error('First tip: stamping the empty set seen failed', e, st);
-    }
   }
 
   /// Whether [userId] is still signed in; logged when not, and the rest
