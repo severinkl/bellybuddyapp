@@ -67,6 +67,13 @@ void main() {
       });
     });
 
+    test('an unseen set without tips: no tipsArrived', () async {
+      tips.sets = [testRecommendation(id: 'empty', recommendations: [])];
+      final c = await loaded(weeklyTips: true);
+
+      expect(c.read(buddyOffersProvider), isEmpty);
+    });
+
     test('all seen: nothing', () async {
       final c = await loaded(weeklyTips: true);
 

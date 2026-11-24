@@ -211,6 +211,8 @@ const kTestIntoleranceRulesJson =
 IntoleranceRules testIntoleranceRules() =>
     IntoleranceRules.parse(kTestIntoleranceRulesJson)!;
 
+/// A tip set: by default with one tip ([testRecommendationItem]), since a
+/// set without tips is never new; pass `recommendations: []` for one.
 Recommendation testRecommendation({
   String? id,
   String? summary,
@@ -220,7 +222,7 @@ Recommendation testRecommendation({
 }) => Recommendation(
   id: id ?? 'rec-1',
   summary: summary ?? 'Tipp: Mehr Wasser trinken.',
-  recommendations: recommendations ?? [],
+  recommendations: recommendations ?? [testRecommendationItem()],
   createdAt: createdAt,
   seenAt: seenAt,
 );

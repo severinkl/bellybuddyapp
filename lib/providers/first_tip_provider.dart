@@ -72,29 +72,48 @@ class FirstTipNotifier extends Notifier<bool> {
     return true;
   }
 
-  /// The one request: the meals since [AppConstants.firstTipMealsWindow]
-  /// ago, then the tip, at most [AppConstants.firstTipTimeout]. Done with a
-  /// saved set holding tips, and the sets reload; failed otherwise, and a
-  /// saved set without tips is stamped seen, so it is never announced as
-  /// new. Dropped once another user is signed in.
+  /// The one request: the meals of the last [AppConstants.firstTipMealsDays]
+  /// calendar days, then the tip, both together at most
+  /// [AppConstants.firstTipTimeout]: a read that hangs fails too, and once
+  /// failed no request follows. Done with a saved set holding tips, and the
+  /// sets reload; failed otherwise, and a saved set without tips is stamped
+  /// seen. Dropped once another user is signed in.
   Future<void> _request(String userId, UserProfile profile) async {
-    try {
-      final since = ref
-          .read(buddyClockProvider)()
-          .subtract(AppConstants.firstTipMealsWindow);
+    // Set as the time is up: a read ending later starts no request.
+    var over = false;
+    Future<FirstTipResult?> ask() async {
+      final n = ref.read(buddyClockProvider)();
+      // Wall-clock fields, so a DST switch between doesn't move the bound.
+      final since = DateTime(
+        n.year,
+        n.month,
+        n.day - AppConstants.firstTipMealsDays,
+        n.hour,
+        n.minute,
+        n.second,
+      );
       final meals = await ref
           .read(entryRepositoryProvider)
           .fetchRecentMeals(userId: userId, since: since);
-      if (!_stillFor(userId)) return;
-      final result = await ref
+      if (over || !_stillFor(userId)) return null;
+      return ref
           .read(recommendationRepositoryProvider)
           .requestFirstTip(
             intolerances: profile.intolerances,
             diet: profile.diet,
             meals: meals,
-          )
-          .timeout(AppConstants.firstTipTimeout);
-      if (!_stillFor(userId)) return;
+          );
+    }
+
+    try {
+      final result = await ask().timeout(
+        AppConstants.firstTipTimeout,
+        onTimeout: () {
+          over = true;
+          throw TimeoutException(null, AppConstants.firstTipTimeout);
+        },
+      );
+      if (result == null || !_stillFor(userId)) return;
       if (result.ok) {
         await _set(FirstTipState.done);
         if (!_stillFor(userId)) return;

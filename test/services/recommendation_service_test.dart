@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -7,6 +6,7 @@ import 'package:belly_buddy/models/first_tip.dart';
 import 'package:belly_buddy/services/recommendation_service.dart';
 
 import '../helpers/fixtures.dart';
+import '../helpers/logs.dart';
 import '../helpers/mocks.dart';
 import '../helpers/supabase_mocks.dart';
 
@@ -34,15 +34,6 @@ void _stubFilterFuture(MockPostgrestFilterBuilder filter, {Object? error}) {
         : Future<PostgrestList>.error(error);
     return answer.then((v) => onValue(v), onError: onError);
   });
-}
-
-/// What the logger prints during the test (and nothing on the console).
-List<String> _captureLogs() {
-  final logs = <String>[];
-  final original = debugPrint;
-  debugPrint = (message, {wrapWidth}) => logs.add(message ?? '');
-  addTearDown(() => debugPrint = original);
-  return logs;
 }
 
 /// An item of a `diet-recommendations` answer.
@@ -291,7 +282,7 @@ void main() {
     });
 
     test('429 → FirstTipException(429)', () async {
-      _captureLogs();
+      captureLogs();
       stubThrow(
         const FunctionsHttpException(
           status: 429,
@@ -304,7 +295,7 @@ void main() {
 
     test('500 → FirstTipException(500); the log names the status, never '
         'the meals', () async {
-      final logs = _captureLogs();
+      final logs = captureLogs();
       stubThrow(
         const FunctionsHttpException(
           status: 500,
@@ -322,14 +313,14 @@ void main() {
     });
 
     test('transport → FirstTipException(null)', () async {
-      _captureLogs();
+      captureLogs();
       stubThrow(const FunctionsFetchException(details: 'offline'));
 
       await expectLater(request(), failsWith(null));
     });
 
     test('a non-map answer → FirstTipException(null)', () async {
-      final logs = _captureLogs();
+      final logs = captureLogs();
       stubAnswer('Zwiebelsuppe mit Brot');
 
       await expectLater(request(), failsWith(null));
@@ -339,7 +330,7 @@ void main() {
     });
 
     test('an id that is not a string → FirstTipException(null)', () async {
-      _captureLogs();
+      captureLogs();
       stubAnswer({
         'id': 7,
         'recommendations': [_item('Reis')],

@@ -2,7 +2,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
@@ -22,6 +21,7 @@ import 'package:belly_buddy/services/journey/journey_rules.dart';
 
 import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
+import '../helpers/logs.dart';
 import '../helpers/riverpod_helpers.dart';
 
 /// The signed-in user's id, switchable.
@@ -52,15 +52,6 @@ Future<void> _settle() async {
   for (var i = 0; i < 5; i++) {
     await pumpEventQueue();
   }
-}
-
-/// What the logger prints during the test (and nothing on the console).
-List<String> _captureLogs() {
-  final logs = <String>[];
-  final print = debugPrint;
-  debugPrint = (message, {wrapWidth}) => logs.add(message ?? '');
-  addTearDown(() => debugPrint = print);
-  return logs;
 }
 
 /// An override for the rewards whose preferences open through [open].
@@ -363,7 +354,7 @@ void main() {
     ]) {
       test('unreadable stored JSON starts afresh, stored ($name)', () async {
         SharedPreferences.setMockInitialValues({'journey_rewards_u1': value});
-        final logs = _captureLogs();
+        final logs = captureLogs();
 
         final rewards = await rewardsOf(container());
 
@@ -384,7 +375,7 @@ void main() {
         'insight_journey_u1': true,
         'journey_rewards_u1': kept,
       });
-      final logs = _captureLogs();
+      final logs = captureLogs();
       var opens = 0;
       final c = container(
         overrides: [

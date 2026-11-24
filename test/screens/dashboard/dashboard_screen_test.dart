@@ -206,7 +206,7 @@ void main() {
       await _pumpHome(tester, tips: _unseenTips());
 
       expect(find.byKey(TipsRow.rowKey), findsOneWidget);
-      expect(find.text('✨ Neue Tipps · Woche 47'), findsOneWidget);
+      expect(find.text('✨ Neue Tipps · Woche 47 · 1 Tipp'), findsOneWidget);
       expect(
         tester.getRect(find.byKey(TipsRow.rowKey)).top,
         greaterThanOrEqualTo(

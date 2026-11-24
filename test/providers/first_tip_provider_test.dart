@@ -3,7 +3,6 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:fake_async/fake_async.dart';
-import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
@@ -23,6 +22,7 @@ import 'package:belly_buddy/repositories/recommendation_repository.dart';
 
 import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
+import '../helpers/logs.dart';
 import '../helpers/riverpod_helpers.dart';
 
 /// The signed-in user's id, switchable.
@@ -77,15 +77,6 @@ Future<void> _settle() async {
   }
 }
 
-/// What the logger prints during the test (and nothing on the console).
-List<String> _captureLogs() {
-  final logs = <String>[];
-  final print = debugPrint;
-  debugPrint = (message, {wrapWidth}) => logs.add(message ?? '');
-  addTearDown(() => debugPrint = print);
-  return logs;
-}
-
 /// No line of [logs] names a meal's title or ingredient.
 void _expectNoMeals(List<String> logs) {
   for (final meal in [_today, _twoDaysAgo, _fourDaysAgo]) {
@@ -123,11 +114,13 @@ void main() {
   });
 
   /// A container with [rewards] seeded (in memory), or with the stored
-  /// rewards when [storedRewards]; with [_profile] loaded, or no profile.
+  /// rewards when [storedRewards]; with [_profile] loaded, or no profile;
+  /// the app's clock pinned to [now] (default [_now]).
   ProviderContainer container({
     JourneyRewards? rewards = _offered,
     bool noProfile = false,
     bool storedRewards = false,
+    DateTime? now,
     List<Override> overrides = const [],
   }) => ProviderContainer.test(
     overrides: [
@@ -136,7 +129,7 @@ void main() {
       profileProviderSeededWith(noProfile ? null : _profile),
       entryRepositoryProvider.overrideWithValue(entries),
       recommendationRepositoryProvider.overrideWithValue(tips),
-      buddyClockProvider.overrideWithValue(() => _now),
+      buddyClockProvider.overrideWithValue(() => now ?? _now),
       if (!storedRewards) journeyRewardsSeededWith(rewards),
       ...overrides,
     ],
@@ -188,11 +181,8 @@ void main() {
         (TipOffer.accepted, FirstTipState.requested),
       ]);
       expect(c.read(firstTipProvider), isTrue);
+      // 3 calendar days back, at the same wall-clock time.
       expect(entries.recentMealsSince, [DateTime(2026, 11, 21, 14)]);
-      expect(
-        entries.recentMealsSince.single,
-        _now.subtract(AppConstants.firstTipMealsWindow),
-      );
       final request = tips.firstTipRequests.single;
       expect(request.intolerances, ['Fruktose']);
       expect(request.diet, 'vegetarisch');
@@ -209,7 +199,7 @@ void main() {
     });
 
     test('opt-in fails: false, no request, firstTip unchanged', () async {
-      _captureLogs();
+      captureLogs();
       profiles.weeklyTipsError = Exception('offline');
       final c = container();
 
@@ -226,7 +216,7 @@ void main() {
 
     test('no user, no journey or no profile: false, nothing written or '
         'asked', () async {
-      _captureLogs();
+      captureLogs();
       final signedOut = container();
       _user.set(signedOut, null);
       final cases = [
@@ -276,21 +266,26 @@ void main() {
       expect(rewardsOf(c)!.firstTip, FirstTipState.done);
     });
 
-    test('after a restart with a request stored: none', () async {
-      const stored = JourneyRewards(
-        earnedDay: 3,
-        tipOffer: TipOffer.accepted,
-        firstTip: FirstTipState.requested,
+    test('the 3 days are calendar days: across the autumn-DST Sunday the '
+        'bound keeps the wall clock', () async {
+      // Under TZ=Europe/Vienna, 25 Oct 2026 has 25 hours: 72 hours before
+      // Tuesday 14:00 is Saturday 15:00, not 14:00.
+      final at1430 = testMealEntry(
+        id: 'in',
+        trackedAt: DateTime(2026, 10, 24, 14, 30),
       );
-      final c = container(rewards: stored);
+      final at1330 = testMealEntry(
+        id: 'out',
+        trackedAt: DateTime(2026, 10, 24, 13, 30),
+      );
+      entries.recentMeals = [at1430, at1330];
+      final c = container(now: DateTime(2026, 10, 27, 14));
 
       expect(await accept(c), isTrue);
       await _settle();
 
-      expect(tips.firstTipRequests, isEmpty);
-      expect(profiles.weeklyTipsWrites, isEmpty);
-      expect(rewardsOf(c), stored);
-      expect(c.read(firstTipProvider), isFalse);
+      expect(entries.recentMealsSince, [DateTime(2026, 10, 24, 14)]);
+      expect(tips.firstTipRequests.single.meals, [at1430]);
     });
   });
 
@@ -317,7 +312,7 @@ void main() {
       ('transport', const FirstTipException(), 'no status'),
     ]) {
       test('$name: failed, still opted in, one request', () async {
-        final logs = _captureLogs();
+        final logs = captureLogs();
         tips.firstTipError = error;
         final c = container();
 
@@ -333,7 +328,7 @@ void main() {
 
     test('timeout: failed, still opted in, one request', () {
       fakeAsync((async) {
-        final logs = _captureLogs();
+        final logs = captureLogs();
         tips.firstTipGate = Completer<void>(); // never answers
         final c = container();
         bool? accepted;
@@ -355,11 +350,65 @@ void main() {
       });
     });
 
+    test('a meals read that never ends: failed after the timeout, and no '
+        'request after it', () {
+      fakeAsync((async) {
+        captureLogs();
+        final read = Completer<void>();
+        entries.recentMealsGate = read; // hangs
+        final c = container();
+        accept(c);
+        async.flushMicrotasks();
+        expect(c.read(firstTipProvider), isTrue);
+
+        async.elapse(AppConstants.firstTipTimeout - const Duration(seconds: 1));
+        expect(rewardsOf(c)!.firstTip, FirstTipState.requested);
+
+        async.elapse(const Duration(seconds: 2));
+        expect(rewardsOf(c)!.firstTip, FirstTipState.failed);
+        expect(c.read(firstTipProvider), isFalse);
+
+        // The read ends late: the request it would start is dropped.
+        read.complete();
+        async.flushMicrotasks();
+        expect(tips.firstTipRequests, isEmpty);
+        expect(rewardsOf(c)!.firstTip, FirstTipState.failed);
+        expect(weeklyTipsOf(c), isTrue);
+      });
+    });
+
+    test(
+      'any other error (the meals read fails): failed, no request',
+      () async {
+        final logs = captureLogs();
+        entries.recentMealsError = Exception('offline');
+        final c = container();
+
+        expect(await accept(c), isTrue);
+        await _settle();
+
+        expect(rewardsOf(c)!.firstTip, FirstTipState.failed);
+        expect(weeklyTipsOf(c), isTrue);
+        expect(tips.firstTipRequests, isEmpty);
+        expect(c.read(firstTipProvider), isFalse);
+        expect(
+          logs,
+          contains('FirstTip [ERROR]: First tip failed (_Exception)'),
+        );
+        _expectNoMeals(logs);
+
+        expect(await accept(c), isTrue);
+        await _settle();
+        expect(entries.recentMealsSince, hasLength(1));
+      },
+    );
+
     test('200 without tips: failed, the set stamped seen', () async {
-      _captureLogs();
+      captureLogs();
       tips.firstTipSet = testRecommendation(
         id: 'empty',
         summary: 'Leider konnte keine Analyse durchgeführt werden.',
+        recommendations: [],
       );
       final c = container();
 
@@ -374,7 +423,7 @@ void main() {
     });
 
     test('an answer without id: failed, nothing to stamp', () async {
-      _captureLogs();
+      captureLogs();
       final c = container();
 
       expect(await accept(c), isTrue);
@@ -385,9 +434,9 @@ void main() {
     });
 
     test('a failed stamp is only logged', () async {
-      final logs = _captureLogs();
+      final logs = captureLogs();
       tips
-        ..firstTipSet = testRecommendation(id: 'empty')
+        ..firstTipSet = testRecommendation(id: 'empty', recommendations: [])
         ..markError = Exception('offline');
       final c = container();
 
@@ -402,7 +451,7 @@ void main() {
     });
   });
 
-  group('the user changed meanwhile', () {
+  group('over the stored rewards', () {
     late FakeRecipeRepository recipes;
 
     setUp(() {
@@ -422,7 +471,7 @@ void main() {
         ..collection = [testRecipe(id: 'a', title: 'Apfel-Reis')];
     });
 
-    /// A container over the stored rewards, read.
+    /// A container over the stored rewards (an app start), read.
     Future<ProviderContainer> stored() async {
       final c = container(
         storedRewards: true,
@@ -430,7 +479,7 @@ void main() {
       );
       c.listen(journeyRewardsProvider, (_, _) {});
       await _settle();
-      expect(rewardsOf(c)!.tipOffer, TipOffer.offered);
+      expect(rewardsOf(c), isNotNull);
       return c;
     }
 
@@ -448,15 +497,39 @@ void main() {
       return raw == null ? null : JourneyRewards.fromJson(jsonDecode(raw));
     }
 
+    test('after a restart with a request stored: none', () async {
+      // The app is closed while the call is on its way.
+      tips.firstTipGate = Completer<void>();
+      final first = await stored();
+      expect(await accept(first), isTrue);
+      await _settle();
+      expect(tips.firstTipRequests, hasLength(1));
+      first.dispose();
+
+      final restarted = await stored();
+      const requested = (TipOffer.accepted, FirstTipState.requested);
+      expect(answerOf(rewardsOf(restarted)), requested);
+
+      expect(await accept(restarted), isTrue);
+      await _settle();
+
+      expect(tips.firstTipRequests, hasLength(1));
+      expect(profiles.weeklyTipsWrites, [true]);
+      expect(answerOf(rewardsOf(restarted)), requested);
+      expect(answerOf(await storedFor('u1')), requested);
+      expect(restarted.read(firstTipProvider), isFalse);
+    });
+
     test(
       'the user changed meanwhile: nothing stored for the new user',
       () async {
-        final logs = _captureLogs();
+        final logs = captureLogs();
         final aiCall = Completer<void>();
         tips
           ..firstTipGate = aiCall
           ..firstTipSet = _set;
         final c = await stored();
+        expect(answerOf(rewardsOf(c)), open);
 
         expect(await accept(c), isTrue);
         await _settle();
@@ -482,10 +555,11 @@ void main() {
 
     test('a switch during the opt-in write: false, no request, nothing '
         'stored for the new user', () async {
-      _captureLogs();
+      captureLogs();
       final optIn = Completer<void>();
       profiles.gate = optIn;
       final c = await stored();
+      expect(answerOf(rewardsOf(c)), open);
 
       final accepted = accept(c);
       await _settle();

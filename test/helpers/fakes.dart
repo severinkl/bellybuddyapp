@@ -375,6 +375,12 @@ class FakeEntryRepository implements EntryRepository {
   /// The `since` of every [fetchRecentMeals] call, in order.
   final List<DateTime?> recentMealsSince = [];
 
+  /// When set, [fetchRecentMeals] waits for it (a slow read).
+  Completer<void>? recentMealsGate;
+
+  /// Thrown by [fetchRecentMeals] when set (after [recentMealsGate]).
+  Object? recentMealsError;
+
   @override
   Future<List<MealEntry>> fetchRecentMeals({
     required String userId,
@@ -382,6 +388,8 @@ class FakeEntryRepository implements EntryRepository {
     DateTime? since,
   }) async {
     recentMealsSince.add(since);
+    await recentMealsGate?.future;
+    if (recentMealsError case final error?) throw error;
     final meals = recentMeals ?? _result.meals;
     return [
       for (final m in meals)
@@ -773,9 +781,6 @@ class FakeRecommendationRepository implements RecommendationRepository {
 class FakeFirstTipNotifier extends FirstTipNotifier {
   int accepts = 0;
   bool acceptResult = true;
-
-  @override
-  bool build() => false;
 
   @override
   Future<bool> accept() async {
