@@ -74,17 +74,28 @@ class EntriesNotifier extends Notifier<EntriesState> {
   /// Counts loads (and resets); only the latest load publishes its result.
   int _load = 0;
 
+  /// The day whose [EntriesState.latestBefore] the state holds; null while
+  /// it is unknown (none loaded yet, the query failed, or a write may have
+  /// changed it).
+  DateTime? _latestFor;
+
   @override
   EntriesState build() {
     _load++;
+    _latestFor = null;
     return const EntriesState();
   }
 
   /// Loads the entries of [date]'s local day ([EntriesState.day]). A load
-  /// started meanwhile supersedes this one.
-  Future<void> loadEntries(DateTime date) async {
+  /// started meanwhile supersedes this one. The latest entries before the
+  /// day are fetched again only when they can have changed: for another
+  /// day, after a write that may change them, or with [refreshLatest] (pull
+  /// to refresh).
+  Future<void> loadEntries(DateTime date, {bool refreshLatest = false}) async {
     final load = ++_load;
-    state = state.copyWith(isLoading: true, error: null, day: startOfDay(date));
+    final day = startOfDay(date);
+    if (refreshLatest) _latestFor = null;
+    state = state.copyWith(isLoading: true, error: null, day: day);
     try {
       final userId = ref.read(currentUserIdProvider);
       if (userId == null) {
@@ -100,17 +111,24 @@ class EntriesNotifier extends Notifier<EntriesState> {
         date: date,
         ordered: true,
       );
-      final latestFuture = _fetchLatestBefore(repo, userId, startOfDay(date));
+      final latestFuture = _latestFor == day
+          ? null
+          : _fetchLatestBefore(repo, userId, day);
       final result = await dayFuture;
       final latestBefore = await latestFuture;
       if (!_isLatest(load)) return;
 
+      if (latestFuture != null) {
+        _latestFor = latestBefore == null ? null : day;
+      }
       state = state.copyWith(
         meals: result.meals,
         toiletEntries: result.toiletEntries,
         gutFeelings: result.gutFeelings,
         drinks: result.drinks,
-        latestBefore: latestBefore,
+        latestBefore: latestFuture == null
+            ? null
+            : latestBefore ?? const LatestEntries(),
         isLoading: false,
       );
     } catch (e, st) {
@@ -121,8 +139,8 @@ class EntriesNotifier extends Notifier<EntriesState> {
   }
 
   /// The latest entries before [before]; a failing query is logged and
-  /// gives none, so the day itself still loads.
-  Future<LatestEntries> _fetchLatestBefore(
+  /// gives null, so the day itself still loads.
+  Future<LatestEntries?> _fetchLatestBefore(
     EntryRepository repo,
     String userId,
     DateTime before,
@@ -131,7 +149,7 @@ class EntriesNotifier extends Notifier<EntriesState> {
       return await repo.fetchLatestBefore(userId: userId, before: before);
     } catch (e, st) {
       _log.error('fetchLatestBefore failed before $before', e, st);
-      return const LatestEntries();
+      return null;
     }
   }
 
@@ -144,13 +162,17 @@ class EntriesNotifier extends Notifier<EntriesState> {
   /// With [refreshesBuddy] (an edit, a move or a delete) a loaded Buddy
   /// reloads too: the write can change his streak or whether today counts
   /// (today's only entry deleted). An insert needs none of it; a tracker's
-  /// log event already refreshes him.
+  /// log event already refreshes him. Such a write, or one that [movesLatest]
+  /// (an insert dated before the loaded day), also fetches the latest
+  /// entries before the day again.
   Future<void> _write(
     Future<void> Function() write, {
     bool refreshesBuddy = false,
+    bool movesLatest = false,
   }) async {
     await write();
     if (!ref.mounted) return;
+    if (refreshesBuddy || movesLatest) _latestFor = null;
     ref.read(entriesRevisionProvider.notifier)._bump();
     if (refreshesBuddy && ref.read(buddyProvider.exists)) {
       unawaited(ref.read(buddyProvider.notifier).reload());
@@ -164,8 +186,14 @@ class EntriesNotifier extends Notifier<EntriesState> {
 
   Future<void> _insert(String type, Map<String, dynamic> data) {
     final userId = ref.read(currentUserIdProvider)!;
+    final day = state.day;
+    final trackedAt = data['tracked_at'];
     return _write(
       () => _repo.insertEntry(entryTableFor[type]!, data, userId: userId),
+      movesLatest:
+          day != null &&
+          trackedAt is String &&
+          wallClockFromWire(trackedAt).isBefore(day),
     );
   }
 
@@ -279,6 +307,7 @@ class EntriesNotifier extends Notifier<EntriesState> {
 
   void reset() {
     _load++;
+    _latestFor = null;
     state = const EntriesState();
   }
 }

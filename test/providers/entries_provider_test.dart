@@ -218,6 +218,132 @@ void main() {
     });
   });
 
+  group('EntriesNotifier: the latest before the day only when it can '
+      'change', () {
+    final day = DateTime(2026, 11, 23);
+
+    /// How often the latest entries before a day were fetched.
+    late int latestCalls;
+
+    setUp(() {
+      latestCalls = 0;
+      when(
+        () => mockRepo.fetchForDate(
+          userId: any(named: 'userId'),
+          date: any(named: 'date'),
+          ordered: any(named: 'ordered'),
+        ),
+      ).thenAnswer((_) async => testEntryQueryResult());
+      when(
+        () => mockRepo.fetchLatestBefore(
+          userId: any(named: 'userId'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer((_) async {
+        latestCalls++;
+        return LatestEntries(drink: DateTime(2026, 11, 22, 21));
+      });
+      when(
+        () => mockRepo.insertEntry(any(), any(), userId: any(named: 'userId')),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockRepo.updateEntry(any(), any(), any()),
+      ).thenAnswer((_) async {});
+      when(() => mockRepo.deleteEntry(any(), any())).thenAnswer((_) async {});
+    });
+
+    /// A container with [day] loaded once.
+    Future<ProviderContainer> loaded() async {
+      final container = makeContainer();
+      await container.read(entriesProvider.notifier).loadEntries(day);
+      expect(latestCalls, 1);
+      return container;
+    }
+
+    /// Lets a write's background reload land.
+    Future<void> settle() => Future<void>.delayed(Duration.zero);
+
+    test('reloading the same day keeps them', () async {
+      final container = await loaded();
+
+      await container
+          .read(entriesProvider.notifier)
+          .loadEntries(day.add(const Duration(hours: 14)));
+
+      expect(latestCalls, 1);
+      expect(
+        container.read(entriesProvider).latestBefore.drink,
+        DateTime(2026, 11, 22, 21),
+      );
+    });
+
+    test('another day and a pull to refresh fetch them again', () async {
+      final container = await loaded();
+      final notifier = container.read(entriesProvider.notifier);
+
+      await notifier.loadEntries(DateTime(2026, 11, 24));
+      expect(latestCalls, 2);
+      await notifier.loadEntries(DateTime(2026, 11, 24), refreshLatest: true);
+      expect(latestCalls, 3);
+    });
+
+    test('an edit, a move or a delete fetches them again', () async {
+      final container = await loaded();
+      final notifier = container.read(entriesProvider.notifier);
+
+      await notifier.updateMeal(testMealEntry());
+      await settle();
+      expect(latestCalls, 2);
+      await notifier.updateDrinkById(
+        'drink-1',
+        amountMl: 250,
+        trackedAt: DateTime(2026, 11, 20, 9),
+      );
+      await settle();
+      expect(latestCalls, 3);
+      await notifier.deleteMeal('meal-1');
+      await settle();
+      expect(latestCalls, 4);
+    });
+
+    test('an insert dated before the loaded day fetches them again, one on '
+        'the day does not', () async {
+      final container = await loaded();
+      final notifier = container.read(entriesProvider.notifier);
+
+      await notifier.addMeal(
+        testMealEntry(trackedAt: DateTime(2026, 11, 23, 12)),
+      );
+      await settle();
+      expect(latestCalls, 1);
+
+      await notifier.addMeal(
+        testMealEntry(trackedAt: DateTime(2026, 11, 22, 23, 30)),
+      );
+      await settle();
+      expect(latestCalls, 2);
+    });
+
+    test('a failed query is tried again with the next load', () async {
+      when(
+        () => mockRepo.fetchLatestBefore(
+          userId: any(named: 'userId'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer((_) async {
+        if (++latestCalls == 1) throw Exception('offline');
+        return const LatestEntries();
+      });
+      final container = makeContainer();
+      final notifier = container.read(entriesProvider.notifier);
+
+      await notifier.loadEntries(day);
+      await notifier.loadEntries(day);
+
+      expect(latestCalls, 2);
+    });
+  });
+
   group('EntriesNotifier.addMeal', () {
     test('delegates to repo.insertEntry', () async {
       when(

@@ -153,7 +153,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
         ref.read(profileProvider.notifier).fetchProfile(),
         ref
             .read(entriesProvider.notifier)
-            .loadEntries(ref.read(buddyClockProvider)()),
+            .loadEntries(ref.read(buddyClockProvider)(), refreshLatest: true),
         ref.read(buddyProvider.notifier).reload(),
         ref.read(insightsProvider.notifier).refresh(),
         // The first load leaves the tips to the app root's sign-in load.

@@ -94,7 +94,7 @@ class _FakeEntries extends EntriesNotifier {
   EntriesState build() => _initial;
 
   @override
-  Future<void> loadEntries(DateTime date) async {
+  Future<void> loadEntries(DateTime date, {bool refreshLatest = false}) async {
     loaded.add(date);
     state = (next ?? state).copyWith(day: startOfDay(date));
   }
