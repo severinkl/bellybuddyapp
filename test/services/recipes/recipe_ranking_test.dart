@@ -140,6 +140,50 @@ void main() {
       expect(recipeScore(recipe, const RankingSignals(good: {'reis'})), 2);
     });
 
+    test('a food in another spelling counts, like core', () {
+      final recipe = testRecipe(
+        ingredients: [testLine('Ei'), testLine('Zwiebelpulver', position: 1)],
+      );
+      expect(
+        recipeScore(
+          recipe,
+          const RankingSignals(good: {'eier'}, noticed: {'zwiebeln'}),
+        ),
+        -1,
+      );
+    });
+
+    test('another food with a similar name does not', () {
+      final recipe = testRecipe(
+        ingredients: [
+          testLine('Kokosmilch'),
+          testLine('Eisbergsalat', position: 1),
+          testLine('Frühlingszwiebelgrün', position: 2),
+        ],
+      );
+      expect(
+        recipeScore(
+          recipe,
+          const RankingSignals(good: {'milch', 'eier'}, noticed: {'zwiebel'}),
+        ),
+        0,
+      );
+    });
+
+    test('a food counts once, however many lines are it', () {
+      final recipe = testRecipe(
+        ingredients: [
+          testLine('Zwiebel'),
+          testLine('Rote Zwiebeln', position: 1),
+          testLine('Zwiebelpulver', position: 2),
+        ],
+      );
+      expect(
+        recipeScore(recipe, const RankingSignals(noticed: {'zwiebel'})),
+        -3,
+      );
+    });
+
     test('an older recipe scores 0', () {
       const older = Recipe(
         id: 'old',
@@ -234,7 +278,8 @@ void main() {
       expect(signals.noticed, isEmpty);
     });
 
-    test('unlocked: the good days and the certain noticed, lower-cased', () {
+    test('unlocked: the good days and the certain noticed, keyed like the '
+        'insights (trimmed, lower case)', () {
       final signals = RankingSignals.of(
         _insights(
           unlocked: true,
@@ -242,11 +287,11 @@ void main() {
             days: 4,
             often: [
               IngredientCount('Reis', 3, of: 4),
-              IngredientCount('Haferflocken', 2, of: 4),
+              IngredientCount(' Haferflocken ', 2, of: 4),
             ],
           ),
           hardDays: const DayColumn(days: 3),
-          noticed: [_noticed('Zwiebel'), _noticed('Lauch', uncertain: true)],
+          noticed: [_noticed('Zwiebel '), _noticed('Lauch', uncertain: true)],
           calmDayIngredients: {'brot'},
         ),
       );

@@ -4,11 +4,12 @@ import '../../config/constants.dart';
 import '../../models/insights.dart';
 import '../../models/recipe.dart';
 import '../../utils/german_list.dart';
+import '../../utils/ingredient_key.dart';
 import 'recipe_fit.dart';
 
-/// What the user's entries say about ingredients, for the ranking: keys
-/// (trimmed, lower case) that rank a recipe up ([good]) or down
-/// ([noticed]).
+/// What the user's entries say about ingredients, for the ranking: the
+/// foods, keyed like the insights key them (`ingredientKey`), that rank a
+/// recipe up ([good]) or down ([noticed]).
 class RankingSignals {
   const RankingSignals({this.good = const {}, this.noticed = const {}});
 
@@ -23,12 +24,12 @@ class RankingSignals {
     return RankingSignals(
       good: {
         if (insights.goodDays.shown)
-          for (final item in insights.goodDays.often) item.name.toLowerCase(),
+          for (final item in insights.goodDays.often) ingredientKey(item.name),
       },
       noticed: {
         if (insights.showNoticed)
           for (final n in insights.noticed)
-            if (!n.uncertain) n.name.toLowerCase(),
+            if (!n.uncertain) ingredientKey(n.name),
       },
     );
   }
@@ -48,12 +49,15 @@ class RankingSignals {
   );
 }
 
-/// 2 per distinct good key of [recipe]'s lines, minus 3 per distinct
-/// noticed key; 0 for an older recipe.
+/// 2 per good food that one of [recipe]'s lines is
+/// ([RecipeIngredient.isFood]: also in another spelling, like core), minus
+/// 3 per noticed one; each food once, however many lines are it. 0 for an
+/// older recipe.
 int recipeScore(Recipe recipe, RankingSignals signals) {
-  final keys = {for (final line in recipe.ingredients) ...line.matchKeys};
-  return 2 * keys.intersection(signals.good).length -
-      3 * keys.intersection(signals.noticed).length;
+  bool inRecipe(String food) =>
+      recipe.ingredients.any((line) => line.isFood(food));
+  return 2 * signals.good.where(inRecipe).length -
+      3 * signals.noticed.where(inRecipe).length;
 }
 
 /// The collection for one user ([rankRecipes]).

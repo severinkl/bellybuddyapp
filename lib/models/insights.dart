@@ -278,10 +278,10 @@ class Insights {
   /// is the active days, up to [InsightRules.daysNeeded].
   final List<JourneyDay> journey;
 
-  /// The ingredient keys (`ingredientKey`: trimmed, lower case, like
-  /// `RecipeIngredient.matchKeys`) of the window's meals on local days
-  /// without a „Schlecht" gut-feeling entry (days without any count): what
-  /// ranks recipes up while [unlocked] is false.
+  /// The ingredient keys (`ingredientKey`: trimmed, lower case; a recipe
+  /// line is one by `RecipeIngredient.isFood`) of the window's meals on
+  /// local days without a „Schlecht" gut-feeling entry (days without any
+  /// count): what ranks recipes up while [unlocked] is false.
   final Set<String> calmDayIngredients;
 
   @override

@@ -355,6 +355,50 @@ void main() {
       expect(r.picks[5]!.matched, ['Karotte']);
     });
 
+    test('day 5 matches a calm-day food in another spelling, like core: '
+        'Eier is Ei, Zwiebel is Zwiebelpulver', () {
+      final x = _recipe('x', ['Kartoffel'], title: 'Kartoffelsuppe');
+      final y = _recipe('y', [
+        'Reis',
+        'Ei',
+        'Zwiebelpulver',
+      ], title: 'Reispfanne mit Ei');
+      final ranked = _rank([x, y]);
+      expect(ranked.fits.first.recipe.id, 'x');
+      final r = fillPicks(
+        const JourneyRewards(earnedDay: 5, picks: _earlier),
+        ranked: ranked,
+        calmKeys: const {'eier', 'zwiebel'},
+      );
+      expect(
+        r.picks[5],
+        const RecipePick(
+          id: 'y',
+          title: 'Reispfanne mit Ei',
+          matched: ['Ei', 'Zwiebelpulver'],
+        ),
+      );
+    });
+
+    test('day 5: another food with a similar name is no match', () {
+      final y = _recipe('y', [
+        'Frühlingszwiebelgrün',
+        'Schnittlauch',
+        'Kokosmilch',
+        'Eisbergsalat',
+        'Milchreis',
+      ], title: 'Milchreis mit Kokos');
+      final r = fillPicks(
+        const JourneyRewards(earnedDay: 5, picks: _earlier),
+        ranked: _rank([y]),
+        calmKeys: const {'zwiebel', 'milch', 'eier', 'reis', 'lauch'},
+      );
+      expect(
+        r.picks[5],
+        const RecipePick(id: 'y', title: 'Milchreis mit Kokos'),
+      );
+    });
+
     test('unchecked ranking: no pick', () {
       const r = JourneyRewards(earnedDay: 5, tipOffer: TipOffer.declined);
       expect(

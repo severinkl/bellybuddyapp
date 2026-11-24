@@ -83,9 +83,10 @@ JourneyRewards fillPicks(
 }
 
 /// A recipe of [ranked] in „Für dich" order ([pickForYou]) that is not in
-/// [exclude]: the first that [passesForYou] with a line matching [goodKeys]
-/// (`RecipeIngredient.matchKeys`), naming those lines, else the first,
-/// naming none. Null when none is left.
+/// [exclude]: the first that [passesForYou] with a line that is one of the
+/// foods [goodKeys] (`RecipeIngredient.isFood`: also in another spelling,
+/// like core), naming those lines, else the first, naming none. Null when
+/// none is left.
 RecipePick? pickJourneyRecipe(
   List<RecipeFit> ranked, {
   Set<String> exclude = const {},
@@ -112,13 +113,14 @@ RecipePick? pickJourneyRecipe(
   return RecipePick(id: first.id, title: first.title);
 }
 
-/// The names of [recipe]'s lines matching [keys], in recipe order, each
-/// once (case ignored), at most [_maxMatched].
+/// The names of [recipe]'s lines that are one of the foods [keys], as the
+/// recipe spells them, in recipe order, each once (case ignored), at most
+/// [_maxMatched].
 List<String> _matchedLines(Recipe recipe, Set<String> keys) =>
     List.unmodifiable(
       distinctByName([
         for (final line in recipe.ingredients)
-          if (line.matchKeys.any(keys.contains)) line.name.trim(),
+          if (keys.any(line.isFood)) line.name.trim(),
       ], (name) => name).take(_maxMatched),
     );
 

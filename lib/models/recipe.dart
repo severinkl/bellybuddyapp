@@ -1,4 +1,4 @@
-import '../utils/ingredient_key.dart';
+import '../utils/food_words.dart';
 import '../utils/json_values.dart';
 import '../utils/url_utils.dart';
 import 'fodmap_flags.dart';
@@ -77,11 +77,14 @@ class RecipeIngredient {
 
   bool get mapped => catalogId != null;
 
-  /// The line's name and catalog name as [ingredientKey]s (trimmed,
-  /// lower-cased), for matching against diary ingredients.
-  Set<String> get matchKeys => {
-    for (final key in [name, ?catalogName]) ingredientKey(key),
-  }..remove('');
+  /// Whether the line is the food [food] (a name, or an `ingredientKey`
+  /// as the insights key the diary's ingredients): its name or catalog
+  /// name is that food ([sameFood], as core matches recipe lines: „Ei" is
+  /// „Eier", „Zwiebelpulver" „Zwiebel"; „Kokosmilch" is no „Milch").
+  bool isFood(String food) {
+    final catalog = catalogName;
+    return sameFood(name, food) || (catalog != null && sameFood(catalog, food));
+  }
 }
 
 /// A recipe of the curated collection (`recipes`).
