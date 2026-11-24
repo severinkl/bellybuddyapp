@@ -1,6 +1,7 @@
 import '../models/ingredient_suggestion_group.dart';
 import '../models/replacement_ingredient.dart';
 import 'url_utils.dart';
+import 'wall_clock.dart';
 
 class _GroupAccumulator {
   final String ingredientId;
@@ -93,7 +94,7 @@ abstract final class SuggestionHelpers {
       mealsById[id] = MealDetail(
         id: id,
         title: row['title'] as String? ?? '',
-        trackedAt: DateTime.parse(row['tracked_at'] as String),
+        trackedAt: wallClockFromWire(row['tracked_at'] as String),
         imageUrl: row['image_url'] as String?,
         ingredients: [
           for (final name in row['ingredients'] as List? ?? const [])

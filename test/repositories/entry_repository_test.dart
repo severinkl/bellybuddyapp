@@ -123,32 +123,37 @@ void main() {
   });
 
   group('fetchActivityDays', () {
-    test('maps instants to local dates and dedupes same-day entries', () async {
-      final since = DateTime(2026, 11, 1);
-      when(
-        () => queryService.fetchTrackedAtSince(
-          userId: any(named: 'userId'),
-          since: any(named: 'since'),
-        ),
-      ).thenAnswer(
-        (_) async => [
-          DateTime(2026, 11, 21, 23, 59).toUtc(),
-          DateTime(2026, 11, 21, 0, 1).toUtc(),
-          DateTime(2026, 11, 22, 8).toUtc(),
-        ],
-      );
+    test(
+      'maps wall-clock times to their dates and dedupes same days',
+      () async {
+        final since = DateTime(2026, 11, 1);
+        when(
+          () => queryService.fetchTrackedAtSince(
+            userId: any(named: 'userId'),
+            since: any(named: 'since'),
+          ),
+        ).thenAnswer(
+          (_) async => [
+            DateTime(2026, 11, 21, 23, 59),
+            DateTime(2026, 11, 21, 0, 1),
+            DateTime(2026, 11, 22, 8),
+          ],
+        );
 
-      final days = await repo.fetchActivityDays(
-        userId: 'user-123',
-        since: since,
-      );
+        final days = await repo.fetchActivityDays(
+          userId: 'user-123',
+          since: since,
+        );
 
-      expect(days, {DateTime(2026, 11, 21), DateTime(2026, 11, 22)});
-      verify(
-        () =>
-            queryService.fetchTrackedAtSince(userId: 'user-123', since: since),
-      ).called(1);
-    });
+        expect(days, {DateTime(2026, 11, 21), DateTime(2026, 11, 22)});
+        verify(
+          () => queryService.fetchTrackedAtSince(
+            userId: 'user-123',
+            since: since,
+          ),
+        ).called(1);
+      },
+    );
   });
 
   group('fetchInsightSource', () {
@@ -156,7 +161,7 @@ void main() {
       const source = InsightSource(
         meals: [],
         gutFeelings: [],
-        activityInstants: [],
+        activityTimes: [],
       );
       when(
         () => queryService.fetchInsightSource(
@@ -190,11 +195,8 @@ void main() {
           mealsSince: any(named: 'mealsSince'),
         ),
       ).thenAnswer(
-        (_) async => const InsightSource(
-          meals: [],
-          gutFeelings: [],
-          activityInstants: [],
-        ),
+        (_) async =>
+            const InsightSource(meals: [], gutFeelings: [], activityTimes: []),
       );
 
       await repo.fetchInsightSource(

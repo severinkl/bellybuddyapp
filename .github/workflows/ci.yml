@@ -44,6 +44,10 @@ jobs:
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-latest
+    # Entry times are wall-clock local time; under UTC a wall clock and an
+    # instant look alike and timezone bugs pass unnoticed.
+    env:
+      TZ: Europe/Vienna
     timeout-minutes: 5
 
     steps:
@@ -68,6 +72,10 @@ jobs:
   widget-tests:
     name: Widget Tests
     runs-on: ubuntu-latest
+    # Entry times are wall-clock local time; under UTC a wall clock and an
+    # instant look alike and timezone bugs pass unnoticed.
+    env:
+      TZ: Europe/Vienna
     timeout-minutes: 10
 
     steps:

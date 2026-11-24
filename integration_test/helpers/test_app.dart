@@ -198,6 +198,6 @@ InsightSource unlockedInsightSource() {
         ),
     ],
     gutFeelings: gutFeelings,
-    activityInstants: [for (final g in gutFeelings) g.trackedAt],
+    activityTimes: [for (final g in gutFeelings) g.trackedAt],
   );
 }

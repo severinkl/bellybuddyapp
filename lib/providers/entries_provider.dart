@@ -11,6 +11,7 @@ import '../repositories/entry_repository.dart';
 import '../services/entry_query_service.dart';
 import '../utils/date_format_utils.dart';
 import '../utils/logger.dart';
+import '../utils/wall_clock.dart';
 
 /// The entries of one local day ([day]); the dashboard's ring and „Heute"
 /// list show them.
@@ -273,7 +274,7 @@ class EntriesNotifier extends Notifier<EntriesState> {
 
   /// `tracked_at` as the entry models write it, or nothing for null.
   static Map<String, dynamic> _trackedAtJson(DateTime? trackedAt) => {
-    if (trackedAt != null) 'tracked_at': trackedAt.toIso8601String(),
+    if (trackedAt != null) 'tracked_at': wallClockToWire(trackedAt),
   };
 
   void reset() {

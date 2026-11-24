@@ -81,7 +81,7 @@ Insights computeInsights(InsightSource source, DateTime now) {
   );
 
   final activeDays = {
-    for (final t in source.activityInstants)
+    for (final t in source.activityTimes)
       if (inWindow(t)) _localDay(t),
   };
   final journeyDays = (activeDays.toList()..sort()).reversed
@@ -118,7 +118,7 @@ InsightPick _pick(List<Noticed> noticed, DayColumn goodDays) {
   return const NothingYetPick();
 }
 
-DateTime _localDay(DateTime t) => startOfDay(t.toLocal());
+DateTime _localDay(DateTime t) => startOfDay(t);
 
 DayClass _classOf(GutFeelingRatingLevel level) => switch (level) {
   GutFeelingRatingLevel.spiGut || GutFeelingRatingLevel.gut => DayClass.good,

@@ -323,6 +323,34 @@ void main() {
     });
   });
 
+  group('EntriesNotifier moves an entry', () {
+    test('to the new time as the wall clock, every kind', () async {
+      when(
+        () => mockRepo.updateEntry(any(), any(), any()),
+      ).thenAnswer((_) async {});
+      final notifier = makeContainer().read(entriesProvider.notifier);
+      final moved = DateTime(2026, 11, 23, 23, 30);
+
+      await notifier.updateToiletById('t', stoolType: 3, trackedAt: moved);
+      await notifier.updateDrinkById('d', amountMl: 250, trackedAt: moved);
+      await notifier.updateGutFeelingById(
+        'g',
+        bloating: 0,
+        gas: 0,
+        cramps: 0,
+        fullness: 0,
+        trackedAt: moved,
+      );
+
+      final sent = verify(
+        () => mockRepo.updateEntry(any(), any(), captureAny()),
+      ).captured.cast<Map<String, dynamic>>();
+      expect(sent.map((d) => d['tracked_at']), [
+        for (var i = 0; i < 3; i++) '2026-11-23T23:30:00.000Z',
+      ]);
+    });
+  });
+
   group('EntriesNotifier keeps the loaded day current', () {
     final day = DateTime(2026, 3, 25);
 

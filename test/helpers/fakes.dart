@@ -327,7 +327,7 @@ class FakeEntryRepository implements EntryRepository {
   InsightSource insightSource = const InsightSource(
     meals: [],
     gutFeelings: [],
-    activityInstants: [],
+    activityTimes: [],
   );
 
   /// When set, [fetchInsightSource] throws it.
@@ -846,7 +846,7 @@ InsightSource insightSourceFor({
       for (var i = 0; i < gutFeelings; i++)
         testGutFeelingEntry(trackedAt: dayBefore(i)),
     ],
-    activityInstants: [for (var i = 0; i < activeDays; i++) dayBefore(i)],
+    activityTimes: [for (var i = 0; i < activeDays; i++) dayBefore(i)],
   );
 }
 

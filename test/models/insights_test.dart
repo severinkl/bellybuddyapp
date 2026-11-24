@@ -34,7 +34,7 @@ InsightSource _source() => InsightSource(
     for (var d = 1; d <= 4; d++) _gut(d, 5),
     for (var d = 10; d <= 13; d++) _gut(d, 1),
   ],
-  activityInstants: [for (var d = 1; d <= 13; d++) DateTime(2026, 11, d, 12)],
+  activityTimes: [for (var d = 1; d <= 13; d++) DateTime(2026, 11, d, 12)],
 );
 
 Insights _with(
