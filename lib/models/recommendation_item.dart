@@ -1,3 +1,5 @@
+import '../utils/json_values.dart';
+
 class RecommendationItem {
   final String type; // 'substitute' | 'try'
   final String ingredient;
@@ -31,8 +33,8 @@ class RecommendationItem {
         reason: json['reason'] as String? ?? '',
         alternative: json['alternative'] as String?,
         focus: json['focus'] == true,
-        recipeId: _trimmedOrNull(json['recipe_id']),
-        recipeTitle: _trimmedOrNull(json['recipe_title']),
+        recipeId: trimmedOrNull(json['recipe_id']),
+        recipeTitle: trimmedOrNull(json['recipe_title']),
       );
 
   /// An older set's keys, plus the new ones only when set.
@@ -51,9 +53,4 @@ class RecommendationItem {
 
   /// Whether the tip links its matching recipe: a Tausch-Tipp with one.
   bool get hasRecipeLink => isSubstitute && recipeId != null;
-
-  static String? _trimmedOrNull(Object? value) {
-    final trimmed = value is String ? value.trim() : '';
-    return trimmed.isEmpty ? null : trimmed;
-  }
 }

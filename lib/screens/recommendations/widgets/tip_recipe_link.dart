@@ -5,7 +5,6 @@ import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../providers/recipe_collection_provider.dart';
 import '../../../router/navigation_extensions.dart';
-import '../../../utils/settled_value.dart';
 import '../../../widgets/common/bb_card.dart';
 import '../../recipes/widgets/recipe_image.dart';
 
@@ -25,11 +24,7 @@ class TipRecipeLink extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final recipe = ref.watch(
-      recipeCollectionProvider.select(
-        (c) => c.settledValue?.where((r) => r.id == recipeId).firstOrNull,
-      ),
-    );
+    final recipe = ref.watch(collectionRecipeProvider(recipeId)).value;
     if (recipe == null) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(top: AppConstants.spacing10),
