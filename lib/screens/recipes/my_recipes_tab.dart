@@ -56,18 +56,15 @@ class _MyRecipesTabState extends ConsumerState<MyRecipesTab> {
         onRetry: () => ref.read(recipeSearchProvider(_host).notifier).retry(),
       ),
       data: (found) {
-        final query = ref
-            .read(recipeSearchProvider(_host).notifier)
-            .activeQuery
-            ?.toLowerCase();
+        // The query [found] answers (after the debounce), so the saved
+        // recipes are filtered along with the own ones.
+        final query = ref.read(recipeSearchProvider(_host).notifier).shownQuery;
         final hasActiveQuery = query != null;
         // The search finds own recipes only; the saved ones are matched by
-        // title here.
+        // title here, as the server matches the own ones.
         final recipes = mergeMyRecipes(found, [
           for (final saved in ref.watch(savedRecipesProvider))
-            if (query == null ||
-                saved.recipe.title.toLowerCase().contains(query))
-              saved,
+            if (query == null || titleMatches(saved.recipe.title, query)) saved,
         ]);
         if (recipes.isEmpty && !hasActiveQuery) {
           // Saved recipes may still be on their way, or have failed.

@@ -7,6 +7,7 @@ import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/repositories/recipe_repository.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_collection_card.dart';
+import 'package:belly_buddy/providers/recipe_collection_provider.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/screens/recipes/my_recipes_tab.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_card.dart';
@@ -141,6 +142,68 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(RecipeCollectionCard), findsNothing);
     expect(find.text('Keine Treffer'), findsOneWidget);
+  });
+
+  group('the gemerkte match like the own ones', () {
+    Future<void> search(WidgetTester tester, String query) async {
+      await tester.enterText(find.byType(TextField), query);
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('every word a prefix of a title word, in any order', (
+      tester,
+    ) async {
+      saved('g', 'Curry mit Reis');
+      await pump(
+        tester,
+        recipes: [testUserRecipe(id: 'a', title: 'Eigenes')],
+      );
+
+      await search(tester, 'Reis Curry');
+      expect(find.text('Curry mit Reis'), findsOneWidget);
+
+      await search(tester, 'cur re');
+      expect(find.text('Curry mit Reis'), findsOneWidget);
+
+      // Inside a word is no match, as on the server.
+      await search(tester, 'urry');
+      expect(find.text('Curry mit Reis'), findsNothing);
+
+      await search(tester, 'Curry Nudeln');
+      expect(find.text('Curry mit Reis'), findsNothing);
+    });
+
+    testWidgets('only once the search runs, with the own ones', (tester) async {
+      saved('g', 'Curry mit Reis');
+      await pump(
+        tester,
+        recipes: [testUserRecipe(id: 'a', title: 'Eigenes')],
+      );
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MyRecipesTab)),
+      );
+
+      await tester.enterText(find.byType(TextField), 'zzz');
+      await tester.pump(const Duration(milliseconds: 100));
+      // Something else rebuilds the list before the search ran.
+      collection.favorites = [
+        ...collection.favorites,
+        FavoriteRecipe('recipe-1', DateTime(2026, 11, 21)),
+      ];
+      collection.collection = [...collection.collection, testRecipe()];
+      await container.read(recipeCollectionProvider.notifier).refresh();
+      await container.read(recipeFavoritesProvider.notifier).refresh();
+      await tester.pump();
+      expect(find.text('Curry mit Reis'), findsOneWidget);
+      expect(find.text('Eigenes'), findsOneWidget);
+
+      when(() => repo.searchForUser(any(), any())).thenAnswer((_) async => []);
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
+      expect(find.text('Curry mit Reis'), findsNothing);
+      expect(find.text('Keine Treffer'), findsOneWidget);
+    });
   });
 
   testWidgets('only gemerkte → grid, not the empty state', (tester) async {

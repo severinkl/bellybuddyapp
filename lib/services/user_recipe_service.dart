@@ -196,17 +196,18 @@ class UserRecipeService {
   // `unicode: true`, which would drop umlauts (Möhren → Mhren).
   static final _tsqueryStripRx = RegExp(r'[^\p{L}\p{N}_]', unicode: true);
 
+  /// The words of a free-form query, each without what isn't a letter,
+  /// digit or underscore; none for a blank one.
+  static List<String> queryTokens(String query) => query
+      .trim()
+      .split(_whitespaceRx)
+      .map((t) => t.replaceAll(_tsqueryStripRx, ''))
+      .where((t) => t.isNotEmpty)
+      .toList();
+
   /// Converts a free-form user query into a tsquery string with prefix-match
   /// per token (`token:*`) joined by `&` so multi-word queries narrow.
   /// Exposed for tests; not part of the public API.
-  static String buildTsQuery(String query) {
-    final tokens = query
-        .trim()
-        .split(_whitespaceRx)
-        .map((t) => t.replaceAll(_tsqueryStripRx, ''))
-        .where((t) => t.isNotEmpty)
-        .toList();
-    if (tokens.isEmpty) return '';
-    return tokens.map((t) => '$t:*').join(' & ');
-  }
+  static String buildTsQuery(String query) =>
+      queryTokens(query).map((t) => '$t:*').join(' & ');
 }
