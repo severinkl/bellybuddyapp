@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/fodmap_flags.dart';
 import 'package:belly_buddy/models/intolerance_rules.dart';
 import 'package:belly_buddy/models/recipe.dart';
@@ -268,6 +269,103 @@ void main() {
 
       expect(fit.checked, isTrue);
       expect(fit.badge, const FitsBadge());
+    });
+  });
+
+  // Mirrors core's backend/tests/domain/test_recipe_fit.py (bellybuddy-core,
+  // `critical_hits` and the kritisch rule), so the app judges a line as the
+  // adapt route does. Keep both in step: a non-empty hit set there is a
+  // kritisch line here, an empty one is not.
+  group("core's critical_hits cases", () {
+    FodmapFlags flags(Set<String> keys) => FodmapFlags(
+      fructans: keys.contains('fructans'),
+      gos: keys.contains('gos'),
+      lactose: keys.contains('lactose'),
+      fructose: keys.contains('fructose'),
+      sorbitol: keys.contains('sorbitol'),
+      mannitol: keys.contains('mannitol'),
+    );
+
+    bool kritisch(
+      String intolerance, {
+      Set<String>? fodmaps,
+      Set<String> allergens = const {},
+      bool lowAtAmount = false,
+    }) {
+      final line = testLine(
+        'Zutat',
+        fodmaps: flags(fodmaps ?? const {}),
+        allergens: allergens,
+        lowAtAmount: lowAtAmount,
+        // None: an unmapped ingredient, without flags.
+        mapped: fodmaps != null,
+      );
+      return _fit([line], [intolerance]).kritischCount == 1;
+    }
+
+    const all = FodmapFlags.keys;
+    for (final (intolerance, fodmaps, allergens, expected)
+        in <(String, Set<String>, Set<String>, bool)>[
+          ('Laktose', {'lactose'}, {}, true),
+          // Lactose-free dairy and hard cheese are fine: Laktose is the
+          // FODMAP flag, not the milk tag.
+          ('Laktose', {}, {'milch'}, false),
+          ('Gluten', {'fructans'}, {}, false),
+          ('Gluten', {}, {'gluten'}, true),
+          ('Weizen', {'fructans'}, {'weizen', 'gluten'}, true),
+          ('Nüsse', {}, {'nuesse'}, true),
+          ('Eier', {}, {'eier'}, true),
+          ('Soja', {'gos'}, {'soja'}, true),
+          ('Fruktose', {'fructose', 'sorbitol'}, {}, true),
+          ('Sorbit', {'fructose', 'sorbitol'}, {}, true),
+          ('GOS', {'gos'}, {}, true),
+          ('FODMAPs', {'mannitol'}, {}, true),
+          ('Histamin', all, {'milch'}, false),
+          ('Unbekannt', all, {'milch'}, false),
+        ]) {
+      test('$intolerance, $fodmaps, $allergens: '
+          '${expected ? 'kritisch' : 'not kritisch'}', () {
+        expect(
+          kritisch(intolerance, fodmaps: fodmaps, allergens: allergens),
+          expected,
+        );
+      });
+    }
+
+    test('the kritisch rule', () {
+      const garlic = {'fructans'};
+      // A FODMAP hit is kritisch only above the low-FODMAP amount.
+      expect(kritisch('Weizen', fodmaps: garlic), isTrue);
+      expect(kritisch('Weizen', fodmaps: garlic, lowAtAmount: true), isFalse);
+      // An allergen always is.
+      expect(
+        kritisch('Eier', fodmaps: {}, allergens: {'eier'}, lowAtAmount: true),
+        isTrue,
+      );
+      // No hit, no problem; an unmapped ingredient is judged by its
+      // allergens only.
+      expect(
+        kritisch('Fruktose', fodmaps: garlic, allergens: {'milch'}),
+        isFalse,
+      );
+      expect(kritisch('Weizen'), isFalse);
+      expect(
+        kritisch('Nüsse', allergens: {'nuesse'}, lowAtAmount: true),
+        isTrue,
+      );
+    });
+
+    test('every app option is in the table; only Histamin unjudgeable', () {
+      for (final option in AppConstants.intoleranceOptions) {
+        expect(_rules[option], isNotNull, reason: option);
+      }
+      expect(
+        [
+          for (final MapEntry(:key, :value) in _rules.byName.entries)
+            if (!value.judgeable) key,
+        ],
+        ['Histamin'],
+      );
     });
   });
 
