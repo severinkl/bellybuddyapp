@@ -334,4 +334,10 @@ The „Passt zu mir" toggle shows only recipes with 0 critical ingredients.
      - An alembic **data migration** loads it. It resolves each name to an existing shared row (case-insensitive), or creates a shared `ai_enrich` row with the JSON flags, so IDs are resolved per environment at deploy.
      - The source research is committed to core `docs/recipes/sources.md`.
   4. **The KI-Dienst sentence** changes, since the new Tipps send more and nobody has consented to the old wording yet (#86 unreleased): „Dafür schicke ich deine Einträge der letzten Wochen, die Muster daraus und deine Bewertungen meiner Tipps an unseren KI-Dienst." **For Severin to check:** whether the privacy policy's description of requested recommendations covers patterns and ratings, or needs a line.
+  6. **Refinements after the core recipes build** (2026-11-24 night, my calls):
+     - **Laktose maps only to the FODMAP lactose flag** (with `low_at_amount`), not to the `milch` allergen. Lactose-free dairy and hard cheese are fine for Laktose users. The `milch` tag stays in the data for a possible later „Milchallergie" option.
+     - `user_recipes` gets an optional `ingredient_amounts text[]` aligned with `ingredients`, so adapted recipes keep their amounts.
+     - A duplicate title when saving an adapted recipe gets „(angepasst)" appended, or a number.
+     - The adapt route's per-user throttle is in memory (10/h); the api runs as one process.
+     - adapt-recipe gets a small eval set (≤ 2 € of the 20 €).
   5. **Live AI spend:** the recipe import and the Tipps eval together stay within the approved **20 €**, tracked in the eval ledger.
