@@ -10,6 +10,8 @@ import 'package:belly_buddy/providers/insights_provider.dart';
 import 'package:belly_buddy/providers/log_moment.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 
+import '../helpers/fakes.dart';
+
 class _Insights extends InsightsNotifier {
   @override
   Future<Insights> build() async => const Insights(
@@ -35,15 +37,19 @@ final _now = DateTime(2026, 11, 23, 14);
 void main() {
   late WidgetRef ref;
   late ProviderContainer container;
+  late FakeBuddyNotifier buddy;
 
   Future<void> pump(WidgetTester tester) async {
+    buddy = FakeBuddyNotifier(() => buddyStatus(streak: 4));
     container = ProviderContainer.test(
       overrides: [
         insightsProvider.overrideWith(_Insights.new),
+        buddyProvider.overrideWith(() => buddy),
         buddyClockProvider.overrideWithValue(() => _now),
       ],
     );
     await container.read(insightsProvider.future);
+    await container.read(buddyProvider.future);
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
@@ -80,5 +86,24 @@ void main() {
     (container.read(insightsProvider.notifier) as _Insights).failed();
     expect(container.read(insightsProvider).value, isNotNull);
     expect(line(), isNull);
+  });
+
+  int? ignites() =>
+      captureLogMoment(ref, kind: EntryKind.meal, trackedAt: _now).ignitesDay;
+
+  testWidgets('a loaded Buddy: the first entry ignites the next day', (
+    tester,
+  ) async {
+    await pump(tester);
+    expect(ignites(), 5);
+  });
+
+  testWidgets('a Buddy reloading with a value: no ignite', (tester) async {
+    await pump(tester);
+    buddy.state = const AsyncLoading<BuddyStatus?>().copyWithPrevious(
+      buddy.state,
+    );
+    expect(container.read(buddyProvider).value, isNotNull);
+    expect(ignites(), isNull);
   });
 }

@@ -5,6 +5,7 @@ import '../config/constants.dart';
 import '../models/insight_rules.dart';
 import '../models/insights.dart';
 import '../utils/logger.dart';
+import '../utils/settled_value.dart';
 import 'auth_provider.dart';
 import 'insights_provider.dart';
 
@@ -29,11 +30,12 @@ class JourneyNotifier extends Notifier<bool?> {
     final prefs = _prefs();
     var decided = false;
     ref.listen(insightsProvider, (_, next) {
-      // Only AsyncData: a reload or error still carries the previous
-      // user's value.
-      if (decided || next is! AsyncData<Insights>) return;
+      // Settled only: a load, refresh or error may still carry the
+      // previous user's value.
+      final insights = next.settledValue;
+      if (decided || insights == null) return;
       decided = true;
-      _decide(userId, next.value, prefs);
+      _decide(userId, insights, prefs);
     }, fireImmediately: true);
     return null;
   }

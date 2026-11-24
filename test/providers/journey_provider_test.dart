@@ -1,3 +1,4 @@
+// ignore_for_file: invalid_use_of_internal_member
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -37,6 +38,20 @@ class _FakeInsights extends InsightsNotifier {
 class _LoadingInsights extends InsightsNotifier {
   @override
   Future<Insights> build() => Completer<Insights>().future;
+}
+
+/// Loaded with 2 days, then [refreshing] holds that value while the next
+/// one ([next]) loads.
+class _RefreshingInsights extends InsightsNotifier {
+  final next = Completer<Insights>();
+
+  @override
+  Future<Insights> build() async => _insights(days: 2, gutFeelings: 0);
+
+  void refreshing() {
+    state = const AsyncLoading<Insights>().copyWithPrevious(state);
+    next.future.then((value) => state = AsyncData(value));
+  }
 }
 
 final _user = SwitchableUserId('u1');
@@ -107,6 +122,20 @@ void main() {
 
     expect(await _decide(c), isNull);
     expect(await stored('insight_journey_u1'), isNull);
+  });
+
+  test('a refresh still holding the previous value never decides', () async {
+    late _RefreshingInsights insights;
+    final c = _container(() => insights = _RefreshingInsights());
+    await c.read(insightsProvider.future);
+    insights.refreshing();
+    expect(c.read(insightsProvider).value, isNotNull);
+
+    expect(await _decide(c), isNull);
+
+    insights.next.complete(_insights(days: 9, gutFeelings: 1));
+    await settle();
+    expect(c.read(journeyProvider), isFalse);
   });
 
   test('per user: user B is decided under its own key', () async {
