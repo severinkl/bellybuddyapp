@@ -26,7 +26,7 @@ enum MealType {
 
 /// One line of a collection recipe (a `recipe_ingredients` row).
 class RecipeIngredient {
-  const RecipeIngredient({
+  RecipeIngredient({
     required this.position,
     this.amount,
     required this.name,
@@ -77,15 +77,19 @@ class RecipeIngredient {
 
   bool get mapped => catalogId != null;
 
+  /// [name] and [catalogName] as foods, each read once, when first compared.
+  late final FoodName _food = FoodName(name);
+  late final FoodName? _catalogFood = switch (catalogName) {
+    final catalog? => FoodName(catalog),
+    null => null,
+  };
+
   /// Whether the line is [food]: its name or catalog name is the same food
   /// ([FoodName.isSame]: the same match key or a shared food word). A line
   /// „Ei" is the food „Eier", a line „Zwiebelpulver" the food „Zwiebel"; a
   /// line „Kokosmilch" or „Laktosefreie Milch" is no „Milch".
-  bool isFood(FoodName food) {
-    final catalog = catalogName;
-    return food.isSame(FoodName.of(name)) ||
-        (catalog != null && food.isSame(FoodName.of(catalog)));
-  }
+  bool isFood(FoodName food) =>
+      food.isSame(_food) || (_catalogFood?.isSame(food) ?? false);
 }
 
 /// A recipe of the curated collection (`recipes`).

@@ -143,7 +143,7 @@ RecipePick? pickJourneyRecipe(
       if (!exclude.contains(fit.recipe.id)) fit,
   ];
   if (goodKeys.isNotEmpty) {
-    final good = [for (final key in goodKeys) FoodName.of(key)];
+    final good = goodKeys.map(FoodName.new).toList();
     for (final fit in order.where(passesForYou)) {
       final matched = _matchedLines(fit.recipe, good);
       if (matched.isNotEmpty) {

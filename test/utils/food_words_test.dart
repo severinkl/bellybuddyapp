@@ -207,9 +207,8 @@ void main() {
       expect(foodWords('寿司'), isEmpty);
     });
 
-    test('the same set again, which cannot be changed', () {
-      final words = foodWords('Zwiebeln');
-      expect(foodWords('Zwiebeln'), same(words));
+    test("a FoodName's words cannot be changed", () {
+      final words = FoodName('Zwiebeln').words;
       expect(() => words.add('x'), throwsUnsupportedError);
     });
   });
@@ -294,13 +293,12 @@ void main() {
   });
 
   group('FoodName', () {
-    test('read once: the same instance for the same name', () {
-      final zwiebeln = FoodName.of('Zwiebeln');
-      expect(FoodName.of('Zwiebeln'), same(zwiebeln));
+    test('its name, key and words', () {
+      final zwiebeln = FoodName('Zwiebeln');
       expect(zwiebeln.name, 'Zwiebeln');
       expect(zwiebeln.key, 'zwiebeln');
       expect(zwiebeln.words, {'zwiebel'});
-      expect(zwiebeln.isSame(FoodName.of('rote Zwiebel')), isTrue);
+      expect(zwiebeln.isSame(FoodName('rote Zwiebel')), isTrue);
     });
   });
 

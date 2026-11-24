@@ -98,23 +98,23 @@ void main() {
       expect(reis.catalogId, 'ing-reis');
       expect(reis.catalogName, 'Reis');
       expect(reis.mapped, isTrue);
-      expect(reis.isFood(FoodName.of('risottoreis')), isTrue);
-      expect(reis.isFood(FoodName.of('Reis')), isTrue);
-      expect(reis.isFood(FoodName.of('Milchreis')), isFalse);
+      expect(reis.isFood(FoodName('risottoreis')), isTrue);
+      expect(reis.isFood(FoodName('Reis')), isTrue);
+      expect(reis.isFood(FoodName('Milchreis')), isFalse);
 
       final knoblauch = recipe.ingredients[1];
       expect(knoblauch.position, 1);
       expect(knoblauch.fodmaps!.fructans, isTrue);
       expect(knoblauch.lowAtAmount, isFalse);
-      expect(knoblauch.isFood(FoodName.of('knoblauch')), isTrue);
+      expect(knoblauch.isFood(FoodName('knoblauch')), isTrue);
 
       final obst = recipe.ingredients[2];
       expect(obst.mapped, isFalse);
       expect(obst.fodmaps, isNull);
       expect(obst.amount, isNull);
       expect(obst.catalogName, isNull);
-      expect(obst.isFood(FoodName.of('obst nach wahl')), isTrue);
-      expect(obst.isFood(FoodName.of('Obst')), isTrue);
+      expect(obst.isFood(FoodName('obst nach wahl')), isTrue);
+      expect(obst.isFood(FoodName('Obst')), isTrue);
 
       expect(recipe.detailMeta, '35 Min · 2 Portionen');
       expect(recipe.listMeta, '35 Min · Mittag');
@@ -223,39 +223,39 @@ void main() {
 
     test('isFood: the name or catalog name, case and spaces ignored; '
         'a blank food never', () {
-      const line = RecipeIngredient(
+      final line = RecipeIngredient(
         position: 0,
         name: ' Knoblauch ',
         catalogId: 'ing-1',
         catalogName: '  ',
       );
 
-      expect(line.isFood(FoodName.of('KNOBLAUCH')), isTrue);
-      expect(line.isFood(FoodName.of('')), isFalse);
-      expect(line.isFood(FoodName.of('  ')), isFalse);
+      expect(line.isFood(FoodName('KNOBLAUCH')), isTrue);
+      expect(line.isFood(FoodName('')), isFalse);
+      expect(line.isFood(FoodName('  ')), isFalse);
     });
 
     test('isFood: a plural or a processed form is the food, like core; '
         'another food with a similar name is not', () {
-      const ei = RecipeIngredient(position: 0, name: 'Ei');
-      const gewuerz = RecipeIngredient(
+      final ei = RecipeIngredient(position: 0, name: 'Ei');
+      final gewuerz = RecipeIngredient(
         position: 1,
         name: 'Gewürz',
         catalogId: 'ing-zwiebelpulver',
         catalogName: 'Zwiebelpulver',
       );
-      const kokosmilch = RecipeIngredient(position: 2, name: 'Kokosmilch');
+      final kokosmilch = RecipeIngredient(position: 2, name: 'Kokosmilch');
 
-      expect(ei.isFood(FoodName.of('eier')), isTrue);
-      expect(gewuerz.isFood(FoodName.of('Zwiebeln')), isTrue);
-      expect(kokosmilch.isFood(FoodName.of('milch')), isFalse);
-      expect(ei.isFood(FoodName.of('Eisbergsalat')), isFalse);
-      const laktosefrei = RecipeIngredient(
+      expect(ei.isFood(FoodName('eier')), isTrue);
+      expect(gewuerz.isFood(FoodName('Zwiebeln')), isTrue);
+      expect(kokosmilch.isFood(FoodName('milch')), isFalse);
+      expect(ei.isFood(FoodName('Eisbergsalat')), isFalse);
+      final laktosefrei = RecipeIngredient(
         position: 3,
         name: 'Laktosefreie Milch',
       );
-      expect(laktosefrei.isFood(FoodName.of('milch')), isFalse);
-      expect(laktosefrei.isFood(FoodName.of('laktosefreie milch')), isTrue);
+      expect(laktosefrei.isFood(FoodName('milch')), isFalse);
+      expect(laktosefrei.isFood(FoodName('laktosefreie milch')), isTrue);
     });
   });
 

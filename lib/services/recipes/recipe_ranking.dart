@@ -54,6 +54,7 @@ class RankingSignals {
 /// ([RecipeIngredient.isFood]: also in another spelling, like core), minus
 /// 3 per noticed one; each food once, however many lines are it and however
 /// many spellings the signals have for it. 0 for an older recipe.
+@visibleForTesting
 int recipeScore(Recipe recipe, RankingSignals signals) =>
     _SignalFoods(signals).score(recipe);
 

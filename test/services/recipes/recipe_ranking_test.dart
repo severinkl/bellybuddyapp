@@ -122,12 +122,12 @@ void main() {
     });
 
     test('matches the catalog name too', () {
-      const paprika = RecipeIngredient(
+      final paprika = RecipeIngredient(
         position: 0,
         name: 'Rote Paprika',
         catalogId: 'ing-paprika',
         catalogName: 'Paprika',
-        fodmaps: FodmapFlags(),
+        fodmaps: const FodmapFlags(),
       );
       final recipe = testRecipe(ingredients: [paprika]);
       expect(recipeScore(recipe, const RankingSignals(good: {'paprika'})), 2);

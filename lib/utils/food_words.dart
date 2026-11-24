@@ -1,12 +1,15 @@
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 /// Whether [a] and [b] name the same food ([FoodName.isSame]).
-bool sameFood(String a, String b) => FoodName.of(a).isSame(FoodName.of(b));
+@visibleForTesting
+bool sameFood(String a, String b) => FoodName(a).isSame(FoodName(b));
 
 /// [names] by food: names that are the same food ([FoodName.isSame]), also
 /// through another („Öl" and „Knoblauch" through „Öl mit Knoblauch"),
 /// share a group, so a food written in several spellings counts once.
 List<List<FoodName>> foodGroups(Iterable<String> names) {
   final groups = <List<FoodName>>[];
-  for (final food in names.map(FoodName.of)) {
+  for (final food in names.map(FoodName.new)) {
     final joined = [
       for (final group in groups)
         if (group.any(food.isSame)) group,
@@ -19,22 +22,12 @@ List<List<FoodName>> foodGroups(Iterable<String> names) {
 
 /// A food name read the two ways core compares names (bellybuddy-core
 /// `backend/app/domain/tip_recipes.py`): its [key] ([matchKey]) and its
-/// [words] ([foodWords]).
+/// [words] ([foodWords]). Read once where it is kept: a recipe line holds
+/// its own (`RecipeIngredient`), a ranking reads its signals once.
 class FoodName {
-  FoodName._(this.name)
+  FoodName(this.name)
     : key = matchKey(name),
       words = Set.unmodifiable(_foodWords(name));
-
-  /// [name] read once: the same instance again for the same name. The app
-  /// compares the same few hundred names (the collection's lines, the
-  /// diary's ingredients) on every ranking; past [_memoLimit] names the
-  /// kept ones start over.
-  factory FoodName.of(String name) {
-    final known = _memo[name];
-    if (known != null) return known;
-    if (_memo.length >= _memoLimit) _memo.clear();
-    return _memo[name] = FoodName._(name);
-  }
 
   final String name;
 
@@ -52,11 +45,6 @@ class FoodName {
   bool isSame(FoodName other) =>
       (key.isNotEmpty && key == other.key) || words.any(other.words.contains);
 }
-
-final _memo = <String, FoodName>{};
-
-/// More names than the collection and a diary hold.
-const _memoLimit = 4096;
 
 /// How core matches names exactly (`match_key`): folded ([_fold]), without
 /// a bracketed note unless it says the food is free from something
@@ -99,9 +87,8 @@ final _spaceOrHyphen = RegExp(
 /// - only the end of a compound is read: „Hühnerbrühe" is no chicken;
 /// - irregular plurals outside [_irregular] are missed („Ananasse");
 /// - an unknown adjective before a food is a word of its own.
-///
-/// The same unmodifiable set for the same name ([FoodName.of]).
-Set<String> foodWords(String name) => FoodName.of(name).words;
+@visibleForTesting
+Set<String> foodWords(String name) => _foodWords(name);
 
 Set<String> _foodWords(String name) {
   if (_freeFrom.hasMatch(_fold(name))) return {};
