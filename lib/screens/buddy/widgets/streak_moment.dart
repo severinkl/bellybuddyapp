@@ -20,7 +20,7 @@ class StreakMoment extends StatelessWidget {
     required this.streak,
     required this.weekDays,
     required this.today,
-    this.lit = true,
+    required this.lit,
   });
 
   final int streak;

@@ -29,6 +29,7 @@ import 'package:belly_buddy/screens/buddy/widgets/streak_moment.dart';
 import 'package:belly_buddy/screens/registration/steps/steps.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 import 'package:belly_buddy/utils/buddy_name.dart';
+import 'package:belly_buddy/widgets/buddy/streak_flame.dart';
 import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
 
 import '../../helpers/ambient_animations.dart';
@@ -380,6 +381,19 @@ void main() {
           AppConstants.keyNotificationModalShown,
         );
 
+    /// Whether the streak moment's flame (beside the count, before the
+    /// week row's marks) burns; else it is an ember.
+    bool flameLit(WidgetTester tester) => tester
+        .widget<StreakFlame>(
+          find
+              .descendant(
+                of: find.byType(StreakMoment),
+                matching: find.byType(StreakFlame),
+              )
+              .first,
+        )
+        .lit;
+
     /// The goal row for [days] shows as the selected one.
     bool goalSelected(WidgetTester tester, int days) => find
         .descendant(
@@ -468,9 +482,12 @@ void main() {
       await tapKey(tester, BuddyOnboardingScreen.mealLogKey);
       await tapText(tester, 'fake-save-meal');
 
-      // The streak moment: born today, with this week's row.
+      // The streak moment: born today, with this week's row. The meal
+      // lights the flame before the Buddy's refresh says today counts.
       expect(find.text(_bornLine), findsOneWidget);
       expect(find.bySemanticsLabel('Streak: 1 Tag'), findsOneWidget);
+      expect(h.container.read(buddyProvider).value?.todayCounted, isFalse);
+      expect(flameLit(tester), isTrue);
       expect(find.byKey(StreakWeekRow.todayKey), findsOneWidget);
       expect(find.text(kStreakRuleText), findsOneWidget);
       await tapKey(tester, BuddyOnboardingScreen.momentNextKey);
@@ -724,6 +741,8 @@ void main() {
       expect(find.text(_introLine), findsNothing);
       expect(find.text('Unser Streak: 3 Tage! Weiter so.'), findsOneWidget);
       expect(find.bySemanticsLabel('Streak: 3 Tage'), findsOneWidget);
+      // Today counts: the flame burns.
+      expect(flameLit(tester), isTrue);
       expect(
         find.bySemanticsLabel(
           'Diese Woche eingetragen: Montag, Dienstag, '
@@ -737,6 +756,25 @@ void main() {
       expect(find.text('7 Tage'), findsOneWidget);
       await pickGoal(tester, '7 Tage');
       expect(find.text('dashboard-stub'), findsOneWidget);
+    });
+
+    testWidgets('gate with a streak today has not counted yet: the flame '
+        'is an ember', (tester) async {
+      final today = DateTime(2026, 11, 25);
+      await pumpOnboarding(
+        tester,
+        entry: BuddyOnboardingEntry.gate,
+        pushEnabled: true,
+        existingRow: const BuddyState(userId: testUserId, name: 'Bauchi'),
+        activityDays: {
+          for (var i = 1; i <= 3; i++)
+            DateTime(today.year, today.month, today.day - i),
+        },
+        extraOverrides: [buddyTodayProvider.overrideWithValue(() => today)],
+      );
+
+      expect(find.bySemanticsLabel('Streak: 3 Tage'), findsOneWidget);
+      expect(flameLit(tester), isFalse);
     });
 
     testWidgets('completing keeps the savers a user already has', (

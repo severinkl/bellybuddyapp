@@ -646,6 +646,7 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
         streak: _momentStreak(status),
         weekDays: _momentWeek(status),
         today: _today(),
+        lit: (status?.todayCounted ?? false) || _loggedToday,
       ),
       BuddyOnboardingStep.streakGoal => Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
