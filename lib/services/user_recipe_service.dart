@@ -119,8 +119,14 @@ class UserRecipeService {
       if (ingredientAmounts == null || saved.ingredientAmounts != null) {
         return saved;
       }
-      // The trigger nulls the amounts when `ingredients` changes in an
-      // update without them; write them once more so they stick.
+      // Core's trigger nulls the amounts when an update changes
+      // `ingredients` but not them (an unchanged array counts as not sent),
+      // so an older app that edits only `ingredients` can't leave them
+      // misaligned; write them once more so they stick. Should this second
+      // write fail, the recipe stays saved without amounts and the error
+      // reaches the editor. Drop this write once core drops the trigger,
+      // which it can after `minimum_supported_version` excludes the apps
+      // that don't send amounts.
       final again = await _client
           .from(_table)
           .update({'ingredient_amounts': ingredientAmounts})
