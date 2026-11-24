@@ -378,9 +378,52 @@ void main() {
       expect(backgroundOf(tester, checked), AppTheme.gutFeelingNeutralSoft);
       expect(find.text(AdaptRecipeScreen.allChecked), findsNothing);
       expect(inLine('Sumach', find.byIcon(Icons.help_outline)), findsOne);
-      expect(inLine('Sumach', find.text('unbekannt')), findsOneWidget);
+      // Said once.
+      expect(inLine('Sumach', find.text('nicht im Katalog')), findsOneWidget);
+      expect(find.text('nicht im Katalog'), findsOneWidget);
+      expect(find.text('unbekannt'), findsNothing);
       expect(inLine('Sumach', find.byIcon(Icons.check)), findsNothing);
       expect(inLine('Haferflocken', find.byIcon(Icons.check)), findsOne);
+    });
+
+    testWidgets('a swap to an unknown ingredient says so once', (tester) async {
+      final semantics = tester.ensureSemantics();
+      answer(
+        answer: testAdaptedRecipe(
+          ingredients: const [
+            AdaptedIngredient(amount: '50 g', name: 'Haferflocken'),
+            AdaptedIngredient(
+              amount: '1 EL',
+              name: 'Dattelsirup',
+              replaces: 'Honig',
+              unknown: true,
+            ),
+          ],
+        ),
+      );
+      await pump(tester);
+
+      expect(struck('Honig'), findsOneWidget);
+      expect(inLine('Dattelsirup', find.textContaining('getauscht')), findsOne);
+      expect(inLine('Dattelsirup', find.byIcon(Icons.help_outline)), findsOne);
+      expect(
+        inLine('Dattelsirup', find.text('nicht im Katalog')),
+        findsOneWidget,
+      );
+      expect(find.text('nicht im Katalog'), findsOneWidget);
+      expect(find.text('unbekannt'), findsNothing);
+      expect(
+        find.text(
+          'Mit dem FODMAP-Katalog geprüft. Nicht im Katalog: '
+          'Dattelsirup',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        tester.getSemantics(line('Dattelsirup')).label,
+        'Honig getauscht gegen Dattelsirup, nicht im Katalog',
+      );
+      semantics.dispose();
     });
 
     testWidgets('a Histamin user: no ✓, which would read like a verdict', (
@@ -446,6 +489,38 @@ void main() {
       expect(find.textContaining('›'), findsNothing);
       await tester.tapVisible(original0);
       expect(launches.urls, isEmpty);
+    });
+
+    testWidgets('the original is there with the first result frame', (
+      tester,
+    ) async {
+      final collection = Completer<List<Recipe>>();
+      final gated = _GatedCollection(collection.future)
+        ..collection = [original()];
+      repo = gated;
+      final reply = Completer<AdaptedRecipe>();
+      repo.onAdapt = (_) => reply.future;
+      await pump(tester);
+      expect(gated.collectionFetches, 1);
+
+      collection.complete([original()]);
+      await tester.pumpAndSettle();
+      reply.complete(testAdaptedRecipe());
+      // The first frame that shows the answer.
+      final title = find.text('Porridge mit Ahornsirup');
+      for (var i = 0; i < 5 && title.evaluate().isEmpty; i++) {
+        await tester.pump();
+      }
+
+      expect(title, findsOneWidget);
+      expect(find.text('10 Min · 2 Portionen'), findsOneWidget);
+      expect(find.text('für 2 Portionen'), findsOneWidget);
+      expect(
+        tester
+            .widget<RecipePlaceholder>(find.byType(RecipePlaceholder))
+            .mealType,
+        MealType.breakfast,
+      );
     });
 
     testWidgets('the original gone from the collection: no meta, no Original', (
@@ -688,6 +763,19 @@ void main() {
       expect(errors, isEmpty);
     });
   });
+}
+
+/// The collection arrives with [arrival].
+class _GatedCollection extends FakeRecipeRepository {
+  _GatedCollection(this.arrival);
+
+  final Future<List<Recipe>> arrival;
+
+  @override
+  Future<List<Recipe>> fetchCollection() {
+    collectionFetches++;
+    return arrival;
+  }
 }
 
 /// Saves only once [gate] opens.

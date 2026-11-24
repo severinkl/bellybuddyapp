@@ -19,6 +19,7 @@ import 'package:belly_buddy/screens/recipes/widgets/fit_badge_view.dart';
 import 'package:belly_buddy/screens/recipes/widgets/ingredient_line_view.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_image.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_steps.dart';
+import 'package:belly_buddy/services/recipes/recipe_copy.dart';
 import 'package:belly_buddy/widgets/common/bb_async_state.dart';
 
 import '../../helpers/app_host.dart';
@@ -314,7 +315,7 @@ void main() {
 
       expect(launches.urls, [Uri.parse(sourceUrl)]);
       expect(launches.modes, [LaunchMode.inAppBrowserView]);
-      expect(find.text(CollectionRecipeScreen.sourceFailed), findsNothing);
+      expect(find.text(RecipeCopy.sourceFailed), findsNothing);
     });
 
     testWidgets('a failure says so', (tester) async {
@@ -324,7 +325,7 @@ void main() {
       await tester.tapVisible(find.byKey(CollectionRecipeScreen.sourceKey));
 
       expect(launches.urls, hasLength(1));
-      expect(find.text(CollectionRecipeScreen.sourceFailed), findsOneWidget);
+      expect(find.text(RecipeCopy.sourceFailed), findsOneWidget);
     });
 
     testWidgets('without a name, the site', (tester) async {

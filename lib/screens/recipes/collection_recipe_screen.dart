@@ -38,7 +38,6 @@ class CollectionRecipeScreen extends ConsumerWidget {
       logKey = Key('recipe_log'),
       sourceKey = Key('recipe_source');
 
-  static const sourceFailed = 'Die Quelle konnte nicht geöffnet werden.';
   static const saved = 'Gemerkt. Du findest es unter „Meine Rezepte".';
   static const unsaved = 'Nicht mehr gemerkt.';
   static const saveFailed =
@@ -271,7 +270,7 @@ class _SourceLink extends StatelessWidget {
         onTap: () => openExternalUrl(
           context,
           url,
-          failureMessage: CollectionRecipeScreen.sourceFailed,
+          failureMessage: RecipeCopy.sourceFailed,
           open: openUrl,
           mode: LaunchMode.inAppBrowserView,
         ),

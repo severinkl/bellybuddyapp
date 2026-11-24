@@ -163,6 +163,26 @@ void main() {
     handle.dispose();
   });
 
+  testWidgets('a swap to an unknown ingredient: said as not in the catalog', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await pump(
+      tester,
+      const IngredientLineView(
+        amount: '1 EL',
+        name: 'Dattelsirup',
+        mark: LineMark.unknown,
+        replaces: 'Honig',
+      ),
+    );
+    expect(
+      tester.getSemantics(find.byType(IngredientLineView)).label,
+      'Honig getauscht gegen Dattelsirup, nicht im Katalog',
+    );
+    handle.dispose();
+  });
+
   testWidgets('removed: struck name and weggelassen', (tester) async {
     await pump(
       tester,

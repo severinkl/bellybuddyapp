@@ -24,7 +24,6 @@ import '../../utils/url_utils.dart';
 import '../../widgets/buddy/buddy.dart';
 import '../../widgets/buddy/buddy_side_header.dart';
 import '../../widgets/common/bb_button.dart';
-import 'collection_recipe_screen.dart';
 import 'widgets/fit_badge_view.dart';
 import 'widgets/ingredient_line_view.dart';
 import 'widgets/recipe_collection_card.dart';
@@ -114,6 +113,9 @@ class _AdaptRecipeScreenState extends ConsumerState<AdaptRecipeScreen> {
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(adaptRecipeProvider(widget.recipeId));
+    // From the first frame, so the original (picture, meta, servings) is
+    // loaded by the time the answer comes, also on a deep link.
+    final fit = ref.watch(recipeFitProvider(widget.recipeId)).value;
     AdaptedRecipe? result;
     final Widget body;
     if (state.isLoading ||
@@ -130,11 +132,7 @@ class _AdaptRecipeScreenState extends ConsumerState<AdaptRecipeScreen> {
       );
     } else if (state.value case final adapted?) {
       result = adapted;
-      body = _Result(
-        adapted: adapted,
-        fit: ref.watch(recipeFitProvider(widget.recipeId)).value,
-        openUrl: widget.openUrl,
-      );
+      body = _Result(adapted: adapted, fit: fit, openUrl: widget.openUrl);
     } else {
       body = _Question(onStart: () => unawaited(_adapt.start()));
     }
@@ -588,8 +586,8 @@ class _CheckLine extends StatelessWidget {
   }
 }
 
-/// „Zutaten": each adapted ingredient (✓, or „?" and „unbekannt" when not
-/// in the catalog; a swap with its original struck), then the removed
+/// „Zutaten": each adapted ingredient (✓, or „?" and „nicht im Katalog"
+/// when not in it; a swap with its original struck), then the removed
 /// ones struck with „weggelassen".
 class _IngredientsCard extends StatelessWidget {
   const _IngredientsCard({
@@ -620,7 +618,10 @@ class _IngredientsCard extends StatelessWidget {
             name: i.name,
             mark: i.unknown ? LineMark.unknown : known,
             replaces: i.replaces,
-            note: i.unknown ? 'unbekannt' : null,
+            // The line says „nicht im Katalog" itself, except for a swap.
+            note: i.unknown && i.replaces != null
+                ? RecipeCopy.notInCatalog
+                : null,
             amountColumn: amounts,
           ),
         // A neutral dot keeps them in line with the marked names.
@@ -691,7 +692,7 @@ class _OriginalLine extends StatelessWidget {
           : () => openExternalUrl(
               context,
               url,
-              failureMessage: CollectionRecipeScreen.sourceFailed,
+              failureMessage: RecipeCopy.sourceFailed,
               open: openUrl,
               mode: LaunchMode.inAppBrowserView,
             ),

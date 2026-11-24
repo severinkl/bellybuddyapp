@@ -39,6 +39,9 @@ abstract final class RecipeCopy {
   static const fitsSemantics = 'passt';
   static const stepChanged = 'geändert';
 
+  /// When a recipe's source didn't open.
+  static const sourceFailed = 'Die Quelle konnte nicht geöffnet werden.';
+
   /// The tags on a recipe card's picture.
   static const tagSaved = 'Gemerkt';
   static const tagAdapted = 'Angepasst';

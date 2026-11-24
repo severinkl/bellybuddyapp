@@ -51,7 +51,12 @@ class IngredientLineView extends StatelessWidget {
 
   String get _semanticsLabel {
     final swapped = replaces;
-    if (swapped != null) return RecipeCopy.swappedSemantics(swapped, name);
+    if (swapped != null) {
+      final swap = RecipeCopy.swappedSemantics(swapped, name);
+      return mark == LineMark.unknown
+          ? '$swap, ${RecipeCopy.notInCatalog}'
+          : swap;
+    }
     final head = [?amount, name].join(' ');
     if (removed) return '$head, ${RecipeCopy.removedSemantics}';
     return switch (mark) {
