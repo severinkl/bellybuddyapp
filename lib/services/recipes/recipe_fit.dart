@@ -167,10 +167,11 @@ RecipeFit fitOf(
 /// recipes ([fit] is [fitOf]).
 ///
 /// An ingredient is kritisch, as in core's `critical_hits`, when it carries
-/// an allergen of one of the judgeable rules, or when its catalog row has a
-/// FODMAP flag of one of them and the stated amount is not low-FODMAP. An
-/// unmapped line has no flags, so only its allergens count. The other lines
-/// are [LineMark.fits], or [LineMark.neutral] while an intolerance can't be
+/// an allergen of one of the user's rules, or when its catalog row has a
+/// FODMAP flag of one of them and the stated amount is not low-FODMAP;
+/// whether a rule is judgeable doesn't matter here. An unmapped line has no
+/// flags, so only its allergens count. The other lines are
+/// [LineMark.fits], or [LineMark.neutral] while an intolerance can't be
 /// judged.
 class UserIntolerances {
   factory UserIntolerances(
@@ -180,16 +181,13 @@ class UserIntolerances {
     if (rules == null || intolerances == null) {
       return const UserIntolerances._(checked: false);
     }
-    final named = [
+    final named = List<_NamedRule>.unmodifiable([
       for (final name in intolerances.toSet())
         if (rules[name] case final rule?) (name: name, rule: rule),
-    ];
+    ]);
     return UserIntolerances._(
       checked: true,
-      judgeable: [
-        for (final r in named)
-          if (r.rule.judgeable) r,
-      ],
+      named: named,
       selfCheck: List.unmodifiable([
         for (final r in named)
           if (!r.rule.judgeable) r.name,
@@ -199,9 +197,9 @@ class UserIntolerances {
 
   const UserIntolerances._({
     required this.checked,
-    List<_NamedRule> judgeable = const [],
+    List<_NamedRule> named = const [],
     this.selfCheck = const [],
-  }) : _judgeable = judgeable;
+  }) : _named = named;
 
   /// Whether the table and the intolerances are known.
   final bool checked;
@@ -209,9 +207,13 @@ class UserIntolerances {
   /// The intolerances whose rule is not judgeable, in profile order.
   final List<String> selfCheck;
 
-  /// The rules that decide the lines, in profile order; intolerances
-  /// missing from the table hit nothing.
-  final List<_NamedRule> _judgeable;
+  /// The user's rules, in profile order; intolerances missing from the
+  /// table hit nothing. All of them decide which lines are kritisch.
+  final List<_NamedRule> _named;
+
+  /// The rules the catalog can judge: they decide ✓ and „nicht im
+  /// Katalog".
+  Iterable<_NamedRule> get _judgeable => _named.where((r) => r.rule.judgeable);
 
   RecipeFit fit(Recipe recipe) {
     if (!checked) return RecipeFit(recipe: recipe, checked: false);
@@ -229,24 +231,19 @@ class UserIntolerances {
   }
 
   /// Equal for the same intolerances against the same table, so a profile
-  /// write that leaves them doesn't re-rank.
+  /// write that leaves them doesn't re-rank ([selfCheck] follows from them).
   @override
   bool operator ==(Object other) =>
       other is UserIntolerances &&
       other.checked == checked &&
-      listEquals(other.selfCheck, selfCheck) &&
-      listEquals(other._judgeable, _judgeable);
+      listEquals(other._named, _named);
 
   @override
-  int get hashCode => Object.hash(
-    checked,
-    Object.hashAll(selfCheck),
-    Object.hashAll(_judgeable),
-  );
+  int get hashCode => Object.hash(checked, Object.hashAll(_named));
 
   LineFit _lineFit(RecipeIngredient line) {
     final because = [
-      for (final r in _judgeable)
+      for (final r in _named)
         if (_hits(r.rule, line)) r.name,
     ];
     if (because.isNotEmpty) {

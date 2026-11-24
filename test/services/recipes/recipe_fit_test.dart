@@ -355,6 +355,35 @@ void main() {
       );
     });
 
+    test('a rule that is not judgeable still hits by what it names', () {
+      // As core's critical_hits, which ignores `judgeable`: should the
+      // table give Histamin an allergen, a line with it is kritisch.
+      const rules = IntoleranceRules({
+        'Histamin': IntoleranceRule(allergens: {'tomate'}, judgeable: false),
+      });
+      final fit = fitOf(
+        testRecipe(
+          ingredients: [
+            testLine('Tomate', allergens: {'tomate'}),
+            _reis,
+            testLine('Drachenfrucht', mapped: false),
+          ],
+        ),
+        rules: rules,
+        intolerances: ['Histamin'],
+      );
+
+      expect(_marks(fit), {
+        'Tomate': LineMark.kritisch,
+        'Reis': LineMark.neutral,
+        // Nothing judgeable needs the catalog's flags.
+        'Drachenfrucht': LineMark.neutral,
+      });
+      expect(fit.lines.first.because, ['Histamin']);
+      expect(fit.selfCheck, ['Histamin']);
+      expect(fit.badge, const KritischBadge(1));
+    });
+
     test('every app option is in the table; only Histamin unjudgeable', () {
       for (final option in AppConstants.intoleranceOptions) {
         expect(_rules[option], isNotNull, reason: option);
