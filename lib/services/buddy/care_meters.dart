@@ -96,8 +96,7 @@ class CareLog {
     DateTime? latest(Iterable<DateTime> times) {
       DateTime? last;
       for (final t in times) {
-        final local = t.toLocal();
-        if (last == null || local.isAfter(last)) last = local;
+        if (last == null || t.isAfter(last)) last = t;
       }
       return last;
     }
@@ -105,7 +104,7 @@ class CareLog {
     final lastGutFeeling =
         [
           for (final g in s.gutFeelings)
-            if (isSameDay(g.trackedAt.toLocal(), day)) g,
+            if (isSameDay(g.trackedAt, day)) g,
         ].fold<GutFeelingEntry?>(
           null,
           (a, b) => a == null || b.trackedAt.isAfter(a.trackedAt) ? b : a,

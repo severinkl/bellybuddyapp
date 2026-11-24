@@ -330,7 +330,7 @@ void main() {
         for (final t in tables) {
           verify(() => s.filters[t]!.eq('user_id', testUserId)).called(1);
           verify(
-            () => s.filters[t]!.lt('tracked_at', '2026-11-23T00:00:00.000'),
+            () => s.filters[t]!.lt('tracked_at', '2026-11-23T00:00:00.000Z'),
           ).called(1);
           verify(
             () => s.filters[t]!.order('tracked_at', ascending: false),
@@ -343,11 +343,12 @@ void main() {
 
     test('maps each table\'s row, null without one', () async {
       setUpTables({
+        // As PostgREST sends them: the wall clock in the UTC slot.
         'meal_entries': [
-          {'tracked_at': '2026-11-22T19:00:00.000'},
+          {'tracked_at': '2026-11-22T19:00:00+00:00'},
         ],
         'drink_entries': [
-          {'tracked_at': '2026-11-22T21:00:00.000'},
+          {'tracked_at': '2026-11-22T21:00:00+00:00'},
         ],
       });
 

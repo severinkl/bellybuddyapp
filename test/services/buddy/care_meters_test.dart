@@ -1,10 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:belly_buddy/models/drink_entry.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/services/buddy/care_meters.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/services/entry_query_service.dart';
 import 'package:belly_buddy/utils/gut_feeling_rating.dart';
+import 'package:belly_buddy/utils/wall_clock.dart';
 
 import '../../helpers/fixtures.dart';
 
@@ -137,19 +139,29 @@ void main() {
       expect(log.lastToiletAt, isNull);
     });
 
-    test('converts UTC tracked_at to local', () {
-      final utc = DateTime.utc(2026, 11, 23, 7);
+    test('takes tracked_at as the wall clock PostgREST sends', () {
+      // `tracked_at` holds the wall clock in the UTC slot: 07:00 local
+      // arrives as `…T07:00:00+00:00` and stays 07:00.
       final log = CareLog.fromEntries(
         EntriesState(
           day: day,
-          drinks: [testDrinkEntry(trackedAt: utc)],
-          latestBefore: LatestEntries(meal: DateTime.utc(2026, 11, 22, 18)),
+          drinks: [
+            DrinkEntry.fromDbRow({
+              'id': 'd',
+              'drink_id': 'water',
+              'amount_ml': 250,
+              'tracked_at': '2026-11-23T07:00:00+00:00',
+            }),
+          ],
+          latestBefore: LatestEntries(
+            meal: wallClockFromWire('2026-11-22T18:00:00+00:00'),
+          ),
         ),
         day,
       );
-      expect(log.lastDrinkAt, utc.toLocal());
+      expect(log.lastDrinkAt, _t(7));
       expect(log.lastDrinkAt!.isUtc, isFalse);
-      expect(log.lastMealAt, DateTime.utc(2026, 11, 22, 18).toLocal());
+      expect(log.lastMealAt, _t(18, 0, 22));
       expect(log.lastMealAt!.isUtc, isFalse);
     });
 

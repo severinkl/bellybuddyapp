@@ -15,6 +15,7 @@ import 'package:belly_buddy/models/toilet_entry.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
+import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 import 'package:belly_buddy/services/buddy/care_meters.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/services/buddy/log_moment.dart';
@@ -23,6 +24,7 @@ import 'package:belly_buddy/services/entry_query_service.dart';
 import 'package:belly_buddy/services/insights/insights_engine.dart';
 import 'package:belly_buddy/utils/gut_feeling_rating.dart';
 import 'package:belly_buddy/utils/wall_clock.dart';
+import 'package:belly_buddy/widgets/buddy/buddy_pose.dart';
 
 import '../helpers/fixtures.dart';
 import '../helpers/mocks.dart';
@@ -225,6 +227,37 @@ void main() {
 
       expect(log.lastGutFeelingLevel, GutFeelingRatingLevel.schlecht);
     });
+
+    test(
+      "yesterday's 23:30 entry is not today's: sleepy in the morning",
+      () async {
+        final client = MockSupabaseClient();
+        final filters = _serveRows(client, {
+          'drink_entries': [
+            {'tracked_at': _wire('2026-11-22T23:30')},
+          ],
+        });
+
+        final latest = await EntryQueryService(
+          client,
+        ).fetchLatestBefore(userId: testUserId, before: day);
+        expect(latest.drink, DateTime(2026, 11, 22, 23, 30));
+        verify(
+          () => filters['drink_entries']!.lt(
+            'tracked_at',
+            '2026-11-23T00:00:00.000Z',
+          ),
+        ).called(1);
+
+        final morning = DateTime(2026, 11, 23, 7);
+        final log = CareLog.fromEntries(
+          EntriesState(day: day, latestBefore: latest),
+          day,
+        );
+        expect(log.anyOn(morning), isFalse);
+        expect(deriveBuddyMood(log, morning), BuddyMood.sleepy);
+      },
+    );
   });
 
   group('meal prompt', () {

@@ -139,7 +139,7 @@ class EntryQueryService {
     required DateTime before,
   }) async {
     try {
-      final beforeIso = before.toIso8601String();
+      final beforeIso = wallClockToWire(before);
       Future<DateTime?> latest(String table) async {
         final rows = await _client
             .from(table)
@@ -150,7 +150,7 @@ class EntryQueryService {
             .limit(1);
         return rows.isEmpty
             ? null
-            : DateTime.parse(rows.first['tracked_at'] as String);
+            : wallClockFromWire(rows.first['tracked_at'] as String);
       }
 
       final results = await Future.wait([
