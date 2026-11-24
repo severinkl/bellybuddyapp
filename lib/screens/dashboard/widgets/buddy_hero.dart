@@ -98,7 +98,9 @@ _Cue _cueFor(BuddyAnnouncement a) => switch (a) {
 /// dashboard is not under the splash or covered by another route or tab):
 /// the first line, the follow-up to a fresh [BuddyLogEvent] and the
 /// Buddy's announcements. His cues and their sheets also wait while Home is
-/// covered ([homeCoveredProvider]: a sheet over it, a page on its way in).
+/// covered ([homeCoveredProvider]: a page over it or on its way in, a
+/// sheet, dialog or menu over it, another tab); the hero tells it whether
+/// Home's route is on top ([_onRoute]).
 /// Without a Buddy status (loading, error, signed out) the Buddy still
 /// shows, named 'Buddy', without the streak chip.
 class BuddyHero extends ConsumerStatefulWidget {
@@ -252,26 +254,21 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     if (router != _router) {
       _router?.routerDelegate.removeListener(_onRoute);
       _router = router?..routerDelegate.addListener(_onRoute);
+      _onRoute();
     }
     final visible = TickerMode.valuesOf(context).enabled;
     if (visible == _visible) return;
     _visible = visible;
-    final cover = ref.read(homeCoveredProvider.notifier);
     if (visible) {
       _afterFrame(() {
-        // Shown again: what left Home no longer covers it.
-        cover.homeShown();
         _consumeEvent();
         _takeAnnouncements();
         _maybeGreet();
         _resume();
       });
-    } else {
-      // Hidden, Home's visibility holds the cues: a page that covered it
-      // no longer needs to.
-      _afterFrame(cover.homeHidden);
+    } else if (_override == BuddyMood.empathetic) {
       // Leaving the dashboard ends this visit's empathy.
-      if (_override == BuddyMood.empathetic) _setOverride(null);
+      _setOverride(null);
     }
   }
 
@@ -283,13 +280,17 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     super.dispose();
   }
 
-  /// The router moved: back on Home's route (a page popped, or replaced by
-  /// a `go` to Home, even on its way in while Home was never hidden), what
-  /// left Home no longer covers it ([HomeCoverNotifier.homeShown]).
-  void _onRoute() {
-    if (_topLocation != RoutePaths.dashboard) return;
-    _afterFrame(ref.read(homeCoveredProvider.notifier).homeShown);
-  }
+  /// The router moved: whether Home's route is on top
+  /// ([HomeCoverNotifier.homeCurrent]). Any page pushed over Home covers it
+  /// from the push on, before it is built, so what goes on right after
+  /// waits; so does another tab. Popped or replaced (a `go` to Home, also
+  /// on its way in), Home is free again. Without a router Home is on top.
+  void _onRoute() => outsideBuild(() {
+    if (!mounted) return;
+    ref
+        .read(homeCoveredProvider.notifier)
+        .homeCurrent(_router == null || _topLocation == RoutePaths.dashboard);
+  });
 
   /// The path of the router's top route.
   String? get _topLocation =>
@@ -689,10 +690,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     if (ref.read(journeyProvider) == false) {
       final open = await showWeeklyTipsOfferSheet(context);
       if (!mounted) return;
-      if (open) {
-        ref.read(homeCoveredProvider.notifier).leftHome(null);
-        context.go(RoutePaths.discover);
-      }
+      if (open) context.go(RoutePaths.discover);
     }
     _nextCue();
   }
@@ -759,9 +757,8 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// it comes again ([_endUnshown]).
   Future<void> _openPatternsUnlocked() async {
     if (_deferSheet(_openPatternsUnlocked)) return;
-    ref
-        .read(homeCoveredProvider.notifier)
-        .leftHome(context.push(RoutePaths.patternsUnlocked));
+    // Covers Home as it is pushed ([_onRoute]).
+    unawaited(context.push(RoutePaths.patternsUnlocked));
     _afterFrame(
       () => _topLocation == RoutePaths.patternsUnlocked
           ? _nextCue()

@@ -6,6 +6,7 @@ import '../models/meal_prefill.dart';
 import '../providers/auth_provider.dart';
 import '../providers/buddy_onboarding_gate_provider.dart';
 import '../providers/health_consent_provider.dart';
+import '../providers/home_cover_provider.dart';
 import '../providers/upgrade_gate_provider.dart';
 import '../utils/logger.dart';
 import '../screens/screens.dart';
@@ -29,10 +30,24 @@ final navigatorKeyProvider = Provider<GlobalKey<NavigatorState>>((ref) {
   return GlobalKey<NavigatorState>();
 });
 
+/// The navigator of Home's tab, whose sheets cover Home too
+/// ([HomeCoverObserver]).
+final homeNavigatorKeyProvider = Provider<GlobalKey<NavigatorState>>(
+  (ref) => GlobalKey<NavigatorState>(debugLabel: 'home'),
+);
+
 final routerProvider = Provider<GoRouter>((ref) {
   final navigatorKey = ref.read(navigatorKeyProvider);
+  final homeNavigatorKey = ref.read(homeNavigatorKeyProvider);
   return GoRouter(
     navigatorKey: navigatorKey,
+    // Sheets, dialogs and menus over Home cover it, so the Buddy waits.
+    observers: [
+      HomeCoverObserver(
+        () => ref.read(homeCoveredProvider.notifier),
+        navigators: [navigatorKey, homeNavigatorKey],
+      ),
+    ],
     initialLocation: RoutePaths.welcome,
     refreshListenable: _RouterRefreshNotifier(ref),
     errorBuilder: (context, state) => const NotFoundScreen(),
@@ -136,6 +151,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
         branches: [
           StatefulShellBranch(
+            navigatorKey: homeNavigatorKey,
             routes: [
               GoRoute(
                 path: RoutePaths.dashboard,

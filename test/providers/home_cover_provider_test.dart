@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 
 import 'package:belly_buddy/providers/home_cover_provider.dart';
 
@@ -55,64 +56,194 @@ void main() {
     expect(c.read(homeCoveredProvider), isFalse);
   });
 
-  test(
-    'a page covers Home until it closes, past the sheet that opened it',
-    () async {
-      final c = container();
-      final cover = c.read(homeCoveredProvider.notifier);
-      final page = Completer<void>();
+  test("Home's route not on top (a page, another tab) covers it until it is "
+      'again', () {
+    final c = container();
+    final cover = c.read(homeCoveredProvider.notifier);
 
-      await cover.whileOpen(() async => cover.leftHome(page.future));
-      expect(c.read(homeCoveredProvider), isTrue);
+    cover.homeCurrent(false);
+    expect(c.read(homeCoveredProvider), isTrue);
+    cover.homeCurrent(false);
+    expect(c.read(homeCoveredProvider), isTrue);
 
-      page.complete();
-      await pumpEventQueue();
-      expect(c.read(homeCoveredProvider), isFalse);
-    },
-  );
+    cover.homeCurrent(true);
+    expect(c.read(homeCoveredProvider), isFalse);
+  });
 
-  for (final (name, end) in [
-    ('hidden', (HomeCoverNotifier c) => c.homeHidden()),
-    ('shown again', (HomeCoverNotifier c) => c.homeShown()),
-  ]) {
-    test('another tab covers Home until it is $name', () {
-      final c = container();
-      final cover = c.read(homeCoveredProvider.notifier);
+  test('something over the app covers Home until it ends, past the sheet '
+      'that opened it', () async {
+    final c = container();
+    final cover = c.read(homeCoveredProvider.notifier);
+    final back = Completer<void>();
 
-      cover.leftHome(null);
-      expect(c.read(homeCoveredProvider), isTrue);
+    await cover.whileOpen(() async => cover.leftHome(back.future));
+    expect(c.read(homeCoveredProvider), isTrue);
 
-      end(cover);
-      expect(c.read(homeCoveredProvider), isFalse);
-    });
+    back.complete();
+    await pumpEventQueue();
+    expect(c.read(homeCoveredProvider), isFalse);
+  });
 
-    test(
-      'Home $name: a page no longer covers it, a sheet still does',
-      () async {
-        final c = container();
-        final cover = c.read(homeCoveredProvider.notifier);
-        final sheet = Completer<void>();
+  test('every cover counts: Home is free once none is left', () async {
+    final c = container();
+    final cover = c.read(homeCoveredProvider.notifier);
+    final sheet = Completer<void>();
+    final popup = _route();
 
-        // A page that never closes (removed by a `go`, not popped).
-        cover.leftHome(Completer<void>().future);
-        unawaited(cover.whileOpen(() => sheet.future));
-        end(cover);
-        expect(c.read(homeCoveredProvider), isTrue);
+    unawaited(cover.whileOpen(() => sheet.future));
+    cover
+      ..popupOpened(popup)
+      ..homeCurrent(false);
 
-        sheet.complete();
-        await pumpEventQueue();
-        expect(c.read(homeCoveredProvider), isFalse);
-      },
-    );
-  }
+    sheet.complete();
+    await pumpEventQueue();
+    expect(c.read(homeCoveredProvider), isTrue);
+    cover.popupClosed(popup);
+    expect(c.read(homeCoveredProvider), isTrue);
+    cover.homeCurrent(true);
+    expect(c.read(homeCoveredProvider), isFalse);
+  });
 
   test('another user: uncovered', () async {
     final c = container();
-    c.read(homeCoveredProvider.notifier).leftHome(Completer<void>().future);
+    c.read(homeCoveredProvider.notifier)
+      ..popupOpened(_route())
+      ..homeCurrent(false);
     expect(c.read(homeCoveredProvider), isTrue);
 
     user.set(c, 'u2');
 
     expect(c.read(homeCoveredProvider), isFalse);
   });
+
+  group('HomeCoverObserver', () {
+    final watched = GlobalKey<NavigatorState>();
+    final other = GlobalKey<NavigatorState>();
+
+    /// Home on [watched], next to a tab's navigator [other], both observed.
+    Future<ProviderContainer> pumpNavigators(WidgetTester tester) async {
+      final c = container();
+      addTearDown(c.dispose);
+      HomeCoverObserver observer() => HomeCoverObserver(
+        () => c.read(homeCoveredProvider.notifier),
+        navigators: [watched],
+      );
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: c,
+          child: MaterialApp(
+            navigatorKey: watched,
+            navigatorObservers: [observer()],
+            home: Scaffold(
+              body: Row(
+                children: [
+                  const Expanded(child: Text('Home')),
+                  Expanded(
+                    child: Navigator(
+                      key: other,
+                      observers: [observer()],
+                      onGenerateRoute: (_) => MaterialPageRoute<void>(
+                        builder: (_) => const Text('another tab'),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+      return c;
+    }
+
+    testWidgets('a sheet or dialog over Home covers it until it is closed', (
+      tester,
+    ) async {
+      final c = await pumpNavigators(tester);
+      final context = watched.currentContext!;
+
+      unawaited(
+        showModalBottomSheet<void>(
+          context: context,
+          builder: (_) => const Text('sheet'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(c.read(homeCoveredProvider), isTrue);
+      unawaited(
+        showDialog<void>(context: context, builder: (_) => const Text('dlg')),
+      );
+      await tester.pumpAndSettle();
+
+      watched.currentState!.pop();
+      await tester.pumpAndSettle();
+      expect(c.read(homeCoveredProvider), isTrue);
+      watched.currentState!.pop();
+      await tester.pumpAndSettle();
+      expect(c.read(homeCoveredProvider), isFalse);
+    });
+
+    testWidgets('covered as soon as the sheet is pushed, before a frame', (
+      tester,
+    ) async {
+      final c = await pumpNavigators(tester);
+
+      unawaited(
+        showModalBottomSheet<void>(
+          context: watched.currentContext!,
+          builder: (_) => const Text('sheet'),
+        ),
+      );
+
+      expect(c.read(homeCoveredProvider), isTrue);
+    });
+
+    testWidgets('a removed sheet no longer covers Home', (tester) async {
+      final c = await pumpNavigators(tester);
+      final sheet = ModalBottomSheetRoute<void>(
+        builder: (_) => const Text('sheet'),
+        isScrollControlled: false,
+      );
+      unawaited(watched.currentState!.push(sheet));
+      await tester.pumpAndSettle();
+      expect(c.read(homeCoveredProvider), isTrue);
+
+      watched.currentState!.removeRoute(sheet);
+      await tester.pumpAndSettle();
+      expect(c.read(homeCoveredProvider), isFalse);
+    });
+
+    testWidgets("pages are the router's, another tab's sheets not Home's", (
+      tester,
+    ) async {
+      final c = await pumpNavigators(tester);
+
+      unawaited(
+        watched.currentState!.push(
+          MaterialPageRoute<void>(builder: (_) => const Text('page')),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(c.read(homeCoveredProvider), isFalse);
+      watched.currentState!.pop();
+      await tester.pumpAndSettle();
+
+      unawaited(
+        showModalBottomSheet<void>(
+          context: other.currentContext!,
+          useRootNavigator: false,
+          builder: (_) => const Text('a tab sheet'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('a tab sheet'), findsOneWidget);
+      expect(c.read(homeCoveredProvider), isFalse);
+    });
+  });
 }
+
+/// A sheet's route, never pushed.
+Route<void> _route() => ModalBottomSheetRoute<void>(
+  builder: (_) => const SizedBox(),
+  isScrollControlled: false,
+);

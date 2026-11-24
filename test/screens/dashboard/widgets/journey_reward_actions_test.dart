@@ -18,15 +18,14 @@ import '../../../helpers/fakes.dart';
 import '../../../helpers/fixtures.dart';
 import '../../../helpers/riverpod_helpers.dart';
 
-/// [HomeCoverNotifier] that records each page Home was left for (null: a
-/// tab).
+/// [HomeCoverNotifier] that records what over the app Home was left for.
 class _RecordingCover extends HomeCoverNotifier {
-  final left = <Future<void>?>[];
+  final left = <Future<void>>[];
 
   @override
-  void leftHome(Future<void>? page) {
-    left.add(page);
-    super.leftHome(page);
+  void leftHome(Future<void> until) {
+    left.add(until);
+    super.leftHome(until);
   }
 }
 
@@ -90,9 +89,10 @@ void main() {
   String location() =>
       router.routerDelegate.currentConfiguration.last.matchedLocation;
 
-  group('openJourneyReward: Home left', () {
-    testWidgets('a recipe page: left with the page, which completes once '
-        'it is closed', (tester) async {
+  // A page or tab covers Home through the router (the hero follows it:
+  // buddy_hero_test); only what the router can't see is told here.
+  group('openJourneyReward: what it opens', () {
+    testWidgets('a recipe page', (tester) async {
       await pumpOpen(
         tester,
         1,
@@ -102,28 +102,21 @@ void main() {
         ),
       );
       expect(location(), RoutePaths.collectionRecipeFor('r1'));
-      expect(cover.left, hasLength(1));
-      var closed = false;
-      unawaited(cover.left.single!.whenComplete(() => closed = true));
-
-      router.pop();
-      await tester.pumpAndSettle();
-
-      expect(closed, isTrue);
+      expect(cover.left, isEmpty);
     });
 
-    testWidgets('Muster (day 6): left with the page', (tester) async {
+    testWidgets('Muster (day 6)', (tester) async {
       await pumpOpen(tester, 6, const JourneyRewards(earnedDay: 6));
 
       expect(location(), RoutePaths.patterns);
-      expect(cover.left.single, isNotNull);
+      expect(cover.left, isEmpty);
     });
 
-    testWidgets('no pick: the recipes, left for a tab', (tester) async {
+    testWidgets('no pick: the recipes', (tester) async {
       await pumpOpen(tester, 1, const JourneyRewards(earnedDay: 1));
 
       expect(location(), RoutePaths.discoverRecipes);
-      expect(cover.left, [null]);
+      expect(cover.left, isEmpty);
     });
 
     for (final (name, back) in [

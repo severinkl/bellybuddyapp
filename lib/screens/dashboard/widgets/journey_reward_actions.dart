@@ -28,9 +28,10 @@ import 'journey_day_sheet.dart';
 /// - 4: nothing (the saying is the reward);
 /// - 6 and 7: Muster.
 ///
-/// Navigations are not awaited; each tells [homeCoveredProvider] that Home
-/// is left as it starts. The article, once it opened, covers Home until the
-/// user is back in the app ([backInApp]); day 4 never leaves Home.
+/// Navigations are not awaited; a page or tab covers Home as it starts
+/// ([homeCoveredProvider], from the router). The article, once it opened,
+/// covers Home until the user is back in the app ([backInApp]); day 4 never
+/// leaves Home.
 Future<void> openJourneyReward(
   BuildContext context,
   WidgetRef ref,
@@ -39,17 +40,11 @@ Future<void> openJourneyReward(
 }) async {
   final rewards = ref.read(journeyRewardsProvider) ?? const JourneyRewards();
   final weeklyTips = ref.read(weeklyTipsEnabledProvider);
-  final cover = ref.read(homeCoveredProvider.notifier);
-  void push(Future<void> page) {
-    cover.leftHome(page);
-    unawaited(page);
-  }
 
   void openPick() {
     if (rewardPick(day, rewards, weeklyTips: weeklyTips) case final pick?) {
-      push(context.openRecipe(pick.id));
+      unawaited(context.openRecipe(pick.id));
     } else {
-      cover.leftHome(null);
       context.go(RoutePaths.discoverRecipes);
     }
   }
@@ -65,18 +60,20 @@ Future<void> openJourneyReward(
       );
       // Over the app, Home stays where it is: nothing that waits for Home
       // may play under the browser.
-      if (opened) cover.leftHome(backInApp());
+      if (opened) {
+        ref.read(homeCoveredProvider.notifier).leftHome(backInApp());
+      }
     case 3:
       switch (day3Of(rewards, weeklyTips: weeklyTips)) {
         case Day3.waiting || Day3.offerOpen || Day3.tip:
-          push(context.push(RoutePaths.recommendations));
+          unawaited(context.push(RoutePaths.recommendations));
         case Day3.recipe:
           openPick();
       }
     case 1 || 5:
       openPick();
     case 6 || 7:
-      push(context.push(RoutePaths.patterns));
+      unawaited(context.push(RoutePaths.patterns));
   }
 }
 

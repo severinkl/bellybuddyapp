@@ -41,6 +41,7 @@ import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
 import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
 import 'package:belly_buddy/widgets/common/weekly_tips_switch.dart';
+import 'package:belly_buddy/widgets/log_sheet/log_sheet.dart';
 
 import '../../../helpers/app_lifecycle.dart';
 import '../../../helpers/ambient_animations.dart';
@@ -162,6 +163,7 @@ const _goalTitle = "Wir haben's geschafft! Neues Ziel?";
 const _tipsArrivedLine = 'Neue Tipps sind da! ✨';
 const _sheetTitle = 'Dein Streak';
 const _rewardsButton = Key('open_rewards');
+const _logButton = Key('open_log_sheet');
 const _pickTitle = 'Neues Streak-Ziel';
 
 /// The first tip's failure line while the weekly tips are off (the hero's
@@ -250,7 +252,15 @@ void main() {
       ],
     );
     addTearDown(container.dispose);
+    final rootNavigator = GlobalKey<NavigatorState>();
     router = GoRouter(
+      navigatorKey: rootNavigator,
+      observers: [
+        HomeCoverObserver(
+          () => container.read(homeCoveredProvider.notifier),
+          navigators: [rootNavigator],
+        ),
+      ],
       initialLocation: RoutePaths.dashboard,
       redirect: (_, state) =>
           redirectUnlocked &&
@@ -280,6 +290,19 @@ void main() {
                                   openUrl: opener.call,
                                 ),
                                 child: const Text('Belohnungen'),
+                              ),
+                            ),
+                            // The bottom bar's „Eintragen" (its sheet on the
+                            // root navigator, as in the app).
+                            Builder(
+                              builder: (context) => TextButton(
+                                key: _logButton,
+                                onPressed: () => showLogSheet(
+                                  context,
+                                  day: startOfDay(now),
+                                  now: now,
+                                ),
+                                child: const Text('Eintragen'),
                               ),
                             ),
                           ],
@@ -1291,6 +1314,99 @@ void main() {
 
         expect(opener.urls, [Uri.parse(JourneyCopy.articleUrl)]);
         expect(find.text(JourneyCopy.articleFailure), findsOneWidget);
+        expect(controller(tester).bubble, _firstTipFailedLine);
+      });
+
+      testWidgets('a tracker opened from Home as the celebration ends: the '
+          'sheet waits until Home is back', (tester) async {
+        journey = true;
+        rewards = day1;
+        buddy = _FakeBuddy(
+          () => _status(announcements: const [BuddyAnnouncement.journeyReward]),
+        );
+        await pumpHero(tester);
+        // Just before the sheet is due: a need bubble opens its tracker.
+        await advance(
+          tester,
+          buddyActionDuration(BuddyAction.celebrate) -
+              const Duration(milliseconds: 100),
+        );
+        await tester.tap(find.byKey(CareRing.needKey(CareNeed.gutFeeling)));
+        // Not over the page on its way in, nor once it covers Home.
+        for (var i = 0; i < 10; i++) {
+          await tester.pump(const Duration(milliseconds: 50));
+          expect(find.byType(JourneyDaySheet), findsNothing);
+        }
+        await tester.pump(const Duration(seconds: 3));
+        expect(location(), RoutePaths.gutFeelingTracker);
+        expect(find.byType(JourneyDaySheet), findsNothing);
+        expect(buddy.shown, isEmpty);
+
+        router.pop();
+        await tester.pump();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(location(), RoutePaths.dashboard);
+        expect(find.byType(JourneyDaySheet), findsOneWidget);
+        await closeOffer(tester, JourneyDaySheet.laterKey);
+        expect(buddy.shown, [BuddyAnnouncement.journeyReward]);
+      });
+
+      testWidgets('„Eintragen" open as the sheet comes due: it waits until '
+          '„Eintragen" closed', (tester) async {
+        journey = true;
+        rewards = day1;
+        buddy = _FakeBuddy(
+          () => _status(announcements: const [BuddyAnnouncement.journeyReward]),
+        );
+        await pumpHero(tester);
+        await tester.ensureVisible(find.byKey(_logButton));
+        await tester.tap(find.byKey(_logButton));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(find.byType(LogSheet), findsOneWidget);
+
+        await afterCelebration(tester);
+        await tester.pump(const Duration(seconds: 2));
+        expect(find.byType(JourneyDaySheet), findsNothing);
+        expect(buddy.shown, isEmpty);
+
+        await tester.tapAt(const Offset(10, 10)); // „Eintragen"'s barrier
+        await tester.pump();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(find.byType(LogSheet), findsNothing);
+        expect(find.byType(JourneyDaySheet), findsOneWidget);
+      });
+
+      testWidgets('a line due while „Eintragen" is open waits until it '
+          'closed', (tester) async {
+        journey = true;
+        rewards = const JourneyRewards(
+          earnedDay: 3,
+          tipOffer: TipOffer.accepted,
+          firstTip: FirstTipState.failed,
+        );
+        await pumpHero(tester);
+        await tester.ensureVisible(find.byKey(_logButton));
+        await tester.tap(find.byKey(_logButton));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        buddy.push(
+          _status(announcements: const [BuddyAnnouncement.firstTipFailed]),
+        );
+        await tester.pump();
+        await advance(tester, const Duration(seconds: 5));
+        expect(bubbleBehind(tester), isNot(_firstTipFailedLine));
+        expect(buddy.shown, isEmpty);
+
+        await tester.tapAt(const Offset(10, 10)); // „Eintragen"'s barrier
+        await tester.pump();
+        await tester.pump();
+        await tick(tester);
         expect(controller(tester).bubble, _firstTipFailedLine);
       });
 
