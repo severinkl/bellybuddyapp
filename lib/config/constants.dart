@@ -125,15 +125,13 @@ class AppConstants {
   static const double reminderExampleLabelWidth = 112.0;
   static const double reminderExampleDotSize = 16.0;
 
-  /// Need meters (tunable): how long awake time drains each need from full,
-  /// the night pause (local hours) in which nothing drains, and the levels.
-  /// The floor keeps a meter from ever looking empty; low and high split the
-  /// meter's mood colours.
+  /// Need meters (tunable): how long awake time drains each need from full
+  /// (the night pause is in DayParts), and the levels. The floor keeps a
+  /// meter from ever looking empty; low and high split the meter's mood
+  /// colours.
   static const Duration careFoodDrain = Duration(hours: 5);
   static const Duration careDrinkDrain = Duration(hours: 3);
   static const Duration careGutFeelingDrain = Duration(hours: 24);
-  static const int careNightFromHour = 22;
-  static const int careNightUntilHour = 7;
   static const double careMeterFloor = 0.15;
   static const double careMeterLow = 0.35;
   static const double careMeterHigh = 0.7;

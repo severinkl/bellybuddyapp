@@ -23,17 +23,18 @@ CareNeed careNeedOf(EntryKind kind) => switch (kind) {
 enum LogSentiment { good, neutral, bad }
 
 /// The Buddy's resting mood from his need meters at [now]: sleepy before
-/// 10:00 while nothing is logged today, energetic with every meter at
-/// [AppConstants.careMeterHigh] or more, happy with none under
-/// [AppConstants.careMeterLow], else hungry by day (10–22) and sleepy at
-/// night.
+/// [DayParts.awakeFrom] while nothing is logged today, energetic with every
+/// meter at [AppConstants.careMeterHigh] or more, happy with none under
+/// [AppConstants.careMeterLow], else hungry from [DayParts.awakeFrom] until
+/// [DayParts.nightFrom] and sleepy otherwise.
 BuddyMood deriveBuddyMood(CareLog log, DateTime now) {
-  final h = now.hour;
-  if (!log.anyOn(now) && h < 10) return BuddyMood.sleepy;
+  final minute = DayParts.minuteOf(now);
+  final awake = minute >= DayParts.awakeFrom;
+  if (!log.anyOn(now) && !awake) return BuddyMood.sleepy;
   final lowest = CareMeters.at(log, now).lowestLevel;
   if (lowest >= AppConstants.careMeterHigh) return BuddyMood.energetic;
   if (lowest >= AppConstants.careMeterLow) return BuddyMood.happy;
-  if (h >= 10 && h < 22) return BuddyMood.hungry;
+  if (awake && minute < DayParts.nightFrom) return BuddyMood.hungry;
   return BuddyMood.sleepy;
 }
 
@@ -105,9 +106,11 @@ BuddyReaction reactionFor(
   }
 }
 
-/// A resting-mood line. Lines quoting the streak („{streak} Tage in Folge")
-/// are only used from a streak of 2 days on. Never [avoid] (the line said
-/// last) while the pool has another.
+/// A resting-mood line; sleepy outside the morning ([DayParts.dayFrom]
+/// until [DayParts.awakeFrom]) means night ([BuddyCopy.sleepyNight]).
+/// Lines quoting the streak („{streak} Tage in Folge") are only used from a
+/// streak of 2 days on. Never [avoid] (the line said last) while the pool
+/// has another.
 String moodLine(
   BuddyMood mood, {
   required String name,
@@ -116,7 +119,9 @@ String moodLine(
   required Random rnd,
   String? avoid,
 }) {
-  final all = mood == BuddyMood.sleepy && (now.hour < 5 || now.hour >= 10)
+  final minute = DayParts.minuteOf(now);
+  final morning = minute >= DayParts.dayFrom && minute < DayParts.awakeFrom;
+  final all = mood == BuddyMood.sleepy && !morning
       ? BuddyCopy.sleepyNight
       : BuddyCopy.mood[mood]!;
   final withoutStreak = [

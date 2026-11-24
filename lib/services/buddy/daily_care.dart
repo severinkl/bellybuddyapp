@@ -40,8 +40,20 @@ enum CareAction {
 }
 
 /// The Buddy's day: where its parts start, in minutes after local
-/// midnight.
+/// midnight. The night runs from [nightFrom] until [dayFrom] ([isDay]).
 abstract final class DayParts {
+  /// The day starts: the dashboard Buddy's resting line names his next
+  /// need from here until [nightFrom]. Breakfast is asked for from here on.
+  static const dayFrom = 5 * 60;
+
+  /// The need meters drain from here until [nightFrom]; they pause
+  /// overnight.
+  static const metersFrom = 7 * 60;
+
+  /// Until here he is sleepy while nothing is logged today; from here until
+  /// [nightFrom] a low meter makes him hungry.
+  static const awakeFrom = 10 * 60;
+
   /// Mittagessen is asked for from here (Frühstück before).
   static const lunchFrom = 10 * 60 + 30;
 
@@ -51,14 +63,16 @@ abstract final class DayParts {
   /// Abendessen.
   static const dinnerFrom = 17 * 60;
 
-  /// The dashboard Buddy's resting line names his next need by day, from
-  /// [dayFrom] until [nightFrom]. Breakfast is asked for from [dayFrom]
-  /// on.
-  static const dayFrom = 5 * 60;
+  /// The night starts: the meters pause, his resting line and his hunger
+  /// end.
   static const nightFrom = 22 * 60;
 
   /// [t]'s minutes after midnight.
   static int minuteOf(DateTime t) => t.hour * 60 + t.minute;
+
+  /// [day]'s local time [minute] minutes after midnight.
+  static DateTime at(DateTime day, int minute) =>
+      DateTime(day.year, day.month, day.day, 0, minute);
 
   /// Whether [t] is by day ([dayFrom] until [nightFrom]).
   static bool isDay(DateTime t) {
@@ -95,14 +109,7 @@ const _slotFrom = {
 CareAction _mealAt(CareLog log, DateTime now) {
   final slot = mealSlotAt(now);
   if (slot == null) return CareAction.feed;
-  final from = _slotFrom[slot]!;
-  final slotStart = DateTime(
-    now.year,
-    now.month,
-    now.day,
-    from ~/ 60,
-    from % 60,
-  );
+  final slotStart = DayParts.at(now, _slotFrom[slot]!);
   final last = log.lastMealAt;
   return last != null && !last.isBefore(slotStart) ? CareAction.snack : slot;
 }

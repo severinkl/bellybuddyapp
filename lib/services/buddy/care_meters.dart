@@ -16,8 +16,9 @@ Duration? drainOf(CareNeed need) => switch (need) {
   CareNeed.toilet => null,
 };
 
-/// The time between [from] and [to] that falls in the awake windows
-/// (07:00–22:00 local); the night pause is left out.
+/// The time between [from] and [to] that falls in the meters' awake
+/// windows ([DayParts.metersFrom] until [DayParts.nightFrom], local); the
+/// night pause is left out.
 Duration awakeBetween(DateTime from, DateTime to) {
   if (!to.isAfter(from)) return Duration.zero;
   var total = Duration.zero;
@@ -27,18 +28,8 @@ Duration awakeBetween(DateTime from, DateTime to) {
     !day.isAfter(lastDay);
     day = addDays(day, 1)
   ) {
-    final from0 = DateTime(
-      day.year,
-      day.month,
-      day.day,
-      AppConstants.careNightUntilHour,
-    );
-    final to0 = DateTime(
-      day.year,
-      day.month,
-      day.day,
-      AppConstants.careNightFromHour,
-    );
+    final from0 = DayParts.at(day, DayParts.metersFrom);
+    final to0 = DayParts.at(day, DayParts.nightFrom);
     final lo = from.isAfter(from0) ? from : from0;
     final hi = to.isBefore(to0) ? to : to0;
     if (hi.isAfter(lo)) total += hi.difference(lo);

@@ -160,7 +160,7 @@ class BuddyCopy {
 
   static String _log(CareNeed need) => '${need.emoji} ${need.logLabel}';
 
-  /// Sleepy lines for late evening / night (hour < 5 or >= 10).
+  /// Sleepy lines outside the morning: late evening and night.
   static const sleepyNight = [
     'Schon spät … *gähn* Gute Nacht bald?',
     'Mir fallen die Augen zu … *gähn*',
