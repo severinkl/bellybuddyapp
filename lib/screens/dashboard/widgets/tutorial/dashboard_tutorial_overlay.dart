@@ -65,6 +65,7 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _showStep());
+    WidgetsBinding.instance.addPostFrameCallback(_follow);
   }
 
   @override
@@ -115,11 +116,46 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
         rect.bottom <= bounds.bottom;
   }
 
-  void _measure() {
-    final step = widget.steps[_index];
-    final ctx = step.targetKey.currentContext;
+  /// Where the current step's target is on screen right now; null while it
+  /// is not mounted / attached, or hidden (no size).
+  Rect? _targetOnScreen() {
+    final ctx = widget.steps[_index].targetKey.currentContext;
     final box = ctx?.findRenderObject() as RenderBox?;
     if (box == null || !box.attached || !box.hasSize || box.size.isEmpty) {
+      return null;
+    }
+    // Transform-aware: MatrixUtils.transformRect respects any ancestor
+    // transform (e.g. PressScaleWrapper's ScaleTransition around the
+    // tracker cards). localToGlobal + size alone silently drops
+    // non-translation transforms and occasionally returned a mis-sized
+    // rect for the first step.
+    return MatrixUtils.transformRect(
+      box.getTransformTo(null),
+      Offset.zero & box.size,
+    );
+  }
+
+  /// After every frame while the tour is up: the spotlight follows its
+  /// target, which may still be moving when its step starts (on a cold
+  /// start Home slides in from /loading while the tour begins). Runs only
+  /// on frames that happen anyway; it never schedules one.
+  void _follow(Duration _) {
+    if (!mounted || _finished) return;
+    // Null between steps, until _showStep has measured the next target
+    // (after scrolling to it).
+    if (_targetRect != null) {
+      final rect = _targetOnScreen();
+      if (rect != null && rect != _targetRect) {
+        setState(() => _targetRect = rect);
+      }
+    }
+    WidgetsBinding.instance.addPostFrameCallback(_follow);
+  }
+
+  void _measure() {
+    final step = widget.steps[_index];
+    final rect = _targetOnScreen();
+    if (rect == null) {
       // Target not mounted / attached, or hidden (e.g. the insight card
       // while its progress failed to load) — skip it so we don't get stuck
       // or point at nothing. Log so a broken key surfaces during
@@ -130,15 +166,6 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
       _advance();
       return;
     }
-    // Transform-aware: MatrixUtils.transformRect respects any ancestor
-    // transform (e.g. PressScaleWrapper's ScaleTransition around the
-    // tracker cards). localToGlobal + size alone silently drops
-    // non-translation transforms and occasionally returned a mis-sized
-    // rect for the first step.
-    final rect = MatrixUtils.transformRect(
-      box.getTransformTo(null),
-      Offset.zero & box.size,
-    );
     final skip = _skipBox.currentContext?.findRenderObject() as RenderBox?;
     setState(() {
       _targetRect = rect;

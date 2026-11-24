@@ -17,7 +17,9 @@ import 'package:belly_buddy/screens/dashboard/widgets/journey_dots.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_line.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_day_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_list_sheet.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/tutorial/dashboard_tutorial_overlay.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/dashboard_tutorial_steps.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/tutorial/spotlight_painter.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_keys.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_step.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
@@ -177,12 +179,14 @@ const _optInTitle = 'Bleib auf dem Laufenden!';
 
 /// Home in the app: the real router and shell under [AppTestHost], whose
 /// root keeps the tips loaded (its sign-in load brings [tips]'s sets).
+/// [profiles] holds the user's profile (default: [testUserProfile]).
 Future<ProviderContainer> _pumpHome(
   WidgetTester tester, {
   FakeRecommendationRepository? tips,
+  FakeProfileRepository? profiles,
 }) async {
   final container = ProviderContainer.test(
-    overrides: baseOverrides(tips: tips),
+    overrides: baseOverrides(tips: tips, profiles: profiles),
   );
   await tester.pumpWidget(
     UncontrolledProviderScope(container: container, child: const AppTestHost()),
@@ -190,6 +194,14 @@ Future<ProviderContainer> _pumpHome(
   await _settleFirstRun(tester);
   return container;
 }
+
+/// The rect the tour's spotlight cuts out.
+Rect _spotlight(WidgetTester tester) => tester
+    .widgetList<CustomPaint>(find.byType(CustomPaint))
+    .map((paint) => paint.painter)
+    .whereType<SpotlightPainter>()
+    .single
+    .targetRect;
 
 /// A tip set that nobody opened yet.
 FakeRecommendationRepository _unseenTips() => FakeRecommendationRepository(
@@ -1105,6 +1117,77 @@ void main() {
       expect(find.text(_welcomeModalTitle), findsNothing);
       expect(find.text(_optInTitle), findsNothing);
     });
+  });
+
+  group('DashboardScreen tour spotlight', () {
+    // A cold start opens Home from /loading: its page still slides in while
+    // the tour starts. Each hole frames its target where it ends up.
+    final phones = [
+      (
+        name: 'iPhone 17 Pro, 402×874',
+        size: const Size(402, 874),
+        dpr: 3.0,
+        top: 62.0,
+        bottom: 34.0,
+        textScale: 1.0,
+      ),
+      (
+        name: '375×667 at text scale 1.3',
+        size: const Size(375, 667),
+        dpr: 2.0,
+        top: 20.0,
+        bottom: 0.0,
+        textScale: 1.3,
+      ),
+    ];
+    for (final phone in phones) {
+      testWidgets(
+        '${phone.name}: the first hole frames the Buddy in his ring, '
+        'centred, and each later one its target',
+        variant: const TargetPlatformVariant({
+          TargetPlatform.iOS,
+          TargetPlatform.android,
+        }),
+        (tester) async {
+          tester.view
+            ..physicalSize = phone.size * phone.dpr
+            ..devicePixelRatio = phone.dpr
+            ..padding = FakeViewPadding(
+              top: phone.top * phone.dpr,
+              bottom: phone.bottom * phone.dpr,
+            );
+          addTearDown(tester.view.reset);
+          tester.platformDispatcher.textScaleFactorTestValue = phone.textScale;
+          addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+          await _pumpHome(
+            tester,
+            profiles: FakeProfileRepository()
+              ..seedProfile(testUserProfile(alreadySeenTutorial: false)),
+          );
+          await tester.pumpAndSettle();
+          expect(find.text(_tourSkip), findsOneWidget);
+
+          final hero = tester.getRect(find.byKey(TutorialKeys.buddy));
+          final ring = tester.getRect(find.byType(CareRing));
+          final hole = _spotlight(tester);
+          expect(hole, hero.inflate(AppConstants.spacingXs));
+          expect(hole.intersect(ring), ring, reason: 'the ring is in the hole');
+          expect(hole.center.dx, closeTo(phone.size.width / 2, 0.01));
+
+          for (final step in dashboardTutorialSteps.skip(1)) {
+            await tester.tap(find.byKey(DashboardTutorialOverlay.advanceKey));
+            await tester.pumpAndSettle();
+            expect(
+              _spotlight(tester),
+              tester
+                  .getRect(find.byKey(step.targetKey))
+                  .inflate(AppConstants.spacingXs),
+              reason: '${step.targetKey}',
+            );
+          }
+        },
+      );
+    }
   });
 
   group('DashboardScreen tour replay', () {
