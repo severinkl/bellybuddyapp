@@ -5,17 +5,13 @@ import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/meal_entry.dart';
 import '../../../models/user_recipe.dart';
-import '../../../providers/buddy_events_provider.dart';
-import '../../../providers/buddy_provider.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../providers/ingredient_autocomplete_provider.dart';
-import '../../../providers/log_moment.dart';
 import '../../../providers/meal_tracker_provider.dart';
 import '../../../providers/user_recipes_provider.dart';
 import '../../../router/navigation_extensions.dart';
 import '../../../router/route_names.dart';
 import '../../../services/buddy/buddy_mood_logic.dart';
-import '../../../services/buddy/log_moment.dart';
 import '../../../services/user_recipe_service.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/logger.dart';
@@ -26,6 +22,7 @@ import '../../../widgets/common/date_time_chips.dart';
 import '../../../widgets/common/editable_app_bar_title.dart';
 import '../../../widgets/common/tracker_screen_scaffold.dart';
 import '../../../widgets/common/ingredient_search.dart';
+import '../entry_logger.dart';
 import 'widgets/meal_image_section.dart';
 import 'widgets/meal_title_sheet.dart';
 import 'widgets/recipe_selector_sheet.dart';
@@ -69,13 +66,11 @@ class MealTrackerScreen extends ConsumerStatefulWidget {
   ConsumerState<MealTrackerScreen> createState() => _MealTrackerScreenState();
 }
 
-class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
+class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen>
+    with EntryLogger {
   bool _mealNotFound = false;
   bool _savedAsRecipe = false;
   bool _savingAsRecipe = false;
-
-  /// What a new meal does, as it is saved; the success page shows it.
-  LogMoment? _moment;
 
   @override
   void initState() {
@@ -153,36 +148,21 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
       }
     }
 
+    // A new log (not an edit): the Buddy reacts on the success screen and
+    // the dashboard picks the event up. A failure leaves the user on the
+    // form.
     if (widget.mealId == null) {
-      _moment = captureLogMoment(
-        ref,
+      await logEntry(
         kind: EntryKind.meal,
         trackedAt: ref.read(mealTrackerProvider).trackedAt,
+        save: notifier.save,
       );
-    }
-    final ok = await saveWithFeedback(context, () => notifier.save());
-
-    // Edit mode: pop only on success — saveWithFeedback already surfaced the
-    // error SnackBar on failure, and keeping the screen lets the user retry.
-    // Create mode stays on the success overlay regardless (failure leaves the
-    // user on the form, same behavior as before).
-    if (!mounted || !ok) return;
-    if (widget.mealId != null) {
-      context.popOrGoDashboard();
       return;
     }
-    // A new log (not an edit): the Buddy reacts on the success screen and
-    // the dashboard picks the event up.
-    ref
-        .read(buddyEventsProvider.notifier)
-        .emit(
-          BuddyLogEvent(
-            EntryKind.meal,
-            LogSentiment.good,
-            at: ref.read(buddyClockProvider)(),
-            trackedAt: ref.read(mealTrackerProvider).trackedAt,
-          ),
-        );
+    // Edit mode: pop only on success — saveWithFeedback already surfaced the
+    // error SnackBar on failure, and keeping the screen lets the user retry.
+    final ok = await saveWithFeedback(context, notifier.save);
+    if (mounted && ok) context.popOrGoDashboard();
   }
 
   bool _canSave(MealTrackerState state) {
@@ -216,7 +196,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
     }
 
     final state = ref.watch(mealTrackerProvider);
-    final moment = _moment;
+    final moment = logMoment;
     // A meal started from a recipe and left unchanged has nothing to lose.
     final recipe = widget.initialRecipe;
     final canPop =
@@ -246,12 +226,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
         successMessage: 'Mahlzeit gespeichert!',
         successIllustration: moment == null
             ? null
-            : LogSuccessHero(
-                moment: moment,
-                kind: EntryKind.meal,
-                sentiment: LogSentiment.good,
-                foodImageBytes: state.imageBytes,
-              ),
+            : LogSuccessHero(moment: moment, foodImageBytes: state.imageBytes),
         successActions: [
           GestureDetector(
             onTap: () => _logDrinkAfterMeal(state.trackedAt),

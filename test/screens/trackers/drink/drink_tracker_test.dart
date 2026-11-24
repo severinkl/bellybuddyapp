@@ -240,6 +240,8 @@ void main() {
       final meter = tester.widget<ChargingMeter>(find.byType(ChargingMeter));
       expect(meter.need, CareNeed.drink);
       expect(meter.to, 1.0);
+      // The log event is stamped with the app's clock, as the moment is.
+      expect(container.read(buddyEventsProvider)?.at, now);
       expect(
         find.descendant(
           of: find.byType(LogSuccessHero),

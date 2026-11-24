@@ -4,21 +4,17 @@ import 'package:uuid/uuid.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/gut_feeling_entry.dart';
-import '../../../providers/buddy_events_provider.dart';
-import '../../../providers/buddy_provider.dart';
 import '../../../providers/diary_provider.dart';
 import '../../../providers/entries_provider.dart';
-import '../../../providers/log_moment.dart';
 import '../../../router/navigation_extensions.dart';
 import '../../../services/buddy/buddy_mood_logic.dart';
-import '../../../services/buddy/log_moment.dart';
 import '../../../services/haptic_service.dart';
 import '../../../utils/date_format_utils.dart';
-import '../../../utils/save_helper.dart';
 import '../../../widgets/buddy/log_success_hero.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/bb_success_overlay.dart';
 import '../../../widgets/common/date_time_chips.dart';
+import '../entry_logger.dart';
 import 'widgets/bauchgefuehl_tab.dart';
 import 'widgets/mood_tab_selector.dart';
 import 'widgets/stimmung_tab.dart';
@@ -35,16 +31,13 @@ class GutFeelingTrackerScreen extends ConsumerStatefulWidget {
 
 class _GutFeelingTrackerScreenState
     extends ConsumerState<GutFeelingTrackerScreen>
-    with TickerProviderStateMixin {
+    with TickerProviderStateMixin, EntryLogger {
   late DateTime _trackedAt = buildTrackedAt(widget.initialDate);
   int _activeTab = 0;
   bool _isSaving = false;
 
   /// Set once the entry is saved; shows the success screen.
-  LogSentiment? _savedSentiment;
-
-  /// What the entry does, as it is saved; the success page shows it.
-  LogMoment? _moment;
+  bool _saved = false;
 
   // Bauchgefuehl values
   int _bloating = 1;
@@ -131,35 +124,16 @@ class _GutFeelingTrackerScreenState
       focus: _focus,
       bodyFeel: _bodyFeel,
     );
-    _moment = captureLogMoment(
-      ref,
+    final logged = await logEntry(
       kind: EntryKind.gutFeeling,
       trackedAt: entry.trackedAt,
       sentiment: sentimentForGutFeeling(entry),
+      save: () => ref.read(entriesProvider.notifier).addGutFeeling(entry),
     );
-    final success = await saveWithFeedback(
-      context,
-      () => ref.read(entriesProvider.notifier).addGutFeeling(entry),
-    );
-    if (mounted) {
-      if (success) {
-        ref.invalidate(diaryEntriesProvider(startOfDay(_trackedAt)));
-        final sentiment = sentimentForGutFeeling(entry);
-        ref
-            .read(buddyEventsProvider.notifier)
-            .emit(
-              BuddyLogEvent(
-                EntryKind.gutFeeling,
-                sentiment,
-                at: ref.read(buddyClockProvider)(),
-                trackedAt: entry.trackedAt,
-              ),
-            );
-        setState(() => _savedSentiment = sentiment);
-      } else {
-        setState(() => _isSaving = false);
-      }
-    }
+    if (!mounted) return;
+    if (!logged) return setState(() => _isSaving = false);
+    ref.invalidate(diaryEntriesProvider(startOfDay(_trackedAt)));
+    setState(() => _saved = true);
   }
 
   void _animateToTab(int tab) {
@@ -181,22 +155,15 @@ class _GutFeelingTrackerScreenState
 
   @override
   Widget build(BuildContext context) {
-    final savedSentiment = _savedSentiment;
-    if (savedSentiment != null) {
-      final moment = _moment;
+    final moment = _saved ? logMoment : null;
+    if (moment != null) {
       // After a hard day no celebration: calm, without the „!".
-      final hardDay = savedSentiment == LogSentiment.bad;
+      final hardDay = moment.sentiment == LogSentiment.bad;
       return BbSuccessOverlay(
         message: hardDay ? 'Eintrag gespeichert.' : 'Eintrag gespeichert!',
         calm: hardDay,
         subMessage: 'Ist jetzt in deinem Tagebuch eingetragen.',
-        illustration: moment == null
-            ? null
-            : LogSuccessHero(
-                moment: moment,
-                kind: EntryKind.gutFeeling,
-                sentiment: savedSentiment,
-              ),
+        illustration: LogSuccessHero(moment: moment),
         onDismissed: context.popOrGoDashboard,
       );
     }

@@ -18,7 +18,7 @@ LogMoment captureLogMoment(
 }) {
   final care = ref.read(careNowProvider);
   return logMomentFor(
-    need: careNeedOf(kind),
+    kind: kind,
     trackedAt: trackedAt,
     care: care.log,
     now: care.at,

@@ -4,20 +4,16 @@ import 'package:uuid/uuid.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/toilet_entry.dart';
-import '../../../providers/buddy_events_provider.dart';
-import '../../../providers/buddy_provider.dart';
 import '../../../providers/diary_provider.dart';
 import '../../../providers/entries_provider.dart';
-import '../../../providers/log_moment.dart';
 import '../../../services/buddy/buddy_mood_logic.dart';
-import '../../../services/buddy/log_moment.dart';
 import '../../../utils/date_format_utils.dart';
-import '../../../utils/save_helper.dart';
 import '../../../widgets/buddy/log_success_hero.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/bb_slider.dart';
 import '../../../widgets/common/date_time_chips.dart';
 import '../../../widgets/common/tracker_screen_scaffold.dart';
+import '../entry_logger.dart';
 
 class ToiletTrackerScreen extends ConsumerStatefulWidget {
   const ToiletTrackerScreen({super.key, this.initialDate});
@@ -29,16 +25,14 @@ class ToiletTrackerScreen extends ConsumerStatefulWidget {
       _ToiletTrackerScreenState();
 }
 
-class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
+class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen>
+    with EntryLogger {
   int _stoolType = 3;
   late DateTime _trackedAt = buildTrackedAt(widget.initialDate);
   bool _isSaving = false;
 
   /// Set once the entry is saved; shows the success screen.
-  LogSentiment? _savedSentiment;
-
-  /// What the entry does, as it is saved; the success page shows it.
-  LogMoment? _moment;
+  bool _saved = false;
 
   Future<void> _save() async {
     setState(() => _isSaving = true);
@@ -47,55 +41,33 @@ class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
       trackedAt: _trackedAt,
       stoolType: _stoolType,
     );
-    _moment = captureLogMoment(
-      ref,
+    final logged = await logEntry(
       kind: EntryKind.toilet,
       trackedAt: entry.trackedAt,
+      sentiment: sentimentForToilet(entry),
+      save: () => ref.read(entriesProvider.notifier).addToiletEntry(entry),
     );
-    final success = await saveWithFeedback(
-      context,
-      () => ref.read(entriesProvider.notifier).addToiletEntry(entry),
-    );
-    if (mounted) {
-      if (success) {
-        ref.invalidate(diaryEntriesProvider(startOfDay(_trackedAt)));
-        final sentiment = sentimentForToilet(entry);
-        ref
-            .read(buddyEventsProvider.notifier)
-            .emit(
-              BuddyLogEvent(
-                EntryKind.toilet,
-                sentiment,
-                at: ref.read(buddyClockProvider)(),
-                trackedAt: entry.trackedAt,
-              ),
-            );
-        setState(() => _savedSentiment = sentiment);
-      } else {
-        setState(() => _isSaving = false);
-      }
-    }
+    if (!mounted) return;
+    if (!logged) return setState(() => _isSaving = false);
+    ref.invalidate(diaryEntriesProvider(startOfDay(_trackedAt)));
+    setState(() => _saved = true);
   }
 
   @override
   Widget build(BuildContext context) {
-    final savedSentiment = _savedSentiment;
-    final moment = _moment;
+    final moment = _saved ? logMoment : null;
+    // After a hard moment no celebration: calm, without the „!".
+    final calm = moment?.sentiment == LogSentiment.bad;
     return TrackerScreenScaffold(
       title: 'Am Klo \u{1F4A9} gewesen?',
-      showSuccess: savedSentiment != null,
-      // After a hard moment no celebration: calm, without the „!".
-      successMessage: savedSentiment == LogSentiment.bad
+      showSuccess: moment != null,
+      successMessage: calm
           ? 'Klo-Eintrag gespeichert.'
           : 'Klo-Eintrag gespeichert!',
-      successCalm: savedSentiment == LogSentiment.bad,
-      successIllustration: savedSentiment == null || moment == null
+      successCalm: calm,
+      successIllustration: moment == null
           ? null
-          : LogSuccessHero(
-              moment: moment,
-              kind: EntryKind.toilet,
-              sentiment: savedSentiment,
-            ),
+          : LogSuccessHero(moment: moment),
       body: Padding(
         padding: AppConstants.paddingLg,
         child: Column(

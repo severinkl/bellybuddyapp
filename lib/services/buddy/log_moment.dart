@@ -11,14 +11,22 @@ import 'daily_care.dart';
 /// and with it, and the streak day it ignites. The success page shows it.
 class LogMoment {
   const LogMoment({
-    required this.need,
+    required this.kind,
+    this.sentiment = LogSentiment.good,
     this.from,
     this.to,
     this.ignitesDay,
     this.buddyLine,
   });
 
-  final CareNeed need;
+  /// What was logged.
+  final EntryKind kind;
+
+  /// How the entry went; a bad one gets the calm page.
+  final LogSentiment sentiment;
+
+  /// The need the entry fills.
+  CareNeed get need => careNeedOf(kind);
 
   /// The need's level before / with the entry; null for Klo.
   final double? from, to;
@@ -31,17 +39,17 @@ class LogMoment {
   final String? buddyLine;
 }
 
-/// The [LogMoment] of an entry for [need] at [trackedAt], saved at [now]
+/// The [LogMoment] of an entry of [kind] at [trackedAt], saved at [now]
 /// with [care] as logged so far. A back-dated entry older than the need's
 /// last one leaves its level as it was. It ignites the next streak day when
 /// it falls on [now]'s date and nothing counts today yet ([buddy]'s
 /// `todayCounted`, [care]).
 ///
-/// The Buddy says how far the first patterns are ([buddyLine]) after
-/// today's first good or neutral Bauchgefühl while [insights] are locked,
-/// but not when this entry unlocks them.
+/// The Buddy says how far the first patterns are ([LogMoment.buddyLine])
+/// after today's first good or neutral Bauchgefühl while [insights] are
+/// locked, but not when this entry unlocks them.
 LogMoment logMomentFor({
-  required CareNeed need,
+  required EntryKind kind,
   required DateTime trackedAt,
   required CareLog care,
   required DateTime now,
@@ -49,45 +57,38 @@ LogMoment logMomentFor({
   Insights? insights,
   LogSentiment sentiment = LogSentiment.good,
 }) {
+  final need = careNeedOf(kind);
   final drain = drainOf(need);
   final last = care.lastAt(need);
   final latest = last == null || trackedAt.isAfter(last) ? trackedAt : last;
+  final today = isSameDay(trackedAt, now);
+  final firstToday = !care.anyOn(now);
+  final firstGutFeelingToday =
+      need == CareNeed.gutFeeling &&
+      today &&
+      !care.loggedOn(CareNeed.gutFeeling, now);
+  // How far the first patterns are, while locked.
+  final progress = insights == null || insights.unlocked
+      ? null
+      : insights.progress;
   return LogMoment(
-    buddyLine: _buddyLine(need, trackedAt, care, now, insights, sentiment),
-    need: need,
+    kind: kind,
+    sentiment: sentiment,
     from: drain == null ? null : meterLevel(last, now, drain),
     to: drain == null ? null : meterLevel(latest, now, drain),
-    ignitesDay:
-        buddy != null &&
-            !buddy.todayCounted &&
-            isSameDay(trackedAt, now) &&
-            !care.anyOn(now)
+    ignitesDay: buddy != null && !buddy.todayCounted && today && firstToday
         ? buddy.streak + 1
         : null,
-  );
-}
-
-String? _buddyLine(
-  CareNeed need,
-  DateTime trackedAt,
-  CareLog care,
-  DateTime now,
-  Insights? insights,
-  LogSentiment sentiment,
-) {
-  if (need != CareNeed.gutFeeling ||
-      sentiment == LogSentiment.bad ||
-      insights == null ||
-      insights.unlocked ||
-      !isSameDay(trackedAt, now) ||
-      care.loggedOn(CareNeed.gutFeeling, now)) {
-    return null;
-  }
-  final progress = insights.progress;
-  return InsightCopy.journeyFeedback(
-    InsightProgress(
-      activeDays: progress.activeDays + (care.anyOn(now) ? 0 : 1),
-      gutFeelingEntries: progress.gutFeelingEntries + 1,
-    ),
+    buddyLine:
+        firstGutFeelingToday &&
+            sentiment != LogSentiment.bad &&
+            progress != null
+        ? InsightCopy.journeyFeedback(
+            InsightProgress(
+              activeDays: progress.activeDays + (firstToday ? 1 : 0),
+              gutFeelingEntries: progress.gutFeelingEntries + 1,
+            ),
+          )
+        : null,
   );
 }

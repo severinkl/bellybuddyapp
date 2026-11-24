@@ -17,7 +17,7 @@ void main() {
   group('logMomentFor: the level before and with the entry', () {
     test('drink last at 13:00, logged now: from 0.717 to full', () {
       final m = logMomentFor(
-        need: CareNeed.drink,
+        kind: EntryKind.drink,
         trackedAt: _now,
         care: CareLog(lastDrinkAt: _t(13)),
         now: _now,
@@ -29,7 +29,7 @@ void main() {
 
     test('a back-dated entry older than the last changes nothing', () {
       final m = logMomentFor(
-        need: CareNeed.drink,
+        kind: EntryKind.drink,
         trackedAt: _t(11),
         care: CareLog(lastDrinkAt: _t(13)),
         now: _now,
@@ -40,7 +40,7 @@ void main() {
 
     test('an entry for later today charges to full', () {
       final m = logMomentFor(
-        need: CareNeed.drink,
+        kind: EntryKind.drink,
         trackedAt: _t(18),
         care: CareLog(lastDrinkAt: _t(13)),
         now: _now,
@@ -48,13 +48,16 @@ void main() {
       expect(m.to, 1.0);
     });
 
-    test('Klo has no level', () {
+    test('Klo has no level; the moment carries what was logged and how', () {
       final m = logMomentFor(
-        need: CareNeed.toilet,
+        kind: EntryKind.toilet,
         trackedAt: _now,
         care: CareLog(lastToiletAt: _t(9)),
         now: _now,
+        sentiment: LogSentiment.bad,
       );
+      expect(m.kind, EntryKind.toilet);
+      expect(m.sentiment, LogSentiment.bad);
       expect(m.need, CareNeed.toilet);
       expect(m.from, isNull);
       expect(m.to, isNull);
@@ -69,7 +72,7 @@ void main() {
       int streak = 4,
       bool todayCounted = false,
     }) => logMomentFor(
-      need: CareNeed.food,
+      kind: EntryKind.meal,
       trackedAt: trackedAt ?? _now,
       care: care,
       now: _now,
@@ -122,7 +125,7 @@ void main() {
       DateTime? trackedAt,
       LogSentiment sentiment = LogSentiment.good,
     }) => logMomentFor(
-      need: CareNeed.gutFeeling,
+      kind: EntryKind.gutFeeling,
       trackedAt: trackedAt ?? _now,
       care: care,
       now: _now,
@@ -190,7 +193,7 @@ void main() {
     test('another need: no line', () {
       expect(
         logMomentFor(
-          need: CareNeed.food,
+          kind: EntryKind.meal,
           trackedAt: _now,
           care: const CareLog(),
           now: _now,

@@ -59,19 +59,12 @@ class ChargingMeter extends StatelessWidget {
 /// [AppConstants.logSuccessHeroStackedMinHeight] it stands beside „Tag n"
 /// instead of above it, so the Buddy keeps a body.
 class LogSuccessHero extends StatelessWidget {
-  const LogSuccessHero({
-    super.key,
-    required this.moment,
-    required this.kind,
-    required this.sentiment,
-    this.foodImageBytes,
-  });
+  const LogSuccessHero({super.key, required this.moment, this.foodImageBytes});
 
   static const igniteKey = Key('log_success_ignite');
 
+  /// What was logged and what it did.
   final LogMoment moment;
-  final EntryKind kind;
-  final LogSentiment sentiment;
 
   /// The meal photo the Buddy eats ([BuddyReactionView.foodImageBytes]).
   final Uint8List? foodImageBytes;
@@ -80,7 +73,7 @@ class LogSuccessHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final from = moment.from;
     final to = moment.to;
-    final day = sentiment == LogSentiment.bad ? null : moment.ignitesDay;
+    final day = moment.sentiment == LogSentiment.bad ? null : moment.ignitesDay;
     return LayoutBuilder(
       builder: (context, constraints) {
         final height = constraints.maxHeight;
@@ -139,8 +132,8 @@ class LogSuccessHero extends StatelessWidget {
             AppConstants.gap8,
             Flexible(
               child: BuddyReactionView(
-                kind: kind,
-                sentiment: sentiment,
+                kind: moment.kind,
+                sentiment: moment.sentiment,
                 foodImageBytes: foodImageBytes,
                 line: moment.buddyLine,
               ),

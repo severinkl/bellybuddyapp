@@ -26,15 +26,11 @@ List<Override> _overrides() => [
   currentUserIdProvider.overrideWithValue('u1'),
 ];
 
-LogSuccessHero _hero(
-  LogMoment moment, {
-  EntryKind kind = EntryKind.drink,
-  LogSentiment sentiment = LogSentiment.good,
-}) => LogSuccessHero(moment: moment, kind: kind, sentiment: sentiment);
+LogSuccessHero _hero(LogMoment moment) => LogSuccessHero(moment: moment);
 
 /// A drink, today's first entry: it ignites day 5.
 const _ignites = LogMoment(
-  need: CareNeed.drink,
+  kind: EntryKind.drink,
   from: 0.4,
   to: 1.0,
   ignitesDay: 5,
@@ -42,7 +38,7 @@ const _ignites = LogMoment(
 
 /// A meal, today's first entry, for the short slots.
 const _mealIgnites = LogMoment(
-  need: CareNeed.food,
+  kind: EntryKind.meal,
   from: 0.2,
   to: 1.0,
   ignitesDay: 1,
@@ -83,7 +79,7 @@ void main() {
         '1.2 s', (tester) async {
       await _pump(
         tester,
-        _hero(const LogMoment(need: CareNeed.drink, from: 0.4, to: 1.0)),
+        _hero(const LogMoment(kind: EntryKind.drink, from: 0.4, to: 1.0)),
       );
 
       expect(_level(tester), closeTo(0.4, 0.005));
@@ -117,7 +113,7 @@ void main() {
       testWidgets('the new level at once', (tester) async {
         await _pump(
           tester,
-          _hero(const LogMoment(need: CareNeed.drink, from: 0.4, to: 1.0)),
+          _hero(const LogMoment(kind: EntryKind.drink, from: 0.4, to: 1.0)),
         );
         await tester.pump();
 
@@ -141,10 +137,7 @@ void main() {
     });
 
     testWidgets('Klo: no circle', (tester) async {
-      await _pump(
-        tester,
-        _hero(const LogMoment(need: CareNeed.toilet), kind: EntryKind.toilet),
-      );
+      await _pump(tester, _hero(const LogMoment(kind: EntryKind.toilet)));
 
       expect(find.byType(ChargingMeter), findsNothing);
       expect(find.byType(NeedMeter), findsNothing);
@@ -173,7 +166,7 @@ void main() {
     testWidgets('otherwise no flame', (tester) async {
       await _pump(
         tester,
-        _hero(const LogMoment(need: CareNeed.drink, from: 0.4, to: 1.0)),
+        _hero(const LogMoment(kind: EntryKind.drink, from: 0.4, to: 1.0)),
       );
 
       expect(find.byKey(LogSuccessHero.igniteKey), findsNothing);
@@ -186,9 +179,11 @@ void main() {
       await _pump(
         tester,
         _hero(
-          const LogMoment(need: CareNeed.toilet, ignitesDay: 5),
-          kind: EntryKind.toilet,
-          sentiment: LogSentiment.bad,
+          const LogMoment(
+            kind: EntryKind.toilet,
+            sentiment: LogSentiment.bad,
+            ignitesDay: 5,
+          ),
         ),
       );
 
@@ -199,10 +194,7 @@ void main() {
     });
 
     testWidgets('a tall slot: the circle above „Tag n"', (tester) async {
-      await _pump(
-        tester,
-        SizedBox(height: 400, child: _hero(_mealIgnites, kind: EntryKind.meal)),
-      );
+      await _pump(tester, SizedBox(height: 400, child: _hero(_mealIgnites)));
       await tester.pump(const Duration(milliseconds: 1300));
 
       final meter = tester.getRect(find.byType(ChargingMeter));
@@ -213,10 +205,7 @@ void main() {
 
     testWidgets('a short slot: the circle beside „Tag n", a share of the slot, '
         'nothing scaled', (tester) async {
-      await _pump(
-        tester,
-        SizedBox(height: 260, child: _hero(_mealIgnites, kind: EntryKind.meal)),
-      );
+      await _pump(tester, SizedBox(height: 260, child: _hero(_mealIgnites)));
       await tester.pump(const Duration(milliseconds: 1300));
 
       expect(tester.takeException(), isNull);
@@ -240,10 +229,7 @@ void main() {
 
     testWidgets('a slot too short for it all: the bubble yields, the Buddy '
         'keeps his body', (tester) async {
-      await _pump(
-        tester,
-        SizedBox(height: 100, child: _hero(_mealIgnites, kind: EntryKind.meal)),
-      );
+      await _pump(tester, SizedBox(height: 100, child: _hero(_mealIgnites)));
       await tester.pump(const Duration(milliseconds: 1300));
 
       expect(tester.takeException(), isNull);

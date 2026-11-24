@@ -304,7 +304,7 @@ void main() {
     test('a drink an hour after the last fills from a drained meter', () {
       final now = DateTime(2026, 11, 23, 13);
       final moment = logMomentFor(
-        need: CareNeed.drink,
+        kind: EntryKind.drink,
         trackedAt: now,
         care: CareLog.fromEntries(
           EntriesState(day: day, drinks: [_drink('2026-11-23T12:00')]),
@@ -321,7 +321,7 @@ void main() {
         'the day', () {
       final now = DateTime(2026, 11, 23, 8);
       final moment = logMomentFor(
-        need: CareNeed.drink,
+        kind: EntryKind.drink,
         trackedAt: now,
         care: CareLog.fromEntries(
           EntriesState(
