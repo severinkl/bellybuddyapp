@@ -9,7 +9,6 @@ import '../../../services/recipes/recipe_copy.dart';
 import '../../../services/recipes/recipe_fit.dart';
 import '../../../utils/url_utils.dart';
 import '../../../widgets/buddy/buddy_says.dart';
-import 'fit_badge_view.dart';
 import 'ingredient_line_view.dart';
 import 'recipe_collection_card.dart';
 import 'recipe_image.dart';
@@ -39,7 +38,6 @@ class AdaptedRecipeView extends StatelessWidget {
   Widget build(BuildContext context) {
     final fit = this.fit;
     final original = fit?.recipe;
-    final meta = original?.detailMeta ?? '';
     final selfCheck = fit?.selfCheck ?? const [];
     final steps = adapted.steps;
     final changed = {
@@ -51,50 +49,17 @@ class AdaptedRecipeView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-            child: AspectRatio(
-              aspectRatio: 16 / 9,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  if (original == null)
-                    const RecipePlaceholder()
-                  else
-                    RecipeImage(recipe: original),
-                  const Positioned(
-                    top: AppConstants.spacing12,
-                    left: AppConstants.spacing12,
-                    child: RecipeTagPill(
-                      RecipeCardTag.adapted,
-                      label: RecipeCopy.adaptedForYou,
-                    ),
-                  ),
-                ],
-              ),
-            ),
+          RecipePageHead(
+            image: original == null
+                ? const RecipePlaceholder()
+                : RecipeImage(recipe: original),
+            tag: RecipeCardTag.adapted,
+            title: adapted.title,
+            meta: original?.detailMeta ?? '',
+            // The catalog can't judge these (Histamin): said as on the
+            // detail.
+            badge: selfCheck.isEmpty ? null : SelfCheckBadge(selfCheck),
           ),
-          AppConstants.gap16,
-          Semantics(
-            header: true,
-            child: Text(
-              adapted.title,
-              style: const TextStyle(
-                fontSize: AppTheme.fontSizeDisplay,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.foreground,
-              ),
-            ),
-          ),
-          if (meta.isNotEmpty) ...[AppConstants.gap8, RecipeMetaLine(meta)],
-          // The catalog can't judge these (Histamin): said as on the detail.
-          if (selfCheck.isNotEmpty) ...[
-            AppConstants.gap8,
-            Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: FitBadgeView(SelfCheckBadge(selfCheck)),
-            ),
-          ],
           if (adapted.note.isNotEmpty) ...[
             AppConstants.gap16,
             BuddySays.beside(
@@ -212,9 +177,7 @@ class _IngredientsCard extends StatelessWidget {
     final known = verdict ? LineMark.fits : LineMark.neutral;
     return RecipeSectionCard(
       title: 'Zutaten',
-      trailing: servings == null
-          ? null
-          : Text('für $servings', style: RecipeSectionCard.captionStyle),
+      servings: servings,
       children: [
         for (final i in adapted.ingredients)
           IngredientLineView(

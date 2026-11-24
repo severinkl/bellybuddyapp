@@ -131,35 +131,11 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(
-                        AppConstants.radiusLg,
-                      ),
-                      child: AspectRatio(
-                        aspectRatio: 16 / 9,
-                        child: _RecipeImage(recipe: recipe),
-                      ),
+                    RecipePageHead(
+                      image: _RecipeImage(recipe: recipe),
+                      tag: recipe.isAdapted ? RecipeCardTag.adapted : null,
+                      title: recipe.title,
                     ),
-                    AppConstants.gap16,
-                    Text(
-                      recipe.title,
-                      style: const TextStyle(
-                        fontSize: AppTheme.fontSizeDisplay,
-                        fontWeight: FontWeight.w700,
-                        color: AppTheme.foreground,
-                      ),
-                    ),
-                    AppConstants.gap16,
-                    if (recipe.isAdapted) ...[
-                      AppConstants.gap8,
-                      const Align(
-                        alignment: AlignmentDirectional.centerStart,
-                        child: RecipeTagPill(
-                          RecipeCardTag.adapted,
-                          label: 'Für dich angepasst',
-                        ),
-                      ),
-                    ],
                     if (recipe.adaptedFromRecipeId case final originalId?)
                       _OriginalLink(recipeId: originalId),
                     AppConstants.gap16,
@@ -298,7 +274,7 @@ class _OriginalLink extends ConsumerWidget {
     final original = ref.watch(collectionRecipeProvider(recipeId)).value;
     if (original == null) return const SizedBox.shrink();
     return Padding(
-      padding: const EdgeInsets.only(top: AppConstants.spacingXs),
+      padding: const EdgeInsets.only(top: AppConstants.spacingSm),
       child: RecipeLinkLine(
         lead: 'Original: ',
         name: original.title,

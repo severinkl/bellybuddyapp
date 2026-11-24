@@ -17,7 +17,6 @@ import '../../services/recipes/recipe_fit.dart';
 import '../../utils/url_utils.dart';
 import '../../widgets/common/bb_async_state.dart';
 import '../../widgets/common/bb_button.dart';
-import 'widgets/fit_badge_view.dart';
 import 'widgets/ingredient_line_view.dart';
 import 'widgets/recipe_image.dart';
 import 'widgets/recipe_page_parts.dart';
@@ -98,7 +97,6 @@ class _RecipeBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final recipe = fit.recipe;
-    final meta = recipe.detailMeta;
     final source = recipe.sourceUrl;
     final sourceName = recipe.sourceLabel;
     return SingleChildScrollView(
@@ -106,33 +104,12 @@ class _RecipeBody extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-            child: AspectRatio(
-              aspectRatio: 16 / 9,
-              child: RecipeImage(recipe: recipe),
-            ),
+          RecipePageHead(
+            image: RecipeImage(recipe: recipe),
+            title: recipe.title,
+            meta: recipe.detailMeta,
+            badge: fit.badge,
           ),
-          AppConstants.gap16,
-          Semantics(
-            header: true,
-            child: Text(
-              recipe.title,
-              style: const TextStyle(
-                fontSize: AppTheme.fontSizeDisplay,
-                fontWeight: FontWeight.w700,
-                color: AppTheme.foreground,
-              ),
-            ),
-          ),
-          if (meta.isNotEmpty) ...[AppConstants.gap8, RecipeMetaLine(meta)],
-          if (fit.badge case final badge?) ...[
-            AppConstants.gap8,
-            Align(
-              alignment: AlignmentDirectional.centerStart,
-              child: FitBadgeView(badge),
-            ),
-          ],
           AppConstants.gap16,
           _IngredientsCard(fit: fit),
           if (recipe.instructions.isNotEmpty) ...[
@@ -162,13 +139,10 @@ class _IngredientsCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final recipe = fit.recipe;
-    final servings = recipe.servingsLabel;
     final kritisch = {for (final l in fit.kritisch) l.line.name}.toList();
     return RecipeSectionCard(
       title: 'Zutaten',
-      trailing: servings == null
-          ? null
-          : Text('für $servings', style: RecipeSectionCard.captionStyle),
+      servings: recipe.servingsLabel,
       children: [
         ..._lines(),
         if (kritisch.isNotEmpty) ...[

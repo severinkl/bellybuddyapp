@@ -124,6 +124,11 @@ void main() {
     expect(spoken(Icons.arrow_back), 'Zurück');
     expect(spoken(Icons.edit_outlined), 'Bearbeiten');
     expect(spoken(Icons.delete_outline), 'Rezept löschen');
+    // The title is the page's heading, as on a collection recipe.
+    expect(
+      tester.getSemantics(find.text('Linseneintopf')),
+      isSemantics(label: 'Linseneintopf', isHeader: true),
+    );
     semantics.dispose();
   });
 
@@ -229,6 +234,13 @@ void main() {
 
       expect(find.text('Für dich angepasst'), findsOneWidget);
       expect(find.byType(RecipeTagPill), findsOneWidget);
+      // On the picture, as on the adapt screen.
+      expect(
+        tester
+            .getRect(find.byKey(RecipeDetailScreen.imagePlaceholderKey))
+            .contains(tester.getCenter(find.byType(RecipeTagPill))),
+        isTrue,
+      );
       await tester.tap(find.textContaining('Reis mit Honig'));
       await tester.pumpAndSettle();
       expect(find.text('page:/collection/orig-1'), findsOneWidget);

@@ -2,15 +2,99 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
+import '../../../services/recipes/recipe_copy.dart';
+import '../../../services/recipes/recipe_fit.dart';
 import '../../../widgets/common/bb_card.dart';
+import 'fit_badge_view.dart';
+import 'recipe_collection_card.dart';
+
+/// The head of a recipe page: the picture (16:9, with an optional [tag] on
+/// it), the title as the page's heading, [meta] („35 Min · 2 Portionen")
+/// and the fit [badge].
+class RecipePageHead extends StatelessWidget {
+  const RecipePageHead({
+    super.key,
+    required this.image,
+    this.tag,
+    required this.title,
+    this.meta = '',
+    this.badge,
+  });
+
+  final Widget image;
+
+  /// On the picture, top left; an adapted recipe's says „Für dich
+  /// angepasst".
+  final RecipeCardTag? tag;
+  final String title;
+
+  /// Nothing when blank.
+  final String meta;
+  final FitBadge? badge;
+
+  @override
+  Widget build(BuildContext context) {
+    final tag = this.tag;
+    final badge = this.badge;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(AppConstants.radiusLg),
+          child: AspectRatio(
+            aspectRatio: 16 / 9,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                image,
+                if (tag != null)
+                  Positioned(
+                    top: AppConstants.spacing12,
+                    left: AppConstants.spacing12,
+                    child: RecipeTagPill(
+                      tag,
+                      label: tag == RecipeCardTag.adapted
+                          ? RecipeCopy.adaptedForYou
+                          : null,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ),
+        AppConstants.gap16,
+        Semantics(
+          header: true,
+          child: Text(
+            title,
+            style: const TextStyle(
+              fontSize: AppTheme.fontSizeDisplay,
+              fontWeight: FontWeight.w700,
+              color: AppTheme.foreground,
+            ),
+          ),
+        ),
+        if (meta.isNotEmpty) ...[AppConstants.gap8, RecipeMetaLine(meta)],
+        if (badge != null) ...[
+          AppConstants.gap8,
+          Align(
+            alignment: AlignmentDirectional.centerStart,
+            child: FitBadgeView(badge),
+          ),
+        ],
+      ],
+    );
+  }
+}
 
 /// A white card of a recipe page („Zutaten", „Zubereitung") with a heading
-/// and, at its right, a [trailing] (e.g. „für 2 Portionen" in
+/// and, at its right, „für [servings]" or a [trailing] (in
 /// [captionStyle]).
 class RecipeSectionCard extends StatelessWidget {
   const RecipeSectionCard({
     super.key,
     required this.title,
+    this.servings,
     this.trailing,
     required this.children,
   });
@@ -22,11 +106,18 @@ class RecipeSectionCard extends StatelessWidget {
   );
 
   final String title;
+
+  /// E.g. „2 Portionen", said as „für 2 Portionen"; instead of [trailing].
+  final String? servings;
   final Widget? trailing;
   final List<Widget> children;
 
   @override
   Widget build(BuildContext context) {
+    final trailing = switch (servings) {
+      final servings? => Text('für $servings', style: captionStyle),
+      null => this.trailing,
+    };
     return BbCard(
       color: Colors.white,
       showBorder: false,
