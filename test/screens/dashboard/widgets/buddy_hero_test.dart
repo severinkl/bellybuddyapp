@@ -1658,7 +1658,7 @@ void main() {
       testWidgets('yes with a failing opt-in → the SnackBar, nothing said', (
         tester,
       ) async {
-        firstTip.acceptResult = false;
+        firstTip.acceptResult = FirstTipAcceptance.failed;
         await pumpHero(tester);
         await afterWave(tester);
 
@@ -1669,6 +1669,41 @@ void main() {
         expect(find.text(WeeklyTipsSwitch.failure), findsOneWidget);
         expect(controller(tester).bubble, isNot(JourneyCopy.firstTipStarted));
         expect(buddy.shown, [BuddyAnnouncement.firstTipOffer]);
+      });
+
+      testWidgets('yes while the profile is not ready → not answered: no '
+          'SnackBar, still pending, it comes again', (tester) async {
+        firstTip.acceptResult = FirstTipAcceptance.notReady;
+        final container = await pumpHero(tester);
+        await afterWave(tester);
+
+        await closeOffer(tester, FirstTipOfferSheet.yesKey);
+        await tick(tester);
+
+        expect(firstTip.accepts, 1);
+        expect(find.byType(SnackBar), findsNothing);
+        expect(controller(tester).bubble, isNot(JourneyCopy.firstTipStarted));
+        expect(
+          container.read(journeyRewardsProvider)!.tipOffer,
+          TipOffer.offered,
+        );
+        expect(buddy.shown, isEmpty);
+        expect(container.read(buddyProvider).value!.announcements, [
+          BuddyAnnouncement.firstTipOffer,
+        ]);
+
+        // The next status update: the offer again.
+        firstTip.acceptResult = FirstTipAcceptance.started;
+        buddy.push(
+          _status(announcements: const [BuddyAnnouncement.firstTipOffer]),
+        );
+        await tester.pump();
+        await tester.pump();
+        await afterWave(tester);
+        expect(find.byType(FirstTipOfferSheet), findsOneWidget);
+        await closeOffer(tester, FirstTipOfferSheet.yesKey);
+        await tick(tester);
+        expect(controller(tester).bubble, JourneyCopy.firstTipStarted);
       });
 
       testWidgets('no → declined, the day-3 recipe sheet with day3AfterNoLine, '

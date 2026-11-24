@@ -13,6 +13,23 @@ import 'journey_rewards_provider.dart';
 import 'profile_provider.dart';
 import 'recommendation_provider.dart';
 
+/// What [FirstTipNotifier.accept] did.
+enum FirstTipAcceptance {
+  /// The weekly tips are on and the first tip is on its way, or this
+  /// device already asked for it.
+  started,
+
+  /// Switching the weekly tips on failed, or another user signed in
+  /// meanwhile: nothing requested.
+  failed,
+
+  /// Nothing to do it with yet: no user, no journey rewards, or no profile
+  /// (none, failed, or still loading after
+  /// [AppConstants.firstTipProfileWait]; another user signed in while it
+  /// waited). Nothing changed or requested: the offer is not answered.
+  notReady,
+}
+
 /// The day-3 first tip after „Ja, gern": one `diet-recommendations` call
 /// per user and device, made only once the weekly tips are switched on.
 ///
@@ -23,49 +40,76 @@ class FirstTipNotifier extends Notifier<void> {
   static const _log = AppLogger('FirstTip');
 
   /// The [accept] on its way: a second call (a double tap) joins it.
-  Future<bool>? _accepting;
+  Future<FirstTipAcceptance>? _accepting;
 
   @override
   void build() {}
 
   /// Switches the weekly tips on, answers the offer „Ja", notes the request
-  /// (both stored) and starts it, unawaited. True once started, and when
-  /// this device already asked: never a second request.
+  /// (both stored) and starts it, unawaited: [FirstTipAcceptance.started],
+  /// also when this device already asked (never a second request).
   ///
-  /// False, with nothing changed, when the user, the journey's rewards or
-  /// the profile is missing, and when the opt-in write fails: no AI call
-  /// with the user's data without it. False too when another user signed
-  /// in meanwhile.
-  Future<bool> accept() =>
+  /// A profile still (re)loading is waited for, at most
+  /// [AppConstants.firstTipProfileWait]. [FirstTipAcceptance.notReady],
+  /// with nothing changed, when the user, the journey's rewards or the
+  /// profile is missing (then too). [FirstTipAcceptance.failed] when the
+  /// opt-in write fails (no AI call with the user's data without it) or
+  /// another user signed in meanwhile.
+  Future<FirstTipAcceptance> accept() =>
       _accepting ??= _accept().whenComplete(() => _accepting = null);
 
-  Future<bool> _accept() async {
+  Future<FirstTipAcceptance> _accept() async {
     final userId = ref.read(currentUserIdProvider);
-    final rewards = ref.read(journeyRewardsProvider);
-    final profile = ref.read(profileProvider).value;
-    if (userId == null || rewards == null || profile == null) {
-      _log.warn('accept: no user, journey rewards or profile');
-      return false;
+    if (userId == null || ref.read(journeyRewardsProvider) == null) {
+      _log.warn('accept: no user or journey rewards');
+      return FirstTipAcceptance.notReady;
     }
-    if (rewards.firstTip != null) return true;
+    final profile = await _settledProfile();
+    if (!_stillFor(userId)) return FirstTipAcceptance.notReady;
+    final rewards = ref.read(journeyRewardsProvider);
+    if (rewards == null || profile == null) {
+      _log.warn('accept: no journey rewards or profile');
+      return FirstTipAcceptance.notReady;
+    }
+    if (rewards.firstTip != null) return FirstTipAcceptance.started;
     try {
       // Fails by throwing (and switches back): never a request then.
       await ref.read(profileProvider.notifier).setWeeklyTips(true);
     } catch (e, st) {
       _log.error('accept: switching the weekly tips on failed', e, st);
-      return false;
+      return FirstTipAcceptance.failed;
     }
-    if (!_stillFor(userId)) return false;
+    if (!_stillFor(userId)) return FirstTipAcceptance.failed;
     await ref
         .read(journeyRewardsProvider.notifier)
         .answerTipOffer(accepted: true);
-    if (!_stillFor(userId)) return false;
+    if (!_stillFor(userId)) return FirstTipAcceptance.failed;
     await ref
         .read(journeyRewardsProvider.notifier)
         .setFirstTip(FirstTipState.requested);
-    if (!_stillFor(userId)) return false;
+    if (!_stillFor(userId)) return FirstTipAcceptance.failed;
     unawaited(_request(userId, profile));
-    return true;
+    return FirstTipAcceptance.started;
+  }
+
+  /// The profile once it is no longer loading, waiting at most
+  /// [AppConstants.firstTipProfileWait]; null without one (none, failed,
+  /// still loading).
+  Future<UserProfile?> _settledProfile() async {
+    final now = ref.read(profileProvider);
+    if (!now.isLoading) return now.value;
+    final settled = Completer<UserProfile?>();
+    final sub = ref.listen(profileProvider, (_, next) {
+      if (!next.isLoading && !settled.isCompleted) settled.complete(next.value);
+    });
+    try {
+      return await settled.future.timeout(
+        AppConstants.firstTipProfileWait,
+        onTimeout: () => null,
+      );
+    } finally {
+      sub.close();
+    }
   }
 
   /// The one request, with the profile's intolerances and diet (core reads

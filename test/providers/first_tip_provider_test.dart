@@ -80,17 +80,21 @@ void main() {
   });
 
   /// A container with [rewards] seeded (in memory), or with the stored
-  /// rewards when [storedRewards]; with [_profile] loaded, or no profile.
+  /// rewards when [storedRewards]; with [_profile] loaded, no profile, or
+  /// [profileLoading] (it loads [_profile] on `fetchProfile`).
   ProviderContainer container({
     JourneyRewards? rewards = _offered,
     bool noProfile = false,
+    bool profileLoading = false,
     bool storedRewards = false,
     List<Override> overrides = const [],
   }) => ProviderContainer.test(
     overrides: [
       _user.override,
       profileRepositoryProvider.overrideWithValue(profiles),
-      profileProviderSeededWith(noProfile ? null : _profile),
+      // Loading: the real notifier, loading until fetchProfile.
+      if (!profileLoading)
+        profileProviderSeededWith(noProfile ? null : _profile),
       entryRepositoryProvider.overrideWithValue(entries),
       recommendationRepositoryProvider.overrideWithValue(tips),
       buddyClockProvider.overrideWithValue(() => _now),
@@ -99,7 +103,7 @@ void main() {
     ],
   );
 
-  Future<bool> accept(ProviderContainer c) =>
+  Future<FirstTipAcceptance> accept(ProviderContainer c) =>
       c.read(firstTipProvider.notifier).accept();
 
   JourneyRewards? rewardsOf(ProviderContainer c) =>
@@ -130,7 +134,7 @@ void main() {
       expect(rewardsOf(c), _offered);
 
       optIn.complete();
-      expect(await accepted, isTrue);
+      expect(await accepted, FirstTipAcceptance.started);
       await _settle();
 
       expect(profiles.weeklyTipsWrites, [true]);
@@ -153,12 +157,12 @@ void main() {
       expect(tips.firstTipRequests, hasLength(1));
     });
 
-    test('opt-in fails: false, no request, firstTip unchanged', () async {
+    test('opt-in fails: failed, no request, firstTip unchanged', () async {
       captureLogs();
       profiles.weeklyTipsError = Exception('offline');
       final c = container();
 
-      expect(await accept(c), isFalse);
+      expect(await accept(c), FirstTipAcceptance.failed);
       await _settle();
 
       expect(profiles.weeklyTipsWrites, [true]);
@@ -167,7 +171,7 @@ void main() {
       expect(rewardsOf(c), _offered);
     });
 
-    test('no user, no journey or no profile: false, nothing written or '
+    test('no user, no journey or no profile: not ready, nothing written or '
         'asked', () async {
       captureLogs();
       final signedOut = container();
@@ -179,13 +183,54 @@ void main() {
       ];
 
       for (final c in cases) {
-        expect(await accept(c), isFalse);
+        expect(await accept(c), FirstTipAcceptance.notReady);
       }
       await _settle();
 
       expect(profiles.weeklyTipsWrites, isEmpty);
       expect(tips.firstTipRequests, isEmpty);
       expect(rewardsOf(cases.first), _offered);
+    });
+
+    test('the profile (re)loading: waits for it, then switches on and asks '
+        'with it', () async {
+      final c = container(profileLoading: true);
+      expect(c.read(profileProvider).isLoading, isTrue);
+
+      final accepted = accept(c);
+      await _settle();
+      expect(profiles.weeklyTipsWrites, isEmpty);
+      expect(rewardsOf(c), _offered);
+
+      await c.read(profileProvider.notifier).fetchProfile();
+      expect(await accepted, FirstTipAcceptance.started);
+      await _settle();
+
+      expect(profiles.weeklyTipsWrites, [true]);
+      expect(rewardsOf(c)!.tipOffer, TipOffer.accepted);
+      expect(tips.firstTipRequests.single.intolerances, ['Fruktose']);
+    });
+
+    test('the profile still loading after '
+        '${AppConstants.firstTipProfileWait.inSeconds} s: not ready, nothing '
+        'written or asked', () {
+      fakeAsync((async) {
+        captureLogs();
+        final c = container(profileLoading: true);
+        FirstTipAcceptance? accepted;
+        accept(c).then((v) => accepted = v);
+
+        async.elapse(
+          AppConstants.firstTipProfileWait - const Duration(seconds: 1),
+        );
+        expect(accepted, isNull);
+        async.elapse(const Duration(seconds: 2));
+
+        expect(accepted, FirstTipAcceptance.notReady);
+        expect(profiles.weeklyTipsWrites, isEmpty);
+        expect(tips.firstTipRequests, isEmpty);
+        expect(rewardsOf(c), _offered);
+      });
     });
 
     test('accept twice: one request', () async {
@@ -198,11 +243,11 @@ void main() {
       // At once (a double tap): the second joins the first.
       final both = await Future.wait([accept(c), accept(c)]);
       await _settle();
-      expect(both, [true, true]);
+      expect(both, [FirstTipAcceptance.started, FirstTipAcceptance.started]);
       expect(tips.firstTipRequests, hasLength(1));
 
       // While the request runs.
-      expect(await accept(c), isTrue);
+      expect(await accept(c), FirstTipAcceptance.started);
       await _settle();
       expect(tips.firstTipRequests, hasLength(1));
 
@@ -211,7 +256,7 @@ void main() {
       expect(rewardsOf(c)!.firstTip, FirstTipState.done);
 
       // After it is done.
-      expect(await accept(c), isTrue);
+      expect(await accept(c), FirstTipAcceptance.started);
       await _settle();
 
       expect(tips.firstTipRequests, hasLength(1));
@@ -231,7 +276,7 @@ void main() {
       expect(tips.firstTipRequests, hasLength(1));
       expect(tips.fetchCount, 0);
 
-      expect(await accept(c), isTrue);
+      expect(await accept(c), FirstTipAcceptance.started);
       await _settle();
       expect(tips.firstTipRequests, hasLength(1));
     }
@@ -246,7 +291,7 @@ void main() {
         tips.firstTipError = error;
         final c = container();
 
-        expect(await accept(c), isTrue);
+        expect(await accept(c), FirstTipAcceptance.started);
         await _settle();
 
         await expectFailedOnce(c);
@@ -262,10 +307,10 @@ void main() {
         captureLogs();
         tips.firstTipGate = Completer<void>(); // never answers
         final c = container();
-        bool? accepted;
+        FirstTipAcceptance? accepted;
         accept(c).then((v) => accepted = v);
         async.flushMicrotasks();
-        expect(accepted, isTrue);
+        expect(accepted, FirstTipAcceptance.started);
 
         async.elapse(AppConstants.firstTipTimeout - const Duration(seconds: 1));
         expect(rewardsOf(c)!.firstTip, FirstTipState.requested);
@@ -283,7 +328,7 @@ void main() {
       tips.firstTipError = StateError('broken');
       final c = container();
 
-      expect(await accept(c), isTrue);
+      expect(await accept(c), FirstTipAcceptance.started);
       await _settle();
 
       await expectFailedOnce(c);
@@ -300,7 +345,7 @@ void main() {
       );
       final c = container();
 
-      expect(await accept(c), isTrue);
+      expect(await accept(c), FirstTipAcceptance.started);
       await _settle();
 
       await expectFailedOnce(c);
@@ -311,7 +356,7 @@ void main() {
       captureLogs();
       final c = container();
 
-      expect(await accept(c), isTrue);
+      expect(await accept(c), FirstTipAcceptance.started);
       await _settle();
 
       await expectFailedOnce(c);
@@ -369,7 +414,7 @@ void main() {
       // The app is closed while the call is on its way.
       tips.firstTipGate = Completer<void>();
       final first = await stored();
-      expect(await accept(first), isTrue);
+      expect(await accept(first), FirstTipAcceptance.started);
       await _settle();
       expect(tips.firstTipRequests, hasLength(1));
       first.dispose();
@@ -378,7 +423,7 @@ void main() {
       const requested = (TipOffer.accepted, FirstTipState.requested);
       expect(answerOf(rewardsOf(restarted)), requested);
 
-      expect(await accept(restarted), isTrue);
+      expect(await accept(restarted), FirstTipAcceptance.started);
       await _settle();
 
       expect(tips.firstTipRequests, hasLength(1));
@@ -398,7 +443,7 @@ void main() {
         final c = await stored();
         expect(answerOf(rewardsOf(c)), open);
 
-        expect(await accept(c), isTrue);
+        expect(await accept(c), FirstTipAcceptance.started);
         await _settle();
         expect(tips.firstTipRequests, hasLength(1));
 
@@ -433,7 +478,7 @@ void main() {
       await _settle();
       optIn.complete();
 
-      expect(await accepted, isFalse);
+      expect(await accepted, FirstTipAcceptance.failed);
       await _settle();
 
       expect(tips.firstTipRequests, isEmpty);

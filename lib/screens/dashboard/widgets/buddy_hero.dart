@@ -700,10 +700,12 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// After the wave: day 3's offer of a first tip ([offerFirstTip]), then
   /// continues; waits like every cue's sheet ([_deferSheet]). „Ja, gern"
   /// started → he says it is on its way, holding the stage; the opt-in
-  /// failed → a SnackBar; „Nein, danke" was answered there. A dismissal
-  /// here counts as „Nein" (the offer doesn't come again), but only while
-  /// the hero is still here: gone, nothing is stored and the offer comes
-  /// again. Off the journey or undecided by now (another user): none.
+  /// failed → a SnackBar; not ready yet (the profile loading) → not
+  /// answered, the offer stays pending and comes again ([_endUnshown]);
+  /// „Nein, danke" was answered there. A dismissal here counts as „Nein"
+  /// (the offer doesn't come again), but only while the hero is still
+  /// here: gone, nothing is stored and the offer comes again. Off the
+  /// journey or undecided by now (another user): none.
   Future<void> _offerFirstTip() async {
     if (_deferSheet(_offerFirstTip)) return;
     if (ref.read(journeyProvider) != true) return _nextCue();
@@ -718,6 +720,8 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
           const SnackBar(content: Text(WeeklyTipsSwitch.failure)),
         );
         _nextCue();
+      case FirstTipOutcome.notReady:
+        _endUnshown();
       case FirstTipOutcome.declined:
         _nextCue();
       case FirstTipOutcome.dismissed:

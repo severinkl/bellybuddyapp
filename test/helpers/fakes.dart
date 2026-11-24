@@ -761,10 +761,10 @@ class FakeRecommendationRepository implements RecommendationRepository {
 /// [accepts] and answers [acceptResult].
 class FakeFirstTipNotifier extends FirstTipNotifier {
   int accepts = 0;
-  bool acceptResult = true;
+  FirstTipAcceptance acceptResult = FirstTipAcceptance.started;
 
   @override
-  Future<bool> accept() async {
+  Future<FirstTipAcceptance> accept() async {
     accepts++;
     return acceptResult;
   }

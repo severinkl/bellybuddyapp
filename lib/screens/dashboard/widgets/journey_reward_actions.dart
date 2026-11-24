@@ -88,6 +88,10 @@ enum FirstTipOutcome {
   /// „Ja, gern", but switching the weekly tips on failed: nothing sent.
   optInFailed,
 
+  /// „Ja, gern", but nothing to do it with yet (the profile still loading):
+  /// nothing stored or sent. Not answered: the caller asks again later.
+  notReady,
+
   /// „Nein, danke": answered so, and day 3's recipe given.
   declined,
 
@@ -99,8 +103,9 @@ enum FirstTipOutcome {
 /// The day-3 offer of a first tip ([showFirstTipOfferSheet]), from
 /// [context], and what follows the answer:
 /// - „Ja, gern" requests it (`FirstTipNotifier.accept`, which switches the
-///   weekly tips on first): [FirstTipOutcome.started], or
-///   [FirstTipOutcome.optInFailed] when that failed;
+///   weekly tips on first): [FirstTipOutcome.started],
+///   [FirstTipOutcome.optInFailed] when that failed, or
+///   [FirstTipOutcome.notReady] when it couldn't be done yet;
 /// - „Nein, danke" answers the offer so, then gives day 3's recipe
 ///   ([showJourneyDaySheet] after „Nein"; its primary button opens it):
 ///   [FirstTipOutcome.declined]; opening it leaves Home as
@@ -116,9 +121,11 @@ Future<FirstTipOutcome> offerFirstTip(
   if (answer == null || !context.mounted) return FirstTipOutcome.dismissed;
   switch (answer) {
     case FirstTipAnswer.yes:
-      return await ref.read(firstTipProvider.notifier).accept()
-          ? FirstTipOutcome.started
-          : FirstTipOutcome.optInFailed;
+      return switch (await ref.read(firstTipProvider.notifier).accept()) {
+        FirstTipAcceptance.started => FirstTipOutcome.started,
+        FirstTipAcceptance.failed => FirstTipOutcome.optInFailed,
+        FirstTipAcceptance.notReady => FirstTipOutcome.notReady,
+      };
     case FirstTipAnswer.no:
       await ref
           .read(journeyRewardsProvider.notifier)

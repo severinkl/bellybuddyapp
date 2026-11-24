@@ -24,7 +24,8 @@ import 'journey_reward_actions.dart';
 /// outlive the sheet, e.g. Home's):
 /// - day 3 while its offer is open ([tipOfferDue]): the offer
 ///   ([offerFirstTip]); a SnackBar says when the first tip started or the
-///   opt-in failed, and a dismissal here is no „Nein": the Buddy still asks;
+///   opt-in failed, and a dismissal here, or a „Ja" that couldn't be done
+///   yet, is no answer: the Buddy still asks;
 /// - any other: [openJourneyReward], articles through [openUrl].
 ///
 /// Home counts as covered ([homeCoveredProvider]) until that is done, and
@@ -61,7 +62,9 @@ Future<void> _showRewards(
   final message = switch (await offerFirstTip(context, ref)) {
     FirstTipOutcome.started => JourneyCopy.firstTipStarted,
     FirstTipOutcome.optInFailed => WeeklyTipsSwitch.failure,
-    FirstTipOutcome.declined || FirstTipOutcome.dismissed => null,
+    FirstTipOutcome.declined ||
+    FirstTipOutcome.dismissed ||
+    FirstTipOutcome.notReady => null,
   };
   if (message != null) {
     messenger?.showSnackBar(SnackBar(content: Text(message)));

@@ -332,6 +332,10 @@ class AppConstants {
   /// The day-3 first tip's one request may take this long.
   static const Duration firstTipTimeout = Duration(seconds: 60);
 
+  /// „Ja, gern" to the first tip waits at most this long for a (re)loading
+  /// profile.
+  static const Duration firstTipProfileWait = Duration(seconds: 10);
+
   // Apple "Hide My Email" relay address suffix (includes the leading `@`).
   // See the Sign in with Apple docs — this domain is stable since iOS 13.
   static const String appleRelayEmailSuffix = '@privaterelay.appleid.com';

@@ -290,13 +290,25 @@ void main() {
     testWidgets('yes with a failing opt-in → the switch\'s failure', (
       tester,
     ) async {
-      firstTip.acceptResult = false;
+      firstTip.acceptResult = FirstTipAcceptance.failed;
       await openOffer(tester);
       await tester.tap(find.byKey(FirstTipOfferSheet.yesKey));
       await tester.pumpAndSettle();
 
       expect(firstTip.accepts, 1);
       expect(find.text(WeeklyTipsSwitch.failure), findsOneWidget);
+    });
+
+    testWidgets('yes while the profile is not ready → no SnackBar, not '
+        'answered', (tester) async {
+      firstTip.acceptResult = FirstTipAcceptance.notReady;
+      final container = await openOffer(tester);
+      await tester.tap(find.byKey(FirstTipOfferSheet.yesKey));
+      await tester.pumpAndSettle();
+
+      expect(firstTip.accepts, 1);
+      expect(find.byType(SnackBar), findsNothing);
+      expect(offerOf(container), TipOffer.offered);
     });
 
     testWidgets('no → declined, no request, the day-3 recipe sheet', (
