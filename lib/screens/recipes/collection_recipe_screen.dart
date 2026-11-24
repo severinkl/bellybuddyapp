@@ -229,8 +229,9 @@ class _ActionBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    ref.watch(recipeFavoritesProvider);
-    final saved = ref.read(recipeFavoritesProvider.notifier).isSaved(recipe.id);
+    final saved = ref.watch(
+      recipeFavoritesProvider.select((f) => f.isSaved(recipe.id)),
+    );
     return SafeArea(
       top: false,
       child: Padding(

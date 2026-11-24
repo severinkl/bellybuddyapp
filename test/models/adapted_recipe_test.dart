@@ -157,4 +157,16 @@ void main() {
       });
     }
   });
+
+  test('retryable: only when trying again may help', () {
+    expect(
+      {for (final f in AdaptFailure.values) f: f.retryable},
+      {
+        AdaptFailure.nothingToAdapt: false,
+        AdaptFailure.cannotJudge: false,
+        AdaptFailure.later: true,
+        AdaptFailure.failed: true,
+      },
+    );
+  });
 }

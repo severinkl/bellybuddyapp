@@ -72,9 +72,7 @@ class AdaptedRecipeView extends StatelessWidget {
           _IngredientsCard(
             adapted: adapted,
             servings: original?.servingsLabel,
-            // No ✓ while an intolerance can't be judged (or the fit is
-            // unknown): it would read like a verdict on it.
-            verdict: fit != null && fit.checked && selfCheck.isEmpty,
+            clean: fit?.cleanMark ?? LineMark.neutral,
           ),
           if (steps.isNotEmpty) ...[
             AppConstants.gap16,
@@ -163,19 +161,18 @@ class _IngredientsCard extends StatelessWidget {
   const _IngredientsCard({
     required this.adapted,
     required this.servings,
-    required this.verdict,
+    required this.clean,
   });
 
   final AdaptedRecipe adapted;
   final String? servings;
 
-  /// Whether a line in the catalog gets ✓ (else a neutral dot).
-  final bool verdict;
+  /// The mark of a line in the catalog ([RecipeFit.cleanMark]).
+  final LineMark clean;
 
   @override
   Widget build(BuildContext context) {
     final amounts = adapted.ingredients.any((i) => i.amount != null);
-    final known = verdict ? LineMark.fits : LineMark.neutral;
     return RecipeSectionCard(
       title: 'Zutaten',
       servings: servings,
@@ -184,7 +181,7 @@ class _IngredientsCard extends StatelessWidget {
           IngredientLineView(
             amount: i.amount,
             name: i.name,
-            mark: i.unknown ? LineMark.unknown : known,
+            mark: i.unknown ? LineMark.unknown : clean,
             replaces: i.replaces,
             // The line says „nicht im Katalog" itself, except for a swap.
             note: i.unknown && i.replaces != null

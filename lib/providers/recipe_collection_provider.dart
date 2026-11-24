@@ -67,8 +67,7 @@ class RecipeFavoritesNotifier extends AsyncNotifier<List<FavoriteRecipe>>
     return ref.read(recipeRepositoryProvider).fetchFavorites(userId);
   }
 
-  bool isSaved(String recipeId) =>
-      state.settledValue?.any((f) => f.recipeId == recipeId) ?? false;
+  bool isSaved(String recipeId) => state.isSaved(recipeId);
 
   /// Saves [recipeId], or removes it when saved; shown at once. Returns
   /// false, with the change taken back, when the write fails, and false
@@ -111,6 +110,12 @@ class RecipeFavoritesNotifier extends AsyncNotifier<List<FavoriteRecipe>>
   /// Fetches again, keeping the data on show when it fails.
   Future<void> refresh() =>
       refreshWith(ref.read(recipeRepositoryProvider).fetchFavorites, _favLog);
+}
+
+/// Whether [recipeId] is among the settled favourites; for a `select`.
+extension SavedFavorites on AsyncValue<List<FavoriteRecipe>> {
+  bool isSaved(String recipeId) =>
+      settledValue?.any((f) => f.recipeId == recipeId) ?? false;
 }
 
 final recipeFavoritesProvider =

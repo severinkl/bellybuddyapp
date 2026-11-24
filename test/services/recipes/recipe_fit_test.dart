@@ -386,6 +386,16 @@ void main() {
     expect(fit.badge, const KritischBadge(2));
   });
 
+  test('cleanMark: ✓ only while every intolerance can be judged', () {
+    expect(_fit([_reis], ['Fruktose']).cleanMark, LineMark.fits);
+    expect(_fit([_reis], ['Fruktose', 'Histamin']).cleanMark, LineMark.neutral);
+    expect(_fit([_reis], null).cleanMark, LineMark.neutral);
+    expect(
+      _fit([_reis], ['Fruktose'], withRules: false).cleanMark,
+      LineMark.neutral,
+    );
+  });
+
   group('badges', () {
     test('compare by value', () {
       final histamin = SelfCheckBadge(List.of(['Histamin']));

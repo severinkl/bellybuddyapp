@@ -147,6 +147,12 @@ class RecipeFit {
 
   /// Whether the recipe passes „Passt zu mir" (which ignores [selfCheck]).
   bool get passtZuMir => checked && judged && kritischCount == 0;
+
+  /// The mark of a line that hits nothing: ✓ only while every intolerance
+  /// is known and can be judged, else neutral (a ✓ would read like a
+  /// verdict on Histamin).
+  LineMark get cleanMark =>
+      checked && selfCheck.isEmpty ? LineMark.fits : LineMark.neutral;
 }
 
 /// How [recipe] fits a user with [intolerances] (profile values) by

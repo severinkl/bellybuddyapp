@@ -123,7 +123,13 @@ enum AdaptFailure {
   later,
 
   /// Anything else.
-  failed,
+  failed;
+
+  /// Whether trying again may help (else nothing would change).
+  bool get retryable => switch (this) {
+    later || failed => true,
+    nothingToAdapt || cannotJudge => false,
+  };
 }
 
 /// Thrown by `RecipeService.adapt`; the app shows its own copy per

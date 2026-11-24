@@ -54,9 +54,8 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
   List<String> _loadedSteps = [];
 
   /// Ingredient name → its amount, from the loaded recipe; an ingredient
-  /// added here has none. Sent again only when the recipe had amounts.
+  /// added here has none.
   final Map<String, String?> _amounts = {};
-  bool _hadAmounts = false;
   bool _prefilled = false;
 
   bool get _isEditMode => widget.recipeId != null;
@@ -91,7 +90,6 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
       _imageUrl = recipe.imageUrl;
       _steps = List<String>.from(recipe.instructions);
       _loadedSteps = recipe.instructions;
-      _hadAmounts = recipe.ingredientAmounts != null;
       _amounts.clear();
       for (var i = 0; i < recipe.ingredients.length; i++) {
         _amounts[recipe.ingredients[i]] = recipe.amountOf(i);
@@ -181,9 +179,8 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
   }
 
   /// The amounts aligned with the ingredients that are left, or null when
-  /// the recipe had none (or no ingredient has one any more).
+  /// none has one (nor had: a recipe without amounts sends none).
   List<String?>? _amountsToSend() {
-    if (!_hadAmounts) return null;
     final amounts = [for (final name in _ingredients) _amounts[name]];
     return amounts.every((a) => a == null) ? null : amounts;
   }

@@ -193,13 +193,8 @@ class _AdaptRecipeScreenState extends ConsumerState<AdaptRecipeScreen> {
   }
 
   /// Back to the recipe's detail: popped, or opened when nothing is below.
-  void _backToRecipe() {
-    if (context.canPop()) {
-      context.pop();
-    } else {
-      context.go(RoutePaths.collectionRecipeFor(widget.recipeId));
-    }
-  }
+  void _backToRecipe() =>
+      context.popOr(RoutePaths.collectionRecipeFor(widget.recipeId));
 }
 
 /// [children] centred, scrolling when they don't fit.
@@ -289,10 +284,6 @@ class _Failure extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final retryable = switch (failure) {
-      AdaptFailure.later || AdaptFailure.failed => true,
-      AdaptFailure.nothingToAdapt || AdaptFailure.cannotJudge => false,
-    };
     return SingleChildScrollView(
       padding: AppConstants.paddingMd,
       child: Column(
@@ -304,7 +295,7 @@ class _Failure extends StatelessWidget {
             height: AppConstants.adaptBuddyBesideHeight,
           ),
           AppConstants.gap24,
-          if (retryable)
+          if (failure.retryable)
             BbButton(
               key: AdaptRecipeScreen.retryKey,
               label: 'Nochmal versuchen',

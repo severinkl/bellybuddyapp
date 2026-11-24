@@ -1,7 +1,6 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../config/app_theme.dart';
@@ -40,9 +39,6 @@ class _CollectionScreenState extends ConsumerState<CollectionScreen> {
   Future<void> _refresh() =>
       ref.read(recipeCollectionProvider.notifier).refresh();
 
-  void _back() =>
-      context.canPop() ? context.pop() : context.go(RoutePaths.discover);
-
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(rankedRecipesProvider);
@@ -50,7 +46,9 @@ class _CollectionScreenState extends ConsumerState<CollectionScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Rezepte'),
-        leading: BackButton(onPressed: _back),
+        leading: BackButton(
+          onPressed: () => context.popOr(RoutePaths.discover),
+        ),
       ),
       body: ranked != null
           ? _buildList(ranked)
