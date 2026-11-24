@@ -295,7 +295,7 @@ class _OriginalLink extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final original = ref.watch(recipeFitProvider(recipeId)).value?.recipe;
+    final original = ref.watch(collectionRecipeProvider(recipeId)).value;
     if (original == null) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.only(top: AppConstants.spacingXs),

@@ -172,19 +172,26 @@ final rankedRecipesProvider = Provider<AsyncValue<RankedRecipes>>((ref) {
   );
 });
 
+/// The collection recipe [id]; null for an unknown id. Loading while the
+/// collection reloads, like the ranking.
+final collectionRecipeProvider = Provider.autoDispose
+    .family<AsyncValue<Recipe?>, String>(
+      (ref, id) => _settledCollection(ref).whenData((recipes) {
+        for (final recipe in recipes) {
+          if (recipe.id == id) return recipe;
+        }
+        return null;
+      }),
+    );
+
 /// How the recipe [id] fits the user, diet ignored; null for an unknown id.
-final recipeFitProvider = Provider.family<AsyncValue<RecipeFit?>, String>((
-  ref,
-  id,
-) {
-  final user = ref.watch(userIntolerancesProvider);
-  return _settledCollection(ref).whenData((recipes) {
-    for (final recipe in recipes) {
-      if (recipe.id == id) return user.fit(recipe);
-    }
-    return null;
-  });
-});
+final recipeFitProvider = Provider.autoDispose
+    .family<AsyncValue<RecipeFit?>, String>((ref, id) {
+      final user = ref.watch(userIntolerancesProvider);
+      return ref
+          .watch(collectionRecipeProvider(id))
+          .whenData((recipe) => recipe == null ? null : user.fit(recipe));
+    });
 
 /// „Für dich" on the collection's page.
 final forYouRecipesProvider = Provider<AsyncValue<List<RecipeFit>>>(

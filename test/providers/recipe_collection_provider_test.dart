@@ -498,6 +498,25 @@ void main() {
     });
   });
 
+  group('collectionRecipe', () {
+    test('known id, unknown id; gone once nobody watches', () async {
+      final c = make();
+      final sub = c.listen(collectionRecipeProvider('meat'), (_, _) {});
+      final fit = c.listen(recipeFitProvider('meat'), (_, _) {});
+      await c.read(recipeCollectionProvider.future);
+      expect(sub.read().requireValue, same(meat));
+      expect(c.read(collectionRecipeProvider('nope')).requireValue, isNull);
+
+      fit.close();
+      await c.pump();
+      expect(c.read(recipeFitProvider('meat').exists), isFalse);
+      expect(c.read(collectionRecipeProvider('meat').exists), isTrue);
+      sub.close();
+      await c.pump();
+      expect(c.read(collectionRecipeProvider('meat').exists), isFalse);
+    });
+  });
+
   group('recipeFit', () {
     test('known id, unknown id, collection error', () async {
       final c = make();
