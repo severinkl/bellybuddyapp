@@ -1,16 +1,22 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
+import '../../models/my_recipe_item.dart';
+import '../../providers/recipe_collection_provider.dart';
 import '../../providers/recipe_search_provider.dart';
 import '../../providers/user_recipes_provider.dart';
+import '../../router/navigation_extensions.dart';
 import '../../router/route_names.dart';
 import '../../widgets/common/bb_async_state.dart';
 import '../../widgets/common/mascot_image.dart';
 import 'widgets/add_recipe_chooser_sheet.dart';
 import 'widgets/recipe_card.dart';
+import 'widgets/recipe_collection_card.dart';
 import 'widgets/recipes_search_field.dart';
 
 class MyRecipesTab extends ConsumerStatefulWidget {
@@ -44,10 +50,20 @@ class _MyRecipesTabState extends ConsumerState<MyRecipesTab> {
         message: 'Konnte Rezepte nicht laden',
         onRetry: () => ref.read(recipeSearchProvider(_host).notifier).retry(),
       ),
-      data: (recipes) {
-        final hasActiveQuery = ref
+      data: (found) {
+        final query = ref
             .read(recipeSearchProvider(_host).notifier)
-            .hasActiveQuery;
+            .activeQuery
+            ?.toLowerCase();
+        final hasActiveQuery = query != null;
+        // The search finds own recipes only; the saved ones are matched by
+        // title here.
+        final recipes = mergeMyRecipes(found, [
+          for (final saved in ref.watch(savedRecipesProvider))
+            if (query == null ||
+                saved.recipe.title.toLowerCase().contains(query))
+              saved,
+        ]);
         if (recipes.isEmpty && !hasActiveQuery) return const _EmptyState();
         return Column(
           children: [
@@ -74,13 +90,20 @@ class _MyRecipesTabState extends ConsumerState<MyRecipesTab> {
                           ),
                       itemCount: recipes.length,
                       itemBuilder: (context, i) {
-                        final recipe = recipes[i];
-                        return RecipeCard(
-                          recipe: recipe,
-                          onTap: () => context.push(
-                            RoutePaths.recipeDetailFor(recipe.id),
+                        return switch (recipes[i]) {
+                          OwnRecipe(:final recipe) => RecipeCard(
+                            recipe: recipe,
+                            onTap: () => context.push(
+                              RoutePaths.recipeDetailFor(recipe.id),
+                            ),
                           ),
-                        );
+                          SavedRecipe(:final recipe) => RecipeCollectionCard(
+                            recipe: recipe,
+                            tag: RecipeCardTag.saved,
+                            onTap: () =>
+                                unawaited(context.openRecipe(recipe.id)),
+                          ),
+                        };
                       },
                     ),
             ),

@@ -4,6 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:belly_buddy/providers/core_providers.dart';
+import 'package:belly_buddy/models/recipe.dart';
+import 'package:belly_buddy/repositories/recipe_repository.dart';
+import 'package:belly_buddy/screens/recipes/widgets/recipe_collection_card.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/screens/recipes/my_recipes_tab.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_card.dart';
@@ -15,9 +18,11 @@ import '../../helpers/mocks.dart';
 
 void main() {
   late MockUserRecipeRepository repo;
+  late FakeRecipeRepository collection;
 
   setUp(() {
     repo = MockUserRecipeRepository();
+    collection = FakeRecipeRepository();
   });
 
   Future<void> pump(WidgetTester tester, {required List recipes}) async {
@@ -31,12 +36,21 @@ void main() {
       ProviderScope(
         overrides: [
           userRecipeRepositoryProvider.overrideWithValue(repo),
+          recipeRepositoryProvider.overrideWithValue(collection),
           currentUserIdProvider.overrideWithValue(testUserId),
         ],
         child: const MaterialApp(home: Scaffold(body: MyRecipesTab())),
       ),
     );
     await tester.pumpAndSettle();
+  }
+
+  void saved(String id, String title) {
+    collection.collection = [
+      ...collection.collection.where((r) => r.id != 'recipe-1'),
+      testRecipe(id: id, title: title),
+    ];
+    collection.favorites = [FavoriteRecipe(id, DateTime(2026, 11, 20))];
   }
 
   testWidgets('shows empty-state CTA when there are no recipes', (
@@ -95,4 +109,46 @@ void main() {
       expect(find.byType(RecipeCard), findsNothing);
     },
   );
+
+  testWidgets('gemerkte appear with a heart', (tester) async {
+    saved('g', 'Gemerktes Curry');
+    await pump(
+      tester,
+      recipes: [testUserRecipe(id: 'a', title: 'Eigenes')],
+    );
+
+    expect(find.byType(RecipeCard), findsOneWidget);
+    expect(find.byType(RecipeCollectionCard), findsOneWidget);
+    expect(find.text('Gemerktes Curry'), findsOneWidget);
+    expect(find.byIcon(Icons.favorite), findsOneWidget);
+  });
+
+  testWidgets('a search filters the gemerkte by title', (tester) async {
+    saved('g', 'Gemerktes Curry');
+    await pump(
+      tester,
+      recipes: [testUserRecipe(id: 'a', title: 'Eigenes')],
+    );
+
+    await tester.enterText(find.byType(TextField), '  CURRY ');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
+    expect(find.text('Gemerktes Curry'), findsOneWidget);
+
+    when(() => repo.searchForUser(any(), any())).thenAnswer((_) async => []);
+    await tester.enterText(find.byType(TextField), 'zzz');
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pumpAndSettle();
+    expect(find.byType(RecipeCollectionCard), findsNothing);
+    expect(find.text('Keine Treffer'), findsOneWidget);
+  });
+
+  testWidgets('only gemerkte → grid, not the empty state', (tester) async {
+    saved('g', 'Gemerktes Curry');
+    await pump(tester, recipes: const []);
+
+    expect(find.text('Noch keine Rezepte'), findsNothing);
+    expect(find.byType(GridView), findsOneWidget);
+    expect(find.byType(RecipeCollectionCard), findsOneWidget);
+  });
 }

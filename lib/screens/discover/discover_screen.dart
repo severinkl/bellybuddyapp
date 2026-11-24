@@ -11,8 +11,10 @@ import '../../providers/discover_news_provider.dart';
 import '../../providers/ingredient_suggestion_provider.dart';
 import '../../providers/knowledge_provider.dart';
 import '../../providers/profile_provider.dart';
+import '../../providers/recipe_collection_provider.dart';
 import '../../providers/recommendation_provider.dart';
 import '../../providers/user_recipes_provider.dart';
+import '../../router/navigation_extensions.dart';
 import '../../router/route_names.dart';
 import '../../utils/url_utils.dart';
 import 'widgets/discover_alternatives_section.dart';
@@ -25,7 +27,8 @@ import 'widgets/knowledge_article_tile.dart';
 
 /// The Entdecken tab: the hub over the app's content. Top to bottom:
 /// Tipps (the newest recommendation set), Alternativen (the newest
-/// ingredient suggestions), Meine Rezepte and Wissen (the newest myfodmap
+/// ingredient suggestions), Rezepte (Für dich from the collection, and
+/// Meine Rezepte: own and saved) and Wissen (the newest myfodmap
 /// blog articles).
 /// A section with nothing in it says so and links nowhere.
 class DiscoverScreen extends ConsumerStatefulWidget {
@@ -37,7 +40,7 @@ class DiscoverScreen extends ConsumerStatefulWidget {
   /// The Alternativen section, with its „Alle ›".
   static const alternativesKey = DiscoverAlternativesSection.sectionKey;
 
-  /// The Meine Rezepte section, with its „+" and „Alle ›".
+  /// The Rezepte section, with its „Alle ›".
   static const recipesKey = DiscoverRecipesSection.sectionKey;
 
   /// The Wissen section, with its „Alle ›".
@@ -59,13 +62,19 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
 
   /// Loads tips, alternatives, recipes and articles. The first load keeps
   /// the tips and Alternativen the app root loaded; [refresh] reloads them,
-  /// and what is cached (the recipes and the articles).
+  /// and what is cached (the recipes, the collection with the saved ones
+  /// and its intolerance table, the articles).
   Future<void> _load({bool refresh = false}) async {
     if (!mounted) return;
     final news = ref.read(discoverNewsProvider.notifier);
+    if (refresh) ref.invalidate(intoleranceRulesProvider);
     await Future.wait([
       if (refresh) news.refresh() else news.ensureLoaded(),
       ref.read(userRecipesProvider.notifier).fetch(force: refresh),
+      if (refresh) ...[
+        ref.read(recipeCollectionProvider.notifier).refresh(),
+        ref.read(recipeFavoritesProvider.notifier).refresh(),
+      ],
       if (refresh)
         ref.read(knowledgeFeedProvider.notifier).refresh()
       else
@@ -79,7 +88,8 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     final weeklyTips = ref.watch(weeklyTipsEnabledProvider);
     final groups = ref.watch(ingredientSuggestionProvider);
     final newGroups = ref.watch(newIngredientSuggestionCountProvider);
-    final recipes = ref.watch(userRecipesProvider);
+    final forYou = ref.watch(forYouRecipesProvider);
+    final mine = ref.watch(myRecipeItemsProvider);
     final knowledge = ref.watch(knowledgeFeedProvider);
 
     return Scaffold(
@@ -115,9 +125,12 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
               ),
               AppConstants.gap24,
               DiscoverRecipesSection(
-                recipes: recipes,
-                onOpenAll: () => context.push(RoutePaths.recipes),
-                onOpen: (recipe) =>
+                forYou: forYou,
+                mine: mine,
+                onOpenAll: () => context.push(RoutePaths.discoverRecipes),
+                onOpenMine: () => context.push(RoutePaths.recipes),
+                onOpenRecipe: (id) => unawaited(context.openRecipe(id)),
+                onOpenOwn: (recipe) =>
                     context.push(RoutePaths.recipeDetailFor(recipe.id)),
               ),
               AppConstants.gap24,

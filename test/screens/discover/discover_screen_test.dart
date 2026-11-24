@@ -8,12 +8,19 @@ import 'package:riverpod/src/internals.dart' show Override;
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
+import 'package:belly_buddy/models/fodmap_flags.dart';
 import 'package:belly_buddy/models/knowledge_article.dart';
+import 'package:belly_buddy/models/recipe.dart';
+import 'package:belly_buddy/repositories/recipe_repository.dart';
+import 'package:belly_buddy/repositories/entry_repository.dart';
+import 'package:belly_buddy/screens/recipes/widgets/recipe_collection_card.dart';
+import 'package:belly_buddy/services/recipes/recipe_copy.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/models/recommendation_item.dart';
 import 'package:belly_buddy/models/replacement_ingredient.dart';
 import 'package:belly_buddy/models/user_recipe.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
+import 'package:belly_buddy/screens/discover/widgets/discover_recipes_section.dart';
 import 'package:belly_buddy/screens/discover/widgets/discover_tips_section.dart';
 import 'package:belly_buddy/screens/discover/widgets/example_tip_card.dart';
 import 'package:belly_buddy/widgets/common/weekly_tips_switch.dart';
@@ -67,6 +74,7 @@ void main() {
   late MockUserRecipeRepository recipes;
   late RecordingUrlOpener launches;
   late FakeKnowledgeRepository knowledge;
+  late FakeRecipeRepository collection;
 
   setUp(() {
     recommendations = MockRecommendationRepository();
@@ -75,6 +83,7 @@ void main() {
     launches = RecordingUrlOpener();
     knowledge = FakeKnowledgeRepository();
     profileRepo = FakeProfileRepository();
+    collection = FakeRecipeRepository();
   });
 
   Future<void> pump(
@@ -88,6 +97,7 @@ void main() {
     bool? weeklyTips,
     // Whether the app root keeps the news loaded, as in the app.
     bool appRoot = false,
+    List<String>? intolerances,
   }) async {
     when(
       () => recommendations.fetchByUserId(any()),
@@ -117,6 +127,8 @@ void main() {
           RoutePaths.ingredientSuggestions,
           if (!realRecipesScreen) RoutePaths.recipes,
           RoutePaths.recipeDetail,
+          RoutePaths.discoverRecipes,
+          RoutePaths.collectionRecipe,
           RoutePaths.knowledge,
         ]),
       ],
@@ -130,9 +142,14 @@ void main() {
       userRecipeRepositoryProvider.overrideWithValue(recipes),
       knowledgeRepositoryProvider.overrideWithValue(knowledge),
       profileRepositoryProvider.overrideWithValue(profileRepo),
-      if (weeklyTips != null)
+      recipeRepositoryProvider.overrideWithValue(collection),
+      entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
+      if (weeklyTips != null || intolerances != null)
         profileProviderSeededWith(
-          testUserProfile(weeklyTipsEnabled: weeklyTips),
+          testUserProfile(
+            weeklyTipsEnabled: weeklyTips ?? true,
+            intolerances: intolerances,
+          ),
         ),
     ];
     final app = germanRouterApp(router, textScale: textScale);
@@ -257,7 +274,7 @@ void main() {
     await pump(tester);
 
     final tops = [
-      for (final title in ['Tipps', 'Alternativen', 'Meine Rezepte', 'Wissen'])
+      for (final title in ['Tipps', 'Alternativen', 'Rezepte', 'Wissen'])
         tester.getTopLeft(find.text(title)).dy,
     ];
     expect(tops, orderedEquals([...tops]..sort()));
@@ -561,9 +578,7 @@ void main() {
     expect(find.text('Rezept 6'), findsOneWidget);
     expect(find.text('Rezept 7'), findsNothing);
 
-    await tester.tapVisible(
-      inSection(DiscoverScreen.recipesKey, find.text('Alle ›')),
-    );
+    await tester.tapVisible(find.bySemanticsLabel('Alle meine Rezepte'));
     expect(find.text('page:${RoutePaths.recipes}'), findsOneWidget);
   });
 
@@ -579,9 +594,7 @@ void main() {
       ],
     );
 
-    await tester.tapVisible(
-      inSection(DiscoverScreen.recipesKey, find.text('Alle ›')),
-    );
+    await tester.tapVisible(find.bySemanticsLabel('Alle meine Rezepte'));
     await tester.enterText(find.byType(TextField), 'zzz');
     await tester.pump(const Duration(milliseconds: 400));
     await tester.pumpAndSettle();
@@ -593,10 +606,7 @@ void main() {
     expect(find.byType(DiscoverScreen), findsOneWidget);
     expect(find.text('Noch keine Rezepte.'), findsNothing);
     expect(find.byType(RecipeCard), findsNWidgets(2));
-    expect(
-      inSection(DiscoverScreen.recipesKey, find.text('Alle ›')),
-      findsOneWidget,
-    );
+    expect(find.bySemanticsLabel('Alle meine Rezepte'), findsOneWidget);
   });
 
   testWidgets("Meine Rezepte's + opens the chooser", (tester) async {
@@ -618,13 +628,149 @@ void main() {
   testWidgets('no recipes', (tester) async {
     await pump(tester);
 
-    expect(find.text('Noch keine Rezepte.'), findsOneWidget);
     expect(
-      inSection(DiscoverScreen.recipesKey, find.text('Alle ›')),
-      findsNothing,
+      inSection(
+        DiscoverRecipesSection.mineKey,
+        find.text('Noch keine Rezepte.'),
+      ),
+      findsOneWidget,
     );
+    expect(find.bySemanticsLabel('Alle meine Rezepte'), findsNothing);
     await tester.tapVisible(find.text('Erstes Rezept erstellen'));
     expect(find.text('Rezept hinzufügen'), findsOneWidget);
+  });
+
+  group('Rezepte', () {
+    final milch = testLine('Milch', fodmaps: const FodmapFlags(lactose: true));
+
+    Finder forYou(Finder f) => inSection(DiscoverRecipesSection.forYouKey, f);
+    Finder mine(Finder f) => inSection(DiscoverRecipesSection.mineKey, f);
+
+    testWidgets('Für dich shows 3 ranked cards with badges', (tester) async {
+      collection.collection = [
+        testRecipe(id: 'a', title: 'Reisbowl'),
+        testRecipe(id: 'b', title: 'Milchreis', ingredients: [milch]),
+        testRecipe(id: 'c', title: 'Gemüsepfanne'),
+        testRecipe(id: 'd', title: 'Nudeln'),
+        testRecipe(id: 'e', title: 'Suppe'),
+      ];
+      await pump(tester, intolerances: const ['Laktose']);
+
+      expect(forYou(find.byType(RecipeCollectionCard)), findsNWidgets(3));
+      // The kritisch one is ranked after those that fit.
+      expect(forYou(find.text('Milchreis')), findsNothing);
+      expect(forYou(find.text(RecipeCopy.fits)), findsNWidgets(3));
+    });
+
+    testWidgets('Alle › opens the Rezepte list', (tester) async {
+      await pump(tester);
+
+      await tester.tapVisible(
+        find
+            .descendant(
+              of: find.byKey(DiscoverScreen.recipesKey),
+              matching: find.text('Alle ›'),
+            )
+            .first,
+      );
+      expect(find.text('page:${RoutePaths.discoverRecipes}'), findsOneWidget);
+    });
+
+    testWidgets('a Für dich card opens the collection recipe', (tester) async {
+      await pump(tester);
+
+      await tester.tapVisible(forYou(find.byType(RecipeCollectionCard)));
+      expect(find.text('page:${RoutePaths.collectionRecipe}'), findsOneWidget);
+    });
+
+    testWidgets('Meine Rezepte: own and gemerkte by date, the gemerkte '
+        'with a heart', (tester) async {
+      collection.collection = [testRecipe(id: 'g', title: 'Gemerktes')];
+      collection.favorites = [FavoriteRecipe('g', DateTime(2026, 11, 20))];
+      await pump(
+        tester,
+        myRecipes: [
+          testUserRecipe(
+            id: 'new',
+            title: 'Neu geschrieben',
+            createdAt: DateTime(2026, 11, 22),
+          ),
+          testUserRecipe(
+            id: 'old',
+            title: 'Alt geschrieben',
+            createdAt: DateTime(2026, 11, 10),
+          ),
+        ],
+      );
+
+      final tops = [
+        for (final t in ['Neu geschrieben', 'Gemerktes', 'Alt geschrieben'])
+          tester.getTopLeft(mine(find.text(t))).dx,
+      ];
+      expect(tops, orderedEquals([...tops]..sort()));
+      expect(mine(find.byType(RecipeTagPill)), findsOneWidget);
+      expect(mine(find.byIcon(Icons.favorite)), findsOneWidget);
+
+      await tester.tapVisible(mine(find.text('Gemerktes')));
+      expect(find.text('page:${RoutePaths.collectionRecipe}'), findsOneWidget);
+    });
+
+    testWidgets('collection fails: own recipes still shown', (tester) async {
+      collection.collectionError = Exception('404');
+      await pump(tester, myRecipes: [testUserRecipe(title: 'Eigenes')]);
+
+      expect(
+        forYou(find.text('Rezepte konnten nicht geladen werden.')),
+        findsOneWidget,
+      );
+      expect(mine(find.byType(RecipeCard)), findsOneWidget);
+      expect(mine(find.text('Eigenes')), findsOneWidget);
+    });
+
+    testWidgets('pull to refresh reloads the collection and the rules', (
+      tester,
+    ) async {
+      await pump(tester);
+      expect(forYou(find.text('Testrezept')), findsOneWidget);
+
+      collection.collection = [testRecipe(id: 'n', title: 'Neues Rezept')];
+      await tester.fling(
+        find.byType(RefreshIndicator),
+        const Offset(0, 400),
+        1000,
+      );
+      await tester.pumpAndSettle();
+
+      expect(forYou(find.text('Neues Rezept')), findsOneWidget);
+      expect(forYou(find.text('Testrezept')), findsNothing);
+    });
+
+    testWidgets('fits 375×667 at text scale 1.3', (tester) async {
+      tester.view.physicalSize = const Size(375, 667);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      collection.collection = [
+        for (var i = 0; i < 4; i++)
+          testRecipe(
+            id: 'c$i',
+            title: 'Ein Sammlungsrezept mit einem langen Namen $i',
+            ingredients: [milch],
+          ),
+      ];
+      collection.favorites = [FavoriteRecipe('c0', DateTime(2026, 11, 20))];
+
+      await pump(
+        tester,
+        textScale: 1.3,
+        intolerances: const ['Laktose'],
+        myRecipes: [testUserRecipe(title: 'Ein langes Rezept zum Testen')],
+      );
+
+      expect(tester.takeException(), isNull);
+      await tester.ensureVisible(find.byKey(DiscoverRecipesSection.mineKey));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+    });
   });
 
   Finder tilesIn(Key section) =>
