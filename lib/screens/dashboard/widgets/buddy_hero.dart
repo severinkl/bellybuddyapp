@@ -15,6 +15,7 @@ import '../../../providers/buddy_provider.dart';
 import '../../../providers/buddy_welcome_provider.dart';
 import '../../../providers/care_log_provider.dart';
 import '../../../providers/entries_provider.dart';
+import '../../../providers/home_cover_provider.dart';
 import '../../../providers/journey_provider.dart';
 import '../../../providers/journey_rewards_provider.dart';
 import '../../../providers/today_provider.dart';
@@ -198,9 +199,10 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   bool _visible = false;
 
   /// A cue's sheet or page (the new goal, the weekly-tips offer, a day's
-  /// reward, „Muster frei!") that came due while the hero was hidden (or,
-  /// all but the goal, while „Dein Streak" was open); shown once visible
-  /// (once it has closed).
+  /// reward, „Muster frei!") that came due while the hero was hidden, while
+  /// Home was covered ([homeCoveredProvider]: „Deine Belohnungen" open), or
+  /// (all but the goal) while „Dein Streak" was open; shown once visible
+  /// and uncovered (once it has closed).
   Future<void> Function()? _deferredSheet;
 
   /// A cue that ends in a sheet or page is on stage (a celebration before
@@ -235,6 +237,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       (_, next) => _onStatus(next),
       fireImmediately: true,
     );
+    ref.listenManual(homeCoveredProvider, (_, covered) {
+      if (!covered) _afterFrame(_showDeferredSheet);
+    });
   }
 
   @override
@@ -252,9 +257,12 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
         _showDeferredSheet();
         _resumeCues();
       });
-    } else if (_override == BuddyMood.empathetic) {
+    } else {
+      // Hidden, Home's visibility holds the cues' sheets: a page that
+      // covered it ([homeCoveredProvider]) no longer needs to.
+      _afterFrame(() => ref.read(homeCoveredProvider.notifier).homeHidden());
       // Leaving the dashboard ends this visit's empathy.
-      _setOverride(null);
+      if (_override == BuddyMood.empathetic) _setOverride(null);
     }
   }
 
@@ -638,9 +646,10 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   }
 
   /// After the goal celebration: offers the next goal, then continues.
-  /// Waits until the hero is visible again if it was hidden meanwhile.
+  /// Waits until the hero is visible again if it was hidden meanwhile, and
+  /// until Home is uncovered ([homeCoveredProvider]).
   Future<void> _askForNewGoal() async {
-    if (!_visible) {
+    if (!_visible || ref.read(homeCoveredProvider)) {
       _deferredSheet = _askForNewGoal;
       return;
     }
@@ -662,9 +671,12 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   /// Whether a cue's sheet or page must wait: until the hero is visible
   /// again if it was hidden meanwhile, and until „Dein Streak" has closed
-  /// if it is open (sheets never stack). Then [show] is deferred.
+  /// if it is open, as „Deine Belohnungen" and a page it opened
+  /// ([homeCoveredProvider]; sheets never stack). Then [show] is deferred.
   bool _deferSheet(Future<void> Function() show) {
-    if (_visible && !_chipSheetOpen) return false;
+    if (_visible && !_chipSheetOpen && !ref.read(homeCoveredProvider)) {
+      return false;
+    }
     _deferredSheet = show;
     return true;
   }

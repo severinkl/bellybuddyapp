@@ -27,6 +27,7 @@ import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
 import 'package:belly_buddy/screens/buddy/streak_goal_picker.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/first_tip_offer_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_sheet.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/journey_rewards_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/streak_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/weekly_tips_offer_sheet.dart';
 import 'package:belly_buddy/services/buddy/buddy_copy.dart';
@@ -133,6 +134,7 @@ const _saverEarnedLine = 'Du hast einen Streak-Saver verdient! 🛡';
 const _goalTitle = "Wir haben's geschafft! Neues Ziel?";
 const _tipsArrivedLine = 'Neue Tipps sind da! ✨';
 const _sheetTitle = 'Dein Streak';
+const _rewardsButton = Key('open_rewards');
 const _pickTitle = 'Neues Streak-Ziel';
 
 void main() {
@@ -185,7 +187,8 @@ void main() {
 
   /// Pumps the hero on Home (`/dashboard`) of a router with stub pages for
   /// the Tagebuch, the trackers and Entdecken; `TickerMode` follows
-  /// [visible].
+  /// [visible]. Below the hero, a button opens „Deine Belohnungen" as the
+  /// journey card's line does ([openRewards]).
   Future<ProviderContainer> pumpHero(
     WidgetTester tester, {
     List<Override> extra = const [],
@@ -224,7 +227,22 @@ void main() {
                 valueListenable: heroShown,
                 builder: (_, shown, _) => shown
                     ? SingleChildScrollView(
-                        child: BuddyHero(openUrl: opener.call),
+                        child: Column(
+                          children: [
+                            BuddyHero(openUrl: opener.call),
+                            Consumer(
+                              builder: (context, ref, _) => TextButton(
+                                key: _rewardsButton,
+                                onPressed: () => showJourneyRewardsSheet(
+                                  context,
+                                  ref,
+                                  openUrl: opener.call,
+                                ),
+                                child: const Text('Belohnungen'),
+                              ),
+                            ),
+                          ],
+                        ),
                       )
                     : const SizedBox.shrink(),
               ),
@@ -287,6 +305,14 @@ void main() {
     for (var t = Duration.zero; t < d; t += step) {
       await tester.pump(step);
     }
+  }
+
+  /// Opens „Deine Belohnungen" from Home, as the journey card's line does.
+  Future<void> openRewards(WidgetTester tester) async {
+    await tester.ensureVisible(find.byKey(_rewardsButton));
+    await tester.tap(find.byKey(_rewardsButton));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
   }
 
   /// Taps the StreakChip and lets „Dein Streak" open.
@@ -649,6 +675,41 @@ void main() {
 
       expect(find.text(_goalTitle), findsNothing);
       expect(find.text(_sheetTitle), findsOneWidget);
+      expect(buddy.shown, [BuddyAnnouncement.goalReached]);
+    });
+
+    testWidgets('a goal reached while „Deine Belohnungen" is open: the new '
+        'goal waits until it closed', (tester) async {
+      journey = true;
+      rewards = const JourneyRewards(earnedDay: 2);
+      buddy = _FakeBuddy(() => _status(streak: 7));
+      await pumpHero(tester);
+      await openRewards(tester);
+      expect(find.byType(JourneyRewardsSheet), findsOneWidget);
+
+      buddy.push(
+        _status(
+          streak: 7,
+          announcements: const [BuddyAnnouncement.goalReached],
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text(_goalTitle), findsNothing);
+      expect(find.byType(JourneyRewardsSheet), findsOneWidget);
+
+      await tester.tapAt(const Offset(10, 10)); // the list's barrier
+      // Closed, then the next frame opens what waited.
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byType(JourneyRewardsSheet), findsNothing);
+      expect(find.text(_goalTitle), findsOneWidget);
+      expect(buddy.shown, isEmpty);
+      await chooseGoal(tester, '14 Tage');
+      expect(buddy.goals, [14]);
       expect(buddy.shown, [BuddyAnnouncement.goalReached]);
     });
 
@@ -1134,6 +1195,126 @@ void main() {
         expect(buddy.shown, isEmpty);
         await closeOffer(tester, JourneyRewardSheet.laterKey);
         expect(buddy.shown, [BuddyAnnouncement.journeyReward]);
+      });
+
+      testWidgets('journeyReward while „Deine Belohnungen" is open waits '
+          'until it closed', (tester) async {
+        journey = true;
+        rewards = day1;
+        await pumpHero(tester);
+        await openRewards(tester);
+        expect(find.byType(JourneyRewardsSheet), findsOneWidget);
+
+        buddy.push(
+          _status(announcements: const [BuddyAnnouncement.journeyReward]),
+        );
+        await tester.pump();
+        await afterCelebration(tester);
+        await tester.pump(const Duration(seconds: 1));
+        expect(find.byType(JourneyRewardSheet), findsNothing);
+        expect(find.byType(JourneyRewardsSheet), findsOneWidget);
+
+        await tester.tapAt(const Offset(10, 10)); // the list's barrier
+        // Closed, then the next frame opens what waited.
+        await tester.pump();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(find.byType(JourneyRewardsSheet), findsNothing);
+        expect(find.byType(JourneyRewardSheet), findsOneWidget);
+        expect(buddy.shown, isEmpty);
+        await closeOffer(tester, JourneyRewardSheet.laterKey);
+        expect(buddy.shown, [BuddyAnnouncement.journeyReward]);
+      });
+
+      testWidgets('journeyReward while „Deine Belohnungen" is open, whose row '
+          'opens a page: it waits until Home is back', (tester) async {
+        journey = true;
+        rewards = day1;
+        await pumpHero(tester);
+        await openRewards(tester);
+        buddy.push(
+          _status(announcements: const [BuddyAnnouncement.journeyReward]),
+        );
+        await tester.pump();
+        await afterCelebration(tester);
+        expect(find.byType(JourneyRewardSheet), findsNothing);
+
+        // Day 1's row: the list closes, the recipe opens over Home.
+        await tester.tap(find.byKey(JourneyRewardsSheet.rowKey(1)));
+        await tester.pump();
+        expect(location(), RoutePaths.collectionRecipeFor('r1'));
+        // Not over the page on its way in, nor once it covers Home.
+        for (var i = 0; i < 10; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+          expect(find.byType(JourneyRewardSheet), findsNothing);
+        }
+        await tester.pump(const Duration(seconds: 2));
+        expect(find.byType(JourneyRewardSheet), findsNothing);
+        expect(buddy.shown, isEmpty);
+
+        router.pop();
+        await tester.pump();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(location(), RoutePaths.dashboard);
+        expect(find.byType(JourneyRewardSheet), findsOneWidget);
+        await closeOffer(tester, JourneyRewardSheet.laterKey);
+        expect(buddy.shown, [BuddyAnnouncement.journeyReward]);
+      });
+
+      testWidgets('a page that „Deine Belohnungen" opened and that never '
+          'closes (Home gone to instead): the cue comes once Home is back', (
+        tester,
+      ) async {
+        journey = true;
+        rewards = day1;
+        await pumpHero(tester);
+        await openRewards(tester);
+        buddy.push(
+          _status(announcements: const [BuddyAnnouncement.journeyReward]),
+        );
+        await tester.pump();
+        await afterCelebration(tester);
+
+        await tester.tap(find.byKey(JourneyRewardsSheet.rowKey(1)));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+        expect(location(), RoutePaths.collectionRecipeFor('r1'));
+
+        // Replaced, not popped: the page's future never completes.
+        router.go(RoutePaths.dashboard);
+        await tester.pump();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(location(), RoutePaths.dashboard);
+        expect(find.byType(JourneyRewardSheet), findsOneWidget);
+      });
+
+      testWidgets('a page that „Deine Belohnungen" opened and that closes on '
+          'its way in: the cue then shows on Home', (tester) async {
+        journey = true;
+        rewards = day1;
+        await pumpHero(tester);
+        await openRewards(tester);
+        buddy.push(
+          _status(announcements: const [BuddyAnnouncement.journeyReward]),
+        );
+        await tester.pump();
+        await afterCelebration(tester);
+
+        await tester.tap(find.byKey(JourneyRewardsSheet.rowKey(1)));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(find.byType(JourneyRewardSheet), findsNothing);
+        router.pop(); // mid-transition: Home was never hidden
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(location(), RoutePaths.dashboard);
+        expect(find.byType(JourneyRewardSheet), findsOneWidget);
       });
 
       testWidgets('journeyReward waits while the hero is hidden', (

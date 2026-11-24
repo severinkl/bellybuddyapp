@@ -14,6 +14,7 @@ import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/insight_card.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_dots.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_line.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/dashboard_tutorial_steps.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_keys.dart';
@@ -356,6 +357,47 @@ void main() {
       expect(find.text('2 von 7 Tagen', skipOffstage: false), findsOneWidget);
       // Loaded once on mount: the dashboard's load joins the card's.
       expect(entryRepo.insightSourceCalls, 1);
+    });
+
+    testWidgets("a journey user's card shows the line", (tester) async {
+      final entries = FakeEntryRepository()
+        ..insightSource = insightSourceFor(
+          activeDays: 1,
+          gutFeelings: 0,
+          now: _insightsNow,
+        );
+      final container = ProviderContainer.test(
+        overrides: [
+          ...baseOverrides(entries: entries),
+          buddyClockProvider.overrideWithValue(() => _insightsNow),
+        ],
+      );
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const AppTestHost(),
+        ),
+      );
+      await _settleFirstRun(tester);
+
+      expect(container.read(journeyProvider), isTrue);
+      // Day 1 earned yesterday, nothing today yet: day 2 waits.
+      final line = find.descendant(
+        of: find.byKey(InsightCard.cardKey),
+        matching: find.byKey(JourneyRewardLineView.lineKey),
+      );
+      expect(line, findsOneWidget);
+      expect(
+        find.descendant(
+          of: line,
+          matching: find.text('Heute wartet: Ein Wissen-Häppchen'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        tester.getRect(line).top,
+        greaterThanOrEqualTo(tester.getRect(find.byType(JourneyDots)).bottom),
+      );
     });
 
     testWidgets("a user past day 7 sees Stage 2's card", (tester) async {

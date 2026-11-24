@@ -7,22 +7,27 @@ import 'package:material_ui/material_ui.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/insight_progress.dart';
 import 'package:belly_buddy/models/insights.dart';
+import 'package:belly_buddy/providers/journey_rewards_provider.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/insight_card.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_dots.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_line.dart';
+import 'package:belly_buddy/services/journey/journey_rules.dart';
 import 'package:belly_buddy/widgets/common/insight_progress_row.dart';
 
 import '../../../helpers/app_host.dart';
 import '../../../helpers/fixtures.dart';
 
 /// The card on a Home-like scrolling page, with `/patterns` stubbed; not
-/// [scrolling], it must fit the screen as it is.
+/// [scrolling], it must fit the screen as it is. A [JourneyRewardLineView]
+/// as the [journeyReward] shows [line].
 Future<GoRouter> _pump(
   WidgetTester tester,
   AsyncValue<Insights> insights, {
   double textScale = 1,
   bool? journey = false,
   Widget? journeyReward,
+  JourneyRewardLine? line,
   bool scrolling = true,
 }) async {
   final card = InsightCard(
@@ -48,7 +53,14 @@ Future<GoRouter> _pump(
     ],
   );
   addTearDown(router.dispose);
-  await tester.pumpWidget(germanRouterApp(router, textScale: textScale));
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        if (line != null) journeyRewardLineProvider.overrideWithValue(line),
+      ],
+      child: germanRouterApp(router, textScale: textScale),
+    ),
+  );
   return router;
 }
 
@@ -198,7 +210,9 @@ void main() {
       expect(find.text('Fällt mir auf'.toUpperCase()), findsOneWidget);
     });
 
-    testWidgets('a reward shows under the dots when given', (tester) async {
+    testWidgets("a reward shows below the counters, outside the card's "
+        'button', (tester) async {
+      final handle = tester.ensureSemantics();
       await _pump(
         tester,
         _journeyInsights(2, 1),
@@ -206,11 +220,71 @@ void main() {
         journeyReward: const Text('R'),
       );
 
-      final dots = tester.getRect(find.byType(JourneyDots));
       final reward = tester.getRect(find.text('R'));
       final counters = tester.getRect(find.text('2 von 7 Tagen'));
-      expect(reward.top, greaterThanOrEqualTo(dots.bottom));
-      expect(counters.top, greaterThanOrEqualTo(reward.bottom));
+      expect(reward.top, greaterThanOrEqualTo(counters.bottom));
+      // Inside the card.
+      expect(tester.getRect(_card).contains(reward.center), isTrue);
+
+      final button = find.semantics.byLabel(RegExp('^Muster ansehen'));
+      expect(button, findsOne);
+      final card = button.evaluate().single;
+      expect(card.label, contains('2 von 7 Tagen'));
+      expect(card.label, isNot(contains('R')));
+      final own = tester.getSemantics(find.text('R'));
+      expect(own.label, 'R');
+      expect(own.id, isNot(card.id));
+      handle.dispose();
+    });
+
+    testWidgets("tapping the reward doesn't open Muster; the card still "
+        'does', (tester) async {
+      await _pump(
+        tester,
+        _journeyInsights(2, 1),
+        journey: true,
+        journeyReward: const Text('R'),
+      );
+
+      await tester.tap(find.text('R'));
+      await tester.pumpAndSettle();
+      expect(find.text('page:${RoutePaths.patterns}'), findsNothing);
+
+      await tester.tap(find.byType(JourneyDots));
+      await tester.pumpAndSettle();
+      expect(find.text('page:${RoutePaths.patterns}'), findsOneWidget);
+    });
+
+    testWidgets('fits 375×667 at 1.3 with 7 days and a line', (tester) async {
+      tester.view.physicalSize = const Size(375, 667);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await _pump(
+        tester,
+        _journeyInsights(7, 1),
+        journey: true,
+        journeyReward: const JourneyRewardLineView(),
+        line: const JourneyRewardLine(
+          'Heute wartet: Eine Vorschau auf deine Muster',
+          day: 6,
+          earned: false,
+        ),
+        textScale: 1.3,
+        scrolling: false,
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.byKey(JourneyRewardLineView.lineKey), findsOneWidget);
+      expect(
+        find.text('Heute wartet: Eine Vorschau auf deine Muster'),
+        findsOneWidget,
+      );
+      _expectOnScreen(tester);
+      expect(
+        tester.getRect(find.byKey(JourneyRewardLineView.lineKey)).bottom,
+        lessThanOrEqualTo(tester.getRect(_card).bottom),
+      );
     });
 
     testWidgets('fits 375×667 at text scale 1.3 with 7 days', (tester) async {

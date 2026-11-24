@@ -22,6 +22,7 @@ import '../../router/route_names.dart';
 import '../../providers/tutorial_provider.dart';
 import 'widgets/buddy_hero.dart';
 import 'widgets/insight_card.dart';
+import 'widgets/journey_reward_line.dart';
 import 'widgets/notification_opt_in_dialog.dart';
 import 'widgets/tips_row.dart';
 import 'widgets/tutorial/show_dashboard_tutorial.dart';
@@ -214,6 +215,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     key: TutorialKeys.insight,
                     insights: ref.watch(insightsProvider),
                     journey: ref.watch(journeyProvider),
+                    journeyReward: const JourneyRewardLineView(),
                   ),
                 ),
                 // Only while a tip set is new.

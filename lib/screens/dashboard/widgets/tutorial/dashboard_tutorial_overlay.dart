@@ -51,6 +51,11 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
   Rect? _targetRect;
   bool _finished = false;
 
+  /// The „Überspringen" pill, measured with each target: the bubble stays
+  /// below it.
+  final _skipBox = GlobalKey();
+  double? _skipBottom;
+
   late final AnimationController _fade = AnimationController(
     vsync: this,
     duration: AppConstants.animFast,
@@ -134,8 +139,12 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
       box.getTransformTo(null),
       Offset.zero & box.size,
     );
+    final skip = _skipBox.currentContext?.findRenderObject() as RenderBox?;
     setState(() {
       _targetRect = rect;
+      _skipBottom = skip == null || !skip.hasSize
+          ? null
+          : skip.localToGlobal(Offset(0, skip.size.height)).dy;
     });
   }
 
@@ -201,6 +210,7 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
                     targetRect: rect,
                     screenSize: screenSize,
                     safe: safe,
+                    top: _skipBottom ?? safe.top,
                   ),
                 // "Überspringen" link (must sit above the advance layer),
                 // top right and at most [_skipMaxWidth] of the width: Home's
@@ -214,6 +224,7 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
                     behavior: HitTestBehavior.opaque,
                     onTap: _finish,
                     child: Container(
+                      key: _skipBox,
                       constraints: BoxConstraints(
                         minHeight: 44,
                         maxWidth: screenSize.width * _skipMaxWidth,
@@ -252,17 +263,20 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
     );
   }
 
+  /// The step's bubble and its connector to [targetRect], the bubble below
+  /// [top] (the „Überspringen" pill's bottom, which spans its width).
   List<Widget> _buildBubbleAndConnector({
     required TutorialStep step,
     required Rect targetRect,
     required Size screenSize,
     required EdgeInsets safe,
+    required double top,
   }) {
     const horizontalMargin = AppConstants.spacingLg;
     final bubbleWidth = screenSize.width - (horizontalMargin * 2);
 
     // Decide actual anchor based on available space.
-    final spaceAbove = targetRect.top - safe.top;
+    final spaceAbove = targetRect.top - top;
     final spaceBelow = screenSize.height - safe.bottom - targetRect.bottom;
     TooltipAnchor anchor = step.preferredAnchor;
     if (anchor == TooltipAnchor.above && spaceAbove < _minAnchorSpace) {
@@ -303,7 +317,7 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
               edge: bubbleAnchor.dy,
               above: above,
               width: bubbleWidth,
-              minTop: safe.top + AppConstants.spacingSm,
+              minTop: top + AppConstants.spacingSm,
               maxBottom:
                   screenSize.height - safe.bottom - AppConstants.spacingSm,
             ),

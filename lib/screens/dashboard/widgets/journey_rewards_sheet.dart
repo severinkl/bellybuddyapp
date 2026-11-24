@@ -7,6 +7,7 @@ import '../../../config/constants.dart';
 import '../../../models/insight_rules.dart';
 import '../../../models/journey_rewards.dart';
 import '../../../providers/auth_provider.dart';
+import '../../../providers/home_cover_provider.dart';
 import '../../../providers/journey_rewards_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../services/journey/journey_copy.dart';
@@ -25,11 +26,27 @@ import 'journey_reward_actions.dart';
 ///   opt-in failed, and a dismissal here is no „Nein": the Buddy still asks;
 /// - any other: [openJourneyReward], articles through [openUrl].
 ///
-/// Completes once that is done.
+/// Home counts as covered ([homeCoveredProvider]) until that is done, and
+/// while a page it opened is on its way over Home, so the Buddy's own
+/// sheets wait. Completes once that is done.
 Future<void> showJourneyRewardsSheet(
   BuildContext context,
   WidgetRef ref, {
   UrlOpener openUrl = launchUrl,
+}) {
+  final cover = ref.read(homeCoveredProvider.notifier);
+  return cover.whileOpen(
+    () => _showRewards(context, ref, openUrl: openUrl, onLeave: cover.leftHome),
+  );
+}
+
+/// [showJourneyRewardsSheet]'s list and what follows it; a page it opens
+/// over Home is told to [onLeave].
+Future<void> _showRewards(
+  BuildContext context,
+  WidgetRef ref, {
+  required UrlOpener openUrl,
+  required LeavingHome onLeave,
 }) async {
   final day = await showBuddySheet<int>(
     context,
@@ -42,10 +59,16 @@ Future<void> showJourneyRewardsSheet(
     weeklyTips: ref.read(weeklyTipsEnabledProvider),
   );
   if (!offersTip) {
-    return openJourneyReward(context, ref, day, openUrl: openUrl);
+    return openJourneyReward(
+      context,
+      ref,
+      day,
+      openUrl: openUrl,
+      onLeave: onLeave,
+    );
   }
   final messenger = ScaffoldMessenger.maybeOf(context);
-  final message = switch (await offerFirstTip(context, ref)) {
+  final message = switch (await offerFirstTip(context, ref, onLeave: onLeave)) {
     FirstTipOutcome.started => JourneyCopy.firstTipStarted,
     FirstTipOutcome.optInFailed => WeeklyTipsSwitch.failure,
     FirstTipOutcome.declined || FirstTipOutcome.dismissed => null,
