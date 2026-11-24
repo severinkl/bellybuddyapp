@@ -113,9 +113,8 @@ CareAction _mealAt(CareLog log, DateTime now) {
 /// ([_mealAt]). With no meter that low: [CareAction.feed].
 CareAction nextCareAction(CareLog log, DateTime now) {
   final m = CareMeters.at(log, now);
-  final lowest = m.lowest;
-  if (m.level(lowest)! >= AppConstants.careMeterLow) return CareAction.feed;
-  return switch (lowest) {
+  if (m.lowestLevel >= AppConstants.careMeterLow) return CareAction.feed;
+  return switch (m.lowest) {
     CareNeed.food => _mealAt(log, now),
     CareNeed.drink => CareAction.drink,
     CareNeed.gutFeeling => CareAction.gutFeeling,

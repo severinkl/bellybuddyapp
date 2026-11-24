@@ -19,13 +19,11 @@ Duration? drainOf(CareNeed need) => switch (need) {
 /// The time between [from] and [to] that falls in the awake windows
 /// (07:00–22:00 local); the night pause is left out.
 Duration awakeBetween(DateTime from, DateTime to) {
-  final start = from.toLocal();
-  final end = to.toLocal();
-  if (!end.isAfter(start)) return Duration.zero;
+  if (!to.isAfter(from)) return Duration.zero;
   var total = Duration.zero;
-  final lastDay = DateTime(end.year, end.month, end.day);
+  final lastDay = startOfDay(to);
   for (
-    var day = DateTime(start.year, start.month, start.day);
+    var day = startOfDay(from);
     !day.isAfter(lastDay);
     day = addDays(day, 1)
   ) {
@@ -41,43 +39,48 @@ Duration awakeBetween(DateTime from, DateTime to) {
       day.day,
       AppConstants.careNightFromHour,
     );
-    final lo = start.isAfter(from0) ? start : from0;
-    final hi = end.isBefore(to0) ? end : to0;
+    final lo = from.isAfter(from0) ? from : from0;
+    final hi = to.isBefore(to0) ? to : to0;
     if (hi.isAfter(lo)) total += hi.difference(lo);
   }
   return total;
 }
 
+/// Any two days hold more awake time than the longest drain: a need last
+/// logged longer ago than this is at the floor, without counting.
+const _drainedAfter = Duration(days: 2);
+
 /// A need's level from 1.0 (just logged) down to the floor, linear in awake
 /// time since [last]; a future [last] counts as just logged.
 double meterLevel(DateTime? last, DateTime now, Duration drain) {
   const floor = AppConstants.careMeterFloor;
-  if (last == null) return floor;
+  if (last == null || now.difference(last) > _drainedAfter) return floor;
   final awake = awakeBetween(last, now).inMicroseconds;
   return (1 - (1 - floor) * awake / drain.inMicroseconds).clamp(floor, 1.0);
 }
 
-String _two(int n) => n.toString().padLeft(2, '0');
-
 /// „vor 3 Std", „gestern" … for [last] seen from [now].
 String careAgo(DateTime last, DateTime now) {
-  final l = last.toLocal();
-  final n = now.toLocal();
-  if (l.isAfter(n)) return 'um ${_two(l.hour)}:${_two(l.minute)}';
-  final diff = n.difference(l);
+  if (last.isAfter(now)) return 'um ${formatTime(last)}';
+  final diff = now.difference(last);
   if (diff < const Duration(minutes: 10)) return 'gerade eben';
   if (diff < const Duration(hours: 1)) return 'vor ${diff.inMinutes} Min';
-  final days = DateTime(
-    n.year,
-    n.month,
-    n.day,
-  ).difference(DateTime(l.year, l.month, l.day));
+  final days = startOfDay(now).difference(startOfDay(last));
   // Calendar days, rounded to absorb a DST hour.
   final dayCount = (days.inHours / 24).round();
   if (dayCount == 0) return 'vor ${diff.inHours} Std';
   if (dayCount == 1) return 'gestern';
   return 'vor $dayCount Tagen';
 }
+
+/// The latest of [items] by [at] (the first of a tie), null when there is
+/// none.
+E? _latest<E>(Iterable<E> items, DateTime Function(E) at) => items.fold(
+  null,
+  (last, e) => last == null || at(e).isAfter(at(last)) ? e : last,
+);
+
+DateTime _self(DateTime t) => t;
 
 /// When each need was last logged (local), as far as the loaded days show.
 class CareLog {
@@ -93,34 +96,28 @@ class CareLog {
   /// loaded day or, failing that, of the days before ([EntriesState
   /// .latestBefore]). Klo has only the loaded day's.
   factory CareLog.fromEntries(EntriesState s, DateTime day) {
-    DateTime? latest(Iterable<DateTime> times) {
-      DateTime? last;
-      for (final t in times) {
-        if (last == null || t.isAfter(last)) last = t;
-      }
-      return last;
-    }
-
-    final lastGutFeeling =
-        [
-          for (final g in s.gutFeelings)
-            if (isSameDay(g.trackedAt, day)) g,
-        ].fold<GutFeelingEntry?>(
-          null,
-          (a, b) => a == null || b.trackedAt.isAfter(a.trackedAt) ? b : a,
-        );
+    final todaysGutFeeling = _latest(
+      s.gutFeelings.where((g) => isSameDay(g.trackedAt, day)),
+      (GutFeelingEntry g) => g.trackedAt,
+    );
     final before = s.latestBefore;
     return CareLog(
-      lastMealAt: latest([...s.meals.map((e) => e.trackedAt), ?before.meal]),
-      lastDrinkAt: latest([...s.drinks.map((e) => e.trackedAt), ?before.drink]),
-      lastGutFeelingAt: latest([
+      lastMealAt: _latest([
+        ...s.meals.map((e) => e.trackedAt),
+        ?before.meal,
+      ], _self),
+      lastDrinkAt: _latest([
+        ...s.drinks.map((e) => e.trackedAt),
+        ?before.drink,
+      ], _self),
+      lastGutFeelingAt: _latest([
         ...s.gutFeelings.map((e) => e.trackedAt),
         ?before.gutFeeling,
-      ]),
-      lastToiletAt: latest(s.toiletEntries.map((e) => e.trackedAt)),
-      lastGutFeelingLevel: lastGutFeeling == null
+      ], _self),
+      lastToiletAt: _latest(s.toiletEntries.map((e) => e.trackedAt), _self),
+      lastGutFeelingLevel: todaysGutFeeling == null
           ? null
-          : calculateGutFeelingRating(lastGutFeeling).level,
+          : calculateGutFeelingRating(todaysGutFeeling).level,
     );
   }
 
@@ -142,10 +139,7 @@ class CareLog {
   /// Whether [need]'s last entry falls on [day]'s date.
   bool loggedOn(CareNeed need, DateTime day) {
     final at = lastAt(need);
-    return at != null &&
-        at.year == day.year &&
-        at.month == day.month &&
-        at.day == day.day;
+    return at != null && isSameDay(at, day);
   }
 
   bool anyOn(DateTime day) => CareNeed.values.any((n) => loggedOn(n, day));
@@ -177,15 +171,15 @@ class CareMeters {
     required this.gutFeeling,
   });
 
-  factory CareMeters.at(CareLog log, DateTime now) => CareMeters(
-    food: meterLevel(log.lastMealAt, now, AppConstants.careFoodDrain),
-    drink: meterLevel(log.lastDrinkAt, now, AppConstants.careDrinkDrain),
-    gutFeeling: meterLevel(
-      log.lastGutFeelingAt,
-      now,
-      AppConstants.careGutFeelingDrain,
-    ),
-  );
+  factory CareMeters.at(CareLog log, DateTime now) {
+    double at(CareNeed need) =>
+        meterLevel(log.lastAt(need), now, drainOf(need)!);
+    return CareMeters(
+      food: at(CareNeed.food),
+      drink: at(CareNeed.drink),
+      gutFeeling: at(CareNeed.gutFeeling),
+    );
+  }
 
   final double food;
   final double drink;
@@ -207,6 +201,9 @@ class CareMeters {
     }
     return low;
   }
+
+  /// The [lowest] meter's level.
+  double get lowestLevel => level(lowest)!;
 
   @override
   bool operator ==(Object other) =>

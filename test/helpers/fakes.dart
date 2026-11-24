@@ -30,6 +30,8 @@ import 'package:belly_buddy/repositories/recommendation_repository.dart';
 import 'package:belly_buddy/repositories/user_recipe_repository.dart';
 import 'package:belly_buddy/services/entry_query_service.dart';
 import 'package:belly_buddy/services/ingredient_service.dart';
+import 'package:belly_buddy/utils/date_format_utils.dart';
+import 'package:belly_buddy/utils/wall_clock.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'fixtures.dart';
@@ -368,20 +370,11 @@ class FakeEntryRepository implements EntryRepository {
     int? limit,
   }) async => _result.meals;
 
-  /// What [fetchLatestBefore] returns.
-  LatestEntries latestBefore = const LatestEntries();
-
-  /// The `before` of each [fetchLatestBefore] call, in order.
-  final List<DateTime> latestBeforeRequests = [];
-
   @override
   Future<LatestEntries> fetchLatestBefore({
     required String userId,
     required DateTime before,
-  }) async {
-    latestBeforeRequests.add(before);
-    return latestBefore;
-  }
+  }) async => const LatestEntries();
 
   /// When set, [fetchForDate] throws it (a day that fails to load).
   Object? fetchForDateError;
@@ -408,8 +401,8 @@ class FakeEntryRepository implements EntryRepository {
       addedMeals.add(MealEntry.fromJson(data));
     }
     if (countInsertsAsActivity) {
-      final at = DateTime.parse(data['tracked_at'] as String).toLocal();
-      _activityDays = {..._activityDays, DateTime(at.year, at.month, at.day)};
+      final at = wallClockFromWire(data['tracked_at'] as String);
+      _activityDays = {..._activityDays, startOfDay(at)};
     }
   }
 

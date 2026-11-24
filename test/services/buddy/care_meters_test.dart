@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 import 'package:belly_buddy/models/drink_entry.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
@@ -15,6 +16,9 @@ const _h3 = Duration(hours: 3);
 DateTime _t(int h, [int m = 0, int d = 23]) => DateTime(2026, 11, d, h, m);
 
 void main() {
+  // „um 18:00" is formatted for de_DE.
+  setUpAll(() => initializeDateFormatting('de_DE'));
+
   group('awakeBetween', () {
     test('counts the awake time on one day', () {
       expect(
@@ -44,11 +48,6 @@ void main() {
         const Duration(hours: 2),
       );
     });
-    test('a UTC instant equals its local twin', () {
-      final t = _t(10);
-      final u = _t(15);
-      expect(awakeBetween(t.toUtc(), u), awakeBetween(t, u));
-    });
   });
 
   group('meterLevel', () {
@@ -59,6 +58,13 @@ void main() {
       expect(meterLevel(_t(12, 30), now, _h3), closeTo(0.575, 0.005));
       expect(meterLevel(_t(11), now, _h3), closeTo(0.15, 0.005));
       expect(meterLevel(_t(4, 0, 22), now, _h3), 0.15);
+    });
+    test('two days on, at the floor whatever the drain', () {
+      expect(meterLevel(_t(21, 0, 21), _t(21, 1), _h3), 0.15);
+      expect(
+        meterLevel(DateTime(2026, 8, 1), _t(14), const Duration(hours: 24)),
+        0.15,
+      );
     });
     test('a future entry keeps the meter full', () {
       expect(meterLevel(_t(18), _t(14), _h3), 1.0);
@@ -257,6 +263,7 @@ void main() {
       expect(m.level(CareNeed.toilet), isNull);
       expect(m.level(CareNeed.drink), m.drink);
       expect(m.lowest, CareNeed.drink);
+      expect(m.lowestLevel, m.drink);
     });
     test('lowest ties go to food', () {
       expect(CareMeters.at(const CareLog(), now).lowest, CareNeed.food);

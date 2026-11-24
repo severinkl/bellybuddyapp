@@ -30,8 +30,7 @@ enum LogSentiment { good, neutral, bad }
 BuddyMood deriveBuddyMood(CareLog log, DateTime now) {
   final h = now.hour;
   if (!log.anyOn(now) && h < 10) return BuddyMood.sleepy;
-  final m = CareMeters.at(log, now);
-  final lowest = m.level(m.lowest)!;
+  final lowest = CareMeters.at(log, now).lowestLevel;
   if (lowest >= AppConstants.careMeterHigh) return BuddyMood.energetic;
   if (lowest >= AppConstants.careMeterLow) return BuddyMood.happy;
   if (h >= 10 && h < 22) return BuddyMood.hungry;
