@@ -11,11 +11,11 @@ import '../services/journey/journey_rules.dart';
 import '../utils/logger.dart';
 import '../utils/settled_value.dart';
 import 'auth_provider.dart';
-import 'buddy_provider.dart';
 import 'insights_provider.dart';
 import 'journey_provider.dart';
 import 'profile_provider.dart';
 import 'recipe_collection_provider.dart';
+import 'today_provider.dart';
 
 /// The signed-in journey user's rewards of the first 7 days, kept per user
 /// and device under `journey_rewards_<userId>`; null while signed out,
@@ -183,16 +183,17 @@ final journeyRewardsProvider =
       JourneyRewardsNotifier.new,
     );
 
-/// The reward line below the journey's counters, as of the app's clock;
-/// null without rewards, and unless the insights settled, locked.
-final journeyRewardLineProvider = Provider<JourneyRewardLine?>((ref) {
+/// The reward line below the journey's counters ([rewardLine]), as of the
+/// app's day ([todayProvider]); null without rewards, and unless the
+/// insights settled, locked.
+final journeyRewardLineProvider = Provider<String?>((ref) {
   final rewards = ref.watch(journeyRewardsProvider);
   final insights = ref.watch(insightsProvider).settledValue;
-  if (rewards == null || insights == null || insights.unlocked) return null;
+  if (rewards == null || insights == null) return null;
   return rewardLine(
     rewards,
     insights: insights,
-    now: ref.watch(buddyClockProvider)(),
+    today: ref.watch(todayProvider),
     weeklyTips: ref.watch(weeklyTipsEnabledProvider),
   );
 });

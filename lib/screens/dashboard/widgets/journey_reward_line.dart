@@ -40,7 +40,7 @@ class JourneyRewardLineView extends ConsumerWidget {
       key: lineKey,
       container: true,
       button: true,
-      label: line.text,
+      label: line,
       hint: JourneyCopy.openRewards,
       onTap: open,
       excludeSemantics: true,
@@ -57,7 +57,7 @@ class JourneyRewardLineView extends ConsumerWidget {
                 color: AppTheme.primary,
               ),
               const SizedBox(width: AppConstants.spacing6),
-              Expanded(child: Text(line.text, style: _style)),
+              Expanded(child: Text(line, style: _style)),
               const SizedBox(width: AppConstants.spacingXs),
               const Icon(
                 Icons.chevron_right,

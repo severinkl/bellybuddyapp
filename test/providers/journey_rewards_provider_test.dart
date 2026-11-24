@@ -17,7 +17,6 @@ import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/providers/recipe_collection_provider.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/repositories/recipe_repository.dart';
-import 'package:belly_buddy/services/journey/journey_rules.dart';
 
 import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
@@ -480,14 +479,7 @@ void main() {
       final c = container();
       await rewardsOf(c);
 
-      expect(
-        c.read(journeyRewardLineProvider),
-        const JourneyRewardLine(
-          'Heute: Ein Wissen-Häppchen',
-          day: 2,
-          earned: true,
-        ),
-      );
+      expect(c.read(journeyRewardLineProvider), 'Heute: Ein Wissen-Häppchen');
       expect(c.read(journeyRewardAnnouncementProvider), 2);
       expect(c.read(patternsUnlockedDueProvider), isFalse);
       expect(c.read(firstTipFailedProvider), isFalse);

@@ -12,7 +12,6 @@ import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/insight_card.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_dots.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_line.dart';
-import 'package:belly_buddy/services/journey/journey_rules.dart';
 import 'package:belly_buddy/widgets/common/insight_progress_row.dart';
 
 import '../../../helpers/app_host.dart';
@@ -27,7 +26,7 @@ Future<GoRouter> _pump(
   double textScale = 1,
   bool? journey = false,
   Widget? journeyReward,
-  JourneyRewardLine? line,
+  String? line,
   bool scrolling = true,
 }) async {
   final card = InsightCard(
@@ -265,11 +264,7 @@ void main() {
         _journeyInsights(7, 1),
         journey: true,
         journeyReward: const JourneyRewardLineView(),
-        line: const JourneyRewardLine(
-          'Heute wartet: Eine Vorschau auf deine Muster',
-          day: 6,
-          earned: false,
-        ),
+        line: 'Heute wartet: Eine Vorschau auf deine Muster',
         textScale: 1.3,
         scrolling: false,
       );

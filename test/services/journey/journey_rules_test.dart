@@ -10,6 +10,7 @@ import 'package:belly_buddy/services/journey/journey_copy.dart';
 import 'package:belly_buddy/services/journey/journey_rules.dart';
 import 'package:belly_buddy/services/recipes/recipe_fit.dart';
 import 'package:belly_buddy/services/recipes/recipe_ranking.dart';
+import 'package:belly_buddy/utils/date_format_utils.dart';
 
 import '../../helpers/fixtures.dart';
 
@@ -782,12 +783,12 @@ void main() {
   });
 
   group('rewardLine', () {
-    JourneyRewardLine line(
+    String? line(
       int earned, {
       required List<JourneyDay> journey,
       int gutFeelings = 1,
       bool? weeklyTips = false,
-      DateTime? now,
+      DateTime? today,
     }) => rewardLine(
       JourneyRewards(earnedDay: earned),
       insights: lockedInsights(
@@ -795,60 +796,37 @@ void main() {
         gutFeelings: gutFeelings,
         journey: journey,
       ),
-      now: now ?? _now,
+      today: today ?? _today,
       weeklyTips: weeklyTips,
     );
 
     test('no entry yet', () {
       expect(
         line(0, journey: const [], gutFeelings: 0),
-        const JourneyRewardLine(
-          'Heute wartet: Dein erstes Rezept',
-          day: 1,
-          earned: false,
-        ),
+        'Heute wartet: Dein erstes Rezept',
       );
     });
 
     test('day 2 filled today', () {
       expect(
         line(2, journey: _journeyUntil(_today, 2)),
-        const JourneyRewardLine(
-          'Heute: Ein Wissen-Häppchen',
-          day: 2,
-          earned: true,
-        ),
+        'Heute: Ein Wissen-Häppchen',
       );
     });
 
     test('day 4 yesterday: day 5 waits without claiming a match', () {
       expect(
         line(4, journey: _journeyUntil(_yesterday, 4)),
-        const JourneyRewardLine(
-          'Heute wartet: Noch ein Rezept für dich',
-          day: 5,
-          earned: false,
-        ),
+        'Heute wartet: Noch ein Rezept für dich',
       );
     });
 
     test('day 2 yesterday, none today', () {
       final journey = _journeyUntil(_yesterday, 2);
-      expect(
-        line(2, journey: journey),
-        const JourneyRewardLine(
-          'Heute wartet: Dein erster Tipp',
-          day: 3,
-          earned: false,
-        ),
-      );
+      expect(line(2, journey: journey), 'Heute wartet: Dein erster Tipp');
       expect(
         line(2, journey: journey, weeklyTips: true),
-        const JourneyRewardLine(
-          'Heute wartet: Ein Rezept für dich',
-          day: 3,
-          earned: false,
-        ),
+        'Heute wartet: Ein Rezept für dich',
       );
     });
 
@@ -860,57 +838,45 @@ void main() {
             JourneyDay(DateTime(2026, 10, 24), gutFeeling: false),
             JourneyDay(DateTime(2026, 10, 25), gutFeeling: false),
           ],
-          now: DateTime(2026, 10, 25, 23, 45),
+          // The day of a 23:45 clock on that Sunday ([todayProvider]).
+          today: startOfDay(DateTime(2026, 10, 25, 23, 45)),
         ),
-        const JourneyRewardLine(
-          'Heute: Ein Wissen-Häppchen',
-          day: 2,
-          earned: true,
-        ),
+        'Heute: Ein Wissen-Häppchen',
       );
     });
 
     test('day 6 filled', () {
       expect(
         line(6, journey: _journeyUntil(_today, 6), gutFeelings: 3),
-        const JourneyRewardLine(
-          'Heute: Eine Vorschau auf deine Muster',
-          day: 6,
-          earned: true,
-        ),
+        'Heute: Eine Vorschau auf deine Muster',
       );
     });
 
     test('day 6 yesterday, Bauchgefühl complete', () {
       expect(
         line(6, journey: _journeyUntil(_yesterday, 6), gutFeelings: 3),
-        const JourneyRewardLine(
-          'Heute wartet: Deine ersten Muster',
-          day: 7,
-          earned: false,
-        ),
+        'Heute wartet: Deine ersten Muster',
       );
     });
 
     test('day 6 yesterday, one Bauchgefühl missing', () {
       expect(
         line(6, journey: _journeyUntil(_yesterday, 6), gutFeelings: 2),
-        const JourneyRewardLine(
-          'Bald: Deine ersten Muster',
-          day: 7,
-          earned: false,
-        ),
+        'Bald: Deine ersten Muster',
+      );
+    });
+
+    test('unlocked: none', () {
+      expect(
+        line(7, journey: _journeyUntil(_today, 7), gutFeelings: 3),
+        isNull,
       );
     });
 
     test('day 7 locked', () {
       expect(
         line(7, journey: _journeyUntil(_today, 7), gutFeelings: 2),
-        const JourneyRewardLine(
-          'Bald: Deine ersten Muster',
-          day: 7,
-          earned: false,
-        ),
+        'Bald: Deine ersten Muster',
       );
     });
   });

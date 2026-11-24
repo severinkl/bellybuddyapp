@@ -239,66 +239,30 @@ String sayingFor(String userId) {
   return JourneyCopy.sayings[sum % JourneyCopy.sayings.length];
 }
 
-/// The reward line below the journey's counters.
-class JourneyRewardLine {
-  const JourneyRewardLine(this.text, {required this.day, required this.earned});
-
-  final String text;
-
-  /// The day it names, 1–7.
-  final int day;
-
-  /// Whether that day's reward is already earned („Heute: …").
-  final bool earned;
-
-  @override
-  bool operator ==(Object other) =>
-      other is JourneyRewardLine &&
-      other.text == text &&
-      other.day == day &&
-      other.earned == earned;
-
-  @override
-  int get hashCode => Object.hash(text, day, earned);
-
-  @override
-  String toString() => 'JourneyRewardLine($text, day: $day, earned: $earned)';
-}
-
-/// The reward line as of [now]: today's reward („Heute: …") once today's
-/// dot is filled (the journey's last day is [now]'s local day), else the
-/// next one („Heute wartet: …"). Day 7 is „Bald: …" unless today's entry
-/// alone could unlock it (no Bauchgefühl missing).
-JourneyRewardLine rewardLine(
+/// The reward line below the journey's counters on [today] (the local
+/// day): today's reward („Heute: …") once today's dot is filled (the
+/// journey's last day is [today]), else the next one („Heute wartet: …").
+/// Day 7 is „Bald: …" unless today's entry alone could unlock it (no
+/// Bauchgefühl missing). None once the [insights] are unlocked.
+String? rewardLine(
   JourneyRewards r, {
   required Insights insights,
-  required DateTime now,
+  required DateTime today,
   required bool? weeklyTips,
 }) {
+  if (insights.unlocked) return null;
   final n = r.earnedDay;
   final journey = insights.journey;
-  final filled = journey.isNotEmpty && isSameDay(journey.last.day, now);
+  final filled = journey.isNotEmpty && isSameDay(journey.last.day, today);
   if (filled && n >= 1 && n < _patternsDay) {
-    return JourneyRewardLine(
-      JourneyCopy.today(rewardTitle(n, r, weeklyTips: weeklyTips)),
-      day: n,
-      earned: true,
-    );
+    return JourneyCopy.today(rewardTitle(n, r, weeklyTips: weeklyTips));
   }
   final next = filled ? _patternsDay : math.min(n + 1, _patternsDay);
   if (next == _patternsDay) {
     final waiting = !filled && insights.progress.gutFeelingsLeft == 0;
-    return JourneyRewardLine(
-      waiting
-          ? JourneyCopy.waiting(JourneyCopy.day7)
-          : JourneyCopy.soon(JourneyCopy.day7),
-      day: _patternsDay,
-      earned: false,
-    );
+    return waiting
+        ? JourneyCopy.waiting(JourneyCopy.day7)
+        : JourneyCopy.soon(JourneyCopy.day7);
   }
-  return JourneyRewardLine(
-    JourneyCopy.waiting(rewardTitle(next, r, weeklyTips: weeklyTips)),
-    day: next,
-    earned: false,
-  );
+  return JourneyCopy.waiting(rewardTitle(next, r, weeklyTips: weeklyTips));
 }
