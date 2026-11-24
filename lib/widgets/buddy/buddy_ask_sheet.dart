@@ -21,40 +21,78 @@ Future<T?> showBuddySheet<T>(
 );
 
 /// A sheet in which the Buddy asks: the drag handle, the Buddy in [mood]
-/// saying [line] (the sheet has no title of its own), and [child] below him
-/// (the answers).
+/// saying [line] (the sheet has no title of its own), [child] below him,
+/// and the [actions]. On a screen shorter than
+/// [AppConstants.buddyAskSheetCompactBelow] the Buddy is compact, so more
+/// fits on screen.
 class BuddyAskSheet extends StatelessWidget {
   const BuddyAskSheet({
     super.key,
     required this.line,
     this.mood = BuddyMood.happy,
-    required this.child,
+    this.child,
+    this.actions,
   });
 
   final String line;
   final BuddyMood mood;
-  final Widget child;
+
+  /// Below the Buddy: what he offers, or the answers themselves; scrolls
+  /// with him when the sheet is too short.
+  final Widget? child;
+
+  /// The sheet's buttons, below [child] but pinned to the sheet's bottom:
+  /// on screen without scrolling, however long [child] is.
+  final Widget? actions;
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: SingleChildScrollView(
-        padding: AppConstants.paddingLg,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const BbDragHandle(color: AppTheme.border),
-            AppConstants.gap16,
-            BuddySays(
-              mood: mood,
-              line: line,
-              height: AppConstants.streakSheetBuddyHeight,
+    final compact =
+        MediaQuery.sizeOf(context).height <
+        AppConstants.buddyAskSheetCompactBelow;
+    final child = this.child, actions = this.actions;
+    final content = SingleChildScrollView(
+      padding: actions == null
+          ? AppConstants.paddingLg
+          : const EdgeInsets.only(
+              left: AppConstants.spacingLg,
+              top: AppConstants.spacingLg,
+              right: AppConstants.spacingLg,
             ),
-            AppConstants.gap16,
-            child,
-          ],
-        ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const BbDragHandle(color: AppTheme.border),
+          AppConstants.gap16,
+          BuddySays(
+            mood: mood,
+            line: line,
+            height: compact
+                ? AppConstants.buddyAskSheetCompactHeight
+                : AppConstants.streakSheetBuddyHeight,
+          ),
+          if (child != null) ...[AppConstants.gap16, child],
+        ],
+      ),
+    );
+    if (actions == null) return SafeArea(child: content);
+    return SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Flexible(child: content),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppConstants.spacingLg,
+              AppConstants.spacingMd,
+              AppConstants.spacingLg,
+              AppConstants.spacingLg,
+            ),
+            child: actions,
+          ),
+        ],
       ),
     );
   }

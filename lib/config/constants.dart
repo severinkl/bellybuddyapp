@@ -98,6 +98,11 @@ class AppConstants {
   static const double streakChipPopScale = 1.25;
   static const double streakSheetBuddyHeight = 220.0;
 
+  // A Buddy sheet's Buddy on a short screen (below this height), so both
+  // its buttons stay on screen without scrolling
+  static const double buddyAskSheetCompactBelow = 700.0;
+  static const double buddyAskSheetCompactHeight = 140.0;
+
   // Streak week row (Mo–So): day circle
   static const double streakWeekDaySize = 36.0;
 
@@ -171,6 +176,9 @@ class AppConstants {
 
   // Muster page: how blurred the locked state's sample preview is
   static const double patternsPreviewBlur = 5.0;
+
+  // „Deine Belohnungen": a row's day circle
+  static const double journeyRewardDaySize = 44.0;
 
   // Entdecken: a recipe card's width in the Meine Rezepte row
   static const double discoverRecipeCardWidth = 148.0;

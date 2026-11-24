@@ -47,6 +47,11 @@ void main() {
   }
 
   testWidgets('shows the line, the sentence and both buttons', (tester) async {
+    // A tall screen: the Buddy at his full sheet height.
+    tester.view
+      ..physicalSize = const Size(390, 844)
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     await pumpOpener(tester, []);
     await openSheet(tester);
 
@@ -101,13 +106,12 @@ void main() {
     await openSheet(tester);
 
     expect(tester.takeException(), isNull);
-    // The longer KI-Dienst sentence pushes „Später" below the fold at this
-    // scale; the sheet scrolls, and „Zu den Tipps" stays on screen.
-    expect(
-      tester.getRect(find.byKey(WeeklyTipsOfferSheet.openKey)).bottom,
-      lessThanOrEqualTo(667),
-    );
-    await tester.ensureVisible(find.byKey(WeeklyTipsOfferSheet.laterKey));
-    expect(tester.takeException(), isNull);
+    // The compact Buddy keeps both buttons on screen without scrolling.
+    for (final key in [
+      WeeklyTipsOfferSheet.openKey,
+      WeeklyTipsOfferSheet.laterKey,
+    ]) {
+      expect(tester.getRect(find.byKey(key)).bottom, lessThanOrEqualTo(667));
+    }
   });
 }

@@ -526,6 +526,39 @@ void main() {
     });
   });
 
+  group('rewardPick', () {
+    const one = RecipePick(id: 'r-1', title: 'Eins');
+    const three = RecipePick(id: 'r-3', title: 'Drei');
+    const five = RecipePick(id: 'r-5', title: 'Fünf');
+    const picked = JourneyRewards(
+      earnedDay: 5,
+      picks: {1: one, 3: three, 5: five},
+      tipOffer: TipOffer.declined,
+    );
+
+    test("a recipe day's stored pick", () {
+      expect(rewardPick(1, picked), one);
+      expect(rewardPick(3, picked), three);
+      expect(rewardPick(5, picked), five);
+    });
+
+    test('none on the other days, nor without a pick', () {
+      for (final day in [2, 4, 6, 7]) {
+        expect(rewardPick(day, picked), isNull, reason: '$day');
+      }
+      expect(rewardPick(5, const JourneyRewards(earnedDay: 5)), isNull);
+    });
+
+    test('day 3 once the tip was accepted: never the stored recipe', () {
+      final accepted = picked.copyWith(tipOffer: TipOffer.accepted);
+      expect(rewardPick(3, accepted), isNull);
+      expect(rewardPick(1, accepted), one);
+      for (final offer in [TipOffer.offered, TipOffer.skipped]) {
+        expect(rewardPick(3, picked.copyWith(tipOffer: offer)), three);
+      }
+    });
+  });
+
   group('rewardTitle', () {
     test('day 3 follows the answer, then the weekly tips', () {
       String title(TipOffer? answer, bool? weekly) => rewardTitle(

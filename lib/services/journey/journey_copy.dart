@@ -41,6 +41,10 @@ abstract final class JourneyCopy {
 
   static const rewardsTitle = 'Deine Belohnungen';
 
+  /// A day of „Deine Belohnungen" not earned yet, to a screen reader.
+  static String notYet(int day, String title) =>
+      '${dayLabel(day)}: $title, kommt noch';
+
   /// What the reward line does, to a screen reader.
   static const openRewards = 'Belohnungen ansehen';
 
@@ -63,6 +67,10 @@ abstract final class JourneyCopy {
 
   /// Right after „Nein, danke".
   static const day3AfterNoLine = 'Alles klar! Dann hier ein Rezept für dich.';
+
+  /// Day 3 once the first tip was accepted: the tip is the reward, never a
+  /// recipe.
+  static const day3TipLine = 'Tag 3! Deine Tipps findest du unter Entdecken.';
 
   static const day5Line =
       'Tag 5! Hier ist ein Rezept mit Zutaten, die du schon gegessen hast.';

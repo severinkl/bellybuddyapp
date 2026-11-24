@@ -152,6 +152,13 @@ bool rewardEarned(int day, JourneyRewards r) => day == _patternsDay
     ? r.patternsFreed
     : day >= 1 && day < _patternsDay && day <= r.earnedDay;
 
+/// The recipe [day]'s reward shows and opens: the stored pick of a recipe
+/// day ([JourneyRewards.recipeDays]); null on another day, without a pick,
+/// and on day 3 once the first tip was accepted (a recipe picked while the
+/// offer waited is not the reward then).
+RecipePick? rewardPick(int day, JourneyRewards r) =>
+    day == _tipDay && r.tipOffer == TipOffer.accepted ? null : r.picks[day];
+
 /// The title of [day]'s reward (1–7). Day 3 is the tip once accepted, a
 /// recipe once declined or skipped, and before that whatever the weekly
 /// tips make it; day 5 names the user's ingredients only once a stored pick
