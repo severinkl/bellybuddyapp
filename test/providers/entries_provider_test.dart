@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -180,6 +181,39 @@ void main() {
       expect(state.latestBefore, const LatestEntries());
       expect(state.error, isNull);
       expect(state.isLoading, isFalse);
+    });
+
+    test('a failing latest-before query is logged once, by the query '
+        'service', () async {
+      stubDay(() async => testEntryQueryResult());
+      final client = MockSupabaseClient();
+      when(() => client.from(any())).thenThrow(Exception('db error'));
+      final service = EntryQueryService(client);
+      when(
+        () => mockRepo.fetchLatestBefore(
+          userId: any(named: 'userId'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer(
+        (i) => service.fetchLatestBefore(
+          userId: i.namedArguments[#userId] as String,
+          before: i.namedArguments[#before] as DateTime,
+        ),
+      );
+      final logs = <String>[];
+      final originalDebugPrint = debugPrint;
+      debugPrint = (message, {wrapWidth}) => logs.add(message ?? '');
+      addTearDown(() => debugPrint = originalDebugPrint);
+      final container = makeContainer();
+
+      await container
+          .read(entriesProvider.notifier)
+          .loadEntries(DateTime(2026, 11, 23));
+
+      expect(
+        logs.where((l) => l.contains('[ERROR]: fetchLatestBefore failed')),
+        hasLength(1),
+      );
     });
 
     test('a superseded load publishes neither', () async {

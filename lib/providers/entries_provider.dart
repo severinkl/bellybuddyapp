@@ -157,8 +157,8 @@ class EntriesNotifier extends Notifier<EntriesState> {
     }
   }
 
-  /// The latest entries before [before]; a failing query is logged and
-  /// gives null, so the day itself still loads.
+  /// The latest entries before [before]; a failing query gives null, so
+  /// the day itself still loads.
   Future<LatestEntries?> _fetchLatestBefore(
     EntryRepository repo,
     String userId,
@@ -166,8 +166,8 @@ class EntriesNotifier extends Notifier<EntriesState> {
   ) async {
     try {
       return await repo.fetchLatestBefore(userId: userId, before: before);
-    } catch (e, st) {
-      _log.error('fetchLatestBefore failed before $before', e, st);
+    } catch (_) {
+      // Logged by the query service.
       return null;
     }
   }
