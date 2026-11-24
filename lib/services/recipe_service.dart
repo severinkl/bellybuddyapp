@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/adapted_recipe.dart';
 import '../models/intolerance_rules.dart';
 import '../models/recipe.dart';
 import '../providers/core_providers.dart';
@@ -113,6 +114,57 @@ class RecipeService {
       rethrow;
     }
   }
+
+  /// Core's `adapt-recipe` for [recipeId]. The body is the id alone: the
+  /// server reads the intolerances and the diet itself, and no diary data is
+  /// sent. Every failure is an [AdaptRecipeException].
+  Future<AdaptedRecipe> adapt(String recipeId) async {
+    final Object? data;
+    try {
+      final response = await _client.functions.invoke(
+        'adapt-recipe',
+        body: {'recipe_id': recipeId},
+      );
+      data = response.data;
+    } on FunctionException catch (e, st) {
+      final failure = _failureOf(e);
+      if (failure == AdaptFailure.failed) {
+        _log.error('adapt failed (${e.status})', e, st);
+      } else {
+        _log.warn('adapt: ${e.status} ${_codeOf(e)}');
+      }
+      throw AdaptRecipeException(failure);
+    } catch (e, st) {
+      _log.error('adapt failed', e, st);
+      throw const AdaptRecipeException(AdaptFailure.failed);
+    }
+    try {
+      if (data is! Map<String, dynamic>) {
+        throw FormatException('not a JSON object: ${data.runtimeType}');
+      }
+      return AdaptedRecipe.fromJson(data);
+    } catch (e, st) {
+      _log.error('adapt: unreadable answer', e, st);
+      throw const AdaptRecipeException(AdaptFailure.failed);
+    }
+  }
+
+  /// The failure for an `adapt-recipe` error, keyed off its `code` (the
+  /// server's message is never shown).
+  static AdaptFailure _failureOf(FunctionException e) =>
+      switch ((e.status, _codeOf(e))) {
+        (409, 'nothing_to_adapt') => AdaptFailure.nothingToAdapt,
+        (409, 'cannot_judge') => AdaptFailure.cannotJudge,
+        (429, _) => AdaptFailure.later,
+        _ => AdaptFailure.failed,
+      };
+
+  /// The error body's `code`; null when the body isn't a JSON object (a
+  /// proxy's text page) or has none.
+  static Object? _codeOf(FunctionException e) => switch (e.details) {
+    final Map<dynamic, dynamic> details => details['code'],
+    _ => null,
+  };
 }
 
 final recipeServiceProvider = Provider<RecipeService>(

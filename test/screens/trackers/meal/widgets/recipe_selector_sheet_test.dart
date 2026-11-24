@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:belly_buddy/models/adapted_recipe.dart';
 import 'package:belly_buddy/models/user_recipe.dart';
 import 'package:belly_buddy/providers/recipe_search_provider.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
@@ -46,6 +47,10 @@ class _FakeUserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>>
     List<String>? instructions,
     List<String?>? ingredientAmounts,
   }) => throw UnimplementedError();
+
+  @override
+  Future<UserRecipe> createAdapted(AdaptedRecipe adapted) =>
+      throw UnimplementedError();
 
   @override
   Future<void> delete(String id) async {}

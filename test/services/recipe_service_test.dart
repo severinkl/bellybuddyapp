@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:belly_buddy/models/adapted_recipe.dart';
 import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/services/recipe_service.dart';
 
@@ -89,6 +90,26 @@ List<String> _captureLogs() {
   addTearDown(() => debugPrint = original);
   return logs;
 }
+
+/// A 200 answer of `adapt-recipe` with one ingredient.
+Map<String, dynamic> _adaptAnswer() => {
+  'recipe_id': 'recipe-1',
+  'title': 'Risotto',
+  'ingredients': [
+    {
+      'amount': '200 g',
+      'name': 'Reis',
+      'replaces': null,
+      'status': 'ok',
+      'ingredient_id': 'ing-Reis',
+    },
+  ],
+  'removed': <dynamic>[],
+  'steps': [
+    {'text': 'Kochen.', 'changed': false},
+  ],
+  'note': '',
+};
 
 void main() {
   late MockSupabaseClient client;
@@ -322,6 +343,113 @@ void main() {
         service.removeFavorite(testUserId, 'recipe-1'),
         completes,
       );
+    });
+  });
+  group('RecipeService.adapt', () {
+    late MockFunctionsClient functions;
+
+    setUp(() {
+      functions = mockFunctions(client);
+    });
+
+    void stubAnswer(Object? data) => when(
+      () => functions.invoke(any(), body: any(named: 'body')),
+    ).thenAnswer((_) async => FunctionResponse(data: data, status: 200));
+
+    void stubThrow(Object error) => when(
+      () => functions.invoke(any(), body: any(named: 'body')),
+    ).thenThrow(error);
+
+    Future<AdaptFailure?> failureOf(Future<Object?> call) async {
+      try {
+        await call;
+        return null;
+      } on AdaptRecipeException catch (e) {
+        return e.failure;
+      }
+    }
+
+    test('the body is exactly the recipe id', () async {
+      stubAnswer(_adaptAnswer());
+
+      final adapted = await service.adapt('recipe-1');
+
+      final captured = verify(
+        () => functions.invoke('adapt-recipe', body: captureAny(named: 'body')),
+      ).captured;
+      expect(captured.single, {'recipe_id': 'recipe-1'});
+      expect(adapted.title, 'Risotto');
+      expect(adapted.ingredients.single.name, 'Reis');
+    });
+
+    test('error codes map', () async {
+      for (final (status, code, failure, level) in [
+        (409, 'nothing_to_adapt', AdaptFailure.nothingToAdapt, 'WARN'),
+        (409, 'cannot_judge', AdaptFailure.cannotJudge, 'WARN'),
+        (429, 'throttled', AdaptFailure.later, 'WARN'),
+        (429, 'ai_busy', AdaptFailure.later, 'WARN'),
+        (429, null, AdaptFailure.later, 'WARN'),
+        (422, 'adapt_failed', AdaptFailure.failed, 'ERROR'),
+        (502, 'ai_error', AdaptFailure.failed, 'ERROR'),
+        (404, 'recipe_not_found', AdaptFailure.failed, 'ERROR'),
+        (400, 'invalid_request', AdaptFailure.failed, 'ERROR'),
+        (401, null, AdaptFailure.failed, 'ERROR'),
+        (500, null, AdaptFailure.failed, 'ERROR'),
+        (409, 'something_new', AdaptFailure.failed, 'ERROR'),
+      ]) {
+        final logs = _captureLogs();
+        stubThrow(
+          FunctionsHttpException(
+            status: status,
+            details: {'code': ?code, 'error': 'Eine Meldung vom Server.'},
+          ),
+        );
+
+        expect(
+          await failureOf(service.adapt('recipe-1')),
+          failure,
+          reason: '$status $code',
+        );
+        expect(
+          logs.first,
+          startsWith('RecipeService [$level]: adapt'),
+          reason: '$status $code',
+        );
+      }
+    });
+
+    test('an error body that is not JSON → failed', () async {
+      final logs = _captureLogs();
+      stubThrow(
+        const FunctionsHttpException(status: 502, details: 'Bad Gateway'),
+      );
+
+      expect(await failureOf(service.adapt('recipe-1')), AdaptFailure.failed);
+      expect(logs.first, 'RecipeService [ERROR]: adapt failed (502)');
+    });
+
+    test('transport failure', () async {
+      final logs = _captureLogs();
+      stubThrow(const FunctionsFetchException(details: 'offline'));
+
+      expect(await failureOf(service.adapt('recipe-1')), AdaptFailure.failed);
+      expect(logs.first, startsWith('RecipeService [ERROR]: adapt'));
+    });
+
+    test('an answer that is not a map → failed', () async {
+      final logs = _captureLogs();
+      stubAnswer('kein JSON');
+
+      expect(await failureOf(service.adapt('recipe-1')), AdaptFailure.failed);
+      expect(logs.first, startsWith('RecipeService [ERROR]: adapt'));
+    });
+
+    test('an answer that fails fromJson → failed', () async {
+      final logs = _captureLogs();
+      stubAnswer(_adaptAnswer()..remove('ingredients'));
+
+      expect(await failureOf(service.adapt('recipe-1')), AdaptFailure.failed);
+      expect(logs.first, 'RecipeService [ERROR]: adapt: unreadable answer');
     });
   });
 }

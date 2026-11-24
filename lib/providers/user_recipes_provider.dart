@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../config/constants.dart';
+import '../models/adapted_recipe.dart';
 import '../models/user_recipe.dart';
 import '../providers/core_providers.dart';
 import '../repositories/user_recipe_repository.dart';
@@ -96,6 +98,52 @@ class UserRecipesNotifier extends Notifier<AsyncValue<List<UserRecipe>>> {
     await fetch(force: true);
     return recipe;
   }
+
+  /// Saves [adapted] as an own recipe: the names trimmed and de-duplicated
+  /// case-insensitively (the first and its amount kept), the amounts aligned
+  /// (none when every one is null), the non-blank steps up to
+  /// [AppConstants.recipeStepsMax], the original as its origin, no photo.
+  ///
+  /// When the title is taken, tries „<title> (angepasst)", then
+  /// „(angepasst 2)" … „(angepasst 9)"; after that the
+  /// [DuplicateRecipeTitleException] is rethrown.
+  Future<UserRecipe> createAdapted(AdaptedRecipe adapted) async {
+    final names = <String>[];
+    final amounts = <String?>[];
+    final seen = <String>{};
+    for (final ingredient in adapted.ingredients) {
+      final name = ingredient.name.trim();
+      if (name.isEmpty || !seen.add(name.toLowerCase())) continue;
+      final amount = ingredient.amount?.trim();
+      names.add(name);
+      amounts.add(amount == null || amount.isEmpty ? null : amount);
+    }
+    final steps = [
+      for (final step in adapted.steps)
+        if (step.text.trim() case final text when text.isNotEmpty) text,
+    ].take(AppConstants.recipeStepsMax).toList();
+    final title = adapted.title.trim();
+    for (var attempt = 0; ; attempt++) {
+      try {
+        return await create(
+          title: switch (attempt) {
+            0 => title,
+            1 => '$title (angepasst)',
+            _ => '$title (angepasst $attempt)',
+          },
+          ingredients: names,
+          instructions: steps,
+          ingredientAmounts: amounts.every((a) => a == null) ? null : amounts,
+          adaptedFromRecipeId: adapted.recipeId,
+        );
+      } on DuplicateRecipeTitleException {
+        if (attempt >= _adaptedTitleAttempts - 1) rethrow;
+      }
+    }
+  }
+
+  /// The plain title, then „(angepasst)" and „(angepasst 2)" … „(angepasst 9)".
+  static const _adaptedTitleAttempts = 10;
 
   Future<void> delete(String id) async {
     await ref.read(userRecipeRepositoryProvider).delete(id);

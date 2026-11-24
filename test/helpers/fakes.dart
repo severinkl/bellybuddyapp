@@ -4,6 +4,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart' show AsyncData;
 import 'package:belly_buddy/config/constants.dart';
+import 'package:belly_buddy/models/adapted_recipe.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/drink.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
@@ -547,7 +548,45 @@ class FakeRecipeRepository implements RecipeRepository {
     rulesFetches++;
     return rules;
   }
+
+  /// Answers [adapt]; by default [testAdaptedRecipe] for the recipe.
+  Future<AdaptedRecipe> Function(String recipeId)? onAdapt;
+
+  /// How often [adapt] was called.
+  int adaptCalls = 0;
+
+  @override
+  Future<AdaptedRecipe> adapt(String recipeId) async {
+    adaptCalls++;
+    return await onAdapt?.call(recipeId) ??
+        testAdaptedRecipe(recipeId: recipeId);
+  }
 }
+
+/// An `adapt-recipe` answer: Honig swapped for Ahornsirup, the second step
+/// changed for it.
+AdaptedRecipe testAdaptedRecipe({
+  String recipeId = 'recipe-1',
+  String title = 'Porridge mit Ahornsirup',
+  List<AdaptedIngredient> ingredients = const [
+    AdaptedIngredient(amount: '50 g', name: 'Haferflocken'),
+    AdaptedIngredient(amount: '200 ml', name: 'Haferdrink'),
+    AdaptedIngredient(amount: '1 EL', name: 'Ahornsirup', replaces: 'Honig'),
+  ],
+  List<String> removed = const [],
+  List<AdaptedStep> steps = const [
+    AdaptedStep('Haferflocken im Haferdrink aufkochen.'),
+    AdaptedStep('Mit Ahornsirup süßen.', changed: true),
+  ],
+  String note = 'Ich hab Honig gegen Ahornsirup getauscht.',
+}) => AdaptedRecipe(
+  recipeId: recipeId,
+  title: title,
+  ingredients: ingredients,
+  removed: removed,
+  steps: steps,
+  note: note,
+);
 
 // -- FakeUserRecipeRepository --
 class FakeUserRecipeRepository implements UserRecipeRepository {

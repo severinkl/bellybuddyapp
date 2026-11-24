@@ -1,3 +1,4 @@
+import 'adapted_recipe.dart';
 import 'recipe.dart';
 import 'user_recipe.dart';
 
@@ -27,6 +28,13 @@ class MealPrefill {
           ? recipe.legacyIngredients
           : recipe.ingredients.map((line) => line.name),
     ),
+  );
+
+  /// An adapted recipe: its names, cleaned up as in [MealPrefill.ofRecipe],
+  /// and no image.
+  factory MealPrefill.ofAdapted(AdaptedRecipe adapted) => MealPrefill(
+    title: adapted.title,
+    ingredients: _distinct(adapted.ingredients.map((i) => i.name)),
   );
 
   final String title;
