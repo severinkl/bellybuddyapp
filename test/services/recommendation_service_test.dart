@@ -282,7 +282,6 @@ void main() {
     });
 
     test('429 → FirstTipException(429)', () async {
-      captureLogs();
       stubThrow(
         const FunctionsHttpException(
           status: 429,
@@ -293,8 +292,7 @@ void main() {
       await expectLater(request(), failsWith(429));
     });
 
-    test('500 → FirstTipException(500); the log names the status, never '
-        'the meals', () async {
+    test('500 → FirstTipException(500), logged by the caller only', () async {
       final logs = captureLogs();
       stubThrow(
         const FunctionsHttpException(
@@ -304,33 +302,27 @@ void main() {
       );
 
       await expectLater(request(), failsWith(500));
-      expect(logs, isNotEmpty);
-      expect(logs.first, contains('500'));
-      for (final line in logs) {
-        expect(line, isNot(contains('Zwiebel')));
-        expect(line, isNot(contains('Brot')));
-      }
+      expect(logs, isEmpty);
     });
 
     test('transport → FirstTipException(null)', () async {
-      captureLogs();
       stubThrow(const FunctionsFetchException(details: 'offline'));
 
       await expectLater(request(), failsWith(null));
     });
 
-    test('a non-map answer → FirstTipException(null)', () async {
-      final logs = captureLogs();
-      stubAnswer('Zwiebelsuppe mit Brot');
+    test(
+      'a non-map answer → FirstTipException(null), nothing logged',
+      () async {
+        final logs = captureLogs();
+        stubAnswer('Zwiebelsuppe mit Brot');
 
-      await expectLater(request(), failsWith(null));
-      for (final line in logs) {
-        expect(line, isNot(contains('Zwiebel')));
-      }
-    });
+        await expectLater(request(), failsWith(null));
+        expect(logs, isEmpty);
+      },
+    );
 
     test('an id that is not a string → FirstTipException(null)', () async {
-      captureLogs();
       stubAnswer({
         'id': 7,
         'recommendations': [_item('Reis')],

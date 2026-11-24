@@ -24,7 +24,7 @@ class RecommendationService {
   ///
   /// Every failure is a [FirstTipException]: an error answer with its
   /// status; no connection, or an answer that can't be read, without one.
-  /// Logs name the status only, never a meal.
+  /// Nothing is logged here: the caller logs the failure once.
   Future<FirstTipResult> requestFirstTip({
     required List<String> intolerances,
     required String? diet,
@@ -50,13 +50,10 @@ class RecommendationService {
       data = response.data;
     } on FunctionsFetchException {
       // The request never got an answer (status 0): no status to name.
-      _log.error('requestFirstTip failed: no answer');
       throw const FirstTipException();
     } on FunctionException catch (e) {
-      _log.error('requestFirstTip failed (${e.status})');
       throw FirstTipException(e.status);
-    } catch (e) {
-      _log.error('requestFirstTip failed (${e.runtimeType})');
+    } catch (_) {
       throw const FirstTipException();
     }
     try {
@@ -65,9 +62,7 @@ class RecommendationService {
         id: data['id'] as String?,
         tips: (data['recommendations'] as List?)?.length ?? 0,
       );
-    } catch (e) {
-      // The answer itself is never logged: it may repeat the meals.
-      _log.error('requestFirstTip: unreadable answer (${e.runtimeType})');
+    } catch (_) {
       throw const FirstTipException();
     }
   }

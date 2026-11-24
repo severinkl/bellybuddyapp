@@ -305,7 +305,7 @@ void main() {
       ('429', const FirstTipException(429), '429'),
       ('transport', const FirstTipException(), 'no status'),
     ]) {
-      test('$name: failed, still opted in, one request', () async {
+      test('$name: failed, still opted in, one request, logged once', () async {
         final logs = captureLogs();
         tips.firstTipError = error;
         final c = container();
@@ -315,7 +315,9 @@ void main() {
 
         await expectFailedOnce(c);
         expect(tips.marked, isEmpty);
-        expect(logs, contains(contains(logged)));
+        expect(logs.where((line) => line.contains('First tip failed')), [
+          contains(logged),
+        ]);
         _expectNoMeals(logs);
       });
     }
