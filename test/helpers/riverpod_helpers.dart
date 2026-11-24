@@ -87,13 +87,16 @@ Override insightsProviderSeededWith(Insights insights) =>
     insightsProvider.overrideWith(() => _SeededInsightsNotifier(insights));
 
 /// A [JourneyRewardsNotifier] that starts with [_rewards] and keeps its
-/// answers in memory: nothing read, moved on or stored.
-class _SeededJourneyRewardsNotifier extends JourneyRewardsNotifier {
-  _SeededJourneyRewardsNotifier(this._rewards);
+/// answers in memory: nothing read, moved on or stored; [set] replaces
+/// them (moved on elsewhere).
+class SeededJourneyRewardsNotifier extends JourneyRewardsNotifier {
+  SeededJourneyRewardsNotifier(this._rewards);
   final JourneyRewards? _rewards;
 
   @override
   JourneyRewards? build() => _rewards;
+
+  void set(JourneyRewards? rewards) => state = rewards;
 
   @override
   Future<void> answerTipOffer({required bool accepted}) async {
@@ -106,10 +109,12 @@ class _SeededJourneyRewardsNotifier extends JourneyRewardsNotifier {
 }
 
 /// An [Override] for [journeyRewardsProvider] that serves [rewards] (null:
-/// no journey) and keeps `answerTipOffer` and `setFirstTip` in memory.
+/// no journey) and keeps `answerTipOffer` and `setFirstTip` in memory;
+/// change them through `container.read(journeyRewardsProvider.notifier)`
+/// ([SeededJourneyRewardsNotifier]).
 Override journeyRewardsSeededWith(JourneyRewards? rewards) =>
     journeyRewardsProvider.overrideWith(
-      () => _SeededJourneyRewardsNotifier(rewards),
+      () => SeededJourneyRewardsNotifier(rewards),
     );
 
 /// A [JourneyNotifier] decided as [_journey], nothing read or stored;

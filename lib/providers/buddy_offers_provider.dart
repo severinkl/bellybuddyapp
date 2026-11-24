@@ -85,8 +85,11 @@ final buddyOffersProvider = Provider<Map<BuddyAnnouncement, String>>((ref) {
 /// that is only before the first decision (signed out, a new user's
 /// insights still loading), so this drops at most a previous user's cue
 /// (its flag is that user's). A reached goal applies while it is still
-/// the goal: one picked meanwhile (in „Dein Streak") withdraws it. The
-/// others always apply.
+/// the goal: one picked meanwhile (in „Dein Streak") withdraws it. A day's
+/// reward applies while there is a day to announce
+/// ([journeyRewardAnnouncementProvider]): superseded (day 3's offer stands
+/// for it, the rewards gone), it doesn't celebrate for nothing. The others
+/// always apply.
 final offerStillAppliesProvider = Provider.family<bool, BuddyAnnouncement>(
   (ref, announcement) => switch (announcement) {
     BuddyAnnouncement.tipsArrived => ref.watch(unseenTipSetProvider) != null,
@@ -95,10 +98,11 @@ final offerStillAppliesProvider = Provider.family<bool, BuddyAnnouncement>(
           ref.watch(journeyProvider) == false,
     BuddyAnnouncement.firstTipOffer => _firstTipOfferApplies(ref),
     BuddyAnnouncement.goalReached => _goalStillApplies(ref),
+    BuddyAnnouncement.journeyReward =>
+      ref.watch(journeyRewardAnnouncementProvider) != null,
     BuddyAnnouncement.saverUsed ||
     BuddyAnnouncement.streakBroken ||
     BuddyAnnouncement.saverEarned ||
-    BuddyAnnouncement.journeyReward ||
     BuddyAnnouncement.patternsUnlocked ||
     BuddyAnnouncement.firstTipFailed => true,
   },

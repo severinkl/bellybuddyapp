@@ -1553,16 +1553,45 @@ void main() {
         ]);
       });
 
-      testWidgets('no day to announce (the rewards gone meanwhile): no sheet, '
-          'marked shown', (tester) async {
+      testWidgets('no day to announce (the rewards gone meanwhile): no '
+          'celebration, no sheet, marked shown', (tester) async {
         journey = true;
         rewards = null;
         buddy = _FakeBuddy(
           () => _status(announcements: const [BuddyAnnouncement.journeyReward]),
         );
         await pumpHero(tester);
-        await afterCelebration(tester);
+        await tick(tester);
 
+        expect(controller(tester).currentAction, isNot(BuddyAction.celebrate));
+        await afterCelebration(tester);
+        expect(find.byType(JourneyDaySheet), findsNothing);
+        expect(buddy.shown, [BuddyAnnouncement.journeyReward]);
+      });
+
+      testWidgets('superseded while it waited (day 3, the offer open now): '
+          'no celebration, no sheet, marked shown', (tester) async {
+        journey = true;
+        rewards = const JourneyRewards(earnedDay: 2);
+        final container = await pumpHero(tester);
+        await openSheet(tester);
+        buddy.push(
+          _status(announcements: const [BuddyAnnouncement.journeyReward]),
+        );
+        await tester.pump();
+        (container.read(journeyRewardsProvider.notifier)
+                as SeededJourneyRewardsNotifier)
+            .set(
+              const JourneyRewards(earnedDay: 3, tipOffer: TipOffer.offered),
+            );
+
+        await tester.tapAt(const Offset(10, 10)); // „Dein Streak"'s barrier
+        await tester.pump();
+        await tester.pump();
+        await tick(tester);
+
+        expect(controller(tester).currentAction, isNot(BuddyAction.celebrate));
+        await afterCelebration(tester);
         expect(find.byType(JourneyDaySheet), findsNothing);
         expect(buddy.shown, [BuddyAnnouncement.journeyReward]);
       });

@@ -592,10 +592,28 @@ void main() {
       }
     });
 
-    test('offerStillApplies: the new kinds always apply', () {
+    test('journeyReward: while there is a day to announce', () {
+      bool applies(JourneyRewards? rewards, {bool? weeklyTips = false}) =>
+          container(
+            weeklyTips: weeklyTips,
+            journey: true,
+            rewards: rewards,
+          ).read(offerStillAppliesProvider(BuddyAnnouncement.journeyReward));
+
+      expect(applies(const JourneyRewards(earnedDay: 2)), isTrue);
+      // Superseded: day 3's offer stands for it, or the rewards are gone.
+      expect(
+        applies(const JourneyRewards(earnedDay: 3, tipOffer: TipOffer.offered)),
+        isFalse,
+      );
+      expect(applies(const JourneyRewards(earnedDay: 7)), isFalse);
+      expect(applies(null), isFalse);
+    });
+
+    test('offerStillApplies: patternsUnlocked and firstTipFailed always '
+        'apply', () {
       final c = container(weeklyTips: true, journey: null);
       for (final a in [
-        BuddyAnnouncement.journeyReward,
         BuddyAnnouncement.patternsUnlocked,
         BuddyAnnouncement.firstTipFailed,
       ]) {
