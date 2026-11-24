@@ -48,6 +48,29 @@ void main() {
     });
   });
 
+  // Under TZ=Europe/Vienna: 25 Oct 2026, the clocks went back at 03:00
+  // CEST, so 02:30 comes twice. 02:30:20 CET is its second time.
+  test('the repeated hour when the clocks go back: the minute of the clock, '
+      'the next tick at most a minute away', () {
+    fakeAsync((async) {
+      final secondTime = DateTime.utc(2026, 10, 25, 1, 30, 20).toLocal();
+      final (c, minutes) = makeContainer(() => secondTime.add(async.elapsed));
+
+      expect(
+        c.read(minuteProvider),
+        DateTime.utc(2026, 10, 25, 1, 30).toLocal(),
+      );
+      final delay = async.pendingTimers.single.duration;
+      expect(delay, const Duration(seconds: 40));
+
+      async.elapse(const Duration(seconds: 39));
+      expect(minutes, isEmpty);
+      async.elapse(const Duration(seconds: 1));
+      expect(minutes, [DateTime.utc(2026, 10, 25, 1, 31).toLocal()]);
+      expect(async.pendingTimers, hasLength(1));
+    });
+  });
+
   group('back in the foreground (timers stood still while the device '
       'slept)', () {
     test('a later minute: announced at once', () {

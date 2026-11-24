@@ -27,14 +27,18 @@ class MinuteNotifier extends Notifier<DateTime> {
   void _check() => state = _arm(ref.read(buddyClockProvider)());
 
   /// Arms the timer for the minute after [now] and returns [now]'s minute.
+  /// Counted back from [now] rather than rebuilt from its fields: in the
+  /// hour that repeats when the clocks go back, the fields name its first
+  /// time, an hour before [now].
   DateTime _arm(DateTime now) {
-    final minute = DateTime(now.year, now.month, now.day, now.hour, now.minute);
-    _tick?.cancel();
-    _tick = Timer(
-      minute.add(const Duration(minutes: 1)).difference(now),
-      _check,
+    final intoMinute = Duration(
+      seconds: now.second,
+      milliseconds: now.millisecond,
+      microseconds: now.microsecond,
     );
-    return minute;
+    _tick?.cancel();
+    _tick = Timer(const Duration(minutes: 1) - intoMinute, _check);
+    return now.subtract(intoMinute);
   }
 }
 
