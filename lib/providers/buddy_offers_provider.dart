@@ -1,51 +1,103 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../models/journey_rewards.dart';
+import '../services/journey/journey_rules.dart';
 import '../utils/settled_value.dart';
 import 'buddy_provider.dart';
 import 'insights_provider.dart';
+import 'journey_provider.dart';
+import 'journey_rewards_provider.dart';
 import 'profile_provider.dart';
 import 'recommendation_provider.dart';
 
-/// The flag suffix of [BuddyAnnouncement.weeklyTipsOffer]: offered once per
-/// user, ever.
-const weeklyTipsOfferSuffix = 'once';
+/// The flag suffix of the announcements offered once per user, ever:
+/// [BuddyAnnouncement.weeklyTipsOffer], [BuddyAnnouncement.patternsUnlocked]
+/// and [BuddyAnnouncement.firstTipFailed].
+const onceSuffix = 'once';
 
-/// Whether the Buddy offers the weekly tips: he sees first patterns (the
-/// signed-in user's insights are loaded and unlocked) and the weekly tips
-/// are known to be off. Only settled insights count: while another user's
-/// insights load, the state still holds the previous user's.
-final weeklyTipsOfferDueProvider = Provider<bool>(
-  (ref) =>
+/// The flag suffix of [BuddyAnnouncement.weeklyTipsOffer].
+const weeklyTipsOfferSuffix = onceSuffix;
+
+/// The flag suffix of [BuddyAnnouncement.journeyReward], followed by the
+/// day: `day<n>`, once per journey day.
+const journeyRewardSuffix = 'day';
+
+/// Whether the Buddy offers the weekly tips, as the journey
+/// ([journeyProvider]) says:
+/// - on it: day 3's offer of a first tip waits for its answer
+///   ([tipOfferDue]), the insights locked or not;
+/// - off it: he sees first patterns (the signed-in user's insights are
+///   loaded and unlocked) and the weekly tips are known to be off. Only
+///   settled insights count: while another user's insights load, the state
+///   still holds the previous user's;
+/// - undecided: never.
+final weeklyTipsOfferDueProvider = Provider<bool>((ref) {
+  final weeklyTips = ref.watch(weeklyTipsEnabledProvider);
+  return switch (ref.watch(journeyProvider)) {
+    true => switch (ref.watch(journeyRewardsProvider)) {
+      final rewards? => tipOfferDue(rewards, weeklyTips: weeklyTips),
+      null => false,
+    },
+    false =>
       (ref.watch(insightsProvider).settledValue?.unlocked ?? false) &&
-      ref.watch(weeklyTipsEnabledProvider) == false,
-);
+          weeklyTips == false,
+    null => false,
+  };
+});
 
 /// The announcements Home offers the Buddy while they apply, each with its
-/// flag suffix ([BuddyNotifier.offerAnnouncement]): `tipsArrived` for the
-/// unseen tip set (once per set), `weeklyTipsOffer` while it is due.
+/// flag suffix ([BuddyNotifier.offerAnnouncement]), in this order:
+/// - `tipsArrived` for the unseen tip set (once per set);
+/// - `journeyReward` for the newest earned day of 1–6
+///   ([journeyRewardAnnouncementProvider]), once per day: a newer day
+///   replaces a pending older one;
+/// - `weeklyTipsOffer` while it is due ([weeklyTipsOfferDueProvider]);
+/// - `patternsUnlocked` once the journey's first patterns were unlocked;
+/// - `firstTipFailed` once the day-3 first tip failed.
 final buddyOffersProvider = Provider<Map<BuddyAnnouncement, String>>((ref) {
   final set = ref.watch(unseenTipSetProvider);
+  final day = ref.watch(journeyRewardAnnouncementProvider);
   return {
     if (set != null) BuddyAnnouncement.tipsArrived: set.id,
+    if (day != null)
+      BuddyAnnouncement.journeyReward: '$journeyRewardSuffix$day',
     if (ref.watch(weeklyTipsOfferDueProvider))
       BuddyAnnouncement.weeklyTipsOffer: weeklyTipsOfferSuffix,
+    if (ref.watch(patternsUnlockedDueProvider) &&
+        ref.watch(journeyProvider) == true)
+      BuddyAnnouncement.patternsUnlocked: onceSuffix,
+    if (ref.watch(firstTipFailedProvider))
+      BuddyAnnouncement.firstTipFailed: onceSuffix,
   };
 });
 
 /// Whether an announcement still applies as the Buddy plays it: when its
 /// cue starts, and again right before its sheet opens (it may have waited
-/// while Home was hidden). „Neue Tipps" needs the set still unseen; the
-/// weekly-tips offer goes only once the weekly tips are known to be on, so
-/// a profile still (re)loading never withdraws the one-time offer (and so
-/// never has it marked shown unplayed). The others always apply.
+/// while Home was hidden). „Neue Tipps" needs the set still unseen. The
+/// weekly-tips offer goes once the weekly tips are known to be on, so a
+/// profile still (re)loading never withdraws the one-time offer (and so
+/// never has it marked shown unplayed); on the journey also once day 3's
+/// offer was answered (e.g. in „Deine Belohnungen"), and while the journey
+/// is undecided it never applies. The others always apply.
 final offerStillAppliesProvider = Provider.family<bool, BuddyAnnouncement>(
   (ref, announcement) => switch (announcement) {
     BuddyAnnouncement.tipsArrived => ref.watch(unseenTipSetProvider) != null,
     BuddyAnnouncement.weeklyTipsOffer =>
-      ref.watch(weeklyTipsEnabledProvider) != true,
+      ref.watch(weeklyTipsEnabledProvider) != true &&
+          switch (ref.watch(journeyProvider)) {
+            true => switch (ref.watch(journeyRewardsProvider)?.tipOffer) {
+              TipOffer.accepted || TipOffer.declined => false,
+              TipOffer.offered || TipOffer.skipped || null => true,
+            },
+            false => true,
+            null => false,
+          },
     BuddyAnnouncement.saverUsed ||
     BuddyAnnouncement.streakBroken ||
     BuddyAnnouncement.saverEarned ||
-    BuddyAnnouncement.goalReached => true,
+    BuddyAnnouncement.goalReached ||
+    BuddyAnnouncement.journeyReward ||
+    BuddyAnnouncement.patternsUnlocked ||
+    BuddyAnnouncement.firstTipFailed => true,
   },
 );

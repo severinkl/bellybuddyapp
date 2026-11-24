@@ -12,6 +12,7 @@ import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/providers/insights_provider.dart';
+import 'package:belly_buddy/providers/journey_provider.dart';
 import 'package:belly_buddy/providers/journey_rewards_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/services/journey/journey_rules.dart';
@@ -110,6 +111,24 @@ Override journeyRewardsSeededWith(JourneyRewards? rewards) =>
     journeyRewardsProvider.overrideWith(
       () => _SeededJourneyRewardsNotifier(rewards),
     );
+
+/// A [JourneyNotifier] decided as [_journey], nothing read or stored;
+/// [set] changes it (e.g. another user, still undecided).
+class SeededJourneyNotifier extends JourneyNotifier {
+  SeededJourneyNotifier(this._journey);
+  final bool? _journey;
+
+  @override
+  bool? build() => _journey;
+
+  void set(bool? journey) => state = journey;
+}
+
+/// An [Override] for [journeyProvider] that serves [journey] (null:
+/// undecided) instead of deciding it; switch it through
+/// `container.read(journeyProvider.notifier)` ([SeededJourneyNotifier]).
+Override journeySeededWith(bool? journey) =>
+    journeyProvider.overrideWith(() => SeededJourneyNotifier(journey));
 
 /// An [EntriesNotifier] whose [build] returns a pre-seeded [EntriesState] so
 /// widgets that `ref.read(entriesProvider)` in `initState` see the supplied

@@ -14,6 +14,7 @@ import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/insight_card.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_dots.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/dashboard_tutorial_steps.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_keys.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_step.dart';
@@ -26,12 +27,14 @@ import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/repositories/recommendation_repository.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tips_row.dart';
 import 'package:belly_buddy/providers/insights_provider.dart';
+import 'package:belly_buddy/providers/journey_provider.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/screens/recommendations/recommendations_screen.dart';
 import 'package:belly_buddy/services/entry_query_service.dart';
+import 'package:belly_buddy/services/journey/journey_copy.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/services/buddy/care_meters.dart';
@@ -1130,6 +1133,42 @@ void main() {
       expect(container.read(buddyProvider).value!.announcements, [
         BuddyAnnouncement.tipsArrived,
       ]);
+    });
+
+    testWidgets('a journey user on day 1 hears the reward', (tester) async {
+      final entries = FakeEntryRepository()
+        ..insightSource = insightSourceFor(
+          activeDays: 1,
+          gutFeelings: 0,
+          now: _insightsNow,
+        );
+      final container = ProviderContainer.test(
+        overrides: [
+          ...baseOverrides(entries: entries),
+          buddyClockProvider.overrideWithValue(() => _insightsNow),
+        ],
+      );
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const AppTestHost(),
+        ),
+      );
+      await _settleFirstRun(tester);
+
+      expect(container.read(journeyProvider), isTrue);
+      final status = container.read(buddyProvider).value!;
+      expect(status.announcements, [BuddyAnnouncement.journeyReward]);
+      expect(
+        status.announcementKeys[BuddyAnnouncement.journeyReward],
+        endsWith('_journeyReward_day1'),
+      );
+
+      // He celebrates, then gives day 1's recipe.
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byType(JourneyRewardSheet), findsOneWidget);
+      expect(find.text(JourneyCopy.day1Line), findsOneWidget);
     });
 
     testWidgets('repeated offers queue it once', (tester) async {

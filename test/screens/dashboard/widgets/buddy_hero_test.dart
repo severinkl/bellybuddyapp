@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 
 import 'package:belly_buddy/config/constants.dart';
+import 'package:belly_buddy/models/journey_rewards.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
@@ -14,22 +15,30 @@ import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/buddy_welcome_provider.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
+import 'package:belly_buddy/providers/first_tip_provider.dart';
+import 'package:belly_buddy/providers/journey_provider.dart';
+import 'package:belly_buddy/providers/journey_rewards_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
+import 'package:belly_buddy/repositories/recipe_repository.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
 import 'package:belly_buddy/screens/buddy/streak_goal_picker.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/first_tip_offer_sheet.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/streak_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/weekly_tips_offer_sheet.dart';
 import 'package:belly_buddy/services/buddy/buddy_copy.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/services/entry_query_service.dart';
+import 'package:belly_buddy/services/journey/journey_copy.dart';
 import 'package:belly_buddy/utils/date_format_utils.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
 import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
+import 'package:belly_buddy/widgets/common/weekly_tips_switch.dart';
 
 import '../../../helpers/app_lifecycle.dart';
 import '../../../helpers/ambient_animations.dart';
@@ -131,6 +140,10 @@ void main() {
   late _FakeBuddy buddy;
   late _FakeEntries entries;
   late ValueNotifier<bool> visible;
+
+  /// Whether Home holds the hero; false disposes it, while a sheet it opened
+  /// stays open.
+  late ValueNotifier<bool> heroShown;
   late GoRouter router;
 
   /// What [unseenTipSetProvider] and [weeklyTipsEnabledProvider] hold; the
@@ -138,6 +151,12 @@ void main() {
   late Recommendation? unseenTipSet;
   late bool? weeklyTips;
   late NotifierProvider<Switchable<bool?>, bool?> weeklyTipsSwitch;
+
+  /// Whether the user is on the journey, their rewards (kept in memory)
+  /// and the first tip's notifier.
+  late bool? journey;
+  late JourneyRewards? rewards;
+  late FakeFirstTipNotifier firstTip;
 
   // The hero's bubble and actions need ticking Buddies.
   tickBuddiesInTests();
@@ -147,12 +166,17 @@ void main() {
     buddy = _FakeBuddy(() => _status());
     entries = _FakeEntries(const EntriesState());
     visible = ValueNotifier(true);
+    heroShown = ValueNotifier(true);
     unseenTipSet = null;
     weeklyTips = false;
+    journey = false;
+    rewards = null;
+    firstTip = FakeFirstTipNotifier();
   });
 
   tearDown(() {
     visible.dispose();
+    heroShown.dispose();
   });
 
   /// Pumps the hero on Home (`/dashboard`) of a router with stub pages for
@@ -175,6 +199,10 @@ void main() {
         weeklyTipsEnabledProvider.overrideWith(
           (ref) => ref.watch(weeklyTipsSwitch),
         ),
+        journeySeededWith(journey),
+        journeyRewardsSeededWith(rewards),
+        firstTipProvider.overrideWith(() => firstTip),
+        recipeRepositoryProvider.overrideWithValue(FakeRecipeRepository()),
         ...extra,
       ],
     );
@@ -188,7 +216,12 @@ void main() {
             body: ValueListenableBuilder<bool>(
               valueListenable: visible,
               builder: (_, on, child) => TickerMode(enabled: on, child: child!),
-              child: const SingleChildScrollView(child: BuddyHero()),
+              child: ValueListenableBuilder<bool>(
+                valueListenable: heroShown,
+                builder: (_, shown, _) => shown
+                    ? const SingleChildScrollView(child: BuddyHero())
+                    : const SizedBox.shrink(),
+              ),
             ),
           ),
         ),
@@ -202,6 +235,11 @@ void main() {
           RoutePaths.gutFeelingTracker,
           RoutePaths.toiletTracker,
           RoutePaths.discover,
+          RoutePaths.discoverRecipes,
+          RoutePaths.collectionRecipe,
+          RoutePaths.recommendations,
+          RoutePaths.patterns,
+          RoutePaths.patternsUnlocked,
         ]),
       ],
     );
@@ -255,6 +293,18 @@ void main() {
     await tester.ensureVisible(find.byKey(StreakGoalChooser.confirmKey));
     await tester.tap(find.byKey(StreakGoalChooser.confirmKey));
     await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+  }
+
+  /// Lets a celebration play and the sheet that follows it open.
+  Future<void> afterCelebration(WidgetTester tester) async {
+    await tester.pump(buddyActionDuration(BuddyAction.celebrate));
+    await tester.pump(const Duration(milliseconds: 500));
+  }
+
+  /// Lets the wave play and the offer that follows it open.
+  Future<void> afterWave(WidgetTester tester) async {
+    await tester.pump(buddyActionDuration(BuddyAction.wave));
     await tester.pump(const Duration(milliseconds: 500));
   }
 
@@ -935,6 +985,460 @@ void main() {
       expect(buddy.shown, isEmpty);
       await closeOffer(tester, WeeklyTipsOfferSheet.laterKey);
       expect(buddy.shown, [BuddyAnnouncement.weeklyTipsOffer]);
+    });
+
+    group('journey rewards', () {
+      /// Day 1 with its recipe picked.
+      const day1 = JourneyRewards(
+        earnedDay: 1,
+        picks: {1: RecipePick(id: 'r1', title: 'Apfel-Reis')},
+      );
+
+      testWidgets('journeyReward day 1 → celebrate, the sheet, „Rezept '
+          'ansehen" opens the recipe; marked shown', (tester) async {
+        journey = true;
+        rewards = day1;
+        buddy = _FakeBuddy(
+          () => _status(announcements: const [BuddyAnnouncement.journeyReward]),
+        );
+        await pumpHero(tester);
+        await tick(tester);
+
+        expect(controller(tester).currentAction, BuddyAction.celebrate);
+        expect(find.byType(JourneyRewardSheet), findsNothing);
+
+        // The sheet opens once the celebration has played.
+        await afterCelebration(tester);
+        expect(find.byType(JourneyRewardSheet), findsOneWidget);
+        expect(find.text(JourneyCopy.day1Line), findsOneWidget);
+        expect(find.text('Apfel-Reis'), findsOneWidget);
+        expect(buddy.shown, isEmpty);
+
+        await closeOffer(tester, JourneyRewardSheet.primaryKey);
+
+        expect(location(), RoutePaths.collectionRecipeFor('r1'));
+        expect(buddy.shown, [BuddyAnnouncement.journeyReward]);
+      });
+
+      testWidgets('„Später" stays on Home and marks it shown', (tester) async {
+        journey = true;
+        rewards = day1;
+        buddy = _FakeBuddy(
+          () => _status(announcements: const [BuddyAnnouncement.journeyReward]),
+        );
+        await pumpHero(tester);
+        await afterCelebration(tester);
+
+        await closeOffer(tester, JourneyRewardSheet.laterKey);
+
+        expect(find.byType(JourneyRewardSheet), findsNothing);
+        expect(location(), RoutePaths.dashboard);
+        expect(buddy.shown, [BuddyAnnouncement.journeyReward]);
+      });
+
+      testWidgets('journeyReward while „Dein Streak" is open waits until it '
+          'closed', (tester) async {
+        journey = true;
+        rewards = day1;
+        await pumpHero(tester);
+        await openSheet(tester);
+        expect(find.text(_sheetTitle), findsOneWidget);
+
+        buddy.push(
+          _status(announcements: const [BuddyAnnouncement.journeyReward]),
+        );
+        await tester.pump();
+        await afterCelebration(tester);
+        expect(find.byType(JourneyRewardSheet), findsNothing);
+        expect(find.text(_sheetTitle), findsOneWidget);
+
+        await tester.tapAt(const Offset(10, 10)); // „Dein Streak"'s barrier
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(find.text(_sheetTitle), findsNothing);
+        expect(find.byType(JourneyRewardSheet), findsOneWidget);
+        expect(buddy.shown, isEmpty);
+        await closeOffer(tester, JourneyRewardSheet.laterKey);
+        expect(buddy.shown, [BuddyAnnouncement.journeyReward]);
+      });
+
+      testWidgets('journeyReward waits while the hero is hidden', (
+        tester,
+      ) async {
+        journey = true;
+        rewards = day1;
+        buddy = _FakeBuddy(
+          () => _status(announcements: const [BuddyAnnouncement.journeyReward]),
+        );
+        await pumpHero(tester);
+        visible.value = false;
+        await tester.pump();
+        await afterCelebration(tester);
+        await tester.pump(const Duration(seconds: 1));
+        expect(find.byType(JourneyRewardSheet), findsNothing);
+
+        visible.value = true;
+        await tester.pump();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(find.byType(JourneyRewardSheet), findsOneWidget);
+      });
+
+      testWidgets('a cue cut short comes again', (tester) async {
+        journey = true;
+        rewards = day1;
+        buddy = _FakeBuddy(
+          () => _status(announcements: const [BuddyAnnouncement.journeyReward]),
+        );
+        final container = await pumpHero(tester);
+        await afterCelebration(tester);
+        expect(find.byType(JourneyRewardSheet), findsOneWidget);
+
+        // The hero goes away with its sheet open (the app closing), then
+        // the sheet closes.
+        heroShown.value = false;
+        await tester.pump();
+        expect(find.byType(BuddyHero), findsNothing);
+        await closeOffer(tester, JourneyRewardSheet.primaryKey);
+
+        expect(location(), RoutePaths.dashboard);
+        expect(buddy.shown, isEmpty);
+        expect(container.read(buddyProvider).value!.announcements, [
+          BuddyAnnouncement.journeyReward,
+        ]);
+      });
+
+      testWidgets('no day to announce (the rewards gone meanwhile): no sheet, '
+          'marked shown', (tester) async {
+        journey = true;
+        rewards = null;
+        buddy = _FakeBuddy(
+          () => _status(announcements: const [BuddyAnnouncement.journeyReward]),
+        );
+        await pumpHero(tester);
+        await afterCelebration(tester);
+
+        expect(find.byType(JourneyRewardSheet), findsNothing);
+        expect(buddy.shown, [BuddyAnnouncement.journeyReward]);
+      });
+    });
+
+    group('journey user, weeklyTipsOffer → the first-tip sheet', () {
+      /// Day 3, the offer open, day 3's recipe already picked.
+      const day3 = JourneyRewards(
+        earnedDay: 3,
+        tipOffer: TipOffer.offered,
+        picks: {3: RecipePick(id: 'r3', title: 'Bohnen-Topf')},
+      );
+
+      setUp(() {
+        journey = true;
+        rewards = day3;
+        buddy = _FakeBuddy(
+          () =>
+              _status(announcements: const [BuddyAnnouncement.weeklyTipsOffer]),
+        );
+      });
+
+      testWidgets('wave, then the first-tip sheet, never the old one', (
+        tester,
+      ) async {
+        await pumpHero(tester);
+        await tick(tester);
+
+        expect(controller(tester).currentAction, BuddyAction.wave);
+        await afterWave(tester);
+        expect(find.byType(FirstTipOfferSheet), findsOneWidget);
+        expect(find.byType(WeeklyTipsOfferSheet), findsNothing);
+        expect(buddy.shown, isEmpty);
+      });
+
+      testWidgets('yes → accept called once, the Buddy says firstTipStarted', (
+        tester,
+      ) async {
+        await pumpHero(tester);
+        await afterWave(tester);
+
+        await closeOffer(tester, FirstTipOfferSheet.yesKey);
+        await tick(tester);
+
+        expect(firstTip.accepts, 1);
+        expect(controller(tester).bubble, JourneyCopy.firstTipStarted);
+        expect(find.byType(JourneyRewardSheet), findsNothing);
+        // The line holds the stage, then the offer counts as shown.
+        expect(buddy.shown, isEmpty);
+        await tester.pump(const Duration(seconds: 4));
+        expect(buddy.shown, [BuddyAnnouncement.weeklyTipsOffer]);
+        expect(firstTip.accepts, 1);
+      });
+
+      testWidgets('yes with a failing opt-in → the SnackBar, nothing said', (
+        tester,
+      ) async {
+        firstTip.acceptResult = false;
+        await pumpHero(tester);
+        await afterWave(tester);
+
+        await closeOffer(tester, FirstTipOfferSheet.yesKey);
+        await tick(tester);
+
+        expect(firstTip.accepts, 1);
+        expect(find.text(WeeklyTipsSwitch.failure), findsOneWidget);
+        expect(controller(tester).bubble, isNot(JourneyCopy.firstTipStarted));
+        expect(buddy.shown, [BuddyAnnouncement.weeklyTipsOffer]);
+      });
+
+      testWidgets('no → declined, the day-3 recipe sheet with day3AfterNoLine, '
+          'no accept', (tester) async {
+        final container = await pumpHero(tester);
+        await afterWave(tester);
+
+        await closeOffer(tester, FirstTipOfferSheet.noKey);
+
+        expect(
+          container.read(journeyRewardsProvider)!.tipOffer,
+          TipOffer.declined,
+        );
+        expect(find.byType(JourneyRewardSheet), findsOneWidget);
+        expect(find.text(JourneyCopy.day3AfterNoLine), findsOneWidget);
+        expect(find.text('Bohnen-Topf'), findsOneWidget);
+        expect(buddy.shown, isEmpty);
+
+        await closeOffer(tester, JourneyRewardSheet.primaryKey);
+
+        expect(location(), RoutePaths.collectionRecipeFor('r3'));
+        expect(firstTip.accepts, 0);
+        expect(buddy.shown, [BuddyAnnouncement.weeklyTipsOffer]);
+      });
+
+      testWidgets('dismissed → declined, no second sheet, no accept', (
+        tester,
+      ) async {
+        final container = await pumpHero(tester);
+        await afterWave(tester);
+
+        await tester.tapAt(const Offset(10, 10)); // the offer's barrier
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(
+          container.read(journeyRewardsProvider)!.tipOffer,
+          TipOffer.declined,
+        );
+        expect(find.byType(FirstTipOfferSheet), findsNothing);
+        expect(find.byType(JourneyRewardSheet), findsNothing);
+        expect(firstTip.accepts, 0);
+        expect(buddy.shown, [BuddyAnnouncement.weeklyTipsOffer]);
+      });
+
+      for (final (name, close) in [
+        ('„Ja, gern"', FirstTipOfferSheet.yesKey),
+        ('„Nein, danke"', FirstTipOfferSheet.noKey),
+        ('a dismissal', null),
+      ]) {
+        testWidgets('the hero gone before $name: nothing stored, nothing '
+            'requested, still pending', (tester) async {
+          final container = await pumpHero(tester);
+          await afterWave(tester);
+          expect(find.byType(FirstTipOfferSheet), findsOneWidget);
+
+          heroShown.value = false;
+          await tester.pump();
+          if (close == null) {
+            await tester.tapAt(const Offset(10, 10)); // the offer's barrier
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 500));
+          } else {
+            await closeOffer(tester, close);
+          }
+
+          expect(find.byType(FirstTipOfferSheet), findsNothing);
+          expect(find.byType(JourneyRewardSheet), findsNothing);
+          expect(
+            container.read(journeyRewardsProvider)!.tipOffer,
+            TipOffer.offered,
+          );
+          expect(firstTip.accepts, 0);
+          expect(buddy.shown, isEmpty);
+          expect(container.read(buddyProvider).value!.announcements, [
+            BuddyAnnouncement.weeklyTipsOffer,
+          ]);
+        });
+      }
+
+      testWidgets('answered meanwhile („Deine Belohnungen"): no sheet, marked '
+          'shown', (tester) async {
+        rewards = const JourneyRewards(
+          earnedDay: 3,
+          tipOffer: TipOffer.declined,
+        );
+        await pumpHero(tester);
+        await tick(tester);
+
+        expect(controller(tester).currentAction, isNot(BuddyAction.wave));
+        await afterWave(tester);
+        expect(find.byType(FirstTipOfferSheet), findsNothing);
+        expect(buddy.shown, [BuddyAnnouncement.weeklyTipsOffer]);
+      });
+
+      testWidgets('journey undecided: no offer', (tester) async {
+        journey = null;
+        await pumpHero(tester);
+        await tick(tester);
+
+        expect(controller(tester).currentAction, isNot(BuddyAction.wave));
+        await afterWave(tester);
+        expect(find.byType(FirstTipOfferSheet), findsNothing);
+        expect(find.byType(WeeklyTipsOfferSheet), findsNothing);
+        expect(firstTip.accepts, 0);
+      });
+
+      testWidgets('journey undecided by the end of the wave (another user): '
+          'no sheet', (tester) async {
+        final container = await pumpHero(tester);
+        await tick(tester);
+        expect(controller(tester).currentAction, BuddyAction.wave);
+
+        (container.read(journeyProvider.notifier) as SeededJourneyNotifier).set(
+          null,
+        );
+        await afterWave(tester);
+
+        expect(find.byType(FirstTipOfferSheet), findsNothing);
+        expect(find.byType(WeeklyTipsOfferSheet), findsNothing);
+        expect(firstTip.accepts, 0);
+      });
+    });
+
+    group('patternsUnlocked', () {
+      setUp(() {
+        journey = true;
+        rewards = const JourneyRewards(earnedDay: 7, patternsFreed: true);
+      });
+
+      testWidgets('patternsUnlocked → celebrate, then /patterns-unlocked', (
+        tester,
+      ) async {
+        buddy = _FakeBuddy(
+          () => _status(
+            announcements: const [BuddyAnnouncement.patternsUnlocked],
+          ),
+        );
+        await pumpHero(tester);
+        await tick(tester);
+
+        expect(controller(tester).currentAction, BuddyAction.celebrate);
+        expect(location(), RoutePaths.dashboard);
+
+        await afterCelebration(tester);
+
+        expect(location(), RoutePaths.patternsUnlocked);
+        expect(buddy.shown, [BuddyAnnouncement.patternsUnlocked]);
+      });
+
+      testWidgets('the next cue waits until Home is visible again', (
+        tester,
+      ) async {
+        buddy = _FakeBuddy(
+          () => _status(
+            announcements: const [
+              BuddyAnnouncement.patternsUnlocked,
+              BuddyAnnouncement.firstTipFailed,
+            ],
+          ),
+        );
+        await pumpHero(tester);
+        await afterCelebration(tester);
+        expect(location(), RoutePaths.patternsUnlocked);
+
+        await tester.pump(const Duration(seconds: 6));
+        expect(buddy.shown, [BuddyAnnouncement.patternsUnlocked]);
+
+        router.pop();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        await tick(tester);
+
+        expect(location(), RoutePaths.dashboard);
+        expect(controller(tester).bubble, JourneyCopy.firstTipFailed);
+        await tester.pump(const Duration(seconds: 4));
+        expect(buddy.shown, [
+          BuddyAnnouncement.patternsUnlocked,
+          BuddyAnnouncement.firstTipFailed,
+        ]);
+      });
+
+      testWidgets('patternsUnlocked waits while the hero is hidden', (
+        tester,
+      ) async {
+        buddy = _FakeBuddy(
+          () => _status(
+            announcements: const [BuddyAnnouncement.patternsUnlocked],
+          ),
+        );
+        await pumpHero(tester);
+        visible.value = false;
+        await tester.pump();
+        await afterCelebration(tester);
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(location(), RoutePaths.dashboard);
+        expect(buddy.shown, isEmpty);
+
+        visible.value = true;
+        await tester.pump();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(location(), RoutePaths.patternsUnlocked);
+        expect(buddy.shown, [BuddyAnnouncement.patternsUnlocked]);
+      });
+
+      testWidgets('patternsUnlocked waits while „Dein Streak" is open', (
+        tester,
+      ) async {
+        await pumpHero(tester);
+        await openSheet(tester);
+
+        buddy.push(
+          _status(announcements: const [BuddyAnnouncement.patternsUnlocked]),
+        );
+        await tester.pump();
+        await afterCelebration(tester);
+        expect(location(), RoutePaths.dashboard);
+        expect(find.text(_sheetTitle), findsOneWidget);
+
+        await tester.tapAt(const Offset(10, 10)); // „Dein Streak"'s barrier
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(location(), RoutePaths.patternsUnlocked);
+        expect(buddy.shown, [BuddyAnnouncement.patternsUnlocked]);
+      });
+    });
+
+    testWidgets('firstTipFailed → the line, once', (tester) async {
+      journey = true;
+      rewards = const JourneyRewards(
+        earnedDay: 3,
+        tipOffer: TipOffer.accepted,
+        firstTip: FirstTipState.failed,
+      );
+      buddy = _FakeBuddy(
+        () => _status(announcements: const [BuddyAnnouncement.firstTipFailed]),
+      );
+      final container = await pumpHero(tester);
+      await tick(tester);
+
+      expect(controller(tester).bubble, JourneyCopy.firstTipFailed);
+      expect(buddy.shown, isEmpty);
+
+      await tester.pump(const Duration(seconds: 4));
+      expect(buddy.shown, [BuddyAnnouncement.firstTipFailed]);
+      expect(container.read(buddyProvider).value!.announcements, isEmpty);
+      await tester.pump(const Duration(seconds: 5));
+      expect(buddy.shown, [BuddyAnnouncement.firstTipFailed]);
     });
 
     testWidgets('fresh log that counts today → „Danke! 🔥 N Tage"', (
