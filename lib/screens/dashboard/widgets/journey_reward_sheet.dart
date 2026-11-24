@@ -58,10 +58,16 @@ class JourneyRewardSheet extends ConsumerWidget {
         content: _Article(onTap: open),
         primary: JourneyCopy.readArticle,
       ),
-      3 when day3IsTip(rewards, weeklyTips: weeklyTips) => const _Reward(
-        line: JourneyCopy.day3TipLine,
-        primary: JourneyCopy.toTips,
-      ),
+      3 => switch (day3Of(rewards, weeklyTips: weeklyTips)) {
+        Day3.waiting || Day3.offerOpen || Day3.tip => const _Reward(
+          line: JourneyCopy.day3TipLine,
+          primary: JourneyCopy.toTips,
+        ),
+        Day3.recipe => _recipeReward(
+          rewardPick(day, rewards, weeklyTips: weeklyTips),
+          onTap: open,
+        ),
+      },
       4 => _Reward(
         line: sayingFor(ref.watch(currentUserIdProvider) ?? ''),
         primary: JourneyCopy.thanks,

@@ -51,10 +51,41 @@ JourneyRewards advanceRewards(
   return next == r ? r : next;
 }
 
+/// Day 3's reward ([day3Of]): the one rule for its title, detail, sheet,
+/// action, pick and announcement.
+enum Day3 {
+  /// Not decided yet (before day 3, or the weekly tips unknown when it
+  /// came), the weekly tips not on: the first tip, waiting.
+  waiting,
+
+  /// Offered, waiting for „Ja, gern" or „Nein, danke" (answerable once the
+  /// weekly tips are known to be off: [tipOfferDue]): the first tip. Its
+  /// recipe is picked meanwhile, in case the offer goes.
+  offerOpen,
+
+  /// „Ja, gern": the first tip.
+  tip,
+
+  /// A recipe: „Nein, danke", the offer skipped (the weekly tips on at day
+  /// 3), or the weekly tips on now while it was open or undecided.
+  recipe,
+}
+
+/// Day 3's reward as of [r]'s offer and the weekly tips ([weeklyTips], null
+/// while unknown).
+Day3 day3Of(JourneyRewards r, {required bool? weeklyTips}) =>
+    switch (r.tipOffer) {
+      TipOffer.accepted => Day3.tip,
+      TipOffer.declined || TipOffer.skipped => Day3.recipe,
+      _ when weeklyTips == true => Day3.recipe,
+      TipOffer.offered when r.earnedDay >= _tipDay => Day3.offerOpen,
+      TipOffer.offered || null => Day3.waiting,
+    };
+
 /// [r] with the recipes of the earned recipe days that have none yet, in
-/// day order, each another recipe than those picked before. Day 3 only once
-/// the offer is decided and not accepted; day 5 prefers the [calmKeys]
-/// (`Insights.calmDayIngredients`).
+/// day order, each another recipe than those picked before. Day 3 once the
+/// offer is open or it is a recipe ([day3Of] with [weeklyTips]); day 5
+/// prefers the [calmKeys] (`Insights.calmDayIngredients`).
 ///
 /// Nothing while [ranked] is unchecked; a stored pick is never replaced.
 /// [r] itself when nothing was picked.
@@ -62,14 +93,19 @@ JourneyRewards fillPicks(
   JourneyRewards r, {
   required RankedRecipes ranked,
   required Set<String> calmKeys,
+  required bool? weeklyTips,
 }) {
   if (!ranked.checked) return r;
   final picks = {...r.picks};
   for (final day in JourneyRewards.recipeDays) {
     if (day > r.earnedDay || picks.containsKey(day)) continue;
-    if (day == _tipDay &&
-        (r.tipOffer == null || r.tipOffer == TipOffer.accepted)) {
-      continue;
+    if (day == _tipDay) {
+      switch (day3Of(r, weeklyTips: weeklyTips)) {
+        case Day3.waiting || Day3.tip:
+          continue;
+        case Day3.offerOpen || Day3.recipe:
+          break;
+      }
     }
     final pick = pickJourneyRecipe(
       ranked.fits,
@@ -129,11 +165,14 @@ List<String> _matchedLines(Recipe recipe, List<FoodName> foods) =>
 /// The day the Buddy announces: the earned day while it is 1–6, but day 3
 /// only when the offer was skipped (otherwise the offer itself, or the
 /// answer's sheet, stands for it). Day 7 is the celebration's.
-int? announcementDay(JourneyRewards r) {
+int? announcementDay(JourneyRewards r, {required bool? weeklyTips}) {
   final day = r.earnedDay;
   if (day < 1 || day >= _patternsDay) return null;
-  if (day == _tipDay && r.tipOffer != TipOffer.skipped) return null;
-  return day;
+  if (day != _tipDay) return day;
+  return switch (day3Of(r, weeklyTips: weeklyTips)) {
+    Day3.waiting || Day3.offerOpen || Day3.tip => null,
+    Day3.recipe => r.tipOffer == TipOffer.skipped ? day : null,
+  };
 }
 
 /// [r] with the day-3 offer answered: [TipOffer.offered] becomes accepted
@@ -143,12 +182,13 @@ JourneyRewards answerOffer(JourneyRewards r, {required bool accepted}) =>
     ? r.copyWith(tipOffer: accepted ? TipOffer.accepted : TipOffer.declined)
     : r;
 
-/// Whether the day-3 offer of a first tip is waiting for an answer: earned,
-/// offered and still unanswered, with the weekly tips known to be off.
+/// Whether the day-3 offer of a first tip is waiting for an answer: open
+/// ([Day3.offerOpen]), with the weekly tips known to be off.
 bool tipOfferDue(JourneyRewards r, {required bool? weeklyTips}) =>
-    r.earnedDay >= _tipDay &&
-    r.tipOffer == TipOffer.offered &&
-    weeklyTips == false;
+    switch (day3Of(r, weeklyTips: weeklyTips)) {
+      Day3.offerOpen => weeklyTips == false,
+      Day3.waiting || Day3.tip || Day3.recipe => false,
+    };
 
 /// Whether [day]'s reward is earned: days 1–6 up to the earned day, day 7
 /// once the patterns were freed.
@@ -156,45 +196,32 @@ bool rewardEarned(int day, JourneyRewards r) => day == _patternsDay
     ? r.patternsFreed
     : day >= 1 && day < _patternsDay && day <= r.earnedDay;
 
-/// Whether day 3's reward is the first tip rather than a recipe: once
-/// accepted, and while the offer is open or undecided unless the weekly
-/// tips are on (then it is a recipe). The one rule for day 3's title,
-/// detail, sheet and action.
-bool day3IsTip(JourneyRewards r, {required bool? weeklyTips}) =>
-    switch (r.tipOffer) {
-      TipOffer.accepted => true,
-      TipOffer.declined || TipOffer.skipped => false,
-      TipOffer.offered || null => weeklyTips != true,
-    };
-
-/// Whether day 3's reward waits for the answer to the offer: the tip
-/// ([day3IsTip]), not accepted yet.
-bool day3Pending(JourneyRewards r, {required bool? weeklyTips}) =>
-    r.tipOffer != TipOffer.accepted && day3IsTip(r, weeklyTips: weeklyTips);
-
 /// The recipe [day]'s reward shows and opens: the stored pick of a recipe
 /// day ([JourneyRewards.recipeDays]); null on another day, without a pick,
-/// and on day 3 while that is the tip ([day3IsTip]): a recipe picked while
+/// and on day 3 unless that is a recipe ([day3Of]): a recipe picked while
 /// the offer waits is not the reward then.
 RecipePick? rewardPick(
   int day,
   JourneyRewards r, {
   required bool? weeklyTips,
-}) => day == _tipDay && day3IsTip(r, weeklyTips: weeklyTips)
-    ? null
-    : r.picks[day];
+}) => day != _tipDay
+    ? r.picks[day]
+    : switch (day3Of(r, weeklyTips: weeklyTips)) {
+        Day3.recipe => r.picks[day],
+        Day3.waiting || Day3.offerOpen || Day3.tip => null,
+      };
 
 /// The title of [day]'s reward (1–7). Day 3 is the tip or a recipe as
-/// [day3IsTip] says; day 5 names the user's ingredients only once a stored
+/// [day3Of] says; day 5 names the user's ingredients only once a stored
 /// pick matched some, and is generic before that and without a match.
 String rewardTitle(int day, JourneyRewards r, {required bool? weeklyTips}) =>
     switch (day) {
       1 => JourneyCopy.day1,
       2 => JourneyCopy.day2,
-      3 =>
-        day3IsTip(r, weeklyTips: weeklyTips)
-            ? JourneyCopy.day3Tip
-            : JourneyCopy.day3Recipe,
+      3 => switch (day3Of(r, weeklyTips: weeklyTips)) {
+        Day3.waiting || Day3.offerOpen || Day3.tip => JourneyCopy.day3Tip,
+        Day3.recipe => JourneyCopy.day3Recipe,
+      },
       4 => JourneyCopy.day4,
       5 =>
         r.picks[_calmDay]?.matched.isNotEmpty == true

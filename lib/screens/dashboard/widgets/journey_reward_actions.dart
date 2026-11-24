@@ -22,7 +22,7 @@ import 'journey_reward_sheet.dart';
 /// - 1, 3 and 5: the picked recipe ([rewardPick]), else the recipes;
 /// - 2: the article, in the in-app browser through [openUrl] (a SnackBar
 ///   says when that fails); completes once it opened or failed;
-/// - 3 while it is the tip ([day3IsTip]): the Tipps (an open offer is
+/// - 3 unless it is a recipe ([day3Of]): the Tipps (an open offer is
 ///   answered through [offerFirstTip], never here);
 /// - 4: nothing (the saying is the reward);
 /// - 6 and 7: Muster.
@@ -44,6 +44,15 @@ Future<void> openJourneyReward(
     unawaited(page);
   }
 
+  void openPick() {
+    if (rewardPick(day, rewards, weeklyTips: weeklyTips) case final pick?) {
+      push(context.openRecipe(pick.id));
+    } else {
+      cover.leftHome(null);
+      context.go(RoutePaths.discoverRecipes);
+    }
+  }
+
   switch (day) {
     case 2:
       await openExternalUrl(
@@ -53,15 +62,15 @@ Future<void> openJourneyReward(
         failureMessage: JourneyCopy.articleFailure,
         open: openUrl,
       );
-    case 3 when day3IsTip(rewards, weeklyTips: weeklyTips):
-      push(context.push(RoutePaths.recommendations));
-    case 1 || 3 || 5:
-      if (rewardPick(day, rewards, weeklyTips: weeklyTips) case final pick?) {
-        push(context.openRecipe(pick.id));
-      } else {
-        cover.leftHome(null);
-        context.go(RoutePaths.discoverRecipes);
+    case 3:
+      switch (day3Of(rewards, weeklyTips: weeklyTips)) {
+        case Day3.waiting || Day3.offerOpen || Day3.tip:
+          push(context.push(RoutePaths.recommendations));
+        case Day3.recipe:
+          openPick();
       }
+    case 1 || 5:
+      openPick();
     case 6 || 7:
       push(context.push(RoutePaths.patterns));
   }

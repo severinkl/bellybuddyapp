@@ -107,10 +107,11 @@ class JourneyRewardsNotifier extends Notifier<JourneyRewards?> {
   JourneyRewards _moved(JourneyRewards r) {
     final insights = _insights;
     if (insights == null) return r;
+    final weeklyTips = ref.read(weeklyTipsEnabledProvider);
     final advanced = advanceRewards(
       r,
       insights: insights,
-      weeklyTips: ref.read(weeklyTipsEnabledProvider),
+      weeklyTips: weeklyTips,
     );
     final ranked = ref.read(rankedRecipesProvider).settledValue;
     if (ranked == null) return advanced;
@@ -118,6 +119,7 @@ class JourneyRewardsNotifier extends Notifier<JourneyRewards?> {
       advanced,
       ranked: ranked,
       calmKeys: insights.calmDayIngredients,
+      weeklyTips: weeklyTips,
     );
   }
 
@@ -198,7 +200,12 @@ final journeyRewardLineProvider = Provider<JourneyRewardLine?>((ref) {
 /// The day the Buddy announces ([announcementDay]); null without rewards.
 final journeyRewardAnnouncementProvider = Provider<int?>((ref) {
   final rewards = ref.watch(journeyRewardsProvider);
-  return rewards == null ? null : announcementDay(rewards);
+  return rewards == null
+      ? null
+      : announcementDay(
+          rewards,
+          weeklyTips: ref.watch(weeklyTipsEnabledProvider),
+        );
 });
 
 /// Whether the journey's first patterns were unlocked (the day-7 reward).

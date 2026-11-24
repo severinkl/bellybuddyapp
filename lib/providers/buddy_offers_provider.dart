@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../models/journey_rewards.dart';
 import '../services/journey/journey_rules.dart';
 import '../utils/settled_value.dart';
 import 'buddy_provider.dart';
@@ -94,14 +93,7 @@ final offerStillAppliesProvider = Provider.family<bool, BuddyAnnouncement>(
     BuddyAnnouncement.weeklyTipsOffer =>
       ref.watch(weeklyTipsEnabledProvider) != true &&
           ref.watch(journeyProvider) == false,
-    BuddyAnnouncement.firstTipOffer =>
-      ref.watch(weeklyTipsEnabledProvider) != true &&
-          ref.watch(journeyProvider) == true &&
-          switch (ref.watch(journeyRewardsProvider)?.tipOffer) {
-            // Answered, or skipped (never offered): done.
-            TipOffer.accepted || TipOffer.declined || TipOffer.skipped => false,
-            TipOffer.offered || null => true,
-          },
+    BuddyAnnouncement.firstTipOffer => _firstTipOfferApplies(ref),
     BuddyAnnouncement.saverUsed ||
     BuddyAnnouncement.streakBroken ||
     BuddyAnnouncement.saverEarned ||
@@ -111,3 +103,18 @@ final offerStillAppliesProvider = Provider.family<bool, BuddyAnnouncement>(
     BuddyAnnouncement.firstTipFailed => true,
   },
 );
+
+/// [offerStillAppliesProvider] of the first-tip offer: on the journey,
+/// while day 3 still waits for it ([Day3.waiting], [Day3.offerOpen]); its
+/// rewards not read yet, never withdrawn meanwhile.
+bool _firstTipOfferApplies(Ref ref) {
+  final weeklyTips = ref.watch(weeklyTipsEnabledProvider);
+  if (weeklyTips == true || ref.watch(journeyProvider) != true) return false;
+  final rewards = ref.watch(journeyRewardsProvider);
+  if (rewards == null) return true;
+  return switch (day3Of(rewards, weeklyTips: weeklyTips)) {
+    Day3.waiting || Day3.offerOpen => true,
+    // Answered, or skipped (never offered): done.
+    Day3.tip || Day3.recipe => false,
+  };
+}

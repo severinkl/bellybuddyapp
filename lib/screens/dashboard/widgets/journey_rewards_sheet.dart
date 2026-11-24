@@ -48,11 +48,11 @@ Future<void> _showRewards(
     builder: (_) => const JourneyRewardsSheet(),
   );
   if (day == null || !context.mounted) return;
-  final offersTip = _offersTip(
-    day,
-    ref.read(journeyRewardsProvider),
-    weeklyTips: ref.read(weeklyTipsEnabledProvider),
-  );
+  final rewards = ref.read(journeyRewardsProvider);
+  final offersTip =
+      day == 3 &&
+      rewards != null &&
+      tipOfferDue(rewards, weeklyTips: ref.read(weeklyTipsEnabledProvider));
   if (!offersTip) {
     return openJourneyReward(context, ref, day, openUrl: openUrl);
   }
@@ -66,15 +66,6 @@ Future<void> _showRewards(
     messenger?.showSnackBar(SnackBar(content: Text(message)));
   }
 }
-
-/// Whether a tap on [day]'s row opens the first-tip offer: day 3 while
-/// that offer waits for its answer ([tipOfferDue]).
-bool _offersTip(
-  int day,
-  JourneyRewards? rewards, {
-  required bool? weeklyTips,
-}) =>
-    day == 3 && rewards != null && tipOfferDue(rewards, weeklyTips: weeklyTips);
 
 /// „Deine Belohnungen": a row per day of the first 7. An earned one names
 /// its reward and what it gives, and a tap closes the sheet with its day
@@ -134,11 +125,11 @@ class JourneyRewardsSheet extends ConsumerWidget {
         earned &&
         switch (day) {
           4 => false,
-          3 when day3Pending(rewards, weeklyTips: weeklyTips) => _offersTip(
-            day,
-            rewards,
-            weeklyTips: weeklyTips,
-          ),
+          3 => switch (day3Of(rewards, weeklyTips: weeklyTips)) {
+            Day3.waiting => false,
+            Day3.offerOpen => tipOfferDue(rewards, weeklyTips: weeklyTips),
+            Day3.tip || Day3.recipe => true,
+          },
           _ => true,
         };
     return _RewardRow(
@@ -160,17 +151,25 @@ class JourneyRewardsSheet extends ConsumerWidget {
     required bool? weeklyTips,
   }) => switch (day) {
     2 => '${JourneyCopy.articleTitle} · ${JourneyCopy.articleSource}',
-    3 when day3IsTip(rewards, weeklyTips: weeklyTips) =>
-      day3Pending(rewards, weeklyTips: weeklyTips)
-          ? JourneyCopy.day3Pending
-          : JourneyCopy.toTips,
+    3 => switch (day3Of(rewards, weeklyTips: weeklyTips)) {
+      Day3.waiting || Day3.offerOpen => JourneyCopy.day3Pending,
+      Day3.tip => JourneyCopy.toTips,
+      Day3.recipe => _pickTitle(day, rewards, weeklyTips: weeklyTips),
+    },
     4 => sayingFor(ref.watch(currentUserIdProvider) ?? ''),
     6 => JourneyCopy.example,
     7 => JourneyCopy.toPatterns,
-    _ =>
-      rewardPick(day, rewards, weeklyTips: weeklyTips)?.title ??
-          JourneyCopy.noRecipe,
+    _ => _pickTitle(day, rewards, weeklyTips: weeklyTips),
   };
+
+  /// The title of [day]'s picked recipe, else the way to the recipes.
+  String _pickTitle(
+    int day,
+    JourneyRewards rewards, {
+    required bool? weeklyTips,
+  }) =>
+      rewardPick(day, rewards, weeklyTips: weeklyTips)?.title ??
+      JourneyCopy.noRecipe;
 }
 
 /// A day's row: its day circle, [title] and [detail], and a chevron when

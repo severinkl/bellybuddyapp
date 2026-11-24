@@ -196,6 +196,7 @@ void main() {
       final r = fillPicks(
         const JourneyRewards(earnedDay: 1),
         ranked: ranked,
+        weeklyTips: false,
         calmKeys: const {},
       );
       expect(r.picks, {1: const RecipePick(id: 'a', title: 'Apfel-Reis')});
@@ -206,6 +207,7 @@ void main() {
         fillPicks(
           const JourneyRewards(),
           ranked: _rank([_a, _c]),
+          weeklyTips: false,
           calmKeys: const {},
         ).picks,
         isEmpty,
@@ -216,6 +218,7 @@ void main() {
       final r = fillPicks(
         const JourneyRewards(earnedDay: 3, tipOffer: TipOffer.declined),
         ranked: _rank([_a, _b, _c]),
+        weeklyTips: false,
         calmKeys: const {},
       );
       expect(r.picks, {
@@ -229,6 +232,7 @@ void main() {
         final r = fillPicks(
           JourneyRewards(earnedDay: 4, tipOffer: answer),
           ranked: _rank([_a, _c]),
+          weeklyTips: false,
           calmKeys: const {},
         );
         expect(r.picks.keys, [1], reason: '$answer');
@@ -244,6 +248,7 @@ void main() {
         final r = fillPicks(
           JourneyRewards(earnedDay: 3, tipOffer: answer),
           ranked: _rank([_a, _c]),
+          weeklyTips: false,
           calmKeys: const {},
         );
         expect(r.picks.keys, [1, 3], reason: '$answer');
@@ -267,6 +272,7 @@ void main() {
           tipOffer: TipOffer.declined,
         ),
         ranked: ranked,
+        weeklyTips: false,
         calmKeys: const {'reis', 'karotte'},
       );
       expect(
@@ -294,6 +300,7 @@ void main() {
           tipOffer: TipOffer.declined,
         ),
         ranked: _rank([x, w]),
+        weeklyTips: false,
         calmKeys: const {'reis', 'karotte'},
       );
       expect(r.picks[5], const RecipePick(id: 'x', title: 'Kartoffelsuppe'));
@@ -310,6 +317,7 @@ void main() {
       final r = fillPicks(
         const JourneyRewards(earnedDay: 5, picks: _earlier),
         ranked: _rank([kritisch, x], good: {'reis'}),
+        weeklyTips: false,
         calmKeys: const {'reis'},
       );
       expect(r.picks[5], const RecipePick(id: 'x', title: 'Kartoffelsuppe'));
@@ -327,6 +335,7 @@ void main() {
       final r = fillPicks(
         const JourneyRewards(earnedDay: 5, picks: _earlier),
         ranked: _rank([y]),
+        weeklyTips: false,
         calmKeys: const {'reis', 'karotte', 'kartoffel', 'zucchini'},
       );
       expect(r.picks[5]!.matched, ['Zucchini', 'Reis', 'Karotte']);
@@ -350,6 +359,7 @@ void main() {
       final r = fillPicks(
         const JourneyRewards(earnedDay: 5, picks: _earlier),
         ranked: _rank([_c, y]),
+        weeklyTips: false,
         calmKeys: insights.calmDayIngredients,
       );
       expect(r.picks[5]!.matched, ['Karotte']);
@@ -368,6 +378,7 @@ void main() {
       final r = fillPicks(
         const JourneyRewards(earnedDay: 5, picks: _earlier),
         ranked: ranked,
+        weeklyTips: false,
         calmKeys: const {'eier', 'zwiebel'},
       );
       expect(
@@ -392,6 +403,7 @@ void main() {
       final calmFree = fillPicks(
         const JourneyRewards(earnedDay: 5, picks: _earlier),
         ranked: _rank([plain, free]),
+        weeklyTips: false,
         calmKeys: const {'laktosefreie milch', 'glutenfreies brot'},
       );
       expect(
@@ -406,6 +418,7 @@ void main() {
       final calmPlain = fillPicks(
         const JourneyRewards(earnedDay: 5, picks: _earlier),
         ranked: _rank([free]),
+        weeklyTips: false,
         calmKeys: const {'milch', 'brot'},
       );
       expect(
@@ -425,6 +438,7 @@ void main() {
       final r = fillPicks(
         const JourneyRewards(earnedDay: 5, picks: _earlier),
         ranked: _rank([y]),
+        weeklyTips: false,
         calmKeys: const {'zwiebel', 'milch', 'eier', 'reis', 'lauch'},
       );
       expect(
@@ -436,14 +450,27 @@ void main() {
     test('unchecked ranking: no pick', () {
       const r = JourneyRewards(earnedDay: 5, tipOffer: TipOffer.declined);
       expect(
-        fillPicks(r, ranked: _rank([_a, _c], checked: false), calmKeys: {}),
+        fillPicks(
+          r,
+          ranked: _rank([_a, _c], checked: false),
+          weeklyTips: false,
+          calmKeys: {},
+        ),
         r,
       );
     });
 
     test('empty collection: no pick', () {
       const r = JourneyRewards(earnedDay: 5, tipOffer: TipOffer.declined);
-      expect(fillPicks(r, ranked: _rank(const []), calmKeys: const {}), r);
+      expect(
+        fillPicks(
+          r,
+          ranked: _rank(const []),
+          weeklyTips: false,
+          calmKeys: const {},
+        ),
+        r,
+      );
     });
 
     test('stored picks stay when the ranking changes', () {
@@ -452,7 +479,12 @@ void main() {
         picks: {1: RecipePick(id: 'a', title: 'Apfel-Reis')},
         tipOffer: TipOffer.declined,
       );
-      final next = fillPicks(r, ranked: _rank([_c, _b]), calmKeys: const {});
+      final next = fillPicks(
+        r,
+        ranked: _rank([_c, _b]),
+        weeklyTips: false,
+        calmKeys: const {},
+      );
       expect(next.picks, {
         1: const RecipePick(id: 'a', title: 'Apfel-Reis'),
         3: const RecipePick(id: 'c', title: 'Couscous-Salat'),
@@ -475,11 +507,16 @@ void main() {
   });
 
   group('announcementDay', () {
+    // Day 3: see the day-3 table.
     test('0 and 7 → null; 1, 2, 4, 5, 6 → themselves', () {
-      expect(announcementDay(const JourneyRewards()), isNull);
+      expect(
+        announcementDay(const JourneyRewards(), weeklyTips: false),
+        isNull,
+      );
       expect(
         announcementDay(
           const JourneyRewards(earnedDay: 7, tipOffer: TipOffer.skipped),
+          weeklyTips: true,
         ),
         isNull,
       );
@@ -487,31 +524,11 @@ void main() {
         expect(
           announcementDay(
             JourneyRewards(earnedDay: day, tipOffer: TipOffer.declined),
+            weeklyTips: false,
           ),
           day,
         );
       }
-    });
-
-    test('3 only when the offer was skipped', () {
-      for (final answer in [
-        null,
-        TipOffer.offered,
-        TipOffer.accepted,
-        TipOffer.declined,
-      ]) {
-        expect(
-          announcementDay(JourneyRewards(earnedDay: 3, tipOffer: answer)),
-          isNull,
-          reason: '$answer',
-        );
-      }
-      expect(
-        announcementDay(
-          const JourneyRewards(earnedDay: 3, tipOffer: TipOffer.skipped),
-        ),
-        3,
-      );
     });
   });
 
@@ -629,89 +646,87 @@ void main() {
         isNull,
       );
     });
-
-    test('day 3: the stored recipe only while it is the reward '
-        '(day3IsTip false)', () {
-      // Built anew: copyWith can't clear the offer.
-      RecipePick? pick(TipOffer? offer, bool? weekly) => rewardPick(
-        3,
-        JourneyRewards(earnedDay: 5, picks: picked.picks, tipOffer: offer),
-        weeklyTips: weekly,
-      );
-      for (final weekly in [true, false, null]) {
-        expect(pick(TipOffer.accepted, weekly), isNull, reason: '$weekly');
-        expect(pick(TipOffer.declined, weekly), three, reason: '$weekly');
-        expect(pick(TipOffer.skipped, weekly), three, reason: '$weekly');
-      }
-      // The offer open or undecided: the tip unless the weekly tips are on.
-      for (final offer in [TipOffer.offered, null]) {
-        expect(pick(offer, false), isNull, reason: '$offer');
-        expect(pick(offer, null), isNull, reason: '$offer');
-        expect(pick(offer, true), three, reason: '$offer');
-      }
-      // The other days never depend on it.
-      expect(
-        rewardPick(
-          1,
-          picked.copyWith(tipOffer: TipOffer.accepted),
-          weeklyTips: false,
-        ),
-        one,
-      );
-    });
   });
 
-  group('day 3', () {
-    test('day3IsTip: accepted, or open / undecided without the weekly '
-        'tips on', () {
-      bool tip(TipOffer? offer, bool? weekly) => day3IsTip(
-        JourneyRewards(earnedDay: 3, tipOffer: offer),
-        weeklyTips: weekly,
-      );
-      for (final weekly in [true, false, null]) {
-        expect(tip(TipOffer.accepted, weekly), isTrue);
-        expect(tip(TipOffer.declined, weekly), isFalse);
-        expect(tip(TipOffer.skipped, weekly), isFalse);
-      }
-      for (final offer in [TipOffer.offered, null]) {
-        expect(tip(offer, false), isTrue);
-        expect(tip(offer, null), isTrue);
-        expect(tip(offer, true), isFalse);
-      }
+  group('day 3: one rule (day3Of) for every site', () {
+    const three = RecipePick(id: 'r-3', title: 'Drei');
+    const tip = 'Dein erster Tipp', recipe = 'Ein Rezept für dich';
+
+    // Day 3 earned, its recipe picked. Per offer and weekly tips: the rule,
+    // the title, whether the pick is the reward, whether the offer is due,
+    // whether the Buddy announces it, and whether a missing pick is made.
+    for (final (offer, weekly, day3, title, shown, due, announced, fills) in [
+      (null, false, Day3.waiting, tip, false, false, false, false),
+      (null, null, Day3.waiting, tip, false, false, false, false),
+      // Only before day 3: advanceRewards decides the offer once the
+      // weekly tips are known.
+      (null, true, Day3.recipe, recipe, true, false, false, true),
+      (TipOffer.offered, false, Day3.offerOpen, tip, false, true, false, true),
+      (TipOffer.offered, null, Day3.offerOpen, tip, false, false, false, true),
+      (TipOffer.offered, true, Day3.recipe, recipe, true, false, false, true),
+      for (final weekly in [false, null, true]) ...[
+        (TipOffer.accepted, weekly, Day3.tip, tip, false, false, false, false),
+        (
+          TipOffer.declined,
+          weekly,
+          Day3.recipe,
+          recipe,
+          true,
+          false,
+          false,
+          true,
+        ),
+        (
+          TipOffer.skipped,
+          weekly,
+          Day3.recipe,
+          recipe,
+          true,
+          false,
+          true,
+          true,
+        ),
+      ],
+    ]) {
+      test('${offer?.name}, weekly tips $weekly → ${day3.name}', () {
+        final r = JourneyRewards(
+          earnedDay: 3,
+          picks: const {3: three},
+          tipOffer: offer,
+        );
+        expect(day3Of(r, weeklyTips: weekly), day3);
+        expect(rewardTitle(3, r, weeklyTips: weekly), title);
+        expect(rewardPick(3, r, weeklyTips: weekly), shown ? three : isNull);
+        expect(tipOfferDue(r, weeklyTips: weekly), due);
+        expect(announcementDay(r, weeklyTips: weekly), announced ? 3 : isNull);
+        final filled = fillPicks(
+          JourneyRewards(earnedDay: 3, tipOffer: offer),
+          ranked: _rank([_a, _c]),
+          calmKeys: const {},
+          weeklyTips: weekly,
+        );
+        expect(filled.picks.containsKey(3), fills);
+      });
+    }
+
+    test('offered before day 3 is earned: waiting, never due', () {
+      const early = JourneyRewards(earnedDay: 2, tipOffer: TipOffer.offered);
+      expect(day3Of(early, weeklyTips: false), Day3.waiting);
+      expect(tipOfferDue(early, weeklyTips: false), isFalse);
     });
 
-    test('day3Pending: the tip, not accepted yet', () {
-      bool pending(TipOffer? offer, bool? weekly) => day3Pending(
-        JourneyRewards(earnedDay: 3, tipOffer: offer),
-        weeklyTips: weekly,
+    test('the other days never depend on it', () {
+      const one = RecipePick(id: 'r-1', title: 'Eins');
+      const accepted = JourneyRewards(
+        earnedDay: 5,
+        picks: {1: one, 3: three},
+        tipOffer: TipOffer.accepted,
       );
-      expect(pending(TipOffer.offered, false), isTrue);
-      expect(pending(TipOffer.offered, null), isTrue);
-      expect(pending(null, false), isTrue);
-      expect(pending(TipOffer.offered, true), isFalse);
-      expect(pending(TipOffer.accepted, true), isFalse);
-      expect(pending(TipOffer.declined, false), isFalse);
-      expect(pending(TipOffer.skipped, false), isFalse);
+      expect(rewardPick(1, accepted, weeklyTips: false), one);
     });
   });
 
   group('rewardTitle', () {
-    test('day 3 follows the answer, then the weekly tips', () {
-      String title(TipOffer? answer, bool? weekly) => rewardTitle(
-        3,
-        JourneyRewards(earnedDay: 3, tipOffer: answer),
-        weeklyTips: weekly,
-      );
-      expect(title(TipOffer.accepted, true), 'Dein erster Tipp');
-      expect(title(TipOffer.declined, false), 'Ein Rezept für dich');
-      expect(title(TipOffer.skipped, false), 'Ein Rezept für dich');
-      for (final answer in [null, TipOffer.offered]) {
-        expect(title(answer, true), 'Ein Rezept für dich');
-        expect(title(answer, false), 'Dein erster Tipp');
-        expect(title(answer, null), 'Dein erster Tipp');
-      }
-    });
-
     test('the other days: their constant', () {
       const r = JourneyRewards(earnedDay: 7);
       expect(
