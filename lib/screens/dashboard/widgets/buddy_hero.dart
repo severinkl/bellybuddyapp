@@ -94,8 +94,10 @@ _Cue _cueFor(BuddyAnnouncement a) => switch (a) {
 /// Everything it says waits until it is visible (`TickerMode` on, i.e. the
 /// dashboard is not under the splash or covered by another route or tab):
 /// the first line, the follow-up to a fresh [BuddyLogEvent] and the
-/// Buddy's announcements. Without a Buddy status (loading, error, signed
-/// out) the Buddy still shows, named 'Buddy', without the streak chip.
+/// Buddy's announcements. His cues and their sheets also wait while Home is
+/// covered ([homeCoveredProvider]: a sheet over it, a page on its way in).
+/// Without a Buddy status (loading, error, signed out) the Buddy still
+/// shows, named 'Buddy', without the streak chip.
 class BuddyHero extends ConsumerStatefulWidget {
   const BuddyHero({super.key, this.openUrl = launchUrl});
 
@@ -199,23 +201,21 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   bool _visible = false;
 
   /// A cue's sheet or page (the new goal, the weekly-tips offer, a day's
-  /// reward, „Muster frei!") that came due while the hero was hidden, while
-  /// Home was covered ([homeCoveredProvider]: „Deine Belohnungen" open), or
-  /// (all but the goal) while „Dein Streak" was open; shown once visible
-  /// and uncovered (once it has closed).
+  /// reward, „Muster frei!") that came due while the hero was hidden or
+  /// Home was covered ([homeCoveredProvider]); shown once Home is free
+  /// again ([_resume]).
   Future<void> Function()? _deferredSheet;
 
   /// A cue that ends in a sheet or page is on stage (a celebration before
   /// it, the weekly-tips offer's wave): from its start until it closed.
   bool get _sheetCueOnStage => _playing?.endsInSheet ?? false;
 
-  /// A cue left Home („Muster frei!", a reward it opened, as a page over
-  /// it or another tab): the next cue waits until Home is shown again
-  /// ([_leaveHome]).
-  bool _awayFromHome = false;
+  /// Whether his cues and their sheets may play: the hero is visible and
+  /// nothing covers Home ([homeCoveredProvider]).
+  bool get _homeFree => _visible && !ref.read(homeCoveredProvider);
 
-  /// The StreakChip's „Dein Streak" sheet is open.
-  bool _chipSheetOpen = false;
+  /// The router whose top route [_onRoute] follows.
+  GoRouter? _router;
 
   /// The local day for which "today counted" was already thanked for or
   /// known before a log, so "Danke! 🔥 …" is said once per day.
@@ -238,29 +238,35 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       fireImmediately: true,
     );
     ref.listenManual(homeCoveredProvider, (_, covered) {
-      if (!covered) _afterFrame(_showDeferredSheet);
+      if (!covered) _afterFrame(_resume);
     });
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    final router = GoRouter.maybeOf(context);
+    if (router != _router) {
+      _router?.routerDelegate.removeListener(_onRoute);
+      _router = router?..routerDelegate.addListener(_onRoute);
+    }
     final visible = TickerMode.valuesOf(context).enabled;
     if (visible == _visible) return;
     _visible = visible;
+    final cover = ref.read(homeCoveredProvider.notifier);
     if (visible) {
-      _awayFromHome = false;
       _afterFrame(() {
+        // Shown again: what left Home no longer covers it.
+        cover.homeShown();
         _consumeEvent();
         _takeAnnouncements();
         _maybeGreet();
-        _showDeferredSheet();
-        _resumeCues();
+        _resume();
       });
     } else {
-      // Hidden, Home's visibility holds the cues' sheets: a page that
-      // covered it ([homeCoveredProvider]) no longer needs to.
-      _afterFrame(() => ref.read(homeCoveredProvider.notifier).homeHidden());
+      // Hidden, Home's visibility holds the cues: a page that covered it
+      // no longer needs to.
+      _afterFrame(cover.homeHidden);
       // Leaving the dashboard ends this visit's empathy.
       if (_override == BuddyMood.empathetic) _setOverride(null);
     }
@@ -268,9 +274,19 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   @override
   void dispose() {
+    _router?.routerDelegate.removeListener(_onRoute);
     _cueTimer?.cancel();
     _buddy.dispose();
     super.dispose();
+  }
+
+  /// The router moved: back on Home's route (a page popped, or replaced by
+  /// a `go` to Home, even on its way in while Home was never hidden), what
+  /// left Home no longer covers it ([HomeCoverNotifier.homeShown]).
+  void _onRoute() {
+    final top = _router?.routerDelegate.currentConfiguration.lastOrNull;
+    if (top?.matchedLocation != RoutePaths.dashboard) return;
+    _afterFrame(ref.read(homeCoveredProvider.notifier).homeShown);
   }
 
   /// Runs [fn] only while the hero is visible: nothing is said or played
@@ -525,8 +541,8 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       _cuePlayed = false;
       return;
     }
-    if (_awayFromHome) {
-      // Resumed once Home is shown again ([_resumeCues]).
+    if (!_homeFree) {
+      // Goes on once Home is free again ([_resume]).
       _cueRunning = false;
       return;
     }
@@ -591,27 +607,12 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     }
   }
 
-  /// The queue waited while a page covered Home ([_awayFromHome]): it goes
-  /// on now.
-  void _resumeCues() {
+  /// Home is free again (visible, uncovered): the sheet that waited opens,
+  /// or the queue that waited goes on.
+  void _resume() {
+    if (!_homeFree) return;
+    _showDeferredSheet();
     if (!_cueRunning && _cues.isNotEmpty) _nextCue();
-  }
-
-  /// A cue leaves Home for [page] (null: another tab): the next cue waits
-  /// until Home is shown again ([_awayFromHome]). Home is hidden only once
-  /// the page's transition has ended, so [page] closing also ends the wait,
-  /// should Home still be visible then (closed during its transition).
-  void _leaveHome(Future<void>? page) {
-    _awayFromHome = true;
-    page?.whenComplete(() => _afterFrame(_backOnHome)).ignore();
-  }
-
-  /// After a page closed: back on a visible Home, the queue goes on
-  /// (hidden, it goes on once shown).
-  void _backOnHome() {
-    if (!_visible) return;
-    _awayFromHome = false;
-    _resumeCues();
   }
 
   /// The cue on stage has ended: its announcement counts as shown, and a
@@ -645,18 +646,13 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     unawaited(sheet());
   }
 
-  /// After the goal celebration: offers the next goal, then continues.
-  /// Waits until the hero is visible again if it was hidden meanwhile, and
-  /// until Home is uncovered ([homeCoveredProvider]).
+  /// After the goal celebration: offers the next goal, then continues;
+  /// waits like every cue's sheet ([_deferSheet]).
   Future<void> _askForNewGoal() async {
-    if (!_visible || ref.read(homeCoveredProvider)) {
-      _deferredSheet = _askForNewGoal;
-      return;
-    }
+    if (_deferSheet(_askForNewGoal)) return;
     final streak = ref.read(buddyProvider).value?.streak ?? 0;
     int? goal;
-    // With the StreakChip's sheet open the user is picking a goal already.
-    if (!_chipSheetOpen && streakGoalChoices(streak).isNotEmpty) {
+    if (streakGoalChoices(streak).isNotEmpty) {
       goal = await showStreakGoalSheet(
         context,
         currentStreak: streak,
@@ -669,14 +665,11 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _nextCue();
   }
 
-  /// Whether a cue's sheet or page must wait: until the hero is visible
-  /// again if it was hidden meanwhile, and until „Dein Streak" has closed
-  /// if it is open, as „Deine Belohnungen" and a page it opened
-  /// ([homeCoveredProvider]; sheets never stack). Then [show] is deferred.
+  /// Whether a cue's sheet or page must wait until Home is free again
+  /// ([_homeFree]: the hero was hidden meanwhile, or something covers Home;
+  /// sheets never stack). Then [show] is deferred.
   bool _deferSheet(Future<void> Function() show) {
-    if (_visible && !_chipSheetOpen && !ref.read(homeCoveredProvider)) {
-      return false;
-    }
+    if (_homeFree) return false;
     _deferredSheet = show;
     return true;
   }
@@ -693,7 +686,10 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       case false:
         final open = await showWeeklyTipsOfferSheet(context);
         if (!mounted) return;
-        if (open) context.go(RoutePaths.discover);
+        if (open) {
+          ref.read(homeCoveredProvider.notifier).leftHome(null);
+          context.go(RoutePaths.discover);
+        }
       case null:
         break;
     }
@@ -706,7 +702,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// „Nein" (the offer doesn't come again), but only while the hero is
   /// still here: gone, nothing is stored and the offer comes again.
   Future<void> _offerFirstTip() async {
-    final outcome = await offerFirstTip(context, ref, onLeave: _leaveHome);
+    final outcome = await offerFirstTip(context, ref);
     if (!mounted) return;
     switch (outcome) {
       case FirstTipOutcome.started:
@@ -740,46 +736,42 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     final open = await showJourneyRewardSheet(context, day: day);
     if (!mounted) return;
     if (open) {
-      await openJourneyReward(
-        context,
-        ref,
-        day,
-        openUrl: widget.openUrl,
-        onLeave: _leaveHome,
-      );
+      await openJourneyReward(context, ref, day, openUrl: widget.openUrl);
     }
     if (!mounted) return;
     _nextCue();
   }
 
   /// After the celebration: „Muster frei!" over Home, then continues once
-  /// Home is shown again ([_leaveHome]); waits like every cue's sheet
-  /// ([_deferSheet]).
+  /// Home is free again (the page left it, [homeCoveredProvider]); waits
+  /// like every cue's sheet ([_deferSheet]).
   Future<void> _openPatternsUnlocked() async {
     if (_deferSheet(_openPatternsUnlocked)) return;
-    _leaveHome(context.push(RoutePaths.patternsUnlocked));
+    ref
+        .read(homeCoveredProvider.notifier)
+        .leftHome(context.push(RoutePaths.patternsUnlocked));
     _nextCue();
   }
 
   /// The StreakChip's tap: „Dein Streak", where the goal can be set or
-  /// changed. Ignored while a cue's sheet is coming ([_sheetCueOnStage])
-  /// or the sheet is already open, so sheets never stack. An offer that
-  /// came due meanwhile follows once it has closed.
+  /// changed; it covers Home ([HomeCoverNotifier.whileOpen]), so the cues
+  /// wait until it has closed. Ignored while a cue's sheet is coming
+  /// ([_sheetCueOnStage]) or Home is covered (the sheet already open), so
+  /// sheets never stack.
   Future<void> _openStreakSheet() async {
     final status = ref.read(buddyProvider).value;
-    if (status == null || _sheetCueOnStage || _chipSheetOpen) return;
-    _chipSheetOpen = true;
-    try {
-      await openStreakSheetAndSaveGoal(
+    final cover = ref.read(homeCoveredProvider.notifier);
+    if (status == null || _sheetCueOnStage || ref.read(homeCoveredProvider)) {
+      return;
+    }
+    await cover.whileOpen(
+      () => openStreakSheetAndSaveGoal(
         context,
         ref,
         status: status,
         today: _now(),
-      );
-    } finally {
-      _chipSheetOpen = false;
-      _showDeferredSheet();
-    }
+      ),
+    );
   }
 
   // --- UI ---------------------------------------------------------------------

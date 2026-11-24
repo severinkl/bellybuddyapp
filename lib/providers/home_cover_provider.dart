@@ -2,25 +2,30 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'auth_provider.dart';
 
-/// Whether something Home's content opened covers Home, so the Buddy's own
-/// sheets wait (`BuddyHero`): they never stack on it, nor open over a page
-/// on its way in.
-/// - A sheet ([whileOpen], „Deine Belohnungen" with what its row opens)
-///   covers Home until it is done.
-/// - A page it opened over Home ([leftHome]) covers it until the page
-///   closes or Home is hidden under it ([homeHidden]); hidden, Home's own
-///   visibility holds the Buddy's sheets.
+/// Whether something covers Home, so the Buddy's cues and their sheets wait
+/// (`BuddyHero`): they never stack on it, play behind it, nor open over a
+/// page on its way in. The one tracker of what covers Home:
+/// - a sheet opened over it ([whileOpen]: „Dein Streak", „Deine
+///   Belohnungen" with what its row opens) until it is done;
+/// - Home left ([leftHome]) for a page pushed over it until that page
+///   closes, or for another tab; either until Home is hidden
+///   ([homeHidden]; hidden, Home's own visibility holds the Buddy) or shown
+///   again ([homeShown]).
 ///
 /// Per signed-in user: another user starts uncovered.
 class HomeCoverNotifier extends Notifier<bool> {
   final _sheets = <Object>{};
   final _pages = <Future<void>>{};
 
+  /// Home was left for another tab, and not hidden or shown since.
+  bool _leftForTab = false;
+
   @override
   bool build() {
     ref.watch(currentUserIdProvider);
     _sheets.clear();
     _pages.clear();
+    _leftForTab = false;
     return false;
   }
 
@@ -38,27 +43,40 @@ class HomeCoverNotifier extends Notifier<bool> {
     }
   }
 
-  /// Told that a reward left Home (a `LeavingHome`): [page] covers it until
-  /// it closes or Home is hidden; another tab (null) hides Home at once.
+  /// Home is left: for [page], pushed over it, until that page closes; for
+  /// another tab (null). Either until Home is hidden or shown again.
   void leftHome(Future<void>? page) {
-    if (page == null) return;
-    _pages.add(page);
+    if (page == null) {
+      _leftForTab = true;
+    } else {
+      _pages.add(page);
+      page.whenComplete(() {
+        if (_pages.remove(page)) _update();
+      }).ignore();
+    }
     _update();
-    page.whenComplete(() {
-      _pages.remove(page);
-      _update();
-    }).ignore();
   }
 
-  /// Home is hidden (under a page or another tab): no page covers it now.
-  void homeHidden() {
-    if (_pages.isEmpty) return;
+  /// Home is hidden (under a page or another tab): what left it no longer
+  /// covers it.
+  void homeHidden() => _clearLeft();
+
+  /// Home is shown again, or its route is on top again (a `go` that
+  /// replaced a page on its way in, whose close never comes): what left it
+  /// no longer covers it.
+  void homeShown() => _clearLeft();
+
+  void _clearLeft() {
+    if (_pages.isEmpty && !_leftForTab) return;
     _pages.clear();
+    _leftForTab = false;
     _update();
   }
 
   void _update() {
-    if (ref.mounted) state = _sheets.isNotEmpty || _pages.isNotEmpty;
+    if (ref.mounted) {
+      state = _sheets.isNotEmpty || _pages.isNotEmpty || _leftForTab;
+    }
   }
 }
 

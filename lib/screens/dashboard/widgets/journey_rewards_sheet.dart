@@ -27,26 +27,21 @@ import 'journey_reward_actions.dart';
 /// - any other: [openJourneyReward], articles through [openUrl].
 ///
 /// Home counts as covered ([homeCoveredProvider]) until that is done, and
-/// while a page it opened is on its way over Home, so the Buddy's own
-/// sheets wait. Completes once that is done.
+/// while a page it opened is on its way over Home, so the Buddy's cues
+/// wait. Completes once that is done.
 Future<void> showJourneyRewardsSheet(
   BuildContext context,
   WidgetRef ref, {
   UrlOpener openUrl = launchUrl,
-}) {
-  final cover = ref.read(homeCoveredProvider.notifier);
-  return cover.whileOpen(
-    () => _showRewards(context, ref, openUrl: openUrl, onLeave: cover.leftHome),
-  );
-}
+}) => ref
+    .read(homeCoveredProvider.notifier)
+    .whileOpen(() => _showRewards(context, ref, openUrl: openUrl));
 
-/// [showJourneyRewardsSheet]'s list and what follows it; a page it opens
-/// over Home is told to [onLeave].
+/// [showJourneyRewardsSheet]'s list and what follows it.
 Future<void> _showRewards(
   BuildContext context,
   WidgetRef ref, {
   required UrlOpener openUrl,
-  required LeavingHome onLeave,
 }) async {
   final day = await showBuddySheet<int>(
     context,
@@ -59,16 +54,10 @@ Future<void> _showRewards(
     weeklyTips: ref.read(weeklyTipsEnabledProvider),
   );
   if (!offersTip) {
-    return openJourneyReward(
-      context,
-      ref,
-      day,
-      openUrl: openUrl,
-      onLeave: onLeave,
-    );
+    return openJourneyReward(context, ref, day, openUrl: openUrl);
   }
   final messenger = ScaffoldMessenger.maybeOf(context);
-  final message = switch (await offerFirstTip(context, ref, onLeave: onLeave)) {
+  final message = switch (await offerFirstTip(context, ref)) {
     FirstTipOutcome.started => JourneyCopy.firstTipStarted,
     FirstTipOutcome.optInFailed => WeeklyTipsSwitch.failure,
     FirstTipOutcome.declined || FirstTipOutcome.dismissed => null,

@@ -7,6 +7,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'package:belly_buddy/models/journey_rewards.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
+import 'package:belly_buddy/providers/home_cover_provider.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_actions.dart';
 
@@ -15,16 +16,28 @@ import '../../../helpers/fakes.dart';
 import '../../../helpers/fixtures.dart';
 import '../../../helpers/riverpod_helpers.dart';
 
+/// [HomeCoverNotifier] that records each page Home was left for (null: a
+/// tab).
+class _RecordingCover extends HomeCoverNotifier {
+  final left = <Future<void>?>[];
+
+  @override
+  void leftHome(Future<void>? page) {
+    left.add(page);
+    super.leftHome(page);
+  }
+}
+
 void main() {
   late RecordingUrlOpener opener;
   late GoRouter router;
 
-  /// What `onLeave` heard: each page it left Home for (null: a tab).
-  late List<Future<void>?> left;
+  /// Home's cover, recording what Home was left for.
+  late _RecordingCover cover;
 
   setUp(() {
     opener = RecordingUrlOpener();
-    left = [];
+    cover = _RecordingCover();
   });
 
   /// Home with an „open" button that opens [day]'s reward over [rewards],
@@ -42,13 +55,7 @@ void main() {
             body: Consumer(
               builder: (c, ref, _) => TextButton(
                 onPressed: () => unawaited(
-                  openJourneyReward(
-                    c,
-                    ref,
-                    day,
-                    openUrl: opener.call,
-                    onLeave: left.add,
-                  ),
+                  openJourneyReward(c, ref, day, openUrl: opener.call),
                 ),
                 child: const Text('open'),
               ),
@@ -69,6 +76,7 @@ void main() {
           currentUserIdProvider.overrideWithValue('u1'),
           profileProviderSeededWith(testUserProfile(userId: 'u1')),
           journeyRewardsSeededWith(rewards),
+          homeCoveredProvider.overrideWith(() => cover),
         ],
         child: germanRouterApp(router),
       ),
@@ -80,8 +88,8 @@ void main() {
   String location() =>
       router.routerDelegate.currentConfiguration.last.matchedLocation;
 
-  group('openJourneyReward: onLeave', () {
-    testWidgets('a recipe page: told with the page, which completes once '
+  group('openJourneyReward: Home left', () {
+    testWidgets('a recipe page: left with the page, which completes once '
         'it is closed', (tester) async {
       await pumpOpen(
         tester,
@@ -92,9 +100,9 @@ void main() {
         ),
       );
       expect(location(), '/collection/r1');
-      expect(left, hasLength(1));
+      expect(cover.left, hasLength(1));
       var closed = false;
-      unawaited(left.single!.whenComplete(() => closed = true));
+      unawaited(cover.left.single!.whenComplete(() => closed = true));
 
       router.pop();
       await tester.pumpAndSettle();
@@ -102,18 +110,18 @@ void main() {
       expect(closed, isTrue);
     });
 
-    testWidgets('Muster (day 6): told with the page', (tester) async {
+    testWidgets('Muster (day 6): left with the page', (tester) async {
       await pumpOpen(tester, 6, const JourneyRewards(earnedDay: 6));
 
       expect(location(), RoutePaths.patterns);
-      expect(left.single, isNotNull);
+      expect(cover.left.single, isNotNull);
     });
 
-    testWidgets('no pick: the recipes, told without a page', (tester) async {
+    testWidgets('no pick: the recipes, left for a tab', (tester) async {
       await pumpOpen(tester, 1, const JourneyRewards(earnedDay: 1));
 
       expect(location(), RoutePaths.discoverRecipes);
-      expect(left, [null]);
+      expect(cover.left, [null]);
     });
 
     testWidgets('day 2: the article over the app, Home never left', (
@@ -122,14 +130,14 @@ void main() {
       await pumpOpen(tester, 2, const JourneyRewards(earnedDay: 2));
 
       expect(opener.urls, hasLength(1));
-      expect(left, isEmpty);
+      expect(cover.left, isEmpty);
     });
 
     testWidgets('day 4: nothing opened, Home never left', (tester) async {
       await pumpOpen(tester, 4, const JourneyRewards(earnedDay: 4));
 
       expect(location(), '/');
-      expect(left, isEmpty);
+      expect(cover.left, isEmpty);
     });
   });
 }

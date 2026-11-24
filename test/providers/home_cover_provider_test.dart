@@ -71,27 +71,40 @@ void main() {
     },
   );
 
-  test('another tab (no page) covers nothing', () {
-    final c = container();
-    c.read(homeCoveredProvider.notifier).leftHome(null);
-    expect(c.read(homeCoveredProvider), isFalse);
-  });
+  for (final (name, end) in [
+    ('hidden', (HomeCoverNotifier c) => c.homeHidden()),
+    ('shown again', (HomeCoverNotifier c) => c.homeShown()),
+  ]) {
+    test('another tab covers Home until it is $name', () {
+      final c = container();
+      final cover = c.read(homeCoveredProvider.notifier);
 
-  test('Home hidden: a page no longer covers it, a sheet still does', () async {
-    final c = container();
-    final cover = c.read(homeCoveredProvider.notifier);
-    final sheet = Completer<void>();
+      cover.leftHome(null);
+      expect(c.read(homeCoveredProvider), isTrue);
 
-    // A page that never closes (removed by a `go`, not popped).
-    cover.leftHome(Completer<void>().future);
-    unawaited(cover.whileOpen(() => sheet.future));
-    cover.homeHidden();
-    expect(c.read(homeCoveredProvider), isTrue);
+      end(cover);
+      expect(c.read(homeCoveredProvider), isFalse);
+    });
 
-    sheet.complete();
-    await pumpEventQueue();
-    expect(c.read(homeCoveredProvider), isFalse);
-  });
+    test(
+      'Home $name: a page no longer covers it, a sheet still does',
+      () async {
+        final c = container();
+        final cover = c.read(homeCoveredProvider.notifier);
+        final sheet = Completer<void>();
+
+        // A page that never closes (removed by a `go`, not popped).
+        cover.leftHome(Completer<void>().future);
+        unawaited(cover.whileOpen(() => sheet.future));
+        end(cover);
+        expect(c.read(homeCoveredProvider), isTrue);
+
+        sheet.complete();
+        await pumpEventQueue();
+        expect(c.read(homeCoveredProvider), isFalse);
+      },
+    );
+  }
 
   test('another user: uncovered', () async {
     final c = container();
