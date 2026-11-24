@@ -324,7 +324,8 @@ class _GlowState extends State<_Glow> with SingleTickerProviderStateMixin {
   double get _pulse =>
       _still ? 1 : 0.5 + 0.5 * math.sin(_clock.value * 2 * math.pi);
 
-  // Its own layer: the pulse repaints every frame, the rest of Home not.
+  // Its own layer: the pulse repaints every frame, the rest of Home not;
+  // nor the meter, in a layer of its own above it.
   @override
   Widget build(BuildContext context) => RepaintBoundary(
     child: AnimatedBuilder(
@@ -343,7 +344,7 @@ class _GlowState extends State<_Glow> with SingleTickerProviderStateMixin {
         ),
         child: child,
       ),
-      child: widget.child,
+      child: RepaintBoundary(child: widget.child),
     ),
   );
 }

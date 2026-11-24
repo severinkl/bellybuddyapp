@@ -431,6 +431,31 @@ void main() {
       );
     });
 
+    testWidgets('the pulse repaints the glow, not the meter', (tester) async {
+      await pump(tester, highlight: CareNeed.drink);
+
+      final glowBox = tester.renderObject(
+        find.descendant(
+          of: find.byKey(CareRing.needKey(CareNeed.drink)),
+          matching: find.byWidgetPredicate(
+            (w) =>
+                w is DecoratedBox &&
+                ((w.decoration as BoxDecoration?)?.boxShadow ?? []).isNotEmpty,
+          ),
+        ),
+      );
+      // The first layer above the meter is its own, inside the glow.
+      RenderObject? layer = tester.renderObject(meterOf(CareNeed.drink));
+      while (!layer!.isRepaintBoundary) {
+        layer = layer.parent;
+      }
+      var above = layer.parent;
+      while (above != null && !identical(above, glowBox)) {
+        above = above.parent;
+      }
+      expect(above, same(glowBox));
+    });
+
     testWidgets('reduced motion: a full glow that holds still', (tester) async {
       tester.platformDispatcher.accessibilityFeaturesTestValue =
           const FakeAccessibilityFeatures(disableAnimations: true);
