@@ -66,9 +66,11 @@ class AppConstants {
   static const double borderWidthMd = 1.5;
   static const double borderWidthLg = 2.0;
 
-  // Dashed outlines
+  // Dashed outlines; the meal photo picker's longer dashes
   static const double dashLength = 6.0;
   static const double dashGap = 4.0;
+  static const double dashLengthLg = 8.0;
+  static const double dashGapLg = 5.0;
 
   // Drag handle
   static const double dragHandleWidth = 40.0;

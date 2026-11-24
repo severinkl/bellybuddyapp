@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/screens/discover/widgets/example_tip_card.dart';
 import 'package:belly_buddy/widgets/common/bb_card.dart';
+import 'package:belly_buddy/widgets/common/dashed_border_painter.dart';
 import 'package:belly_buddy/widgets/common/weekly_tips_switch.dart';
 
 import '../../../helpers/fixtures.dart';
@@ -86,7 +87,7 @@ void main() {
 
     expect(
       tester.getSemantics(find.byKey(ExampleTipCard.cardKey)).label,
-      startsWith('Beispiel-Tipp: Zwiebel mal tauschen?'),
+      startsWith('Beispiel-Tipp: Zwiebel mal tauschen? Diese Woche'),
     );
     handle.dispose();
   });

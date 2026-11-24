@@ -1,9 +1,9 @@
-import 'dart:ui';
-
 import 'package:material_ui/material_ui.dart';
 
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
+import '../../../widgets/common/bb_card.dart';
+import '../../../widgets/common/dashed_border_painter.dart';
 
 /// A made-up tip shown above the weekly-tips opt-in, so people see what they
 /// would get. Dashed and labelled „Beispiel", so it never passes for one of
@@ -28,15 +28,13 @@ class ExampleTipCard extends StatelessWidget {
       key: cardKey,
       container: true,
       excludeSemantics: true,
-      label: 'Beispiel-Tipp: $title. $body $footer',
+      // The title ends with its own „?".
+      label: 'Beispiel-Tipp: $title $body $footer',
       child: CustomPaint(
         foregroundPainter: const DashedBorderPainter(),
-        child: Container(
-          padding: AppConstants.paddingMd,
-          decoration: BoxDecoration(
-            color: AppTheme.background,
-            borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-          ),
+        child: BbCard(
+          color: AppTheme.background,
+          showBorder: false,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -92,43 +90,4 @@ class ExampleTipCard extends StatelessWidget {
       ),
     );
   }
-}
-
-/// Strokes the rounded rect's outline as dashes. Public so tests can find it.
-class DashedBorderPainter extends CustomPainter {
-  const DashedBorderPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    const inset = AppConstants.borderWidthLg / 2;
-    final path = Path()
-      ..addRRect(
-        RRect.fromRectAndRadius(
-          Rect.fromLTWH(
-            inset,
-            inset,
-            size.width - 2 * inset,
-            size.height - 2 * inset,
-          ),
-          const Radius.circular(AppConstants.radiusLg),
-        ),
-      );
-    final paint = Paint()
-      ..color = AppTheme.border
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = AppConstants.borderWidthLg;
-    for (final PathMetric metric in path.computeMetrics()) {
-      var d = 0.0;
-      while (d < metric.length) {
-        canvas.drawPath(
-          metric.extractPath(d, d + AppConstants.dashLength),
-          paint,
-        );
-        d += AppConstants.dashLength + AppConstants.dashGap;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(DashedBorderPainter old) => false;
 }
