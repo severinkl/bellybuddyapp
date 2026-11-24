@@ -10,6 +10,7 @@ import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/utils/date_format_utils.dart';
 import 'package:belly_buddy/widgets/common/mascot_image.dart';
+import 'package:belly_buddy/screens/diary/widgets/diary_entry_card.dart';
 
 import '../../helpers/app_lifecycle.dart';
 import '../../helpers/fakes.dart';
@@ -70,6 +71,51 @@ void main() {
         findsOneWidget,
       );
       expect(find.byType(MascotImage), findsOneWidget);
+    });
+
+    testWidgets("the day's totals stand above its entries", (tester) async {
+      await tester.pumpWithProviders(
+        const DiaryScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(DiaryScreen.totalsKey), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.byKey(DiaryScreen.totalsKey)).dy,
+        lessThan(tester.getTopLeft(find.byType(DiaryEntryCard).first).dy),
+      );
+    });
+
+    testWidgets('an empty day shows no totals', (tester) async {
+      await tester.pumpWithProviders(
+        const DiaryScreen(),
+        overrides: _emptyOverrides(),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(DiaryScreen.totalsKey), findsNothing);
+    });
+
+    testWidgets('fits 375×667 at text scale 1.3', (tester) async {
+      tester.view.physicalSize = const Size(375, 667);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await tester.pumpWithProviders(
+        const DiaryScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(DiaryScreen.totalsKey), findsOneWidget);
+      expect(
+        tester.widget<Text>(find.byKey(DiaryScreen.totalsKey)).data,
+        '1× Essen · 250 ml getrunken · 1× Bauchgefühl · 1× Klo',
+      );
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('VoiceOver reads the day arrows by name', (tester) async {

@@ -140,4 +140,103 @@ void main() {
       expect(entries[2].id, 'd1'); // 08:00
     });
   });
+
+  group('DiaryHelpers.dayTotals', () {
+    DiaryEntry drink(int ml) {
+      final d = DrinkEntry(
+        id: 'd$ml',
+        trackedAt: DateTime(2026, 1, 1, 8),
+        drinkId: 'dk',
+        drinkName: 'Wasser',
+        amountMl: ml,
+      );
+      return DiaryEntry(
+        id: d.id,
+        type: DiaryEntryType.drink,
+        trackedAt: d.trackedAt,
+        title: 'Wasser',
+        subtitle: '',
+        data: DrinkDiaryData(d),
+      );
+    }
+
+    DiaryEntry meal(String id) {
+      final m = MealEntry(
+        id: id,
+        trackedAt: DateTime(2026, 1, 1, 12),
+        title: 'Essen',
+        ingredients: const [],
+      );
+      return DiaryEntry(
+        id: id,
+        type: DiaryEntryType.meal,
+        trackedAt: m.trackedAt,
+        title: m.title,
+        subtitle: '',
+        data: MealDiaryData(m),
+      );
+    }
+
+    DiaryEntry gut() {
+      final g = GutFeelingEntry(
+        id: 'g',
+        trackedAt: DateTime(2026, 1, 1, 9),
+        bloating: 1,
+        gas: 1,
+        cramps: 1,
+        fullness: 1,
+      );
+      return DiaryEntry(
+        id: 'g',
+        type: DiaryEntryType.gutFeeling,
+        trackedAt: g.trackedAt,
+        title: 'Bauchgefühl',
+        subtitle: '',
+        data: GutFeelingDiaryData(g),
+      );
+    }
+
+    DiaryEntry toilet() {
+      final t = ToiletEntry(
+        id: 't',
+        trackedAt: DateTime(2026, 1, 1, 10),
+        stoolType: 4,
+      );
+      return DiaryEntry(
+        id: 't',
+        type: DiaryEntryType.toilet,
+        trackedAt: t.trackedAt,
+        title: 'Klo',
+        subtitle: '',
+        data: ToiletDiaryData(t),
+      );
+    }
+
+    test('lists meals, drinks and Bauchgefühl in order', () {
+      expect(
+        DiaryHelpers.dayTotals([
+          meal('m1'),
+          meal('m2'),
+          drink(250),
+          drink(1250),
+          gut(),
+        ]),
+        '2× Essen · 1,5 l getrunken · 1× Bauchgefühl',
+      );
+    });
+
+    test('writes the amount in ml or litres', () {
+      expect(DiaryHelpers.dayTotals([drink(750)]), '750 ml getrunken');
+      expect(DiaryHelpers.dayTotals([drink(2000)]), '2 l getrunken');
+      expect(DiaryHelpers.dayTotals([drink(1250)]), '1,3 l getrunken');
+    });
+
+    test('only one Klo', () {
+      expect(DiaryHelpers.dayTotals([toilet()]), '1× Klo');
+    });
+
+    test('no entries is null', () {
+      expect(DiaryHelpers.dayTotals([]), isNull);
+    });
+  });
 }

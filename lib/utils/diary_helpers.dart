@@ -49,4 +49,34 @@ abstract final class DiaryHelpers {
 
     return entries;
   }
+
+  /// The day's totals for the Tagebuch („2× Essen · 1,5 l getrunken"), parts
+  /// left out at 0. Null for a day without entries.
+  static String? dayTotals(List<DiaryEntry> entries) {
+    if (entries.isEmpty) return null;
+    int count(DiaryEntryType type) =>
+        entries.where((e) => e.type == type).length;
+    final drunkMl = entries
+        .map((e) => e.data)
+        .whereType<DrinkDiaryData>()
+        .fold<int>(0, (sum, d) => sum + d.drink.amountMl);
+    final meals = count(DiaryEntryType.meal);
+    final gut = count(DiaryEntryType.gutFeeling);
+    final toilet = count(DiaryEntryType.toilet);
+    return [
+      if (meals > 0) '$meals× Essen',
+      if (drunkMl > 0) '${_amount(drunkMl)} getrunken',
+      if (gut > 0) '$gut× Bauchgefühl',
+      if (toilet > 0) '$toilet× Klo',
+    ].join(' · ');
+  }
+
+  static String _amount(int ml) {
+    if (ml < 1000) return '$ml ml';
+    final litres = (ml / 100).round() / 10;
+    final text = litres == litres.truncate()
+        ? '${litres.truncate()}'
+        : litres.toStringAsFixed(1).replaceAll('.', ',');
+    return '$text l';
+  }
 }
