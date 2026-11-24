@@ -316,6 +316,13 @@ final routerProvider = Provider<GoRouter>((ref) {
           return RecipeEditorScreen(recipeId: id);
         },
       ),
+      // A recipe of the collection, pushed over the shell (no bar).
+      GoRoute(
+        path: RoutePaths.collectionRecipe,
+        name: RouteNames.collectionRecipe,
+        builder: (context, state) =>
+            CollectionRecipeScreen(recipeId: state.pathParameters['id']!),
+      ),
       GoRoute(
         path: RoutePaths.upgradeRequired,
         name: RouteNames.upgradeRequired,

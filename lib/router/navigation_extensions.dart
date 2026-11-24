@@ -9,4 +9,8 @@ extension BellyBuddyNavigation on BuildContext {
   /// notification whose `data.route` points directly at a tracker): in that
   /// case `context.pop()` would throw a GoError.
   void popOrGoDashboard() => canPop() ? pop() : go(RoutePaths.dashboard);
+
+  /// Pushes the collection recipe [recipeId] (its detail, without the bar).
+  Future<void> openRecipe(String recipeId) =>
+      push<void>(RoutePaths.collectionRecipeFor(recipeId));
 }

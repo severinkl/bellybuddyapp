@@ -65,6 +65,44 @@ void main() {
       expect(find.byKey(const Key('dashboard-page')), findsOneWidget);
     });
   });
+
+  group('BellyBuddyNavigation.openRecipe', () {
+    testWidgets('openRecipe pushes /collection/<id>', (tester) async {
+      final router = GoRouter(
+        initialLocation: RoutePaths.dashboard,
+        routes: [
+          GoRoute(
+            path: RoutePaths.dashboard,
+            builder: (context, _) => Scaffold(
+              body: ElevatedButton(
+                key: const Key('open-recipe'),
+                onPressed: () => context.openRecipe('abc'),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+          GoRoute(
+            path: RoutePaths.collectionRecipe,
+            builder: (_, state) => Text('recipe:${state.pathParameters['id']}'),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+
+      await tester.pumpWidget(MaterialApp.router(routerConfig: router));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('open-recipe')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('recipe:abc'), findsOneWidget);
+      expect(
+        router.routerDelegate.currentConfiguration.last.matchedLocation,
+        '/collection/abc',
+      );
+      // Pushed over the page it was opened from.
+      expect(router.canPop(), isTrue);
+    });
+  });
 }
 
 class _DashboardPage extends StatelessWidget {

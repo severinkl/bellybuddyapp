@@ -20,6 +20,7 @@ import 'package:belly_buddy/screens/discover/discover_screen.dart';
 import 'package:belly_buddy/screens/discover/knowledge_screen.dart';
 import 'package:belly_buddy/screens/me/me_screen.dart';
 import 'package:belly_buddy/screens/patterns/patterns_screen.dart';
+import 'package:belly_buddy/screens/recipes/collection_recipe_screen.dart';
 import 'package:belly_buddy/screens/recommendations/recommendations_screen.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
@@ -363,6 +364,31 @@ void main() {
         tester.getRect(card).bottom,
         lessThanOrEqualTo(tester.getRect(find.byType(BbBottomNav)).top),
       );
+    });
+
+    testWidgets('a collection recipe opens over the bar', (tester) async {
+      final container = await _pumpShell(tester);
+      await _tap(tester, BbBottomNav.navDiscoverKey);
+
+      unawaited(
+        container
+            .read(routerProvider)
+            .push(RoutePaths.collectionRecipeFor('recipe-1')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(
+        container
+            .read(routerProvider)
+            .routerDelegate
+            .currentConfiguration
+            .last
+            .matchedLocation,
+        '/collection/recipe-1',
+      );
+      expect(find.byType(CollectionRecipeScreen), findsOneWidget);
+      expect(find.text('Testrezept'), findsOneWidget);
+      expect(find.byType(BbBottomNav), findsNothing);
     });
 
     testWidgets('the insight card pushes the Muster page over the bar', (

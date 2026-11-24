@@ -21,6 +21,7 @@ import 'package:belly_buddy/repositories/knowledge_repository.dart';
 import 'package:belly_buddy/repositories/meal_media_repository.dart';
 import 'package:belly_buddy/repositories/notification_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
+import 'package:belly_buddy/repositories/recipe_repository.dart';
 import 'package:belly_buddy/repositories/recommendation_repository.dart';
 import 'package:belly_buddy/router/app_router.dart';
 
@@ -99,6 +100,7 @@ List<Override> baseOverrides({
     tips ?? FakeRecommendationRepository(),
   ),
   userRecipeRepositoryProvider.overrideWithValue(FakeUserRecipeRepository()),
+  recipeRepositoryProvider.overrideWithValue(FakeRecipeRepository()),
   mealMediaRepositoryProvider.overrideWithValue(FakeMealMediaRepository()),
   notificationRepositoryProvider.overrideWithValue(
     FakeNotificationRepository(),
