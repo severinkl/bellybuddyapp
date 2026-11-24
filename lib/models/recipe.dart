@@ -1,3 +1,4 @@
+import '../utils/ingredient_key.dart';
 import '../utils/json_values.dart';
 import '../utils/url_utils.dart';
 import 'fodmap_flags.dart';
@@ -75,10 +76,10 @@ class RecipeIngredient {
 
   bool get mapped => catalogId != null;
 
-  /// The line's name and catalog name, trimmed and lower-cased, for matching
-  /// against diary ingredients.
+  /// The line's name and catalog name as [ingredientKey]s (trimmed,
+  /// lower-cased), for matching against diary ingredients.
   Set<String> get matchKeys => {
-    for (final key in [name, ?catalogName]) key.trim().toLowerCase(),
+    for (final key in [name, ?catalogName]) ingredientKey(key),
   }..remove('');
 }
 

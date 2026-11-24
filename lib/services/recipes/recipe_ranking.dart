@@ -128,17 +128,20 @@ int _compare(_Scored a, _Scored b) {
   return title != 0 ? title : ra.id.compareTo(rb.id);
 }
 
-/// „Für dich": the first [count] of [ranked] that pass „Passt zu mir" (all
-/// pass while unchecked), topped up in rank order from the rest.
+/// Whether [fit] comes first in „Für dich": it passes „Passt zu mir", or
+/// nothing is checked yet.
+bool passesForYou(RecipeFit fit) => !fit.checked || fit.passtZuMir;
+
+/// „Für dich": the first [count] of [ranked] that [passesForYou], topped up
+/// in rank order from the rest.
 List<RecipeFit> pickForYou(
   List<RecipeFit> ranked, {
   int count = AppConstants.recipeForYouCount,
 }) {
-  bool passes(RecipeFit f) => !f.checked || f.passtZuMir;
-  final picked = ranked.where(passes).take(count).toList();
+  final picked = ranked.where(passesForYou).take(count).toList();
   return [
     ...picked,
-    ...ranked.where((f) => !passes(f)).take(count - picked.length),
+    ...ranked.where((f) => !passesForYou(f)).take(count - picked.length),
   ];
 }
 
