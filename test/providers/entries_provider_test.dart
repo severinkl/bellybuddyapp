@@ -261,7 +261,7 @@ void main() {
     }
 
     /// Lets a write's background reload land.
-    Future<void> settle() => Future<void>.delayed(Duration.zero);
+    Future<void> settle() => pumpEventQueue();
 
     test('reloading the same day keeps them', () async {
       final container = await loaded();

@@ -81,18 +81,25 @@ void main() {
     expect(SchedulerBinding.instance.hasScheduledFrame, isFalse);
   });
 
-  testWidgets('no semantics of its own', (tester) async {
+  testWidgets('silent to a screen reader: adds nothing to the card around '
+      'it', (tester) async {
     final handle = tester.ensureSemantics();
-    await _pump(tester, _days([true, false]));
-
-    expect(
-      find.descendant(
-        of: find.byType(JourneyDots),
-        matching: find.byType(ExcludeSemantics),
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.theme,
+        home: Scaffold(
+          body: Semantics(
+            container: true,
+            label: 'Karte',
+            child: JourneyDots(days: _days([true, false])),
+          ),
+        ),
       ),
-      findsWidgets,
     );
-    expect(tester.getSemantics(find.byType(JourneyDots)).label, isEmpty);
+
+    final card = tester.getSemantics(find.byType(JourneyDots));
+    expect(card.label, 'Karte');
+    expect(card.childrenCount, 0);
     handle.dispose();
   });
 }

@@ -3,7 +3,6 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:belly_buddy/models/insight_progress.dart';
 import 'package:belly_buddy/models/insights.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/insights_provider.dart';
@@ -11,17 +10,11 @@ import 'package:belly_buddy/providers/log_moment.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 
 import '../helpers/fakes.dart';
+import '../helpers/fixtures.dart';
 
 class _Insights extends InsightsNotifier {
   @override
-  Future<Insights> build() async => const Insights(
-    progress: InsightProgress(activeDays: 2, gutFeelingEntries: 1),
-    calendar: [],
-    goodDays: DayColumn(days: 0),
-    hardDays: DayColumn(days: 0),
-    noticed: [],
-    pick: NothingYetPick(),
-  );
+  Future<Insights> build() async => lockedInsights();
 
   void reloading() =>
       state = const AsyncLoading<Insights>().copyWithPrevious(state);

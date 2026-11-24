@@ -34,6 +34,7 @@ import 'package:belly_buddy/screens/recommendations/recommendations_screen.dart'
 import 'package:belly_buddy/services/entry_query_service.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/router/route_names.dart';
+import 'package:belly_buddy/services/buddy/care_meters.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:belly_buddy/widgets/buddy/need_meter.dart';
@@ -45,6 +46,7 @@ import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/riverpod_helpers.dart';
+import '../../helpers/widget_tester_helpers.dart';
 
 /// The app's clock in the insight-card tests, pinned: their entries
 /// ([insightSourceFor]) lie before it, in the insights' window on any date.
@@ -151,17 +153,12 @@ Future<void> _go(WidgetTester tester, GoRouter router, String path) async {
   await tester.pumpAndSettle();
 }
 
-/// A step's copy with its bold parts in `**`.
-/// The level the ring's meter of [need] shows (null for Klo).
-double? _meter(WidgetTester tester, CareNeed need) => tester
-    .widget<NeedMeter>(
-      find.descendant(
-        of: find.byKey(CareRing.needKey(need)),
-        matching: find.byType(NeedMeter),
-      ),
-    )
-    .level;
+/// Essen's level at [now] after a meal at [meal] (its math is
+/// care_meters_test's).
+double _foodAfter(DateTime meal, DateTime now) =>
+    CareMeters.at(CareLog(lastMealAt: meal), now).food;
 
+/// A step's copy with its bold parts in `**`.
 String _markedCopy(TutorialStep step) => step.richText.map((span) {
   final text = span.toPlainText();
   final bold = (span as TextSpan).style?.fontWeight == FontWeight.w700;
@@ -810,8 +807,9 @@ void main() {
 
   group('DashboardScreen shows the signed-in user\'s day', () {
     final now = DateTime(2026, 11, 23, 14);
+    final lunchAt = DateTime(2026, 11, 23, 12);
     EntryQueryResult lunchToday() => testEntryQueryResult(
-      meals: [testMealEntry(trackedAt: DateTime(2026, 11, 23, 12))],
+      meals: [testMealEntry(trackedAt: lunchAt)],
       toiletEntries: const [],
       gutFeelings: const [],
       drinks: const [],
@@ -841,7 +839,7 @@ void main() {
       await settle(tester);
 
       // Lunch at 12:00, 2 h ago.
-      expect(_meter(tester, CareNeed.food), closeTo(0.66, 0.005));
+      expect(needMeterLevel(tester, CareNeed.food), _foodAfter(lunchAt, now));
     });
 
     testWidgets('after signing out and in again: Home shows the new day '
@@ -883,12 +881,15 @@ void main() {
         ),
       );
       await settle(tester);
-      expect(_meter(tester, CareNeed.food), AppConstants.careMeterFloor);
+      expect(
+        needMeterLevel(tester, CareNeed.food),
+        AppConstants.careMeterFloor,
+      );
 
       // Twice: each round leaves the providers in another order.
-      for (final (meal, level) in [
-        (DateTime(2026, 11, 23, 12), 0.66),
-        (DateTime(2026, 11, 23, 13), 0.83),
+      for (final meal in [
+        DateTime(2026, 11, 23, 12),
+        DateTime(2026, 11, 23, 13),
       ]) {
         // Sign-out: Home goes, the app drops the user's entries.
         router.go(RoutePaths.welcome);
@@ -907,8 +908,8 @@ void main() {
         await settle(tester);
 
         expect(
-          _meter(tester, CareNeed.food),
-          closeTo(level, 0.005),
+          needMeterLevel(tester, CareNeed.food),
+          _foodAfter(meal, now),
           reason: '$meal',
         );
       }

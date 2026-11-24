@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:belly_buddy/models/insight_progress.dart';
+import 'package:belly_buddy/config/constants.dart';
+
 import 'package:belly_buddy/models/insights.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 import 'package:belly_buddy/services/buddy/care_meters.dart';
@@ -8,14 +9,20 @@ import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/services/buddy/log_moment.dart';
 
 import '../../helpers/fakes.dart';
+import '../../helpers/fixtures.dart';
 
 DateTime _t(int h, [int d = 23]) => DateTime(2026, 11, d, h);
 
 final _now = _t(14);
 
+/// Trinken's level now after a drink at [last] (its math is
+/// care_meters_test's).
+double _drinkAt14(DateTime last) =>
+    meterLevel(last, _now, AppConstants.careDrinkDrain);
+
 void main() {
   group('logMomentFor: the level before and with the entry', () {
-    test('drink last at 13:00, logged now: from 0.717 to full', () {
+    test('drink last at 13:00, logged now: from its level to full', () {
       final m = logMomentFor(
         kind: EntryKind.drink,
         trackedAt: _now,
@@ -23,8 +30,8 @@ void main() {
         now: _now,
       );
       expect(m.need, CareNeed.drink);
-      expect(m.from, closeTo(0.717, 0.005));
-      expect(m.to, closeTo(1.0, 0.005));
+      expect(m.from, _drinkAt14(_t(13)));
+      expect(m.to, 1.0);
     });
 
     test('a back-dated entry older than the last changes nothing', () {
@@ -34,7 +41,7 @@ void main() {
         care: CareLog(lastDrinkAt: _t(13)),
         now: _now,
       );
-      expect(m.from, closeTo(0.717, 0.005));
+      expect(m.from, _drinkAt14(_t(13)));
       expect(m.to, m.from);
     });
 
@@ -107,17 +114,8 @@ void main() {
   });
 
   group("logMomentFor: the Buddy's feedback line", () {
-    Insights insights(int days, int gutFeelings) => Insights(
-      progress: InsightProgress(
-        activeDays: days,
-        gutFeelingEntries: gutFeelings,
-      ),
-      calendar: const [],
-      goodDays: const DayColumn(days: 0),
-      hardDays: const DayColumn(days: 0),
-      noticed: const [],
-      pick: const NothingYetPick(),
-    );
+    Insights insights(int days, int gutFeelings) =>
+        lockedInsights(activeDays: days, gutFeelings: gutFeelings);
 
     String? line({
       Insights? insights,

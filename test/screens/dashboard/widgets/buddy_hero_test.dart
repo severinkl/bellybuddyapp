@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 
+import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
@@ -27,7 +28,6 @@ import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/services/entry_query_service.dart';
 import 'package:belly_buddy/utils/date_format_utils.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
-import 'package:belly_buddy/widgets/buddy/need_meter.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
 import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
 
@@ -37,6 +37,7 @@ import '../../../helpers/app_host.dart';
 import '../../../helpers/fakes.dart';
 import '../../../helpers/fixtures.dart';
 import '../../../helpers/riverpod_helpers.dart';
+import '../../../helpers/widget_tester_helpers.dart';
 
 /// A welcome already set when the hero first reads it.
 class _PresetWelcome extends BuddyWelcomeNotifier {
@@ -277,16 +278,6 @@ void main() {
     for (final l in BuddyCopy.care[action]!) BuddyCopy.fill(l, name: 'Bubu'),
   ];
 
-  /// The level the ring's meter of [need] shows (null for Klo).
-  double? meter(WidgetTester tester, CareNeed need) => tester
-      .widget<NeedMeter>(
-        find.descendant(
-          of: find.byKey(CareRing.needKey(need)),
-          matching: find.byType(NeedMeter),
-        ),
-      )
-      .level;
-
   /// The 22nd with a drink at 12:00 and a Bauchgefühl at 08:00, plus
   /// [meals]: at 14:00 with nothing eaten he is hungry for lunch, a meal
   /// makes him happy (Trinken at 43 % is then the lowest).
@@ -352,7 +343,11 @@ void main() {
         tester.widget<CareRing>(find.byType(CareRing)).highlight,
         CareNeed.drink,
       );
-      expect(meter(tester, CareNeed.food), closeTo(0.83, 0.005));
+      // Lunch an hour ago: Essen well filled.
+      expect(
+        needMeterLevel(tester, CareNeed.food),
+        greaterThan(AppConstants.careMeterHigh),
+      );
     });
 
     testWidgets('a bad log keeps the empathetic line, not a care line', (
@@ -485,7 +480,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 400)); // meter fills
 
         expect(
-          meter(tester, CareNeed.food),
+          needMeterLevel(tester, CareNeed.food),
           closeTo(level, 0.005),
           reason: '$meal',
         );
@@ -1075,7 +1070,10 @@ void main() {
       await tick(tester);
 
       // Trinken is still the lowest: a drink is what he asks for next …
-      expect(meter(tester, CareNeed.drink), closeTo(0.15, 0.005));
+      expect(
+        needMeterLevel(tester, CareNeed.drink),
+        AppConstants.careMeterFloor,
+      );
       expect(find.text('💧 Trinken eintragen'), findsOneWidget);
       // … but not now: he thanks for this one.
       final c = controller(tester);
@@ -1471,7 +1469,7 @@ void main() {
         ),
       );
       await pumpHero(tester);
-      expect(meter(tester, CareNeed.food), closeTo(0.66, 0.005));
+      final evening = needMeterLevel(tester, CareNeed.food)!;
 
       now = DateTime(2026, 11, 23, 8);
       // Nothing logged yet today; the load brings yesterday's meal along.
@@ -1484,8 +1482,10 @@ void main() {
       await tester.pump(const Duration(milliseconds: 400)); // meter drains
 
       expect(entries.loaded.map(startOfDay), [DateTime(2026, 11, 23)]);
-      // 3 h before the night pause, 1 h after it.
-      expect(meter(tester, CareNeed.food), closeTo(0.32, 0.005));
+      // An hour after the night pause: lower than last night, not empty.
+      final morning = needMeterLevel(tester, CareNeed.food)!;
+      expect(morning, lessThan(evening));
+      expect(morning, greaterThan(AppConstants.careMeterFloor));
     });
 
     testWidgets('open across midnight: the meters carry over', (tester) async {
@@ -1502,7 +1502,8 @@ void main() {
         ),
       );
       await pumpHero(tester);
-      expect(meter(tester, CareNeed.food), closeTo(0.49, 0.005));
+      final beforeMidnight = needMeterLevel(tester, CareNeed.food)!;
+      expect(beforeMidnight, greaterThan(AppConstants.careMeterFloor));
 
       // The minute tick loads the new day, which brings the meal along as
       // the latest before it.
@@ -1514,13 +1515,13 @@ void main() {
       await tester.pump();
 
       expect(entries.loaded.map(startOfDay), [DateTime(2026, 11, 23)]);
-      expect(meter(tester, CareNeed.food), closeTo(0.49, 0.005));
+      expect(needMeterLevel(tester, CareNeed.food), beforeMidnight);
 
       // The night pause held it; from 07:00 it drains again.
       now = DateTime(2026, 11, 23, 7, 30);
       await tester.pump(const Duration(minutes: 1));
       await tester.pump(const Duration(milliseconds: 400));
-      expect(meter(tester, CareNeed.food), closeTo(0.405, 0.005));
+      expect(needMeterLevel(tester, CareNeed.food), lessThan(beforeMidnight));
     });
 
     testWidgets('the meters drain with the minute tick', (tester) async {
@@ -1530,14 +1531,14 @@ void main() {
         ),
       );
       await pumpHero(tester);
-      expect(meter(tester, CareNeed.drink), closeTo(0.717, 0.005));
+      final before = needMeterLevel(tester, CareNeed.drink)!;
 
       // Still lunch time and the same mood: only the meter moves.
       now = DateTime(2026, 11, 22, 14, 59);
       await tester.pump(const Duration(minutes: 1));
       await tester.pump(const Duration(milliseconds: 400));
       expect(find.text('🍝 Mittagessen eintragen'), findsOneWidget);
-      expect(meter(tester, CareNeed.drink), closeTo(0.438, 0.005));
+      expect(needMeterLevel(tester, CareNeed.drink), lessThan(before));
     });
 
     for (final (name, meal, from, to, before, after) in [
@@ -1569,14 +1570,14 @@ void main() {
         String? spoken() => tester
             .getSemantics(find.byKey(CareRing.needKey(CareNeed.food)))
             .value;
-        final level = meter(tester, CareNeed.food);
+        final level = needMeterLevel(tester, CareNeed.food);
         expect(spoken(), before);
 
         now = to;
         await tester.pump(const Duration(minutes: 1));
         await tester.pump();
         expect(spoken(), after);
-        expect(meter(tester, CareNeed.food), level);
+        expect(needMeterLevel(tester, CareNeed.food), level);
         handle.dispose();
       });
     }

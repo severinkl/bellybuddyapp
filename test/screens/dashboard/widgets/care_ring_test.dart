@@ -11,7 +11,14 @@ import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/utils/gut_feeling_rating.dart';
 import 'package:belly_buddy/widgets/buddy/need_meter.dart';
 
+import '../../../helpers/widget_tester_helpers.dart';
+
 DateTime _t(int h, [int m = 0, int d = 23]) => DateTime(2026, 11, d, h, m);
+
+/// Essen's level at 14:00 after a meal at [meal] (its math is
+/// care_meters_test's).
+double _foodAt14(DateTime meal) =>
+    CareMeters.at(CareLog(lastMealAt: meal), _t(14)).food;
 
 void main() {
   var buddyTapsLog = <int>[];
@@ -72,10 +79,6 @@ void main() {
     matching: find.byType(NeedMeter),
   );
 
-  /// The level [need]'s meter shows (null for Klo).
-  double? meter(WidgetTester tester, CareNeed need) =>
-      tester.widget<NeedMeter>(meterOf(need)).level;
-
   /// The circle [need]'s meter draws (its glow reaches around it).
   Rect circle(WidgetTester tester, CareNeed need) =>
       tester.getRect(meterOf(need));
@@ -100,20 +103,19 @@ void main() {
   testWidgets('each metered need shows its level, Klo its last time', (
     tester,
   ) async {
-    await pump(
-      tester,
-      log: CareLog(
-        lastMealAt: _t(13),
-        lastDrinkAt: _t(12, 30),
-        lastGutFeelingAt: _t(8),
-        lastToiletAt: _t(11),
-      ),
+    final log = CareLog(
+      lastMealAt: _t(13),
+      lastDrinkAt: _t(12, 30),
+      lastGutFeelingAt: _t(8),
+      lastToiletAt: _t(11),
     );
+    await pump(tester, log: log);
 
-    expect(meter(tester, CareNeed.food), closeTo(0.83, 0.005));
-    expect(meter(tester, CareNeed.drink), closeTo(0.575, 0.005));
-    expect(meter(tester, CareNeed.gutFeeling), closeTo(0.7875, 0.005));
-    expect(meter(tester, CareNeed.toilet), isNull);
+    final meters = CareMeters.at(log, _t(14));
+    for (final need in meteredNeeds) {
+      expect(needMeterLevel(tester, need), meters.level(need), reason: '$need');
+    }
+    expect(needMeterLevel(tester, CareNeed.toilet), isNull);
     for (final need in CareNeed.values) {
       expect(
         find.descendant(
@@ -273,7 +275,7 @@ void main() {
     );
     expect(tester.hasRunningAnimations, isTrue);
     await tester.pump(const Duration(milliseconds: 400));
-    expect(meter(tester, CareNeed.food), closeTo(0.915, 0.005));
+    expect(needMeterLevel(tester, CareNeed.food), _foodAt14(_t(13, 30)));
   });
 
   testWidgets('a later minute updates what a bubble says without moving a '
@@ -288,7 +290,7 @@ void main() {
 
     await pump(tester, log: log, now: _t(14), settle: Duration.zero);
     expect(value(), 'zuletzt vor 7 Std');
-    expect(meter(tester, CareNeed.food), AppConstants.careMeterFloor);
+    expect(needMeterLevel(tester, CareNeed.food), AppConstants.careMeterFloor);
     expect(tester.hasRunningAnimations, isFalse);
     handle.dispose();
   });
@@ -297,7 +299,7 @@ void main() {
     tester,
   ) async {
     await pump(tester, highlight: CareNeed.drink);
-    expect(meter(tester, CareNeed.drink), AppConstants.careMeterFloor);
+    expect(needMeterLevel(tester, CareNeed.drink), AppConstants.careMeterFloor);
 
     // A drink logged: Trinken is full, the glow goes elsewhere.
     await pump(
@@ -307,9 +309,9 @@ void main() {
       settle: Duration.zero,
     );
     expect(tester.hasRunningAnimations, isTrue);
-    expect(meter(tester, CareNeed.drink), lessThan(1));
+    expect(needMeterLevel(tester, CareNeed.drink), lessThan(1));
     await tester.pump(const Duration(milliseconds: 400));
-    expect(meter(tester, CareNeed.drink), 1);
+    expect(needMeterLevel(tester, CareNeed.drink), 1);
   });
 
   testWidgets('reduced motion: a new level shows at once', (tester) async {
@@ -317,14 +319,14 @@ void main() {
         const FakeAccessibilityFeatures(disableAnimations: true);
     addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
     await pump(tester, log: CareLog(lastMealAt: _t(13)));
-    expect(meter(tester, CareNeed.food), closeTo(0.83, 0.005));
+    expect(needMeterLevel(tester, CareNeed.food), _foodAt14(_t(13)));
 
     await pump(
       tester,
       log: CareLog(lastMealAt: _t(13, 30)),
       settle: Duration.zero,
     );
-    expect(meter(tester, CareNeed.food), closeTo(0.915, 0.005));
+    expect(needMeterLevel(tester, CareNeed.food), _foodAt14(_t(13, 30)));
     expect(tester.binding.hasScheduledFrame, isFalse);
   });
 

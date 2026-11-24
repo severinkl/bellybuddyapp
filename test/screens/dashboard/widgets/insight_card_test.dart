@@ -13,28 +13,35 @@ import 'package:belly_buddy/screens/dashboard/widgets/journey_dots.dart';
 import 'package:belly_buddy/widgets/common/insight_progress_row.dart';
 
 import '../../../helpers/app_host.dart';
+import '../../../helpers/fixtures.dart';
 
-/// The card on a Home-like scrolling page, with `/patterns` stubbed.
+/// The card on a Home-like scrolling page, with `/patterns` stubbed; not
+/// [scrolling], it must fit the screen as it is.
 Future<GoRouter> _pump(
   WidgetTester tester,
   AsyncValue<Insights> insights, {
   double textScale = 1,
   bool? journey = false,
   Widget? journeyReward,
+  bool scrolling = true,
 }) async {
+  final card = InsightCard(
+    insights: insights,
+    journey: journey,
+    journeyReward: journeyReward,
+  );
+  const padding = EdgeInsets.all(AppConstants.spacingLg);
   final router = GoRouter(
     routes: [
       GoRoute(
         path: '/',
         builder: (_, _) => Scaffold(
-          body: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppConstants.spacingLg),
-            child: InsightCard(
-              insights: insights,
-              journey: journey,
-              journeyReward: journeyReward,
-            ),
-          ),
+          body: scrolling
+              ? SingleChildScrollView(padding: padding, child: card)
+              : Padding(
+                  padding: padding,
+                  child: Align(alignment: Alignment.topCenter, child: card),
+                ),
         ),
       ),
       ...stubRoutes([RoutePaths.patterns]),
@@ -59,9 +66,8 @@ Insights _insights(
   pick: pick,
 );
 
-AsyncValue<Insights> _locked(int days, int gutFeelings) => AsyncData(
-  _insights(InsightProgress(activeDays: days, gutFeelingEntries: gutFeelings)),
-);
+AsyncValue<Insights> _locked(int days, int gutFeelings) =>
+    AsyncData(lockedInsights(activeDays: days, gutFeelings: gutFeelings));
 
 const _unlocked = InsightProgress(activeDays: 12, gutFeelingEntries: 11);
 
@@ -97,6 +103,14 @@ const _nothingYetLine =
     'mehr.';
 
 final _card = find.byKey(InsightCard.cardKey);
+
+/// The whole card lies on the 375×667 screen.
+void _expectOnScreen(WidgetTester tester) {
+  final card = tester.getRect(_card);
+  expect(card.left, greaterThanOrEqualTo(0));
+  expect(card.right, lessThanOrEqualTo(375));
+  expect(card.bottom, lessThanOrEqualTo(667));
+}
 
 Future<void> _expectOpensPatterns(WidgetTester tester) async {
   await tester.tap(_card);
@@ -209,10 +223,12 @@ void main() {
         _journeyInsights(7, 1),
         journey: true,
         textScale: 1.3,
+        scrolling: false,
       );
 
       expect(tester.takeException(), isNull);
       expect(find.byType(JourneyDots), findsOneWidget);
+      _expectOnScreen(tester);
     });
   });
 
@@ -440,10 +456,11 @@ void main() {
           addTearDown(tester.view.resetPhysicalSize);
           addTearDown(tester.view.resetDevicePixelRatio);
 
-          await _pump(tester, insights, textScale: 1.3);
+          await _pump(tester, insights, textScale: 1.3, scrolling: false);
 
           expect(_card, findsOneWidget);
           expect(tester.takeException(), isNull);
+          _expectOnScreen(tester);
         });
       }
     });

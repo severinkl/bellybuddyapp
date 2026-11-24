@@ -11,25 +11,9 @@ import 'package:belly_buddy/widgets/common/weekly_tips_switch.dart';
 import '../../../helpers/fixtures.dart';
 import '../../../helpers/riverpod_helpers.dart';
 
-/// The page around the card: Entdecken scrolls, so [scroll] is the default.
-class _Wrap extends StatelessWidget {
-  const _Wrap({required this.scroll, required this.child});
-  final bool scroll;
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final padded = Padding(padding: const EdgeInsets.all(16), child: child);
-    return scroll ? SingleChildScrollView(child: padded) : padded;
-  }
-}
-
 void main() {
-  Future<void> pump(
-    WidgetTester tester, {
-    double textScale = 1,
-    bool scroll = true,
-  }) async {
+  /// The card above the switch, as on Entdecken (a scroll view).
+  Future<void> pump(WidgetTester tester, {double textScale = 1}) async {
     tester.view.physicalSize = const Size(375, 667);
     tester.view.devicePixelRatio = 1;
     tester.platformDispatcher.textScaleFactorTestValue = textScale;
@@ -41,8 +25,8 @@ void main() {
         child: MaterialApp(
           theme: AppTheme.theme,
           home: const Scaffold(
-            body: _Wrap(
-              scroll: true,
+            body: SingleChildScrollView(
+              padding: EdgeInsets.all(16),
               child: Column(
                 children: [
                   ExampleTipCard(),

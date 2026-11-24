@@ -5,34 +5,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'package:belly_buddy/models/insight_progress.dart';
 import 'package:belly_buddy/models/insights.dart';
 import 'package:belly_buddy/providers/insights_provider.dart';
 import 'package:belly_buddy/providers/journey_provider.dart';
 
+import '../helpers/fixtures.dart';
 import '../helpers/riverpod_helpers.dart';
-
-Future<void> settle() async {
-  for (var i = 0; i < 20; i++) {
-    await Future<void>.delayed(Duration.zero);
-  }
-}
-
-Insights _insights({required int days, required int gutFeelings}) => Insights(
-  progress: InsightProgress(activeDays: days, gutFeelingEntries: gutFeelings),
-  calendar: const [],
-  goodDays: const DayColumn(days: 0),
-  hardDays: const DayColumn(days: 0),
-  noticed: const [],
-  pick: const NothingYetPick(),
-);
-
-class _FakeInsights extends InsightsNotifier {
-  _FakeInsights(this._value);
-  final FutureOr<Insights> _value;
-  @override
-  Future<Insights> build() async => _value;
-}
 
 /// A never-completing load.
 class _LoadingInsights extends InsightsNotifier {
@@ -46,7 +24,7 @@ class _RefreshingInsights extends InsightsNotifier {
   final next = Completer<Insights>();
 
   @override
-  Future<Insights> build() async => _insights(days: 2, gutFeelings: 0);
+  Future<Insights> build() async => lockedInsights(gutFeelings: 0);
 
   void refreshing() {
     state = const AsyncLoading<Insights>().copyWithPrevious(state);
@@ -61,9 +39,14 @@ ProviderContainer _container(InsightsNotifier Function() insights) =>
       overrides: [_user.override, insightsProvider.overrideWith(insights)],
     );
 
+/// A container whose insights are [insights], loaded.
+ProviderContainer _seeded(Insights insights) => ProviderContainer.test(
+  overrides: [_user.override, insightsProviderSeededWith(insights)],
+);
+
 Future<bool?> _decide(ProviderContainer c) async {
   c.listen(journeyProvider, (_, _) {});
-  await settle();
+  await pumpEventQueue();
   return c.read(journeyProvider);
 }
 
@@ -74,45 +57,35 @@ void main() {
       (await SharedPreferences.getInstance()).getBool(key);
 
   test('a new user (2 days, locked) gets the journey, stored', () async {
-    final c = _container(
-      () => _FakeInsights(_insights(days: 2, gutFeelings: 0)),
-    );
+    final c = _seeded(lockedInsights(activeDays: 2, gutFeelings: 0));
 
     expect(await _decide(c), isTrue);
     expect(await stored('insight_journey_u1'), isTrue);
   });
 
   test('a user past day 7 (9 days, 1 Bauchgefühl) gets none', () async {
-    final c = _container(
-      () => _FakeInsights(_insights(days: 9, gutFeelings: 1)),
-    );
+    final c = _seeded(lockedInsights(activeDays: 9, gutFeelings: 1));
 
     expect(await _decide(c), isFalse);
     expect(await stored('insight_journey_u1'), isFalse);
   });
 
   test('an unlocked user gets none', () async {
-    final c = _container(
-      () => _FakeInsights(_insights(days: 7, gutFeelings: 3)),
-    );
+    final c = _seeded(lockedInsights(activeDays: 7, gutFeelings: 3));
 
     expect(await _decide(c), isFalse);
   });
 
   test('decided once: stored true stays true at 9 days', () async {
     SharedPreferences.setMockInitialValues({'insight_journey_u1': true});
-    final c = _container(
-      () => _FakeInsights(_insights(days: 9, gutFeelings: 1)),
-    );
+    final c = _seeded(lockedInsights(activeDays: 9, gutFeelings: 1));
 
     expect(await _decide(c), isTrue);
   });
 
   test('decided once: stored false stays false at 2 days', () async {
     SharedPreferences.setMockInitialValues({'insight_journey_u1': false});
-    final c = _container(
-      () => _FakeInsights(_insights(days: 2, gutFeelings: 0)),
-    );
+    final c = _seeded(lockedInsights(activeDays: 2, gutFeelings: 0));
 
     expect(await _decide(c), isFalse);
   });
@@ -133,20 +106,18 @@ void main() {
 
     expect(await _decide(c), isNull);
 
-    insights.next.complete(_insights(days: 9, gutFeelings: 1));
-    await settle();
+    insights.next.complete(lockedInsights(activeDays: 9, gutFeelings: 1));
+    await pumpEventQueue();
     expect(c.read(journeyProvider), isFalse);
   });
 
   test('per user: user B is decided under its own key', () async {
     SharedPreferences.setMockInitialValues({'insight_journey_u1': false});
-    final c = _container(
-      () => _FakeInsights(_insights(days: 2, gutFeelings: 0)),
-    );
+    final c = _seeded(lockedInsights(activeDays: 2, gutFeelings: 0));
     expect(await _decide(c), isFalse);
 
     _user.set(c, 'u2');
-    await settle();
+    await pumpEventQueue();
 
     expect(c.read(journeyProvider), isTrue);
     expect(await stored('insight_journey_u2'), isTrue);
@@ -157,8 +128,8 @@ void main() {
     final c = ProviderContainer.test(
       overrides: [
         SwitchableUserId(null).override,
-        insightsProvider.overrideWith(
-          () => _FakeInsights(_insights(days: 2, gutFeelings: 0)),
+        insightsProviderSeededWith(
+          lockedInsights(activeDays: 2, gutFeelings: 0),
         ),
       ],
     );

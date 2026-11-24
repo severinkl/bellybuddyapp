@@ -9,8 +9,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:belly_buddy/screens/trackers/gut_feeling/gut_feeling_tracker_screen.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
-import 'package:belly_buddy/models/insight_progress.dart';
-import 'package:belly_buddy/models/insights.dart';
 import 'package:belly_buddy/providers/care_log_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/insights_provider.dart';
@@ -27,6 +25,7 @@ import 'package:belly_buddy/widgets/common/mascot_image.dart';
 import 'package:belly_buddy/config/constants.dart';
 
 import '../../../helpers/fakes.dart';
+import '../../../helpers/fixtures.dart';
 import '../../../helpers/layout_checks.dart';
 import '../../../helpers/riverpod_helpers.dart';
 
@@ -35,18 +34,6 @@ List<Override> _overrides([FakeEntryRepository? entries]) => [
   buddyRepositoryProvider.overrideWithValue(FakeBuddyRepository()),
   currentUserIdProvider.overrideWithValue('test-user'),
 ];
-
-class _LockedInsights extends InsightsNotifier {
-  @override
-  Future<Insights> build() async => const Insights(
-    progress: InsightProgress(activeDays: 2, gutFeelingEntries: 1),
-    calendar: [],
-    goodDays: DayColumn(days: 0),
-    hardDays: DayColumn(days: 0),
-    noticed: [],
-    pick: NothingYetPick(),
-  );
-}
 
 void main() {
   group('GutFeelingTrackerScreen', () {
@@ -208,7 +195,7 @@ void main() {
           buddyClockProvider.overrideWithValue(
             () => DateTime(2026, 11, 23, 12),
           ),
-          insightsProvider.overrideWith(_LockedInsights.new),
+          insightsProviderSeededWith(lockedInsights()),
           careLogProvider.overrideWithValue(const CareLog()),
           buddyProvider.overrideWith(
             () => FakeBuddyNotifier(() => buddyStatus(streak: 4)),
