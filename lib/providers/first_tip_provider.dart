@@ -39,8 +39,9 @@ enum FirstTipAcceptance {
 class FirstTipNotifier extends Notifier<void> {
   static const _log = AppLogger('FirstTip');
 
-  /// The [accept] on its way: a second call (a double tap) joins it.
-  Future<FirstTipAcceptance>? _accepting;
+  /// The [accept] on its way and its user: a second call for the same
+  /// user (a double tap) joins it; another user's makes its own.
+  ({String? userId, Future<FirstTipAcceptance> done})? _accepting;
 
   @override
   void build() {}
@@ -55,11 +56,20 @@ class FirstTipNotifier extends Notifier<void> {
   /// profile is missing (then too). [FirstTipAcceptance.failed] when the
   /// opt-in write fails (no AI call with the user's data without it) or
   /// another user signed in meanwhile.
-  Future<FirstTipAcceptance> accept() =>
-      _accepting ??= _accept().whenComplete(() => _accepting = null);
-
-  Future<FirstTipAcceptance> _accept() async {
+  Future<FirstTipAcceptance> accept() {
     final userId = ref.read(currentUserIdProvider);
+    if (_accepting case (userId: final user, :final done) when user == userId) {
+      return done;
+    }
+    final done = _accept(userId);
+    _accepting = (userId: userId, done: done);
+    done.whenComplete(() {
+      if (_accepting?.done == done) _accepting = null;
+    }).ignore();
+    return done;
+  }
+
+  Future<FirstTipAcceptance> _accept(String? userId) async {
     if (userId == null || ref.read(journeyRewardsProvider) == null) {
       _log.warn('accept: no user or journey rewards');
       return FirstTipAcceptance.notReady;

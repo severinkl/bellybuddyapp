@@ -464,6 +464,32 @@ void main() {
       },
     );
 
+    test('another user\'s „Ja" while the first user\'s is on its way: its '
+        'own, not joined to it', () async {
+      captureLogs();
+      final optIn = Completer<void>();
+      profiles.gate = optIn;
+      tips.firstTipSet = _set;
+      final c = await stored();
+
+      final first = accept(c);
+      await _settle();
+      _user.set(c, 'u2');
+      await _settle();
+      expect(answerOf(rewardsOf(c)), open);
+      final second = accept(c);
+      await _settle();
+      optIn.complete();
+
+      expect(await first, FirstTipAcceptance.failed);
+      expect(await second, FirstTipAcceptance.started);
+      await _settle();
+      expect(profiles.weeklyTipsWrites, [true, true]);
+      expect(tips.firstTipRequests, hasLength(1));
+      expect(answerOf(await storedFor('u1')), open);
+      expect((await storedFor('u2'))!.tipOffer, TipOffer.accepted);
+    });
+
     test('a switch during the opt-in write: false, no request, nothing '
         'stored for the new user', () async {
       captureLogs();
