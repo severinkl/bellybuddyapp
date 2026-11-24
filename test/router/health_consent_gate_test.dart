@@ -97,6 +97,8 @@ void main() {
       expect(container.read(healthConsentRequiredProvider), isTrue);
       expect(_currentPath(container), RoutePaths.healthConsent);
       expect(find.byType(HealthConsentScreen), findsOneWidget);
+      // A first consent: no word of an update.
+      expect(find.textContaining('aktualisiert'), findsNothing);
 
       final router = container.read(routerProvider);
       for (final route in [
@@ -126,6 +128,51 @@ void main() {
 
       expect(_currentPath(container), RoutePaths.healthConsent);
       expect(find.byType(HealthConsentScreen), findsOneWidget);
+    });
+
+    testWidgets('a consent to the policy of 22.11.2026 is asked again, with '
+        'the update line; accepting stores 2026-11-24 and lifts the gate', (
+      tester,
+    ) async {
+      final profiles = _profilesWith(
+        testUserProfile(privacyPolicyVersion: '2026-11-22'),
+      );
+      final container = await _pumpHost(tester, _overrides(profiles: profiles));
+
+      expect(container.read(healthConsentRequiredProvider), isTrue);
+      expect(_currentPath(container), RoutePaths.healthConsent);
+      expect(
+        find.text(
+          'Wir haben unsere Datenschutzerklärung aktualisiert '
+          '(Stand 24.11.2026).',
+        ),
+        findsOneWidget,
+      );
+
+      await tester.ensureVisible(
+        find.byKey(HealthConsentScreen.consentCheckboxKey),
+      );
+      await tester.tap(find.byKey(HealthConsentScreen.consentCheckboxKey));
+      await tester.pump();
+      await tester.ensureVisible(
+        find.byKey(HealthConsentScreen.acceptButtonKey),
+      );
+      await tester.tap(find.byKey(HealthConsentScreen.acceptButtonKey));
+      // While the screen leaves, the line stays: the text does not jump.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.byType(HealthConsentScreen), findsOneWidget);
+      expect(find.text(HealthConsentScreen.policyUpdated), findsOneWidget);
+      await tester.pumpAndSettle();
+
+      expect(profiles.acceptHealthConsentCount, 1);
+      expect(profiles.storedProfile!.privacyPolicyVersion, '2026-11-24');
+      expect(container.read(healthConsentRequiredProvider), isFalse);
+      expect(_currentPath(container), RoutePaths.dashboard);
+
+      container.read(routerProvider).go(RoutePaths.diary);
+      await tester.pumpAndSettle();
+      expect(_currentPath(container), RoutePaths.diary);
     });
 
     testWidgets('a current consent passes and /health-consent is '

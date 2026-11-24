@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/health_consent_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../router/route_names.dart';
+import '../../utils/date_format_utils.dart';
 import '../../utils/logger.dart';
 import '../../widgets/common/bb_button.dart';
 import '../../widgets/common/mascot_image.dart';
@@ -15,12 +17,18 @@ import 'widgets/health_consent_content.dart';
 /// Asks a signed-in user for explicit consent (GDPR Art. 9) to the
 /// processing of their health data. The router keeps the user here while
 /// `healthConsentRequiredProvider` is set; the only ways out are consenting,
-/// signing out, or deleting the account.
+/// signing out, or deleting the account. A user who consented to an older
+/// policy version first reads that the policy changed.
 class HealthConsentScreen extends ConsumerStatefulWidget {
   const HealthConsentScreen({super.key});
 
   static const consentCheckboxKey = HealthConsentContent.checkboxKey;
   static const acceptButtonKey = Key('health_consent_accept_button');
+
+  /// Above the copy when the user consented to an older policy version.
+  static String get policyUpdated =>
+      'Wir haben unsere Datenschutzerklärung aktualisiert (Stand '
+      '${formatDateShort(DateTime.parse(AppConstants.privacyPolicyVersion))}).';
 
   @override
   ConsumerState<HealthConsentScreen> createState() =>
@@ -32,6 +40,11 @@ class _HealthConsentScreenState extends ConsumerState<HealthConsentScreen> {
 
   bool _consentChecked = false;
   bool _isSaving = false;
+
+  /// Whether [HealthConsentScreen.policyUpdated] shows. Once shown it stays:
+  /// the accepted consent makes the profile current while the screen is
+  /// still leaving, and the text must not jump then.
+  bool _policyUpdated = false;
 
   Future<void> _accept() async {
     if (_isSaving) return;
@@ -72,6 +85,11 @@ class _HealthConsentScreenState extends ConsumerState<HealthConsentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (ref.watch(
+      profileProvider.select((p) => consentedToOlderPolicy(p.value)),
+    )) {
+      _policyUpdated = true;
+    }
     return PopScope(
       canPop: false,
       child: Scaffold(
@@ -98,6 +116,17 @@ class _HealthConsentScreenState extends ConsumerState<HealthConsentScreen> {
                   ),
                 ),
                 AppConstants.gap16,
+                if (_policyUpdated) ...[
+                  Text(
+                    HealthConsentScreen.policyUpdated,
+                    style: const TextStyle(
+                      fontSize: AppTheme.fontSizeBody,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.foreground,
+                    ),
+                  ),
+                  AppConstants.gap12,
+                ],
                 HealthConsentContent(
                   checked: _consentChecked,
                   onChanged: _isSaving

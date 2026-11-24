@@ -13,6 +13,12 @@ bool needsHealthConsent(UserProfile? profile) {
       profile.privacyPolicyVersion != AppConstants.privacyPolicyVersion;
 }
 
+/// Whether [profile] consented to an older privacy policy version than the
+/// current one: the consent screen then asks again and says the policy
+/// changed. False for a first-time consent.
+bool consentedToOlderPolicy(UserProfile? profile) =>
+    profile?.healthConsentAt != null && needsHealthConsent(profile);
+
 /// True while the signed-in user's profile is loaded and lacks a current
 /// health-data consent. The router redirect sends every location to
 /// `/health-consent` while it is set (the upgrade hard gate still wins).

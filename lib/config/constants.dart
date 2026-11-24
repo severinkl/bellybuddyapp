@@ -314,8 +314,9 @@ class AppConstants {
   /// Version of the privacy policy the health-data consent refers to. Bump it
   /// when the policy changes materially: every user whose stored
   /// `profiles.privacy_policy_version` differs is sent through the consent
-  /// gate again.
-  static const String privacyPolicyVersion = '2026-11-22';
+  /// gate again. It equals core's `PRIVACY_POLICY_VERSION` (the public page's
+  /// „Stand") and moves with it.
+  static const String privacyPolicyVersion = '2026-11-24';
 
   /// The myfodmap blog feed behind Wissen, how long a fetched copy counts as
   /// fresh, and how long a fetch may take.
