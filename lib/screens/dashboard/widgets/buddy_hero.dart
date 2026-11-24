@@ -146,6 +146,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// sheet); mood lines wait meanwhile.
   bool _cueRunning = false;
 
+  /// A cue of the running queue played (not every one was withdrawn).
+  bool _cuePlayed = false;
+
   /// A log's follow-up is queued and not said yet.
   bool _followUpPending = false;
 
@@ -525,6 +528,10 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _markPlayed();
     if (_cues.isEmpty) {
       _cueRunning = false;
+      // All withdrawn (a lone „Neue Tipps" whose set was opened): the
+      // greeting they replaced is still due.
+      if (!_cuePlayed) _sayMoodLine();
+      _cuePlayed = false;
       return;
     }
     _cueRunning = true;
@@ -532,6 +539,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     // Withdrawn meanwhile (the set opened, the weekly tips switched on): it
     // ends unplayed.
     if (!_stillApplies(cue)) return _nextCue();
+    _cuePlayed = true;
     switch (cue) {
       case _Cue.welcome:
         _say(_welcome);

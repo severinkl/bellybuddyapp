@@ -774,8 +774,8 @@ void main() {
       expect(buddy.shown, [BuddyAnnouncement.tipsArrived]);
     });
 
-    testWidgets('tipsArrived whose set was seen before it played says '
-        'nothing', (tester) async {
+    testWidgets('tipsArrived whose set was seen before it played: no '
+        'celebration, he greets with his line instead', (tester) async {
       // unseenTipSet: null, the set was opened meanwhile.
       buddy = _FakeBuddy(
         () => _status(announcements: const [BuddyAnnouncement.tipsArrived]),
@@ -789,6 +789,8 @@ void main() {
       }
       expect(c.currentAction, isNot(BuddyAction.celebrate));
       expect(buddy.shown, [BuddyAnnouncement.tipsArrived]);
+      // 14:00, nothing eaten: lunch.
+      expect(careLines(CareAction.lunch), contains(c.bubble));
     });
 
     testWidgets('weeklyTipsOffer → wave, then the sheet; „Zu den Tipps" '
