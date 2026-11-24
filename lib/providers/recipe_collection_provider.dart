@@ -257,8 +257,8 @@ Future<void> refreshSavedRecipes(WidgetRef ref) => Future.wait([
 /// the own recipes; saved ones join when they are there. Without own
 /// recipes the list is the saved ones, so it waits for them: never „Noch
 /// keine Rezepte" flashing for a user whose saved ones are on their way.
-/// Failed, they are left out (the screens add a quiet line), so „Erstes
-/// Rezept erstellen" stays, e.g. on a backend without the collection.
+/// Failed (e.g. offline), they are left out (the screens add a quiet
+/// line), so „Erstes Rezept erstellen" stays.
 final myRecipeItemsProvider = Provider<AsyncValue<List<MyRecipeItem>>>((ref) {
   final saved = ref.watch(savedRecipesProvider);
   final own = ref.watch(userRecipesProvider);

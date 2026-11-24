@@ -602,10 +602,6 @@ class FakeUserRecipeRepository implements UserRecipeRepository {
 
   final List<UserRecipe> _recipes;
 
-  /// False: a backend without core #11's columns, which saves a recipe
-  /// without its steps, amounts and origin.
-  bool newColumns = true;
-
   void seedRecipes(List<UserRecipe> recipes) {
     _recipes
       ..clear()
@@ -640,9 +636,9 @@ class FakeUserRecipeRepository implements UserRecipeRepository {
       title: title,
       ingredients: ingredients,
       imageUrl: imageUrl,
-      instructions: newColumns ? instructions : const [],
-      ingredientAmounts: newColumns ? ingredientAmounts : null,
-      adaptedFromRecipeId: newColumns ? adaptedFromRecipeId : null,
+      instructions: instructions,
+      ingredientAmounts: ingredientAmounts,
+      adaptedFromRecipeId: adaptedFromRecipeId,
     );
     _recipes.add(created);
     return created;
@@ -666,8 +662,8 @@ class FakeUserRecipeRepository implements UserRecipeRepository {
       title: title,
       ingredients: ingredients,
       imageUrl: imageUrl,
-      instructions: newColumns ? instructions ?? old.instructions : const [],
-      ingredientAmounts: newColumns ? ingredientAmounts : null,
+      instructions: instructions ?? old.instructions,
+      ingredientAmounts: ingredientAmounts,
       adaptedFromRecipeId: old.adaptedFromRecipeId,
     );
     _recipes[i] = next;

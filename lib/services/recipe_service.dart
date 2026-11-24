@@ -103,7 +103,7 @@ class RecipeService {
   }
 
   /// Core's intolerance table (`app_config.intolerance_rules`). Null when the
-  /// row is missing (a backend without core #11) or isn't a JSON object.
+  /// row is missing or isn't a JSON object.
   Future<IntoleranceRules?> fetchIntoleranceRules() async {
     try {
       final row = await _client

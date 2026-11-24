@@ -102,12 +102,6 @@ abstract final class RecipeCopy {
     AdaptFailure.notFound => 'Dieses Rezept kann ich nicht finden.',
   };
 
-  /// When a recipe was saved without its steps (a backend that can't keep
-  /// them yet).
-  static const stepsNotSaved =
-      'Die Schritte kann ich gerade noch nicht speichern – der Rest ist '
-      'gespeichert.';
-
   /// When an adapted recipe is longer than an own recipe may be.
   static const adaptTooLong =
       'Das Rezept ist zu lang zum Speichern. Als Essen eintragen kannst du '

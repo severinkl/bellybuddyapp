@@ -1,8 +1,9 @@
+import 'dart:io' show SocketException;
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/models/recipe.dart';
@@ -240,19 +241,13 @@ void main() {
     expect(find.byType(RecipeCollectionCard), findsOneWidget);
   });
 
-  testWidgets('a backend without the collection: no own recipes still '
-      'offers the first one, with a quiet line and a retry', (tester) async {
+  testWidgets('saved recipes offline: no own recipes still offers the '
+      'first one, with a quiet line and a retry', (tester) async {
     saved('g', 'Gemerktes Curry');
-    // Before core #11: the collection's and the favourites' reads fail.
+    // Offline: the collection's and the favourites' reads fail.
     collection
-      ..collectionError = const PostgrestException(
-        message: 'column recipes.meal_types does not exist',
-        code: '42703',
-      )
-      ..favoritesError = const PostgrestException(
-        message: 'offline',
-        code: 'PGRST000',
-      );
+      ..collectionError = const SocketException('Failed host lookup')
+      ..favoritesError = const SocketException('Failed host lookup');
     await pump(tester, recipes: const []);
 
     expect(find.text('Noch keine Rezepte'), findsOneWidget);

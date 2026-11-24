@@ -4,8 +4,8 @@ import '../../../config/app_theme.dart';
 import '../../../services/recipes/recipe_copy.dart';
 
 /// „Meine Rezepte"'s quiet line when the saved recipes couldn't be loaded
-/// (e.g. a backend without the collection), with its retry. The own
-/// recipes and „Erstes Rezept erstellen" stay above it.
+/// (e.g. offline), with its retry. The own recipes and „Erstes Rezept
+/// erstellen" stay above it.
 class SavedRecipesFailedNote extends StatelessWidget {
   const SavedRecipesFailedNote({
     super.key,
