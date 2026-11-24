@@ -141,6 +141,9 @@ class AppConstants {
   /// A need meter's ring thickness, as a share of its diameter.
   static const double careMeterStrokeShare = 0.085;
 
+  /// The share of a need meter its icon (emoji) may take.
+  static const double careMeterIconShare = 0.5;
+
   // Dashboard care ring: its diameter (at most this, this share of the
   // width and of the screen height, at least the minimum) and the Buddy's
   // box inside it

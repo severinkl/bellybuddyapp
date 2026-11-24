@@ -39,7 +39,7 @@ class NeedMeter extends StatelessWidget {
         painter: NeedMeterPainter(need: need, level: level),
         child: Center(
           child: SizedBox.square(
-            dimension: size * 0.5,
+            dimension: size * AppConstants.careMeterIconShare,
             child: FittedBox(fit: BoxFit.scaleDown, child: child),
           ),
         ),

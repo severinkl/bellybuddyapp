@@ -222,9 +222,8 @@ abstract final class CareCopy {
   /// latest one was („zuletzt vor 2 Std, Mittel").
   static String spoken(CareNeed need, CareLog log, DateTime now) {
     if (need == CareNeed.toilet) {
-      return log.loggedOn(need, now)
-          ? 'zuletzt ${looLine(log, now)}'
-          : notToday;
+      final line = looLine(log, now);
+      return line == notToday ? line : 'zuletzt $line';
     }
     final last = log.lastAt(need);
     if (last == null) return notYet;

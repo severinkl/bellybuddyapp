@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import '../../models/gut_feeling_entry.dart';
 import '../../models/insight_progress.dart';
 import '../../models/insight_rules.dart';
@@ -84,10 +86,10 @@ Insights computeInsights(InsightSource source, DateTime now) {
     for (final t in source.activityTimes)
       if (inWindow(t)) _localDay(t),
   };
-  final journeyDays = (activeDays.toList()..sort()).reversed
-      .take(InsightRules.daysNeeded)
-      .toList()
-      .reversed;
+  final sortedDays = activeDays.toList()..sort();
+  final journeyDays = sortedDays.skip(
+    math.max(0, sortedDays.length - InsightRules.daysNeeded),
+  );
 
   return Insights(
     progress: InsightProgress(

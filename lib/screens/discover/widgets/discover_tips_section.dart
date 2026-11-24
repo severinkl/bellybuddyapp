@@ -38,7 +38,10 @@ class DiscoverTipsSection extends StatelessWidget {
     if (weeklyTips != null && (tips.value?.isEmpty ?? false)) {
       return weeklyTips
           ? const DiscoverNote(key: DiscoverTipsCard.cardKey, emptyWhileOn)
-          : const _OptInWithExample();
+          : const Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: _optInWithExample,
+            );
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -56,13 +59,3 @@ const _optInWithExample = [
   AppConstants.gap12,
   BbCard(key: DiscoverTipsSection.optInKey, child: WeeklyTipsSwitch()),
 ];
-
-class _OptInWithExample extends StatelessWidget {
-  const _OptInWithExample();
-
-  @override
-  Widget build(BuildContext context) => const Column(
-    crossAxisAlignment: CrossAxisAlignment.stretch,
-    children: _optInWithExample,
-  );
-}

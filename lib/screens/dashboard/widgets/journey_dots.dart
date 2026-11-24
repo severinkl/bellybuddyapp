@@ -128,15 +128,10 @@ class _JourneyDotsState extends State<JourneyDots>
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: day == null ? AppTheme.background : AppTheme.primary,
-        border: day == null
-            ? Border.all(
-                color: AppTheme.border,
-                width: AppConstants.borderWidthMd,
-              )
-            : Border.all(
-                color: AppTheme.buddyOutline,
-                width: AppConstants.borderWidthMd,
-              ),
+        border: Border.all(
+          color: day == null ? AppTheme.border : AppTheme.buddyOutline,
+          width: AppConstants.borderWidthMd,
+        ),
       ),
       child: day == null
           ? null
