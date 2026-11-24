@@ -22,6 +22,7 @@ import 'package:belly_buddy/screens/recipes/widgets/ingredient_line_view.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_collection_card.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_image.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_steps.dart';
+import 'package:belly_buddy/services/recipes/recipe_copy.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
 
 import '../../helpers/app_host.dart';
@@ -43,7 +44,7 @@ void main() {
 
   /// The loading line as the bubble draws it (its „…" glued to the word
   /// before).
-  final loadingLine = glueClosingSymbol(AdaptRecipeScreen.loading);
+  final loadingLine = glueClosingSymbol(RecipeCopy.adaptWorking);
 
   Recipe original({String? source = sourceUrl}) => testRecipe(
     title: 'Porridge mit Honig',
@@ -197,7 +198,7 @@ void main() {
     expect(repo.adaptCalls, 1);
     expect(find.byType(BuddyStage), findsOneWidget);
     expect(inBubble(find.text(loadingLine)), findsOneWidget);
-    expect(find.text(AdaptRecipeScreen.loadingSub), findsOneWidget);
+    expect(find.text(RecipeCopy.adaptWorkingSub), findsOneWidget);
     expect(moodOf(tester), BuddyMood.zen);
     expect(find.byKey(AdaptRecipeScreen.startKey), findsNothing);
     expect(find.byKey(AdaptRecipeScreen.saveKey), findsNothing);
@@ -353,7 +354,7 @@ void main() {
     testWidgets('every ingredient in the catalog: all checked', (tester) async {
       await pump(tester);
 
-      final checked = find.text(AdaptRecipeScreen.allChecked);
+      final checked = find.text(RecipeCopy.allChecked);
       expect(checked, findsOneWidget);
       expect(backgroundOf(tester, checked), AppTheme.gutFeelingGoodSoft);
     });
@@ -376,7 +377,7 @@ void main() {
       );
       expect(checked, findsOneWidget);
       expect(backgroundOf(tester, checked), AppTheme.gutFeelingNeutralSoft);
-      expect(find.text(AdaptRecipeScreen.allChecked), findsNothing);
+      expect(find.text(RecipeCopy.allChecked), findsNothing);
       expect(inLine('Sumach', find.byIcon(Icons.help_outline)), findsOne);
       // Said once.
       expect(inLine('Sumach', find.text('nicht im Katalog')), findsOneWidget);
@@ -554,7 +555,7 @@ void main() {
         answer(failure: failure);
         await pump(tester);
 
-        expect(AdaptRecipeScreen.messageFor(failure), message);
+        expect(RecipeCopy.adaptFailed(failure), message);
         expect(inBubble(find.text(message)), findsOneWidget);
         expect(moodOf(tester), BuddyMood.empathetic);
         expect(find.byType(BuddyStage), findsNothing);
@@ -636,7 +637,7 @@ void main() {
 
       expect(inSave(find.text('In Meine Rezepte gespeichert')), findsOneWidget);
       expect(inSave(find.byIcon(Icons.check)), findsOneWidget);
-      expect(find.text(AdaptRecipeScreen.saveFailed), findsNothing);
+      expect(find.text(RecipeCopy.adaptSaveFailed), findsNothing);
 
       await tester.tap(find.byKey(AdaptRecipeScreen.saveKey));
       await tester.pumpAndSettle();
@@ -671,7 +672,7 @@ void main() {
       await tester.tap(find.byKey(AdaptRecipeScreen.saveKey));
       await tester.pumpAndSettle();
 
-      expect(find.text(AdaptRecipeScreen.saveFailed), findsOneWidget);
+      expect(find.text(RecipeCopy.adaptSaveFailed), findsOneWidget);
       expect(inSave(find.text('In Meine Rezepte speichern')), findsOneWidget);
       expect(find.text('page:/recipe/rec-1'), findsNothing);
     });

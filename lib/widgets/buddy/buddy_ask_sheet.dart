@@ -3,9 +3,8 @@ import 'package:material_ui/material_ui.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../common/bb_drag_handle.dart';
-import 'buddy_controller.dart';
 import 'buddy_pose.dart';
-import 'buddy_stage.dart';
+import 'buddy_says.dart';
 
 /// Opens a sheet [builder] builds (usually a [BuddyAskSheet]) over the
 /// bottom bar too, since these open from Home's tab. Returns what it pops
@@ -24,7 +23,7 @@ Future<T?> showBuddySheet<T>(
 /// A sheet in which the Buddy asks: the drag handle, the Buddy in [mood]
 /// saying [line] (the sheet has no title of its own), and [child] below him
 /// (the answers).
-class BuddyAskSheet extends StatefulWidget {
+class BuddyAskSheet extends StatelessWidget {
   const BuddyAskSheet({
     super.key,
     required this.line,
@@ -37,25 +36,6 @@ class BuddyAskSheet extends StatefulWidget {
   final Widget child;
 
   @override
-  State<BuddyAskSheet> createState() => _BuddyAskSheetState();
-}
-
-class _BuddyAskSheetState extends State<BuddyAskSheet> {
-  late final BuddyController _buddy = BuddyController(mood: widget.mood);
-
-  @override
-  void initState() {
-    super.initState();
-    _buddy.say(widget.line, duration: null);
-  }
-
-  @override
-  void dispose() {
-    _buddy.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return SafeArea(
       child: SingleChildScrollView(
@@ -66,12 +46,13 @@ class _BuddyAskSheetState extends State<BuddyAskSheet> {
           children: [
             const BbDragHandle(color: AppTheme.border),
             AppConstants.gap16,
-            SizedBox(
+            BuddySays(
+              mood: mood,
+              line: line,
               height: AppConstants.streakSheetBuddyHeight,
-              child: BuddyStage(controller: _buddy),
             ),
             AppConstants.gap16,
-            widget.child,
+            child,
           ],
         ),
       ),

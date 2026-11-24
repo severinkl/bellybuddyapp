@@ -12,6 +12,7 @@ import 'package:belly_buddy/screens/recipes/widgets/ingredient_line_view.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_steps.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_steps_editor.dart';
 import 'package:belly_buddy/screens/trackers/meal/meal_tracker_screen.dart';
+import 'package:belly_buddy/services/recipes/recipe_copy.dart';
 import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
 import 'package:belly_buddy/widgets/common/bb_success_overlay.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -196,7 +197,7 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text(AdaptRecipeScreen.allChecked), findsOneWidget);
+    expect(find.text(RecipeCopy.allChecked), findsOneWidget);
 
     final save = find.byKey(AdaptRecipeScreen.saveKey);
     expect(

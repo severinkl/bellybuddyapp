@@ -1,3 +1,4 @@
+import '../../models/adapted_recipe.dart';
 import '../../utils/german_list.dart';
 
 /// German copy for how a collection recipe fits the user: observations
@@ -56,4 +57,37 @@ abstract final class RecipeCopy {
   /// Below the „Passt zu mir" toggle: what it can't check.
   static String selfCheckFilter(List<String> names) =>
       '${joinGerman(names)} kann ich nicht prüfen, bitte schau da selbst.';
+
+  /// The Buddy's offer when „Für mich anpassen" opens without the button.
+  static const adaptQuestion = 'Soll ich das Rezept für dich umbauen?';
+
+  /// The Buddy at work on „Für mich anpassen", and the line below him.
+  static const adaptWorking = 'Ich bau’s für dich um …';
+  static const adaptWorkingSub =
+      'Ich tausche, was für dich kritisch ist, und prüfe jede Zutat im '
+      'FODMAP-Katalog.';
+
+  /// An adapted recipe's check line: all ingredients in the catalog.
+  static const allChecked = 'Alle Zutaten mit dem FODMAP-Katalog geprüft';
+
+  /// An adapted recipe's check line while [names] are not in the catalog.
+  static String someUnknown(List<String> names) =>
+      'Mit dem FODMAP-Katalog geprüft. Nicht im Katalog: ${joinGerman(names)}';
+
+  /// What the Buddy says when no adaptation came back. Never „passt": a
+  /// recipe without anything to swap may still rest on unknowns.
+  static String adaptFailed(AdaptFailure f) => switch (f) {
+    AdaptFailure.later =>
+      'Ich bin gerade ausgelastet. Versuch es bitte später nochmal.',
+    AdaptFailure.failed =>
+      'Das hat gerade nicht geklappt. Versuch es bitte nochmal.',
+    AdaptFailure.nothingToAdapt => 'Hier muss ich für dich nichts tauschen.',
+    AdaptFailure.cannotJudge =>
+      'Ob ich hier etwas tauschen muss, kann ich nicht prüfen: Mir fehlen '
+          'Angaben zu den Zutaten.',
+  };
+
+  /// When saving an adapted recipe in „Meine Rezepte" failed.
+  static const adaptSaveFailed =
+      'Speichern hat nicht geklappt. Bitte versuch es nochmal.';
 }
