@@ -233,6 +233,30 @@ void main() {
       verify(() => meal.lt('tracked_at', expectedEnd)).called(1);
     });
 
+    // Under TZ=Europe/Vienna: 25 Oct 2026 has 25 hours, 29 Mar 23.
+    for (final (day, start, end) in [
+      (
+        DateTime(2026, 10, 25, 12),
+        '2026-10-25T00:00:00.000Z',
+        '2026-10-26T00:00:00.000Z',
+      ),
+      (
+        DateTime(2026, 3, 29, 12),
+        '2026-03-29T00:00:00.000Z',
+        '2026-03-30T00:00:00.000Z',
+      ),
+    ]) {
+      test('a DST switch day ($start) ends at the next midnight', () async {
+        final filters = _setupAllTables(client);
+        final meal = filters[0];
+
+        await service.fetchEntriesForDateRange(userId: testUserId, date: day);
+
+        verify(() => meal.gte('tracked_at', start)).called(1);
+        verify(() => meal.lt('tracked_at', end)).called(1);
+      });
+    }
+
     test('ordered=true applies .order() on each table', () async {
       final filters = _setupAllTables(client);
       final meal = filters[0];

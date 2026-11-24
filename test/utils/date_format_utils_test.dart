@@ -29,6 +29,22 @@ void main() {
     });
   });
 
+  group('endOfDay', () {
+    test("the next day's midnight", () {
+      expect(endOfDay(DateTime(2026, 11, 23, 14, 30)), DateTime(2026, 11, 24));
+      expect(endOfDay(DateTime(2026, 12, 31)), DateTime(2027));
+    });
+
+    // Under TZ=Europe/Vienna these days have 25 and 23 hours.
+    test('the next midnight on the day the clocks go back (25 hours)', () {
+      expect(endOfDay(DateTime(2026, 10, 25, 12)), DateTime(2026, 10, 26));
+    });
+
+    test('the next midnight on the day the clocks go forward (23 hours)', () {
+      expect(endOfDay(DateTime(2026, 3, 29, 12)), DateTime(2026, 3, 30));
+    });
+  });
+
   group('mondayOf', () {
     test("the week's Monday at midnight, across a month end", () {
       // 23 Nov 2026 is a Monday.

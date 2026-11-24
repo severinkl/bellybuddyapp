@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -142,7 +143,11 @@ class LocalNotificationService {
         buddyName: buddyName,
       );
 
-      final scheduledDate = _nextInstanceOfTime(hour, minute, location);
+      final scheduledDate = nextInstanceOfTime(
+        hour,
+        minute,
+        tz.TZDateTime.now(location),
+      );
       _log.debug(
         'scheduling meal reminder $i: ${mealReminderTimes[i]} → $scheduledDate '
         '(now=${tz.TZDateTime.now(location)})',
@@ -195,7 +200,11 @@ class LocalNotificationService {
       final hour = int.parse(parts[0]);
       final minute = int.parse(parts[1]);
 
-      final scheduledDate = _nextInstanceOfTime(hour, minute, location);
+      final scheduledDate = nextInstanceOfTime(
+        hour,
+        minute,
+        tz.TZDateTime.now(location),
+      );
       final body = ReminderCopy.pickMoodBody(
         hour,
         _random,
@@ -261,24 +270,18 @@ class LocalNotificationService {
     _log.debug('cancelled all notifications');
   }
 
-  /// Calculate the next instance of a given time in the given timezone.
-  static tz.TZDateTime _nextInstanceOfTime(
+  /// The next [hour]:[minute] from [now] on, in [now]'s time zone: today,
+  /// or tomorrow once it has passed. Calendar arithmetic, so it keeps its
+  /// time of day across a DST switch (the daily reminder repeats at it).
+  @visibleForTesting
+  static tz.TZDateTime nextInstanceOfTime(
     int hour,
     int minute,
-    tz.Location location,
+    tz.TZDateTime now,
   ) {
-    final now = tz.TZDateTime.now(location);
-    var scheduled = tz.TZDateTime(
-      location,
-      now.year,
-      now.month,
-      now.day,
-      hour,
-      minute,
-    );
-    if (scheduled.isBefore(now)) {
-      scheduled = scheduled.add(const Duration(days: 1));
-    }
-    return scheduled;
+    tz.TZDateTime on(int day) =>
+        tz.TZDateTime(now.location, now.year, now.month, day, hour, minute);
+    final today = on(now.day);
+    return today.isBefore(now) ? on(now.day + 1) : today;
   }
 }
