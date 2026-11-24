@@ -10,30 +10,44 @@ import 'package:belly_buddy/widgets/common/weekly_tips_switch.dart';
 import '../../../helpers/fixtures.dart';
 import '../../../helpers/riverpod_helpers.dart';
 
+/// The page around the card: Entdecken scrolls, so [scroll] is the default.
+class _Wrap extends StatelessWidget {
+  const _Wrap({required this.scroll, required this.child});
+  final bool scroll;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final padded = Padding(padding: const EdgeInsets.all(16), child: child);
+    return scroll ? SingleChildScrollView(child: padded) : padded;
+  }
+}
+
 void main() {
-  Future<void> pump(WidgetTester tester, {double textScale = 1}) async {
+  Future<void> pump(
+    WidgetTester tester, {
+    double textScale = 1,
+    bool scroll = true,
+  }) async {
     tester.view.physicalSize = const Size(375, 667);
     tester.view.devicePixelRatio = 1;
+    tester.platformDispatcher.textScaleFactorTestValue = textScale;
     addTearDown(tester.view.reset);
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
     await tester.pumpWidget(
       ProviderScope(
         overrides: [profileProviderSeededWith(testUserProfile())],
         child: MaterialApp(
           theme: AppTheme.theme,
-          home: MediaQuery(
-            data: MediaQueryData(textScaler: TextScaler.linear(textScale)),
-            child: const Scaffold(
-              body: SingleChildScrollView(
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      ExampleTipCard(),
-                      SizedBox(height: 12),
-                      BbCard(child: WeeklyTipsSwitch()),
-                    ],
-                  ),
-                ),
+          home: const Scaffold(
+            body: _Wrap(
+              scroll: true,
+              child: Column(
+                children: [
+                  ExampleTipCard(),
+                  SizedBox(height: 12),
+                  BbCard(child: WeeklyTipsSwitch()),
+                ],
               ),
             ),
           ),
@@ -52,20 +66,18 @@ void main() {
     expect(find.text(ExampleTipCard.footer), findsOneWidget);
   });
 
-  testWidgets('a dashed outline', (tester) async {
+  testWidgets('a dashed outline, painted over the fill', (tester) async {
     await pump(tester);
 
-    expect(
+    final paint = tester.widget<CustomPaint>(
       find.descendant(
         of: find.byKey(ExampleTipCard.cardKey),
         matching: find.byWidgetPredicate(
-          (w) =>
-              w is CustomPaint &&
-              w.painter.runtimeType.toString().contains('DashedBorder'),
+          (w) => w is CustomPaint && w.foregroundPainter is DashedBorderPainter,
         ),
       ),
-      findsOneWidget,
     );
+    expect(paint.painter, isNull);
   });
 
   testWidgets('speaks as one example', (tester) async {
@@ -83,8 +95,15 @@ void main() {
     tester,
   ) async {
     await pump(tester, textScale: 1.3);
+    // As on Entdecken (a scroll view): nothing overflows sideways, and the
+    // card sits above the switch.
 
     expect(tester.takeException(), isNull);
-    expect(find.byKey(WeeklyTipsSwitch.switchKey), findsOneWidget);
+    final card = tester.getRect(find.byKey(ExampleTipCard.cardKey));
+    final sw = tester.getRect(find.byKey(WeeklyTipsSwitch.switchKey));
+    expect(card.left, greaterThanOrEqualTo(0));
+    expect(card.right, lessThanOrEqualTo(375));
+    expect(card.bottom, lessThan(sw.top));
+    expect(sw.right, lessThanOrEqualTo(375));
   });
 }

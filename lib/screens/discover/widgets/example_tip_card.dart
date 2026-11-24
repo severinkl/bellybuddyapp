@@ -30,7 +30,7 @@ class ExampleTipCard extends StatelessWidget {
       excludeSemantics: true,
       label: 'Beispiel-Tipp: $title. $body $footer',
       child: CustomPaint(
-        painter: const _DashedBorderPainter(),
+        foregroundPainter: const DashedBorderPainter(),
         child: Container(
           padding: AppConstants.paddingMd,
           decoration: BoxDecoration(
@@ -94,9 +94,9 @@ class ExampleTipCard extends StatelessWidget {
   }
 }
 
-/// Strokes the rounded rect's outline as dashes.
-class _DashedBorderPainter extends CustomPainter {
-  const _DashedBorderPainter();
+/// Strokes the rounded rect's outline as dashes. Public so tests can find it.
+class DashedBorderPainter extends CustomPainter {
+  const DashedBorderPainter();
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -130,5 +130,5 @@ class _DashedBorderPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_DashedBorderPainter old) => false;
+  bool shouldRepaint(DashedBorderPainter old) => false;
 }
