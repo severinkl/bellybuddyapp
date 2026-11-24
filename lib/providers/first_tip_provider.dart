@@ -17,19 +17,18 @@ import 'recommendation_provider.dart';
 
 /// The day-3 first tip after „Ja, gern": one `diet-recommendations` call
 /// per user and device, made only once the weekly tips are switched on.
-/// True while that request runs.
 ///
 /// The request is never retried. Its outcome lands in the journey's
 /// rewards ([FirstTipState]); the saved set arrives through the normal
 /// tips load. Logs name a status at most, never a meal.
-class FirstTipNotifier extends Notifier<bool> {
+class FirstTipNotifier extends Notifier<void> {
   static const _log = AppLogger('FirstTip');
 
   /// The [accept] on its way: a second call (a double tap) joins it.
   Future<bool>? _accepting;
 
   @override
-  bool build() => false;
+  void build() {}
 
   /// Switches the weekly tips on, answers the offer „Ja", notes the request
   /// (both stored) and starts it, unawaited. True once started, and when
@@ -67,7 +66,6 @@ class FirstTipNotifier extends Notifier<bool> {
         .read(journeyRewardsProvider.notifier)
         .setFirstTip(FirstTipState.requested);
     if (!_stillFor(userId)) return false;
-    state = true;
     unawaited(_request(userId, profile));
     return true;
   }
@@ -139,8 +137,6 @@ class FirstTipNotifier extends Notifier<bool> {
     } catch (e) {
       _log.error('First tip failed (${e.runtimeType})');
       await _failFor(userId);
-    } finally {
-      if (ref.mounted) state = false;
     }
   }
 
@@ -170,6 +166,6 @@ class FirstTipNotifier extends Notifier<bool> {
   }
 }
 
-final firstTipProvider = NotifierProvider<FirstTipNotifier, bool>(
+final firstTipProvider = NotifierProvider<FirstTipNotifier, void>(
   FirstTipNotifier.new,
 );

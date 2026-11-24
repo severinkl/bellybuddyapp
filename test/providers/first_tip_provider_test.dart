@@ -159,8 +159,6 @@ void main() {
         journeyRewardsProvider,
         (_, next) => seen.add((next?.tipOffer, next?.firstTip)),
       );
-      final running = <bool>[];
-      c.listen(firstTipProvider, (_, next) => running.add(next));
 
       final accepted = accept(c);
       await _settle();
@@ -180,7 +178,6 @@ void main() {
         (TipOffer.accepted, null),
         (TipOffer.accepted, FirstTipState.requested),
       ]);
-      expect(c.read(firstTipProvider), isTrue);
       // 3 calendar days back, at the same wall-clock time.
       expect(entries.recentMealsSince, [DateTime(2026, 11, 21, 14)]);
       final request = tips.firstTipRequests.single;
@@ -194,7 +191,6 @@ void main() {
       expect(seen.last, (TipOffer.accepted, FirstTipState.done));
       expect(tips.fetchCount, 1);
       expect(tips.marked, isEmpty);
-      expect(running, [true, false]);
       expect(tips.firstTipRequests, hasLength(1));
     });
 
@@ -211,7 +207,6 @@ void main() {
       expect(entries.recentMealsSince, isEmpty);
       expect(tips.firstTipRequests, isEmpty);
       expect(rewardsOf(c), _offered);
-      expect(c.read(firstTipProvider), isFalse);
     });
 
     test('no user, no journey or no profile: false, nothing written or '
@@ -299,7 +294,6 @@ void main() {
       expect(profiles.weeklyTipsWrites, [true]);
       expect(tips.firstTipRequests, hasLength(1));
       expect(tips.fetchCount, 0);
-      expect(c.read(firstTipProvider), isFalse);
 
       expect(await accept(c), isTrue);
       await _settle();
@@ -335,7 +329,6 @@ void main() {
         accept(c).then((v) => accepted = v);
         async.flushMicrotasks();
         expect(accepted, isTrue);
-        expect(c.read(firstTipProvider), isTrue);
 
         async.elapse(AppConstants.firstTipTimeout - const Duration(seconds: 1));
         expect(rewardsOf(c)!.firstTip, FirstTipState.requested);
@@ -345,7 +338,6 @@ void main() {
         expect(weeklyTipsOf(c), isTrue);
         expect(tips.firstTipRequests, hasLength(1));
         expect(tips.fetchCount, 0);
-        expect(c.read(firstTipProvider), isFalse);
         _expectNoMeals(logs);
       });
     });
@@ -359,14 +351,12 @@ void main() {
         final c = container();
         accept(c);
         async.flushMicrotasks();
-        expect(c.read(firstTipProvider), isTrue);
 
         async.elapse(AppConstants.firstTipTimeout - const Duration(seconds: 1));
         expect(rewardsOf(c)!.firstTip, FirstTipState.requested);
 
         async.elapse(const Duration(seconds: 2));
         expect(rewardsOf(c)!.firstTip, FirstTipState.failed);
-        expect(c.read(firstTipProvider), isFalse);
 
         // The read ends late: the request it would start is dropped.
         read.complete();
@@ -390,7 +380,6 @@ void main() {
         expect(rewardsOf(c)!.firstTip, FirstTipState.failed);
         expect(weeklyTipsOf(c), isTrue);
         expect(tips.firstTipRequests, isEmpty);
-        expect(c.read(firstTipProvider), isFalse);
         expect(
           logs,
           contains('FirstTip [ERROR]: First tip failed (_Exception)'),
@@ -517,7 +506,6 @@ void main() {
       expect(profiles.weeklyTipsWrites, [true]);
       expect(answerOf(rewardsOf(restarted)), requested);
       expect(answerOf(await storedFor('u1')), requested);
-      expect(restarted.read(firstTipProvider), isFalse);
     });
 
     test(
@@ -548,7 +536,6 @@ void main() {
         ));
         expect(tips.fetchCount, 0);
         expect(tips.marked, isEmpty);
-        expect(c.read(firstTipProvider), isFalse);
         expect(logs, contains(startsWith('FirstTip [WARN]')));
       },
     );
