@@ -1089,6 +1089,31 @@ void main() {
       );
     });
 
+    testWidgets('an offer made while the Buddy failed to load comes once he '
+        'loads', (tester) async {
+      final buddies = onboardedBuddyRepository()..throwOnFetch = true;
+      final container = ProviderContainer.test(
+        overrides: baseOverrides(tips: _unseenTips(), buddies: buddies),
+      );
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const AppTestHost(),
+        ),
+      );
+      await _settleFirstRun(tester);
+      expect(container.read(buddyOffersProvider), isNotEmpty);
+      expect(container.read(buddyProvider).hasValue, isFalse);
+
+      buddies.throwOnFetch = false;
+      await container.read(buddyProvider.notifier).reload();
+      await _settleFirstRun(tester);
+
+      expect(container.read(buddyProvider).value!.announcements, [
+        BuddyAnnouncement.tipsArrived,
+      ]);
+    });
+
     testWidgets('repeated offers queue it once', (tester) async {
       final entryRepo = FakeEntryRepository()
         ..insightSource = insightSourceFor(

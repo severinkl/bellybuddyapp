@@ -77,6 +77,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       (_, offers) => Future.microtask(() => _offerToBuddy(offers)),
       fireImmediately: true,
     );
+    // He drops an offer while he has no status (his load failed): once he
+    // has one (or another user's), the offers go to him again.
+    ref.listenManual<String?>(
+      buddyProvider.select((buddy) => buddy.value?.state.userId),
+      (previous, userId) {
+        if (userId == null || userId == previous) return;
+        Future.microtask(() {
+          if (mounted) _offerToBuddy(ref.read(buddyOffersProvider));
+        });
+      },
+    );
   }
 
   /// Hands each of [offers] to the Buddy ([BuddyNotifier.offerAnnouncement]).
