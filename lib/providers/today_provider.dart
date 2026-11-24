@@ -8,7 +8,8 @@ import 'buddy_provider.dart';
 
 /// Today by the app's clock ([buddyClockProvider]): the local date, at
 /// midnight. The one signal that the day changed; whatever follows the day
-/// listens to it (the insights' window, Home's entries).
+/// listens to it (the insights' window, Home's entries, the Buddy's
+/// streak).
 ///
 /// Moves on at local midnight (one timer to the next, armed by the
 /// calendar so a DST change can't shift it) and, since timers stand still
