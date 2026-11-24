@@ -135,12 +135,9 @@ void main() {
 
       await service.fetchDayTotal(testUserId, DateTime(2026, 11, 22, 15));
 
-      verify(
-        () => fb.gte('tracked_at', DateTime(2026, 11, 22).toIso8601String()),
-      ).called(1);
-      verify(
-        () => fb.lt('tracked_at', DateTime(2026, 11, 23).toIso8601String()),
-      ).called(1);
+      // Local midnights, sent as the wall clock in the UTC slot.
+      verify(() => fb.gte('tracked_at', '2026-11-22T00:00:00.000Z')).called(1);
+      verify(() => fb.lt('tracked_at', '2026-11-23T00:00:00.000Z')).called(1);
     });
   });
 

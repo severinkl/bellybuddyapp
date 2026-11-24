@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/services/buddy/streak_engine.dart';
+import 'package:belly_buddy/utils/wall_clock.dart';
 
 DateTime nov(int day) => DateTime(2026, 11, day);
 
@@ -22,11 +23,12 @@ Set<DateTime> span(DateTime from, DateTime to) {
   return days;
 }
 
-/// Task 3's mapping (`EntryRepository.fetchActivityDays`): a `tracked_at`
-/// instant becomes the local calendar day it falls on.
-DateTime localDay(DateTime trackedAt) {
-  final local = trackedAt.toLocal();
-  return DateTime(local.year, local.month, local.day);
+/// `EntryRepository.fetchActivityDays`' mapping: a `tracked_at` as
+/// PostgREST sends it (the wall clock in the UTC slot) becomes the calendar
+/// day the user logged it on.
+DateTime localDay(String trackedAtWire) {
+  final t = wallClockFromWire(trackedAtWire);
+  return DateTime(t.year, t.month, t.day);
 }
 
 class _Case {
@@ -576,8 +578,8 @@ void main() {
     _Case(
       'midnight: 23:59 and 00:01 local count as two days',
       activity: {
-        localDay(DateTime(2026, 11, 21, 23, 59).toUtc()),
-        localDay(DateTime(2026, 11, 22, 0, 1).toUtc()),
+        localDay('2026-11-21T23:59:00+00:00'),
+        localDay('2026-11-22T00:01:00+00:00'),
       },
       streak: 2,
       todayCounted: true,

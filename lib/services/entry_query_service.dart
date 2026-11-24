@@ -8,6 +8,7 @@ import '../models/drink_entry.dart';
 import '../providers/core_providers.dart';
 import '../utils/date_format_utils.dart';
 import '../utils/logger.dart';
+import '../utils/wall_clock.dart';
 
 class EntryQueryResult {
   final List<MealEntry> meals;
@@ -56,8 +57,8 @@ class EntryQueryService {
     bool ordered = false,
   }) async {
     try {
-      final start = startOfDay(date).toIso8601String();
-      final end = endOfDay(date).toIso8601String();
+      final start = wallClockToWire(startOfDay(date));
+      final end = wallClockToWire(endOfDay(date));
 
       PostgrestFilterBuilder<PostgrestList> baseQuery(
         String table, [
@@ -110,7 +111,8 @@ class EntryQueryService {
   }
 
   /// Fetches `tracked_at` of every entry in [tables] (default: all four
-  /// entry tables) since [since] and, with [until], before [until].
+  /// entry tables) since [since] and, with [until], before [until], as local
+  /// wall-clock times.
   Future<List<DateTime>> fetchTrackedAtSince({
     required String userId,
     required DateTime since,
@@ -118,8 +120,8 @@ class EntryQueryService {
     Iterable<String>? tables,
   }) async {
     try {
-      final sinceIso = since.toUtc().toIso8601String();
-      final untilIso = until?.toUtc().toIso8601String();
+      final sinceIso = wallClockToWire(since);
+      final untilIso = until == null ? null : wallClockToWire(until);
       final results = await Future.wait(
         (tables ?? entryTableFor.values).map(
           (t) => _fetchTrackedAtTable(t, userId, sinceIso, untilIso),
@@ -127,7 +129,8 @@ class EntryQueryService {
       );
       return [
         for (final rows in results)
-          for (final row in rows) DateTime.parse(row['tracked_at'] as String),
+          for (final row in rows)
+            wallClockFromWire(row['tracked_at'] as String),
       ];
     } catch (e, st) {
       _log.error('fetchTrackedAtSince failed', e, st);

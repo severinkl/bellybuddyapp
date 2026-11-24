@@ -189,8 +189,9 @@ void main() {
       final filters = _setupAllTables(client);
       final meal = filters[0];
 
-      final expectedStart = DateTime(2026, 3, 25).toIso8601String();
-      final expectedEnd = DateTime(2026, 3, 26).toIso8601String();
+      // Local midnights, sent as the wall clock in the UTC slot.
+      const expectedStart = '2026-03-25T00:00:00.000Z';
+      const expectedEnd = '2026-03-26T00:00:00.000Z';
 
       await service.fetchEntriesForDateRange(
         userId: testUserId,
@@ -298,12 +299,12 @@ void main() {
       );
 
       expect(result, hasLength(4));
-      expect(result.first, DateTime.parse('2026-03-25T12:00:00.000Z'));
+      expect(result.first, DateTime(2026, 3, 25, 12));
       for (final t in tables) {
         verify(() => builders[t]!.select('tracked_at')).called(1);
         verify(() => filters[t]!.eq('user_id', testUserId)).called(1);
         verify(
-          () => filters[t]!.gte('tracked_at', since.toUtc().toIso8601String()),
+          () => filters[t]!.gte('tracked_at', '2026-03-01T00:00:00.000Z'),
         ).called(1);
       }
     });
@@ -339,12 +340,8 @@ void main() {
       );
 
       for (final f in filters) {
-        verify(
-          () => f.gte('tracked_at', since.toUtc().toIso8601String()),
-        ).called(1);
-        verify(
-          () => f.lt('tracked_at', until.toUtc().toIso8601String()),
-        ).called(1);
+        verify(() => f.gte('tracked_at', '2026-03-01T00:00:00.000Z')).called(1);
+        verify(() => f.lt('tracked_at', '2026-03-20T00:00:00.000Z')).called(1);
       }
     });
 
