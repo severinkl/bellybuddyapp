@@ -324,6 +324,67 @@ void main() {
       expect(latestCalls, 2);
     });
 
+    test('a failed query keeps the same day\'s, and is tried again', () async {
+      final container = await loaded();
+      final notifier = container.read(entriesProvider.notifier);
+      var fail = true;
+      when(
+        () => mockRepo.fetchLatestBefore(
+          userId: any(named: 'userId'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer((_) async {
+        latestCalls++;
+        if (fail) throw Exception('offline');
+        return LatestEntries(drink: DateTime(2026, 11, 22, 23));
+      });
+
+      // Pull to refresh, offline.
+      await notifier.loadEntries(day, refreshLatest: true);
+      expect(latestCalls, 2);
+      expect(
+        container.read(entriesProvider).latestBefore.drink,
+        DateTime(2026, 11, 22, 21),
+      );
+
+      // An edit's reload, still offline.
+      await notifier.updateMeal(testMealEntry());
+      await settle();
+      expect(latestCalls, 3);
+      expect(
+        container.read(entriesProvider).latestBefore.drink,
+        DateTime(2026, 11, 22, 21),
+      );
+
+      // Online again: the next load fetches them.
+      fail = false;
+      await notifier.loadEntries(day);
+      expect(latestCalls, 4);
+      expect(
+        container.read(entriesProvider).latestBefore.drink,
+        DateTime(2026, 11, 22, 23),
+      );
+    });
+
+    test('a failed query for another day drops the previous day\'s', () async {
+      final container = await loaded();
+      when(
+        () => mockRepo.fetchLatestBefore(
+          userId: any(named: 'userId'),
+          before: any(named: 'before'),
+        ),
+      ).thenAnswer((_) async => throw Exception('offline'));
+
+      await container
+          .read(entriesProvider.notifier)
+          .loadEntries(DateTime(2026, 11, 24));
+
+      expect(
+        container.read(entriesProvider).latestBefore,
+        const LatestEntries(),
+      );
+    });
+
     test('a failed query is tried again with the next load', () async {
       when(
         () => mockRepo.fetchLatestBefore(

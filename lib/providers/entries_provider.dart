@@ -75,26 +75,36 @@ class EntriesNotifier extends Notifier<EntriesState> {
   int _load = 0;
 
   /// The day whose [EntriesState.latestBefore] the state holds; null while
-  /// it is unknown (none loaded yet, the query failed, or a write may have
-  /// changed it).
-  DateTime? _latestFor;
+  /// it holds none (none loaded yet, or the query failed for another day).
+  DateTime? _latestDay;
+
+  /// Whether the state's [EntriesState.latestBefore] is known to be
+  /// current; false after a failed query, a write that may have changed
+  /// it, or a pull to refresh, so the next load fetches it again.
+  bool _latestCurrent = false;
 
   @override
   EntriesState build() {
     _load++;
-    _latestFor = null;
+    _forgetLatest();
     return const EntriesState();
+  }
+
+  void _forgetLatest() {
+    _latestDay = null;
+    _latestCurrent = false;
   }
 
   /// Loads the entries of [date]'s local day ([EntriesState.day]). A load
   /// started meanwhile supersedes this one. The latest entries before the
   /// day are fetched again only when they can have changed: for another
-  /// day, after a write that may change them, or with [refreshLatest] (pull
-  /// to refresh).
+  /// day, after a write that may change them or a failed query, or with
+  /// [refreshLatest] (pull to refresh). When that query fails, the same
+  /// day's stay; another day's are dropped.
   Future<void> loadEntries(DateTime date, {bool refreshLatest = false}) async {
     final load = ++_load;
     final day = startOfDay(date);
-    if (refreshLatest) _latestFor = null;
+    if (refreshLatest) _latestCurrent = false;
     state = state.copyWith(isLoading: true, error: null, day: day);
     try {
       final userId = ref.read(currentUserIdProvider);
@@ -111,24 +121,33 @@ class EntriesNotifier extends Notifier<EntriesState> {
         date: date,
         ordered: true,
       );
-      final latestFuture = _latestFor == day
+      final latestFuture = _latestCurrent && _latestDay == day
           ? null
           : _fetchLatestBefore(repo, userId, day);
       final result = await dayFuture;
-      final latestBefore = await latestFuture;
+      final fetched = await latestFuture;
       if (!_isLatest(load)) return;
 
-      if (latestFuture != null) {
-        _latestFor = latestBefore == null ? null : day;
+      // Null keeps the state's.
+      LatestEntries? latestBefore;
+      if (fetched != null) {
+        latestBefore = fetched;
+        _latestDay = day;
+        _latestCurrent = true;
+      } else if (latestFuture != null) {
+        // The query failed: tried again with the next load.
+        _latestCurrent = false;
+        if (_latestDay != day) {
+          _latestDay = null;
+          latestBefore = const LatestEntries();
+        }
       }
       state = state.copyWith(
         meals: result.meals,
         toiletEntries: result.toiletEntries,
         gutFeelings: result.gutFeelings,
         drinks: result.drinks,
-        latestBefore: latestFuture == null
-            ? null
-            : latestBefore ?? const LatestEntries(),
+        latestBefore: latestBefore,
         isLoading: false,
       );
     } catch (e, st) {
@@ -172,7 +191,7 @@ class EntriesNotifier extends Notifier<EntriesState> {
   }) async {
     await write();
     if (!ref.mounted) return;
-    if (refreshesBuddy || movesLatest) _latestFor = null;
+    if (refreshesBuddy || movesLatest) _latestCurrent = false;
     ref.read(entriesRevisionProvider.notifier)._bump();
     if (refreshesBuddy && ref.read(buddyProvider.exists)) {
       unawaited(ref.read(buddyProvider.notifier).reload());
@@ -307,7 +326,7 @@ class EntriesNotifier extends Notifier<EntriesState> {
 
   void reset() {
     _load++;
-    _latestFor = null;
+    _forgetLatest();
     state = const EntriesState();
   }
 }
