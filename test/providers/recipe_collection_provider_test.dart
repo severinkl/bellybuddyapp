@@ -413,6 +413,92 @@ void main() {
       },
     );
 
+    /// Signed in as A, out, then in as B while offline: the rebuild fails
+    /// and Riverpod's error still carries the signed-out empty list.
+    Future<ProviderContainer> offlineSignIn() async {
+      final c = ProviderContainer(
+        overrides: [
+          recipeRepositoryProvider.overrideWithValue(repo),
+          user.override,
+          profileProviderSeededWith(testUserProfile()),
+          rankingSignalsProvider.overrideWithValue(const RankingSignals()),
+        ],
+      );
+      addTearDown(c.dispose);
+      c.listen(recipeFavoritesProvider, (_, _) {});
+      c.listen(recipeCollectionProvider, (_, _) {});
+      c.listen(rankedRecipesProvider, (_, _) {});
+      c.listen(forYouRecipesProvider, (_, _) {});
+      c.listen(recipeFitProvider('vegan'), (_, _) {});
+      await c.read(recipeFavoritesProvider.future);
+      await c.read(recipeCollectionProvider.future);
+      user.set(c, null);
+      await c.read(recipeFavoritesProvider.future);
+      await c.read(recipeCollectionProvider.future);
+      repo
+        ..favoritesError = StateError('offline')
+        ..collectionError = StateError('offline');
+      user.set(c, 'B');
+      await c
+          .read(recipeFavoritesProvider.future)
+          .then((_) {}, onError: (_) {});
+      await c
+          .read(recipeCollectionProvider.future)
+          .then((_) {}, onError: (_) {});
+      expect(c.read(recipeFavoritesProvider).hasValue, isTrue);
+      expect(c.read(recipeCollectionProvider).hasValue, isTrue);
+      return c;
+    }
+
+    test('an offline sign-in: the error, never the previous list', () async {
+      final c = await offlineSignIn();
+
+      expect(c.read(recipeFavoritesProvider).hasError, isTrue);
+      expect(c.read(rankedRecipesProvider), isA<AsyncError>());
+      expect(c.read(rankedRecipesProvider).hasValue, isFalse);
+      expect(c.read(forYouRecipesProvider).hasValue, isFalse);
+      expect(c.read(recipeFitProvider('vegan')), isA<AsyncError>());
+      expect(c.read(recipeFitProvider('vegan')).hasValue, isFalse);
+    });
+
+    test(
+      'after an offline sign-in, a refresh loads, then fails or lands',
+      () async {
+        final c = await offlineSignIn();
+        final favorites = c.read(recipeFavoritesProvider.notifier);
+        final collection = c.read(recipeCollectionProvider.notifier);
+
+        var refreshing = [favorites.refresh(), collection.refresh()];
+        expect(c.read(recipeFavoritesProvider).isLoading, isTrue);
+        expect(c.read(rankedRecipesProvider), isA<AsyncLoading>());
+        await Future.wait(refreshing);
+        for (final state in [
+          c.read(recipeFavoritesProvider),
+          c.read(recipeCollectionProvider),
+        ]) {
+          expect(state.hasError, isTrue);
+          expect(state.isLoading, isFalse);
+        }
+        expect(c.read(rankedRecipesProvider), isA<AsyncError>());
+
+        repo
+          ..favoritesError = null
+          ..collectionError = null
+          ..favorites = [FavoriteRecipe('vegan', DateTime(2026))];
+        refreshing = [favorites.refresh(), collection.refresh()];
+        await Future.wait(refreshing);
+        expect(favorites.isSaved('vegan'), isTrue);
+        expect(
+          c
+              .read(rankedRecipesProvider)
+              .requireValue
+              .fits
+              .map((f) => f.recipe.id),
+          unorderedEquals(['vegan', 'meat']),
+        );
+      },
+    );
+
     test('signed out: favourites and collection are empty', () async {
       final c = ProviderContainer(
         overrides: [

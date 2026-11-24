@@ -12,6 +12,7 @@ import 'package:belly_buddy/models/fodmap_flags.dart';
 import 'package:belly_buddy/models/meal_prefill.dart';
 import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
+import 'package:belly_buddy/providers/recipe_collection_provider.dart';
 import 'package:belly_buddy/repositories/recipe_repository.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/recipes/collection_recipe_screen.dart';
@@ -480,6 +481,37 @@ void main() {
       expect(inSave(find.text('Merken')), findsOneWidget);
       expect(find.text(CollectionRecipeScreen.unsaved), findsOneWidget);
     });
+
+    testWidgets('after a failed reload that kept the old list, fetches first', (
+      tester,
+    ) async {
+      final failing = _FailingFavoritesOnce(failing: 2)
+        ..collection = [recipe()]
+        ..favorites = [FavoriteRecipe('recipe-1', DateTime(2026, 11, 20))];
+      repo = failing;
+      await pump(tester);
+      expect(inSave(find.text('Gemerkt')), findsOneWidget);
+
+      // A reload fails; Riverpod's error still carries the old list.
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(CollectionRecipeScreen)),
+      );
+      container.invalidate(recipeFavoritesProvider);
+      await tester.pumpAndSettle();
+      final reloaded = container.read(recipeFavoritesProvider);
+      expect(reloaded.hasError && reloaded.hasValue, isTrue);
+      expect(inSave(find.text('Merken')), findsOneWidget);
+
+      await tester.tap(find.byKey(CollectionRecipeScreen.saveKey));
+      await tester.pumpAndSettle();
+
+      // It was saved: the tap takes it back, no failure.
+      expect(failing.fetches, 3);
+      expect(repo.removed, ['recipe-1']);
+      expect(repo.added, isEmpty);
+      expect(find.text(RecipeCopy.failed), findsNothing);
+      expect(find.text(CollectionRecipeScreen.unsaved), findsOneWidget);
+    });
   });
 
   testWidgets('Als Essen eintragen', (tester) async {
@@ -647,13 +679,16 @@ class _GatedFavorites extends FakeRecipeRepository {
   }
 }
 
-/// The first favourites fetch fails, later ones answer.
+/// The favourites fetch number [failing] fails, the others answer.
 class _FailingFavoritesOnce extends FakeRecipeRepository {
+  _FailingFavoritesOnce({this.failing = 1});
+
+  final int failing;
   var fetches = 0;
 
   @override
   Future<List<FavoriteRecipe>> fetchFavorites(String userId) async {
-    if (++fetches == 1) throw StateError('offline');
+    if (++fetches == failing) throw StateError('offline');
     return super.fetchFavorites(userId);
   }
 }

@@ -270,15 +270,16 @@ class _ActionBar extends ConsumerWidget {
   Future<void> _toggle(BuildContext context, WidgetRef ref) async {
     final messenger = ScaffoldMessenger.of(context);
     final favorites = ref.read(recipeFavoritesProvider.notifier);
-    // A toggle needs the saved recipes: after a failed load, load them
-    // again; while they load, wait (a failure then is the toggle's).
+    // A toggle needs the saved recipes: while they load, wait (a failure
+    // then is the toggle's); after a failed load, load them again, also
+    // when the error still carries the list from before it.
     switch (ref.read(recipeFavoritesProvider)) {
-      case AsyncError(hasValue: false):
-        await favorites.refresh();
       case AsyncValue(isLoading: true):
         await ref
             .read(recipeFavoritesProvider.future)
             .then((_) {}, onError: (_) {});
+      case AsyncValue(hasError: true):
+        await favorites.refresh();
       case _:
     }
     final wasSaved = favorites.isSaved(recipe.id);

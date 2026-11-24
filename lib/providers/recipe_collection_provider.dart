@@ -129,13 +129,16 @@ final rankingSignalsProvider = Provider<RankingSignals>(
   (ref) => RankingSignals.of(ref.watch(insightsProvider).settledValue),
 );
 
-/// The collection, as loading while it reloads (e.g. for another user):
-/// the data it still holds may be the previous user's.
+/// The collection, as loading while it (re)loads (e.g. for another user)
+/// and as the bare error after a failure: the data either may still hold
+/// is the previous user's, or the signed-out empty list.
 AsyncValue<List<Recipe>> _settledCollection(Ref ref) {
   final collection = ref.watch(recipeCollectionProvider);
-  return collection.hasValue && collection.isLoading
-      ? const AsyncLoading()
-      : collection;
+  if (collection.isLoading) return const AsyncLoading();
+  if (collection.hasError) {
+    return AsyncError(collection.error!, collection.stackTrace!);
+  }
+  return collection;
 }
 
 /// The profile's intolerances against core's table, resolved once for all
