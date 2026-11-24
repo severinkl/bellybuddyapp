@@ -312,4 +312,25 @@ The „Passt zu mir" toggle shows only recipes with 0 critical ingredients.
   - Tipps preview A (proposed, not objected to).
   - Recipes: curated + „Für mich anpassen" (AI rewrite + catalog check), collection imported from online sources, all sources including Monash and FODMAP Everyday.
   - Tipps: patterns, memory and ratings, at most 3 + focus + letter, roles clarified, no follow-up.
-- Builder-check answers: (appended after the check)
+- Builder-check answers (2026-11-24, **my calls** while Severin slept; he approved building without reading and asked for the list in the morning):
+  1. **Intolerances the FODMAP flags can't represent.**
+     - At import, every recipe ingredient gets an `allergens text[]` tag from {gluten, weizen, milch, nuesse, eier, soja}. It is set by a deterministic German keyword list (e.g. Ei/Eigelb; Mandel/Haselnuss/Walnuss/Cashew/Pistazie, but not Kokos/Muskat; Weizen/Dinkel/Roggen/Gerste/Bulgur/Couscous/Grieß/Seitan/Paniermehl unless „glutenfrei"; Soja/Tofu/Tempeh/Edamame/Miso) and cross-checked by the AI during import. Disagreements go to the review file.
+     - Mapping of the app's intolerance options:
+       - Laktose → FODMAP lactose **and** milch;
+       - Gluten → gluten;
+       - Weizen → weizen (+ fructans);
+       - Nüsse/Eier/Soja → their tag;
+       - Fruktose/Sorbit → FODMAP flags as in core.
+     - **Histamin cannot be judged.** For a Histamin user the badge never says „Passt zu dir". It says „Histamin bitte selbst prüfen", and the „Passt zu mir" filter ignores Histamin and says so in one line.
+     - The adapt route checks FODMAP flags and allergens.
+  2. **Portions and „kritisch".**
+     - `recipe_ingredients` gets `low_at_amount boolean`: the import's AI judgement whether the stated amount is low-FODMAP (Monash-style portion thinking; the sources are low-FODMAP recipe sites).
+     - An ingredient is **kritisch** for a user only if it hits one of their intolerances (FODMAP flag or allergen) **and** it is not `low_at_amount`. Allergens are always kritisch.
+     - The „high-FODMAP for everyone" filter is replaced by: drop a recipe if any FODMAP-flagged ingredient is judged not low at its amount.
+     - The import may add missing low-FODMAP variants (Knoblauchöl, Lauchgrün, laktosefreier Joghurt …) as **shared** catalog rows (`added_via = 'ai_enrich'`), with flags from the existing catalog-FODMAP classification.
+  3. **Catalog access and loading.**
+     - The import does not read the production catalog. The reviewed JSON (committed in core, generated from public recipe pages only, so no user data) carries normalised German ingredient names plus their FODMAP flags, allergens and `low_at_amount`.
+     - An alembic **data migration** loads it. It resolves each name to an existing shared row (case-insensitive), or creates a shared `ai_enrich` row with the JSON flags, so IDs are resolved per environment at deploy.
+     - The source research is committed to core `docs/recipes/sources.md`.
+  4. **The KI-Dienst sentence** changes, since the new Tipps send more and nobody has consented to the old wording yet (#86 unreleased): „Dafür schicke ich deine Einträge der letzten Wochen, die Muster daraus und deine Bewertungen meiner Tipps an unseren KI-Dienst." **For Severin to check:** whether the privacy policy's description of requested recommendations covers patterns and ratings, or needs a line.
+  5. **Live AI spend:** the recipe import and the Tipps eval together stay within the approved **20 €**, tracked in the eval ledger.
