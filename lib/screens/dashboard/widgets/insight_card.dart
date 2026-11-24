@@ -17,8 +17,8 @@ import 'journey_dots.dart';
 /// the Muster page (once: a double tap doesn't push it twice).
 ///
 /// - Locked, for a user on the first-patterns [journey]: the Buddy's line,
-///   the 7 [JourneyDots], the [journeyReward] (Stage 3's slot) and the day
-///   and Bauchgefühl counters.
+///   the 7 [JourneyDots] and the day and Bauchgefühl counters, then the
+///   [journeyReward] below them, as its own button.
 /// - Locked, otherwise: how much is left until the first patterns, and both
 ///   progress bars (days with entries, gut-feeling entries). Hidden while
 ///   [journey] is still undecided (null).
@@ -44,7 +44,9 @@ class InsightCard extends StatelessWidget {
   /// Whether this user sees the journey while locked; null: undecided.
   final bool? journey;
 
-  /// Under the dots of the journey.
+  /// The journey's reward line: below the counters, its own button (a tap
+  /// on it doesn't open Muster), reaching the card's edges with its own
+  /// padding.
   final Widget? journeyReward;
 
   static const _padding = EdgeInsets.fromLTRB(
@@ -71,32 +73,62 @@ class InsightCard extends StatelessWidget {
       router.push(RoutePaths.patterns);
     }
 
-    return MergeSemantics(
+    // „Muster ansehen", as one button with what it holds.
+    Widget patternsButton(Widget child) => MergeSemantics(
       child: Semantics(
         button: true,
         label: InsightCopy.openPatterns,
         onTap: open,
-        child: BbCard(
-          key: cardKey,
-          color: AppTheme.beige,
-          showBorder: false,
-          radius: AppConstants.radiusRound,
-          padding: EdgeInsets.zero,
-          child: InkWell(
-            onTap: open,
-            // The button above speaks for it.
-            excludeFromSemantics: true,
-            borderRadius: BorderRadius.circular(AppConstants.radiusRound),
-            child: Padding(
-              padding: _padding,
-              child: value.unlocked
-                  ? _Unlocked(value.pick)
-                  : journey == true
-                  ? _Journey(value, reward: journeyReward)
-                  : _Locked(value.progress),
-            ),
+        child: child,
+      ),
+    );
+
+    // [content], padded, tapped like the button above, which speaks for it.
+    Widget tappable(Widget content, BorderRadius radius) => InkWell(
+      onTap: open,
+      excludeFromSemantics: true,
+      borderRadius: radius,
+      child: Padding(padding: _padding, child: content),
+    );
+
+    Widget card(Widget child) => BbCard(
+      key: cardKey,
+      color: AppTheme.beige,
+      showBorder: false,
+      radius: AppConstants.radiusRound,
+      padding: EdgeInsets.zero,
+      child: child,
+    );
+
+    const round = BorderRadius.all(Radius.circular(AppConstants.radiusRound));
+    if (value.unlocked || journey != true) {
+      return patternsButton(
+        card(
+          tappable(
+            value.unlocked ? _Unlocked(value.pick) : _Locked(value.progress),
+            round,
           ),
         ),
+      );
+    }
+    final reward = journeyReward;
+    return card(
+      Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          patternsButton(
+            tappable(
+              _Journey(value),
+              reward == null
+                  ? round
+                  : const BorderRadius.vertical(
+                      top: Radius.circular(AppConstants.radiusRound),
+                    ),
+            ),
+          ),
+          // Its own button, outside „Muster ansehen".
+          ?reward,
+        ],
       ),
     );
   }
@@ -182,12 +214,11 @@ class _Locked extends StatelessWidget {
   }
 }
 
-/// The first 7 days: the Buddy's line, the dots, [reward], the counters.
+/// The first 7 days: the Buddy's line, the dots, the counters.
 class _Journey extends StatelessWidget {
-  const _Journey(this.insights, {this.reward});
+  const _Journey(this.insights);
 
   final Insights insights;
-  final Widget? reward;
 
   static const _counterStyle = TextStyle(
     fontSize: AppTheme.fontSizeCaptionLG,
@@ -218,7 +249,6 @@ class _Journey extends StatelessWidget {
       below: [
         AppConstants.gap12,
         JourneyDots(days: insights.journey),
-        if (reward != null) ...[AppConstants.gap8, reward!],
         AppConstants.gap8,
         Wrap(
           spacing: AppConstants.spacingMd,

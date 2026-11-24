@@ -7,6 +7,7 @@ import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/adapted_recipe.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/drink.dart';
+import 'package:belly_buddy/models/first_tip.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/knowledge_article.dart';
 import 'package:belly_buddy/models/insight_rules.dart';
@@ -18,6 +19,7 @@ import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/models/user_recipe.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
+import 'package:belly_buddy/providers/first_tip_provider.dart';
 import 'package:belly_buddy/repositories/auth_repository.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/drink_repository.dart';
@@ -715,6 +717,57 @@ class FakeRecommendationRepository implements RecommendationRepository {
     required RecommendationState state,
     String? dislikeComment,
   }) async {}
+
+  /// The set a first-tip request saves: put first into [sets], then
+  /// answered as its id and number of tips. Null: an answer without id or
+  /// tips.
+  Recommendation? firstTipSet;
+
+  /// Thrown by [requestFirstTip] when set (after [firstTipGate]).
+  Object? firstTipError;
+
+  /// When set, [requestFirstTip] waits for it (an AI call on its way).
+  Completer<void>? firstTipGate;
+
+  /// Every [requestFirstTip], in order.
+  final List<({List<String> intolerances, String? diet})> firstTipRequests = [];
+
+  /// Asked as each [requestFirstTip] arrives: whether the user is opted in
+  /// to the weekly tips on the server then (e.g. the stored profile of a
+  /// [FakeProfileRepository]).
+  bool Function()? optedIn;
+
+  /// What [optedIn] answered at each [requestFirstTip], in order; null
+  /// while it is unset.
+  final List<bool?> firstTipRequestOptIns = [];
+
+  @override
+  Future<FirstTipResult> requestFirstTip({
+    required List<String> intolerances,
+    required String? diet,
+  }) async {
+    firstTipRequestOptIns.add(optedIn?.call());
+    firstTipRequests.add((intolerances: intolerances, diet: diet));
+    await firstTipGate?.future;
+    if (firstTipError case final error?) throw error;
+    final set = firstTipSet;
+    if (set == null) return const FirstTipResult(tips: 0);
+    sets = [set, ...sets];
+    return FirstTipResult(id: set.id, tips: set.recommendations.length);
+  }
+}
+
+/// A [FirstTipNotifier] that asks nothing: [accept] counts the calls in
+/// [accepts] and answers [acceptResult].
+class FakeFirstTipNotifier extends FirstTipNotifier {
+  int accepts = 0;
+  FirstTipAcceptance acceptResult = FirstTipAcceptance.started;
+
+  @override
+  Future<FirstTipAcceptance> accept() async {
+    accepts++;
+    return acceptResult;
+  }
 }
 
 // -- FakeMealMediaRepository --
@@ -855,6 +908,7 @@ BuddyStatus buddyStatus({
   bool todayCounted = false,
   Set<DateTime> weekDays = const {},
   List<BuddyAnnouncement> announcements = const [],
+  Map<BuddyAnnouncement, String> announcementKeys = const {},
 }) => BuddyStatus(
   state: BuddyState(
     userId: userId,
@@ -868,6 +922,7 @@ BuddyStatus buddyStatus({
   todayCounted: todayCounted,
   weekDays: weekDays,
   announcements: announcements,
+  announcementKeys: announcementKeys,
 );
 
 /// [BuddyNotifier] serving [initial] (none: no Buddy) without a backend.

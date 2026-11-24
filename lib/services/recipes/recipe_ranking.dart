@@ -3,12 +3,14 @@ import 'package:flutter/foundation.dart';
 import '../../config/constants.dart';
 import '../../models/insights.dart';
 import '../../models/recipe.dart';
+import '../../utils/food_words.dart';
 import '../../utils/german_list.dart';
+import '../../utils/ingredient_key.dart';
 import 'recipe_fit.dart';
 
-/// What the user's entries say about ingredients, for the ranking: keys
-/// (trimmed, lower case) that rank a recipe up ([good]) or down
-/// ([noticed]).
+/// What the user's entries say about ingredients, for the ranking: the
+/// foods, keyed like the insights key them (`ingredientKey`), that rank a
+/// recipe up ([good]) or down ([noticed]).
 class RankingSignals {
   const RankingSignals({this.good = const {}, this.noticed = const {}});
 
@@ -23,12 +25,12 @@ class RankingSignals {
     return RankingSignals(
       good: {
         if (insights.goodDays.shown)
-          for (final item in insights.goodDays.often) item.name.toLowerCase(),
+          for (final item in insights.goodDays.often) ingredientKey(item.name),
       },
       noticed: {
         if (insights.showNoticed)
           for (final n in insights.noticed)
-            if (!n.uncertain) n.name.toLowerCase(),
+            if (!n.uncertain) ingredientKey(n.name),
       },
     );
   }
@@ -48,12 +50,29 @@ class RankingSignals {
   );
 }
 
-/// 2 per distinct good key of [recipe]'s lines, minus 3 per distinct
-/// noticed key; 0 for an older recipe.
-int recipeScore(Recipe recipe, RankingSignals signals) {
-  final keys = {for (final line in recipe.ingredients) ...line.matchKeys};
-  return 2 * keys.intersection(signals.good).length -
-      3 * keys.intersection(signals.noticed).length;
+/// 2 per good food that one of [recipe]'s lines is
+/// ([RecipeIngredient.isFood]: also in another spelling, like core), minus
+/// 3 per noticed one; each food once, however many lines are it and however
+/// many spellings the signals have for it. 0 for an older recipe.
+@visibleForTesting
+int recipeScore(Recipe recipe, RankingSignals signals) =>
+    _SignalFoods(signals).score(recipe);
+
+/// [RankingSignals] read once per ranking: their names by food
+/// ([foodGroups]).
+class _SignalFoods {
+  _SignalFoods(RankingSignals signals)
+    : good = foodGroups(signals.good),
+      noticed = foodGroups(signals.noticed);
+
+  final List<List<FoodName>> good, noticed;
+
+  /// [recipeScore].
+  int score(Recipe recipe) {
+    bool inRecipe(List<FoodName> food) =>
+        recipe.ingredients.any((line) => food.any(line.isFood));
+    return 2 * good.where(inRecipe).length - 3 * noticed.where(inRecipe).length;
+  }
 }
 
 /// The collection for one user ([rankRecipes]).
@@ -94,13 +113,10 @@ RankedRecipes rankRecipes(
   required RankingSignals signals,
 }) {
   final kept = recipes.where((r) => fitsDiet(r, diet)).toList();
+  final foods = _SignalFoods(signals);
   final scored = [
     for (final fit in kept.map(user.fit))
-      (
-        fit: fit,
-        score: recipeScore(fit.recipe, signals),
-        kritisch: fit.kritischCount,
-      ),
+      (fit: fit, score: foods.score(fit.recipe), kritisch: fit.kritischCount),
   ]..sort(_compare);
   return RankedRecipes(
     fits: List.unmodifiable([for (final s in scored) s.fit]),
@@ -128,17 +144,20 @@ int _compare(_Scored a, _Scored b) {
   return title != 0 ? title : ra.id.compareTo(rb.id);
 }
 
-/// „Für dich": the first [count] of [ranked] that pass „Passt zu mir" (all
-/// pass while unchecked), topped up in rank order from the rest.
+/// Whether [fit] comes first in „Für dich": it passes „Passt zu mir", or
+/// nothing is checked yet.
+bool passesForYou(RecipeFit fit) => !fit.checked || fit.passtZuMir;
+
+/// „Für dich": the first [count] of [ranked] that [passesForYou], topped up
+/// in rank order from the rest.
 List<RecipeFit> pickForYou(
   List<RecipeFit> ranked, {
   int count = AppConstants.recipeForYouCount,
 }) {
-  bool passes(RecipeFit f) => !f.checked || f.passtZuMir;
-  final picked = ranked.where(passes).take(count).toList();
+  final picked = ranked.where(passesForYou).take(count).toList();
   return [
     ...picked,
-    ...ranked.where((f) => !passes(f)).take(count - picked.length),
+    ...ranked.where((f) => !passesForYou(f)).take(count - picked.length),
   ];
 }
 

@@ -50,6 +50,9 @@ class AppConstants {
   static const double iconBadgeLg = 48.0;
   static const double iconBadgeXl = 56.0;
 
+  /// The smallest tap target (Apple's 44 pt).
+  static const double minTapTarget = 44.0;
+
   // Border radius
   static const double radiusXs = 4.0;
   static const double radiusSm = 8.0;
@@ -97,6 +100,14 @@ class AppConstants {
   // Streak chip / goal sheet
   static const double streakChipPopScale = 1.25;
   static const double streakSheetBuddyHeight = 220.0;
+
+  // A Buddy sheet's Buddy on a short screen (below this height), so both
+  // its buttons stay on screen without scrolling
+  static const double buddyAskSheetCompactBelow = 700.0;
+  static const double buddyAskSheetCompactHeight = 140.0;
+
+  /// The Buddy's height on the „Muster frei!" page.
+  static const double patternsUnlockedBuddyHeight = 220.0;
 
   // Streak week row (Mo–So): day circle
   static const double streakWeekDaySize = 36.0;
@@ -172,6 +183,9 @@ class AppConstants {
   // Muster page: how blurred the locked state's sample preview is
   static const double patternsPreviewBlur = 5.0;
 
+  // „Deine Belohnungen": a row's day circle
+  static const double journeyRewardDaySize = 44.0;
+
   // Entdecken: a recipe card's width in the Meine Rezepte row
   static const double discoverRecipeCardWidth = 148.0;
 
@@ -201,6 +215,9 @@ class AppConstants {
 
   /// Entdecken: how many recipes „Für dich" shows.
   static const int recipeForYouCount = 3;
+
+  /// Tipps: the thumbnail of a Tausch-Tipp's matching recipe.
+  static const double tipRecipeThumbSize = 40.0;
 
   // Wissen: an article's square thumbnail
   static const double knowledgeThumbSize = 64.0;
@@ -268,6 +285,7 @@ class AppConstants {
 
   // Image sizes
   static const double mealImageHeight = 180.0;
+  static const double mascotSizeSm = 80.0;
   static const double mascotSizeMd = 96.0;
   static const double mascotSizeLg = 160.0;
 
@@ -300,8 +318,9 @@ class AppConstants {
   /// Version of the privacy policy the health-data consent refers to. Bump it
   /// when the policy changes materially: every user whose stored
   /// `profiles.privacy_policy_version` differs is sent through the consent
-  /// gate again.
-  static const String privacyPolicyVersion = '2026-11-22';
+  /// gate again. It equals core's `PRIVACY_POLICY_VERSION` (the public page's
+  /// „Stand") and moves with it.
+  static const String privacyPolicyVersion = '2026-11-24';
 
   /// The myfodmap blog feed behind Wissen, how long a fetched copy counts as
   /// fresh, and how long a fetch may take.
@@ -309,6 +328,13 @@ class AppConstants {
       'https://www.myfodmap.at/blog-feed.xml';
   static const Duration knowledgeFeedMaxAge = Duration(hours: 6);
   static const Duration knowledgeFeedTimeout = Duration(seconds: 10);
+
+  /// The day-3 first tip's one request may take this long.
+  static const Duration firstTipTimeout = Duration(seconds: 60);
+
+  /// „Ja, gern" to the first tip waits at most this long for a (re)loading
+  /// profile.
+  static const Duration firstTipProfileWait = Duration(seconds: 10);
 
   // Apple "Hide My Email" relay address suffix (includes the leading `@`).
   // See the Sign in with Apple docs — this domain is stable since iOS 13.
@@ -322,6 +348,10 @@ class AppConstants {
   /// Prefix of the once-per-user-and-device decision whether the user sees
   /// the first-patterns journey (`insight_journey_<userId>`, a bool).
   static const String keyInsightJourneyPrefix = 'insight_journey_';
+
+  /// Prefix of the rewards of the first 7 days, per user and device
+  /// (`journey_rewards_<userId>`, the JSON of a `JourneyRewards`).
+  static const String keyJourneyRewardsPrefix = 'journey_rewards_';
 
   /// Prefix of the Buddy announcement flags
   /// (`buddy_announced_<userId>_<kind>_<yyyy-MM-dd | goal>`), set once an

@@ -122,12 +122,12 @@ void main() {
     });
 
     test('matches the catalog name too', () {
-      const paprika = RecipeIngredient(
+      final paprika = RecipeIngredient(
         position: 0,
         name: 'Rote Paprika',
         catalogId: 'ing-paprika',
         catalogName: 'Paprika',
-        fodmaps: FodmapFlags(),
+        fodmaps: const FodmapFlags(),
       );
       final recipe = testRecipe(ingredients: [paprika]);
       expect(recipeScore(recipe, const RankingSignals(good: {'paprika'})), 2);
@@ -138,6 +138,61 @@ void main() {
         ingredients: [reis, testLine('Reis', position: 1)],
       );
       expect(recipeScore(recipe, const RankingSignals(good: {'reis'})), 2);
+    });
+
+    // The food rules themselves: food_words_test.
+    test('a food in another spelling counts, like core', () {
+      final recipe = testRecipe(
+        ingredients: [testLine('Ei'), testLine('Zwiebelpulver', position: 1)],
+      );
+      expect(
+        recipeScore(
+          recipe,
+          const RankingSignals(good: {'eier'}, noticed: {'zwiebeln'}),
+        ),
+        -1,
+      );
+    });
+
+    test('a food in several spellings counts once', () {
+      final recipe = testRecipe(
+        ingredients: [testLine('Zwiebel'), testLine('Ei', position: 1)],
+      );
+      expect(
+        recipeScore(
+          recipe,
+          const RankingSignals(good: {'zwiebel', 'zwiebeln', 'rote zwiebel'}),
+        ),
+        2,
+      );
+      expect(
+        recipeScore(recipe, const RankingSignals(noticed: {'ei', 'eier'})),
+        -3,
+      );
+      expect(
+        recipeScore(
+          recipe,
+          const RankingSignals(
+            good: {'zwiebel', 'zwiebeln', 'reis'},
+            noticed: {'ei', 'eier', 'milch'},
+          ),
+        ),
+        -1,
+      );
+    });
+
+    test('a food counts once, however many lines are it', () {
+      final recipe = testRecipe(
+        ingredients: [
+          testLine('Zwiebel'),
+          testLine('Rote Zwiebeln', position: 1),
+          testLine('Zwiebelpulver', position: 2),
+        ],
+      );
+      expect(
+        recipeScore(recipe, const RankingSignals(noticed: {'zwiebel'})),
+        -3,
+      );
     });
 
     test('an older recipe scores 0', () {
@@ -234,7 +289,8 @@ void main() {
       expect(signals.noticed, isEmpty);
     });
 
-    test('unlocked: the good days and the certain noticed, lower-cased', () {
+    test('unlocked: the good days and the certain noticed, keyed like the '
+        'insights (trimmed, lower case)', () {
       final signals = RankingSignals.of(
         _insights(
           unlocked: true,
@@ -242,11 +298,11 @@ void main() {
             days: 4,
             often: [
               IngredientCount('Reis', 3, of: 4),
-              IngredientCount('Haferflocken', 2, of: 4),
+              IngredientCount(' Haferflocken ', 2, of: 4),
             ],
           ),
           hardDays: const DayColumn(days: 3),
-          noticed: [_noticed('Zwiebel'), _noticed('Lauch', uncertain: true)],
+          noticed: [_noticed('Zwiebel '), _noticed('Lauch', uncertain: true)],
           calmDayIngredients: {'brot'},
         ),
       );

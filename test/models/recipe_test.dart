@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:belly_buddy/models/recipe.dart';
+import 'package:belly_buddy/utils/food_words.dart';
 
 Map<String, dynamic> _catalogRow({
   required String id,
@@ -97,20 +98,23 @@ void main() {
       expect(reis.catalogId, 'ing-reis');
       expect(reis.catalogName, 'Reis');
       expect(reis.mapped, isTrue);
-      expect(reis.matchKeys, {'risottoreis', 'reis'});
+      expect(reis.isFood(FoodName('risottoreis')), isTrue);
+      expect(reis.isFood(FoodName('Reis')), isTrue);
+      expect(reis.isFood(FoodName('Milchreis')), isFalse);
 
       final knoblauch = recipe.ingredients[1];
       expect(knoblauch.position, 1);
       expect(knoblauch.fodmaps!.fructans, isTrue);
       expect(knoblauch.lowAtAmount, isFalse);
-      expect(knoblauch.matchKeys, {'knoblauch'});
+      expect(knoblauch.isFood(FoodName('knoblauch')), isTrue);
 
       final obst = recipe.ingredients[2];
       expect(obst.mapped, isFalse);
       expect(obst.fodmaps, isNull);
       expect(obst.amount, isNull);
       expect(obst.catalogName, isNull);
-      expect(obst.matchKeys, {'obst nach wahl'});
+      expect(obst.isFood(FoodName('obst nach wahl')), isTrue);
+      expect(obst.isFood(FoodName('Obst')), isTrue);
 
       expect(recipe.detailMeta, '35 Min · 2 Portionen');
       expect(recipe.listMeta, '35 Min · Mittag');
@@ -217,15 +221,31 @@ void main() {
       expect(line.fodmaps!.hasAny, isFalse);
     });
 
-    test('matchKeys are trimmed and lower-cased, without empties', () {
-      const line = RecipeIngredient(
+    test('isFood: the name or catalog name, case and spaces ignored; '
+        'a blank food never', () {
+      final line = RecipeIngredient(
         position: 0,
         name: ' Knoblauch ',
         catalogId: 'ing-1',
         catalogName: '  ',
       );
 
-      expect(line.matchKeys, {'knoblauch'});
+      expect(line.isFood(FoodName('KNOBLAUCH')), isTrue);
+      expect(line.isFood(FoodName('')), isFalse);
+      expect(line.isFood(FoodName('  ')), isFalse);
+    });
+
+    test('isFood: the catalog name in another spelling too, like core '
+        '(the food rules: food_words_test)', () {
+      final gewuerz = RecipeIngredient(
+        position: 1,
+        name: 'Gewürz',
+        catalogId: 'ing-zwiebelpulver',
+        catalogName: 'Zwiebelpulver',
+      );
+
+      expect(gewuerz.isFood(FoodName('Zwiebeln')), isTrue);
+      expect(gewuerz.isFood(FoodName('Frühlingszwiebelgrün')), isFalse);
     });
   });
 

@@ -211,6 +211,8 @@ const kTestIntoleranceRulesJson =
 IntoleranceRules testIntoleranceRules() =>
     IntoleranceRules.parse(kTestIntoleranceRulesJson)!;
 
+/// A tip set: by default with one tip ([testRecommendationItem]), since a
+/// set without tips is never new; pass `recommendations: []` for one.
 Recommendation testRecommendation({
   String? id,
   String? summary,
@@ -220,9 +222,29 @@ Recommendation testRecommendation({
 }) => Recommendation(
   id: id ?? 'rec-1',
   summary: summary ?? 'Tipp: Mehr Wasser trinken.',
-  recommendations: recommendations ?? [],
+  recommendations: recommendations ?? [testRecommendationItem()],
   createdAt: createdAt,
   seenAt: seenAt,
+);
+
+/// A tip: by default a Tausch-Tipp, Zwiebel → Schnittlauch, without focus
+/// or a recipe (an older set's shape).
+RecommendationItem testRecommendationItem({
+  String type = 'substitute',
+  String ingredient = 'Zwiebel',
+  String reason = 'Grund',
+  String? alternative = 'Schnittlauch',
+  bool focus = false,
+  String? recipeId,
+  String? recipeTitle,
+}) => RecommendationItem(
+  type: type,
+  ingredient: ingredient,
+  reason: reason,
+  alternative: alternative,
+  focus: focus,
+  recipeId: recipeId,
+  recipeTitle: recipeTitle,
 );
 
 EntryQueryResult testEntryQueryResult({

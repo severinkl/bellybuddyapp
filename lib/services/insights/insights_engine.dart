@@ -8,6 +8,7 @@ import '../../models/insights.dart';
 import '../../utils/date_format_utils.dart';
 import '../../utils/german_list.dart';
 import '../../utils/gut_feeling_rating.dart';
+import '../../utils/ingredient_key.dart';
 
 /// What the last [InsightRules.windowDays] local days of [source] show,
 /// as of [now]; every threshold comes from [InsightRules].
@@ -169,18 +170,16 @@ class _Meal {
   factory _Meal.of(InsightMeal meal) {
     final spellings = <String, String>{};
     for (final raw in meal.ingredients) {
-      final name = raw.trim();
-      if (name.isNotEmpty) {
-        spellings.putIfAbsent(name.toLowerCase(), () => name);
-      }
+      final key = ingredientKey(raw);
+      if (key.isNotEmpty) spellings.putIfAbsent(key, raw.trim);
     }
     return _Meal(meal.trackedAt, spellings);
   }
 
   final DateTime trackedAt;
 
-  /// The trimmed spelling per ingredient key (trimmed, lower case); one
-  /// entry per key, so a meal never counts an ingredient twice.
+  /// The trimmed spelling per [ingredientKey]; one entry per key, so a
+  /// meal never counts an ingredient twice.
   final Map<String, String> spellings;
 }
 

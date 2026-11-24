@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -8,6 +7,7 @@ import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/services/recipe_service.dart';
 
 import '../helpers/fixtures.dart';
+import '../helpers/logs.dart';
 import '../helpers/mocks.dart';
 import '../helpers/supabase_mocks.dart';
 
@@ -80,15 +80,6 @@ _stubRulesRow(MockSupabaseClient client, Map<String, dynamic>? row) {
   when(() => filter.eq(any(), any())).thenAnswer((_) => filter);
   when(() => filter.maybeSingle()).thenAnswer((_) => settleMaybeSingle(row));
   return (query: query, filter: filter);
-}
-
-/// Collects [debugPrint] output (the [AppLogger] lines) for this test.
-List<String> _captureLogs() {
-  final logs = <String>[];
-  final original = debugPrint;
-  debugPrint = (message, {wrapWidth}) => logs.add(message ?? '');
-  addTearDown(() => debugPrint = original);
-  return logs;
 }
 
 /// A 200 answer of `adapt-recipe` with one ingredient.
@@ -174,7 +165,7 @@ void main() {
     });
 
     test('rethrows a failed read', () async {
-      final logs = _captureLogs();
+      final logs = captureLogs();
       filter = SettlableFilterBuilder(
         Future<PostgrestList>.error(Exception('offline')),
       );
@@ -249,7 +240,7 @@ void main() {
     });
 
     test('no row → null', () async {
-      final logs = _captureLogs();
+      final logs = captureLogs();
       _stubRulesRow(client, null);
 
       expect(await service.fetchIntoleranceRules(), isNull);
@@ -257,7 +248,7 @@ void main() {
     });
 
     test('a value that is not JSON → null', () async {
-      final logs = _captureLogs();
+      final logs = captureLogs();
       _stubRulesRow(client, {'value': 'kein JSON'});
 
       expect(await service.fetchIntoleranceRules(), isNull);
@@ -267,7 +258,7 @@ void main() {
     });
 
     test('a value that is not a JSON object → null', () async {
-      final logs = _captureLogs();
+      final logs = captureLogs();
       _stubRulesRow(client, {'value': '["Laktose"]'});
 
       expect(await service.fetchIntoleranceRules(), isNull);
@@ -277,7 +268,7 @@ void main() {
     });
 
     test('rethrows a failed read', () async {
-      final logs = _captureLogs();
+      final logs = captureLogs();
       final filter = mockSelect(client, table: 'app_config');
       when(() => filter.eq(any(), any())).thenAnswer((_) => filter);
       when(() => filter.maybeSingle()).thenAnswer(
@@ -331,7 +322,7 @@ void main() {
     test(
       'already saved (23505, e.g. on another device) counts as saved',
       () async {
-        final logs = _captureLogs();
+        final logs = captureLogs();
         insertFails(
           const PostgrestException(message: 'duplicate key', code: '23505'),
         );
@@ -345,7 +336,7 @@ void main() {
     );
 
     test('another failure rethrows', () async {
-      _captureLogs();
+      captureLogs();
       insertFails(const PostgrestException(message: 'denied', code: '42501'));
 
       await expectLater(
@@ -435,7 +426,7 @@ void main() {
         (500, null, AdaptFailure.failed, 'ERROR'),
         (409, 'something_new', AdaptFailure.failed, 'ERROR'),
       ]) {
-        final logs = _captureLogs();
+        final logs = captureLogs();
         stubThrow(
           FunctionsHttpException(
             status: status,
@@ -457,7 +448,7 @@ void main() {
     });
 
     test('an error body that is not JSON → failed', () async {
-      final logs = _captureLogs();
+      final logs = captureLogs();
       stubThrow(
         const FunctionsHttpException(status: 502, details: 'Bad Gateway'),
       );
@@ -467,7 +458,7 @@ void main() {
     });
 
     test('transport failure', () async {
-      final logs = _captureLogs();
+      final logs = captureLogs();
       stubThrow(const FunctionsFetchException(details: 'offline'));
 
       expect(await failureOf(service.adapt('recipe-1')), AdaptFailure.failed);
@@ -475,7 +466,7 @@ void main() {
     });
 
     test('an answer that is not a map → failed', () async {
-      final logs = _captureLogs();
+      final logs = captureLogs();
       stubAnswer('kein JSON');
 
       expect(await failureOf(service.adapt('recipe-1')), AdaptFailure.failed);
@@ -483,7 +474,7 @@ void main() {
     });
 
     test('an answer that fails fromJson → failed', () async {
-      final logs = _captureLogs();
+      final logs = captureLogs();
       stubAnswer(_adaptAnswer()..remove('ingredients'));
 
       expect(await failureOf(service.adapt('recipe-1')), AdaptFailure.failed);

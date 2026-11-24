@@ -1,0 +1,4309 @@
+{
+ "_comment": [
+  "Shared test vectors of the insights engine (Muster): the app's computeInsights",
+  "(lib/services/insights/insights_engine.dart) and core's compute_insights",
+  "(backend/app/domain/insights.py) must give exactly these results. The file lives in core",
+  "(backend/tests/fixtures/insights/vectors.json) and is copied into the app's tests; change both together.",
+  "Format: docs/superpowers/plans/2026-11-24-round4-stage3-tips-core.md, 'Shared insights test vectors'.",
+  "Every tracked_at is written as PostgREST sends it: the user's WALL CLOCK in the UTC slot (+00:00), so",
+  "23:30+00:00 is 23:30 local. Each side reads it as local wall clock in `timezone` (Dart: wallClockFromWire,",
+  "run under TZ=Europe/Vienna; Python: the fields with tzinfo=timezone, never astimezone). `now` is a real",
+  "instant (the device clock) with its offset. The 24 h meal window is 24 real hours (Dart's local",
+  "DateTime.subtract), so across a DST switch it starts at another wall-clock hour. Days are local dates in",
+  "`timezone`. Input lists are in the order the engine receives them. `calendar.classes` lists the days that",
+  "are not `none`. Synthetic data only."
+ ],
+ "timezone": "Europe/Vienna",
+ "rules": {
+  "window_days": 30,
+  "days_needed": 7,
+  "gut_feelings_needed": 3,
+  "meals_before_hours": 24,
+  "min_column_days": 3,
+  "min_often_count": 2,
+  "min_often_share": [
+   1,
+   2
+  ],
+  "max_often": 5,
+  "min_hard_days": 3,
+  "min_hard_share": [
+   1,
+   2
+  ],
+  "min_share_gap": [
+   1,
+   4
+  ],
+  "min_noticed_hard": 3,
+  "uncertain_hard": 2,
+  "max_noticed": 5,
+  "max_uncertain": 3
+ },
+ "vectors": [
+  {
+   "id": "empty",
+   "description": "No entries: 30 days without a class, nothing unlocked, nothing yet.",
+   "now": "2026-11-23T20:00:00+01:00",
+   "meals": [],
+   "gut_feelings": [],
+   "activity": [],
+   "expected": {
+    "progress": {
+     "active_days": 0,
+     "gut_feeling_entries": 0,
+     "unlocked": false
+    },
+    "calendar": {
+     "first_day": "2026-10-25",
+     "last_day": "2026-11-23",
+     "classes": {}
+    },
+    "gut_feeling_days": 0,
+    "good_days": {
+     "days": 0,
+     "shown": false,
+     "often": []
+    },
+    "hard_days": {
+     "days": 0,
+     "shown": false,
+     "often": []
+    },
+    "show_noticed": false,
+    "noticed": [],
+    "pick": {
+     "kind": "nothing_yet"
+    },
+    "journey": []
+   }
+  },
+  {
+   "id": "unlock-needs-7-active-days",
+   "description": "6 active days and 3 gut-feeling entries: still locked. The journey lists the active days.",
+   "now": "2026-11-23T20:00:00+01:00",
+   "meals": [],
+   "gut_feelings": [
+    {
+     "tracked_at": "2026-11-01T12:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    },
+    {
+     "tracked_at": "2026-11-02T12:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    },
+    {
+     "tracked_at": "2026-11-03T12:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    }
+   ],
+   "activity": [
+    "2026-11-01T12:00:00+00:00",
+    "2026-11-02T12:00:00+00:00",
+    "2026-11-03T12:00:00+00:00",
+    "2026-11-04T12:00:00+00:00",
+    "2026-11-05T12:00:00+00:00",
+    "2026-11-06T12:00:00+00:00"
+   ],
+   "expected": {
+    "progress": {
+     "active_days": 6,
+     "gut_feeling_entries": 3,
+     "unlocked": false
+    },
+    "calendar": {
+     "first_day": "2026-10-25",
+     "last_day": "2026-11-23",
+     "classes": {
+      "2026-11-01": "good",
+      "2026-11-02": "good",
+      "2026-11-03": "good"
+     }
+    },
+    "gut_feeling_days": 3,
+    "good_days": {
+     "days": 3,
+     "shown": true,
+     "often": []
+    },
+    "hard_days": {
+     "days": 0,
+     "shown": false,
+     "often": []
+    },
+    "show_noticed": false,
+    "noticed": [],
+    "pick": {
+     "kind": "nothing_yet"
+    },
+    "journey": [
+     {
+      "day": "2026-11-01",
+      "gut_feeling": true
+     },
+     {
+      "day": "2026-11-02",
+      "gut_feeling": true
+     },
+     {
+      "day": "2026-11-03",
+      "gut_feeling": true
+     },
+     {
+      "day": "2026-11-04",
+      "gut_feeling": false
+     },
+     {
+      "day": "2026-11-05",
+      "gut_feeling": false
+     },
+     {
+      "day": "2026-11-06",
+      "gut_feeling": false
+     }
+    ]
+   }
+  },
+  {
+   "id": "unlock-at-7-active-days-and-3-gut-entries",
+   "description": "7 active days and 3 gut-feeling entries: unlocked.",
+   "now": "2026-11-23T20:00:00+01:00",
+   "meals": [],
+   "gut_feelings": [
+    {
+     "tracked_at": "2026-11-01T12:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    },
+    {
+     "tracked_at": "2026-11-02T12:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    },
+    {
+     "tracked_at": "2026-11-03T12:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    }
+   ],
+   "activity": [
+    "2026-11-01T12:00:00+00:00",
+    "2026-11-02T12:00:00+00:00",
+    "2026-11-03T12:00:00+00:00",
+    "2026-11-04T12:00:00+00:00",
+    "2026-11-05T12:00:00+00:00",
+    "2026-11-06T12:00:00+00:00",
+    "2026-11-07T12:00:00+00:00"
+   ],
+   "expected": {
+    "progress": {
+     "active_days": 7,
+     "gut_feeling_entries": 3,
+     "unlocked": true
+    },
+    "calendar": {
+     "first_day": "2026-10-25",
+     "last_day": "2026-11-23",
+     "classes": {
+      "2026-11-01": "good",
+      "2026-11-02": "good",
+      "2026-11-03": "good"
+     }
+    },
+    "gut_feeling_days": 3,
+    "good_days": {
+     "days": 3,
+     "shown": true,
+     "often": []
+    },
+    "hard_days": {
+     "days": 0,
+     "shown": false,
+     "often": []
+    },
+    "show_noticed": false,
+    "noticed": [],
+    "pick": {
+     "kind": "nothing_yet"
+    },
+    "journey": [
+     {
+      "day": "2026-11-01",
+      "gut_feeling": true
+     },
+     {
+      "day": "2026-11-02",
+      "gut_feeling": true
+     },
+     {
+      "day": "2026-11-03",
+      "gut_feeling": true
+     },
+     {
+      "day": "2026-11-04",
+      "gut_feeling": false
+     },
+     {
+      "day": "2026-11-05",
+      "gut_feeling": false
+     },
+     {
+      "day": "2026-11-06",
+      "gut_feeling": false
+     },
+     {
+      "day": "2026-11-07",
+      "gut_feeling": false
+     }
+    ]
+   }
+  },
+  {
+   "id": "unlock-needs-3-gut-entries",
+   "description": "7 active days but only 2 gut-feeling entries: still locked.",
+   "now": "2026-11-23T20:00:00+01:00",
+   "meals": [],
+   "gut_feelings": [
+    {
+     "tracked_at": "2026-11-01T12:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    },
+    {
+     "tracked_at": "2026-11-02T12:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    }
+   ],
+   "activity": [
+    "2026-11-01T12:00:00+00:00",
+    "2026-11-02T12:00:00+00:00",
+    "2026-11-03T12:00:00+00:00",
+    "2026-11-04T12:00:00+00:00",
+    "2026-11-05T12:00:00+00:00",
+    "2026-11-06T12:00:00+00:00",
+    "2026-11-07T12:00:00+00:00"
+   ],
+   "expected": {
+    "progress": {
+     "active_days": 7,
+     "gut_feeling_entries": 2,
+     "unlocked": false
+    },
+    "calendar": {
+     "first_day": "2026-10-25",
+     "last_day": "2026-11-23",
+     "classes": {
+      "2026-11-01": "good",
+      "2026-11-02": "good"
+     }
+    },
+    "gut_feeling_days": 2,
+    "good_days": {
+     "days": 2,
+     "shown": false,
+     "often": []
+    },
+    "hard_days": {
+     "days": 0,
+     "shown": false,
+     "often": []
+    },
+    "show_noticed": false,
+    "noticed": [],
+    "pick": {
+     "kind": "nothing_yet"
+    },
+    "journey": [
+     {
+      "day": "2026-11-01",
+      "gut_feeling": true
+     },
+     {
+      "day": "2026-11-02",
+      "gut_feeling": true
+     },
+     {
+      "day": "2026-11-03",
+      "gut_feeling": false
+     },
+     {
+      "day": "2026-11-04",
+      "gut_feeling": false
+     },
+     {
+      "day": "2026-11-05",
+      "gut_feeling": false
+     },
+     {
+      "day": "2026-11-06",
+      "gut_feeling": false
+     },
+     {
+      "day": "2026-11-07",
+      "gut_feeling": false
+     }
+    ]
+   }
+  },
+  {
+   "id": "window-edges",
+   "description": "The window runs from local midnight 29 days ago (25 Oct, a 25-hour day) through the end of today; entries a minute before it or at tomorrow's midnight do not count, a later-today one does.",
+   "now": "2026-11-23T20:00:00+01:00",
+   "meals": [],
+   "gut_feelings": [
+    {
+     "tracked_at": "2026-10-24T23:59:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-10-25T00:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-23T20:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-23T23:59:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    },
+    {
+     "tracked_at": "2026-11-24T00:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    }
+   ],
+   "activity": [
+    "2026-10-24T23:59:00+00:00",
+    "2026-10-25T00:00:00+00:00",
+    "2026-11-23T20:00:00+00:00",
+    "2026-11-24T00:00:00+00:00"
+   ],
+   "expected": {
+    "progress": {
+     "active_days": 2,
+     "gut_feeling_entries": 3,
+     "unlocked": false
+    },
+    "calendar": {
+     "first_day": "2026-10-25",
+     "last_day": "2026-11-23",
+     "classes": {
+      "2026-10-25": "good",
+      "2026-11-23": "good"
+     }
+    },
+    "gut_feeling_days": 2,
+    "good_days": {
+     "days": 2,
+     "shown": false,
+     "often": []
+    },
+    "hard_days": {
+     "days": 0,
+     "shown": false,
+     "often": []
+    },
+    "show_noticed": false,
+    "noticed": [],
+    "pick": {
+     "kind": "nothing_yet"
+    },
+    "journey": [
+     {
+      "day": "2026-10-25",
+      "gut_feeling": true
+     },
+     {
+      "day": "2026-11-23",
+      "gut_feeling": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "late-evening-entries-stay-on-their-day",
+   "description": "tracked_at is the wall clock: a 23:30 entry stays on its date and a 00:15 one on its own, read at 23:45.",
+   "now": "2026-11-23T23:45:00+01:00",
+   "meals": [],
+   "gut_feelings": [
+    {
+     "tracked_at": "2026-11-22T23:30:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-23T00:15:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-23T23:30:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    }
+   ],
+   "activity": [
+    "2026-11-22T23:30:00+00:00",
+    "2026-11-23T00:15:00+00:00",
+    "2026-11-23T23:30:00+00:00"
+   ],
+   "expected": {
+    "progress": {
+     "active_days": 2,
+     "gut_feeling_entries": 3,
+     "unlocked": false
+    },
+    "calendar": {
+     "first_day": "2026-10-25",
+     "last_day": "2026-11-23",
+     "classes": {
+      "2026-11-22": "good",
+      "2026-11-23": "hard"
+     }
+    },
+    "gut_feeling_days": 2,
+    "good_days": {
+     "days": 1,
+     "shown": false,
+     "often": []
+    },
+    "hard_days": {
+     "days": 1,
+     "shown": false,
+     "often": []
+    },
+    "show_noticed": false,
+    "noticed": [],
+    "pick": {
+     "kind": "nothing_yet"
+    },
+    "journey": [
+     {
+      "day": "2026-11-22",
+      "gut_feeling": true
+     },
+     {
+      "day": "2026-11-23",
+      "gut_feeling": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "summer-late-evening-and-the-day-before-the-window",
+   "description": "Summer time (CEST): a 22:15 entry stays on its date, also with its meal window; one at 22:15 on the day before the window (15 Jun) does not count, one at 00:15 on its first day does.",
+   "now": "2026-07-15T23:00:00+02:00",
+   "meals": [
+    {
+     "tracked_at": "2026-07-01T08:00:00+00:00",
+     "ingredients": [
+      "Reis",
+      "Brot"
+     ]
+    },
+    {
+     "tracked_at": "2026-07-03T08:00:00+00:00",
+     "ingredients": [
+      "Reis",
+      "Brot"
+     ]
+    },
+    {
+     "tracked_at": "2026-07-14T22:30:00+00:00",
+     "ingredients": [
+      "Reis"
+     ]
+    },
+    {
+     "tracked_at": "2026-07-14T22:00:00+00:00",
+     "ingredients": [
+      "Brot"
+     ]
+    }
+   ],
+   "gut_feelings": [
+    {
+     "tracked_at": "2026-06-15T22:15:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-06-16T00:15:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-07-01T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-07-03T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-07-15T22:15:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    }
+   ],
+   "activity": [
+    "2026-06-15T22:15:00+00:00",
+    "2026-06-16T00:15:00+00:00",
+    "2026-07-01T08:00:00+00:00",
+    "2026-07-01T12:00:00+00:00",
+    "2026-07-03T08:00:00+00:00",
+    "2026-07-03T12:00:00+00:00",
+    "2026-07-14T22:00:00+00:00",
+    "2026-07-14T22:30:00+00:00",
+    "2026-07-15T22:15:00+00:00"
+   ],
+   "expected": {
+    "progress": {
+     "active_days": 5,
+     "gut_feeling_entries": 4,
+     "unlocked": false
+    },
+    "calendar": {
+     "first_day": "2026-06-16",
+     "last_day": "2026-07-15",
+     "classes": {
+      "2026-06-16": "good",
+      "2026-07-01": "hard",
+      "2026-07-03": "hard",
+      "2026-07-15": "hard"
+     }
+    },
+    "gut_feeling_days": 4,
+    "good_days": {
+     "days": 1,
+     "shown": false,
+     "often": []
+    },
+    "hard_days": {
+     "days": 3,
+     "shown": true,
+     "often": [
+      {
+       "name": "Reis",
+       "count": 3,
+       "of": 3
+      },
+      {
+       "name": "Brot",
+       "count": 2,
+       "of": 3
+      }
+     ]
+    },
+    "show_noticed": true,
+    "noticed": [
+     {
+      "name": "Reis",
+      "hard": 3,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 1,
+      "uncertain": false
+     },
+     {
+      "name": "Brot",
+      "hard": 2,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 1,
+      "uncertain": true
+     }
+    ],
+    "pick": {
+     "kind": "noticed",
+     "noticed": {
+      "name": "Reis",
+      "hard": 3,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 1,
+      "uncertain": false
+     }
+    },
+    "journey": [
+     {
+      "day": "2026-06-16",
+      "gut_feeling": true
+     },
+     {
+      "day": "2026-07-01",
+      "gut_feeling": true
+     },
+     {
+      "day": "2026-07-03",
+      "gut_feeling": true
+     },
+     {
+      "day": "2026-07-14",
+      "gut_feeling": false
+     },
+     {
+      "day": "2026-07-15",
+      "gut_feeling": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "day-class-mean-at-2.5",
+   "description": "A mean of exactly 2.5 is good, just above is medium (5/2, 10/4, 7/3, 8/3, 15/6, 18/7).",
+   "now": "2026-11-23T20:00:00+01:00",
+   "meals": [],
+   "gut_feelings": [
+    {
+     "tracked_at": "2026-11-01T08:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    },
+    {
+     "tracked_at": "2026-11-01T09:00:00+00:00",
+     "bloating": 3,
+     "gas": 3,
+     "cramps": 3,
+     "fullness": 3
+    },
+    {
+     "tracked_at": "2026-11-02T08:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-02T09:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-02T10:00:00+00:00",
+     "bloating": 3,
+     "gas": 3,
+     "cramps": 3,
+     "fullness": 3
+    },
+    {
+     "tracked_at": "2026-11-02T11:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-03T08:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    },
+    {
+     "tracked_at": "2026-11-03T09:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    },
+    {
+     "tracked_at": "2026-11-03T10:00:00+00:00",
+     "bloating": 3,
+     "gas": 3,
+     "cramps": 3,
+     "fullness": 3
+    },
+    {
+     "tracked_at": "2026-11-04T08:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    },
+    {
+     "tracked_at": "2026-11-04T09:00:00+00:00",
+     "bloating": 3,
+     "gas": 3,
+     "cramps": 3,
+     "fullness": 3
+    },
+    {
+     "tracked_at": "2026-11-04T10:00:00+00:00",
+     "bloating": 3,
+     "gas": 3,
+     "cramps": 3,
+     "fullness": 3
+    },
+    {
+     "tracked_at": "2026-11-05T08:00:00+00:00",
+     "bloating": 3,
+     "gas": 3,
+     "cramps": 3,
+     "fullness": 3
+    },
+    {
+     "tracked_at": "2026-11-05T09:00:00+00:00",
+     "bloating": 3,
+     "gas": 3,
+     "cramps": 3,
+     "fullness": 3
+    },
+    {
+     "tracked_at": "2026-11-05T10:00:00+00:00",
+     "bloating": 3,
+     "gas": 3,
+     "cramps": 3,
+     "fullness": 3
+    },
+    {
+     "tracked_at": "2026-11-05T11:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    },
+    {
+     "tracked_at": "2026-11-05T12:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    },
+    {
+     "tracked_at": "2026-11-05T13:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    },
+    {
+     "tracked_at": "2026-11-06T08:00:00+00:00",
+     "bloating": 3,
+     "gas": 3,
+     "cramps": 3,
+     "fullness": 3
+    },
+    {
+     "tracked_at": "2026-11-06T09:00:00+00:00",
+     "bloating": 3,
+     "gas": 3,
+     "cramps": 3,
+     "fullness": 3
+    },
+    {
+     "tracked_at": "2026-11-06T10:00:00+00:00",
+     "bloating": 3,
+     "gas": 3,
+     "cramps": 3,
+     "fullness": 3
+    },
+    {
+     "tracked_at": "2026-11-06T11:00:00+00:00",
+     "bloating": 3,
+     "gas": 3,
+     "cramps": 3,
+     "fullness": 3
+    },
+    {
+     "tracked_at": "2026-11-06T12:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    },
+    {
+     "tracked_at": "2026-11-06T13:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    },
+    {
+     "tracked_at": "2026-11-06T14:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    }
+   ],
+   "activity": [],
+   "expected": {
+    "progress": {
+     "active_days": 0,
+     "gut_feeling_entries": 25,
+     "unlocked": false
+    },
+    "calendar": {
+     "first_day": "2026-10-25",
+     "last_day": "2026-11-23",
+     "classes": {
+      "2026-11-01": "good",
+      "2026-11-02": "good",
+      "2026-11-03": "good",
+      "2026-11-04": "medium",
+      "2026-11-05": "good",
+      "2026-11-06": "medium"
+     }
+    },
+    "gut_feeling_days": 6,
+    "good_days": {
+     "days": 4,
+     "shown": true,
+     "often": []
+    },
+    "hard_days": {
+     "days": 0,
+     "shown": false,
+     "often": []
+    },
+    "show_noticed": false,
+    "noticed": [],
+    "pick": {
+     "kind": "nothing_yet"
+    },
+    "journey": []
+   }
+  },
+  {
+   "id": "day-class-mean-at-3.5",
+   "description": "A mean of exactly 3.5 is medium, just above is hard (7/2, 14/4, 10/3, 11/3, 21/6, 25/7).",
+   "now": "2026-11-23T20:00:00+01:00",
+   "meals": [],
+   "gut_feelings": [
+    {
+     "tracked_at": "2026-11-01T08:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    },
+    {
+     "tracked_at": "2026-11-01T09:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-02T08:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-02T09:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-02T10:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-02T11:00:00+00:00",
+     "bloating": 3,
+     "gas": 3,
+     "cramps": 3,
+     "fullness": 3
+    },
+    {
+     "tracked_at": "2026-11-03T08:00:00+00:00",
+     "bloating": 3,
+     "gas": 3,
+     "cramps": 3,
+     "fullness": 3
+    },
+    {
+     "tracked_at": "2026-11-03T09:00:00+00:00",
+     "bloating": 4,
+     "gas": 4,
+     "cramps": 4,
+     "fullness": 4
+    },
+    {
+     "tracked_at": "2026-11-03T10:00:00+00:00",
+     "bloating": 3,
+     "gas": 3,
+     "cramps": 3,
+     "fullness": 3
+    },
+    {
+     "tracked_at": "2026-11-04T08:00:00+00:00",
+     "bloating": 4,
+     "gas": 4,
+     "cramps": 4,
+     "fullness": 4
+    },
+    {
+     "tracked_at": "2026-11-04T09:00:00+00:00",
+     "bloating": 4,
+     "gas": 4,
+     "cramps": 4,
+     "fullness": 4
+    },
+    {
+     "tracked_at": "2026-11-04T10:00:00+00:00",
+     "bloating": 3,
+     "gas": 3,
+     "cramps": 3,
+     "fullness": 3
+    },
+    {
+     "tracked_at": "2026-11-05T08:00:00+00:00",
+     "bloating": 4,
+     "gas": 4,
+     "cramps": 4,
+     "fullness": 4
+    },
+    {
+     "tracked_at": "2026-11-05T09:00:00+00:00",
+     "bloating": 4,
+     "gas": 4,
+     "cramps": 4,
+     "fullness": 4
+    },
+    {
+     "tracked_at": "2026-11-05T10:00:00+00:00",
+     "bloating": 4,
+     "gas": 4,
+     "cramps": 4,
+     "fullness": 4
+    },
+    {
+     "tracked_at": "2026-11-05T11:00:00+00:00",
+     "bloating": 3,
+     "gas": 3,
+     "cramps": 3,
+     "fullness": 3
+    },
+    {
+     "tracked_at": "2026-11-05T12:00:00+00:00",
+     "bloating": 3,
+     "gas": 3,
+     "cramps": 3,
+     "fullness": 3
+    },
+    {
+     "tracked_at": "2026-11-05T13:00:00+00:00",
+     "bloating": 3,
+     "gas": 3,
+     "cramps": 3,
+     "fullness": 3
+    },
+    {
+     "tracked_at": "2026-11-06T08:00:00+00:00",
+     "bloating": 4,
+     "gas": 4,
+     "cramps": 4,
+     "fullness": 4
+    },
+    {
+     "tracked_at": "2026-11-06T09:00:00+00:00",
+     "bloating": 4,
+     "gas": 4,
+     "cramps": 4,
+     "fullness": 4
+    },
+    {
+     "tracked_at": "2026-11-06T10:00:00+00:00",
+     "bloating": 4,
+     "gas": 4,
+     "cramps": 4,
+     "fullness": 4
+    },
+    {
+     "tracked_at": "2026-11-06T11:00:00+00:00",
+     "bloating": 4,
+     "gas": 4,
+     "cramps": 4,
+     "fullness": 4
+    },
+    {
+     "tracked_at": "2026-11-06T12:00:00+00:00",
+     "bloating": 3,
+     "gas": 3,
+     "cramps": 3,
+     "fullness": 3
+    },
+    {
+     "tracked_at": "2026-11-06T13:00:00+00:00",
+     "bloating": 3,
+     "gas": 3,
+     "cramps": 3,
+     "fullness": 3
+    },
+    {
+     "tracked_at": "2026-11-06T14:00:00+00:00",
+     "bloating": 3,
+     "gas": 3,
+     "cramps": 3,
+     "fullness": 3
+    }
+   ],
+   "activity": [],
+   "expected": {
+    "progress": {
+     "active_days": 0,
+     "gut_feeling_entries": 25,
+     "unlocked": false
+    },
+    "calendar": {
+     "first_day": "2026-10-25",
+     "last_day": "2026-11-23",
+     "classes": {
+      "2026-11-01": "medium",
+      "2026-11-02": "medium",
+      "2026-11-03": "medium",
+      "2026-11-04": "hard",
+      "2026-11-05": "medium",
+      "2026-11-06": "hard"
+     }
+    },
+    "gut_feeling_days": 6,
+    "good_days": {
+     "days": 0,
+     "shown": false,
+     "often": []
+    },
+    "hard_days": {
+     "days": 2,
+     "shown": false,
+     "often": []
+    },
+    "show_noticed": false,
+    "noticed": [],
+    "pick": {
+     "kind": "nothing_yet"
+    },
+    "journey": []
+   }
+  },
+  {
+   "id": "entry-score-is-the-worst-gut-symptom",
+   "description": "An entry counts with its worst gut symptom; the mood never counts; a mean of 1.5 (and 5/3) is good; a 1 and a 5 make a medium day.",
+   "now": "2026-11-23T20:00:00+01:00",
+   "meals": [],
+   "gut_feelings": [
+    {
+     "tracked_at": "2026-11-10T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-11T08:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-11T09:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    },
+    {
+     "tracked_at": "2026-11-12T09:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1,
+     "stress": 5,
+     "happiness": 5,
+     "energy": 5,
+     "focus": 5,
+     "body_feel": 5
+    },
+    {
+     "tracked_at": "2026-11-12T18:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1,
+     "stress": 5,
+     "happiness": 5,
+     "energy": 5,
+     "focus": 5,
+     "body_feel": 5
+    },
+    {
+     "tracked_at": "2026-11-13T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 4,
+     "cramps": 1,
+     "fullness": 1,
+     "stress": 1,
+     "happiness": 1,
+     "energy": 1,
+     "focus": 1,
+     "body_feel": 1
+    },
+    {
+     "tracked_at": "2026-11-14T09:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-14T18:00:00+00:00",
+     "bloating": 5,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-15T08:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    },
+    {
+     "tracked_at": "2026-11-15T09:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    },
+    {
+     "tracked_at": "2026-11-15T10:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    },
+    {
+     "tracked_at": "2026-11-15T11:00:00+00:00",
+     "bloating": 3,
+     "gas": 3,
+     "cramps": 3,
+     "fullness": 3
+    },
+    {
+     "tracked_at": "2026-11-16T08:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-16T09:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    },
+    {
+     "tracked_at": "2026-11-16T10:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    }
+   ],
+   "activity": [],
+   "expected": {
+    "progress": {
+     "active_days": 0,
+     "gut_feeling_entries": 15,
+     "unlocked": false
+    },
+    "calendar": {
+     "first_day": "2026-10-25",
+     "last_day": "2026-11-23",
+     "classes": {
+      "2026-11-10": "hard",
+      "2026-11-11": "good",
+      "2026-11-12": "good",
+      "2026-11-13": "hard",
+      "2026-11-14": "medium",
+      "2026-11-15": "good",
+      "2026-11-16": "good"
+     }
+    },
+    "gut_feeling_days": 7,
+    "good_days": {
+     "days": 4,
+     "shown": true,
+     "often": []
+    },
+    "hard_days": {
+     "days": 2,
+     "shown": false,
+     "often": []
+    },
+    "show_noticed": false,
+    "noticed": [],
+    "pick": {
+     "kind": "nothing_yet"
+    },
+    "journey": []
+   }
+  },
+  {
+   "id": "hard-anchor-and-24h-meal-window",
+   "description": "10 Nov: a 3 at 08:00, then a 5 at 12:00 (mean 4): the anchor is 12:00, the first schlecht entry. The meal window [anchor - 24 h, anchor) includes a meal exactly 24 h before and excludes one at the anchor.",
+   "now": "2026-11-23T20:00:00+01:00",
+   "meals": [
+    {
+     "tracked_at": "2026-11-03T08:00:00+00:00",
+     "ingredients": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-05T08:00:00+00:00",
+     "ingredients": [
+      "A",
+      "B",
+      "C",
+      "D",
+      "E"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-10T10:00:00+00:00",
+     "ingredients": [
+      "A"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-10T11:59:00+00:00",
+     "ingredients": [
+      "B"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-10T12:00:00+00:00",
+     "ingredients": [
+      "C"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-09T12:00:00+00:00",
+     "ingredients": [
+      "D"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-09T11:59:00+00:00",
+     "ingredients": [
+      "E"
+     ]
+    }
+   ],
+   "gut_feelings": [
+    {
+     "tracked_at": "2026-11-03T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-05T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-10T08:00:00+00:00",
+     "bloating": 3,
+     "gas": 3,
+     "cramps": 3,
+     "fullness": 3
+    },
+    {
+     "tracked_at": "2026-11-10T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    }
+   ],
+   "activity": [],
+   "expected": {
+    "progress": {
+     "active_days": 0,
+     "gut_feeling_entries": 4,
+     "unlocked": false
+    },
+    "calendar": {
+     "first_day": "2026-10-25",
+     "last_day": "2026-11-23",
+     "classes": {
+      "2026-11-03": "hard",
+      "2026-11-05": "hard",
+      "2026-11-10": "hard"
+     }
+    },
+    "gut_feeling_days": 3,
+    "good_days": {
+     "days": 0,
+     "shown": false,
+     "often": []
+    },
+    "hard_days": {
+     "days": 3,
+     "shown": true,
+     "often": [
+      {
+       "name": "A",
+       "count": 3,
+       "of": 3
+      },
+      {
+       "name": "B",
+       "count": 3,
+       "of": 3
+      },
+      {
+       "name": "D",
+       "count": 3,
+       "of": 3
+      },
+      {
+       "name": "C",
+       "count": 2,
+       "of": 3
+      },
+      {
+       "name": "E",
+       "count": 2,
+       "of": 3
+      }
+     ]
+    },
+    "show_noticed": true,
+    "noticed": [
+     {
+      "name": "A",
+      "hard": 3,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": false
+     },
+     {
+      "name": "B",
+      "hard": 3,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": false
+     },
+     {
+      "name": "D",
+      "hard": 3,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": false
+     },
+     {
+      "name": "C",
+      "hard": 2,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": true
+     },
+     {
+      "name": "E",
+      "hard": 2,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": true
+     }
+    ],
+    "pick": {
+     "kind": "noticed",
+     "noticed": {
+      "name": "A",
+      "hard": 3,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": false
+     }
+    },
+    "journey": []
+   }
+  },
+  {
+   "id": "good-anchor-is-the-first-good-entry",
+   "description": "15 Nov: a 4 at 08:00, 1 at 12:00, 1 at 14:00 (mean 2, good): the anchor is 12:00, so a meal at 13:00 does not count. Entries are given out of order.",
+   "now": "2026-11-23T20:00:00+01:00",
+   "meals": [
+    {
+     "tracked_at": "2026-11-17T08:00:00+00:00",
+     "ingredients": [
+      "Hafer",
+      "Reis"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-19T08:00:00+00:00",
+     "ingredients": [
+      "Hafer",
+      "Reis"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-15T10:00:00+00:00",
+     "ingredients": [
+      "Hafer"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-15T13:00:00+00:00",
+     "ingredients": [
+      "Reis"
+     ]
+    }
+   ],
+   "gut_feelings": [
+    {
+     "tracked_at": "2026-11-17T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-19T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-15T08:00:00+00:00",
+     "bloating": 4,
+     "gas": 4,
+     "cramps": 4,
+     "fullness": 4
+    },
+    {
+     "tracked_at": "2026-11-15T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-15T14:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    }
+   ],
+   "activity": [],
+   "expected": {
+    "progress": {
+     "active_days": 0,
+     "gut_feeling_entries": 5,
+     "unlocked": false
+    },
+    "calendar": {
+     "first_day": "2026-10-25",
+     "last_day": "2026-11-23",
+     "classes": {
+      "2026-11-15": "good",
+      "2026-11-17": "good",
+      "2026-11-19": "good"
+     }
+    },
+    "gut_feeling_days": 3,
+    "good_days": {
+     "days": 3,
+     "shown": true,
+     "often": [
+      {
+       "name": "Hafer",
+       "count": 3,
+       "of": 3
+      },
+      {
+       "name": "Reis",
+       "count": 2,
+       "of": 3
+      }
+     ]
+    },
+    "hard_days": {
+     "days": 0,
+     "shown": false,
+     "often": []
+    },
+    "show_noticed": false,
+    "noticed": [],
+    "pick": {
+     "kind": "good_days"
+    },
+    "journey": []
+   }
+  },
+  {
+   "id": "meal-window-reaches-before-the-first-day",
+   "description": "A hard day on the window's first day (25 Oct, 07:00 CET): its meals reach into 24 Oct (CEST), 21:00 inside, 06:00 outside.",
+   "now": "2026-11-23T20:00:00+01:00",
+   "meals": [
+    {
+     "tracked_at": "2026-11-03T08:00:00+00:00",
+     "ingredients": [
+      "Zwiebel",
+      "Brot"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-05T08:00:00+00:00",
+     "ingredients": [
+      "Zwiebel",
+      "Brot"
+     ]
+    },
+    {
+     "tracked_at": "2026-10-24T21:00:00+00:00",
+     "ingredients": [
+      "Zwiebel"
+     ]
+    },
+    {
+     "tracked_at": "2026-10-24T06:00:00+00:00",
+     "ingredients": [
+      "Brot"
+     ]
+    }
+   ],
+   "gut_feelings": [
+    {
+     "tracked_at": "2026-11-03T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-05T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-10-25T07:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    }
+   ],
+   "activity": [],
+   "expected": {
+    "progress": {
+     "active_days": 0,
+     "gut_feeling_entries": 3,
+     "unlocked": false
+    },
+    "calendar": {
+     "first_day": "2026-10-25",
+     "last_day": "2026-11-23",
+     "classes": {
+      "2026-10-25": "hard",
+      "2026-11-03": "hard",
+      "2026-11-05": "hard"
+     }
+    },
+    "gut_feeling_days": 3,
+    "good_days": {
+     "days": 0,
+     "shown": false,
+     "often": []
+    },
+    "hard_days": {
+     "days": 3,
+     "shown": true,
+     "often": [
+      {
+       "name": "Zwiebel",
+       "count": 3,
+       "of": 3
+      },
+      {
+       "name": "Brot",
+       "count": 2,
+       "of": 3
+      }
+     ]
+    },
+    "show_noticed": true,
+    "noticed": [
+     {
+      "name": "Zwiebel",
+      "hard": 3,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": false
+     },
+     {
+      "name": "Brot",
+      "hard": 2,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": true
+     }
+    ],
+    "pick": {
+     "kind": "noticed",
+     "noticed": {
+      "name": "Zwiebel",
+      "hard": 3,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": false
+     }
+    },
+    "journey": []
+   }
+  },
+  {
+   "id": "meal-window-is-24-real-hours-autumn-dst",
+   "description": "24 h before 25 Oct 12:00 CET is 24 Oct 13:00 CEST, not 12:00: a meal at 13:00 counts, one at 12:59 does not.",
+   "now": "2026-11-23T20:00:00+01:00",
+   "meals": [
+    {
+     "tracked_at": "2026-11-03T08:00:00+00:00",
+     "ingredients": [
+      "Drin",
+      "Draussen"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-05T08:00:00+00:00",
+     "ingredients": [
+      "Drin",
+      "Draussen"
+     ]
+    },
+    {
+     "tracked_at": "2026-10-24T13:00:00+00:00",
+     "ingredients": [
+      "Drin"
+     ]
+    },
+    {
+     "tracked_at": "2026-10-24T12:59:00+00:00",
+     "ingredients": [
+      "Draussen"
+     ]
+    }
+   ],
+   "gut_feelings": [
+    {
+     "tracked_at": "2026-11-03T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-05T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-10-25T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    }
+   ],
+   "activity": [],
+   "expected": {
+    "progress": {
+     "active_days": 0,
+     "gut_feeling_entries": 3,
+     "unlocked": false
+    },
+    "calendar": {
+     "first_day": "2026-10-25",
+     "last_day": "2026-11-23",
+     "classes": {
+      "2026-10-25": "hard",
+      "2026-11-03": "hard",
+      "2026-11-05": "hard"
+     }
+    },
+    "gut_feeling_days": 3,
+    "good_days": {
+     "days": 0,
+     "shown": false,
+     "often": []
+    },
+    "hard_days": {
+     "days": 3,
+     "shown": true,
+     "often": [
+      {
+       "name": "Drin",
+       "count": 3,
+       "of": 3
+      },
+      {
+       "name": "Draussen",
+       "count": 2,
+       "of": 3
+      }
+     ]
+    },
+    "show_noticed": true,
+    "noticed": [
+     {
+      "name": "Drin",
+      "hard": 3,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": false
+     },
+     {
+      "name": "Draussen",
+      "hard": 2,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": true
+     }
+    ],
+    "pick": {
+     "kind": "noticed",
+     "noticed": {
+      "name": "Drin",
+      "hard": 3,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": false
+     }
+    },
+    "journey": []
+   }
+  },
+  {
+   "id": "meal-window-is-24-real-hours-spring-dst",
+   "description": "Spring: 24 h before 29 Mar 12:00 CEST is 28 Mar 11:00 CET, not 12:00. The window (12 Mar to 10 Apr) steps calendar days across the 23-hour day (23:30 on 31 Mar is that day; its meal window holds no meal).",
+   "now": "2026-04-10T20:00:00+02:00",
+   "meals": [
+    {
+     "tracked_at": "2026-03-28T11:00:00+00:00",
+     "ingredients": [
+      "Drin"
+     ]
+    },
+    {
+     "tracked_at": "2026-03-28T10:59:00+00:00",
+     "ingredients": [
+      "Draussen"
+     ]
+    },
+    {
+     "tracked_at": "2026-03-30T08:00:00+00:00",
+     "ingredients": [
+      "Drin",
+      "Draussen"
+     ]
+    },
+    {
+     "tracked_at": "2026-04-01T08:00:00+00:00",
+     "ingredients": [
+      "Drin",
+      "Draussen"
+     ]
+    }
+   ],
+   "gut_feelings": [
+    {
+     "tracked_at": "2026-03-29T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-03-30T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-04-01T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-03-31T23:30:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    }
+   ],
+   "activity": [],
+   "expected": {
+    "progress": {
+     "active_days": 0,
+     "gut_feeling_entries": 4,
+     "unlocked": false
+    },
+    "calendar": {
+     "first_day": "2026-03-12",
+     "last_day": "2026-04-10",
+     "classes": {
+      "2026-03-29": "hard",
+      "2026-03-30": "hard",
+      "2026-03-31": "good",
+      "2026-04-01": "hard"
+     }
+    },
+    "gut_feeling_days": 4,
+    "good_days": {
+     "days": 1,
+     "shown": false,
+     "often": []
+    },
+    "hard_days": {
+     "days": 3,
+     "shown": true,
+     "often": [
+      {
+       "name": "Drin",
+       "count": 3,
+       "of": 3
+      },
+      {
+       "name": "Draussen",
+       "count": 2,
+       "of": 3
+      }
+     ]
+    },
+    "show_noticed": true,
+    "noticed": [
+     {
+      "name": "Drin",
+      "hard": 3,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 1,
+      "uncertain": false
+     },
+     {
+      "name": "Draussen",
+      "hard": 2,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 1,
+      "uncertain": true
+     }
+    ],
+    "pick": {
+     "kind": "noticed",
+     "noticed": {
+      "name": "Drin",
+      "hard": 3,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 1,
+      "uncertain": false
+     }
+    },
+    "journey": []
+   }
+  },
+  {
+   "id": "later-today-counts-after-today-does-not",
+   "description": "At 18:00 a hard entry logged for 21:00 counts, its window ends at 21:00 (a meal at 19:00 is in, 21:30 out); entries from tomorrow's midnight are ignored.",
+   "now": "2026-11-23T18:00:00+01:00",
+   "meals": [
+    {
+     "tracked_at": "2026-11-03T08:00:00+00:00",
+     "ingredients": [
+      "Früh",
+      "Später",
+      "Danach"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-05T08:00:00+00:00",
+     "ingredients": [
+      "Früh",
+      "Später",
+      "Danach"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-23T12:00:00+00:00",
+     "ingredients": [
+      "Früh"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-23T19:00:00+00:00",
+     "ingredients": [
+      "Später"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-23T21:30:00+00:00",
+     "ingredients": [
+      "Danach"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-24T00:00:00+00:00",
+     "ingredients": [
+      "Morgen",
+      "Früh"
+     ]
+    }
+   ],
+   "gut_feelings": [
+    {
+     "tracked_at": "2026-11-03T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-05T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-23T21:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-24T00:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    }
+   ],
+   "activity": [
+    "2026-11-23T21:00:00+00:00",
+    "2026-11-24T00:00:00+00:00"
+   ],
+   "expected": {
+    "progress": {
+     "active_days": 1,
+     "gut_feeling_entries": 3,
+     "unlocked": false
+    },
+    "calendar": {
+     "first_day": "2026-10-25",
+     "last_day": "2026-11-23",
+     "classes": {
+      "2026-11-03": "hard",
+      "2026-11-05": "hard",
+      "2026-11-23": "hard"
+     }
+    },
+    "gut_feeling_days": 3,
+    "good_days": {
+     "days": 0,
+     "shown": false,
+     "often": []
+    },
+    "hard_days": {
+     "days": 3,
+     "shown": true,
+     "often": [
+      {
+       "name": "Früh",
+       "count": 3,
+       "of": 3
+      },
+      {
+       "name": "Später",
+       "count": 3,
+       "of": 3
+      },
+      {
+       "name": "Danach",
+       "count": 2,
+       "of": 3
+      }
+     ]
+    },
+    "show_noticed": true,
+    "noticed": [
+     {
+      "name": "Früh",
+      "hard": 3,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": false
+     },
+     {
+      "name": "Später",
+      "hard": 3,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": false
+     },
+     {
+      "name": "Danach",
+      "hard": 2,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": true
+     }
+    ],
+    "pick": {
+     "kind": "noticed",
+     "noticed": {
+      "name": "Früh",
+      "hard": 3,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": false
+     }
+    },
+    "journey": [
+     {
+      "day": "2026-11-23",
+      "gut_feeling": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "names-match-trimmed-and-without-case",
+   "description": "Names match trimmed and case-insensitively, once per meal and day; blank names are skipped. The shown spelling is the most recent meal's (by time, not position; the first listed on equal times), also outside every window, never one after today.",
+   "now": "2026-11-23T20:00:00+01:00",
+   "meals": [
+    {
+     "tracked_at": "2026-11-07T08:00:00+00:00",
+     "ingredients": [
+      "Zwiebel",
+      "",
+      "   "
+     ]
+    },
+    {
+     "tracked_at": "2026-11-23T21:00:00+00:00",
+     "ingredients": [
+      " zwiebel "
+     ]
+    },
+    {
+     "tracked_at": "2026-11-23T21:00:00+00:00",
+     "ingredients": [
+      "Zwiebel"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-05T08:00:00+00:00",
+     "ingredients": [
+      " zwiebel ",
+      "ZWIEBEL"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-24T00:00:00+00:00",
+     "ingredients": [
+      "ZWIEBEL"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-03T08:00:00+00:00",
+     "ingredients": [
+      "ZWIEBEL"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-07T09:00:00+00:00",
+     "ingredients": [
+      "Zwiebel",
+      "zwiebel "
+     ]
+    }
+   ],
+   "gut_feelings": [
+    {
+     "tracked_at": "2026-11-03T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-05T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-07T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    }
+   ],
+   "activity": [],
+   "expected": {
+    "progress": {
+     "active_days": 0,
+     "gut_feeling_entries": 3,
+     "unlocked": false
+    },
+    "calendar": {
+     "first_day": "2026-10-25",
+     "last_day": "2026-11-23",
+     "classes": {
+      "2026-11-03": "hard",
+      "2026-11-05": "hard",
+      "2026-11-07": "hard"
+     }
+    },
+    "gut_feeling_days": 3,
+    "good_days": {
+     "days": 0,
+     "shown": false,
+     "often": []
+    },
+    "hard_days": {
+     "days": 3,
+     "shown": true,
+     "often": [
+      {
+       "name": "zwiebel",
+       "count": 3,
+       "of": 3
+      }
+     ]
+    },
+    "show_noticed": true,
+    "noticed": [
+     {
+      "name": "zwiebel",
+      "hard": 3,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": false
+     }
+    ],
+    "pick": {
+     "kind": "noticed",
+     "noticed": {
+      "name": "zwiebel",
+      "hard": 3,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": false
+     }
+    },
+    "journey": []
+   }
+  },
+  {
+   "id": "noticed-thresholds",
+   "description": "H = 5, G = 6. Zwiebel rate 0.8 gap 0.633, Knoblauch 0.6/0.433, Brot 0.6/0.267 are shown; Kaffee (gap 0.1) and Milch (rate 0.4) are not. Columns: oft dabei on at least 2 days and at least half of them.",
+   "now": "2026-11-23T20:00:00+01:00",
+   "meals": [
+    {
+     "tracked_at": "2026-11-01T08:00:00+00:00",
+     "ingredients": [
+      "Zwiebel",
+      "Knoblauch",
+      "Kaffee",
+      "Brot",
+      "Milch"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-02T08:00:00+00:00",
+     "ingredients": [
+      "Zwiebel",
+      "Knoblauch",
+      "Kaffee",
+      "Brot",
+      "Milch"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-03T08:00:00+00:00",
+     "ingredients": [
+      "Zwiebel",
+      "Knoblauch",
+      "Kaffee",
+      "Brot"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-04T08:00:00+00:00",
+     "ingredients": [
+      "Zwiebel"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-05T08:00:00+00:00",
+     "ingredients": []
+    },
+    {
+     "tracked_at": "2026-11-12T08:00:00+00:00",
+     "ingredients": [
+      "Zwiebel",
+      "Knoblauch",
+      "Kaffee",
+      "Brot"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-13T08:00:00+00:00",
+     "ingredients": [
+      "Kaffee",
+      "Brot"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-14T08:00:00+00:00",
+     "ingredients": [
+      "Kaffee"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-15T08:00:00+00:00",
+     "ingredients": []
+    },
+    {
+     "tracked_at": "2026-11-16T08:00:00+00:00",
+     "ingredients": []
+    },
+    {
+     "tracked_at": "2026-11-17T08:00:00+00:00",
+     "ingredients": []
+    }
+   ],
+   "gut_feelings": [
+    {
+     "tracked_at": "2026-11-01T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-02T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-03T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-04T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-05T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-12T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-13T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-14T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-15T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-16T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-17T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    }
+   ],
+   "activity": [],
+   "expected": {
+    "progress": {
+     "active_days": 0,
+     "gut_feeling_entries": 11,
+     "unlocked": false
+    },
+    "calendar": {
+     "first_day": "2026-10-25",
+     "last_day": "2026-11-23",
+     "classes": {
+      "2026-11-01": "hard",
+      "2026-11-02": "hard",
+      "2026-11-03": "hard",
+      "2026-11-04": "hard",
+      "2026-11-05": "hard",
+      "2026-11-12": "good",
+      "2026-11-13": "good",
+      "2026-11-14": "good",
+      "2026-11-15": "good",
+      "2026-11-16": "good",
+      "2026-11-17": "good"
+     }
+    },
+    "gut_feeling_days": 11,
+    "good_days": {
+     "days": 6,
+     "shown": true,
+     "often": [
+      {
+       "name": "Kaffee",
+       "count": 3,
+       "of": 6
+      }
+     ]
+    },
+    "hard_days": {
+     "days": 5,
+     "shown": true,
+     "often": [
+      {
+       "name": "Zwiebel",
+       "count": 4,
+       "of": 5
+      },
+      {
+       "name": "Brot",
+       "count": 3,
+       "of": 5
+      },
+      {
+       "name": "Kaffee",
+       "count": 3,
+       "of": 5
+      },
+      {
+       "name": "Knoblauch",
+       "count": 3,
+       "of": 5
+      }
+     ]
+    },
+    "show_noticed": true,
+    "noticed": [
+     {
+      "name": "Zwiebel",
+      "hard": 4,
+      "hard_days": 5,
+      "good": 1,
+      "good_days": 6,
+      "uncertain": false
+     },
+     {
+      "name": "Knoblauch",
+      "hard": 3,
+      "hard_days": 5,
+      "good": 1,
+      "good_days": 6,
+      "uncertain": false
+     },
+     {
+      "name": "Brot",
+      "hard": 3,
+      "hard_days": 5,
+      "good": 2,
+      "good_days": 6,
+      "uncertain": false
+     }
+    ],
+    "pick": {
+     "kind": "noticed",
+     "noticed": {
+      "name": "Zwiebel",
+      "hard": 4,
+      "hard_days": 5,
+      "good": 1,
+      "good_days": 6,
+      "uncertain": false
+     }
+    },
+    "journey": []
+   }
+  },
+  {
+   "id": "uncertain-needs-hard-2-and-the-rates",
+   "description": "H = 4, G = 2: Apfel on 2 hard days (rate 0.5, gap 0.5) is noch unsicher; Birne's gap is 0. An uncertain item is never the pick, and the good-days column (2 days) is not shown.",
+   "now": "2026-11-23T20:00:00+01:00",
+   "meals": [
+    {
+     "tracked_at": "2026-11-01T08:00:00+00:00",
+     "ingredients": [
+      "Apfel",
+      "Birne"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-02T08:00:00+00:00",
+     "ingredients": [
+      "Apfel",
+      "Birne"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-03T08:00:00+00:00",
+     "ingredients": []
+    },
+    {
+     "tracked_at": "2026-11-04T08:00:00+00:00",
+     "ingredients": []
+    },
+    {
+     "tracked_at": "2026-11-12T08:00:00+00:00",
+     "ingredients": [
+      "Birne"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-13T08:00:00+00:00",
+     "ingredients": []
+    }
+   ],
+   "gut_feelings": [
+    {
+     "tracked_at": "2026-11-01T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-02T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-03T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-04T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-12T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-13T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    }
+   ],
+   "activity": [],
+   "expected": {
+    "progress": {
+     "active_days": 0,
+     "gut_feeling_entries": 6,
+     "unlocked": false
+    },
+    "calendar": {
+     "first_day": "2026-10-25",
+     "last_day": "2026-11-23",
+     "classes": {
+      "2026-11-01": "hard",
+      "2026-11-02": "hard",
+      "2026-11-03": "hard",
+      "2026-11-04": "hard",
+      "2026-11-12": "good",
+      "2026-11-13": "good"
+     }
+    },
+    "gut_feeling_days": 6,
+    "good_days": {
+     "days": 2,
+     "shown": false,
+     "often": []
+    },
+    "hard_days": {
+     "days": 4,
+     "shown": true,
+     "often": [
+      {
+       "name": "Apfel",
+       "count": 2,
+       "of": 4
+      },
+      {
+       "name": "Birne",
+       "count": 2,
+       "of": 4
+      }
+     ]
+    },
+    "show_noticed": true,
+    "noticed": [
+     {
+      "name": "Apfel",
+      "hard": 2,
+      "hard_days": 4,
+      "good": 0,
+      "good_days": 2,
+      "uncertain": true
+     }
+    ],
+    "pick": {
+     "kind": "nothing_yet"
+    },
+    "journey": []
+   }
+  },
+  {
+   "id": "noticed-exact-rate-and-gap",
+   "description": "H = 6, G = 12: Reis 4/6 - 5/12 is a gap of exactly 0.25 (as doubles 0.2499...), Hafer a rate of exactly 0.5; both count. Dinkel (rate 1/3) does not.",
+   "now": "2026-11-23T20:00:00+01:00",
+   "meals": [
+    {
+     "tracked_at": "2026-11-01T08:00:00+00:00",
+     "ingredients": [
+      "Reis",
+      "Hafer",
+      "Dinkel"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-02T08:00:00+00:00",
+     "ingredients": [
+      "Reis",
+      "Hafer",
+      "Dinkel"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-03T08:00:00+00:00",
+     "ingredients": [
+      "Reis",
+      "Hafer"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-04T08:00:00+00:00",
+     "ingredients": [
+      "Reis"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-05T08:00:00+00:00",
+     "ingredients": []
+    },
+    {
+     "tracked_at": "2026-11-06T08:00:00+00:00",
+     "ingredients": []
+    },
+    {
+     "tracked_at": "2026-11-12T08:00:00+00:00",
+     "ingredients": [
+      "Reis"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-13T08:00:00+00:00",
+     "ingredients": [
+      "Reis"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-14T08:00:00+00:00",
+     "ingredients": [
+      "Reis"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-15T08:00:00+00:00",
+     "ingredients": [
+      "Reis"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-16T08:00:00+00:00",
+     "ingredients": [
+      "Reis"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-17T08:00:00+00:00",
+     "ingredients": []
+    },
+    {
+     "tracked_at": "2026-11-18T08:00:00+00:00",
+     "ingredients": []
+    },
+    {
+     "tracked_at": "2026-11-19T08:00:00+00:00",
+     "ingredients": []
+    },
+    {
+     "tracked_at": "2026-11-20T08:00:00+00:00",
+     "ingredients": []
+    },
+    {
+     "tracked_at": "2026-11-21T08:00:00+00:00",
+     "ingredients": []
+    },
+    {
+     "tracked_at": "2026-11-22T08:00:00+00:00",
+     "ingredients": []
+    },
+    {
+     "tracked_at": "2026-11-23T08:00:00+00:00",
+     "ingredients": []
+    }
+   ],
+   "gut_feelings": [
+    {
+     "tracked_at": "2026-11-01T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-02T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-03T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-04T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-05T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-06T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-12T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-13T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-14T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-15T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-16T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-17T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-18T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-19T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-20T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-21T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-22T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-23T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    }
+   ],
+   "activity": [],
+   "expected": {
+    "progress": {
+     "active_days": 0,
+     "gut_feeling_entries": 18,
+     "unlocked": false
+    },
+    "calendar": {
+     "first_day": "2026-10-25",
+     "last_day": "2026-11-23",
+     "classes": {
+      "2026-11-01": "hard",
+      "2026-11-02": "hard",
+      "2026-11-03": "hard",
+      "2026-11-04": "hard",
+      "2026-11-05": "hard",
+      "2026-11-06": "hard",
+      "2026-11-12": "good",
+      "2026-11-13": "good",
+      "2026-11-14": "good",
+      "2026-11-15": "good",
+      "2026-11-16": "good",
+      "2026-11-17": "good",
+      "2026-11-18": "good",
+      "2026-11-19": "good",
+      "2026-11-20": "good",
+      "2026-11-21": "good",
+      "2026-11-22": "good",
+      "2026-11-23": "good"
+     }
+    },
+    "gut_feeling_days": 18,
+    "good_days": {
+     "days": 12,
+     "shown": true,
+     "often": []
+    },
+    "hard_days": {
+     "days": 6,
+     "shown": true,
+     "often": [
+      {
+       "name": "Reis",
+       "count": 4,
+       "of": 6
+      },
+      {
+       "name": "Hafer",
+       "count": 3,
+       "of": 6
+      }
+     ]
+    },
+    "show_noticed": true,
+    "noticed": [
+     {
+      "name": "Reis",
+      "hard": 4,
+      "hard_days": 6,
+      "good": 5,
+      "good_days": 12,
+      "uncertain": false
+     },
+     {
+      "name": "Hafer",
+      "hard": 3,
+      "hard_days": 6,
+      "good": 0,
+      "good_days": 12,
+      "uncertain": false
+     }
+    ],
+    "pick": {
+     "kind": "noticed",
+     "noticed": {
+      "name": "Reis",
+      "hard": 4,
+      "hard_days": 6,
+      "good": 5,
+      "good_days": 12,
+      "uncertain": false
+     }
+    },
+    "journey": []
+   }
+  },
+  {
+   "id": "noticed-sorted-by-hard-then-gap-then-name",
+   "description": "Sorted by hard, then the gap, then the name without case: Dill (4, 0.8), Senf (4, 0.4), Zimt (3, 0.6), apfel (3, 0.4), Birne (3, 0.4).",
+   "now": "2026-11-23T20:00:00+01:00",
+   "meals": [
+    {
+     "tracked_at": "2026-11-01T08:00:00+00:00",
+     "ingredients": [
+      "Birne",
+      "apfel",
+      "Zimt",
+      "Senf",
+      "Dill"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-02T08:00:00+00:00",
+     "ingredients": [
+      "Birne",
+      "apfel",
+      "Zimt",
+      "Senf",
+      "Dill"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-03T08:00:00+00:00",
+     "ingredients": [
+      "Birne",
+      "apfel",
+      "Zimt",
+      "Senf",
+      "Dill"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-04T08:00:00+00:00",
+     "ingredients": [
+      "Senf",
+      "Dill"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-05T08:00:00+00:00",
+     "ingredients": []
+    },
+    {
+     "tracked_at": "2026-11-12T08:00:00+00:00",
+     "ingredients": [
+      "Birne",
+      "apfel",
+      "Senf"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-13T08:00:00+00:00",
+     "ingredients": [
+      "Senf"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-14T08:00:00+00:00",
+     "ingredients": []
+    },
+    {
+     "tracked_at": "2026-11-15T08:00:00+00:00",
+     "ingredients": []
+    },
+    {
+     "tracked_at": "2026-11-16T08:00:00+00:00",
+     "ingredients": []
+    }
+   ],
+   "gut_feelings": [
+    {
+     "tracked_at": "2026-11-01T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-02T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-03T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-04T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-05T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-12T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-13T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-14T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-15T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-16T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    }
+   ],
+   "activity": [],
+   "expected": {
+    "progress": {
+     "active_days": 0,
+     "gut_feeling_entries": 10,
+     "unlocked": false
+    },
+    "calendar": {
+     "first_day": "2026-10-25",
+     "last_day": "2026-11-23",
+     "classes": {
+      "2026-11-01": "hard",
+      "2026-11-02": "hard",
+      "2026-11-03": "hard",
+      "2026-11-04": "hard",
+      "2026-11-05": "hard",
+      "2026-11-12": "good",
+      "2026-11-13": "good",
+      "2026-11-14": "good",
+      "2026-11-15": "good",
+      "2026-11-16": "good"
+     }
+    },
+    "gut_feeling_days": 10,
+    "good_days": {
+     "days": 5,
+     "shown": true,
+     "often": []
+    },
+    "hard_days": {
+     "days": 5,
+     "shown": true,
+     "often": [
+      {
+       "name": "Dill",
+       "count": 4,
+       "of": 5
+      },
+      {
+       "name": "Senf",
+       "count": 4,
+       "of": 5
+      },
+      {
+       "name": "apfel",
+       "count": 3,
+       "of": 5
+      },
+      {
+       "name": "Birne",
+       "count": 3,
+       "of": 5
+      },
+      {
+       "name": "Zimt",
+       "count": 3,
+       "of": 5
+      }
+     ]
+    },
+    "show_noticed": true,
+    "noticed": [
+     {
+      "name": "Dill",
+      "hard": 4,
+      "hard_days": 5,
+      "good": 0,
+      "good_days": 5,
+      "uncertain": false
+     },
+     {
+      "name": "Senf",
+      "hard": 4,
+      "hard_days": 5,
+      "good": 2,
+      "good_days": 5,
+      "uncertain": false
+     },
+     {
+      "name": "Zimt",
+      "hard": 3,
+      "hard_days": 5,
+      "good": 0,
+      "good_days": 5,
+      "uncertain": false
+     },
+     {
+      "name": "apfel",
+      "hard": 3,
+      "hard_days": 5,
+      "good": 1,
+      "good_days": 5,
+      "uncertain": false
+     },
+     {
+      "name": "Birne",
+      "hard": 3,
+      "hard_days": 5,
+      "good": 1,
+      "good_days": 5,
+      "uncertain": false
+     }
+    ],
+    "pick": {
+     "kind": "noticed",
+     "noticed": {
+      "name": "Dill",
+      "hard": 4,
+      "hard_days": 5,
+      "good": 0,
+      "good_days": 5,
+      "uncertain": false
+     }
+    },
+    "journey": []
+   }
+  },
+  {
+   "id": "ties-in-german-order",
+   "description": "Ties sort in German order (DIN 5007-1): Ä as A, Ö as O, ü as u, ß as ss; equal folds (Masse, Maße) by code unit. Only the top 5 of a column are kept.",
+   "now": "2026-11-23T20:00:00+01:00",
+   "meals": [
+    {
+     "tracked_at": "2026-11-01T08:00:00+00:00",
+     "ingredients": [
+      "Zwiebel",
+      "Äpfel",
+      "Öl",
+      "Brot"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-02T08:00:00+00:00",
+     "ingredients": [
+      "Zwiebel",
+      "Äpfel",
+      "Öl",
+      "Brot"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-03T08:00:00+00:00",
+     "ingredients": [
+      "Zwiebel",
+      "Äpfel",
+      "Öl",
+      "Brot"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-12T08:00:00+00:00",
+     "ingredients": [
+      "Muesli",
+      "Möhre",
+      "Mohn",
+      "Mus",
+      "Müsli",
+      "Maße",
+      "Masse"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-13T08:00:00+00:00",
+     "ingredients": [
+      "Muesli",
+      "Möhre",
+      "Mohn",
+      "Mus",
+      "Müsli",
+      "Maße",
+      "Masse"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-14T08:00:00+00:00",
+     "ingredients": [
+      "Muesli",
+      "Möhre",
+      "Mohn",
+      "Mus",
+      "Müsli",
+      "Maße",
+      "Masse"
+     ]
+    }
+   ],
+   "gut_feelings": [
+    {
+     "tracked_at": "2026-11-01T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-02T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-03T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-12T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-13T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-14T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    }
+   ],
+   "activity": [],
+   "expected": {
+    "progress": {
+     "active_days": 0,
+     "gut_feeling_entries": 6,
+     "unlocked": false
+    },
+    "calendar": {
+     "first_day": "2026-10-25",
+     "last_day": "2026-11-23",
+     "classes": {
+      "2026-11-01": "hard",
+      "2026-11-02": "hard",
+      "2026-11-03": "hard",
+      "2026-11-12": "good",
+      "2026-11-13": "good",
+      "2026-11-14": "good"
+     }
+    },
+    "gut_feeling_days": 6,
+    "good_days": {
+     "days": 3,
+     "shown": true,
+     "often": [
+      {
+       "name": "Masse",
+       "count": 3,
+       "of": 3
+      },
+      {
+       "name": "Maße",
+       "count": 3,
+       "of": 3
+      },
+      {
+       "name": "Mohn",
+       "count": 3,
+       "of": 3
+      },
+      {
+       "name": "Möhre",
+       "count": 3,
+       "of": 3
+      },
+      {
+       "name": "Muesli",
+       "count": 3,
+       "of": 3
+      }
+     ]
+    },
+    "hard_days": {
+     "days": 3,
+     "shown": true,
+     "often": [
+      {
+       "name": "Äpfel",
+       "count": 3,
+       "of": 3
+      },
+      {
+       "name": "Brot",
+       "count": 3,
+       "of": 3
+      },
+      {
+       "name": "Öl",
+       "count": 3,
+       "of": 3
+      },
+      {
+       "name": "Zwiebel",
+       "count": 3,
+       "of": 3
+      }
+     ]
+    },
+    "show_noticed": true,
+    "noticed": [
+     {
+      "name": "Äpfel",
+      "hard": 3,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 3,
+      "uncertain": false
+     },
+     {
+      "name": "Brot",
+      "hard": 3,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 3,
+      "uncertain": false
+     },
+     {
+      "name": "Öl",
+      "hard": 3,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 3,
+      "uncertain": false
+     },
+     {
+      "name": "Zwiebel",
+      "hard": 3,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 3,
+      "uncertain": false
+     }
+    ],
+    "pick": {
+     "kind": "noticed",
+     "noticed": {
+      "name": "Äpfel",
+      "hard": 3,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 3,
+      "uncertain": false
+     }
+    },
+    "journey": []
+   }
+  },
+  {
+   "id": "top-5-shown-then-top-3-uncertain",
+   "description": "At most 5 shown items, then at most 3 noch unsicher ones.",
+   "now": "2026-11-23T20:00:00+01:00",
+   "meals": [
+    {
+     "tracked_at": "2026-11-01T08:00:00+00:00",
+     "ingredients": [
+      "Okra",
+      "Nuss",
+      "Mais",
+      "Lauch",
+      "Kiwi",
+      "Gurke",
+      "Feige",
+      "Dattel",
+      "Birne",
+      "Apfel",
+      "Zwiebel"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-02T08:00:00+00:00",
+     "ingredients": [
+      "Okra",
+      "Nuss",
+      "Mais",
+      "Lauch",
+      "Kiwi",
+      "Gurke",
+      "Feige",
+      "Dattel",
+      "Birne",
+      "Apfel",
+      "Zwiebel"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-03T08:00:00+00:00",
+     "ingredients": [
+      "Kiwi",
+      "Gurke",
+      "Feige",
+      "Dattel",
+      "Birne",
+      "Apfel",
+      "Zwiebel"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-04T08:00:00+00:00",
+     "ingredients": [
+      "Zwiebel"
+     ]
+    }
+   ],
+   "gut_feelings": [
+    {
+     "tracked_at": "2026-11-01T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-02T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-03T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-04T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    }
+   ],
+   "activity": [],
+   "expected": {
+    "progress": {
+     "active_days": 0,
+     "gut_feeling_entries": 4,
+     "unlocked": false
+    },
+    "calendar": {
+     "first_day": "2026-10-25",
+     "last_day": "2026-11-23",
+     "classes": {
+      "2026-11-01": "hard",
+      "2026-11-02": "hard",
+      "2026-11-03": "hard",
+      "2026-11-04": "hard"
+     }
+    },
+    "gut_feeling_days": 4,
+    "good_days": {
+     "days": 0,
+     "shown": false,
+     "often": []
+    },
+    "hard_days": {
+     "days": 4,
+     "shown": true,
+     "often": [
+      {
+       "name": "Zwiebel",
+       "count": 4,
+       "of": 4
+      },
+      {
+       "name": "Apfel",
+       "count": 3,
+       "of": 4
+      },
+      {
+       "name": "Birne",
+       "count": 3,
+       "of": 4
+      },
+      {
+       "name": "Dattel",
+       "count": 3,
+       "of": 4
+      },
+      {
+       "name": "Feige",
+       "count": 3,
+       "of": 4
+      }
+     ]
+    },
+    "show_noticed": true,
+    "noticed": [
+     {
+      "name": "Zwiebel",
+      "hard": 4,
+      "hard_days": 4,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": false
+     },
+     {
+      "name": "Apfel",
+      "hard": 3,
+      "hard_days": 4,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": false
+     },
+     {
+      "name": "Birne",
+      "hard": 3,
+      "hard_days": 4,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": false
+     },
+     {
+      "name": "Dattel",
+      "hard": 3,
+      "hard_days": 4,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": false
+     },
+     {
+      "name": "Feige",
+      "hard": 3,
+      "hard_days": 4,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": false
+     },
+     {
+      "name": "Lauch",
+      "hard": 2,
+      "hard_days": 4,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": true
+     },
+     {
+      "name": "Mais",
+      "hard": 2,
+      "hard_days": 4,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": true
+     },
+     {
+      "name": "Nuss",
+      "hard": 2,
+      "hard_days": 4,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": true
+     }
+    ],
+    "pick": {
+     "kind": "noticed",
+     "noticed": {
+      "name": "Zwiebel",
+      "hard": 4,
+      "hard_days": 4,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": false
+     }
+    },
+    "journey": []
+   }
+  },
+  {
+   "id": "often-thresholds-and-the-good-days-pick",
+   "description": "oft dabei: at least 2 days and at least half of them (Hafer 2 of 4 yes, 2 of 5 no). Nothing stands out (Reis' gap is negative), so the good days are the pick.",
+   "now": "2026-11-23T20:00:00+01:00",
+   "meals": [
+    {
+     "tracked_at": "2026-11-01T08:00:00+00:00",
+     "ingredients": [
+      "Hafer",
+      "Reis"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-02T08:00:00+00:00",
+     "ingredients": [
+      "Hafer",
+      "Reis"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-03T08:00:00+00:00",
+     "ingredients": [
+      "Reis"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-04T08:00:00+00:00",
+     "ingredients": []
+    },
+    {
+     "tracked_at": "2026-11-05T08:00:00+00:00",
+     "ingredients": []
+    },
+    {
+     "tracked_at": "2026-11-12T08:00:00+00:00",
+     "ingredients": [
+      "Karotte",
+      "Hafer",
+      "Reis"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-13T08:00:00+00:00",
+     "ingredients": [
+      "Hafer",
+      "Reis"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-14T08:00:00+00:00",
+     "ingredients": [
+      "Reis"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-15T08:00:00+00:00",
+     "ingredients": []
+    }
+   ],
+   "gut_feelings": [
+    {
+     "tracked_at": "2026-11-01T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-02T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-03T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-04T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-05T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-12T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-13T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-14T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-15T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    }
+   ],
+   "activity": [],
+   "expected": {
+    "progress": {
+     "active_days": 0,
+     "gut_feeling_entries": 9,
+     "unlocked": false
+    },
+    "calendar": {
+     "first_day": "2026-10-25",
+     "last_day": "2026-11-23",
+     "classes": {
+      "2026-11-01": "hard",
+      "2026-11-02": "hard",
+      "2026-11-03": "hard",
+      "2026-11-04": "hard",
+      "2026-11-05": "hard",
+      "2026-11-12": "good",
+      "2026-11-13": "good",
+      "2026-11-14": "good",
+      "2026-11-15": "good"
+     }
+    },
+    "gut_feeling_days": 9,
+    "good_days": {
+     "days": 4,
+     "shown": true,
+     "often": [
+      {
+       "name": "Reis",
+       "count": 3,
+       "of": 4
+      },
+      {
+       "name": "Hafer",
+       "count": 2,
+       "of": 4
+      }
+     ]
+    },
+    "hard_days": {
+     "days": 5,
+     "shown": true,
+     "often": [
+      {
+       "name": "Reis",
+       "count": 3,
+       "of": 5
+      }
+     ]
+    },
+    "show_noticed": true,
+    "noticed": [],
+    "pick": {
+     "kind": "good_days"
+    },
+    "journey": []
+   }
+  },
+  {
+   "id": "columns-hidden-below-3-days",
+   "description": "2 good and 2 hard days: neither column is shown, so they list nothing, and there is no Fällt mir auf.",
+   "now": "2026-11-23T20:00:00+01:00",
+   "meals": [
+    {
+     "tracked_at": "2026-11-01T08:00:00+00:00",
+     "ingredients": [
+      "Zwiebel"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-02T08:00:00+00:00",
+     "ingredients": [
+      "Zwiebel"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-12T08:00:00+00:00",
+     "ingredients": [
+      "Reis"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-13T08:00:00+00:00",
+     "ingredients": [
+      "Reis"
+     ]
+    }
+   ],
+   "gut_feelings": [
+    {
+     "tracked_at": "2026-11-01T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-02T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-12T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-13T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    }
+   ],
+   "activity": [],
+   "expected": {
+    "progress": {
+     "active_days": 0,
+     "gut_feeling_entries": 4,
+     "unlocked": false
+    },
+    "calendar": {
+     "first_day": "2026-10-25",
+     "last_day": "2026-11-23",
+     "classes": {
+      "2026-11-01": "hard",
+      "2026-11-02": "hard",
+      "2026-11-12": "good",
+      "2026-11-13": "good"
+     }
+    },
+    "gut_feeling_days": 4,
+    "good_days": {
+     "days": 2,
+     "shown": false,
+     "often": []
+    },
+    "hard_days": {
+     "days": 2,
+     "shown": false,
+     "often": []
+    },
+    "show_noticed": false,
+    "noticed": [],
+    "pick": {
+     "kind": "nothing_yet"
+    },
+    "journey": []
+   }
+  },
+  {
+   "id": "a-meal-in-two-windows-counts-on-both",
+   "description": "A meal at 20:00 on 9 Nov is in the window of 9 Nov (21:00) and of 10 Nov (19:00).",
+   "now": "2026-11-23T20:00:00+01:00",
+   "meals": [
+    {
+     "tracked_at": "2026-11-09T20:00:00+00:00",
+     "ingredients": [
+      "Reis"
+     ]
+    },
+    {
+     "tracked_at": "2026-11-11T08:00:00+00:00",
+     "ingredients": [
+      "Reis"
+     ]
+    }
+   ],
+   "gut_feelings": [
+    {
+     "tracked_at": "2026-11-09T21:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-10T19:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    },
+    {
+     "tracked_at": "2026-11-11T12:00:00+00:00",
+     "bloating": 5,
+     "gas": 5,
+     "cramps": 5,
+     "fullness": 5
+    }
+   ],
+   "activity": [],
+   "expected": {
+    "progress": {
+     "active_days": 0,
+     "gut_feeling_entries": 3,
+     "unlocked": false
+    },
+    "calendar": {
+     "first_day": "2026-10-25",
+     "last_day": "2026-11-23",
+     "classes": {
+      "2026-11-09": "hard",
+      "2026-11-10": "hard",
+      "2026-11-11": "hard"
+     }
+    },
+    "gut_feeling_days": 3,
+    "good_days": {
+     "days": 0,
+     "shown": false,
+     "often": []
+    },
+    "hard_days": {
+     "days": 3,
+     "shown": true,
+     "often": [
+      {
+       "name": "Reis",
+       "count": 3,
+       "of": 3
+      }
+     ]
+    },
+    "show_noticed": true,
+    "noticed": [
+     {
+      "name": "Reis",
+      "hard": 3,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": false
+     }
+    ],
+    "pick": {
+     "kind": "noticed",
+     "noticed": {
+      "name": "Reis",
+      "hard": 3,
+      "hard_days": 3,
+      "good": 0,
+      "good_days": 0,
+      "uncertain": false
+     }
+    },
+    "journey": []
+   }
+  },
+  {
+   "id": "journey-marks-gut-feeling-days",
+   "description": "The journey: the active days, oldest first, each marking whether it had a Bauchgefühl.",
+   "now": "2026-11-23T20:00:00+01:00",
+   "meals": [],
+   "gut_feelings": [
+    {
+     "tracked_at": "2026-11-20T12:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    },
+    {
+     "tracked_at": "2026-11-23T12:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    }
+   ],
+   "activity": [
+    "2026-11-14T12:00:00+00:00",
+    "2026-11-18T12:00:00+00:00",
+    "2026-11-20T12:00:00+00:00",
+    "2026-11-22T12:00:00+00:00",
+    "2026-11-23T12:00:00+00:00"
+   ],
+   "expected": {
+    "progress": {
+     "active_days": 5,
+     "gut_feeling_entries": 2,
+     "unlocked": false
+    },
+    "calendar": {
+     "first_day": "2026-10-25",
+     "last_day": "2026-11-23",
+     "classes": {
+      "2026-11-20": "good",
+      "2026-11-23": "good"
+     }
+    },
+    "gut_feeling_days": 2,
+    "good_days": {
+     "days": 2,
+     "shown": false,
+     "often": []
+    },
+    "hard_days": {
+     "days": 0,
+     "shown": false,
+     "often": []
+    },
+    "show_noticed": false,
+    "noticed": [],
+    "pick": {
+     "kind": "nothing_yet"
+    },
+    "journey": [
+     {
+      "day": "2026-11-14",
+      "gut_feeling": false
+     },
+     {
+      "day": "2026-11-18",
+      "gut_feeling": false
+     },
+     {
+      "day": "2026-11-20",
+      "gut_feeling": true
+     },
+     {
+      "day": "2026-11-22",
+      "gut_feeling": false
+     },
+     {
+      "day": "2026-11-23",
+      "gut_feeling": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "journey-holds-the-latest-7-days",
+   "description": "9 active days: the journey holds only the latest 7; a Bauchgefühl on an earlier day is not on it.",
+   "now": "2026-11-23T20:00:00+01:00",
+   "meals": [],
+   "gut_feelings": [
+    {
+     "tracked_at": "2026-11-16T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-18T12:00:00+00:00",
+     "bloating": 1,
+     "gas": 1,
+     "cramps": 1,
+     "fullness": 1
+    },
+    {
+     "tracked_at": "2026-11-18T13:00:00+00:00",
+     "bloating": 2,
+     "gas": 2,
+     "cramps": 2,
+     "fullness": 2
+    }
+   ],
+   "activity": [
+    "2026-11-23T12:00:00+00:00",
+    "2026-11-22T12:00:00+00:00",
+    "2026-11-21T12:00:00+00:00",
+    "2026-11-20T12:00:00+00:00",
+    "2026-11-19T12:00:00+00:00",
+    "2026-11-18T12:00:00+00:00",
+    "2026-11-17T12:00:00+00:00",
+    "2026-11-16T12:00:00+00:00",
+    "2026-11-15T12:00:00+00:00"
+   ],
+   "expected": {
+    "progress": {
+     "active_days": 9,
+     "gut_feeling_entries": 3,
+     "unlocked": true
+    },
+    "calendar": {
+     "first_day": "2026-10-25",
+     "last_day": "2026-11-23",
+     "classes": {
+      "2026-11-16": "good",
+      "2026-11-18": "good"
+     }
+    },
+    "gut_feeling_days": 2,
+    "good_days": {
+     "days": 2,
+     "shown": false,
+     "often": []
+    },
+    "hard_days": {
+     "days": 0,
+     "shown": false,
+     "often": []
+    },
+    "show_noticed": false,
+    "noticed": [],
+    "pick": {
+     "kind": "nothing_yet"
+    },
+    "journey": [
+     {
+      "day": "2026-11-17",
+      "gut_feeling": false
+     },
+     {
+      "day": "2026-11-18",
+      "gut_feeling": true
+     },
+     {
+      "day": "2026-11-19",
+      "gut_feeling": false
+     },
+     {
+      "day": "2026-11-20",
+      "gut_feeling": false
+     },
+     {
+      "day": "2026-11-21",
+      "gut_feeling": false
+     },
+     {
+      "day": "2026-11-22",
+      "gut_feeling": false
+     },
+     {
+      "day": "2026-11-23",
+      "gut_feeling": false
+     }
+    ]
+   }
+  }
+ ]
+}

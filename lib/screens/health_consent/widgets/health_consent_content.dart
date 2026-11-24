@@ -50,7 +50,12 @@ class HealthConsentContent extends StatelessWidget {
         AppConstants.gap12,
         const Text(
           'Fotos und Beschreibungen deiner Mahlzeiten werden von einem '
-          'KI-Dienst (Anthropic, USA) analysiert.',
+          'KI-Dienst (Anthropic, USA) analysiert. Wenn du die wöchentlichen '
+          'Tipps einschaltest, gehen deine Einträge der letzten Wochen, die '
+          'Muster daraus und deine Bewertungen der bisherigen Tipps an diesen '
+          'KI-Dienst. Erst wenn du bei einem Rezept auf „Für mich anpassen“ '
+          'tippst, gehen dieses Rezept, deine Unverträglichkeiten und deine '
+          'Ernährungsform an den KI-Dienst.',
           style: TextStyle(
             fontSize: AppTheme.fontSizeBody,
             color: AppTheme.foreground,

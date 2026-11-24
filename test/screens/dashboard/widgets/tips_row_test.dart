@@ -31,13 +31,18 @@ void main() {
 
     test('no items: the count is left out', () {
       expect(
-        TipsRow.label(testRecommendation(createdAt: monday)),
+        TipsRow.label(
+          testRecommendation(createdAt: monday, recommendations: []),
+        ),
         '✨ Neue Tipps · Woche 47',
       );
     });
 
-    String labelFor(DateTime createdAt) =>
-        TipsRow.label(testRecommendation(createdAt: createdAt));
+    /// The label of a set made at [createdAt], without items (the week
+    /// alone).
+    String labelFor(DateTime createdAt) => TipsRow.label(
+      testRecommendation(createdAt: createdAt, recommendations: []),
+    );
 
     test('the ISO week across the year boundaries', () {
       expect(labelFor(DateTime(2025, 12, 28)), '✨ Neue Tipps · Woche 52');

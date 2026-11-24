@@ -1,3 +1,4 @@
+import '../utils/food_words.dart';
 import '../utils/json_values.dart';
 import '../utils/url_utils.dart';
 import 'fodmap_flags.dart';
@@ -25,7 +26,7 @@ enum MealType {
 
 /// One line of a collection recipe (a `recipe_ingredients` row).
 class RecipeIngredient {
-  const RecipeIngredient({
+  RecipeIngredient({
     required this.position,
     this.amount,
     required this.name,
@@ -76,11 +77,21 @@ class RecipeIngredient {
 
   bool get mapped => catalogId != null;
 
-  /// The line's name and catalog name, trimmed and lower-cased, for matching
-  /// against diary ingredients.
-  Set<String> get matchKeys => {
-    for (final key in [name, ?catalogName]) key.trim().toLowerCase(),
-  }..remove('');
+  /// [name] and [catalogName] as foods, each read once, when first compared.
+  late final FoodName _food = FoodName(name);
+  late final FoodName? _catalogFood = switch (catalogName) {
+    final catalog? => FoodName(catalog),
+    null => null,
+  };
+
+  /// Whether the line is [food]: its name or catalog name is the same food
+  /// ([FoodName.isSame]: the same match key or a shared food word). A line
+  /// „Ei" is the food „Eier", a line „Zwiebelpulver" the food „Zwiebel"
+  /// (not without [viaProcessing]); a line „Kokosmilch" or „Laktosefreie
+  /// Milch" is no „Milch".
+  bool isFood(FoodName food, {bool viaProcessing = true}) =>
+      food.isSame(_food, viaProcessing: viaProcessing) ||
+      (_catalogFood?.isSame(food, viaProcessing: viaProcessing) ?? false);
 }
 
 /// A recipe of the curated collection (`recipes`).

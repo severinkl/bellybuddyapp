@@ -14,7 +14,12 @@ import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/insight_card.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_dots.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_line.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/journey_day_sheet.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_list_sheet.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/tutorial/dashboard_tutorial_overlay.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/dashboard_tutorial_steps.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/tutorial/spotlight_painter.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_keys.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_step.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
@@ -26,12 +31,15 @@ import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/repositories/recommendation_repository.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tips_row.dart';
 import 'package:belly_buddy/providers/insights_provider.dart';
+import 'package:belly_buddy/providers/journey_provider.dart';
+import 'package:belly_buddy/providers/journey_rewards_provider.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/screens/recommendations/recommendations_screen.dart';
 import 'package:belly_buddy/services/entry_query_service.dart';
+import 'package:belly_buddy/services/journey/journey_copy.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/services/buddy/care_meters.dart';
@@ -171,12 +179,14 @@ const _optInTitle = 'Bleib auf dem Laufenden!';
 
 /// Home in the app: the real router and shell under [AppTestHost], whose
 /// root keeps the tips loaded (its sign-in load brings [tips]'s sets).
+/// [profiles] holds the user's profile (default: [testUserProfile]).
 Future<ProviderContainer> _pumpHome(
   WidgetTester tester, {
   FakeRecommendationRepository? tips,
+  FakeProfileRepository? profiles,
 }) async {
   final container = ProviderContainer.test(
-    overrides: baseOverrides(tips: tips),
+    overrides: baseOverrides(tips: tips, profiles: profiles),
   );
   await tester.pumpWidget(
     UncontrolledProviderScope(container: container, child: const AppTestHost()),
@@ -184,6 +194,14 @@ Future<ProviderContainer> _pumpHome(
   await _settleFirstRun(tester);
   return container;
 }
+
+/// The rect the tour's spotlight cuts out.
+Rect _spotlight(WidgetTester tester) => tester
+    .widgetList<CustomPaint>(find.byType(CustomPaint))
+    .map((paint) => paint.painter)
+    .whereType<SpotlightPainter>()
+    .single
+    .targetRect;
 
 /// A tip set that nobody opened yet.
 FakeRecommendationRepository _unseenTips() => FakeRecommendationRepository(
@@ -206,7 +224,7 @@ void main() {
       await _pumpHome(tester, tips: _unseenTips());
 
       expect(find.byKey(TipsRow.rowKey), findsOneWidget);
-      expect(find.text('✨ Neue Tipps · Woche 47'), findsOneWidget);
+      expect(find.text('✨ Neue Tipps · Woche 47 · 1 Tipp'), findsOneWidget);
       expect(
         tester.getRect(find.byKey(TipsRow.rowKey)).top,
         greaterThanOrEqualTo(
@@ -353,6 +371,94 @@ void main() {
       expect(find.text('2 von 7 Tagen', skipOffstage: false), findsOneWidget);
       // Loaded once on mount: the dashboard's load joins the card's.
       expect(entryRepo.insightSourceCalls, 1);
+    });
+
+    testWidgets("a journey user's card shows the line", (tester) async {
+      final entries = FakeEntryRepository()
+        ..insightSource = insightSourceFor(
+          activeDays: 1,
+          gutFeelings: 0,
+          now: _insightsNow,
+        );
+      final container = ProviderContainer.test(
+        overrides: [
+          ...baseOverrides(entries: entries),
+          buddyClockProvider.overrideWithValue(() => _insightsNow),
+        ],
+      );
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const AppTestHost(),
+        ),
+      );
+      await _settleFirstRun(tester);
+
+      expect(container.read(journeyProvider), isTrue);
+      // Day 1 earned yesterday, nothing today yet: day 2 waits.
+      final line = find.descendant(
+        of: find.byKey(InsightCard.cardKey),
+        matching: find.byKey(JourneyRewardLineView.lineKey),
+      );
+      expect(line, findsOneWidget);
+      expect(
+        find.descendant(
+          of: line,
+          matching: find.text('Heute wartet: Ein Wissen-Häppchen'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        tester.getRect(line).top,
+        greaterThanOrEqualTo(tester.getRect(find.byType(JourneyDots)).bottom),
+      );
+
+      // Its tap target reaches the card's bottom edge, and opens the list,
+      // not Muster.
+      await tester.ensureVisible(find.byKey(InsightCard.cardKey));
+      await tester.pump();
+      final card = tester.getRect(find.byKey(InsightCard.cardKey));
+      expect(tester.getRect(line).bottom, card.bottom);
+      await tester.tapAt(Offset(card.center.dx, card.bottom - 4));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byType(JourneyRewardListSheet), findsOneWidget);
+      expect(
+        container.read(routerProvider).state.matchedLocation,
+        RoutePaths.dashboard,
+      );
+    });
+
+    testWidgets("a journey user's card without a line (the rewards not read "
+        'yet): no slot for it', (tester) async {
+      final entries = FakeEntryRepository()
+        ..insightSource = insightSourceFor(
+          activeDays: 1,
+          gutFeelings: 0,
+          now: _insightsNow,
+        );
+      final container = ProviderContainer.test(
+        overrides: [
+          ...baseOverrides(entries: entries),
+          buddyClockProvider.overrideWithValue(() => _insightsNow),
+          journeyRewardsSeededWith(null),
+        ],
+      );
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const AppTestHost(),
+        ),
+      );
+      await _settleFirstRun(tester);
+
+      expect(container.read(journeyProvider), isTrue);
+      expect(find.byType(JourneyDots), findsOneWidget);
+      expect(container.read(journeyRewardLineProvider), isNull);
+      expect(
+        tester.widget<InsightCard>(find.byType(InsightCard)).journeyReward,
+        isNull,
+      );
     });
 
     testWidgets("a user past day 7 sees Stage 2's card", (tester) async {
@@ -1013,6 +1119,77 @@ void main() {
     });
   });
 
+  group('DashboardScreen tour spotlight', () {
+    // A cold start opens Home from /loading: its page still slides in while
+    // the tour starts. Each hole frames its target where it ends up.
+    final phones = [
+      (
+        name: 'iPhone 17 Pro, 402×874',
+        size: const Size(402, 874),
+        dpr: 3.0,
+        top: 62.0,
+        bottom: 34.0,
+        textScale: 1.0,
+      ),
+      (
+        name: '375×667 at text scale 1.3',
+        size: const Size(375, 667),
+        dpr: 2.0,
+        top: 20.0,
+        bottom: 0.0,
+        textScale: 1.3,
+      ),
+    ];
+    for (final phone in phones) {
+      testWidgets(
+        '${phone.name}: the first hole frames the Buddy in his ring, '
+        'centred, and each later one its target',
+        variant: const TargetPlatformVariant({
+          TargetPlatform.iOS,
+          TargetPlatform.android,
+        }),
+        (tester) async {
+          tester.view
+            ..physicalSize = phone.size * phone.dpr
+            ..devicePixelRatio = phone.dpr
+            ..padding = FakeViewPadding(
+              top: phone.top * phone.dpr,
+              bottom: phone.bottom * phone.dpr,
+            );
+          addTearDown(tester.view.reset);
+          tester.platformDispatcher.textScaleFactorTestValue = phone.textScale;
+          addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+          await _pumpHome(
+            tester,
+            profiles: FakeProfileRepository()
+              ..seedProfile(testUserProfile(alreadySeenTutorial: false)),
+          );
+          await tester.pumpAndSettle();
+          expect(find.text(_tourSkip), findsOneWidget);
+
+          final hero = tester.getRect(find.byKey(TutorialKeys.buddy));
+          final ring = tester.getRect(find.byType(CareRing));
+          final hole = _spotlight(tester);
+          expect(hole, hero.inflate(AppConstants.spacingXs));
+          expect(hole.intersect(ring), ring, reason: 'the ring is in the hole');
+          expect(hole.center.dx, closeTo(phone.size.width / 2, 0.01));
+
+          for (final step in dashboardTutorialSteps.skip(1)) {
+            await tester.tap(find.byKey(DashboardTutorialOverlay.advanceKey));
+            await tester.pumpAndSettle();
+            expect(
+              _spotlight(tester),
+              tester
+                  .getRect(find.byKey(step.targetKey))
+                  .inflate(AppConstants.spacingXs),
+              reason: '${step.targetKey}',
+            );
+          }
+        },
+      );
+    }
+  });
+
   group('DashboardScreen tour replay', () {
     testWidgets('replay from Ich starts the tour on Home once', (tester) async {
       final profileRepo = FakeProfileRepository()
@@ -1132,6 +1309,42 @@ void main() {
       ]);
     });
 
+    testWidgets('a journey user on day 1 hears the reward', (tester) async {
+      final entries = FakeEntryRepository()
+        ..insightSource = insightSourceFor(
+          activeDays: 1,
+          gutFeelings: 0,
+          now: _insightsNow,
+        );
+      final container = ProviderContainer.test(
+        overrides: [
+          ...baseOverrides(entries: entries),
+          buddyClockProvider.overrideWithValue(() => _insightsNow),
+        ],
+      );
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const AppTestHost(),
+        ),
+      );
+      await _settleFirstRun(tester);
+
+      expect(container.read(journeyProvider), isTrue);
+      final status = container.read(buddyProvider).value!;
+      expect(status.announcements, [BuddyAnnouncement.journeyReward]);
+      expect(
+        status.announcementKeys[BuddyAnnouncement.journeyReward],
+        endsWith('_journeyReward_day1'),
+      );
+
+      // He celebrates, then gives day 1's recipe.
+      await tester.pump(buddyActionDuration(BuddyAction.celebrate));
+      await tester.pump();
+      expect(find.byType(JourneyDaySheet), findsOneWidget);
+      expect(find.text(JourneyCopy.day1Line), findsOneWidget);
+    });
+
     testWidgets('repeated offers queue it once', (tester) async {
       final entryRepo = FakeEntryRepository()
         ..insightSource = insightSourceFor(
@@ -1168,7 +1381,7 @@ void main() {
         expect(
           container.read(buddyOffersProvider),
           gutFeelings == 3
-              ? {BuddyAnnouncement.weeklyTipsOffer: weeklyTipsOfferSuffix}
+              ? {BuddyAnnouncement.weeklyTipsOffer: onceSuffix}
               : isEmpty,
           reason: '$gutFeelings gut-feeling entries',
         );

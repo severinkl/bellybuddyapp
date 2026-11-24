@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -363,6 +365,60 @@ void main() {
       expect(target.bottom, lessThanOrEqualTo(height));
       expect(find.text('step b', findRichText: true), findsOneWidget);
       // Measured once the scroll has landed, not a frame before.
+      expect(_spotlight(tester), target.inflate(AppConstants.spacingXs));
+    });
+
+    testWidgets('follows a target that is still moving when its step starts', (
+      tester,
+    ) async {
+      // As Home under the tour on a cold start: its page still slides in
+      // from the right (/loading → /dashboard) when the tour measures.
+      final slide = AnimationController(
+        vsync: const TestVSync(),
+        duration: const Duration(milliseconds: 500),
+      );
+      addTearDown(slide.dispose);
+      await tester.pumpWithProviders(
+        Scaffold(
+          body: Stack(
+            children: [
+              SlideTransition(
+                position: Tween(
+                  begin: const Offset(1, 0),
+                  end: Offset.zero,
+                ).animate(slide),
+                child: Align(
+                  alignment: Alignment.topLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 20, top: 100),
+                    child: Container(
+                      key: keyA,
+                      width: 200,
+                      height: 80,
+                      color: Colors.blue,
+                    ),
+                  ),
+                ),
+              ),
+              Positioned.fill(
+                child: DashboardTutorialOverlay(
+                  steps: twoSteps(),
+                  onFinish: () {},
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+      unawaited(slide.forward());
+      await tester.pump(const Duration(milliseconds: 100));
+      // Measured mid-slide.
+      expect(_spotlight(tester).left, greaterThan(20));
+
+      await tester.pumpAndSettle();
+
+      final target = tester.getRect(find.byKey(keyA));
+      expect(target.left, 20);
       expect(_spotlight(tester), target.inflate(AppConstants.spacingXs));
     });
 

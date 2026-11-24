@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../models/first_tip.dart';
 import '../models/recommendation.dart';
 import '../providers/core_providers.dart';
 import '../utils/logger.dart';
@@ -10,6 +11,47 @@ class RecommendationService {
   RecommendationService(this._client);
 
   static const _log = AppLogger('RecommendationService');
+
+  /// Core's function behind the day-3 first tip.
+  static const firstTipFunction = 'diet-recommendations';
+
+  /// Asks core for the day-3 first tip ([firstTipFunction]); core saves the
+  /// set it makes. The body is exactly the profile's [intolerances] and
+  /// [diet]: without `recentMeals`, core reads the last days' meals itself.
+  /// Only the answer's `id` and its number of tips are read.
+  ///
+  /// Every failure is a [FirstTipException]: an error answer with its
+  /// status; no connection, or an answer that can't be read, without one.
+  /// Nothing is logged here: the caller logs the failure once.
+  Future<FirstTipResult> requestFirstTip({
+    required List<String> intolerances,
+    required String? diet,
+  }) async {
+    final Object? data;
+    try {
+      final response = await _client.functions.invoke(
+        firstTipFunction,
+        body: {'intolerances': intolerances, 'diet': diet},
+      );
+      data = response.data;
+    } on FunctionsFetchException {
+      // The request never got an answer (status 0): no status to name.
+      throw const FirstTipException();
+    } on FunctionException catch (e) {
+      throw FirstTipException(e.status);
+    } catch (_) {
+      throw const FirstTipException();
+    }
+    try {
+      if (data is! Map) throw const FormatException('not a JSON object');
+      return FirstTipResult(
+        id: data['id'] as String?,
+        tips: (data['recommendations'] as List?)?.length ?? 0,
+      );
+    } catch (_) {
+      throw const FirstTipException();
+    }
+  }
 
   Future<List<Recommendation>> fetchByUserId(String userId) async {
     try {

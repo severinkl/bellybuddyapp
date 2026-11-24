@@ -57,6 +57,36 @@ void main() {
         isTrue,
       );
     });
+
+    test('true for a consent to the policy of 22.11.2026', () {
+      expect(
+        needsHealthConsent(testUserProfile(privacyPolicyVersion: '2026-11-22')),
+        isTrue,
+      );
+    });
+  });
+
+  group('consentedToOlderPolicy', () {
+    test('true for a consent to an older policy version', () {
+      expect(
+        consentedToOlderPolicy(
+          testUserProfile(privacyPolicyVersion: '2026-11-22'),
+        ),
+        isTrue,
+      );
+    });
+
+    test('false for a first-time consent', () {
+      expect(consentedToOlderPolicy(null), isFalse);
+      expect(
+        consentedToOlderPolicy(testUserProfile(hasHealthConsent: false)),
+        isFalse,
+      );
+    });
+
+    test('false with a consent for the current policy version', () {
+      expect(consentedToOlderPolicy(testUserProfile()), isFalse);
+    });
   });
 
   group('healthConsentRequiredProvider', () {

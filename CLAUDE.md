@@ -41,6 +41,6 @@ Non-conventional commit messages are silently ignored by the analyzer — a merg
 
 The release workflow creates the `v<version>` tag with `GITHUB_TOKEN` and commits the bumped `pubspec.yaml` back to `main` as a `chore(release): x.y.z [skip ci]` commit. A tag pushed with `GITHUB_TOKEN` never triggers `push` workflows, so `release.yml` starts the deploy itself via `gh workflow run` (`workflow_dispatch` on `deploy.yml`). The tag points at the `[skip ci]` commit, so re-pushing it starts no deploy either; to redeploy a release, run `deploy.yml` manually with `workflow_dispatch` and the tag as the ref. Deploys never run directly on `push: main`.
 
-### One-off migration (still to do)
+### Baseline
 
-The baseline tag `v1.0.0` has not been created yet. The owner must push it on `main` before the first `release.yml` run so semantic-release has a reference point.
+semantic-release has its reference point: the first automated release was `v1.1.0` (2026-11-24); every later release bumps from the latest `v*` tag on `main`.

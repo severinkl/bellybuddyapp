@@ -1,9 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
-import '../../../config/app_theme.dart';
-import '../../../config/constants.dart';
 import '../../../widgets/buddy/buddy_ask_sheet.dart';
-import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/weekly_tips_switch.dart';
 
 /// The Buddy's one-time offer of the weekly tips ([WeeklyTipsOfferSheet]),
@@ -34,36 +31,15 @@ class WeeklyTipsOfferSheet extends StatelessWidget {
   Widget build(BuildContext context) {
     return BuddyAskSheet(
       line: line,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            body,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: AppTheme.fontSizeBody,
-              height: AppTheme.lineHeightBody,
-              color: AppTheme.mutedForeground,
-            ),
-          ),
-          AppConstants.gap16,
-          BbButton(
-            tapKey: openKey,
-            label: 'Zu den Tipps',
-            onPressed: () => Navigator.pop(context, true),
-          ),
-          AppConstants.gap8,
-          TextButton(
-            key: laterKey,
-            onPressed: () => Navigator.pop(context, false),
-            style: TextButton.styleFrom(
-              foregroundColor: AppTheme.mutedForeground,
-            ),
-            child: const Text('Später'),
-          ),
-        ],
+      actions: BuddySheetActions(
+        primaryKey: openKey,
+        primary: 'Zu den Tipps',
+        onPrimary: () => Navigator.pop(context, true),
+        secondaryKey: laterKey,
+        secondary: 'Später',
+        onSecondary: () => Navigator.pop(context, false),
       ),
+      child: const BuddySheetText(body),
     );
   }
 }

@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../models/recommendation.dart';
+import '../../providers/recipe_collection_provider.dart';
 import '../../providers/recommendation_index_provider.dart';
 import '../../providers/recommendation_provider.dart';
 import '../../router/navigation_extensions.dart';
@@ -58,11 +59,15 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
       await ref.read(recommendationProvider.notifier).fetchRecommendations();
       if (!mounted) return;
       // From now on a set that arrives while they are open (a push) is seen
-      // too: each newest set once, so a failing mark isn't retried in a loop.
-      _markedNewestId = ref.read(recommendationProvider).value?.firstOrNull?.id;
-      ref.listenManual<Recommendation?>(unseenTipSetProvider, (_, set) {
-        if (set == null || set.id == _markedNewestId) return;
-        _markedNewestId = set.id;
+      // too, also one without tips: each newest set once, so a failing mark
+      // isn't retried in a loop.
+      _markedNewestId = _newestId(ref.read(recommendationProvider));
+      ref.listenManual<String?>(recommendationProvider.select(_newestId), (
+        _,
+        id,
+      ) {
+        if (id == null || id == _markedNewestId) return;
+        _markedNewestId = id;
         unawaited(_markSeen());
       });
       await _markSeen();
@@ -71,6 +76,10 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
 
   /// The newest set [_markSeen] was called for.
   String? _markedNewestId;
+
+  /// The id of the newest loaded set, with or without tips.
+  static String? _newestId(AsyncValue<List<Recommendation>> sets) =>
+      sets.value?.firstOrNull?.id;
 
   /// Marks the shown sets seen.
   Future<void> _markSeen() async {
@@ -199,8 +208,8 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
             children: [
               const MascotImage(
                 assetPath: AppConstants.mascotHappy,
-                width: 96,
-                height: 96,
+                width: AppConstants.mascotSizeMd,
+                height: AppConstants.mascotSizeMd,
               ),
               AppConstants.gap16,
               const Padding(
@@ -379,10 +388,16 @@ class _RecommendationPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final letter = recommendation.isLetter;
     return RefreshIndicator(
       color: AppTheme.primary,
-      onRefresh: () =>
-          ref.read(recommendationProvider.notifier).fetchRecommendations(),
+      // The tips, and a collection that failed to load: its recipe links
+      // show only once it has.
+      onRefresh: () => Future.wait([
+        ref.read(recommendationProvider.notifier).fetchRecommendations(),
+        if (ref.read(recipeCollectionProvider).hasError)
+          ref.read(recipeCollectionProvider.notifier).refresh(),
+      ]),
       child: ListView(
         padding: AppConstants.paddingMd,
         children: [
@@ -397,12 +412,12 @@ class _RecommendationPage extends ConsumerWidget {
             ),
           ),
           AppConstants.gap12,
-          ...recommendation.recommendations.map(
-            (item) => Padding(
+          // A letter's focus comes first, with its label.
+          for (final (i, item) in recommendation.itemsFocusFirst.indexed)
+            Padding(
               padding: const EdgeInsets.only(bottom: AppConstants.spacing10),
-              child: RecommendationCard(item: item),
+              child: RecommendationCard(item: item, focus: letter && i == 0),
             ),
-          ),
           AppConstants.gap16,
           RecommendationFeedbackView(recommendation: recommendation),
           AppConstants.gap24,

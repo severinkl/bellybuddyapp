@@ -1,0 +1,137 @@
+import 'dart:async';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:material_ui/material_ui.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../../../models/journey_rewards.dart';
+import '../../../providers/first_tip_provider.dart';
+import '../../../providers/home_cover_provider.dart';
+import '../../../providers/journey_rewards_provider.dart';
+import '../../../providers/profile_provider.dart';
+import '../../../router/navigation_extensions.dart';
+import '../../../router/route_names.dart';
+import '../../../services/journey/journey_copy.dart';
+import '../../../services/journey/journey_rules.dart';
+import '../../../utils/back_in_app.dart';
+import '../../../utils/url_utils.dart';
+import 'first_tip_offer_sheet.dart';
+import 'journey_day_sheet.dart';
+
+/// Opens what [day]'s reward gives, from [context]:
+/// - 1, 3 and 5: the picked recipe ([rewardPick]), else the recipes;
+/// - 2: the article, in the in-app browser through [openUrl] (a SnackBar
+///   says when that fails); completes once it opened or failed;
+/// - 3 unless it is a recipe ([day3Of]): the Tipps (an open offer is
+///   answered through [offerFirstTip], never here);
+/// - 4: nothing (the saying is the reward);
+/// - 6 and 7: Muster.
+///
+/// Navigations are not awaited; a page or tab covers Home as it starts
+/// ([homeCoveredProvider], from the router). The article, once it opened,
+/// covers Home until the user is back in the app ([backInApp]); day 4 never
+/// leaves Home.
+Future<void> openJourneyReward(
+  BuildContext context,
+  WidgetRef ref,
+  int day, {
+  UrlOpener openUrl = launchUrl,
+}) async {
+  final rewards = ref.read(journeyRewardsProvider) ?? const JourneyRewards();
+  final weeklyTips = ref.read(weeklyTipsEnabledProvider);
+
+  void openPick() {
+    if (rewardPick(day, rewards, weeklyTips: weeklyTips) case final pick?) {
+      unawaited(context.openRecipe(pick.id));
+    } else {
+      context.go(RoutePaths.discoverRecipes);
+    }
+  }
+
+  switch (day) {
+    case 2:
+      final opened = await openExternalUrl(
+        context,
+        JourneyCopy.articleUrl,
+        mode: LaunchMode.inAppBrowserView,
+        failureMessage: JourneyCopy.articleFailure,
+        open: openUrl,
+      );
+      // Over the app, Home stays where it is: nothing that waits for Home
+      // may play under the browser.
+      if (opened) {
+        ref.read(homeCoveredProvider.notifier).leftHome(backInApp());
+      }
+    case 3:
+      switch (day3Of(rewards, weeklyTips: weeklyTips)) {
+        case Day3.waiting || Day3.offerOpen || Day3.tip:
+          unawaited(context.push(RoutePaths.recommendations));
+        case Day3.recipe:
+          openPick();
+      }
+    case 1 || 5:
+      openPick();
+    case 6 || 7:
+      unawaited(context.push(RoutePaths.patterns));
+  }
+}
+
+/// How the day-3 offer of a first tip ended ([offerFirstTip]).
+enum FirstTipOutcome {
+  /// „Ja, gern": the weekly tips are on and the first tip is on its way.
+  started,
+
+  /// „Ja, gern", but switching the weekly tips on failed: nothing sent.
+  optInFailed,
+
+  /// „Ja, gern", but nothing to do it with yet (the profile still loading):
+  /// nothing stored or sent. Not answered: the caller asks again later.
+  notReady,
+
+  /// „Nein, danke": answered so, and day 3's recipe given.
+  declined,
+
+  /// Dismissed, or [offerFirstTip]'s context gone meanwhile: nothing
+  /// stored. What that means is the caller's.
+  dismissed,
+}
+
+/// The day-3 offer of a first tip ([showFirstTipOfferSheet]), from
+/// [context], and what follows the answer:
+/// - „Ja, gern" requests it (`FirstTipNotifier.accept`, which switches the
+///   weekly tips on first): [FirstTipOutcome.started],
+///   [FirstTipOutcome.optInFailed] when that failed, or
+///   [FirstTipOutcome.notReady] when it couldn't be done yet;
+/// - „Nein, danke" answers the offer so, then gives day 3's recipe
+///   ([showJourneyDaySheet] after „Nein"; its primary button opens it):
+///   [FirstTipOutcome.declined]; opening it leaves Home as
+///   [openJourneyReward] does;
+/// - a dismissal stores nothing: [FirstTipOutcome.dismissed].
+///
+/// The caller presents the outcome. Nothing is requested before „Ja".
+Future<FirstTipOutcome> offerFirstTip(
+  BuildContext context,
+  WidgetRef ref,
+) async {
+  final answer = await showFirstTipOfferSheet(context);
+  if (answer == null || !context.mounted) return FirstTipOutcome.dismissed;
+  switch (answer) {
+    case FirstTipAnswer.yes:
+      return switch (await ref.read(firstTipProvider.notifier).accept()) {
+        FirstTipAcceptance.started => FirstTipOutcome.started,
+        FirstTipAcceptance.failed => FirstTipOutcome.optInFailed,
+        FirstTipAcceptance.notReady => FirstTipOutcome.notReady,
+      };
+    case FirstTipAnswer.no:
+      await ref
+          .read(journeyRewardsProvider.notifier)
+          .answerTipOffer(accepted: false);
+      if (context.mounted &&
+          await showJourneyDaySheet(context, day: 3, afterNo: true) &&
+          context.mounted) {
+        await openJourneyReward(context, ref, 3);
+      }
+      return FirstTipOutcome.declined;
+  }
+}

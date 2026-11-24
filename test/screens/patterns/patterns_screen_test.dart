@@ -9,6 +9,7 @@ import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/router/app_router.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/patterns/patterns_screen.dart';
+import 'package:belly_buddy/screens/patterns/widgets/patterns_preview.dart';
 
 import '../../helpers/app_lifecycle.dart';
 import '../../helpers/app_host.dart';
@@ -169,6 +170,14 @@ void main() {
       expect(find.text(_hintGut), findsOneWidget);
       expect(find.text(_hintKeep), findsNothing);
       expect(find.byType(ImageFiltered), findsOneWidget);
+      // The sample, through the preview the day-6 reward shows too.
+      expect(
+        find.descendant(
+          of: find.byType(PatternsPreview),
+          matching: find.byType(ImageFiltered),
+        ),
+        findsOneWidget,
+      );
       expect(
         find.text('Das siehst du dann · Beispiel'.toUpperCase()),
         findsOneWidget,

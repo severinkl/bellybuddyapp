@@ -77,3 +77,22 @@ extension RecommendationLabels on Recommendation {
     return count == 1 ? '1 Tipp' : '$count Tipps';
   }
 }
+
+/// How the Tipps show a set: core #12's sets are a weekly letter with a
+/// focus; older sets have no focus and show as before.
+extension RecommendationLetter on Recommendation {
+  /// Whether the set is in the new layout: any item has focus.
+  bool get isLetter => recommendations.any((item) => item.focus);
+
+  /// The first focus item, then the others in stored order; an older set
+  /// in stored order.
+  List<RecommendationItem> get itemsFocusFirst {
+    final index = recommendations.indexWhere((item) => item.focus);
+    if (index <= 0) return recommendations;
+    return [
+      recommendations[index],
+      ...recommendations.take(index),
+      ...recommendations.skip(index + 1),
+    ];
+  }
+}

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../models/first_tip.dart';
 import '../models/recommendation.dart';
 import '../services/recommendation_service.dart';
 import '../utils/logger.dart';
@@ -12,6 +13,15 @@ class RecommendationRepository {
 
   Future<void> markSeen(String userId, List<String> ids) =>
       _recommendationService.markSeen(userId, ids);
+
+  /// The day-3 first tip, asked once: never retried (cost, rate limits).
+  Future<FirstTipResult> requestFirstTip({
+    required List<String> intolerances,
+    required String? diet,
+  }) => _recommendationService.requestFirstTip(
+    intolerances: intolerances,
+    diet: diet,
+  );
 
   Future<List<Recommendation>> fetchByUserId(String userId) => retryAsync(
     () => _recommendationService.fetchByUserId(userId),
