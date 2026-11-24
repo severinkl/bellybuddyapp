@@ -136,6 +136,33 @@ void main() {
       await _expectOpensPatterns(tester);
     });
 
+    testWidgets('the counters set exactly their counts in w600', (
+      tester,
+    ) async {
+      await _pump(tester, _journeyInsights(2, 3), journey: true);
+
+      List<String> strong(String text) {
+        final rich = tester.widget<RichText>(
+          find.byWidgetPredicate(
+            (w) => w is RichText && w.text.toPlainText() == text,
+          ),
+        );
+        final out = <String>[];
+        rich.text.visitChildren((span) {
+          if (span is TextSpan &&
+              span.text != null &&
+              span.style?.fontWeight == FontWeight.w600) {
+            out.add(span.text!);
+          }
+          return true;
+        });
+        return out;
+      }
+
+      expect(strong('2 von 7 Tagen'), ['2', '7']);
+      expect(strong('Bauchgefühl 3 von 3 ✓'), ['3', '3']);
+    });
+
     testWidgets("without the journey: Stage 2's bars", (tester) async {
       await _pump(tester, _journeyInsights(2, 1), journey: false);
 

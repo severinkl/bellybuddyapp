@@ -195,26 +195,18 @@ class _Journey extends StatelessWidget {
     color: AppTheme.mutedForeground,
   );
 
-  /// „2 von 7 Tagen" with its number in w600.
-  Widget _counter(String text) {
-    final split = text.indexOf(' von ');
-    // The number before „ von ", or after „Bauchgefühl ".
-    final start = text.lastIndexOf(' ', split - 1) + 1;
-    final end = split + ' von '.length + 1;
-    return Text.rich(
-      TextSpan(
-        style: _counterStyle,
-        children: [
-          TextSpan(text: text.substring(0, start)),
+  Widget _counter(List<CopySpan> spans) => Text.rich(
+    TextSpan(
+      style: _counterStyle,
+      children: [
+        for (final (text, strong) in spans)
           TextSpan(
-            text: text.substring(start, end),
-            style: const TextStyle(fontWeight: FontWeight.w600),
+            text: text,
+            style: strong ? const TextStyle(fontWeight: FontWeight.w600) : null,
           ),
-          TextSpan(text: text.substring(end)),
-        ],
-      ),
-    );
-  }
+      ],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -232,8 +224,8 @@ class _Journey extends StatelessWidget {
           spacing: AppConstants.spacingMd,
           runSpacing: AppConstants.spacingXs,
           children: [
-            _counter(InsightCopy.journeyDays(progress)),
-            _counter(InsightCopy.journeyGutFeelings(progress)),
+            _counter(InsightCopy.journeyDaysSpans(progress)),
+            _counter(InsightCopy.journeyGutFeelingsSpans(progress)),
           ],
         ),
       ],

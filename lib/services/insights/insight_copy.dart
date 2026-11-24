@@ -5,6 +5,9 @@ import '../../models/insight_rules.dart';
 import '../../models/insights.dart';
 import '../../utils/date_format_utils.dart';
 
+/// A part of a line of copy and whether it is set strong.
+typedef CopySpan = (String text, bool strong);
+
 /// German copy for Home's insight card and the Muster page: observations
 /// from the user's own entries, with their counts, never a finding.
 class InsightCopy {
@@ -74,14 +77,34 @@ class InsightCopy {
   }
 
   /// The journey's counter: „2 von 7 Tagen".
-  static String journeyDays(InsightProgress p) =>
-      '${math.min(p.activeDays, 7)} von 7 Tagen';
+  static String journeyDays(InsightProgress p) => _plain(journeyDaysSpans(p));
 
   /// The journey's counter: „Bauchgefühl 1 von 3", with „ ✓" once met.
-  static String journeyGutFeelings(InsightProgress p) {
+  static String journeyGutFeelings(InsightProgress p) =>
+      _plain(journeyGutFeelingsSpans(p));
+
+  /// [journeyDays] in parts: the counts are strong.
+  static List<CopySpan> journeyDaysSpans(InsightProgress p) => [
+    (math.min(p.activeDays, 7).toString(), true),
+    (' von ', false),
+    ('7', true),
+    (' Tagen', false),
+  ];
+
+  /// [journeyGutFeelings] in parts: the counts are strong.
+  static List<CopySpan> journeyGutFeelingsSpans(InsightProgress p) {
     final n = math.min(p.gutFeelingEntries, 3);
-    return 'Bauchgefühl $n von 3${n == 3 ? ' ✓' : ''}';
+    return [
+      ('Bauchgefühl ', false),
+      (n.toString(), true),
+      (' von ', false),
+      ('3', true),
+      if (n == 3) (' ✓', false),
+    ];
   }
+
+  static String _plain(List<CopySpan> spans) =>
+      [for (final (text, _) in spans) text].join();
 
   /// „Zwiebel war an 4 von 5 schweren Tagen dabei." (a shown item was there
   /// on at least [InsightRules.minNoticedHard] hard days, so always
