@@ -45,6 +45,7 @@ Insights _with(
   DayColumn? hardDays,
   List<Noticed>? noticed,
   InsightPick? pick,
+  List<JourneyDay>? journey,
 }) => Insights(
   progress: progress ?? i.progress,
   calendar: calendar ?? i.calendar,
@@ -52,6 +53,7 @@ Insights _with(
   hardDays: hardDays ?? i.hardDays,
   noticed: noticed ?? i.noticed,
   pick: pick ?? i.pick,
+  journey: journey ?? i.journey,
 );
 
 void main() {
@@ -116,6 +118,10 @@ void main() {
       ),
       'what I noticed': _with(insights, noticed: const []),
       'the pick': _with(insights, pick: const NothingYetPick()),
+      'the journey': _with(
+        insights,
+        journey: [JourneyDay(DateTime(2026, 11, 23), gutFeeling: true)],
+      ),
     };
     for (final MapEntry(key: part, value: changed) in variants.entries) {
       expect(changed, isNot(insights), reason: part);

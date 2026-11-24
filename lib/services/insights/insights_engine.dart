@@ -22,6 +22,9 @@ import '../../utils/gut_feeling_rating.dart';
 ///   were there. Names match trimmed and case-insensitively, and each
 ///   ingredient counts once per day.
 ///
+/// The journey holds the latest [InsightRules.daysNeeded] days with any
+/// entry, from the same active-day set as the progress.
+///
 /// Pure: no I/O and no clock.
 Insights computeInsights(InsightSource source, DateTime now) {
   final start = addDays(startOfDay(now.toLocal()), 1 - InsightRules.windowDays);
@@ -77,12 +80,18 @@ Insights computeInsights(InsightSource source, DateTime now) {
     names: names,
   );
 
+  final activeDays = {
+    for (final t in source.activityInstants)
+      if (inWindow(t)) _localDay(t),
+  };
+  final journeyDays = (activeDays.toList()..sort()).reversed
+      .take(InsightRules.daysNeeded)
+      .toList()
+      .reversed;
+
   return Insights(
     progress: InsightProgress(
-      activeDays: {
-        for (final t in source.activityInstants)
-          if (inWindow(t)) _localDay(t),
-      }.length,
+      activeDays: activeDays.length,
       gutFeelingEntries: gutFeelings.length,
     ),
     calendar: List.unmodifiable(calendar),
@@ -90,6 +99,10 @@ Insights computeInsights(InsightSource source, DateTime now) {
     hardDays: hardDays,
     noticed: List.unmodifiable(noticed),
     pick: _pick(noticed, goodDays),
+    journey: List.unmodifiable([
+      for (final day in journeyDays)
+        JourneyDay(day, gutFeeling: entriesByDay.containsKey(day)),
+    ]),
   );
 }
 

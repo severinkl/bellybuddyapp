@@ -207,6 +207,27 @@ final class NothingYetPick extends InsightPick {
   String toString() => 'NothingYetPick()';
 }
 
+/// One day of the first-patterns journey: a local day with any entry, and
+/// whether one of them was a Bauchgefühl.
+class JourneyDay {
+  const JourneyDay(this.day, {required this.gutFeeling});
+
+  /// The local day, at midnight.
+  final DateTime day;
+
+  final bool gutFeeling;
+
+  @override
+  bool operator ==(Object other) =>
+      other is JourneyDay && other.day == day && other.gutFeeling == gutFeeling;
+
+  @override
+  int get hashCode => Object.hash(day, gutFeeling);
+
+  @override
+  String toString() => 'JourneyDay($day, gutFeeling: $gutFeeling)';
+}
+
 /// What the last 30 local days of entries show (`computeInsights`):
 /// observations from the user's own entries, never a finding. Everything
 /// except [progress] is meant for display only once [unlocked].
@@ -218,6 +239,7 @@ class Insights {
     required this.hardDays,
     required this.noticed,
     required this.pick,
+    this.journey = const [],
   });
 
   /// Toward the first patterns: active days and gut-feeling entries.
@@ -248,6 +270,11 @@ class Insights {
   /// What Home's card shows once [unlocked].
   final InsightPick pick;
 
+  /// The latest [InsightRules.daysNeeded] local days of the window with any
+  /// entry, oldest first: the dots of the first-patterns journey. Its length
+  /// is the active days, up to [InsightRules.daysNeeded].
+  final List<JourneyDay> journey;
+
   @override
   bool operator ==(Object other) =>
       other is Insights &&
@@ -256,7 +283,8 @@ class Insights {
       other.goodDays == goodDays &&
       other.hardDays == hardDays &&
       _listEquals(other.noticed, noticed) &&
-      other.pick == pick;
+      other.pick == pick &&
+      _listEquals(other.journey, journey);
 
   @override
   int get hashCode => Object.hash(
@@ -266,12 +294,13 @@ class Insights {
     hardDays,
     Object.hashAll(noticed),
     pick,
+    Object.hashAll(journey),
   );
 
   @override
   String toString() =>
       'Insights($progress, goodDays: $goodDays, hardDays: $hardDays, '
-      'noticed: $noticed, pick: $pick)';
+      'noticed: $noticed, pick: $pick, journey: $journey)';
 }
 
 bool _listEquals<T>(List<T> a, List<T> b) {

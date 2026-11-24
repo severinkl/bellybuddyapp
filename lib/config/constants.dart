@@ -276,6 +276,10 @@ class AppConstants {
   static const String keyKnowledgeFeedCache = 'knowledge_feed_cache_v1';
   static const String keyBuddyStatePrefix = 'buddy_state_';
 
+  /// Prefix of the once-per-user-and-device decision whether the user sees
+  /// the first-patterns journey (`insight_journey_<userId>`, a bool).
+  static const String keyInsightJourneyPrefix = 'insight_journey_';
+
   /// Prefix of the Buddy announcement flags
   /// (`buddy_announced_<userId>_<kind>_<yyyy-MM-dd | goal>`), set once an
   /// announcement was shown, so each one shows only once.
