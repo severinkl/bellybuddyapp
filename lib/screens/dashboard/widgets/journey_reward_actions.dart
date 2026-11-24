@@ -14,6 +14,7 @@ import '../../../router/navigation_extensions.dart';
 import '../../../router/route_names.dart';
 import '../../../services/journey/journey_copy.dart';
 import '../../../services/journey/journey_rules.dart';
+import '../../../utils/back_in_app.dart';
 import '../../../utils/url_utils.dart';
 import 'first_tip_offer_sheet.dart';
 import 'journey_day_sheet.dart';
@@ -28,8 +29,8 @@ import 'journey_day_sheet.dart';
 /// - 6 and 7: Muster.
 ///
 /// Navigations are not awaited; each tells [homeCoveredProvider] that Home
-/// is left as it starts. The article (over the app) and day 4 never leave
-/// Home.
+/// is left as it starts. The article, once it opened, covers Home until the
+/// user is back in the app ([backInApp]); day 4 never leaves Home.
 Future<void> openJourneyReward(
   BuildContext context,
   WidgetRef ref,
@@ -55,13 +56,16 @@ Future<void> openJourneyReward(
 
   switch (day) {
     case 2:
-      await openExternalUrl(
+      final opened = await openExternalUrl(
         context,
         JourneyCopy.articleUrl,
         mode: LaunchMode.inAppBrowserView,
         failureMessage: JourneyCopy.articleFailure,
         open: openUrl,
       );
+      // Over the app, Home stays where it is: nothing that waits for Home
+      // may play under the browser.
+      if (opened) cover.leftHome(backInApp());
     case 3:
       switch (day3Of(rewards, weeklyTips: weeklyTips)) {
         case Day3.waiting || Day3.offerOpen || Day3.tip:

@@ -10,8 +10,10 @@ import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/home_cover_provider.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_actions.dart';
+import 'package:belly_buddy/services/journey/journey_copy.dart';
 
 import '../../../helpers/app_host.dart';
+import '../../../helpers/app_lifecycle.dart';
 import '../../../helpers/fakes.dart';
 import '../../../helpers/fixtures.dart';
 import '../../../helpers/riverpod_helpers.dart';
@@ -124,13 +126,47 @@ void main() {
       expect(cover.left, [null]);
     });
 
-    testWidgets('day 2: the article over the app, Home never left', (
+    for (final (name, back) in [
+      // iOS: the in-app browser closed, the app never left resumed.
+      ('a touch', (WidgetTester t) => t.tapAt(const Offset(790, 590))),
+      // Android's Custom Tabs, or iOS once the app went to the background.
+      ('a resume', (WidgetTester t) async => returnFromBackground()),
+    ]) {
+      testWidgets('day 2: the article covers Home until the user is back '
+          '($name)', (tester) async {
+        await pumpOpen(tester, 2, const JourneyRewards(earnedDay: 2));
+        final container = ProviderScope.containerOf(
+          tester.element(find.text('open')),
+        );
+
+        expect(opener.urls, hasLength(1));
+        expect(location(), '/');
+        expect(cover.left, hasLength(1));
+        await tester.pump(const Duration(minutes: 5));
+        expect(container.read(homeCoveredProvider), isTrue);
+
+        await back(tester);
+        await tester.pump();
+
+        expect(container.read(homeCoveredProvider), isFalse);
+      });
+    }
+
+    testWidgets('day 2, the launch failed: the SnackBar, Home not covered', (
       tester,
     ) async {
+      opener.result = false;
       await pumpOpen(tester, 2, const JourneyRewards(earnedDay: 2));
 
       expect(opener.urls, hasLength(1));
+      expect(find.text(JourneyCopy.articleFailure), findsOneWidget);
       expect(cover.left, isEmpty);
+      expect(
+        ProviderScope.containerOf(
+          tester.element(find.text('open')),
+        ).read(homeCoveredProvider),
+        isFalse,
+      );
     });
 
     testWidgets('day 4: nothing opened, Home never left', (tester) async {

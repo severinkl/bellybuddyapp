@@ -8,9 +8,10 @@ import 'auth_provider.dart';
 /// - a sheet opened over it ([whileOpen]: „Dein Streak", „Deine
 ///   Belohnungen" with what its row opens) until it is done;
 /// - Home left ([leftHome]) for a page pushed over it until that page
-///   closes, or for another tab; either until Home is hidden
-///   ([homeHidden]; hidden, Home's own visibility holds the Buddy) or shown
-///   again ([homeShown]).
+///   closes, for something over the app until the user is back (day 2's
+///   article in the in-app browser, `backInApp`), or for another tab; each
+///   until Home is hidden ([homeHidden]; hidden, Home's own visibility
+///   holds the Buddy) or shown again ([homeShown]).
 ///
 /// Per signed-in user: another user starts uncovered.
 class HomeCoverNotifier extends Notifier<bool> {
@@ -43,8 +44,9 @@ class HomeCoverNotifier extends Notifier<bool> {
     }
   }
 
-  /// Home is left: for [page], pushed over it, until that page closes; for
-  /// another tab (null). Either until Home is hidden or shown again.
+  /// Home is left: for [page] until it completes (a page pushed over it
+  /// closes, the user is back from the in-app browser); for another tab
+  /// (null). Either until Home is hidden or shown again.
   void leftHome(Future<void>? page) {
     if (page == null) {
       _leftForTab = true;

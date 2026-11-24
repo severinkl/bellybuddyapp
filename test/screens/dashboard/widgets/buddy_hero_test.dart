@@ -1150,10 +1150,57 @@ void main() {
         ]);
       });
 
-      testWidgets('day 2: the article opens over the app, the next cue goes '
-          'on', (tester) async {
+      for (final (name, back) in [
+        // iOS: the in-app browser closed, the app never left resumed.
+        ('a touch', (WidgetTester t) => t.tapAt(const Offset(790, 590))),
+        // Android's Custom Tabs, or iOS once the app went to the background.
+        ('a resume', (WidgetTester t) async => returnFromBackground()),
+      ]) {
+        testWidgets('day 2: the article opens over the app; the next cue '
+            'waits until the user is back ($name)', (tester) async {
+          journey = true;
+          rewards = const JourneyRewards(earnedDay: 2);
+          buddy = _FakeBuddy(
+            () => _status(
+              announcements: const [
+                BuddyAnnouncement.journeyReward,
+                BuddyAnnouncement.firstTipFailed,
+              ],
+            ),
+          );
+          await pumpHero(tester);
+          await afterCelebration(tester);
+          expect(find.text(JourneyCopy.day2Line), findsOneWidget);
+
+          await closeOffer(tester, JourneyDaySheet.primaryKey);
+          expect(opener.urls, [Uri.parse(JourneyCopy.articleUrl)]);
+          expect(location(), RoutePaths.dashboard);
+
+          // Reading: nothing is said, nor marked shown, under the browser.
+          await advance(tester, const Duration(seconds: 6));
+          expect(bubbleBehind(tester), isNot(_firstTipFailedLine));
+          expect(buddy.shown, [BuddyAnnouncement.journeyReward]);
+
+          await back(tester);
+          await tester.pump();
+          await tester.pump();
+          await tick(tester);
+
+          expect(controller(tester).bubble, _firstTipFailedLine);
+          await tester.pump(const Duration(seconds: 4));
+          expect(buddy.shown, [
+            BuddyAnnouncement.journeyReward,
+            BuddyAnnouncement.firstTipFailed,
+          ]);
+        });
+      }
+
+      testWidgets('day 2, the launch failed: the next cue goes on', (
+        tester,
+      ) async {
         journey = true;
         rewards = const JourneyRewards(earnedDay: 2);
+        opener.result = false;
         buddy = _FakeBuddy(
           () => _status(
             announcements: const [
@@ -1164,15 +1211,13 @@ void main() {
         );
         await pumpHero(tester);
         await afterCelebration(tester);
-        expect(find.text(JourneyCopy.day2Line), findsOneWidget);
 
         await closeOffer(tester, JourneyDaySheet.primaryKey);
         await tick(tester);
 
         expect(opener.urls, [Uri.parse(JourneyCopy.articleUrl)]);
-        expect(location(), RoutePaths.dashboard);
+        expect(find.text(JourneyCopy.articleFailure), findsOneWidget);
         expect(controller(tester).bubble, _firstTipFailedLine);
-        expect(buddy.shown, [BuddyAnnouncement.journeyReward]);
       });
 
       testWidgets('„Später" stays on Home and marks it shown', (tester) async {
