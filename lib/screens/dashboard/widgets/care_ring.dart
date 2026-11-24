@@ -85,9 +85,13 @@ class CareRing extends StatelessWidget {
   );
 
   /// The text scale all four labels share: the user's, or less where the
-  /// longest label would not fit [AppConstants.careNeedWidth].
+  /// longest label would not fit [AppConstants.careNeedWidth]. Measured as
+  /// [Text] draws them: bold where the platform asks for bold text.
   static TextScaler _labelScaler(BuildContext context) {
-    final style = DefaultTextStyle.of(context).style.merge(_labelStyle);
+    var style = DefaultTextStyle.of(context).style.merge(_labelStyle);
+    if (MediaQuery.boldTextOf(context)) {
+      style = style.merge(const TextStyle(fontWeight: FontWeight.bold));
+    }
     double widest(TextScaler scaler) {
       var widest = 0.0;
       for (final need in CareNeed.values) {
