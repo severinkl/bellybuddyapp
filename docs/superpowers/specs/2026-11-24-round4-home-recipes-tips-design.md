@@ -2,7 +2,7 @@
 
 Brainstormed with Severin on 2026-11-24. Mockups:
 - „Runde 4 · Home & Motivation": https://claude.ai/artifact/C4i1ZNb6vj6PBm43Vzm9u9
-- „Runde 4 · Rezepte": linked in the PR once published.
+- „Runde 4 · Rezepte": https://claude.ai/artifact/8CqdhqNL983Gi1DZ54T9k7
 
 This round builds on the app-structure redesign (spec `2026-11-23-app-structure-redesign-design.md`, PRs #84–#86) and on core PRs #7–#9 (weekly tips, AI models and prompts, shared ingredient catalog).
 
@@ -193,6 +193,7 @@ Users who already passed day 7 before this release see no journey, and their off
   - „Quelle: <site> ›" (opens in the in-app browser).
   - **„Als Essen eintragen"** (opens the Essen tracker pre-filled with the ingredients) and **„♡ Merken"** (the existing `user_favorite_recipes`).
 - Home gets nothing new.
+- *(my calls, from the recipes mockup)* Recipes saved with „Merken" also appear in „Meine Rezepte", marked with a heart. The recipe detail is a pushed page without the bottom bar, as today.
 
 #### 5.6.2 The collection (core)
 **Schema:** extend `recipes`, keeping existing rows.
