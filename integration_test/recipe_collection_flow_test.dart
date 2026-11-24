@@ -178,6 +178,16 @@ void main() {
     );
 
     await tester.tapVisible(find.byKey(CollectionScreen.fitToggleKey));
+    // Off again: both are back.
+    expect(_in(CollectionScreen, find.text(_reisBowl)), findsOneWidget);
+    expect(_in(CollectionScreen, find.text(_porridge)), findsOneWidget);
+    expect(
+      find.text(
+        '2 Rezepte · für dich sortiert · nur vegetarische, wie in deinem '
+        'Profil',
+      ),
+      findsOneWidget,
+    );
     await tester.tapVisible(_in(CollectionScreen, find.text(_porridge)));
 
     expect(find.byType(CollectionRecipeScreen), findsOneWidget);
@@ -278,14 +288,15 @@ void main() {
     expect(find.byType(DiscoverScreen), findsOneWidget);
     expect(_inMine(find.text(_reisBowl)), findsNothing);
     expect(_inMine(find.text('Noch keine Rezepte.')), findsOneWidget);
+    // Merken never asks the AI.
+    expect(recipeRepo.adaptCalls, 0);
   });
 
   testWidgets('Als Essen eintragen: the tracker with the recipe\'s '
       'ingredients → saved → Home', (tester) async {
     final entryRepo = FakeEntryRepository();
-    await tester.pumpWidget(
-      _app(recipeRepo: _collection(), entryRepo: entryRepo),
-    );
+    final recipeRepo = _collection();
+    await tester.pumpWidget(_app(recipeRepo: recipeRepo, entryRepo: entryRepo));
     await tester.pumpAndSettle();
     await _openDiscover(tester);
 
@@ -307,6 +318,8 @@ void main() {
     final meal = entryRepo.addedMeals.single;
     expect(meal.title, _reisBowl);
     expect(meal.ingredients, ['Reis', 'Karotte']);
+    // Logging never asks the AI.
+    expect(recipeRepo.adaptCalls, 0);
   });
 
   testWidgets('steps: an own recipe → „Schritte hinzufügen" → one step '
