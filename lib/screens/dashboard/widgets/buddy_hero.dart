@@ -19,7 +19,7 @@ import '../../../router/route_names.dart';
 import '../../../router/tracker_routes.dart';
 import '../../../services/buddy/buddy_copy.dart';
 import '../../../services/buddy/buddy_mood_logic.dart';
-import '../../../services/buddy/care_meters.dart';
+import '../../../services/buddy/care_now.dart';
 import '../../../services/buddy/daily_care.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/logger.dart';
@@ -68,18 +68,18 @@ _Cue _cueFor(BuddyAnnouncement a) => switch (a) {
 /// makes him talk), and a button that opens the tracker for the next thing
 /// to log ([nextCareAction]).
 ///
-/// The need meters, his mood and the next action follow when each need was
-/// last logged ([careLogProvider]) and the clock (re-derived on every
-/// change and every minute); his resting line names what he needs next
-/// ([BuddyCopy.care]), except while empathetic, in love, asleep or at
+/// The need meters, his mood and the next action follow [careNowProvider]
+/// (when each need was last logged, seen from the current minute); a new
+/// mood or next action gets his resting line, which names what he needs
+/// next ([BuddyCopy.care]), except while empathetic, in love, asleep or at
 /// night. Every write reloads [entriesProvider]; the hero moves it on to
 /// the new day when the day changes ([todayProvider]), and the meters
 /// carry over (the new day's load brings the latest entries before it).
-/// Everything it says waits until it is visible (`TickerMode` on, i.e. the dashboard is
-/// not under the splash or covered by another route or tab): the first
-/// line, the follow-up to a fresh [BuddyLogEvent] and the Buddy's
-/// announcements. Without a Buddy status (loading, error, signed out) the
-/// Buddy still shows, named 'Buddy', without the streak chip.
+/// Everything it says waits until it is visible (`TickerMode` on, i.e. the
+/// dashboard is not under the splash or covered by another route or tab):
+/// the first line, the follow-up to a fresh [BuddyLogEvent] and the
+/// Buddy's announcements. Without a Buddy status (loading, error, signed
+/// out) the Buddy still shows, named 'Buddy', without the streak chip.
 class BuddyHero extends ConsumerStatefulWidget {
   const BuddyHero({super.key});
 
@@ -100,7 +100,6 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// The follow-up waits at most this long for the Buddy refresh the log
   /// started, so "Danke! 🔥" sees the new streak on a slow connection.
   static const _refreshWait = Duration(seconds: 3);
-  static const _moodInterval = Duration(minutes: 1);
 
   /// How long a follow-up or announcement line stays up; the next cue waits
   /// for it.
@@ -115,27 +114,13 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   late final BuddyController _buddy;
 
-  late final AppLifecycleListener _lifecycle;
   final math.Random _rnd = math.Random();
-  Timer? _moodTimer;
 
-  /// When each need was last logged, and the moment [_careAt] it is seen
-  /// from (see [_deriveCare]): re-derived on every change of the log,
-  /// every minute and on resume. The meters, his mood and the next action
-  /// all follow them.
-  late CareLog _care;
-  late DateTime _careAt;
+  /// His needs right now: the meters, his mood from them and the next
+  /// action.
+  CareNow get _care => ref.read(careNowProvider);
 
-  /// The need meters at [_careAt].
-  CareMeters get _meters => CareMeters.at(_care, _careAt);
-
-  /// Mood derived from the meters.
-  BuddyMood get _careMood => deriveBuddyMood(_care, _careAt);
-
-  /// What he needs next, from the meters and the time of day.
-  CareAction get _careAction => nextCareAction(_care, _careAt);
-
-  /// Temporary mood on top of [_careMood] (empathetic after a bad log for
+  /// Temporary mood on top of [_care]'s (empathetic after a bad log for
   /// this dashboard visit, in love while celebrating a reached goal).
   BuddyMood? _override;
 
@@ -173,7 +158,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   static const _thirstPause = Duration(minutes: 30);
 
   /// Whether a drink was logged, or taken, within [_thirstPause] of [now].
-  bool _justDrank(DateTime now) => [_drinkLoggedAt, _care.lastDrinkAt].any(
+  bool _justDrank(DateTime now) => [_drinkLoggedAt, _care.log.lastDrinkAt].any(
     (t) => t != null && !t.isAfter(now) && now.difference(t) < _thirstPause,
   );
 
@@ -213,18 +198,8 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   @override
   void initState() {
     super.initState();
-    _deriveCare();
-    _buddy = BuddyController(mood: _careMood);
-    // Hidden, the hero skips the minute ticks; it catches up once visible.
-    _moodTimer = Timer.periodic(_moodInterval, (_) {
-      if (_visible) _updateCare();
-    });
-    _lifecycle = AppLifecycleListener(onResume: _onResume);
-    // The log itself, not the entries it derives from: a listener of
-    // entriesProvider that reads careLogProvider can get its previous
-    // value (dependents are told in subscription order), which left the
-    // ring on an empty day after a load until the next minute tick.
-    ref.listenManual(careLogProvider, (_, _) => _updateCare());
+    _buddy = BuddyController(mood: _care.mood);
+    ref.listenManual(careNowProvider, _onCare);
     ref.listenManual(todayProvider, (_, _) => _followDay());
     ref.listenManual(buddyEventsProvider, (_, event) {
       if (event != null) _afterFrame(_consumeEvent);
@@ -244,8 +219,6 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _visible = visible;
     if (visible) {
       _afterFrame(() {
-        // What changed while hidden was never said; it isn't now either.
-        _updateCare(speak: false);
         _consumeEvent();
         _takeAnnouncements();
         _maybeGreet();
@@ -259,9 +232,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   @override
   void dispose() {
-    _moodTimer?.cancel();
     _cueTimer?.cancel();
-    _lifecycle.dispose();
     _buddy.dispose();
     super.dispose();
   }
@@ -281,19 +252,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     SchedulerBinding.instance.ensureVisualUpdate();
   }
 
-  void _onResume() {
-    _updateCare();
-    _afterFrame(_consumeEvent);
-  }
-
   // --- Mood -----------------------------------------------------------------
-
-  /// The log of the loaded day and the days before ([careLogProvider]),
-  /// seen from now.
-  void _deriveCare() {
-    _careAt = _now();
-    _care = ref.read(careLogProvider);
-  }
 
   /// A new day: once the loaded day is over, loads the new one for the
   /// ring. After the frame, where provider writes are always allowed.
@@ -309,37 +268,22 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     });
   }
 
-  /// Re-derives the log and the meters; a new mood or next action gets its
-  /// line, unless not to [speak].
-  void _updateCare({bool speak = true}) {
-    if (!mounted) return;
-    final (care, meters, said) = (_care, _meters, _said);
-    final (mood, action) = (_careMood, _careAction);
-    _deriveCare();
-    final moodChanged = _careMood != mood;
-    final actionChanged = _careAction != action;
-    // The ring, its glow and the button follow the log and the clock.
-    if (_care != care || _meters != meters || _said != said || actionChanged) {
-      setState(() {});
-    }
-    if (!moodChanged && !actionChanged) return;
+  /// His needs moved on (a log, the clock): a new mood or next action gets
+  /// its line. Hidden, he says nothing, and what changed meanwhile is never
+  /// said ([_sayMoodLine]).
+  void _onCare(CareNow? previous, CareNow next) {
+    final moodChanged = previous?.mood != next.mood;
+    if (!moodChanged && previous?.action == next.action) return;
     if (moodChanged) _applyMood();
-    if (speak && _override == null) _sayMoodLine();
+    if (_override == null) _sayMoodLine();
   }
-
-  /// What the bubbles say at [_careAt] (Klo's „vor 3 Std", each one's
-  /// „zuletzt …"): it ages with the clock even where no meter moves (at the
-  /// floor, in the night pause).
-  String get _said => [
-    for (final need in CareNeed.values) CareCopy.spoken(need, _care, _careAt),
-  ].join('\n');
 
   void _setOverride(BuddyMood? mood) {
     _override = mood;
     _applyMood();
   }
 
-  void _applyMood() => _buddy.mood = _override ?? _careMood;
+  void _applyMood() => _buddy.mood = _override ?? _care.mood;
 
   /// His resting line: what he needs next by day, else the [mood]'s line
   /// (empathetic, in love, asleep, or at night); never the line he just
@@ -353,7 +297,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     final byDay = DayParts.isDay(now);
     const moodOnly = {BuddyMood.empathetic, BuddyMood.inLove, BuddyMood.asleep};
     if (byDay && !moodOnly.contains(mood)) {
-      final action = _careAction;
+      final action = _care.action;
       final moreOfTheSame =
           (justLogged != null && justLogged == action.need) ||
           (action == CareAction.drink && _justDrank(now));
@@ -686,7 +630,8 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   @override
   Widget build(BuildContext context) {
     final status = ref.watch(buddyProvider).value;
-    final action = _careAction;
+    final care = ref.watch(careNowProvider);
+    final action = care.action;
     final name = status?.state.name ?? 'Buddy';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -723,8 +668,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
                   buddyArea: Size.square(buddySide),
                 ),
                 CareRing(
-                  log: _care,
-                  now: _careAt,
+                  care: care,
                   diameter: diameter,
                   highlight: action.need,
                   onNeed: (need) => openTracker(context, need),

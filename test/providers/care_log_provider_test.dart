@@ -1,9 +1,12 @@
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/care_log_provider.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
+import 'package:belly_buddy/services/buddy/care_now.dart';
+import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/services/entry_query_service.dart';
 
 import '../helpers/fixtures.dart';
@@ -22,6 +25,9 @@ class _Entries extends EntriesNotifier {
 }
 
 void main() {
+  // The minute's foreground signal needs the binding.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   final now = DateTime(2026, 11, 23, 12, 40);
 
   ProviderContainer makeContainer(EntriesState entries) => createContainer(
@@ -86,5 +92,57 @@ void main() {
     );
 
     expect(c.read(careLogProvider).lastDrinkAt, DateTime(2026, 11, 22, 21));
+  });
+
+  group('careNowProvider', () {
+    test('the log seen from the minute', () {
+      final c = makeContainer(
+        EntriesState(
+          day: DateTime(2026, 11, 23),
+          drinks: [testDrinkEntry(trackedAt: DateTime(2026, 11, 23, 10))],
+        ),
+      );
+
+      expect(
+        c.read(careNowProvider),
+        CareNow.at(c.read(careLogProvider), DateTime(2026, 11, 23, 12, 40)),
+      );
+      expect(c.read(careNowProvider).at, DateTime(2026, 11, 23, 12, 40));
+    });
+
+    test('a minute is announced only when something shown changed', () {
+      fakeAsync((async) {
+        // Klo at 11:00, nothing else: every meter at the floor, only Klo's
+        // „vor 1 Std" ages (to „vor 2 Std" at 13:00).
+        final c = ProviderContainer.test(
+          overrides: [
+            entriesProvider.overrideWith(
+              () => _Entries(
+                EntriesState(
+                  day: DateTime(2026, 11, 23),
+                  toiletEntries: [
+                    testToiletEntry(trackedAt: DateTime(2026, 11, 23, 11)),
+                  ],
+                ),
+              ),
+            ),
+            buddyTodayProvider.overrideWithValue(
+              () => DateTime(2026, 11, 23, 12, 58).add(async.elapsed),
+            ),
+          ],
+        );
+        final heard = <String>[];
+        c.listen(
+          careNowProvider,
+          (_, now) => heard.add(now.spoken(CareNeed.toilet)),
+        );
+
+        async.elapse(const Duration(minutes: 1));
+        expect(heard, isEmpty);
+
+        async.elapse(const Duration(minutes: 1));
+        expect(heard, ['zuletzt vor 2 Std']);
+      });
+    });
   });
 }

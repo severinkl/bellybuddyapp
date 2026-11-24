@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../providers/buddy_events_provider.dart';
+import '../../../providers/buddy_provider.dart';
 import '../../../providers/drink_tracker_provider.dart';
 import '../../../providers/log_moment.dart';
 import '../../../router/route_names.dart';
@@ -258,7 +259,7 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen> {
           BuddyLogEvent(
             EntryKind.drink,
             LogSentiment.good,
-            at: DateTime.now(),
+            at: ref.read(buddyClockProvider)(),
             trackedAt: ref.read(drinkTrackerProvider).trackedAt,
           ),
         );

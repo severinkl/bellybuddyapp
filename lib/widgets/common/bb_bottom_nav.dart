@@ -168,7 +168,7 @@ class BbBottomNav extends ConsumerWidget {
     final homeDay = ref.read(entriesProvider).day;
     final suggested =
         isSameDay(day, now) && homeDay != null && isSameDay(homeDay, now)
-        ? nextCareAction(ref.read(careLogProvider), now).need
+        ? ref.read(careNowProvider).action.need
         : null;
     unawaited(showLogSheet(context, day: day, now: now, suggested: suggested));
   }

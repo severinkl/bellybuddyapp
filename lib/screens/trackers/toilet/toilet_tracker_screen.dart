@@ -5,6 +5,7 @@ import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/toilet_entry.dart';
 import '../../../providers/buddy_events_provider.dart';
+import '../../../providers/buddy_provider.dart';
 import '../../../providers/diary_provider.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../providers/log_moment.dart';
@@ -65,7 +66,7 @@ class _ToiletTrackerScreenState extends ConsumerState<ToiletTrackerScreen> {
               BuddyLogEvent(
                 EntryKind.toilet,
                 sentiment,
-                at: DateTime.now(),
+                at: ref.read(buddyClockProvider)(),
                 trackedAt: entry.trackedAt,
               ),
             );

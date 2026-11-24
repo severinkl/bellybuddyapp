@@ -5,6 +5,7 @@ import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
 import 'package:belly_buddy/services/buddy/care_meters.dart';
+import 'package:belly_buddy/services/buddy/care_now.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/utils/gut_feeling_rating.dart';
 import 'package:belly_buddy/widgets/buddy/need_meter.dart';
@@ -43,8 +44,7 @@ void main() {
               builder: (context) {
                 final width = MediaQuery.sizeOf(context).width - 32;
                 return CareRing(
-                  log: log,
-                  now: now ?? _t(14),
+                  care: CareNow.at(log, now ?? _t(14)),
                   diameter: CareRing.diameterFor(width, size.height),
                   highlight: highlight,
                   onNeed: tapped.add,

@@ -6,6 +6,7 @@ import '../../../config/constants.dart';
 import '../../../models/meal_entry.dart';
 import '../../../models/user_recipe.dart';
 import '../../../providers/buddy_events_provider.dart';
+import '../../../providers/buddy_provider.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../providers/ingredient_autocomplete_provider.dart';
 import '../../../providers/log_moment.dart';
@@ -178,7 +179,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen> {
           BuddyLogEvent(
             EntryKind.meal,
             LogSentiment.good,
-            at: DateTime.now(),
+            at: ref.read(buddyClockProvider)(),
             trackedAt: ref.read(mealTrackerProvider).trackedAt,
           ),
         );

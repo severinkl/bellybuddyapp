@@ -5,6 +5,7 @@ import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/gut_feeling_entry.dart';
 import '../../../providers/buddy_events_provider.dart';
+import '../../../providers/buddy_provider.dart';
 import '../../../providers/diary_provider.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../providers/log_moment.dart';
@@ -150,7 +151,7 @@ class _GutFeelingTrackerScreenState
               BuddyLogEvent(
                 EntryKind.gutFeeling,
                 sentiment,
-                at: DateTime.now(),
+                at: ref.read(buddyClockProvider)(),
                 trackedAt: entry.trackedAt,
               ),
             );

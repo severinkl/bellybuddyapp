@@ -5,14 +5,15 @@ import 'package:material_ui/material_ui.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../services/buddy/care_meters.dart';
+import '../../../services/buddy/care_now.dart';
 import '../../../services/buddy/daily_care.dart';
 import '../../../services/haptic_service.dart';
 import '../../../widgets/buddy/need_meter.dart';
 
 /// The Buddy among his four needs, a bubble in each corner (Essen top
 /// left, Trinken top right, Klo bottom left, Bauchgefühl bottom right).
-/// A bubble's meter shows how full its need is at [now] ([CareMeters]
-/// from [log]); Klo has no meter and says when it was last instead
+/// A bubble's meter shows how full its need is ([care]'s [CareMeters]);
+/// Klo has no meter and says when it was last instead
 /// ([CareCopy.looLine]). Tapping a bubble calls [onNeed] with its need;
 /// the space between them is no tap target (the Buddy has his own). The
 /// [highlight]ed need (the one he suggests next) glows and, unless
@@ -21,8 +22,7 @@ import '../../../widgets/buddy/need_meter.dart';
 class CareRing extends StatelessWidget {
   const CareRing({
     super.key,
-    required this.log,
-    required this.now,
+    required this.care,
     required this.diameter,
     required this.buddy,
     required this.onNeed,
@@ -61,11 +61,8 @@ class CareRing extends StatelessWidget {
         AppConstants.careMeterMaxSize,
       );
 
-  /// When each need was last logged.
-  final CareLog log;
-
-  /// The moment the meters show.
-  final DateTime now;
+  /// His needs at the moment shown.
+  final CareNow care;
   final double diameter;
 
   /// Drawn centred, [AppConstants.careRingBuddyFactor] of [diameter]
@@ -78,18 +75,17 @@ class CareRing extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final meters = CareMeters.at(log, now);
     final meterSize = meterSizeFor(diameter);
     Widget bubble(CareNeed need) => _NeedBubble(
       key: needKey(need),
       need: need,
-      level: meters.level(need),
+      level: care.meters.level(need),
       // Bauchgefühl shows how today's latest entry was.
       emoji: need == CareNeed.gutFeeling
-          ? log.lastGutFeelingLevel?.face ?? need.emoji
+          ? care.gutFeelingLevel?.face ?? need.emoji
           : need.emoji,
-      line: need == CareNeed.toilet ? CareCopy.looLine(log, now) : null,
-      spoken: CareCopy.spoken(need, log, now),
+      line: need == CareNeed.toilet ? care.looLine : null,
+      spoken: care.spoken(need),
       meterSize: meterSize,
       highlighted: need == highlight,
       onTap: () => onNeed(need),
