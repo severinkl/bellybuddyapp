@@ -202,6 +202,9 @@ class AppConstants {
   /// Entdecken: how many recipes „Für dich" shows.
   static const int recipeForYouCount = 3;
 
+  /// Tipps: the thumbnail of a Tausch-Tipp's matching recipe.
+  static const double tipRecipeThumbSize = 40.0;
+
   // Wissen: an article's square thumbnail
   static const double knowledgeThumbSize = 64.0;
 

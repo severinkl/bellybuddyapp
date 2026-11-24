@@ -223,6 +223,26 @@ Recommendation testRecommendation({
   seenAt: seenAt,
 );
 
+/// A tip: by default a Tausch-Tipp, Zwiebel → Schnittlauch, without focus
+/// or a recipe (an older set's shape).
+RecommendationItem testRecommendationItem({
+  String type = 'substitute',
+  String ingredient = 'Zwiebel',
+  String reason = 'Grund',
+  String? alternative = 'Schnittlauch',
+  bool focus = false,
+  String? recipeId,
+  String? recipeTitle,
+}) => RecommendationItem(
+  type: type,
+  ingredient: ingredient,
+  reason: reason,
+  alternative: alternative,
+  focus: focus,
+  recipeId: recipeId,
+  recipeTitle: recipeTitle,
+);
+
 EntryQueryResult testEntryQueryResult({
   List<MealEntry>? meals,
   List<ToiletEntry>? toiletEntries,

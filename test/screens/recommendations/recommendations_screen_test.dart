@@ -9,17 +9,27 @@ import 'package:mocktail/mocktail.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 
 import 'package:belly_buddy/config/app_theme.dart';
+import 'package:belly_buddy/config/constants.dart';
+import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
+import 'package:belly_buddy/providers/recipe_collection_provider.dart';
 import 'package:belly_buddy/providers/recommendation_index_provider.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
+import 'package:belly_buddy/repositories/recipe_repository.dart';
 import 'package:belly_buddy/repositories/recommendation_repository.dart';
+import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/recommendations/recommendations_screen.dart';
+import 'package:belly_buddy/screens/recommendations/widgets/recommendation_card.dart';
+import 'package:belly_buddy/screens/recommendations/widgets/tip_recipe_link.dart';
 import 'package:belly_buddy/utils/date_format_utils.dart';
 import 'package:belly_buddy/widgets/common/bb_async_state.dart';
+import 'package:belly_buddy/widgets/common/bb_card.dart';
 
+import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
+import '../../helpers/layout_checks.dart';
 import '../../helpers/mocks.dart';
 import '../../helpers/riverpod_helpers.dart';
 
@@ -856,4 +866,298 @@ void main() {
       expect(find.text('Empfehlungen'), findsNothing);
     });
   });
+
+  group('a letter, a focus and a recipe link (core #12)', () {
+    const letter =
+        'Mir ist aufgefallen, dass an deinen schweren Tagen oft Zwiebel '
+        'dabei war. Lass uns diese Woche etwas Neues ausprobieren.';
+    // „Dein Wochenbrief", drawn in capitals (StepFieldLabel.style).
+    const letterLabel = 'DEIN WOCHENBRIEF';
+    final anyLetterLabel = find.textContaining(
+      RegExp('wochenbrief', caseSensitive: false),
+    );
+    const link = 'Passendes Rezept: Hirse-Bowl';
+
+    late FakeRecipeRepository collection;
+    late GoRouter router;
+
+    setUp(() {
+      collection = FakeRecipeRepository()
+        ..collection = [testRecipe(id: 'r-1', title: 'Hirse-Bowl')];
+    });
+
+    Future<void> pumpTips(
+      WidgetTester tester,
+      Recommendation set, {
+      double textScale = 1,
+    }) async {
+      router = GoRouter(
+        routes: [
+          GoRoute(path: '/', builder: (_, _) => const RecommendationsScreen()),
+          ...stubRoutes([RoutePaths.collectionRecipe]),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            recommendationRepositoryProvider.overrideWithValue(
+              FakeRecommendationRepository(sets: [set]),
+            ),
+            recipeRepositoryProvider.overrideWithValue(collection),
+            currentUserIdProvider.overrideWithValue(testUserId),
+          ],
+          child: germanRouterApp(router, textScale: textScale),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    /// The cards' ingredients, top to bottom.
+    List<String> ingredients(WidgetTester tester) => [
+      for (final card in tester.widgetList<RecommendationCard>(
+        find.byType(RecommendationCard),
+      ))
+        card.item.ingredient,
+    ];
+
+    /// The outer card of each tip, top to bottom.
+    List<BbCard> tipCards(WidgetTester tester) => [
+      for (final card in find.byType(RecommendationCard).evaluate())
+        tester.widget<BbCard>(
+          find
+              .descendant(
+                of: find.byWidget(card.widget),
+                matching: find.byType(BbCard),
+              )
+              .first,
+        ),
+    ];
+
+    /// Core's new shape, the focus item stored second.
+    Recommendation letterSet({String? recipeTitle = 'Hirse-Bowl'}) =>
+        testRecommendation(
+          id: 'new',
+          summary: letter,
+          recommendations: [
+            testRecommendationItem(
+              type: 'try',
+              ingredient: 'Haferflocken',
+              alternative: null,
+            ),
+            testRecommendationItem(
+              focus: true,
+              recipeId: 'r-1',
+              recipeTitle: recipeTitle,
+            ),
+          ],
+        );
+
+    testWidgets('a new set: the letter, then the focus item first', (
+      tester,
+    ) async {
+      await pumpTips(tester, letterSet());
+
+      expect(find.text(letterLabel), findsOneWidget);
+      expect(find.text(letter), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text(letterLabel)).dy,
+        lessThan(tester.getTopLeft(find.text(letter)).dy),
+      );
+      expect(
+        tester.widget<Text>(find.text(letter)).style?.fontWeight,
+        FontWeight.w400,
+      );
+
+      expect(ingredients(tester), ['Zwiebel', 'Haferflocken']);
+      expect(
+        find.descendant(
+          of: find.byType(RecommendationCard).first,
+          matching: find.text('Fokus der Woche'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('Fokus der Woche'), findsOneWidget);
+      expect(find.byKey(RecommendationCard.focusLabelKey), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text('Fokus der Woche')).dy,
+        lessThan(tester.getTopLeft(find.text('Zwiebel')).dy),
+      );
+      final [focus, other] = tipCards(tester);
+      expect(focus.showBorder, isTrue);
+      expect(focus.borderColor, AppTheme.primary);
+      expect(focus.borderWidth, AppConstants.borderWidthLg);
+      expect(other.showBorder, isFalse);
+    });
+
+    testWidgets('an old set renders as today', (tester) async {
+      final old = Recommendation.fromJson({
+        'id': 'old',
+        'summary': 'Weniger Zwiebel, mehr Haferflocken.',
+        'recommendations': [
+          {'type': 'try', 'ingredient': 'Haferflocken', 'reason': 'r'},
+          {
+            'type': 'substitute',
+            'ingredient': 'Zwiebel',
+            'reason': 'r',
+            'alternative': 'Schnittlauch',
+          },
+        ],
+      });
+      await pumpTips(tester, old);
+
+      expect(anyLetterLabel, findsNothing);
+      expect(find.text('Fokus der Woche'), findsNothing);
+      expect(find.byKey(RecommendationCard.focusLabelKey), findsNothing);
+      expect(find.byType(TipRecipeLink), findsNothing);
+      expect(find.textContaining('Passendes Rezept'), findsNothing);
+      expect(ingredients(tester), ['Haferflocken', 'Zwiebel']);
+      expect(tipCards(tester).map((c) => c.showBorder), [false, false]);
+      expect(
+        tester
+            .widget<Text>(find.text('Weniger Zwiebel, mehr Haferflocken.'))
+            .style
+            ?.fontWeight,
+        FontWeight.w600,
+      );
+      // Nothing to link: the collection isn't even loaded.
+      expect(collection.collectionFetches, 0);
+    });
+
+    testWidgets('the recipe link opens the recipe', (tester) async {
+      await pumpTips(tester, letterSet());
+
+      final zwiebel = find.byType(RecommendationCard).first;
+      expect(
+        find.descendant(of: zwiebel, matching: find.text(link)),
+        findsOneWidget,
+      );
+      // Under the reason and the alternative.
+      expect(
+        tester.getTopLeft(find.text(link)).dy,
+        greaterThan(
+          tester
+              .getTopLeft(
+                find.descendant(
+                  of: zwiebel,
+                  matching: find.text('→ Alternative: Schnittlauch'),
+                ),
+              )
+              .dy,
+        ),
+      );
+
+      await tester.tap(find.text(link));
+      await tester.pumpAndSettle();
+
+      expect(
+        router.routerDelegate.currentConfiguration.last.matchedLocation,
+        '/collection/r-1',
+      );
+      expect(find.text('page:${RoutePaths.collectionRecipe}'), findsOneWidget);
+      // Pushed over the Tipps.
+      expect(router.canPop(), isTrue);
+    });
+
+    testWidgets('a recipe no longer in the collection: no link', (
+      tester,
+    ) async {
+      collection.collection = [testRecipe(id: 'r-2', title: 'Hirse-Bowl')];
+      await pumpTips(tester, letterSet());
+
+      expect(find.text('Fokus der Woche'), findsOneWidget);
+      expect(find.byKey(TipRecipeLink.keyFor('r-1')), findsNothing);
+      expect(find.textContaining('Passendes Rezept'), findsNothing);
+    });
+
+    testWidgets('the collection loading or failed: no link', (tester) async {
+      final gate = Completer<void>();
+      collection = _GatedRecipeRepository(gate.future)
+        ..collection = [testRecipe(id: 'r-1', title: 'Hirse-Bowl')]
+        ..collectionError = Exception('offline');
+      await pumpTips(tester, letterSet());
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(RecommendationsScreen)),
+      );
+
+      expect(container.read(recipeCollectionProvider).isLoading, isTrue);
+      expect(find.text('Fokus der Woche'), findsOneWidget);
+      expect(find.byKey(TipRecipeLink.keyFor('r-1')), findsNothing);
+      expect(find.textContaining('Passendes Rezept'), findsNothing);
+
+      gate.complete();
+      await tester.pumpAndSettle();
+      expect(container.read(recipeCollectionProvider).hasError, isTrue);
+      expect(find.byKey(TipRecipeLink.keyFor('r-1')), findsNothing);
+      expect(find.textContaining('Passendes Rezept'), findsNothing);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets("recipe_title missing: the collection's title", (tester) async {
+      await pumpTips(tester, letterSet(recipeTitle: null));
+
+      expect(find.text(link), findsOneWidget);
+    });
+
+    testWidgets('fits 375×667 at 1.3', (tester) async {
+      tester.view.physicalSize = const Size(375, 667);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      collection.collection = [
+        testRecipe(
+          id: 'r-1',
+          title: 'Hirse-Bowl mit Ofengemüse und Tahini-Dressing',
+        ),
+      ];
+      const reason =
+          'An deinen schweren Tagen war oft Zwiebel dabei, an deinen guten '
+          'Tagen seltener.';
+      final set = testRecommendation(
+        summary: letter,
+        recommendations: [
+          testRecommendationItem(
+            reason: reason,
+            alternative: 'Frühlingszwiebelgrün',
+            focus: true,
+            recipeId: 'r-1',
+            recipeTitle: 'Hirse-Bowl mit Ofengemüse und Tahini-Dressing',
+          ),
+          testRecommendationItem(
+            type: 'try',
+            ingredient: 'Haferflocken',
+            reason: reason,
+            alternative: null,
+          ),
+          testRecommendationItem(
+            ingredient: 'Knoblauch',
+            reason: reason,
+            alternative: 'Knoblauchöl',
+          ),
+        ],
+      );
+
+      final errors = await collectFlutterErrors(() async {
+        await pumpTips(tester, set, textScale: 1.3);
+        expect(find.byKey(TipRecipeLink.keyFor('r-1')), findsOneWidget);
+        await tester.drag(find.byType(ListView), const Offset(0, -2000));
+        await tester.pumpAndSettle();
+      });
+
+      expect(find.text('Knoblauch'), findsOneWidget);
+      expect(verticalOverflows(errors), isEmpty);
+    });
+  });
+}
+
+/// A collection whose fetch waits for [_gate].
+class _GatedRecipeRepository extends FakeRecipeRepository {
+  _GatedRecipeRepository(this._gate);
+
+  final Future<void> _gate;
+
+  @override
+  Future<List<Recipe>> fetchCollection() async {
+    await _gate;
+    return super.fetchCollection();
+  }
 }

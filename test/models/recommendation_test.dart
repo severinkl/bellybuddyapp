@@ -2,6 +2,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/models/recommendation_item.dart';
 
+import '../helpers/fixtures.dart';
+
 void main() {
   group('Recommendation.fromJson (tests _parseItems indirectly)', () {
     test('null recommendations field produces empty list', () {
@@ -132,6 +134,61 @@ void main() {
           recommendations: [item, item, item],
         ).tipCountLabel,
         '3 Tipps',
+      );
+    });
+  });
+
+  group('letter', () {
+    final tryA = testRecommendationItem(
+      type: 'try',
+      ingredient: 'A',
+      alternative: null,
+    );
+    final subB = testRecommendationItem(ingredient: 'B', focus: true);
+    final subC = testRecommendationItem(ingredient: 'C');
+
+    test('isLetter: true with one focus item, false without', () {
+      expect(
+        Recommendation(id: 'r', recommendations: [tryA, subB]).isLetter,
+        isTrue,
+      );
+      expect(
+        Recommendation(id: 'r', recommendations: [tryA, subC]).isLetter,
+        isFalse,
+      );
+      expect(const Recommendation(id: 'r').isLetter, isFalse);
+    });
+
+    test('itemsFocusFirst: the focus item, then the others in stored '
+        'order', () {
+      expect(
+        Recommendation(id: 'r', recommendations: [tryA, subB]).itemsFocusFirst,
+        [subB, tryA],
+      );
+      expect(
+        Recommendation(
+          id: 'r',
+          recommendations: [tryA, subC, subB],
+        ).itemsFocusFirst,
+        [subB, tryA, subC],
+      );
+    });
+
+    test('itemsFocusFirst of an old set: stored order', () {
+      expect(
+        Recommendation(id: 'r', recommendations: [tryA, subC]).itemsFocusFirst,
+        [tryA, subC],
+      );
+    });
+
+    test('itemsFocusFirst: only the first focus item moves', () {
+      final subD = testRecommendationItem(ingredient: 'D', focus: true);
+      expect(
+        Recommendation(
+          id: 'r',
+          recommendations: [tryA, subB, subC, subD],
+        ).itemsFocusFirst,
+        [subB, tryA, subC, subD],
       );
     });
   });

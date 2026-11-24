@@ -379,6 +379,7 @@ class _RecommendationPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final letter = recommendation.isLetter;
     return RefreshIndicator(
       color: AppTheme.primary,
       onRefresh: () =>
@@ -397,12 +398,12 @@ class _RecommendationPage extends ConsumerWidget {
             ),
           ),
           AppConstants.gap12,
-          ...recommendation.recommendations.map(
-            (item) => Padding(
+          // A letter's focus comes first, with its label.
+          for (final (i, item) in recommendation.itemsFocusFirst.indexed)
+            Padding(
               padding: const EdgeInsets.only(bottom: AppConstants.spacing10),
-              child: RecommendationCard(item: item),
+              child: RecommendationCard(item: item, focus: letter && i == 0),
             ),
-          ),
           AppConstants.gap16,
           RecommendationFeedbackView(recommendation: recommendation),
           AppConstants.gap24,
