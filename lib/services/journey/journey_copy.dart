@@ -117,7 +117,6 @@ abstract final class JourneyCopy {
   static const okay = 'Okay';
   static const later = 'Später';
   static const toTips = 'Zu deinen Tipps';
-  static const toPatterns = 'Muster ansehen';
 
   /// Day 4: one per user (`sayingFor`).
   static const sayings = [

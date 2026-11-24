@@ -10,6 +10,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../providers/home_cover_provider.dart';
 import '../../../providers/journey_rewards_provider.dart';
 import '../../../providers/profile_provider.dart';
+import '../../../services/insights/insight_copy.dart';
 import '../../../services/journey/journey_copy.dart';
 import '../../../services/journey/journey_rules.dart';
 import '../../../utils/url_utils.dart';
@@ -158,7 +159,7 @@ class JourneyRewardListSheet extends ConsumerWidget {
     },
     4 => sayingFor(ref.watch(currentUserIdProvider) ?? ''),
     6 => JourneyCopy.example,
-    7 => JourneyCopy.toPatterns,
+    7 => InsightCopy.openPatterns,
     _ => _pickTitle(day, rewards, weeklyTips: weeklyTips),
   };
 

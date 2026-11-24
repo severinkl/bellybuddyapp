@@ -14,19 +14,21 @@ import 'package:belly_buddy/widgets/buddy/buddy_stage.dart';
 import '../../helpers/app_host.dart';
 import '../../helpers/layout_checks.dart';
 
-/// The router: /dashboard, with the celebration pushed on top.
+/// The router: /dashboard, with the celebration pushed on top; [alone],
+/// the celebration opened directly (a deep link, restored state).
 Future<GoRouter> _pump(
   WidgetTester tester, {
   double textScale = 1,
   bool reducedMotion = false,
   Size size = const Size(375, 667),
+  bool alone = false,
 }) async {
   tester.view
     ..physicalSize = size
     ..devicePixelRatio = 1;
   addTearDown(tester.view.reset);
   final router = GoRouter(
-    initialLocation: '/dashboard',
+    initialLocation: alone ? '/patterns-unlocked' : '/dashboard',
     routes: [
       GoRoute(
         path: '/dashboard',
@@ -56,9 +58,11 @@ Future<GoRouter> _pump(
     ),
   );
   await tester.pumpAndSettle();
-  unawaited(router.push('/patterns-unlocked'));
-  await tester.pump();
-  await tester.pump(const Duration(milliseconds: 500));
+  if (!alone) {
+    unawaited(router.push('/patterns-unlocked'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+  }
   return router;
 }
 
@@ -91,6 +95,16 @@ void main() {
     final router = await _pump(tester);
     await tester.tapAt(const Offset(20, 20));
     await tester.pumpAndSettle();
+    expect(_location(router), '/dashboard');
+  });
+
+  testWidgets('nothing below: a tap elsewhere goes Home', (tester) async {
+    final router = await _pump(tester, alone: true);
+    expect(_location(router), '/patterns-unlocked');
+
+    await tester.tapAt(const Offset(20, 20));
+    await tester.pumpAndSettle();
+
     expect(_location(router), '/dashboard');
   });
 

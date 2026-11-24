@@ -2,8 +2,9 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../config/constants.dart';
+import '../../router/navigation_extensions.dart';
 import '../../router/route_names.dart';
-import '../../services/journey/journey_copy.dart';
+import '../../services/insights/insight_copy.dart';
 import '../../widgets/buddy/buddy_actions.dart';
 import '../../widgets/buddy/buddy_controller.dart';
 import '../../widgets/buddy/buddy_pose.dart';
@@ -13,7 +14,7 @@ import '../../widgets/common/bb_success_overlay.dart';
 
 /// „Muster frei!": the full-screen celebration of day 7, pushed by the Buddy
 /// when the patterns unlock. The button replaces it with the Muster page; a
-/// tap elsewhere goes back.
+/// tap elsewhere goes back (Home when nothing is below).
 class PatternsUnlockedScreen extends StatefulWidget {
   const PatternsUnlockedScreen({super.key});
 
@@ -63,11 +64,13 @@ class _PatternsUnlockedScreenState extends State<PatternsUnlockedScreen> {
         actions: [
           BbButton(
             tapKey: PatternsUnlockedScreen.openKey,
-            label: JourneyCopy.toPatterns,
+            label: InsightCopy.openPatterns,
             onPressed: () => context.pushReplacement(RoutePaths.patterns),
           ),
         ],
-        onDismissed: () => context.pop(),
+        // Back, or Home when nothing is below (a deep link, restored
+        // state).
+        onDismissed: context.popOrGoDashboard,
       ),
     );
   }

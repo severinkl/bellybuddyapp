@@ -81,9 +81,6 @@ class AppConstants {
   // plus tail and shadow), the bubble's widest width and its line limit
   static const double buddyBubbleHeight = 76.0;
   static const double buddyBubbleMaxWidth = 280.0;
-
-  /// The Buddy's height on the „Muster frei!" page.
-  static const double patternsUnlockedBuddyHeight = 220.0;
   static const int buddyBubbleMaxLines = 4;
 
   // Its tail (base width, length), the side tail's middle below the
@@ -105,6 +102,9 @@ class AppConstants {
   // its buttons stay on screen without scrolling
   static const double buddyAskSheetCompactBelow = 700.0;
   static const double buddyAskSheetCompactHeight = 140.0;
+
+  /// The Buddy's height on the „Muster frei!" page.
+  static const double patternsUnlockedBuddyHeight = 220.0;
 
   // Streak week row (Mo–So): day circle
   static const double streakWeekDaySize = 36.0;
