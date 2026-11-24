@@ -221,7 +221,7 @@ void main() {
   });
 
   group('buddyOffersProvider on the journey', () {
-    test('journey undecided: no weekly-tips offer', () async {
+    test('journey undecided: no offer', () async {
       // Unlocked and off: today's rule would offer it.
       final c = await loaded(
         overrides: [journeySeededWith(null)],
@@ -230,6 +230,7 @@ void main() {
 
       expect(c.read(insightsProvider).value!.unlocked, isTrue);
       expect(c.read(weeklyTipsOfferDueProvider), isFalse);
+      expect(c.read(firstTipOfferDueProvider), isFalse);
       expect(c.read(buddyOffersProvider), isEmpty);
     });
 
@@ -240,6 +241,7 @@ void main() {
       final unlocked = await loaded();
       expect(unlocked.read(journeyProvider), isFalse);
       expect(unlocked.read(weeklyTipsOfferDueProvider), isTrue);
+      expect(unlocked.read(firstTipOfferDueProvider), isFalse);
       expect(unlocked.read(buddyOffersProvider), {
         BuddyAnnouncement.weeklyTipsOffer: 'once',
       });
@@ -251,20 +253,21 @@ void main() {
       expect(locked.read(buddyOffersProvider), isEmpty);
     });
 
-    test('journey true, day 3, weekly off → weeklyTipsOffer once', () async {
+    test('journey true, day 3, weekly off → firstTipOffer once', () async {
       journeyDays(3);
       final c = await loaded();
 
       expect(c.read(journeyProvider), isTrue);
+      expect(c.read(weeklyTipsOfferDueProvider), isFalse);
       expect(c.read(buddyOffersProvider), {
-        BuddyAnnouncement.weeklyTipsOffer: 'once',
+        BuddyAnnouncement.firstTipOffer: 'once',
       });
       await offerAll(c);
       await offerAll(c);
-      expect(await pending(c), [BuddyAnnouncement.weeklyTipsOffer]);
+      expect(await pending(c), [BuddyAnnouncement.firstTipOffer]);
       expect(c.read(buddyProvider).value!.announcementKeys, {
-        BuddyAnnouncement.weeklyTipsOffer: flag(
-          BuddyAnnouncement.weeklyTipsOffer,
+        BuddyAnnouncement.firstTipOffer: flag(
+          BuddyAnnouncement.firstTipOffer,
           'once',
         ),
       });
@@ -275,14 +278,48 @@ void main() {
       final c = await loaded();
 
       expect(c.read(insightsProvider).value!.unlocked, isFalse);
-      expect(c.read(weeklyTipsOfferDueProvider), isTrue);
+      expect(c.read(firstTipOfferDueProvider), isTrue);
+    });
+
+    group('a journey user flagged for the old shared weeklyTipsOffer', () {
+      /// Day 3 with [offer], and the flag the day-3 offer used to share
+      /// with the weekly tips' set.
+      Future<ProviderContainer> flaggedWith(TipOffer offer) async {
+        SharedPreferences.setMockInitialValues({
+          '${AppConstants.keyInsightJourneyPrefix}$testUserId': true,
+          '${AppConstants.keyJourneyRewardsPrefix}$testUserId': jsonEncode(
+            JourneyRewards(earnedDay: 3, tipOffer: offer).toJson(),
+          ),
+          flag(BuddyAnnouncement.weeklyTipsOffer, 'once'): true,
+        });
+        journeyDays(3);
+        final c = await loaded();
+        await offerAll(c);
+        return c;
+      }
+
+      test('answered: never offered again', () async {
+        final c = await flaggedWith(TipOffer.declined);
+
+        expect(c.read(firstTipOfferDueProvider), isFalse);
+        expect(
+          await pending(c),
+          isNot(contains(BuddyAnnouncement.firstTipOffer)),
+        );
+      });
+
+      test('unanswered (the opt-in failed): offered once more', () async {
+        final c = await flaggedWith(TipOffer.offered);
+
+        expect(await pending(c), contains(BuddyAnnouncement.firstTipOffer));
+      });
     });
 
     test('opted in before day 3: journeyReward day 3, no offer', () async {
       journeyDays(3);
       final c = await loaded(weeklyTips: true);
 
-      expect(c.read(weeklyTipsOfferDueProvider), isFalse);
+      expect(c.read(firstTipOfferDueProvider), isFalse);
       expect(c.read(buddyOffersProvider), {
         BuddyAnnouncement.journeyReward: 'day3',
       });
@@ -392,13 +429,13 @@ void main() {
       expect(c.read(buddyOffersProvider).keys.toList(), [
         BuddyAnnouncement.tipsArrived,
         BuddyAnnouncement.patternsUnlocked,
-        BuddyAnnouncement.weeklyTipsOffer,
+        BuddyAnnouncement.firstTipOffer,
       ]);
       await offerAll(c);
       expect(await pending(c), [
         BuddyAnnouncement.tipsArrived,
         BuddyAnnouncement.patternsUnlocked,
-        BuddyAnnouncement.weeklyTipsOffer,
+        BuddyAnnouncement.firstTipOffer,
       ]);
     });
 
@@ -471,15 +508,17 @@ void main() {
       expect(applies(true), isFalse);
     });
 
-    test('weeklyTipsOffer for a journey user: until the offer is answered '
-        '(here or in „Deine Belohnungen"); never once skipped', () {
-      bool applies(TipOffer? offer) => container(
-        weeklyTips: false,
+    test('firstTipOffer: until the offer is answered (here or in „Deine '
+        'Belohnungen") or the weekly tips are on; never once skipped', () {
+      bool applies(TipOffer? offer, {bool? weeklyTips = false}) => container(
+        weeklyTips: weeklyTips,
         journey: true,
         rewards: JourneyRewards(earnedDay: 3, tipOffer: offer),
-      ).read(offerStillAppliesProvider(BuddyAnnouncement.weeklyTipsOffer));
+      ).read(offerStillAppliesProvider(BuddyAnnouncement.firstTipOffer));
 
       expect(applies(TipOffer.offered), isTrue);
+      expect(applies(TipOffer.offered, weeklyTips: null), isTrue);
+      expect(applies(TipOffer.offered, weeklyTips: true), isFalse);
       expect(applies(null), isTrue);
       expect(applies(TipOffer.declined), isFalse);
       expect(applies(TipOffer.accepted), isFalse);
@@ -489,19 +528,25 @@ void main() {
         container(
           weeklyTips: false,
           journey: true,
-        ).read(offerStillAppliesProvider(BuddyAnnouncement.weeklyTipsOffer)),
+        ).read(offerStillAppliesProvider(BuddyAnnouncement.firstTipOffer)),
         isTrue,
       );
     });
 
-    test('weeklyTipsOffer while the journey is undecided: no offer', () {
-      expect(
-        container(
-          weeklyTips: false,
-          journey: null,
-        ).read(offerStillAppliesProvider(BuddyAnnouncement.weeklyTipsOffer)),
-        isFalse,
-      );
+    test('each offer only on its side of the journey; neither while it is '
+        'undecided', () {
+      bool applies(BuddyAnnouncement offer, bool? journey) => container(
+        weeklyTips: false,
+        journey: journey,
+        rewards: const JourneyRewards(earnedDay: 3, tipOffer: TipOffer.offered),
+      ).read(offerStillAppliesProvider(offer));
+
+      expect(applies(BuddyAnnouncement.weeklyTipsOffer, false), isTrue);
+      expect(applies(BuddyAnnouncement.weeklyTipsOffer, true), isFalse);
+      expect(applies(BuddyAnnouncement.weeklyTipsOffer, null), isFalse);
+      expect(applies(BuddyAnnouncement.firstTipOffer, true), isTrue);
+      expect(applies(BuddyAnnouncement.firstTipOffer, false), isFalse);
+      expect(applies(BuddyAnnouncement.firstTipOffer, null), isFalse);
     });
 
     test('the others always', () {

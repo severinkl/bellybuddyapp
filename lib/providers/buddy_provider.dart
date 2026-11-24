@@ -41,8 +41,10 @@ final buddyClockProvider = Provider<DateTime Function()>(
 /// from outside ([BuddyNotifier.offerAnnouncement], by Home while they
 /// apply; `buddyOffersProvider`):
 /// - `tipsArrived` once per tip set;
-/// - `weeklyTipsOffer` once ever (on the journey: day 3's offer of a first
-///   tip);
+/// - `weeklyTipsOffer` once ever, off the journey: the weekly tips after the
+///   first patterns;
+/// - `firstTipOffer` once ever, on the journey: day 3's offer of a first
+///   tip;
 /// - `journeyReward` once per journey day (1–6, suffix `day<n>`): the
 ///   newest earned day's reward;
 /// - `patternsUnlocked` once ever: the journey's day 7, „Muster frei!";
@@ -54,6 +56,7 @@ enum BuddyAnnouncement {
   goalReached,
   tipsArrived,
   weeklyTipsOffer,
+  firstTipOffer,
   journeyReward,
   patternsUnlocked,
   firstTipFailed,

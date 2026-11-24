@@ -52,6 +52,7 @@ enum _Cue {
   goalReached(BuddyAnnouncement.goalReached, endsInSheet: true),
   tipsArrived(BuddyAnnouncement.tipsArrived),
   weeklyTipsOffer(BuddyAnnouncement.weeklyTipsOffer, endsInSheet: true),
+  firstTipOffer(BuddyAnnouncement.firstTipOffer, endsInSheet: true),
   journeyReward(BuddyAnnouncement.journeyReward, endsInSheet: true),
   patternsUnlocked(BuddyAnnouncement.patternsUnlocked, endsInSheet: true),
   firstTipFailed(BuddyAnnouncement.firstTipFailed);
@@ -62,7 +63,7 @@ enum _Cue {
   final BuddyAnnouncement? announcement;
 
   /// Whether the cue ends in a sheet or page (the new goal, the weekly-tips
-  /// offer, a day's reward, „Muster frei!").
+  /// or first-tip offer, a day's reward, „Muster frei!").
   final bool endsInSheet;
 }
 
@@ -73,6 +74,7 @@ _Cue _cueFor(BuddyAnnouncement a) => switch (a) {
   BuddyAnnouncement.goalReached => _Cue.goalReached,
   BuddyAnnouncement.tipsArrived => _Cue.tipsArrived,
   BuddyAnnouncement.weeklyTipsOffer => _Cue.weeklyTipsOffer,
+  BuddyAnnouncement.firstTipOffer => _Cue.firstTipOffer,
   BuddyAnnouncement.journeyReward => _Cue.journeyReward,
   BuddyAnnouncement.patternsUnlocked => _Cue.patternsUnlocked,
   BuddyAnnouncement.firstTipFailed => _Cue.firstTipFailed,
@@ -589,6 +591,12 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
           buddyActionDuration(BuddyAction.wave),
           () => unawaited(_offerWeeklyTips()),
         );
+      case _Cue.firstTipOffer:
+        _buddy.play(BuddyAction.wave);
+        _cueTimer = Timer(
+          buddyActionDuration(BuddyAction.wave),
+          () => unawaited(_offerFirstTip()),
+        );
       case _Cue.journeyReward:
         _buddy.play(BuddyAction.celebrate);
         _cueTimer = Timer(
@@ -674,34 +682,32 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     return true;
   }
 
-  /// After the wave: offers the weekly tips, then continues; waits like
-  /// every cue's sheet ([_deferSheet]). On the journey it is day 3's offer
-  /// of a first tip ([_offerFirstTip]); off it, the weekly tips' („Zu den
-  /// Tipps" opens Entdecken); undecided, none.
+  /// After the wave: the weekly tips' offer off the journey („Zu den Tipps"
+  /// opens Entdecken), then continues; waits like every cue's sheet
+  /// ([_deferSheet]). On the journey or undecided by now: none.
   Future<void> _offerWeeklyTips() async {
     if (_deferSheet(_offerWeeklyTips)) return;
-    switch (ref.read(journeyProvider)) {
-      case true:
-        return _offerFirstTip();
-      case false:
-        final open = await showWeeklyTipsOfferSheet(context);
-        if (!mounted) return;
-        if (open) {
-          ref.read(homeCoveredProvider.notifier).leftHome(null);
-          context.go(RoutePaths.discover);
-        }
-      case null:
-        break;
+    if (ref.read(journeyProvider) == false) {
+      final open = await showWeeklyTipsOfferSheet(context);
+      if (!mounted) return;
+      if (open) {
+        ref.read(homeCoveredProvider.notifier).leftHome(null);
+        context.go(RoutePaths.discover);
+      }
     }
     _nextCue();
   }
 
-  /// Day 3's offer of a first tip ([offerFirstTip]): „Ja, gern" started →
-  /// he says it is on its way, holding the stage; the opt-in failed → a
-  /// SnackBar; „Nein, danke" was answered there. A dismissal here counts as
-  /// „Nein" (the offer doesn't come again), but only while the hero is
-  /// still here: gone, nothing is stored and the offer comes again.
+  /// After the wave: day 3's offer of a first tip ([offerFirstTip]), then
+  /// continues; waits like every cue's sheet ([_deferSheet]). „Ja, gern"
+  /// started → he says it is on its way, holding the stage; the opt-in
+  /// failed → a SnackBar; „Nein, danke" was answered there. A dismissal
+  /// here counts as „Nein" (the offer doesn't come again), but only while
+  /// the hero is still here: gone, nothing is stored and the offer comes
+  /// again. Off the journey or undecided by now (another user): none.
   Future<void> _offerFirstTip() async {
+    if (_deferSheet(_offerFirstTip)) return;
+    if (ref.read(journeyProvider) != true) return _nextCue();
     final outcome = await offerFirstTip(context, ref);
     if (!mounted) return;
     switch (outcome) {

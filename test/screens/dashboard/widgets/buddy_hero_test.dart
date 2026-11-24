@@ -1455,7 +1455,7 @@ void main() {
       });
     });
 
-    group('journey user, weeklyTipsOffer → the first-tip sheet', () {
+    group('journey user, firstTipOffer → the first-tip sheet', () {
       /// Day 3, the offer open, day 3's recipe already picked.
       const day3 = JourneyRewards(
         earnedDay: 3,
@@ -1467,8 +1467,7 @@ void main() {
         journey = true;
         rewards = day3;
         buddy = _FakeBuddy(
-          () =>
-              _status(announcements: const [BuddyAnnouncement.weeklyTipsOffer]),
+          () => _status(announcements: const [BuddyAnnouncement.firstTipOffer]),
         );
       });
 
@@ -1500,7 +1499,7 @@ void main() {
         // The line holds the stage, then the offer counts as shown.
         expect(buddy.shown, isEmpty);
         await tester.pump(const Duration(seconds: 4));
-        expect(buddy.shown, [BuddyAnnouncement.weeklyTipsOffer]);
+        expect(buddy.shown, [BuddyAnnouncement.firstTipOffer]);
         expect(firstTip.accepts, 1);
       });
 
@@ -1517,7 +1516,7 @@ void main() {
         expect(firstTip.accepts, 1);
         expect(find.text(WeeklyTipsSwitch.failure), findsOneWidget);
         expect(controller(tester).bubble, isNot(JourneyCopy.firstTipStarted));
-        expect(buddy.shown, [BuddyAnnouncement.weeklyTipsOffer]);
+        expect(buddy.shown, [BuddyAnnouncement.firstTipOffer]);
       });
 
       testWidgets('no → declined, the day-3 recipe sheet with day3AfterNoLine, '
@@ -1540,7 +1539,7 @@ void main() {
 
         expect(location(), RoutePaths.collectionRecipeFor('r3'));
         expect(firstTip.accepts, 0);
-        expect(buddy.shown, [BuddyAnnouncement.weeklyTipsOffer]);
+        expect(buddy.shown, [BuddyAnnouncement.firstTipOffer]);
       });
 
       testWidgets('no, then the recipe: the next cue waits until Home is '
@@ -1549,7 +1548,7 @@ void main() {
         buddy = _FakeBuddy(
           () => _status(
             announcements: const [
-              BuddyAnnouncement.weeklyTipsOffer,
+              BuddyAnnouncement.firstTipOffer,
               BuddyAnnouncement.tipsArrived,
             ],
           ),
@@ -1562,7 +1561,7 @@ void main() {
 
         await advance(tester, const Duration(seconds: 6));
         expect(bubbleBehind(tester), isNot(_tipsArrivedLine));
-        expect(buddy.shown, [BuddyAnnouncement.weeklyTipsOffer]);
+        expect(buddy.shown, [BuddyAnnouncement.firstTipOffer]);
 
         router.pop();
         await tester.pump();
@@ -1589,7 +1588,7 @@ void main() {
         expect(find.byType(FirstTipOfferSheet), findsNothing);
         expect(find.byType(JourneyRewardSheet), findsNothing);
         expect(firstTip.accepts, 0);
-        expect(buddy.shown, [BuddyAnnouncement.weeklyTipsOffer]);
+        expect(buddy.shown, [BuddyAnnouncement.firstTipOffer]);
       });
 
       for (final (name, close) in [
@@ -1622,7 +1621,7 @@ void main() {
           expect(firstTip.accepts, 0);
           expect(buddy.shown, isEmpty);
           expect(container.read(buddyProvider).value!.announcements, [
-            BuddyAnnouncement.weeklyTipsOffer,
+            BuddyAnnouncement.firstTipOffer,
           ]);
         });
       }
@@ -1639,7 +1638,7 @@ void main() {
         expect(controller(tester).currentAction, isNot(BuddyAction.wave));
         await afterWave(tester);
         expect(find.byType(FirstTipOfferSheet), findsNothing);
-        expect(buddy.shown, [BuddyAnnouncement.weeklyTipsOffer]);
+        expect(buddy.shown, [BuddyAnnouncement.firstTipOffer]);
       });
 
       testWidgets('journey undecided: no offer', (tester) async {
@@ -1740,7 +1739,7 @@ void main() {
           () => _status(
             announcements: const [
               BuddyAnnouncement.patternsUnlocked,
-              BuddyAnnouncement.weeklyTipsOffer,
+              BuddyAnnouncement.firstTipOffer,
             ],
           ),
         );
