@@ -5,6 +5,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:belly_buddy/config/app_theme.dart';
+import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/providers/diary_provider.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/router/route_names.dart';
@@ -80,6 +81,22 @@ void main() {
         now,
       );
       expect(items.single.label, endsWith('· 1.5 L'));
+    });
+
+    test('a 23:30 entry stays on its day, at 23:30 (as in the Tagebuch)', () {
+      // `tracked_at` as PostgREST sends it: the wall clock in the UTC slot.
+      final late = MealEntry.fromJson({
+        'id': 'late',
+        'title': 'Spätes Essen',
+        'tracked_at': '2026-11-23T23:30:00+00:00',
+      });
+
+      final items = todayLogItems(
+        EntriesState(meals: [late]),
+        DateTime(2026, 11, 23, 23, 45),
+      );
+
+      expect(items.single.at, DateTime(2026, 11, 23, 23, 30));
     });
   });
 

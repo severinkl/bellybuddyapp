@@ -29,33 +29,33 @@ class TodayLogItem {
 /// The entries of [s] on [day] (local), oldest first, each with a short
 /// label.
 List<TodayLogItem> todayLogItems(EntriesState s, DateTime day) {
-  bool isToday(DateTime trackedAt) => isSameDay(trackedAt.toLocal(), day);
+  bool isToday(DateTime trackedAt) => isSameDay(trackedAt, day);
 
   return <TodayLogItem>[
     for (final e in s.meals)
       if (isToday(e.trackedAt))
         TodayLogItem(
-          e.trackedAt.toLocal(),
+          e.trackedAt,
           CareNeed.food,
           e.title.trim().isEmpty ? 'Mahlzeit' : e.title.trim(),
         ),
     for (final e in s.drinks)
       if (isToday(e.trackedAt))
         TodayLogItem(
-          e.trackedAt.toLocal(),
+          e.trackedAt,
           CareNeed.drink,
           '${e.drinkName} · ${DrinkHelpers.formatAmount(e.amountMl)}',
         ),
     for (final e in s.gutFeelings)
       if (isToday(e.trackedAt))
         TodayLogItem(
-          e.trackedAt.toLocal(),
+          e.trackedAt,
           CareNeed.gutFeeling,
           'Bauchgefühl: ${calculateGutFeelingRating(e).level.label}',
         ),
     for (final e in s.toiletEntries)
       if (isToday(e.trackedAt))
-        TodayLogItem(e.trackedAt.toLocal(), CareNeed.toilet, 'Klo-Eintrag'),
+        TodayLogItem(e.trackedAt, CareNeed.toilet, 'Klo-Eintrag'),
   ]..sort((a, b) => a.at.compareTo(b.at));
 }
 

@@ -1,5 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import '../utils/wall_clock.dart';
+
 part 'drink_entry.freezed.dart';
 part 'drink_entry.g.dart';
 
@@ -10,7 +12,12 @@ abstract class DrinkEntry with _$DrinkEntry {
   const factory DrinkEntry({
     required String id,
     @JsonKey(name: 'user_id') String? userId,
-    @JsonKey(name: 'tracked_at') required DateTime trackedAt,
+
+    /// When the user logged it: local wall-clock time, not an instant (see
+    /// `utils/wall_clock.dart`).
+    @JsonKey(name: 'tracked_at')
+    @WallClockConverter()
+    required DateTime trackedAt,
     @JsonKey(name: 'drink_id') required String drinkId,
 
     /// Excluded from JSON serialization. Populated only by [fromDbRow]
@@ -20,6 +27,8 @@ abstract class DrinkEntry with _$DrinkEntry {
     String drinkName,
     @JsonKey(name: 'amount_ml') required int amountMl,
     String? notes,
+
+    /// When the row was created: a real instant (server `now()`).
     @JsonKey(name: 'created_at') DateTime? createdAt,
   }) = _DrinkEntry;
 
@@ -31,7 +40,7 @@ abstract class DrinkEntry with _$DrinkEntry {
   /// Unlike [toJson], this excludes `drinkName` (which comes from a join)
   /// and includes only the columns that belong to the `drink_entries` table.
   Map<String, dynamic> toInsertJson() => {
-    'tracked_at': trackedAt.toIso8601String(),
+    'tracked_at': wallClockToWire(trackedAt),
     'drink_id': drinkId,
     'amount_ml': amountMl,
     'notes': notes,
@@ -48,7 +57,7 @@ abstract class DrinkEntry with _$DrinkEntry {
     return DrinkEntry(
       id: row['id'] as String,
       userId: row['user_id'] as String?,
-      trackedAt: DateTime.parse(row['tracked_at'] as String),
+      trackedAt: wallClockFromWire(row['tracked_at'] as String),
       drinkId: row['drink_id'] as String,
       drinkName: drinks?['name'] as String? ?? 'Unbekanntes Getränk',
       amountMl: row['amount_ml'] as int,

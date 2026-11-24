@@ -33,12 +33,12 @@ class EntryRepository {
     required DateTime since,
     DateTime? until,
   }) async {
-    final instants = await _queryService.fetchTrackedAtSince(
+    final times = await _queryService.fetchTrackedAtSince(
       userId: userId,
       since: since,
       until: until,
     );
-    return {for (final i in instants) startOfDay(i.toLocal())};
+    return {for (final t in times) startOfDay(t)};
   }
 
   Future<void> insertEntry(

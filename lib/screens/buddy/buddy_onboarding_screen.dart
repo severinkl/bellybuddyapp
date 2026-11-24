@@ -201,7 +201,7 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
       if (event == null) return;
       // The entry's own date: a meal backdated to yesterday is no log for
       // today, however recently it was saved.
-      if (isSameDay(event.trackedAt.toLocal(), _today())) _loggedToday = true;
+      if (isSameDay(event.trackedAt, _today())) _loggedToday = true;
       if (event.kind == EntryKind.meal &&
           _steps != null &&
           _step == BuddyOnboardingStep.firstMeal) {

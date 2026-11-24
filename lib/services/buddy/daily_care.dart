@@ -91,14 +91,14 @@ class DailyCare {
     /// The local times of today's entries among [trackedAt].
     List<DateTime> today(Iterable<DateTime> trackedAt) => [
       for (final t in trackedAt)
-        if (isSameDay(t.toLocal(), now)) t.toLocal(),
+        if (isSameDay(t, now)) t,
     ];
     DateTime? latest(List<DateTime> times) =>
         times.isEmpty ? null : times.reduce((a, b) => a.isAfter(b) ? a : b);
 
     final drinks = [
       for (final d in s.drinks)
-        if (isSameDay(d.trackedAt.toLocal(), now)) d,
+        if (isSameDay(d.trackedAt, now)) d,
     ];
     final mealTimes = today(s.meals.map((e) => e.trackedAt));
     final gutFeelingTimes = today(s.gutFeelings.map((e) => e.trackedAt));
@@ -112,7 +112,7 @@ class DailyCare {
       lastMealAt: latest(mealTimes),
       lastLogAt: latest([
         ...mealTimes,
-        for (final d in drinks) d.trackedAt.toLocal(),
+        for (final d in drinks) d.trackedAt,
         ...gutFeelingTimes,
         ...toiletTimes,
       ]),
