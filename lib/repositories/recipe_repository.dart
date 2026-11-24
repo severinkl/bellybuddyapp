@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 import '../models/adapted_recipe.dart';
 import '../models/intolerance_rules.dart';
 import '../models/recipe.dart';
@@ -12,10 +13,13 @@ class RecipeRepository {
 
   RecipeRepository(this._recipeService);
 
+  /// Retries only what another attempt can fix: a PostgREST error (schema,
+  /// permission) fails the same way again.
   Future<List<Recipe>> fetchCollection() => retryAsync(
     _recipeService.fetchCollection,
     log: _log,
     label: 'fetchCollection',
+    retryIf: (e) => e is! PostgrestException,
   );
 
   Future<List<FavoriteRecipe>> fetchFavorites(String userId) =>

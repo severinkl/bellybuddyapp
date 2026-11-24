@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 
 import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/repositories/recipe_repository.dart';
@@ -53,6 +54,31 @@ void main() {
       expect(
         logs,
         contains('RecipeRepository [ERROR]: fetchCollection (attempt 1/3)'),
+      );
+    });
+
+    test('fails at once on a PostgREST error (schema, permission)', () async {
+      final logs = <String>[];
+      final original = debugPrint;
+      debugPrint = (message, {wrapWidth}) => logs.add(message ?? '');
+      addTearDown(() => debugPrint = original);
+      var calls = 0;
+      when(() => recipeService.fetchCollection()).thenAnswer((_) async {
+        calls++;
+        throw const PostgrestException(
+          message: 'column missing',
+          code: '42703',
+        );
+      });
+
+      await expectLater(
+        repo.fetchCollection(),
+        throwsA(isA<PostgrestException>()),
+      );
+      expect(calls, 1);
+      expect(
+        logs,
+        contains(startsWith('RecipeRepository [ERROR]: fetchCollection')),
       );
     });
   });
