@@ -136,9 +136,10 @@ void main() {
 
   for (final v in vectors) {
     test(v['id'] as String, () {
+      // The app's clock is local (`buddyClockProvider`).
       final got = computeInsights(
         _source(v),
-        DateTime.parse(v['now'] as String),
+        DateTime.parse(v['now'] as String).toLocal(),
       );
       expect(
         jsonDecode(jsonEncode(_toJson(got))),
@@ -147,4 +148,31 @@ void main() {
       );
     }, skip: _vienna ? false : 'only under TZ=Europe/Vienna');
   }
+
+  // Dart-only (the shared file is core's, unchanged here): core's
+  // late-evening vector read just after local midnight, whose UTC instant
+  // is still the day before. The window ends on the local day, whether
+  // `now` comes local (as in the app) or as that instant.
+  test('now just after local midnight: the local day (Dart-only)', () {
+    final lateEvening = vectors.singleWhere(
+      (v) => v['id'] == 'late-evening-entries-stay-on-their-day',
+    );
+    final v = {...lateEvening, 'now': '2026-11-24T00:10:00+01:00'};
+    final expected =
+        jsonDecode(jsonEncode(lateEvening['expected'])) as Map<String, dynamic>;
+    expected['calendar']
+      ..['first_day'] = '2026-10-26'
+      ..['last_day'] = '2026-11-24';
+    final instant = DateTime.parse(v['now'] as String);
+    expect(instant.isUtc, isTrue);
+    expect(instant.day, 23);
+
+    for (final now in [instant.toLocal(), instant]) {
+      expect(
+        jsonDecode(jsonEncode(_toJson(computeInsights(_source(v), now)))),
+        expected,
+        reason: '$now',
+      );
+    }
+  }, skip: _vienna ? false : 'only under TZ=Europe/Vienna');
 }
