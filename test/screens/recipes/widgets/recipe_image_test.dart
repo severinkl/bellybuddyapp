@@ -87,6 +87,32 @@ void main() {
       );
     });
 
+    testWidgets('decodes at its laid-out size, not the photo\'s', (
+      tester,
+    ) async {
+      tester.view.devicePixelRatio = 2;
+      addTearDown(tester.view.resetDevicePixelRatio);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 160,
+                height: 90,
+                child: RecipeImage(recipe: withImage('https://x.test/a.jpg')),
+              ),
+            ),
+          ),
+        ),
+      );
+      final image = tester.widget<CachedNetworkImage>(
+        find.byType(CachedNetworkImage),
+      );
+      // The longer side, so a landscape photo still covers the box sharply.
+      expect(image.memCacheHeight, 320);
+      expect(image.memCacheWidth, isNull);
+    });
+
     testWidgets('another scheme is the placeholder', (tester) async {
       await pump(tester, RecipeImage(recipe: withImage('ftp://x')));
       expect(find.byKey(RecipePlaceholder.placeholderKey), findsOneWidget);

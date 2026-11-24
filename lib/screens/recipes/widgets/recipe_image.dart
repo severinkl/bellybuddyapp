@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shimmer/shimmer.dart';
@@ -51,7 +53,8 @@ class RecipePlaceholder extends StatelessWidget {
 }
 
 /// A collection recipe's picture: its `image_url` (http or https) or the
-/// placeholder of its first meal type. Fills the space it is given.
+/// placeholder of its first meal type. Fills the space it is given, and
+/// decodes the photo only as large as that space needs.
 class RecipeImage extends StatelessWidget {
   const RecipeImage({super.key, required this.recipe});
 
@@ -64,17 +67,29 @@ class RecipeImage extends StatelessWidget {
     if (url == null || !isHttpUrl(url)) {
       return RecipePlaceholder(mealType: type);
     }
-    return CachedNetworkImage(
-      imageUrl: url,
-      fit: BoxFit.cover,
-      // Still with reduced motion.
-      placeholder: (context, _) => Shimmer.fromColors(
-        enabled: !MediaQuery.disableAnimationsOf(context),
-        baseColor: AppTheme.muted,
-        highlightColor: AppTheme.background,
-        child: const ColoredBox(color: AppTheme.muted),
+    return LayoutBuilder(
+      builder: (context, constraints) => CachedNetworkImage(
+        imageUrl: url,
+        fit: BoxFit.cover,
+        memCacheHeight: _decodeHeight(context, constraints),
+        // Still with reduced motion.
+        placeholder: (context, _) => Shimmer.fromColors(
+          enabled: !MediaQuery.disableAnimationsOf(context),
+          baseColor: AppTheme.muted,
+          highlightColor: AppTheme.background,
+          child: const ColoredBox(color: AppTheme.muted),
+        ),
+        errorWidget: (_, _, _) => RecipePlaceholder(mealType: type),
       ),
-      errorWidget: (_, _, _) => RecipePlaceholder(mealType: type),
     );
+  }
+
+  /// The box's longer side in physical pixels, so a landscape photo still
+  /// covers it sharply; null (the photo's own size) when unbounded.
+  static int? _decodeHeight(BuildContext context, BoxConstraints box) {
+    final sides = [box.maxWidth, box.maxHeight].where((s) => s.isFinite);
+    if (sides.isEmpty) return null;
+    return (sides.reduce(math.max) * MediaQuery.devicePixelRatioOf(context))
+        .round();
   }
 }
