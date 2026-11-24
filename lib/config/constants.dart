@@ -200,6 +200,14 @@ class AppConstants {
   static const double progressDotSize = 8.0;
   static const double progressDotActiveWidth = 24.0;
 
+  /// The first-patterns journey's dots: a dot, the Bauchgefühl pip under
+  /// it, the still Buddy over the row, the track line, and a new dot's bump.
+  static const double journeyDotSize = 22.0;
+  static const double journeyPipSize = 7.0;
+  static const double journeyBuddyHeight = 34.0;
+  static const double journeyTrackHeight = 3.0;
+  static const Duration journeyDotBump = Duration(milliseconds: 900);
+
   // Registration wizard: above every step a header with the Buddy on the
   // left (this wide; his height follows) and his bubble on the right; with
   // the keyboard open a compact header (the Buddy this tall). Below it a

@@ -13,6 +13,9 @@ import 'package:belly_buddy/screens/dashboard/dashboard_screen.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/insight_card.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/journey_dots.dart';
+import 'package:belly_buddy/models/insight_progress.dart';
+import 'package:belly_buddy/services/insights/insight_copy.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/dashboard_tutorial_steps.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_keys.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_step.dart';
@@ -354,13 +357,42 @@ void main() {
 
       expect(
         find.text(
-          'Noch 5 Tage, dann zeig ich dir erste Muster.',
+          InsightCopy.journeyDays(
+            const InsightProgress(activeDays: 2, gutFeelingEntries: 0),
+          ),
           skipOffstage: false,
         ),
         findsOneWidget,
       );
       // Loaded once on mount: the dashboard's load joins the card's.
       expect(entryRepo.insightSourceCalls, 1);
+    });
+
+    testWidgets("a user past day 7 sees Stage 2's card", (tester) async {
+      SharedPreferences.setMockInitialValues({
+        AppConstants.keyNotificationModalShown: true,
+        '${AppConstants.keyInsightJourneyPrefix}$testUserId': false,
+      });
+      final entryRepo = FakeEntryRepository()
+        ..insightSource = insightSourceFor(
+          activeDays: 2,
+          gutFeelings: 1,
+          now: _insightsNow,
+        );
+      await tester.pumpWithProviders(
+        const DashboardScreen(),
+        overrides: [
+          ..._overrides(entryRepo: entryRepo),
+          buddyClockProvider.overrideWithValue(() => _insightsNow),
+        ],
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(
+        find.text('Tage mit Einträgen', skipOffstage: false),
+        findsOneWidget,
+      );
+      expect(find.byType(JourneyDots, skipOffstage: false), findsNothing);
     });
 
     testWidgets('pull-to-refresh fetches the insights again', (tester) async {
@@ -396,7 +428,9 @@ void main() {
       expect(entryRepo.insightSourceCalls, 2);
       expect(
         find.text(
-          'Noch 4 Tage, dann zeig ich dir erste Muster.',
+          InsightCopy.journeyDays(
+            const InsightProgress(activeDays: 3, gutFeelingEntries: 0),
+          ),
           skipOffstage: false,
         ),
         findsOneWidget,
@@ -405,6 +439,12 @@ void main() {
 
     testWidgets('deleting the 3rd gut-feeling entry locks the card again, '
         'without pull-to-refresh', (tester) async {
+      // Past day 7 at the first load would decide against the journey: this
+      // user has it from before.
+      SharedPreferences.setMockInitialValues({
+        AppConstants.keyNotificationModalShown: true,
+        '${AppConstants.keyInsightJourneyPrefix}$testUserId': true,
+      });
       final entryRepo = FakeEntryRepository()
         ..insightSource = insightSourceFor(
           activeDays: 7,
@@ -444,10 +484,7 @@ void main() {
 
       expect(entryRepo.insightSourceCalls, 2);
       expect(
-        find.text(
-          'Noch 1 Bauchgefühl-Eintrag, dann zeig ich dir erste Muster.',
-          skipOffstage: false,
-        ),
+        find.text('Bauchgefühl 2 von 3', skipOffstage: false),
         findsOneWidget,
       );
     });
@@ -502,7 +539,9 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       expect(
         find.text(
-          'Noch 5 Tage, dann zeig ich dir erste Muster.',
+          InsightCopy.journeyDays(
+            const InsightProgress(activeDays: 2, gutFeelingEntries: 0),
+          ),
           skipOffstage: false,
         ),
         findsOneWidget,
@@ -536,7 +575,9 @@ void main() {
       await tester.pump();
       expect(
         find.text(
-          'Noch 6 Tage, dann zeig ich dir erste Muster.',
+          InsightCopy.journeyDays(
+            const InsightProgress(activeDays: 1, gutFeelingEntries: 0),
+          ),
           skipOffstage: false,
         ),
         findsOneWidget,

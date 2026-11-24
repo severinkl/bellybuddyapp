@@ -21,6 +21,61 @@ const _zwiebel = Noticed(
 );
 
 void main() {
+  group('journey copy', () {
+    test('journeyLine by days, the last two with Bauchgefühl', () {
+      expect(
+        InsightCopy.journeyLine(_progress(0, 0)),
+        'Mit deinem ersten Eintrag fang ich an zu lernen.',
+      );
+      expect(
+        InsightCopy.journeyLine(_progress(1, 0)),
+        'Tag 1! Ich lerne gerade, was du so isst.',
+      );
+      expect(
+        InsightCopy.journeyLine(_progress(2, 1)),
+        'Ich sammle, was du isst und wie’s deinem Bauch danach geht.',
+      );
+      expect(
+        InsightCopy.journeyLine(_progress(3, 0)),
+        'Ich lerne gerade, was dir guttut.',
+      );
+      expect(
+        InsightCopy.journeyLine(_progress(4, 0)),
+        'Mehr als die Hälfte. Jeder Tag macht das Bild klarer.',
+      );
+      expect(
+        InsightCopy.journeyLine(_progress(5, 0)),
+        'Jetzt hab ich schon ein paar Tage zum Vergleichen.',
+      );
+      expect(
+        InsightCopy.journeyLine(_progress(6, 3)),
+        'Noch ein Tag, dann schau ich nach ersten Mustern.',
+      );
+      expect(
+        InsightCopy.journeyLine(_progress(6, 1)),
+        'Noch ein Tag und 2× Bauchgefühl, dann schau ich nach ersten '
+        'Mustern.',
+      );
+      expect(
+        InsightCopy.journeyLine(_progress(9, 1)),
+        'Noch 2× Bauchgefühl, dann schau ich nach ersten Mustern.',
+      );
+    });
+
+    test('the counters cap at 7 and 3', () {
+      expect(InsightCopy.journeyDays(_progress(9, 1)), '7 von 7 Tagen');
+      expect(InsightCopy.journeyDays(_progress(2, 1)), '2 von 7 Tagen');
+      expect(
+        InsightCopy.journeyGutFeelings(_progress(2, 1)),
+        'Bauchgefühl 1 von 3',
+      );
+      expect(
+        InsightCopy.journeyGutFeelings(_progress(2, 4)),
+        'Bauchgefühl 3 von 3 ✓',
+      );
+    });
+  });
+
   group('lockedLine', () {
     test('days left first, plural and singular', () {
       expect(
