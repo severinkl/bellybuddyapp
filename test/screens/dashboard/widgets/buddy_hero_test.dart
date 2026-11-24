@@ -27,8 +27,8 @@ import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
 import 'package:belly_buddy/screens/buddy/streak_goal_picker.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/first_tip_offer_sheet.dart';
-import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_sheet.dart';
-import 'package:belly_buddy/screens/dashboard/widgets/journey_rewards_sheet.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/journey_day_sheet.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_list_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/streak_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/weekly_tips_offer_sheet.dart';
 import 'package:belly_buddy/services/buddy/buddy_copy.dart';
@@ -234,7 +234,7 @@ void main() {
                             Consumer(
                               builder: (context, ref, _) => TextButton(
                                 key: _rewardsButton,
-                                onPressed: () => showJourneyRewardsSheet(
+                                onPressed: () => showJourneyRewardListSheet(
                                   context,
                                   ref,
                                   openUrl: opener.call,
@@ -699,7 +699,7 @@ void main() {
       buddy = _FakeBuddy(() => _status(streak: 7));
       await pumpHero(tester);
       await openRewards(tester);
-      expect(find.byType(JourneyRewardsSheet), findsOneWidget);
+      expect(find.byType(JourneyRewardListSheet), findsOneWidget);
 
       buddy.push(
         _status(
@@ -711,7 +711,7 @@ void main() {
       await tester.pump(const Duration(seconds: 3));
       await tester.pump(const Duration(milliseconds: 500));
       expect(find.text(_goalTitle), findsNothing);
-      expect(find.byType(JourneyRewardsSheet), findsOneWidget);
+      expect(find.byType(JourneyRewardListSheet), findsOneWidget);
 
       await tester.tapAt(const Offset(10, 10)); // the list's barrier
       // Closed, then the next frame plays what waited.
@@ -719,7 +719,7 @@ void main() {
       await tester.pump();
       await afterCelebration(tester);
 
-      expect(find.byType(JourneyRewardsSheet), findsNothing);
+      expect(find.byType(JourneyRewardListSheet), findsNothing);
       expect(find.text(_goalTitle), findsOneWidget);
       expect(buddy.shown, isEmpty);
       await chooseGoal(tester, '14 Tage');
@@ -1095,16 +1095,16 @@ void main() {
         await tick(tester);
 
         expect(controller(tester).currentAction, BuddyAction.celebrate);
-        expect(find.byType(JourneyRewardSheet), findsNothing);
+        expect(find.byType(JourneyDaySheet), findsNothing);
 
         // The sheet opens once the celebration has played.
         await afterCelebration(tester);
-        expect(find.byType(JourneyRewardSheet), findsOneWidget);
+        expect(find.byType(JourneyDaySheet), findsOneWidget);
         expect(find.text(JourneyCopy.day1Line), findsOneWidget);
         expect(find.text('Apfel-Reis'), findsOneWidget);
         expect(buddy.shown, isEmpty);
 
-        await closeOffer(tester, JourneyRewardSheet.primaryKey);
+        await closeOffer(tester, JourneyDaySheet.primaryKey);
 
         expect(location(), RoutePaths.collectionRecipeFor('r1'));
         expect(buddy.shown, [BuddyAnnouncement.journeyReward]);
@@ -1125,7 +1125,7 @@ void main() {
         await pumpHero(tester);
         await afterCelebration(tester);
 
-        await closeOffer(tester, JourneyRewardSheet.primaryKey);
+        await closeOffer(tester, JourneyDaySheet.primaryKey);
         expect(location(), RoutePaths.collectionRecipeFor('r1'));
 
         await advance(tester, const Duration(seconds: 6));
@@ -1162,7 +1162,7 @@ void main() {
         await afterCelebration(tester);
         expect(find.text(JourneyCopy.day2Line), findsOneWidget);
 
-        await closeOffer(tester, JourneyRewardSheet.primaryKey);
+        await closeOffer(tester, JourneyDaySheet.primaryKey);
         await tick(tester);
 
         expect(opener.urls, [Uri.parse(JourneyCopy.articleUrl)]);
@@ -1180,9 +1180,9 @@ void main() {
         await pumpHero(tester);
         await afterCelebration(tester);
 
-        await closeOffer(tester, JourneyRewardSheet.laterKey);
+        await closeOffer(tester, JourneyDaySheet.laterKey);
 
-        expect(find.byType(JourneyRewardSheet), findsNothing);
+        expect(find.byType(JourneyDaySheet), findsNothing);
         expect(location(), RoutePaths.dashboard);
         expect(buddy.shown, [BuddyAnnouncement.journeyReward]);
       });
@@ -1200,7 +1200,7 @@ void main() {
         );
         await tester.pump();
         await afterCelebration(tester);
-        expect(find.byType(JourneyRewardSheet), findsNothing);
+        expect(find.byType(JourneyDaySheet), findsNothing);
         expect(find.text(_sheetTitle), findsOneWidget);
 
         await tester.tapAt(const Offset(10, 10)); // „Dein Streak"'s barrier
@@ -1209,9 +1209,9 @@ void main() {
         await afterCelebration(tester);
 
         expect(find.text(_sheetTitle), findsNothing);
-        expect(find.byType(JourneyRewardSheet), findsOneWidget);
+        expect(find.byType(JourneyDaySheet), findsOneWidget);
         expect(buddy.shown, isEmpty);
-        await closeOffer(tester, JourneyRewardSheet.laterKey);
+        await closeOffer(tester, JourneyDaySheet.laterKey);
         expect(buddy.shown, [BuddyAnnouncement.journeyReward]);
       });
 
@@ -1221,7 +1221,7 @@ void main() {
         rewards = day1;
         await pumpHero(tester);
         await openRewards(tester);
-        expect(find.byType(JourneyRewardsSheet), findsOneWidget);
+        expect(find.byType(JourneyRewardListSheet), findsOneWidget);
 
         buddy.push(
           _status(announcements: const [BuddyAnnouncement.journeyReward]),
@@ -1229,8 +1229,8 @@ void main() {
         await tester.pump();
         await afterCelebration(tester);
         await tester.pump(const Duration(seconds: 1));
-        expect(find.byType(JourneyRewardSheet), findsNothing);
-        expect(find.byType(JourneyRewardsSheet), findsOneWidget);
+        expect(find.byType(JourneyDaySheet), findsNothing);
+        expect(find.byType(JourneyRewardListSheet), findsOneWidget);
 
         await tester.tapAt(const Offset(10, 10)); // the list's barrier
         // Closed, then the next frame plays what waited.
@@ -1238,10 +1238,10 @@ void main() {
         await tester.pump();
         await afterCelebration(tester);
 
-        expect(find.byType(JourneyRewardsSheet), findsNothing);
-        expect(find.byType(JourneyRewardSheet), findsOneWidget);
+        expect(find.byType(JourneyRewardListSheet), findsNothing);
+        expect(find.byType(JourneyDaySheet), findsOneWidget);
         expect(buddy.shown, isEmpty);
-        await closeOffer(tester, JourneyRewardSheet.laterKey);
+        await closeOffer(tester, JourneyDaySheet.laterKey);
         expect(buddy.shown, [BuddyAnnouncement.journeyReward]);
       });
 
@@ -1285,19 +1285,19 @@ void main() {
         );
         await tester.pump();
         await afterCelebration(tester);
-        expect(find.byType(JourneyRewardSheet), findsNothing);
+        expect(find.byType(JourneyDaySheet), findsNothing);
 
         // Day 1's row: the list closes, the recipe opens over Home.
-        await tester.tap(find.byKey(JourneyRewardsSheet.rowKey(1)));
+        await tester.tap(find.byKey(JourneyRewardListSheet.rowKey(1)));
         await tester.pump();
         expect(location(), RoutePaths.collectionRecipeFor('r1'));
         // Not over the page on its way in, nor once it covers Home.
         for (var i = 0; i < 10; i++) {
           await tester.pump(const Duration(milliseconds: 100));
-          expect(find.byType(JourneyRewardSheet), findsNothing);
+          expect(find.byType(JourneyDaySheet), findsNothing);
         }
         await tester.pump(const Duration(seconds: 2));
-        expect(find.byType(JourneyRewardSheet), findsNothing);
+        expect(find.byType(JourneyDaySheet), findsNothing);
         expect(buddy.shown, isEmpty);
 
         router.pop();
@@ -1306,8 +1306,8 @@ void main() {
         await afterCelebration(tester);
 
         expect(location(), RoutePaths.dashboard);
-        expect(find.byType(JourneyRewardSheet), findsOneWidget);
-        await closeOffer(tester, JourneyRewardSheet.laterKey);
+        expect(find.byType(JourneyDaySheet), findsOneWidget);
+        await closeOffer(tester, JourneyDaySheet.laterKey);
         expect(buddy.shown, [BuddyAnnouncement.journeyReward]);
       });
 
@@ -1325,7 +1325,7 @@ void main() {
         await tester.pump();
         await afterCelebration(tester);
 
-        await tester.tap(find.byKey(JourneyRewardsSheet.rowKey(1)));
+        await tester.tap(find.byKey(JourneyRewardListSheet.rowKey(1)));
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
         expect(location(), RoutePaths.collectionRecipeFor('r1'));
@@ -1337,7 +1337,7 @@ void main() {
         await afterCelebration(tester);
 
         expect(location(), RoutePaths.dashboard);
-        expect(find.byType(JourneyRewardSheet), findsOneWidget);
+        expect(find.byType(JourneyDaySheet), findsOneWidget);
       });
 
       testWidgets('a page that „Deine Belohnungen" opened, replaced by a go '
@@ -1353,7 +1353,7 @@ void main() {
         );
         await tester.pump();
 
-        await tester.tap(find.byKey(JourneyRewardsSheet.rowKey(1)));
+        await tester.tap(find.byKey(JourneyRewardListSheet.rowKey(1)));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 50));
         expect(location(), RoutePaths.collectionRecipeFor('r1'));
@@ -1366,7 +1366,7 @@ void main() {
         await afterCelebration(tester);
 
         expect(location(), RoutePaths.dashboard);
-        expect(find.byType(JourneyRewardSheet), findsOneWidget);
+        expect(find.byType(JourneyDaySheet), findsOneWidget);
       });
 
       testWidgets('a page that „Deine Belohnungen" opened and that closes on '
@@ -1381,17 +1381,17 @@ void main() {
         await tester.pump();
         await afterCelebration(tester);
 
-        await tester.tap(find.byKey(JourneyRewardsSheet.rowKey(1)));
+        await tester.tap(find.byKey(JourneyRewardListSheet.rowKey(1)));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 50));
-        expect(find.byType(JourneyRewardSheet), findsNothing);
+        expect(find.byType(JourneyDaySheet), findsNothing);
         router.pop(); // mid-transition: Home was never hidden
         await tester.pump();
         await tester.pump();
         await afterCelebration(tester);
 
         expect(location(), RoutePaths.dashboard);
-        expect(find.byType(JourneyRewardSheet), findsOneWidget);
+        expect(find.byType(JourneyDaySheet), findsOneWidget);
       });
 
       testWidgets('journeyReward waits while the hero is hidden', (
@@ -1407,13 +1407,13 @@ void main() {
         await tester.pump();
         await afterCelebration(tester);
         await tester.pump(const Duration(seconds: 1));
-        expect(find.byType(JourneyRewardSheet), findsNothing);
+        expect(find.byType(JourneyDaySheet), findsNothing);
 
         visible.value = true;
         await tester.pump();
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 500));
-        expect(find.byType(JourneyRewardSheet), findsOneWidget);
+        expect(find.byType(JourneyDaySheet), findsOneWidget);
       });
 
       testWidgets('a cue cut short comes again', (tester) async {
@@ -1424,14 +1424,14 @@ void main() {
         );
         final container = await pumpHero(tester);
         await afterCelebration(tester);
-        expect(find.byType(JourneyRewardSheet), findsOneWidget);
+        expect(find.byType(JourneyDaySheet), findsOneWidget);
 
         // The hero goes away with its sheet open (the app closing), then
         // the sheet closes.
         heroShown.value = false;
         await tester.pump();
         expect(find.byType(BuddyHero), findsNothing);
-        await closeOffer(tester, JourneyRewardSheet.primaryKey);
+        await closeOffer(tester, JourneyDaySheet.primaryKey);
 
         expect(location(), RoutePaths.dashboard);
         expect(buddy.shown, isEmpty);
@@ -1450,7 +1450,7 @@ void main() {
         await pumpHero(tester);
         await afterCelebration(tester);
 
-        expect(find.byType(JourneyRewardSheet), findsNothing);
+        expect(find.byType(JourneyDaySheet), findsNothing);
         expect(buddy.shown, [BuddyAnnouncement.journeyReward]);
       });
     });
@@ -1495,7 +1495,7 @@ void main() {
 
         expect(firstTip.accepts, 1);
         expect(controller(tester).bubble, JourneyCopy.firstTipStarted);
-        expect(find.byType(JourneyRewardSheet), findsNothing);
+        expect(find.byType(JourneyDaySheet), findsNothing);
         // The line holds the stage, then the offer counts as shown.
         expect(buddy.shown, isEmpty);
         await tester.pump(const Duration(seconds: 4));
@@ -1530,12 +1530,12 @@ void main() {
           container.read(journeyRewardsProvider)!.tipOffer,
           TipOffer.declined,
         );
-        expect(find.byType(JourneyRewardSheet), findsOneWidget);
+        expect(find.byType(JourneyDaySheet), findsOneWidget);
         expect(find.text(JourneyCopy.day3AfterNoLine), findsOneWidget);
         expect(find.text('Bohnen-Topf'), findsOneWidget);
         expect(buddy.shown, isEmpty);
 
-        await closeOffer(tester, JourneyRewardSheet.primaryKey);
+        await closeOffer(tester, JourneyDaySheet.primaryKey);
 
         expect(location(), RoutePaths.collectionRecipeFor('r3'));
         expect(firstTip.accepts, 0);
@@ -1556,7 +1556,7 @@ void main() {
         await pumpHero(tester);
         await afterWave(tester);
         await closeOffer(tester, FirstTipOfferSheet.noKey);
-        await closeOffer(tester, JourneyRewardSheet.primaryKey);
+        await closeOffer(tester, JourneyDaySheet.primaryKey);
         expect(location(), RoutePaths.collectionRecipeFor('r3'));
 
         await advance(tester, const Duration(seconds: 6));
@@ -1586,7 +1586,7 @@ void main() {
           TipOffer.declined,
         );
         expect(find.byType(FirstTipOfferSheet), findsNothing);
-        expect(find.byType(JourneyRewardSheet), findsNothing);
+        expect(find.byType(JourneyDaySheet), findsNothing);
         expect(firstTip.accepts, 0);
         expect(buddy.shown, [BuddyAnnouncement.firstTipOffer]);
       });
@@ -1613,7 +1613,7 @@ void main() {
           }
 
           expect(find.byType(FirstTipOfferSheet), findsNothing);
-          expect(find.byType(JourneyRewardSheet), findsNothing);
+          expect(find.byType(JourneyDaySheet), findsNothing);
           expect(
             container.read(journeyRewardsProvider)!.tipOffer,
             TipOffer.offered,

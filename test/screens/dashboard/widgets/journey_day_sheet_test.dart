@@ -10,7 +10,7 @@ import 'package:belly_buddy/models/journey_rewards.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/insights_provider.dart';
 import 'package:belly_buddy/repositories/recipe_repository.dart';
-import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_sheet.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/journey_day_sheet.dart';
 import 'package:belly_buddy/screens/patterns/widgets/patterns_preview.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_list_tile.dart';
 
@@ -107,7 +107,7 @@ void main() {
             body: Builder(
               builder: (c) => TextButton(
                 onPressed: () async {
-                  final opened = await showJourneyRewardSheet(
+                  final opened = await showJourneyDaySheet(
                     c,
                     day: day,
                     afterNo: afterNo,
@@ -126,11 +126,11 @@ void main() {
   }
 
   Finder primary(String label) => find.descendant(
-    of: find.byKey(JourneyRewardSheet.primaryKey),
+    of: find.byKey(JourneyDaySheet.primaryKey),
     matching: find.text(label),
   );
   final later = find.descendant(
-    of: find.byKey(JourneyRewardSheet.laterKey),
+    of: find.byKey(JourneyDaySheet.laterKey),
     matching: find.text('Später'),
   );
 
@@ -163,9 +163,9 @@ void main() {
     expect(primary('Rezept ansehen'), findsOneWidget);
     expect(later, findsOneWidget);
 
-    await tapAndClose(tester, find.byKey(JourneyRewardSheet.primaryKey));
+    await tapAndClose(tester, find.byKey(JourneyDaySheet.primaryKey));
     expect(results, [true]);
-    expect(find.byType(JourneyRewardSheet), findsNothing);
+    expect(find.byType(JourneyDaySheet), findsNothing);
   });
 
   testWidgets('day 1: the tile opens it too; „Später" and a dismissal → '
@@ -180,7 +180,7 @@ void main() {
     await tapAndClose(tester, tileOf('Hirse-Bowl'));
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
-    await tapAndClose(tester, find.byKey(JourneyRewardSheet.laterKey));
+    await tapAndClose(tester, find.byKey(JourneyDaySheet.laterKey));
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
     await tester.tapAt(const Offset(10, 10)); // the modal barrier
@@ -255,7 +255,7 @@ void main() {
     expect(primary('Artikel lesen'), findsOneWidget);
     expect(later, findsOneWidget);
 
-    await tapAndClose(tester, find.byKey(JourneyRewardSheet.primaryKey));
+    await tapAndClose(tester, find.byKey(JourneyDaySheet.primaryKey));
     expect(results, [true]);
   });
 
@@ -298,7 +298,7 @@ void main() {
     expect(find.byType(RecipeListTile), findsNothing);
     expect(primary('Zu deinen Tipps'), findsOneWidget);
 
-    await tapAndClose(tester, find.byKey(JourneyRewardSheet.primaryKey));
+    await tapAndClose(tester, find.byKey(JourneyDaySheet.primaryKey));
     expect(results, [true]);
   });
 
@@ -355,9 +355,9 @@ void main() {
       findsOneWidget,
     );
     expect(primary('Danke!'), findsOneWidget);
-    expect(find.byKey(JourneyRewardSheet.laterKey), findsNothing);
+    expect(find.byKey(JourneyDaySheet.laterKey), findsNothing);
 
-    await tapAndClose(tester, find.byKey(JourneyRewardSheet.primaryKey));
+    await tapAndClose(tester, find.byKey(JourneyDaySheet.primaryKey));
     expect(results, [false]);
   });
 
@@ -451,9 +451,9 @@ void main() {
     expect(find.text('BEISPIEL'), findsOneWidget);
     expect(find.byType(PatternsPreview), findsOneWidget);
     expect(primary('Okay'), findsOneWidget);
-    expect(find.byKey(JourneyRewardSheet.laterKey), findsNothing);
+    expect(find.byKey(JourneyDaySheet.laterKey), findsNothing);
 
-    await tapAndClose(tester, find.byKey(JourneyRewardSheet.primaryKey));
+    await tapAndClose(tester, find.byKey(JourneyDaySheet.primaryKey));
     expect(results, [false]);
   });
 
@@ -487,7 +487,7 @@ void main() {
     expect(find.text(counted), findsOneWidget);
 
     ProviderScope.containerOf(
-      tester.element(find.byType(JourneyRewardSheet)),
+      tester.element(find.byType(JourneyDaySheet)),
     ).invalidate(insightsProvider);
     await tester.pumpAndSettle();
 
@@ -532,11 +532,11 @@ void main() {
       );
       // Without scrolling: as the sheet opened.
       for (final key in [
-        JourneyRewardSheet.primaryKey,
-        JourneyRewardSheet.laterKey,
+        JourneyDaySheet.primaryKey,
+        JourneyDaySheet.laterKey,
       ]) {
         final button = find.byKey(key);
-        if (key == JourneyRewardSheet.laterKey && (day == 4 || day == 6)) {
+        if (key == JourneyDaySheet.laterKey && (day == 4 || day == 6)) {
           expect(button, findsNothing, reason: 'day $day');
           continue;
         }

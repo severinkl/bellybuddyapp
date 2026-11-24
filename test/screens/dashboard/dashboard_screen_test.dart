@@ -15,8 +15,8 @@ import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/insight_card.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_dots.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_line.dart';
-import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_sheet.dart';
-import 'package:belly_buddy/screens/dashboard/widgets/journey_rewards_sheet.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/journey_day_sheet.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_list_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/dashboard_tutorial_steps.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_keys.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_step.dart';
@@ -410,7 +410,7 @@ void main() {
       await tester.tapAt(Offset(card.center.dx, card.bottom - 4));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
-      expect(find.byType(JourneyRewardsSheet), findsOneWidget);
+      expect(find.byType(JourneyRewardListSheet), findsOneWidget);
       expect(
         container.read(routerProvider).state.matchedLocation,
         RoutePaths.dashboard,
@@ -1258,7 +1258,7 @@ void main() {
       // He celebrates, then gives day 1's recipe.
       await tester.pump(buddyActionDuration(BuddyAction.celebrate));
       await tester.pump();
-      expect(find.byType(JourneyRewardSheet), findsOneWidget);
+      expect(find.byType(JourneyDaySheet), findsOneWidget);
       expect(find.text(JourneyCopy.day1Line), findsOneWidget);
     });
 

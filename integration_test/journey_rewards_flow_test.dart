@@ -7,8 +7,8 @@ import 'package:belly_buddy/screens/dashboard/dashboard_screen.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/first_tip_offer_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_line.dart';
-import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_sheet.dart';
-import 'package:belly_buddy/screens/dashboard/widgets/journey_rewards_sheet.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/journey_day_sheet.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_list_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tips_row.dart';
 import 'package:belly_buddy/screens/patterns/patterns_screen.dart';
 import 'package:belly_buddy/screens/patterns/patterns_unlocked_screen.dart';
@@ -129,7 +129,7 @@ Finder _in(Type screen, Finder f) =>
     find.descendant(of: find.byType(screen), matching: f);
 
 Finder _inRow(int day, Finder f) => find.descendant(
-  of: find.byKey(JourneyRewardsSheet.rowKey(day)),
+  of: find.byKey(JourneyRewardListSheet.rowKey(day)),
   matching: f,
 );
 
@@ -193,29 +193,29 @@ void main() {
     await tester.pumpAndSettle();
 
     // He celebrates first; the sheet follows on a timer.
-    await _pumpUntilSheet(tester, JourneyRewardSheet);
+    await _pumpUntilSheet(tester, JourneyDaySheet);
     expect(
       find.text('Willkommen an Tag 1! Hier ist dein erstes Rezept für dich.'),
       findsOneWidget,
     );
-    expect(_in(JourneyRewardSheet, find.text(_reisBowl)), findsOneWidget);
-    expect(_in(JourneyRewardSheet, find.text(_hirseBowl)), findsNothing);
+    expect(_in(JourneyDaySheet, find.text(_reisBowl)), findsOneWidget);
+    expect(_in(JourneyDaySheet, find.text(_hirseBowl)), findsNothing);
 
-    final open = find.byKey(JourneyRewardSheet.primaryKey);
+    final open = find.byKey(JourneyDaySheet.primaryKey);
     expect(
       find.descendant(of: open, matching: find.text('Rezept ansehen')),
       findsOneWidget,
     );
     await tester.tapVisible(open);
 
-    expect(find.byType(JourneyRewardSheet), findsNothing);
+    expect(find.byType(JourneyDaySheet), findsNothing);
     expect(find.byType(CollectionRecipeScreen), findsOneWidget);
     expect(_in(CollectionRecipeScreen, find.text(_reisBowl)), findsWidgets);
 
     await _back(tester, CollectionRecipeScreen);
     expect(find.byType(DashboardScreen), findsOneWidget);
     // Shown once: back on Home, no sheet again.
-    expect(find.byType(JourneyRewardSheet), findsNothing);
+    expect(find.byType(JourneyDaySheet), findsNothing);
 
     await _expectRewardLine(tester, 'Heute wartet: Ein Wissen-Häppchen');
     await tester.tapVisible(find.byKey(JourneyRewardLineView.lineKey));
@@ -336,21 +336,21 @@ void main() {
     await tester.tapVisible(find.byKey(FirstTipOfferSheet.noKey));
 
     expect(find.byType(FirstTipOfferSheet), findsNothing);
-    expect(find.byType(JourneyRewardSheet), findsOneWidget);
+    expect(find.byType(JourneyDaySheet), findsOneWidget);
     expect(
       find.text('Alles klar! Dann hier ein Rezept für dich.'),
       findsOneWidget,
     );
     // Another recipe than day 1's.
-    expect(_in(JourneyRewardSheet, find.text(_hirseBowl)), findsOneWidget);
+    expect(_in(JourneyDaySheet, find.text(_hirseBowl)), findsOneWidget);
 
-    final later = find.byKey(JourneyRewardSheet.laterKey);
+    final later = find.byKey(JourneyDaySheet.laterKey);
     expect(
       find.descendant(of: later, matching: find.text('Später')),
       findsOneWidget,
     );
     await tester.tapVisible(later);
-    expect(find.byType(JourneyRewardSheet), findsNothing);
+    expect(find.byType(JourneyDaySheet), findsNothing);
     expect(find.byType(DashboardScreen), findsOneWidget);
     expect(find.byType(CollectionRecipeScreen), findsNothing);
 
@@ -363,7 +363,7 @@ void main() {
 
     expect(find.byType(DashboardScreen), findsOneWidget);
     expect(find.byType(FirstTipOfferSheet), findsNothing);
-    expect(find.byType(JourneyRewardSheet), findsNothing);
+    expect(find.byType(JourneyDaySheet), findsNothing);
     await _expectRewardLine(tester, 'Heute wartet: Ein Spruch von mir');
     expect(tipsRepo.firstTipRequests, isEmpty);
     expect(profileRepo.weeklyTipsWrites, isEmpty);
@@ -437,9 +437,9 @@ void main() {
       find.text('Alles klar! Dann hier ein Rezept für dich.'),
       findsOneWidget,
     );
-    await tester.tapVisible(find.byKey(JourneyRewardSheet.laterKey));
+    await tester.tapVisible(find.byKey(JourneyDaySheet.laterKey));
 
-    expect(find.byType(JourneyRewardSheet), findsNothing);
+    expect(find.byType(JourneyDaySheet), findsNothing);
     expect(find.byType(PatternsUnlockedScreen), findsNothing);
     expect(find.byType(DashboardScreen), findsOneWidget);
     expect(tipsRepo.firstTipRequests, isEmpty);

@@ -16,7 +16,7 @@ import '../../../services/journey/journey_copy.dart';
 import '../../../services/journey/journey_rules.dart';
 import '../../../utils/url_utils.dart';
 import 'first_tip_offer_sheet.dart';
-import 'journey_reward_sheet.dart';
+import 'journey_day_sheet.dart';
 
 /// Opens what [day]'s reward gives, from [context]:
 /// - 1, 3 and 5: the picked recipe ([rewardPick]), else the recipes;
@@ -98,7 +98,7 @@ enum FirstTipOutcome {
 ///   weekly tips on first): [FirstTipOutcome.started], or
 ///   [FirstTipOutcome.optInFailed] when that failed;
 /// - „Nein, danke" answers the offer so, then gives day 3's recipe
-///   ([showJourneyRewardSheet] after „Nein"; its primary button opens it):
+///   ([showJourneyDaySheet] after „Nein"; its primary button opens it):
 ///   [FirstTipOutcome.declined]; opening it leaves Home as
 ///   [openJourneyReward] does;
 /// - a dismissal stores nothing: [FirstTipOutcome.dismissed].
@@ -120,7 +120,7 @@ Future<FirstTipOutcome> offerFirstTip(
           .read(journeyRewardsProvider.notifier)
           .answerTipOffer(accepted: false);
       if (context.mounted &&
-          await showJourneyRewardSheet(context, day: 3, afterNo: true) &&
+          await showJourneyDaySheet(context, day: 3, afterNo: true) &&
           context.mounted) {
         await openJourneyReward(context, ref, 3);
       }

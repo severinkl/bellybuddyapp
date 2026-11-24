@@ -8,12 +8,12 @@ import '../../../config/constants.dart';
 import '../../../providers/home_cover_provider.dart';
 import '../../../providers/journey_rewards_provider.dart';
 import '../../../services/journey/journey_copy.dart';
-import 'journey_rewards_sheet.dart';
+import 'journey_reward_list_sheet.dart';
 
 /// The journey card's reward line ([journeyRewardLineProvider]): today's
 /// reward („Heute: …") or the next („Heute wartet: …", „Bald: …"). Its own
 /// button at the bottom of the card, its tap target reaching the card's
-/// edges: a tap opens „Deine Belohnungen" ([showJourneyRewardsSheet]),
+/// edges: a tap opens „Deine Belohnungen" ([showJourneyRewardListSheet]),
 /// once (a tap while Home is covered, e.g. by the list itself, does
 /// nothing). Nothing while the line is null.
 class JourneyRewardLineView extends ConsumerWidget {
@@ -42,7 +42,7 @@ class JourneyRewardLineView extends ConsumerWidget {
     if (line == null) return const SizedBox.shrink();
     void open() {
       if (ref.read(homeCoveredProvider)) return;
-      unawaited(showJourneyRewardsSheet(context, ref));
+      unawaited(showJourneyRewardListSheet(context, ref));
     }
 
     return Semantics(

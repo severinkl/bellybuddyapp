@@ -18,18 +18,18 @@ import '../../patterns/widgets/patterns_preview.dart';
 import '../../recipes/widgets/recipe_list_tile.dart';
 import '../../registration/widgets/step_field_label.dart';
 
-/// The Buddy gives [day]'s reward (1–6) in a [JourneyRewardSheet], over the
+/// The Buddy gives [day]'s reward (1–6) in a [JourneyDaySheet], over the
 /// bottom bar. True for the primary button (or the reward's card): the
 /// caller opens it (`openJourneyReward`); false for „Später", when
 /// dismissed, and on days with nothing to open (4 and 6).
-Future<bool> showJourneyRewardSheet(
+Future<bool> showJourneyDaySheet(
   BuildContext context, {
   required int day,
   bool afterNo = false,
 }) async =>
     await showBuddySheet<bool>(
       context,
-      builder: (_) => JourneyRewardSheet(day: day, afterNo: afterNo),
+      builder: (_) => JourneyDaySheet(day: day, afterNo: afterNo),
     ) ??
     false;
 
@@ -37,8 +37,8 @@ Future<bool> showJourneyRewardSheet(
 /// Buddy's line, what he gives, the primary button and, when there is
 /// something to open, „Später". Day 3 after „Nein, danke" ([afterNo]) has
 /// its own line.
-class JourneyRewardSheet extends ConsumerWidget {
-  const JourneyRewardSheet({super.key, required this.day, this.afterNo = false})
+class JourneyDaySheet extends ConsumerWidget {
+  const JourneyDaySheet({super.key, required this.day, this.afterNo = false})
     : assert(day >= 1 && day < InsightRules.daysNeeded);
 
   final int day;

@@ -11,8 +11,8 @@ import 'package:belly_buddy/providers/journey_rewards_provider.dart';
 import 'package:belly_buddy/repositories/recipe_repository.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/first_tip_offer_sheet.dart';
-import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_sheet.dart';
-import 'package:belly_buddy/screens/dashboard/widgets/journey_rewards_sheet.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/journey_day_sheet.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_list_sheet.dart';
 import 'package:belly_buddy/widgets/common/weekly_tips_switch.dart';
 
 import '../../../helpers/app_host.dart';
@@ -66,7 +66,7 @@ void main() {
             body: Consumer(
               builder: (c, ref, _) => TextButton(
                 onPressed: () =>
-                    showJourneyRewardsSheet(c, ref, openUrl: opener.call),
+                    showJourneyRewardListSheet(c, ref, openUrl: opener.call),
                 child: const Text('open'),
               ),
             ),
@@ -108,7 +108,7 @@ void main() {
   String location() =>
       router.routerDelegate.currentConfiguration.last.matchedLocation;
 
-  Finder row(int day) => find.byKey(JourneyRewardsSheet.rowKey(day));
+  Finder row(int day) => find.byKey(JourneyRewardListSheet.rowKey(day));
 
   Finder inRow(int day, Finder matching) =>
       find.descendant(of: row(day), matching: matching);
@@ -177,7 +177,7 @@ void main() {
     }
     await tester.tap(row(5));
     await tester.pumpAndSettle();
-    expect(find.byType(JourneyRewardsSheet), findsOneWidget);
+    expect(find.byType(JourneyRewardListSheet), findsOneWidget);
     expect(location(), '/');
     semantics.dispose();
   });
@@ -186,7 +186,7 @@ void main() {
     await pumpRewards(tester, _day4);
     await tapRow(tester, 1);
 
-    expect(find.byType(JourneyRewardsSheet), findsNothing);
+    expect(find.byType(JourneyRewardListSheet), findsNothing);
     expect(location(), '/collection/r-1');
   });
 
@@ -211,7 +211,7 @@ void main() {
     await pumpRewards(tester, _day4);
     await tapRow(tester, 2);
 
-    expect(find.byType(JourneyRewardsSheet), findsNothing);
+    expect(find.byType(JourneyRewardListSheet), findsNothing);
     expect(opener.urls, [
       Uri.parse('https://www.myfodmap.at/low-fodmap-kurz-und-knackig'),
     ]);
@@ -262,7 +262,7 @@ void main() {
       // The recipe stored meanwhile is not the reward.
       expect(find.text('Kürbissuppe'), findsNothing);
       await tapRow(tester, 3);
-      expect(find.byType(JourneyRewardsSheet), findsNothing);
+      expect(find.byType(JourneyRewardListSheet), findsNothing);
       expect(find.byType(FirstTipOfferSheet), findsOneWidget);
       return container;
     }
@@ -314,7 +314,7 @@ void main() {
       );
       expect(find.text('Kürbissuppe'), findsOneWidget);
 
-      await tester.tap(find.byKey(JourneyRewardSheet.primaryKey));
+      await tester.tap(find.byKey(JourneyDaySheet.primaryKey));
       await tester.pumpAndSettle();
       expect(location(), '/collection/r-3');
       expect(find.byType(SnackBar), findsNothing);
@@ -324,7 +324,7 @@ void main() {
       final container = await openOffer(tester);
       await tester.tap(find.byKey(FirstTipOfferSheet.noKey));
       await tester.pumpAndSettle();
-      await tester.tap(find.byKey(JourneyRewardSheet.laterKey));
+      await tester.tap(find.byKey(JourneyDaySheet.laterKey));
       await tester.pumpAndSettle();
 
       expect(offerOf(container), TipOffer.declined);
@@ -340,7 +340,7 @@ void main() {
       expect(find.byType(FirstTipOfferSheet), findsNothing);
       expect(firstTip.accepts, 0);
       expect(offerOf(container), TipOffer.offered);
-      expect(find.byType(JourneyRewardSheet), findsNothing);
+      expect(find.byType(JourneyDaySheet), findsNothing);
       expect(find.byType(SnackBar), findsNothing);
       expect(location(), '/');
     });
@@ -361,7 +361,7 @@ void main() {
     expect(find.text('Kürbissuppe'), findsNothing);
     await tapRow(tester, 3);
 
-    expect(find.byType(JourneyRewardsSheet), findsOneWidget);
+    expect(find.byType(JourneyRewardListSheet), findsOneWidget);
     expect(find.byType(FirstTipOfferSheet), findsNothing);
     expect(firstTip.accepts, 0);
   });
@@ -370,7 +370,7 @@ void main() {
     await pumpRewards(tester, _day4);
     await tapRow(tester, 4);
 
-    expect(find.byType(JourneyRewardsSheet), findsOneWidget);
+    expect(find.byType(JourneyRewardListSheet), findsOneWidget);
     expect(location(), '/');
     expect(opener.urls, isEmpty);
   });

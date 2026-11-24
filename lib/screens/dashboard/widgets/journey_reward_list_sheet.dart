@@ -18,7 +18,7 @@ import '../../../widgets/common/bb_drag_handle.dart';
 import '../../../widgets/common/weekly_tips_switch.dart';
 import 'journey_reward_actions.dart';
 
-/// Opens „Deine Belohnungen" ([JourneyRewardsSheet]) over the bottom bar,
+/// Opens „Deine Belohnungen" ([JourneyRewardListSheet]) over the bottom bar,
 /// then what the tapped row gives, from [context] with [ref] (both must
 /// outlive the sheet, e.g. Home's):
 /// - day 3 while its offer is open ([tipOfferDue]): the offer
@@ -29,7 +29,7 @@ import 'journey_reward_actions.dart';
 /// Home counts as covered ([homeCoveredProvider]) until that is done, and
 /// while a page it opened is on its way over Home, so the Buddy's cues
 /// wait. Completes once that is done.
-Future<void> showJourneyRewardsSheet(
+Future<void> showJourneyRewardListSheet(
   BuildContext context,
   WidgetRef ref, {
   UrlOpener openUrl = launchUrl,
@@ -37,7 +37,7 @@ Future<void> showJourneyRewardsSheet(
     .read(homeCoveredProvider.notifier)
     .whileOpen(() => _showRewards(context, ref, openUrl: openUrl));
 
-/// [showJourneyRewardsSheet]'s list and what follows it.
+/// [showJourneyRewardListSheet]'s list and what follows it.
 Future<void> _showRewards(
   BuildContext context,
   WidgetRef ref, {
@@ -45,7 +45,7 @@ Future<void> _showRewards(
 }) async {
   final day = await showBuddySheet<int>(
     context,
-    builder: (_) => const JourneyRewardsSheet(),
+    builder: (_) => const JourneyRewardListSheet(),
   );
   if (day == null || !context.mounted) return;
   final rewards = ref.read(journeyRewardsProvider);
@@ -69,11 +69,11 @@ Future<void> _showRewards(
 
 /// „Deine Belohnungen": a row per day of the first 7. An earned one names
 /// its reward and what it gives, and a tap closes the sheet with its day
-/// ([showJourneyRewardsSheet] then opens it); day 4's saying has nothing to
+/// ([showJourneyRewardListSheet] then opens it); day 4's saying has nothing to
 /// open, nor has day 3 while its offer waits and the weekly tips are
 /// unknown. A day not earned yet is locked.
-class JourneyRewardsSheet extends ConsumerWidget {
-  const JourneyRewardsSheet({super.key});
+class JourneyRewardListSheet extends ConsumerWidget {
+  const JourneyRewardListSheet({super.key});
 
   static Key rowKey(int day) => ValueKey('journey_reward_row_$day');
 

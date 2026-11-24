@@ -15,7 +15,7 @@ import 'package:belly_buddy/providers/first_tip_provider.dart';
 import 'package:belly_buddy/repositories/recipe_repository.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_line.dart';
-import 'package:belly_buddy/screens/dashboard/widgets/journey_rewards_sheet.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_list_sheet.dart';
 import 'package:belly_buddy/services/journey/journey_copy.dart';
 
 import '../../../helpers/app_host.dart';
@@ -141,7 +141,7 @@ void main() {
     await tester.tap(_line);
     await tester.pumpAndSettle();
 
-    expect(find.byType(JourneyRewardsSheet), findsOneWidget);
+    expect(find.byType(JourneyRewardListSheet), findsOneWidget);
     expect(find.text(JourneyCopy.rewardsTitle), findsOneWidget);
   });
 
@@ -156,7 +156,7 @@ void main() {
     await tester.tap(_line);
     await tester.pumpAndSettle();
 
-    expect(find.byType(JourneyRewardsSheet), findsOneWidget);
+    expect(find.byType(JourneyRewardListSheet), findsOneWidget);
   });
 
   testWidgets('no reward line without the journey', (tester) async {
@@ -203,7 +203,7 @@ void main() {
 
     tester.semantics.tap(find.semantics.byLabel('Heute: Ein Wissen-Häppchen'));
     await tester.pumpAndSettle();
-    expect(find.byType(JourneyRewardsSheet), findsOneWidget);
+    expect(find.byType(JourneyRewardListSheet), findsOneWidget);
     handle.dispose();
   });
 }

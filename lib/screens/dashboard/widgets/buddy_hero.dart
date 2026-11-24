@@ -36,7 +36,7 @@ import '../../../widgets/common/weekly_tips_switch.dart';
 import '../../buddy/streak_goal_picker.dart';
 import 'care_ring.dart';
 import 'journey_reward_actions.dart';
-import 'journey_reward_sheet.dart';
+import 'journey_day_sheet.dart';
 import 'streak_sheet.dart';
 import 'tutorial/tutorial_keys.dart';
 import 'weekly_tips_offer_sheet.dart';
@@ -719,14 +719,14 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   }
 
   /// After the celebration: the newest earned day's reward in its sheet
-  /// ([showJourneyRewardSheet]; its primary button opens it), then
+  /// ([showJourneyDaySheet]; its primary button opens it), then
   /// continues; waits like every cue's sheet ([_deferSheet]). No day to
   /// announce (any more): it ends without one.
   Future<void> _showJourneyReward() async {
     if (_deferSheet(_showJourneyReward)) return;
     final day = ref.read(journeyRewardAnnouncementProvider);
     if (day == null) return _nextCue();
-    final open = await showJourneyRewardSheet(context, day: day);
+    final open = await showJourneyDaySheet(context, day: day);
     if (!mounted) return;
     if (open) {
       await openJourneyReward(context, ref, day, openUrl: widget.openUrl);
