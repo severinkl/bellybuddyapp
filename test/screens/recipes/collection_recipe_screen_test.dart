@@ -342,6 +342,22 @@ void main() {
       expect(find.byKey(CollectionRecipeScreen.sourceKey), findsNothing);
       expect(find.textContaining('Quelle'), findsNothing);
     });
+
+    testWidgets('hidden without a web link', (tester) async {
+      repo.collection = [recipe(source: 'ftp://files.example.de/reis')];
+      await pump(tester);
+
+      expect(find.byKey(CollectionRecipeScreen.sourceKey), findsNothing);
+    });
+
+    testWidgets('opens the link trimmed', (tester) async {
+      repo.collection = [recipe(source: '  $sourceUrl ')];
+      await pump(tester);
+
+      await tester.tapVisible(find.byKey(CollectionRecipeScreen.sourceKey));
+
+      expect(launches.urls, [Uri.parse(sourceUrl)]);
+    });
   });
 
   group('Merken', () {

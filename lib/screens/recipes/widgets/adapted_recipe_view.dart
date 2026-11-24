@@ -1,10 +1,8 @@
 import 'package:material_ui/material_ui.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/adapted_recipe.dart';
-import '../../../models/recipe.dart';
 import '../../../services/recipes/recipe_copy.dart';
 import '../../../services/recipes/recipe_fit.dart';
 import '../../../utils/url_utils.dart';
@@ -95,7 +93,10 @@ class AdaptedRecipeView extends StatelessWidget {
             AppConstants.gap8,
             Align(
               alignment: AlignmentDirectional.centerStart,
-              child: _OriginalLine(original: original, openUrl: openUrl),
+              child: RecipeSourceLink.original(
+                recipe: original,
+                openUrl: openUrl,
+              ),
             ),
           ],
         ],
@@ -232,37 +233,6 @@ class _ChangedLegend extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// „Original: <title> · <source> ›", opening the source in the in-app
-/// browser; plain text without a link.
-class _OriginalLine extends StatelessWidget {
-  const _OriginalLine({required this.original, required this.openUrl});
-
-  final Recipe original;
-  final UrlOpener openUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    final url = original.sourceUrl;
-    return RecipeLinkLine(
-      lead: 'Original: ',
-      name: original.title,
-      tail: switch (original.sourceLabel) {
-        final source? => ' · $source',
-        null => '',
-      },
-      onTap: url == null
-          ? null
-          : () => openExternalUrl(
-              context,
-              url,
-              failureMessage: RecipeCopy.sourceFailed,
-              open: openUrl,
-              mode: LaunchMode.inAppBrowserView,
-            ),
     );
   }
 }

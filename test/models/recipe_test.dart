@@ -168,7 +168,24 @@ void main() {
       );
       expect(source(name: 'Reizdarmblog').sourceLabel, 'Reizdarmblog');
       expect(source(url: 'keine url').sourceLabel, isNull);
+      expect(source(url: 'ftp://files.example.de/a').sourceLabel, isNull);
       expect(source().sourceLabel, isNull);
+    });
+
+    test('sourceLink: a web link, trimmed; null otherwise', () {
+      Recipe source(String? url) =>
+          Recipe.fromJson({..._contractRow(), 'source_url': url});
+
+      expect(
+        source('  https://www.reizdarmblog.de/a ').sourceLink,
+        'https://www.reizdarmblog.de/a',
+      );
+      expect(source('http://x.de/a').sourceLink, 'http://x.de/a');
+      expect(source('ftp://files.example.de/a').sourceLink, isNull);
+      expect(source('javascript:alert(1)').sourceLink, isNull);
+      expect(source('www.reizdarmblog.de').sourceLink, isNull);
+      expect(source('  ').sourceLink, isNull);
+      expect(source(null).sourceLink, isNull);
     });
 
     test('a numeric or blank cook_time', () {

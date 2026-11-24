@@ -1,3 +1,4 @@
+import '../utils/url_utils.dart';
 import 'fodmap_flags.dart';
 
 /// A meal type of the collection (`recipes.meal_types`), in display order.
@@ -152,12 +153,19 @@ class Recipe {
     final n => '$n Portionen',
   };
 
-  /// The source's name, else its site (the link's host); null when
+  /// The source's address, trimmed, when it is a web link (http, https);
+  /// null otherwise.
+  String? get sourceLink {
+    final url = sourceUrl?.trim();
+    return url != null && isHttpUrl(url) ? url : null;
+  }
+
+  /// The source's name, else its site ([sourceLink]'s host); null when
   /// neither is known.
   String? get sourceLabel {
     final name = sourceName?.trim() ?? '';
     if (name.isNotEmpty) return name;
-    final host = Uri.tryParse(sourceUrl?.trim() ?? '')?.host ?? '';
+    final host = Uri.tryParse(sourceLink ?? '')?.host ?? '';
     return host.isEmpty ? null : host;
   }
 

@@ -1,9 +1,12 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
+import '../../../models/recipe.dart';
 import '../../../services/recipes/recipe_copy.dart';
 import '../../../services/recipes/recipe_fit.dart';
+import '../../../utils/url_utils.dart';
 import '../../../widgets/common/bb_card.dart';
 import 'fit_badge_view.dart';
 import 'recipe_collection_card.dart';
@@ -251,6 +254,51 @@ class RecipeLinkLine extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Where [recipe] comes from, opening its [Recipe.sourceLink] in the
+/// in-app browser: „Quelle: <source> ›", or ([RecipeSourceLink.original])
+/// „Original: <title> · <source> ›". Plain text without a web link.
+class RecipeSourceLink extends StatelessWidget {
+  /// „Quelle: <source> ›"; for a recipe with a [Recipe.sourceLabel].
+  const RecipeSourceLink({
+    super.key,
+    required this.recipe,
+    required this.openUrl,
+  }) : original = false;
+
+  /// „Original: <title> · <source> ›", the source left out when unknown.
+  const RecipeSourceLink.original({
+    super.key,
+    required this.recipe,
+    required this.openUrl,
+  }) : original = true;
+
+  final Recipe recipe;
+  final bool original;
+
+  /// Opens the link (`launchUrl`; tests record the launches).
+  final UrlOpener openUrl;
+
+  @override
+  Widget build(BuildContext context) {
+    final link = recipe.sourceLink;
+    final source = recipe.sourceLabel;
+    return RecipeLinkLine(
+      lead: original ? 'Original: ' : 'Quelle: ',
+      name: original ? recipe.title : source ?? '',
+      tail: original && source != null ? ' · $source' : '',
+      onTap: link == null
+          ? null
+          : () => openExternalUrl(
+              context,
+              link,
+              failureMessage: RecipeCopy.sourceFailed,
+              open: openUrl,
+              mode: LaunchMode.inAppBrowserView,
+            ),
     );
   }
 }

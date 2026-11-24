@@ -97,8 +97,6 @@ class _RecipeBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final recipe = fit.recipe;
-    final source = recipe.sourceUrl;
-    final sourceName = recipe.sourceLabel;
     return SingleChildScrollView(
       padding: AppConstants.paddingMd,
       child: Column(
@@ -119,9 +117,16 @@ class _RecipeBody extends StatelessWidget {
               children: [RecipeSteps(steps: recipe.instructions)],
             ),
           ],
-          if (source != null && sourceName != null) ...[
+          if (recipe.sourceLink != null && recipe.sourceLabel != null) ...[
             AppConstants.gap8,
-            _SourceLink(url: source, name: sourceName, openUrl: openUrl),
+            Align(
+              alignment: AlignmentDirectional.centerStart,
+              child: RecipeSourceLink(
+                key: CollectionRecipeScreen.sourceKey,
+                recipe: recipe,
+                openUrl: openUrl,
+              ),
+            ),
           ],
         ],
       ),
@@ -213,37 +218,6 @@ class _IngredientsCard extends StatelessWidget {
           amountColumn: amounts,
         ),
     ];
-  }
-}
-
-/// „Quelle: Name ›", opening the source in the in-app browser.
-class _SourceLink extends StatelessWidget {
-  const _SourceLink({
-    required this.url,
-    required this.name,
-    required this.openUrl,
-  });
-
-  final String url, name;
-  final UrlOpener openUrl;
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      alignment: AlignmentDirectional.centerStart,
-      child: RecipeLinkLine(
-        key: CollectionRecipeScreen.sourceKey,
-        lead: 'Quelle: ',
-        name: name,
-        onTap: () => openExternalUrl(
-          context,
-          url,
-          failureMessage: RecipeCopy.sourceFailed,
-          open: openUrl,
-          mode: LaunchMode.inAppBrowserView,
-        ),
-      ),
-    );
   }
 }
 

@@ -61,7 +61,7 @@ class RecipeImage extends StatelessWidget {
   Widget build(BuildContext context) {
     final type = recipe.mealTypes.firstOrNull;
     final url = recipe.imageUrl;
-    if (url == null || !isValidImageUrl(url)) {
+    if (url == null || !isHttpUrl(url)) {
       return RecipePlaceholder(mealType: type);
     }
     return CachedNetworkImage(

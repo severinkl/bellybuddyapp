@@ -35,11 +35,11 @@ abstract final class SuggestionHelpers {
     String? own,
     List<ReplacementIngredient> replacements,
   ) {
-    if (own != null && isValidImageUrl(own)) return own;
+    if (own != null && isHttpUrl(own)) return own;
     final food = name.trim().toLowerCase();
     for (final r in replacements) {
       final url = r.imageUrl;
-      if (url == null || !isValidImageUrl(url)) continue;
+      if (url == null || !isHttpUrl(url)) continue;
       final other = r.name.trim().toLowerCase();
       if (other == food || other.startsWith('$food (')) return url;
     }

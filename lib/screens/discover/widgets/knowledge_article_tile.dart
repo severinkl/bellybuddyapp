@@ -114,7 +114,7 @@ class _Thumbnail extends StatelessWidget {
     final dpr = MediaQuery.devicePixelRatioOf(context);
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-      child: url == null || !isValidImageUrl(url)
+      child: url == null || !isHttpUrl(url)
           ? _fallback
           : CachedNetworkImage(
               imageUrl: url,

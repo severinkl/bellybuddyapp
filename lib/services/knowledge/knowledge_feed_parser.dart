@@ -73,7 +73,7 @@ KnowledgeArticle? _parseItem(XmlElement item) {
     link: link,
     category: normalizeFeedCategory(_text(item.getElement('category'))),
     publishedAt: _date(_text(item.getElement('pubDate'))),
-    imageUrl: image != null && isValidImageUrl(image) ? image : null,
+    imageUrl: image != null && isHttpUrl(image) ? image : null,
   );
 }
 
