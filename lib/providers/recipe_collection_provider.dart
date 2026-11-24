@@ -146,20 +146,24 @@ AsyncValue<List<Recipe>> _settledCollection(Ref ref) {
       : collection;
 }
 
+/// The profile's intolerances against core's table, resolved once for all
+/// recipes. Watches only the intolerances, and an equal result notifies
+/// nobody, so other profile writes don't re-rank.
+final userIntolerancesProvider = Provider<UserIntolerances>(
+  (ref) => UserIntolerances(
+    ref.watch(intoleranceRulesProvider).value,
+    ref.watch(profileProvider.select((p) => p.value?.intolerances)),
+  ),
+);
+
 /// The collection for this user: their diet applied, ranked, each recipe
 /// with its fit.
 final rankedRecipesProvider = Provider<AsyncValue<RankedRecipes>>((ref) {
-  final profile = ref.watch(profileProvider).value;
-  final rules = ref.watch(intoleranceRulesProvider).value;
+  final diet = ref.watch(profileProvider.select((p) => p.value?.diet));
+  final user = ref.watch(userIntolerancesProvider);
   final signals = ref.watch(rankingSignalsProvider);
   return _settledCollection(ref).whenData(
-    (recipes) => rankRecipes(
-      recipes,
-      diet: profile?.diet,
-      rules: rules,
-      intolerances: profile?.intolerances,
-      signals: signals,
-    ),
+    (recipes) => rankRecipes(recipes, diet: diet, user: user, signals: signals),
   );
 });
 
@@ -168,13 +172,10 @@ final recipeFitProvider = Provider.family<AsyncValue<RecipeFit?>, String>((
   ref,
   id,
 ) {
-  final profile = ref.watch(profileProvider).value;
-  final rules = ref.watch(intoleranceRulesProvider).value;
+  final user = ref.watch(userIntolerancesProvider);
   return _settledCollection(ref).whenData((recipes) {
     for (final recipe in recipes) {
-      if (recipe.id == id) {
-        return fitOf(recipe, rules: rules, intolerances: profile?.intolerances);
-      }
+      if (recipe.id == id) return user.fit(recipe);
     }
     return null;
   });

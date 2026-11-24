@@ -284,6 +284,27 @@ void main() {
     });
   });
 
+  group('UserIntolerances', () {
+    test('equal for the same intolerances against the same table', () {
+      final a = UserIntolerances(_rules, List.of(['Fruktose', 'Histamin']));
+      final b = UserIntolerances(_rules, const ['Fruktose', 'Histamin']);
+
+      expect(a, b);
+      expect(a.hashCode, b.hashCode);
+      expect(a, isNot(UserIntolerances(_rules, const ['Fruktose'])));
+      expect(a, isNot(UserIntolerances(null, const ['Fruktose', 'Histamin'])));
+      expect(
+        UserIntolerances(null, const ['Fruktose']),
+        UserIntolerances(_rules, null),
+      );
+      expect(
+        a,
+        isNot(UserIntolerances(testIntoleranceRules(), const ['Fruktose'])),
+        reason: 'another table may judge differently',
+      );
+    });
+  });
+
   group('RecipeCopy', () {
     test('joins names in German', () {
       expect(RecipeCopy.kritisch(1), '1 Zutat ist für dich kritisch');

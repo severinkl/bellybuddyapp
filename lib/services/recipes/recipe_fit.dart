@@ -220,6 +220,22 @@ class UserIntolerances {
     );
   }
 
+  /// Equal for the same intolerances against the same table, so a profile
+  /// write that leaves them doesn't re-rank.
+  @override
+  bool operator ==(Object other) =>
+      other is UserIntolerances &&
+      other.checked == checked &&
+      listEquals(other.selfCheck, selfCheck) &&
+      listEquals(other._judgeable, _judgeable);
+
+  @override
+  int get hashCode => Object.hash(
+    checked,
+    Object.hashAll(selfCheck),
+    Object.hashAll(_judgeable),
+  );
+
   LineFit _lineFit(RecipeIngredient line) {
     final because = [
       for (final r in _judgeable)

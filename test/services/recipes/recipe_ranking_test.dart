@@ -20,8 +20,7 @@ RankedRecipes _rank(
 }) => rankRecipes(
   recipes,
   diet: null,
-  rules: _rules,
-  intolerances: ['Fruktose'],
+  user: UserIntolerances(_rules, ['Fruktose']),
   signals: signals,
 );
 
@@ -88,8 +87,7 @@ void main() {
           testRecipe(id: 'alles', dietTags: const {}),
         ],
         diet: 'vegan',
-        rules: _rules,
-        intolerances: const [],
+        user: UserIntolerances(_rules, const []),
         signals: const RankingSignals(),
       );
 
@@ -191,8 +189,7 @@ void main() {
       final histamin = rankRecipes(
         const [],
         diet: null,
-        rules: _rules,
-        intolerances: ['Histamin', 'Fruktose'],
+        user: UserIntolerances(_rules, ['Histamin', 'Fruktose']),
         signals: const RankingSignals(),
       );
       expect(histamin.checked, isTrue);
@@ -202,8 +199,7 @@ void main() {
       final unknown = rankRecipes(
         [testRecipe()],
         diet: null,
-        rules: null,
-        intolerances: ['Histamin'],
+        user: UserIntolerances(null, ['Histamin']),
         signals: const RankingSignals(),
       );
       expect(unknown.checked, isFalse);

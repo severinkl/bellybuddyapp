@@ -1,6 +1,5 @@
 import '../../config/constants.dart';
 import '../../models/insights.dart';
-import '../../models/intolerance_rules.dart';
 import '../../models/recipe.dart';
 import 'recipe_fit.dart';
 
@@ -82,11 +81,9 @@ class RankedRecipes {
 RankedRecipes rankRecipes(
   List<Recipe> recipes, {
   required String? diet,
-  required IntoleranceRules? rules,
-  required List<String>? intolerances,
+  required UserIntolerances user,
   required RankingSignals signals,
 }) {
-  final user = UserIntolerances(rules, intolerances);
   final kept = recipes.where((r) => fitsDiet(r, diet)).toList();
   final scored = [
     for (final fit in kept.map(user.fit))

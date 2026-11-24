@@ -165,6 +165,43 @@ void main() {
       expect(c.read(rankedRecipesProvider).requireValue.checked, isFalse);
     });
 
+    test(
+      'a profile write that keeps intolerances and diet keeps the ranking',
+      () async {
+        final c = make();
+        c.listen(rankedRecipesProvider, (_, _) {});
+        c.listen(recipeFitProvider('vegan'), (_, _) {});
+        await c.read(recipeCollectionProvider.future);
+        await c.read(intoleranceRulesProvider.future);
+        final ranked = c.read(rankedRecipesProvider).requireValue;
+        final fit = c.read(recipeFitProvider('vegan')).requireValue;
+        final notifier = c.read(profileProvider.notifier);
+        final profile = c.read(profileProvider).requireValue!;
+
+        // A re-read profile: equal intolerances in a new list.
+        notifier.state = AsyncData(
+          profile.copyWith(
+            weeklyTipsEnabled: !profile.weeklyTipsEnabled,
+            intolerances: List.of(profile.intolerances),
+          ),
+        );
+        expect(c.read(rankedRecipesProvider).requireValue, same(ranked));
+        expect(c.read(recipeFitProvider('vegan')).requireValue, same(fit));
+
+        notifier.state = AsyncData(profile.copyWith(intolerances: const []));
+        expect(c.read(rankedRecipesProvider).requireValue, isNot(same(ranked)));
+        expect(
+          c.read(recipeFitProvider('vegan')).requireValue,
+          isNot(same(fit)),
+        );
+
+        final now = c.read(rankedRecipesProvider).requireValue;
+        notifier.state = AsyncData(profile.copyWith(diet: null));
+        expect(c.read(rankedRecipesProvider).requireValue.hiddenByDiet, 0);
+        expect(now.hiddenByDiet, 1);
+      },
+    );
+
     test('profile in error or loading: unchecked, diet not applied', () async {
       for (final profile in [
         AsyncValue<UserProfile?>.error(StateError('x'), StackTrace.empty),
