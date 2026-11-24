@@ -57,6 +57,41 @@ class _SlowFavRepo extends FakeRecipeRepository {
   }
 }
 
+/// Each favourite write waits for its entry in [writes]; with
+/// [holdFetches], each favourites fetch answers with its entry in
+/// [fetches].
+class _HeldWrites extends FakeRecipeRepository {
+  final writes = <Completer<void>>[];
+  final fetches = <Completer<List<FavoriteRecipe>>>[];
+  var holdFetches = false;
+
+  @override
+  Future<List<FavoriteRecipe>> fetchFavorites(String userId) {
+    if (!holdFetches) return super.fetchFavorites(userId);
+    final c = Completer<List<FavoriteRecipe>>();
+    fetches.add(c);
+    return c.future;
+  }
+
+  @override
+  Future<void> addFavorite(String userId, String recipeId) {
+    added.add(recipeId);
+    return _held();
+  }
+
+  @override
+  Future<void> removeFavorite(String userId, String recipeId) {
+    removed.add(recipeId);
+    return _held();
+  }
+
+  Future<void> _held() {
+    final write = Completer<void>();
+    writes.add(write);
+    return write.future;
+  }
+}
+
 class _GatedRepo extends FakeRecipeRepository {
   final favGates = <String, Completer<List<FavoriteRecipe>>>{};
   final collectionGates = <Completer<List<Recipe>>>[];
@@ -546,6 +581,95 @@ void main() {
       expect(c.read(recipeFavoritesProvider).requireValue, before);
       expect(await n.toggle('meat'), isFalse);
       expect(c.read(recipeFavoritesProvider).requireValue, before);
+    });
+
+    group('while a write is on its way', () {
+      late _HeldWrites held;
+      late ProviderContainer c;
+      late RecipeFavoritesNotifier n;
+
+      setUp(() async {
+        held = _HeldWrites();
+        repo = held;
+        c = make();
+        c.listen(recipeFavoritesProvider, (_, _) {});
+        await c.read(recipeFavoritesProvider.future);
+        n = c.read(recipeFavoritesProvider.notifier);
+      });
+
+      List<String> ids() => c
+          .read(recipeFavoritesProvider)
+          .requireValue
+          .map((f) => f.recipeId)
+          .toList();
+
+      test('a second toggle of the same recipe is ignored', () async {
+        final first = n.toggle('vegan');
+        expect(n.isToggling('vegan'), isTrue);
+        expect(await n.toggle('vegan'), isNull);
+        expect(held.added, ['vegan']);
+        expect(held.removed, isEmpty);
+        expect(ids(), ['vegan']);
+
+        held.writes.single.complete();
+        expect(await first, isTrue);
+        expect(n.isToggling('vegan'), isFalse);
+
+        final again = n.toggle('vegan');
+        held.writes.last.complete();
+        expect(await again, isTrue);
+        expect(held.removed, ['vegan']);
+        expect(ids(), isEmpty);
+      });
+
+      test('another recipe toggles meanwhile', () async {
+        final first = n.toggle('vegan');
+        final second = n.toggle('meat');
+        expect(held.added, ['vegan', 'meat']);
+        for (final w in held.writes) {
+          w.complete();
+        }
+        expect(await first, isTrue);
+        expect(await second, isTrue);
+        expect(ids(), unorderedEquals(['vegan', 'meat']));
+      });
+
+      test('a refresh that started before the toggle is dropped', () async {
+        // Started before the toggle: the server's list is without it.
+        held.holdFetches = true;
+        final refreshing = n.refresh();
+        final toggling = n.toggle('vegan');
+        held.fetches.single.complete(const []);
+        await refreshing;
+        expect(ids(), ['vegan']);
+
+        held.writes.single.complete();
+        expect(await toggling, isTrue);
+        expect(ids(), ['vegan']);
+      });
+
+      test('a refresh that started while the write was on its way is '
+          'dropped', () async {
+        held.holdFetches = true;
+        final toggling = n.toggle('vegan');
+        final refreshing = n.refresh();
+        held.writes.single.complete();
+        expect(await toggling, isTrue);
+        held.fetches.single.complete(const []);
+        await refreshing;
+        expect(ids(), ['vegan']);
+      });
+
+      test('a refresh after the write landed shows', () async {
+        final toggling = n.toggle('vegan');
+        held.writes.single.complete();
+        await toggling;
+        held.holdFetches = true;
+        final refreshing = n.refresh();
+        held.fetches.single.complete([FavoriteRecipe('meat', DateTime(2026))]);
+        await refreshing;
+        expect(ids(), ['meat']);
+      });
     });
 
     test('savedRecipes skips ids missing from the collection', () async {

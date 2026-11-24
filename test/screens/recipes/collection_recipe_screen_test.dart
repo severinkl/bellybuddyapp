@@ -436,6 +436,34 @@ void main() {
       expect(find.text(CollectionRecipeScreen.saved), findsOneWidget);
     });
 
+    testWidgets('takes no second tap while the write is on its way', (
+      tester,
+    ) async {
+      final held = _HeldFavoriteWrite()..collection = [recipe()];
+      repo = held;
+      await pump(tester);
+      OutlinedButton save() => tester.widget<OutlinedButton>(
+        find.byKey(CollectionRecipeScreen.saveKey),
+      );
+
+      await tester.tap(find.byKey(CollectionRecipeScreen.saveKey));
+      await tester.pump();
+      expect(save().onPressed, isNull);
+      await tester.tap(
+        find.byKey(CollectionRecipeScreen.saveKey),
+        warnIfMissed: false,
+      );
+      await tester.pump();
+      expect(held.added, ['recipe-1']);
+      expect(held.removed, isEmpty);
+
+      held.write.complete();
+      await tester.pumpAndSettle();
+      expect(save().onPressed, isNotNull);
+      expect(inSave(find.text('Gemerkt')), findsOneWidget);
+      expect(find.text(CollectionRecipeScreen.saved), findsOneWidget);
+    });
+
     testWidgets('Merken while the saved recipes load waits for them', (
       tester,
     ) async {

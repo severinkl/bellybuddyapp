@@ -220,13 +220,24 @@ class _IngredientsCard extends StatelessWidget {
 }
 
 /// „Als Essen eintragen" and the „Merken" toggle.
-class _ActionBar extends ConsumerWidget {
+class _ActionBar extends ConsumerStatefulWidget {
   const _ActionBar({required this.recipe});
 
   final Recipe recipe;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ActionBar> createState() => _ActionBarState();
+}
+
+class _ActionBarState extends ConsumerState<_ActionBar> {
+  /// A tap of „Merken" is on its way (waiting for the saved recipes or the
+  /// write): the button takes no second one meanwhile.
+  bool _toggling = false;
+
+  Recipe get recipe => widget.recipe;
+
+  @override
+  Widget build(BuildContext context) {
     final saved = ref.watch(
       recipeFavoritesProvider.select((f) => f.isSaved(recipe.id)),
     );
@@ -249,7 +260,7 @@ class _ActionBar extends ConsumerWidget {
             const SizedBox(width: AppConstants.spacingSm),
             OutlinedButton.icon(
               key: CollectionRecipeScreen.saveKey,
-              onPressed: () => _toggle(context, ref),
+              onPressed: _toggling ? null : () => unawaited(_toggle()),
               icon: Icon(
                 saved ? Icons.favorite : Icons.favorite_border,
                 color: saved ? AppTheme.buddyHeart : null,
@@ -267,30 +278,38 @@ class _ActionBar extends ConsumerWidget {
   }
 
   /// Saves the recipe or takes it back, at once, and says how it went.
-  Future<void> _toggle(BuildContext context, WidgetRef ref) async {
+  Future<void> _toggle() async {
+    setState(() => _toggling = true);
     final messenger = ScaffoldMessenger.of(context);
     final favorites = ref.read(recipeFavoritesProvider.notifier);
-    // A toggle needs the saved recipes: while they load, wait (a failure
-    // then is the toggle's); after a failed load, load them again, also
-    // when the error still carries the list from before it.
-    switch (ref.read(recipeFavoritesProvider)) {
-      case AsyncValue(isLoading: true):
-        await ref
-            .read(recipeFavoritesProvider.future)
-            .then((_) {}, onError: (_) {});
-      case AsyncValue(hasError: true):
-        await favorites.refresh();
-      case _:
+    try {
+      // A toggle needs the saved recipes: while they load, wait (a failure
+      // then is the toggle's); after a failed load, load them again, also
+      // when the error still carries the list from before it.
+      switch (ref.read(recipeFavoritesProvider)) {
+        case AsyncValue(isLoading: true):
+          await ref
+              .read(recipeFavoritesProvider.future)
+              .then((_) {}, onError: (_) {});
+        case AsyncValue(hasError: true):
+          await favorites.refresh();
+        case _:
+      }
+      final wasSaved = favorites.isSaved(recipe.id);
+      final message = switch ((await favorites.toggle(recipe.id), wasSaved)) {
+        // Another tap's write is still on its way; it says how it went.
+        (null, _) => null,
+        (false, _) => RecipeCopy.failed,
+        (true, true) => CollectionRecipeScreen.unsaved,
+        (true, false) => CollectionRecipeScreen.saved,
+      };
+      if (message != null) {
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(SnackBar(content: Text(message)));
+      }
+    } finally {
+      if (mounted) setState(() => _toggling = false);
     }
-    final wasSaved = favorites.isSaved(recipe.id);
-    final ok = await favorites.toggle(recipe.id);
-    final message = switch ((ok, wasSaved)) {
-      (false, _) => RecipeCopy.failed,
-      (true, true) => CollectionRecipeScreen.unsaved,
-      (true, false) => CollectionRecipeScreen.saved,
-    };
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
   }
 }

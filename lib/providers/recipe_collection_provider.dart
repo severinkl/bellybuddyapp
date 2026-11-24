@@ -69,13 +69,26 @@ class RecipeFavoritesNotifier extends AsyncNotifier<List<FavoriteRecipe>>
 
   bool isSaved(String recipeId) => state.isSaved(recipeId);
 
+  /// The recipes whose write is on its way.
+  final _toggling = <String>{};
+
+  /// Counts the toggles, so a refresh can tell one started after it.
+  var _toggles = 0;
+
+  /// Whether a toggle of [recipeId] is on its way.
+  bool isToggling(String recipeId) => _toggling.contains(recipeId);
+
   /// Saves [recipeId], or removes it when saved; shown at once. Returns
   /// false, with the change taken back, when the write fails, and false
-  /// without a change while the favourites aren't loaded.
-  Future<bool> toggle(String recipeId) async {
+  /// without a change while the favourites aren't loaded. Null, ignored,
+  /// while a toggle of the same recipe is on its way: two writes at once
+  /// could land in either order.
+  Future<bool?> toggle(String recipeId) async {
     final userId = ref.read(currentUserIdProvider);
     final current = state.settledValue;
     if (userId == null || current == null) return false;
+    if (!_toggling.add(recipeId)) return null;
+    _toggles++;
     final index = current.indexWhere((f) => f.recipeId == recipeId);
     final removed = index < 0 ? null : current[index];
     state = AsyncData([
@@ -104,12 +117,23 @@ class RecipeFavoritesNotifier extends AsyncNotifier<List<FavoriteRecipe>>
         state = AsyncData(now);
       }
       return false;
+    } finally {
+      _toggling.remove(recipeId);
     }
   }
 
-  /// Fetches again ([refreshWith]).
-  Future<void> refresh() =>
-      refreshWith(ref.read(recipeRepositoryProvider).fetchFavorites, _favLog);
+  /// Fetches again ([refreshWith]). An answer that may predate a toggle (one
+  /// was on its way when the fetch started, or started since) is dropped:
+  /// what is shown already has the toggle.
+  Future<void> refresh() {
+    final toggles = _toggles;
+    final busy = _toggling.isNotEmpty;
+    return refreshWith(
+      ref.read(recipeRepositoryProvider).fetchFavorites,
+      _favLog,
+      outdated: () => busy || _toggles != toggles,
+    );
+  }
 }
 
 /// Whether [recipeId] is among the settled favourites; for a `select`.
