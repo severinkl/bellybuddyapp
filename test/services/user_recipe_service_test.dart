@@ -200,6 +200,75 @@ void main() {
       expect(r.amountOf(0), '2 EL');
     });
 
+    /// PostgREST's answer on a backend without core #11's [column].
+    PostgrestException missing(String column) => PostgrestException(
+      message:
+          "Could not find the '$column' column of 'user_recipes' in the "
+          'schema cache',
+      code: 'PGRST204',
+    );
+    const oldColumns = {'user_id', 'title', 'ingredients', 'image_url'};
+
+    test('create on a backend without steps: saved once more without '
+        'them', () async {
+      stub(results: [missing('instructions'), row()]);
+      final saved = await service.create(
+        userId: 'u1',
+        title: 'T',
+        ingredients: const ['Reis', 'Salz'],
+        instructions: const ['Kochen'],
+        ingredientAmounts: const ['2 EL', null],
+        adaptedFromRecipeId: 'src-1',
+      );
+      expect(inserts, hasLength(2));
+      expect(inserts[0]['instructions'], ['Kochen']);
+      expect(inserts[1].keys.toSet(), oldColumns);
+      expect(saved.instructions, isEmpty);
+    });
+
+    test('update on a backend without steps: saved once more without them, '
+        'no second amounts write', () async {
+      stub(results: [missing('ingredient_amounts'), row()]);
+      final saved = await service.update(
+        id: 'rec-1',
+        title: 'T',
+        ingredients: const ['Reis', 'Salz'],
+        instructions: const ['Kochen'],
+        ingredientAmounts: const ['2 EL', null],
+      );
+      expect(updates, hasLength(2));
+      expect(updates[0]['instructions'], ['Kochen']);
+      expect(updates[1].keys.toSet(), {
+        'title',
+        'ingredients',
+        'image_url',
+        'updated_at',
+      });
+      expect(saved.instructions, isEmpty);
+    });
+
+    test('another missing column, or none of the new ones sent, '
+        'rethrows', () async {
+      stub(results: [missing('image_url')]);
+      await expectLater(
+        service.create(
+          userId: 'u1',
+          title: 'T',
+          ingredients: const ['A'],
+          instructions: const ['Kochen'],
+        ),
+        throwsA(isA<PostgrestException>()),
+      );
+      expect(inserts, hasLength(1));
+
+      stub(results: [missing('instructions')]);
+      await expectLater(
+        service.update(id: 'rec-1', title: 'T', ingredients: const ['A']),
+        throwsA(isA<PostgrestException>()),
+      );
+      expect(updates, hasLength(1));
+    });
+
     test('a duplicate title throws on create and update', () async {
       stub(results: [dup]);
       await expectLater(

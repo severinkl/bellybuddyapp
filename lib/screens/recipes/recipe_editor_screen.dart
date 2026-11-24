@@ -12,6 +12,7 @@ import '../../providers/core_providers.dart';
 import '../../providers/ingredient_autocomplete_provider.dart';
 import '../../providers/user_recipes_provider.dart';
 import '../../repositories/meal_media_repository.dart';
+import '../../services/recipes/recipe_copy.dart';
 import '../../services/user_recipe_service.dart';
 import '../../utils/logger.dart';
 import '../../utils/save_helper.dart';
@@ -137,25 +138,32 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
       }
 
       final notifier = ref.read(userRecipesProvider.notifier);
-      if (_isEditMode) {
-        await notifier.update(
-          id: widget.recipeId!,
-          title: title,
-          ingredients: _ingredients,
-          imageUrl: resolvedImageUrl,
-          instructions: listEquals(steps, _loadedSteps) ? null : steps,
-          ingredientAmounts: _amountsToSend(),
-        );
-      } else {
-        await notifier.create(
-          title: title,
-          ingredients: _ingredients,
-          imageUrl: resolvedImageUrl,
-          instructions: steps,
-        );
-      }
+      final sentSteps = _isEditMode && listEquals(steps, _loadedSteps)
+          ? null
+          : steps;
+      final saved = _isEditMode
+          ? await notifier.update(
+              id: widget.recipeId!,
+              title: title,
+              ingredients: _ingredients,
+              imageUrl: resolvedImageUrl,
+              instructions: sentSteps,
+              ingredientAmounts: _amountsToSend(),
+            )
+          : await notifier.create(
+              title: title,
+              ingredients: _ingredients,
+              imageUrl: resolvedImageUrl,
+              instructions: steps,
+            );
 
-      if (mounted) context.pop();
+      if (!mounted) return;
+      if (saved.lostSteps(sentSteps)) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text(RecipeCopy.stepsNotSaved)));
+      }
+      context.pop();
     } on DuplicateRecipeTitleException {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

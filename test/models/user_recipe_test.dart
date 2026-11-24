@@ -71,5 +71,19 @@ void main() {
       });
       expect(r.amountOf(0), isNull);
     });
+
+    test('lostSteps: steps sent, none read back', () {
+      const kept = UserRecipe(
+        id: 'r',
+        userId: 'u',
+        title: 'T',
+        instructions: ['Kochen'],
+      );
+      const without = UserRecipe(id: 'r', userId: 'u', title: 'T');
+      expect(without.lostSteps(const ['Kochen']), isTrue);
+      expect(kept.lostSteps(const ['Kochen']), isFalse);
+      expect(without.lostSteps(const []), isFalse);
+      expect(without.lostSteps(null), isFalse);
+    });
   });
 }

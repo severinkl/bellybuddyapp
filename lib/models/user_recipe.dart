@@ -31,6 +31,11 @@ abstract class UserRecipe with _$UserRecipe {
 
   bool get isAdapted => adaptedFromRecipeId != null;
 
+  /// Whether this recipe, as saved, is missing the [steps] it was saved
+  /// with: a backend without core #11's columns keeps the rest only.
+  bool lostSteps(List<String>? steps) =>
+      (steps?.isNotEmpty ?? false) && instructions.isEmpty;
+
   factory UserRecipe.fromJson(Map<String, dynamic> json) =>
       _$UserRecipeFromJson(json);
 }

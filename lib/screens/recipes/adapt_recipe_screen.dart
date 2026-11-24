@@ -165,7 +165,8 @@ class _AdaptRecipeScreenState extends ConsumerState<AdaptRecipeScreen> {
     );
   }
 
-  /// Saves [adapted] as an own recipe once; a failure says so.
+  /// Saves [adapted] as an own recipe once; a failure says so, and so do
+  /// steps the backend couldn't keep.
   Future<void> _save(AdaptedRecipe adapted) async {
     if (_saving) return;
     setState(() => _saving = true);
@@ -183,12 +184,17 @@ class _AdaptRecipeScreenState extends ConsumerState<AdaptRecipeScreen> {
       _saving = false;
       _saved = saved;
     });
-    if (saved == null) {
+    final message = switch (saved) {
+      null => RecipeCopy.adaptSaveFailed,
+      // A backend without core #11's columns kept the rest only.
+      _ when saved.lostSteps([for (final step in adapted.steps) step.text]) =>
+        RecipeCopy.stepsNotSaved,
+      _ => null,
+    };
+    if (message != null) {
       messenger
         ..hideCurrentSnackBar()
-        ..showSnackBar(
-          const SnackBar(content: Text(RecipeCopy.adaptSaveFailed)),
-        );
+        ..showSnackBar(SnackBar(content: Text(message)));
     }
   }
 

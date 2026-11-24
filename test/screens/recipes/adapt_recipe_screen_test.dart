@@ -665,6 +665,28 @@ void main() {
       expect(await userRecipes.fetchForUser(testUserId), hasLength(1));
     });
 
+    testWidgets('a backend that keeps no steps: saved, the steps said to be '
+        'left out', (tester) async {
+      userRecipes = FakeUserRecipeRepository()..newColumns = false;
+      await pump(tester);
+
+      await tester.tap(find.byKey(AdaptRecipeScreen.saveKey));
+      await tester.pumpAndSettle();
+
+      expect(find.text(RecipeCopy.stepsNotSaved), findsOneWidget);
+      expect(inSave(find.text('In Meine Rezepte gespeichert')), findsOneWidget);
+      expect(find.text(RecipeCopy.adaptSaveFailed), findsNothing);
+    });
+
+    testWidgets('steps kept: nothing said', (tester) async {
+      await pump(tester);
+
+      await tester.tap(find.byKey(AdaptRecipeScreen.saveKey));
+      await tester.pumpAndSettle();
+
+      expect(find.text(RecipeCopy.stepsNotSaved), findsNothing);
+    });
+
     testWidgets('save fails → SnackBar', (tester) async {
       userRecipes = _FailingUserRecipes();
       await pump(tester);

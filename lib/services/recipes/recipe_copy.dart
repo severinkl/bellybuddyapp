@@ -90,6 +90,12 @@ abstract final class RecipeCopy {
           'Angaben zu den Zutaten.',
   };
 
+  /// When a recipe was saved without its steps (a backend that can't keep
+  /// them yet).
+  static const stepsNotSaved =
+      'Die Schritte kann ich gerade noch nicht speichern – der Rest ist '
+      'gespeichert.';
+
   /// When saving an adapted recipe in „Meine Rezepte" failed.
   static const adaptSaveFailed =
       'Speichern hat nicht geklappt. Versuch es bitte nochmal.';
