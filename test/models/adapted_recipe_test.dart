@@ -165,6 +165,7 @@ void main() {
         AdaptFailure.nothingToAdapt: false,
         AdaptFailure.cannotJudge: false,
         AdaptFailure.later: true,
+        AdaptFailure.notFound: false,
         AdaptFailure.failed: true,
       },
     );

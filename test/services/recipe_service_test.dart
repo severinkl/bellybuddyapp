@@ -425,8 +425,12 @@ void main() {
         (429, null, AdaptFailure.later, 'WARN'),
         (422, 'adapt_failed', AdaptFailure.failed, 'ERROR'),
         (502, 'ai_error', AdaptFailure.failed, 'ERROR'),
-        (404, 'recipe_not_found', AdaptFailure.failed, 'ERROR'),
-        (400, 'invalid_request', AdaptFailure.failed, 'ERROR'),
+        (404, 'recipe_not_found', AdaptFailure.notFound, 'WARN'),
+        // A request core can't read is the app's bug: logged as one.
+        (400, 'invalid_request', AdaptFailure.notFound, 'ERROR'),
+        (400, null, AdaptFailure.notFound, 'ERROR'),
+        // A 404 without the code (e.g. no such route) isn't the recipe.
+        (404, null, AdaptFailure.failed, 'ERROR'),
         (401, null, AdaptFailure.failed, 'ERROR'),
         (500, null, AdaptFailure.failed, 'ERROR'),
         (409, 'something_new', AdaptFailure.failed, 'ERROR'),

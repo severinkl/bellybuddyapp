@@ -548,6 +548,7 @@ void main() {
       AdaptFailure.cannotJudge:
           'Ob ich hier etwas tauschen muss, kann ich nicht prüfen: Mir fehlen '
           'Angaben zu den Zutaten.',
+      AdaptFailure.notFound: 'Dieses Rezept kann ich nicht finden.',
     };
 
     for (final MapEntry(key: failure, value: message) in cases.entries) {

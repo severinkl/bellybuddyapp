@@ -124,13 +124,17 @@ enum AdaptFailure {
   /// Throttled or the AI service is busy (429).
   later,
 
+  /// No such recipe, or a hidden one (404 `recipe_not_found`), or a
+  /// request core can't read (400).
+  notFound,
+
   /// Anything else.
   failed;
 
   /// Whether trying again may help (else nothing would change).
   bool get retryable => switch (this) {
     later || failed => true,
-    nothingToAdapt || cannotJudge => false,
+    nothingToAdapt || cannotJudge || notFound => false,
   };
 }
 

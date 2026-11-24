@@ -140,7 +140,8 @@ class RecipeService {
       data = response.data;
     } on FunctionException catch (e, st) {
       final failure = _failureOf(e);
-      if (failure == AdaptFailure.failed) {
+      // A 400 is the app's request at fault: logged like a failure.
+      if (failure == AdaptFailure.failed || e.status == 400) {
         _log.error('adapt failed (${e.status})', e, st);
       } else {
         _log.warn('adapt: ${e.status} ${_codeOf(e)}');
@@ -167,6 +168,7 @@ class RecipeService {
       switch ((e.status, _codeOf(e))) {
         (409, 'nothing_to_adapt') => AdaptFailure.nothingToAdapt,
         (409, 'cannot_judge') => AdaptFailure.cannotJudge,
+        (404, 'recipe_not_found') || (400, _) => AdaptFailure.notFound,
         (429, _) => AdaptFailure.later,
         _ => AdaptFailure.failed,
       };

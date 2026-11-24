@@ -99,6 +99,7 @@ abstract final class RecipeCopy {
     AdaptFailure.cannotJudge =>
       'Ob ich hier etwas tauschen muss, kann ich nicht prüfen: Mir fehlen '
           'Angaben zu den Zutaten.',
+    AdaptFailure.notFound => 'Dieses Rezept kann ich nicht finden.',
   };
 
   /// When a recipe was saved without its steps (a backend that can't keep
