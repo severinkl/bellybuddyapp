@@ -218,17 +218,18 @@ abstract final class CareCopy {
       ? careAgo(log.lastToiletAt!, now)
       : notToday;
 
-  /// A bubble's semantics value; Bauchgefühl's also names how today's
-  /// latest one was („zuletzt vor 2 Std, Mittel").
+  /// A bubble's semantics value: when it was last („zuletzt vor 2 Std"),
+  /// or for an entry later today the time it is for („eingetragen für
+  /// 18:00"); Klo's [notToday] when not logged today. Bauchgefühl's also
+  /// names how today's latest one was („zuletzt vor 2 Std, Mittel").
   static String spoken(CareNeed need, CareLog log, DateTime now) {
-    if (need == CareNeed.toilet) {
-      final line = looLine(log, now);
-      return line == notToday ? line : 'zuletzt $line';
-    }
+    if (need == CareNeed.toilet && !log.loggedOn(need, now)) return notToday;
     final last = log.lastAt(need);
     if (last == null) return notYet;
-    final ago = 'zuletzt ${careAgo(last, now)}';
+    final when = last.isAfter(now)
+        ? 'eingetragen für ${formatTime(last)}'
+        : 'zuletzt ${careAgo(last, now)}';
     final level = need == CareNeed.gutFeeling ? log.lastGutFeelingLevel : null;
-    return level == null ? ago : '$ago, ${level.label}';
+    return level == null ? when : '$when, ${level.label}';
   }
 }

@@ -304,6 +304,30 @@ void main() {
         'zuletzt vor 3 Std',
       );
     });
+    test('spoken for an entry later today: the time it is for, not '
+        '„zuletzt"', () {
+      expect(
+        CareCopy.spoken(CareNeed.drink, CareLog(lastDrinkAt: _t(18)), now),
+        'eingetragen für 18:00',
+      );
+      expect(
+        CareCopy.spoken(CareNeed.toilet, CareLog(lastToiletAt: _t(18)), now),
+        'eingetragen für 18:00',
+      );
+      expect(
+        CareCopy.spoken(
+          CareNeed.gutFeeling,
+          CareLog(
+            lastGutFeelingAt: _t(18, 30),
+            lastGutFeelingLevel: GutFeelingRatingLevel.mittel,
+          ),
+          now,
+        ),
+        'eingetragen für 18:30, Mittel',
+      );
+      // Klo's line under its bubble stays short.
+      expect(CareCopy.looLine(CareLog(lastToiletAt: _t(18)), now), 'um 18:00');
+    });
     test('spoken Bauchgefühl names how it was', () {
       expect(
         CareCopy.spoken(
