@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
+import '../../models/meal_prefill.dart';
 import '../../models/user_recipe.dart';
 import '../../providers/user_recipes_provider.dart';
 import '../../router/navigation_extensions.dart';
@@ -165,8 +166,10 @@ class _RecipeDetailScreenState extends ConsumerState<RecipeDetailScreen> {
               padding: AppConstants.paddingMd,
               child: BbButton(
                 label: 'Jetzt als Essen eintragen',
-                onPressed: () =>
-                    context.push(RoutePaths.mealTracker, extra: recipe),
+                onPressed: () => context.push(
+                  RoutePaths.mealTracker,
+                  extra: MealPrefill.ofUserRecipe(recipe),
+                ),
               ),
             ),
           ],

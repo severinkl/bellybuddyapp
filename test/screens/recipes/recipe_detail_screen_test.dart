@@ -1,10 +1,13 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:belly_buddy/models/meal_prefill.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
+import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/recipes/recipe_detail_screen.dart';
 
 import '../../helpers/fakes.dart';
@@ -54,6 +57,53 @@ void main() {
     );
     expect(find.text('Linsen'), findsOneWidget);
     expect(find.text('Jetzt als Essen eintragen'), findsOneWidget);
+  });
+
+  testWidgets('"Jetzt als Essen eintragen" hands the tracker a MealPrefill', (
+    tester,
+  ) async {
+    final recipe = testUserRecipe(
+      id: 'rec-1',
+      title: 'Linseneintopf',
+      ingredients: const ['Linsen', 'Tomaten'],
+    );
+    when(() => repo.fetchForUser(any())).thenAnswer((_) async => [recipe]);
+    Object? extra;
+    final router = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, _) => const RecipeDetailScreen(recipeId: 'rec-1'),
+        ),
+        GoRoute(
+          path: RoutePaths.mealTracker,
+          builder: (_, state) {
+            extra = state.extra;
+            return const Scaffold(body: Text('tracker-sentinel'));
+          },
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userRecipeRepositoryProvider.overrideWithValue(repo),
+          currentUserIdProvider.overrideWithValue(testUserId),
+        ],
+        child: MaterialApp.router(routerConfig: router),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Jetzt als Essen eintragen'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('tracker-sentinel'), findsOneWidget);
+    expect(extra, isA<MealPrefill>());
+    final prefill = extra! as MealPrefill;
+    expect(prefill.title, 'Linseneintopf');
+    expect(prefill.ingredients, ['Linsen', 'Tomaten']);
+    expect(prefill.imageUrl, isNull);
   });
 
   testWidgets('VoiceOver reads ←, ✎ and 🗑 by name', (tester) async {

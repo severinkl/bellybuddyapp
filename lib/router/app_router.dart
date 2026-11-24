@@ -2,7 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../models/meal_entry.dart';
-import '../models/user_recipe.dart';
+import '../models/meal_prefill.dart';
 import '../providers/auth_provider.dart';
 import '../providers/buddy_onboarding_gate_provider.dart';
 import '../providers/health_consent_provider.dart';
@@ -187,7 +187,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: RouteNames.mealTracker,
         builder: (context, state) {
           final extra = state.extra;
-          if (extra is UserRecipe) {
+          if (extra is MealPrefill) {
             return MealTrackerScreen(initialRecipe: extra);
           }
           if (extra is DateTime) {

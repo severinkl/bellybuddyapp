@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/meal_entry.dart';
+import '../../../models/meal_prefill.dart';
 import '../../../models/user_recipe.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../providers/ingredient_autocomplete_provider.dart';
@@ -56,7 +57,7 @@ class MealTrackerScreen extends ConsumerStatefulWidget {
   /// When non-null and in create mode, pre-fills the tracker with this
   /// recipe's title, ingredients, and imageUrl. Passed by RecipeDetailScreen
   /// via GoRouter extra. Ignored in edit mode.
-  final UserRecipe? initialRecipe;
+  final MealPrefill? initialRecipe;
 
   static const drinkTrackerButtonKey = Key('drink_tracker_button');
   static const mealTrackerTitleKey = Key('meal_tracker_title');
@@ -473,7 +474,9 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen>
   Future<void> _openRecipeSelector() async {
     final recipe = await showRecipeSelectorSheet(context);
     if (recipe == null || !mounted) return;
-    ref.read(mealTrackerProvider.notifier).prefillFromRecipe(recipe);
+    ref
+        .read(mealTrackerProvider.notifier)
+        .prefillFromRecipe(MealPrefill.ofUserRecipe(recipe));
   }
 }
 
