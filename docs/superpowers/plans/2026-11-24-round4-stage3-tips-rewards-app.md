@@ -290,7 +290,7 @@ No new colours: the focus uses `AppTheme.primary`/`primarySoft`.
 - Test: `test/models/journey_rewards_test.dart`, `test/services/journey/journey_rules_test.dart`
 
 **Interfaces:**
-- Consumes: `Insights` (`progress`, `unlocked`, `journey`, `calmDayIngredients`), `InsightRules.daysNeeded`, `RankedRecipes` (`fits`, `checked`), `RecipeFit` (`recipe`, `checked`, `passtZuMir`), `RecipeIngredient.matchKeys`, `pickForYou`, `isSameDay`, `joinGerman`.
+- Consumes: `Insights` (`progress`, `unlocked`, `journey`, `calmDayIngredients`), `InsightRules.daysNeeded`, `RankedRecipes` (`fits`, `checked`), `RecipeFit` (`recipe`, `checked`, `passtZuMir`), `RecipeIngredient.isFood(FoodName)`, `pickForYou`, `isSameDay`, `joinGerman`.
 - Produces:
   ```dart
   enum TipOffer { offered, accepted, declined, skipped }
@@ -398,7 +398,7 @@ No new colours: the focus uses `AppTheme.primary`/`primarySoft`.
 - **`pickJourneyRecipe`:**
   - `order = pickForYou(ranked, count: ranked.length)` without `exclude`d ids;
   - `passing(f) = !f.checked || f.passtZuMir`;
-  - with `goodKeys`: the first passing recipe with a line whose `matchKeys` intersects `goodKeys` → its matching line names (in recipe order, distinct without case, at most 3);
+  - with `goodKeys`: the first passing recipe with a line that `isFood` one of `goodKeys` (as `FoodName`s) → its matching line names (in recipe order, distinct without case, at most 3);
   - otherwise (or no match): the first of `order` with `matched` empty;
   - empty → null.
 - **`announcementDay`:** `earnedDay` when it is 1–6, except 3 unless `tipOffer == skipped`; otherwise null.
