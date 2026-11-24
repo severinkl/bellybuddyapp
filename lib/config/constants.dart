@@ -122,6 +122,9 @@ class AppConstants {
   static const double careMeterLow = 0.35;
   static const double careMeterHigh = 0.7;
 
+  /// A need meter's ring thickness, as a share of its diameter.
+  static const double careMeterStrokeShare = 0.085;
+
   // Dashboard care ring: its diameter (at most this, this share of the
   // width and of the screen height, at least the minimum), stroke, the gap
   // between its four segments, and the Buddy's box inside it
