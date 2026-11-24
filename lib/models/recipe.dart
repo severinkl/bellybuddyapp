@@ -80,7 +80,8 @@ class RecipeIngredient {
   /// Whether the line is the food [food] (a name, or an `ingredientKey`
   /// as the insights key the diary's ingredients): its name or catalog
   /// name is that food ([sameFood], as core matches recipe lines: „Ei" is
-  /// „Eier", „Zwiebelpulver" „Zwiebel"; „Kokosmilch" is no „Milch").
+  /// „Eier", „Zwiebelpulver" „Zwiebel"; „Kokosmilch" and „Laktosefreie
+  /// Milch" are no „Milch").
   bool isFood(String food) {
     final catalog = catalogName;
     return sameFood(name, food) || (catalog != null && sameFood(catalog, food));

@@ -23,7 +23,9 @@ bool sameFood(String a, String b) {
 /// names the food before it. „Zwiebeln", „rote Zwiebel", „Zwiebel,
 /// gehackt" and „Zwiebelpulver" share „zwiebel", „Eier" and „Ei" share
 /// „ei"; „Frühlingszwiebelgrün", „Kokosmilch" and „Eisbergsalat" are words
-/// of their own. Empty for a name without a letter a–z.
+/// of their own. Empty for a name without a letter a–z, and for a
+/// free-from food ([_freeFrom]): „Laktosefreie Milch" is no „Milch", it
+/// matches its own name only (by its `ingredientKey`, [sameFood]).
 ///
 /// Known limits, precision first (a missed spelling only costs a ranking
 /// point or a named line; a wrong match would name a food the user did not
@@ -51,6 +53,7 @@ final _memo = <String, Set<String>>{};
 const _memoLimit = 4096;
 
 Set<String> _foodWords(String name) {
+  if (_freeFrom.hasMatch(_fold(name))) return {};
   final folded = _fold(name.replaceAll(_note, ' '));
   final ohne = _ohne.firstMatch(folded);
   final text = ohne == null ? folded : folded.substring(0, ohne.start);
@@ -66,6 +69,13 @@ Set<String> _foodWords(String name) {
   };
   return named.isNotEmpty ? named : words.toSet();
 }
+
+/// „laktosefrei", „glutenfrei", „weizenfrei", „fruktosefrei" (also
+/// „fructosefrei"), folded, in any inflection and anywhere in the name, a
+/// bracketed note and an „ohne …" tail included („Laktosefreie Milch",
+/// „Laktosefrei-Joghurt", „Brot (glutenfrei)"): a free-from food is another
+/// food than the plain one (core's `FREE_FROM`, dd3c42e).
+final _freeFrom = RegExp(r'(?:laktose|gluten|weizen|fru[kc]tose)frei');
 
 /// A bracketed note („Gemüsebrühe (low-FODMAP)").
 final _note = RegExp(r'\([^)]*\)');
@@ -263,7 +273,7 @@ rot grün gelb weiß schwarz braun dunkel hell bunt
 frisch roh gekocht gegart gebacken gebraten gedünstet gegrillt gehackt gemahlen gerieben getrocknet geröstet
 geräuchert gepufft gemischt gewürfelt geschält geschnitten gefroren tiefgekühlt eingelegt püriert stückig
 ganz halbiert fein grob klein groß mittelgroß jung reif mild scharf
-glutenfrei laktosefrei vegan vegetarisch bio light natur tk
+vegan vegetarisch bio light natur tk
 aus der die das dem den des ein eine dose glas packung nach wahl mit und oder von vom zum zur für in im nur
 ''';
 

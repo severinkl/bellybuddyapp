@@ -380,6 +380,40 @@ void main() {
       );
     });
 
+    test('day 5: a free-from food is another food, matched by its own name '
+        'only', () {
+      final plain = _recipe('a', ['Milch', 'Brot'], title: 'Arme Ritter');
+      final free = _recipe('b', [
+        'Laktosefreie Milch',
+        'Glutenfreies Brot',
+      ], title: 'Brotauflauf');
+      expect(_rank([plain, free]).fits.first.recipe.id, 'a');
+
+      final calmFree = fillPicks(
+        const JourneyRewards(earnedDay: 5, picks: _earlier),
+        ranked: _rank([plain, free]),
+        calmKeys: const {'laktosefreie milch', 'glutenfreies brot'},
+      );
+      expect(
+        calmFree.picks[5],
+        const RecipePick(
+          id: 'b',
+          title: 'Brotauflauf',
+          matched: ['Laktosefreie Milch', 'Glutenfreies Brot'],
+        ),
+      );
+
+      final calmPlain = fillPicks(
+        const JourneyRewards(earnedDay: 5, picks: _earlier),
+        ranked: _rank([free]),
+        calmKeys: const {'milch', 'brot'},
+      );
+      expect(
+        calmPlain.picks[5],
+        const RecipePick(id: 'b', title: 'Brotauflauf'),
+      );
+    });
+
     test('day 5: another food with a similar name is no match', () {
       final y = _recipe('y', [
         'Frühlingszwiebelgrün',

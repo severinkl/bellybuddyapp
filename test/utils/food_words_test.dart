@@ -6,7 +6,9 @@ import 'package:belly_buddy/utils/food_words.dart';
 /// bellybuddy-core `backend/tests/domain/test_tip_recipes.py`
 /// (`test_food_words_name_the_food_whatever_the_spelling`,
 /// `test_food_words_find_the_food_in_its_processed_form`,
-/// `test_food_words_keep_other_foods_apart`; core #12, 04d17e8).
+/// `test_food_words_keep_other_foods_apart`,
+/// `test_a_free_from_food_has_no_food_words`; core #12, 04d17e8 and
+/// dd3c42e, the free-from ruling of 2026-11-24).
 const _sameFood = [
   ('Zwiebeln', 'Zwiebel'),
   ('rote Zwiebel', 'Zwiebel'),
@@ -16,7 +18,6 @@ const _sameFood = [
   ('Gehackte Tomaten aus der Dose', 'Tomate'),
   ('Haselnüsse', 'Haselnuss'),
   ('Weiße Bohnen', 'Bohne'),
-  ('Laktosefreie Milch', 'Milch'),
   ('Gemüsebrühwürfel ohne Zwiebel und Knoblauch', 'Gemüsebrühwürfel'),
   // irregular plurals (the table), also at a compound's end
   ('Eier', 'Ei'),
@@ -47,7 +48,7 @@ const _processed = [
   ('Agavendicksaft', 'Agavensirup'),
   ('Weizenmehl', 'Weizen'),
   ('Weizengrieß', 'Weizen'),
-  ('Haferflocken (glutenfrei)', 'Hafer'),
+  ('Haferflocken', 'Hafer'),
   ('Erdnussmus', 'Erdnüsse'),
   ('Erdnussbutter', 'Erdnuss'),
   ('Apfelmus', 'Apfel'),
@@ -93,6 +94,31 @@ const _otherFoods = [
   ('Soja', 'Sojasprossen'),
   ('Mehl', 'Weizenmehl'),
   ('Saft', 'Apfelsaft'),
+  // a free-from food is another food (the Tausch-Tipp Milch → laktosefreie
+  // Milch; ruling of 2026-11-24)
+  ('Milch', 'Laktosefreie Milch'),
+  ('Milch', 'Milch (laktosefrei)'),
+  ('Brot', 'Glutenfreies Brot'),
+  ('Brot', 'Brot (glutenfrei)'),
+  ('Hafer', 'Haferflocken (glutenfrei)'),
+  ('Joghurt', 'Laktosefrei-Joghurt'),
+];
+
+/// Core's `test_a_free_from_food_has_no_food_words`.
+const _freeFromFoods = [
+  'Laktosefreie Milch',
+  'laktosefreier Joghurt',
+  'Laktosefreies Eis',
+  'mit laktosefreiem Quark',
+  'aus laktosefreien Milchprodukten',
+  'Milch, laktosefrei',
+  'Milch (laktosefrei)',
+  'Laktosefrei-Joghurt',
+  'Glutenfreies Brot',
+  'Brot (glutenfrei)',
+  'Weizenfreie Nudeln',
+  'Fruktosefreier Sirup',
+  'Fructosefreier Sirup',
 ];
 
 void main() {
@@ -135,7 +161,7 @@ void main() {
       'Knoblauch-Öl': {'knoblauchol'},
       'Öl mit Knoblauch': {'knoblauch', 'ol'},
       'Hühnereier': {'huhnerei'},
-      'Haferflocken (glutenfrei)': {'haf', 'haferflock'},
+      'Haferflocken': {'haf', 'haferflock'},
       'Agavendicksaft': {'agav', 'agavendicksaft'},
       'Paprikapulver': {'paprikapulv'},
       'Milchreis': {'milchrei'},
@@ -175,6 +201,27 @@ void main() {
     });
   });
 
+  group('foodWords: a free-from food has none (ruling 2026-11-24)', () {
+    test('core cases: any inflection, a bracketed note, a compound', () {
+      for (final name in _freeFromFoods) {
+        expect(foodWords(name), isEmpty, reason: name);
+      }
+    });
+
+    test('anywhere in the name, also after „ohne"', () {
+      for (final name in [
+        'Laktosefreimilch',
+        'Glutenfreibrot',
+        'Bio-laktosefreie Milch',
+        'Glutenfreie Haferflocken',
+        'GLUTENFREIE NUDELN',
+        'Brot ohne glutenfreies Mehl',
+      ]) {
+        expect(foodWords(name), isEmpty, reason: name);
+      }
+    });
+  });
+
   group('sameFood', () {
     test('a shared food word', () {
       expect(sameFood('eier', 'Ei'), isTrue);
@@ -187,6 +234,17 @@ void main() {
       expect(sameFood('eier', 'Eisbergsalat'), isFalse);
       expect(sameFood('zwiebel', 'Frühlingszwiebelgrün'), isFalse);
       expect(sameFood('reis', 'Milchreis'), isFalse);
+    });
+
+    test('a free-from name only by its exact key', () {
+      expect(sameFood('Laktosefreie Milch', 'laktosefreie milch'), isTrue);
+      expect(sameFood('Laktosefreie Milch', 'Milch'), isFalse);
+      expect(sameFood('milch', 'Laktosefreie Milch'), isFalse);
+      expect(sameFood('glutenfreies Brot', 'Brot'), isFalse);
+      expect(
+        sameFood('Laktosefreie Milch', 'Laktosefreie Milch (1,5 %)'),
+        isFalse,
+      );
     });
 
     test('the same key without food words still matches; blank never', () {

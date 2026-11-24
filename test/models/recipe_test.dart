@@ -249,6 +249,12 @@ void main() {
       expect(gewuerz.isFood('Zwiebeln'), isTrue);
       expect(kokosmilch.isFood('milch'), isFalse);
       expect(ei.isFood('Eisbergsalat'), isFalse);
+      const laktosefrei = RecipeIngredient(
+        position: 3,
+        name: 'Laktosefreie Milch',
+      );
+      expect(laktosefrei.isFood('milch'), isFalse);
+      expect(laktosefrei.isFood('laktosefreie milch'), isTrue);
     });
   });
 

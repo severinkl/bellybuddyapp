@@ -153,6 +153,34 @@ void main() {
       );
     });
 
+    test('a free-from food is another food: only its own name counts', () {
+      final milch = testRecipe(ingredients: [testLine('Milch')]);
+      final laktosefrei = testRecipe(
+        ingredients: [testLine('Laktosefreie Milch')],
+      );
+      final brot = testRecipe(ingredients: [testLine('Brot')]);
+
+      expect(
+        recipeScore(laktosefrei, const RankingSignals(noticed: {'milch'})),
+        0,
+      );
+      expect(
+        recipeScore(milch, const RankingSignals(good: {'laktosefreie milch'})),
+        0,
+      );
+      expect(
+        recipeScore(brot, const RankingSignals(good: {'glutenfreies brot'})),
+        0,
+      );
+      expect(
+        recipeScore(
+          laktosefrei,
+          const RankingSignals(good: {'laktosefreie milch'}),
+        ),
+        2,
+      );
+    });
+
     test('another food with a similar name does not', () {
       final recipe = testRecipe(
         ingredients: [
