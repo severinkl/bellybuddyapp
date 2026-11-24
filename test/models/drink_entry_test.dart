@@ -13,7 +13,7 @@ void main() {
 
     test('toInsertJson includes tracked_at, drink_id, amount_ml, notes', () {
       final json = sampleEntry.toInsertJson();
-      expect(json['tracked_at'], sampleEntry.trackedAt.toIso8601String());
+      expect(json['tracked_at'], '2026-03-13T14:30:00.000Z');
       expect(json['drink_id'], 'drink-1');
       expect(json['amount_ml'], 250);
       expect(json['notes'], 'warm');

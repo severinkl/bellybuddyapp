@@ -26,11 +26,7 @@ Future<void> settle() async {
   }
 }
 
-const _noEntries = InsightSource(
-  meals: [],
-  gutFeelings: [],
-  activityInstants: [],
-);
+const _noEntries = InsightSource(meals: [], gutFeelings: [], activityTimes: []);
 
 /// The signed-in user's id, switchable.
 final _user = SwitchableUserId('u1');
@@ -273,7 +269,7 @@ void main() {
     final source = InsightSource(
       meals: const [],
       gutFeelings: const [],
-      activityInstants: [DateTime(2026, 10, 25, 12), DateTime(2026, 11, 23, 9)],
+      activityTimes: [DateTime(2026, 10, 25, 12), DateTime(2026, 11, 23, 9)],
     );
     final beforeMidnight = DateTime(2026, 11, 23, 23, 59, 30);
 
@@ -427,7 +423,7 @@ void main() {
     final source = InsightSource(
       meals: const [],
       gutFeelings: const [],
-      activityInstants: [DateTime(2026, 10, 25, 12), DateTime(2026, 11, 23, 9)],
+      activityTimes: [DateTime(2026, 10, 25, 12), DateTime(2026, 11, 23, 9)],
     );
     final beforeMidnight = DateTime(2026, 11, 23, 23, 59, 30);
 

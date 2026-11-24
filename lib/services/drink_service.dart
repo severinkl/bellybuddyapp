@@ -4,6 +4,7 @@ import '../models/drink.dart';
 import '../providers/core_providers.dart';
 import '../utils/date_format_utils.dart';
 import '../utils/logger.dart';
+import '../utils/wall_clock.dart';
 
 class DrinkService {
   final SupabaseClient _client;
@@ -29,8 +30,8 @@ class DrinkService {
           .from('drink_entries')
           .select('amount_ml')
           .eq('user_id', userId)
-          .gte('tracked_at', startOfDay(day).toIso8601String())
-          .lt('tracked_at', endOfDay(day).toIso8601String());
+          .gte('tracked_at', wallClockToWire(startOfDay(day)))
+          .lt('tracked_at', wallClockToWire(endOfDay(day)));
       return data.fold<int>(0, (sum, e) => sum + (e['amount_ml'] as int));
     } catch (e, st) {
       _log.error('fetchDayTotal failed', e, st);

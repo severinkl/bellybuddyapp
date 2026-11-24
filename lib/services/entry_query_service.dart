@@ -9,6 +9,7 @@ import '../models/insight_source.dart';
 import '../providers/core_providers.dart';
 import '../utils/date_format_utils.dart';
 import '../utils/logger.dart';
+import '../utils/wall_clock.dart';
 
 class EntryQueryResult {
   final List<MealEntry> meals;
@@ -57,8 +58,8 @@ class EntryQueryService {
     bool ordered = false,
   }) async {
     try {
-      final start = startOfDay(date).toIso8601String();
-      final end = endOfDay(date).toIso8601String();
+      final start = wallClockToWire(startOfDay(date));
+      final end = wallClockToWire(endOfDay(date));
 
       PostgrestFilterBuilder<PostgrestList> baseQuery(
         String table, [
@@ -111,7 +112,8 @@ class EntryQueryService {
   }
 
   /// Fetches `tracked_at` of every entry in [tables] (default: all four
-  /// entry tables) since [since] and, with [until], before [until].
+  /// entry tables) since [since] and, with [until], before [until], as local
+  /// wall-clock times.
   Future<List<DateTime>> fetchTrackedAtSince({
     required String userId,
     required DateTime since,
@@ -119,8 +121,8 @@ class EntryQueryService {
     Iterable<String>? tables,
   }) async {
     try {
-      final sinceIso = since.toUtc().toIso8601String();
-      final untilIso = until?.toUtc().toIso8601String();
+      final sinceIso = wallClockToWire(since);
+      final untilIso = until == null ? null : wallClockToWire(until);
       final results = await Future.wait(
         (tables ?? entryTableFor.values).map(
           (t) => _fetchPaged(
@@ -134,7 +136,8 @@ class EntryQueryService {
       );
       return [
         for (final rows in results)
-          for (final row in rows) DateTime.parse(row['tracked_at'] as String),
+          for (final row in rows)
+            wallClockFromWire(row['tracked_at'] as String),
       ];
     } catch (e, st) {
       _log.error('fetchTrackedAtSince failed', e, st);
@@ -152,8 +155,8 @@ class EntryQueryService {
     required DateTime mealsSince,
   }) async {
     try {
-      final sinceIso = since.toUtc().toIso8601String();
-      final mealsSinceIso = mealsSince.toUtc().toIso8601String();
+      final sinceIso = wallClockToWire(since);
+      final mealsSinceIso = wallClockToWire(mealsSince);
       final results = await Future.wait([
         _fetchPaged(
           'meal_entries',
@@ -165,12 +168,12 @@ class EntryQueryService {
         _fetchPaged('toilet_entries', 'tracked_at', userId, sinceIso),
         _fetchPaged('drink_entries', 'tracked_at', userId, sinceIso),
       ]);
-      DateTime instant(Map<String, dynamic> row) =>
-          DateTime.parse(row['tracked_at'] as String);
+      DateTime trackedAt(Map<String, dynamic> row) =>
+          wallClockFromWire(row['tracked_at'] as String);
       final meals = [
         for (final row in results[0])
           InsightMeal(
-            trackedAt: instant(row),
+            trackedAt: trackedAt(row),
             ingredients: [
               for (final i
                   in (row['ingredients'] as List<dynamic>?) ?? const [])
@@ -184,12 +187,12 @@ class EntryQueryService {
       return InsightSource(
         meals: meals,
         gutFeelings: gutFeelings,
-        activityInstants: [
+        activityTimes: [
           for (final m in meals)
             if (!m.trackedAt.isBefore(since)) m.trackedAt,
-          for (final g in results[1]) instant(g),
+          for (final g in results[1]) trackedAt(g),
           for (final rows in results.skip(2))
-            for (final row in rows) instant(row),
+            for (final row in rows) trackedAt(row),
         ],
       );
     } catch (e, st) {

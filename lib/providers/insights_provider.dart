@@ -39,7 +39,7 @@ class InsightsNotifier extends AsyncNotifier<Insights> {
   static const _noEntries = InsightSource(
     meals: [],
     gutFeelings: [],
-    activityInstants: [],
+    activityTimes: [],
   );
 
   /// Counts computations outside build, in the order they start.
