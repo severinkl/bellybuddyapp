@@ -67,7 +67,8 @@ class RecipeIngredient {
   /// The catalog row's FODMAP flags; null when unmapped.
   final FodmapFlags? fodmaps;
 
-  /// Allergen tags (`gluten`, `weizen`, `milch`, `nuesse`, `eier`, `soja`).
+  /// Allergen tags (`gluten`, `weizen`, `milch`, `nuesse`, `erdnuss`,
+  /// `eier`, `soja`), as core writes them; only compared with the rules'.
   final Set<String> allergens;
 
   /// The stated amount per portion is low-FODMAP.

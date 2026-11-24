@@ -9,7 +9,7 @@ void main() {
     test('reads the published table', () {
       final rules = IntoleranceRules.parse(kTestIntoleranceRulesJson)!;
 
-      expect(rules.byName, hasLength(13));
+      expect(rules.byName, hasLength(15));
       expect(rules['Laktose']!.fodmaps, {'lactose'});
       expect(rules['Laktose']!.allergens, isEmpty);
       expect(rules['Gluten']!.allergens, {'gluten'});
@@ -19,6 +19,18 @@ void main() {
       expect(rules['Histamin']!.judgeable, isFalse);
       expect(rules['Laktose']!.judgeable, isTrue);
       expect(rules['FODMAPs']!.fodmaps.length, 6);
+      expect(rules['Milch']!.allergens, {'milch'});
+      expect(rules['Milch']!.fodmaps, isEmpty);
+      expect(rules['Erdnuss']!.allergens, {'erdnuss'});
+      expect(rules['Erdnuss']!.fodmaps, isEmpty);
+    });
+
+    test('an allergen key the app has never seen is kept as it is', () {
+      final rules = IntoleranceRules.parse(
+        '{"Sesam": {"fodmaps": [], "allergens": ["sesam"], "judgeable": true}}',
+      )!;
+
+      expect(rules['Sesam']!.allergens, {'sesam'});
     });
 
     test('a profile value missing from the table has no rule', () {

@@ -187,9 +187,9 @@ Recipe testRecipe({
   createdAt: createdAt,
 );
 
-/// Core's intolerance table as migration 0013 writes it to
+/// Core's intolerance table as core #11 publishes it in
 /// `app_config.intolerance_rules` (`json.dumps(INTOLERANCE_RULES,
-/// ensure_ascii=False)`).
+/// ensure_ascii=False)`), „Milch" and „Erdnuss" among the allergens.
 const kTestIntoleranceRulesJson =
     '{"Laktose": {"fodmaps": ["lactose"], "allergens": [], "judgeable": true}, '
     '"Gluten": {"fodmaps": [], "allergens": ["gluten"], "judgeable": true}, '
@@ -197,6 +197,8 @@ const kTestIntoleranceRulesJson =
     '"Nüsse": {"fodmaps": [], "allergens": ["nuesse"], "judgeable": true}, '
     '"Eier": {"fodmaps": [], "allergens": ["eier"], "judgeable": true}, '
     '"Soja": {"fodmaps": [], "allergens": ["soja"], "judgeable": true}, '
+    '"Milch": {"fodmaps": [], "allergens": ["milch"], "judgeable": true}, '
+    '"Erdnuss": {"fodmaps": [], "allergens": ["erdnuss"], "judgeable": true}, '
     '"Fruktose": {"fodmaps": ["fructose"], "allergens": [], "judgeable": true}, '
     '"Sorbit": {"fodmaps": ["sorbitol"], "allergens": [], "judgeable": true}, '
     '"Histamin": {"fodmaps": [], "allergens": [], "judgeable": false}, '

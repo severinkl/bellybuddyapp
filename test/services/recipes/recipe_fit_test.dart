@@ -210,7 +210,7 @@ void main() {
     });
 
     test('not in the table', () {
-      final fit = _fit([_butter, _quark], ['Milch']);
+      final fit = _fit([_butter, _quark], ['Kohl']);
 
       expect(fit.kritischCount, 0);
       expect(fit.badge, const FitsBadge());
@@ -250,6 +250,24 @@ void main() {
       final none = fitOf(older, rules: _rules, intolerances: const []);
       expect(none.judged, isTrue);
       expect(none.badge, const FitsBadge());
+    });
+
+    test('Milch and Erdnuss: kritisch by their allergens, named in the '
+        'reason', () {
+      final butter = testLine('Butter', allergens: {'milch'});
+      final erdnussmus = testLine('Erdnussmus', allergens: {'erdnuss'});
+      final fit = _fit([butter, erdnussmus, _reis], ['Milch', 'Erdnuss']);
+
+      expect(_marks(fit), {
+        'Butter': LineMark.kritisch,
+        'Erdnussmus': LineMark.kritisch,
+        'Reis': LineMark.fits,
+      });
+      expect(fit.lines.map((l) => RecipeCopy.because(l.because)).take(2), [
+        'wegen Milch',
+        'wegen Erdnuss',
+      ]);
+      expect(fit.badge, const KritischBadge(2));
     });
 
     test('two kritisch lines', () {
@@ -316,6 +334,10 @@ void main() {
           ('Nüsse', {}, {'nuesse'}, true),
           ('Eier', {}, {'eier'}, true),
           ('Soja', {'gos'}, {'soja'}, true),
+          // Milch is the milk tag, not the Laktose flag.
+          ('Milch', {}, {'milch'}, true),
+          ('Milch', {'lactose'}, {}, false),
+          ('Erdnuss', {}, {'erdnuss'}, true),
           ('Fruktose', {'fructose', 'sorbitol'}, {}, true),
           ('Sorbit', {'fructose', 'sorbitol'}, {}, true),
           ('GOS', {'gos'}, {}, true),
