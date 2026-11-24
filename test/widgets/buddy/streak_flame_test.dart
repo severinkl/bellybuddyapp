@@ -37,6 +37,24 @@ FlamePainter _painter(WidgetTester t) =>
             .painter!
         as FlamePainter;
 
+/// The ember's opacity along its breath (1 when it holds still).
+double _breath(WidgetTester t) => t
+    .widget<FadeTransition>(
+      find.descendant(
+        of: find.byType(StreakFlame),
+        matching: find.byType(FadeTransition),
+      ),
+    )
+    .opacity
+    .value;
+
+/// A canvas that scales the body by [scale] (about its base).
+PaintPattern _scalesBody(double scale) => paints
+  ..something(
+    (method, args) =>
+        method == #scale && ((args[0] as double) - scale).abs() < 1e-9,
+  );
+
 RenderObject _canvas(WidgetTester t) => t.renderObject(
   find.descendant(
     of: find.byType(StreakFlame),
@@ -103,25 +121,50 @@ void main() {
     expect(_canvas(t), isNot(_fillsCircle(AppTheme.streakFlameCore)));
   });
 
+  testWidgets('ember and off are drawn at 0.8 of their tier', (t) async {
+    await t.pumpWidget(_wrap(_flame(streak: 5, lit: true)));
+    expect(_canvas(t), _scalesBody(FlameTier.medium.scale));
+
+    await t.pumpWidget(_wrap(_flame(streak: 5, lit: false)));
+    expect(_canvas(t), _scalesBody(FlameTier.medium.scale * 0.8));
+
+    await t.pumpWidget(_wrap(_flame(streak: 0, lit: false)));
+    expect(_canvas(t), _scalesBody(FlameTier.small.scale * 0.8));
+  });
+
   testWidgets('size keeps the 100:120 shape', (t) async {
     await t.pumpWidget(_wrap(_flame(height: 24)));
     expect(t.getSize(find.byType(StreakFlame)), const Size(20, 24));
   });
 
-  testWidgets('ember → lit plays one burst', (t) async {
+  testWidgets('ember → lit plays one burst, repainting the same painter', (
+    t,
+  ) async {
     await t.pumpWidget(_wrap(_flame(streak: 5, lit: false)));
-    expect(_painter(t).burst, 0);
+    expect(_painter(t).burst, isNull);
 
     await t.pumpWidget(_wrap(_flame(streak: 6, lit: true)));
-    expect(_painter(t).look, FlameLook.lit);
+    final painter = _painter(t);
+    expect(painter.look, FlameLook.lit);
     await t.pump(const Duration(milliseconds: 150));
-    expect(_painter(t).burst, greaterThan(0));
+    expect(painter.burst, greaterThan(0));
     await t.pump(const Duration(milliseconds: 150));
-    expect(_painter(t).burst, greaterThan(0));
+    expect(painter.burst, greaterThan(0));
+    expect(_painter(t), same(painter));
 
     await t.pump(const Duration(milliseconds: 500));
-    expect(_painter(t).burst, 0);
+    expect(_painter(t).burst, isNull);
     expect(t.hasRunningAnimations, isFalse);
+  });
+
+  testWidgets("the ignite starts at the ember's size, without a full-size "
+      'frame', (t) async {
+    await t.pumpWidget(_wrap(_flame(streak: 5, lit: false)));
+    await t.pumpWidget(_wrap(_flame(streak: 6, lit: true)));
+
+    expect(_painter(t).burst, 0);
+    expect(_canvas(t), _scalesBody(FlameTier.medium.scale * 0.8));
+    expect(_canvas(t), isNot(_scalesBody(FlameTier.medium.scale)));
   });
 
   testWidgets('lit → ember: no burst', (t) async {
@@ -134,7 +177,7 @@ void main() {
     await t.pumpWidget(_wrap(_flame(streak: 5, lit: false)));
     await t.pump();
     expect(_painter(t).look, FlameLook.ember);
-    expect(_painter(t).burst, 0);
+    expect(_painter(t).burst, isNull);
     expect(t.hasRunningAnimations, isFalse);
   });
 
@@ -144,19 +187,19 @@ void main() {
     expect(_painter(t).look, FlameLook.lit);
     expect(_painter(t).burst, greaterThan(0));
     await t.pumpAndSettle();
-    expect(_painter(t).burst, 0);
+    expect(_painter(t).burst, isNull);
 
     // A rebuild does not ignite it again.
     await t.pumpWidget(_wrap(_flame(streak: 1, igniteOnMount: true)));
     await t.pump(const Duration(milliseconds: 150));
-    expect(_painter(t).burst, 0);
+    expect(_painter(t).burst, isNull);
     expect(t.hasRunningAnimations, isFalse);
   });
 
   testWidgets('a flame lit from the start does not burst', (t) async {
     await t.pumpWidget(_wrap(_flame(streak: 5, lit: true)));
     await t.pump(const Duration(milliseconds: 150));
-    expect(_painter(t).burst, 0);
+    expect(_painter(t).burst, isNull);
     expect(t.hasRunningAnimations, isFalse);
   });
 
@@ -165,21 +208,21 @@ void main() {
     await t.pumpWidget(_wrap(_flame(lit: true), ticking: false));
     await t.pump(const Duration(milliseconds: 150));
     expect(_painter(t).look, FlameLook.lit);
-    expect(_painter(t).burst, 0);
+    expect(_painter(t).burst, isNull);
     await t.pump(const Duration(seconds: 2));
-    expect(_painter(t).burst, 0);
+    expect(_painter(t).burst, isNull);
 
     await t.pumpWidget(_wrap(_flame(lit: true)));
     await t.pump(const Duration(milliseconds: 150));
     expect(_painter(t).burst, greaterThan(0));
     await t.pumpAndSettle();
-    expect(_painter(t).burst, 0);
+    expect(_painter(t).burst, isNull);
 
     // Once played, hiding and showing it again does not replay it.
     await t.pumpWidget(_wrap(_flame(lit: true), ticking: false));
     await t.pumpWidget(_wrap(_flame(lit: true)));
     await t.pump(const Duration(milliseconds: 150));
-    expect(_painter(t).burst, 0);
+    expect(_painter(t).burst, isNull);
   });
 
   group('reduced motion', () {
@@ -192,13 +235,13 @@ void main() {
       addTearDown(t.platformDispatcher.clearAccessibilityFeaturesTestValue);
 
       await t.pumpWidget(_wrap(_flame(streak: 30, lit: false)));
-      expect(_painter(t).breath, 1);
+      expect(_breath(t), 1);
       await t.pumpWidget(_wrap(_flame(streak: 31, lit: true)));
       await t.pump();
 
       final painter = _painter(t);
       expect(painter.look, FlameLook.lit);
-      expect(painter.burst, 0);
+      expect(painter.burst, isNull);
       expect(painter.wobble, 0);
       expect(t.binding.hasScheduledFrame, isFalse);
 
@@ -209,7 +252,7 @@ void main() {
       );
       await t.pump();
       expect(_painter(t).look, FlameLook.lit);
-      expect(_painter(t).burst, 0);
+      expect(_painter(t).burst, isNull);
       expect(t.binding.hasScheduledFrame, isFalse);
     });
   });
@@ -224,7 +267,7 @@ void main() {
 
       await t.pumpWidget(_wrap(_flame(streak: 5, lit: false)));
       expect(t.hasRunningAnimations, isFalse);
-      expect(_painter(t).breath, 1);
+      expect(_breath(t), 1);
     });
 
     testWidgets('on, it wobbles, the ember breathes, sparks rise', (t) async {
@@ -237,11 +280,13 @@ void main() {
       expect(wobble, isNot(0));
       expect(wobble.abs(), lessThanOrEqualTo(1));
 
+      // The ember breathes in its opacity; the painting holds still.
       await t.pumpWidget(_wrap(_flame(streak: 5, lit: false)));
       await t.pump(const Duration(milliseconds: 300));
-      final breath = _painter(t).breath;
+      final breath = _breath(t);
       expect(breath, inInclusiveRange(0, 1));
       expect(breath, lessThan(1));
+      expect(_painter(t).clock, isNull);
 
       await t.pumpWidget(_wrap(_flame(streak: 30, lit: true)));
       await t.pump(const Duration(milliseconds: 300));
@@ -264,6 +309,14 @@ void main() {
       expect(painter.look, FlameLook.lit);
       expect(painter.tier, FlameTier.large);
       expect(painter.wobble, 0);
+      // Only painted: no layer, fade or ticker of its own.
+      expect(
+        find.descendant(
+          of: find.byType(StreakFlame),
+          matching: find.byType(FadeTransition),
+        ),
+        findsNothing,
+      );
     });
   });
 }

@@ -73,19 +73,11 @@ void main() {
       for (final text in tester.widgetList<Text>(find.byType(Text))) text.data,
     ];
     // The count's flame (the week row's marks are flames too).
-    FlameLook look() =>
-        (tester
-                    .widget<CustomPaint>(
-                      find.descendant(
-                        of: find.byWidgetPredicate(
-                          (w) => w is StreakFlame && !w.still,
-                        ),
-                        matching: find.byType(CustomPaint),
-                      ),
-                    )
-                    .painter!
-                as FlamePainter)
-            .look;
+    FlameLook look() => tester
+        .widget<StreakFlame>(
+          find.byWidgetPredicate((w) => w is StreakFlame && !w.still),
+        )
+        .look;
 
     await pump(tester, status(todayCounted: true));
     expect(look(), FlameLook.lit);

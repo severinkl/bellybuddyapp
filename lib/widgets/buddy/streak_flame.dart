@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -33,7 +34,7 @@ enum FlameLook { off, ember, lit }
 /// flame's sparks rise. Under reduced motion all of it holds still and an
 /// ignite is lit at once. It adds no semantics; the widget around it
 /// speaks.
-class StreakFlame extends StatefulWidget {
+class StreakFlame extends StatelessWidget {
   const StreakFlame({
     super.key,
     required this.streak,
@@ -41,14 +42,16 @@ class StreakFlame extends StatefulWidget {
     required this.height,
     this.igniteOnMount = false,
     this.still = false,
-  });
+  }) : _mark = false;
 
-  /// A still, lit, large flame: a kept day in the week row.
+  /// A still, lit, large flame: a kept day in the week row. Only painted,
+  /// it never moves.
   const StreakFlame.mark({super.key, required this.height})
     : streak = _markStreak,
       lit = true,
       igniteOnMount = false,
-      still = true;
+      still = true,
+      _mark = true;
 
   /// A streak drawn as [FlameTier.large].
   static const _markStreak = 7;
@@ -78,39 +81,64 @@ class StreakFlame extends StatefulWidget {
   /// No ambient motion, even with animations on.
   final bool still;
 
-  FlameLook get _look => lit
+  final bool _mark;
+
+  /// How it shows: lit, an ember, or off.
+  FlameLook get look => lit
       ? FlameLook.lit
       : streak > 0
       ? FlameLook.ember
       : FlameLook.off;
 
   @override
-  State<StreakFlame> createState() => _StreakFlameState();
+  Widget build(BuildContext context) {
+    final size = Size(height * FlamePainter.aspectRatio, height);
+    if (_mark) {
+      return CustomPaint(
+        size: size,
+        painter: FlamePainter(look: look, tier: tierOf(streak)),
+      );
+    }
+    return _LiveFlame(flame: this, size: size);
+  }
 }
 
-class _StreakFlameState extends State<StreakFlame>
-    with TickerProviderStateMixin {
+/// A [StreakFlame] that can ignite and move.
+class _LiveFlame extends StatefulWidget {
+  const _LiveFlame({required this.flame, required this.size});
+
+  final StreakFlame flame;
+  final Size size;
+
+  @override
+  State<_LiveFlame> createState() => _LiveFlameState();
+}
+
+class _LiveFlameState extends State<_LiveFlame> with TickerProviderStateMixin {
   late final AnimationController _ignite = AnimationController(
     vsync: this,
     duration: AppConstants.streakFlameIgnite,
   );
 
-  /// The ambient motion's clock: time since it started.
+  /// The lit flame's motion clock (wobble, sparks): time since it started.
   final ValueNotifier<Duration> _clock = ValueNotifier(Duration.zero);
-  late final Ticker _ambient;
-  late final Listenable _frames = Listenable.merge([_ignite, _clock]);
+  late final Ticker _ambient = createTicker((t) => _clock.value = t);
+
+  /// The ember's breath, one cycle per [AppConstants.streakFlameBreath].
+  late final AnimationController _breath = AnimationController(
+    vsync: this,
+    duration: AppConstants.streakFlameBreath,
+  );
+  late final Animation<double> _breathOpacity = _breath.drive(
+    const _BreathOpacity(),
+  );
 
   /// An ignite waits for the flame to be visible.
-  bool _ignitePending = false;
+  late bool _ignitePending = _flame.igniteOnMount && _flame.lit;
   bool _reducedMotion = false;
   bool _visible = true;
 
-  @override
-  void initState() {
-    super.initState();
-    _ambient = createTicker((elapsed) => _clock.value = elapsed);
-    _ignitePending = widget.igniteOnMount && widget.lit;
-  }
+  StreakFlame get _flame => widget.flame;
 
   @override
   void didChangeDependencies() {
@@ -121,21 +149,24 @@ class _StreakFlameState extends State<StreakFlame>
   }
 
   @override
-  void didUpdateWidget(StreakFlame old) {
+  void didUpdateWidget(_LiveFlame old) {
     super.didUpdateWidget(old);
-    if (widget.lit && !old.lit) _ignitePending = true;
+    if (_flame.lit && !old.flame.lit) _ignitePending = true;
     // Back to the ember at once (today's first entry deleted again).
-    if (!widget.lit) {
+    if (!_flame.lit) {
       _ignitePending = false;
       _ignite.stop();
     }
     _sync();
   }
 
+  /// Whether the flame shows its ambient motion now.
+  bool get _moving =>
+      StreakFlame.ambientEnabled && !_flame.still && !_reducedMotion;
+
   /// Plays a pending ignite (once visible, never under reduced motion) and
-  /// runs the ambient clock while there is motion to show. A stopped ignite
-  /// shows no burst ([FlamePainter.burst] 0); the build that follows paints
-  /// it.
+  /// runs the motion the look has: the lit flame's clock or the ember's
+  /// breath.
   void _sync() {
     if (_reducedMotion) {
       _ignitePending = false;
@@ -145,16 +176,18 @@ class _StreakFlameState extends State<StreakFlame>
       _ignite.forward(from: 0);
     }
 
-    final ambient =
-        StreakFlame.ambientEnabled &&
-        !widget.still &&
-        !_reducedMotion &&
-        widget._look != FlameLook.off;
-    if (ambient && !_ambient.isActive) {
-      _ambient.start();
-    } else if (!ambient && _ambient.isActive) {
+    final look = _flame.look;
+    final moving = _moving;
+    if (moving && look == FlameLook.lit) {
+      if (!_ambient.isActive) _ambient.start();
+    } else if (_ambient.isActive) {
       _ambient.stop();
       _clock.value = Duration.zero;
+    }
+    if (moving && look == FlameLook.ember) {
+      if (!_breath.isAnimating) _breath.repeat();
+    } else {
+      _breath.reset();
     }
   }
 
@@ -162,68 +195,60 @@ class _StreakFlameState extends State<StreakFlame>
   void dispose() {
     _ambient.dispose();
     _ignite.dispose();
+    _breath.dispose();
     _clock.dispose();
     super.dispose();
   }
 
-  /// [period]'s phase at the ambient clock, 0..1.
-  double _phase(Duration period) =>
-      _clock.value.inMicroseconds %
-      period.inMicroseconds /
-      period.inMicroseconds;
-
-  FlamePainter _painter() {
-    final look = widget._look;
-    final tier = StreakFlame.tierOf(widget.streak);
-    final moving = _ambient.isActive;
-    final lit = look == FlameLook.lit;
-    return FlamePainter(
-      look: look,
-      tier: tier,
-      burst: _ignite.isAnimating ? _ignite.value : 0,
-      wobble: moving && lit
-          ? math.sin(2 * math.pi * _phase(AppConstants.streakFlameWobble))
-          : 0,
-      breath: moving && look == FlameLook.ember
-          ? (1 -
-                    math.cos(
-                      2 * math.pi * _phase(AppConstants.streakFlameBreath),
-                    )) /
-                2
-          : 1,
-      rise: moving && lit && tier == FlameTier.blazing
-          ? _phase(AppConstants.streakFlameSparks)
-          : null,
+  // Its own layer: the motion repaints (or fades) every frame, the rest
+  // not.
+  @override
+  Widget build(BuildContext context) {
+    final look = _flame.look;
+    return RepaintBoundary(
+      child: FadeTransition(
+        opacity: _breath.isAnimating
+            ? _breathOpacity
+            : kAlwaysCompleteAnimation,
+        child: CustomPaint(
+          size: widget.size,
+          painter: FlamePainter(
+            look: look,
+            tier: StreakFlame.tierOf(_flame.streak),
+            ignite: _ignite,
+            clock: _ambient.isActive ? _clock : null,
+          ),
+        ),
+      ),
     );
   }
+}
 
-  // Its own layer: the motion repaints every frame, the rest not.
+/// The ember's opacity along its breath (0..1): dimmest at the start and
+/// end of a cycle, full in its middle.
+class _BreathOpacity extends Animatable<double> {
+  const _BreathOpacity();
+
+  /// The opacity at the low of the breath.
+  static const double _dim = 0.7;
+
   @override
-  Widget build(BuildContext context) => RepaintBoundary(
-    child: SizedBox(
-      width: widget.height * FlamePainter.aspectRatio,
-      height: widget.height,
-      child: AnimatedBuilder(
-        animation: _frames,
-        builder: (_, _) => CustomPaint(painter: _painter()),
-      ),
-    ),
-  );
+  double transform(double t) =>
+      _dim + (1 - _dim) * (1 - math.cos(2 * math.pi * t)) / 2;
 }
 
 /// Paints the flame in a 100 × 120 box scaled to its size: the body (outer
 /// flame with its shine, inner flame, a blazing flame's hot core) scaled by
 /// [tier] about its base, a blazing flame's sparks behind it and an
-/// ignite's burst in front.
+/// ignite's burst in front. It repaints as [ignite] runs and [clock]
+/// ticks, without a rebuild.
 class FlamePainter extends CustomPainter {
-  const FlamePainter({
+  FlamePainter({
     required this.look,
     required this.tier,
-    this.burst = 0,
-    this.wobble = 0,
-    this.breath = 1,
-    this.rise,
-  });
+    this.ignite,
+    this.clock,
+  }) : super(repaint: Listenable.merge([ignite, clock]));
 
   /// Width per height of the drawing's box.
   static const double aspectRatio = _boxWidth / _boxHeight;
@@ -234,15 +259,13 @@ class FlamePainter extends CustomPainter {
   /// The point the body scales and wobbles about: the flame's base.
   static const Offset _base = Offset(50, 114);
 
-  /// An ember is this much smaller than its lit tier.
+  /// An ember (and the flame that is off) is this much smaller than its lit
+  /// tier.
   static const double _emberScale = 0.8;
 
   /// The ignite's pop: its peak scale, and when in the burst it peaks.
   static const double _popPeak = 1.24;
   static const double _popPeakAt = 0.45;
-
-  /// The ember's opacity at the low of its breath.
-  static const double _emberDim = 0.7;
 
   /// The lit flame's skew at the peak of its wobble (outer, inner).
   static const double _outerSkew = 3 * math.pi / 180;
@@ -251,17 +274,52 @@ class FlamePainter extends CustomPainter {
   final FlameLook look;
   final FlameTier tier;
 
-  /// 0..1 progress of the ignite burst, 0 when none.
-  final double burst;
+  /// The ignite; its burst shows while it runs.
+  final Animation<double>? ignite;
+
+  /// The lit flame's motion clock; null while it holds still.
+  final ValueListenable<Duration>? clock;
+
+  /// 0..1 progress of the ignite burst; null when there is none.
+  double? get burst {
+    final ignite = this.ignite;
+    return ignite != null && ignite.isAnimating ? ignite.value : null;
+  }
 
   /// −1..1 along the lit flame's wobble, 0 when still.
-  final double wobble;
-
-  /// 0..1 along the ember's breathing, 1 when still.
-  final double breath;
+  double get wobble {
+    final phase = look == FlameLook.lit
+        ? _phase(AppConstants.streakFlameWobble)
+        : null;
+    return phase == null ? 0 : math.sin(2 * math.pi * phase);
+  }
 
   /// 0..1 along the sparks' rise; null when still (sparks at rest).
-  final double? rise;
+  double? get rise => look == FlameLook.lit && tier == FlameTier.blazing
+      ? _phase(AppConstants.streakFlameSparks)
+      : null;
+
+  /// [period]'s phase at [clock], 0..1; null without a clock.
+  double? _phase(Duration period) {
+    final at = clock?.value;
+    if (at == null) return null;
+    return at.inMicroseconds % period.inMicroseconds / period.inMicroseconds;
+  }
+
+  // Cached paints; each drawing call sets what varies.
+  static final _fill = Paint();
+  static final _outline = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeJoin = StrokeJoin.round
+    ..color = AppTheme.buddyOutline;
+  static final _shinePaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 3.6
+    ..strokeCap = StrokeCap.round
+    ..color = Colors.white.withValues(alpha: 0.85);
+  static final _dotOutline = Paint()
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = 2;
 
   static final Path _outer = Path()
     ..moveTo(50, 6)
@@ -323,32 +381,25 @@ class FlamePainter extends CustomPainter {
     if (look == FlameLook.lit && tier == FlameTier.blazing) {
       _paintSparks(canvas);
     }
-    _paintBody(canvas);
-    if (burst > 0) _paintBurst(canvas);
+    final burst = this.burst;
+    _paintBody(canvas, burst, wobble);
+    if (burst != null) _paintBurst(canvas, burst);
     canvas.restore();
   }
 
-  void _paintBody(Canvas canvas) {
+  void _paintBody(Canvas canvas, double? burst, double wobble) {
     final (outer, inner) = switch (look) {
       FlameLook.lit => (AppTheme.streakFlame, AppTheme.streakFlameCore),
       FlameLook.ember => (AppTheme.streakEmber, AppTheme.streakEmberCore),
       FlameLook.off => (AppTheme.streakEmberOff, null),
     };
     final lit = look == FlameLook.lit;
-    final ember = look == FlameLook.ember;
-    final opacity = ember ? _emberDim + (1 - _emberDim) * breath : 1.0;
 
     canvas.save();
     _aboutBase(
       canvas,
-      () => canvas.scale(tier.scale * (ember ? _emberScale : 1) * _pop),
+      () => canvas.scale(tier.scale * (lit ? 1 : _emberScale) * _pop(burst)),
     );
-    if (opacity < 1) {
-      canvas.saveLayer(
-        null,
-        Paint()..color = Colors.black.withValues(alpha: opacity),
-      );
-    }
 
     canvas.save();
     _aboutBase(canvas, () {
@@ -356,16 +407,7 @@ class FlamePainter extends CustomPainter {
       canvas.scale(1 - 0.02 * wobble, 1 + 0.03 * wobble);
     });
     _shape(canvas, _outer, outer, 4.5);
-    if (lit) {
-      canvas.drawPath(
-        _shine,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 3.6
-          ..strokeCap = StrokeCap.round
-          ..color = Colors.white.withValues(alpha: 0.85),
-      );
-    }
+    if (lit) canvas.drawPath(_shine, _shinePaint);
     canvas.restore();
 
     if (inner != null) {
@@ -384,14 +426,14 @@ class FlamePainter extends CustomPainter {
       canvas.restore();
     }
 
-    if (opacity < 1) canvas.restore();
     canvas.restore();
   }
 
-  /// The body's pop while it ignites: from the ember's size up to
-  /// [_popPeak] (at [_popPeakAt] of the burst), then down to its own.
-  double get _pop {
-    if (burst <= 0 || burst >= 1) return 1;
+  /// The body's pop while it ignites ([burst] not null): from the ember's
+  /// size up to [_popPeak] (at [_popPeakAt] of the burst), then down to its
+  /// own.
+  static double _pop(double? burst) {
+    if (burst == null || burst >= 1) return 1;
     if (burst < _popPeakAt) {
       return _lerp(
         _emberScale,
@@ -409,9 +451,9 @@ class FlamePainter extends CustomPainter {
   /// Three sparks, a third of the rise apart: each rises from below its
   /// rest, shrinking, and fades in, then out.
   void _paintSparks(Canvas canvas) {
+    final rise = this.rise;
     for (var i = 0; i < _sparks.length; i++) {
       final (x, y, r) = _sparks[i];
-      final rise = this.rise;
       if (rise == null) {
         _dot(canvas, Offset(x, y), r, 1);
         continue;
@@ -425,7 +467,7 @@ class FlamePainter extends CustomPainter {
 
   /// The burst's circles fly out from the flame's middle, shrinking and
   /// fading.
-  void _paintBurst(Canvas canvas) {
+  static void _paintBurst(Canvas canvas, double burst) {
     final t = Curves.easeOut.transform(burst);
     for (final to in _burstTo) {
       _dot(canvas, _burstFrom + to * t, _burstRadius * _lerp(1, 0.4, t), 1 - t);
@@ -437,29 +479,19 @@ class FlamePainter extends CustomPainter {
     canvas.drawCircle(
       center,
       radius,
-      Paint()..color = AppTheme.streakFlameCore.withValues(alpha: alpha),
+      _fill..color = AppTheme.streakFlameCore.withValues(alpha: alpha),
     );
     canvas.drawCircle(
       center,
       radius,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2
-        ..color = AppTheme.buddyOutline.withValues(alpha: alpha),
+      _dotOutline..color = AppTheme.buddyOutline.withValues(alpha: alpha),
     );
   }
 
   /// [path] filled with [fill] and outlined [strokeWidth] wide.
   static void _shape(Canvas canvas, Path path, Color fill, double strokeWidth) {
-    canvas.drawPath(path, Paint()..color = fill);
-    canvas.drawPath(
-      path,
-      Paint()
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = strokeWidth
-        ..strokeJoin = StrokeJoin.round
-        ..color = AppTheme.buddyOutline,
-    );
+    canvas.drawPath(path, _fill..color = fill);
+    canvas.drawPath(path, _outline..strokeWidth = strokeWidth);
   }
 
   /// Applies [transform] about [_base].
@@ -475,8 +507,6 @@ class FlamePainter extends CustomPainter {
   bool shouldRepaint(FlamePainter old) =>
       old.look != look ||
       old.tier != tier ||
-      old.burst != burst ||
-      old.wobble != wobble ||
-      old.breath != breath ||
-      old.rise != rise;
+      old.ignite != ignite ||
+      old.clock != clock;
 }

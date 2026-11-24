@@ -18,7 +18,6 @@ import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
 import 'package:belly_buddy/widgets/common/weekly_tips_switch.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../test/helpers/fakes.dart';
@@ -44,20 +43,14 @@ Finder _chipText(String text) =>
     find.descendant(of: find.byType(StreakChip), matching: find.text(text));
 
 /// How the streak chip's flame shows.
-FlameLook _chipFlame(WidgetTester tester) =>
-    (tester
-                .widget<CustomPaint>(
-                  find.descendant(
-                    of: find.descendant(
-                      of: find.byType(StreakChip),
-                      matching: find.byType(StreakFlame),
-                    ),
-                    matching: find.byType(CustomPaint),
-                  ),
-                )
-                .painter!
-            as FlamePainter)
-        .look;
+FlameLook _chipFlame(WidgetTester tester) => tester
+    .widget<StreakFlame>(
+      find.descendant(
+        of: find.byType(StreakChip),
+        matching: find.byType(StreakFlame),
+      ),
+    )
+    .look;
 
 /// Waits for the success page's hero after a save.
 Future<void> _pumpUntilSuccess(WidgetTester tester) =>

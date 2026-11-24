@@ -94,10 +94,12 @@ class _StreakChipState extends State<StreakChip>
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Grows with the text beside it.
+                // Grows with the text beside it; its motion stays in „Dein
+                // Streak" and on the success page.
                 StreakFlame(
                   streak: widget.streak,
                   lit: widget.todayCounted,
+                  still: true,
                   height: MediaQuery.textScalerOf(
                     context,
                   ).scale(AppConstants.streakFlameChipHeight),

@@ -134,7 +134,7 @@ void main() {
         expect(find.byKey(LogSuccessHero.igniteKey), findsOneWidget);
         final flame = _flamePainter(tester);
         expect(flame.look, FlameLook.lit);
-        expect(flame.burst, 0);
+        expect(flame.burst, isNull);
         expect(_level(tester), 1.0);
         expect(tester.binding.hasScheduledFrame, isFalse);
       });

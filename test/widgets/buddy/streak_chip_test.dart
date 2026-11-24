@@ -42,6 +42,8 @@ void main() {
     expect(flame.streak, 4);
     expect(flame.lit, isFalse);
     expect(flame.height, AppConstants.streakFlameChipHeight);
+    // Its motion stays in „Dein Streak" and on the success page.
+    expect(flame.still, isTrue);
 
     await t.pumpWidget(_wrap(const StreakChip(streak: 4, todayCounted: true)));
     flame = t.widget<StreakFlame>(find.byType(StreakFlame));
