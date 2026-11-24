@@ -2,6 +2,7 @@ import '../config/constants.dart';
 import '../models/diary_entry.dart';
 import '../services/entry_query_service.dart';
 import '../utils/gut_feeling_rating.dart';
+import 'drink_helpers.dart';
 
 abstract final class DiaryHelpers {
   /// Transforms an [EntryQueryResult] into a flat, time-sorted list of
@@ -50,10 +51,10 @@ abstract final class DiaryHelpers {
     return entries;
   }
 
-  /// The day's totals for the Tagebuch („2× Essen · 1,5 l getrunken"), parts
-  /// left out at 0. Null for a day without entries.
+  /// The day's totals for the Tagebuch („2× Essen · 1,5 L getrunken"),
+  /// parts left out at 0. Null when there is nothing to count (no entries,
+  /// or only drinks of 0 ml).
   static String? dayTotals(List<DiaryEntry> entries) {
-    if (entries.isEmpty) return null;
     int count(DiaryEntryType type) =>
         entries.where((e) => e.type == type).length;
     final drunkMl = entries
@@ -63,20 +64,12 @@ abstract final class DiaryHelpers {
     final meals = count(DiaryEntryType.meal);
     final gut = count(DiaryEntryType.gutFeeling);
     final toilet = count(DiaryEntryType.toilet);
-    return [
+    final parts = [
       if (meals > 0) '$meals× Essen',
-      if (drunkMl > 0) '${_amount(drunkMl)} getrunken',
+      if (drunkMl > 0) '${DrinkHelpers.formatAmount(drunkMl)} getrunken',
       if (gut > 0) '$gut× Bauchgefühl',
       if (toilet > 0) '$toilet× Klo',
-    ].join(' · ');
-  }
-
-  static String _amount(int ml) {
-    if (ml < 1000) return '$ml ml';
-    final litres = (ml / 100).round() / 10;
-    final text = litres == litres.truncate()
-        ? '${litres.truncate()}'
-        : litres.toStringAsFixed(1).replaceAll('.', ',');
-    return '$text l';
+    ];
+    return parts.isEmpty ? null : parts.join(' · ');
   }
 }

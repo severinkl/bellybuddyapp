@@ -263,23 +263,26 @@ class _DiaryBody extends ConsumerWidget {
               ),
             );
           }
+          // The totals head the list, when there is something to count.
+          final totals = DiaryHelpers.dayTotals(entries);
+          final head = totals == null ? 0 : 1;
           return ListView.builder(
             padding: AppConstants.paddingMd,
-            itemCount: entries.length + 1,
+            itemCount: entries.length + head,
             itemBuilder: (context, index) {
-              if (index == 0) {
+              if (totals != null && index == 0) {
                 return Padding(
                   padding: const EdgeInsets.only(
                     bottom: AppConstants.spacingSm,
                   ),
                   child: Text(
-                    DiaryHelpers.dayTotals(entries)!,
+                    totals,
                     key: DiaryScreen.totalsKey,
                     style: AppTheme.captionMutedStyle,
                   ),
                 );
               }
-              final entry = entries[index - 1];
+              final entry = entries[index - head];
               return DiaryEntryCard(
                 entry: entry,
                 onTap: () => showDiaryDetailSheet(context, ref, entry),
