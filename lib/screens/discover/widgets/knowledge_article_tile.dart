@@ -124,7 +124,9 @@ class _Thumbnail extends StatelessWidget {
               // The blog's images are 1000 px wide landscapes: decoded as
               // tall as the box, their short side fills it under cover.
               memCacheHeight: (_size * dpr).round(),
-              placeholder: (_, _) => Shimmer.fromColors(
+              // Still with reduced motion.
+              placeholder: (context, _) => Shimmer.fromColors(
+                enabled: !MediaQuery.disableAnimationsOf(context),
                 baseColor: AppTheme.muted,
                 highlightColor: AppTheme.background,
                 child: Container(

@@ -245,7 +245,10 @@ void main() {
     );
     expect(image.imageUrl, 'https://static.wixstatic.com/media/x.jpg');
     final context = tester.element(find.byType(CachedNetworkImage));
-    expect(image.placeholder!(context, image.imageUrl), isA<Shimmer>());
+    expect(
+      image.placeholder!(context, image.imageUrl),
+      isA<Shimmer>().having((s) => s.enabled, 'enabled', isTrue),
+    );
     // Decoded as tall as the box (the landscape images' short side), so
     // BoxFit.cover fills it without upscaling.
     final dpr = tester.view.devicePixelRatio;
@@ -254,6 +257,29 @@ void main() {
       (AppConstants.knowledgeThumbSize * dpr).round(),
     );
     expect(image.memCacheWidth, isNull);
+  });
+
+  testWidgets('with reduced motion the shimmer stands still', (tester) async {
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    repo = FakeKnowledgeRepository(
+      articles: [
+        KnowledgeArticle(
+          title: 'Mit Bild',
+          link: Uri.parse('https://www.myfodmap.at/bild'),
+          imageUrl: 'https://static.wixstatic.com/media/x.jpg',
+        ),
+      ],
+    );
+    await pump(tester, settle: false);
+
+    final image = tester.widget<CachedNetworkImage>(
+      find.byType(CachedNetworkImage),
+    );
+    final context = tester.element(find.byType(CachedNetworkImage));
+    final shimmer = image.placeholder!(context, image.imageUrl) as Shimmer;
+    expect(shimmer.enabled, isFalse);
   });
 
   testWidgets('fits 375x667 at text scale 1.3', (tester) async {
