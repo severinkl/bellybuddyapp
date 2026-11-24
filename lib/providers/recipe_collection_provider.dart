@@ -12,6 +12,7 @@ import '../utils/settled_value.dart';
 import 'auth_provider.dart';
 import 'insights_provider.dart';
 import 'profile_provider.dart';
+import 'user_scoped_refresh.dart';
 import 'user_recipes_provider.dart';
 
 const _log = AppLogger('RecipeCollection');
@@ -19,7 +20,8 @@ const _favLog = AppLogger('RecipeFavorites');
 
 /// The visible recipe collection; empty while signed out. A failed load
 /// stays an error (no automatic retries); [refresh] keeps what is shown.
-class RecipeCollectionNotifier extends AsyncNotifier<List<Recipe>> {
+class RecipeCollectionNotifier extends AsyncNotifier<List<Recipe>>
+    with UserScopedRefresh<List<Recipe>> {
   @override
   Future<List<Recipe>> build() async {
     if (ref.watch(currentUserIdProvider) == null) return const [];
@@ -29,24 +31,16 @@ class RecipeCollectionNotifier extends AsyncNotifier<List<Recipe>> {
   /// Fetches again, and the intolerance table when it failed or was missing
   /// (a loaded one stays). A failure keeps the data on show (logged);
   /// without data, the error stays.
-  Future<void> refresh() async {
-    final userId = ref.read(currentUserIdProvider);
-    if (userId == null) return;
+  Future<void> refresh() {
     final rules = ref.read(intoleranceRulesProvider);
-    if (rules.hasError || (rules.hasValue && rules.value == null)) {
+    if (ref.read(currentUserIdProvider) != null &&
+        (rules.hasError || (rules.hasValue && rules.value == null))) {
       ref.invalidate(intoleranceRulesProvider);
     }
-    try {
-      final recipes = await ref
-          .read(recipeRepositoryProvider)
-          .fetchCollection();
-      if (ref.isCurrentUser(userId)) state = AsyncData(recipes);
-    } catch (e, st) {
-      _log.error('refresh failed', e, st);
-      if (ref.isCurrentUser(userId) && !state.hasValue) {
-        state = AsyncError(e, st);
-      }
-    }
+    return refreshWith(
+      (_) => ref.read(recipeRepositoryProvider).fetchCollection(),
+      _log,
+    );
   }
 }
 
@@ -64,7 +58,8 @@ final intoleranceRulesProvider = FutureProvider<IntoleranceRules?>(
 );
 
 /// The recipes the user saved („Merken"), newest first.
-class RecipeFavoritesNotifier extends AsyncNotifier<List<FavoriteRecipe>> {
+class RecipeFavoritesNotifier extends AsyncNotifier<List<FavoriteRecipe>>
+    with UserScopedRefresh<List<FavoriteRecipe>> {
   @override
   Future<List<FavoriteRecipe>> build() async {
     final userId = ref.watch(currentUserIdProvider);
@@ -114,21 +109,8 @@ class RecipeFavoritesNotifier extends AsyncNotifier<List<FavoriteRecipe>> {
   }
 
   /// Fetches again, keeping the data on show when it fails.
-  Future<void> refresh() async {
-    final userId = ref.read(currentUserIdProvider);
-    if (userId == null) return;
-    try {
-      final favorites = await ref
-          .read(recipeRepositoryProvider)
-          .fetchFavorites(userId);
-      if (ref.isCurrentUser(userId)) state = AsyncData(favorites);
-    } catch (e, st) {
-      _favLog.error('refresh favourites failed', e, st);
-      if (ref.isCurrentUser(userId) && !state.hasValue) {
-        state = AsyncError(e, st);
-      }
-    }
-  }
+  Future<void> refresh() =>
+      refreshWith(ref.read(recipeRepositoryProvider).fetchFavorites, _favLog);
 }
 
 final recipeFavoritesProvider =
