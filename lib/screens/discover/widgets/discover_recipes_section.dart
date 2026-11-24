@@ -56,7 +56,11 @@ class DiscoverRecipesSection extends StatelessWidget {
     return DiscoverSection(
       key: sectionKey,
       title: 'Rezepte',
-      actions: [DiscoverAllLink(onTap: onOpenAll)],
+      // Only with recipes to list: never a link to an empty or failed screen.
+      actions: [
+        if (forYou.value?.isNotEmpty ?? false)
+          DiscoverAllLink(onTap: onOpenAll),
+      ],
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [_forYou(), AppConstants.gap16, _mine(context)],

@@ -64,7 +64,13 @@ class _MyRecipesTabState extends ConsumerState<MyRecipesTab> {
                 saved.recipe.title.toLowerCase().contains(query))
               saved,
         ]);
-        if (recipes.isEmpty && !hasActiveQuery) return const _EmptyState();
+        if (recipes.isEmpty && !hasActiveQuery) {
+          // Saved recipes may still be on their way.
+          final loading =
+              ref.watch(recipeCollectionProvider).isLoading ||
+              ref.watch(recipeFavoritesProvider).isLoading;
+          return loading ? const BbLoadingState() : const _EmptyState();
+        }
         return Column(
           children: [
             const Padding(

@@ -732,6 +732,8 @@ void main() {
     ) async {
       await pump(tester);
       expect(forYou(find.text('Testrezept')), findsOneWidget);
+      final rules = collection.rulesFetches;
+      final favorites = collection.favoritesFetches;
 
       collection.collection = [testRecipe(id: 'n', title: 'Neues Rezept')];
       await tester.fling(
@@ -743,6 +745,33 @@ void main() {
 
       expect(forYou(find.text('Neues Rezept')), findsOneWidget);
       expect(forYou(find.text('Testrezept')), findsNothing);
+      expect(collection.rulesFetches, rules + 1);
+      expect(collection.favoritesFetches, favorites + 1);
+    });
+
+    testWidgets('no header „Alle ›" without Für dich recipes', (tester) async {
+      collection.collection = [];
+      await pump(tester, myRecipes: [testUserRecipe()]);
+      expect(
+        find.descendant(
+          of: find.byKey(DiscoverRecipesSection.sectionKey),
+          matching: find.text('Alle ›'),
+        ),
+        findsOneWidget, // only Meine Rezepte's
+      );
+      expect(find.bySemanticsLabel('Alle meine Rezepte'), findsOneWidget);
+    });
+
+    testWidgets('no header „Alle ›" when the collection fails', (tester) async {
+      collection.collectionError = Exception('404');
+      await pump(tester);
+      expect(
+        find.descendant(
+          of: find.byKey(DiscoverRecipesSection.sectionKey),
+          matching: find.text('Alle ›'),
+        ),
+        findsNothing,
+      );
     });
 
     testWidgets('fits 375×667 at text scale 1.3', (tester) async {

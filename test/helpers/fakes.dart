@@ -507,14 +507,23 @@ class FakeRecipeRepository implements RecipeRepository {
   final added = <String>[];
   final removed = <String>[];
 
+  /// How often the rules, the favourites and the collection were fetched.
+  int rulesFetches = 0;
+  int favoritesFetches = 0;
+  int collectionFetches = 0;
+
   @override
   Future<List<Recipe>> fetchCollection() async {
+    collectionFetches++;
     if (collectionError case final error?) throw error;
     return collection;
   }
 
   @override
-  Future<List<FavoriteRecipe>> fetchFavorites(String userId) async => favorites;
+  Future<List<FavoriteRecipe>> fetchFavorites(String userId) async {
+    favoritesFetches++;
+    return favorites;
+  }
 
   @override
   Future<void> addFavorite(String userId, String recipeId) async {
@@ -534,7 +543,10 @@ class FakeRecipeRepository implements RecipeRepository {
   }
 
   @override
-  Future<IntoleranceRules?> fetchIntoleranceRules() async => rules;
+  Future<IntoleranceRules?> fetchIntoleranceRules() async {
+    rulesFetches++;
+    return rules;
+  }
 }
 
 // -- FakeUserRecipeRepository --

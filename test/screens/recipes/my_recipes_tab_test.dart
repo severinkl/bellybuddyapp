@@ -151,4 +151,27 @@ void main() {
     expect(find.byType(GridView), findsOneWidget);
     expect(find.byType(RecipeCollectionCard), findsOneWidget);
   });
+
+  testWidgets('no empty state while the saved ones are still loading', (
+    tester,
+  ) async {
+    saved('g', 'Gemerktes Curry');
+    when(() => repo.fetchForUser(any())).thenAnswer((_) async => []);
+    when(() => repo.searchForUser(any(), any())).thenAnswer((_) async => []);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userRecipeRepositoryProvider.overrideWithValue(repo),
+          recipeRepositoryProvider.overrideWithValue(collection),
+          currentUserIdProvider.overrideWithValue(testUserId),
+        ],
+        child: const MaterialApp(home: Scaffold(body: MyRecipesTab())),
+      ),
+    );
+    // One frame: the lists are fetched but not yet settled.
+    await tester.pump();
+    expect(find.text('Noch keine Rezepte'), findsNothing);
+    await tester.pumpAndSettle();
+    expect(find.byType(RecipeCollectionCard), findsOneWidget);
+  });
 }
