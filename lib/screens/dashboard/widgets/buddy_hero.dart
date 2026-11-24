@@ -157,10 +157,12 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// for it instead ([BuddyCopy.careAfterLog]).
   static const _thirstPause = Duration(minutes: 30);
 
-  /// Whether a drink was logged, or taken, within [_thirstPause] of [now].
-  bool _justDrank(DateTime now) => [_drinkLoggedAt, _care.log.lastDrinkAt].any(
-    (t) => t != null && !t.isAfter(now) && now.difference(t) < _thirstPause,
-  );
+  /// Whether a drink was logged here within [_thirstPause] of [now]. (One
+  /// taken that recently fills Trinken, so it never asks for a drink.)
+  bool _justDrank(DateTime now) {
+    final at = _drinkLoggedAt;
+    return at != null && !at.isAfter(now) && now.difference(at) < _thirstPause;
+  }
 
   /// The line he said last; a pool never repeats it right away (a few taps
   /// in a row each get another line).
