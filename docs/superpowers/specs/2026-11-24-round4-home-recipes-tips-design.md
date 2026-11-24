@@ -340,4 +340,5 @@ The „Passt zu mir" toggle shows only recipes with 0 critical ingredients.
      - A duplicate title when saving an adapted recipe gets „(angepasst)" appended, or a number.
      - The adapt route's per-user throttle is in memory (10/h); the api runs as one process.
      - adapt-recipe gets a small eval set (≤ 2 € of the 20 €).
+     - **One intolerance table in core**, published to the app via `app_config` (`intolerance_rules`). Gluten → allergen `gluten` only, with no fructans, so garlic and onion aren't gluten problems; this also changes the Tipps' mapping for Gluten users. Weizen → `weizen` + fructans. Histamin is not judgeable. The app reads the table and doesn't keep its own copy.
   5. **Live AI spend:** the recipe import and the Tipps eval together stay within the approved **20 €**, tracked in the eval ledger.
