@@ -16,6 +16,7 @@ import 'package:belly_buddy/screens/dashboard/widgets/insight_card.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_dots.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_line.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_sheet.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/journey_rewards_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/dashboard_tutorial_steps.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_keys.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_step.dart';
@@ -29,6 +30,7 @@ import 'package:belly_buddy/repositories/recommendation_repository.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tips_row.dart';
 import 'package:belly_buddy/providers/insights_provider.dart';
 import 'package:belly_buddy/providers/journey_provider.dart';
+import 'package:belly_buddy/providers/journey_rewards_provider.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
@@ -397,6 +399,53 @@ void main() {
       expect(
         tester.getRect(line).top,
         greaterThanOrEqualTo(tester.getRect(find.byType(JourneyDots)).bottom),
+      );
+
+      // Its tap target reaches the card's bottom edge, and opens the list,
+      // not Muster.
+      await tester.ensureVisible(find.byKey(InsightCard.cardKey));
+      await tester.pump();
+      final card = tester.getRect(find.byKey(InsightCard.cardKey));
+      expect(tester.getRect(line).bottom, card.bottom);
+      await tester.tapAt(Offset(card.center.dx, card.bottom - 4));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byType(JourneyRewardsSheet), findsOneWidget);
+      expect(
+        container.read(routerProvider).state.matchedLocation,
+        RoutePaths.dashboard,
+      );
+    });
+
+    testWidgets("a journey user's card without a line (the rewards not read "
+        'yet): no slot for it', (tester) async {
+      final entries = FakeEntryRepository()
+        ..insightSource = insightSourceFor(
+          activeDays: 1,
+          gutFeelings: 0,
+          now: _insightsNow,
+        );
+      final container = ProviderContainer.test(
+        overrides: [
+          ...baseOverrides(entries: entries),
+          buddyClockProvider.overrideWithValue(() => _insightsNow),
+          journeyRewardsSeededWith(null),
+        ],
+      );
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const AppTestHost(),
+        ),
+      );
+      await _settleFirstRun(tester);
+
+      expect(container.read(journeyProvider), isTrue);
+      expect(find.byType(JourneyDots), findsOneWidget);
+      expect(container.read(journeyRewardLineProvider), isNull);
+      expect(
+        tester.widget<InsightCard>(find.byType(InsightCard)).journeyReward,
+        isNull,
       );
     });
 

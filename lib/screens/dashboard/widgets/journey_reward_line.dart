@@ -12,13 +12,22 @@ import 'journey_rewards_sheet.dart';
 
 /// The journey card's reward line ([journeyRewardLineProvider]): today's
 /// reward („Heute: …") or the next („Heute wartet: …", „Bald: …"). Its own
-/// button: a tap opens „Deine Belohnungen" ([showJourneyRewardsSheet]),
+/// button at the bottom of the card, its tap target reaching the card's
+/// edges: a tap opens „Deine Belohnungen" ([showJourneyRewardsSheet]),
 /// once (a tap while Home is covered, e.g. by the list itself, does
 /// nothing). Nothing while the line is null.
 class JourneyRewardLineView extends ConsumerWidget {
   const JourneyRewardLineView({super.key});
 
   static const lineKey = Key('journey_reward_line');
+
+  /// The card's padding beside and below it, inside the tap target.
+  static const _padding = EdgeInsets.fromLTRB(
+    AppConstants.spacingMd,
+    AppConstants.spacingXs,
+    AppConstants.spacingMd,
+    AppConstants.spacing20,
+  );
 
   static const _style = TextStyle(
     fontSize: AppTheme.fontSizeCaptionLG,
@@ -46,9 +55,11 @@ class JourneyRewardLineView extends ConsumerWidget {
       excludeSemantics: true,
       child: InkWell(
         onTap: open,
-        borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+        borderRadius: const BorderRadius.vertical(
+          bottom: Radius.circular(AppConstants.radiusRound),
+        ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppConstants.spacingXs),
+          padding: _padding,
           child: Row(
             children: [
               const Icon(

@@ -45,7 +45,8 @@ class InsightCard extends StatelessWidget {
   final bool? journey;
 
   /// The journey's reward line: below the counters, its own button (a tap
-  /// on it doesn't open Muster).
+  /// on it doesn't open Muster), reaching the card's edges with its own
+  /// padding.
   final Widget? journeyReward;
 
   static const _padding = EdgeInsets.fromLTRB(
@@ -126,15 +127,7 @@ class InsightCard extends StatelessWidget {
             ),
           ),
           // Its own button, outside „Muster ansehen".
-          if (reward != null)
-            Padding(
-              padding: const EdgeInsets.only(
-                left: AppConstants.spacingMd,
-                right: AppConstants.spacingMd,
-                bottom: AppConstants.spacingMd,
-              ),
-              child: reward,
-            ),
+          ?reward,
         ],
       ),
     );

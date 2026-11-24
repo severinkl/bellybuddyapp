@@ -14,6 +14,7 @@ import '../../providers/discover_news_provider.dart';
 import '../../providers/entries_provider.dart';
 import '../../providers/insights_provider.dart';
 import '../../providers/journey_provider.dart';
+import '../../providers/journey_rewards_provider.dart';
 import '../../providers/upgrade_gate_provider.dart';
 import '../../widgets/common/upgrade_available_dialog.dart';
 import '../../providers/profile_provider.dart';
@@ -209,13 +210,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 AppConstants.gap16,
                 // Only the card rebuilds with the insights. It shows only
                 // AsyncData: after a user change, the value of a loading or
-                // failed state is still the previous user's.
+                // failed state is still the previous user's. The reward
+                // line only while there is one.
                 Consumer(
                   builder: (_, ref, _) => InsightCard(
                     key: TutorialKeys.insight,
                     insights: ref.watch(insightsProvider),
                     journey: ref.watch(journeyProvider),
-                    journeyReward: const JourneyRewardLineView(),
+                    journeyReward:
+                        ref.watch(
+                          journeyRewardLineProvider.select(
+                            (line) => line != null,
+                          ),
+                        )
+                        ? const JourneyRewardLineView()
+                        : null,
                   ),
                 ),
                 // Only while a tip set is new.
