@@ -19,6 +19,11 @@ LogMoment captureLogMoment(
   care: ref.read(careLogProvider),
   now: ref.read(buddyClockProvider)(),
   buddy: ref.read(buddyProvider).value,
-  insights: ref.read(insightsProvider).value,
+  // Settled data only: a reload or an error keeps the previous value, which may be
+  // another user's.
+  insights: switch (ref.read(insightsProvider)) {
+    AsyncData(:final value, isLoading: false) => value,
+    _ => null,
+  },
   sentiment: sentiment,
 );
