@@ -59,8 +59,37 @@ void main() {
     await tester.tap(find.byKey(RecipeStepsEditor.removeKey(0)));
     await tester.pump();
     expect(latest, ['Zwei']);
-    expect(find.byKey(RecipeStepsEditor.fieldKey(1)), findsNothing);
-    expect(find.text('Zwei'), findsOneWidget);
+    // The keys follow the step, not its place.
+    expect(find.byKey(RecipeStepsEditor.fieldKey(0)), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byKey(RecipeStepsEditor.fieldKey(1)),
+        matching: find.text('Zwei'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('removing a step before the one being typed in keeps it '
+      'focused, with its text', (tester) async {
+    await pump(tester, const ['Eins', 'Zwei', 'Drei']);
+    EditableText field(String text) =>
+        tester.widget<EditableText>(find.text(text));
+
+    await tester.showKeyboard(find.text('Drei'));
+    await tester.pump();
+    expect(field('Drei').focusNode.hasFocus, isTrue);
+
+    await tester.tap(find.byKey(RecipeStepsEditor.removeKey(1)));
+    await tester.pump();
+
+    expect(latest, ['Eins', 'Drei']);
+    expect(find.text('Zwei'), findsNothing);
+    expect(field('Drei').focusNode.hasFocus, isTrue);
+    expect(field('Eins').focusNode.hasFocus, isFalse);
+    // Numbered by place: „Drei" is step 2 now.
+    expect(find.text('2'), findsOneWidget);
+    expect(find.text('3'), findsNothing);
   });
 
   testWidgets('screen readers hear each field as „Schritt N"', (tester) async {

@@ -18,50 +18,67 @@ class RecipeStepsEditor extends StatefulWidget {
   final ValueChanged<List<String>> onChanged;
 
   static const addKey = Key('steps_add');
-  static Key fieldKey(int i) => ValueKey('steps_field_$i');
-  static Key removeKey(int i) => ValueKey('steps_remove_$i');
+
+  /// The field and the remove button of the step made [id]-th (the initial
+  /// steps first, in order): a step keeps its id when one before it goes.
+  static Key fieldKey(int id) => ValueKey('steps_field_$id');
+  static Key removeKey(int id) => ValueKey('steps_remove_$id');
 
   @override
   State<RecipeStepsEditor> createState() => _RecipeStepsEditorState();
 }
 
+/// A step's field and its id ([RecipeStepsEditor.fieldKey]).
+class _Step {
+  _Step(this.id, [String text = ''])
+    : controller = TextEditingController(text: text);
+
+  final int id;
+  final TextEditingController controller;
+}
+
 class _RecipeStepsEditorState extends State<RecipeStepsEditor> {
-  late final List<TextEditingController> _controllers = [
-    for (final text in widget.initial) TextEditingController(text: text),
+  late final List<_Step> _steps = [
+    for (final (i, text) in widget.initial.indexed) _Step(i, text),
   ];
+  late int _nextId = _steps.length;
 
   @override
   void dispose() {
-    for (final c in _controllers) {
-      c.dispose();
+    for (final s in _steps) {
+      s.controller.dispose();
     }
     super.dispose();
   }
 
-  void _emit() => widget.onChanged([for (final c in _controllers) c.text]);
+  void _emit() => widget.onChanged([for (final s in _steps) s.controller.text]);
 
   void _add() {
-    setState(() => _controllers.add(TextEditingController()));
+    setState(() => _steps.add(_Step(_nextId++)));
     _emit();
   }
 
-  void _remove(int i) {
-    final removed = _controllers.removeAt(i);
-    setState(() {});
+  void _remove(_Step step) {
+    setState(() => _steps.remove(step));
     _emit();
     // The field is still in this frame's tree; dispose after it.
-    WidgetsBinding.instance.addPostFrameCallback((_) => removed.dispose());
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => step.controller.dispose(),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final full = _controllers.length >= AppConstants.recipeStepsMax;
+    final full = _steps.length >= AppConstants.recipeStepsMax;
     return RecipeSectionCard(
       title: 'Zubereitung',
       trailing: const Text('optional', style: AppTheme.captionMutedStyle),
       children: [
-        for (var i = 0; i < _controllers.length; i++)
+        for (final (i, step) in _steps.indexed)
           Padding(
+            // By the step, not its place: removing one before it keeps its
+            // field (focus, cursor) with it.
+            key: ObjectKey(step.controller),
             padding: const EdgeInsets.only(bottom: AppConstants.spacingSm),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -87,8 +104,8 @@ class _RecipeStepsEditorState extends State<RecipeStepsEditor> {
                   child: Semantics(
                     label: 'Schritt ${i + 1}',
                     child: TextField(
-                      key: RecipeStepsEditor.fieldKey(i),
-                      controller: _controllers[i],
+                      key: RecipeStepsEditor.fieldKey(step.id),
+                      controller: step.controller,
                       minLines: 1,
                       maxLines: null,
                       keyboardType: TextInputType.multiline,
@@ -101,10 +118,10 @@ class _RecipeStepsEditorState extends State<RecipeStepsEditor> {
                   ),
                 ),
                 IconButton(
-                  key: RecipeStepsEditor.removeKey(i),
+                  key: RecipeStepsEditor.removeKey(step.id),
                   icon: const Icon(Icons.close),
                   tooltip: 'Schritt entfernen',
-                  onPressed: () => _remove(i),
+                  onPressed: () => _remove(step),
                 ),
               ],
             ),
