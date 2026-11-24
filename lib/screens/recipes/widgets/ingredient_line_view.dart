@@ -41,13 +41,14 @@ class IngredientLineView extends StatelessWidget {
 
   String get _semanticsLabel {
     final swapped = replaces;
-    if (swapped != null) return '$swapped getauscht gegen $name';
+    if (swapped != null) return RecipeCopy.swappedSemantics(swapped, name);
     final head = [?amount, name].join(' ');
-    if (removed) return '$head, weggelassen';
+    if (removed) return '$head, ${RecipeCopy.removedSemantics}';
     return switch (mark) {
       LineMark.kritisch =>
-        '$head, für dich kritisch, ${RecipeCopy.because(because)}',
-      LineMark.fits => '$head, passt',
+        '$head, ${RecipeCopy.kritischSemantics}, '
+            '${RecipeCopy.because(because)}',
+      LineMark.fits => '$head, ${RecipeCopy.fitsSemantics}',
       LineMark.unknown => '$head, ${RecipeCopy.notInCatalog}',
       null => head,
     };
@@ -120,7 +121,7 @@ class IngredientLineView extends StatelessWidget {
             TextSpan(text: swappedFrom, style: _struck),
             const TextSpan(text: ' → '),
             TextSpan(text: name, style: bold),
-            const TextSpan(text: ' getauscht', style: caption),
+            const TextSpan(text: ' ${RecipeCopy.swapped}', style: caption),
           ],
         ),
       );
@@ -130,7 +131,7 @@ class IngredientLineView extends StatelessWidget {
           style: body,
           children: [
             TextSpan(text: name, style: _struck),
-            const TextSpan(text: ' weggelassen', style: caption),
+            const TextSpan(text: ' ${RecipeCopy.removed}', style: caption),
           ],
         ),
       );

@@ -50,6 +50,8 @@ class FitBadgeView extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                   color: color,
                 ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],

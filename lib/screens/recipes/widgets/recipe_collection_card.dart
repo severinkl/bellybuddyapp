@@ -4,6 +4,7 @@ import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/recipe.dart';
 import '../../../services/recipes/recipe_fit.dart';
+import '../../../services/recipes/recipe_copy.dart';
 import 'fit_badge_view.dart';
 import 'recipe_image.dart';
 
@@ -40,7 +41,7 @@ class RecipeTagPill extends StatelessWidget {
             ),
             const SizedBox(width: AppConstants.spacingXs),
             Text(
-              saved ? 'Gemerkt' : 'Angepasst',
+              saved ? RecipeCopy.tagSaved : RecipeCopy.tagAdapted,
               style: TextStyle(
                 fontSize: AppTheme.fontSizeSM,
                 fontWeight: FontWeight.w600,

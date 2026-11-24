@@ -43,4 +43,18 @@ void main() {
       isNot(AppTheme.primary),
     );
   });
+
+  testWidgets('a changed step says geändert to screen readers', (tester) async {
+    final handle = tester.ensureSemantics();
+    await pump(tester, const RecipeSteps(steps: ['A', 'B'], changed: {1}));
+    expect(
+      tester.getSemantics(find.byKey(RecipeSteps.stepKey(1))).hint,
+      'geändert',
+    );
+    expect(
+      tester.getSemantics(find.byKey(RecipeSteps.stepKey(0))).hint,
+      isEmpty,
+    );
+    handle.dispose();
+  });
 }

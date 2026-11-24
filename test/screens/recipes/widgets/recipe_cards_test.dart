@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:belly_buddy/config/constants.dart';
+import 'package:belly_buddy/screens/recipes/widgets/fit_badge_view.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_collection_card.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_list_tile.dart';
 import 'package:belly_buddy/services/recipes/recipe_fit.dart';
@@ -101,7 +102,8 @@ void main() {
         : RecipeFit(
             recipe: recipe,
             checked: true,
-            judged: badge is FitsBadge,
+            judged: true,
+            selfCheck: badge is SelfCheckBadge ? badge.intolerances : const [],
             lines: [
               if (badge is KritischBadge)
                 for (var i = 0; i < badge.count; i++)
@@ -137,7 +139,7 @@ void main() {
           ),
         ),
       );
-      expect(find.byType(FitBadge), findsNothing);
+      expect(find.byType(FitBadgeView), findsNothing);
       expect(find.text('Passt zu dir'), findsNothing);
     });
 
@@ -171,6 +173,9 @@ void main() {
         );
       });
       expect(verticalOverflows(errors), isEmpty);
+      expect(find.text('2 Zutaten sind für dich kritisch'), findsOneWidget);
+      expect(find.text('Histamin bitte selbst prüfen'), findsOneWidget);
+      expect(find.text('Passt zu dir'), findsOneWidget);
     });
   });
 }

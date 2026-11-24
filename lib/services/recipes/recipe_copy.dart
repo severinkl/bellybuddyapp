@@ -25,6 +25,24 @@ abstract final class RecipeCopy {
   /// After an unmapped line's name, while it can't be judged.
   static const notInCatalog = 'nicht im Katalog';
 
+  /// The Buddy swapped this ingredient (after the new name).
+  static const swapped = 'getauscht';
+
+  /// The Buddy left this ingredient out (after its struck name).
+  static const removed = 'weggelassen';
+
+  /// Screen-reader fragments of an ingredient line and a step.
+  static String swappedSemantics(String from, String to) =>
+      '$from getauscht gegen $to';
+  static const removedSemantics = 'weggelassen';
+  static const kritischSemantics = 'für dich kritisch';
+  static const fitsSemantics = 'passt';
+  static const stepChanged = 'geändert';
+
+  /// The tags on a recipe card's picture.
+  static const tagSaved = 'Gemerkt';
+  static const tagAdapted = 'Angepasst';
+
   /// Below „Für mich anpassen": which ingredients the Buddy swaps.
   static String adaptHint(List<String> names) =>
       'Ich tausche ${joinGerman(names)} und schreibe die Schritte passend um.';
