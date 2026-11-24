@@ -17,6 +17,7 @@ import 'package:riverpod/src/internals.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers/fakes.dart';
+import '../../helpers/layout_checks.dart';
 import '../../helpers/riverpod_helpers.dart';
 
 List<Override> _overrides() => [
@@ -46,9 +47,6 @@ const _mealIgnites = LogMoment(
   to: 1.0,
   ignitesDay: 1,
 );
-
-/// The least the Buddy is drawn tall, however short the slot.
-const _minBuddyHeight = 24.0;
 
 Future<void> _pump(WidgetTester tester, Widget hero) =>
     tester.pumpWithProviders(
@@ -200,7 +198,21 @@ void main() {
       expect(find.byType(BuddyReactionView), findsOneWidget);
     });
 
-    testWidgets('fits a short slot', (tester) async {
+    testWidgets('a tall slot: the circle above „Tag n"', (tester) async {
+      await _pump(
+        tester,
+        SizedBox(height: 400, child: _hero(_mealIgnites, kind: EntryKind.meal)),
+      );
+      await tester.pump(const Duration(milliseconds: 1300));
+
+      final meter = tester.getRect(find.byType(ChargingMeter));
+      final ignite = tester.getRect(find.byKey(LogSuccessHero.igniteKey));
+      expect(meter.height, AppConstants.careChargeSize);
+      expect(ignite.top, greaterThanOrEqualTo(meter.bottom));
+    });
+
+    testWidgets('a short slot: the circle beside „Tag n", a share of the slot, '
+        'nothing scaled', (tester) async {
       await _pump(
         tester,
         SizedBox(height: 260, child: _hero(_mealIgnites, kind: EntryKind.meal)),
@@ -208,24 +220,26 @@ void main() {
       await tester.pump(const Duration(milliseconds: 1300));
 
       expect(tester.takeException(), isNull);
-      expect(find.byKey(LogSuccessHero.igniteKey), findsOneWidget);
+      final meter = tester.getRect(find.byType(ChargingMeter));
+      final ignite = tester.getRect(find.byKey(LogSuccessHero.igniteKey));
+      expect(ignite.left, greaterThanOrEqualTo(meter.right));
+      expect(
+        meter.height,
+        moreOrLessEquals(260 * AppConstants.careChargeHeightShare),
+      );
       expect(
         tester.getRect(find.byType(LogSuccessHero)).height,
         lessThanOrEqualTo(260),
       );
-      // As drawn: at most its share of the slot.
-      expect(
-        tester.getRect(find.byType(ChargingMeter)).height,
-        lessThanOrEqualTo(260 * AppConstants.careChargeHeightShare + 0.01),
-      );
+      expect(drawnScale(tester.element(find.text('Tag 1'))), 1);
       expect(
         tester.getRect(find.byType(AnimatedBuddy)).height,
-        greaterThanOrEqualTo(_minBuddyHeight),
+        greaterThanOrEqualTo(minBuddyHeight),
       );
     });
 
-    testWidgets('a slot too short for it all scales the hero down, the Buddy '
-        'with his body', (tester) async {
+    testWidgets('a slot too short for it all: the bubble yields, the Buddy '
+        'keeps his body', (tester) async {
       await _pump(
         tester,
         SizedBox(height: 100, child: _hero(_mealIgnites, kind: EntryKind.meal)),
@@ -236,9 +250,9 @@ void main() {
       final slot = tester.getRect(find.byType(LogSuccessHero));
       expect(slot.height, lessThanOrEqualTo(100));
       expect(find.byType(ChargingMeter), findsOneWidget);
-      expect(find.byKey(LogSuccessHero.igniteKey), findsOneWidget);
+      expect(drawnScale(tester.element(find.text('Tag 1'))), 1);
       final buddy = tester.getRect(find.byType(AnimatedBuddy));
-      expect(buddy.height, greaterThanOrEqualTo(_minBuddyHeight));
+      expect(buddy.height, greaterThanOrEqualTo(minBuddyHeight));
       expect(buddy.bottom, lessThanOrEqualTo(slot.bottom + 0.01));
     });
   });

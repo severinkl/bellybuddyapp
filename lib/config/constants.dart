@@ -176,8 +176,10 @@ class AppConstants {
   // Ich: the Buddy in the header
   static const double meBuddySize = 112.0;
 
-  // Buddy reaction on the tracker success screens (bubble slot + Buddy)
+  // Buddy reaction on the tracker success screens (bubble slot + Buddy),
+  // and the least he is drawn tall in a short slot (the bubble yields)
   static const double buddyReactionSize = 220.0;
+  static const double buddyReactionMinHeight = 24.0;
 
   // The success page's charging circle: at most this size and this share
   // of the page's slot for it, and how long it charges
@@ -185,10 +187,9 @@ class AppConstants {
   static const double careChargeHeightShare = 0.3;
   static const Duration careChargeDuration = Duration(milliseconds: 1200);
 
-  /// The success page's hero (circle, ignite row, Buddy) is laid out at
-  /// least this tall and scaled down into a shorter slot, so the Buddy keeps
-  /// a body beside the circle and the ignite row.
-  static const double logSuccessHeroMinHeight = 320.0;
+  /// In a success-page slot shorter than this, the charging circle and
+  /// „Tag n" stand side by side, so the Buddy keeps a body below them.
+  static const double logSuccessHeroStackedMinHeight = 320.0;
 
   // Buddy onboarding (/buddy-onboarding): stage (bubble slot + Buddy) and
   // progress dots

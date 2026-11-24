@@ -42,7 +42,9 @@ class BuddyReactionView extends ConsumerStatefulWidget {
   final String? line;
 
   /// Maximum height of the stage (speech-bubble slot plus Buddy); the Buddy
-  /// shrinks when less height is available.
+  /// shrinks when less height is available, down to
+  /// [AppConstants.buddyReactionMinHeight], below which the bubble's slot
+  /// yields instead.
   final double size;
 
   @override
@@ -131,7 +133,15 @@ class _BuddyReactionViewState extends ConsumerState<BuddyReactionView> {
     final name = ref.watch(buddyProvider.select((s) => s.value?.state.name));
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: widget.size),
-      child: BuddyStage(controller: _controller, name: name ?? _fallbackName),
+      child: LayoutBuilder(
+        builder: (context, constraints) => BuddyStage(
+          controller: _controller,
+          name: name ?? _fallbackName,
+          bubbleHeight:
+              (constraints.maxHeight - AppConstants.buddyReactionMinHeight)
+                  .clamp(0, AppConstants.buddyBubbleHeight),
+        ),
+      ),
     );
   }
 }

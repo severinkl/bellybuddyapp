@@ -27,6 +27,7 @@ import 'package:belly_buddy/widgets/common/mascot_image.dart';
 import 'package:belly_buddy/config/constants.dart';
 
 import '../../../helpers/fakes.dart';
+import '../../../helpers/layout_checks.dart';
 import '../../../helpers/riverpod_helpers.dart';
 
 List<Override> _overrides([FakeEntryRepository? entries]) => [
@@ -243,37 +244,32 @@ void main() {
       expect(find.text(line), findsOneWidget);
     });
 
-    testWidgets('fits 375×667 at text scale 1.3 with the line and the ignite '
-        'row', (tester) async {
-      tester.view.physicalSize = const Size(750, 1334);
-      tester.view.devicePixelRatio = 2;
-      tester.platformDispatcher.textScaleFactorTestValue = 1.3;
-      addTearDown(tester.view.reset);
-      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    for (final scale in [1.0, 1.3]) {
+      testWidgets('fits 375×667 at text scale $scale with the line and the '
+          'ignite row', (tester) async {
+        tester.view.physicalSize = const Size(750, 1334);
+        tester.view.devicePixelRatio = 2;
+        tester.platformDispatcher.textScaleFactorTestValue = scale;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
 
-      // Test-font glyphs overflow sideways; only the bottom matters here.
-      final errors = <FlutterErrorDetails>[];
-      final previousOnError = FlutterError.onError;
-      FlutterError.onError = errors.add;
-      try {
-        await saveWithLine(tester);
-      } finally {
-        FlutterError.onError = previousOnError;
-      }
+        final errors = await collectFlutterErrors(() => saveWithLine(tester));
 
-      expect(find.byKey(LogSuccessHero.igniteKey), findsOneWidget);
-      expect(
-        tester
-            .widget<LogSuccessHero>(find.byType(LogSuccessHero))
-            .moment
-            .buddyLine,
-        isNotNull,
-      );
-      expect(
-        errors.where((e) => e.exceptionAsString().contains('bottom')),
-        isEmpty,
-      );
-    });
+        expect(find.byKey(LogSuccessHero.igniteKey), findsOneWidget);
+        expect(
+          tester
+              .widget<LogSuccessHero>(find.byType(LogSuccessHero))
+              .moment
+              .buddyLine,
+          isNotNull,
+        );
+        expectSuccessPageFits(
+          tester,
+          errors,
+          page: find.byType(BbSuccessOverlay),
+        );
+      });
+    }
 
     Future<ProviderContainer> pumpTracker(
       WidgetTester tester,

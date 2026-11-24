@@ -16,12 +16,13 @@ import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/repositories/meal_media_repository.dart';
 import 'package:belly_buddy/screens/trackers/meal/meal_tracker_screen.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
-import 'package:belly_buddy/widgets/buddy/animated_buddy.dart';
 import 'package:belly_buddy/widgets/buddy/buddy_reaction_view.dart';
 import 'package:belly_buddy/widgets/buddy/log_success_hero.dart';
+import 'package:belly_buddy/widgets/common/bb_success_overlay.dart';
 import 'package:belly_buddy/widgets/common/mascot_image.dart';
 
 import '../../../helpers/fakes.dart';
+import '../../../helpers/layout_checks.dart';
 import '../../../helpers/riverpod_helpers.dart';
 
 List<Override> _overrides({EntryRepository? entries}) => [
@@ -203,25 +204,18 @@ void main() {
       expect(find.text('Fehler beim Speichern.'), findsOneWidget);
     });
 
-    testWidgets(
-      'the meal page fits 375×667 at text scale 1.3 with its circle, actions '
-      'and callout',
-      (tester) async {
+    for (final scale in [1.0, 1.3]) {
+      testWidgets('the meal page fits 375×667 at text scale $scale with its '
+          'circle, ignite row, actions and callout', (tester) async {
         SharedPreferences.setMockInitialValues({});
         tester.view.physicalSize = const Size(750, 1334);
         tester.view.devicePixelRatio = 2;
-        tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+        tester.platformDispatcher.textScaleFactorTestValue = scale;
         addTearDown(tester.view.reset);
         addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
         final now = DateTime(2026, 11, 23, 14);
 
-        // The test font's square glyphs overflow the action pills sideways;
-        // only overflow at the bottom (content taller than the screen)
-        // matters here.
-        final errors = <FlutterErrorDetails>[];
-        final previousOnError = FlutterError.onError;
-        FlutterError.onError = errors.add;
-        try {
+        final errors = await collectFlutterErrors(() async {
           await tester.pumpWithProviders(
             const MealTrackerScreen(),
             overrides: [
@@ -250,26 +244,20 @@ void main() {
           await tester.tap(find.byKey(MealTrackerScreen.mealEditSaveKey));
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 1300));
-        } finally {
-          FlutterError.onError = previousOnError;
-        }
+        });
 
         expect(find.byType(ChargingMeter), findsOneWidget);
         expect(find.byKey(LogSuccessHero.igniteKey), findsOneWidget);
         expect(find.byType(BuddyReactionView), findsOneWidget);
-        // Drawn with a body, not just his bubble.
-        expect(
-          tester.getRect(find.byType(AnimatedBuddy)).height,
-          greaterThanOrEqualTo(24),
-        );
         expect(find.text('Trinken eintragen'), findsOneWidget);
         expect(find.text('Als Rezept speichern'), findsOneWidget);
         expect(find.text('Tippen zum Fortfahren'), findsOneWidget);
-        final vertical = errors
-            .map((e) => e.exceptionAsString())
-            .where((m) => m.contains('overflowed') && m.contains('bottom'));
-        expect(vertical, isEmpty);
-      },
-    );
+        expectSuccessPageFits(
+          tester,
+          errors,
+          page: find.byType(BbSuccessOverlay),
+        );
+      });
+    }
   });
 }

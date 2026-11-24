@@ -54,9 +54,10 @@ class ChargingMeter extends StatelessWidget {
 /// the height left over.
 ///
 /// The calm page after a hard moment ([LogSentiment.bad]) cheers no
-/// progress: it shows no ignite row. The hero is laid out at least
-/// [AppConstants.logSuccessHeroMinHeight] tall and scaled down into a
-/// shorter slot, so the Buddy keeps a body there.
+/// progress: it shows no ignite row. Nothing is scaled: the circle takes a
+/// share of the slot, and in a slot shorter than
+/// [AppConstants.logSuccessHeroStackedMinHeight] it stands beside „Tag n"
+/// instead of above it, so the Buddy keeps a body.
 class LogSuccessHero extends StatelessWidget {
   const LogSuccessHero({
     super.key,
@@ -82,68 +83,69 @@ class LogSuccessHero extends StatelessWidget {
     final day = sentiment == LogSentiment.bad ? null : moment.ignitesDay;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final height = math.max(
-          constraints.maxHeight,
-          AppConstants.logSuccessHeroMinHeight,
-        );
-        // The same tree at any height, so the reaction never restarts.
-        return FittedBox(
-          fit: BoxFit.scaleDown,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(
-              maxWidth: constraints.maxWidth,
-              maxHeight: height,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (from != null && to != null)
-                  ChargingMeter(
-                    need: moment.need,
-                    from: from,
-                    to: to,
-                    size: math.min(
-                      AppConstants.careChargeSize,
-                      height * AppConstants.careChargeHeightShare,
+        final height = constraints.maxHeight;
+        final meter = from == null || to == null
+            ? null
+            : ChargingMeter(
+                need: moment.need,
+                from: from,
+                to: to,
+                size: math.min(
+                  AppConstants.careChargeSize,
+                  height * AppConstants.careChargeHeightShare,
+                ),
+              );
+        final ignite = day == null
+            ? null
+            : Row(
+                key: igniteKey,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  StreakFlame(
+                    streak: day,
+                    lit: true,
+                    height: AppConstants.streakFlameIgniteHeight,
+                    igniteOnMount: true,
+                  ),
+                  const SizedBox(width: AppConstants.spacingSm),
+                  Text(
+                    'Tag $day',
+                    style: const TextStyle(
+                      fontSize: AppTheme.fontSizeTitleLG,
+                      fontWeight: FontWeight.w700,
+                      color: AppTheme.primaryForeground,
                     ),
                   ),
-                // Also the room the flame's ignite burst draws into above it.
-                AppConstants.gap8,
-                if (day != null) ...[
-                  Row(
-                    key: igniteKey,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      StreakFlame(
-                        streak: day,
-                        lit: true,
-                        height: AppConstants.streakFlameIgniteHeight,
-                        igniteOnMount: true,
-                      ),
-                      const SizedBox(width: AppConstants.spacingSm),
-                      Text(
-                        'Tag $day',
-                        style: const TextStyle(
-                          fontSize: AppTheme.fontSizeTitleLG,
-                          fontWeight: FontWeight.w700,
-                          color: AppTheme.primaryForeground,
-                        ),
-                      ),
-                    ],
-                  ),
-                  AppConstants.gap8,
                 ],
-                Flexible(
-                  child: BuddyReactionView(
-                    kind: kind,
-                    sentiment: sentiment,
-                    foodImageBytes: foodImageBytes,
-                    line: moment.buddyLine,
-                  ),
-                ),
-              ],
+              );
+        final sideBySide = height < AppConstants.logSuccessHeroStackedMinHeight;
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (sideBySide && meter != null && ignite != null)
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  meter,
+                  const SizedBox(width: AppConstants.spacingMd),
+                  ignite,
+                ],
+              )
+            else ...[
+              ?meter,
+              // Also the room the flame's ignite burst draws into above it.
+              if (ignite != null) ...[AppConstants.gap8, ignite],
+            ],
+            AppConstants.gap8,
+            Flexible(
+              child: BuddyReactionView(
+                kind: kind,
+                sentiment: sentiment,
+                foodImageBytes: foodImageBytes,
+                line: moment.buddyLine,
+              ),
             ),
-          ),
+          ],
         );
       },
     );

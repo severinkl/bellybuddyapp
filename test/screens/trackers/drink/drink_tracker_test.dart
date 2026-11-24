@@ -20,10 +20,12 @@ import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/buddy/buddy_reaction_view.dart';
 import 'package:belly_buddy/widgets/buddy/log_success_hero.dart';
+import 'package:belly_buddy/widgets/common/bb_success_overlay.dart';
 import 'package:belly_buddy/widgets/common/mascot_image.dart';
 
 import '../../../helpers/fakes.dart';
 import '../../../helpers/fixtures.dart';
+import '../../../helpers/layout_checks.dart';
 import '../../../helpers/riverpod_helpers.dart';
 
 List<Override> _overrides({FakeDrinkRepository? drinkRepo}) => [
@@ -246,6 +248,57 @@ void main() {
         findsOneWidget,
       );
     });
+
+    for (final scale in [1.0, 1.3]) {
+      testWidgets('the drink page fits 375×667 at text scale $scale with its '
+          'circle and ignite row', (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        tester.view.physicalSize = const Size(750, 1334);
+        tester.view.devicePixelRatio = 2;
+        tester.platformDispatcher.textScaleFactorTestValue = scale;
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        final now = DateTime(2026, 11, 23, 14);
+        final errors = await collectFlutterErrors(() async {
+          final container = ProviderContainer.test(
+            overrides: [
+              ..._overrides(),
+              buddyClockProvider.overrideWithValue(() => now),
+              // Today's first entry: the ignite row too.
+              buddyProvider.overrideWith(
+                () => FakeBuddyNotifier(() => buddyStatus(streak: 4)),
+              ),
+            ],
+          );
+          addTearDown(container.dispose);
+          await container.read(buddyProvider.future);
+          await tester.pumpWidget(
+            UncontrolledProviderScope(
+              container: container,
+              child: const MaterialApp(home: DrinkTrackerScreen()),
+            ),
+          );
+          await tester.pump(const Duration(milliseconds: 200));
+          container.read(drinkTrackerProvider.notifier)
+            ..toggleDrink(testDrink())
+            ..selectAmount(250)
+            ..setTrackedAt(now);
+          await tester.pump();
+          await tester.ensureVisible(find.text('Speichern'));
+          await tester.tap(find.text('Speichern'));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 1300));
+        });
+
+        expect(find.byType(ChargingMeter), findsOneWidget);
+        expect(find.byKey(LogSuccessHero.igniteKey), findsOneWidget);
+        expectSuccessPageFits(
+          tester,
+          errors,
+          page: find.byType(BbSuccessOverlay),
+        );
+      });
+    }
 
     testWidgets('a save that stores nothing emits no Buddy event', (
       tester,
