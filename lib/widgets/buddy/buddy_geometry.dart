@@ -207,6 +207,9 @@ class BuddyLayout {
   final double scale;
   final Offset origin;
 
+  /// The top of his head (his image's top), in local coordinates.
+  double get headTop => origin.dy;
+
   Offset toImage(Offset local) =>
       scale == 0 ? Offset.zero : (local - origin) / scale;
 

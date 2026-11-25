@@ -1,5 +1,3 @@
-import 'dart:ui' show ImageFilter;
-
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -16,113 +14,138 @@ import 'package:belly_buddy/widgets/buddy/streak_flame.dart';
 void main() {
   const side = 192.0;
 
-  /// How far right of his square's middle his foot stands.
-  final footDx =
-      BuddyLayout(const Size.square(side)).toLocal(kBuddyFoot).dx - side / 2;
+  /// A ring's box with his square in its middle (a middle [middleWidth]
+  /// wide).
+  ({Size ring, Rect buddy, Rect middle}) places(double middleWidth) {
+    const ring = Size(600, 260);
+    final middle = Rect.fromCenter(
+      center: ring.center(Offset.zero),
+      width: middleWidth,
+      height: ring.height,
+    );
+    final buddy = Rect.fromCenter(
+      center: middle.center,
+      width: middleWidth < side ? middleWidth : side,
+      height: side,
+    );
+    return (ring: ring, buddy: buddy, middle: middle);
+  }
 
-  Future<void> pump(
+  /// His foot in the ring.
+  Offset footIn(Rect buddy) =>
+      buddy.topLeft + BuddyLayout(buddy.size).toLocal(kBuddyFoot);
+
+  const shot = Key('shot');
+
+  Future<({Rect buddy, Rect middle})> pump(
     WidgetTester tester, {
     required int streak,
     bool lit = false,
-    double middleWidth = 1000,
-  }) => tester.pumpWidget(
-    Center(
-      child: HomeFlame(
-        streak: streak,
-        lit: lit,
-        buddySide: side,
-        middleWidth: middleWidth,
-      ),
-    ),
-  );
-
-  /// The backdrop filter: blurred, then faded to [opacity].
-  ImageFilter backdrop(double opacity) => ImageFilter.compose(
-    outer: ColorFilter.mode(
-      Colors.black.withValues(alpha: opacity),
-      BlendMode.dstIn,
-    ),
-    inner: ImageFilter.blur(
-      sigmaX: AppConstants.homeFlameBlur,
-      sigmaY: AppConstants.homeFlameBlur,
-      // Clear beyond it: no smeared edges.
-      tileMode: TileMode.decal,
-    ),
-  );
-
-  ImageFilter filterOf(WidgetTester tester) => tester
-      .widget<ImageFiltered>(
-        find.ancestor(
-          of: find.byType(StreakFlame),
-          matching: find.byType(ImageFiltered),
+    double middleWidth = 400,
+  }) async {
+    final (:ring, :buddy, :middle) = places(middleWidth);
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: RepaintBoundary(
+            key: shot,
+            child: SizedBox.fromSize(
+              size: ring,
+              child: HomeFlame(
+                streak: streak,
+                lit: lit,
+                buddy: buddy,
+                middle: middle,
+              ),
+            ),
+          ),
         ),
-      )
-      .imageFilter;
+      ),
+    );
+    return (buddy: buddy, middle: middle);
+  }
 
-  testWidgets('the streak flame, larger than his square', (tester) async {
+  testWidgets('the streak flame, larger than his square, without its core; '
+      'its ignite stays inside its box', (tester) async {
     await pump(tester, streak: 12, lit: true);
 
     final flame = tester.widget<StreakFlame>(find.byType(StreakFlame));
     expect(flame.streak, 12);
     expect(flame.lit, isTrue);
     expect(flame.height, side * AppConstants.homeFlameScale);
-    // It moves: its motion is Home's.
-    expect(flame.still, isFalse);
     expect(flame.igniteOnMount, isFalse);
     // Its bright core would only show beside his stem.
     expect(flame.core, isFalse);
+    expect(flame.contained, isTrue);
   });
 
-  testWidgets("fits the ring's middle: as tall, but no wider than the middle "
-      'leaves around his foot, and only where it must', (tester) async {
-    const height = side * AppConstants.homeFlameScale;
-    const own = height * FlamePainter.aspectRatio;
-    double drawn(FlameLook look, FlameTier tier) =>
-        own * FlamePainter.widthShare(look: look, tier: tier, height: height);
+  testWidgets('centred on his foot, its base a little below it; as wide as '
+      'the middle leaves around his foot, less its blur', (tester) async {
+    for (final middleWidth in [400.0, 170.0]) {
+      final (:buddy, :middle) = await pump(
+        tester,
+        streak: 42,
+        lit: true,
+        middleWidth: middleWidth,
+      );
 
-    // A wide middle: its own shape.
-    await pump(tester, streak: 42, lit: true);
-    var flame = tester.getRect(find.byType(StreakFlame));
-    expect(flame.height, moreOrLessEquals(height));
-    expect(flame.width, moreOrLessEquals(own));
-
-    // A narrow one: what it draws just fits, as tall.
-    const middle = 170.0;
-    final room = middle - 2 * footDx;
-    for (final (streak, tier) in [
-      (42, FlameTier.blazing),
-      (12, FlameTier.large),
-    ]) {
-      expect(drawn(FlameLook.lit, tier), greaterThan(room));
-      await pump(tester, streak: streak, lit: true, middleWidth: middle);
-      flame = tester.getRect(find.byType(StreakFlame));
-      expect(flame.height, moreOrLessEquals(height));
+      final foot = footIn(buddy);
+      // Right of his square's middle, a little above its bottom.
+      expect(foot.dx, greaterThan(buddy.center.dx));
+      expect(foot.dy, lessThan(buddy.bottom));
+      final flame = tester.getRect(find.byType(StreakFlame));
+      expect(flame.center.dx, moreOrLessEquals(foot.dx));
+      expect(
+        flame.bottom - flame.height * FlamePainter.baseInset,
+        moreOrLessEquals(foot.dy + side * AppConstants.homeFlameBelowFeet),
+      );
+      final room = 2 * (middle.right - foot.dx);
       expect(
         flame.width,
-        moreOrLessEquals(own * room / drawn(FlameLook.lit, tier)),
-        reason: '$tier',
-      );
-    }
-    // Smaller ones and the ember already fit: their own shape.
-    for (final (streak, lit) in [(5, true), (2, true), (42, false)]) {
-      expect(
-        drawn(
-          lit ? FlameLook.lit : FlameLook.ember,
-          StreakFlame.tierOf(streak),
-        ),
-        lessThanOrEqualTo(room),
-      );
-      await pump(tester, streak: streak, lit: lit, middleWidth: middle);
-      expect(
-        tester.getRect(find.byType(StreakFlame)).width,
-        moreOrLessEquals(own),
-        reason: '$streak, $lit',
+        moreOrLessEquals(room - 2 * 3 * AppConstants.homeFlameBlur),
+        reason: '$middleWidth',
       );
     }
   });
 
-  testWidgets('a backdrop: translucent by its look (an ember, brennt, '
-      'lodert) in one blurring filter', (tester) async {
+  testWidgets('what it shows, blurred, stays in the middle', (tester) async {
+    for (final (streak, lit) in [
+      (42, true),
+      (12, true),
+      (2, true),
+      (5, false),
+    ]) {
+      final (buddy: _, :middle) = await pump(
+        tester,
+        streak: streak,
+        lit: lit,
+        middleWidth: 170,
+      );
+      final boundary = tester.renderObject<RenderRepaintBoundary>(
+        find.byKey(shot),
+      );
+      final (bytes, width, height) = (await tester.runAsync(() async {
+        final image = await boundary.toImage();
+        final data = (await image.toByteData())!;
+        return (data, image.width, image.height);
+      }))!;
+      var left = width, right = 0;
+      for (var y = 0; y < height; y++) {
+        for (var x = 0; x < width; x++) {
+          if (bytes.getUint8((y * width + x) * 4 + 3) <= 2) continue;
+          if (x < left) left = x;
+          if (x > right) right = x;
+        }
+      }
+      final at = '$streak, $lit';
+      expect(left, greaterThanOrEqualTo(middle.left.floor()), reason: at);
+      expect(right, lessThan(middle.right.ceil()), reason: at);
+    }
+  });
+
+  test('translucent by its look: an ember, brennt, lodert', () {
     for (final (streak, lit, expected) in [
       (5, false, AppConstants.homeFlameEmberOpacity),
       (0, false, AppConstants.homeFlameEmberOpacity),
@@ -131,10 +154,11 @@ void main() {
       (29, true, AppConstants.homeFlameLitOpacity),
       (30, true, AppConstants.homeFlameBlazingOpacity),
     ]) {
-      await pump(tester, streak: streak, lit: lit);
-      expect(filterOf(tester), backdrop(expected), reason: '$streak, $lit');
-      // No layer of its own for the opacity.
-      expect(find.byType(Opacity), findsNothing);
+      expect(
+        HomeFlame.opacityFor(streak: streak, lit: lit),
+        expected,
+        reason: '$streak, $lit',
+      );
     }
     expect(
       AppConstants.homeFlameLitOpacity,
@@ -146,12 +170,25 @@ void main() {
     );
   });
 
+  testWidgets('blurred and faded in one filter layer', (tester) async {
+    await pump(tester, streak: 30, lit: true);
+
+    expect(
+      find.ancestor(
+        of: find.byType(StreakFlame),
+        matching: find.byType(ImageFiltered),
+      ),
+      findsOneWidget,
+    );
+    expect(find.byType(Opacity), findsNothing);
+    expect(find.byType(ShaderMask), findsNothing);
+  });
+
   testWidgets('in front of lodert he is opaque: inside his stem shows him, '
       'not the flame', (tester) async {
     tester.view.physicalSize = const Size(402, 874);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
-    const shot = Key('shot');
     const width = 402.0 - 2 * AppConstants.spacingLg;
     final diameter = CareRing.diameterFor(width, 874);
     await tester.pumpWidget(
@@ -167,11 +204,11 @@ void main() {
                   care: CareNow.at(const CareLog(), DateTime(2026, 11, 23, 14)),
                   diameter: diameter,
                   onNeed: (_) {},
-                  behindBuddy: HomeFlame(
+                  behindBuddy: (buddy, middle) => HomeFlame(
                     streak: 42,
                     lit: true,
-                    buddySide: diameter * AppConstants.careRingBuddyFactor,
-                    middleWidth: CareRing.middleWidthFor(width),
+                    buddy: buddy,
+                    middle: middle,
                   ),
                   buddy: AnimatedBuddy(
                     controller: BuddyController(),

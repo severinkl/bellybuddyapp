@@ -35,8 +35,8 @@ void main() {
     Size size = const Size(393, 852),
     double textScale = 1.0,
     Duration settle = const Duration(milliseconds: 400),
-    Widget? behindBuddy,
-    Widget? overBuddy,
+    CareRingLayer? behindBuddy,
+    CareRingLayer? overBuddy,
     double overBuddyRoom = 0,
     Widget? buddy,
   }) async {
@@ -104,9 +104,8 @@ void main() {
     expect(CareRing.diameterFor(200, 400), 170);
   });
 
-  test("its middle: the width between the bubbles' columns", () {
-    expect(CareRing.middleWidthFor(354), 158);
-    expect(CareRing.middleWidthFor(327), 131);
+  test("the Buddy's square: 74 % of the ring", () {
+    expect(CareRing.buddySideFor(200), closeTo(148, 1e-9));
   });
 
   test('meter size: 27 % of the ring, between 48 and 72', () {
@@ -257,158 +256,109 @@ void main() {
     expect(buddyTapsLog.length, 1);
   });
 
-  testWidgets("behindBuddy: bottom-centred in the Buddy's square, under him", (
-    tester,
-  ) async {
-    const behindKey = Key('behind');
-    await pump(
-      tester,
-      behindBuddy: const SizedBox(key: behindKey, width: 50, height: 80),
-    );
+  for (final (name, size, scale) in [
+    ('393×852', const Size(393, 852), 1.0),
+    // A middle narrower than his side: his square narrows.
+    ('360×800 at text scale 1.3', const Size(360, 800), 1.3),
+  ]) {
+    testWidgets("$name: the layers are handed his square and the ring's "
+        'middle, between the bubbles, in the ring', (tester) async {
+      final handed = <String, (Rect, Rect)>{};
+      await pump(
+        tester,
+        size: size,
+        textScale: scale,
+        behindBuddy: (buddy, middle) {
+          handed['behind'] = (buddy, middle);
+          return const SizedBox.expand();
+        },
+        overBuddy: (buddy, middle) {
+          handed['over'] = (buddy, middle);
+          return const SizedBox();
+        },
+      );
 
-    final square = tester.getRect(find.byKey(CareRing.buddyKey));
-    final behind = tester.getRect(find.byKey(behindKey));
-    expect(behind.size, const Size(50, 80));
-    expect(behind.bottom, moreOrLessEquals(square.bottom));
-    expect(behind.center.dx, moreOrLessEquals(square.center.dx));
-    // Painted first, so under him.
-    expect(
-      find
-          .descendant(
-            of: find.byType(CareRing),
-            matching: find.byWidgetPredicate(
-              (w) => w.key == behindKey || w.key == const Key('buddy_double'),
-            ),
-          )
-          .evaluate()
-          .map((e) => e.widget.key),
-      [behindKey, const Key('buddy_double')],
-    );
+      final ring = tester.getRect(find.byType(CareRing));
+      final square = tester.getRect(find.byKey(CareRing.buddyKey));
+      final middle = Rect.fromLTRB(
+        bubble(tester, CareNeed.food).right,
+        ring.top,
+        bubble(tester, CareNeed.drink).left,
+        ring.bottom,
+      );
+      expect(handed.keys, unorderedEquals(['behind', 'over']));
+      for (final MapEntry(key: layer, value: (buddy, mid)) in handed.entries) {
+        expect(
+          buddy.shift(ring.topLeft),
+          rectMoreOrLessEquals(square),
+          reason: layer,
+        );
+        expect(
+          mid.shift(ring.topLeft),
+          rectMoreOrLessEquals(middle),
+          reason: layer,
+        );
+      }
+      if (scale > 1) {
+        expect(square.width, lessThan(square.height));
+        expect(square.width, moreOrLessEquals(middle.width));
+      }
+    });
+  }
 
-    // Never a tap target: a tap on it lands on the Buddy.
-    await tester.tapAt(behind.center);
-    expect(buddyTapsLog, hasLength(1));
-  });
-
-  testWidgets('behindBuddy larger than his square: at its own size, clipped '
-      'to the ring between the bubbles; the bubbles still open', (
-    tester,
-  ) async {
-    const behindKey = Key('behind');
-    final tapped = await pump(
-      tester,
-      behindBuddy: const SizedBox(key: behindKey, width: 600, height: 600),
-    );
-
-    final square = tester.getRect(find.byKey(CareRing.buddyKey));
-    final behind = tester.getRect(find.byKey(behindKey));
-    expect(behind.size, const Size(600, 600));
-    expect(behind.bottom, moreOrLessEquals(square.bottom));
-    expect(behind.center.dx, moreOrLessEquals(square.center.dx));
-
-    final clip = tester
-        .getRect(
-          find
-              .ancestor(
-                of: find.byKey(behindKey),
-                matching: find.byType(ClipRect),
-              )
-              .first,
-        )
-        .deflate(0.01);
-    final ring = tester.getRect(find.byType(CareRing));
-    // The ring's middle, between the bubbles.
-    expect(
-      clip.width,
-      moreOrLessEquals(CareRing.middleWidthFor(ring.width) - 0.02),
-    );
-    expect(ring.inflate(0.01).contains(clip.topLeft), isTrue);
-    expect(ring.inflate(0.01).contains(clip.bottomRight), isTrue);
-    expect(clip.contains(square.center), isTrue);
-    for (final need in CareNeed.values) {
-      expect(clip.overlaps(bubble(tester, need)), isFalse, reason: '$need');
-      await tester.tap(find.byKey(CareRing.needKey(need)));
-    }
-    expect(tapped, CareNeed.values);
-    expect(buddyTapsLog, isEmpty);
-  });
-
-  testWidgets("behindBuddy fades out toward the bubbles and the ring's top, so "
-      'it shows no edge where it is cut off', (tester) async {
-    const behindKey = Key('behind');
-    await pump(
-      tester,
-      behindBuddy: const ColoredBox(
-        key: behindKey,
-        color: AppTheme.foreground,
-        child: SizedBox(width: 600, height: 600),
-      ),
-    );
-
-    final clip = tester.getRect(
-      find
-          .ancestor(of: find.byKey(behindKey), matching: find.byType(ClipRect))
-          .first,
-    );
-    final ring = tester.getRect(find.byType(CareRing));
-    expect(clip.top, moreOrLessEquals(ring.top));
-    final square = tester.getRect(find.byKey(CareRing.buddyKey));
-    final bytes = (await tester.runAsync(() async {
-      final image = await captureImage(find.byType(CareRing).evaluate().single);
-      return image.toByteData();
-    }))!;
-    final width = tester.view.physicalSize.width.round();
-
-    /// How much of the behind shows at ([x], [y]): 0 none, 1 all of it.
-    double shown(double x, double y) {
-      final i = (y.round() * width + x.round()) * 4;
-      const fg = AppTheme.foreground;
-      final bg = AppTheme.background.r * 255;
-      return (bg - bytes.getUint8(i)) / (bg - fg.r * 255);
-    }
-
-    const fade = AppConstants.careRingBehindFade;
-    // A row inside the ring, above his square and below the top's fade.
-    final y = square.top - 2;
-    expect(y, greaterThan(clip.top + fade + 1));
-    expect(shown(clip.center.dx, y), moreOrLessEquals(1, epsilon: 0.02));
-    for (final edge in [clip.left + 0.5, clip.right - 0.5]) {
-      expect(shown(edge, y), lessThan(0.1), reason: 'at $edge');
-    }
-    for (final x in [clip.left + fade + 1, clip.right - fade - 1]) {
-      expect(shown(x, y), moreOrLessEquals(1, epsilon: 0.02), reason: 'at $x');
-    }
-    expect(shown(clip.left + fade / 2, y), inInclusiveRange(0.3, 0.7));
-
-    // Its middle, at the ring's top.
-    final x = clip.center.dx;
-    expect(shown(x, clip.top + 0.5), lessThan(0.1));
-    expect(shown(x, clip.top + fade / 2), inInclusiveRange(0.3, 0.7));
-    expect(shown(x, clip.top + fade + 1), moreOrLessEquals(1, epsilon: 0.02));
-  });
-
-  testWidgets('behindBuddy never takes a tap, even where the Buddy does not', (
+  testWidgets('behindBuddy: under him and the bubbles, never a tap target', (
     tester,
   ) async {
     var behindTaps = 0;
     const behindKey = Key('behind');
     final tapped = await pump(
       tester,
-      buddy: const SizedBox.expand(),
-      behindBuddy: GestureDetector(
-        behavior: HitTestBehavior.opaque,
-        onTap: () => behindTaps++,
-        child: const SizedBox(key: behindKey, width: 50, height: 80),
+      behindBuddy: (_, middle) => Stack(
+        children: [
+          Positioned.fromRect(
+            rect: middle,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => behindTaps++,
+              child: const ColoredBox(
+                key: behindKey,
+                color: AppTheme.foreground,
+              ),
+            ),
+          ),
+        ],
       ),
     );
 
-    await tester.tapAt(tester.getCenter(find.byKey(behindKey)));
+    // Painted first, so under him and the bubbles.
+    expect(
+      find
+          .descendant(
+            of: find.byType(CareRing),
+            matching: find.byWidgetPredicate(
+              (w) =>
+                  w.key == behindKey ||
+                  w.key == CareRing.needKey(CareNeed.food) ||
+                  w.key == const Key('buddy_double'),
+            ),
+          )
+          .evaluate()
+          .map((e) => e.widget.key),
+      [behindKey, CareRing.needKey(CareNeed.food), const Key('buddy_double')],
+    );
+
+    // A tap on it lands on the Buddy …
+    await tester.tapAt(tester.getCenter(find.byKey(CareRing.buddyKey)));
+    expect(buddyTapsLog, hasLength(1));
+    // … and where he is not, on nothing.
+    final square = tester.getRect(find.byKey(CareRing.buddyKey));
+    await tester.tapAt(square.topCenter - const Offset(0, 4));
     expect(behindTaps, 0);
     expect(tapped, isEmpty);
   });
 
   /// The top of the Buddy's head in his [square].
-  double headOf(Rect square) => square.top + BuddyLayout(square.size).origin.dy;
+  double headOf(Rect square) => square.top + BuddyLayout(square.size).headTop;
 
   testWidgets('overBuddy: on his head, over the bubbles, never a tap target', (
     tester,
@@ -418,7 +368,7 @@ void main() {
     final tapped = await pump(
       tester,
       // A tap target of its own (as the bubble is), which never gets one.
-      overBuddy: GestureDetector(
+      overBuddy: (_, _) => GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: () => overTaps++,
         child: const SizedBox(key: overKey, width: 300, height: 60),
@@ -460,7 +410,7 @@ void main() {
     await pump(
       tester,
       overBuddyRoom: 48,
-      overBuddy: const FittedBox(
+      overBuddy: (_, _) => const FittedBox(
         fit: BoxFit.scaleDown,
         alignment: Alignment.bottomCenter,
         child: SizedBox(key: tallKey, width: 100, height: 1000),

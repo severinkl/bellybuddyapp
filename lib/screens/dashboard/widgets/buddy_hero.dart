@@ -838,7 +838,6 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
               width,
               MediaQuery.sizeOf(context).height,
             );
-            final buddySide = diameter * AppConstants.careRingBuddyFactor;
             // Wider with large text, so a line breaks as at the base size
             // and shows at the user's size instead of scaled down. (The
             // scale of the bubble's own text size: Android scales large
@@ -857,23 +856,23 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
               onNeed: (need) => openTracker(context, need),
               behindBuddy: status == null
                   ? null
-                  : HomeFlame(
+                  : (buddy, middle) => HomeFlame(
                       streak: status.streak,
                       lit: status.todayCounted,
-                      buddySide: buddySide,
-                      middleWidth: CareRing.middleWidthFor(width),
+                      buddy: buddy,
+                      middle: middle,
                     ),
               // His bubble may rise over the chip row, never above the hero;
               // a taller one is scaled down to fit.
               overBuddyRoom: AppConstants.iconBadgeLg,
-              overBuddy: FittedBox(
+              overBuddy: (buddy, _) => FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.bottomCenter,
                 child: BuddySpeechBubble(
                   controller: _buddy,
                   maxWidth: bubbleWidth,
                   tail: BuddyBubbleTail.down(
-                    shift: BuddyStage.faceShift(Size.square(buddySide)),
+                    shift: BuddyStage.faceShift(buddy.size),
                   ),
                 ),
               ),

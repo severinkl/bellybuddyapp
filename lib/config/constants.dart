@@ -190,10 +190,6 @@ class AppConstants {
   static const double careNeedGlow = 5.0;
   static const Duration careNeedPulse = Duration(milliseconds: 1400);
 
-  /// What the ring draws behind the Buddy fades out over this much toward
-  /// the bubbles.
-  static const double careRingBehindFade = 16.0;
-
   // Home's streak flame, a glow behind the Buddy: its height (per side of
   // his square), how far its base sits below his feet (per side), how
   // opaque it is as an ember, lit and blazing („lodert"), and its blur

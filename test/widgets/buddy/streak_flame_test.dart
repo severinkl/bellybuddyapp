@@ -267,48 +267,91 @@ void main() {
     });
   });
 
-  testWidgets('widthShare: the share of its width it paints at rest, its '
-      'glow when lit from 40 dp up, else its body', (t) async {
+  testWidgets('a narrower box narrows what it paints at rest to fit, as '
+      'tall; a wider one centres it', (t) async {
     await t.runAsync(() async {
       for (final look in FlameLook.values) {
         for (final tier in FlameTier.values) {
-          // Wide enough to measure; the second too low to glow.
-          for (final box in const [Size(200, 240), Size(200, 36)]) {
-            final bounds = await _paintedBounds(
-              FlamePainter(look: look, tier: tier),
-              box,
+          // Tall enough to glow, and too low to.
+          for (final height in const [240.0, 36.0]) {
+            final painter = FlamePainter(look: look, tier: tier);
+            final at = '$look, $tier at $height';
+            final own = (await _paintedBounds(
+              painter,
+              Size(height * FlamePainter.aspectRatio, height),
+            ))!;
+
+            final wide = Size(height * 2, height);
+            final centred = (await _paintedBounds(painter, wide))!;
+            expect(centred.size, own.size, reason: at);
+            expect(
+              centred.center.dx,
+              moreOrLessEquals(wide.width / 2, epsilon: 1),
+              reason: at,
+            );
+
+            final narrow = Size(own.width * 0.7, height);
+            final fitted = (await _paintedBounds(painter, narrow))!;
+            // Within a pixel's antialiasing.
+            expect(fitted.left, greaterThanOrEqualTo(-1), reason: at);
+            expect(
+              fitted.right,
+              lessThanOrEqualTo(narrow.width + 1),
+              reason: at,
             );
             expect(
-              bounds!.width / box.width,
-              moreOrLessEquals(
-                FlamePainter.widthShare(
-                  look: look,
-                  tier: tier,
-                  height: box.height,
-                ),
-                epsilon: 0.03,
-              ),
-              reason: '$look, $tier at $box',
+              fitted.width,
+              moreOrLessEquals(narrow.width, epsilon: narrow.width * 0.05 + 1),
+              reason: at,
             );
+            expect(fitted.top, own.top, reason: at);
+            expect(fitted.bottom, own.bottom, reason: at);
           }
         }
       }
     });
-    // Lit, it glows wider than its body.
-    expect(
-      FlamePainter.widthShare(
-        look: FlameLook.lit,
-        tier: FlameTier.large,
-        height: 240,
-      ),
-      greaterThan(
-        FlamePainter.widthShare(
-          look: FlameLook.lit,
-          tier: FlameTier.large,
-          height: 36,
-        ),
-      ),
-    );
+  });
+
+  testWidgets('contained, its ignite stays inside its box: the pop at most '
+      'fills it, the burst flies no further than its sides', (t) async {
+    const box = Size(120, 240);
+    Widget flame(int streak, {required bool lit, bool contained = true}) =>
+        StreakFlame(
+          streak: streak,
+          lit: lit,
+          height: box.height,
+          width: box.width,
+          contained: contained,
+        );
+
+    /// What the ignite paints at each step, outside [box].
+    Future<List<Rect>> igniteOutside(
+      int streak, {
+      bool contained = true,
+    }) async {
+      await t.pumpWidget(
+        _wrap(flame(streak, lit: false, contained: contained)),
+      );
+      await t.pumpWidget(_wrap(flame(streak, lit: true, contained: contained)));
+      final outside = <Rect>[];
+      for (var step = 0; step < 10; step++) {
+        await t.pump(const Duration(milliseconds: 70));
+        final painter = _painter(t);
+        if (painter.burst == null) break;
+        final bounds = (await t.runAsync(() => _paintedBounds(painter, box)))!;
+        if ((Offset.zero & box).intersect(bounds) != bounds) {
+          outside.add(bounds);
+        }
+      }
+      await t.pumpAndSettle();
+      return outside;
+    }
+
+    for (final streak in [1, 5, 12, 42]) {
+      expect(await igniteOutside(streak), isEmpty, reason: '$streak');
+    }
+    // Not contained, it pops out of its box.
+    expect(await igniteOutside(42, contained: false), isNotEmpty);
   });
 
   testWidgets('size keeps the 100:120 shape', (t) async {

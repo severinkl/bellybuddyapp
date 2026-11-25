@@ -691,70 +691,24 @@ void main() {
       expect(chip.todayCounted, isFalse);
     });
 
-    testWidgets('the flame glows behind the Buddy: larger than his square, '
-        'its base just below his foot, its core behind his stem, as wide as '
-        'the ring between the bubbles leaves, under him', (tester) async {
-      // A phone whose ring leaves the flame less than its own width.
-      tester.view.physicalSize = const Size(360, 800);
-      tester.view.devicePixelRatio = 1;
-      addTearDown(tester.view.reset);
+    testWidgets("the flame glows behind the Buddy: Home's flame for the "
+        "streak and today, placed by the ring's square and middle, under "
+        'him', (tester) async {
       buddy = _FakeBuddy(() => _status(streak: 42, todayCounted: true));
       await pumpHero(tester);
 
-      final square = tester.getRect(find.byKey(CareRing.buddyKey));
-      final side = square.height;
-      final flame = tester.getRect(flameFinder());
+      final flame = tester.widget<HomeFlame>(find.byType(HomeFlame));
+      expect(flame.streak, 42);
+      expect(flame.lit, isTrue);
+      final ring = tester.getRect(find.byType(CareRing));
       expect(
-        flame.height,
-        moreOrLessEquals(side * AppConstants.homeFlameScale),
-      );
-      expect(flame.height, greaterThan(side));
-      // His foot, the middle of his stem's end: right of the square's
-      // middle, a little above its bottom.
-      final foot =
-          square.topLeft + BuddyLayout(square.size).toLocal(kBuddyFoot);
-      expect(foot.dx, greaterThan(square.center.dx));
-      expect(foot.dy, lessThan(square.bottom));
-      expect(flame.center.dx, moreOrLessEquals(foot.dx));
-      final base = flame.bottom - flame.height * FlamePainter.baseInset;
-      expect(
-        base,
-        moreOrLessEquals(foot.dy + side * AppConstants.homeFlameBelowFeet),
-      );
-
-      // Only inside the ring, between the bubbles; narrowed to fit there
-      // whole, around his foot.
-      final middle = tester.getRect(
-        find.ancestor(of: flameFinder(), matching: find.byType(ClipRect)).first,
-      );
-      final clip = middle.deflate(0.01);
-      final ring = tester.getRect(find.byType(CareRing)).inflate(0.01);
-      expect(ring.contains(clip.topLeft), isTrue);
-      expect(ring.contains(clip.bottomRight), isTrue);
-      for (final need in CareNeed.values) {
-        expect(
-          clip.overlaps(tester.getRect(find.byKey(CareRing.needKey(need)))),
-          isFalse,
-          reason: '$need',
-        );
-      }
-      expect(flame.width, lessThan(flame.height * FlamePainter.aspectRatio));
-      final drawn =
-          flame.width *
-          FlamePainter.widthShare(
-            look: FlameLook.lit,
-            tier: FlameTier.blazing,
-            height: flame.height,
-          );
-      expect(
-        drawn,
-        moreOrLessEquals(middle.width - 2 * (foot.dx - middle.center.dx)),
+        flame.buddy.shift(ring.topLeft),
+        rectMoreOrLessEquals(tester.getRect(find.byKey(CareRing.buddyKey))),
       );
       expect(
-        flame.center.dx + drawn / 2,
-        lessThanOrEqualTo(middle.right + 0.01),
+        flame.middle.shift(ring.topLeft).center,
+        offsetMoreOrLessEquals(ring.center),
       );
-      expect(flame.center.dx - drawn / 2, greaterThanOrEqualTo(middle.left));
 
       // Painted before him, so under him.
       expect(
@@ -2988,7 +2942,7 @@ void main() {
       /// The top of the Buddy's head, as drawn in his square.
       double head(WidgetTester tester) {
         final square = tester.getRect(find.byKey(CareRing.buddyKey));
-        return square.top + BuddyLayout(square.size).origin.dy;
+        return square.top + BuddyLayout(square.size).headTop;
       }
 
       Rect bubbleRect(WidgetTester tester) =>

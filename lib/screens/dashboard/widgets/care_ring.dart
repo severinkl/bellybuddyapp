@@ -13,6 +13,11 @@ import '../../../widgets/buddy/buddy_geometry.dart';
 import '../../../widgets/buddy/need_icon.dart';
 import '../../../widgets/buddy/need_meter.dart';
 
+/// Builds a layer of [CareRing] around the Buddy, in the ring's box: his
+/// square ([buddy]) and the ring's middle between the bubbles' columns
+/// ([middle]), both in that box.
+typedef CareRingLayer = Widget Function(Rect buddy, Rect middle);
+
 /// The Buddy among his four needs, a bubble in each corner (Essen top
 /// left, Trinken top right, Klo bottom left, Bauchgefühl bottom right):
 /// a column of two bubbles on each side of him, at least [diameter] tall
@@ -26,7 +31,8 @@ import '../../../widgets/buddy/need_meter.dart';
 /// [highlight]ed need (the one he suggests next) glows and, unless
 /// animations are off, pulses gently on its own clock (paused while
 /// `TickerMode` is off). [behindBuddy] (Home's streak flame) is drawn
-/// under him, [overBuddy] (his speech bubble) on his head, over it all.
+/// under him and the bubbles, [overBuddy] (his speech bubble) on his head,
+/// over it all.
 class CareRing extends StatelessWidget {
   const CareRing({
     super.key,
@@ -68,10 +74,10 @@ class CareRing extends StatelessWidget {
         AppConstants.careRingMaxDiameter,
       );
 
-  /// The width of the ring's middle, between the bubbles, in a [width]
-  /// wide ring: [behindBuddy] shows only there.
-  static double middleWidthFor(double width) =>
-      width - 2 * (AppConstants.careNeedWidth + 2 * AppConstants.careNeedGlow);
+  /// The side of the Buddy's square on a ring of [diameter]: he is drawn
+  /// as tall, and as wide where the ring's middle leaves the room.
+  static double buddySideFor(double diameter) =>
+      diameter * AppConstants.careRingBuddyFactor;
 
   /// A bubble's meter on a ring of [diameter].
   static double meterSizeFor(double diameter) =>
@@ -84,27 +90,25 @@ class CareRing extends StatelessWidget {
   final CareNow care;
   final double diameter;
 
-  /// Drawn centred, [AppConstants.careRingBuddyFactor] of [diameter]
-  /// square.
+  /// Drawn centred in his square ([buddySideFor]).
   final Widget buddy;
 
   /// Tapping a need's bubble calls this with the need.
   final ValueChanged<CareNeed> onNeed;
   final CareNeed? highlight;
 
-  /// Drawn under the Buddy at its own size, bottom-centred in his square.
-  /// It may be larger than the square, but shows only inside the ring
-  /// between the bubbles ([middleWidthFor]; never over or under one),
-  /// faded out toward them and the ring's top, and it is never a tap
-  /// target: a tap on it lands on him.
-  final Widget? behindBuddy;
+  /// Drawn under the Buddy and the bubbles, filling the ring: it places
+  /// itself by his square and the ring's middle it is handed, and keeps
+  /// to the middle (never over or under a bubble). It is never a tap
+  /// target: a tap on it lands on what is over it.
+  final CareRingLayer? behindBuddy;
 
   /// Drawn over everything in the ring, the bubbles included (Home's
-  /// speech bubble): centred on the ring, its bottom on the Buddy's head.
-  /// It gets at most the ring's width and the height from the ring's top
-  /// down to his head plus [overBuddyRoom], and is never a tap target: a
-  /// tap on it lands on what it covers.
-  final Widget? overBuddy;
+  /// speech bubble): centred on the ring, its bottom on the Buddy's head
+  /// ([BuddyLayout.headTop]). It gets at most the ring's width and the
+  /// height from the ring's top down to his head plus [overBuddyRoom], and
+  /// is never a tap target: a tap on it lands on what it covers.
+  final CareRingLayer? overBuddy;
 
   /// How far [overBuddy] may rise above the ring.
   final double overBuddyRoom;
@@ -161,26 +165,48 @@ class CareRing extends StatelessWidget {
   /// How much each further step shrinks the labels by ([_labelScaler]).
   static const _labelShrinkStep = 0.98;
 
-  /// [behindBuddy]'s mask over the ring's middle ([bounds]): clear at its
-  /// sides, full from [AppConstants.careRingBehindFade] in.
-  static Shader _fadeSides(Rect bounds) {
-    final fade = math.min(0.5, AppConstants.careRingBehindFade / bounds.width);
-    return LinearGradient(
-      colors: const [
-        Colors.transparent,
-        Colors.black,
-        Colors.black,
-        Colors.transparent,
-      ],
-      stops: [0, fade, 1 - fade, 1],
-    ).createShader(bounds);
+  /// The Buddy's square and the ring's middle (between the bubbles'
+  /// columns) in a ring of [size], as its row lays them out: he is centred
+  /// in the middle, narrower where it leaves less room than [buddySide].
+  static ({Rect buddy, Rect middle}) _placesIn(Size size, double buddySide) {
+    const column = AppConstants.careNeedWidth + 2 * AppConstants.careNeedGlow;
+    final middle = Rect.fromLTRB(
+      column,
+      0,
+      math.max(column, size.width - column),
+      size.height,
+    );
+    final buddy = Rect.fromCenter(
+      center: middle.center,
+      width: math.min(buddySide, middle.width),
+      height: math.min(buddySide, middle.height),
+    );
+    return (buddy: buddy, middle: middle);
   }
+
+  /// [layer] in a ring-filling box that takes no tap, handed his square
+  /// and the middle; [place] puts what it builds into that box.
+  Widget _layer(
+    CareRingLayer layer,
+    double buddySide, {
+    Widget Function(Rect buddy, Widget child)? place,
+  }) => Positioned.fill(
+    child: IgnorePointer(
+      child: LayoutBuilder(
+        builder: (_, constraints) {
+          final (:buddy, :middle) = _placesIn(constraints.biggest, buddySide);
+          final child = layer(buddy, middle);
+          return place == null ? child : place(buddy, child);
+        },
+      ),
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
     final meterSize = meterSizeFor(diameter);
     final labelScaler = _labelScaler(context);
-    final buddySide = diameter * AppConstants.careRingBuddyFactor;
+    final buddySide = buddySideFor(diameter);
     Widget bubble(CareNeed need) => _NeedBubble(
       key: needKey(need),
       need: need,
@@ -206,67 +232,36 @@ class CareRing extends StatelessWidget {
         child: Stack(
           clipBehavior: Clip.none,
           children: [
+            if (behindBuddy case final behind?) _layer(behind, buddySide),
             Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 side(CareNeed.food, CareNeed.toilet),
                 // His square, narrower where the bubbles leave less room (he
-                // is drawn narrower than tall, so his height stays).
+                // is drawn narrower than tall, so his height stays):
+                // [_placesIn].
                 Expanded(
-                  child: Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      if (behindBuddy case final behind?)
-                        Positioned.fill(
-                          child: IgnorePointer(
-                            // Faded out toward the bubbles and the ring's
-                            // top, so where it is cut off it shows no edge.
-                            child: ShaderMask(
-                              blendMode: BlendMode.dstIn,
-                              shaderCallback: _fadeSides,
-                              child: CustomPaint(
-                                foregroundPainter: const _FadeTop(),
-                                child: ClipRect(
-                                  child: Center(
-                                    // His square again, to align it in.
-                                    child: SizedBox.square(
-                                      dimension: buddySide,
-                                      child: OverflowBox(
-                                        alignment: Alignment.bottomCenter,
-                                        minWidth: 0,
-                                        maxWidth: double.infinity,
-                                        minHeight: 0,
-                                        maxHeight: double.infinity,
-                                        child: behind,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      SizedBox.square(
-                        key: buddyKey,
-                        dimension: buddySide,
-                        child: buddy,
-                      ),
-                    ],
+                  child: Center(
+                    child: SizedBox.square(
+                      key: buddyKey,
+                      dimension: buddySide,
+                      child: buddy,
+                    ),
                   ),
                 ),
                 side(CareNeed.drink, CareNeed.gutFeeling),
               ],
             ),
             if (overBuddy case final over?)
-              Positioned.fill(
-                child: IgnorePointer(
-                  child: CustomSingleChildLayout(
-                    delegate: _OverBuddyLayout(
-                      buddySide: buddySide,
-                      room: overBuddyRoom,
-                    ),
-                    child: over,
+              _layer(
+                over,
+                buddySide,
+                place: (buddy, child) => CustomSingleChildLayout(
+                  delegate: _OverBuddyLayout(
+                    head: buddy.top + BuddyLayout(buddy.size).headTop,
+                    room: overBuddyRoom,
                   ),
+                  child: child,
                 ),
               ),
           ],
@@ -277,73 +272,31 @@ class CareRing extends StatelessWidget {
 }
 
 /// Lays out [CareRing.overBuddy] in the ring: at most the ring's width and
-/// the height down to the Buddy's head plus [room], centred on the ring,
+/// the height down to the Buddy's [head] plus [room], centred on the ring,
 /// its bottom on his head.
 class _OverBuddyLayout extends SingleChildLayoutDelegate {
-  const _OverBuddyLayout({required this.buddySide, required this.room});
+  const _OverBuddyLayout({required this.head, required this.room});
 
-  /// His square's side ([CareRing.buddy]).
-  final double buddySide;
+  /// The top of his head in the ring.
+  final double head;
 
   /// How far it may rise above the ring ([CareRing.overBuddyRoom]).
   final double room;
-
-  /// The top of his head in a ring of [size]: in his square, centred in
-  /// the ring and as narrow as its middle leaves ([CareRing.middleWidthFor]).
-  double _headTop(Size size) {
-    final square = Size(
-      math.max(0, math.min(buddySide, CareRing.middleWidthFor(size.width))),
-      buddySide,
-    );
-    return (size.height - buddySide) / 2 + BuddyLayout(square).origin.dy;
-  }
 
   @override
   BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
       BoxConstraints(
         maxWidth: constraints.maxWidth,
-        maxHeight: math.max(0, _headTop(constraints.biggest) + room),
+        maxHeight: math.max(0, head + room),
       );
 
   @override
-  Offset getPositionForChild(Size size, Size childSize) => Offset(
-    (size.width - childSize.width) / 2,
-    _headTop(size) - childSize.height,
-  );
+  Offset getPositionForChild(Size size, Size childSize) =>
+      Offset((size.width - childSize.width) / 2, head - childSize.height);
 
   @override
   bool shouldRelayout(_OverBuddyLayout old) =>
-      old.buddySide != buddySide || old.room != room;
-}
-
-/// Fades what is painted under it, inside [CareRing.behindBuddy]'s mask
-/// layer, out toward its top over [AppConstants.careRingBehindFade]: the
-/// ring's top, where an igniting flame's pop is cut off.
-class _FadeTop extends CustomPainter {
-  const _FadeTop();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final band =
-        Offset.zero &
-        Size(
-          size.width,
-          math.min(size.height, AppConstants.careRingBehindFade),
-        );
-    canvas.drawRect(
-      band,
-      Paint()
-        ..blendMode = BlendMode.dstIn
-        ..shader = const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Colors.transparent, Colors.black],
-        ).createShader(band),
-    );
-  }
-
-  @override
-  bool shouldRepaint(_FadeTop old) => false;
+      old.head != head || old.room != room;
 }
 
 /// A need's corner bubble, a button that logs it ([onTap]): its meter
