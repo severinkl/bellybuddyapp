@@ -156,8 +156,7 @@ void main() {
     addTearDown(disableAmbientAnimationsForTests);
     await t.pumpWidget(_wrap(_flame(streak: 7, lit: true)));
     final painter = _painter(t);
-    expect(FlamePainter.tongueCount, greaterThanOrEqualTo(3));
-    expect(painter.flicker, hasLength(FlamePainter.tongueCount));
+    expect(painter.flicker.length, greaterThanOrEqualTo(3));
     expect(painter.tier, FlameTier.large);
     expect(painter.sparkCount, 2);
     expect(painter.hotCore, isFalse);

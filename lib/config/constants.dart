@@ -122,19 +122,13 @@ class AppConstants {
   static const double streakWeekDaySize = 36.0;
 
   // The drawn streak flame: its height in the streak moment, a week row's
-  // day and the success page's ignite; the ignite's burst, the flicker of
-  // each tongue (one period per tongue, pairwise different), the ember's
+  // day and the success page's ignite; the ignite's burst, the ember's
   // breathing and the lit flame's sparks; its glow and sparks only from
   // this height up (smaller, they would only smudge)
   static const double streakFlameMomentHeight = 72.0;
   static const double streakFlameMarkHeight = 20.0;
   static const double streakFlameIgniteHeight = 32.0;
   static const Duration streakFlameIgnite = Duration(milliseconds: 750);
-  static const List<Duration> streakFlameFlicker = <Duration>[
-    Duration(milliseconds: 1300),
-    Duration(milliseconds: 1700),
-    Duration(milliseconds: 1100),
-  ];
   static const Duration streakFlameBreath = Duration(milliseconds: 2800);
   static const Duration streakFlameSparks = Duration(milliseconds: 1600);
   static const double streakFlameGlowMinHeight = 40.0;
