@@ -53,9 +53,12 @@ class BuddySpeechBubble extends StatelessWidget {
     this.tail = const BuddyBubbleTail.down(),
     this.fontSize = AppTheme.fontSizeBodyLG,
     this.maxLines = AppConstants.buddyBubbleMaxLines,
+    this.scaleWidthWithText = false,
   });
 
   final BuddyController controller;
+
+  /// Its widest (at the base text size with [scaleWidthWithText]).
   final double maxWidth;
   final BuddyBubbleTail tail;
 
@@ -66,11 +69,20 @@ class BuddySpeechBubble extends StatelessWidget {
   /// more; null shows the whole text (a bubble in a scrolling page).
   final int? maxLines;
 
+  /// Whether it widens with large text: [maxWidth] times the text's scale
+  /// at its own [fontSize] (Android scales large sizes less), so a line
+  /// breaks as at the base size and shows at the user's size.
+  final bool scaleWidthWithText;
+
   @override
   Widget build(BuildContext context) {
     final calm =
         (MediaQuery.maybeDisableAnimationsOf(context) ?? false) ||
         controller.reducedMotion;
+    final scaler = MediaQuery.maybeTextScalerOf(context);
+    final maxWidth = scaleWidthWithText && scaler != null
+        ? this.maxWidth * math.max(1, scaler.scale(fontSize) / fontSize)
+        : this.maxWidth;
     final bubble = controller.bubbleListenable;
     return ListenableBuilder(
       listenable: bubble,

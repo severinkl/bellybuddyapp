@@ -65,11 +65,12 @@ class BuddyStage extends StatelessWidget {
   }
 }
 
-/// The bubble slot above a Buddy who fills [buddyArea]: [height] tall and
-/// [width] wide, his speech bubble on its bottom edge (at most
-/// [AppConstants.buddyBubbleMaxWidth] wide) with its tail pointing at his
-/// face. A taller bubble (large text scale) is scaled down to fit instead
-/// of overflowing.
+/// The bubble slot above a Buddy who fills [buddyArea]: [height] tall (or,
+/// null, as tall as the bubble) and [width] wide, his speech bubble on its
+/// bottom edge (at most [maxWidth] wide, wider with large text where
+/// [scaleWidthWithText], never wider than [width]) with its tail pointing
+/// at his face. A taller bubble (large text scale) is scaled down to fit
+/// its [height], or the height it is given, instead of overflowing.
 class BuddyBubbleSlot extends StatelessWidget {
   const BuddyBubbleSlot({
     super.key,
@@ -77,27 +78,37 @@ class BuddyBubbleSlot extends StatelessWidget {
     required this.width,
     required this.buddyArea,
     this.height = AppConstants.buddyBubbleHeight,
+    this.maxWidth = AppConstants.buddyBubbleMaxWidth,
+    this.scaleWidthWithText = false,
   });
 
   final BuddyController controller;
   final double width;
   final Size buddyArea;
-  final double height;
+  final double? height;
+  final double maxWidth;
+
+  /// [BuddySpeechBubble.scaleWidthWithText].
+  final bool scaleWidthWithText;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: height,
-      width: double.infinity,
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        alignment: Alignment.bottomCenter,
+    final bubble = FittedBox(
+      fit: BoxFit.scaleDown,
+      alignment: Alignment.bottomCenter,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: width),
         child: BuddySpeechBubble(
           controller: controller,
-          maxWidth: math.min(AppConstants.buddyBubbleMaxWidth, width),
+          maxWidth: maxWidth,
+          scaleWidthWithText: scaleWidthWithText,
           tail: BuddyBubbleTail.down(shift: BuddyStage.faceShift(buddyArea)),
         ),
       ),
     );
+    final height = this.height;
+    return height == null
+        ? bubble
+        : SizedBox(height: height, width: double.infinity, child: bubble);
   }
 }

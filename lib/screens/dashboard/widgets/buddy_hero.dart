@@ -8,7 +8,6 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
-import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../providers/buddy_events_provider.dart';
 import '../../../providers/buddy_offers_provider.dart';
@@ -838,17 +837,6 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
               width,
               MediaQuery.sizeOf(context).height,
             );
-            // Wider with large text, so a line breaks as at the base size
-            // and shows at the user's size instead of scaled down. (The
-            // scale of the bubble's own text size: Android scales large
-            // sizes less.)
-            const textSize = AppTheme.fontSizeBodyLG;
-            final textScale =
-                MediaQuery.textScalerOf(context).scale(textSize) / textSize;
-            final bubbleWidth = math.min(
-              width,
-              AppConstants.buddyBubbleOverlayMaxWidth * math.max(1, textScale),
-            );
             return CareRing(
               care: care,
               diameter: diameter,
@@ -863,18 +851,17 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
                       middle: middle,
                     ),
               // His bubble may rise over the chip row, never above the hero;
-              // a taller one is scaled down to fit.
+              // a taller one is scaled down to fit. Wider with large text,
+              // so a line breaks as at the base size and shows at the
+              // user's size instead of scaled down.
               overBuddyRoom: AppConstants.iconBadgeLg,
-              overBuddy: (buddy, _) => FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.bottomCenter,
-                child: BuddySpeechBubble(
-                  controller: _buddy,
-                  maxWidth: bubbleWidth,
-                  tail: BuddyBubbleTail.down(
-                    shift: BuddyStage.faceShift(buddy.size),
-                  ),
-                ),
+              overBuddy: (buddy, _) => BuddyBubbleSlot(
+                controller: _buddy,
+                width: width,
+                buddyArea: buddy.size,
+                height: null,
+                maxWidth: AppConstants.buddyBubbleOverlayMaxWidth,
+                scaleWidthWithText: true,
               ),
               buddy: AnimatedBuddy(
                 controller: _buddy,
