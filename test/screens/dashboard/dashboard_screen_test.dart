@@ -1172,6 +1172,11 @@ void main() {
           final hole = _spotlight(tester);
           expect(hole, hero.inflate(AppConstants.spacingXs));
           expect(hole.intersect(ring), ring, reason: 'the ring is in the hole');
+          // So is the room his bubble may take above the ring.
+          expect(
+            hole.top,
+            lessThanOrEqualTo(ring.top - AppConstants.iconBadgeLg),
+          );
           expect(hole.center.dx, closeTo(phone.size.width / 2, 0.01));
 
           for (final step in dashboardTutorialSteps.skip(1)) {

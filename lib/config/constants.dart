@@ -96,6 +96,10 @@ class AppConstants {
   static const double buddyBubbleSideTailTop = 34.0;
   static const Offset buddyBubbleShadowOffset = Offset(3, 4);
 
+  // Home's bubble, floating over the Buddy's head in the ring: its widest
+  // width (the ring's middle is narrower; it may cover the top needs)
+  static const double buddyBubbleOverlayMaxWidth = 200.0;
+
   // Typewriter reveal: per character, at most this long in total
   static const Duration buddyBubbleCharDelay = Duration(milliseconds: 30);
   static const Duration buddyBubbleTypeMax = Duration(milliseconds: 1200);

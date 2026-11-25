@@ -84,10 +84,13 @@ _Cue _cueFor(BuddyAnnouncement a) => switch (a) {
 };
 
 /// The Buddy at the top of the dashboard: the streak chip (opens „Dein
-/// Streak"), his speech bubble, the Buddy inside the [CareRing] of his four
-/// needs (tapping a need's bubble opens its tracker; tapping the Buddy
-/// makes him talk), and a button that opens the tracker for the next thing
-/// to log ([nextCareAction]).
+/// Streak"), the Buddy inside the [CareRing] of his four needs (tapping a
+/// need's bubble opens its tracker; tapping the Buddy makes him talk), and
+/// a button that opens the tracker for the next thing to log
+/// ([nextCareAction]). His speech bubble floats over his head
+/// ([CareRing.overBuddy]): it may rise over the chip row, scaled down where
+/// it would rise above the hero, never moves the layout and never takes a
+/// tap (Essen, Trinken and the chip under it still open).
 ///
 /// The need meters, his mood and the next action follow [careNowProvider]
 /// (when each need was last logged, seen from the current minute); a new
@@ -830,7 +833,6 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
                   ),
           ),
         ),
-        AppConstants.gap8,
         LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
@@ -839,33 +841,41 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
               MediaQuery.sizeOf(context).height,
             );
             final buddySide = diameter * AppConstants.careRingBuddyFactor;
-            return Column(
-              children: [
-                BuddyBubbleSlot(
+            return CareRing(
+              care: care,
+              diameter: diameter,
+              highlight: action.need,
+              onNeed: (need) => openTracker(context, need),
+              behindBuddy: status == null
+                  ? null
+                  : HomeFlame(
+                      streak: status.streak,
+                      lit: status.todayCounted,
+                      buddySide: buddySide,
+                      middleWidth: CareRing.middleWidthFor(width),
+                    ),
+              // His bubble may rise over the chip row, never above the hero;
+              // a taller one is scaled down to fit.
+              overBuddyRoom: AppConstants.iconBadgeLg,
+              overBuddy: FittedBox(
+                fit: BoxFit.scaleDown,
+                alignment: Alignment.bottomCenter,
+                child: BuddySpeechBubble(
                   controller: _buddy,
-                  width: width,
-                  buddyArea: Size.square(buddySide),
-                ),
-                CareRing(
-                  care: care,
-                  diameter: diameter,
-                  highlight: action.need,
-                  onNeed: (need) => openTracker(context, need),
-                  behindBuddy: status == null
-                      ? null
-                      : HomeFlame(
-                          streak: status.streak,
-                          lit: status.todayCounted,
-                          buddySide: buddySide,
-                          middleWidth: CareRing.middleWidthFor(width),
-                        ),
-                  buddy: AnimatedBuddy(
-                    controller: _buddy,
-                    name: name,
-                    onPoke: _sayMoodLine,
+                  maxWidth: math.min(
+                    AppConstants.buddyBubbleOverlayMaxWidth,
+                    width,
+                  ),
+                  tail: BuddyBubbleTail.down(
+                    shift: BuddyStage.faceShift(Size.square(buddySide)),
                   ),
                 ),
-              ],
+              ),
+              buddy: AnimatedBuddy(
+                controller: _buddy,
+                name: name,
+                onPoke: _sayMoodLine,
+              ),
             );
           },
         ),

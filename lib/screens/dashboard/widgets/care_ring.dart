@@ -9,6 +9,7 @@ import '../../../services/buddy/care_now.dart';
 import '../../../services/buddy/daily_care.dart';
 import '../../../services/haptic_service.dart';
 import '../../../utils/gut_feeling_rating.dart';
+import '../../../widgets/buddy/buddy_geometry.dart';
 import '../../../widgets/buddy/need_icon.dart';
 import '../../../widgets/buddy/need_meter.dart';
 
@@ -25,7 +26,7 @@ import '../../../widgets/buddy/need_meter.dart';
 /// [highlight]ed need (the one he suggests next) glows and, unless
 /// animations are off, pulses gently on its own clock (paused while
 /// `TickerMode` is off). [behindBuddy] (Home's streak flame) is drawn
-/// under him.
+/// under him, [overBuddy] (his speech bubble) on his head, over it all.
 class CareRing extends StatelessWidget {
   const CareRing({
     super.key,
@@ -35,6 +36,8 @@ class CareRing extends StatelessWidget {
     required this.onNeed,
     this.highlight,
     this.behindBuddy,
+    this.overBuddy,
+    this.overBuddyRoom = 0,
   });
 
   /// A need's bubble (its whole tap area): `care_need_<name>`.
@@ -95,6 +98,16 @@ class CareRing extends StatelessWidget {
   /// faded out toward them and the ring's top, and it is never a tap
   /// target: a tap on it lands on him.
   final Widget? behindBuddy;
+
+  /// Drawn over everything in the ring, the bubbles included (Home's
+  /// speech bubble): centred on the ring, its bottom on the Buddy's head.
+  /// It gets at most the ring's width and the height from the ring's top
+  /// down to his head plus [overBuddyRoom], and is never a tap target: a
+  /// tap on it lands on what it covers.
+  final Widget? overBuddy;
+
+  /// How far [overBuddy] may rise above the ring.
+  final double overBuddyRoom;
 
   /// The labels' style; [_labelScaler] fits the longest into a bubble.
   static const _labelStyle = TextStyle(
@@ -189,60 +202,118 @@ class CareRing extends StatelessWidget {
     return ConstrainedBox(
       constraints: BoxConstraints(minHeight: diameter),
       child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        // As tall as the row: a positioned child adds no height.
+        child: Stack(
+          clipBehavior: Clip.none,
           children: [
-            side(CareNeed.food, CareNeed.toilet),
-            // His square, narrower where the bubbles leave less room (he
-            // is drawn narrower than tall, so his height stays).
-            Expanded(
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  if (behindBuddy case final behind?)
-                    Positioned.fill(
-                      child: IgnorePointer(
-                        // Faded out toward the bubbles and the ring's top,
-                        // so where it is cut off it shows no edge.
-                        child: ShaderMask(
-                          blendMode: BlendMode.dstIn,
-                          shaderCallback: _fadeSides,
-                          child: CustomPaint(
-                            foregroundPainter: const _FadeTop(),
-                            child: ClipRect(
-                              child: Center(
-                                // His square again, to align it in.
-                                child: SizedBox.square(
-                                  dimension: buddySide,
-                                  child: OverflowBox(
-                                    alignment: Alignment.bottomCenter,
-                                    minWidth: 0,
-                                    maxWidth: double.infinity,
-                                    minHeight: 0,
-                                    maxHeight: double.infinity,
-                                    child: behind,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                side(CareNeed.food, CareNeed.toilet),
+                // His square, narrower where the bubbles leave less room (he
+                // is drawn narrower than tall, so his height stays).
+                Expanded(
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: [
+                      if (behindBuddy case final behind?)
+                        Positioned.fill(
+                          child: IgnorePointer(
+                            // Faded out toward the bubbles and the ring's
+                            // top, so where it is cut off it shows no edge.
+                            child: ShaderMask(
+                              blendMode: BlendMode.dstIn,
+                              shaderCallback: _fadeSides,
+                              child: CustomPaint(
+                                foregroundPainter: const _FadeTop(),
+                                child: ClipRect(
+                                  child: Center(
+                                    // His square again, to align it in.
+                                    child: SizedBox.square(
+                                      dimension: buddySide,
+                                      child: OverflowBox(
+                                        alignment: Alignment.bottomCenter,
+                                        minWidth: 0,
+                                        maxWidth: double.infinity,
+                                        minHeight: 0,
+                                        maxHeight: double.infinity,
+                                        child: behind,
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
                             ),
                           ),
                         ),
+                      SizedBox.square(
+                        key: buddyKey,
+                        dimension: buddySide,
+                        child: buddy,
                       ),
-                    ),
-                  SizedBox.square(
-                    key: buddyKey,
-                    dimension: buddySide,
-                    child: buddy,
+                    ],
                   ),
-                ],
-              ),
+                ),
+                side(CareNeed.drink, CareNeed.gutFeeling),
+              ],
             ),
-            side(CareNeed.drink, CareNeed.gutFeeling),
+            if (overBuddy case final over?)
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: CustomSingleChildLayout(
+                    delegate: _OverBuddyLayout(
+                      buddySide: buddySide,
+                      room: overBuddyRoom,
+                    ),
+                    child: over,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
     );
   }
+}
+
+/// Lays out [CareRing.overBuddy] in the ring: at most the ring's width and
+/// the height down to the Buddy's head plus [room], centred on the ring,
+/// its bottom on his head.
+class _OverBuddyLayout extends SingleChildLayoutDelegate {
+  const _OverBuddyLayout({required this.buddySide, required this.room});
+
+  /// His square's side ([CareRing.buddy]).
+  final double buddySide;
+
+  /// How far it may rise above the ring ([CareRing.overBuddyRoom]).
+  final double room;
+
+  /// The top of his head in a ring of [size]: in his square, centred in
+  /// the ring and as narrow as its middle leaves ([CareRing.middleWidthFor]).
+  double _headTop(Size size) {
+    final square = Size(
+      math.max(0, math.min(buddySide, CareRing.middleWidthFor(size.width))),
+      buddySide,
+    );
+    return (size.height - buddySide) / 2 + BuddyLayout(square).origin.dy;
+  }
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
+      BoxConstraints(
+        maxWidth: constraints.maxWidth,
+        maxHeight: math.max(0, _headTop(constraints.biggest) + room),
+      );
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) => Offset(
+    (size.width - childSize.width) / 2,
+    _headTop(size) - childSize.height,
+  );
+
+  @override
+  bool shouldRelayout(_OverBuddyLayout old) =>
+      old.buddySide != buddySide || old.room != room;
 }
 
 /// Fades what is painted under it, inside [CareRing.behindBuddy]'s mask

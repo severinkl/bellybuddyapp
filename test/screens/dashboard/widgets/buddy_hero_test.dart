@@ -2977,6 +2977,142 @@ void main() {
       expect(buddy.shown, [BuddyAnnouncement.weeklyTipsOffer]);
     });
 
+    group('his bubble over his head', () {
+      /// About 140 characters: four lines in his bubble.
+      const longLine =
+          'Oh, ich habe so viel zu erzählen! Heute geht es um dein Essen, '
+          'dein Trinken und dein Bauchgefühl, und alles trägst du ganz '
+          'einfach hier ein.';
+
+      /// The top of the Buddy's head, as drawn in his square.
+      double head(WidgetTester tester) {
+        final square = tester.getRect(find.byKey(CareRing.buddyKey));
+        return square.top + BuddyLayout(square.size).origin.dy;
+      }
+
+      Rect bubbleRect(WidgetTester tester) =>
+          tester.getRect(find.byType(BuddySpeechBubble));
+
+      testWidgets('no reserved bubble slot: the ring sits right under the chip '
+          'row, and never moves while he talks', (tester) async {
+        await pumpHero(tester);
+        await advance(tester, const Duration(seconds: 3)); // greeting gone
+        expect(controller(tester).bubble, isNull);
+
+        final hero = tester.getRect(find.byType(BuddyHero));
+        final ring = tester.getRect(find.byType(CareRing));
+        expect(ring.top - hero.top, AppConstants.iconBadgeLg);
+
+        controller(tester).say('Hallo, schön dich zu sehen!');
+        await tick(tester);
+        expect(bubbleRect(tester).isEmpty, isFalse);
+        expect(tester.getRect(find.byType(CareRing)), ring);
+      });
+
+      testWidgets('his bubble floats over his head while he talks, then is '
+          'gone', (tester) async {
+        await pumpHero(tester);
+        await advance(tester, const Duration(seconds: 3)); // greeting gone
+
+        controller(tester).say('Hallo, schön dich zu sehen!');
+        await tick(tester);
+        final hero = tester.getRect(find.byType(BuddyHero));
+        final ring = tester.getRect(find.byType(CareRing));
+        final bubble = bubbleRect(tester);
+        expect(bubble.isEmpty, isFalse);
+        expect(bubble.bottom, closeTo(head(tester), 0.5));
+        expect(bubble.center.dx, closeTo(ring.center.dx, 0.5));
+        expect(bubble.top, greaterThanOrEqualTo(hero.top));
+        expect(
+          bubble.width,
+          lessThanOrEqualTo(AppConstants.buddyBubbleOverlayMaxWidth),
+        );
+
+        await advance(tester, const Duration(seconds: 4));
+        expect(tester.getSize(find.byType(BuddySpeechBubble)).isEmpty, isTrue);
+      });
+
+      testWidgets('a four-line line stays inside the hero at 375×667, text '
+          'scale 1.3', (tester) async {
+        tester.view
+          ..physicalSize = const Size(375, 667)
+          ..devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await pumpHero(tester);
+        await advance(tester, const Duration(seconds: 3)); // greeting gone
+
+        controller(tester).say(longLine);
+        await tick(tester);
+        await tester.pump(const Duration(milliseconds: 1300));
+
+        final hero = tester.getRect(find.byType(BuddyHero));
+        final bubble = bubbleRect(tester);
+        expect(bubble.isEmpty, isFalse);
+        expect(bubble.top, greaterThanOrEqualTo(hero.top - 0.01));
+        expect(bubble.bottom, closeTo(head(tester), 0.5));
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('while he talks, Essen and Trinken still open under his '
+          'bubble', (tester) async {
+        // The hero's width on a 393-wide phone (the harness has no side
+        // padding): the ring's middle is narrower than the bubble, so it
+        // covers both top bubbles.
+        tester.view
+          ..physicalSize = const Size(345, 852)
+          ..devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await pumpHero(tester);
+        await advance(tester, const Duration(seconds: 3)); // greeting gone
+
+        for (final (need, path) in [
+          (CareNeed.food, RoutePaths.mealTracker),
+          (CareNeed.drink, RoutePaths.drinkTracker),
+        ]) {
+          controller(tester).say(longLine);
+          await tick(tester);
+          final overlap = bubbleRect(
+            tester,
+          ).intersect(tester.getRect(find.byKey(CareRing.needKey(need))));
+          expect(overlap.isEmpty, isFalse, reason: '$need');
+
+          await tester.tapAt(overlap.center);
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 500));
+          expect(location(), path, reason: '$need');
+
+          router.go(RoutePaths.dashboard);
+          await tester.pump(const Duration(milliseconds: 500));
+        }
+      });
+
+      testWidgets('while he talks, the StreakChip still opens under his '
+          'bubble', (tester) async {
+        // The bubble rises over the chip row; on this narrow hero it
+        // reaches over the chip's right end.
+        tester.view
+          ..physicalSize = const Size(345, 852)
+          ..devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await pumpHero(tester);
+        await advance(tester, const Duration(seconds: 3)); // greeting gone
+
+        controller(tester).say(longLine);
+        await tick(tester);
+        final overlap = bubbleRect(
+          tester,
+        ).intersect(tester.getRect(find.byType(StreakChip)));
+        expect(overlap.isEmpty, isFalse);
+
+        await tester.tapAt(overlap.center);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(find.text(_sheetTitle), findsOneWidget);
+      });
+    });
+
     testWidgets('the ring follows the screen (clamped)', (tester) async {
       tester.view.physicalSize = const Size(393, 852);
       tester.view.devicePixelRatio = 1.0;
