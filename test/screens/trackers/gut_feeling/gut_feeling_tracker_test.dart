@@ -18,7 +18,9 @@ import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/buddy/buddy_reaction_view.dart';
+import 'package:belly_buddy/utils/gut_feeling_rating.dart';
 import 'package:belly_buddy/widgets/buddy/log_success_hero.dart';
+import 'package:belly_buddy/widgets/buddy/need_icon.dart';
 import 'package:belly_buddy/widgets/common/bb_button.dart';
 import 'package:belly_buddy/widgets/common/bb_success_overlay.dart';
 import 'package:belly_buddy/widgets/common/mascot_image.dart';
@@ -413,6 +415,59 @@ void main() {
         find.byType(BbSuccessOverlay),
       );
       expect(overlay.calm, isFalse);
+    });
+
+    /// The asset the charging circle's belly draws.
+    String chargingBelly(WidgetTester tester) {
+      final icon = tester.widget<NeedIcon>(
+        find.descendant(
+          of: find.byType(ChargingMeter),
+          matching: find.byType(NeedIcon),
+        ),
+      );
+      return NeedIcon.assetFor(icon.need, gutFeeling: icon.gutFeeling);
+    }
+
+    testWidgets('„Schlecht": the calm page\'s charging belly has its mouth', (
+      tester,
+    ) async {
+      await pumpTracker(tester, FakeEntryRepository());
+
+      await tapMascot(tester, AppConstants.mascotCramp);
+      await goToStimmungAndSave(tester);
+
+      expect(
+        tester.widget<BbSuccessOverlay>(find.byType(BbSuccessOverlay)).calm,
+        isTrue,
+      );
+      expect(
+        chargingBelly(tester),
+        NeedIcon.assetFor(
+          CareNeed.gutFeeling,
+          gutFeeling: GutFeelingRatingLevel.schlecht,
+        ),
+      );
+    });
+
+    testWidgets('„Sehr gut": the charging belly smiles wide open', (
+      tester,
+    ) async {
+      await pumpTracker(tester, FakeEntryRepository());
+
+      // All symptoms at „gar nicht".
+      await goToStimmungAndSave(tester);
+
+      expect(
+        chargingBelly(tester),
+        NeedIcon.assetFor(
+          CareNeed.gutFeeling,
+          gutFeeling: GutFeelingRatingLevel.spiGut,
+        ),
+      );
+      expect(
+        chargingBelly(tester),
+        isNot(NeedIcon.assetFor(CareNeed.gutFeeling)),
+      );
     });
 
     testWidgets('on a phone, the Stimmung rows end above Speichern', (

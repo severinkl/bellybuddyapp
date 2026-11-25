@@ -8,6 +8,7 @@ import '../../config/constants.dart';
 import '../../services/buddy/buddy_mood_logic.dart';
 import '../../services/buddy/daily_care.dart';
 import '../../services/buddy/log_moment.dart';
+import '../../utils/gut_feeling_rating.dart';
 import 'buddy_reaction_view.dart';
 import 'need_icon.dart';
 import 'need_meter.dart';
@@ -18,7 +19,8 @@ import 'streak_flame.dart';
 /// ([AppConstants.careChargeCurve]), then calling [onCharged]. Under
 /// reduced motion (also when it turns on mid-charge) it shows [to] at once;
 /// then, and with nothing to charge ([from] == [to]), [onCharged] is never
-/// called. It adds no semantics.
+/// called. Its icon is [need]'s (for Bauchgefühl, the belly with
+/// [gutFeeling]'s mouth, [NeedIcon.gutFeeling]). It adds no semantics.
 class ChargingMeter extends StatelessWidget {
   const ChargingMeter({
     super.key,
@@ -26,6 +28,7 @@ class ChargingMeter extends StatelessWidget {
     required this.from,
     required this.to,
     required this.size,
+    this.gutFeeling,
     this.onCharged,
   });
 
@@ -33,6 +36,7 @@ class ChargingMeter extends StatelessWidget {
   final double from;
   final double to;
   final double size;
+  final GutFeelingRatingLevel? gutFeeling;
   final VoidCallback? onCharged;
 
   @override
@@ -47,7 +51,7 @@ class ChargingMeter extends StatelessWidget {
       onEnd: onCharged,
       builder: (_, level, child) =>
           NeedMeter(need: need, level: level, size: size, child: child!),
-      child: NeedIcon(need),
+      child: NeedIcon(need, gutFeeling: gutFeeling),
     );
   }
 }
@@ -131,6 +135,7 @@ class _LogSuccessHeroState extends State<LogSuccessHero> {
                   AppConstants.careChargeSize,
                   height * AppConstants.careChargeHeightShare,
                 ),
+                gutFeeling: _moment.gutFeeling,
                 onCharged: _onCharged,
               );
         final ignite = day == null
