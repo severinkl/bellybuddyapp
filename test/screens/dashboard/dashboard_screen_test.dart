@@ -1198,6 +1198,51 @@ void main() {
           }
         },
       );
+
+      testWidgets('${phone.name}: his bubble hides while the tour is up, so '
+          '„Überspringen" covers nothing he says; after it, it is back', (
+        tester,
+      ) async {
+        tester.view
+          ..physicalSize = phone.size * phone.dpr
+          ..devicePixelRatio = phone.dpr
+          ..padding = FakeViewPadding(
+            top: phone.top * phone.dpr,
+            bottom: phone.bottom * phone.dpr,
+          );
+        addTearDown(tester.view.reset);
+        tester.platformDispatcher.textScaleFactorTestValue = phone.textScale;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await _pumpHome(
+          tester,
+          profiles: FakeProfileRepository()
+            ..seedProfile(testUserProfile(alreadySeenTutorial: false)),
+        );
+        await tester.pumpAndSettle();
+
+        // The pill sits in the room his bubble rises into, above the ring.
+        final skip = tester.getRect(
+          find.byKey(DashboardTutorialOverlay.skipKey),
+        );
+        final ring = tester.getRect(find.byType(CareRing));
+        final room = Rect.fromLTRB(
+          ring.left,
+          ring.top - AppConstants.homeTapTarget,
+          ring.right,
+          ring.top,
+        );
+        expect(skip.overlaps(room), isTrue);
+        expect(find.byType(BuddySpeechBubble), findsNothing);
+        expect(
+          tester.widget<BuddyHero>(find.byType(BuddyHero)).showsBubble,
+          isFalse,
+        );
+
+        await tester.tap(find.text(_tourSkip));
+        await tester.pumpAndSettle();
+        expect(find.text(_tourSkip), findsNothing);
+        expect(find.byType(BuddySpeechBubble), findsOneWidget);
+      });
     }
   });
 

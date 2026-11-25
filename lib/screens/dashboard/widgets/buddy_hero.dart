@@ -112,10 +112,19 @@ _Cue _cueFor(BuddyAnnouncement a) => switch (a) {
 /// out) the Buddy still shows, named 'Buddy', without the streak chip and
 /// the flame (so the status arriving never looks like an ignite).
 class BuddyHero extends ConsumerStatefulWidget {
-  const BuddyHero({super.key, this.openUrl = launchUrl});
+  const BuddyHero({
+    super.key,
+    this.openUrl = launchUrl,
+    this.showsBubble = true,
+  });
 
   /// Opens day 2's article (a reward); tests record it.
   final UrlOpener openUrl;
+
+  /// Whether his speech bubble shows. Home hides it while its tour is up
+  /// (the tour's „Überspringen" sits where it rises); what he says then
+  /// is not shown.
+  final bool showsBubble;
 
   /// The next-action button under the ring.
   static const actionKey = Key('buddy_hero_next_action');
@@ -858,14 +867,16 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
               // so a line breaks as at the base size and shows at the
               // user's size instead of scaled down.
               overBuddyRoom: AppConstants.homeTapTarget,
-              overBuddy: (buddy, _) => BuddyBubbleSlot(
-                controller: _buddy,
-                width: width,
-                buddyArea: buddy.size,
-                height: null,
-                maxWidth: AppConstants.buddyBubbleOverlayMaxWidth,
-                scaleWidthWithText: true,
-              ),
+              overBuddy: !widget.showsBubble
+                  ? null
+                  : (buddy, _) => BuddyBubbleSlot(
+                      controller: _buddy,
+                      width: width,
+                      buddyArea: buddy.size,
+                      height: null,
+                      maxWidth: AppConstants.buddyBubbleOverlayMaxWidth,
+                      scaleWidthWithText: true,
+                    ),
               buddy: AnimatedBuddy(
                 controller: _buddy,
                 name: name,

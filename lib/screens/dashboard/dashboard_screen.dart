@@ -139,10 +139,11 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
       if (!mounted || _tutorialHandle != null) return;
     }
     final handle = showDashboardTutorial(context);
-    _tutorialHandle = handle;
+    // The Buddy's bubble hides while the tour is up.
+    setState(() => _tutorialHandle = handle);
     await handle.future;
-    _tutorialHandle = null;
     if (!mounted) return;
+    setState(() => _tutorialHandle = null);
     await ref.read(tutorialProvider.notifier).markSeen();
   }
 
@@ -206,7 +207,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                BuddyHero(key: TutorialKeys.buddy),
+                BuddyHero(
+                  key: TutorialKeys.buddy,
+                  showsBubble: _tutorialHandle == null,
+                ),
                 AppConstants.gap16,
                 // Only the card rebuilds with the insights. It shows only
                 // AsyncData: after a user change, the value of a loading or
