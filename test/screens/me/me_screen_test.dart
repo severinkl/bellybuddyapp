@@ -116,10 +116,17 @@ void main() {
   );
 
   testWidgets('header shows the Buddy and his name', (tester) async {
+    final handle = tester.ensureSemantics();
     await pump(tester);
 
     expect(find.byType(AnimatedBuddy), findsOneWidget);
     expect(find.text('Bruno'), findsOneWidget);
+    // His name is the screen's heading, now that there is no app bar.
+    expect(
+      tester.getSemantics(find.text('Bruno')),
+      isSemantics(label: 'Bruno', isHeader: true),
+    );
+    handle.dispose();
     expect(find.byType(StreakChip), findsOneWidget);
     expect(find.byKey(MeScreen.renameKey), findsOneWidget);
     expect(find.text('Umbenennen'), findsOneWidget);

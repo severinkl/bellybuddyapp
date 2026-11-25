@@ -21,9 +21,10 @@ import '../dashboard/widgets/streak_sheet.dart';
 import 'widgets/rename_buddy_dialog.dart';
 
 /// The Ich tab, without an app bar (its body sits in a [SafeArea], as
-/// Home's does; the Buddy's name is the screen's heading): the Buddy with his name („Umbenennen") and streak chip,
-/// then Streak & Ziel („Dein Streak"), Einstellungen, Tutorial wiederholen
-/// and Feedback geben, and the app version in small print.
+/// Home's does; the Buddy's name is the screen's heading): the Buddy with
+/// his name („Umbenennen") and streak chip, then Streak & Ziel („Dein
+/// Streak"), Einstellungen, Tutorial wiederholen and Feedback geben, and
+/// the app version in small print.
 ///
 /// Without a Buddy status (loading, error) the Buddy shows as 'Buddy',
 /// without the chip, „Umbenennen" and the Streak row.
