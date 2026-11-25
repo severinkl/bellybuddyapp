@@ -43,7 +43,9 @@ class BbButton extends StatelessWidget {
           }
         : null;
 
-    final lead = icon == null ? leading : Icon(icon, size: 20);
+    final lead = icon == null
+        ? leading
+        : Icon(icon, size: AppConstants.iconSizeClose);
     final child = isLoading
         ? const SizedBox(
             width: 24,

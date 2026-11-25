@@ -821,7 +821,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       children: [
         // Keeps its height while the chip waits for the Buddy status.
         SizedBox(
-          height: AppConstants.iconBadgeLg,
+          height: AppConstants.homeTapTarget,
           child: Align(
             alignment: Alignment.centerLeft,
             child: status == null
@@ -857,7 +857,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
               // a taller one is scaled down to fit. Wider with large text,
               // so a line breaks as at the base size and shows at the
               // user's size instead of scaled down.
-              overBuddyRoom: AppConstants.iconBadgeLg,
+              overBuddyRoom: AppConstants.homeTapTarget,
               overBuddy: (buddy, _) => BuddyBubbleSlot(
                 controller: _buddy,
                 width: width,
@@ -880,10 +880,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
           child: BbButton(
             tapKey: BuddyHero.actionKey,
             label: BuddyCopy.careButton(action),
-            leading: NeedIcon(
-              actionNeed,
-              size: AppConstants.careButtonIconSize,
-            ),
+            leading: NeedIcon(actionNeed, size: AppConstants.iconSizeMd),
             onPressed: () => openTracker(context, actionNeed),
           ),
         ),

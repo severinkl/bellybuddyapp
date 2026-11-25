@@ -53,7 +53,8 @@ class AppConstants {
   /// The smallest tap target (Apple's 44 pt).
   static const double minTapTarget = 44.0;
 
-  /// The smallest tap target on Home.
+  /// The smallest tap target on Home; also the height of its streak chip's
+  /// row, which the Buddy's bubble may rise over.
   static const double homeTapTarget = 48.0;
 
   // Border radius
@@ -199,9 +200,6 @@ class AppConstants {
   static const double homeFlameLitOpacity = 0.55;
   static const double homeFlameBlazingOpacity = 0.65;
   static const double homeFlameBlur = 2.5;
-
-  /// The sticker icon leading Home's next-action button.
-  static const double careButtonIconSize = 24.0;
 
   // „Dein Streak" sheet: the goal progress bar
   static const double streakProgressHeight = 10.0;

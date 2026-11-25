@@ -2968,7 +2968,7 @@ void main() {
 
         final hero = tester.getRect(find.byType(BuddyHero));
         final ring = tester.getRect(find.byType(CareRing));
-        expect(ring.top - hero.top, AppConstants.iconBadgeLg);
+        expect(ring.top - hero.top, AppConstants.homeTapTarget);
 
         controller(tester).say('Hallo, schön dich zu sehen!');
         await tick(tester);
