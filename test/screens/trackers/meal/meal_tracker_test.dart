@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
@@ -243,7 +244,9 @@ void main() {
           );
           await tester.tap(find.byKey(MealTrackerScreen.mealEditSaveKey));
           await tester.pump();
-          await tester.pump(const Duration(milliseconds: 1300));
+          await tester.pump(
+            AppConstants.careChargeDuration + const Duration(milliseconds: 100),
+          );
         });
 
         expect(find.byType(ChargingMeter), findsOneWidget);

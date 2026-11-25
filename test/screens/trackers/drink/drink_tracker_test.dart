@@ -289,7 +289,9 @@ void main() {
           await tester.ensureVisible(find.text('Speichern'));
           await tester.tap(find.text('Speichern'));
           await tester.pump();
-          await tester.pump(const Duration(milliseconds: 1300));
+          await tester.pump(
+            AppConstants.careChargeDuration + const Duration(milliseconds: 100),
+          );
         });
 
         expect(find.byType(ChargingMeter), findsOneWidget);

@@ -92,7 +92,9 @@ void main() {
     final meter = find.byType(ChargingMeter);
     await pumpUntilFound(tester, meter);
     expect(tester.widget<ChargingMeter>(meter).need, CareNeed.drink);
-    await tester.pump(const Duration(milliseconds: 1300));
+    await tester.pump(
+      AppConstants.careChargeDuration + const Duration(milliseconds: 100),
+    );
     final level = tester
         .widget<NeedMeter>(
           find.descendant(of: meter, matching: find.byType(NeedMeter)),

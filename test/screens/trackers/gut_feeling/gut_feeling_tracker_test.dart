@@ -219,7 +219,9 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Speichern'));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 1300));
+      await tester.pump(
+        AppConstants.careChargeDuration + const Duration(milliseconds: 100),
+      );
       return container;
     }
 

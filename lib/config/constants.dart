@@ -264,10 +264,11 @@ class AppConstants {
   static const double buddyReactionMinHeight = 24.0;
 
   // The success page's charging circle: at most this size and this share
-  // of the page's slot for it, and how long it charges
+  // of the page's slot for it, how long it charges and how it eases
   static const double careChargeSize = 120.0;
   static const double careChargeHeightShare = 0.3;
-  static const Duration careChargeDuration = Duration(milliseconds: 1200);
+  static const Duration careChargeDuration = Duration(milliseconds: 2000);
+  static const Curve careChargeCurve = Curves.easeOut;
 
   /// In a success-page slot shorter than this, the charging circle and
   /// „Tag n" stand side by side, so the Buddy keeps a body below them.
