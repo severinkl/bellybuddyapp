@@ -10,6 +10,10 @@ white = alpha&(r>235)&(g>235)&(b>235)
 pink = alpha&~black&~white
 # background = transparent connected to border; silhouette = rest
 trans = (~alpha).astype(np.uint8)
+# The stem's end is open: seal the transparent strip between its left
+# outline and its fill (x 704-738) where the fill ends, so the strip is
+# silhouette and he stays opaque over what Home draws behind him.
+cv2.line(trans, (696, 1900), (746, 1900), 0, thickness=5)
 n,lab = cv2.connectedComponents(trans,connectivity=4)
 border = (set(lab[0,:])|set(lab[-1,:])|set(lab[:,0])|set(lab[:,-1]))-{0}
 sil = ~np.isin(lab,list(border))

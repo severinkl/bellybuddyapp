@@ -44,6 +44,7 @@ class StreakFlame extends StatelessWidget {
     required this.height,
     this.igniteOnMount = false,
     this.still = false,
+    this.core = true,
   }) : _mark = false;
 
   /// A still, lit, large flame: a kept day in the week row. Only painted,
@@ -53,6 +54,7 @@ class StreakFlame extends StatelessWidget {
       lit = true,
       igniteOnMount = false,
       still = true,
+      core = true,
       _mark = true;
 
   /// A streak drawn as [FlameTier.large].
@@ -82,6 +84,11 @@ class StreakFlame extends StatelessWidget {
 
   /// No ambient motion, even with animations on.
   final bool still;
+
+  /// Whether it draws its bright core (and, blazing, the core's blue
+  /// root). Home's backdrop leaves it out: behind the Buddy it would only
+  /// show beside his stem.
+  final bool core;
 
   final bool _mark;
 
@@ -216,6 +223,7 @@ class _LiveFlameState extends State<_LiveFlame> with TickerProviderStateMixin {
           painter: FlamePainter(
             look: look,
             tier: StreakFlame.tierOf(_flame.streak),
+            core: _flame.core,
             ignite: _ignite,
             clock: _ambient.isActive ? _clock : null,
           ),
@@ -249,6 +257,7 @@ class FlamePainter extends CustomPainter {
   FlamePainter({
     required this.look,
     required this.tier,
+    this.core = true,
     this.ignite,
     this.clock,
   }) : assert(_tongues.length == AppConstants.streakFlameFlicker.length),
@@ -263,6 +272,26 @@ class FlamePainter extends CustomPainter {
 
   /// An ember is its tier squashed this much: low embers at its base.
   static const Size emberSquash = Size(0.8, 0.4);
+
+  /// The share of its box's width the flame paints at rest, as [look] at
+  /// [tier], painted [height] tall: its glow where it has one ([showsGlow]),
+  /// else its body.
+  static double widthShare({
+    required FlameLook look,
+    required FlameTier tier,
+    required double height,
+  }) {
+    final lit = look == FlameLook.lit;
+    final half = !lit
+        ? _bodyHalfWidth * emberSquash.width
+        : height >= AppConstants.streakFlameGlowMinHeight
+        ? _glowRadius
+        : _bodyHalfWidth;
+    return 2 * half * tier.scaleX / _boxWidth;
+  }
+
+  /// Half the body's width: its tongues share the base between x 14 and 86.
+  static const double _bodyHalfWidth = 36;
 
   /// The flame's tongues, one per [AppConstants.streakFlameFlicker] period.
   static int get tongueCount => AppConstants.streakFlameFlicker.length;
@@ -286,6 +315,10 @@ class FlamePainter extends CustomPainter {
 
   final FlameLook look;
   final FlameTier tier;
+
+  /// Whether the lit flame draws its bright core and, blazing, its blue
+  /// root ([StreakFlame.core]).
+  final bool core;
 
   /// The ignite; its burst shows while it runs.
   final Animation<double>? ignite;
@@ -353,8 +386,8 @@ class FlamePainter extends CustomPainter {
   bool showsSparks(Size size) =>
       sparkCount > 0 && size.height >= AppConstants.streakFlameGlowMinHeight;
 
-  /// A blazing flame burns blue at its base.
-  bool get hotCore => _lit && tier == FlameTier.blazing;
+  /// A blazing flame burns blue at its base (in its core).
+  bool get hotCore => _lit && core && tier == FlameTier.blazing;
 
   /// The lit flame glows when painted at least
   /// [AppConstants.streakFlameGlowMinHeight] tall.
@@ -546,7 +579,7 @@ class FlamePainter extends CustomPainter {
         canvas.drawPath(_tongues[i].path, tongues[i]);
       });
     }
-    if (_lit) {
+    if (_lit && core) {
       _swaying(canvas, angles[_centre], () {
         canvas.drawPath(_core, _corePaint);
         if (hotCore) _paintHotRoot(canvas);
@@ -693,6 +726,7 @@ class FlamePainter extends CustomPainter {
   bool shouldRepaint(FlamePainter old) =>
       old.look != look ||
       old.tier != tier ||
+      old.core != core ||
       old.ignite != ignite ||
       old.clock != clock;
 }

@@ -35,6 +35,7 @@ void main() {
     double textScale = 1.0,
     Duration settle = const Duration(milliseconds: 400),
     Widget? behindBuddy,
+    Widget? buddy,
   }) async {
     final tapped = <CareNeed>[];
     final buddyTaps = <int>[];
@@ -59,12 +60,14 @@ void main() {
                   highlight: highlight,
                   onNeed: tapped.add,
                   behindBuddy: behindBuddy,
-                  buddy: GestureDetector(
-                    key: const Key('buddy_double'),
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => buddyTaps.add(1),
-                    child: const ColoredBox(color: AppTheme.buddyBody),
-                  ),
+                  buddy:
+                      buddy ??
+                      GestureDetector(
+                        key: const Key('buddy_double'),
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => buddyTaps.add(1),
+                        child: const ColoredBox(color: AppTheme.buddyBody),
+                      ),
                 );
               },
             ),
@@ -94,6 +97,11 @@ void main() {
     expect(CareRing.diameterFor(1000, 2000), 260);
     expect(CareRing.diameterFor(343, 667), closeTo(200.1, 0.01));
     expect(CareRing.diameterFor(200, 400), 170);
+  });
+
+  test("its middle: the width between the bubbles' columns", () {
+    expect(CareRing.middleWidthFor(354), 158);
+    expect(CareRing.middleWidthFor(327), 131);
   });
 
   test('meter size: 27 % of the ring, between 48 and 72', () {
@@ -304,6 +312,11 @@ void main() {
         )
         .deflate(0.01);
     final ring = tester.getRect(find.byType(CareRing));
+    // The ring's middle, between the bubbles.
+    expect(
+      clip.width,
+      moreOrLessEquals(CareRing.middleWidthFor(ring.width) - 0.02),
+    );
     expect(ring.inflate(0.01).contains(clip.topLeft), isTrue);
     expect(ring.inflate(0.01).contains(clip.bottomRight), isTrue);
     expect(clip.contains(square.center), isTrue);
@@ -315,8 +328,8 @@ void main() {
     expect(buddyTapsLog, isEmpty);
   });
 
-  testWidgets('behindBuddy fades out toward the bubbles, so it shows no edge '
-      'where it is cut off', (tester) async {
+  testWidgets("behindBuddy fades out toward the bubbles and the ring's top, so "
+      'it shows no edge where it is cut off', (tester) async {
     const behindKey = Key('behind');
     await pump(
       tester,
@@ -332,32 +345,61 @@ void main() {
           .ancestor(of: find.byKey(behindKey), matching: find.byType(ClipRect))
           .first,
     );
+    final ring = tester.getRect(find.byType(CareRing));
+    expect(clip.top, moreOrLessEquals(ring.top));
     final square = tester.getRect(find.byKey(CareRing.buddyKey));
-    // A row inside the ring, above his square.
-    final y = ((clip.top + square.top) / 2).round();
     final bytes = (await tester.runAsync(() async {
       final image = await captureImage(find.byType(CareRing).evaluate().single);
       return image.toByteData();
     }))!;
     final width = tester.view.physicalSize.width.round();
 
-    /// How much of the behind shows at [x]: 0 none, 1 all of it.
-    double shown(double x) {
-      final i = (y * width + x.round()) * 4;
+    /// How much of the behind shows at ([x], [y]): 0 none, 1 all of it.
+    double shown(double x, double y) {
+      final i = (y.round() * width + x.round()) * 4;
       const fg = AppTheme.foreground;
       final bg = AppTheme.background.r * 255;
       return (bg - bytes.getUint8(i)) / (bg - fg.r * 255);
     }
 
     const fade = AppConstants.careRingBehindFade;
-    expect(shown(clip.center.dx), moreOrLessEquals(1, epsilon: 0.02));
+    // A row inside the ring, above his square and below the top's fade.
+    final y = square.top - 2;
+    expect(y, greaterThan(clip.top + fade + 1));
+    expect(shown(clip.center.dx, y), moreOrLessEquals(1, epsilon: 0.02));
     for (final edge in [clip.left + 0.5, clip.right - 0.5]) {
-      expect(shown(edge), lessThan(0.1), reason: 'at $edge');
+      expect(shown(edge, y), lessThan(0.1), reason: 'at $edge');
     }
     for (final x in [clip.left + fade + 1, clip.right - fade - 1]) {
-      expect(shown(x), moreOrLessEquals(1, epsilon: 0.02), reason: 'at $x');
+      expect(shown(x, y), moreOrLessEquals(1, epsilon: 0.02), reason: 'at $x');
     }
-    expect(shown(clip.left + fade / 2), inInclusiveRange(0.3, 0.7));
+    expect(shown(clip.left + fade / 2, y), inInclusiveRange(0.3, 0.7));
+
+    // Its middle, at the ring's top.
+    final x = clip.center.dx;
+    expect(shown(x, clip.top + 0.5), lessThan(0.1));
+    expect(shown(x, clip.top + fade / 2), inInclusiveRange(0.3, 0.7));
+    expect(shown(x, clip.top + fade + 1), moreOrLessEquals(1, epsilon: 0.02));
+  });
+
+  testWidgets('behindBuddy never takes a tap, even where the Buddy does not', (
+    tester,
+  ) async {
+    var behindTaps = 0;
+    const behindKey = Key('behind');
+    final tapped = await pump(
+      tester,
+      buddy: const SizedBox.expand(),
+      behindBuddy: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: () => behindTaps++,
+        child: const SizedBox(key: behindKey, width: 50, height: 80),
+      ),
+    );
+
+    await tester.tapAt(tester.getCenter(find.byKey(behindKey)));
+    expect(behindTaps, 0);
+    expect(tapped, isEmpty);
   });
 
   testWidgets('the ring between the bubbles is no tap target', (tester) async {

@@ -65,6 +65,11 @@ class CareRing extends StatelessWidget {
         AppConstants.careRingMaxDiameter,
       );
 
+  /// The width of the ring's middle, between the bubbles, in a [width]
+  /// wide ring: [behindBuddy] shows only there.
+  static double middleWidthFor(double width) =>
+      width - 2 * (AppConstants.careNeedWidth + 2 * AppConstants.careNeedGlow);
+
   /// A bubble's meter on a ring of [diameter].
   static double meterSizeFor(double diameter) =>
       (diameter * AppConstants.careMeterFactor).clamp(
@@ -86,7 +91,8 @@ class CareRing extends StatelessWidget {
 
   /// Drawn under the Buddy at its own size, bottom-centred in his square.
   /// It may be larger than the square, but shows only inside the ring
-  /// between the bubbles (never over or under one), and it is never a tap
+  /// between the bubbles ([middleWidthFor]; never over or under one),
+  /// faded out toward them and the ring's top, and it is never a tap
   /// target: a tap on it lands on him.
   final Widget? behindBuddy;
 
@@ -196,23 +202,26 @@ class CareRing extends StatelessWidget {
                   if (behindBuddy case final behind?)
                     Positioned.fill(
                       child: IgnorePointer(
-                        // Faded out toward the bubbles, so where a wide one
-                        // is cut off it shows no edge.
+                        // Faded out toward the bubbles and the ring's top,
+                        // so where it is cut off it shows no edge.
                         child: ShaderMask(
                           blendMode: BlendMode.dstIn,
                           shaderCallback: _fadeSides,
-                          child: ClipRect(
-                            child: Center(
-                              // His square again, to align it in.
-                              child: SizedBox.square(
-                                dimension: buddySide,
-                                child: OverflowBox(
-                                  alignment: Alignment.bottomCenter,
-                                  minWidth: 0,
-                                  maxWidth: double.infinity,
-                                  minHeight: 0,
-                                  maxHeight: double.infinity,
-                                  child: behind,
+                          child: CustomPaint(
+                            foregroundPainter: const _FadeTop(),
+                            child: ClipRect(
+                              child: Center(
+                                // His square again, to align it in.
+                                child: SizedBox.square(
+                                  dimension: buddySide,
+                                  child: OverflowBox(
+                                    alignment: Alignment.bottomCenter,
+                                    minWidth: 0,
+                                    maxWidth: double.infinity,
+                                    minHeight: 0,
+                                    maxHeight: double.infinity,
+                                    child: behind,
+                                  ),
                                 ),
                               ),
                             ),
@@ -234,6 +243,36 @@ class CareRing extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Fades what is painted under it, inside [CareRing.behindBuddy]'s mask
+/// layer, out toward its top over [AppConstants.careRingBehindFade]: the
+/// ring's top, where an igniting flame's pop is cut off.
+class _FadeTop extends CustomPainter {
+  const _FadeTop();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final band =
+        Offset.zero &
+        Size(
+          size.width,
+          math.min(size.height, AppConstants.careRingBehindFade),
+        );
+    canvas.drawRect(
+      band,
+      Paint()
+        ..blendMode = BlendMode.dstIn
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.transparent, Colors.black],
+        ).createShader(band),
+    );
+  }
+
+  @override
+  bool shouldRepaint(_FadeTop old) => false;
 }
 
 /// A need's corner bubble, a button that logs it ([onTap]): its meter

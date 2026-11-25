@@ -857,6 +857,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
                           streak: status.streak,
                           lit: status.todayCounted,
                           buddySide: buddySide,
+                          middleWidth: CareRing.middleWidthFor(width),
                         ),
                   buddy: AnimatedBuddy(
                     controller: _buddy,

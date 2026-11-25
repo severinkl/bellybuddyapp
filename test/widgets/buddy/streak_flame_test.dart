@@ -199,6 +199,39 @@ void main() {
     }
   });
 
+  testWidgets('without its core: no bright core, no blue root, the tongues '
+      'yellow at their base', (t) async {
+    Future<List<(int, int)>> column({required bool core}) async =>
+        (await t.runAsync(
+          () => _column(
+            FlamePainter(
+              look: FlameLook.lit,
+              tier: FlameTier.blazing,
+              core: core,
+            ),
+            const Size(200, 240),
+            x: 100,
+          ),
+        ))!;
+    final withCore = await column(core: true);
+    final without = await column(core: false);
+    // Up the middle from the base: the core's cream and the root's blue
+    // only with it (its blue: blue above red; its cream: blue above 150).
+    bool creamOrBlue((int, int) p) => p.$2 > p.$1 || p.$2 > 150;
+    expect(withCore.sublist(160, 222).where(creamOrBlue), isNotEmpty);
+    expect(without.sublist(160, 222).where(creamOrBlue), isEmpty);
+  });
+
+  testWidgets('the core by default', (t) async {
+    await t.pumpWidget(_wrap(_flame(streak: 42, lit: true, height: 120)));
+    expect(_painter(t).core, isTrue);
+    expect(t.widget<StreakFlame>(find.byType(StreakFlame)).core, isTrue);
+    await t.pumpWidget(
+      _wrap(const StreakFlame(streak: 42, lit: true, height: 120, core: false)),
+    );
+    expect(_painter(t).core, isFalse);
+  });
+
   testWidgets('the glow from 40 dp up, only when lit', (t) async {
     await t.pumpWidget(_wrap(_flame(streak: 7, lit: true)));
     final painter = _painter(t);
@@ -232,6 +265,50 @@ void main() {
         }
       }
     });
+  });
+
+  testWidgets('widthShare: the share of its width it paints at rest, its '
+      'glow when lit from 40 dp up, else its body', (t) async {
+    await t.runAsync(() async {
+      for (final look in FlameLook.values) {
+        for (final tier in FlameTier.values) {
+          // Wide enough to measure; the second too low to glow.
+          for (final box in const [Size(200, 240), Size(200, 36)]) {
+            final bounds = await _paintedBounds(
+              FlamePainter(look: look, tier: tier),
+              box,
+            );
+            expect(
+              bounds!.width / box.width,
+              moreOrLessEquals(
+                FlamePainter.widthShare(
+                  look: look,
+                  tier: tier,
+                  height: box.height,
+                ),
+                epsilon: 0.03,
+              ),
+              reason: '$look, $tier at $box',
+            );
+          }
+        }
+      }
+    });
+    // Lit, it glows wider than its body.
+    expect(
+      FlamePainter.widthShare(
+        look: FlameLook.lit,
+        tier: FlameTier.large,
+        height: 240,
+      ),
+      greaterThan(
+        FlamePainter.widthShare(
+          look: FlameLook.lit,
+          tier: FlameTier.large,
+          height: 36,
+        ),
+      ),
+    );
   });
 
   testWidgets('size keeps the 100:120 shape', (t) async {

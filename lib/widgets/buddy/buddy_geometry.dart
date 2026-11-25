@@ -174,6 +174,10 @@ const double kBuddyStageHeightFactor = 1.18;
 /// Gap below the Buddy's feet, as a fraction of the stage height.
 const double kBuddyStageBottomMargin = 0.03;
 
+/// His foot (image coords): the middle of his stem's end, outline to
+/// outline.
+const Offset kBuddyFoot = Offset(796, kBuddyHeight);
+
 /// Width / height of a stage the Buddy fills exactly.
 const double kBuddyStageAspect =
     (kBuddyWidth * kBuddyStageWidthFactor) /

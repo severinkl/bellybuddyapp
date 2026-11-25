@@ -25,6 +25,7 @@ import 'package:belly_buddy/repositories/recipe_repository.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/home_flame.dart';
 import 'package:belly_buddy/screens/buddy/streak_goal_picker.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/first_tip_offer_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_day_sheet.dart';
@@ -690,8 +691,13 @@ void main() {
     });
 
     testWidgets('the flame glows behind the Buddy: larger than his square, '
-        'its base just below his foot, its core behind his stem, between '
-        'the bubbles, under him', (tester) async {
+        'its base just below his foot, its core behind his stem, as wide as '
+        'the ring between the bubbles leaves, under him', (tester) async {
+      // A phone whose ring leaves the flame less than its own width.
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      buddy = _FakeBuddy(() => _status(streak: 42, todayCounted: true));
       await pumpHero(tester);
 
       final square = tester.getRect(find.byKey(CareRing.buddyKey));
@@ -702,11 +708,10 @@ void main() {
         moreOrLessEquals(side * AppConstants.homeFlameScale),
       );
       expect(flame.height, greaterThan(side));
-      // His foot, the end of his stem: right of the square's middle, a
-      // little above its bottom.
+      // His foot, the middle of his stem's end: right of the square's
+      // middle, a little above its bottom.
       final foot =
-          square.topLeft +
-          BuddyLayout(square.size).toLocal(kBuddyCenterline.last);
+          square.topLeft + BuddyLayout(square.size).toLocal(kBuddyFoot);
       expect(foot.dx, greaterThan(square.center.dx));
       expect(foot.dy, lessThan(square.bottom));
       expect(flame.center.dx, moreOrLessEquals(foot.dx));
@@ -716,14 +721,12 @@ void main() {
         moreOrLessEquals(foot.dy + side * AppConstants.homeFlameBelowFeet),
       );
 
-      // Drawn only inside the ring, between the bubbles.
-      final clip = tester
-          .getRect(
-            find
-                .ancestor(of: flameFinder(), matching: find.byType(ClipRect))
-                .first,
-          )
-          .deflate(0.01);
+      // Only inside the ring, between the bubbles; narrowed to fit there
+      // whole, around his foot.
+      final middle = tester.getRect(
+        find.ancestor(of: flameFinder(), matching: find.byType(ClipRect)).first,
+      );
+      final clip = middle.deflate(0.01);
       final ring = tester.getRect(find.byType(CareRing)).inflate(0.01);
       expect(ring.contains(clip.topLeft), isTrue);
       expect(ring.contains(clip.bottomRight), isTrue);
@@ -734,6 +737,23 @@ void main() {
           reason: '$need',
         );
       }
+      expect(flame.width, lessThan(flame.height * FlamePainter.aspectRatio));
+      final drawn =
+          flame.width *
+          FlamePainter.widthShare(
+            look: FlameLook.lit,
+            tier: FlameTier.blazing,
+            height: flame.height,
+          );
+      expect(
+        drawn,
+        moreOrLessEquals(middle.width - 2 * (foot.dx - middle.center.dx)),
+      );
+      expect(
+        flame.center.dx + drawn / 2,
+        lessThanOrEqualTo(middle.right + 0.01),
+      );
+      expect(flame.center.dx - drawn / 2, greaterThanOrEqualTo(middle.left));
 
       // Painted before him, so under him.
       expect(
@@ -773,6 +793,29 @@ void main() {
           contains(buddyTap),
           reason: '$at',
         );
+      }
+    });
+
+    testWidgets('the flame is never hit: not at its tip above his square', (
+      tester,
+    ) async {
+      buddy = _FakeBuddy(() => _status(streak: 42, todayCounted: true));
+      await pumpHero(tester);
+
+      final square = tester.getRect(find.byKey(CareRing.buddyKey));
+      final flame = tester.getRect(flameFinder());
+      final ring = tester.getRect(find.byType(CareRing));
+      // Lodert's tip rises above his square, inside the ring.
+      final tip = Offset(flame.center.dx, (ring.top + square.top) / 2);
+      expect(flame.contains(tip), isTrue);
+      final hit = tester.hitTestOnBinding(tip).path.map((e) => e.target);
+      for (final part in tester.renderObjectList(
+        find.descendant(
+          of: find.byType(HomeFlame),
+          matching: find.byWidgetPredicate((_) => true),
+        ),
+      )) {
+        expect(hit, isNot(contains(part)), reason: '$part');
       }
     });
 
