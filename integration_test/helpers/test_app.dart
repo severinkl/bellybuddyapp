@@ -56,7 +56,7 @@ ProviderScope buildTestApp({
   bool weeklyTipsEnabled = false,
 }) {
   // Animated Buddies (dashboard hero, welcome screen) tick every frame, the
-  // care ring's glow pulses and the streak flame wobbles forever, so
+  // care ring's glow pulses and the streak flame flickers forever, so
   // `pumpAndSettle` would never settle: hold them still.
   disableAmbientAnimationsForTests();
 

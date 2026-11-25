@@ -1,3 +1,5 @@
+import 'dart:ui' as ui;
+
 import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/widgets/buddy/streak_flame.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -48,37 +50,36 @@ double _breath(WidgetTester t) => t
     .opacity
     .value;
 
-/// A canvas that scales the body by [scale] (about its base).
-PaintPattern _scalesBody(double scale) => paints
-  ..something(
-    (method, args) =>
-        method == #scale && ((args[0] as double) - scale).abs() < 1e-9,
+/// The bounds of what [painter] paints into its box at [box]'s size,
+/// relative to the box (null when it paints nothing).
+Future<Rect?> _paintedBounds(FlamePainter painter, Size box) async {
+  // A margin as large as the box on every side catches anything outside it.
+  final width = box.width.ceil() * 3;
+  final height = box.height.ceil() * 3;
+  final recorder = ui.PictureRecorder();
+  final canvas = Canvas(recorder)..translate(box.width, box.height);
+  painter.paint(canvas, box);
+  final image = await recorder.endRecording().toImage(width, height);
+  final bytes = (await image.toByteData())!;
+  image.dispose();
+  int? left, top, right, bottom;
+  for (var y = 0; y < height; y++) {
+    for (var x = 0; x < width; x++) {
+      if (bytes.getUint8((y * width + x) * 4 + 3) == 0) continue;
+      left = left == null || x < left ? x : left;
+      right = right == null || x > right ? x : right;
+      top ??= y;
+      bottom = y;
+    }
+  }
+  if (left == null) return null;
+  return Rect.fromLTRB(
+    left - box.width,
+    top! - box.height,
+    right! + 1 - box.width,
+    bottom! + 1 - box.height,
   );
-
-RenderObject _canvas(WidgetTester t) => t.renderObject(
-  find.descendant(
-    of: find.byType(StreakFlame),
-    matching: find.byType(CustomPaint),
-  ),
-);
-
-/// A canvas that fills a path with [color].
-PaintPattern _fillsPath(Color color) => paints
-  ..something(
-    (method, args) =>
-        method == #drawPath &&
-        (args[1] as Paint).style == PaintingStyle.fill &&
-        (args[1] as Paint).color.toARGB32() == color.toARGB32(),
-  );
-
-/// A canvas that fills a circle with [color].
-PaintPattern _fillsCircle(Color color) => paints
-  ..something(
-    (method, args) =>
-        method == #drawCircle &&
-        (args[2] as Paint).style == PaintingStyle.fill &&
-        (args[2] as Paint).color.toARGB32() == color.toARGB32(),
-  );
+}
 
 void main() {
   test('tiers by streak', () {
@@ -91,45 +92,91 @@ void main() {
     expect(StreakFlame.tierOf(30), FlameTier.blazing);
   });
 
-  testWidgets('looks: lit, ember, off', (t) async {
+  test('lodert is taller than wide; the others keep their shape', () {
+    expect(FlameTier.blazing.scaleY, greaterThan(FlameTier.blazing.scaleX));
+    for (final tier in [FlameTier.small, FlameTier.medium, FlameTier.large]) {
+      expect(tier.scaleX, tier.scaleY, reason: tier.name);
+    }
+  });
+
+  testWidgets('looks: lit once today counts, else an ember, also at '
+      'streak 0', (t) async {
     await t.pumpWidget(_wrap(_flame(streak: 5, lit: true)));
     expect(_painter(t).look, FlameLook.lit);
-    expect(_canvas(t), _fillsPath(AppTheme.streakFlame));
-    expect(_canvas(t), _fillsPath(AppTheme.streakFlameCore));
 
     await t.pumpWidget(_wrap(_flame(streak: 5, lit: false)));
     expect(_painter(t).look, FlameLook.ember);
-    expect(_canvas(t), _fillsPath(AppTheme.streakEmber));
-    expect(_canvas(t), _fillsPath(AppTheme.streakEmberCore));
-    expect(_canvas(t), isNot(_fillsPath(AppTheme.streakFlame)));
 
     await t.pumpWidget(_wrap(_flame(streak: 0, lit: false)));
-    expect(_painter(t).look, FlameLook.off);
-    expect(_canvas(t), _fillsPath(AppTheme.streakEmberOff));
-    expect(_canvas(t), isNot(_fillsPath(AppTheme.streakEmberCore)));
+    expect(_painter(t).look, FlameLook.ember);
   });
 
-  testWidgets('the blazing flame has its hot core and sparks', (t) async {
-    await t.pumpWidget(_wrap(_flame(streak: 30)));
-    expect(_painter(t).tier, FlameTier.blazing);
-    expect(_canvas(t), _fillsPath(AppTheme.streakFlameHot));
-    expect(_canvas(t), _fillsCircle(AppTheme.streakFlameCore));
-
-    await t.pumpWidget(_wrap(_flame(streak: 29)));
-    expect(_painter(t).tier, FlameTier.large);
-    expect(_canvas(t), isNot(_fillsPath(AppTheme.streakFlameHot)));
-    expect(_canvas(t), isNot(_fillsCircle(AppTheme.streakFlameCore)));
-  });
-
-  testWidgets('ember and off are drawn at 0.8 of their tier', (t) async {
-    await t.pumpWidget(_wrap(_flame(streak: 5, lit: true)));
-    expect(_canvas(t), _scalesBody(FlameTier.medium.scale));
-
+  testWidgets('the ember is low: its tier squashed to 0.8 × 0.4, without '
+      'sparks, hot core or glow', (t) async {
     await t.pumpWidget(_wrap(_flame(streak: 5, lit: false)));
-    expect(_canvas(t), _scalesBody(FlameTier.medium.scale * 0.8));
+    final painter = _painter(t);
+    expect(painter.tier, FlameTier.medium);
+    expect(painter.bodyScale, const Size(0.8 * 0.8, 0.8 * 0.4));
+    expect(painter.sparkCount, 0);
+    expect(painter.hotCore, isFalse);
+    expect(painter.showsGlow(const Size(100, 120)), isFalse);
+    expect(painter.flicker, everyElement(0));
+  });
 
-    await t.pumpWidget(_wrap(_flame(streak: 0, lit: false)));
-    expect(_canvas(t), _scalesBody(FlameTier.small.scale * 0.8));
+  testWidgets('brennt: at least three tongues and sparks, no hot core', (
+    t,
+  ) async {
+    await t.pumpWidget(_wrap(_flame(streak: 7, lit: true)));
+    final painter = _painter(t);
+    expect(FlamePainter.tongueCount, greaterThanOrEqualTo(3));
+    expect(painter.flicker, hasLength(FlamePainter.tongueCount));
+    expect(painter.tier, FlameTier.large);
+    expect(painter.sparkCount, 2);
+    expect(painter.hotCore, isFalse);
+    expect(painter.bodyScale, const Size(1, 1));
+  });
+
+  testWidgets('lodert: a hot core and more sparks', (t) async {
+    await t.pumpWidget(_wrap(_flame(streak: 30)));
+    final painter = _painter(t);
+    expect(painter.tier, FlameTier.blazing);
+    expect(painter.hotCore, isTrue);
+    expect(painter.sparkCount, greaterThan(2));
+  });
+
+  testWidgets('the glow from 40 dp up, only when lit', (t) async {
+    await t.pumpWidget(_wrap(_flame(streak: 7, lit: true)));
+    final painter = _painter(t);
+    expect(painter.showsGlow(const Size(33.3, 39.9)), isFalse);
+    expect(painter.showsGlow(const Size(33.4, 40)), isTrue);
+  });
+
+  testWidgets('at rest, every tier stays inside its box, sparks and '
+      'flicker included', (t) async {
+    const box = Size(100, 120);
+    final clock = ValueNotifier(Duration.zero);
+    addTearDown(clock.dispose);
+    await t.runAsync(() async {
+      for (final look in FlameLook.values) {
+        for (final tier in FlameTier.values) {
+          // Through a whole cycle of every tongue's flicker and the sparks.
+          for (var ms = 0; ms < 1800; ms += 60) {
+            clock.value = Duration(milliseconds: ms);
+            final bounds = await _paintedBounds(
+              FlamePainter(look: look, tier: tier, clock: clock),
+              box,
+            );
+            final at = '$look, $tier at $ms ms';
+            expect(bounds, isNotNull, reason: at);
+            expect(
+              (Offset.zero & box).intersect(bounds!),
+              bounds,
+              reason: '$at: $bounds',
+            );
+          }
+        }
+      }
+    });
   });
 
   testWidgets('size keeps the 100:120 shape', (t) async {
@@ -163,8 +210,7 @@ void main() {
     await t.pumpWidget(_wrap(_flame(streak: 6, lit: true)));
 
     expect(_painter(t).burst, 0);
-    expect(_canvas(t), _scalesBody(FlameTier.medium.scale * 0.8));
-    expect(_canvas(t), isNot(_scalesBody(FlameTier.medium.scale)));
+    expect(_painter(t).bodyScale, const Size(0.8 * 0.8, 0.8 * 0.4));
   });
 
   testWidgets('lit → ember: no burst', (t) async {
@@ -229,7 +275,7 @@ void main() {
     setUp(() => StreakFlame.ambientEnabled = true);
     tearDown(disableAmbientAnimationsForTests);
 
-    testWidgets('lit at once, no burst, no wobble', (t) async {
+    testWidgets('lit at once, no burst, no flicker', (t) async {
       t.platformDispatcher.accessibilityFeaturesTestValue =
           const FakeAccessibilityFeatures(disableAnimations: true);
       addTearDown(t.platformDispatcher.clearAccessibilityFeaturesTestValue);
@@ -242,7 +288,7 @@ void main() {
       final painter = _painter(t);
       expect(painter.look, FlameLook.lit);
       expect(painter.burst, isNull);
-      expect(painter.wobble, 0);
+      expect(painter.flicker, everyElement(0));
       expect(t.binding.hasScheduledFrame, isFalse);
 
       // A fresh flame that would ignite on mount is lit at once too.
@@ -253,6 +299,7 @@ void main() {
       await t.pump();
       expect(_painter(t).look, FlameLook.lit);
       expect(_painter(t).burst, isNull);
+      expect(_painter(t).flicker, everyElement(0));
       expect(t.binding.hasScheduledFrame, isFalse);
     });
   });
@@ -263,22 +310,30 @@ void main() {
     testWidgets('off in tests: still', (t) async {
       await t.pumpWidget(_wrap(_flame(streak: 5, lit: true)));
       expect(t.hasRunningAnimations, isFalse);
-      expect(_painter(t).wobble, 0);
+      expect(_painter(t).flicker, everyElement(0));
 
       await t.pumpWidget(_wrap(_flame(streak: 5, lit: false)));
       expect(t.hasRunningAnimations, isFalse);
       expect(_breath(t), 1);
     });
 
-    testWidgets('on, it wobbles, the ember breathes, sparks rise', (t) async {
+    testWidgets('on: the tongues flicker independently', (t) async {
       StreakFlame.ambientEnabled = true;
 
       await t.pumpWidget(_wrap(_flame(streak: 5, lit: true)));
       expect(t.hasRunningAnimations, isTrue);
       await t.pump(const Duration(milliseconds: 300));
-      final wobble = _painter(t).wobble;
-      expect(wobble, isNot(0));
-      expect(wobble.abs(), lessThanOrEqualTo(1));
+      final flicker = _painter(t).flicker;
+      expect(flicker, everyElement(inInclusiveRange(-1, 1)));
+      expect(flicker.toSet().length, greaterThanOrEqualTo(2));
+      expect(flicker, isNot(everyElement(0)));
+
+      await t.pump(const Duration(milliseconds: 250));
+      expect(_painter(t).flicker, isNot(flicker));
+    });
+
+    testWidgets('the ember breathes', (t) async {
+      StreakFlame.ambientEnabled = true;
 
       // The ember breathes in its opacity; the painting holds still.
       await t.pumpWidget(_wrap(_flame(streak: 5, lit: false)));
@@ -287,17 +342,18 @@ void main() {
       expect(breath, inInclusiveRange(0, 1));
       expect(breath, lessThan(1));
       expect(_painter(t).clock, isNull);
+      expect(_painter(t).flicker, everyElement(0));
+    });
 
-      await t.pumpWidget(_wrap(_flame(streak: 30, lit: true)));
+    testWidgets('sparks rise from brennt up', (t) async {
+      StreakFlame.ambientEnabled = true;
+
+      await t.pumpWidget(_wrap(_flame(streak: 5, lit: true)));
       await t.pump(const Duration(milliseconds: 300));
       final rise = _painter(t).rise;
+      expect(rise, isNotNull);
       await t.pump(const Duration(milliseconds: 300));
       expect(_painter(t).rise, isNot(rise));
-
-      // Not with nothing to show: no flame yet.
-      await t.pumpWidget(_wrap(_flame(streak: 0, lit: false)));
-      await t.pump();
-      expect(t.hasRunningAnimations, isFalse);
     });
 
     testWidgets('the mark stays still', (t) async {
@@ -308,7 +364,7 @@ void main() {
       final painter = _painter(t);
       expect(painter.look, FlameLook.lit);
       expect(painter.tier, FlameTier.large);
-      expect(painter.wobble, 0);
+      expect(painter.flicker, everyElement(0));
       // Only painted: no layer, fade or ticker of its own.
       expect(
         find.descendant(

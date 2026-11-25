@@ -114,15 +114,22 @@ class AppConstants {
 
   // The drawn streak flame: its height in the chip, the streak moment, a
   // week row's day and the success page's ignite; the ignite's burst, the
-  // lit flame's wobble, the ember's breathing and a blazing flame's sparks
+  // flicker of each tongue (one period per tongue, pairwise different), the
+  // ember's breathing and the lit flame's sparks; its glow only from this
+  // height up (smaller, it would only smudge)
   static const double streakFlameChipHeight = 22.0;
   static const double streakFlameMomentHeight = 72.0;
   static const double streakFlameMarkHeight = 20.0;
   static const double streakFlameIgniteHeight = 32.0;
   static const Duration streakFlameIgnite = Duration(milliseconds: 750);
-  static const Duration streakFlameWobble = Duration(milliseconds: 1700);
+  static const List<Duration> streakFlameFlicker = <Duration>[
+    Duration(milliseconds: 1300),
+    Duration(milliseconds: 1700),
+    Duration(milliseconds: 1100),
+  ];
   static const Duration streakFlameBreath = Duration(milliseconds: 2800);
   static const Duration streakFlameSparks = Duration(milliseconds: 1600);
+  static const double streakFlameGlowMinHeight = 40.0;
 
   // A streak goal's row in the goal list
   static const double streakGoalRowHeight = 56.0;
