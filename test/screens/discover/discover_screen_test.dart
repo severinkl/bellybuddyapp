@@ -412,28 +412,42 @@ void main() {
     expect(find.text('1 Tipp'), findsOneWidget);
   });
 
-  testWidgets('a newest set without tips is never „Neu" (as for Home and '
-      'the Buddy)', (tester) async {
-    await pump(
-      tester,
-      tips: [
-        testRecommendation(
-          id: 'empty',
-          recommendations: const [],
-          createdAt: DateTime.utc(2026, 11, 16, 10),
-        ),
-        testRecommendation(
-          id: 'old',
-          recommendations: const [_item],
-          createdAt: DateTime.utc(2026, 11, 9, 10),
-          seenAt: DateTime.utc(2026, 11, 10, 7),
-        ),
-      ],
-    );
+  for (final seen in [true, false]) {
+    testWidgets('a newest set without tips is skipped: the card shows the '
+        'older one with tips, „Neu" as it is${seen ? ' seen' : ' unseen'} '
+        '(as for Home and the Buddy)', (tester) async {
+      await pump(
+        tester,
+        tips: [
+          testRecommendation(
+            id: 'empty',
+            recommendations: const [],
+            createdAt: DateTime.utc(2026, 11, 16, 10),
+          ),
+          testRecommendation(
+            id: 'old',
+            recommendations: const [_item],
+            createdAt: DateTime.utc(2026, 11, 9, 10),
+            seenAt: seen ? DateTime.utc(2026, 11, 10, 7) : null,
+          ),
+        ],
+      );
 
-    expect(find.text('Woche 47'), findsOneWidget);
-    expect(inSection(DiscoverScreen.tipsKey, find.text('Neu')), findsNothing);
-  });
+      expect(
+        inSection(DiscoverScreen.tipsKey, find.text('Woche 46')),
+        findsOneWidget,
+      );
+      expect(find.text('Woche 47'), findsNothing);
+      expect(
+        inSection(DiscoverScreen.tipsKey, find.text('1 Tipp')),
+        findsOneWidget,
+      );
+      expect(
+        inSection(DiscoverScreen.tipsKey, find.text('Neu')),
+        seen ? findsNothing : findsOneWidget,
+      );
+    });
+  }
 
   testWidgets('„Neu" goes once the Tipps are marked seen, while Entdecken '
       'stays open underneath', (tester) async {

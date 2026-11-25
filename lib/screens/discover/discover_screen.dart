@@ -30,11 +30,11 @@ import 'widgets/knowledge_article_tile.dart';
 /// ingredient suggestions), Rezepte (Für dich from the collection, and
 /// Meine Rezepte: own and saved) and Wissen (the newest myfodmap
 /// blog articles).
-/// Tipps shows only once a loaded set has tips
-/// ([DiscoverTipsSection.showsFor]), and stays through a refresh, loading or
-/// failed; while the first load runs, after it failed and without tips it
-/// is absent (the weekly tips are switched on in Einstellungen). Every other
-/// section with nothing in it says so and links nowhere.
+/// Tipps shows only once a loaded set has tips ([newestTipSetProvider]),
+/// and stays through a refresh, loading or failed; while the first load
+/// runs, after it failed and without tips it is absent (the weekly tips are
+/// switched on in Einstellungen). Every other section with nothing in it
+/// says so and links nowhere.
 class DiscoverScreen extends ConsumerStatefulWidget {
   const DiscoverScreen({super.key, this.openUrl = launchUrl});
 
@@ -87,7 +87,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final tips = ref.watch(recommendationProvider);
+    final tipSet = ref.watch(newestTipSetProvider);
     final weeklyTips = ref.watch(weeklyTipsEnabledProvider);
     final groups = ref.watch(ingredientSuggestionProvider);
     final newGroups = ref.watch(newIngredientSuggestionCountProvider);
@@ -113,11 +113,11 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (DiscoverTipsSection.showsFor(tips)) ...[
+              if (tipSet != null) ...[
                 DiscoverSection(
                   title: 'Tipps',
                   child: DiscoverTipsSection(
-                    sets: tips.value!,
+                    set: tipSet,
                     weeklyTips: weeklyTips,
                     onOpen: () => context.push(RoutePaths.recommendations),
                   ),
