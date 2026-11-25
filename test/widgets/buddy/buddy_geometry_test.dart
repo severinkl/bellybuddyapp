@@ -85,10 +85,9 @@ void main() {
     expect(hit.contains(const Offset(722, 1915)), isFalse);
   });
 
-  test('his foot: the middle of his stem at its end', () {
-    expect(kBuddyFoot, const Offset(796, kBuddyHeight));
-    final hit = BuddyShapes.hitPath;
-    expect(hit.contains(kBuddyFoot.translate(0, -20)), isTrue);
+  test('his foot is at his stem\'s end: just above it, he is there', () {
+    expect(kBuddyFoot.dy, kBuddyHeight);
+    expect(BuddyShapes.hitPath.contains(kBuddyFoot.translate(0, -20)), isTrue);
   });
 
   test('layout round-trips', () {

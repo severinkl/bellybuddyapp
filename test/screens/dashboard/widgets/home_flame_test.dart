@@ -11,6 +11,8 @@ import 'package:belly_buddy/services/buddy/care_now.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:belly_buddy/widgets/buddy/streak_flame.dart';
 
+import '../../../helpers/pixels.dart';
+
 void main() {
   const side = 192.0;
 
@@ -134,7 +136,7 @@ void main() {
       var left = width, right = 0;
       for (var y = 0; y < height; y++) {
         for (var x = 0; x < width; x++) {
-          if (bytes.getUint8((y * width + x) * 4 + 3) <= 2) continue;
+          if (pixelAt(bytes, width, x, y).a <= 2 / 255) continue;
           if (x < left) left = x;
           if (x > right) right = x;
         }
@@ -238,13 +240,7 @@ void main() {
     /// The colour drawn at [imagePoint] of the Buddy.
     Color at(Offset imagePoint) {
       final p = (square.topLeft + layout.toLocal(imagePoint) - origin) * ratio;
-      final i = (p.dy.round() * imageWidth + p.dx.round()) * 4;
-      return Color.fromARGB(
-        bytes.getUint8(i + 3),
-        bytes.getUint8(i),
-        bytes.getUint8(i + 1),
-        bytes.getUint8(i + 2),
-      );
+      return pixelAt(bytes, imageWidth, p.dx.round(), p.dy.round());
     }
 
     // Inside his stem's left outline: his white, as on a white page.

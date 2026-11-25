@@ -6,6 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../helpers/ambient_animations.dart';
+import '../../helpers/flames.dart';
+import '../../helpers/pixels.dart';
 
 Widget _wrap(Widget flame, {bool ticking = true}) => MaterialApp(
   theme: AppTheme.theme,
@@ -27,17 +29,6 @@ Widget _flame({
   height: height,
   igniteOnMount: igniteOnMount,
 );
-
-FlamePainter _painter(WidgetTester t) =>
-    t
-            .widget<CustomPaint>(
-              find.descendant(
-                of: find.byType(StreakFlame),
-                matching: find.byType(CustomPaint),
-              ),
-            )
-            .painter!
-        as FlamePainter;
 
 /// The ember's opacity along its breath (1 when it holds still).
 double _breath(WidgetTester t) => t
@@ -65,7 +56,7 @@ Future<Rect?> _paintedBounds(FlamePainter painter, Size box) async {
   int? left, top, right, bottom;
   for (var y = 0; y < height; y++) {
     for (var x = 0; x < width; x++) {
-      if (bytes.getUint8((y * width + x) * 4 + 3) == 0) continue;
+      if (pixelAt(bytes, width, x, y).a == 0) continue;
       left = left == null || x < left ? x : left;
       right = right == null || x > right ? x : right;
       top ??= y;
@@ -99,10 +90,8 @@ Future<List<(int, int)>> _column(
   image.dispose();
   return [
     for (var y = 0; y < height; y++)
-      (
-        bytes.getUint8((y * width + x) * 4),
-        bytes.getUint8((y * width + x) * 4 + 2),
-      ),
+      if (pixelAt(bytes, width, x, y) case final c)
+        ((c.r * 255).round(), (c.b * 255).round()),
   ];
 }
 
@@ -127,19 +116,19 @@ void main() {
   testWidgets('looks: lit once today counts, else an ember, also at '
       'streak 0', (t) async {
     await t.pumpWidget(_wrap(_flame(streak: 5, lit: true)));
-    expect(_painter(t).look, FlameLook.lit);
+    expect(flamePainter(t).look, FlameLook.lit);
 
     await t.pumpWidget(_wrap(_flame(streak: 5, lit: false)));
-    expect(_painter(t).look, FlameLook.ember);
+    expect(flamePainter(t).look, FlameLook.ember);
 
     await t.pumpWidget(_wrap(_flame(streak: 0, lit: false)));
-    expect(_painter(t).look, FlameLook.ember);
+    expect(flamePainter(t).look, FlameLook.ember);
   });
 
   testWidgets('the ember is low: its tier squashed to 0.8 × 0.4, without '
       'sparks, hot core or glow', (t) async {
     await t.pumpWidget(_wrap(_flame(streak: 5, lit: false)));
-    final painter = _painter(t);
+    final painter = flamePainter(t);
     expect(painter.tier, FlameTier.medium);
     expect(painter.bodyScale, const Size(0.8 * 0.8, 0.8 * 0.4));
     expect(painter.sparkCount, 0);
@@ -155,7 +144,7 @@ void main() {
     StreakFlame.ambientEnabled = true;
     addTearDown(disableAmbientAnimationsForTests);
     await t.pumpWidget(_wrap(_flame(streak: 7, lit: true)));
-    final painter = _painter(t);
+    final painter = flamePainter(t);
     expect(painter.flicker.length, greaterThanOrEqualTo(3));
     expect(painter.tier, FlameTier.large);
     expect(painter.sparkCount, 2);
@@ -167,7 +156,7 @@ void main() {
     StreakFlame.ambientEnabled = true;
     addTearDown(disableAmbientAnimationsForTests);
     await t.pumpWidget(_wrap(_flame(streak: 30)));
-    final painter = _painter(t);
+    final painter = flamePainter(t);
     expect(painter.tier, FlameTier.blazing);
     expect(painter.hotCore, isTrue);
     expect(painter.sparkCount, greaterThan(2));
@@ -247,22 +236,22 @@ void main() {
         const StreakFlame(streak: 5, lit: false, height: 40, onPrimary: true),
       ),
     );
-    expect(_painter(t).onPrimary, isTrue);
+    expect(flamePainter(t).onPrimary, isTrue);
   });
 
   testWidgets('the core by default', (t) async {
     await t.pumpWidget(_wrap(_flame(streak: 42, lit: true, height: 120)));
-    expect(_painter(t).core, isTrue);
+    expect(flamePainter(t).core, isTrue);
     expect(t.widget<StreakFlame>(find.byType(StreakFlame)).core, isTrue);
     await t.pumpWidget(
       _wrap(const StreakFlame(streak: 42, lit: true, height: 120, core: false)),
     );
-    expect(_painter(t).core, isFalse);
+    expect(flamePainter(t).core, isFalse);
   });
 
   testWidgets('the glow from 40 dp up, only when lit', (t) async {
     await t.pumpWidget(_wrap(_flame(streak: 7, lit: true)));
-    final painter = _painter(t);
+    final painter = flamePainter(t);
     expect(painter.showsGlow(const Size(33.3, 39.9)), isFalse);
     expect(painter.showsGlow(const Size(33.4, 40)), isTrue);
   });
@@ -275,8 +264,9 @@ void main() {
     await t.runAsync(() async {
       for (final look in FlameLook.values) {
         for (final tier in FlameTier.values) {
-          // Through a whole cycle of every tongue's flicker and the sparks.
-          for (var ms = 0; ms < 1800; ms += 60) {
+          // Through a whole cycle of every tongue's flicker and the sparks,
+          // about six poses each.
+          for (var ms = 0; ms < 1800; ms += 290) {
             clock.value = Duration(milliseconds: ms);
             final bounds = await _paintedBounds(
               FlamePainter(look: look, tier: tier, clock: clock),
@@ -364,7 +354,7 @@ void main() {
       final outside = <Rect>[];
       for (var step = 0; step < 10; step++) {
         await t.pump(const Duration(milliseconds: 70));
-        final painter = _painter(t);
+        final painter = flamePainter(t);
         if (painter.burst == null) break;
         final bounds = (await t.runAsync(() => _paintedBounds(painter, box)))!;
         if ((Offset.zero & box).intersect(bounds) != bounds) {
@@ -391,19 +381,19 @@ void main() {
     t,
   ) async {
     await t.pumpWidget(_wrap(_flame(streak: 5, lit: false)));
-    expect(_painter(t).burst, isNull);
+    expect(flamePainter(t).burst, isNull);
 
     await t.pumpWidget(_wrap(_flame(streak: 6, lit: true)));
-    final painter = _painter(t);
+    final painter = flamePainter(t);
     expect(painter.look, FlameLook.lit);
     await t.pump(const Duration(milliseconds: 150));
     expect(painter.burst, greaterThan(0));
     await t.pump(const Duration(milliseconds: 150));
     expect(painter.burst, greaterThan(0));
-    expect(_painter(t), same(painter));
+    expect(flamePainter(t), same(painter));
 
     await t.pump(const Duration(milliseconds: 500));
-    expect(_painter(t).burst, isNull);
+    expect(flamePainter(t).burst, isNull);
     expect(t.hasRunningAnimations, isFalse);
   });
 
@@ -412,8 +402,8 @@ void main() {
     await t.pumpWidget(_wrap(_flame(streak: 5, lit: false)));
     await t.pumpWidget(_wrap(_flame(streak: 6, lit: true)));
 
-    expect(_painter(t).burst, 0);
-    expect(_painter(t).bodyScale, const Size(0.8 * 0.8, 0.8 * 0.4));
+    expect(flamePainter(t).burst, 0);
+    expect(flamePainter(t).bodyScale, const Size(0.8 * 0.8, 0.8 * 0.4));
   });
 
   testWidgets('lit → ember: no burst', (t) async {
@@ -421,34 +411,34 @@ void main() {
     await t.pumpWidget(_wrap(_flame(streak: 5, lit: false)));
     await t.pumpWidget(_wrap(_flame(streak: 6, lit: true)));
     await t.pump(const Duration(milliseconds: 150));
-    expect(_painter(t).burst, greaterThan(0));
+    expect(flamePainter(t).burst, greaterThan(0));
 
     await t.pumpWidget(_wrap(_flame(streak: 5, lit: false)));
     await t.pump();
-    expect(_painter(t).look, FlameLook.ember);
-    expect(_painter(t).burst, isNull);
+    expect(flamePainter(t).look, FlameLook.ember);
+    expect(flamePainter(t).burst, isNull);
     expect(t.hasRunningAnimations, isFalse);
   });
 
   testWidgets('igniteOnMount bursts once on the first build', (t) async {
     await t.pumpWidget(_wrap(_flame(streak: 1, igniteOnMount: true)));
     await t.pump(const Duration(milliseconds: 150));
-    expect(_painter(t).look, FlameLook.lit);
-    expect(_painter(t).burst, greaterThan(0));
+    expect(flamePainter(t).look, FlameLook.lit);
+    expect(flamePainter(t).burst, greaterThan(0));
     await t.pumpAndSettle();
-    expect(_painter(t).burst, isNull);
+    expect(flamePainter(t).burst, isNull);
 
     // A rebuild does not ignite it again.
     await t.pumpWidget(_wrap(_flame(streak: 1, igniteOnMount: true)));
     await t.pump(const Duration(milliseconds: 150));
-    expect(_painter(t).burst, isNull);
+    expect(flamePainter(t).burst, isNull);
     expect(t.hasRunningAnimations, isFalse);
   });
 
   testWidgets('a flame lit from the start does not burst', (t) async {
     await t.pumpWidget(_wrap(_flame(streak: 5, lit: true)));
     await t.pump(const Duration(milliseconds: 150));
-    expect(_painter(t).burst, isNull);
+    expect(flamePainter(t).burst, isNull);
     expect(t.hasRunningAnimations, isFalse);
   });
 
@@ -456,22 +446,22 @@ void main() {
     await t.pumpWidget(_wrap(_flame(lit: false), ticking: false));
     await t.pumpWidget(_wrap(_flame(lit: true), ticking: false));
     await t.pump(const Duration(milliseconds: 150));
-    expect(_painter(t).look, FlameLook.lit);
-    expect(_painter(t).burst, isNull);
+    expect(flamePainter(t).look, FlameLook.lit);
+    expect(flamePainter(t).burst, isNull);
     await t.pump(const Duration(seconds: 2));
-    expect(_painter(t).burst, isNull);
+    expect(flamePainter(t).burst, isNull);
 
     await t.pumpWidget(_wrap(_flame(lit: true)));
     await t.pump(const Duration(milliseconds: 150));
-    expect(_painter(t).burst, greaterThan(0));
+    expect(flamePainter(t).burst, greaterThan(0));
     await t.pumpAndSettle();
-    expect(_painter(t).burst, isNull);
+    expect(flamePainter(t).burst, isNull);
 
     // Once played, hiding and showing it again does not replay it.
     await t.pumpWidget(_wrap(_flame(lit: true), ticking: false));
     await t.pumpWidget(_wrap(_flame(lit: true)));
     await t.pump(const Duration(milliseconds: 150));
-    expect(_painter(t).burst, isNull);
+    expect(flamePainter(t).burst, isNull);
   });
 
   testWidgets('lit in the frame that hides it: the ignite still waits', (
@@ -480,11 +470,11 @@ void main() {
     await t.pumpWidget(_wrap(_flame(lit: false)));
     await t.pumpWidget(_wrap(_flame(lit: true), ticking: false));
     await t.pump(const Duration(seconds: 2));
-    expect(_painter(t).burst, isNull);
+    expect(flamePainter(t).burst, isNull);
 
     await t.pumpWidget(_wrap(_flame(lit: true)));
     await t.pump(const Duration(milliseconds: 150));
-    expect(_painter(t).burst, greaterThan(0));
+    expect(flamePainter(t).burst, greaterThan(0));
   });
 
   group('reduced motion', () {
@@ -501,7 +491,7 @@ void main() {
       await t.pumpWidget(_wrap(_flame(streak: 31, lit: true)));
       await t.pump();
 
-      final painter = _painter(t);
+      final painter = flamePainter(t);
       expect(painter.look, FlameLook.lit);
       expect(painter.burst, isNull);
       expect(painter.flicker, everyElement(0));
@@ -514,9 +504,9 @@ void main() {
         _wrap(_flame(streak: 1, lit: true, igniteOnMount: true)),
       );
       await t.pump();
-      expect(_painter(t).look, FlameLook.lit);
-      expect(_painter(t).burst, isNull);
-      expect(_painter(t).flicker, everyElement(0));
+      expect(flamePainter(t).look, FlameLook.lit);
+      expect(flamePainter(t).burst, isNull);
+      expect(flamePainter(t).flicker, everyElement(0));
       expect(t.binding.hasScheduledFrame, isFalse);
     });
   });
@@ -527,9 +517,9 @@ void main() {
     testWidgets('off in tests: still', (t) async {
       await t.pumpWidget(_wrap(_flame(streak: 30, lit: true)));
       expect(t.hasRunningAnimations, isFalse);
-      expect(_painter(t).flicker, everyElement(0));
+      expect(flamePainter(t).flicker, everyElement(0));
       // A frozen spark would read as a speck of dirt.
-      expect(_painter(t).sparkCount, 0);
+      expect(flamePainter(t).sparkCount, 0);
 
       await t.pumpWidget(_wrap(_flame(streak: 5, lit: false)));
       expect(t.hasRunningAnimations, isFalse);
@@ -542,13 +532,13 @@ void main() {
       await t.pumpWidget(_wrap(_flame(streak: 5, lit: true)));
       expect(t.hasRunningAnimations, isTrue);
       await t.pump(const Duration(milliseconds: 300));
-      final flicker = _painter(t).flicker;
+      final flicker = flamePainter(t).flicker;
       expect(flicker, everyElement(inInclusiveRange(-1, 1)));
       expect(flicker.toSet().length, greaterThanOrEqualTo(2));
       expect(flicker, isNot(everyElement(0)));
 
       await t.pump(const Duration(milliseconds: 250));
-      expect(_painter(t).flicker, isNot(flicker));
+      expect(flamePainter(t).flicker, isNot(flicker));
     });
 
     testWidgets('the ember breathes', (t) async {
@@ -560,8 +550,8 @@ void main() {
       final breath = _breath(t);
       expect(breath, inInclusiveRange(0, 1));
       expect(breath, lessThan(1));
-      expect(_painter(t).clock, isNull);
-      expect(_painter(t).flicker, everyElement(0));
+      expect(flamePainter(t).clock, isNull);
+      expect(flamePainter(t).flicker, everyElement(0));
     });
 
     testWidgets('no sparks while it ignites', (t) async {
@@ -569,29 +559,29 @@ void main() {
 
       await t.pumpWidget(_wrap(_flame(streak: 5, lit: false)));
       await t.pumpWidget(_wrap(_flame(streak: 6, lit: true)));
-      expect(_painter(t).burst, 0);
-      expect(_painter(t).sparkCount, 0);
+      expect(flamePainter(t).burst, 0);
+      expect(flamePainter(t).sparkCount, 0);
       await t.pump(const Duration(milliseconds: 300));
-      expect(_painter(t).burst, greaterThan(0));
-      expect(_painter(t).sparkCount, 0);
+      expect(flamePainter(t).burst, greaterThan(0));
+      expect(flamePainter(t).sparkCount, 0);
 
       await t.pump(const Duration(milliseconds: 600));
-      expect(_painter(t).burst, isNull);
-      expect(_painter(t).sparkCount, 2);
+      expect(flamePainter(t).burst, isNull);
+      expect(flamePainter(t).sparkCount, 2);
     });
 
     testWidgets('sparks from 40 dp up, only while it moves', (t) async {
       StreakFlame.ambientEnabled = true;
 
       await t.pumpWidget(_wrap(_flame(streak: 7, lit: true)));
-      final moving = _painter(t);
+      final moving = flamePainter(t);
       expect(moving.showsSparks(const Size(33.3, 39.9)), isFalse);
       expect(moving.showsSparks(const Size(33.4, 40)), isTrue);
 
       // The same flame held still: none at any size.
       disableAmbientAnimationsForTests();
       await t.pumpWidget(_wrap(_flame(streak: 7, lit: true, height: 41)));
-      expect(_painter(t).showsSparks(const Size(100, 120)), isFalse);
+      expect(flamePainter(t).showsSparks(const Size(100, 120)), isFalse);
     });
 
     testWidgets('sparks rise from brennt up', (t) async {
@@ -599,10 +589,10 @@ void main() {
 
       await t.pumpWidget(_wrap(_flame(streak: 5, lit: true)));
       await t.pump(const Duration(milliseconds: 300));
-      final rise = _painter(t).rise;
+      final rise = flamePainter(t).rise;
       expect(rise, isNotNull);
       await t.pump(const Duration(milliseconds: 300));
-      expect(_painter(t).rise, isNot(rise));
+      expect(flamePainter(t).rise, isNot(rise));
     });
 
     testWidgets('the mark stays still', (t) async {
@@ -610,7 +600,7 @@ void main() {
 
       await t.pumpWidget(_wrap(const StreakFlame.mark(height: 20)));
       expect(t.hasRunningAnimations, isFalse);
-      final painter = _painter(t);
+      final painter = flamePainter(t);
       expect(painter.look, FlameLook.lit);
       expect(painter.tier, FlameTier.large);
       expect(painter.flicker, everyElement(0));

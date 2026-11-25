@@ -28,6 +28,7 @@ import '../../../helpers/fakes.dart';
 import '../../../helpers/fixtures.dart';
 import '../../../helpers/layout_checks.dart';
 import '../../../helpers/riverpod_helpers.dart';
+import '../../../helpers/widget_tester_helpers.dart';
 
 List<Override> _overrides([FakeEntryRepository? entries]) => [
   entryRepositoryProvider.overrideWithValue(entries ?? FakeEntryRepository()),
@@ -219,9 +220,7 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('Speichern'));
       await tester.pump();
-      await tester.pump(
-        AppConstants.careChargeDuration + const Duration(milliseconds: 100),
-      );
+      await pumpPastCharge(tester);
       return container;
     }
 

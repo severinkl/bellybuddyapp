@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
@@ -25,6 +24,7 @@ import 'package:belly_buddy/widgets/common/mascot_image.dart';
 import '../../../helpers/fakes.dart';
 import '../../../helpers/layout_checks.dart';
 import '../../../helpers/riverpod_helpers.dart';
+import '../../../helpers/widget_tester_helpers.dart';
 
 List<Override> _overrides({EntryRepository? entries}) => [
   entryRepositoryProvider.overrideWithValue(entries ?? FakeEntryRepository()),
@@ -244,9 +244,7 @@ void main() {
           );
           await tester.tap(find.byKey(MealTrackerScreen.mealEditSaveKey));
           await tester.pump();
-          await tester.pump(
-            AppConstants.careChargeDuration + const Duration(milliseconds: 100),
-          );
+          await pumpPastCharge(tester);
         });
 
         expect(find.byType(ChargingMeter), findsOneWidget);

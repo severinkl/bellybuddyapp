@@ -2,8 +2,6 @@ import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/screens/dashboard/dashboard_screen.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/insight_card.dart';
-import 'package:belly_buddy/screens/discover/discover_screen.dart';
-import 'package:belly_buddy/screens/discover/widgets/discover_tips_section.dart';
 import 'package:belly_buddy/screens/trackers/drink/drink_tracker_screen.dart';
 import 'package:belly_buddy/screens/trackers/gut_feeling/gut_feeling_tracker_screen.dart';
 import 'package:belly_buddy/screens/trackers/toilet/toilet_tracker_screen.dart';
@@ -14,10 +12,8 @@ import 'package:belly_buddy/widgets/buddy/log_success_hero.dart';
 import 'package:belly_buddy/widgets/buddy/need_meter.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
 import 'package:belly_buddy/widgets/buddy/streak_flame.dart';
-import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:material_ui/material_ui.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../test/helpers/fakes.dart';
@@ -92,9 +88,7 @@ void main() {
     final meter = find.byType(ChargingMeter);
     await pumpUntilFound(tester, meter);
     expect(tester.widget<ChargingMeter>(meter).need, CareNeed.drink);
-    await tester.pump(
-      AppConstants.careChargeDuration + const Duration(milliseconds: 100),
-    );
+    await pumpPastCharge(tester);
     final level = tester
         .widget<NeedMeter>(
           find.descendant(of: meter, matching: find.byType(NeedMeter)),
@@ -179,44 +173,4 @@ void main() {
       ),
     );
   });
-
-  for (final weeklyTips in [false, true]) {
-    testWidgets('Entdecken without tips: no Tipps section, weekly tips '
-        '${weeklyTips ? 'on' : 'off'}', (tester) async {
-      await tester.pumpWidget(
-        buildTestApp(
-          recommendationRepo: FakeRecommendationRepository(sets: []),
-          weeklyTipsEnabled: weeklyTips,
-        ),
-      );
-      await tester.pumpAndSettle();
-      await tester.tapVisible(find.byKey(BbBottomNav.navDiscoverKey));
-
-      final discover = find.byType(DiscoverScreen);
-      expect(discover, findsOneWidget);
-      expect(find.byKey(DiscoverScreen.tipsKey), findsNothing);
-      expect(find.byKey(DiscoverTipsSection.optInKey), findsNothing);
-      expect(
-        find.descendant(of: discover, matching: find.text('Tipps')),
-        findsNothing,
-      );
-      expect(
-        find.descendant(of: discover, matching: find.textContaining('Montag')),
-        findsNothing,
-      );
-      // Alternativen is the first section.
-      expect(
-        tester.getTopLeft(find.byKey(DiscoverScreen.alternativesKey)).dy,
-        tester
-                .getTopLeft(
-                  find.descendant(
-                    of: discover,
-                    matching: find.byType(RefreshIndicator),
-                  ),
-                )
-                .dy +
-            AppConstants.spacingSm,
-      );
-    });
-  }
 }

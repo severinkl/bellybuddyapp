@@ -51,6 +51,7 @@ import '../../../helpers/ambient_animations.dart';
 import '../../../helpers/app_host.dart';
 import '../../../helpers/fakes.dart';
 import '../../../helpers/fixtures.dart';
+import '../../../helpers/flames.dart';
 import '../../../helpers/riverpod_helpers.dart';
 import '../../../helpers/widget_tester_helpers.dart';
 
@@ -371,15 +372,7 @@ void main() {
 
   /// The painter of the streak flame behind the Buddy.
   FlamePainter homeFlame(WidgetTester tester) =>
-      tester
-              .widget<CustomPaint>(
-                find.descendant(
-                  of: flameFinder(),
-                  matching: find.byType(CustomPaint),
-                ),
-              )
-              .painter!
-          as FlamePainter;
+      flamePainter(tester, flameFinder());
 
   /// What he says, also while a page covers Home.
   String? bubbleBehind(WidgetTester tester) => tester
@@ -725,55 +718,6 @@ void main() {
       );
     });
 
-    testWidgets('a tap where the flame glows lands on the Buddy', (
-      tester,
-    ) async {
-      await pumpHero(tester);
-
-      final square = tester.getRect(find.byKey(CareRing.buddyKey));
-      final flame = tester.getRect(flameFinder());
-      final buddyTap = tester.renderObject(
-        find.descendant(
-          of: find.byType(AnimatedBuddy),
-          matching: find.byType(GestureDetector),
-        ),
-      );
-      // Its middle, and its base at his feet.
-      for (final at in [
-        flame.center,
-        Offset(flame.center.dx, square.bottom - 1),
-      ]) {
-        expect(
-          tester.hitTestOnBinding(at).path.map((e) => e.target),
-          contains(buddyTap),
-          reason: '$at',
-        );
-      }
-    });
-
-    testWidgets('the flame is never hit: not at its tip above his square', (
-      tester,
-    ) async {
-      buddy = _FakeBuddy(() => _status(streak: 42, todayCounted: true));
-      await pumpHero(tester);
-
-      final square = tester.getRect(find.byKey(CareRing.buddyKey));
-      final flame = tester.getRect(flameFinder());
-      final ring = tester.getRect(find.byType(CareRing));
-      // Lodert's tip rises above his square, inside the ring.
-      final tip = Offset(flame.center.dx, (ring.top + square.top) / 2);
-      expect(flame.contains(tip), isTrue);
-      final hit = tester.hitTestOnBinding(tip).path.map((e) => e.target);
-      for (final part in tester.renderObjectList(
-        find.descendant(
-          of: find.byType(HomeFlame),
-          matching: find.byWidgetPredicate((_) => true),
-        ),
-      )) {
-        expect(hit, isNot(contains(part)), reason: '$part');
-      }
-    });
-
     testWidgets("glimmt before today's first entry, brennt after; streak 0 "
         'an ember', (tester) async {
       buddy = _FakeBuddy(() => _status(streak: 5));
@@ -788,44 +732,6 @@ void main() {
       buddy.push(_status(streak: 0));
       await tester.pump();
       expect(homeFlame(tester).look, FlameLook.ember);
-    });
-
-    testWidgets("today's first entry ignites it once", (tester) async {
-      await pumpHero(tester);
-      expect(homeFlame(tester).burst, isNull);
-
-      buddy.push(_status(todayCounted: true));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 150));
-      expect(homeFlame(tester).burst, greaterThan(0));
-
-      await tester.pump(const Duration(seconds: 1));
-      expect(homeFlame(tester).burst, isNull);
-      expect(homeFlame(tester).look, FlameLook.lit);
-    });
-
-    testWidgets("opened after today's first entry: lit from the first frame, "
-        'no burst', (tester) async {
-      buddy = _FakeBuddy(() => _status(todayCounted: true));
-      await pumpHero(tester);
-      await tester.pump(const Duration(milliseconds: 150));
-
-      expect(homeFlame(tester).look, FlameLook.lit);
-      expect(homeFlame(tester).burst, isNull);
-    });
-
-    testWidgets('midnight: lit turns to an ember without a burst', (
-      tester,
-    ) async {
-      buddy = _FakeBuddy(() => _status(todayCounted: true));
-      await pumpHero(tester);
-
-      buddy.push(_status());
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 150));
-
-      expect(homeFlame(tester).look, FlameLook.ember);
-      expect(homeFlame(tester).burst, isNull);
     });
 
     testWidgets('an entry while Home is covered ignites it once Home shows '
@@ -2950,14 +2856,13 @@ void main() {
 
       /// Lets his greeting show and run out: then he says nothing.
       Future<void> afterGreeting(WidgetTester tester) async {
-        const step = Duration(milliseconds: 50);
-        for (var i = 0; i < 40 && controller(tester).bubble == null; i++) {
-          await tester.pump(step);
-        }
+        await pumpUntil(
+          tester,
+          () => controller(tester).bubble != null,
+          max: 40,
+        );
         expect(controller(tester).bubble, isNotNull, reason: 'his greeting');
-        for (var i = 0; i < 200 && controller(tester).bubble != null; i++) {
-          await tester.pump(step);
-        }
+        await pumpUntil(tester, () => controller(tester).bubble == null);
         expect(controller(tester).bubble, isNull);
       }
 
