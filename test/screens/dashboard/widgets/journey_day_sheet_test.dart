@@ -290,10 +290,7 @@ void main() {
       results: results,
     );
 
-    expect(
-      find.text('Tag 3! Deine Tipps findest du unter Entdecken.'),
-      findsOneWidget,
-    );
+    expect(find.text("Tag 3! Hier geht's zu deinen Tipps."), findsOneWidget);
     expect(find.text('Kürbissuppe'), findsNothing);
     expect(find.byType(RecipeListTile), findsNothing);
     expect(primary('Zu deinen Tipps'), findsOneWidget);
@@ -318,7 +315,7 @@ void main() {
       );
 
       expect(
-        find.text('Tag 3! Deine Tipps findest du unter Entdecken.'),
+        find.text("Tag 3! Hier geht's zu deinen Tipps."),
         findsOneWidget,
         reason: '$offer',
       );

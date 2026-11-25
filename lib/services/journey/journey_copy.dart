@@ -73,8 +73,9 @@ abstract final class JourneyCopy {
   static const day3AfterNoLine = 'Alles klar! Dann hier ein Rezept für dich.';
 
   /// Day 3 once the first tip was accepted: the tip is the reward, never a
-  /// recipe.
-  static const day3TipLine = 'Tag 3! Deine Tipps findest du unter Entdecken.';
+  /// recipe. The sheet's [toTips] opens the Tipps, so the line holds even
+  /// before the first tip is there (Entdecken shows Tipps only then).
+  static const day3TipLine = "Tag 3! Hier geht's zu deinen Tipps.";
 
   static const day5Line =
       'Tag 5! Hier ist ein Rezept mit Zutaten, die du schon gegessen hast.';
