@@ -85,8 +85,9 @@ class StreakFlame extends StatelessWidget {
   final double height;
 
   /// Its box's width; null follows the drawing's 100 × 120 box. In a
-  /// narrower box the flame is narrowed to fit what it paints at rest
-  /// (as tall); in a wider one it is centred.
+  /// narrower box the flame is narrowed to fit what its tier paints at
+  /// rest at its widest, lit (as tall; an ember as much); in a wider one it
+  /// is centred.
   final double? width;
   final bool igniteOnMount;
 
@@ -462,16 +463,12 @@ class FlamePainter extends CustomPainter {
   /// The highest tongue tip's y.
   static final double _tipY = _tongues.map((t) => t.tipY).reduce(math.min);
 
-  /// Half the width the flame paints at rest at [size] (in the drawing's
-  /// units): its glow where it shows one, else its body (squashed as an
-  /// ember).
+  /// Half the width its tier paints at rest at [size] at its widest, lit
+  /// (in the drawing's units): its glow where it shows one, else its body.
+  /// An ember is narrowed by it too, so both looks share one horizontal
+  /// scale and an ignite never snaps the flame narrower.
   double _restingHalfWidth(Size size) =>
-      tier.scaleX *
-      (showsGlow(size)
-          ? _glowRadius
-          : _lit
-          ? _bodyHalfWidth
-          : _bodyHalfWidth * _emberSquash.width);
+      tier.scaleX * (_glowsAt(size) ? _glowRadius : _bodyHalfWidth);
 
   /// Each tongue filled from its base to its tip: lit, yellow → orange →
   /// red, fading at the tip; as an ember in the ember's colours (on the

@@ -286,18 +286,23 @@ void main() {
   });
 
   testWidgets('a narrower box narrows what it paints at rest to fit, as '
-      'tall; a wider one centres it', (t) async {
+      'tall, by one horizontal scale for both looks: the lit flame fills '
+      'it, the ember narrows as much; a wider one centres it', (t) async {
     await t.runAsync(() async {
-      for (final look in FlameLook.values) {
-        for (final tier in FlameTier.values) {
-          // Tall enough to glow, and too low to.
-          for (final height in const [240.0, 36.0]) {
+      for (final tier in FlameTier.values) {
+        // Tall enough to glow, and too low to.
+        for (final height in const [240.0, 36.0]) {
+          final natural = Size(height * FlamePainter.aspectRatio, height);
+          final lit = (await _paintedBounds(
+            FlamePainter(look: FlameLook.lit, tier: tier),
+            natural,
+          ))!;
+          // The lit flame's width at rest, narrowed to 70 %.
+          final narrow = Size(lit.width * 0.7, height);
+          for (final look in FlameLook.values) {
             final painter = FlamePainter(look: look, tier: tier);
             final at = '$look, $tier at $height';
-            final own = (await _paintedBounds(
-              painter,
-              Size(height * FlamePainter.aspectRatio, height),
-            ))!;
+            final own = (await _paintedBounds(painter, natural))!;
 
             final wide = Size(height * 2, height);
             final centred = (await _paintedBounds(painter, wide))!;
@@ -308,7 +313,6 @@ void main() {
               reason: at,
             );
 
-            final narrow = Size(own.width * 0.7, height);
             final fitted = (await _paintedBounds(painter, narrow))!;
             // Within a pixel's antialiasing.
             expect(fitted.left, greaterThanOrEqualTo(-1), reason: at);
@@ -317,9 +321,14 @@ void main() {
               lessThanOrEqualTo(narrow.width + 1),
               reason: at,
             );
+            // One horizontal scale: narrowed as much as the lit flame, so
+            // an ignite never snaps it narrower.
             expect(
               fitted.width,
-              moreOrLessEquals(narrow.width, epsilon: narrow.width * 0.05 + 1),
+              moreOrLessEquals(
+                own.width * narrow.width / lit.width,
+                epsilon: own.width * 0.05 + 1,
+              ),
               reason: at,
             );
             expect(fitted.top, own.top, reason: at);
