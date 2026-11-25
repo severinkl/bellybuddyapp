@@ -326,6 +326,19 @@ void main() {
     expect(_painter(t).burst, isNull);
   });
 
+  testWidgets('lit in the frame that hides it: the ignite still waits', (
+    t,
+  ) async {
+    await t.pumpWidget(_wrap(_flame(lit: false)));
+    await t.pumpWidget(_wrap(_flame(lit: true), ticking: false));
+    await t.pump(const Duration(seconds: 2));
+    expect(_painter(t).burst, isNull);
+
+    await t.pumpWidget(_wrap(_flame(lit: true)));
+    await t.pump(const Duration(milliseconds: 150));
+    expect(_painter(t).burst, greaterThan(0));
+  });
+
   group('reduced motion', () {
     setUp(() => StreakFlame.ambientEnabled = true);
     tearDown(disableAmbientAnimationsForTests);

@@ -42,11 +42,11 @@ const _tapToContinue = 'Tippen zum Fortfahren';
 Finder _chipText(String text) =>
     find.descendant(of: find.byType(StreakChip), matching: find.text(text));
 
-/// How the streak chip's flame shows.
-FlameLook _chipFlame(WidgetTester tester) => tester
+/// How Home's streak flame (behind the Buddy) shows.
+FlameLook _homeFlame(WidgetTester tester) => tester
     .widget<StreakFlame>(
       find.descendant(
-        of: find.byType(StreakChip),
+        of: find.byType(CareRing),
         matching: find.byType(StreakFlame),
       ),
     )
@@ -117,7 +117,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(_chipText('3 Tage'), findsOneWidget);
-    expect(_chipFlame(tester), FlameLook.ember);
+    expect(_homeFlame(tester), FlameLook.ember);
 
     await tester.tapVisible(find.byKey(CareRing.needKey(CareNeed.toilet)));
     expect(find.byType(ToiletTrackerScreen), findsOneWidget);
@@ -135,7 +135,7 @@ void main() {
     await _continue(tester);
     await pumpUntilFound(tester, _chipText('4 Tage'));
     await tester.pumpAndSettle();
-    expect(_chipFlame(tester), FlameLook.lit);
+    expect(_homeFlame(tester), FlameLook.lit);
   });
 
   testWidgets("journey and feedback: the card counts the days, and the day's "

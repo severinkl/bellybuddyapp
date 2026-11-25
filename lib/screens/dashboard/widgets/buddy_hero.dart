@@ -37,6 +37,7 @@ import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/weekly_tips_switch.dart';
 import '../../buddy/streak_goal_picker.dart';
 import 'care_ring.dart';
+import 'home_flame.dart';
 import 'journey_reward_actions.dart';
 import 'journey_day_sheet.dart';
 import 'streak_sheet.dart';
@@ -102,8 +103,10 @@ _Cue _cueFor(BuddyAnnouncement a) => switch (a) {
 /// covered ([homeCoveredProvider]: a page over it or on its way in, a
 /// sheet, dialog or menu over it, another tab); the hero tells it whether
 /// Home's route is on top ([_onRoute]).
-/// Without a Buddy status (loading, error, signed out) the Buddy still
-/// shows, named 'Buddy', without the streak chip.
+/// The streak flame glows behind him ([HomeFlame]), an ember until today's
+/// first entry ignites it. Without a Buddy status (loading, error, signed
+/// out) the Buddy still shows, named 'Buddy', without the streak chip and
+/// the flame (so the status arriving never looks like an ignite).
 class BuddyHero extends ConsumerStatefulWidget {
   const BuddyHero({super.key, this.openUrl = launchUrl});
 
@@ -848,6 +851,13 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
                   diameter: diameter,
                   highlight: action.need,
                   onNeed: (need) => openTracker(context, need),
+                  behindBuddy: status == null
+                      ? null
+                      : HomeFlame(
+                          streak: status.streak,
+                          lit: status.todayCounted,
+                          buddySide: buddySide,
+                        ),
                   buddy: AnimatedBuddy(
                     controller: _buddy,
                     name: name,

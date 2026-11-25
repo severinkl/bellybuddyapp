@@ -34,6 +34,7 @@ void main() {
     Size size = const Size(393, 852),
     double textScale = 1.0,
     Duration settle = const Duration(milliseconds: 400),
+    Widget? behindBuddy,
   }) async {
     final tapped = <CareNeed>[];
     final buddyTaps = <int>[];
@@ -57,6 +58,7 @@ void main() {
                   diameter: CareRing.diameterFor(width, size.height),
                   highlight: highlight,
                   onNeed: tapped.add,
+                  behindBuddy: behindBuddy,
                   buddy: GestureDetector(
                     key: const Key('buddy_double'),
                     behavior: HitTestBehavior.opaque,
@@ -240,6 +242,122 @@ void main() {
     await tester.tap(find.byKey(const Key('buddy_double')));
     expect(tapped, isEmpty);
     expect(buddyTapsLog.length, 1);
+  });
+
+  testWidgets("behindBuddy: bottom-centred in the Buddy's square, under him", (
+    tester,
+  ) async {
+    const behindKey = Key('behind');
+    await pump(
+      tester,
+      behindBuddy: const SizedBox(key: behindKey, width: 50, height: 80),
+    );
+
+    final square = tester.getRect(find.byKey(CareRing.buddyKey));
+    final behind = tester.getRect(find.byKey(behindKey));
+    expect(behind.size, const Size(50, 80));
+    expect(behind.bottom, moreOrLessEquals(square.bottom));
+    expect(behind.center.dx, moreOrLessEquals(square.center.dx));
+    // Painted first, so under him.
+    expect(
+      find
+          .descendant(
+            of: find.byType(CareRing),
+            matching: find.byWidgetPredicate(
+              (w) => w.key == behindKey || w.key == const Key('buddy_double'),
+            ),
+          )
+          .evaluate()
+          .map((e) => e.widget.key),
+      [behindKey, const Key('buddy_double')],
+    );
+
+    // Never a tap target: a tap on it lands on the Buddy.
+    await tester.tapAt(behind.center);
+    expect(buddyTapsLog, hasLength(1));
+  });
+
+  testWidgets('behindBuddy larger than his square: at its own size, clipped '
+      'to the ring between the bubbles; the bubbles still open', (
+    tester,
+  ) async {
+    const behindKey = Key('behind');
+    final tapped = await pump(
+      tester,
+      behindBuddy: const SizedBox(key: behindKey, width: 600, height: 600),
+    );
+
+    final square = tester.getRect(find.byKey(CareRing.buddyKey));
+    final behind = tester.getRect(find.byKey(behindKey));
+    expect(behind.size, const Size(600, 600));
+    expect(behind.bottom, moreOrLessEquals(square.bottom));
+    expect(behind.center.dx, moreOrLessEquals(square.center.dx));
+
+    final clip = tester
+        .getRect(
+          find
+              .ancestor(
+                of: find.byKey(behindKey),
+                matching: find.byType(ClipRect),
+              )
+              .first,
+        )
+        .deflate(0.01);
+    final ring = tester.getRect(find.byType(CareRing));
+    expect(ring.inflate(0.01).contains(clip.topLeft), isTrue);
+    expect(ring.inflate(0.01).contains(clip.bottomRight), isTrue);
+    expect(clip.contains(square.center), isTrue);
+    for (final need in CareNeed.values) {
+      expect(clip.overlaps(bubble(tester, need)), isFalse, reason: '$need');
+      await tester.tap(find.byKey(CareRing.needKey(need)));
+    }
+    expect(tapped, CareNeed.values);
+    expect(buddyTapsLog, isEmpty);
+  });
+
+  testWidgets('behindBuddy fades out toward the bubbles, so it shows no edge '
+      'where it is cut off', (tester) async {
+    const behindKey = Key('behind');
+    await pump(
+      tester,
+      behindBuddy: const ColoredBox(
+        key: behindKey,
+        color: AppTheme.foreground,
+        child: SizedBox(width: 600, height: 600),
+      ),
+    );
+
+    final clip = tester.getRect(
+      find
+          .ancestor(of: find.byKey(behindKey), matching: find.byType(ClipRect))
+          .first,
+    );
+    final square = tester.getRect(find.byKey(CareRing.buddyKey));
+    // A row inside the ring, above his square.
+    final y = ((clip.top + square.top) / 2).round();
+    final bytes = (await tester.runAsync(() async {
+      final image = await captureImage(find.byType(CareRing).evaluate().single);
+      return image.toByteData();
+    }))!;
+    final width = tester.view.physicalSize.width.round();
+
+    /// How much of the behind shows at [x]: 0 none, 1 all of it.
+    double shown(double x) {
+      final i = (y * width + x.round()) * 4;
+      const fg = AppTheme.foreground;
+      final bg = AppTheme.background.r * 255;
+      return (bg - bytes.getUint8(i)) / (bg - fg.r * 255);
+    }
+
+    const fade = AppConstants.careRingBehindFade;
+    expect(shown(clip.center.dx), moreOrLessEquals(1, epsilon: 0.02));
+    for (final edge in [clip.left + 0.5, clip.right - 0.5]) {
+      expect(shown(edge), lessThan(0.1), reason: 'at $edge');
+    }
+    for (final x in [clip.left + fade + 1, clip.right - fade - 1]) {
+      expect(shown(x), moreOrLessEquals(1, epsilon: 0.02), reason: 'at $x');
+    }
+    expect(shown(clip.left + fade / 2), inInclusiveRange(0.3, 0.7));
   });
 
   testWidgets('the ring between the bubbles is no tap target', (tester) async {

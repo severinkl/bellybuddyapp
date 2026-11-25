@@ -142,8 +142,6 @@ class _LiveFlameState extends State<_LiveFlame> with TickerProviderStateMixin {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _reducedMotion = MediaQuery.disableAnimationsOf(context);
-    _visible = TickerMode.valuesOf(context).enabled;
     _sync();
   }
 
@@ -167,6 +165,10 @@ class _LiveFlameState extends State<_LiveFlame> with TickerProviderStateMixin {
   /// runs the motion the look has: the lit flame's clock or the ember's
   /// breath.
   void _sync() {
+    // Read on every sync: a new widget can come in the frame that covers
+    // the flame, before its didChangeDependencies.
+    _reducedMotion = MediaQuery.disableAnimationsOf(context);
+    _visible = TickerMode.valuesOf(context).enabled;
     if (_reducedMotion) {
       _ignitePending = false;
       _ignite.stop();
@@ -255,6 +257,10 @@ class FlamePainter extends CustomPainter {
   /// Width per height of the drawing's box.
   static const double aspectRatio = _boxWidth / _boxHeight;
 
+  /// How far the flame's base sits above the box's bottom, as a share of
+  /// its height.
+  static const double baseInset = (_boxHeight - _boxBaseY) / _boxHeight;
+
   /// An ember is its tier squashed this much: low embers at its base.
   static const Size emberSquash = Size(0.8, 0.4);
 
@@ -266,7 +272,8 @@ class FlamePainter extends CustomPainter {
 
   /// The point the body scales and the tongues sway about: the flame's
   /// base.
-  static const Offset _base = Offset(50, 114);
+  static const Offset _base = Offset(50, _boxBaseY);
+  static const double _boxBaseY = 114;
 
   /// The ignite's pop: its peak scale, and when in the burst it peaks.
   static const double _popPeak = 1.24;

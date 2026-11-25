@@ -53,6 +53,9 @@ class AppConstants {
   /// The smallest tap target (Apple's 44 pt).
   static const double minTapTarget = 44.0;
 
+  /// The smallest tap target on Home.
+  static const double homeTapTarget = 48.0;
+
   // Border radius
   static const double radiusXs = 4.0;
   static const double radiusSm = 8.0;
@@ -112,12 +115,11 @@ class AppConstants {
   // Streak week row (Mo–So): day circle
   static const double streakWeekDaySize = 36.0;
 
-  // The drawn streak flame: its height in the chip, the streak moment, a
-  // week row's day and the success page's ignite; the ignite's burst, the
-  // flicker of each tongue (one period per tongue, pairwise different), the
-  // ember's breathing and the lit flame's sparks; its glow and sparks only
-  // from this height up (smaller, they would only smudge)
-  static const double streakFlameChipHeight = 22.0;
+  // The drawn streak flame: its height in the streak moment, a week row's
+  // day and the success page's ignite; the ignite's burst, the flicker of
+  // each tongue (one period per tongue, pairwise different), the ember's
+  // breathing and the lit flame's sparks; its glow and sparks only from
+  // this height up (smaller, they would only smudge)
   static const double streakFlameMomentHeight = 72.0;
   static const double streakFlameMarkHeight = 20.0;
   static const double streakFlameIgniteHeight = 32.0;
@@ -182,6 +184,20 @@ class AppConstants {
   static const double careNeedWidth = 88.0;
   static const double careNeedGlow = 5.0;
   static const Duration careNeedPulse = Duration(milliseconds: 1400);
+
+  /// What the ring draws behind the Buddy fades out over this much toward
+  /// the bubbles.
+  static const double careRingBehindFade = 16.0;
+
+  // Home's streak flame, a glow behind the Buddy: its height (per side of
+  // his square), how far its base sits below his feet (per side), how
+  // opaque it is as an ember, lit and blazing („lodert"), and its blur
+  static const double homeFlameScale = 1.25;
+  static const double homeFlameBelowFeet = 0.02;
+  static const double homeFlameEmberOpacity = 0.8;
+  static const double homeFlameLitOpacity = 0.55;
+  static const double homeFlameBlazingOpacity = 0.65;
+  static const double homeFlameBlur = 2.5;
 
   /// The sticker icon leading Home's next-action button.
   static const double careButtonIconSize = 24.0;

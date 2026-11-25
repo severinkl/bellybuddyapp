@@ -40,6 +40,7 @@ import 'package:belly_buddy/utils/date_format_utils.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:belly_buddy/widgets/buddy/need_icon.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
+import 'package:belly_buddy/widgets/buddy/streak_flame.dart';
 import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
 import 'package:belly_buddy/widgets/common/weekly_tips_switch.dart';
 import 'package:belly_buddy/widgets/log_sheet/log_sheet.dart';
@@ -360,6 +361,24 @@ void main() {
     ),
   );
 
+  /// The streak flame behind the Buddy.
+  Finder flameFinder() => find.descendant(
+    of: find.byType(CareRing),
+    matching: find.byType(StreakFlame),
+  );
+
+  /// The painter of the streak flame behind the Buddy.
+  FlamePainter homeFlame(WidgetTester tester) =>
+      tester
+              .widget<CustomPaint>(
+                find.descendant(
+                  of: flameFinder(),
+                  matching: find.byType(CustomPaint),
+                ),
+              )
+              .painter!
+          as FlamePainter;
+
   /// What he says, also while a page covers Home.
   String? bubbleBehind(WidgetTester tester) => tester
       .widget<AnimatedBuddy>(find.byType(AnimatedBuddy, skipOffstage: false))
@@ -670,6 +689,162 @@ void main() {
       expect(chip.todayCounted, isFalse);
     });
 
+    testWidgets('the flame glows behind the Buddy: larger than his square, '
+        'its base just below his foot, its core behind his stem, between '
+        'the bubbles, under him', (tester) async {
+      await pumpHero(tester);
+
+      final square = tester.getRect(find.byKey(CareRing.buddyKey));
+      final side = square.height;
+      final flame = tester.getRect(flameFinder());
+      expect(
+        flame.height,
+        moreOrLessEquals(side * AppConstants.homeFlameScale),
+      );
+      expect(flame.height, greaterThan(side));
+      // His foot, the end of his stem: right of the square's middle, a
+      // little above its bottom.
+      final foot =
+          square.topLeft +
+          BuddyLayout(square.size).toLocal(kBuddyCenterline.last);
+      expect(foot.dx, greaterThan(square.center.dx));
+      expect(foot.dy, lessThan(square.bottom));
+      expect(flame.center.dx, moreOrLessEquals(foot.dx));
+      final base = flame.bottom - flame.height * FlamePainter.baseInset;
+      expect(
+        base,
+        moreOrLessEquals(foot.dy + side * AppConstants.homeFlameBelowFeet),
+      );
+
+      // Drawn only inside the ring, between the bubbles.
+      final clip = tester
+          .getRect(
+            find
+                .ancestor(of: flameFinder(), matching: find.byType(ClipRect))
+                .first,
+          )
+          .deflate(0.01);
+      final ring = tester.getRect(find.byType(CareRing)).inflate(0.01);
+      expect(ring.contains(clip.topLeft), isTrue);
+      expect(ring.contains(clip.bottomRight), isTrue);
+      for (final need in CareNeed.values) {
+        expect(
+          clip.overlaps(tester.getRect(find.byKey(CareRing.needKey(need)))),
+          isFalse,
+          reason: '$need',
+        );
+      }
+
+      // Painted before him, so under him.
+      expect(
+        find
+            .descendant(
+              of: find.byType(CareRing),
+              matching: find.byWidgetPredicate(
+                (w) => w is StreakFlame || w is AnimatedBuddy,
+              ),
+            )
+            .evaluate()
+            .map((e) => e.widget.runtimeType),
+        [StreakFlame, AnimatedBuddy],
+      );
+    });
+
+    testWidgets('a tap where the flame glows lands on the Buddy', (
+      tester,
+    ) async {
+      await pumpHero(tester);
+
+      final square = tester.getRect(find.byKey(CareRing.buddyKey));
+      final flame = tester.getRect(flameFinder());
+      final buddyTap = tester.renderObject(
+        find.descendant(
+          of: find.byType(AnimatedBuddy),
+          matching: find.byType(GestureDetector),
+        ),
+      );
+      // Its middle, and its base at his feet.
+      for (final at in [
+        flame.center,
+        Offset(flame.center.dx, square.bottom - 1),
+      ]) {
+        expect(
+          tester.hitTestOnBinding(at).path.map((e) => e.target),
+          contains(buddyTap),
+          reason: '$at',
+        );
+      }
+    });
+
+    testWidgets("glimmt before today's first entry, brennt after; streak 0 "
+        'an ember', (tester) async {
+      buddy = _FakeBuddy(() => _status(streak: 5));
+      await pumpHero(tester);
+      expect(homeFlame(tester).look, FlameLook.ember);
+      expect(tester.widget<StreakFlame>(flameFinder()).streak, 5);
+
+      buddy.push(_status(streak: 5, todayCounted: true));
+      await tester.pump();
+      expect(homeFlame(tester).look, FlameLook.lit);
+
+      buddy.push(_status(streak: 0));
+      await tester.pump();
+      expect(homeFlame(tester).look, FlameLook.ember);
+    });
+
+    testWidgets("today's first entry ignites it once", (tester) async {
+      await pumpHero(tester);
+      expect(homeFlame(tester).burst, isNull);
+
+      buddy.push(_status(todayCounted: true));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 150));
+      expect(homeFlame(tester).burst, greaterThan(0));
+
+      await tester.pump(const Duration(seconds: 1));
+      expect(homeFlame(tester).burst, isNull);
+      expect(homeFlame(tester).look, FlameLook.lit);
+    });
+
+    testWidgets("opened after today's first entry: lit from the first frame, "
+        'no burst', (tester) async {
+      buddy = _FakeBuddy(() => _status(todayCounted: true));
+      await pumpHero(tester);
+      await tester.pump(const Duration(milliseconds: 150));
+
+      expect(homeFlame(tester).look, FlameLook.lit);
+      expect(homeFlame(tester).burst, isNull);
+    });
+
+    testWidgets('midnight: lit turns to an ember without a burst', (
+      tester,
+    ) async {
+      buddy = _FakeBuddy(() => _status(todayCounted: true));
+      await pumpHero(tester);
+
+      buddy.push(_status());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 150));
+
+      expect(homeFlame(tester).look, FlameLook.ember);
+      expect(homeFlame(tester).burst, isNull);
+    });
+
+    testWidgets('an entry while Home is covered ignites it once Home shows '
+        'again', (tester) async {
+      await pumpHero(tester);
+
+      visible.value = false;
+      buddy.push(_status(todayCounted: true));
+      await tester.pump(const Duration(seconds: 1));
+      expect(homeFlame(tester).burst, isNull);
+
+      visible.value = true;
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 150));
+      expect(homeFlame(tester).burst, greaterThan(0));
+    });
+
     testWidgets('the StreakChip opens „Dein Streak"; „Ziel ändern" sets a '
         'new goal', (tester) async {
       await pumpHero(tester);
@@ -872,6 +1047,7 @@ void main() {
       await tick(tester);
 
       expect(find.byType(StreakChip), findsNothing);
+      expect(find.byType(StreakFlame), findsNothing);
       expect(find.byType(AnimatedBuddy), findsOneWidget);
       final c = controller(tester);
       expect(c.mood, BuddyMood.happy);

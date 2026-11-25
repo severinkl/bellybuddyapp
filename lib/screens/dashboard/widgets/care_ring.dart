@@ -24,7 +24,8 @@ import '../../../widgets/buddy/need_meter.dart';
 /// the space between them is no tap target (the Buddy has his own). The
 /// [highlight]ed need (the one he suggests next) glows and, unless
 /// animations are off, pulses gently on its own clock (paused while
-/// `TickerMode` is off).
+/// `TickerMode` is off). [behindBuddy] (Home's streak flame) is drawn
+/// under him.
 class CareRing extends StatelessWidget {
   const CareRing({
     super.key,
@@ -33,10 +34,14 @@ class CareRing extends StatelessWidget {
     required this.buddy,
     required this.onNeed,
     this.highlight,
+    this.behindBuddy,
   });
 
   /// A need's bubble (its whole tap area): `care_need_<name>`.
   static Key needKey(CareNeed need) => ValueKey('care_need_${need.name}');
+
+  /// The Buddy's square.
+  static const buddyKey = Key('care_ring_buddy');
 
   /// Test seam: while false, the highlighted need glows without pulsing,
   /// so `pumpAndSettle` can settle on screens that show the ring (e.g. the
@@ -78,6 +83,12 @@ class CareRing extends StatelessWidget {
   /// Tapping a need's bubble calls this with the need.
   final ValueChanged<CareNeed> onNeed;
   final CareNeed? highlight;
+
+  /// Drawn under the Buddy at its own size, bottom-centred in his square.
+  /// It may be larger than the square, but shows only inside the ring
+  /// between the bubbles (never over or under one), and it is never a tap
+  /// target: a tap on it lands on him.
+  final Widget? behindBuddy;
 
   /// The labels' style; [_labelScaler] fits the longest into a bubble.
   static const _labelStyle = TextStyle(
@@ -131,10 +142,26 @@ class CareRing extends StatelessWidget {
   /// How much each further step shrinks the labels by ([_labelScaler]).
   static const _labelShrinkStep = 0.98;
 
+  /// [behindBuddy]'s mask over the ring's middle ([bounds]): clear at its
+  /// sides, full from [AppConstants.careRingBehindFade] in.
+  static Shader _fadeSides(Rect bounds) {
+    final fade = math.min(0.5, AppConstants.careRingBehindFade / bounds.width);
+    return LinearGradient(
+      colors: const [
+        Colors.transparent,
+        Colors.black,
+        Colors.black,
+        Colors.transparent,
+      ],
+      stops: [0, fade, 1 - fade, 1],
+    ).createShader(bounds);
+  }
+
   @override
   Widget build(BuildContext context) {
     final meterSize = meterSizeFor(diameter);
     final labelScaler = _labelScaler(context);
+    final buddySide = diameter * AppConstants.careRingBuddyFactor;
     Widget bubble(CareNeed need) => _NeedBubble(
       key: needKey(need),
       need: need,
@@ -163,11 +190,42 @@ class CareRing extends StatelessWidget {
             // His square, narrower where the bubbles leave less room (he
             // is drawn narrower than tall, so his height stays).
             Expanded(
-              child: Center(
-                child: SizedBox.square(
-                  dimension: diameter * AppConstants.careRingBuddyFactor,
-                  child: buddy,
-                ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (behindBuddy case final behind?)
+                    Positioned.fill(
+                      child: IgnorePointer(
+                        // Faded out toward the bubbles, so where a wide one
+                        // is cut off it shows no edge.
+                        child: ShaderMask(
+                          blendMode: BlendMode.dstIn,
+                          shaderCallback: _fadeSides,
+                          child: ClipRect(
+                            child: Center(
+                              // His square again, to align it in.
+                              child: SizedBox.square(
+                                dimension: buddySide,
+                                child: OverflowBox(
+                                  alignment: Alignment.bottomCenter,
+                                  minWidth: 0,
+                                  maxWidth: double.infinity,
+                                  minHeight: 0,
+                                  maxHeight: double.infinity,
+                                  child: behind,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  SizedBox.square(
+                    key: buddyKey,
+                    dimension: buddySide,
+                    child: buddy,
+                  ),
+                ],
               ),
             ),
             side(CareNeed.drink, CareNeed.gutFeeling),

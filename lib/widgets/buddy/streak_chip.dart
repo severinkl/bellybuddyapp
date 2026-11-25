@@ -2,14 +2,13 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
-import 'streak_flame.dart';
 
-/// Compact streak indicator: the drawn flame and "5 Tage" (the streak only;
-/// savers are not shown here).
+/// Compact streak indicator: the count, "5 Tage" (the streak only; savers
+/// are not shown here, and on Home the flame burns behind the Buddy).
 ///
-/// Muted while today is not yet counted, the flame an ember until today's
-/// first entry ignites it; pops when [streak] increases.
-/// With [onTap] it is a button that sets the streak goal.
+/// Muted while today is not yet counted; pops when [streak] increases.
+/// With [onTap] it is a button that sets the streak goal. Its tap area is
+/// at least [AppConstants.homeTapTarget] tall, the pill centred in it.
 class StreakChip extends StatefulWidget {
   const StreakChip({
     super.key,
@@ -80,32 +79,25 @@ class _StreakChipState extends State<StreakChip>
       child: GestureDetector(
         onTap: onTap,
         behavior: HitTestBehavior.opaque,
-        child: ScaleTransition(
-          scale: _scale,
-          child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppConstants.spacing12,
-              vertical: AppConstants.spacing6,
-            ),
-            decoration: BoxDecoration(
-              color: muted ? AppTheme.muted : AppTheme.secondary,
-              borderRadius: BorderRadius.circular(AppConstants.radiusFull),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Grows with the text beside it; its motion stays in „Dein
-                // Streak" and on the success page.
-                StreakFlame(
-                  streak: widget.streak,
-                  lit: widget.todayCounted,
-                  still: true,
-                  height: MediaQuery.textScalerOf(
-                    context,
-                  ).scale(AppConstants.streakFlameChipHeight),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(
+            minHeight: AppConstants.homeTapTarget,
+          ),
+          child: Align(
+            widthFactor: 1,
+            heightFactor: 1,
+            child: ScaleTransition(
+              scale: _scale,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.spacing12,
+                  vertical: AppConstants.spacing6,
                 ),
-                const SizedBox(width: AppConstants.spacingXs),
-                Text(
+                decoration: BoxDecoration(
+                  color: muted ? AppTheme.muted : AppTheme.secondary,
+                  borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+                ),
+                child: Text(
                   days,
                   style: TextStyle(
                     fontSize: AppTheme.fontSizeBody,
@@ -113,7 +105,7 @@ class _StreakChipState extends State<StreakChip>
                     color: color,
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ),
