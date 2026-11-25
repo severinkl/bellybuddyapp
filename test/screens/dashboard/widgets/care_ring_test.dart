@@ -155,13 +155,16 @@ void main() {
     await pump(tester, highlight: CareNeed.drink);
 
     for (final need in CareNeed.values) {
-      final icon = tester.widget<NeedIcon>(
-        find.descendant(of: meterOf(need), matching: find.byType(NeedIcon)),
+      final icon = find.descendant(
+        of: meterOf(need),
+        matching: find.byType(NeedIcon),
       );
-      expect(icon.need, need, reason: '$need');
+      expect(tester.widget<NeedIcon>(icon).need, need, reason: '$need');
       expect(
-        icon.size,
-        tester.getSize(meterOf(need)).width * AppConstants.careMeterIconShare,
+        tester.getSize(icon),
+        Size.square(
+          tester.getSize(meterOf(need)).width * AppConstants.careMeterIconShare,
+        ),
         reason: '$need',
       );
     }

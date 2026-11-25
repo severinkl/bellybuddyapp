@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
+import 'package:belly_buddy/widgets/buddy/need_icon.dart';
 import 'package:belly_buddy/widgets/buddy/need_meter.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -45,30 +46,21 @@ void main() {
     expect(painter.fill, AppTheme.careLooSoft);
   });
 
-  testWidgets('the child is centred and scaled down to half the size', (
-    tester,
-  ) async {
+  testWidgets('its icon fills the middle half of it, centred', (tester) async {
     await tester.pumpWidget(
       _host(
         const NeedMeter(
           need: CareNeed.food,
           level: 0.8,
           size: 60,
-          child: SizedBox(key: Key('c'), width: 200, height: 10),
+          child: NeedIcon(CareNeed.food),
         ),
       ),
     );
-    // getSize is the unscaled layout size; the corners go through the
-    // FittedBox's transform.
-    final c = find.byKey(const Key('c'));
-    expect(
-      tester.getTopRight(c).dx - tester.getTopLeft(c).dx,
-      lessThanOrEqualTo(30),
-    );
-    expect(
-      tester.getCenter(find.byKey(const Key('c'))),
-      tester.getCenter(find.byType(NeedMeter)),
-    );
+
+    final icon = find.byType(NeedIcon);
+    expect(tester.getSize(icon), const Size.square(30));
+    expect(tester.getCenter(icon), tester.getCenter(find.byType(NeedMeter)));
   });
 
   testWidgets('no semantics of its own', (tester) async {

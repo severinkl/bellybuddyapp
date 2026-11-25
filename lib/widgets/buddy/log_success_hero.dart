@@ -47,7 +47,7 @@ class ChargingMeter extends StatelessWidget {
       onEnd: onCharged,
       builder: (_, level, child) =>
           NeedMeter(need: need, level: level, size: size, child: child!),
-      child: NeedIcon(need, size: size * AppConstants.careMeterIconShare),
+      child: NeedIcon(need),
     );
   }
 }

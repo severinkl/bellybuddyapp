@@ -104,7 +104,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           (path) => precacheImage(AssetImage(path), context).catchError((_) {}),
         ),
       );
-      futures.add(NeedIcon.precache().catchError((_) {}));
+      futures.add(NeedIcon.precache());
     }
 
     await Future.wait(futures);

@@ -348,11 +348,7 @@ class _NeedBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final icon = NeedIcon(
-      need,
-      size: meterSize * AppConstants.careMeterIconShare,
-      gutFeeling: gutFeeling,
-    );
+    final icon = NeedIcon(need, gutFeeling: gutFeeling);
     // The glow goes inside the tween: when it moves on (the need just
     // logged), the tween keeps its place and the meter still fills.
     Widget meterAt(double? shown, Widget child) {

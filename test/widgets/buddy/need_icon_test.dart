@@ -7,6 +7,8 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../../helpers/logs.dart';
+
 void main() {
   const dir = 'assets/images/icons/needs';
 
@@ -50,6 +52,7 @@ void main() {
       ),
       '$dir/food.svg',
     );
+    expect(NeedIcon.assets, hasLength(7));
     expect(NeedIcon.assets.toSet(), hasLength(7));
   });
 
@@ -89,6 +92,29 @@ void main() {
     expect(picture.width, 24);
     expect(picture.height, 24);
     expect(picture.excludeFromSemantics, isTrue);
+  });
+
+  testWidgets('without a size, it fills its box', (tester) async {
+    await tester.pumpWidget(
+      const Center(
+        child: SizedBox.square(dimension: 30, child: NeedIcon(CareNeed.toilet)),
+      ),
+    );
+
+    expect(tester.getSize(find.byType(NeedIcon)), const Size(30, 30));
+  });
+
+  testWidgets('a failed precache is logged, never thrown', (tester) async {
+    final logs = captureLogs();
+    svg.cache.clear();
+    addTearDown(svg.cache.clear);
+    final messenger = tester.binding.defaultBinaryMessenger;
+    messenger.setMockMessageHandler('flutter/assets', (_) async => null);
+    addTearDown(() => messenger.setMockMessageHandler('flutter/assets', null));
+
+    await tester.runAsync(NeedIcon.precache);
+
+    expect(logs, [startsWith('NeedIcon [WARN]: precache failed')]);
   });
 
   testWidgets('precache fills flutter_svg\'s cache with all seven', (

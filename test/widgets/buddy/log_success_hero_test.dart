@@ -108,17 +108,17 @@ void main() {
         tester.widget<NeedMeter>(find.byType(NeedMeter)).need,
         CareNeed.drink,
       );
-      final icon = tester.widget<NeedIcon>(
-        find.descendant(
-          of: find.byType(ChargingMeter),
-          matching: find.byType(NeedIcon),
-        ),
+      final icon = find.descendant(
+        of: find.byType(ChargingMeter),
+        matching: find.byType(NeedIcon),
       );
-      expect(icon.need, CareNeed.drink);
+      expect(tester.widget<NeedIcon>(icon).need, CareNeed.drink);
       expect(
-        icon.size,
-        tester.getSize(find.byType(NeedMeter)).width *
-            AppConstants.careMeterIconShare,
+        tester.getSize(icon),
+        Size.square(
+          tester.getSize(find.byType(NeedMeter)).width *
+              AppConstants.careMeterIconShare,
+        ),
       );
     });
 
