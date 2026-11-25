@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <clipPath id="glass">
+      <path d="M14 10H50L46.2 53.5A4.5 4.5 0 0 1 41.7 57.6H22.3A4.5 4.5 0 0 1 17.8 53.5Z"/>
+    </clipPath>
+  </defs>
+  <g transform="translate(0.98 -0.95) scale(0.94)">
+    <g transform="translate(2 2.5)" fill="#FFABB6" stroke="#FFABB6" stroke-width="3.5" stroke-linejoin="round">
+      <path d="M14 10H50L46.2 53.5A4.5 4.5 0 0 1 41.7 57.6H22.3A4.5 4.5 0 0 1 17.8 53.5Z"/>
+    </g>
+    <path fill="#F4FAFD" d="M14 10H50L46.2 53.5A4.5 4.5 0 0 1 41.7 57.6H22.3A4.5 4.5 0 0 1 17.8 53.5Z"/>
+    <g clip-path="url(#glass)">
+      <path fill="#A9D8F5" d="M10 30C16 26.5 22 33.5 32 30S46 26.5 54 30V62H10Z"/>
+      <path stroke="#0D0D0F" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" fill="none" d="M10 30C16 26.5 22 33.5 32 30S46 26.5 54 30"/>
+    </g>
+    <circle stroke="#0D0D0F" stroke-width="1.8" stroke-linecap="round" fill="#FFFFFF" cx="38" cy="44" r="2.6"/>
+    <circle stroke="#0D0D0F" stroke-width="1.8" stroke-linecap="round" fill="#FFFFFF" cx="29.5" cy="50" r="1.8"/>
+    <path fill="none" stroke="#FFFFFF" stroke-width="3.2" stroke-linecap="round" stroke-opacity="0.9" d="M20.5 15L22.6 44"/>
+    <path stroke="#0D0D0F" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" fill="none" d="M14 10H50L46.2 53.5A4.5 4.5 0 0 1 41.7 57.6H22.3A4.5 4.5 0 0 1 17.8 53.5Z"/>
+  </g>
+</svg>

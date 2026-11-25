@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
+import '../../widgets/buddy/need_icon.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   final VoidCallback onComplete;
@@ -103,6 +104,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
           (path) => precacheImage(AssetImage(path), context).catchError((_) {}),
         ),
       );
+      futures.add(NeedIcon.precache().catchError((_) {}));
     }
 
     await Future.wait(futures);
