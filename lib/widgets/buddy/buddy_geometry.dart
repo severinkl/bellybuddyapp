@@ -4,6 +4,8 @@ import 'dart:ui';
 
 import 'buddy_shape_data.dart';
 
+export 'buddy_shape_data.dart' show kBuddyFoot;
+
 /// Splits every line/cubic into short cubic pieces (control polygon <= [maxLen])
 /// so local deformations actually bend the outline. Done once.
 List<double> subdivideBuddyPath(List<double> d, {double maxLen = 45}) {
@@ -173,10 +175,6 @@ const double kBuddyStageHeightFactor = 1.18;
 
 /// Gap below the Buddy's feet, as a fraction of the stage height.
 const double kBuddyStageBottomMargin = 0.03;
-
-/// His foot (image coords): the middle of his stem's end, outline to
-/// outline.
-const Offset kBuddyFoot = Offset(796, kBuddyHeight);
 
 /// Width / height of a stage the Buddy fills exactly.
 const double kBuddyStageAspect =

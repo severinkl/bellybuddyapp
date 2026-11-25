@@ -2,8 +2,14 @@
 // Encoding: 0=moveTo(x,y) 1=lineTo(x,y) 2=cubicTo(x1,y1,x2,y2,x,y) 3=close.
 // Coordinates in source-image pixels (1434 x 1920).
 
+import 'dart:ui' show Offset;
+
 const double kBuddyWidth = 1434;
 const double kBuddyHeight = 1920;
+
+/// His foot (image coords): the middle of his stem's end, outline to
+/// outline, at the image's bottom.
+const Offset kBuddyFoot = Offset(796.5, kBuddyHeight);
 
 const List<double> kBuddySilhouette = <double>[
   0,
