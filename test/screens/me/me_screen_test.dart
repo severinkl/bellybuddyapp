@@ -42,8 +42,11 @@ void main() {
     bool failRename = false,
     Size size = const Size(393, 852),
     double textScale = 1,
+    FakeViewPadding padding = FakeViewPadding.zero,
   }) async {
     tester.view.physicalSize = size;
+    tester.view.padding = padding;
+    addTearDown(tester.view.resetPadding);
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
@@ -92,6 +95,25 @@ void main() {
 
   TextButton saveButton(WidgetTester tester) =>
       tester.widget<TextButton>(find.widgetWithText(TextButton, 'Speichern'));
+
+  testWidgets(
+    'no „Ich" header: the Buddy card starts at the top, below the status bar',
+    (tester) async {
+      await pump(tester);
+      expect(find.byType(AppBar), findsNothing);
+      expect(find.text('Ich'), findsNothing);
+      expect(
+        tester.getRect(find.byType(AnimatedBuddy)).top,
+        lessThan(kToolbarHeight),
+      );
+
+      await pump(tester, padding: const FakeViewPadding(top: 59));
+      expect(
+        tester.getRect(find.byType(AnimatedBuddy)).top,
+        greaterThanOrEqualTo(59),
+      );
+    },
+  );
 
   testWidgets('header shows the Buddy and his name', (tester) async {
     await pump(tester);

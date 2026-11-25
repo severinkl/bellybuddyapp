@@ -20,7 +20,8 @@ import '../../widgets/common/bb_settings_item.dart';
 import '../dashboard/widgets/streak_sheet.dart';
 import 'widgets/rename_buddy_dialog.dart';
 
-/// The Ich tab: the Buddy with his name („Umbenennen") and streak chip,
+/// The Ich tab, without an app bar (its body sits in a [SafeArea], as
+/// Home's does; the Buddy's name is the screen's heading): the Buddy with his name („Umbenennen") and streak chip,
 /// then Streak & Ziel („Dein Streak"), Einstellungen, Tutorial wiederholen
 /// and Feedback geben, and the app version in small print.
 ///
@@ -152,40 +153,41 @@ class _MeScreenState extends ConsumerState<MeScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: AppBar(title: const Text('Ich')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(
-          AppConstants.spacingMd,
-          AppConstants.spacingSm,
-          AppConstants.spacingMd,
-          AppConstants.spacingLg,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _Header(
-              controller: _buddy,
-              status: status,
-              onRename: () => unawaited(_rename()),
-              onStreak: () => unawaited(_openStreak()),
-            ),
-            AppConstants.gap24,
-            for (final (i, row) in rows.indexed) ...[
-              if (i > 0) AppConstants.gap12,
-              row,
-            ],
-            if (version != null) ...[
-              AppConstants.gap24,
-              Text(
-                'Version $version',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: AppTheme.fontSizeCaption,
-                  color: AppTheme.mutedForeground,
-                ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(
+            AppConstants.spacingMd,
+            AppConstants.spacingSm,
+            AppConstants.spacingMd,
+            AppConstants.spacingLg,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _Header(
+                controller: _buddy,
+                status: status,
+                onRename: () => unawaited(_rename()),
+                onStreak: () => unawaited(_openStreak()),
               ),
+              AppConstants.gap24,
+              for (final (i, row) in rows.indexed) ...[
+                if (i > 0) AppConstants.gap12,
+                row,
+              ],
+              if (version != null) ...[
+                AppConstants.gap24,
+                Text(
+                  'Version $version',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: AppTheme.fontSizeCaption,
+                    color: AppTheme.mutedForeground,
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -231,12 +233,15 @@ class _Header extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                name,
-                style: const TextStyle(
-                  fontSize: AppTheme.fontSizeHeading,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.foreground,
+              Semantics(
+                header: true,
+                child: Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: AppTheme.fontSizeHeading,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.foreground,
+                  ),
                 ),
               ),
               if (status != null) ...[
