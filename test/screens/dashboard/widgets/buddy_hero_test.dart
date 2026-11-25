@@ -38,6 +38,7 @@ import 'package:belly_buddy/services/entry_query_service.dart';
 import 'package:belly_buddy/services/journey/journey_copy.dart';
 import 'package:belly_buddy/utils/date_format_utils.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
+import 'package:belly_buddy/widgets/buddy/need_icon.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
 import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
 import 'package:belly_buddy/widgets/common/weekly_tips_switch.dart';
@@ -351,6 +352,14 @@ void main() {
   BuddyController controller(WidgetTester tester) =>
       tester.widget<AnimatedBuddy>(find.byType(AnimatedBuddy)).controller;
 
+  /// The sticker icon leading the next-action button.
+  NeedIcon actionIcon(WidgetTester tester) => tester.widget<NeedIcon>(
+    find.descendant(
+      of: find.byKey(BuddyHero.actionKey),
+      matching: find.byType(NeedIcon),
+    ),
+  );
+
   /// What he says, also while a page covers Home.
   String? bubbleBehind(WidgetTester tester) => tester
       .widget<AnimatedBuddy>(find.byType(AnimatedBuddy, skipOffstage: false))
@@ -464,9 +473,10 @@ void main() {
         ),
         findsOneWidget,
       );
-      // 14:00, nothing eaten: lunch.
-      expect(find.text('🍝 Mittagessen eintragen'), findsOneWidget);
+      // 14:00, nothing eaten: lunch, led by the Essen sticker.
+      expect(find.text('Mittagessen eintragen'), findsOneWidget);
       expect(find.byKey(BuddyHero.actionKey), findsOneWidget);
+      expect(actionIcon(tester).need, CareNeed.food);
     });
 
     testWidgets('no entries at 14:00 → hungry, asks for lunch', (tester) async {
@@ -490,7 +500,8 @@ void main() {
       await tick(tester);
 
       expect(careLines(CareAction.drink), contains(controller(tester).bubble));
-      expect(find.text('💧 Trinken eintragen'), findsOneWidget);
+      expect(find.text('Trinken eintragen'), findsOneWidget);
+      expect(actionIcon(tester).need, CareNeed.drink);
       expect(
         tester.widget<CareRing>(find.byType(CareRing)).highlight,
         CareNeed.drink,
@@ -2397,7 +2408,7 @@ void main() {
         needMeterLevel(tester, CareNeed.drink),
         AppConstants.careMeterFloor,
       );
-      expect(find.text('💧 Trinken eintragen'), findsOneWidget);
+      expect(find.text('Trinken eintragen'), findsOneWidget);
       // … but not now: he thanks for this one.
       final c = controller(tester);
       expect(careLines(CareAction.drink), isNot(contains(c.bubble)));
@@ -2787,13 +2798,13 @@ void main() {
     ) async {
       now = DateTime(2026, 11, 22, 10, 29);
       await pumpHero(tester);
-      expect(find.text('🍳 Frühstück eintragen'), findsOneWidget);
+      expect(find.text('Frühstück eintragen'), findsOneWidget);
 
       now = DateTime(2026, 11, 22, 10, 30);
       await tester.pump(const Duration(minutes: 1));
       await tester.pump();
 
-      expect(find.text('🍝 Mittagessen eintragen'), findsOneWidget);
+      expect(find.text('Mittagessen eintragen'), findsOneWidget);
     });
 
     testWidgets('hidden, the minute ticks wait; shown again, he catches up '
@@ -2806,13 +2817,13 @@ void main() {
 
       now = DateTime(2026, 11, 22, 10, 30);
       await tester.pump(const Duration(minutes: 1));
-      expect(find.text('🍳 Frühstück eintragen'), findsOneWidget);
+      expect(find.text('Frühstück eintragen'), findsOneWidget);
 
       visible.value = true;
       await tester.pump();
       await tester.pump();
       await tick(tester);
-      expect(find.text('🍝 Mittagessen eintragen'), findsOneWidget);
+      expect(find.text('Mittagessen eintragen'), findsOneWidget);
       expect(controller(tester).bubble, isNull);
     });
 
@@ -2900,7 +2911,7 @@ void main() {
       now = DateTime(2026, 11, 22, 14, 59);
       await tester.pump(const Duration(minutes: 1));
       await tester.pump(const Duration(milliseconds: 400));
-      expect(find.text('🍝 Mittagessen eintragen'), findsOneWidget);
+      expect(find.text('Mittagessen eintragen'), findsOneWidget);
       expect(needMeterLevel(tester, CareNeed.drink), lessThan(before));
     });
 
@@ -2961,8 +2972,8 @@ void main() {
       await pumpHero(tester);
       await tick(tester);
 
-      expect(find.text('🍎 Snack eintragen'), findsOneWidget);
-      expect(find.text('🍲 Abendessen eintragen'), findsNothing);
+      expect(find.text('Snack eintragen'), findsOneWidget);
+      expect(find.text('Abendessen eintragen'), findsNothing);
       expect(careLines(CareAction.snack), contains(controller(tester).bubble));
     });
 
@@ -3007,7 +3018,7 @@ void main() {
         ),
       );
       await pumpHero(tester);
-      expect(find.text('💧 Trinken eintragen'), findsOneWidget);
+      expect(find.text('Trinken eintragen'), findsOneWidget);
 
       await tester.tap(find.byKey(BuddyHero.actionKey));
       await tester.pump();

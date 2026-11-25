@@ -9,6 +9,7 @@ import 'package:belly_buddy/services/buddy/care_meters.dart';
 import 'package:belly_buddy/services/buddy/care_now.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/utils/gut_feeling_rating.dart';
+import 'package:belly_buddy/widgets/buddy/need_icon.dart';
 import 'package:belly_buddy/widgets/buddy/need_meter.dart';
 
 import '../../../helpers/widget_tester_helpers.dart';
@@ -125,11 +126,6 @@ void main() {
         findsOneWidget,
         reason: '$need',
       );
-      expect(
-        find.descendant(of: meterOf(need), matching: find.text(need.emoji)),
-        findsOneWidget,
-        reason: '$need',
-      );
     }
     expect(
       find.descendant(
@@ -138,6 +134,23 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  testWidgets("each bubble shows its need's sticker icon at the meter's icon "
+      'size', (tester) async {
+    await pump(tester, highlight: CareNeed.drink);
+
+    for (final need in CareNeed.values) {
+      final icon = tester.widget<NeedIcon>(
+        find.descendant(of: meterOf(need), matching: find.byType(NeedIcon)),
+      );
+      expect(icon.need, need, reason: '$need');
+      expect(
+        icon.size,
+        tester.getSize(meterOf(need)).width * AppConstants.careMeterIconShare,
+        reason: '$need',
+      );
+    }
   });
 
   testWidgets("Klo before today's first entry: heute noch nicht", (
@@ -157,30 +170,34 @@ void main() {
   testWidgets("Bauchgefühl shows today's latest level, not always a smile", (
     tester,
   ) async {
+    NeedIcon gutIcon() => tester.widget<NeedIcon>(
+      find.descendant(
+        of: meterOf(CareNeed.gutFeeling),
+        matching: find.byType(NeedIcon),
+      ),
+    );
     final handle = tester.ensureSemantics();
-    final shown = <GutFeelingRatingLevel, String>{};
     for (final level in GutFeelingRatingLevel.values) {
       await pump(
         tester,
         log: CareLog(lastGutFeelingAt: _t(8), lastGutFeelingLevel: level),
       );
-      expect(
-        find.descendant(
-          of: meterOf(CareNeed.gutFeeling),
-          matching: find.text(level.face),
-        ),
-        findsOneWidget,
-      );
+      expect(gutIcon().gutFeeling, level, reason: '$level');
       final node = tester.getSemantics(
         find.byKey(CareRing.needKey(CareNeed.gutFeeling)),
       );
       expect(node.value, 'zuletzt vor 6 Std, ${level.label}');
-      shown[level] = level.face;
     }
     handle.dispose();
-    expect(shown.values.toSet(), hasLength(4));
-    expect(shown[GutFeelingRatingLevel.schlecht], isNot('🙂'));
-    expect(shown[GutFeelingRatingLevel.mittel], isNot('🙂'));
+    // Each level its own mouth.
+    expect({
+      for (final level in GutFeelingRatingLevel.values)
+        NeedIcon.assetFor(CareNeed.gutFeeling, gutFeeling: level),
+    }, hasLength(4));
+
+    // No entry yet: the plain belly.
+    await pump(tester);
+    expect(gutIcon().gutFeeling, isNull);
   });
 
   testWidgets('a bubble opens its own need: on its meter and on its lower '

@@ -2,17 +2,14 @@ import '../../config/constants.dart';
 import 'care_meters.dart';
 
 /// The Buddy's four needs, one per tracker; they make up the dashboard's
-/// care ring.
+/// care ring, each drawn by its sticker icon (`NeedIcon`).
 enum CareNeed {
-  food('🍽', 'Essen'),
-  drink('💧', 'Trinken'),
-  gutFeeling('🙂', 'Bauchgefühl'),
-  toilet('🧻', 'Klo');
+  food('Essen'),
+  drink('Trinken'),
+  gutFeeling('Bauchgefühl'),
+  toilet('Klo');
 
-  const CareNeed(this.emoji, this.label);
-
-  /// Its icon in the care ring and the „Heute" list.
-  final String emoji;
+  const CareNeed(this.label);
 
   /// Its name in the care ring.
   final String label;

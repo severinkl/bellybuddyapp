@@ -6,6 +6,7 @@ import '../../router/tracker_routes.dart';
 import '../../services/buddy/daily_care.dart';
 import '../../services/haptic_service.dart';
 import '../../utils/date_format_utils.dart';
+import '../buddy/need_icon.dart';
 import '../common/bb_drag_handle.dart';
 
 /// Opens the „Eintragen" sheet for [day]: pick what to log, then its tracker
@@ -153,10 +154,7 @@ class _LogOption extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    need.emoji,
-                    style: const TextStyle(fontSize: AppTheme.fontSizeHeading),
-                  ),
+                  NeedIcon(need, size: AppConstants.logSheetIconSize),
                   AppConstants.gap4,
                   Text(
                     need.label,

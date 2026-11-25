@@ -9,6 +9,7 @@ import 'package:belly_buddy/services/buddy/log_moment.dart';
 import 'package:belly_buddy/widgets/buddy/animated_buddy.dart';
 import 'package:belly_buddy/widgets/buddy/buddy_reaction_view.dart';
 import 'package:belly_buddy/widgets/buddy/log_success_hero.dart';
+import 'package:belly_buddy/widgets/buddy/need_icon.dart';
 import 'package:belly_buddy/widgets/buddy/need_meter.dart';
 import 'package:belly_buddy/widgets/buddy/streak_flame.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -91,7 +92,18 @@ void main() {
         tester.widget<NeedMeter>(find.byType(NeedMeter)).need,
         CareNeed.drink,
       );
-      expect(find.text(CareNeed.drink.emoji), findsOneWidget);
+      final icon = tester.widget<NeedIcon>(
+        find.descendant(
+          of: find.byType(ChargingMeter),
+          matching: find.byType(NeedIcon),
+        ),
+      );
+      expect(icon.need, CareNeed.drink);
+      expect(
+        icon.size,
+        tester.getSize(find.byType(NeedMeter)).width *
+            AppConstants.careMeterIconShare,
+      );
     });
 
     group('reduced motion', () {

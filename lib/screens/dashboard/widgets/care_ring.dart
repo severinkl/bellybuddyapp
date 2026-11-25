@@ -8,6 +8,8 @@ import '../../../services/buddy/care_meters.dart';
 import '../../../services/buddy/care_now.dart';
 import '../../../services/buddy/daily_care.dart';
 import '../../../services/haptic_service.dart';
+import '../../../utils/gut_feeling_rating.dart';
+import '../../../widgets/buddy/need_icon.dart';
 import '../../../widgets/buddy/need_meter.dart';
 
 /// The Buddy among his four needs, a bubble in each corner (Essen top
@@ -138,9 +140,7 @@ class CareRing extends StatelessWidget {
       need: need,
       level: care.meters.level(need),
       // Bauchgefühl shows how today's latest entry was.
-      emoji: need == CareNeed.gutFeeling
-          ? care.gutFeelingLevel?.face ?? need.emoji
-          : need.emoji,
+      gutFeeling: need == CareNeed.gutFeeling ? care.gutFeelingLevel : null,
       line: need == CareNeed.toilet ? care.looLine : null,
       spoken: care.spoken(need),
       meterSize: meterSize,
@@ -191,7 +191,7 @@ class _NeedBubble extends StatelessWidget {
     super.key,
     required this.need,
     required this.level,
-    required this.emoji,
+    required this.gutFeeling,
     required this.line,
     required this.spoken,
     required this.meterSize,
@@ -204,7 +204,9 @@ class _NeedBubble extends StatelessWidget {
 
   /// Its meter's level; null for Klo, which has none.
   final double? level;
-  final String emoji;
+
+  /// Bauchgefühl's latest level, the mouth on its icon ([NeedIcon]).
+  final GutFeelingRatingLevel? gutFeeling;
 
   /// A second line under the label (Klo's „vor 3 Std").
   final String? line;
@@ -225,9 +227,10 @@ class _NeedBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final icon = Text(
-      emoji,
-      style: const TextStyle(fontSize: AppTheme.fontSizeHeading),
+    final icon = NeedIcon(
+      need,
+      size: meterSize * AppConstants.careMeterIconShare,
+      gutFeeling: gutFeeling,
     );
     // The glow goes inside the tween: when it moves on (the need just
     // logged), the tween keeps its place and the meter still fills.

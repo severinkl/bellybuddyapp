@@ -37,12 +37,20 @@ void main() {
   });
 
   test('the care buttons speak of Essen, Trinken, Bauchgefühl eintragen', () {
-    expect(BuddyCopy.careButton(CareAction.feed), '🍽 Essen eintragen');
-    expect(BuddyCopy.careButton(CareAction.drink), '💧 Trinken eintragen');
+    expect(BuddyCopy.careButton(CareAction.feed), 'Essen eintragen');
+    expect(BuddyCopy.careButton(CareAction.drink), 'Trinken eintragen');
     expect(
       BuddyCopy.careButton(CareAction.gutFeeling),
-      '🙂 Bauchgefühl eintragen',
+      'Bauchgefühl eintragen',
     );
+    expect(BuddyCopy.careButton(CareAction.lunch), 'Mittagessen eintragen');
+  });
+
+  test('the care buttons are words only: the icon leads them', () {
+    final words = RegExp(r'^[\p{L} ]+$', unicode: true);
+    for (final a in CareAction.values) {
+      expect(BuddyCopy.careButton(a), matches(words), reason: '$a');
+    }
   });
 
   test('care lines invite, they never say a meal is missing', () {

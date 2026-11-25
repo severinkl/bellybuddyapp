@@ -146,19 +146,18 @@ class BuddyCopy {
     CareAction.drink: ['Danke fürs Trinken! 💧', 'Ahh, das tat gut! 💧'],
   };
 
-  /// The dashboard's next-action button: the meal the time of day asks
-  /// for, logging a need („💧 Trinken eintragen") or „🍽 Essen eintragen".
+  /// The dashboard's next-action button's label (its need's sticker icon
+  /// leads it): the meal the time of day asks for, logging a need
+  /// („Trinken eintragen") or „Essen eintragen".
   static String careButton(CareAction action) => switch (action) {
-    CareAction.breakfast => '🍳 Frühstück eintragen',
-    CareAction.lunch => '🍝 Mittagessen eintragen',
-    CareAction.snack => '🍎 Snack eintragen',
-    CareAction.dinner => '🍲 Abendessen eintragen',
-    CareAction.drink => _log(CareNeed.drink),
-    CareAction.gutFeeling => _log(CareNeed.gutFeeling),
-    CareAction.feed => '🍽 ${CareNeed.food.logLabel}',
+    CareAction.breakfast => 'Frühstück eintragen',
+    CareAction.lunch => 'Mittagessen eintragen',
+    CareAction.snack => 'Snack eintragen',
+    CareAction.dinner => 'Abendessen eintragen',
+    CareAction.drink => CareNeed.drink.logLabel,
+    CareAction.gutFeeling => CareNeed.gutFeeling.logLabel,
+    CareAction.feed => CareNeed.food.logLabel,
   };
-
-  static String _log(CareNeed need) => '${need.emoji} ${need.logLabel}';
 
   /// Sleepy lines outside the morning: late evening and night.
   static const sleepyNight = [

@@ -9,6 +9,7 @@ import '../../services/buddy/buddy_mood_logic.dart';
 import '../../services/buddy/daily_care.dart';
 import '../../services/buddy/log_moment.dart';
 import 'buddy_reaction_view.dart';
+import 'need_icon.dart';
 import 'need_meter.dart';
 import 'streak_flame.dart';
 
@@ -38,12 +39,7 @@ class ChargingMeter extends StatelessWidget {
       curve: Curves.easeOutCubic,
       builder: (_, level, child) =>
           NeedMeter(need: need, level: level, size: size, child: child!),
-      child: ExcludeSemantics(
-        child: Text(
-          need.emoji,
-          style: const TextStyle(fontSize: AppTheme.fontSizeChargeIcon),
-        ),
-      ),
+      child: NeedIcon(need, size: size * AppConstants.careMeterIconShare),
     );
   }
 }

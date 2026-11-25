@@ -1,4 +1,6 @@
+import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
+import 'package:belly_buddy/widgets/buddy/need_icon.dart';
 import 'package:belly_buddy/widgets/log_sheet/log_sheet.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -73,6 +75,28 @@ void main() {
       expect(find.byKey(LogSheet.optionKey(need)), findsOneWidget);
       expect(find.text(need.label), findsOneWidget);
     }
+  });
+
+  testWidgets("each option shows its need's sticker icon", (tester) async {
+    final handle = tester.ensureSemantics();
+    await _pump(tester, day: _now);
+    for (final need in CareNeed.values) {
+      final icon = tester.widget<NeedIcon>(
+        find.descendant(
+          of: find.byKey(LogSheet.optionKey(need)),
+          matching: find.byType(NeedIcon),
+        ),
+      );
+      expect(icon.need, need, reason: '$need');
+      expect(icon.size, AppConstants.logSheetIconSize, reason: '$need');
+      // The icon is decorative: only the label is read out.
+      expect(
+        find.bySemanticsLabel(RegExp('^${need.label}\$')),
+        findsOneWidget,
+        reason: '$need',
+      );
+    }
+    handle.dispose();
   });
 
   testWidgets('a past day reads Für …', (tester) async {

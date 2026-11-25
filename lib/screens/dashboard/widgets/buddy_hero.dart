@@ -31,6 +31,7 @@ import '../../../utils/date_format_utils.dart';
 import '../../../utils/logger.dart';
 import '../../../utils/url_utils.dart';
 import '../../../widgets/buddy/buddy.dart';
+import '../../../widgets/buddy/need_icon.dart';
 import '../../../widgets/buddy/streak_chip.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/weekly_tips_switch.dart';
@@ -805,6 +806,8 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     final status = ref.watch(buddyProvider).value;
     final care = ref.watch(careNowProvider);
     final action = care.action;
+    // The button's need: Essen for the plain „Essen eintragen".
+    final actionNeed = action.need ?? CareNeed.food;
     final name = status?.state.name ?? 'Buddy';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -861,7 +864,11 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
           child: BbButton(
             tapKey: BuddyHero.actionKey,
             label: BuddyCopy.careButton(action),
-            onPressed: () => openTracker(context, action.need ?? CareNeed.food),
+            leading: NeedIcon(
+              actionNeed,
+              size: AppConstants.careButtonIconSize,
+            ),
+            onPressed: () => openTracker(context, actionNeed),
           ),
         ),
       ],

@@ -879,7 +879,7 @@ void main() {
         tester,
       ) async {
         final router = await pumpPhone(tester, size, padding);
-        expect(find.text('🍝 Mittagessen eintragen'), findsOneWidget);
+        expect(find.text('Mittagessen eintragen'), findsOneWidget);
 
         for (final MapEntry(key: need, value: path) in trackers.entries) {
           await tapOpens(

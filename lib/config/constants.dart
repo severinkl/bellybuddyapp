@@ -127,8 +127,10 @@ class AppConstants {
   // A streak goal's row in the goal list
   static const double streakGoalRowHeight = 56.0;
 
-  // The Eintragen sheet's option height; the diary's empty-day Buddy
+  // The Eintragen sheet's option height and its sticker icon; the diary's
+  // empty-day Buddy
   static const double logSheetOptionHeight = 96.0;
+  static const double logSheetIconSize = 40.0;
   static const double diaryEmptyBuddySize = 96.0;
 
   // Reminder step: the notification preview's corner radius and app icon,
@@ -152,7 +154,7 @@ class AppConstants {
   /// A need meter's ring thickness, as a share of its diameter.
   static const double careMeterStrokeShare = 0.085;
 
-  /// The share of a need meter its icon (emoji) may take.
+  /// The share of a need meter its sticker icon takes.
   static const double careMeterIconShare = 0.5;
 
   // Dashboard care ring: its diameter (at most this, this share of the
@@ -173,6 +175,9 @@ class AppConstants {
   static const double careNeedWidth = 88.0;
   static const double careNeedGlow = 5.0;
   static const Duration careNeedPulse = Duration(milliseconds: 1400);
+
+  /// The sticker icon leading Home's next-action button.
+  static const double careButtonIconSize = 24.0;
 
   // „Dein Streak" sheet: the goal progress bar
   static const double streakProgressHeight = 10.0;
