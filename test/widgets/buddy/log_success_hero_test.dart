@@ -257,6 +257,20 @@ void main() {
       expect(flamePainter(tester).burst, isNull);
     });
 
+    testWidgets('„Tag n" is read out while the circle charges, before it '
+        'fades in', (tester) async {
+      final semantics = tester.ensureSemantics();
+      await _pump(tester, _hero(_ignites));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(_labelOpacity(tester, 'Tag 5'), 0);
+      expect(find.bySemanticsLabel('Tag 5'), findsOneWidget);
+
+      await pumpPastCharge(tester);
+      expect(find.bySemanticsLabel('Tag 5'), findsOneWidget);
+      semantics.dispose();
+    });
+
     testWidgets('no circle (Klo): it ignites at once', (tester) async {
       await _pump(
         tester,

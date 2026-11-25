@@ -154,10 +154,12 @@ class _LogSuccessHeroState extends State<LogSuccessHero> {
                     onPrimary: true,
                   ),
                   const SizedBox(width: AppConstants.spacingSm),
-                  // Laid out while hidden: nothing jumps as it fades in.
+                  // Laid out while hidden: nothing jumps as it fades in. It
+                  // is read out all along.
                   AnimatedOpacity(
                     opacity: _charged ? 1 : 0,
                     duration: calm ? Duration.zero : AppConstants.animNormal,
+                    alwaysIncludeSemantics: true,
                     child: Text(
                       'Tag $day',
                       style: const TextStyle(
