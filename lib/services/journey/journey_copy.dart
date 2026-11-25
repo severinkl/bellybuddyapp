@@ -104,8 +104,7 @@ abstract final class JourneyCopy {
   static const noRecipe =
       'Rezepte, die zu dir passen, findest du unter Entdecken.';
 
-  // Said by the Buddy on Home: each fits three lines of his bubble (about
-  // 60 characters), so it is never cut or drawn smaller.
+  // Said by the Buddy on Home: within BuddyCopy's length budget.
 
   static const firstTipStarted =
       'Ich mach dir jetzt deinen ersten Tipp. Einen Moment ✨';

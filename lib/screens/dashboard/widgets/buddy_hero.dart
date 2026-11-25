@@ -572,22 +572,18 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
         );
       case _Cue.saverUsed:
         _buddy.play(BuddyAction.hug);
-        _say(BuddyCopy.saverUsed);
-        _holdStage();
+        _sayAnnouncement(cue);
       case _Cue.streakBroken:
-        _say(BuddyCopy.streakBroken);
-        _holdStage();
+        _sayAnnouncement(cue);
       case _Cue.saverEarned:
         _buddy.play(BuddyAction.celebrate);
-        _say(BuddyCopy.saverEarned);
-        _holdStage();
+        _sayAnnouncement(cue);
       case _Cue.goalReached:
         _playThen(BuddyAction.celebrate, _askForNewGoal);
         _setOverride(BuddyMood.inLove);
       case _Cue.tipsArrived:
         _buddy.play(BuddyAction.celebrate);
-        _say(BuddyCopy.tipsArrived);
-        _holdStage();
+        _sayAnnouncement(cue);
       case _Cue.weeklyTipsOffer:
         _playThen(BuddyAction.wave, _offerWeeklyTips);
       case _Cue.firstTipOffer:
@@ -597,13 +593,20 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       case _Cue.patternsUnlocked:
         _playThen(BuddyAction.celebrate, _openPatternsUnlocked);
       case _Cue.firstTipFailed:
-        _say(
-          JourneyCopy.firstTipFailed(
-            weeklyTipsOn: ref.read(weeklyTipsEnabledProvider) == true,
-          ),
-        );
-        _holdStage();
+        _sayAnnouncement(cue);
     }
+  }
+
+  /// Says [cue]'s announcement ([BuddyCopy.announcementLine]) and holds
+  /// the stage for it.
+  void _sayAnnouncement(_Cue cue) {
+    _say(
+      BuddyCopy.announcementLine(
+        cue.announcement!,
+        weeklyTipsOn: ref.read(weeklyTipsEnabledProvider) == true,
+      )!,
+    );
+    _holdStage();
   }
 
   /// Plays [action], then, once it has played, [then] (the cue's sheet or

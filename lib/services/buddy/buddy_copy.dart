@@ -1,12 +1,15 @@
 import 'dart:math';
 
+import '../../providers/buddy_provider.dart' show BuddyAnnouncement;
 import '../../widgets/buddy/buddy_pose.dart';
+import '../journey/journey_copy.dart';
 import 'daily_care.dart';
 
 /// German copy pools for the Buddy. Placeholders: `{name}`, `{streak}`.
 /// Every line the dashboard's Buddy says (his resting lines, the moods',
-/// the announcements) fits three lines of his bubble (about 60 characters
-/// with a 20-character name), so it is never cut or drawn smaller.
+/// [announcementLine]s, JourneyCopy's lines for Home) fits three lines of
+/// his bubble (about 60 characters with a 20-character name), so it is
+/// never cut or drawn smaller.
 class BuddyCopy {
   const BuddyCopy._();
 
@@ -149,8 +152,28 @@ class BuddyCopy {
     CareAction.drink: ['Danke fürs Trinken! 💧', 'Ahh, das tat gut! 💧'],
   };
 
-  /// The announcements the dashboard's Buddy plays: a streak-saver used
-  /// or earned, a broken streak, new tips.
+  /// What the dashboard's Buddy says for [announcement]: a streak-saver
+  /// used or earned, a broken streak, new tips, a failed first tip (whether
+  /// the weekly tips stay on, [weeklyTipsOn]); null for those that end in
+  /// a sheet or page instead.
+  static String? announcementLine(
+    BuddyAnnouncement announcement, {
+    required bool weeklyTipsOn,
+  }) => switch (announcement) {
+    BuddyAnnouncement.saverUsed => saverUsed,
+    BuddyAnnouncement.streakBroken => streakBroken,
+    BuddyAnnouncement.saverEarned => saverEarned,
+    BuddyAnnouncement.tipsArrived => tipsArrived,
+    BuddyAnnouncement.firstTipFailed => JourneyCopy.firstTipFailed(
+      weeklyTipsOn: weeklyTipsOn,
+    ),
+    BuddyAnnouncement.goalReached ||
+    BuddyAnnouncement.weeklyTipsOffer ||
+    BuddyAnnouncement.firstTipOffer ||
+    BuddyAnnouncement.journeyReward ||
+    BuddyAnnouncement.patternsUnlocked => null,
+  };
+
   static const saverUsed = 'Puh! Dein Streak-Saver hat uns gestern gerettet 🛡';
   static const streakBroken = 'Neuer Anlauf — ich bin dabei!';
   static const saverEarned = 'Du hast einen Streak-Saver verdient! 🛡';

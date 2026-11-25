@@ -1,5 +1,3 @@
-import 'dart:io';
-
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/config/constants.dart';
+import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/buddy_welcome_provider.dart';
 import 'package:belly_buddy/services/buddy/buddy_copy.dart';
 import 'package:belly_buddy/services/journey/journey_copy.dart';
@@ -17,28 +16,13 @@ import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import '../../../helpers/ambient_animations.dart';
 import '../../../helpers/app_host.dart';
 import '../../../helpers/layout_checks.dart';
-
-/// The Flutter SDK's Roboto, which every `flutter test` run has.
-File _roboto(String face) => File(
-  '${Platform.environment['FLUTTER_ROOT']}/bin/cache/artifacts/'
-  'material_fonts/Roboto-$face.ttf',
-);
+import '../../../helpers/test_fonts.dart';
 
 /// [font] with every glyph's advance [factor] times as wide.
 Uint8List _widened(Uint8List font, double factor) {
   final data = ByteData.sublistView(font);
-  int table(String tag) {
-    for (var i = 0; i < data.getUint16(4); i++) {
-      final record = 12 + 16 * i;
-      if (String.fromCharCodes(font, record, record + 4) == tag) {
-        return data.getUint32(record + 8);
-      }
-    }
-    throw StateError('no $tag table');
-  }
-
-  final hmtx = table('hmtx');
-  final advances = data.getUint16(table('hhea') + 34);
+  final hmtx = sfntTable(font, 'hmtx');
+  final advances = data.getUint16(sfntTable(font, 'hhea') + 34);
   for (var i = 0; i < advances; i++) {
     final at = hmtx + 4 * i;
     data.setUint16(at, (data.getUint16(at) * factor).round());
@@ -62,22 +46,24 @@ List<String> _homeLines() {
     for (final pool in BuddyCopy.careAfterLog.values) ...pool.map(fill),
     for (final pool in BuddyCopy.mood.values) ...pool.map(fill),
     ...BuddyCopy.sleepyNight.map(fill),
-    // A log's follow-up, the onboarding's welcome and the announcements.
+    // A log's follow-up, the onboarding's welcome, the first tip on its
+    // way and the announcements.
     BuddyCopy.streakThanks(streak),
     BuddyWelcomeNotifier.line,
-    BuddyCopy.saverUsed,
-    BuddyCopy.streakBroken,
-    BuddyCopy.saverEarned,
-    BuddyCopy.tipsArrived,
     JourneyCopy.firstTipStarted,
-    JourneyCopy.firstTipFailed(weeklyTipsOn: true),
-    JourneyCopy.firstTipFailed(weeklyTipsOn: false),
+    for (final announcement in BuddyAnnouncement.values)
+      for (final weeklyTipsOn in [true, false])
+        ?BuddyCopy.announcementLine(announcement, weeklyTipsOn: weeklyTipsOn),
   }.toList();
 }
 
 /// Its own file: the fonts it loads stay loaded for the whole file.
 void main() {
-  final fonts = [_roboto('Regular'), _roboto('Medium'), _roboto('Bold')];
+  final fonts = [
+    robotoFile('Regular'),
+    robotoFile('Medium'),
+    robotoFile('Bold'),
+  ];
   final available = fonts.every((f) => f.existsSync());
 
   setUpAll(() async {
@@ -97,7 +83,7 @@ void main() {
       AppConstants.keyNotificationModalShown: true,
     }),
   );
-  tearDown(disableAmbientAnimationsForTests);
+  tickBuddiesInTests();
 
   for (final phone in [
     (
@@ -119,7 +105,6 @@ void main() {
   ]) {
     testWidgets('${phone.name}: every Home line shows whole, never drawn '
         'below the base text size', (tester) async {
-      AnimatedBuddy.tickerEnabled = true;
       tester.view
         ..physicalSize = phone.size * phone.dpr
         ..devicePixelRatio = phone.dpr

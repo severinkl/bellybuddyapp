@@ -1,5 +1,7 @@
+import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/services/buddy/buddy_copy.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
+import 'package:belly_buddy/services/journey/journey_copy.dart';
 import 'package:belly_buddy/widgets/buddy/buddy_pose.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -19,6 +21,31 @@ void main() {
     }
     for (final m in BuddyMood.values) {
       expect(BuddyCopy.mood[m]!.length, greaterThanOrEqualTo(3));
+    }
+  });
+
+  test('an announcement line for each he says; none for those ending in '
+      'a sheet or page', () {
+    String? line(BuddyAnnouncement a, {bool weeklyTipsOn = false}) =>
+        BuddyCopy.announcementLine(a, weeklyTipsOn: weeklyTipsOn);
+    expect(line(BuddyAnnouncement.saverUsed), BuddyCopy.saverUsed);
+    expect(line(BuddyAnnouncement.streakBroken), BuddyCopy.streakBroken);
+    expect(line(BuddyAnnouncement.saverEarned), BuddyCopy.saverEarned);
+    expect(line(BuddyAnnouncement.tipsArrived), BuddyCopy.tipsArrived);
+    for (final on in [true, false]) {
+      expect(
+        line(BuddyAnnouncement.firstTipFailed, weeklyTipsOn: on),
+        JourneyCopy.firstTipFailed(weeklyTipsOn: on),
+      );
+    }
+    for (final a in [
+      BuddyAnnouncement.goalReached,
+      BuddyAnnouncement.weeklyTipsOffer,
+      BuddyAnnouncement.firstTipOffer,
+      BuddyAnnouncement.journeyReward,
+      BuddyAnnouncement.patternsUnlocked,
+    ]) {
+      expect(line(a), isNull, reason: '$a');
     }
   });
 
