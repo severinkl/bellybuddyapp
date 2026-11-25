@@ -165,6 +165,61 @@ void main() {
       });
     });
 
+    testWidgets('reduced motion turning on mid-charge: full, lit and '
+        '„Tag n" at once', (tester) async {
+      await _pump(tester, _hero(_ignites));
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(_level(tester), lessThan(1.0));
+      expect(_flamePainter(tester).look, FlameLook.ember);
+
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      await tester.pump();
+
+      expect(_level(tester), 1.0);
+      expect(_flamePainter(tester).look, FlameLook.lit);
+      expect(_flamePainter(tester).burst, isNull);
+      expect(_labelOpacity(tester, 'Tag 5'), 1);
+      // The charge it cut short never ends in an ignite.
+      await tester.pump(AppConstants.careChargeDuration);
+      expect(_flamePainter(tester).burst, isNull);
+      expect(tester.binding.hasScheduledFrame, isFalse);
+    });
+
+    testWidgets('the same level again: nothing to charge, it ignites at '
+        'once', (tester) async {
+      await _pump(
+        tester,
+        _hero(
+          const LogMoment(
+            kind: EntryKind.drink,
+            from: 1.0,
+            to: 1.0,
+            ignitesDay: 5,
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 150));
+
+      expect(_level(tester), 1.0);
+      expect(_flamePainter(tester).look, FlameLook.lit);
+      expect(_flamePainter(tester).burst, greaterThan(0));
+      expect(_labelOpacity(tester, 'Tag 5'), 1);
+    });
+
+    testWidgets('closed mid-charge: nothing fires after', (tester) async {
+      await _pump(tester, _hero(_ignites));
+      await tester.pump(const Duration(seconds: 1));
+
+      await _pump(tester, const SizedBox());
+      await tester.pump(AppConstants.careChargeDuration);
+      expect(tester.takeException(), isNull);
+      expect(tester.binding.hasScheduledFrame, isFalse);
+    });
+
     testWidgets('Klo: no circle', (tester) async {
       await _pump(tester, _hero(const LogMoment(kind: EntryKind.toilet)));
 

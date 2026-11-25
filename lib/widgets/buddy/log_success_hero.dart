@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:math' as math;
 import 'dart:typed_data';
 
@@ -16,8 +15,10 @@ import 'streak_flame.dart';
 
 /// A need's circle charging from [from] to [to] in about
 /// [AppConstants.careChargeDuration] (about 2 s), easing out
-/// ([AppConstants.careChargeCurve]); under reduced motion it shows [to] at
-/// once. It adds no semantics.
+/// ([AppConstants.careChargeCurve]), then calling [onCharged]. Under
+/// reduced motion (also when it turns on mid-charge) it shows [to] at once;
+/// then, and with nothing to charge ([from] == [to]), [onCharged] is never
+/// called. It adds no semantics.
 class ChargingMeter extends StatelessWidget {
   const ChargingMeter({
     super.key,
@@ -25,20 +26,25 @@ class ChargingMeter extends StatelessWidget {
     required this.from,
     required this.to,
     required this.size,
+    this.onCharged,
   });
 
   final CareNeed need;
   final double from;
   final double to;
   final double size;
+  final VoidCallback? onCharged;
 
   @override
   Widget build(BuildContext context) {
     final calm = MediaQuery.disableAnimationsOf(context);
     return TweenAnimationBuilder<double>(
+      // A charge reduced motion cuts short starts over, full at once.
+      key: ValueKey(calm),
       tween: Tween(begin: calm ? to : from, end: to),
       duration: calm ? Duration.zero : AppConstants.careChargeDuration,
       curve: AppConstants.careChargeCurve,
+      onEnd: onCharged,
       builder: (_, level, child) =>
           NeedMeter(need: need, level: level, size: size, child: child!),
       child: NeedIcon(need, size: size * AppConstants.careMeterIconShare),
@@ -52,8 +58,10 @@ class ChargingMeter extends StatelessWidget {
 /// the height left over.
 ///
 /// The flame glows as an ember while the circle charges and ignites once
-/// the circle is full, „Tag n" fading in with it. Without a circle (Klo) it
-/// ignites at once; under reduced motion all of it shows at once.
+/// the circle is full ([ChargingMeter.onCharged]), „Tag n" fading in with
+/// it. With nothing to charge (no circle, as for Klo, or the same level
+/// again) it ignites at once; under reduced motion (also when it turns on
+/// mid-charge) all of it shows at once.
 ///
 /// The calm page after a hard moment ([LogSentiment.bad]) cheers no
 /// progress: it shows no ignite row. Nothing is scaled: the circle takes a
@@ -80,36 +88,28 @@ class _LogSuccessHeroState extends State<LogSuccessHero> {
   /// is lit and „Tag n" shows.
   bool _charged = false;
 
-  /// Sets [_charged] once the circle is full.
-  Timer? _charge;
-
   LogMoment get _moment => widget.moment;
 
   /// The streak day the ignite row shows; null without one.
   int? get _day =>
       _moment.sentiment == LogSentiment.bad ? null : _moment.ignitesDay;
 
-  bool get _hasMeter => _moment.from != null && _moment.to != null;
-
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Decided once, on the first build.
-    if (_charged || _charge != null) return;
-    if (!_hasMeter || _day == null || MediaQuery.disableAnimationsOf(context)) {
+    // Nothing to wait for: no circle or nothing it charges, no flame, or
+    // animations off (also once they turn off mid-charge).
+    final from = _moment.from;
+    if (from == null ||
+        from == _moment.to ||
+        _day == null ||
+        MediaQuery.disableAnimationsOf(context)) {
       _charged = true;
-    } else {
-      _charge = Timer(
-        AppConstants.careChargeDuration,
-        () => setState(() => _charged = true),
-      );
     }
   }
 
-  @override
-  void dispose() {
-    _charge?.cancel();
-    super.dispose();
+  void _onCharged() {
+    if (!_charged) setState(() => _charged = true);
   }
 
   @override
@@ -131,6 +131,7 @@ class _LogSuccessHeroState extends State<LogSuccessHero> {
                   AppConstants.careChargeSize,
                   height * AppConstants.careChargeHeightShare,
                 ),
+                onCharged: _onCharged,
               );
         final ignite = day == null
             ? null
