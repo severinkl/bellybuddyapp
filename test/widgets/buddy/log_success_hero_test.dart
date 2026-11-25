@@ -242,6 +242,8 @@ void main() {
         find.descendant(of: row, matching: find.byType(StreakFlame)),
       );
       expect(flame().streak, 5);
+      // On the page's primary colour.
+      expect(flame().onPrimary, isTrue);
       expect(flame().lit, isFalse);
       expect(flame().look, FlameLook.ember);
       expect(_labelOpacity(tester, 'Tag 5'), 0);

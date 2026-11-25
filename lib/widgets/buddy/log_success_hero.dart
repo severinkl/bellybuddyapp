@@ -146,6 +146,7 @@ class _LogSuccessHeroState extends State<LogSuccessHero> {
                     lit: _charged,
                     height: AppConstants.streakFlameIgniteHeight,
                     igniteOnMount: _charged,
+                    onPrimary: true,
                   ),
                   const SizedBox(width: AppConstants.spacingSm),
                   // Laid out while hidden: nothing jumps as it fades in.

@@ -98,7 +98,9 @@ class AppTheme {
   // suggests next. The streak flame burns red at its tips, orange in its
   // middle and yellow at its base, around a bright core (and a blazing
   // flame's hot one) in a warm glow; an ember (its colour, its core) waits
-  // for today's first entry.
+  // for today's first entry, darker and warmer on the primary colour (the
+  // success page), where the pale one would not show (its body at least
+  // 3:1 there).
   static const Color careFood = Color(0xFFD27A12);
   static const Color careFoodSoft = Color(0xFFFCEBD5);
   static const Color careWater = Color(0xFF3A8FCC);
@@ -115,6 +117,8 @@ class AppTheme {
   static const Color streakFlameGlow = Color(0x66FF8C3C);
   static const Color streakEmber = Color(0xFFF4B996);
   static const Color streakEmberCore = Color(0xFFF8DDA6);
+  static const Color streakEmberOnPrimary = Color(0xFFA8431A);
+  static const Color streakEmberCoreOnPrimary = Color(0xFFD2601F);
   static const Color careGlow = Color(0x4DB5CC47);
 
   // Notification previews (the reminder step): an iOS banner's colors

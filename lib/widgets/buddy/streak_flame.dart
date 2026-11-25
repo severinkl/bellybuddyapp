@@ -46,6 +46,7 @@ class StreakFlame extends StatelessWidget {
     this.igniteOnMount = false,
     this.core = true,
     this.contained = false,
+    this.onPrimary = false,
   }) : _mark = false;
 
   /// A still, lit, large flame: a kept day in the week row. Only painted,
@@ -57,6 +58,7 @@ class StreakFlame extends StatelessWidget {
       igniteOnMount = false,
       core = true,
       contained = false,
+      onPrimary = false,
       _mark = true;
 
   /// A streak drawn as [FlameTier.large].
@@ -96,6 +98,10 @@ class StreakFlame extends StatelessWidget {
   /// Whether its ignite stays inside its box (Home's, behind the Buddy): its
   /// pop at most fills the box, its burst flies no further than its sides.
   final bool contained;
+
+  /// Whether it sits on the primary colour (the success page): its ember
+  /// burns darker and warmer there, or it would not show.
+  final bool onPrimary;
 
   final bool _mark;
 
@@ -231,6 +237,7 @@ class _LiveFlameState extends State<_LiveFlame> with TickerProviderStateMixin {
             tier: StreakFlame.tierOf(_flame.streak),
             core: _flame.core,
             contained: _flame.contained,
+            onPrimary: _flame.onPrimary,
             ignite: _ignite,
             clock: _ambient.isActive ? _clock : null,
           ),
@@ -269,6 +276,7 @@ class FlamePainter extends CustomPainter {
     required this.tier,
     this.core = true,
     this.contained = false,
+    this.onPrimary = false,
     this.ignite,
     this.clock,
   }) : super(repaint: Listenable.merge([ignite, clock]));
@@ -312,6 +320,10 @@ class FlamePainter extends CustomPainter {
 
   /// Whether the ignite stays inside the box ([StreakFlame.contained]).
   final bool contained;
+
+  /// Whether the ember burns in its colours for the primary colour
+  /// ([StreakFlame.onPrimary]).
+  final bool onPrimary;
 
   /// The ignite; its burst shows while it runs.
   final Animation<double>? ignite;
@@ -462,7 +474,8 @@ class FlamePainter extends CustomPainter {
           : _bodyHalfWidth * _emberSquash.width);
 
   /// Each tongue filled from its base to its tip: lit, yellow → orange →
-  /// red, fading at the tip; as an ember in the ember's colours.
+  /// red, fading at the tip; as an ember in the ember's colours (on the
+  /// primary colour, its darker ones).
   static final List<Paint> _litTongues = [
     for (final tongue in _tongues)
       _gradient(tongue.tipY, const [
@@ -477,6 +490,14 @@ class FlamePainter extends CustomPainter {
         AppTheme.streakEmberCore,
         AppTheme.streakEmber,
         AppTheme.streakEmber,
+      ], tipAlpha: 0.5),
+  ];
+  static final List<Paint> _emberTonguesOnPrimary = [
+    for (final tongue in _tongues)
+      _gradient(tongue.tipY, const [
+        AppTheme.streakEmberCoreOnPrimary,
+        AppTheme.streakEmberOnPrimary,
+        AppTheme.streakEmberOnPrimary,
       ], tipAlpha: 0.5),
   ];
 
@@ -604,7 +625,11 @@ class FlamePainter extends CustomPainter {
     canvas.save();
     _aboutBase(canvas, () => canvas.scale(scale.width, scale.height));
     final angles = _angles;
-    final tongues = _lit ? _litTongues : _emberTongues;
+    final tongues = _lit
+        ? _litTongues
+        : onPrimary
+        ? _emberTonguesOnPrimary
+        : _emberTongues;
     for (var i = 0; i < _tongues.length; i++) {
       _swaying(canvas, angles[i], () {
         canvas.drawPath(_tongues[i].path, tongues[i]);
@@ -767,6 +792,7 @@ class FlamePainter extends CustomPainter {
       old.tier != tier ||
       old.core != core ||
       old.contained != contained ||
+      old.onPrimary != onPrimary ||
       old.ignite != ignite ||
       old.clock != clock;
 }

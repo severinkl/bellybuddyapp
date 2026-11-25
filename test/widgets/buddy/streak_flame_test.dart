@@ -221,6 +221,35 @@ void main() {
     expect(without.sublist(160, 222).where(creamOrBlue), isEmpty);
   });
 
+  testWidgets('on the primary colour, its ember burns in its darker '
+      'colours; lit, it is the same flame', (t) async {
+    Future<List<(int, int)>> column(
+      FlameLook look, {
+      required bool onPrimary,
+    }) async => (await t.runAsync(
+      () => _column(
+        FlamePainter(look: look, tier: FlameTier.large, onPrimary: onPrimary),
+        const Size(200, 240),
+        x: 100,
+      ),
+    ))!;
+    final pale = await column(FlameLook.ember, onPrimary: false);
+    final dark = await column(FlameLook.ember, onPrimary: true);
+    // Its body, just above its base: darker red there.
+    expect(dark[200].$1, lessThan(pale[200].$1 - 40));
+    expect(
+      await column(FlameLook.lit, onPrimary: true),
+      await column(FlameLook.lit, onPrimary: false),
+    );
+
+    await t.pumpWidget(
+      _wrap(
+        const StreakFlame(streak: 5, lit: false, height: 40, onPrimary: true),
+      ),
+    );
+    expect(_painter(t).onPrimary, isTrue);
+  });
+
   testWidgets('the core by default', (t) async {
     await t.pumpWidget(_wrap(_flame(streak: 42, lit: true, height: 120)));
     expect(_painter(t).core, isTrue);
