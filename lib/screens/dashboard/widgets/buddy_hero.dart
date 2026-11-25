@@ -685,15 +685,17 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     return true;
   }
 
-  /// After the wave: the weekly tips' offer off the journey („Zu den Tipps"
-  /// opens Entdecken), then continues; waits like every cue's sheet
-  /// ([_deferSheet]). On the journey or undecided by now: none.
+  /// After the wave: the weekly tips' offer off the journey („Zu den
+  /// Einstellungen" pushes the notification settings, with the switch; the
+  /// push covers Home, so the next cue waits), then continues; waits like
+  /// every cue's sheet ([_deferSheet]). On the journey or undecided by now:
+  /// none.
   Future<void> _offerWeeklyTips() async {
     if (_deferSheet(_offerWeeklyTips)) return;
     if (ref.read(journeyProvider) == false) {
       final open = await showWeeklyTipsOfferSheet(context);
       if (!mounted) return;
-      if (open) context.go(RoutePaths.discover);
+      if (open) unawaited(context.push(RoutePaths.settingsNotifications));
     }
     _nextCue();
   }

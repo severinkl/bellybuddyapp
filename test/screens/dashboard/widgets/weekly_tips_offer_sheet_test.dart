@@ -9,7 +9,7 @@ import 'package:belly_buddy/widgets/buddy/buddy.dart';
 const _line =
     'Ich seh schon erste Muster! Magst du jeden Montag Tipps von mir? ✨';
 const _body =
-    'Unter Entdecken kannst du sie einschalten. Dafür schicke ich deine '
+    'In den Einstellungen kannst du sie einschalten. Dafür schicke ich deine '
     'Einträge der letzten Wochen, die Muster daraus und deine Bewertungen '
     'meiner Tipps an unseren KI-Dienst.';
 
@@ -55,6 +55,7 @@ void main() {
     await pumpOpener(tester, []);
     await openSheet(tester);
 
+    expect(WeeklyTipsOfferSheet.body, _body);
     expect(find.text(glueClosingSymbol(_line)), findsOneWidget);
     expect(
       tester.getSize(find.byType(BuddyStage)).height,
@@ -64,7 +65,7 @@ void main() {
     expect(
       find.descendant(
         of: find.byKey(WeeklyTipsOfferSheet.openKey),
-        matching: find.text('Zu den Tipps'),
+        matching: find.text('Zu den Einstellungen'),
       ),
       findsOneWidget,
     );
@@ -77,7 +78,7 @@ void main() {
     );
   });
 
-  testWidgets('true for „Zu den Tipps", false for „Später" or when '
+  testWidgets('true for „Zu den Einstellungen", false for „Später" or when '
       'dismissed', (tester) async {
     final results = <bool>[];
     await pumpOpener(tester, results);

@@ -331,6 +331,7 @@ void main() {
           RoutePaths.recommendations,
           RoutePaths.patterns,
           RoutePaths.patternsUnlocked,
+          RoutePaths.settingsNotifications,
         ]),
       ],
     );
@@ -1284,8 +1285,8 @@ void main() {
       expect(careLines(CareAction.lunch), contains(c.bubble));
     });
 
-    testWidgets('weeklyTipsOffer → wave, then the sheet; „Zu den Tipps" '
-        'opens Entdecken', (tester) async {
+    testWidgets('weeklyTipsOffer → wave, then the sheet; „Zu den '
+        'Einstellungen" opens the notification settings', (tester) async {
       buddy = _FakeBuddy(
         () => _status(announcements: const [BuddyAnnouncement.weeklyTipsOffer]),
       );
@@ -1304,9 +1305,9 @@ void main() {
 
       await closeOffer(tester, WeeklyTipsOfferSheet.openKey);
 
-      expect(location(), RoutePaths.discover);
+      expect(location(), RoutePaths.settingsNotifications);
       expect(buddy.shown, [BuddyAnnouncement.weeklyTipsOffer]);
-      // Left for the tab: the next cue waits until Home is back.
+      // Covered by the settings: the next cue waits until Home is back.
       expect(container.read(homeCoveredProvider), isTrue);
     });
 

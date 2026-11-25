@@ -10,27 +10,20 @@ import 'discover_section.dart';
 
 /// The newest tip set: its ISO week, how many tips, two lines of its
 /// summary, and „Neu" while there is a new set ([unseenTipSetProvider], as
-/// for Home's row and the Buddy: a set without tips is never new). No
-/// tips: a line, not tappable.
+/// for Home's row and the Buddy: a set without tips is never new).
 class DiscoverTipsCard extends ConsumerWidget {
-  const DiscoverTipsCard({super.key, required this.tips, required this.onTap});
+  const DiscoverTipsCard({super.key, required this.sets, required this.onTap});
 
-  /// The card (or the line in its place).
   static const cardKey = Key('discover_tips');
 
-  final AsyncValue<List<Recommendation>> tips;
+  /// The tip sets, newest first; never empty.
+  final List<Recommendation> sets;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final isNew = ref.watch(unseenTipSetProvider) != null;
-    final list = tips.value;
-    if (list == null) return DiscoverNote.pending(tips, 'Tipps', key: cardKey);
-    if (list.isEmpty) {
-      return const DiscoverNote(key: cardKey, 'Noch keine Tipps.');
-    }
-    // The list is newest first.
-    final newest = list.first;
+    final newest = sets.first;
     final summary = newest.summary?.trim() ?? '';
     return BbCard(
       key: cardKey,

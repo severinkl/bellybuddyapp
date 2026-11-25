@@ -30,11 +30,15 @@ import 'widgets/knowledge_article_tile.dart';
 /// ingredient suggestions), Rezepte (Für dich from the collection, and
 /// Meine Rezepte: own and saved) and Wissen (the newest myfodmap
 /// blog articles).
-/// A section with nothing in it says so and links nowhere.
+/// Tipps shows only once a loaded set has tips
+/// ([DiscoverTipsSection.showsFor]), and stays through a refresh, loading or
+/// failed; while the first load runs, after it failed and without tips it
+/// is absent (the weekly tips are switched on in Einstellungen). Every other
+/// section with nothing in it says so and links nowhere.
 class DiscoverScreen extends ConsumerStatefulWidget {
   const DiscoverScreen({super.key, this.openUrl = launchUrl});
 
-  /// The Tipps card; opens the Tipps while there are any.
+  /// The Tipps card; opens the Tipps.
   static const tipsKey = DiscoverTipsCard.cardKey;
 
   /// The Alternativen section, with its „Alle ›".
@@ -109,15 +113,17 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              DiscoverSection(
-                title: 'Tipps',
-                child: DiscoverTipsSection(
-                  tips: tips,
-                  weeklyTips: weeklyTips,
-                  onOpen: () => context.push(RoutePaths.recommendations),
+              if (DiscoverTipsSection.showsFor(tips)) ...[
+                DiscoverSection(
+                  title: 'Tipps',
+                  child: DiscoverTipsSection(
+                    sets: tips.value!,
+                    weeklyTips: weeklyTips,
+                    onOpen: () => context.push(RoutePaths.recommendations),
+                  ),
                 ),
-              ),
-              AppConstants.gap24,
+                AppConstants.gap24,
+              ],
               DiscoverAlternativesSection(
                 groups: groups,
                 newCount: newGroups,
