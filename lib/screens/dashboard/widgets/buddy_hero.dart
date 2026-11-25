@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../providers/buddy_events_provider.dart';
 import '../../../providers/buddy_offers_provider.dart';
@@ -88,9 +89,10 @@ _Cue _cueFor(BuddyAnnouncement a) => switch (a) {
 /// need's bubble opens its tracker; tapping the Buddy makes him talk), and
 /// a button that opens the tracker for the next thing to log
 /// ([nextCareAction]). His speech bubble floats over his head
-/// ([CareRing.overBuddy]): it may rise over the chip row, scaled down where
-/// it would rise above the hero, never moves the layout and never takes a
-/// tap (Essen, Trinken and the chip under it still open).
+/// ([CareRing.overBuddy]), wider with large text: it may rise over the chip
+/// row (a line too tall for that is scaled down; none of his are), never
+/// moves the layout and never takes a tap (Essen, Trinken and the chip
+/// under it still open).
 ///
 /// The need meters, his mood and the next action follow [careNowProvider]
 /// (when each need was last logged, seen from the current minute); a new
@@ -138,12 +140,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// for it.
   static const _cueLineDuration = Duration(seconds: 4);
 
-  static const _saverUsedLine =
-      'Puh! Dein Streak-Saver hat uns gestern gerettet 🛡';
-  static const _streakBrokenLine = 'Neuer Anlauf — ich bin dabei!';
-  static const _saverEarnedLine = 'Du hast einen Streak-Saver verdient! 🛡';
   static const _newGoalTitle = "Wir haben's geschafft! Neues Ziel?";
-  static const _tipsArrivedLine = 'Neue Tipps sind da! ✨';
 
   late final BuddyController _buddy;
 
@@ -520,8 +517,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     final today = startOfDay(_now());
     if (status != null && status.todayCounted && _countedDay != today) {
       _countedDay = today;
-      final days = status.streak == 1 ? 'Tag' : 'Tage';
-      _say('Danke! 🔥 ${status.streak} $days');
+      _say(BuddyCopy.streakThanks(status.streak));
     } else {
       _say(_moodLine(_buddy.mood, justLogged: _loggedNeed));
     }
@@ -577,21 +573,21 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
         );
       case _Cue.saverUsed:
         _buddy.play(BuddyAction.hug);
-        _say(_saverUsedLine);
+        _say(BuddyCopy.saverUsed);
         _holdStage();
       case _Cue.streakBroken:
-        _say(_streakBrokenLine);
+        _say(BuddyCopy.streakBroken);
         _holdStage();
       case _Cue.saverEarned:
         _buddy.play(BuddyAction.celebrate);
-        _say(_saverEarnedLine);
+        _say(BuddyCopy.saverEarned);
         _holdStage();
       case _Cue.goalReached:
         _playThen(BuddyAction.celebrate, _askForNewGoal);
         _setOverride(BuddyMood.inLove);
       case _Cue.tipsArrived:
         _buddy.play(BuddyAction.celebrate);
-        _say(_tipsArrivedLine);
+        _say(BuddyCopy.tipsArrived);
         _holdStage();
       case _Cue.weeklyTipsOffer:
         _playThen(BuddyAction.wave, _offerWeeklyTips);
@@ -841,6 +837,17 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
               MediaQuery.sizeOf(context).height,
             );
             final buddySide = diameter * AppConstants.careRingBuddyFactor;
+            // Wider with large text, so a line breaks as at the base size
+            // and shows at the user's size instead of scaled down. (The
+            // scale of the bubble's own text size: Android scales large
+            // sizes less.)
+            const textSize = AppTheme.fontSizeBodyLG;
+            final textScale =
+                MediaQuery.textScalerOf(context).scale(textSize) / textSize;
+            final bubbleWidth = math.min(
+              width,
+              AppConstants.buddyBubbleOverlayMaxWidth * math.max(1, textScale),
+            );
             return CareRing(
               care: care,
               diameter: diameter,
@@ -862,10 +869,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
                 alignment: Alignment.bottomCenter,
                 child: BuddySpeechBubble(
                   controller: _buddy,
-                  maxWidth: math.min(
-                    AppConstants.buddyBubbleOverlayMaxWidth,
-                    width,
-                  ),
+                  maxWidth: bubbleWidth,
                   tail: BuddyBubbleTail.down(
                     shift: BuddyStage.faceShift(Size.square(buddySide)),
                   ),

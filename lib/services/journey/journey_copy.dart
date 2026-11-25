@@ -103,16 +103,17 @@ abstract final class JourneyCopy {
   static const noRecipe =
       'Rezepte, die zu dir passen, findest du unter Entdecken.';
 
+  // Said by the Buddy on Home: each fits three lines of his bubble (about
+  // 60 characters), so it is never cut or drawn smaller.
+
   static const firstTipStarted =
-      'Ich mach dir jetzt deinen ersten Tipp. Das dauert einen Moment ✨';
+      'Ich mach dir jetzt deinen ersten Tipp. Einen Moment ✨';
 
   /// The first tip failed; that the weekly tips stay on only while they
   /// are known to be ([weeklyTipsOn]).
   static String firstTipFailed({required bool weeklyTipsOn}) => weeklyTipsOn
-      ? '$_firstTipFailed Die wöchentlichen Tipps bleiben eingeschaltet.'
-      : _firstTipFailed;
-
-  static const _firstTipFailed = 'Dein erster Tipp hat gerade nicht geklappt.';
+      ? 'Dein erster Tipp ging schief. Wöchentliche Tipps bleiben an.'
+      : 'Dein erster Tipp hat gerade nicht geklappt.';
 
   // Buttons.
 

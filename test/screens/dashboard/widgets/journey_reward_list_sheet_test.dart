@@ -279,9 +279,7 @@ void main() {
 
       expect(firstTip.accepts, 1);
       expect(
-        find.text(
-          'Ich mach dir jetzt deinen ersten Tipp. Das dauert einen Moment ✨',
-        ),
+        find.text('Ich mach dir jetzt deinen ersten Tipp. Einen Moment ✨'),
         findsOneWidget,
       );
       expect(location(), '/');

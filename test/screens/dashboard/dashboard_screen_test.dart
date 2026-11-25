@@ -1173,9 +1173,15 @@ void main() {
           expect(hole, hero.inflate(AppConstants.spacingXs));
           expect(hole.intersect(ring), ring, reason: 'the ring is in the hole');
           // So is the room his bubble may take above the ring.
+          final room = tester
+              .widget<CareRing>(find.byType(CareRing))
+              .overBuddyRoom;
           expect(
-            hole.top,
-            lessThanOrEqualTo(ring.top - AppConstants.iconBadgeLg),
+            room,
+            allOf(
+              greaterThan(0),
+              lessThanOrEqualTo(ring.top - hole.top - AppConstants.spacingXs),
+            ),
           );
           expect(hole.center.dx, closeTo(phone.size.width / 2, 0.01));
 

@@ -4,6 +4,9 @@ import '../../widgets/buddy/buddy_pose.dart';
 import 'daily_care.dart';
 
 /// German copy pools for the Buddy. Placeholders: `{name}`, `{streak}`.
+/// Every line the dashboard's Buddy says (his resting lines, the moods',
+/// the announcements) fits three lines of his bubble (about 60 characters
+/// with a 20-character name), so it is never cut or drawn smaller.
 class BuddyCopy {
   const BuddyCopy._();
 
@@ -146,6 +149,17 @@ class BuddyCopy {
     CareAction.drink: ['Danke fürs Trinken! 💧', 'Ahh, das tat gut! 💧'],
   };
 
+  /// The announcements the dashboard's Buddy plays: a streak-saver used
+  /// or earned, a broken streak, new tips.
+  static const saverUsed = 'Puh! Dein Streak-Saver hat uns gestern gerettet 🛡';
+  static const streakBroken = 'Neuer Anlauf — ich bin dabei!';
+  static const saverEarned = 'Du hast einen Streak-Saver verdient! 🛡';
+  static const tipsArrived = 'Neue Tipps sind da! ✨';
+
+  /// Home's thanks for today's first counted entry, with the [streak].
+  static String streakThanks(int streak) =>
+      'Danke! 🔥 $streak ${streak == 1 ? 'Tag' : 'Tage'}';
+
   /// The dashboard's next-action button's label (its need's sticker icon
   /// leads it): the meal the time of day asks for, logging a need
   /// („Trinken eintragen") or „Essen eintragen".
@@ -163,7 +177,7 @@ class BuddyCopy {
   static const sleepyNight = [
     'Schon spät … *gähn* Gute Nacht bald?',
     'Mir fallen die Augen zu … *gähn*',
-    '{name} meldet sich zum Schlafengehen … *gähn*',
+    '{name} geht jetzt schlafen … *gähn*',
   ];
 
   static String pick(List<String> pool, Random rnd) =>

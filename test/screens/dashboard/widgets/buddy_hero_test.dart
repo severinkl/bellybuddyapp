@@ -2993,11 +2993,23 @@ void main() {
       Rect bubbleRect(WidgetTester tester) =>
           tester.getRect(find.byType(BuddySpeechBubble));
 
+      /// Lets his greeting show and run out: then he says nothing.
+      Future<void> afterGreeting(WidgetTester tester) async {
+        const step = Duration(milliseconds: 50);
+        for (var i = 0; i < 40 && controller(tester).bubble == null; i++) {
+          await tester.pump(step);
+        }
+        expect(controller(tester).bubble, isNotNull, reason: 'his greeting');
+        for (var i = 0; i < 200 && controller(tester).bubble != null; i++) {
+          await tester.pump(step);
+        }
+        expect(controller(tester).bubble, isNull);
+      }
+
       testWidgets('no reserved bubble slot: the ring sits right under the chip '
           'row, and never moves while he talks', (tester) async {
         await pumpHero(tester);
-        await advance(tester, const Duration(seconds: 3)); // greeting gone
-        expect(controller(tester).bubble, isNull);
+        await afterGreeting(tester);
 
         final hero = tester.getRect(find.byType(BuddyHero));
         final ring = tester.getRect(find.byType(CareRing));
@@ -3012,7 +3024,7 @@ void main() {
       testWidgets('his bubble floats over his head while he talks, then is '
           'gone', (tester) async {
         await pumpHero(tester);
-        await advance(tester, const Duration(seconds: 3)); // greeting gone
+        await afterGreeting(tester);
 
         controller(tester).say('Hallo, schön dich zu sehen!');
         await tick(tester);
@@ -3032,8 +3044,8 @@ void main() {
         expect(tester.getSize(find.byType(BuddySpeechBubble)).isEmpty, isTrue);
       });
 
-      testWidgets('a four-line line stays inside the hero at 375×667, text '
-          'scale 1.3', (tester) async {
+      testWidgets('a four-line line is scaled down to stay inside the hero at '
+          '375×667, text scale 1.3', (tester) async {
         tester.view
           ..physicalSize = const Size(375, 667)
           ..devicePixelRatio = 1;
@@ -3041,7 +3053,7 @@ void main() {
         tester.platformDispatcher.textScaleFactorTestValue = 1.3;
         addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
         await pumpHero(tester);
-        await advance(tester, const Duration(seconds: 3)); // greeting gone
+        await afterGreeting(tester);
 
         controller(tester).say(longLine);
         await tick(tester);
@@ -3052,6 +3064,11 @@ void main() {
         expect(bubble.isEmpty, isFalse);
         expect(bubble.top, greaterThanOrEqualTo(hero.top - 0.01));
         expect(bubble.bottom, closeTo(head(tester), 0.5));
+        // Too tall for the room over his head: drawn smaller than laid out.
+        expect(
+          tester.getSize(find.byType(BuddySpeechBubble)).height,
+          greaterThan(bubble.height + 1),
+        );
         expect(tester.takeException(), isNull);
       });
 
@@ -3065,7 +3082,7 @@ void main() {
           ..devicePixelRatio = 1;
         addTearDown(tester.view.reset);
         await pumpHero(tester);
-        await advance(tester, const Duration(seconds: 3)); // greeting gone
+        await afterGreeting(tester);
 
         for (final (need, path) in [
           (CareNeed.food, RoutePaths.mealTracker),
@@ -3097,7 +3114,7 @@ void main() {
           ..devicePixelRatio = 1;
         addTearDown(tester.view.reset);
         await pumpHero(tester);
-        await advance(tester, const Duration(seconds: 3)); // greeting gone
+        await afterGreeting(tester);
 
         controller(tester).say(longLine);
         await tick(tester);
