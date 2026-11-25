@@ -137,3 +137,4 @@ Release like round 4 once both are done (Severin's call).
 
 ## Decisions log
 - 2026-11-25 Severin: A „feuriger"; C stickers; Tipps A (nothing); photo look + ≈150 recipes, ≈15 €.
+- 2026-11-25 Severin: „ja passt" — design and my calls approved; release like round 4 right after building (core → prod, then an Android build), waiting for the pictures (no placeholder release).
