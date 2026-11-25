@@ -19,9 +19,10 @@ import 'streak_flame.dart';
 /// ([AppConstants.careChargeCurve]), then calling [onCharged]. Under
 /// reduced motion (also when it turns on mid-charge) it shows [to] at once;
 /// then, and with nothing to charge ([from] == [to]), [onCharged] is never
-/// called. Its icon is [need]'s (for Bauchgefühl, the belly with
+/// called. Once full it stays full: reduced motion turning off charges it
+/// no second time. Its icon is [need]'s (for Bauchgefühl, the belly with
 /// [gutFeeling]'s mouth, [NeedIcon.gutFeeling]). It adds no semantics.
-class ChargingMeter extends StatelessWidget {
+class ChargingMeter extends StatefulWidget {
   const ChargingMeter({
     super.key,
     required this.need,
@@ -40,18 +41,42 @@ class ChargingMeter extends StatelessWidget {
   final VoidCallback? onCharged;
 
   @override
+  State<ChargingMeter> createState() => _ChargingMeterState();
+}
+
+class _ChargingMeterState extends State<ChargingMeter> {
+  /// Charged, or shown full under reduced motion: it starts full from then
+  /// on.
+  bool _full = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) _full = true;
+  }
+
+  void _onEnd() {
+    _full = true;
+    widget.onCharged?.call();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final calm = MediaQuery.disableAnimationsOf(context);
     return TweenAnimationBuilder<double>(
       // A charge reduced motion cuts short starts over, full at once.
       key: ValueKey(calm),
-      tween: Tween(begin: calm ? to : from, end: to),
+      tween: Tween(begin: _full ? widget.to : widget.from, end: widget.to),
       duration: calm ? Duration.zero : AppConstants.careChargeDuration,
       curve: AppConstants.careChargeCurve,
-      onEnd: onCharged,
-      builder: (_, level, child) =>
-          NeedMeter(need: need, level: level, size: size, child: child!),
-      child: NeedIcon(need, gutFeeling: gutFeeling),
+      onEnd: _onEnd,
+      builder: (_, level, child) => NeedMeter(
+        need: widget.need,
+        level: level,
+        size: widget.size,
+        child: child!,
+      ),
+      child: NeedIcon(widget.need, gutFeeling: widget.gutFeeling),
     );
   }
 }
@@ -65,7 +90,7 @@ class ChargingMeter extends StatelessWidget {
 /// the circle is full ([ChargingMeter.onCharged]), „Tag n" fading in with
 /// it. With nothing to charge (no circle, as for Klo, or the same level
 /// again) it ignites at once; under reduced motion (also when it turns on
-/// mid-charge) all of it shows at once.
+/// mid-charge) all of it shows at once, and stays so when it turns off.
 ///
 /// The calm page after a hard moment ([LogSentiment.bad]) cheers no
 /// progress: it shows no ignite row. Nothing is scaled: the circle takes a

@@ -180,6 +180,51 @@ void main() {
       expect(tester.binding.hasScheduledFrame, isFalse);
     });
 
+    testWidgets('reduced motion turning off while the page is open: the '
+        'circle stays full under the lit flame, no second charge', (
+      tester,
+    ) async {
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      await _pump(tester, _hero(_ignites));
+      await tester.pump();
+      expect(_level(tester), 1.0);
+      expect(flamePainter(tester).look, FlameLook.lit);
+
+      tester.platformDispatcher.clearAccessibilityFeaturesTestValue();
+      await tester.pump();
+      for (var i = 0; i < 5; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(_level(tester), 1.0);
+      }
+      expect(flamePainter(tester).look, FlameLook.lit);
+      expect(flamePainter(tester).burst, isNull);
+    });
+
+    testWidgets('charged, then reduced motion on and off again: no second '
+        'charge', (tester) async {
+      await _pump(tester, _hero(_ignites));
+      await pumpPastCharge(tester);
+      await tester.pumpAndSettle();
+      expect(_level(tester), 1.0);
+
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      await tester.pump();
+      tester.platformDispatcher.clearAccessibilityFeaturesTestValue();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(_level(tester), 1.0);
+      expect(tester.binding.hasScheduledFrame, isFalse);
+    });
+
     testWidgets('the same level again: nothing to charge, it ignites at '
         'once', (tester) async {
       await _pump(
