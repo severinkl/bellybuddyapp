@@ -239,8 +239,8 @@ class _BreathOpacity extends Animatable<double> {
 /// Paints the flame in a 100 × 120 box scaled to its size, back to front:
 /// the lit flame's glow (from [AppConstants.streakFlameGlowMinHeight] up),
 /// its tongues, each flickering on its own, the bright core and a blazing
-/// flame's hot one (swaying with the centre tongue), the sparks and an
-/// ignite's burst. The body is scaled by [bodyScale] about its base. At
+/// flame's blue root (swaying with the centre tongue), the moving flame's
+/// sparks (from that height up too) and an ignite's burst. The body is scaled by [bodyScale] about its base. At
 /// rest all of it stays inside the box; only an ignite's pop leaves it. It
 /// repaints as [ignite] runs and [clock] ticks, without a rebuild.
 class FlamePainter extends CustomPainter {
@@ -331,12 +331,20 @@ class FlamePainter extends CustomPainter {
         : null;
   }
 
-  /// How many sparks rise: none from an ember, more from a blazing flame.
-  int get sparkCount => !_lit
+  /// How many sparks rise: more from a blazing flame; none from an ember,
+  /// while it ignites (none float over the still-small flame) or while it
+  /// holds still (a frozen spark reads as a speck of dirt).
+  int get sparkCount => !_lit || burst != null || rise == null
       ? 0
       : tier == FlameTier.blazing
       ? _sparks.length
       : 2;
+
+  /// The sparks show when painted at least
+  /// [AppConstants.streakFlameGlowMinHeight] tall; smaller, they would only
+  /// speckle.
+  bool showsSparks(Size size) =>
+      sparkCount > 0 && size.height >= AppConstants.streakFlameGlowMinHeight;
 
   /// A blazing flame burns blue at its base.
   bool get hotCore => _lit && tier == FlameTier.blazing;
@@ -452,14 +460,22 @@ class FlamePainter extends CustomPainter {
       const [0.2, 0.6, 1],
     );
 
-  /// A blazing flame's hot core: a small drop at the base.
-  static final Path _hot = Path()
-    ..moveTo(50, 88)
-    ..cubicTo(53, 93, 56, 97, 56, 101)
-    ..cubicTo(56, 105, 53.5, 108, 50, 108)
-    ..cubicTo(46.5, 108, 44, 105, 44, 101)
-    ..cubicTo(44, 97, 47, 93, 50, 88)
-    ..close();
+  /// A blazing flame's hot core: a soft blue root about the bright core's
+  /// bottom, this wide and tall (half-axes), fading out upward into it.
+  static const Offset _hotRoot = Offset(50, 111);
+  static const double _hotWidth = 14;
+  static const double _hotHeight = 26;
+  static final Paint _hotPaint = Paint()
+    ..shader = ui.Gradient.radial(
+      Offset.zero,
+      _hotWidth,
+      [
+        AppTheme.streakFlameHot.withValues(alpha: 0.95),
+        AppTheme.streakFlameHot.withValues(alpha: 0.55),
+        AppTheme.streakFlameHot.withValues(alpha: 0),
+      ],
+      const [0, 0.45, 1],
+    );
 
   /// The glow: a soft ellipse about [_glowCenter], full in its inner half.
   static const Offset _glowCenter = Offset(50, 74);
@@ -492,10 +508,8 @@ class FlamePainter extends CustomPainter {
   static const double _sparkRise = 26;
   static const double _sparkLife = 0.6;
 
-  /// Where along their rise the sparks stand while the flame holds still.
-  static const double _restRise = 0.25;
-
-  /// The burst's circles fly from [_burstFrom] by these offsets.
+  /// The burst's circles fly from [_burstFrom] (at scale 1) by these
+  /// offsets.
   static const Offset _burstFrom = Offset(50, 66);
   static const double _burstRadius = 4;
   static const _burstTo = [
@@ -528,16 +542,14 @@ class FlamePainter extends CustomPainter {
     if (_lit) {
       _swaying(canvas, angles[_centre], () {
         canvas.drawPath(_core, _corePaint);
-        if (hotCore) {
-          canvas.drawPath(_hot, _fill..color = AppTheme.streakFlameHot);
-        }
+        if (hotCore) _paintHotRoot(canvas);
       });
     }
     canvas.restore();
 
-    _paintSparks(canvas);
+    if (showsSparks(size)) _paintSparks(canvas);
     final burst = this.burst;
-    if (burst != null) _paintBurst(canvas, burst);
+    if (burst != null) _paintBurst(canvas, burst, scale);
     canvas.restore();
   }
 
@@ -556,6 +568,17 @@ class FlamePainter extends CustomPainter {
     canvas.translate(_glowCenter.dx, _glowCenter.dy);
     canvas.scale(1, _glowHeightRatio);
     canvas.drawCircle(Offset.zero, _glowRadius, _glowPaint);
+    canvas.restore();
+  }
+
+  /// The hot core's blue root, inside the bright core (over the yellow
+  /// base, blue would turn muddy).
+  static void _paintHotRoot(Canvas canvas) {
+    canvas.save();
+    canvas.clipPath(_core);
+    canvas.translate(_hotRoot.dx, _hotRoot.dy);
+    canvas.scale(1, _hotHeight / _hotWidth);
+    canvas.drawCircle(Offset.zero, _hotWidth, _hotPaint);
     canvas.restore();
   }
 
@@ -597,7 +620,7 @@ class FlamePainter extends CustomPainter {
   /// ignite's pop) for part of the rise: fading in, drifting, shrinking and
   /// fading out, never above the box.
   void _paintSparks(Canvas canvas) {
-    final rise = this.rise ?? _restRise;
+    final rise = this.rise!;
     for (var i = 0; i < sparkCount; i++) {
       final (from, drift, radius, offset) = _sparks[i];
       final t = (rise + offset) % 1;
@@ -617,14 +640,18 @@ class FlamePainter extends CustomPainter {
     }
   }
 
-  /// The burst's circles fly out from the flame's middle, shrinking and
-  /// fading.
-  static void _paintBurst(Canvas canvas, double burst) {
+  /// The burst's circles fly out from the middle of the flame as it pops
+  /// (its body at [scale]), shrinking and fading.
+  static void _paintBurst(Canvas canvas, double burst, Size scale) {
     final t = Curves.easeOut.transform(burst);
+    final from = Offset(
+      _base.dx + (_burstFrom.dx - _base.dx) * scale.width,
+      _base.dy + (_burstFrom.dy - _base.dy) * scale.height,
+    );
     for (final to in _burstTo) {
       _dot(
         canvas,
-        _burstFrom + to * t,
+        from + to * t,
         _burstRadius * _lerp(1, 0.4, t),
         AppTheme.streakFlameCore,
         1 - t,

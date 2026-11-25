@@ -81,6 +81,31 @@ Future<Rect?> _paintedBounds(FlamePainter painter, Size box) async {
   );
 }
 
+/// The colours (red, blue) down the column at [x] of what [painter]
+/// paints at [size], top to bottom.
+Future<List<(int, int)>> _column(
+  FlamePainter painter,
+  Size size, {
+  required int x,
+}) async {
+  final width = size.width.ceil();
+  final height = size.height.ceil();
+  final recorder = ui.PictureRecorder();
+  painter.paint(Canvas(recorder), size);
+  final image = await recorder.endRecording().toImage(width, height);
+  final bytes = (await image.toByteData(
+    format: ui.ImageByteFormat.rawStraightRgba,
+  ))!;
+  image.dispose();
+  return [
+    for (var y = 0; y < height; y++)
+      (
+        bytes.getUint8((y * width + x) * 4),
+        bytes.getUint8((y * width + x) * 4 + 2),
+      ),
+  ];
+}
+
 void main() {
   test('tiers by streak', () {
     expect(StreakFlame.tierOf(0), FlameTier.small);
@@ -126,6 +151,9 @@ void main() {
   testWidgets('brennt: at least three tongues and sparks, no hot core', (
     t,
   ) async {
+    // Sparks rise only while it moves.
+    StreakFlame.ambientEnabled = true;
+    addTearDown(disableAmbientAnimationsForTests);
     await t.pumpWidget(_wrap(_flame(streak: 7, lit: true)));
     final painter = _painter(t);
     expect(FlamePainter.tongueCount, greaterThanOrEqualTo(3));
@@ -137,11 +165,38 @@ void main() {
   });
 
   testWidgets('lodert: a hot core and more sparks', (t) async {
+    StreakFlame.ambientEnabled = true;
+    addTearDown(disableAmbientAnimationsForTests);
     await t.pumpWidget(_wrap(_flame(streak: 30)));
     final painter = _painter(t);
     expect(painter.tier, FlameTier.blazing);
     expect(painter.hotCore, isTrue);
     expect(painter.sparkCount, greaterThan(2));
+  });
+
+  testWidgets('lodert: its hot core is a soft blue root, without a hard '
+      'edge', (t) async {
+    // 2 px per unit of the 100 × 120 box: its base is at y 228, the bright
+    // core's bottom edge just above y 221.
+    final column = await t.runAsync(
+      () => _column(
+        FlamePainter(look: FlameLook.lit, tier: FlameTier.blazing),
+        const Size(200, 240),
+        x: 100,
+      ),
+    );
+    int blueness(int y) => column![y].$2 - column[y].$1;
+    // Blue at the root, cream higher up in the core …
+    expect(blueness(218), greaterThan(0));
+    expect(blueness(150), lessThan(0));
+    // … fading between them, without a hard edge.
+    for (var y = 218; y > 150; y--) {
+      expect(
+        (blueness(y - 1) - blueness(y)).abs(),
+        lessThan(25),
+        reason: 'from y $y up',
+      );
+    }
   });
 
   testWidgets('the glow from 40 dp up, only when lit', (t) async {
@@ -289,6 +344,7 @@ void main() {
       expect(painter.look, FlameLook.lit);
       expect(painter.burst, isNull);
       expect(painter.flicker, everyElement(0));
+      expect(painter.sparkCount, 0);
       expect(t.binding.hasScheduledFrame, isFalse);
 
       // A fresh flame that would ignite on mount is lit at once too.
@@ -308,9 +364,11 @@ void main() {
     tearDown(disableAmbientAnimationsForTests);
 
     testWidgets('off in tests: still', (t) async {
-      await t.pumpWidget(_wrap(_flame(streak: 5, lit: true)));
+      await t.pumpWidget(_wrap(_flame(streak: 30, lit: true)));
       expect(t.hasRunningAnimations, isFalse);
       expect(_painter(t).flicker, everyElement(0));
+      // A frozen spark would read as a speck of dirt.
+      expect(_painter(t).sparkCount, 0);
 
       await t.pumpWidget(_wrap(_flame(streak: 5, lit: false)));
       expect(t.hasRunningAnimations, isFalse);
@@ -345,6 +403,36 @@ void main() {
       expect(_painter(t).flicker, everyElement(0));
     });
 
+    testWidgets('no sparks while it ignites', (t) async {
+      StreakFlame.ambientEnabled = true;
+
+      await t.pumpWidget(_wrap(_flame(streak: 5, lit: false)));
+      await t.pumpWidget(_wrap(_flame(streak: 6, lit: true)));
+      expect(_painter(t).burst, 0);
+      expect(_painter(t).sparkCount, 0);
+      await t.pump(const Duration(milliseconds: 300));
+      expect(_painter(t).burst, greaterThan(0));
+      expect(_painter(t).sparkCount, 0);
+
+      await t.pump(const Duration(milliseconds: 600));
+      expect(_painter(t).burst, isNull);
+      expect(_painter(t).sparkCount, 2);
+    });
+
+    testWidgets('sparks from 40 dp up, only while it moves', (t) async {
+      StreakFlame.ambientEnabled = true;
+
+      await t.pumpWidget(_wrap(_flame(streak: 7, lit: true)));
+      final moving = _painter(t);
+      expect(moving.showsSparks(const Size(33.3, 39.9)), isFalse);
+      expect(moving.showsSparks(const Size(33.4, 40)), isTrue);
+
+      // The same flame held still: none at any size.
+      disableAmbientAnimationsForTests();
+      await t.pumpWidget(_wrap(_flame(streak: 7, lit: true, height: 41)));
+      expect(_painter(t).showsSparks(const Size(100, 120)), isFalse);
+    });
+
     testWidgets('sparks rise from brennt up', (t) async {
       StreakFlame.ambientEnabled = true;
 
@@ -365,6 +453,7 @@ void main() {
       expect(painter.look, FlameLook.lit);
       expect(painter.tier, FlameTier.large);
       expect(painter.flicker, everyElement(0));
+      expect(painter.sparkCount, 0);
       // Only painted: no layer, fade or ticker of its own.
       expect(
         find.descendant(
