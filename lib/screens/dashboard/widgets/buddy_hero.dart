@@ -105,8 +105,8 @@ _Cue _cueFor(BuddyAnnouncement a) => switch (a) {
 /// the first line, the follow-up to a fresh [BuddyLogEvent] and the
 /// Buddy's announcements. His cues and their sheets also wait while Home is
 /// covered ([homeCoveredProvider]: a page over it or on its way in, a
-/// sheet, dialog or menu over it, another tab); the hero tells it whether
-/// Home's route is on top ([_onRoute]).
+/// sheet, dialog or menu over it, another tab, Home's tour); the hero tells
+/// it whether Home's route is on top ([_onRoute]).
 /// The streak flame glows behind him ([HomeFlame]), an ember until today's
 /// first entry ignites it. Without a Buddy status (loading, error, signed
 /// out) the Buddy still shows, named 'Buddy', without the streak chip and
@@ -122,8 +122,8 @@ class BuddyHero extends ConsumerStatefulWidget {
   final UrlOpener openUrl;
 
   /// Whether his speech bubble shows. Home hides it while its tour is up
-  /// (the tour's „Überspringen" sits where it rises); what he says then
-  /// is not shown.
+  /// (the tour's „Überspringen" sits where it rises); the tour covers Home
+  /// ([homeCoveredProvider]), so his cues wait for it.
   final bool showsBubble;
 
   /// The next-action button under the ring.
@@ -503,7 +503,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   }
 
   /// Says the follow-up once the log's Buddy refresh is done (waiting at
-  /// most [_refreshWait]), then holds the stage.
+  /// most [_refreshWait]), then holds the stage. Home covered by then (the
+  /// tour opened, a page), it goes back to the queue's front and is said
+  /// once Home is free again ([_resume]).
   Future<void> _followUpAfterRefresh() async {
     final refresh = _logRefresh;
     _logRefresh = null;
@@ -515,6 +517,12 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       }
     }
     if (!mounted) return;
+    if (!_homeFree) {
+      _playing = null;
+      _cueRunning = false;
+      _cues.addFirst(_Cue.followUp);
+      return;
+    }
     _sayFollowUp();
     _holdStage();
   }
@@ -550,7 +558,15 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       _cueRunning = false;
       return;
     }
+    final welcomed = _playing == _Cue.welcome;
     _markPlayed();
+    if (welcomed) {
+      // Home's tour waits for the welcome ([_markPlayed]) and covers Home
+      // as it opens, in the microtasks after: the next cue lets it go
+      // first, so it waits for the tour instead of playing behind it.
+      _cueTimer = Timer(Duration.zero, _nextCue);
+      return;
+    }
     if (_cues.isEmpty) {
       _cueRunning = false;
       // All withdrawn (a lone „Neue Tipps" whose set was opened): the

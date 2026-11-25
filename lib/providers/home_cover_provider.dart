@@ -23,7 +23,8 @@ import 'auth_provider.dart';
 ///   Buddy's own sheets, …;
 /// - a flow from Home is not done ([whileOpen]), also between its sheets
 ///   and while it still writes: „Dein Streak" until a goal picked there is
-///   saved, „Deine Belohnungen" until what its row opens has opened;
+///   saved, „Deine Belohnungen" until what its row opens has opened, Home's
+///   tour while it is up;
 /// - something over the app until the user is back ([leftHome]): day 2's
 ///   article in the in-app browser.
 ///

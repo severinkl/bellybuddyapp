@@ -12,6 +12,7 @@ import '../../providers/buddy_provider.dart';
 import '../../providers/buddy_welcome_provider.dart';
 import '../../providers/discover_news_provider.dart';
 import '../../providers/entries_provider.dart';
+import '../../providers/home_cover_provider.dart';
 import '../../providers/insights_provider.dart';
 import '../../providers/journey_provider.dart';
 import '../../providers/journey_rewards_provider.dart';
@@ -138,10 +139,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           .timeout(_welcomeWait, onTimeout: () {});
       if (!mounted || _tutorialHandle != null) return;
     }
-    final handle = showDashboardTutorial(context);
-    // The Buddy's bubble hides while the tour is up.
-    setState(() => _tutorialHandle = handle);
-    await handle.future;
+    // The tour covers Home ([HomeCoverNotifier.whileOpen]): the Buddy's
+    // cues and their sheets wait until it is done, and his bubble hides.
+    await ref.read(homeCoveredProvider.notifier).whileOpen(() {
+      final handle = showDashboardTutorial(context);
+      setState(() => _tutorialHandle = handle);
+      return handle.future;
+    });
     if (!mounted) return;
     setState(() => _tutorialHandle = null);
     await ref.read(tutorialProvider.notifier).markSeen();

@@ -1,5 +1,7 @@
 // ignore_for_file: invalid_use_of_internal_member
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -2428,6 +2430,38 @@ void main() {
       await tester.pump(const Duration(milliseconds: 600));
       await tick(tester);
 
+      expect(controller(tester).bubble, 'Danke! 🔥 1 Tag');
+      await tester.pump(const Duration(seconds: 5));
+    });
+
+    testWidgets('Home covered during the follow-up\'s delay (the tour '
+        'opening): the thanks waits until Home is free, then comes', (
+      tester,
+    ) async {
+      buddy = _FakeBuddy(() => _status(streak: 0, savers: 0));
+      final container = await pumpHero(tester);
+      await advance(tester, const Duration(seconds: 3)); // greeting gone
+
+      emit(container, LogSentiment.neutral);
+      buddy.push(_status(streak: 1, savers: 0, todayCounted: true));
+      await tester.pump();
+      final tour = Completer<void>();
+      unawaited(
+        container
+            .read(homeCoveredProvider.notifier)
+            .whileOpen(() => tour.future),
+      );
+      // Long past the delay: nothing said behind the cover.
+      for (var i = 0; i < 100; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(bubbleBehind(tester), isNot('Danke! 🔥 1 Tag'));
+      }
+
+      tour.complete();
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      await tick(tester);
       expect(controller(tester).bubble, 'Danke! 🔥 1 Tag');
       await tester.pump(const Duration(seconds: 5));
     });
