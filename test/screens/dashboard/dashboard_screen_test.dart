@@ -770,15 +770,22 @@ void main() {
         'Sobald genug Einträge da sind, zeig ich dir hier, **was mir an '
             'deinem Bauch auffällt**.',
         'Im **Tagebuch** siehst du alle deine Einträge, Tag für Tag.',
-        'Unter **Entdecken** findest du Tipps, Alternativen, deine Rezepte '
-            'und Wissen rund um die Verdauung.',
+        'Unter **Entdecken** findest du Alternativen, deine Rezepte und '
+            'Wissen rund um die Verdauung.',
         'Unter **Ich** kannst du mich umbenennen, dein Streak-Ziel ändern und '
             'alles einstellen.',
       ]);
-      // The old tour's false or outdated claims are gone.
+      // The old tour's false or outdated claims are gone; Entdecken shows
+      // a new user no Tipps.
       for (final step in dashboardTutorialSteps) {
         final text = step.richText.map((s) => s.toPlainText()).join();
-        for (final banned in ['Serie', 'Speisen', 'tracken', '1 x pro Tag']) {
+        for (final banned in [
+          'Serie',
+          'Speisen',
+          'tracken',
+          '1 x pro Tag',
+          'Tipps',
+        ]) {
           expect(text, isNot(contains(banned)), reason: text);
         }
       }
