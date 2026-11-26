@@ -138,3 +138,21 @@ Release like round 4 once both are done (Severin's call).
 ## Decisions log
 - 2026-11-25 Severin: A „feuriger"; C stickers; Tipps A (nothing); photo look + ≈150 recipes, ≈15 €.
 - 2026-11-25 Severin: „ja passt" — design and my calls approved; release like round 4 right after building (core → prod, then an Android build), waiting for the pictures (no placeholder release).
+
+## Addendum 5b (Severin's click-through of the round-5 preview, 2026-11-26)
+
+Decisions (Severin picked each recommended option):
+1. **Streak count as a badge at the flame.** The top-left chip row on Home goes. The count sits as a small badge („🔥 12" with the
+   drawn flame, ≥ 48 dp tap target) slightly offset at the flame's lower right, next to the Buddy's feet; tapping it opens „Dein Streak".
+   It shows at 0 too (the way into „Dein Streak"). Semantics: „Streak: 12 Tage, Dein Streak öffnen". The freed row lets the ring and the
+   bubble's room move up. Ich keeps its own chip. Any tour step that pointed at the chip points at the badge.
+2. **A flame you recognise.** Taller so its tips rise clearly above his head (≈ 1.5× his height), slightly offset to one side, stronger
+   (less transparent, less blur). Still behind him, never over the need bubbles; the speech bubble still paints above it. Anti-goal stays:
+   it reads as fire behind him, not him burning. Same look on the success page/streak sheet sizes stays as is.
+3. **Notifications: ask again.** When notifications are off (OS permission not granted, or all reminders off in the app), the Buddy asks
+   again with a short explanation and „Einschalten" — after the 2nd active day, after the first week, then monthly, at most 4 times in
+   total, through the existing cue queue (never over another sheet/the tour). „Einschalten" requests the permission, or opens the system
+   settings when it was denied for good. Ich shows a row „Erinnerungen sind aus · Einschalten" while they're off. The onboarding step and the
+   one-time Home dialog stay as they are.
+4. **„Beispiel" goes** from the Muster preview label („Das siehst du dann") and the day-6 reward sheet's label; the fictional values stay
+   blurred and the „Beobachtung aus deinen Einträgen" note stays.
