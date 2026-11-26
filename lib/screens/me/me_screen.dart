@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/buddy_provider.dart';
+import '../../providers/notification_provider.dart';
 import '../../providers/tutorial_provider.dart';
 import '../../providers/upgrade_gate_provider.dart';
 import '../../router/route_names.dart';
@@ -17,14 +18,16 @@ import '../../utils/url_utils.dart';
 import '../../widgets/buddy/buddy.dart';
 import '../../widgets/buddy/streak_chip.dart';
 import '../../widgets/common/bb_settings_item.dart';
+import '../dashboard/widgets/reminders_ask_sheet.dart';
 import '../dashboard/widgets/streak_sheet.dart';
 import 'widgets/rename_buddy_dialog.dart';
 
 /// The Ich tab, without an app bar (its body sits in a [SafeArea], as
 /// Home's does; the Buddy's name is the screen's heading): the Buddy with
-/// his name („Umbenennen") and streak chip, then Streak & Ziel („Dein
-/// Streak"), Einstellungen, Tutorial wiederholen and Feedback geben, and
-/// the app version in small print.
+/// his name („Umbenennen") and streak chip, then „Erinnerungen sind aus"
+/// while notifications are off ([remindersOffProvider]; „Einschalten"),
+/// Streak & Ziel („Dein Streak"), Einstellungen, Tutorial wiederholen and
+/// Feedback geben, and the app version in small print.
 ///
 /// Without a Buddy status (loading, error) the Buddy shows as 'Buddy',
 /// without the chip, „Umbenennen" and the Streak row.
@@ -32,6 +35,7 @@ class MeScreen extends ConsumerStatefulWidget {
   const MeScreen({super.key, this.openUrl = launchUrl});
 
   static const renameKey = Key('me_rename');
+  static const remindersKey = Key('me_reminders');
   static const streakKey = Key('me_streak');
   static const settingsKey = Key('me_settings');
   static const tutorialKey = Key('me_tutorial');
@@ -108,6 +112,21 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     );
   });
 
+  /// „Erinnerungen sind aus · Einschalten": as the Buddy's ask does
+  /// ([turnOnRemindersOrSay]); one at a time.
+  Future<void> _turnOnReminders() async {
+    if (_turningOn) return;
+    _turningOn = true;
+    try {
+      await turnOnRemindersOrSay(context, ref);
+    } finally {
+      _turningOn = false;
+    }
+  }
+
+  /// „Einschalten" is on its way (the OS dialog may be up).
+  bool _turningOn = false;
+
   Future<void> _openFeedback() => openExternalUrl(
     context,
     AppConstants.feedbackFormUrl,
@@ -119,8 +138,17 @@ class _MeScreenState extends ConsumerState<MeScreen> {
   Widget build(BuildContext context) {
     final status = ref.watch(buddyProvider).value;
     final version = ref.watch(currentVersionProvider).value;
+    final remindersOff = ref.watch(remindersOffProvider).value ?? false;
 
     final rows = [
+      if (remindersOff)
+        BbSettingsItem(
+          key: MeScreen.remindersKey,
+          icon: Icons.notifications_off_outlined,
+          title: 'Erinnerungen sind aus',
+          subtitle: remindersTurnOnLabel,
+          onTap: () => unawaited(_turnOnReminders()),
+        ),
       if (status != null)
         BbSettingsItem(
           key: MeScreen.streakKey,

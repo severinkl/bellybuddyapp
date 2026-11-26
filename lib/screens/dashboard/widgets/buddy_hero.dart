@@ -18,6 +18,7 @@ import '../../../providers/entries_provider.dart';
 import '../../../providers/home_cover_provider.dart';
 import '../../../providers/journey_provider.dart';
 import '../../../providers/journey_rewards_provider.dart';
+import '../../../providers/notification_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/today_provider.dart';
 import '../../../router/route_names.dart';
@@ -40,12 +41,14 @@ import 'home_flame.dart';
 import 'home_streak_badge.dart';
 import 'journey_reward_actions.dart';
 import 'journey_day_sheet.dart';
+import 'reminders_ask_sheet.dart';
 import 'streak_sheet.dart';
 import 'tutorial/tutorial_keys.dart';
 import 'weekly_tips_offer_sheet.dart';
 
 /// Lines the hero plays one after another: the onboarding's welcome (ahead
-/// of all others), the follow-up after a log and the [BuddyAnnouncement]s.
+/// of all others), the follow-up after a log, the [BuddyAnnouncement]s and
+/// his ask for reminders while they are off ([reminderAskDueProvider]).
 enum _Cue {
   welcome(null),
   followUp(null),
@@ -58,7 +61,8 @@ enum _Cue {
   firstTipOffer(BuddyAnnouncement.firstTipOffer, endsInSheet: true),
   journeyReward(BuddyAnnouncement.journeyReward, endsInSheet: true),
   patternsUnlocked(BuddyAnnouncement.patternsUnlocked, endsInSheet: true),
-  firstTipFailed(BuddyAnnouncement.firstTipFailed);
+  firstTipFailed(BuddyAnnouncement.firstTipFailed),
+  remindersAsk(null, endsInSheet: true);
 
   const _Cue(this.announcement, {this.endsInSheet = false});
 
@@ -66,7 +70,8 @@ enum _Cue {
   final BuddyAnnouncement? announcement;
 
   /// Whether the cue ends in a sheet or page (the new goal, the weekly-tips
-  /// or first-tip offer, a day's reward, „Muster frei!").
+  /// or first-tip offer, a day's reward, „Muster frei!", the ask for
+  /// reminders).
   final bool endsInSheet;
 }
 
@@ -183,6 +188,13 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// A log's follow-up is queued and not said yet.
   bool _followUpPending = false;
 
+  /// His ask for reminders is queued or on stage.
+  bool _remindersAskQueued = false;
+
+  /// Another cue of the running queue ended in a sheet or page: his ask
+  /// for reminders doesn't follow it (it comes on a later visit of Home).
+  bool _sheetCuePlayed = false;
+
   /// The Buddy refresh of the latest log ([BuddyEventsNotifier.lastRefresh]).
   Future<void>? _logRefresh;
 
@@ -258,6 +270,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     ref.listenManual(homeCoveredProvider, (_, covered) {
       if (!covered) _afterFrame(_resume);
     });
+    ref.listenManual(reminderAskDueProvider, (_, due) {
+      if (_isDue(due)) _afterFrame(_queueRemindersAsk);
+    }, fireImmediately: true);
   }
 
   @override
@@ -277,6 +292,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
         _consumeEvent();
         _takeAnnouncements();
         _maybeGreet();
+        _queueRemindersAsk();
         _resume();
       });
     } else if (_override == BuddyMood.empathetic) {
@@ -469,6 +485,21 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _enqueue(fresh.map(_cueFor));
   });
 
+  /// Whether [due] says his ask for reminders is due (not while it is
+  /// being checked again, e.g. right after it was counted).
+  static bool _isDue(AsyncValue<bool> due) =>
+      !due.isLoading && due.value == true;
+
+  /// Queues his ask for reminders once it is due ([reminderAskDueProvider]),
+  /// after whatever is queued already; it plays once Home is free.
+  void _queueRemindersAsk() => _whenVisible(() {
+    if (_remindersAskQueued || !_isDue(ref.read(reminderAskDueProvider))) {
+      return;
+    }
+    _remindersAskQueued = true;
+    _enqueue(const [_Cue.remindersAsk]);
+  });
+
   // --- Log events -------------------------------------------------------------
 
   void _consumeEvent() => _whenVisible(() {
@@ -570,6 +601,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     }
     if (_cues.isEmpty) {
       _cueRunning = false;
+      _sheetCuePlayed = false;
       // All withdrawn (a lone „Neue Tipps" whose set was opened): the
       // greeting they replaced is still due.
       if (!_cuePlayed) _sayMoodLine();
@@ -586,6 +618,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     // Withdrawn meanwhile (the set opened, the weekly tips switched on): it
     // ends unplayed.
     if (!_stillApplies(cue)) return _nextCue();
+    // Never a second sheet right after another's: it comes another time.
+    if (cue == _Cue.remindersAsk && _sheetCuePlayed) return _endRemindersAsk();
+    if (cue.endsInSheet) _sheetCuePlayed = true;
     _cuePlayed = true;
     switch (cue) {
       case _Cue.welcome:
@@ -620,6 +655,8 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
         _playThen(BuddyAction.celebrate, _openPatternsUnlocked);
       case _Cue.firstTipFailed:
         _sayAnnouncement(cue);
+      case _Cue.remindersAsk:
+        _playThen(BuddyAction.wave, _askForReminders);
     }
   }
 
@@ -797,6 +834,40 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
           ? _nextCue()
           : _endUnshown(),
     );
+  }
+
+  /// After the wave: his ask for reminders while they are off
+  /// ([RemindersAskSheet]), counted as one ask ([recordReminderAsk]) as it
+  /// opens, whatever the answer; waits like every cue's sheet
+  /// ([_deferSheet]). No longer due by now (switched on meanwhile): none.
+  /// „Einschalten" turns them on ([turnOnRemindersOrSay]: the OS dialog,
+  /// or the system settings when the OS won't ask any more), and he thanks
+  /// for it once they are on.
+  Future<void> _askForReminders() async {
+    if (_deferSheet(_askForReminders)) return;
+    if (ref.read(reminderAskDueProvider).value != true) {
+      return _endRemindersAsk();
+    }
+    unawaited(recordReminderAsk(ref));
+    final turnOn = await showRemindersAskSheet(context);
+    if (!mounted) return;
+    if (turnOn) {
+      final outcome = await turnOnRemindersOrSay(context, ref);
+      if (!mounted) return;
+      if (outcome == RemindersTurnOn.on) {
+        _remindersAskQueued = false;
+        _say(BuddyCopy.remindersOn);
+        _holdStage();
+        return;
+      }
+    }
+    _endRemindersAsk();
+  }
+
+  /// His ask for reminders ends; the queue goes on.
+  void _endRemindersAsk() {
+    _remindersAskQueued = false;
+    _nextCue();
   }
 
   /// The cue on stage ends without counting as shown: its announcement

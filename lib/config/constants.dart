@@ -374,6 +374,14 @@ class AppConstants {
 
   // SharedPreferences keys
   static const String keyNotificationModalShown = 'notification_modal_shown';
+
+  /// Prefix of how often the Buddy asked again for reminders, per user and
+  /// device (`reminder_asks_<userId>`, an int; see `reminderAskDueProvider`).
+  static const String keyReminderAsksPrefix = 'reminder_asks_';
+
+  /// Prefix of the day he last asked (`reminder_asked_on_<userId>`,
+  /// yyyy-MM-dd).
+  static const String keyReminderAskedOnPrefix = 'reminder_asked_on_';
   static const String keyKnowledgeFeedCache = 'knowledge_feed_cache_v1';
   static const String keyBuddyStatePrefix = 'buddy_state_';
 

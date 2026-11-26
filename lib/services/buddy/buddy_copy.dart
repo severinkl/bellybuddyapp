@@ -179,6 +179,18 @@ class BuddyCopy {
   static const saverEarned = 'Du hast einen Streak-Saver verdient! 🛡';
   static const tipsArrived = 'Neue Tipps sind da! ✨';
 
+  /// His ask for reminders while they are off (its sheet's line; the
+  /// explanation below it, [remindersAskBody]).
+  static const remindersAsk =
+      'Darf ich dich ab und zu ans Eintragen erinnern? 🔔';
+  static const remindersAskBody =
+      'Deine Erinnerungen sind gerade aus. Schaltest du sie ein, sag ich dir '
+      'Bescheid, wenn Essen und Bauchgefühl dran sind. Ändern kannst du das '
+      'jederzeit in den Einstellungen.';
+
+  /// His thanks once they are on.
+  static const remindersOn = 'Danke! Ich sag dir Bescheid 🔔';
+
   /// Home's thanks for today's first counted entry, with the [streak].
   static String streakThanks(int streak) =>
       'Danke! 🔥 $streak ${streak == 1 ? 'Tag' : 'Tage'}';

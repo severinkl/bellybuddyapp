@@ -1,17 +1,25 @@
+// ignore_for_file: invalid_use_of_internal_member
+
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:riverpod/src/internals.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:belly_buddy/config/constants.dart';
+import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
+import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
 import 'package:belly_buddy/providers/upgrade_gate_provider.dart';
+import 'package:belly_buddy/repositories/notification_repository.dart';
+import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/buddy/streak_goal_picker.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/streak_sheet.dart';
@@ -22,6 +30,8 @@ import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
 
 import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
+import '../../helpers/fixtures.dart';
+import '../../helpers/riverpod_helpers.dart';
 
 BuddyStatus _status({int streak = 3, int? goal = 14, String name = 'Bruno'}) =>
     buddyStatus(name: name, goal: goal, streak: streak, todayCounted: true);
@@ -43,6 +53,7 @@ void main() {
     Size size = const Size(393, 852),
     double textScale = 1,
     FakeViewPadding padding = FakeViewPadding.zero,
+    List<Override> extra = const [],
   }) async {
     tester.view.physicalSize = size;
     tester.view.padding = padding;
@@ -58,6 +69,7 @@ void main() {
         buddyClockProvider.overrideWithValue(() => today),
         currentUserIdProvider.overrideWithValue('u1'),
         currentVersionProvider.overrideWith((_) async => '1.2.3'),
+        ...extra,
       ],
     );
     router = GoRouter(
@@ -474,5 +486,74 @@ void main() {
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
     expect(find.text('Version 1.2.3'), findsOneWidget);
+  });
+
+  group('„Erinnerungen sind aus"', () {
+    late FakeNotificationRepository os;
+
+    setUp(() {
+      os = FakeNotificationRepository();
+      SharedPreferences.setMockInitialValues({});
+    });
+
+    /// Ich with [profile] loaded and the OS as [os] reports it.
+    Future<void> pumpWith(WidgetTester tester, UserProfile profile) => pump(
+      tester,
+      extra: [
+        notificationRepositoryProvider.overrideWithValue(os),
+        profileRepositoryProvider.overrideWithValue(
+          FakeProfileRepository()..seedProfile(profile),
+        ),
+        profileProviderSeededWith(profile),
+      ],
+    );
+
+    Finder row() => find.byKey(MeScreen.remindersKey);
+
+    testWidgets('shows while they are off in the app; „Einschalten" asks the '
+        'OS and the row goes once they are on', (tester) async {
+      os.permission = NotificationPermission.notDetermined;
+      await pumpWith(tester, testUserProfile().withNotifications(false));
+
+      expect(row(), findsOneWidget);
+      expect(
+        find.descendant(
+          of: row(),
+          matching: find.text('Erinnerungen sind aus'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: row(), matching: find.text('Einschalten')),
+        findsOneWidget,
+      );
+
+      await tapRow(tester, MeScreen.remindersKey);
+      expect(os.requests, 1);
+      expect(container.read(profileProvider).value!.anyNotificationOn, isTrue);
+      expect(row(), findsNothing);
+    });
+
+    testWidgets('shows while the OS doesn\'t allow them; denied for good, '
+        '„Einschalten" opens the system settings', (tester) async {
+      os.permission = NotificationPermission.denied;
+      await pumpWith(tester, testUserProfile().withNotifications(true));
+
+      expect(row(), findsOneWidget);
+      await tapRow(tester, MeScreen.remindersKey);
+      expect(os.settingsOpened, 1);
+      expect(os.requests, 0);
+    });
+
+    testWidgets('hidden while they are on', (tester) async {
+      await pumpWith(tester, testUserProfile().withNotifications(true));
+      expect(row(), findsNothing);
+      expect(find.text('Erinnerungen sind aus'), findsNothing);
+    });
+
+    testWidgets('hidden while no profile is loaded', (tester) async {
+      await pump(tester);
+      expect(row(), findsNothing);
+    });
   });
 }

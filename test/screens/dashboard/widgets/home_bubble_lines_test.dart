@@ -47,10 +47,13 @@ List<String> _homeLines() {
     for (final pool in BuddyCopy.mood.values) ...pool.map(fill),
     ...BuddyCopy.sleepyNight.map(fill),
     // A log's follow-up, the onboarding's welcome, the first tip on its
-    // way and the announcements.
+    // way, the reminders and the announcements.
     BuddyCopy.streakThanks(streak),
     BuddyWelcomeNotifier.line,
     JourneyCopy.firstTipStarted,
+    // His ask for reminders (its sheet's line) and his thanks once on.
+    BuddyCopy.remindersAsk,
+    BuddyCopy.remindersOn,
     for (final announcement in BuddyAnnouncement.values)
       for (final weeklyTipsOn in [true, false])
         ?BuddyCopy.announcementLine(announcement, weeklyTipsOn: weeklyTipsOn),

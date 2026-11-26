@@ -7,11 +7,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:riverpod/src/internals.dart' show Override;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/journey_rewards.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/recommendation.dart';
+import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
@@ -23,6 +25,8 @@ import 'package:belly_buddy/providers/journey_provider.dart';
 import 'package:belly_buddy/providers/journey_rewards_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
+import 'package:belly_buddy/repositories/notification_repository.dart';
+import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/repositories/recipe_repository.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
@@ -32,6 +36,7 @@ import 'package:belly_buddy/screens/buddy/streak_goal_picker.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/first_tip_offer_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_day_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_list_sheet.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/reminders_ask_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/streak_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/weekly_tips_offer_sheet.dart';
 import 'package:belly_buddy/services/buddy/buddy_copy.dart';
@@ -41,6 +46,7 @@ import 'package:belly_buddy/services/entry_query_service.dart';
 import 'package:belly_buddy/services/journey/journey_copy.dart';
 import 'package:belly_buddy/utils/date_format_utils.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
+import 'package:belly_buddy/widgets/buddy/buddy_says.dart';
 import 'package:belly_buddy/widgets/buddy/need_icon.dart';
 import 'package:belly_buddy/widgets/buddy/streak_badge.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
@@ -3429,6 +3435,228 @@ void main() {
 
       expect(find.byType(StreakBadge), findsOneWidget);
       expect(find.byType(StreakWeekRow), findsNothing);
+    });
+  });
+
+  group('the ask for reminders while they are off', () {
+    late FakeNotificationRepository os;
+
+    /// The profile loaded: the reminders off unless a test says otherwise.
+    late UserProfile profile;
+
+    setUp(() {
+      os = FakeNotificationRepository();
+      profile = testUserProfile().withNotifications(false);
+      SharedPreferences.setMockInitialValues({
+        AppConstants.keyNotificationModalShown: true,
+      });
+    });
+
+    /// The hero with [profile] loaded, the OS
+    /// as [os] reports it and [activeDays] days with an entry.
+    Future<ProviderContainer> pumpAsking(
+      WidgetTester tester, {
+      int activeDays = 2,
+      List<Override> extra = const [],
+    }) => pumpHero(
+      tester,
+      extra: [
+        notificationRepositoryProvider.overrideWithValue(os),
+        profileRepositoryProvider.overrideWithValue(
+          FakeProfileRepository()..seedProfile(profile),
+        ),
+        profileProviderSeededWith(profile),
+        insightsProviderSeededWith(lockedInsights(activeDays: activeDays)),
+        ...extra,
+      ],
+    );
+
+    Future<int> asks() async {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getInt('${AppConstants.keyReminderAsksPrefix}u1') ?? 0;
+    }
+
+    Future<void> tapInSheet(WidgetTester tester, Key key) async {
+      await tester.ensureVisible(find.byKey(key));
+      await tester.tap(find.byKey(key));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+    }
+
+    testWidgets('due: he waves, then asks in a sheet with what reminders do; '
+        '„Später" counts as an ask and he doesn\'t ask again today', (
+      tester,
+    ) async {
+      await pumpAsking(tester);
+      await tick(tester);
+
+      expect(controller(tester).currentAction, BuddyAction.wave);
+      await afterWave(tester);
+      expect(find.byType(RemindersAskSheet), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is BuddySays && w.line == BuddyCopy.remindersAsk,
+        ),
+        findsOneWidget,
+      );
+      expect(find.text(BuddyCopy.remindersAskBody), findsOneWidget);
+      expect(find.text('Einschalten'), findsOneWidget);
+      expect(find.text('Später'), findsOneWidget);
+      expect(await asks(), 1);
+
+      await tapInSheet(tester, RemindersAskSheet.laterKey);
+      expect(find.byType(RemindersAskSheet), findsNothing);
+      expect(os.requests, 0);
+
+      // Home shown again the same day: no second ask.
+      visible.value = false;
+      await tester.pump();
+      visible.value = true;
+      await tester.pump();
+      await advance(tester, const Duration(seconds: 3));
+      expect(find.byType(RemindersAskSheet), findsNothing);
+      expect(await asks(), 1);
+    });
+
+    testWidgets('„Einschalten": the OS dialog; allowed, every notification '
+        'is on and he thanks', (tester) async {
+      os.permission = NotificationPermission.notDetermined;
+      final container = await pumpAsking(tester);
+      await tick(tester);
+      await afterWave(tester);
+
+      await tapInSheet(tester, RemindersAskSheet.turnOnKey);
+      await tick(tester);
+
+      expect(os.requests, 1);
+      expect(os.settingsOpened, 0);
+      expect(container.read(profileProvider).value!.anyNotificationOn, isTrue);
+      expect(controller(tester).bubble, BuddyCopy.remindersOn);
+      await advance(tester, const Duration(seconds: 5));
+    });
+
+    testWidgets('„Einschalten" while the OS won\'t ask any more: opens the '
+        'system settings, never a dead button', (tester) async {
+      os.permission = NotificationPermission.denied;
+      await pumpAsking(tester);
+      await tick(tester);
+      await afterWave(tester);
+
+      await tapInSheet(tester, RemindersAskSheet.turnOnKey);
+
+      expect(os.settingsOpened, 1);
+      expect(os.requests, 0);
+    });
+
+    testWidgets('the settings don\'t open: a SnackBar says so', (tester) async {
+      os
+        ..permission = NotificationPermission.denied
+        ..settingsOpen = false;
+      await pumpAsking(tester);
+      await tick(tester);
+      await afterWave(tester);
+
+      await tapInSheet(tester, RemindersAskSheet.turnOnKey);
+      expect(find.text(remindersTurnOnFailure), findsOneWidget);
+    });
+
+    testWidgets('never while reminders are on', (tester) async {
+      profile = testUserProfile().withNotifications(true);
+      await pumpAsking(tester, activeDays: 30);
+      await tick(tester);
+      await advance(tester, const Duration(seconds: 3));
+
+      expect(find.byType(RemindersAskSheet), findsNothing);
+      expect(await asks(), 0);
+    });
+
+    testWidgets('not before the 2nd active day', (tester) async {
+      await pumpAsking(tester, activeDays: 1);
+      await tick(tester);
+      await advance(tester, const Duration(seconds: 3));
+      expect(find.byType(RemindersAskSheet), findsNothing);
+    });
+
+    testWidgets('not during the tour: it waits until Home is free', (
+      tester,
+    ) async {
+      final tour = Completer<void>();
+      final container = await pumpAsking(
+        tester,
+        extra: [
+          // A pending welcome: the tour waits for it, then covers Home.
+          buddyWelcomeProvider.overrideWith(
+            () => _PresetWelcome(BuddyWelcomeNotifier.line),
+          ),
+        ],
+      );
+      await tick(tester);
+      // The welcome comes first.
+      expect(controller(tester).bubble, BuddyWelcomeNotifier.line);
+      unawaited(
+        container
+            .read(homeCoveredProvider.notifier)
+            .whileOpen(() => tour.future),
+      );
+      await advance(tester, const Duration(seconds: 8));
+      expect(find.byType(RemindersAskSheet), findsNothing);
+      expect(await asks(), 0);
+
+      tour.complete();
+      await tester.pump();
+      await tester.pump();
+      await tick(tester);
+      await afterWave(tester);
+      expect(find.byType(RemindersAskSheet), findsOneWidget);
+    });
+
+    testWidgets('due while „Dein Streak" is open: waits until it closes', (
+      tester,
+    ) async {
+      profile = testUserProfile().withNotifications(true);
+      final container = await pumpAsking(tester);
+      await advance(tester, const Duration(seconds: 3));
+      await openSheet(tester);
+      expect(find.text(_sheetTitle), findsOneWidget);
+
+      // Switched off elsewhere meanwhile: due now, Home covered.
+      await container
+          .read(profileProvider.notifier)
+          .updateProfile(profile.withNotifications(false));
+      await tester.pump();
+      await advance(tester, const Duration(seconds: 3));
+      expect(find.byType(RemindersAskSheet), findsNothing);
+
+      await tester.tapAt(const Offset(10, 10)); // „Dein Streak"'s barrier
+      await tester.pump();
+      await tester.pump();
+      await afterWave(tester);
+      expect(find.text(_sheetTitle), findsNothing);
+      expect(find.byType(RemindersAskSheet), findsOneWidget);
+    });
+
+    testWidgets('not right after another cue\'s sheet: it comes on a later '
+        'visit of Home', (tester) async {
+      buddy = _FakeBuddy(
+        () => _status(announcements: const [BuddyAnnouncement.weeklyTipsOffer]),
+      );
+      await pumpAsking(tester);
+      await tick(tester);
+      await afterWave(tester);
+      expect(find.byType(WeeklyTipsOfferSheet), findsOneWidget);
+
+      await tapInSheet(tester, WeeklyTipsOfferSheet.laterKey);
+      await advance(tester, const Duration(seconds: 3));
+      expect(find.byType(RemindersAskSheet), findsNothing);
+      expect(await asks(), 0);
+
+      visible.value = false;
+      await tester.pump();
+      visible.value = true;
+      await tester.pump();
+      await tick(tester);
+      await afterWave(tester);
+      expect(find.byType(RemindersAskSheet), findsOneWidget);
     });
   });
 }
