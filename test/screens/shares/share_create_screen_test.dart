@@ -230,6 +230,9 @@ void main() {
     expect(find.text('Dein Link ist bereit'), findsNothing);
     expect(find.text('Deine Freigaben'), findsOneWidget);
     expect(find.byType(ShareCreateScreen), findsNothing);
+    // Exactly one list is in the stack.
+    expect(find.byType(SharesScreen, skipOffstage: false), findsOneWidget);
+    expect(router.canPop(), isFalse);
   });
 
   testWidgets('a 409 message is shown and the form is kept', (tester) async {

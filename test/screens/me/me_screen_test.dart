@@ -215,6 +215,8 @@ void main() {
       await pump(tester);
       await tapRow(tester, MeScreen.shareKey);
       expect(find.text('page:/shares/new'), findsOneWidget);
+      // The list lies beneath the create screen.
+      expect(find.text('page:/shares', skipOffstage: false), findsOneWidget);
     });
 
     testWidgets('with shares: opens the list', (tester) async {
@@ -229,6 +231,7 @@ void main() {
       await pump(tester);
       await tapRow(tester, MeScreen.shareKey);
       expect(find.text('page:/shares/new'), findsOneWidget);
+      expect(find.text('page:/shares', skipOffstage: false), findsOneWidget);
     });
 
     testWidgets('while the list loads: shown and tappable', (tester) async {
@@ -237,6 +240,7 @@ void main() {
       expect(find.byKey(MeScreen.shareKey), findsOneWidget);
       await tapRow(tester, MeScreen.shareKey);
       expect(find.text('page:/shares/new'), findsOneWidget);
+      expect(find.text('page:/shares', skipOffstage: false), findsOneWidget);
     });
   });
 

@@ -8,7 +8,6 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../models/data_share.dart';
 import '../../providers/shares_provider.dart';
-import '../../router/route_names.dart';
 import '../../services/share_secrets_store.dart';
 import '../../services/share_service.dart';
 import '../../utils/logger.dart';
@@ -102,7 +101,7 @@ class _ShareCreateScreenState extends ConsumerState<ShareCreateScreen> {
     ref
         .read(justCreatedShareProvider.notifier)
         .set(ShareSecret(link: created.link, code: created.code));
-    unawaited(router.pushReplacement(RoutePaths.shares));
+    router.pop();
   }
 
   @override
@@ -135,6 +134,13 @@ class _ShareCreateScreenState extends ConsumerState<ShareCreateScreen> {
                   TextField(
                     controller: _name,
                     maxLength: _maxNameLength,
+                    buildCounter:
+                        (
+                          _, {
+                          required currentLength,
+                          required isFocused,
+                          maxLength,
+                        }) => null,
                     textCapitalization: TextCapitalization.words,
                     onChanged: (_) => setState(() {}),
                   ),

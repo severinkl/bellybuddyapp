@@ -129,18 +129,16 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     }
   }
 
-  /// The share row: the create screen while there is no share (or the list
-  /// is not there), else the list.
+  /// The share row: the list; with no share (or no list) the create screen
+  /// on top of it.
   void _openShare() {
     unawaited(ref.read(shareRowBadgeProvider.notifier).markTapped());
     final shares = ref.read(sharesProvider).value;
-    unawaited(
-      context.push(
-        shares == null || shares.isEmpty
-            ? RoutePaths.shareCreate
-            : RoutePaths.shares,
-      ),
-    );
+    unawaited(context.push(RoutePaths.shares));
+    // Without a share the create screen goes on top of the list at once.
+    if (shares == null || shares.isEmpty) {
+      unawaited(context.push(RoutePaths.shareCreate));
+    }
   }
 
   Future<void> _openFeedback() => openExternalUrl(
