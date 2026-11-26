@@ -13,7 +13,7 @@ const _body =
     'Dann schalte ich die wöchentlichen Tipps ein: jeden Montag 2–3 Tipps. '
     'Dafür schicke ich deine Einträge der letzten Wochen, die Muster daraus '
     'und deine Bewertungen meiner Tipps an unseren KI-Dienst. Ausschalten '
-    'kannst du sie jederzeit unter Entdecken oder in den Einstellungen.';
+    'kannst du sie jederzeit in den Einstellungen.';
 
 void main() {
   /// A page whose „open" button opens the sheet; each answer goes to

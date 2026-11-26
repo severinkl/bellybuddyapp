@@ -26,8 +26,8 @@ class FirstTipOfferSheet extends StatelessWidget {
       'Ich hab genug für deinen ersten Tipp! Soll ich ihn dir machen? ✨';
   static const body =
       'Dann schalte ich die wöchentlichen Tipps ein: jeden Montag 2–3 Tipps. '
-      '${WeeklyTipsSwitch.sentence} Ausschalten kannst du sie jederzeit unter '
-      'Entdecken oder in den Einstellungen.';
+      '${WeeklyTipsSwitch.sentence} Ausschalten kannst du sie jederzeit in den '
+      'Einstellungen.';
   static const yes = 'Ja, gern', no = 'Nein, danke';
 
   @override

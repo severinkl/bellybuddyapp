@@ -23,6 +23,7 @@ import 'package:belly_buddy/screens/dashboard/widgets/tutorial/spotlight_painter
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_keys.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_step.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
+import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/buddy_offers_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/buddy_welcome_provider.dart';
@@ -42,10 +43,13 @@ import 'package:belly_buddy/services/entry_query_service.dart';
 import 'package:belly_buddy/services/journey/journey_copy.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/router/route_names.dart';
+import 'package:belly_buddy/services/buddy/buddy_copy.dart';
+import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 import 'package:belly_buddy/services/buddy/care_meters.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:belly_buddy/widgets/buddy/need_meter.dart';
+import 'package:belly_buddy/widgets/buddy/streak_badge.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
 import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
 
@@ -90,6 +94,38 @@ List<Override> _overrides({
   isAuthenticatedProvider.overrideWithValue(true),
 ];
 
+/// A Buddy (onboarded) serving [status]; records what the hero marks shown.
+/// A refresh keeps the status.
+class _RecordingBuddy extends FakeBuddyNotifier {
+  _RecordingBuddy(BuddyStatus status) : super(() => status);
+
+  /// Every announcement the hero marked shown, in order.
+  final List<BuddyAnnouncement> shown = [];
+
+  @override
+  Future<void> refresh() async {}
+
+  @override
+  Future<void> markAnnouncementsShown(List<BuddyAnnouncement> announcements) {
+    shown.addAll(announcements);
+    return super.markAnnouncementsShown(announcements);
+  }
+}
+
+/// An onboarded Buddy's status.
+BuddyStatus _onboardedStatus({
+  int streak = 4,
+  int? goal,
+  bool todayCounted = false,
+  List<BuddyAnnouncement> announcements = const [],
+}) => buddyStatus(
+  streak: streak,
+  goal: goal,
+  todayCounted: todayCounted,
+  announcements: announcements,
+  onboardingCompletedAt: DateTime(2026, 11, 1),
+);
+
 /// A Buddy whose onboarding is done, so the onboarding gate stays off.
 FakeBuddyRepository _onboardedBuddy() => FakeBuddyRepository()
   ..store[testUserId] = BuddyState(
@@ -111,6 +147,7 @@ Future<(ProviderContainer, GoRouter)> _pumpTabs(
   required FakeProfileRepository profileRepo,
   required String initialLocation,
   FakeEntryRepository? entryRepo,
+  List<Override> extra = const [],
 }) async {
   final router = GoRouter(
     initialLocation: initialLocation,
@@ -140,11 +177,14 @@ Future<(ProviderContainer, GoRouter)> _pumpTabs(
   );
   addTearDown(router.dispose);
   final container = ProviderContainer.test(
-    overrides: _overrides(
-      profileRepo: profileRepo,
-      buddyRepo: _onboardedBuddy(),
-      entryRepo: entryRepo,
-    ),
+    overrides: [
+      ..._overrides(
+        profileRepo: profileRepo,
+        buddyRepo: _onboardedBuddy(),
+        entryRepo: entryRepo,
+      ),
+      ...extra,
+    ],
   );
   await tester.pumpWidget(
     UncontrolledProviderScope(
@@ -332,14 +372,22 @@ void main() {
         find.byKey(InsightCard.cardKey, skipOffstage: false),
         findsOneWidget,
       );
-      // New user without a buddy_state row: the chip still shows the streak.
-      expect(find.byType(StreakChip), findsOneWidget);
+      // New user without a buddy_state row: the badge still shows the
+      // streak, in the ring.
+      expect(find.byType(StreakChip), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byType(CareRing),
+          matching: find.byType(StreakBadge),
+        ),
+        findsOneWidget,
+      );
 
-      // Top to bottom: the hero (chip, ring, button), then the card.
+      // Top to bottom: the hero (band, ring, button), then the card.
       final hero = tester.getRect(find.byType(BuddyHero));
       expect(
-        tester.getRect(find.byType(StreakChip)).top,
-        lessThan(tester.getRect(find.byType(CareRing)).top),
+        tester.getRect(find.byType(CareRing)).top - hero.top,
+        AppConstants.homeHeadroom,
       );
       expect(
         tester.getRect(find.byKey(BuddyHero.actionKey)).top,
@@ -731,15 +779,22 @@ void main() {
         'Sobald genug Einträge da sind, zeig ich dir hier, **was mir an '
             'deinem Bauch auffällt**.',
         'Im **Tagebuch** siehst du alle deine Einträge, Tag für Tag.',
-        'Unter **Entdecken** findest du Tipps, Alternativen, deine Rezepte '
-            'und Wissen rund um die Verdauung.',
+        'Unter **Entdecken** findest du Alternativen, deine Rezepte und '
+            'Wissen rund um die Verdauung.',
         'Unter **Ich** kannst du mich umbenennen, dein Streak-Ziel ändern und '
             'alles einstellen.',
       ]);
-      // The old tour's false or outdated claims are gone.
+      // The old tour's false or outdated claims are gone; Entdecken shows
+      // a new user no Tipps.
       for (final step in dashboardTutorialSteps) {
         final text = step.richText.map((s) => s.toPlainText()).join();
-        for (final banned in ['Serie', 'Speisen', 'tracken', '1 x pro Tag']) {
+        for (final banned in [
+          'Serie',
+          'Speisen',
+          'tracken',
+          '1 x pro Tag',
+          'Tipps',
+        ]) {
           expect(text, isNot(contains(banned)), reason: text);
         }
       }
@@ -757,7 +812,7 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.byType(AnimatedBuddy), findsOneWidget);
-      expect(find.byType(StreakChip), findsNothing);
+      expect(find.byType(StreakBadge), findsNothing);
       final fetchesAfterLoad = buddyRepo.fetchCount;
 
       await tester.fling(
@@ -879,7 +934,7 @@ void main() {
         tester,
       ) async {
         final router = await pumpPhone(tester, size, padding);
-        expect(find.text('🍝 Mittagessen eintragen'), findsOneWidget);
+        expect(find.text('Mittagessen eintragen'), findsOneWidget);
 
         for (final MapEntry(key: need, value: path) in trackers.entries) {
           await tapOpens(
@@ -1172,6 +1227,17 @@ void main() {
           final hole = _spotlight(tester);
           expect(hole, hero.inflate(AppConstants.spacingXs));
           expect(hole.intersect(ring), ring, reason: 'the ring is in the hole');
+          // So is the room his bubble may take above the ring.
+          final room = tester
+              .widget<CareRing>(find.byType(CareRing))
+              .overBuddyRoom;
+          expect(
+            room,
+            allOf(
+              greaterThan(0),
+              lessThanOrEqualTo(ring.top - hole.top - AppConstants.spacingXs),
+            ),
+          );
           expect(hole.center.dx, closeTo(phone.size.width / 2, 0.01));
 
           for (final step in dashboardTutorialSteps.skip(1)) {
@@ -1187,6 +1253,51 @@ void main() {
           }
         },
       );
+
+      testWidgets('${phone.name}: his bubble hides while the tour is up, so '
+          '„Überspringen" covers nothing he says; after it, it is back', (
+        tester,
+      ) async {
+        tester.view
+          ..physicalSize = phone.size * phone.dpr
+          ..devicePixelRatio = phone.dpr
+          ..padding = FakeViewPadding(
+            top: phone.top * phone.dpr,
+            bottom: phone.bottom * phone.dpr,
+          );
+        addTearDown(tester.view.reset);
+        tester.platformDispatcher.textScaleFactorTestValue = phone.textScale;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await _pumpHome(
+          tester,
+          profiles: FakeProfileRepository()
+            ..seedProfile(testUserProfile(alreadySeenTutorial: false)),
+        );
+        await tester.pumpAndSettle();
+
+        // The pill sits in the room his bubble rises into, above the ring.
+        final skip = tester.getRect(
+          find.byKey(DashboardTutorialOverlay.skipKey),
+        );
+        final ring = tester.getRect(find.byType(CareRing));
+        final room = Rect.fromLTRB(
+          ring.left,
+          ring.top - AppConstants.homeHeadroom,
+          ring.right,
+          ring.top,
+        );
+        expect(skip.overlaps(room), isTrue);
+        expect(find.byType(BuddySpeechBubble), findsNothing);
+        expect(
+          tester.widget<BuddyHero>(find.byType(BuddyHero)).showsBubble,
+          isFalse,
+        );
+
+        await tester.tap(find.text(_tourSkip));
+        await tester.pumpAndSettle();
+        expect(find.text(_tourSkip), findsNothing);
+        expect(find.byType(BuddySpeechBubble), findsOneWidget);
+      });
     }
   });
 
@@ -1266,6 +1377,187 @@ void main() {
 
       expect(find.text(_tourSkip), findsOneWidget);
       expect(container.read(tutorialProvider), isFalse);
+    });
+  });
+
+  group('DashboardScreen tour covers Home', () {
+    final now = DateTime(2026, 11, 23, 14);
+    const thanks = 'Danke! 🔥 1 Tag';
+    const goalTitle = "Wir haben's geschafft! Neues Ziel?";
+
+    BuddyController buddyOf(WidgetTester tester) =>
+        tester.widget<AnimatedBuddy>(find.byType(AnimatedBuddy)).controller;
+
+    /// Home for a new user (the tour not seen) whose Buddy is [buddy],
+    /// at [now]; [welcome] as the Buddy onboarding leaves it, and a log's
+    /// event pending if [logged].
+    Future<ProviderContainer> pumpNewUser(
+      WidgetTester tester,
+      _RecordingBuddy buddy, {
+      bool welcome = false,
+      bool logged = false,
+    }) async {
+      final container = ProviderContainer.test(
+        overrides: [
+          ..._overrides(profile: testUserProfile(alreadySeenTutorial: false)),
+          buddyProvider.overrideWith(() => buddy),
+          buddyClockProvider.overrideWithValue(() => now),
+        ],
+      );
+      if (welcome) {
+        container
+            .read(buddyWelcomeProvider.notifier)
+            .set(BuddyWelcomeNotifier.line);
+      }
+      if (logged) {
+        container
+            .read(buddyEventsProvider.notifier)
+            .emit(
+              BuddyLogEvent(
+                EntryKind.meal,
+                LogSentiment.good,
+                at: now,
+                trackedAt: now,
+              ),
+            );
+      }
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            theme: AppTheme.theme,
+            home: const DashboardScreen(),
+          ),
+        ),
+      );
+      await _settleFirstRun(tester);
+      return container;
+    }
+
+    /// Pumps [d] in 100 ms steps, checking [during] after each.
+    Future<void> pumpChecking(
+      WidgetTester tester,
+      Duration d,
+      void Function() during,
+    ) async {
+      for (
+        var t = Duration.zero;
+        t < d;
+        t += const Duration(milliseconds: 100)
+      ) {
+        await tester.pump(const Duration(milliseconds: 100));
+        during();
+      }
+    }
+
+    /// Skips the tour and lets Home take over again.
+    Future<void> skipTour(WidgetTester tester) async {
+      await tester.tap(find.text(_tourSkip));
+      await tester.pump();
+      for (var i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+      expect(find.text(_tourSkip), findsNothing);
+    }
+
+    testWidgets("a new user: his welcome, then the tour; the first log's "
+        'thanks waits for the tour and comes once it is done', (tester) async {
+      final buddy = _RecordingBuddy(
+        _onboardedStatus(streak: 1, todayCounted: true),
+      );
+      await pumpNewUser(tester, buddy, welcome: true, logged: true);
+      expect(buddyOf(tester).bubble, BuddyWelcomeNotifier.line);
+      expect(find.text(_tourSkip), findsNothing);
+
+      // His welcome has had its time: the tour. However long it is up, he
+      // thanks nobody behind it.
+      await pumpChecking(tester, const Duration(seconds: 4), () {});
+      expect(find.text(_tourSkip), findsOneWidget);
+      await pumpChecking(
+        tester,
+        const Duration(seconds: 8),
+        () => expect(buddyOf(tester).bubble, isNot(thanks)),
+      );
+
+      await skipTour(tester);
+      expect(buddyOf(tester).bubble, thanks);
+    });
+
+    testWidgets('his welcome, then the tour: an announcement waits for the '
+        'tour and counts as shown only once he said it', (tester) async {
+      final buddy = _RecordingBuddy(
+        _onboardedStatus(announcements: const [BuddyAnnouncement.saverEarned]),
+      );
+      await pumpNewUser(tester, buddy, welcome: true);
+      expect(buddyOf(tester).bubble, BuddyWelcomeNotifier.line);
+
+      await pumpChecking(tester, const Duration(seconds: 4), () {});
+      expect(find.text(_tourSkip), findsOneWidget);
+      await pumpChecking(tester, const Duration(seconds: 8), () {
+        expect(buddyOf(tester).bubble, isNot(BuddyCopy.saverEarned));
+        expect(buddy.shown, isEmpty);
+      });
+
+      await skipTour(tester);
+      expect(buddyOf(tester).bubble, BuddyCopy.saverEarned);
+      expect(buddy.shown, isEmpty);
+      await tester.pump(const Duration(seconds: 5));
+      expect(buddy.shown, [BuddyAnnouncement.saverEarned]);
+    });
+
+    testWidgets("a cue's sheet never opens over the tour: the new goal waits "
+        'until it is done', (tester) async {
+      final buddy = _RecordingBuddy(
+        _onboardedStatus(
+          streak: 7,
+          goal: 7,
+          announcements: const [BuddyAnnouncement.goalReached],
+        ),
+      );
+      await pumpNewUser(tester, buddy);
+      expect(find.text(_tourSkip), findsOneWidget);
+
+      await pumpChecking(
+        tester,
+        buddyActionDuration(BuddyAction.celebrate) + const Duration(seconds: 2),
+        () => expect(find.text(goalTitle), findsNothing),
+      );
+      expect(find.text(_tourSkip), findsOneWidget);
+      expect(buddy.shown, isEmpty);
+
+      await skipTour(tester);
+      await tester.pump(buddyActionDuration(BuddyAction.celebrate));
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text(goalTitle), findsOneWidget);
+    });
+
+    testWidgets('replay from Ich with an announcement pending: it waits for '
+        'the tour and counts as shown only once he said it', (tester) async {
+      final buddy = _RecordingBuddy(_onboardedStatus());
+      final (container, router) = await _pumpTabs(
+        tester,
+        profileRepo: FakeProfileRepository()..seedProfile(testUserProfile()),
+        initialLocation: RoutePaths.dashboard,
+        extra: [buddyProvider.overrideWith(() => buddy)],
+      );
+      await _go(tester, router, RoutePaths.me);
+      buddy.push(
+        _onboardedStatus(announcements: const [BuddyAnnouncement.saverEarned]),
+      );
+
+      // As „Tutorial wiederholen" does: request, then go Home.
+      container.read(tutorialProvider.notifier).requestReplay();
+      await _go(tester, router, RoutePaths.dashboard);
+      expect(find.text(_tourSkip), findsOneWidget);
+      await pumpChecking(tester, const Duration(seconds: 8), () {
+        expect(buddyOf(tester).bubble, isNot(BuddyCopy.saverEarned));
+        expect(buddy.shown, isEmpty);
+      });
+
+      await skipTour(tester);
+      expect(buddyOf(tester).bubble, BuddyCopy.saverEarned);
+      await tester.pump(const Duration(seconds: 5));
+      expect(buddy.shown, [BuddyAnnouncement.saverEarned]);
     });
   });
 

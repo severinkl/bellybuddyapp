@@ -1007,12 +1007,11 @@ void main() {
       );
     });
 
-    test('the first tip failed: „bleiben eingeschaltet" only while the '
-        'weekly tips are on', () {
+    test('the first tip failed: „Wöchentliche Tipps bleiben an" only while '
+        'the weekly tips are on', () {
       expect(
         JourneyCopy.firstTipFailed(weeklyTipsOn: true),
-        'Dein erster Tipp hat gerade nicht geklappt. Die wöchentlichen Tipps '
-        'bleiben eingeschaltet.',
+        'Dein erster Tipp ging schief. Wöchentliche Tipps bleiben an.',
       );
       expect(
         JourneyCopy.firstTipFailed(weeklyTipsOn: false),

@@ -178,10 +178,9 @@ void main() {
         ),
         findsOneWidget,
       );
-      expect(
-        find.text('Das siehst du dann · Beispiel'.toUpperCase()),
-        findsOneWidget,
-      );
+      // Labelled without „Beispiel" (the blur shows it is a sample).
+      expect(find.text('Das siehst du dann'.toUpperCase()), findsOneWidget);
+      expect(find.textContaining('BEISPIEL'), findsNothing);
       expect(
         find.text(
           'ⓘ Beobachtung aus deinen Einträgen, kein medizinischer Befund.',

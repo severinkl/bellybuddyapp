@@ -22,15 +22,9 @@ import '../test/helpers/widget_tester_helpers.dart';
 import 'helpers/test_app.dart';
 import 'helpers/welcome_driver.dart' show pumpUntilFound;
 
-/// The weekly-tips switch inside Entdecken's opt-in card.
-Finder get _optInSwitch => find.descendant(
-  of: find.byKey(DiscoverTipsSection.optInKey),
-  matching: find.byType(WeeklyTipsSwitch),
-);
-
-/// Its switch tile.
-Finder get _optInTile => find.descendant(
-  of: _optInSwitch,
+/// The weekly-tips switch tile on the notification settings.
+Finder get _settingsSwitch => find.descendant(
+  of: find.byType(SettingsNotificationsScreen),
   matching: find.byKey(WeeklyTipsSwitch.switchKey),
 );
 
@@ -98,8 +92,8 @@ void main() {
     },
   );
 
-  testWidgets('opt-in: the switch on Entdecken turns the weekly tips on, '
-      'and Settings show it next to „Tipps per Push"', (tester) async {
+  testWidgets('no tips: Entdecken has no Tipps; Einstellungen turns the '
+      'weekly tips on, next to „Tipps per Push"', (tester) async {
     final profileRepo = FakeProfileRepository();
     await tester.pumpWidget(
       buildTestApp(
@@ -110,13 +104,15 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tapVisible(find.byKey(BbBottomNav.navDiscoverKey));
 
-    expect(_optInSwitch, findsOneWidget);
-    expect(find.text(DiscoverTipsSection.emptyWhileOn), findsNothing);
-
-    await tester.tapVisible(_optInTile);
-    expect(profileRepo.weeklyTipsWrites, [true]);
-    expect(find.text(DiscoverTipsSection.emptyWhileOn), findsOneWidget);
-    expect(_optInSwitch, findsNothing);
+    expect(find.byType(DiscoverScreen), findsOneWidget);
+    expect(find.byKey(DiscoverTipsSection.optInKey), findsNothing);
+    expect(
+      find.descendant(
+        of: find.byType(DiscoverScreen),
+        matching: find.text('Tipps'),
+      ),
+      findsNothing,
+    );
 
     await tester.tapVisible(find.byKey(BbBottomNav.navMeKey));
     await tester.tapVisible(find.byKey(MeScreen.settingsKey));
@@ -127,13 +123,12 @@ void main() {
       ),
     );
 
-    final weekly = find.descendant(
-      of: find.byType(SettingsNotificationsScreen),
-      matching: find.byKey(WeeklyTipsSwitch.switchKey),
-    );
-    await tester.ensureVisible(weekly);
+    await tester.ensureVisible(_settingsSwitch);
     await tester.pumpAndSettle();
-    expect(tester.widget<SwitchListTile>(weekly).value, isTrue);
+    expect(tester.widget<SwitchListTile>(_settingsSwitch).value, isFalse);
+    await tester.tapVisible(_settingsSwitch);
+    expect(profileRepo.weeklyTipsWrites, [true]);
+    expect(tester.widget<SwitchListTile>(_settingsSwitch).value, isTrue);
     // The push is a switch of its own, still off.
     final push = find.widgetWithText(SwitchListTile, 'Tipps per Push');
     await tester.ensureVisible(push);
@@ -175,8 +170,10 @@ void main() {
     expect(dot, findsNothing);
   });
 
-  testWidgets('offer: first patterns bring the weekly-tips offer; '
-      '„Zu den Tipps" opens Entdecken with the switch', (tester) async {
+  testWidgets('offer: first patterns bring the weekly-tips offer; „Zu den '
+      'Einstellungen" opens the notification settings with the switch', (
+    tester,
+  ) async {
     final entryRepo = FakeEntryRepository()
       ..insightSource = unlockedInsightSource();
     await tester.pumpWidget(buildTestApp(entryRepo: entryRepo));
@@ -189,9 +186,11 @@ void main() {
 
     await tester.tapVisible(find.byKey(WeeklyTipsOfferSheet.openKey));
     expect(find.byType(WeeklyTipsOfferSheet), findsNothing);
-    expect(find.byType(DiscoverScreen), findsOneWidget);
-    expect(_optInSwitch.hitTestable(), findsOneWidget);
+    expect(find.byType(SettingsNotificationsScreen), findsOneWidget);
+    await tester.ensureVisible(_settingsSwitch);
+    await tester.pumpAndSettle();
+    expect(_settingsSwitch.hitTestable(), findsOneWidget);
     // The offer only leads there: the weekly tips stay off until switched.
-    expect(tester.widget<SwitchListTile>(_optInTile).value, isFalse);
+    expect(tester.widget<SwitchListTile>(_settingsSwitch).value, isFalse);
   });
 }

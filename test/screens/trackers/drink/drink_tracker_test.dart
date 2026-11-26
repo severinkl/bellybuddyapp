@@ -27,6 +27,7 @@ import '../../../helpers/fakes.dart';
 import '../../../helpers/fixtures.dart';
 import '../../../helpers/layout_checks.dart';
 import '../../../helpers/riverpod_helpers.dart';
+import '../../../helpers/widget_tester_helpers.dart';
 
 List<Override> _overrides({FakeDrinkRepository? drinkRepo}) => [
   entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
@@ -289,7 +290,7 @@ void main() {
           await tester.ensureVisible(find.text('Speichern'));
           await tester.tap(find.text('Speichern'));
           await tester.pump();
-          await tester.pump(const Duration(milliseconds: 1300));
+          await pumpPastCharge(tester);
         });
 
         expect(find.byType(ChargingMeter), findsOneWidget);

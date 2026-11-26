@@ -34,31 +34,37 @@ void main() {
     h.dispose();
   });
 
-  testWidgets('the flame replaces the emoji', (t) async {
-    await t.pumpWidget(_wrap(const StreakChip(streak: 4, todayCounted: false)));
-    expect(find.textContaining('🔥'), findsNothing);
-    expect(find.text('4 Tage'), findsOneWidget);
-    var flame = t.widget<StreakFlame>(find.byType(StreakFlame));
-    expect(flame.streak, 4);
-    expect(flame.lit, isFalse);
-    expect(flame.height, AppConstants.streakFlameChipHeight);
-    // Its motion stays in „Dein Streak" and on the success page.
-    expect(flame.still, isTrue);
+  testWidgets('shows the count only: no flame', (t) async {
+    await t.pumpWidget(_wrap(const StreakChip(streak: 5, todayCounted: true)));
 
-    await t.pumpWidget(_wrap(const StreakChip(streak: 4, todayCounted: true)));
-    flame = t.widget<StreakFlame>(find.byType(StreakFlame));
-    expect(flame.lit, isTrue);
+    expect(find.byType(StreakFlame), findsNothing);
+    expect(find.textContaining('🔥'), findsNothing);
+    expect(find.text('5 Tage'), findsOneWidget);
   });
 
-  testWidgets('the flame grows with the text scale', (t) async {
-    t.platformDispatcher.textScaleFactorTestValue = 1.3;
-    addTearDown(t.platformDispatcher.clearTextScaleFactorTestValue);
-    await t.pumpWidget(_wrap(const StreakChip(streak: 4, todayCounted: true)));
-
-    expect(
-      t.widget<StreakFlame>(find.byType(StreakFlame)).height,
-      moreOrLessEquals(AppConstants.streakFlameChipHeight * 1.3),
+  testWidgets('its tap area is at least 48 dp tall', (t) async {
+    var taps = 0;
+    await t.pumpWidget(
+      _wrap(StreakChip(streak: 5, todayCounted: true, onTap: () => taps++)),
     );
+
+    final chip = t.getRect(find.byType(StreakChip));
+    final pill = t.getRect(
+      find.descendant(
+        of: find.byType(StreakChip),
+        matching: find.byType(Container),
+      ),
+    );
+    expect(chip.height, greaterThanOrEqualTo(AppConstants.homeTapTarget));
+    // Just that tall (the pill is shorter), as wide as the pill, which is
+    // centred in it.
+    expect(pill.height, lessThan(AppConstants.homeTapTarget));
+    expect(chip.height, AppConstants.homeTapTarget);
+    expect(chip.width, pill.width);
+    expect(pill.center, chip.center);
+
+    await t.tapAt(chip.topLeft + const Offset(2, 2));
+    expect(taps, 1);
   });
 
   testWidgets('semantics unchanged', (t) async {

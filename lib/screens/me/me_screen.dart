@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/buddy_provider.dart';
+import '../../providers/notification_provider.dart';
 import '../../providers/tutorial_provider.dart';
 import '../../providers/upgrade_gate_provider.dart';
 import '../../router/route_names.dart';
@@ -17,12 +18,16 @@ import '../../utils/url_utils.dart';
 import '../../widgets/buddy/buddy.dart';
 import '../../widgets/buddy/streak_chip.dart';
 import '../../widgets/common/bb_settings_item.dart';
+import '../dashboard/widgets/reminders_ask_sheet.dart';
 import '../dashboard/widgets/streak_sheet.dart';
 import 'widgets/rename_buddy_dialog.dart';
 
-/// The Ich tab: the Buddy with his name („Umbenennen") and streak chip,
-/// then Streak & Ziel („Dein Streak"), Einstellungen, Tutorial wiederholen
-/// and Feedback geben, and the app version in small print.
+/// The Ich tab, without an app bar (its body sits in a [SafeArea], as
+/// Home's does; the Buddy's name is the screen's heading): the Buddy with
+/// his name („Umbenennen") and streak chip, then „Erinnerungen sind aus"
+/// while notifications are off ([remindersOffProvider]; „Einschalten"),
+/// Streak & Ziel („Dein Streak"), Einstellungen, Tutorial wiederholen and
+/// Feedback geben, and the app version in small print.
 ///
 /// Without a Buddy status (loading, error) the Buddy shows as 'Buddy',
 /// without the chip, „Umbenennen" and the Streak row.
@@ -30,6 +35,7 @@ class MeScreen extends ConsumerStatefulWidget {
   const MeScreen({super.key, this.openUrl = launchUrl});
 
   static const renameKey = Key('me_rename');
+  static const remindersKey = Key('me_reminders');
   static const streakKey = Key('me_streak');
   static const settingsKey = Key('me_settings');
   static const tutorialKey = Key('me_tutorial');
@@ -50,6 +56,9 @@ class _MeScreenState extends ConsumerState<MeScreen> {
   /// „Dein Streak" or the rename dialog is open, or what was chosen there
   /// still saves ([_oneSheet]).
   bool _sheetOpen = false;
+
+  /// „Einschalten" is on its way (the OS dialog may be up).
+  bool _turningOn = false;
 
   @override
   void dispose() {
@@ -106,6 +115,18 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     );
   });
 
+  /// „Erinnerungen sind aus · Einschalten": as the Buddy's ask does
+  /// ([turnOnRemindersOrSay]); one at a time.
+  Future<void> _turnOnReminders() async {
+    if (_turningOn) return;
+    _turningOn = true;
+    try {
+      await turnOnRemindersOrSay(context, ref);
+    } finally {
+      _turningOn = false;
+    }
+  }
+
   Future<void> _openFeedback() => openExternalUrl(
     context,
     AppConstants.feedbackFormUrl,
@@ -117,8 +138,17 @@ class _MeScreenState extends ConsumerState<MeScreen> {
   Widget build(BuildContext context) {
     final status = ref.watch(buddyProvider).value;
     final version = ref.watch(currentVersionProvider).value;
+    final remindersOff = ref.watch(remindersOffProvider).value ?? false;
 
     final rows = [
+      if (remindersOff)
+        BbSettingsItem(
+          key: MeScreen.remindersKey,
+          icon: Icons.notifications_off_outlined,
+          title: 'Erinnerungen sind aus',
+          subtitle: remindersTurnOnLabel,
+          onTap: () => unawaited(_turnOnReminders()),
+        ),
       if (status != null)
         BbSettingsItem(
           key: MeScreen.streakKey,
@@ -152,40 +182,41 @@ class _MeScreenState extends ConsumerState<MeScreen> {
 
     return Scaffold(
       backgroundColor: AppTheme.background,
-      appBar: AppBar(title: const Text('Ich')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(
-          AppConstants.spacingMd,
-          AppConstants.spacingSm,
-          AppConstants.spacingMd,
-          AppConstants.spacingLg,
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _Header(
-              controller: _buddy,
-              status: status,
-              onRename: () => unawaited(_rename()),
-              onStreak: () => unawaited(_openStreak()),
-            ),
-            AppConstants.gap24,
-            for (final (i, row) in rows.indexed) ...[
-              if (i > 0) AppConstants.gap12,
-              row,
-            ],
-            if (version != null) ...[
-              AppConstants.gap24,
-              Text(
-                'Version $version',
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: AppTheme.fontSizeCaption,
-                  color: AppTheme.mutedForeground,
-                ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(
+            AppConstants.spacingMd,
+            AppConstants.spacingSm,
+            AppConstants.spacingMd,
+            AppConstants.spacingLg,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _Header(
+                controller: _buddy,
+                status: status,
+                onRename: () => unawaited(_rename()),
+                onStreak: () => unawaited(_openStreak()),
               ),
+              AppConstants.gap24,
+              for (final (i, row) in rows.indexed) ...[
+                if (i > 0) AppConstants.gap12,
+                row,
+              ],
+              if (version != null) ...[
+                AppConstants.gap24,
+                Text(
+                  'Version $version',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: AppTheme.fontSizeCaption,
+                    color: AppTheme.mutedForeground,
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );
@@ -231,12 +262,15 @@ class _Header extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                name,
-                style: const TextStyle(
-                  fontSize: AppTheme.fontSizeHeading,
-                  fontWeight: FontWeight.w700,
-                  color: AppTheme.foreground,
+              Semantics(
+                header: true,
+                child: Text(
+                  name,
+                  style: const TextStyle(
+                    fontSize: AppTheme.fontSizeHeading,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.foreground,
+                  ),
                 ),
               ),
               if (status != null) ...[

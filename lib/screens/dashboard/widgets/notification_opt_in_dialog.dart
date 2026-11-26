@@ -71,7 +71,7 @@ class _NotificationOptInDialogState
       await postponeReminders(ref);
     } catch (e) {
       _log.error('failed to postpone notifications', e);
-      await markNotificationOptInOffered();
+      await markNotificationOptInOffered(ref);
     }
     if (!mounted) return;
     Navigator.pop(context, false);

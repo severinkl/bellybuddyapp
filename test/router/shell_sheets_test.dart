@@ -3,7 +3,7 @@ import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/router/app_router.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/diary/widgets/diary_entry_card.dart';
-import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
+import 'package:belly_buddy/widgets/buddy/streak_badge.dart';
 import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
 import 'package:belly_buddy/widgets/log_sheet/log_sheet.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -77,7 +77,7 @@ void main() {
       'on a tab closes it and stays on Home', (tester) async {
     final container = await _pumpShell(tester);
 
-    await tester.tap(find.byType(StreakChip));
+    await tester.tap(find.byType(StreakBadge));
     await tester.pumpAndSettle();
     expect(find.text('Dein Streak'), findsOneWidget);
 

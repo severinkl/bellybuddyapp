@@ -73,8 +73,9 @@ abstract final class JourneyCopy {
   static const day3AfterNoLine = 'Alles klar! Dann hier ein Rezept für dich.';
 
   /// Day 3 once the first tip was accepted: the tip is the reward, never a
-  /// recipe.
-  static const day3TipLine = 'Tag 3! Deine Tipps findest du unter Entdecken.';
+  /// recipe. The sheet's [toTips] opens the Tipps, so the line holds even
+  /// before the first tip is there (Entdecken shows Tipps only then).
+  static const day3TipLine = "Tag 3! Hier geht's zu deinen Tipps.";
 
   static const day5Line =
       'Tag 5! Hier ist ein Rezept mit Zutaten, die du schon gegessen hast.';
@@ -96,23 +97,20 @@ abstract final class JourneyCopy {
   static const day6Body =
       'So sieht die Muster-Seite dann aus, hier mit ausgedachten Werten:';
 
-  /// The label on the day-6 preview's fictional sample.
-  static const example = 'Beispiel';
-
   /// A recipe reward while the fit is unchecked, or nothing is left to pick.
   static const noRecipe =
       'Rezepte, die zu dir passen, findest du unter Entdecken.';
 
+  // Said by the Buddy on Home: within BuddyCopy's length budget.
+
   static const firstTipStarted =
-      'Ich mach dir jetzt deinen ersten Tipp. Das dauert einen Moment ✨';
+      'Ich mach dir jetzt deinen ersten Tipp. Einen Moment ✨';
 
   /// The first tip failed; that the weekly tips stay on only while they
   /// are known to be ([weeklyTipsOn]).
   static String firstTipFailed({required bool weeklyTipsOn}) => weeklyTipsOn
-      ? '$_firstTipFailed Die wöchentlichen Tipps bleiben eingeschaltet.'
-      : _firstTipFailed;
-
-  static const _firstTipFailed = 'Dein erster Tipp hat gerade nicht geklappt.';
+      ? 'Dein erster Tipp ging schief. Wöchentliche Tipps bleiben an.'
+      : 'Dein erster Tipp hat gerade nicht geklappt.';
 
   // Buttons.
 

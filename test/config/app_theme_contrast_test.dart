@@ -59,6 +59,19 @@ void main() {
     }
   });
 
+  test('the ember on the primary colour (the success page) has at least '
+      '3:1 on it; the pale one would not show there', () {
+    expect(
+      _contrast(AppTheme.streakEmberOnPrimary, AppTheme.primary),
+      greaterThanOrEqualTo(3.0),
+    );
+    expect(
+      _contrast(AppTheme.streakEmberCoreOnPrimary, AppTheme.primary),
+      greaterThan(_contrast(AppTheme.streakEmberCore, AppTheme.primary)),
+    );
+    expect(_contrast(AppTheme.streakEmber, AppTheme.primary), lessThan(1.5));
+  });
+
   test('placeholderGlyph is the foreground at 45 %', () {
     expect(
       AppTheme.placeholderGlyph,

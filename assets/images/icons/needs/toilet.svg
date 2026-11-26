@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <g transform="translate(0.98 -1.37) scale(0.94)">
+    <g transform="translate(2 2.5)" fill="#FFABB6" stroke="#FFABB6" stroke-width="3.5" stroke-linejoin="round">
+      <path d="M15 15V49A17 6.5 0 0 0 49 49V15Z"/>
+      <ellipse cx="32" cy="15" rx="17" ry="6.5"/>
+      <path d="M21 38C26 39.6 38 39.6 43 38V60l-2.75-1.8-2.75 1.8-2.75-1.8-2.75 1.8-2.75-1.8-2.75 1.8-2.75-1.8-2.75 1.8Z"/>
+    </g>
+    <path fill="#FFFFFF" d="M15 15V49A17 6.5 0 0 0 49 49V15Z"/>
+    <path fill="#F2E4D6" d="M41 20.6C45 19.8 47.6 18.4 49 16.6V49C47.6 50.8 45 52.2 41 53Z"/>
+    <path stroke="#0D0D0F" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" fill="none" d="M15 15V49A17 6.5 0 0 0 49 49V15"/>
+    <ellipse stroke="#0D0D0F" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" fill="#FFFFFF" cx="32" cy="15" rx="17" ry="6.5"/>
+    <ellipse stroke="#0D0D0F" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" fill="#D9C3A8" cx="32" cy="15" rx="6" ry="2.4"/>
+    <path stroke="#0D0D0F" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round" fill="#FFFFFF" d="M21 38C26 39.6 38 39.6 43 38V60l-2.75-1.8-2.75 1.8-2.75-1.8-2.75 1.8-2.75-1.8-2.75 1.8-2.75-1.8-2.75 1.8Z"/>
+    <path stroke="#0D0D0F" stroke-width="1.8" stroke-linecap="round" fill="none" stroke-dasharray="2 2.6" d="M22.5 50H41.5"/>
+  </g>
+</svg>

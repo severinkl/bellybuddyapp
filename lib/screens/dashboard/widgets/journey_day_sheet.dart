@@ -10,6 +10,7 @@ import '../../../providers/insights_provider.dart';
 import '../../../providers/journey_rewards_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/recipe_collection_provider.dart';
+import '../../../services/insights/insight_copy.dart';
 import '../../../services/journey/journey_copy.dart';
 import '../../../services/journey/journey_rules.dart';
 import '../../../widgets/buddy/buddy_ask_sheet.dart';
@@ -257,8 +258,8 @@ class _LinkCard extends StatelessWidget {
   }
 }
 
-/// Day 6: what the preview is, its „Beispiel" label and the Muster page's
-/// fictional sample.
+/// Day 6: what the preview is, its label (the Muster preview's) and the
+/// Muster page's fictional sample.
 class _PatternsSample extends StatelessWidget {
   const _PatternsSample();
 
@@ -270,7 +271,7 @@ class _PatternsSample extends StatelessWidget {
       children: [
         BuddySheetText(JourneyCopy.day6Body),
         AppConstants.gap12,
-        StepFieldLabel(JourneyCopy.example),
+        StepFieldLabel(InsightCopy.previewLabel),
         AppConstants.gap8,
         PatternsPreview(),
       ],

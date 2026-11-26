@@ -7,17 +7,14 @@ import '../models/gut_feeling_entry.dart';
 
 /// The four Bauchgefühl levels: sehr gut, gut, mittel, schlecht.
 enum GutFeelingRatingLevel {
-  spiGut('Sehr gut', '😊'),
-  gut('Gut', '🙂'),
-  mittel('Mittel', '😐'),
-  schlecht('Schlecht', '😕');
+  spiGut('Sehr gut'),
+  gut('Gut'),
+  mittel('Mittel'),
+  schlecht('Schlecht');
 
   final String label;
 
-  /// A face for how the belly felt: it mirrors the answer, it doesn't judge.
-  final String face;
-
-  const GutFeelingRatingLevel(this.label, this.face);
+  const GutFeelingRatingLevel(this.label);
 }
 
 class GutFeelingRating {

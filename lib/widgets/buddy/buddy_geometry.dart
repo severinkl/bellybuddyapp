@@ -4,6 +4,8 @@ import 'dart:ui';
 
 import 'buddy_shape_data.dart';
 
+export 'buddy_shape_data.dart' show kBuddyFoot;
+
 /// Splits every line/cubic into short cubic pieces (control polygon <= [maxLen])
 /// so local deformations actually bend the outline. Done once.
 List<double> subdivideBuddyPath(List<double> d, {double maxLen = 45}) {
@@ -202,6 +204,9 @@ class BuddyLayout {
 
   final double scale;
   final Offset origin;
+
+  /// The top of his head (his image's top), in local coordinates.
+  double get headTop => origin.dy;
 
   Offset toImage(Offset local) =>
       scale == 0 ? Offset.zero : (local - origin) / scale;

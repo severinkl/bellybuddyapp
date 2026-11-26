@@ -1,37 +1,26 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/recommendation.dart';
-import '../../../providers/recommendation_provider.dart';
 import '../../../widgets/common/bb_card.dart';
 import 'discover_section.dart';
 
-/// The newest tip set: its ISO week, how many tips, two lines of its
-/// summary, and „Neu" while there is a new set ([unseenTipSetProvider], as
-/// for Home's row and the Buddy: a set without tips is never new). No
-/// tips: a line, not tappable.
-class DiscoverTipsCard extends ConsumerWidget {
-  const DiscoverTipsCard({super.key, required this.tips, required this.onTap});
+/// A tip set (the newest with tips, `newestTipSetProvider`): its ISO week,
+/// how many tips, two lines of its summary, and „Neu" while it is unseen
+/// (the set `unseenTipSetProvider` follows, as Home's row and the Buddy
+/// do).
+class DiscoverTipsCard extends StatelessWidget {
+  const DiscoverTipsCard({super.key, required this.set, required this.onTap});
 
-  /// The card (or the line in its place).
   static const cardKey = Key('discover_tips');
 
-  final AsyncValue<List<Recommendation>> tips;
+  final Recommendation set;
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final isNew = ref.watch(unseenTipSetProvider) != null;
-    final list = tips.value;
-    if (list == null) return DiscoverNote.pending(tips, 'Tipps', key: cardKey);
-    if (list.isEmpty) {
-      return const DiscoverNote(key: cardKey, 'Noch keine Tipps.');
-    }
-    // The list is newest first.
-    final newest = list.first;
-    final summary = newest.summary?.trim() ?? '';
+  Widget build(BuildContext context) {
+    final summary = set.summary?.trim() ?? '';
     return BbCard(
       key: cardKey,
       onTap: onTap,
@@ -40,13 +29,13 @@ class DiscoverTipsCard extends ConsumerWidget {
         children: [
           Row(
             children: [
-              if (isNew) ...[
+              if (set.seenAt == null) ...[
                 const DiscoverPill('Neu'),
                 const SizedBox(width: AppConstants.spacingSm),
               ],
               Expanded(
                 child: Text(
-                  newest.weekLabel ?? 'Deine Tipps',
+                  set.weekLabel ?? 'Deine Tipps',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -56,7 +45,7 @@ class DiscoverTipsCard extends ConsumerWidget {
                   ),
                 ),
               ),
-              Text(newest.tipCountLabel, style: AppTheme.captionMutedStyle),
+              Text(set.tipCountLabel, style: AppTheme.captionMutedStyle),
               const Icon(Icons.chevron_right, color: AppTheme.mutedForeground),
             ],
           ),

@@ -10,6 +10,7 @@ import '../../../router/navigation_extensions.dart';
 import '../../../services/buddy/buddy_mood_logic.dart';
 import '../../../services/haptic_service.dart';
 import '../../../utils/date_format_utils.dart';
+import '../../../utils/gut_feeling_rating.dart';
 import '../../../widgets/buddy/log_success_hero.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/bb_success_overlay.dart';
@@ -128,6 +129,7 @@ class _GutFeelingTrackerScreenState
       kind: EntryKind.gutFeeling,
       trackedAt: entry.trackedAt,
       sentiment: sentimentForGutFeeling(entry),
+      gutFeeling: calculateGutFeelingRating(entry).level,
       save: () => ref.read(entriesProvider.notifier).addGutFeeling(entry),
     );
     if (!mounted) return;

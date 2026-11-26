@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/buddy/need_meter.dart';
@@ -24,3 +25,20 @@ double? needMeterLevel(WidgetTester tester, CareNeed need) => tester
       ),
     )
     .level;
+
+/// Pumps [step] at a time until [done] holds, at most [max] times.
+Future<void> pumpUntil(
+  WidgetTester tester,
+  bool Function() done, {
+  Duration step = const Duration(milliseconds: 50),
+  int max = 200,
+}) async {
+  for (var i = 0; i < max && !done(); i++) {
+    await tester.pump(step);
+  }
+}
+
+/// Pumps until the success page's charging circle is full.
+Future<void> pumpPastCharge(WidgetTester tester) => tester.pump(
+  AppConstants.careChargeDuration + const Duration(milliseconds: 100),
+);

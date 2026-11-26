@@ -18,6 +18,7 @@ import '../../../providers/entries_provider.dart';
 import '../../../providers/home_cover_provider.dart';
 import '../../../providers/journey_provider.dart';
 import '../../../providers/journey_rewards_provider.dart';
+import '../../../providers/notification_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/today_provider.dart';
 import '../../../router/route_names.dart';
@@ -31,19 +32,23 @@ import '../../../utils/date_format_utils.dart';
 import '../../../utils/logger.dart';
 import '../../../utils/url_utils.dart';
 import '../../../widgets/buddy/buddy.dart';
-import '../../../widgets/buddy/streak_chip.dart';
+import '../../../widgets/buddy/need_icon.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/weekly_tips_switch.dart';
 import '../../buddy/streak_goal_picker.dart';
 import 'care_ring.dart';
+import 'home_flame.dart';
+import 'home_streak_badge.dart';
 import 'journey_reward_actions.dart';
 import 'journey_day_sheet.dart';
+import 'reminders_ask_sheet.dart';
 import 'streak_sheet.dart';
 import 'tutorial/tutorial_keys.dart';
 import 'weekly_tips_offer_sheet.dart';
 
 /// Lines the hero plays one after another: the onboarding's welcome (ahead
-/// of all others), the follow-up after a log and the [BuddyAnnouncement]s.
+/// of all others), the follow-up after a log, the [BuddyAnnouncement]s and
+/// his ask for reminders while they are off ([reminderAskDueProvider]).
 enum _Cue {
   welcome(null),
   followUp(null),
@@ -56,7 +61,8 @@ enum _Cue {
   firstTipOffer(BuddyAnnouncement.firstTipOffer, endsInSheet: true),
   journeyReward(BuddyAnnouncement.journeyReward, endsInSheet: true),
   patternsUnlocked(BuddyAnnouncement.patternsUnlocked, endsInSheet: true),
-  firstTipFailed(BuddyAnnouncement.firstTipFailed);
+  firstTipFailed(BuddyAnnouncement.firstTipFailed),
+  remindersAsk(null, endsInSheet: true);
 
   const _Cue(this.announcement, {this.endsInSheet = false});
 
@@ -64,7 +70,8 @@ enum _Cue {
   final BuddyAnnouncement? announcement;
 
   /// Whether the cue ends in a sheet or page (the new goal, the weekly-tips
-  /// or first-tip offer, a day's reward, „Muster frei!").
+  /// or first-tip offer, a day's reward, „Muster frei!", the ask for
+  /// reminders).
   final bool endsInSheet;
 }
 
@@ -81,11 +88,16 @@ _Cue _cueFor(BuddyAnnouncement a) => switch (a) {
   BuddyAnnouncement.firstTipFailed => _Cue.firstTipFailed,
 };
 
-/// The Buddy at the top of the dashboard: the streak chip (opens „Dein
-/// Streak"), his speech bubble, the Buddy inside the [CareRing] of his four
-/// needs (tapping a need's bubble opens its tracker; tapping the Buddy
-/// makes him talk), and a button that opens the tracker for the next thing
-/// to log ([nextCareAction]).
+/// The Buddy at the top of the dashboard: the Buddy inside the [CareRing]
+/// of his four needs (tapping a need's bubble opens its tracker; tapping
+/// the Buddy makes him talk), the streak flame behind him with its count's
+/// badge at its foot ([HomeStreakBadge], opens „Dein Streak"), and a button
+/// that opens the tracker for the next thing to log ([nextCareAction]).
+/// His speech bubble floats over his head ([CareRing.overBuddy]), wider
+/// with large text: it may rise into the band above the ring
+/// ([AppConstants.homeHeadroom], where the flame's tips burn too; a line
+/// too tall for that is scaled down; none of his are), never moves the
+/// layout and never takes a tap (Essen and Trinken under it still open).
 ///
 /// The need meters, his mood and the next action follow [careNowProvider]
 /// (when each need was last logged, seen from the current minute); a new
@@ -99,15 +111,26 @@ _Cue _cueFor(BuddyAnnouncement a) => switch (a) {
 /// the first line, the follow-up to a fresh [BuddyLogEvent] and the
 /// Buddy's announcements. His cues and their sheets also wait while Home is
 /// covered ([homeCoveredProvider]: a page over it or on its way in, a
-/// sheet, dialog or menu over it, another tab); the hero tells it whether
-/// Home's route is on top ([_onRoute]).
-/// Without a Buddy status (loading, error, signed out) the Buddy still
-/// shows, named 'Buddy', without the streak chip.
+/// sheet, dialog or menu over it, another tab, Home's tour); the hero tells
+/// it whether Home's route is on top ([_onRoute]).
+/// The streak flame burns behind him ([HomeFlame]), an ember until today's
+/// first entry ignites it. Without a Buddy status (loading, error, signed
+/// out) the Buddy still shows, named 'Buddy', without the flame and its
+/// badge (so the status arriving never looks like an ignite).
 class BuddyHero extends ConsumerStatefulWidget {
-  const BuddyHero({super.key, this.openUrl = launchUrl});
+  const BuddyHero({
+    super.key,
+    this.openUrl = launchUrl,
+    this.showsBubble = true,
+  });
 
   /// Opens day 2's article (a reward); tests record it.
   final UrlOpener openUrl;
+
+  /// Whether his speech bubble shows. Home hides it while its tour is up
+  /// (the tour's „Überspringen" sits where it rises); the tour covers Home
+  /// ([homeCoveredProvider]), so his cues wait for it.
+  final bool showsBubble;
 
   /// The next-action button under the ring.
   static const actionKey = Key('buddy_hero_next_action');
@@ -131,12 +154,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// for it.
   static const _cueLineDuration = Duration(seconds: 4);
 
-  static const _saverUsedLine =
-      'Puh! Dein Streak-Saver hat uns gestern gerettet 🛡';
-  static const _streakBrokenLine = 'Neuer Anlauf — ich bin dabei!';
-  static const _saverEarnedLine = 'Du hast einen Streak-Saver verdient! 🛡';
   static const _newGoalTitle = "Wir haben's geschafft! Neues Ziel?";
-  static const _tipsArrivedLine = 'Neue Tipps sind da! ✨';
 
   late final BuddyController _buddy;
 
@@ -169,6 +187,13 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   /// A log's follow-up is queued and not said yet.
   bool _followUpPending = false;
+
+  /// His ask for reminders is queued or on stage.
+  bool _remindersAskQueued = false;
+
+  /// Another cue of the running queue ended in a sheet or page: his ask
+  /// for reminders doesn't follow it (it comes on a later visit of Home).
+  bool _sheetCuePlayed = false;
 
   /// The Buddy refresh of the latest log ([BuddyEventsNotifier.lastRefresh]).
   Future<void>? _logRefresh;
@@ -245,6 +270,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     ref.listenManual(homeCoveredProvider, (_, covered) {
       if (!covered) _afterFrame(_resume);
     });
+    ref.listenManual(reminderAskDueProvider, (_, due) {
+      if (_isDue(due)) _afterFrame(_queueRemindersAsk);
+    }, fireImmediately: true);
   }
 
   @override
@@ -264,6 +292,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
         _consumeEvent();
         _takeAnnouncements();
         _maybeGreet();
+        _queueRemindersAsk();
         _resume();
       });
     } else if (_override == BuddyMood.empathetic) {
@@ -456,6 +485,21 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _enqueue(fresh.map(_cueFor));
   });
 
+  /// Whether [due] says his ask for reminders is due (not while it is
+  /// being checked again, e.g. right after it was counted).
+  static bool _isDue(AsyncValue<bool> due) =>
+      !due.isLoading && due.value == true;
+
+  /// Queues his ask for reminders once it is due ([reminderAskDueProvider]),
+  /// after whatever is queued already; it plays once Home is free.
+  void _queueRemindersAsk() => _whenVisible(() {
+    if (_remindersAskQueued || !_isDue(ref.read(reminderAskDueProvider))) {
+      return;
+    }
+    _remindersAskQueued = true;
+    _enqueue(const [_Cue.remindersAsk]);
+  });
+
   // --- Log events -------------------------------------------------------------
 
   void _consumeEvent() => _whenVisible(() {
@@ -491,7 +535,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   }
 
   /// Says the follow-up once the log's Buddy refresh is done (waiting at
-  /// most [_refreshWait]), then holds the stage.
+  /// most [_refreshWait]), then holds the stage. Home covered by then (the
+  /// tour opened, a page), it goes back to the queue's front and is said
+  /// once Home is free again ([_resume]).
   Future<void> _followUpAfterRefresh() async {
     final refresh = _logRefresh;
     _logRefresh = null;
@@ -503,6 +549,12 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       }
     }
     if (!mounted) return;
+    if (!_homeFree) {
+      _playing = null;
+      _cueRunning = false;
+      _cues.addFirst(_Cue.followUp);
+      return;
+    }
     _sayFollowUp();
     _holdStage();
   }
@@ -513,8 +565,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     final today = startOfDay(_now());
     if (status != null && status.todayCounted && _countedDay != today) {
       _countedDay = today;
-      final days = status.streak == 1 ? 'Tag' : 'Tage';
-      _say('Danke! 🔥 ${status.streak} $days');
+      _say(BuddyCopy.streakThanks(status.streak));
     } else {
       _say(_moodLine(_buddy.mood, justLogged: _loggedNeed));
     }
@@ -539,9 +590,18 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       _cueRunning = false;
       return;
     }
+    final welcomed = _playing == _Cue.welcome;
     _markPlayed();
+    if (welcomed) {
+      // Home's tour waits for the welcome ([_markPlayed]) and covers Home
+      // as it opens, in the microtasks after: the next cue lets it go
+      // first, so it waits for the tour instead of playing behind it.
+      _cueTimer = Timer(Duration.zero, _nextCue);
+      return;
+    }
     if (_cues.isEmpty) {
       _cueRunning = false;
+      _sheetCuePlayed = false;
       // All withdrawn (a lone „Neue Tipps" whose set was opened): the
       // greeting they replaced is still due.
       if (!_cuePlayed) _sayMoodLine();
@@ -558,6 +618,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     // Withdrawn meanwhile (the set opened, the weekly tips switched on): it
     // ends unplayed.
     if (!_stillApplies(cue)) return _nextCue();
+    // Never a second sheet right after another's: it comes another time.
+    if (cue == _Cue.remindersAsk && _sheetCuePlayed) return _endRemindersAsk();
+    if (cue.endsInSheet) _sheetCuePlayed = true;
     _cuePlayed = true;
     switch (cue) {
       case _Cue.welcome:
@@ -570,22 +633,18 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
         );
       case _Cue.saverUsed:
         _buddy.play(BuddyAction.hug);
-        _say(_saverUsedLine);
-        _holdStage();
+        _sayAnnouncement(cue);
       case _Cue.streakBroken:
-        _say(_streakBrokenLine);
-        _holdStage();
+        _sayAnnouncement(cue);
       case _Cue.saverEarned:
         _buddy.play(BuddyAction.celebrate);
-        _say(_saverEarnedLine);
-        _holdStage();
+        _sayAnnouncement(cue);
       case _Cue.goalReached:
         _playThen(BuddyAction.celebrate, _askForNewGoal);
         _setOverride(BuddyMood.inLove);
       case _Cue.tipsArrived:
         _buddy.play(BuddyAction.celebrate);
-        _say(_tipsArrivedLine);
-        _holdStage();
+        _sayAnnouncement(cue);
       case _Cue.weeklyTipsOffer:
         _playThen(BuddyAction.wave, _offerWeeklyTips);
       case _Cue.firstTipOffer:
@@ -595,13 +654,22 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       case _Cue.patternsUnlocked:
         _playThen(BuddyAction.celebrate, _openPatternsUnlocked);
       case _Cue.firstTipFailed:
-        _say(
-          JourneyCopy.firstTipFailed(
-            weeklyTipsOn: ref.read(weeklyTipsEnabledProvider) == true,
-          ),
-        );
-        _holdStage();
+        _sayAnnouncement(cue);
+      case _Cue.remindersAsk:
+        _playThen(BuddyAction.wave, _askForReminders);
     }
+  }
+
+  /// Says [cue]'s announcement ([BuddyCopy.announcementLine]) and holds
+  /// the stage for it.
+  void _sayAnnouncement(_Cue cue) {
+    _say(
+      BuddyCopy.announcementLine(
+        cue.announcement!,
+        weeklyTipsOn: ref.read(weeklyTipsEnabledProvider) == true,
+      )!,
+    );
+    _holdStage();
   }
 
   /// Plays [action], then, once it has played, [then] (the cue's sheet or
@@ -682,15 +750,17 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     return true;
   }
 
-  /// After the wave: the weekly tips' offer off the journey („Zu den Tipps"
-  /// opens Entdecken), then continues; waits like every cue's sheet
-  /// ([_deferSheet]). On the journey or undecided by now: none.
+  /// After the wave: the weekly tips' offer off the journey („Zu den
+  /// Einstellungen" pushes the notification settings, with the switch; the
+  /// push covers Home, so the next cue waits), then continues; waits like
+  /// every cue's sheet ([_deferSheet]). On the journey or undecided by now:
+  /// none.
   Future<void> _offerWeeklyTips() async {
     if (_deferSheet(_offerWeeklyTips)) return;
     if (ref.read(journeyProvider) == false) {
       final open = await showWeeklyTipsOfferSheet(context);
       if (!mounted) return;
-      if (open) context.go(RoutePaths.discover);
+      if (open) unawaited(context.push(RoutePaths.settingsNotifications));
     }
     _nextCue();
   }
@@ -766,6 +836,45 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     );
   }
 
+  /// After the wave: his ask for reminders while they are off
+  /// ([RemindersAskSheet]), counted as one ask ([recordReminderAsk]) as it
+  /// opens, whatever the answer; waits like every cue's sheet
+  /// ([_deferSheet]). No longer due by now (switched on meanwhile): none.
+  /// „Einschalten" turns them on ([turnOnRemindersOrSay]: the OS dialog,
+  /// or the system settings when the OS won't ask any more), and he thanks
+  /// for it once they are on.
+  Future<void> _askForReminders() async {
+    if (_deferSheet(_askForReminders)) return;
+    if (ref.read(reminderAskDueProvider).value != true) {
+      return _endRemindersAsk();
+    }
+    unawaited(
+      recordReminderAsk(ref).catchError(
+        (Object e, StackTrace st) =>
+            _log.error('Recording the reminder ask failed', e, st),
+      ),
+    );
+    final turnOn = await showRemindersAskSheet(context);
+    if (!mounted) return;
+    if (turnOn) {
+      final outcome = await turnOnRemindersOrSay(context, ref);
+      if (!mounted) return;
+      if (outcome == RemindersTurnOn.on) {
+        _remindersAskQueued = false;
+        _say(BuddyCopy.remindersOn);
+        _holdStage();
+        return;
+      }
+    }
+    _endRemindersAsk();
+  }
+
+  /// His ask for reminders ends; the queue goes on.
+  void _endRemindersAsk() {
+    _remindersAskQueued = false;
+    _nextCue();
+  }
+
   /// The cue on stage ends without counting as shown: its announcement
   /// stays pending and is taken again with the next ones
   /// ([_takeAnnouncements]: a status update, Home shown again).
@@ -777,7 +886,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _nextCue();
   }
 
-  /// The StreakChip's tap: „Dein Streak", where the goal can be set or
+  /// The streak badge's tap: „Dein Streak", where the goal can be set or
   /// changed; it covers Home ([HomeCoverNotifier.whileOpen]), so the cues
   /// wait until it has closed. Ignored while a cue's sheet is coming
   /// ([_sheetCueOnStage]) or Home is covered (the sheet already open), so
@@ -805,26 +914,15 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     final status = ref.watch(buddyProvider).value;
     final care = ref.watch(careNowProvider);
     final action = care.action;
+    // The button's need: Essen for the plain „Essen eintragen".
+    final actionNeed = action.need ?? CareNeed.food;
     final name = status?.state.name ?? 'Buddy';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Keeps its height while the chip waits for the Buddy status.
-        SizedBox(
-          height: AppConstants.iconBadgeLg,
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: status == null
-                ? null
-                : StreakChip(
-                    streak: status.streak,
-                    todayCounted: status.todayCounted,
-                    onTap: () => unawaited(_openStreakSheet()),
-                  ),
-          ),
-        ),
-        AppConstants.gap8,
+        // The band his bubble and the flame's tips rise into.
+        const SizedBox(height: AppConstants.homeHeadroom),
         LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
@@ -832,26 +930,50 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
               width,
               MediaQuery.sizeOf(context).height,
             );
-            final buddySide = diameter * AppConstants.careRingBuddyFactor;
-            return Column(
-              children: [
-                BuddyBubbleSlot(
-                  controller: _buddy,
-                  width: width,
-                  buddyArea: Size.square(buddySide),
-                ),
-                CareRing(
-                  care: care,
-                  diameter: diameter,
-                  highlight: action.need,
-                  onNeed: (need) => openTracker(context, need),
-                  buddy: AnimatedBuddy(
-                    controller: _buddy,
-                    name: name,
-                    onPoke: _sayMoodLine,
-                  ),
-                ),
-              ],
+            return CareRing(
+              care: care,
+              diameter: diameter,
+              highlight: action.need,
+              onNeed: (need) => openTracker(context, need),
+              behindBuddy: status == null
+                  ? null
+                  : (buddy, middle) => HomeFlame(
+                      streak: status.streak,
+                      lit: status.todayCounted,
+                      buddy: buddy,
+                      middle: middle,
+                      headroom: AppConstants.homeHeadroom,
+                    ),
+              onBuddy: status == null
+                  ? null
+                  : (buddy, middle) => HomeStreakBadge(
+                      streak: status.streak,
+                      lit: status.todayCounted,
+                      buddy: buddy,
+                      middle: middle,
+                      headroom: AppConstants.homeHeadroom,
+                      onTap: () => unawaited(_openStreakSheet()),
+                    ),
+              // His bubble may rise into the band, never above the hero;
+              // a taller one is scaled down to fit. Wider with large text,
+              // so a line breaks as at the base size and shows at the
+              // user's size instead of scaled down.
+              overBuddyRoom: AppConstants.homeHeadroom,
+              overBuddy: !widget.showsBubble
+                  ? null
+                  : (buddy, _) => BuddyBubbleSlot(
+                      controller: _buddy,
+                      width: width,
+                      buddyArea: buddy.size,
+                      height: null,
+                      maxWidth: AppConstants.buddyBubbleOverlayMaxWidth,
+                      scaleWidthWithText: true,
+                    ),
+              buddy: AnimatedBuddy(
+                controller: _buddy,
+                name: name,
+                onPoke: _sayMoodLine,
+              ),
             );
           },
         ),
@@ -861,7 +983,8 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
           child: BbButton(
             tapKey: BuddyHero.actionKey,
             label: BuddyCopy.careButton(action),
-            onPressed: () => openTracker(context, action.need ?? CareNeed.food),
+            leading: NeedIcon(actionNeed, size: AppConstants.iconSizeMd),
+            onPressed: () => openTracker(context, actionNeed),
           ),
         ),
       ],

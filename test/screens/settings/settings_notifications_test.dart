@@ -6,13 +6,14 @@ import 'package:riverpod/src/internals.dart' show Override;
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/screens/settings/widgets/settings_notifications_screen.dart';
+import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/repositories/notification_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 
 import 'package:belly_buddy/widgets/common/weekly_tips_switch.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../helpers/app_lifecycle.dart';
 import '../../helpers/fakes.dart';
@@ -35,22 +36,9 @@ List<Override> _overrides() {
 /// The OS side: [permission] as the OS reports it; a request shows the
 /// system dialog only while it was never asked ([grant] is the answer).
 class _OsNotifications extends FakeNotificationRepository {
-  _OsNotifications(NotificationPermission initial, {this.grant = true}) {
+  _OsNotifications(NotificationPermission initial, {bool grant = true}) {
     permission = initial;
-  }
-
-  bool grant;
-  int requests = 0;
-
-  @override
-  Future<bool> requestAllPermissions() async {
-    requests++;
-    if (permission == NotificationPermission.notDetermined) {
-      permission = grant
-          ? NotificationPermission.granted
-          : NotificationPermission.denied;
-    }
-    return permission == NotificationPermission.granted;
+    grantOnRequest = grant;
   }
 
   @override
@@ -61,7 +49,8 @@ void main() {
   group('SettingsNotificationsScreen reflects what can arrive', () {
     late ProviderContainer container;
     late _OsNotifications os;
-    late List<Uri> opened;
+
+    setUp(() => SharedPreferences.setMockInitialValues({}));
 
     Future<void> pump(
       WidgetTester tester, {
@@ -70,7 +59,6 @@ void main() {
       UserProfile? profile,
     }) async {
       os = _OsNotifications(permission, grant: grant);
-      opened = [];
       final seeded = profile ?? testUserProfile();
       final repo = FakeProfileRepository()..seedProfile(seeded);
       container = ProviderContainer.test(
@@ -78,21 +66,14 @@ void main() {
           profileRepositoryProvider.overrideWithValue(repo),
           notificationRepositoryProvider.overrideWithValue(os),
           currentUserIdProvider.overrideWithValue('test-user'),
+          buddyClockProvider.overrideWithValue(() => DateTime(2026, 11, 26, 9)),
           profileProviderSeededWith(seeded),
         ],
       );
-      Future<bool> open(
-        Uri url, {
-        LaunchMode mode = LaunchMode.platformDefault,
-      }) async {
-        opened.add(url);
-        return true;
-      }
-
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp(home: SettingsNotificationsScreen(openUrl: open)),
+          child: const MaterialApp(home: SettingsNotificationsScreen()),
         ),
       );
       await tester.pumpAndSettle();
@@ -229,7 +210,8 @@ void main() {
       );
       await tester.tap(find.text('Einstellungen öffnen'));
       await tester.pumpAndSettle();
-      expect(opened, [Uri.parse('app-settings:')]);
+      // The system notification settings, on iOS and Android alike.
+      expect(os.settingsOpened, 1);
 
       // Allowed in the Settings app, back in the app: the reminders the
       // user asked for are on.
@@ -263,6 +245,58 @@ void main() {
       expect(switchOn(tester, 'Benachrichtigungen erlauben'), isFalse);
       expect(switchOn(tester, 'Mahlzeiten'), isFalse);
       expect(find.text('Einstellungen öffnen'), findsOneWidget);
+    });
+
+    testWidgets('the system settings don\'t open: a SnackBar says so', (
+      tester,
+    ) async {
+      await pump(tester, permission: NotificationPermission.denied);
+      os.settingsOpen = false;
+
+      await tester.tap(find.text('Einstellungen öffnen'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Die Einstellungen konnten nicht geöffnet werden.'),
+        findsOneWidget,
+      );
+    });
+
+    Future<String?> lastAskDay() async =>
+        (await SharedPreferences.getInstance()).getString(
+          '${AppConstants.keyReminderAskedOnPrefix}test-user',
+        );
+
+    testWidgets('switched off here: the Buddy doesn\'t ask again for a '
+        'week (today is stored as his last ask)', (tester) async {
+      await pump(tester, permission: NotificationPermission.granted);
+
+      await tester.tap(find.text('Benachrichtigungen erlauben'));
+      await tester.pumpAndSettle();
+      expect(await lastAskDay(), '2026-11-26');
+    });
+
+    testWidgets('the last reminder switched off one by one: the same', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        permission: NotificationPermission.granted,
+        profile: testUserProfile(dailySummaryEnabled: false),
+      );
+
+      await tester.tap(find.text('Mahlzeiten'));
+      await tester.pumpAndSettle();
+      expect(stored().anyNotificationOn, isFalse);
+      expect(await lastAskDay(), '2026-11-26');
+    });
+
+    testWidgets('one of several switched off: nothing stored', (tester) async {
+      await pump(tester, permission: NotificationPermission.granted);
+
+      await tester.tap(find.text('Mahlzeiten'));
+      await tester.pumpAndSettle();
+      expect(stored().anyNotificationOn, isTrue);
+      expect(await lastAskDay(), isNull);
     });
 
     testWidgets('turning it off turns every reminder off', (tester) async {

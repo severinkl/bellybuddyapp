@@ -1,32 +1,27 @@
 import 'dart:async';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/user_profile.dart';
+import '../../../providers/notification_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../repositories/notification_repository.dart';
 import '../../../utils/logger.dart';
-import '../../../utils/url_utils.dart';
 import '../../../widgets/common/bb_async_state.dart';
 import '../../../widgets/common/bb_card.dart';
 import '../../../widgets/common/settings_section_card.dart';
 import '../../../widgets/common/weekly_tips_switch.dart';
 import 'reminder_time_picker.dart';
 
-/// The iOS Settings page of the app (`UIApplication.openSettingsURLString`).
-const _appSettingsUrl = 'app-settings:';
-
 /// The notification settings. A switch shows on only while the OS allows
 /// notifications and the profile wants it (see `enableReminders` for the
 /// model): „Benachrichtigungen erlauben" asks the OS, and points to the
-/// Settings app when the OS won't ask any more.
+/// system settings when the OS won't ask any more. Switching every
+/// notification off here holds the Buddy's ask for them off for a week
+/// ([holdOffReminderAsks]).
 class SettingsNotificationsScreen extends ConsumerStatefulWidget {
-  const SettingsNotificationsScreen({super.key, this.openUrl = launchUrl});
-
-  /// Opens the Settings app.
-  final UrlOpener openUrl;
+  const SettingsNotificationsScreen({super.key});
 
   @override
   ConsumerState<SettingsNotificationsScreen> createState() =>
@@ -78,10 +73,27 @@ class _SettingsNotificationsScreenState
   }
 
   void _save(UserProfile profile) {
+    _holdOffIfAllOff(profile);
     ref
         .read(profileProvider.notifier)
         .updateProfile(profile)
         .catchError((Object e) => _log.error('saving failed', e));
+  }
+
+  /// A switch of one notification: saved; the last one off holds the
+  /// Buddy's ask off ([_holdOffIfAllOff]).
+  void _saveSwitch(UserProfile profile) {
+    _holdOffIfAllOff(profile);
+    ref.read(profileProvider.notifier).updateProfile(profile);
+  }
+
+  /// Every notification off on purpose: the Buddy doesn't ask for them
+  /// again for a week ([holdOffReminderAsks]).
+  void _holdOffIfAllOff(UserProfile profile) {
+    if (profile.anyNotificationOn) return;
+    holdOffReminderAsks(
+      ref,
+    ).catchError((Object e) => _log.error('storing the hold-off failed', e));
   }
 
   void _debounceSave(Function() doSave) {
@@ -116,12 +128,21 @@ class _SettingsNotificationsScreenState
     }
   }
 
-  Future<void> _openSettingsApp() => openExternalUrl(
-    context,
-    _appSettingsUrl,
-    failureMessage: 'Die Einstellungen konnten nicht geöffnet werden.',
-    open: widget.openUrl,
-  );
+  /// The system settings where this app's notifications are allowed (iOS
+  /// and Android); a SnackBar if they don't open.
+  Future<void> _openSettingsApp() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final opened = await ref
+        .read(notificationRepositoryProvider)
+        .openNotificationSettings();
+    if (!opened) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Die Einstellungen konnten nicht geöffnet werden.'),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -235,13 +256,9 @@ class _SettingsNotificationsScreenState
                               value: mealOn,
                               activeThumbColor: AppTheme.primary,
                               contentPadding: EdgeInsets.zero,
-                              onChanged: (v) {
-                                ref
-                                    .read(profileProvider.notifier)
-                                    .updateProfile(
-                                      profile.copyWith(remindersEnabled: v),
-                                    );
-                              },
+                              onChanged: (v) => _saveSwitch(
+                                profile.copyWith(remindersEnabled: v),
+                              ),
                             ),
                             const Text(
                               'Erinnert dich daran, dein Essen einzutragen.',
@@ -278,13 +295,9 @@ class _SettingsNotificationsScreenState
                               value: gutOn,
                               activeThumbColor: AppTheme.primary,
                               contentPadding: EdgeInsets.zero,
-                              onChanged: (v) {
-                                ref
-                                    .read(profileProvider.notifier)
-                                    .updateProfile(
-                                      profile.copyWith(dailySummaryEnabled: v),
-                                    );
-                              },
+                              onChanged: (v) => _saveSwitch(
+                                profile.copyWith(dailySummaryEnabled: v),
+                              ),
                             ),
                             const Text(
                               'Erinnert dich daran, dein Bauchgefühl einzutragen.',
@@ -341,13 +354,8 @@ class _SettingsNotificationsScreenState
                               value: tipsOn,
                               activeThumbColor: AppTheme.primary,
                               contentPadding: EdgeInsets.zero,
-                              onChanged: (v) {
-                                ref
-                                    .read(profileProvider.notifier)
-                                    .updateProfile(
-                                      profile.copyWith(pushEnabled: v),
-                                    );
-                              },
+                              onChanged: (v) =>
+                                  _saveSwitch(profile.copyWith(pushEnabled: v)),
                             ),
                             const Text(
                               'Ich sag dir Bescheid, sobald neue Tipps da sind.',

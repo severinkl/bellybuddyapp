@@ -9,7 +9,7 @@ import 'package:belly_buddy/screens/dashboard/widgets/tutorial/dashboard_tutoria
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/spotlight_painter.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tooltip_bubble.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
-import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
+import 'package:belly_buddy/widgets/buddy/streak_badge.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -78,7 +78,7 @@ void main() {
         final covered = <String, Rect>{
           'bubble': tester.getRect(find.byType(TooltipBubble)),
           for (final (what, finder) in [
-            ('streak chip', find.byType(StreakChip)),
+            ('streak badge', find.byType(StreakBadge)),
             for (final need in CareNeed.values)
               (need.label, find.byKey(CareRing.needKey(need))),
           ])

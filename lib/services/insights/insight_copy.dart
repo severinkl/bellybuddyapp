@@ -168,8 +168,9 @@ class InsightCopy {
   static const keepGoingHint =
       'Trag weiter ein – jeder Tag mit Einträgen zählt.';
 
-  /// Above the blurred sample of what comes.
-  static const previewLabel = 'Das siehst du dann · Beispiel';
+  /// Above the blurred sample of what comes (the Muster preview and day
+  /// 6's reward): the blur shows it is a sample.
+  static const previewLabel = 'Das siehst du dann';
 
   /// The blurred sample, to a screen reader.
   static const previewSemantics = 'Vorschau mit Beispielwerten';

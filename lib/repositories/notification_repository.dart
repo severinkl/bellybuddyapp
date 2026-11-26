@@ -1,6 +1,9 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timezone/timezone.dart' as tz;
+import 'package:url_launcher/url_launcher.dart';
 import '../models/user_profile.dart';
 import '../services/local_notification_service.dart';
 import '../services/push_notification_service.dart';
@@ -73,13 +76,21 @@ enum NotificationPermission {
   notDetermined,
 
   /// Declined or turned off: asking again shows nothing, only the Settings
-  /// app can allow them.
+  /// app can allow them ([NotificationRepository.openNotificationSettings]).
+  /// (On Android 13+ a first decline reads so too, though the OS would ask
+  /// once more.)
   denied,
 }
 
 class NotificationRepository {
   final NotificationScheduler _scheduler;
   static const _log = AppLogger('NotificationRepository');
+
+  /// The iOS Settings page of the app (`UIApplication.openSettingsURLString`).
+  static const _iosAppSettingsUrl = 'app-settings:';
+
+  /// Android's way to the app's notification settings (`MainActivity`).
+  static const _androidSettings = MethodChannel('belly_buddy/app_settings');
 
   NotificationRepository(this._scheduler);
 
@@ -160,6 +171,30 @@ class NotificationRepository {
     final granted = await LocalNotificationService.requestPermission();
     if (granted) await PushNotificationService.requestPermission();
     return granted;
+  }
+
+  /// Opens the system settings where the user allows this app's
+  /// notifications: on iOS the app's page in the Settings app, on Android
+  /// its notification settings. Completes with whether they opened; never
+  /// throws.
+  Future<bool> openNotificationSettings() async {
+    try {
+      return switch (defaultTargetPlatform) {
+        TargetPlatform.iOS => await launchUrl(
+          Uri.parse(_iosAppSettingsUrl),
+          mode: LaunchMode.externalApplication,
+        ),
+        TargetPlatform.android =>
+          await _androidSettings.invokeMethod<bool>(
+                'openNotificationSettings',
+              ) ??
+              false,
+        _ => false,
+      };
+    } catch (e, st) {
+      _log.error('opening the notification settings failed', e, st);
+      return false;
+    }
   }
 
   Future<void> clearToken() => PushNotificationService.clearToken();

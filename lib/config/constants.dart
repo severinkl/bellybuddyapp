@@ -53,6 +53,13 @@ class AppConstants {
   /// The smallest tap target (Apple's 44 pt).
   static const double minTapTarget = 44.0;
 
+  /// The smallest tap target on Home.
+  static const double homeTapTarget = 48.0;
+
+  /// The band above Home's ring that the Buddy's bubble and the streak
+  /// flame's tips may rise into.
+  static const double homeHeadroom = 48.0;
+
   // Border radius
   static const double radiusXs = 4.0;
   static const double radiusSm = 8.0;
@@ -93,12 +100,17 @@ class AppConstants {
   static const double buddyBubbleSideTailTop = 34.0;
   static const Offset buddyBubbleShadowOffset = Offset(3, 4);
 
+  // Home's bubble, floating over the Buddy's head in the ring: its widest
+  // width at the base text size, wider with large text (the ring's middle
+  // is narrower; it may cover the top needs)
+  static const double buddyBubbleOverlayMaxWidth = 200.0;
+
   // Typewriter reveal: per character, at most this long in total
   static const Duration buddyBubbleCharDelay = Duration(milliseconds: 30);
   static const Duration buddyBubbleTypeMax = Duration(milliseconds: 1200);
 
-  // Streak chip / goal sheet
-  static const double streakChipPopScale = 1.25;
+  // Streak chip and badge pop / goal sheet
+  static const double streakPopScale = 1.25;
   static const double streakSheetBuddyHeight = 220.0;
 
   // A Buddy sheet's Buddy on a short screen (below this height), so both
@@ -112,23 +124,25 @@ class AppConstants {
   // Streak week row (Mo–So): day circle
   static const double streakWeekDaySize = 36.0;
 
-  // The drawn streak flame: its height in the chip, the streak moment, a
-  // week row's day and the success page's ignite; the ignite's burst, the
-  // lit flame's wobble, the ember's breathing and a blazing flame's sparks
-  static const double streakFlameChipHeight = 22.0;
+  // The drawn streak flame: its height in the streak moment, a week row's
+  // day and the success page's ignite; the ignite's burst, the ember's
+  // breathing and the lit flame's sparks; its glow and sparks only from
+  // this height up (smaller, they would only smudge)
   static const double streakFlameMomentHeight = 72.0;
   static const double streakFlameMarkHeight = 20.0;
   static const double streakFlameIgniteHeight = 32.0;
   static const Duration streakFlameIgnite = Duration(milliseconds: 750);
-  static const Duration streakFlameWobble = Duration(milliseconds: 1700);
   static const Duration streakFlameBreath = Duration(milliseconds: 2800);
   static const Duration streakFlameSparks = Duration(milliseconds: 1600);
+  static const double streakFlameGlowMinHeight = 40.0;
 
   // A streak goal's row in the goal list
   static const double streakGoalRowHeight = 56.0;
 
-  // The Eintragen sheet's option height; the diary's empty-day Buddy
+  // The Eintragen sheet's option height and its sticker icon; the diary's
+  // empty-day Buddy
   static const double logSheetOptionHeight = 96.0;
+  static const double logSheetIconSize = 40.0;
   static const double diaryEmptyBuddySize = 96.0;
 
   // Reminder step: the notification preview's corner radius and app icon,
@@ -152,7 +166,7 @@ class AppConstants {
   /// A need meter's ring thickness, as a share of its diameter.
   static const double careMeterStrokeShare = 0.085;
 
-  /// The share of a need meter its icon (emoji) may take.
+  /// The share of a need meter its sticker icon takes.
   static const double careMeterIconShare = 0.5;
 
   // Dashboard care ring: its diameter (at most this, this share of the
@@ -173,6 +187,23 @@ class AppConstants {
   static const double careNeedWidth = 88.0;
   static const double careNeedGlow = 5.0;
   static const Duration careNeedPulse = Duration(milliseconds: 1400);
+
+  // Home's streak flame behind the Buddy: how far its tips rise above his
+  // head by its tier (per his height; a one-line bubble of his still
+  // covers them, flicker included), how far right of his foot it burns
+  // (per his height), how far its base sits below his feet (per side of
+  // his square), how opaque it is as an ember, lit and blazing („lodert"),
+  // and its blur
+  static const double homeFlameRiseSmall = 0.17;
+  static const double homeFlameRiseMedium = 0.19;
+  static const double homeFlameRiseLarge = 0.21;
+  static const double homeFlameRiseBlazing = 0.23;
+  static const double homeFlameOffset = 0.04;
+  static const double homeFlameBelowFeet = 0.02;
+  static const double homeFlameEmberOpacity = 0.95;
+  static const double homeFlameLitOpacity = 0.85;
+  static const double homeFlameBlazingOpacity = 0.9;
+  static const double homeFlameBlur = 1.0;
 
   // „Dein Streak" sheet: the goal progress bar
   static const double streakProgressHeight = 10.0;
@@ -231,10 +262,11 @@ class AppConstants {
   static const double buddyReactionMinHeight = 24.0;
 
   // The success page's charging circle: at most this size and this share
-  // of the page's slot for it, and how long it charges
+  // of the page's slot for it, how long it charges and how it eases
   static const double careChargeSize = 120.0;
   static const double careChargeHeightShare = 0.3;
-  static const Duration careChargeDuration = Duration(milliseconds: 1200);
+  static const Duration careChargeDuration = Duration(milliseconds: 2000);
+  static const Curve careChargeCurve = Curves.easeOut;
 
   /// In a success-page slot shorter than this, the charging circle and
   /// „Tag n" stand side by side, so the Buddy keeps a body below them.
@@ -342,6 +374,14 @@ class AppConstants {
 
   // SharedPreferences keys
   static const String keyNotificationModalShown = 'notification_modal_shown';
+
+  /// Prefix of how often the Buddy asked again for reminders, per user and
+  /// device (`reminder_asks_<userId>`, an int; see `reminderAskDueProvider`).
+  static const String keyReminderAsksPrefix = 'reminder_asks_';
+
+  /// Prefix of the day he last asked (`reminder_asked_on_<userId>`,
+  /// yyyy-MM-dd).
+  static const String keyReminderAskedOnPrefix = 'reminder_asked_on_';
   static const String keyKnowledgeFeedCache = 'knowledge_feed_cache_v1';
   static const String keyBuddyStatePrefix = 'buddy_state_';
 

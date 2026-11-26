@@ -52,10 +52,18 @@ void main() {
     final flames = t.widgetList<StreakFlame>(find.byType(StreakFlame));
     expect(flames, hasLength(2));
     for (final flame in flames) {
-      expect(flame.still, isTrue);
       expect(flame.lit, isTrue);
       expect(flame.height, AppConstants.streakFlameMarkHeight);
     }
+    // Marks: only painted, they never move.
+    expect(t.hasRunningAnimations, isFalse);
+    expect(
+      find.descendant(
+        of: find.byType(StreakFlame),
+        matching: find.byType(FadeTransition),
+      ),
+      findsNothing,
+    );
     expect(find.text('🔥'), findsNothing);
   });
 

@@ -24,6 +24,7 @@ import 'package:belly_buddy/widgets/common/mascot_image.dart';
 import '../../../helpers/fakes.dart';
 import '../../../helpers/layout_checks.dart';
 import '../../../helpers/riverpod_helpers.dart';
+import '../../../helpers/widget_tester_helpers.dart';
 
 List<Override> _overrides({EntryRepository? entries}) => [
   entryRepositoryProvider.overrideWithValue(entries ?? FakeEntryRepository()),
@@ -243,7 +244,7 @@ void main() {
           );
           await tester.tap(find.byKey(MealTrackerScreen.mealEditSaveKey));
           await tester.pump();
-          await tester.pump(const Duration(milliseconds: 1300));
+          await pumpPastCharge(tester);
         });
 
         expect(find.byType(ChargingMeter), findsOneWidget);
