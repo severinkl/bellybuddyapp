@@ -185,6 +185,9 @@ class AppTheme {
   // The streak moment's big count („1 Tag" beside the flame)
   static const double fontSizeStreakCount = 56;
 
+  /// Space between the digits of a share code.
+  static const double codeLetterSpacing = 2;
+
   // Stool scale colors
   static const List<Color> stoolColors = [
     Color(0xFF1A6B37), // Type 1: HSL(142, 76%, 25%)

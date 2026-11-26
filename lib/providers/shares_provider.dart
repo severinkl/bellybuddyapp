@@ -86,3 +86,24 @@ final shareRowBadgeProvider =
     AsyncNotifierProvider<ShareRowBadgeNotifier, bool>(
       ShareRowBadgeNotifier.new,
     );
+
+/// The share just created, until the list screen has shown its link and
+/// code once. Holds a secret: cleared as soon as it is taken.
+class JustCreatedShareNotifier extends Notifier<ShareSecret?> {
+  @override
+  ShareSecret? build() => null;
+
+  void set(ShareSecret secret) => state = secret;
+
+  /// The held secret, which is then forgotten.
+  ShareSecret? take() {
+    final secret = state;
+    state = null;
+    return secret;
+  }
+}
+
+final justCreatedShareProvider =
+    NotifierProvider<JustCreatedShareNotifier, ShareSecret?>(
+      JustCreatedShareNotifier.new,
+    );

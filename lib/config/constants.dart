@@ -152,6 +152,9 @@ class AppConstants {
   static const double reminderExampleLabelWidth = 112.0;
   static const double reminderExampleDotSize = 16.0;
 
+  /// How long „Kopiert“ replaces „Kopieren“ after a copy.
+  static const Duration copiedLabelDuration = Duration(seconds: 2);
+
   /// Need meters (tunable): how long awake time drains each need from full
   /// (the night pause is in DayParts), and the levels. The floor keeps a
   /// meter from ever looking empty; low and high split the meter's mood
@@ -352,7 +355,7 @@ class AppConstants {
   /// `profiles.privacy_policy_version` differs is sent through the consent
   /// gate again. It equals core's `PRIVACY_POLICY_VERSION` (the public page's
   /// „Stand") and moves with it.
-  static const String privacyPolicyVersion = '2026-11-24';
+  static const String privacyPolicyVersion = '2026-11-27';
 
   /// The myfodmap blog feed behind Wissen, how long a fetched copy counts as
   /// fresh, and how long a fetch may take.

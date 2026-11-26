@@ -220,7 +220,7 @@ void main() {
     await tester.tap(find.text('Link und Code anzeigen'));
     await tester.pumpAndSettle();
     expect(find.text('https://example.test/s/abc'), findsOneWidget);
-    expect(find.text('482913'), findsOneWidget);
+    expect(find.text('482 913'), findsOneWidget);
   });
 
   testWidgets('ending: confirm, then the share is ended', (tester) async {

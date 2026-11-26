@@ -114,8 +114,37 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
     return [...active..sort(newestFirst), ...others..sort(newestFirst)];
   }
 
+  /// Opens the sheet of a share created a moment ago, once, on top of the
+  /// list.
+  void _showJustCreated() {
+    final secret = ref.read(justCreatedShareProvider.notifier).take();
+    if (secret == null) return;
+    unawaited(
+      showShareSecretSheet(
+        context,
+        link: secret.link,
+        code: secret.code,
+        title: 'Dein Link ist bereit',
+      ),
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _showJustCreated();
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
+    ref.listen(justCreatedShareProvider, (_, secret) {
+      if (secret == null) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _showJustCreated();
+      });
+    });
     final shares = ref.watch(sharesProvider);
     return Scaffold(
       backgroundColor: AppTheme.screenBackground,
