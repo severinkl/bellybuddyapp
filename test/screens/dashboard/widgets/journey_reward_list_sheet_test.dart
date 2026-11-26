@@ -400,7 +400,7 @@ void main() {
   testWidgets('row 6 opens Muster', (tester) async {
     await pumpRewards(tester, _day4.copyWith(earnedDay: 6));
 
-    expect(inRow(6, find.text('Beispiel')), findsOneWidget);
+    expect(inRow(6, find.text('Das siehst du dann')), findsOneWidget);
     await tapRow(tester, 6);
 
     expect(location(), RoutePaths.patterns);

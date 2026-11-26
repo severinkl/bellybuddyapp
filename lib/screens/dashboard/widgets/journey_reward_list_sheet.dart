@@ -161,7 +161,7 @@ class JourneyRewardListSheet extends ConsumerWidget {
       Day3.recipe => _pickTitle(day, rewards, weeklyTips: weeklyTips),
     },
     4 => sayingFor(ref.watch(currentUserIdProvider) ?? ''),
-    6 => JourneyCopy.example,
+    6 => InsightCopy.previewLabel,
     7 => InsightCopy.openPatterns,
     _ => _pickTitle(day, rewards, weeklyTips: weeklyTips),
   };

@@ -422,7 +422,7 @@ void main() {
   });
 
   testWidgets('day 6 with one Bauchgefühl missing: „Noch ein Tag und 1× '
-      'Bauchgefühl, …", „Beispiel", the preview', (tester) async {
+      'Bauchgefühl, …", „Das siehst du dann", the preview', (tester) async {
     final results = <bool>[];
     await pumpOpener(
       tester,
@@ -445,7 +445,8 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('BEISPIEL'), findsOneWidget);
+    expect(find.text('DAS SIEHST DU DANN'), findsOneWidget);
+    expect(find.textContaining('BEISPIEL'), findsNothing);
     expect(find.byType(PatternsPreview), findsOneWidget);
     expect(primary('Okay'), findsOneWidget);
     expect(find.byKey(JourneyDaySheet.laterKey), findsNothing);

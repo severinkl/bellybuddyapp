@@ -97,9 +97,6 @@ abstract final class JourneyCopy {
   static const day6Body =
       'So sieht die Muster-Seite dann aus, hier mit ausgedachten Werten:';
 
-  /// The label on the day-6 preview's fictional sample.
-  static const example = 'Beispiel';
-
   /// A recipe reward while the fit is unchecked, or nothing is left to pick.
   static const noRecipe =
       'Rezepte, die zu dir passen, findest du unter Entdecken.';
