@@ -256,6 +256,47 @@ void main() {
     expect(painter.showsGlow(const Size(33.4, 40)), isTrue);
   });
 
+  test('with a reach, its tallest tip sits that share of its box above its '
+      'base at rest, for every tier, in its shape; an ember is squashed '
+      'from it', () {
+    for (final tier in FlameTier.values) {
+      for (final reach in const [0.5, 0.7]) {
+        final lit = FlamePainter(look: FlameLook.lit, tier: tier, reach: reach);
+        final at = '$tier, $reach';
+        expect(
+          lit.bodyScale.height * FlamePainter.tipReach,
+          moreOrLessEquals(reach),
+          reason: at,
+        );
+        expect(
+          lit.bodyScale.width / lit.bodyScale.height,
+          moreOrLessEquals(tier.scaleX / tier.scaleY),
+          reason: at,
+        );
+        final ember = FlamePainter(
+          look: FlameLook.ember,
+          tier: tier,
+          reach: reach,
+        );
+        expect(
+          ember.bodyScale.width,
+          moreOrLessEquals(lit.bodyScale.width * 0.8),
+          reason: at,
+        );
+        expect(
+          ember.bodyScale.height,
+          moreOrLessEquals(lit.bodyScale.height * 0.4),
+          reason: at,
+        );
+      }
+    }
+    // Its own tier's reach without one.
+    expect(
+      FlamePainter(look: FlameLook.lit, tier: FlameTier.large).bodyScale,
+      const Size(1, 1),
+    );
+  });
+
   testWidgets('at rest, every tier stays inside its box, sparks and '
       'flicker included', (t) async {
     const box = Size(100, 120);
@@ -266,19 +307,27 @@ void main() {
         for (final tier in FlameTier.values) {
           // Through a whole cycle of every tongue's flicker and the sparks,
           // about six poses each.
-          for (var ms = 0; ms < 1800; ms += 290) {
-            clock.value = Duration(milliseconds: ms);
-            final bounds = await _paintedBounds(
-              FlamePainter(look: look, tier: tier, clock: clock),
-              box,
-            );
-            final at = '$look, $tier at $ms ms';
-            expect(bounds, isNotNull, reason: at);
-            expect(
-              (Offset.zero & box).intersect(bounds!),
-              bounds,
-              reason: '$at: $bounds',
-            );
+          // A reach too tall for its flicker is lowered to fit.
+          for (final reach in const [null, 0.6, 1.0]) {
+            for (var ms = 0; ms < 1800; ms += 290) {
+              clock.value = Duration(milliseconds: ms);
+              final bounds = await _paintedBounds(
+                FlamePainter(
+                  look: look,
+                  tier: tier,
+                  clock: clock,
+                  reach: reach,
+                ),
+                box,
+              );
+              final at = '$look, $tier, $reach at $ms ms';
+              expect(bounds, isNotNull, reason: at);
+              expect(
+                (Offset.zero & box).intersect(bounds!),
+                bounds,
+                reason: '$at: $bounds',
+              );
+            }
           }
         }
       }
@@ -342,6 +391,7 @@ void main() {
   testWidgets('contained, its ignite stays inside its box: the pop at most '
       'fills it, the burst flies no further than its sides', (t) async {
     const box = Size(120, 240);
+    double? reach;
     Widget flame(int streak, {required bool lit, bool contained = true}) =>
         StreakFlame(
           streak: streak,
@@ -349,6 +399,7 @@ void main() {
           height: box.height,
           width: box.width,
           contained: contained,
+          reach: reach,
         );
 
     /// What the ignite paints at each step, outside [box].
@@ -377,6 +428,12 @@ void main() {
     for (final streak in [1, 5, 12, 42]) {
       expect(await igniteOutside(streak), isEmpty, reason: '$streak');
     }
+    // As tall as Home's: its pop still stays inside.
+    reach = 0.8;
+    for (final streak in [1, 42]) {
+      expect(await igniteOutside(streak), isEmpty, reason: 'reach $streak');
+    }
+    reach = null;
     // Not contained, it pops out of its box.
     expect(await igniteOutside(42, contained: false), isNotEmpty);
   });

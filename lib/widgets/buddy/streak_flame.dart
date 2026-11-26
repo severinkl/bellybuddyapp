@@ -47,6 +47,7 @@ class StreakFlame extends StatelessWidget {
     this.core = true,
     this.contained = false,
     this.onPrimary = false,
+    this.reach,
   }) : _mark = false;
 
   /// A still, lit, large flame: a kept day in the week row. Only painted,
@@ -59,6 +60,7 @@ class StreakFlame extends StatelessWidget {
       core = true,
       contained = false,
       onPrimary = false,
+      reach = null,
       _mark = true;
 
   /// A streak drawn as [FlameTier.large].
@@ -103,6 +105,12 @@ class StreakFlame extends StatelessWidget {
   /// Whether it sits on the primary colour (the success page): its ember
   /// burns darker and warmer there, or it would not show.
   final bool onPrimary;
+
+  /// How high its tallest tongue reaches at rest above its base, as a share
+  /// of its height, whatever its tier (Home's, sized by the Buddy); null:
+  /// as its tier reaches. A reach too high for its flicker is lowered to
+  /// fit.
+  final double? reach;
 
   final bool _mark;
 
@@ -239,6 +247,7 @@ class _LiveFlameState extends State<_LiveFlame> with TickerProviderStateMixin {
             core: _flame.core,
             contained: _flame.contained,
             onPrimary: _flame.onPrimary,
+            reach: _flame.reach,
             ignite: _ignite,
             clock: _ambient.isActive ? _clock : null,
           ),
@@ -278,6 +287,7 @@ class FlamePainter extends CustomPainter {
     this.core = true,
     this.contained = false,
     this.onPrimary = false,
+    this.reach,
     this.ignite,
     this.clock,
   }) : super(repaint: Listenable.merge([ignite, clock]));
@@ -288,6 +298,15 @@ class FlamePainter extends CustomPainter {
   /// How far the flame's base sits above the box's bottom, as a share of
   /// its height.
   static const double baseInset = (_boxHeight - _boxBaseY) / _boxHeight;
+
+  /// How high its tallest tongue reaches above its base at scale 1, as a
+  /// share of its height.
+  static final double tipReach = (_boxBaseY - _tipY) / _boxHeight;
+
+  /// The tallest its body is scaled for a [reach]: its flicker still stays
+  /// inside the box.
+  static final double _maxReachScale =
+      _boxBaseY / ((_boxBaseY - _tipY) * (1 + _maxStretch));
 
   /// An ember is its tier squashed this much: low embers at its base.
   static const Size _emberSquash = Size(0.8, 0.4);
@@ -326,6 +345,9 @@ class FlamePainter extends CustomPainter {
   /// ([StreakFlame.onPrimary]).
   final bool onPrimary;
 
+  /// How high its tallest tongue reaches ([StreakFlame.reach]).
+  final double? reach;
+
   /// The ignite; its burst shows while it runs.
   final Animation<double>? ignite;
 
@@ -333,6 +355,15 @@ class FlamePainter extends CustomPainter {
   final ValueListenable<Duration>? clock;
 
   bool get _lit => look == FlameLook.lit;
+
+  /// Its tier's scale about its base; with a [reach], the tier's shape
+  /// scaled to reach it.
+  Size get _tierScale {
+    final reach = this.reach;
+    if (reach == null) return Size(tier.scaleX, tier.scaleY);
+    final scaleY = math.min(reach / tipReach, _maxReachScale);
+    return Size(tier.scaleX * scaleY / tier.scaleY, scaleY);
+  }
 
   /// 0..1 progress of the ignite burst; null when there is none.
   double? get burst {
@@ -345,15 +376,15 @@ class FlamePainter extends CustomPainter {
   /// tongue, flickering, reaches the box's top).
   Size get bodyScale {
     final squash = _lit ? const Size(1, 1) : _emberSquash;
+    final own = _tierScale;
     var pop = _pop(burst);
     if (contained) {
-      final cap =
-          _boxBaseY / ((_boxBaseY - _tipY) * tier.scaleY * (1 + _maxStretch));
+      final cap = _maxReachScale / own.height;
       pop = Size(math.min(pop.width, cap), math.min(pop.height, cap));
     }
     return Size(
-      tier.scaleX * squash.width * pop.width,
-      tier.scaleY * squash.height * pop.height,
+      own.width * squash.width * pop.width,
+      own.height * squash.height * pop.height,
     );
   }
 
@@ -468,7 +499,7 @@ class FlamePainter extends CustomPainter {
   /// An ember is narrowed by it too, so both looks share one horizontal
   /// scale and an ignite never snaps the flame narrower.
   double _restingHalfWidth(Size size) =>
-      tier.scaleX * (_glowsAt(size) ? _glowRadius : _bodyHalfWidth);
+      _tierScale.width * (_glowsAt(size) ? _glowRadius : _bodyHalfWidth);
 
   /// Each tongue filled from its base to its tip: lit, yellow → orange →
   /// red, fading at the tip; as an ember in the ember's colours (on the
@@ -659,12 +690,13 @@ class FlamePainter extends CustomPainter {
   /// ignite's pop, but never past the tier, so it stays inside the box.
   void _paintGlow(Canvas canvas) {
     final pop = _pop(burst);
+    final own = _tierScale;
     canvas.save();
     _aboutBase(
       canvas,
       () => canvas.scale(
-        tier.scaleX * math.min(pop.width, 1),
-        tier.scaleY * math.min(pop.height, 1),
+        own.width * math.min(pop.width, 1),
+        own.height * math.min(pop.height, 1),
       ),
     );
     canvas.translate(_glowCenter.dx, _glowCenter.dy);
@@ -716,10 +748,7 @@ class FlamePainter extends CustomPainter {
       final t = (rise + spark.offset) % 1;
       if (t >= _sparkLife) continue;
       final u = t / _sparkLife;
-      final start = _scaledAboutBase(
-        spark.from,
-        Size(tier.scaleX, tier.scaleY),
-      );
+      final start = _scaledAboutBase(spark.from, _tierScale);
       final r = spark.radius * _lerp(1, 0.4, u);
       final travel = math.min(_sparkRise, start.dy - spark.radius - 1);
       final opacity = u < 0.2 ? u / 0.2 : 1 - (u - 0.2) / 0.8;
@@ -790,6 +819,7 @@ class FlamePainter extends CustomPainter {
       old.core != core ||
       old.contained != contained ||
       old.onPrimary != onPrimary ||
+      old.reach != reach ||
       old.ignite != ignite ||
       old.clock != clock;
 }
