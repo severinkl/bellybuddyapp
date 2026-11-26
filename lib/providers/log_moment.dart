@@ -2,19 +2,21 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/buddy/buddy_mood_logic.dart';
 import '../services/buddy/log_moment.dart';
+import '../utils/gut_feeling_rating.dart';
 import '../utils/settled_value.dart';
 import 'buddy_provider.dart';
 import 'insights_provider.dart';
 import 'care_log_provider.dart';
 
-/// The [LogMoment] of an entry of [kind] at [trackedAt], as Home shows the
-/// needs now ([careNowProvider]). Trackers call it right before they write
-/// the entry.
+/// The [LogMoment] of an entry of [kind] at [trackedAt] (a Bauchgefühl
+/// felt [gutFeeling]), as Home shows the needs now ([careNowProvider]).
+/// Trackers call it right before they write the entry.
 LogMoment captureLogMoment(
   WidgetRef ref, {
   required EntryKind kind,
   required DateTime trackedAt,
   LogSentiment sentiment = LogSentiment.good,
+  GutFeelingRatingLevel? gutFeeling,
 }) {
   final care = ref.read(careNowProvider);
   return logMomentFor(
@@ -27,5 +29,6 @@ LogMoment captureLogMoment(
     buddy: ref.read(buddyProvider).settledValue,
     insights: ref.read(insightsProvider).settledValue,
     sentiment: sentiment,
+    gutFeeling: gutFeeling,
   );
 }

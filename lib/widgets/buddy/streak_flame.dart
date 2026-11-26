@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/scheduler.dart';
@@ -7,32 +8,33 @@ import 'package:material_ui/material_ui.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 
-/// How big the flame burns, by the streak ([StreakFlame.tierOf]).
+/// How big the flame burns, by the streak ([StreakFlame.tierOf]): its
+/// body's scale about its base. „lodert" ([blazing]) is taller than wide.
 enum FlameTier {
-  small(0.62),
-  medium(0.8),
-  large(1.0),
-  blazing(1.06);
+  small(0.62, 0.62),
+  medium(0.8, 0.8),
+  large(1.0, 1.0),
+  blazing(1.06, 1.18);
 
-  const FlameTier(this.scale);
+  const FlameTier(this.scaleX, this.scaleY);
 
-  /// The body's scale about its base.
-  final double scale;
+  final double scaleX, scaleY;
 }
 
-/// How the flame shows: lit once today counts, an ember while a streak
-/// waits for today's first entry, off without a streak.
-enum FlameLook { off, ember, lit }
+/// How the flame shows: lit once today counts, else an ember (also at
+/// streak 0).
+enum FlameLook { ember, lit }
 
-/// The streak flame, drawn in the Buddy's style (black outline, flat
-/// colours). It grows with [streak] ([tierOf]); unless [lit] it glows dimly
-/// as an ember, and [lit] turning true ignites it with a small burst (also
-/// on the first build with [igniteOnMount]). An ignite that comes while
-/// `TickerMode` is off plays once the flame is visible.
+/// The streak flame: tongues of fire, red at their tips, yellow at the
+/// base, around a bright core, in a warm glow. It grows with [streak]
+/// ([tierOf]); unless [lit] it glows low as an ember, and [lit] turning
+/// true ignites it with a small burst (also on the first build with
+/// [igniteOnMount]). An ignite that comes while `TickerMode` is off plays
+/// once the flame is visible.
 ///
-/// Unless [still], the lit flame wobbles, the ember breathes and a blazing
-/// flame's sparks rise. Under reduced motion all of it holds still and an
-/// ignite is lit at once. It adds no semantics; the widget around it
+/// The lit flame's tongues flicker and its sparks rise, and the ember
+/// breathes. Under reduced motion all of it holds still and an ignite is
+/// lit at once. It adds no semantics; the widget around it
 /// speaks.
 class StreakFlame extends StatelessWidget {
   const StreakFlame({
@@ -40,17 +42,25 @@ class StreakFlame extends StatelessWidget {
     required this.streak,
     required this.lit,
     required this.height,
+    this.width,
     this.igniteOnMount = false,
-    this.still = false,
+    this.core = true,
+    this.contained = false,
+    this.onPrimary = false,
+    this.reach,
   }) : _mark = false;
 
-  /// A still, lit, large flame: a kept day in the week row. Only painted,
-  /// it never moves.
-  const StreakFlame.mark({super.key, required this.height})
+  /// A still, large flame: a kept day in the week row, or, unless [lit], an
+  /// ember (Home's streak badge while today is open). Only painted, it
+  /// never moves.
+  const StreakFlame.mark({super.key, required this.height, this.lit = true})
     : streak = _markStreak,
-      lit = true,
+      width = null,
       igniteOnMount = false,
-      still = true,
+      core = true,
+      contained = false,
+      onPrimary = false,
+      reach = null,
       _mark = true;
 
   /// A streak drawn as [FlameTier.large].
@@ -64,7 +74,7 @@ class StreakFlame extends StatelessWidget {
     _ => FlameTier.blazing,
   };
 
-  /// Test seam: while false, flames hold their ambient motion (wobble,
+  /// Test seam: while false, flames hold their ambient motion (flicker,
   /// breathing, sparks) still, so `pumpAndSettle` can settle on screens
   /// that show one; the ignite still plays. The test root's
   /// `flutter_test_config.dart` sets it; never change it in app code.
@@ -74,25 +84,42 @@ class StreakFlame extends StatelessWidget {
   final int streak;
   final bool lit;
 
-  /// The width follows the drawing's 100 × 120 box.
   final double height;
+
+  /// Its box's width; null follows the drawing's 100 × 120 box. In a
+  /// narrower box the flame is narrowed to fit what its tier paints at
+  /// rest at its widest, lit (as tall; an ember as much); in a wider one it
+  /// is centred.
+  final double? width;
   final bool igniteOnMount;
 
-  /// No ambient motion, even with animations on.
-  final bool still;
+  /// Whether it draws its bright core (and, blazing, the core's blue
+  /// root). Home's backdrop leaves it out: behind the Buddy it would only
+  /// show beside his stem.
+  final bool core;
+
+  /// Whether its ignite stays inside its box (Home's, behind the Buddy): its
+  /// pop at most fills the box, its burst flies no further than its sides.
+  final bool contained;
+
+  /// Whether it sits on the primary colour (the success page): its ember
+  /// burns darker and warmer there, or it would not show.
+  final bool onPrimary;
+
+  /// How high its tallest tongue reaches at rest above its base, as a share
+  /// of its height, whatever its tier (Home's, sized by the Buddy); null:
+  /// as its tier reaches. A reach too high for its flicker is lowered to
+  /// fit.
+  final double? reach;
 
   final bool _mark;
 
-  /// How it shows: lit, an ember, or off.
-  FlameLook get look => lit
-      ? FlameLook.lit
-      : streak > 0
-      ? FlameLook.ember
-      : FlameLook.off;
+  /// How it shows: lit, or an ember.
+  FlameLook get look => lit ? FlameLook.lit : FlameLook.ember;
 
   @override
   Widget build(BuildContext context) {
-    final size = Size(height * FlamePainter.aspectRatio, height);
+    final size = Size(width ?? height * FlamePainter.aspectRatio, height);
     if (_mark) {
       return CustomPaint(
         size: size,
@@ -120,7 +147,8 @@ class _LiveFlameState extends State<_LiveFlame> with TickerProviderStateMixin {
     duration: AppConstants.streakFlameIgnite,
   );
 
-  /// The lit flame's motion clock (wobble, sparks): time since it started.
+  /// The lit flame's motion clock (flicker, sparks): time since it
+  /// started.
   final ValueNotifier<Duration> _clock = ValueNotifier(Duration.zero);
   late final Ticker _ambient = createTicker((t) => _clock.value = t);
 
@@ -143,8 +171,6 @@ class _LiveFlameState extends State<_LiveFlame> with TickerProviderStateMixin {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _reducedMotion = MediaQuery.disableAnimationsOf(context);
-    _visible = TickerMode.valuesOf(context).enabled;
     _sync();
   }
 
@@ -161,13 +187,16 @@ class _LiveFlameState extends State<_LiveFlame> with TickerProviderStateMixin {
   }
 
   /// Whether the flame shows its ambient motion now.
-  bool get _moving =>
-      StreakFlame.ambientEnabled && !_flame.still && !_reducedMotion;
+  bool get _moving => StreakFlame.ambientEnabled && !_reducedMotion;
 
   /// Plays a pending ignite (once visible, never under reduced motion) and
   /// runs the motion the look has: the lit flame's clock or the ember's
   /// breath.
   void _sync() {
+    // Read on every sync: a new widget can come in the frame that covers
+    // the flame, before its didChangeDependencies.
+    _reducedMotion = MediaQuery.disableAnimationsOf(context);
+    _visible = TickerMode.valuesOf(context).enabled;
     if (_reducedMotion) {
       _ignitePending = false;
       _ignite.stop();
@@ -215,6 +244,10 @@ class _LiveFlameState extends State<_LiveFlame> with TickerProviderStateMixin {
           painter: FlamePainter(
             look: look,
             tier: StreakFlame.tierOf(_flame.streak),
+            core: _flame.core,
+            contained: _flame.contained,
+            onPrimary: _flame.onPrimary,
+            reach: _flame.reach,
             ignite: _ignite,
             clock: _ambient.isActive ? _clock : null,
           ),
@@ -237,15 +270,24 @@ class _BreathOpacity extends Animatable<double> {
       _dim + (1 - _dim) * (1 - math.cos(2 * math.pi * t)) / 2;
 }
 
-/// Paints the flame in a 100 × 120 box scaled to its size: the body (outer
-/// flame with its shine, inner flame, a blazing flame's hot core) scaled by
-/// [tier] about its base, a blazing flame's sparks behind it and an
-/// ignite's burst in front. It repaints as [ignite] runs and [clock]
-/// ticks, without a rebuild.
+/// Paints the flame, drawn in a 100 × 120 box, as tall as its size and as
+/// wide (centred), narrowed where its size is narrower than what it paints
+/// at rest. Back to front: the lit flame's glow (from
+/// [AppConstants.streakFlameGlowMinHeight] up), its tongues, each
+/// flickering on its own, the bright core and a blazing flame's blue root
+/// (swaying with the centre tongue), the moving flame's sparks (from that
+/// height up too) and an ignite's burst. The body is scaled by [bodyScale]
+/// about its base. At rest all of it stays inside the box; only an
+/// ignite's pop leaves it, unless [contained]. It repaints as [ignite]
+/// runs and [clock] ticks, without a rebuild.
 class FlamePainter extends CustomPainter {
   FlamePainter({
     required this.look,
     required this.tier,
+    this.core = true,
+    this.contained = false,
+    this.onPrimary = false,
+    this.reach,
     this.ignite,
     this.clock,
   }) : super(repaint: Listenable.merge([ignite, clock]));
@@ -253,26 +295,58 @@ class FlamePainter extends CustomPainter {
   /// Width per height of the drawing's box.
   static const double aspectRatio = _boxWidth / _boxHeight;
 
+  /// How far the flame's base sits above the box's bottom, as a share of
+  /// its height.
+  static const double baseInset = (_boxHeight - _boxBaseY) / _boxHeight;
+
+  /// How high its tallest tongue reaches above its base at scale 1, as a
+  /// share of its height.
+  static final double tipReach = (_boxBaseY - _tipY) / _boxHeight;
+
+  /// The tallest its body is scaled for a [reach]: its flicker still stays
+  /// inside the box.
+  static final double _maxReachScale =
+      _boxBaseY / ((_boxBaseY - _tipY) * (1 + maxStretch));
+
+  /// An ember is its tier squashed this much: low embers at its base.
+  static const Size _emberSquash = Size(0.8, 0.4);
+
+  /// Half the body's width: its tongues share the base between x 14 and 86.
+  static const double _bodyHalfWidth = 36;
+
   static const double _boxWidth = 100;
   static const double _boxHeight = 120;
 
-  /// The point the body scales and wobbles about: the flame's base.
-  static const Offset _base = Offset(50, 114);
-
-  /// An ember (and the flame that is off) is this much smaller than its lit
-  /// tier.
-  static const double _emberScale = 0.8;
+  /// The point the body scales and the tongues sway about: the flame's
+  /// base.
+  static const Offset _base = Offset(50, _boxBaseY);
+  static const double _boxBaseY = 114;
 
   /// The ignite's pop: its peak scale, and when in the burst it peaks.
   static const double _popPeak = 1.24;
   static const double _popPeakAt = 0.45;
 
-  /// The lit flame's skew at the peak of its wobble (outer, inner).
-  static const double _outerSkew = 3 * math.pi / 180;
-  static const double _innerSkew = 2 * math.pi / 180;
+  /// A tongue's flicker at its peak: its skew and its stretch (of its
+  /// height).
+  static const double _maxSkew = 3 * math.pi / 180;
+  static const double maxStretch = 0.06;
 
   final FlameLook look;
   final FlameTier tier;
+
+  /// Whether the lit flame draws its bright core and, blazing, its blue
+  /// root ([StreakFlame.core]).
+  final bool core;
+
+  /// Whether the ignite stays inside the box ([StreakFlame.contained]).
+  final bool contained;
+
+  /// Whether the ember burns in its colours for the primary colour
+  /// ([StreakFlame.onPrimary]).
+  final bool onPrimary;
+
+  /// How high its tallest tongue reaches ([StreakFlame.reach]).
+  final double? reach;
 
   /// The ignite; its burst shows while it runs.
   final Animation<double>? ignite;
@@ -280,89 +354,280 @@ class FlamePainter extends CustomPainter {
   /// The lit flame's motion clock; null while it holds still.
   final ValueListenable<Duration>? clock;
 
+  bool get _lit => look == FlameLook.lit;
+
+  /// Its tier's scale about its base; with a [reach], the tier's shape
+  /// scaled to reach it.
+  Size get _tierScale {
+    final reach = this.reach;
+    if (reach == null) return Size(tier.scaleX, tier.scaleY);
+    final scaleY = math.min(reach / tipReach, _maxReachScale);
+    return Size(tier.scaleX * scaleY / tier.scaleY, scaleY);
+  }
+
   /// 0..1 progress of the ignite burst; null when there is none.
   double? get burst {
     final ignite = this.ignite;
     return ignite != null && ignite.isAnimating ? ignite.value : null;
   }
 
-  /// −1..1 along the lit flame's wobble, 0 when still.
-  double get wobble {
-    final phase = look == FlameLook.lit
-        ? _phase(AppConstants.streakFlameWobble)
-        : null;
-    return phase == null ? 0 : math.sin(2 * math.pi * phase);
+  /// The body's scale about its base: its tier, squashed as an ember,
+  /// popping while it ignites ([contained]: at most until its tallest
+  /// tongue, flickering, reaches the box's top).
+  Size get bodyScale {
+    final squash = _lit ? const Size(1, 1) : _emberSquash;
+    final own = _tierScale;
+    var pop = _pop(burst);
+    if (contained) {
+      final cap = _maxReachScale / own.height;
+      pop = Size(math.min(pop.width, cap), math.min(pop.height, cap));
+    }
+    return Size(
+      own.width * squash.width * pop.width,
+      own.height * squash.height * pop.height,
+    );
   }
 
-  /// 0..1 along the sparks' rise; null when still (sparks at rest).
-  double? get rise => look == FlameLook.lit && tier == FlameTier.blazing
-      ? _phase(AppConstants.streakFlameSparks)
-      : null;
+  /// Each tongue's sway, −1..1 (in [_tongues]' order); all 0 while the
+  /// flame holds still and for an ember.
+  @visibleForTesting
+  List<double> get flicker => [for (final angle in _angles) math.sin(angle)];
 
-  /// [period]'s phase at [clock], 0..1; null without a clock.
-  double? _phase(Duration period) {
+  /// Each tongue's angle along its flicker (radians); all 0 while still.
+  List<double> get _angles {
+    final at = _lit ? clock?.value : null;
+    return [
+      for (final tongue in _tongues)
+        at == null
+            ? 0
+            : 2 * math.pi * (_phaseOf(at, tongue.period) + tongue.phase),
+    ];
+  }
+
+  /// 0..1 along the sparks' rise for a lit flame; null while still.
+  double? get rise {
     final at = clock?.value;
-    if (at == null) return null;
-    return at.inMicroseconds % period.inMicroseconds / period.inMicroseconds;
+    return _lit && at != null
+        ? _phaseOf(at, AppConstants.streakFlameSparks)
+        : null;
   }
+
+  /// How many sparks rise: more from a blazing flame; none from an ember,
+  /// while it ignites (none float over the still-small flame) or while it
+  /// holds still (a frozen spark reads as a speck of dirt).
+  int get sparkCount => !_lit || burst != null || rise == null
+      ? 0
+      : tier == FlameTier.blazing
+      ? _sparks.length
+      : 2;
+
+  /// Whether it is painted tall enough at [size] for its glow and sparks
+  /// ([AppConstants.streakFlameGlowMinHeight]); smaller, they would only
+  /// smudge.
+  static bool _glowsAt(Size size) =>
+      size.height >= AppConstants.streakFlameGlowMinHeight;
+
+  /// The sparks show when painted tall enough ([_glowsAt]).
+  bool showsSparks(Size size) => sparkCount > 0 && _glowsAt(size);
+
+  /// A blazing flame burns blue at its base (in its core).
+  bool get hotCore => _lit && core && tier == FlameTier.blazing;
+
+  /// The lit flame glows when painted tall enough ([_glowsAt]).
+  bool showsGlow(Size size) => _lit && _glowsAt(size);
+
+  /// [period]'s phase at [at], 0..1.
+  static double _phaseOf(Duration at, Duration period) =>
+      at.inMicroseconds % period.inMicroseconds / period.inMicroseconds;
 
   // Cached paints; each drawing call sets what varies.
   static final _fill = Paint();
-  static final _outline = Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeJoin = StrokeJoin.round
-    ..color = AppTheme.buddyOutline;
-  static final _shinePaint = Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = 3.6
-    ..strokeCap = StrokeCap.round
-    ..color = Colors.white.withValues(alpha: 0.85);
-  static final _dotOutline = Paint()
-    ..style = PaintingStyle.stroke
-    ..strokeWidth = 2;
 
-  static final Path _outer = Path()
-    ..moveTo(50, 6)
-    ..cubicTo(58, 26, 82, 40, 82, 72)
-    ..cubicTo(82, 98, 66, 114, 50, 114)
-    ..cubicTo(34, 114, 18, 100, 18, 76)
-    ..cubicTo(18, 60, 26, 50, 32, 42)
-    ..cubicTo(33, 54, 38, 60, 44, 62)
-    ..cubicTo(40, 44, 44, 24, 50, 6)
-    ..close();
-
-  static final Path _shine = Path()
-    ..moveTo(25.5, 88)
-    ..cubicTo(23, 78, 24, 67, 29, 59);
-
-  static final Path _inner = Path()
-    ..moveTo(50, 50)
-    ..cubicTo(56, 62, 68, 72, 68, 88)
-    ..cubicTo(68, 102, 60, 108, 50, 108)
-    ..cubicTo(40, 108, 32, 101, 32, 89)
-    ..cubicTo(32, 79, 38, 73, 42, 65)
-    ..cubicTo(43, 70, 45, 72, 47, 72)
-    ..cubicTo(46, 64, 47, 57, 50, 50)
-    ..close();
-
-  static final Path _core = Path()
-    ..moveTo(50, 84)
-    ..cubicTo(54, 90, 57, 94, 57, 99)
-    ..cubicTo(57, 104, 54, 106.5, 50, 106.5)
-    ..cubicTo(46, 106.5, 43, 104, 43, 99)
-    ..cubicTo(43, 94, 46, 90, 50, 84)
-    ..close();
-
-  /// Sparks: centre and radius at rest.
-  static const _sparks = [
-    (28.0, 36.0, 3.4),
-    (72.0, 30.0, 3.0),
-    (56.0, 14.0, 2.6),
+  /// The tongues, back to front: the sides, then the centre. Each shares
+  /// the rounded base between x 14 and 86 and flickers on its own period
+  /// (pairwise different).
+  static final _tongues = [
+    // Left, tip at (30, 48).
+    _Tongue(
+      Path()
+        ..moveTo(50, 114)
+        ..cubicTo(34, 114, 14, 105, 14, 88)
+        ..cubicTo(14, 72, 22, 61, 30, 48)
+        ..cubicTo(32, 60, 42, 68, 50, 79)
+        ..cubicTo(58, 90, 60, 114, 50, 114)
+        ..close(),
+      tipY: 48,
+      phase: 0,
+      period: const Duration(milliseconds: 1300),
+    ),
+    // Right, tip at (71, 40).
+    _Tongue(
+      Path()
+        ..moveTo(50, 114)
+        ..cubicTo(66, 114, 86, 105, 86, 88)
+        ..cubicTo(86, 70, 79, 56, 71, 40)
+        ..cubicTo(68, 54, 58, 64, 50, 78)
+        ..cubicTo(42, 90, 40, 114, 50, 114)
+        ..close(),
+      tipY: 40,
+      phase: 0.37,
+      period: const Duration(milliseconds: 1700),
+    ),
+    // Centre, tip at (50, 24).
+    _Tongue(
+      Path()
+        ..moveTo(50, 114)
+        ..cubicTo(36, 114, 27, 103, 27, 88)
+        ..cubicTo(27, 68, 42, 54, 50, 24)
+        ..cubicTo(56, 52, 73, 66, 73, 88)
+        ..cubicTo(73, 103, 64, 114, 50, 114)
+        ..close(),
+      tipY: 24,
+      phase: 0.71,
+      period: const Duration(milliseconds: 1100),
+    ),
   ];
 
-  /// The burst's circles fly from [_burstFrom] by these offsets.
+  /// The centre tongue's index in [_tongues]: the core sways with it.
+  static const int _centre = 2;
+
+  /// The highest tongue tip's y.
+  static final double _tipY = _tongues.map((t) => t.tipY).reduce(math.min);
+
+  /// Half the width its tier paints at rest at [size] at its widest, lit
+  /// (in the drawing's units): its glow where it shows one, else its body.
+  /// An ember is narrowed by it too, so both looks share one horizontal
+  /// scale and an ignite never snaps the flame narrower.
+  double _restingHalfWidth(Size size) =>
+      _tierScale.width * (_glowsAt(size) ? _glowRadius : _bodyHalfWidth);
+
+  /// Each tongue filled from its base to its tip: lit, yellow → orange →
+  /// red, fading at the tip; as an ember in the ember's colours (on the
+  /// primary colour, its darker ones).
+  static final List<Paint> _litTongues = [
+    for (final tongue in _tongues)
+      _gradient(tongue.tipY, const [
+        AppTheme.streakFlameCore,
+        AppTheme.streakFlame,
+        AppTheme.streakFlameRed,
+      ], tipAlpha: 0.25),
+  ];
+  static final List<Paint> _emberTongues = [
+    for (final tongue in _tongues)
+      _gradient(tongue.tipY, const [
+        AppTheme.streakEmberCore,
+        AppTheme.streakEmber,
+        AppTheme.streakEmber,
+      ], tipAlpha: 0.5),
+  ];
+  static final List<Paint> _emberTonguesOnPrimary = [
+    for (final tongue in _tongues)
+      _gradient(tongue.tipY, const [
+        AppTheme.streakEmberCoreOnPrimary,
+        AppTheme.streakEmberOnPrimary,
+        AppTheme.streakEmberOnPrimary,
+      ], tipAlpha: 0.5),
+  ];
+
+  /// A vertical gradient from the base up to [tipY]: [colors] at its
+  /// bottom, middle and top, the top's colour full just below the tip and
+  /// fading to [tipAlpha] at it.
+  static Paint _gradient(
+    double tipY,
+    List<Color> colors, {
+    required double tipAlpha,
+  }) => Paint()
+    ..shader = ui.Gradient.linear(
+      _base,
+      Offset(_base.dx, tipY),
+      [colors[0], colors[1], colors[2], colors[2].withValues(alpha: tipAlpha)],
+      const [0, 0.4, 0.78, 1],
+    );
+
+  /// The bright core: a teardrop low in the centre tongue, melting into
+  /// it at its tip.
+  static final Path _core = Path()
+    ..moveTo(50, 54)
+    ..cubicTo(54, 68, 63, 80, 63, 94)
+    ..cubicTo(63, 105, 57, 111, 50, 111)
+    ..cubicTo(43, 111, 37, 105, 37, 94)
+    ..cubicTo(37, 80, 46, 68, 50, 54)
+    ..close();
+  static final Paint _corePaint = Paint()
+    ..shader = ui.Gradient.linear(
+      const Offset(50, 111),
+      const Offset(50, 54),
+      [
+        AppTheme.streakFlameBright,
+        AppTheme.streakFlameCore,
+        AppTheme.streakFlameCore.withValues(alpha: 0),
+      ],
+      const [0.2, 0.6, 1],
+    );
+
+  /// A blazing flame's hot core: a soft blue root about the bright core's
+  /// bottom, this wide and tall (half-axes), fading out upward into it.
+  /// Painted inside the bright core (over the yellow base, blue would turn
+  /// muddy): the core's outline filled with the root's elliptic gradient.
+  static const Offset _hotRoot = Offset(50, 111);
+  static const double _hotWidth = 14;
+  static const double _hotHeight = 26;
+  static final Paint _hotPaint = Paint()
+    ..shader = ui.Gradient.radial(
+      _hotRoot,
+      _hotWidth,
+      [
+        AppTheme.streakFlameHot.withValues(alpha: 0.95),
+        AppTheme.streakFlameHot.withValues(alpha: 0.55),
+        AppTheme.streakFlameHot.withValues(alpha: 0),
+      ],
+      const [0, 0.45, 1],
+      TileMode.clamp,
+      // Stretched to its height about the root.
+      (Matrix4.diagonal3Values(1, _hotHeight / _hotWidth, 1)..setTranslationRaw(
+            0,
+            _hotRoot.dy * (1 - _hotHeight / _hotWidth),
+            0,
+          ))
+          .storage,
+    );
+
+  /// The glow: a soft ellipse about [_glowCenter], full in its inner half.
+  static const Offset _glowCenter = Offset(50, 74);
+  static const double _glowRadius = 46;
+  static const double _glowHeightRatio = 44 / 46;
+  static final Paint _glowPaint = Paint()
+    ..shader = ui.Gradient.radial(
+      Offset.zero,
+      _glowRadius,
+      [
+        AppTheme.streakFlameGlow,
+        AppTheme.streakFlameGlow,
+        AppTheme.streakFlameGlow.withValues(alpha: 0),
+      ],
+      const [0, 0.5, 1],
+    );
+
+  /// The sparks: a lit flame shows the first two; a blazing one all.
+  static const _sparks = [
+    _Spark(from: Offset(32, 56), drift: -4, radius: 2.6, offset: 0),
+    _Spark(from: Offset(69, 50), drift: 3, radius: 2.3, offset: 0.5),
+    _Spark(from: Offset(42, 40), drift: -2, radius: 2, offset: 0.22),
+    _Spark(from: Offset(60, 36), drift: 2.5, radius: 2.2, offset: 0.72),
+    _Spark(from: Offset(24, 70), drift: -3, radius: 1.8, offset: 0.4),
+  ];
+
+  /// How far a spark rises, and how much of the rise it shows for.
+  static const double _sparkRise = 26;
+  static const double _sparkLife = 0.6;
+
+  /// The burst's circles fly from [_burstFrom] (at scale 1) by these
+  /// offsets.
   static const Offset _burstFrom = Offset(50, 66);
   static const double _burstRadius = 4;
+
+  /// How far a burst circle flies sideways, at most ([_burstTo]).
+  static const double _burstReach = 40;
   static const _burstTo = [
     Offset(0, -40),
     Offset(28, -30),
@@ -376,123 +641,167 @@ class FlamePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    final scaleY = size.height / _boxHeight;
+    final scaleX = math.min(scaleY, size.width / (2 * _restingHalfWidth(size)));
     canvas.save();
-    canvas.scale(size.width / _boxWidth, size.height / _boxHeight);
-    if (look == FlameLook.lit && tier == FlameTier.blazing) {
-      _paintSparks(canvas);
+    canvas.translate(size.width / 2, 0);
+    canvas.scale(scaleX, scaleY);
+    canvas.translate(-_base.dx, 0);
+    if (showsGlow(size)) _paintGlow(canvas);
+    final scale = bodyScale;
+
+    canvas.save();
+    _aboutBase(canvas, () => canvas.scale(scale.width, scale.height));
+    final angles = _angles;
+    final tongues = _lit
+        ? _litTongues
+        : onPrimary
+        ? _emberTonguesOnPrimary
+        : _emberTongues;
+    for (var i = 0; i < _tongues.length; i++) {
+      _swaying(canvas, angles[i], () {
+        canvas.drawPath(_tongues[i].path, tongues[i]);
+      });
     }
+    if (_lit && core) {
+      _swaying(canvas, angles[_centre], () {
+        canvas.drawPath(_core, _corePaint);
+        if (hotCore) canvas.drawPath(_core, _hotPaint);
+      });
+    }
+    canvas.restore();
+
+    if (showsSparks(size)) _paintSparks(canvas);
     final burst = this.burst;
-    _paintBody(canvas, burst, wobble);
-    if (burst != null) _paintBurst(canvas, burst);
+    if (burst != null) {
+      // Contained, it flies no further than the box's sides.
+      final spread = contained
+          ? ((size.width / 2 / scaleX - _burstRadius) / _burstReach).clamp(
+              0.0,
+              1.0,
+            )
+          : 1.0;
+      _paintBurst(canvas, burst, scale, spread);
+    }
     canvas.restore();
   }
 
-  void _paintBody(Canvas canvas, double? burst, double wobble) {
-    final (outer, inner) = switch (look) {
-      FlameLook.lit => (AppTheme.streakFlame, AppTheme.streakFlameCore),
-      FlameLook.ember => (AppTheme.streakEmber, AppTheme.streakEmberCore),
-      FlameLook.off => (AppTheme.streakEmberOff, null),
-    };
-    final lit = look == FlameLook.lit;
-
+  /// The glow behind the body, scaled with its tier. It grows with an
+  /// ignite's pop, but never past the tier, so it stays inside the box.
+  void _paintGlow(Canvas canvas) {
+    final pop = _pop(burst);
+    final own = _tierScale;
     canvas.save();
     _aboutBase(
       canvas,
-      () => canvas.scale(tier.scale * (lit ? 1 : _emberScale) * _pop(burst)),
+      () => canvas.scale(
+        own.width * math.min(pop.width, 1),
+        own.height * math.min(pop.height, 1),
+      ),
     );
+    canvas.translate(_glowCenter.dx, _glowCenter.dy);
+    canvas.scale(1, _glowHeightRatio);
+    canvas.drawCircle(Offset.zero, _glowRadius, _glowPaint);
+    canvas.restore();
+  }
 
+  /// Draws with a tongue's flicker at [angle]: it sways about the base
+  /// and stretches twice per sway, so its tip traces a figure eight (at
+  /// rest, angle 0, it holds its own shape).
+  static void _swaying(Canvas canvas, double angle, VoidCallback draw) {
     canvas.save();
     _aboutBase(canvas, () {
-      canvas.skew(math.tan(_outerSkew * wobble), 0);
-      canvas.scale(1 - 0.02 * wobble, 1 + 0.03 * wobble);
+      canvas.skew(math.tan(_maxSkew * math.sin(angle)), 0);
+      canvas.scale(1, 1 + maxStretch * math.sin(2 * angle));
     });
-    _shape(canvas, _outer, outer, 4.5);
-    if (lit) canvas.drawPath(_shine, _shinePaint);
-    canvas.restore();
-
-    if (inner != null) {
-      // The inner flame sways against the outer one, stretching up at
-      // both ends of the wobble.
-      final stretch = wobble * wobble;
-      canvas.save();
-      _aboutBase(canvas, () {
-        canvas.skew(math.tan(-_innerSkew * wobble), 0);
-        canvas.scale(1 - 0.04 * stretch, 1 + 0.05 * stretch);
-      });
-      _shape(canvas, _inner, inner, 3);
-      if (lit && tier == FlameTier.blazing) {
-        _shape(canvas, _core, AppTheme.streakFlameHot, 2.6);
-      }
-      canvas.restore();
-    }
-
+    draw();
     canvas.restore();
   }
 
   /// The body's pop while it ignites ([burst] not null): from the ember's
   /// size up to [_popPeak] (at [_popPeakAt] of the burst), then down to its
   /// own.
-  static double _pop(double? burst) {
-    if (burst == null || burst >= 1) return 1;
+  static Size _pop(double? burst) {
+    if (burst == null || burst >= 1) return const Size(1, 1);
     if (burst < _popPeakAt) {
-      return _lerp(
-        _emberScale,
-        _popPeak,
-        Curves.easeOut.transform(burst / _popPeakAt),
+      final t = Curves.easeOut.transform(burst / _popPeakAt);
+      return Size(
+        _lerp(_emberSquash.width, _popPeak, t),
+        _lerp(_emberSquash.height, _popPeak, t),
       );
     }
-    return _lerp(
+    final pop = _lerp(
       _popPeak,
       1,
       Curves.easeInOut.transform((burst - _popPeakAt) / (1 - _popPeakAt)),
     );
+    return Size(pop, pop);
   }
 
-  /// Three sparks, a third of the rise apart: each rises from below its
-  /// rest, shrinking, and fades in, then out.
+  /// The first [sparkCount] sparks (yellow with a bright heart), each
+  /// rising from near a tongue's tip (placed by the tier, not by an
+  /// ignite's pop) for part of the rise: fading in, drifting, shrinking and
+  /// fading out, never above the box.
   void _paintSparks(Canvas canvas) {
-    final rise = this.rise;
-    for (var i = 0; i < _sparks.length; i++) {
-      final (x, y, r) = _sparks[i];
-      if (rise == null) {
-        _dot(canvas, Offset(x, y), r, 1);
-        continue;
-      }
-      final t = (rise - i / _sparks.length) % 1;
-      final dy = _lerp(8, -24, Curves.easeOut.transform(t));
-      final opacity = t < 0.2 ? t / 0.2 : 1 - (t - 0.2) / 0.8;
-      _dot(canvas, Offset(x, y + dy), r * _lerp(0.6, 0.3, t), opacity);
+    final rise = this.rise!;
+    for (final spark in _sparks.take(sparkCount)) {
+      final t = (rise + spark.offset) % 1;
+      if (t >= _sparkLife) continue;
+      final u = t / _sparkLife;
+      final start = _scaledAboutBase(spark.from, _tierScale);
+      final r = spark.radius * _lerp(1, 0.4, u);
+      final travel = math.min(_sparkRise, start.dy - spark.radius - 1);
+      final opacity = u < 0.2 ? u / 0.2 : 1 - (u - 0.2) / 0.8;
+      final at =
+          start +
+          Offset(spark.drift * u, -travel * Curves.easeOut.transform(u));
+      _dot(canvas, at, r, AppTheme.streakFlameCore, opacity);
+      _dot(canvas, at, r / 2, AppTheme.streakFlameBright, opacity);
     }
   }
 
-  /// The burst's circles fly out from the flame's middle, shrinking and
-  /// fading.
-  static void _paintBurst(Canvas canvas, double burst) {
+  /// The burst's circles fly out from the middle of the flame as it pops
+  /// (its body at [scale]), [spread] of their way, shrinking and fading.
+  static void _paintBurst(
+    Canvas canvas,
+    double burst,
+    Size scale,
+    double spread,
+  ) {
     final t = Curves.easeOut.transform(burst);
+    final from = _scaledAboutBase(_burstFrom, scale);
     for (final to in _burstTo) {
-      _dot(canvas, _burstFrom + to * t, _burstRadius * _lerp(1, 0.4, t), 1 - t);
+      _dot(
+        canvas,
+        from + to * (t * spread),
+        _burstRadius * _lerp(1, 0.4, t),
+        AppTheme.streakFlameCore,
+        1 - t,
+      );
     }
   }
 
-  /// A flame-core dot with its outline.
-  static void _dot(Canvas canvas, Offset center, double radius, double alpha) {
+  static void _dot(
+    Canvas canvas,
+    Offset center,
+    double radius,
+    Color color,
+    double alpha,
+  ) {
     canvas.drawCircle(
       center,
       radius,
-      _fill..color = AppTheme.streakFlameCore.withValues(alpha: alpha),
-    );
-    canvas.drawCircle(
-      center,
-      radius,
-      _dotOutline..color = AppTheme.buddyOutline.withValues(alpha: alpha),
+      _fill..color = color.withValues(alpha: alpha),
     );
   }
 
-  /// [path] filled with [fill] and outlined [strokeWidth] wide.
-  static void _shape(Canvas canvas, Path path, Color fill, double strokeWidth) {
-    canvas.drawPath(path, _fill..color = fill);
-    canvas.drawPath(path, _outline..strokeWidth = strokeWidth);
-  }
+  /// [point] (of the drawing at scale 1) scaled by [scale] about [_base].
+  static Offset _scaledAboutBase(Offset point, Size scale) =>
+      _base +
+      Offset(
+        (point.dx - _base.dx) * scale.width,
+        (point.dy - _base.dy) * scale.height,
+      );
 
   /// Applies [transform] about [_base].
   static void _aboutBase(Canvas canvas, VoidCallback transform) {
@@ -507,6 +816,42 @@ class FlamePainter extends CustomPainter {
   bool shouldRepaint(FlamePainter old) =>
       old.look != look ||
       old.tier != tier ||
+      old.core != core ||
+      old.contained != contained ||
+      old.onPrimary != onPrimary ||
+      old.reach != reach ||
       old.ignite != ignite ||
       old.clock != clock;
+}
+
+/// One tongue of the flame: its outline, its tip's height (its gradient's
+/// top), its flicker's offset (of a cycle) and period.
+class _Tongue {
+  const _Tongue(
+    this.path, {
+    required this.tipY,
+    required this.phase,
+    required this.period,
+  });
+
+  final Path path;
+  final double tipY;
+  final double phase;
+  final Duration period;
+}
+
+/// A spark: where it starts (at scale 1), how far it drifts sideways as it
+/// rises, its radius and its offset along the rise.
+class _Spark {
+  const _Spark({
+    required this.from,
+    required this.drift,
+    required this.radius,
+    required this.offset,
+  });
+
+  final Offset from;
+  final double drift;
+  final double radius;
+  final double offset;
 }

@@ -8,7 +8,15 @@ import '../../../services/buddy/care_meters.dart';
 import '../../../services/buddy/care_now.dart';
 import '../../../services/buddy/daily_care.dart';
 import '../../../services/haptic_service.dart';
+import '../../../utils/gut_feeling_rating.dart';
+import '../../../widgets/buddy/buddy_geometry.dart';
+import '../../../widgets/buddy/need_icon.dart';
 import '../../../widgets/buddy/need_meter.dart';
+
+/// Builds a layer of [CareRing] around the Buddy, in the ring's box: his
+/// square ([buddy]) and the ring's middle between the bubbles' columns
+/// ([middle]), both in that box.
+typedef CareRingLayer = Widget Function(Rect buddy, Rect middle);
 
 /// The Buddy among his four needs, a bubble in each corner (Essen top
 /// left, Trinken top right, Klo bottom left, Bauchgefühl bottom right):
@@ -22,7 +30,9 @@ import '../../../widgets/buddy/need_meter.dart';
 /// the space between them is no tap target (the Buddy has his own). The
 /// [highlight]ed need (the one he suggests next) glows and, unless
 /// animations are off, pulses gently on its own clock (paused while
-/// `TickerMode` is off).
+/// `TickerMode` is off). [behindBuddy] (Home's streak flame) is drawn
+/// under him and the bubbles, [onBuddy] (the flame's streak badge) over
+/// them, and [overBuddy] (his speech bubble) on his head, over it all.
 class CareRing extends StatelessWidget {
   const CareRing({
     super.key,
@@ -31,10 +41,17 @@ class CareRing extends StatelessWidget {
     required this.buddy,
     required this.onNeed,
     this.highlight,
+    this.behindBuddy,
+    this.onBuddy,
+    this.overBuddy,
+    this.overBuddyRoom = 0,
   });
 
   /// A need's bubble (its whole tap area): `care_need_<name>`.
   static Key needKey(CareNeed need) => ValueKey('care_need_${need.name}');
+
+  /// The Buddy's square.
+  static const buddyKey = Key('care_ring_buddy');
 
   /// Test seam: while false, the highlighted need glows without pulsing,
   /// so `pumpAndSettle` can settle on screens that show the ring (e.g. the
@@ -58,6 +75,11 @@ class CareRing extends StatelessWidget {
         AppConstants.careRingMaxDiameter,
       );
 
+  /// The side of the Buddy's square on a ring of [diameter]: he is drawn
+  /// as tall, and as wide where the ring's middle leaves the room.
+  static double buddySideFor(double diameter) =>
+      diameter * AppConstants.careRingBuddyFactor;
+
   /// A bubble's meter on a ring of [diameter].
   static double meterSizeFor(double diameter) =>
       (diameter * AppConstants.careMeterFactor).clamp(
@@ -69,13 +91,33 @@ class CareRing extends StatelessWidget {
   final CareNow care;
   final double diameter;
 
-  /// Drawn centred, [AppConstants.careRingBuddyFactor] of [diameter]
-  /// square.
+  /// Drawn centred in his square ([buddySideFor]).
   final Widget buddy;
 
   /// Tapping a need's bubble calls this with the need.
   final ValueChanged<CareNeed> onNeed;
   final CareNeed? highlight;
+
+  /// Drawn under the Buddy and the bubbles, filling the ring: it places
+  /// itself by his square and the ring's middle it is handed, and keeps
+  /// to the middle (never over or under a bubble). It is never a tap
+  /// target: a tap on it lands on what is over it.
+  final CareRingLayer? behindBuddy;
+
+  /// Drawn over the Buddy and the bubbles, filling the ring, under
+  /// [overBuddy]: it places itself like [behindBuddy]. What it builds takes
+  /// taps (Home's streak badge); a tap beside it lands on what is under it.
+  final CareRingLayer? onBuddy;
+
+  /// Drawn over everything in the ring, the bubbles included (Home's
+  /// speech bubble): centred on the ring, its bottom on the Buddy's head
+  /// ([BuddyLayout.headTop]). It gets at most the ring's width and the
+  /// height from the ring's top down to his head plus [overBuddyRoom], and
+  /// is never a tap target: a tap on it lands on what it covers.
+  final CareRingLayer? overBuddy;
+
+  /// How far [overBuddy] may rise above the ring.
+  final double overBuddyRoom;
 
   /// The labels' style; [_labelScaler] fits the longest into a bubble.
   static const _labelStyle = TextStyle(
@@ -129,18 +171,57 @@ class CareRing extends StatelessWidget {
   /// How much each further step shrinks the labels by ([_labelScaler]).
   static const _labelShrinkStep = 0.98;
 
+  /// The Buddy's square and the ring's middle (between the bubbles'
+  /// columns) in a ring of [size], as its row lays them out: he is centred
+  /// in the middle, narrower where it leaves less room than [buddySide].
+  static ({Rect buddy, Rect middle}) _placesIn(Size size, double buddySide) {
+    const column = AppConstants.careNeedWidth + 2 * AppConstants.careNeedGlow;
+    final middle = Rect.fromLTRB(
+      column,
+      0,
+      math.max(column, size.width - column),
+      size.height,
+    );
+    final buddy = Rect.fromCenter(
+      center: middle.center,
+      width: math.min(buddySide, middle.width),
+      height: math.min(buddySide, middle.height),
+    );
+    return (buddy: buddy, middle: middle);
+  }
+
+  /// [layer] in a ring-filling box, handed his square and the middle;
+  /// [place] puts what it builds into that box. It takes no tap unless
+  /// [taps].
+  Widget _layer(
+    CareRingLayer layer,
+    double buddySide, {
+    Widget Function(Rect buddy, Widget child)? place,
+    bool taps = false,
+  }) => Positioned.fill(
+    child: IgnorePointer(
+      ignoring: !taps,
+      child: LayoutBuilder(
+        builder: (_, constraints) {
+          final (:buddy, :middle) = _placesIn(constraints.biggest, buddySide);
+          final child = layer(buddy, middle);
+          return place == null ? child : place(buddy, child);
+        },
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final meterSize = meterSizeFor(diameter);
     final labelScaler = _labelScaler(context);
+    final buddySide = buddySideFor(diameter);
     Widget bubble(CareNeed need) => _NeedBubble(
       key: needKey(need),
       need: need,
       level: care.meters.level(need),
       // Bauchgefühl shows how today's latest entry was.
-      emoji: need == CareNeed.gutFeeling
-          ? care.gutFeelingLevel?.face ?? need.emoji
-          : need.emoji,
+      gutFeeling: need == CareNeed.gutFeeling ? care.gutFeelingLevel : null,
       line: need == CareNeed.toilet ? care.looLine : null,
       spoken: care.spoken(need),
       meterSize: meterSize,
@@ -156,26 +237,76 @@ class CareRing extends StatelessWidget {
     return ConstrainedBox(
       constraints: BoxConstraints(minHeight: diameter),
       child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        // As tall as the row: a positioned child adds no height.
+        child: Stack(
+          clipBehavior: Clip.none,
           children: [
-            side(CareNeed.food, CareNeed.toilet),
-            // His square, narrower where the bubbles leave less room (he
-            // is drawn narrower than tall, so his height stays).
-            Expanded(
-              child: Center(
-                child: SizedBox.square(
-                  dimension: diameter * AppConstants.careRingBuddyFactor,
-                  child: buddy,
+            if (behindBuddy case final behind?) _layer(behind, buddySide),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                side(CareNeed.food, CareNeed.toilet),
+                // His square, narrower where the bubbles leave less room (he
+                // is drawn narrower than tall, so his height stays):
+                // [_placesIn].
+                Expanded(
+                  child: Center(
+                    child: SizedBox.square(
+                      key: buddyKey,
+                      dimension: buddySide,
+                      child: buddy,
+                    ),
+                  ),
+                ),
+                side(CareNeed.drink, CareNeed.gutFeeling),
+              ],
+            ),
+            if (onBuddy case final on?) _layer(on, buddySide, taps: true),
+            if (overBuddy case final over?)
+              _layer(
+                over,
+                buddySide,
+                place: (buddy, child) => CustomSingleChildLayout(
+                  delegate: _OverBuddyLayout(
+                    head: buddy.top + BuddyLayout(buddy.size).headTop,
+                    room: overBuddyRoom,
+                  ),
+                  child: child,
                 ),
               ),
-            ),
-            side(CareNeed.drink, CareNeed.gutFeeling),
           ],
         ),
       ),
     );
   }
+}
+
+/// Lays out [CareRing.overBuddy] in the ring: at most the ring's width and
+/// the height down to the Buddy's [head] plus [room], centred on the ring,
+/// its bottom on his head.
+class _OverBuddyLayout extends SingleChildLayoutDelegate {
+  const _OverBuddyLayout({required this.head, required this.room});
+
+  /// The top of his head in the ring.
+  final double head;
+
+  /// How far it may rise above the ring ([CareRing.overBuddyRoom]).
+  final double room;
+
+  @override
+  BoxConstraints getConstraintsForChild(BoxConstraints constraints) =>
+      BoxConstraints(
+        maxWidth: constraints.maxWidth,
+        maxHeight: math.max(0, head + room),
+      );
+
+  @override
+  Offset getPositionForChild(Size size, Size childSize) =>
+      Offset((size.width - childSize.width) / 2, head - childSize.height);
+
+  @override
+  bool shouldRelayout(_OverBuddyLayout old) =>
+      old.head != head || old.room != room;
 }
 
 /// A need's corner bubble, a button that logs it ([onTap]): its meter
@@ -191,7 +322,7 @@ class _NeedBubble extends StatelessWidget {
     super.key,
     required this.need,
     required this.level,
-    required this.emoji,
+    required this.gutFeeling,
     required this.line,
     required this.spoken,
     required this.meterSize,
@@ -204,7 +335,9 @@ class _NeedBubble extends StatelessWidget {
 
   /// Its meter's level; null for Klo, which has none.
   final double? level;
-  final String emoji;
+
+  /// Bauchgefühl's latest level, the mouth on its icon ([NeedIcon]).
+  final GutFeelingRatingLevel? gutFeeling;
 
   /// A second line under the label (Klo's „vor 3 Std").
   final String? line;
@@ -225,10 +358,7 @@ class _NeedBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final icon = Text(
-      emoji,
-      style: const TextStyle(fontSize: AppTheme.fontSizeHeading),
-    );
+    final icon = NeedIcon(need, gutFeeling: gutFeeling);
     // The glow goes inside the tween: when it moves on (the need just
     // logged), the tween keeps its place and the meter still fills.
     Widget meterAt(double? shown, Widget child) {

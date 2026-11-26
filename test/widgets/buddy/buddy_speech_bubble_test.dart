@@ -224,6 +224,109 @@ void main() {
     });
   });
 
+  group('scaleWidthWithText', () {
+    final long = List.filled(4, line).join(' ');
+
+    /// The bubble's width saying [long] (wide enough to fill it) with
+    /// [scaler], [maxWidth] 200.
+    Future<double> widthWith(
+      WidgetTester tester,
+      TextScaler scaler, {
+      bool scaleWidthWithText = true,
+    }) async {
+      final controller = BuddyController()..say(long, duration: null);
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (context) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(textScaler: scaler),
+              child: Center(
+                child: BuddySpeechBubble(
+                  controller: controller,
+                  maxWidth: 200,
+                  maxLines: null,
+                  scaleWidthWithText: scaleWidthWithText,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      return tester.getSize(find.byType(BuddySpeechBubble)).width;
+    }
+
+    testWidgets('as wide at the base size or smaller text; wider by the '
+        "scale of its own text's size", (tester) async {
+      expect(await widthWith(tester, TextScaler.noScaling), 200);
+      expect(await widthWith(tester, const TextScaler.linear(0.85)), 200);
+      expect(
+        await widthWith(tester, const TextScaler.linear(1.3)),
+        moreOrLessEquals(260),
+      );
+      // Android scales large sizes less: the scale at its own size counts.
+      expect(
+        await widthWith(tester, const _BySize(AppTheme.fontSizeBodyLG, 1.2)),
+        moreOrLessEquals(240),
+      );
+    });
+
+    testWidgets('off: never wider than maxWidth', (tester) async {
+      expect(
+        await widthWith(
+          tester,
+          const TextScaler.linear(1.3),
+          scaleWidthWithText: false,
+        ),
+        200,
+      );
+    });
+  });
+
+  group('BuddyBubbleSlot', () {
+    Future<void> pumpSlot(WidgetTester tester, {double? height}) async {
+      final controller = BuddyController()
+        ..say(List.filled(4, line).join(' '), duration: null);
+      addTearDown(controller.dispose);
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MediaQuery(
+            data: const MediaQueryData(textScaler: TextScaler.linear(1.3)),
+            child: Center(
+              child: BuddyBubbleSlot(
+                controller: controller,
+                width: 240,
+                buddyArea: const Size.square(200),
+                height: height,
+                maxWidth: 200,
+                scaleWidthWithText: true,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('widened with large text, never wider than its width', (
+      tester,
+    ) async {
+      await pumpSlot(tester);
+      expect(tester.getSize(find.byType(BuddySpeechBubble)).width, 240);
+    });
+
+    testWidgets('without a height: as tall as its bubble; with one, that '
+        'tall', (tester) async {
+      await pumpSlot(tester);
+      expect(
+        tester.getSize(find.byType(BuddyBubbleSlot)).height,
+        tester.getSize(find.byType(BuddySpeechBubble)).height,
+      );
+
+      await pumpSlot(tester, height: 300);
+      expect(tester.getSize(find.byType(BuddyBubbleSlot)).height, 300);
+    });
+  });
+
   group('buddyBubblePath', () {
     const size = Size(200, 80);
     const shadow = AppConstants.buddyBubbleShadowOffset;
@@ -302,4 +405,20 @@ void main() {
       expect(tail.shift, lessThan(0));
     });
   });
+}
+
+/// Scales [size] by [factor] and every other size by twice as much, as
+/// Android scales large sizes less than small ones.
+class _BySize extends TextScaler {
+  const _BySize(this.size, this.factor);
+
+  final double size;
+  final double factor;
+
+  @override
+  double scale(double fontSize) =>
+      fontSize * (fontSize == size ? factor : 2 * factor);
+
+  @override
+  double get textScaleFactor => factor;
 }

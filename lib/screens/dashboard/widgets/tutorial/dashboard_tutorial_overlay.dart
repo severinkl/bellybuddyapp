@@ -240,9 +240,9 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
                     top: _skipBottom ?? safe.top,
                   ),
                 // "Überspringen" link (must sit above the advance layer),
-                // top right and at most [_skipMaxWidth] of the width: Home's
-                // top left holds the streak chip, which the first step
-                // spotlights.
+                // top right and at most [_skipMaxWidth] of the width: in the
+                // band above Home's ring (his bubble is hidden meanwhile),
+                // clear of the need bubbles the first step spotlights.
                 Positioned(
                   top: safe.top + AppConstants.spacingSm,
                   right: AppConstants.spacingMd,

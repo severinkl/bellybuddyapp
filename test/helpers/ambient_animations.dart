@@ -6,7 +6,7 @@ import 'package:belly_buddy/widgets/buddy/streak_flame.dart';
 
 /// Holds the app's never-ending ambient animations still: Buddies render
 /// without ticking, the care ring's glow does not pulse and streak flames
-/// neither wobble, breathe nor spark, so `pumpAndSettle` settles on any
+/// neither flicker, breathe nor spark, so `pumpAndSettle` settles on any
 /// screen that shows them.
 ///
 /// The root `flutter_test_config.dart` calls this before every test file.

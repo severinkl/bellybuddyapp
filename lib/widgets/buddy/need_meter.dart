@@ -16,7 +16,9 @@ import '../../services/buddy/daily_care.dart';
 
 /// A need's meter: a circle whose fill deepens and whose ring fills with
 /// [level] (0..1). A null [level] (Klo has no meter) is a plain circle.
-/// It adds no semantics; the bubble or page around it speaks.
+/// Its [child] (the need's [NeedIcon], without a size of its own) fills
+/// the square [AppConstants.careMeterIconShare] of it in its middle. It
+/// adds no semantics; the bubble or page around it speaks.
 class NeedMeter extends StatelessWidget {
   const NeedMeter({
     super.key,
@@ -40,7 +42,7 @@ class NeedMeter extends StatelessWidget {
         child: Center(
           child: SizedBox.square(
             dimension: size * AppConstants.careMeterIconShare,
-            child: FittedBox(fit: BoxFit.scaleDown, child: child),
+            child: child,
           ),
         ),
       ),

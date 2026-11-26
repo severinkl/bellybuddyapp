@@ -10,6 +10,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/fodmap_flags.dart';
 import 'package:belly_buddy/models/knowledge_article.dart';
@@ -26,7 +27,6 @@ import 'package:belly_buddy/models/user_recipe.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/screens/discover/widgets/discover_recipes_section.dart';
 import 'package:belly_buddy/screens/discover/widgets/discover_tips_section.dart';
-import 'package:belly_buddy/screens/discover/widgets/example_tip_card.dart';
 import 'package:belly_buddy/widgets/common/weekly_tips_switch.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/discover_news_provider.dart';
@@ -102,10 +102,12 @@ void main() {
     // Whether the app root keeps the news loaded, as in the app.
     bool appRoot = false,
     List<String>? intolerances,
+    // How the tips load, in place of answering [tips].
+    Future<List<Recommendation>> Function()? fetchTips,
   }) async {
     when(
       () => recommendations.fetchByUserId(any()),
-    ).thenAnswer((_) async => tips);
+    ).thenAnswer((_) => fetchTips?.call() ?? Future.value(tips));
     when(
       () => ingredients.fetchSuggestionGroups(any()),
     ).thenAnswer((_) async => groups);
@@ -177,7 +179,12 @@ void main() {
   Finder inSection(Key section, Finder matching) =>
       find.descendant(of: find.byKey(section), matching: matching);
 
-  group('weekly tips opt-in', () {
+  /// The section titles' tops, from the top of the screen.
+  List<double> sectionTops(WidgetTester tester, List<String> titles) => [
+    for (final title in titles) tester.getTopLeft(find.text(title)).dy,
+  ];
+
+  group('Tipps', () {
     final optIn = find.byKey(DiscoverTipsSection.optInKey);
     final someTips = [
       testRecommendation(
@@ -187,12 +194,87 @@ void main() {
       ),
     ];
 
-    testWidgets('off, no tips: only the opt-in', (tester) async {
+    /// No Tipps section at all, Alternativen at the top.
+    void expectNoTipps(WidgetTester tester) {
+      expect(find.text('Tipps'), findsNothing);
+      expect(find.byKey(DiscoverScreen.tipsKey), findsNothing);
+      expect(optIn, findsNothing);
+      expect(find.byKey(WeeklyTipsSwitch.switchKey), findsNothing);
+      expect(
+        tester.getTopLeft(find.byKey(DiscoverScreen.alternativesKey)).dy,
+        tester.getTopLeft(find.byType(RefreshIndicator)).dy +
+            AppConstants.spacingSm,
+      );
+    }
+
+    testWidgets('no tips, weekly tips off: no Tipps section at all', (
+      tester,
+    ) async {
       await pump(tester, weeklyTips: false);
 
-      expect(optIn, findsOneWidget);
-      expect(find.text('Noch keine Tipps.'), findsNothing);
+      expectNoTipps(tester);
+    });
+
+    testWidgets('no tips, weekly tips on: no Tipps section, no note', (
+      tester,
+    ) async {
+      await pump(tester, weeklyTips: true);
+
+      expectNoTipps(tester);
+      expect(find.textContaining('Montag'), findsNothing);
+    });
+
+    testWidgets('a newest set without tips alone: no Tipps section', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        weeklyTips: false,
+        tips: [
+          testRecommendation(
+            recommendations: const [],
+            createdAt: DateTime.utc(2026, 11, 16, 10),
+          ),
+        ],
+      );
+
+      expectNoTipps(tester);
+    });
+
+    testWidgets('the first load still running: no Tipps section, nothing '
+        'flashes', (tester) async {
+      final load = Completer<List<Recommendation>>();
+      await pump(tester, weeklyTips: false, fetchTips: () => load.future);
+
+      expect(find.text('Tipps'), findsNothing);
+      expect(
+        find.text('Laden…'),
+        findsNothing,
+        reason: 'the other sections have loaded',
+      );
       expect(find.byKey(DiscoverScreen.tipsKey), findsNothing);
+      expect(optIn, findsNothing);
+
+      load.complete(someTips);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Tipps'), findsOneWidget);
+      expect(find.byKey(DiscoverScreen.tipsKey), findsOneWidget);
+      expect(optIn, findsOneWidget);
+    });
+
+    testWidgets('a failed first load: no Tipps section, no error line', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        weeklyTips: false,
+        fetchTips: () => Future.error(Exception('offline')),
+      );
+
+      expect(find.text('Tipps'), findsNothing);
+      expect(find.byKey(DiscoverScreen.tipsKey), findsNothing);
+      expect(find.textContaining('konnten nicht geladen werden'), findsNothing);
     });
 
     testWidgets('off, with tips: set card and opt-in', (tester) async {
@@ -202,32 +284,6 @@ void main() {
       expect(optIn, findsOneWidget);
     });
 
-    testWidgets('weekly tips off: the example above the switch', (
-      tester,
-    ) async {
-      await pump(tester, weeklyTips: false);
-
-      final example = find.byKey(ExampleTipCard.cardKey);
-      expect(example, findsOneWidget);
-      expect(
-        tester.getBottomLeft(example).dy,
-        lessThan(tester.getTopLeft(optIn).dy),
-      );
-    });
-
-    testWidgets('on: no example', (tester) async {
-      await pump(tester, weeklyTips: true);
-
-      expect(find.byKey(ExampleTipCard.cardKey), findsNothing);
-    });
-
-    testWidgets('on, no tips: when the first tips come', (tester) async {
-      await pump(tester, weeklyTips: true);
-
-      expect(find.text(DiscoverTipsSection.emptyWhileOn), findsOneWidget);
-      expect(find.byKey(WeeklyTipsSwitch.switchKey), findsNothing);
-    });
-
     testWidgets('on, with tips: no switch', (tester) async {
       await pump(tester, weeklyTips: true, tips: someTips);
 
@@ -235,22 +291,27 @@ void main() {
       expect(find.byKey(WeeklyTipsSwitch.switchKey), findsNothing);
     });
 
-    testWidgets('profile unknown: no switch', (tester) async {
-      await pump(tester);
+    testWidgets('profile unknown, with tips: the card, no switch', (
+      tester,
+    ) async {
+      await pump(tester, tips: someTips);
 
+      expect(find.byKey(DiscoverScreen.tipsKey), findsOneWidget);
       expect(find.byKey(WeeklyTipsSwitch.switchKey), findsNothing);
-      expect(find.text('Noch keine Tipps.'), findsOneWidget);
     });
 
-    testWidgets('turning it on shows when the first tips come', (tester) async {
-      profileRepo.seedProfile(testUserProfile());
-      await pump(tester, weeklyTips: false);
+    testWidgets('with tips and weekly tips off: switching on drops the '
+        'switch, the card stays', (tester) async {
+      profileRepo.seedProfile(testUserProfile(weeklyTipsEnabled: false));
+      await pump(tester, weeklyTips: false, tips: someTips);
 
       await tester.tapVisible(find.byKey(WeeklyTipsSwitch.switchKey));
 
       expect(profileRepo.weeklyTipsWrites, [true]);
-      expect(find.text(DiscoverTipsSection.emptyWhileOn), findsOneWidget);
       expect(find.byKey(WeeklyTipsSwitch.switchKey), findsNothing);
+      expect(optIn, findsNothing);
+      expect(find.byKey(DiscoverScreen.tipsKey), findsOneWidget);
+      expect(find.text('Woche 47'), findsOneWidget);
     });
   });
 
@@ -275,14 +336,25 @@ void main() {
   });
 
   testWidgets('four sections in order', (tester) async {
-    await pump(tester);
+    await pump(tester, tips: [testRecommendation()]);
 
-    final tops = [
-      for (final title in ['Tipps', 'Alternativen', 'Rezepte', 'Wissen'])
-        tester.getTopLeft(find.text(title)).dy,
-    ];
+    final tops = sectionTops(tester, [
+      'Tipps',
+      'Alternativen',
+      'Rezepte',
+      'Wissen',
+    ]);
     expect(tops, orderedEquals([...tops]..sort()));
     expect(tops.toSet(), hasLength(4));
+  });
+
+  testWidgets('without tips: Alternativen, Rezepte, Wissen', (tester) async {
+    await pump(tester);
+
+    expect(find.text('Tipps'), findsNothing);
+    final tops = sectionTops(tester, ['Alternativen', 'Rezepte', 'Wissen']);
+    expect(tops, orderedEquals([...tops]..sort()));
+    expect(tops.toSet(), hasLength(3));
   });
 
   testWidgets('Tipps card shows the newest set, „Neu" while unseen', (
@@ -340,28 +412,42 @@ void main() {
     expect(find.text('1 Tipp'), findsOneWidget);
   });
 
-  testWidgets('a newest set without tips is never „Neu" (as for Home and '
-      'the Buddy)', (tester) async {
-    await pump(
-      tester,
-      tips: [
-        testRecommendation(
-          id: 'empty',
-          recommendations: const [],
-          createdAt: DateTime.utc(2026, 11, 16, 10),
-        ),
-        testRecommendation(
-          id: 'old',
-          recommendations: const [_item],
-          createdAt: DateTime.utc(2026, 11, 9, 10),
-          seenAt: DateTime.utc(2026, 11, 10, 7),
-        ),
-      ],
-    );
+  for (final seen in [true, false]) {
+    testWidgets('a newest set without tips is skipped: the card shows the '
+        'older one with tips, „Neu" as it is${seen ? ' seen' : ' unseen'} '
+        '(as for Home and the Buddy)', (tester) async {
+      await pump(
+        tester,
+        tips: [
+          testRecommendation(
+            id: 'empty',
+            recommendations: const [],
+            createdAt: DateTime.utc(2026, 11, 16, 10),
+          ),
+          testRecommendation(
+            id: 'old',
+            recommendations: const [_item],
+            createdAt: DateTime.utc(2026, 11, 9, 10),
+            seenAt: seen ? DateTime.utc(2026, 11, 10, 7) : null,
+          ),
+        ],
+      );
 
-    expect(find.text('Woche 47'), findsOneWidget);
-    expect(inSection(DiscoverScreen.tipsKey, find.text('Neu')), findsNothing);
-  });
+      expect(
+        inSection(DiscoverScreen.tipsKey, find.text('Woche 46')),
+        findsOneWidget,
+      );
+      expect(find.text('Woche 47'), findsNothing);
+      expect(
+        inSection(DiscoverScreen.tipsKey, find.text('1 Tipp')),
+        findsOneWidget,
+      );
+      expect(
+        inSection(DiscoverScreen.tipsKey, find.text('Neu')),
+        seen ? findsNothing : findsOneWidget,
+      );
+    });
+  }
 
   testWidgets('„Neu" goes once the Tipps are marked seen, while Entdecken '
       'stays open underneath', (tester) async {
@@ -457,15 +543,6 @@ void main() {
       inSection(DiscoverScreen.alternativesKey, find.text('1 neu')),
       findsOneWidget,
     );
-  });
-
-  testWidgets('no tips', (tester) async {
-    await pump(tester);
-
-    expect(find.text('Noch keine Tipps.'), findsOneWidget);
-    await tester.tapVisible(find.byKey(DiscoverScreen.tipsKey));
-    expect(find.text('page:${RoutePaths.recommendations}'), findsNothing);
-    expect(find.byType(DiscoverScreen), findsOneWidget);
   });
 
   testWidgets('Alternativen previews the newest 3', (tester) async {

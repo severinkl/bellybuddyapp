@@ -12,6 +12,7 @@ import '../../providers/buddy_provider.dart';
 import '../../providers/buddy_welcome_provider.dart';
 import '../../providers/discover_news_provider.dart';
 import '../../providers/entries_provider.dart';
+import '../../providers/home_cover_provider.dart';
 import '../../providers/insights_provider.dart';
 import '../../providers/journey_provider.dart';
 import '../../providers/journey_rewards_provider.dart';
@@ -29,8 +30,9 @@ import 'widgets/tips_row.dart';
 import 'widgets/tutorial/show_dashboard_tutorial.dart';
 import 'widgets/tutorial/tutorial_keys.dart';
 
-/// Home: the Buddy hero (streak chip, the Buddy in his care ring, the next
-/// action) and what he is learning about the user's gut ([InsightCard]).
+/// Home: the Buddy hero (the Buddy in his care ring with his streak flame
+/// and its badge, the next action) and what he is learning about the
+/// user's gut ([InsightCard]).
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
@@ -138,11 +140,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
           .timeout(_welcomeWait, onTimeout: () {});
       if (!mounted || _tutorialHandle != null) return;
     }
-    final handle = showDashboardTutorial(context);
-    _tutorialHandle = handle;
-    await handle.future;
-    _tutorialHandle = null;
+    // The tour covers Home ([HomeCoverNotifier.whileOpen]): the Buddy's
+    // cues and their sheets wait until it is done, and his bubble hides.
+    await ref.read(homeCoveredProvider.notifier).whileOpen(() {
+      final handle = showDashboardTutorial(context);
+      setState(() => _tutorialHandle = handle);
+      return handle.future;
+    });
     if (!mounted) return;
+    setState(() => _tutorialHandle = null);
     await ref.read(tutorialProvider.notifier).markSeen();
   }
 
@@ -206,7 +212,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                BuddyHero(key: TutorialKeys.buddy),
+                BuddyHero(
+                  key: TutorialKeys.buddy,
+                  showsBubble: _tutorialHandle == null,
+                ),
                 AppConstants.gap16,
                 // Only the card rebuilds with the insights. It shows only
                 // AsyncData: after a user change, the value of a loading or

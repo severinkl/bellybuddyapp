@@ -1,9 +1,15 @@
 import 'dart:math';
 
+import '../../providers/buddy_provider.dart' show BuddyAnnouncement;
 import '../../widgets/buddy/buddy_pose.dart';
+import '../journey/journey_copy.dart';
 import 'daily_care.dart';
 
 /// German copy pools for the Buddy. Placeholders: `{name}`, `{streak}`.
+/// Every line the dashboard's Buddy says (his resting lines, the moods',
+/// [announcementLine]s, JourneyCopy's lines for Home) fits three lines of
+/// his bubble (about 60 characters with a 20-character name), so it is
+/// never cut or drawn smaller.
 class BuddyCopy {
   const BuddyCopy._();
 
@@ -146,25 +152,67 @@ class BuddyCopy {
     CareAction.drink: ['Danke fürs Trinken! 💧', 'Ahh, das tat gut! 💧'],
   };
 
-  /// The dashboard's next-action button: the meal the time of day asks
-  /// for, logging a need („💧 Trinken eintragen") or „🍽 Essen eintragen".
-  static String careButton(CareAction action) => switch (action) {
-    CareAction.breakfast => '🍳 Frühstück eintragen',
-    CareAction.lunch => '🍝 Mittagessen eintragen',
-    CareAction.snack => '🍎 Snack eintragen',
-    CareAction.dinner => '🍲 Abendessen eintragen',
-    CareAction.drink => _log(CareNeed.drink),
-    CareAction.gutFeeling => _log(CareNeed.gutFeeling),
-    CareAction.feed => '🍽 ${CareNeed.food.logLabel}',
+  /// What the dashboard's Buddy says for [announcement]: a streak-saver
+  /// used or earned, a broken streak, new tips, a failed first tip (whether
+  /// the weekly tips stay on, [weeklyTipsOn]); null for those that end in
+  /// a sheet or page instead.
+  static String? announcementLine(
+    BuddyAnnouncement announcement, {
+    required bool weeklyTipsOn,
+  }) => switch (announcement) {
+    BuddyAnnouncement.saverUsed => saverUsed,
+    BuddyAnnouncement.streakBroken => streakBroken,
+    BuddyAnnouncement.saverEarned => saverEarned,
+    BuddyAnnouncement.tipsArrived => tipsArrived,
+    BuddyAnnouncement.firstTipFailed => JourneyCopy.firstTipFailed(
+      weeklyTipsOn: weeklyTipsOn,
+    ),
+    BuddyAnnouncement.goalReached ||
+    BuddyAnnouncement.weeklyTipsOffer ||
+    BuddyAnnouncement.firstTipOffer ||
+    BuddyAnnouncement.journeyReward ||
+    BuddyAnnouncement.patternsUnlocked => null,
   };
 
-  static String _log(CareNeed need) => '${need.emoji} ${need.logLabel}';
+  static const saverUsed = 'Puh! Dein Streak-Saver hat uns gestern gerettet 🛡';
+  static const streakBroken = 'Neuer Anlauf — ich bin dabei!';
+  static const saverEarned = 'Du hast einen Streak-Saver verdient! 🛡';
+  static const tipsArrived = 'Neue Tipps sind da! ✨';
+
+  /// His ask for reminders while they are off (its sheet's line; the
+  /// explanation below it, [remindersAskBody]).
+  static const remindersAsk =
+      'Darf ich dich ab und zu ans Eintragen erinnern? 🔔';
+  static const remindersAskBody =
+      'Deine Erinnerungen sind gerade aus. Schaltest du sie ein, sag ich dir '
+      'Bescheid, wenn Essen und Bauchgefühl dran sind und wenn neue Tipps da '
+      'sind. Ändern kannst du das jederzeit in den Einstellungen.';
+
+  /// His thanks once they are on.
+  static const remindersOn = 'Danke! Ich sag dir Bescheid 🔔';
+
+  /// Home's thanks for today's first counted entry, with the [streak].
+  static String streakThanks(int streak) =>
+      'Danke! 🔥 $streak ${streak == 1 ? 'Tag' : 'Tage'}';
+
+  /// The dashboard's next-action button's label (its need's sticker icon
+  /// leads it): the meal the time of day asks for, logging a need
+  /// („Trinken eintragen") or „Essen eintragen".
+  static String careButton(CareAction action) => switch (action) {
+    CareAction.breakfast => 'Frühstück eintragen',
+    CareAction.lunch => 'Mittagessen eintragen',
+    CareAction.snack => 'Snack eintragen',
+    CareAction.dinner => 'Abendessen eintragen',
+    CareAction.drink => CareNeed.drink.logLabel,
+    CareAction.gutFeeling => CareNeed.gutFeeling.logLabel,
+    CareAction.feed => CareNeed.food.logLabel,
+  };
 
   /// Sleepy lines outside the morning: late evening and night.
   static const sleepyNight = [
     'Schon spät … *gähn* Gute Nacht bald?',
     'Mir fallen die Augen zu … *gähn*',
-    '{name} meldet sich zum Schlafengehen … *gähn*',
+    '{name} geht jetzt schlafen … *gähn*',
   ];
 
   static String pick(List<String> pool, Random rnd) =>

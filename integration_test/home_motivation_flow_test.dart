@@ -1,9 +1,8 @@
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/screens/dashboard/dashboard_screen.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/home_flame.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/insight_card.dart';
-import 'package:belly_buddy/screens/discover/widgets/discover_tips_section.dart';
-import 'package:belly_buddy/screens/discover/widgets/example_tip_card.dart';
 import 'package:belly_buddy/screens/trackers/drink/drink_tracker_screen.dart';
 import 'package:belly_buddy/screens/trackers/gut_feeling/gut_feeling_tracker_screen.dart';
 import 'package:belly_buddy/screens/trackers/toilet/toilet_tracker_screen.dart';
@@ -12,10 +11,8 @@ import 'package:belly_buddy/services/entry_query_service.dart';
 import 'package:belly_buddy/utils/date_format_utils.dart';
 import 'package:belly_buddy/widgets/buddy/log_success_hero.dart';
 import 'package:belly_buddy/widgets/buddy/need_meter.dart';
-import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
+import 'package:belly_buddy/widgets/buddy/streak_badge.dart';
 import 'package:belly_buddy/widgets/buddy/streak_flame.dart';
-import 'package:belly_buddy/widgets/common/bb_bottom_nav.dart';
-import 'package:belly_buddy/widgets/common/weekly_tips_switch.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -38,15 +35,15 @@ const _emptyDay = EntryQueryResult(
 
 const _tapToContinue = 'Tippen zum Fortfahren';
 
-/// [text] inside the streak chip on Home.
-Finder _chipText(String text) =>
-    find.descendant(of: find.byType(StreakChip), matching: find.text(text));
+/// [text] inside the streak badge on Home.
+Finder _badgeText(String text) =>
+    find.descendant(of: find.byType(StreakBadge), matching: find.text(text));
 
-/// How the streak chip's flame shows.
-FlameLook _chipFlame(WidgetTester tester) => tester
+/// How Home's streak flame (behind the Buddy) shows.
+FlameLook _homeFlame(WidgetTester tester) => tester
     .widget<StreakFlame>(
       find.descendant(
-        of: find.byType(StreakChip),
+        of: find.byType(HomeFlame),
         matching: find.byType(StreakFlame),
       ),
     )
@@ -92,7 +89,7 @@ void main() {
     final meter = find.byType(ChargingMeter);
     await pumpUntilFound(tester, meter);
     expect(tester.widget<ChargingMeter>(meter).need, CareNeed.drink);
-    await tester.pump(const Duration(milliseconds: 1300));
+    await pumpPastCharge(tester);
     final level = tester
         .widget<NeedMeter>(
           find.descendant(of: meter, matching: find.byType(NeedMeter)),
@@ -116,8 +113,8 @@ void main() {
     await tester.pumpWidget(buildTestApp(entryRepo: entryRepo));
     await tester.pumpAndSettle();
 
-    expect(_chipText('3 Tage'), findsOneWidget);
-    expect(_chipFlame(tester), FlameLook.ember);
+    expect(_badgeText('3'), findsOneWidget);
+    expect(_homeFlame(tester), FlameLook.ember);
 
     await tester.tapVisible(find.byKey(CareRing.needKey(CareNeed.toilet)));
     expect(find.byType(ToiletTrackerScreen), findsOneWidget);
@@ -133,9 +130,9 @@ void main() {
     );
 
     await _continue(tester);
-    await pumpUntilFound(tester, _chipText('4 Tage'));
+    await pumpUntilFound(tester, _badgeText('4'));
     await tester.pumpAndSettle();
-    expect(_chipFlame(tester), FlameLook.lit);
+    expect(_homeFlame(tester), FlameLook.lit);
   });
 
   testWidgets("journey and feedback: the card counts the days, and the day's "
@@ -176,35 +173,5 @@ void main() {
         ),
       ),
     );
-  });
-
-  testWidgets('Tipps preview: the example above the switch, gone once the '
-      'weekly tips are on', (tester) async {
-    await tester.pumpWidget(
-      buildTestApp(recommendationRepo: FakeRecommendationRepository(sets: [])),
-    );
-    await tester.pumpAndSettle();
-    await tester.tapVisible(find.byKey(BbBottomNav.navDiscoverKey));
-
-    final example = find.byKey(ExampleTipCard.cardKey);
-    final optIn = find.descendant(
-      of: find.byKey(DiscoverTipsSection.optInKey),
-      matching: find.byType(WeeklyTipsSwitch),
-    );
-    expect(example, findsOneWidget);
-    expect(optIn, findsOneWidget);
-    expect(
-      tester.getBottomLeft(example).dy,
-      lessThan(tester.getTopLeft(optIn).dy),
-    );
-
-    await tester.tapVisible(
-      find.descendant(
-        of: optIn,
-        matching: find.byKey(WeeklyTipsSwitch.switchKey),
-      ),
-    );
-    expect(example, findsNothing);
-    expect(find.text(DiscoverTipsSection.emptyWhileOn), findsOneWidget);
   });
 }

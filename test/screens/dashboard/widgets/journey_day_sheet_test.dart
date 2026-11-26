@@ -290,10 +290,7 @@ void main() {
       results: results,
     );
 
-    expect(
-      find.text('Tag 3! Deine Tipps findest du unter Entdecken.'),
-      findsOneWidget,
-    );
+    expect(find.text("Tag 3! Hier geht's zu deinen Tipps."), findsOneWidget);
     expect(find.text('Kürbissuppe'), findsNothing);
     expect(find.byType(RecipeListTile), findsNothing);
     expect(primary('Zu deinen Tipps'), findsOneWidget);
@@ -318,7 +315,7 @@ void main() {
       );
 
       expect(
-        find.text('Tag 3! Deine Tipps findest du unter Entdecken.'),
+        find.text("Tag 3! Hier geht's zu deinen Tipps."),
         findsOneWidget,
         reason: '$offer',
       );
@@ -425,7 +422,7 @@ void main() {
   });
 
   testWidgets('day 6 with one Bauchgefühl missing: „Noch ein Tag und 1× '
-      'Bauchgefühl, …", „Beispiel", the preview', (tester) async {
+      'Bauchgefühl, …", „Das siehst du dann", the preview', (tester) async {
     final results = <bool>[];
     await pumpOpener(
       tester,
@@ -448,7 +445,8 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('BEISPIEL'), findsOneWidget);
+    expect(find.text('DAS SIEHST DU DANN'), findsOneWidget);
+    expect(find.textContaining('BEISPIEL'), findsNothing);
     expect(find.byType(PatternsPreview), findsOneWidget);
     expect(primary('Okay'), findsOneWidget);
     expect(find.byKey(JourneyDaySheet.laterKey), findsNothing);

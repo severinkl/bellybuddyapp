@@ -95,8 +95,12 @@ class AppTheme {
 
   // Care: one color and one soft tint per need (Essen, Trinken, Bauchgefühl,
   // Klo), each at least 3:1 on the page, and the glow around the need he
-  // suggests next. The streak flame has a lit color (with a core and a hot
-  // tip), and an ember (lit, core, off) for a day it was not kept.
+  // suggests next. The streak flame burns red at its tips, orange in its
+  // middle and yellow at its base, around a bright core (and a blazing
+  // flame's hot one) in a warm glow; an ember (its colour, its core) waits
+  // for today's first entry, darker and warmer on the primary colour (the
+  // success page), where the pale one would not show (its body at least
+  // 3:1 there).
   static const Color careFood = Color(0xFFD27A12);
   static const Color careFoodSoft = Color(0xFFFCEBD5);
   static const Color careWater = Color(0xFF3A8FCC);
@@ -106,11 +110,15 @@ class AppTheme {
   static const Color careLoo = Color(0xFF9C7350);
   static const Color careLooSoft = Color(0xFFF1E7DE);
   static const Color streakFlame = Color(0xFFFF7A2E);
+  static const Color streakFlameRed = Color(0xFFE5391F);
   static const Color streakFlameCore = buddySparkle;
+  static const Color streakFlameBright = Color(0xFFFFF1B8);
   static const Color streakFlameHot = buddyWater;
+  static const Color streakFlameGlow = Color(0x66FF8C3C);
   static const Color streakEmber = Color(0xFFF4B996);
   static const Color streakEmberCore = Color(0xFFF8DDA6);
-  static const Color streakEmberOff = Color(0xFFDDD5CC);
+  static const Color streakEmberOnPrimary = Color(0xFFA8431A);
+  static const Color streakEmberCoreOnPrimary = Color(0xFFD2601F);
   static const Color careGlow = Color(0x4DB5CC47);
 
   // Notification previews (the reminder step): an iOS banner's colors
@@ -173,9 +181,6 @@ class AppTheme {
 
   // The streak moment's big count („1 Tag" beside the flame)
   static const double fontSizeStreakCount = 56;
-
-  // The need's emoji in the success page's charging circle
-  static const double fontSizeChargeIcon = 44;
 
   // Stool scale colors
   static const List<Color> stoolColors = [

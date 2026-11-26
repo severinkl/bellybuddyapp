@@ -71,6 +71,25 @@ void main() {
     expect(hit.contains(const Offset(1400, 1900)), isFalse);
   });
 
+  test('the silhouette is closed at his stem: the strip between its left '
+      'outline and its fill is him, below its end is not', () {
+    final hit = BuddyShapes.hitPath;
+    // Inside the stem's left outline, up the stem and under the curl.
+    for (final p in const [
+      Offset(722, 1880),
+      Offset(722, 1760),
+      Offset(900, 1543),
+    ]) {
+      expect(hit.contains(p), isTrue, reason: '$p');
+    }
+    expect(hit.contains(const Offset(722, 1915)), isFalse);
+  });
+
+  test('his foot is at his stem\'s end: just above it, he is there', () {
+    expect(kBuddyFoot.dy, kBuddyHeight);
+    expect(BuddyShapes.hitPath.contains(kBuddyFoot.translate(0, -20)), isTrue);
+  });
+
   test('layout round-trips', () {
     final l = BuddyLayout(const Size(390, 600));
     const p = Offset(123, 456);

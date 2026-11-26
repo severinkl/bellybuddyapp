@@ -1,3 +1,4 @@
+// ignore_for_file: invalid_use_of_internal_member
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +17,16 @@ import '../helpers/riverpod_helpers.dart';
 
 /// A tip, so a set holding it can be new.
 final _item = testRecommendationItem();
+
+/// The tip sets held as [_value].
+class _FixedTips extends RecommendationNotifier {
+  _FixedTips(this._value);
+
+  final AsyncValue<List<Recommendation>> _value;
+
+  @override
+  AsyncValue<List<Recommendation>> build() => _value;
+}
 
 void main() {
   late MockRecommendationRepository mockRepo;
@@ -285,6 +296,49 @@ void main() {
           .fetchRecommendations();
 
       expect(container.read(unseenTipSetProvider)?.id, 'new');
+    });
+  });
+
+  group('newestTipSetProvider', () {
+    final newest = testRecommendation(id: 'newest', recommendations: [_item]);
+    final empty = testRecommendation(id: 'empty', recommendations: const []);
+    final older = testRecommendation(id: 'older', recommendations: [_item]);
+
+    Recommendation? newestOf(AsyncValue<List<Recommendation>> tips) =>
+        createContainer(
+          overrides: [
+            recommendationProvider.overrideWith(() => _FixedTips(tips)),
+          ],
+        ).read(newestTipSetProvider);
+
+    test('none while loading, failed, or without a set with tips', () {
+      for (final tips in <AsyncValue<List<Recommendation>>>[
+        const AsyncLoading(),
+        AsyncError(Exception('offline'), StackTrace.empty),
+        const AsyncData([]),
+        AsyncData([empty]),
+      ]) {
+        expect(newestOf(tips), isNull, reason: '$tips');
+      }
+    });
+
+    test('the newest set with tips: one without tips is skipped', () {
+      expect(newestOf(AsyncData([newest, older]))?.id, 'newest');
+      expect(newestOf(AsyncData([empty, older]))?.id, 'older');
+    });
+
+    test('kept while a refresh runs or after it failed', () {
+      for (final tips in [
+        const AsyncLoading<List<Recommendation>>().copyWithPrevious(
+          AsyncData([newest]),
+        ),
+        AsyncError<List<Recommendation>>(
+          Exception('offline'),
+          StackTrace.empty,
+        ).copyWithPrevious(AsyncData([newest])),
+      ]) {
+        expect(newestOf(tips)?.id, 'newest', reason: '$tips');
+      }
     });
   });
 

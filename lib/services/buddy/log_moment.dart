@@ -2,6 +2,7 @@ import '../../models/insight_progress.dart';
 import '../../models/insights.dart';
 import '../../providers/buddy_provider.dart';
 import '../../utils/date_format_utils.dart';
+import '../../utils/gut_feeling_rating.dart';
 import '../insights/insight_copy.dart';
 import 'buddy_mood_logic.dart';
 import 'care_meters.dart';
@@ -17,6 +18,7 @@ class LogMoment {
     this.to,
     this.ignitesDay,
     this.buddyLine,
+    this.gutFeeling,
   });
 
   /// What was logged.
@@ -37,13 +39,16 @@ class LogMoment {
   /// What the Buddy says instead of his reaction line: how far the first
   /// patterns are; null when he has nothing to add.
   final String? buddyLine;
+
+  /// A Bauchgefühl's level: the success page's belly shows its mouth.
+  final GutFeelingRatingLevel? gutFeeling;
 }
 
-/// The [LogMoment] of an entry of [kind] at [trackedAt], saved at [now]
-/// with [care] as logged so far. A back-dated entry older than the need's
-/// last one leaves its level as it was. It ignites the next streak day when
-/// it falls on [now]'s date and nothing counts today yet ([buddy]'s
-/// `todayCounted`, [care]).
+/// The [LogMoment] of an entry of [kind] at [trackedAt] (a Bauchgefühl
+/// felt [gutFeeling]), saved at [now] with [care] as logged so far. A
+/// back-dated entry older than the need's last one leaves its level as it
+/// was. It ignites the next streak day when it falls on [now]'s date and
+/// nothing counts today yet ([buddy]'s `todayCounted`, [care]).
 ///
 /// The Buddy says how far the first patterns are ([LogMoment.buddyLine])
 /// after today's first good or neutral Bauchgefühl while [insights] are
@@ -58,6 +63,7 @@ LogMoment logMomentFor({
   BuddyStatus? buddy,
   Insights? insights,
   LogSentiment sentiment = LogSentiment.good,
+  GutFeelingRatingLevel? gutFeeling,
 }) {
   final need = careNeedOf(kind);
   final drain = drainOf(need);
@@ -94,5 +100,6 @@ LogMoment logMomentFor({
             ),
           )
         : null,
+    gutFeeling: gutFeeling,
   );
 }

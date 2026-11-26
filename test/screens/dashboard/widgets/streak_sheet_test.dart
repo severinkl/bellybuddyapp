@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:belly_buddy/config/app_theme.dart';
+import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/screens/buddy/streak_goal_picker.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/streak_sheet.dart';
@@ -75,7 +76,11 @@ void main() {
     // The count's flame (the week row's marks are flames too).
     FlameLook look() => tester
         .widget<StreakFlame>(
-          find.byWidgetPredicate((w) => w is StreakFlame && !w.still),
+          find.byWidgetPredicate(
+            (w) =>
+                w is StreakFlame &&
+                w.height == AppConstants.streakFlameMomentHeight,
+          ),
         )
         .look;
 

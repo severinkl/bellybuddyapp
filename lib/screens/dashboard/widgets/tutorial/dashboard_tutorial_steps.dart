@@ -88,7 +88,7 @@ final List<TutorialStep> dashboardTutorialSteps = [
       _t('Unter '),
       _b('Entdecken'),
       _t(
-        ' findest du Tipps, Alternativen, deine Rezepte und Wissen rund um die Verdauung.',
+        ' findest du Alternativen, deine Rezepte und Wissen rund um die Verdauung.',
       ),
     ],
   ),

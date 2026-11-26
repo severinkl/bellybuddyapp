@@ -1,15 +1,19 @@
 // ignore_for_file: invalid_use_of_internal_member
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:riverpod/src/internals.dart' show Override;
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/journey_rewards.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/recommendation.dart';
+import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
@@ -21,14 +25,18 @@ import 'package:belly_buddy/providers/journey_provider.dart';
 import 'package:belly_buddy/providers/journey_rewards_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
+import 'package:belly_buddy/repositories/notification_repository.dart';
+import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/repositories/recipe_repository.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/home_flame.dart';
 import 'package:belly_buddy/screens/buddy/streak_goal_picker.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/first_tip_offer_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_day_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_list_sheet.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/reminders_ask_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/streak_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/weekly_tips_offer_sheet.dart';
 import 'package:belly_buddy/services/buddy/buddy_copy.dart';
@@ -38,7 +46,11 @@ import 'package:belly_buddy/services/entry_query_service.dart';
 import 'package:belly_buddy/services/journey/journey_copy.dart';
 import 'package:belly_buddy/utils/date_format_utils.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
+import 'package:belly_buddy/widgets/buddy/buddy_says.dart';
+import 'package:belly_buddy/widgets/buddy/need_icon.dart';
+import 'package:belly_buddy/widgets/buddy/streak_badge.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
+import 'package:belly_buddy/widgets/buddy/streak_flame.dart';
 import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
 import 'package:belly_buddy/widgets/common/weekly_tips_switch.dart';
 import 'package:belly_buddy/widgets/log_sheet/log_sheet.dart';
@@ -48,6 +60,7 @@ import '../../../helpers/ambient_animations.dart';
 import '../../../helpers/app_host.dart';
 import '../../../helpers/fakes.dart';
 import '../../../helpers/fixtures.dart';
+import '../../../helpers/flames.dart';
 import '../../../helpers/riverpod_helpers.dart';
 import '../../../helpers/widget_tester_helpers.dart';
 
@@ -328,6 +341,7 @@ void main() {
           RoutePaths.recommendations,
           RoutePaths.patterns,
           RoutePaths.patternsUnlocked,
+          RoutePaths.settingsNotifications,
         ]),
       ],
     );
@@ -350,6 +364,24 @@ void main() {
 
   BuddyController controller(WidgetTester tester) =>
       tester.widget<AnimatedBuddy>(find.byType(AnimatedBuddy)).controller;
+
+  /// The sticker icon leading the next-action button.
+  NeedIcon actionIcon(WidgetTester tester) => tester.widget<NeedIcon>(
+    find.descendant(
+      of: find.byKey(BuddyHero.actionKey),
+      matching: find.byType(NeedIcon),
+    ),
+  );
+
+  /// The streak flame behind the Buddy (not its badge's).
+  Finder flameFinder() => find.descendant(
+    of: find.byType(HomeFlame),
+    matching: find.byType(StreakFlame),
+  );
+
+  /// The painter of the streak flame behind the Buddy.
+  FlamePainter homeFlame(WidgetTester tester) =>
+      flamePainter(tester, flameFinder());
 
   /// What he says, also while a page covers Home.
   String? bubbleBehind(WidgetTester tester) => tester
@@ -379,9 +411,9 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
   }
 
-  /// Taps the StreakChip and lets „Dein Streak" open.
+  /// Taps the StreakBadge and lets „Dein Streak" open.
   Future<void> openSheet(WidgetTester tester) async {
-    await tester.tap(find.byType(StreakChip));
+    await tester.tap(find.byType(StreakBadge));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
   }
@@ -464,9 +496,10 @@ void main() {
         ),
         findsOneWidget,
       );
-      // 14:00, nothing eaten: lunch.
-      expect(find.text('🍝 Mittagessen eintragen'), findsOneWidget);
+      // 14:00, nothing eaten: lunch, led by the Essen sticker.
+      expect(find.text('Mittagessen eintragen'), findsOneWidget);
       expect(find.byKey(BuddyHero.actionKey), findsOneWidget);
+      expect(actionIcon(tester).need, CareNeed.food);
     });
 
     testWidgets('no entries at 14:00 → hungry, asks for lunch', (tester) async {
@@ -490,7 +523,8 @@ void main() {
       await tick(tester);
 
       expect(careLines(CareAction.drink), contains(controller(tester).bubble));
-      expect(find.text('💧 Trinken eintragen'), findsOneWidget);
+      expect(find.text('Trinken eintragen'), findsOneWidget);
+      expect(actionIcon(tester).need, CareNeed.drink);
       expect(
         tester.widget<CareRing>(find.byType(CareRing)).highlight,
         CareNeed.drink,
@@ -651,15 +685,140 @@ void main() {
       expect(controller(tester).mood, BuddyMood.happy);
     });
 
-    testWidgets('shows the StreakChip with the Buddy status', (tester) async {
+    testWidgets('no streak chip on Home: the StreakBadge at the flame, with '
+        'the Buddy status', (tester) async {
       await pumpHero(tester);
 
-      final chip = tester.widget<StreakChip>(find.byType(StreakChip));
-      expect(chip.streak, 4);
-      expect(chip.todayCounted, isFalse);
+      expect(find.byType(StreakChip), findsNothing);
+      final badge = tester.widget<StreakBadge>(find.byType(StreakBadge));
+      expect(badge.streak, 4);
+      expect(badge.lit, isFalse);
+      // In the ring, over him (the hero has no row above the ring).
+      expect(
+        find.descendant(
+          of: find.byType(CareRing),
+          matching: find.byType(StreakBadge),
+        ),
+        findsOneWidget,
+      );
+
+      buddy.push(_status(streak: 0));
+      await tester.pump();
+      expect(tester.widget<StreakBadge>(find.byType(StreakBadge)).streak, 0);
     });
 
-    testWidgets('the StreakChip opens „Dein Streak"; „Ziel ändern" sets a '
+    for (final (name, size, scale) in [
+      ('402×874', const Size(402 - 48, 874), 1.0),
+      ('375×667 at text scale 1.3', const Size(375 - 48, 667), 1.3),
+      ('375×667 at text scale 2', const Size(375 - 48, 667), 2.0),
+    ]) {
+      for (final streak in [5, 128]) {
+        testWidgets('$name, streak $streak: the badge sits at the flame\'s '
+            'lower right, next to his feet, clear of the need bubbles', (
+          tester,
+        ) async {
+          // The hero's width on that phone (the harness has no side padding).
+          tester.view
+            ..physicalSize = size
+            ..devicePixelRatio = 1;
+          addTearDown(tester.view.reset);
+          tester.platformDispatcher.textScaleFactorTestValue = scale;
+          addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+          buddy = _FakeBuddy(() => _status(streak: streak, todayCounted: true));
+          await pumpHero(tester);
+
+          final badge = tester.getRect(find.byType(StreakBadge));
+          final flame = tester.getRect(flameFinder());
+          final square = tester.getRect(find.byKey(CareRing.buddyKey));
+          final ring = tester.getRect(find.byType(CareRing));
+          final base = flame.bottom - flame.height * FlamePainter.baseInset;
+          // At its lower right: its right edge, its base.
+          expect(badge.right, moreOrLessEquals(flame.right));
+          expect(badge.center.dy, moreOrLessEquals(base));
+          expect(badge.left, greaterThan(square.left));
+          // Next to his feet, in the ring.
+          expect(badge.top, greaterThan(square.center.dy));
+          expect(badge.bottom, lessThanOrEqualTo(ring.bottom));
+          for (final need in CareNeed.values) {
+            expect(
+              badge.overlaps(
+                tester.getRect(find.byKey(CareRing.needKey(need))),
+              ),
+              isFalse,
+              reason: '$need',
+            );
+          }
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
+
+    testWidgets("the flame glows behind the Buddy: Home's flame for the "
+        "streak and today, placed by the ring's square and middle, under "
+        'him', (tester) async {
+      buddy = _FakeBuddy(() => _status(streak: 42, todayCounted: true));
+      await pumpHero(tester);
+
+      final flame = tester.widget<HomeFlame>(find.byType(HomeFlame));
+      expect(flame.streak, 42);
+      expect(flame.lit, isTrue);
+      final ring = tester.getRect(find.byType(CareRing));
+      expect(
+        flame.buddy.shift(ring.topLeft),
+        rectMoreOrLessEquals(tester.getRect(find.byKey(CareRing.buddyKey))),
+      );
+      expect(
+        flame.middle.shift(ring.topLeft).center,
+        offsetMoreOrLessEquals(ring.center),
+      );
+
+      // Painted before him, so under him.
+      expect(
+        find
+            .descendant(
+              of: find.byType(CareRing),
+              matching: find.byWidgetPredicate(
+                (w) => w is HomeFlame || w is AnimatedBuddy,
+              ),
+            )
+            .evaluate()
+            .map((e) => e.widget.runtimeType),
+        [HomeFlame, AnimatedBuddy],
+      );
+    });
+
+    testWidgets("glimmt before today's first entry, brennt after; streak 0 "
+        'an ember', (tester) async {
+      buddy = _FakeBuddy(() => _status(streak: 5));
+      await pumpHero(tester);
+      expect(homeFlame(tester).look, FlameLook.ember);
+      expect(tester.widget<StreakFlame>(flameFinder()).streak, 5);
+
+      buddy.push(_status(streak: 5, todayCounted: true));
+      await tester.pump();
+      expect(homeFlame(tester).look, FlameLook.lit);
+
+      buddy.push(_status(streak: 0));
+      await tester.pump();
+      expect(homeFlame(tester).look, FlameLook.ember);
+    });
+
+    testWidgets('an entry while Home is covered ignites it once Home shows '
+        'again', (tester) async {
+      await pumpHero(tester);
+
+      visible.value = false;
+      buddy.push(_status(todayCounted: true));
+      await tester.pump(const Duration(seconds: 1));
+      expect(homeFlame(tester).burst, isNull);
+
+      visible.value = true;
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 150));
+      expect(homeFlame(tester).burst, greaterThan(0));
+    });
+
+    testWidgets('the StreakBadge opens „Dein Streak"; „Ziel ändern" sets a '
         'new goal', (tester) async {
       await pumpHero(tester);
 
@@ -679,20 +838,20 @@ void main() {
       expect(buddy.goals, [14]);
     });
 
-    testWidgets('a double tap on the StreakChip opens one sheet', (
+    testWidgets('a double tap on the StreakBadge opens one sheet', (
       tester,
     ) async {
       await pumpHero(tester);
 
-      await tester.tap(find.byType(StreakChip));
-      await tester.tap(find.byType(StreakChip));
+      await tester.tap(find.byType(StreakBadge));
+      await tester.tap(find.byType(StreakBadge));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.text(_sheetTitle), findsOneWidget);
     });
 
-    testWidgets('the StreakChip is ignored while a reached goal is '
+    testWidgets('the StreakBadge is ignored while a reached goal is '
         'celebrated and its sheet is open', (tester) async {
       buddy = _FakeBuddy(
         () => _status(
@@ -703,7 +862,7 @@ void main() {
       await pumpHero(tester);
       await tick(tester);
 
-      // Celebrating: a chip tap opens nothing.
+      // Celebrating: a badge tap opens nothing.
       await openSheet(tester);
       expect(find.text(_sheetTitle), findsNothing);
 
@@ -715,12 +874,12 @@ void main() {
       await chooseGoal(tester, '14 Tage');
       expect(buddy.goals, [14]);
 
-      // Done: the chip works again.
+      // Done: the badge works again.
       await openSheet(tester);
       expect(find.text(_sheetTitle), findsOneWidget);
     });
 
-    testWidgets('a goal reached while the StreakChip sheet is open does not '
+    testWidgets('a goal reached while the StreakBadge sheet is open does not '
         'stack its own sheet on top: it waits until that closed', (
       tester,
     ) async {
@@ -838,17 +997,17 @@ void main() {
       expect(find.byKey(StreakSheet.changeGoalKey), findsNothing);
     });
 
-    testWidgets('new user without a Buddy row → chip shows 0 Tage', (
+    testWidgets('new user without a Buddy row → the badge shows 0', (
       tester,
     ) async {
       buddy = _FakeBuddy(() => _status(streak: 0, savers: 0, hasRow: false));
       await pumpHero(tester);
 
-      expect(find.text('0 Tage'), findsOneWidget);
+      expect(tester.widget<StreakBadge>(find.byType(StreakBadge)).streak, 0);
       expect(controller(tester).mood, BuddyMood.hungry);
     });
 
-    testWidgets('buddyProvider error → no StreakChip, Buddy still shown', (
+    testWidgets('buddyProvider error → no StreakBadge, Buddy still shown', (
       tester,
     ) async {
       buddy = _FakeBuddy(() => throw Exception('no buddy_state table'));
@@ -860,7 +1019,8 @@ void main() {
       await pumpHero(tester);
       await tick(tester);
 
-      expect(find.byType(StreakChip), findsNothing);
+      expect(find.byType(StreakBadge), findsNothing);
+      expect(find.byType(StreakFlame), findsNothing);
       expect(find.byType(AnimatedBuddy), findsOneWidget);
       final c = controller(tester);
       expect(c.mood, BuddyMood.happy);
@@ -1054,8 +1214,8 @@ void main() {
       expect(careLines(CareAction.lunch), contains(c.bubble));
     });
 
-    testWidgets('weeklyTipsOffer → wave, then the sheet; „Zu den Tipps" '
-        'opens Entdecken', (tester) async {
+    testWidgets('weeklyTipsOffer → wave, then the sheet; „Zu den '
+        'Einstellungen" opens the notification settings', (tester) async {
       buddy = _FakeBuddy(
         () => _status(announcements: const [BuddyAnnouncement.weeklyTipsOffer]),
       );
@@ -1074,9 +1234,9 @@ void main() {
 
       await closeOffer(tester, WeeklyTipsOfferSheet.openKey);
 
-      expect(location(), RoutePaths.discover);
+      expect(location(), RoutePaths.settingsNotifications);
       expect(buddy.shown, [BuddyAnnouncement.weeklyTipsOffer]);
-      // Left for the tab: the next cue waits until Home is back.
+      // Covered by the settings: the next cue waits until Home is back.
       expect(container.read(homeCoveredProvider), isTrue);
     });
 
@@ -1128,14 +1288,14 @@ void main() {
       expect(buddy.shown, isEmpty);
     });
 
-    testWidgets('the StreakChip is ignored while the weekly-tips offer is on '
+    testWidgets('the StreakBadge is ignored while the weekly-tips offer is on '
         'stage', (tester) async {
       buddy = _FakeBuddy(
         () => _status(announcements: const [BuddyAnnouncement.weeklyTipsOffer]),
       );
       await pumpHero(tester);
 
-      // Waving: a chip tap opens nothing.
+      // Waving: a badge tap opens nothing.
       await openSheet(tester);
       expect(find.text(_sheetTitle), findsNothing);
 
@@ -1146,7 +1306,7 @@ void main() {
 
       await closeOffer(tester, WeeklyTipsOfferSheet.laterKey);
 
-      // Done: the chip works again.
+      // Done: the badge works again.
       await openSheet(tester);
       expect(find.text(_sheetTitle), findsOneWidget);
     });
@@ -2341,6 +2501,38 @@ void main() {
       await tester.pump(const Duration(seconds: 5));
     });
 
+    testWidgets('Home covered during the follow-up\'s delay (the tour '
+        'opening): the thanks waits until Home is free, then comes', (
+      tester,
+    ) async {
+      buddy = _FakeBuddy(() => _status(streak: 0, savers: 0));
+      final container = await pumpHero(tester);
+      await advance(tester, const Duration(seconds: 3)); // greeting gone
+
+      emit(container, LogSentiment.neutral);
+      buddy.push(_status(streak: 1, savers: 0, todayCounted: true));
+      await tester.pump();
+      final tour = Completer<void>();
+      unawaited(
+        container
+            .read(homeCoveredProvider.notifier)
+            .whileOpen(() => tour.future),
+      );
+      // Long past the delay: nothing said behind the cover.
+      for (var i = 0; i < 100; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+        expect(bubbleBehind(tester), isNot('Danke! 🔥 1 Tag'));
+      }
+
+      tour.complete();
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      await tick(tester);
+      expect(controller(tester).bubble, 'Danke! 🔥 1 Tag');
+      await tester.pump(const Duration(seconds: 5));
+    });
+
     testWidgets('another log on a counted day → follow-up is the mood line', (
       tester,
     ) async {
@@ -2397,7 +2589,7 @@ void main() {
         needMeterLevel(tester, CareNeed.drink),
         AppConstants.careMeterFloor,
       );
-      expect(find.text('💧 Trinken eintragen'), findsOneWidget);
+      expect(find.text('Trinken eintragen'), findsOneWidget);
       // … but not now: he thanks for this one.
       final c = controller(tester);
       expect(careLines(CareAction.drink), isNot(contains(c.bubble)));
@@ -2747,6 +2939,189 @@ void main() {
       expect(buddy.shown, [BuddyAnnouncement.weeklyTipsOffer]);
     });
 
+    group('his bubble over his head', () {
+      /// About 140 characters: four lines in his bubble.
+      const longLine =
+          'Oh, ich habe so viel zu erzählen! Heute geht es um dein Essen, '
+          'dein Trinken und dein Bauchgefühl, und alles trägst du ganz '
+          'einfach hier ein.';
+
+      /// The top of the Buddy's head, as drawn in his square.
+      double head(WidgetTester tester) {
+        final square = tester.getRect(find.byKey(CareRing.buddyKey));
+        return square.top + BuddyLayout(square.size).headTop;
+      }
+
+      Rect bubbleRect(WidgetTester tester) =>
+          tester.getRect(find.byType(BuddySpeechBubble));
+
+      /// Lets his greeting show and run out: then he says nothing.
+      Future<void> afterGreeting(WidgetTester tester) async {
+        await pumpUntil(
+          tester,
+          () => controller(tester).bubble != null,
+          max: 40,
+        );
+        expect(controller(tester).bubble, isNotNull, reason: 'his greeting');
+        await pumpUntil(tester, () => controller(tester).bubble == null);
+        expect(controller(tester).bubble, isNull);
+      }
+
+      testWidgets('no reserved bubble slot: the ring sits right under the '
+          'band left for his bubble and the flame (where the chip row was), '
+          'and never moves while he talks', (tester) async {
+        await pumpHero(tester);
+        await afterGreeting(tester);
+
+        final hero = tester.getRect(find.byType(BuddyHero));
+        final ring = tester.getRect(find.byType(CareRing));
+        expect(ring.top - hero.top, AppConstants.homeHeadroom);
+        // The band holds nothing of its own.
+        expect(
+          find.descendant(
+            of: find.byType(BuddyHero),
+            matching: find.byType(StreakChip),
+          ),
+          findsNothing,
+        );
+        expect(
+          tester.widget<HomeFlame>(find.byType(HomeFlame)).headroom,
+          AppConstants.homeHeadroom,
+        );
+
+        controller(tester).say('Hallo, schön dich zu sehen!');
+        await tick(tester);
+        expect(bubbleRect(tester).isEmpty, isFalse);
+        expect(tester.getRect(find.byType(CareRing)), ring);
+      });
+
+      for (final (name, width, height) in [
+        ('402×874', 402.0, 874.0),
+        // The largest Buddy (the ring at its widest, his square whole).
+        ('440×956', 440.0, 956.0),
+      ]) {
+        for (final streak in [1, 5, 12, 42]) {
+          testWidgets('$name, streak $streak: a one-line bubble covers the '
+              "flame's tips, their flicker included: no needle above it", (
+            tester,
+          ) async {
+            // The hero's width on that phone (no side padding here).
+            tester.view
+              ..physicalSize = Size(width - 48, height)
+              ..devicePixelRatio = 1;
+            addTearDown(tester.view.reset);
+            buddy = _FakeBuddy(
+              () => _status(streak: streak, todayCounted: true),
+            );
+            await pumpHero(tester);
+            await afterGreeting(tester);
+
+            controller(tester).say('Super!');
+            await tick(tester);
+            await tester.pump(const Duration(milliseconds: 600));
+            final bubble = bubbleRect(tester);
+            expect(bubble.height, lessThan(70), reason: 'one line');
+
+            final box = tester.getRect(flameFinder());
+            final base = box.bottom - box.height * FlamePainter.baseInset;
+            final rest =
+                homeFlame(tester).bodyScale.height *
+                FlamePainter.tipReach *
+                box.height;
+            final peak = base - rest * (1 + FlamePainter.maxStretch);
+            // Under its outline, a little inside.
+            expect(peak, greaterThan(bubble.top + 2));
+            // Still clearly above his head.
+            expect(peak, lessThan(head(tester)));
+          });
+        }
+      }
+
+      testWidgets('his bubble floats over his head while he talks, then is '
+          'gone', (tester) async {
+        await pumpHero(tester);
+        await afterGreeting(tester);
+
+        controller(tester).say('Hallo, schön dich zu sehen!');
+        await tick(tester);
+        final hero = tester.getRect(find.byType(BuddyHero));
+        final ring = tester.getRect(find.byType(CareRing));
+        final bubble = bubbleRect(tester);
+        expect(bubble.isEmpty, isFalse);
+        expect(bubble.bottom, closeTo(head(tester), 0.5));
+        expect(bubble.center.dx, closeTo(ring.center.dx, 0.5));
+        expect(bubble.top, greaterThanOrEqualTo(hero.top));
+        expect(
+          bubble.width,
+          lessThanOrEqualTo(AppConstants.buddyBubbleOverlayMaxWidth),
+        );
+
+        await advance(tester, const Duration(seconds: 4));
+        expect(tester.getSize(find.byType(BuddySpeechBubble)).isEmpty, isTrue);
+      });
+
+      testWidgets('a four-line line is scaled down to stay inside the hero at '
+          '375×667, text scale 1.3', (tester) async {
+        tester.view
+          ..physicalSize = const Size(375, 667)
+          ..devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        tester.platformDispatcher.textScaleFactorTestValue = 1.3;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await pumpHero(tester);
+        await afterGreeting(tester);
+
+        controller(tester).say(longLine);
+        await tick(tester);
+        await tester.pump(const Duration(milliseconds: 1300));
+
+        final hero = tester.getRect(find.byType(BuddyHero));
+        final bubble = bubbleRect(tester);
+        expect(bubble.isEmpty, isFalse);
+        expect(bubble.top, greaterThanOrEqualTo(hero.top - 0.01));
+        expect(bubble.bottom, closeTo(head(tester), 0.5));
+        // Too tall for the room over his head: drawn smaller than laid out.
+        expect(
+          tester.getSize(find.byType(BuddySpeechBubble)).height,
+          greaterThan(bubble.height + 1),
+        );
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('while he talks, Essen and Trinken still open under his '
+          'bubble', (tester) async {
+        // The hero's width on a 393-wide phone (the harness has no side
+        // padding): the ring's middle is narrower than the bubble, so it
+        // covers both top bubbles.
+        tester.view
+          ..physicalSize = const Size(345, 852)
+          ..devicePixelRatio = 1;
+        addTearDown(tester.view.reset);
+        await pumpHero(tester);
+        await afterGreeting(tester);
+
+        for (final (need, path) in [
+          (CareNeed.food, RoutePaths.mealTracker),
+          (CareNeed.drink, RoutePaths.drinkTracker),
+        ]) {
+          controller(tester).say(longLine);
+          await tick(tester);
+          final overlap = bubbleRect(
+            tester,
+          ).intersect(tester.getRect(find.byKey(CareRing.needKey(need))));
+          expect(overlap.isEmpty, isFalse, reason: '$need');
+
+          await tester.tapAt(overlap.center);
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 500));
+          expect(location(), path, reason: '$need');
+
+          router.go(RoutePaths.dashboard);
+          await tester.pump(const Duration(milliseconds: 500));
+        }
+      });
+    });
+
     testWidgets('the ring follows the screen (clamped)', (tester) async {
       tester.view.physicalSize = const Size(393, 852);
       tester.view.devicePixelRatio = 1.0;
@@ -2787,13 +3162,13 @@ void main() {
     ) async {
       now = DateTime(2026, 11, 22, 10, 29);
       await pumpHero(tester);
-      expect(find.text('🍳 Frühstück eintragen'), findsOneWidget);
+      expect(find.text('Frühstück eintragen'), findsOneWidget);
 
       now = DateTime(2026, 11, 22, 10, 30);
       await tester.pump(const Duration(minutes: 1));
       await tester.pump();
 
-      expect(find.text('🍝 Mittagessen eintragen'), findsOneWidget);
+      expect(find.text('Mittagessen eintragen'), findsOneWidget);
     });
 
     testWidgets('hidden, the minute ticks wait; shown again, he catches up '
@@ -2806,13 +3181,13 @@ void main() {
 
       now = DateTime(2026, 11, 22, 10, 30);
       await tester.pump(const Duration(minutes: 1));
-      expect(find.text('🍳 Frühstück eintragen'), findsOneWidget);
+      expect(find.text('Frühstück eintragen'), findsOneWidget);
 
       visible.value = true;
       await tester.pump();
       await tester.pump();
       await tick(tester);
-      expect(find.text('🍝 Mittagessen eintragen'), findsOneWidget);
+      expect(find.text('Mittagessen eintragen'), findsOneWidget);
       expect(controller(tester).bubble, isNull);
     });
 
@@ -2900,7 +3275,7 @@ void main() {
       now = DateTime(2026, 11, 22, 14, 59);
       await tester.pump(const Duration(minutes: 1));
       await tester.pump(const Duration(milliseconds: 400));
-      expect(find.text('🍝 Mittagessen eintragen'), findsOneWidget);
+      expect(find.text('Mittagessen eintragen'), findsOneWidget);
       expect(needMeterLevel(tester, CareNeed.drink), lessThan(before));
     });
 
@@ -2961,8 +3336,8 @@ void main() {
       await pumpHero(tester);
       await tick(tester);
 
-      expect(find.text('🍎 Snack eintragen'), findsOneWidget);
-      expect(find.text('🍲 Abendessen eintragen'), findsNothing);
+      expect(find.text('Snack eintragen'), findsOneWidget);
+      expect(find.text('Abendessen eintragen'), findsNothing);
       expect(careLines(CareAction.snack), contains(controller(tester).bubble));
     });
 
@@ -3007,7 +3382,7 @@ void main() {
         ),
       );
       await pumpHero(tester);
-      expect(find.text('💧 Trinken eintragen'), findsOneWidget);
+      expect(find.text('Trinken eintragen'), findsOneWidget);
 
       await tester.tap(find.byKey(BuddyHero.actionKey));
       await tester.pump();
@@ -3058,8 +3433,230 @@ void main() {
     ) async {
       await pumpHero(tester);
 
-      expect(find.byType(StreakChip), findsOneWidget);
+      expect(find.byType(StreakBadge), findsOneWidget);
       expect(find.byType(StreakWeekRow), findsNothing);
+    });
+  });
+
+  group('the ask for reminders while they are off', () {
+    late FakeNotificationRepository os;
+
+    /// The profile loaded: the reminders off unless a test says otherwise.
+    late UserProfile profile;
+
+    setUp(() {
+      os = FakeNotificationRepository();
+      profile = testUserProfile().withNotifications(false);
+      SharedPreferences.setMockInitialValues({
+        AppConstants.keyNotificationModalShown: true,
+      });
+    });
+
+    /// The hero with [profile] loaded, the OS
+    /// as [os] reports it and [activeDays] days with an entry.
+    Future<ProviderContainer> pumpAsking(
+      WidgetTester tester, {
+      int activeDays = 2,
+      List<Override> extra = const [],
+    }) => pumpHero(
+      tester,
+      extra: [
+        notificationRepositoryProvider.overrideWithValue(os),
+        profileRepositoryProvider.overrideWithValue(
+          FakeProfileRepository()..seedProfile(profile),
+        ),
+        profileProviderSeededWith(profile),
+        insightsProviderSeededWith(lockedInsights(activeDays: activeDays)),
+        ...extra,
+      ],
+    );
+
+    Future<int> asks() async {
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getInt('${AppConstants.keyReminderAsksPrefix}u1') ?? 0;
+    }
+
+    Future<void> tapInSheet(WidgetTester tester, Key key) async {
+      await tester.ensureVisible(find.byKey(key));
+      await tester.tap(find.byKey(key));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+    }
+
+    testWidgets('due: he waves, then asks in a sheet with what reminders do; '
+        '„Später" counts as an ask and he doesn\'t ask again today', (
+      tester,
+    ) async {
+      await pumpAsking(tester);
+      await tick(tester);
+
+      expect(controller(tester).currentAction, BuddyAction.wave);
+      await afterWave(tester);
+      expect(find.byType(RemindersAskSheet), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is BuddySays && w.line == BuddyCopy.remindersAsk,
+        ),
+        findsOneWidget,
+      );
+      expect(find.text(BuddyCopy.remindersAskBody), findsOneWidget);
+      expect(find.text('Einschalten'), findsOneWidget);
+      expect(find.text('Später'), findsOneWidget);
+      expect(await asks(), 1);
+
+      await tapInSheet(tester, RemindersAskSheet.laterKey);
+      expect(find.byType(RemindersAskSheet), findsNothing);
+      expect(os.requests, 0);
+
+      // Home shown again the same day: no second ask.
+      visible.value = false;
+      await tester.pump();
+      visible.value = true;
+      await tester.pump();
+      await advance(tester, const Duration(seconds: 3));
+      expect(find.byType(RemindersAskSheet), findsNothing);
+      expect(await asks(), 1);
+    });
+
+    testWidgets('„Einschalten": the OS dialog; allowed, every notification '
+        'is on and he thanks', (tester) async {
+      os.permission = NotificationPermission.notDetermined;
+      final container = await pumpAsking(tester);
+      await tick(tester);
+      await afterWave(tester);
+
+      await tapInSheet(tester, RemindersAskSheet.turnOnKey);
+      await tick(tester);
+
+      expect(os.requests, 1);
+      expect(os.settingsOpened, 0);
+      expect(container.read(profileProvider).value!.anyNotificationOn, isTrue);
+      expect(controller(tester).bubble, BuddyCopy.remindersOn);
+      await advance(tester, const Duration(seconds: 5));
+    });
+
+    testWidgets('„Einschalten" while the OS won\'t ask any more: opens the '
+        'system settings, never a dead button', (tester) async {
+      os.permission = NotificationPermission.denied;
+      await pumpAsking(tester);
+      await tick(tester);
+      await afterWave(tester);
+
+      await tapInSheet(tester, RemindersAskSheet.turnOnKey);
+
+      expect(os.settingsOpened, 1);
+      expect(os.requests, 0);
+    });
+
+    testWidgets('the settings don\'t open: a SnackBar says so', (tester) async {
+      os
+        ..permission = NotificationPermission.denied
+        ..settingsOpen = false;
+      await pumpAsking(tester);
+      await tick(tester);
+      await afterWave(tester);
+
+      await tapInSheet(tester, RemindersAskSheet.turnOnKey);
+      expect(find.text(remindersTurnOnFailure), findsOneWidget);
+    });
+
+    testWidgets('never while reminders are on', (tester) async {
+      profile = testUserProfile().withNotifications(true);
+      await pumpAsking(tester, activeDays: 30);
+      await tick(tester);
+      await advance(tester, const Duration(seconds: 3));
+
+      expect(find.byType(RemindersAskSheet), findsNothing);
+      expect(await asks(), 0);
+    });
+
+    testWidgets('not before the 2nd active day', (tester) async {
+      await pumpAsking(tester, activeDays: 1);
+      await tick(tester);
+      await advance(tester, const Duration(seconds: 3));
+      expect(find.byType(RemindersAskSheet), findsNothing);
+    });
+
+    testWidgets('not during the tour: it waits until Home is free', (
+      tester,
+    ) async {
+      final tour = Completer<void>();
+      final container = await pumpAsking(
+        tester,
+        extra: [
+          // A pending welcome: the tour waits for it, then covers Home.
+          buddyWelcomeProvider.overrideWith(
+            () => _PresetWelcome(BuddyWelcomeNotifier.line),
+          ),
+        ],
+      );
+      await tick(tester);
+      // The welcome comes first.
+      expect(controller(tester).bubble, BuddyWelcomeNotifier.line);
+      unawaited(
+        container
+            .read(homeCoveredProvider.notifier)
+            .whileOpen(() => tour.future),
+      );
+      await advance(tester, const Duration(seconds: 8));
+      expect(find.byType(RemindersAskSheet), findsNothing);
+      expect(await asks(), 0);
+
+      tour.complete();
+      await tester.pump();
+      await tester.pump();
+      await tick(tester);
+      await afterWave(tester);
+      expect(find.byType(RemindersAskSheet), findsOneWidget);
+    });
+
+    testWidgets('due while „Dein Streak" is open: waits until it closes', (
+      tester,
+    ) async {
+      profile = testUserProfile().withNotifications(true);
+      final container = await pumpAsking(tester);
+      await advance(tester, const Duration(seconds: 3));
+      await openSheet(tester);
+      expect(find.text(_sheetTitle), findsOneWidget);
+
+      // Switched off elsewhere meanwhile: due now, Home covered.
+      await container
+          .read(profileProvider.notifier)
+          .updateProfile(profile.withNotifications(false));
+      await tester.pump();
+      await advance(tester, const Duration(seconds: 3));
+      expect(find.byType(RemindersAskSheet), findsNothing);
+
+      await tester.tapAt(const Offset(10, 10)); // „Dein Streak"'s barrier
+      await tester.pump();
+      await tester.pump();
+      await afterWave(tester);
+      expect(find.text(_sheetTitle), findsNothing);
+      expect(find.byType(RemindersAskSheet), findsOneWidget);
+    });
+
+    testWidgets('not right after another cue\'s sheet: it comes on a later '
+        'visit of Home', (tester) async {
+      buddy = _FakeBuddy(
+        () => _status(announcements: const [BuddyAnnouncement.weeklyTipsOffer]),
+      );
+      await pumpAsking(tester);
+      await tick(tester);
+      await afterWave(tester);
+      expect(find.byType(WeeklyTipsOfferSheet), findsOneWidget);
+
+      await tapInSheet(tester, WeeklyTipsOfferSheet.laterKey);
+      await advance(tester, const Duration(seconds: 3));
+      expect(find.byType(RemindersAskSheet), findsNothing);
+      expect(await asks(), 0);
+
+      visible.value = false;
+      await tester.pump();
+      visible.value = true;
+      await tester.pump();
+      await tick(tester);
+      await afterWave(tester);
+      expect(find.byType(RemindersAskSheet), findsOneWidget);
     });
   });
 }
