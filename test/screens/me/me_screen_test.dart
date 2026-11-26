@@ -226,6 +226,19 @@ void main() {
       expect(find.text('page:/shares'), findsOneWidget);
     });
 
+    testWidgets('a double tap opens the list once', (tester) async {
+      shareService.shares = [testShare()];
+      await pump(tester);
+      await tester.ensureVisible(find.byKey(MeScreen.shareKey));
+      await tester.tap(find.byKey(MeScreen.shareKey));
+      await tester.tap(find.byKey(MeScreen.shareKey));
+      await tester.pumpAndSettle();
+      router.pop();
+      await tester.pumpAndSettle();
+      expect(find.text('page:/shares'), findsNothing);
+      expect(find.byKey(MeScreen.shareKey), findsOneWidget);
+    });
+
     testWidgets('failed list: opens the create screen', (tester) async {
       shareService.failList = true;
       await pump(tester);

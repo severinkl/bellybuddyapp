@@ -25,11 +25,18 @@ class SharesNotifier extends AsyncNotifier<List<DataShare>> {
   Future<CreatedShare> create(NewShare share) async {
     final created = await ref.read(shareServiceProvider).create(share);
     final store = ref.read(shareSecretsStoreProvider);
-    await store.save(
-      created.id,
-      ShareSecret(link: created.link, code: created.code),
+    // The share exists on the server: a local write failing must not turn
+    // that into a failure (the user would create a second one).
+    await _bestEffort('keeping the new share on this device', () async {
+      await store.save(
+        created.id,
+        ShareSecret(link: created.link, code: created.code),
+      );
+    });
+    await _bestEffort(
+      'remembering the display name',
+      () => store.rememberDisplayName(share.displayName),
     );
-    await store.rememberDisplayName(share.displayName);
     ref.invalidate(shareSecretProvider(created.id));
     await _reload();
     return created;
@@ -39,9 +46,33 @@ class SharesNotifier extends AsyncNotifier<List<DataShare>> {
   /// A failing call throws and leaves state and secret as they were.
   Future<void> end(String id) async {
     await ref.read(shareServiceProvider).end(id);
-    await ref.read(shareSecretsStoreProvider).remove(id);
+    await _bestEffort(
+      'dropping the secret of an ended share',
+      () => ref.read(shareSecretsStoreProvider).remove(id),
+    );
     ref.invalidate(shareSecretProvider(id));
     await _reload();
+  }
+
+  /// Loads the list again, keeping what is shown while it runs. A failure
+  /// keeps the list shown; with nothing shown yet it becomes the error.
+  Future<void> refresh() async {
+    try {
+      state = AsyncData(await ref.read(shareServiceProvider).list());
+    } catch (e, st) {
+      _log.error('refreshing the shares failed', e, st);
+      if (!state.hasValue) state = AsyncError(e, st);
+    }
+  }
+
+  /// A local write after a server success: logged (never with secrets) and
+  /// carried on.
+  Future<void> _bestEffort(String what, Future<void> Function() write) async {
+    try {
+      await write();
+    } catch (e, st) {
+      _log.error('$what failed', e, st);
+    }
   }
 
   /// A failing reload keeps the list shown; the call that led here worked.
@@ -90,8 +121,13 @@ final shareRowBadgeProvider =
 /// The share just created, until the list screen has shown its link and
 /// code once. Holds a secret: cleared as soon as it is taken.
 class JustCreatedShareNotifier extends Notifier<ShareSecret?> {
+  /// Watches the user: a pending secret never reaches the next account
+  /// after a sign-out or an account deletion.
   @override
-  ShareSecret? build() => null;
+  ShareSecret? build() {
+    ref.watch(currentUserIdProvider);
+    return null;
+  }
 
   void set(ShareSecret secret) => state = secret;
 

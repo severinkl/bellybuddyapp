@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:belly_buddy/models/data_share.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
+import 'package:belly_buddy/providers/shares_provider.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/shares/shares_screen.dart';
 import 'package:belly_buddy/services/share_secrets_store.dart';
@@ -25,6 +26,7 @@ void main() {
   final now = DateTime(2026, 11, 26, 12);
   late FakeShareService service;
   late GoRouter router;
+  late ProviderContainer container;
 
   setUpAll(() => initializeDateFormatting('de_DE', null));
 
@@ -32,6 +34,8 @@ void main() {
     WidgetTester tester,
     List<DataShare> shares, {
     Map<String, ShareSecret> secrets = const {},
+    FakeShareService? using,
+    Future<void> Function(ProviderContainer container)? before,
   }) async {
     SharedPreferences.setMockInitialValues({});
     final seed = ShareSecretsStore(userId: () => 'u1');
@@ -42,14 +46,15 @@ void main() {
     tester.view.devicePixelRatio = 1.0;
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
-    service = FakeShareService(shares);
-    final container = ProviderContainer.test(
+    service = using ?? FakeShareService(shares);
+    container = ProviderContainer.test(
       overrides: [
         currentUserIdProvider.overrideWithValue('u1'),
         shareServiceProvider.overrideWithValue(service),
         buddyClockProvider.overrideWithValue(() => now),
       ],
     );
+    if (before != null) await before(container);
     router = GoRouter(
       initialLocation: RoutePaths.shares,
       routes: [
@@ -307,6 +312,143 @@ void main() {
     expect(find.text('Aktiv'), findsOneWidget);
   });
 
+  testWidgets('an active share shows until when it is valid', (tester) async {
+    await pump(tester, [testShare()]);
+    expect(find.text('gültig bis 20. Dez.'), findsOneWidget);
+  });
+
+  testWidgets('ended shares do not show a valid-until line', (tester) async {
+    await pump(tester, [testShare(revokedAt: DateTime(2026, 11, 21))]);
+    expect(find.textContaining('gültig bis'), findsNothing);
+  });
+
+  group('5 active shares', () {
+    final five = [for (var i = 0; i < 5; i++) testShare(id: 's$i')];
+    const hint =
+        'Du hast schon 5 aktive Freigaben. Beende eine, um eine neue zu '
+        'erstellen.';
+
+    testWidgets('create buttons are disabled and the line says why', (
+      tester,
+    ) async {
+      await pump(tester, five);
+      expect(find.text(hint), findsOneWidget);
+      await tester.tap(find.text('Weitere Freigabe erstellen'));
+      await tester.pumpAndSettle();
+      expect(find.text('page:/shares/new'), findsNothing);
+      // „Neu erstellen" on a tile is disabled too.
+      await tester.tap(find.text('Neu erstellen').first);
+      await tester.pumpAndSettle();
+      expect(find.text('page:/shares/new'), findsNothing);
+    });
+
+    testWidgets('4 active: still enabled, no line', (tester) async {
+      await pump(tester, five.take(4).toList());
+      expect(find.text(hint), findsNothing);
+      await tester.tap(find.text('Neu erstellen').first);
+      await tester.pumpAndSettle();
+      expect(find.text('page:/shares/new'), findsOneWidget);
+    });
+
+    testWidgets('ended ones do not count', (tester) async {
+      await pump(tester, [
+        ...five.take(4),
+        testShare(id: 'x', revokedAt: DateTime(2026, 11, 21)),
+      ]);
+      expect(find.text(hint), findsNothing);
+    });
+  });
+
+  testWidgets('a failed end reloads the list (ended elsewhere)', (
+    tester,
+  ) async {
+    await pump(tester, [testShare()]);
+    final calls = service.listCalls;
+    service.failEnd = true;
+    service.shares = [testShare(revokedAt: DateTime(2026, 11, 25))];
+    await tester.tap(find.text('Freigabe beenden'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Beenden'));
+    await tester.pumpAndSettle();
+    expect(service.listCalls, greaterThan(calls));
+    expect(find.text('Beendet'), findsOneWidget);
+  });
+
+  testWidgets('opening the screen refreshes a list loaded earlier', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      [testShare()],
+      before: (c) async {
+        await c.read(sharesProvider.future);
+        service.shares = [
+          testShare(openCount: 1, lastOpenedAt: DateTime(2026, 11, 25, 16, 40)),
+        ];
+      },
+    );
+    expect(
+      find.textContaining('zuletzt geöffnet 25. Nov., 16:40'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('pull to refresh loads again', (tester) async {
+    await pump(tester, [testShare()]);
+    service.shares = [
+      testShare(openCount: 2, lastOpenedAt: DateTime(2026, 11, 26, 8, 0)),
+    ];
+    await tester.fling(
+      find.byType(Scrollable).first,
+      const Offset(0, 400),
+      800,
+    );
+    await tester.pumpAndSettle();
+    expect(find.textContaining('2-mal geöffnet'), findsOneWidget);
+  });
+
+  testWidgets('refreshing keeps the list, no spinner', (tester) async {
+    final slow = _SlowSecond([testShare()]);
+    await pump(tester, [], using: slow);
+    expect(find.text('Aktiv'), findsOneWidget);
+    // The refresh from opening is still pending, or was answered: pull again.
+    slow.gate = Completer<void>();
+    await tester.fling(
+      find.byType(Scrollable).first,
+      const Offset(0, 400),
+      800,
+    );
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.byType(BbLoadingState), findsNothing);
+    expect(find.text('Aktiv'), findsOneWidget);
+    slow.gate!.complete();
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('a hand-off made before the list mounts shows the sheet once', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      [testShare()],
+      before: (c) async => c
+          .read(justCreatedShareProvider.notifier)
+          .set(
+            const ShareSecret(
+              link: 'https://example.test/s/zzz',
+              code: '123456',
+            ),
+          ),
+    );
+    expect(find.text('Dein Link ist bereit'), findsOneWidget);
+    expect(find.text('https://example.test/s/zzz'), findsOneWidget);
+    expect(container.read(justCreatedShareProvider), isNull);
+    // Closing it does not bring it back.
+    await tester.tapAt(const Offset(10, 10));
+    await tester.pumpAndSettle();
+    expect(find.text('Dein Link ist bereit'), findsNothing);
+  });
+
   testWidgets('while loading, a loading view shows', (tester) async {
     SharedPreferences.setMockInitialValues({});
     final never = Completer<List<DataShare>>();
@@ -337,4 +479,16 @@ class _Slow extends FakeShareService {
   final Future<List<DataShare>> _answer;
   @override
   Future<List<DataShare>> list() => _answer;
+}
+
+/// Answers at once, until [gate] is set: then the next list waits for it.
+class _SlowSecond extends FakeShareService {
+  _SlowSecond(super.shares);
+  Completer<void>? gate;
+  @override
+  Future<List<DataShare>> list() async {
+    final g = gate;
+    if (g != null) await g.future;
+    return super.list();
+  }
 }

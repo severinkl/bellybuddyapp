@@ -117,6 +117,52 @@ void main() {
     expect(container.read(sharesProvider).value, isNotNull);
   });
 
+  group('local storage failing', () {
+    setUp(() {
+      container = ProviderContainer.test(
+        overrides: [
+          currentUserIdProvider.overrideWithValue('u1'),
+          shareServiceProvider.overrideWithValue(service),
+          shareSecretsStoreProvider.overrideWithValue(_BrokenStore()),
+        ],
+      );
+    });
+
+    test('create still returns the created share and lists it', () async {
+      await container.read(sharesProvider.future);
+      final created = await container
+          .read(sharesProvider.notifier)
+          .create(newShare);
+      expect(created.id, 'new1');
+      expect(container.read(sharesProvider).value!.map((s) => s.id), [
+        'new1',
+        's1',
+      ]);
+    });
+
+    test('end still ends and reloads', () async {
+      await container.read(sharesProvider.future);
+      await container.read(sharesProvider.notifier).end('s1');
+      expect(service.ended, ['s1']);
+      expect(container.read(sharesProvider).value!.single.revokedAt, isNotNull);
+    });
+  });
+
+  test('a pending secret does not outlive the signed-in user', () {
+    final id = NotifierProvider<_Id, String?>(_Id.new);
+    final c = ProviderContainer.test(
+      overrides: [currentUserIdProvider.overrideWith((ref) => ref.watch(id))],
+    );
+    c.read(id.notifier).set('u1');
+    c
+        .read(justCreatedShareProvider.notifier)
+        .set(const ShareSecret(link: 'l', code: 'c'));
+    expect(c.read(justCreatedShareProvider), isNotNull);
+
+    c.read(id.notifier).set(null);
+    expect(c.read(justCreatedShareProvider), isNull);
+  });
+
   test('the badge shows until marked, and stays marked', () async {
     expect(await container.read(shareRowBadgeProvider.future), isTrue);
     await container.read(shareRowBadgeProvider.notifier).markTapped();
@@ -125,4 +171,21 @@ void main() {
     final again = ProviderContainer.test();
     expect(await again.read(shareRowBadgeProvider.future), isFalse);
   });
+}
+
+class _Id extends Notifier<String?> {
+  @override
+  String? build() => null;
+  void set(String? v) => state = v;
+}
+
+class _BrokenStore extends ShareSecretsStore {
+  _BrokenStore() : super(userId: () => 'u1');
+  @override
+  Future<void> save(String shareId, ShareSecret secret) =>
+      throw Exception('disk full');
+  @override
+  Future<void> remove(String shareId) => throw Exception('disk full');
+  @override
+  Future<void> rememberDisplayName(String name) => throw Exception('disk full');
 }

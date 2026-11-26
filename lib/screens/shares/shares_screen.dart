@@ -20,6 +20,12 @@ import 'widgets/share_tile.dart';
 /// Ended, expired and locked shares stay in the list this long.
 const _inactiveShownDays = 90;
 
+/// As many active shares as the server allows.
+const _maxActiveShares = 5;
+const _fullHint =
+    'Du hast schon 5 aktive Freigaben. Beende eine, um eine neue zu '
+    'erstellen.';
+
 /// „Deine Freigaben": the active shares first, then the ones that ended,
 /// expired or were locked in the last 90 days (counted from when they
 /// stopped), each group newest first.
@@ -54,6 +60,8 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
             ),
           ),
         );
+        // The share may have ended elsewhere already.
+        unawaited(ref.read(sharesProvider.notifier).refresh());
       }
     } finally {
       _ending = false;
@@ -133,7 +141,10 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _showJustCreated();
+      if (!mounted) return;
+      // Opened, last opened and the state move on without the app.
+      unawaited(ref.read(sharesProvider.notifier).refresh());
+      _showJustCreated();
     });
   }
 
@@ -152,49 +163,75 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
         backgroundColor: AppTheme.screenBackground,
         title: const Text('Deine Freigaben'),
       ),
-      body: switch (shares) {
-        AsyncData(:final value) => _content(_visible(value)),
-        AsyncError() => BbErrorState(
-          message: 'Deine Freigaben konnten nicht geladen werden.',
-          onRetry: () => ref.invalidate(sharesProvider),
-        ),
-        _ => const BbLoadingState(),
-      },
+      // hasValue: the list stays while it is refreshed.
+      body: shares.hasValue
+          ? _content(shares.requireValue)
+          : shares.hasError
+          ? BbErrorState(
+              message: 'Deine Freigaben konnten nicht geladen werden.',
+              onRetry: () => ref.invalidate(sharesProvider),
+            )
+          : const BbLoadingState(),
     );
   }
 
-  Widget _content(List<(DataShare, ShareState)> visible) {
+  Widget _content(List<DataShare> shares) {
+    final now = ref.read(buddyClockProvider)();
+    final full =
+        shares.where((s) => s.stateAt(now) == ShareState.active).length >=
+        _maxActiveShares;
+    final visible = _visible(shares);
     return Column(
       children: [
         Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(AppConstants.spacingMd),
-            child: visible.isEmpty
-                ? const Text(
-                    'Teile dein Tagebuch mit deiner Diätolog:in oder '
-                    'Ärzt:in. Du entscheidest, was sie sehen, und kannst es '
-                    'jederzeit beenden.',
-                    style: TextStyle(
-                      fontSize: AppTheme.fontSizeBodyLG,
-                      color: AppTheme.foreground,
-                      height: AppTheme.lineHeightBody,
-                    ),
-                  )
-                : _list(visible),
+          child: RefreshIndicator(
+            onRefresh: () => ref.read(sharesProvider.notifier).refresh(),
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.all(AppConstants.spacingMd),
+              child: visible.isEmpty
+                  ? const Text(
+                      'Teile dein Tagebuch mit deiner Diätolog:in oder '
+                      'Ärzt:in. Du entscheidest, was sie sehen, und kannst es '
+                      'jederzeit beenden.',
+                      style: TextStyle(
+                        fontSize: AppTheme.fontSizeBodyLG,
+                        color: AppTheme.foreground,
+                        height: AppTheme.lineHeightBody,
+                      ),
+                    )
+                  : _list(visible, full: full),
+            ),
           ),
         ),
         SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(AppConstants.spacingMd),
-            child: SizedBox(
-              width: double.infinity,
-              child: BbButton(
-                label: visible.isEmpty
-                    ? 'Freigabe erstellen'
-                    : 'Weitere Freigabe erstellen',
-                onPressed: () =>
-                    unawaited(context.push(RoutePaths.shareCreate)),
-              ),
+            child: Column(
+              children: [
+                SizedBox(
+                  width: double.infinity,
+                  child: BbButton(
+                    label: visible.isEmpty
+                        ? 'Freigabe erstellen'
+                        : 'Weitere Freigabe erstellen',
+                    onPressed: full
+                        ? null
+                        : () => unawaited(context.push(RoutePaths.shareCreate)),
+                  ),
+                ),
+                if (full) ...[
+                  AppConstants.gap8,
+                  const Text(
+                    _fullHint,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: AppTheme.fontSizeCaptionLG,
+                      color: AppTheme.mutedForeground,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
         ),
@@ -202,7 +239,7 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
     );
   }
 
-  Widget _list(List<(DataShare, ShareState)> visible) {
+  Widget _list(List<(DataShare, ShareState)> visible, {required bool full}) {
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.card,
@@ -230,8 +267,9 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
                   code: secret.code,
                 ),
               ),
-              onCreateAgain: () =>
-                  unawaited(context.push(RoutePaths.shareCreate)),
+              onCreateAgain: full
+                  ? null
+                  : () => unawaited(context.push(RoutePaths.shareCreate)),
             ),
           ],
         ],

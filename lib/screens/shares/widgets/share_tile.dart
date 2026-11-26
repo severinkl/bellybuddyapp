@@ -54,8 +54,9 @@ class ShareTile extends ConsumerWidget {
   /// „Link und Code anzeigen", with the secret kept on this device.
   final void Function(ShareSecret secret) onShowSecret;
 
-  /// „Neu erstellen", without a secret on this device.
-  final VoidCallback onCreateAgain;
+  /// „Neu erstellen", without a secret on this device; null while the limit
+  /// of active shares is reached.
+  final VoidCallback? onCreateAgain;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -110,6 +111,16 @@ class ShareTile extends ConsumerWidget {
               color: AppTheme.mutedForeground,
             ),
           ),
+          if (active) ...[
+            AppConstants.gap6,
+            Text(
+              'gültig bis ${DateFormat('d. MMM', 'de_DE').format(share.expiresAt.toLocal())}',
+              style: const TextStyle(
+                fontSize: AppTheme.fontSizeCaptionLG,
+                color: AppTheme.mutedForeground,
+              ),
+            ),
+          ],
           if (active && secretLoaded) ...[
             if (secret == null) ...[
               AppConstants.gap6,
