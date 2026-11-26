@@ -2,7 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../config/constants.dart';
 
-/// Pops [child] once (up to [AppConstants.streakChipPopScale] and back)
+/// Pops [child] once (up to [AppConstants.streakPopScale] and back)
 /// whenever [streak] increases; not under reduced motion.
 class StreakPop extends StatefulWidget {
   const StreakPop({super.key, required this.streak, required this.child});
@@ -22,11 +22,11 @@ class _StreakPopState extends State<StreakPop>
   );
   late final Animation<double> _scale = TweenSequence<double>([
     TweenSequenceItem(
-      tween: Tween(begin: 1.0, end: AppConstants.streakChipPopScale),
+      tween: Tween(begin: 1.0, end: AppConstants.streakPopScale),
       weight: 1,
     ),
     TweenSequenceItem(
-      tween: Tween(begin: AppConstants.streakChipPopScale, end: 1.0),
+      tween: Tween(begin: AppConstants.streakPopScale, end: 1.0),
       weight: 1,
     ),
   ]).animate(CurvedAnimation(parent: _pop, curve: Curves.easeOut));

@@ -2989,6 +2989,48 @@ void main() {
         expect(tester.getRect(find.byType(CareRing)), ring);
       });
 
+      for (final (name, width, height) in [
+        ('402×874', 402.0, 874.0),
+        // The largest Buddy (the ring at its widest, his square whole).
+        ('440×956', 440.0, 956.0),
+      ]) {
+        for (final streak in [1, 5, 12, 42]) {
+          testWidgets('$name, streak $streak: a one-line bubble covers the '
+              "flame's tips, their flicker included: no needle above it", (
+            tester,
+          ) async {
+            // The hero's width on that phone (no side padding here).
+            tester.view
+              ..physicalSize = Size(width - 48, height)
+              ..devicePixelRatio = 1;
+            addTearDown(tester.view.reset);
+            buddy = _FakeBuddy(
+              () => _status(streak: streak, todayCounted: true),
+            );
+            await pumpHero(tester);
+            await afterGreeting(tester);
+
+            controller(tester).say('Super!');
+            await tick(tester);
+            await tester.pump(const Duration(milliseconds: 600));
+            final bubble = bubbleRect(tester);
+            expect(bubble.height, lessThan(70), reason: 'one line');
+
+            final box = tester.getRect(flameFinder());
+            final base = box.bottom - box.height * FlamePainter.baseInset;
+            final rest =
+                homeFlame(tester).bodyScale.height *
+                FlamePainter.tipReach *
+                box.height;
+            final peak = base - rest * (1 + FlamePainter.maxStretch);
+            // Under its outline, a little inside.
+            expect(peak, greaterThan(bubble.top + 2));
+            // Still clearly above his head.
+            expect(peak, lessThan(head(tester)));
+          });
+        }
+      }
+
       testWidgets('his bubble floats over his head while he talks, then is '
           'gone', (tester) async {
         await pumpHero(tester);

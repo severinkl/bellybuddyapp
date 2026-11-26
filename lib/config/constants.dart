@@ -109,8 +109,8 @@ class AppConstants {
   static const Duration buddyBubbleCharDelay = Duration(milliseconds: 30);
   static const Duration buddyBubbleTypeMax = Duration(milliseconds: 1200);
 
-  // Streak chip / goal sheet
-  static const double streakChipPopScale = 1.25;
+  // Streak chip and badge pop / goal sheet
+  static const double streakPopScale = 1.25;
   static const double streakSheetBuddyHeight = 220.0;
 
   // A Buddy sheet's Buddy on a short screen (below this height), so both
@@ -189,14 +189,15 @@ class AppConstants {
   static const Duration careNeedPulse = Duration(milliseconds: 1400);
 
   // Home's streak flame behind the Buddy: how far its tips rise above his
-  // head by its tier (per his height), how far right of his foot it burns
+  // head by its tier (per his height; a one-line bubble of his still
+  // covers them, flicker included), how far right of his foot it burns
   // (per his height), how far its base sits below his feet (per side of
   // his square), how opaque it is as an ember, lit and blazing („lodert"),
   // and its blur
-  static const double homeFlameRiseSmall = 0.4;
-  static const double homeFlameRiseMedium = 0.45;
-  static const double homeFlameRiseLarge = 0.5;
-  static const double homeFlameRiseBlazing = 0.55;
+  static const double homeFlameRiseSmall = 0.17;
+  static const double homeFlameRiseMedium = 0.19;
+  static const double homeFlameRiseLarge = 0.21;
+  static const double homeFlameRiseBlazing = 0.23;
   static const double homeFlameOffset = 0.04;
   static const double homeFlameBelowFeet = 0.02;
   static const double homeFlameEmberOpacity = 0.95;

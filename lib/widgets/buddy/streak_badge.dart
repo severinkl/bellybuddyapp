@@ -9,7 +9,8 @@ import 'streak_pop.dart';
 /// the count („🔥 12"), a button that opens „Dein Streak" ([onTap]). It
 /// shows at 0 too, the way into „Dein Streak".
 ///
-/// Muted while today is not yet counted; pops when [streak] increases. Its
+/// While today is not yet counted its flame is an ember and the count
+/// muted (and it says so); pops when [streak] increases. Its
 /// tap area is at least [AppConstants.homeTapTarget] square, the pill
 /// centred in it; the count grows with the user's text size.
 class StreakBadge extends StatelessWidget {
@@ -28,15 +29,20 @@ class StreakBadge extends StatelessWidget {
   /// Opens „Dein Streak".
   final VoidCallback onTap;
 
-  /// To a screen reader: „Streak: 12 Tage, Dein Streak öffnen".
-  String get _semantics =>
-      'Streak: $streak ${streak == 1 ? 'Tag' : 'Tage'}, Dein Streak öffnen';
+  /// To a screen reader: „Streak: 12 Tage, Dein Streak öffnen", with
+  /// „heute noch offen" while [muted].
+  String _semantics({required bool muted}) => [
+    'Streak: $streak ${streak == 1 ? 'Tag' : 'Tage'}',
+    if (muted) 'heute noch offen',
+    'Dein Streak öffnen',
+  ].join(', ');
 
   @override
   Widget build(BuildContext context) {
+    // Nothing to keep at 0: never muted.
     final muted = !lit && streak > 0;
     return Semantics(
-      label: _semantics,
+      label: _semantics(muted: muted),
       button: true,
       onTap: onTap,
       excludeSemantics: true,
@@ -67,7 +73,10 @@ class StreakBadge extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const StreakFlame.mark(height: AppConstants.iconSizeXs),
+                      StreakFlame.mark(
+                        height: AppConstants.iconSizeXs,
+                        lit: lit,
+                      ),
                       const SizedBox(width: AppConstants.spacingXs),
                       Text(
                         '$streak',

@@ -47,12 +47,15 @@ void main() {
 
   testWidgets('a button: „Streak: n Tage, Dein Streak öffnen"', (t) async {
     final h = t.ensureSemantics();
-    for (final (streak, label) in [
-      (12, 'Streak: 12 Tage, Dein Streak öffnen'),
-      (1, 'Streak: 1 Tag, Dein Streak öffnen'),
-      (0, 'Streak: 0 Tage, Dein Streak öffnen'),
+    for (final (streak, lit, label) in [
+      (12, true, 'Streak: 12 Tage, Dein Streak öffnen'),
+      (1, true, 'Streak: 1 Tag, Dein Streak öffnen'),
+      (0, false, 'Streak: 0 Tage, Dein Streak öffnen'),
+      // While today is open, it says so.
+      (5, false, 'Streak: 5 Tage, heute noch offen, Dein Streak öffnen'),
+      (1, false, 'Streak: 1 Tag, heute noch offen, Dein Streak öffnen'),
     ]) {
-      await t.pumpWidget(_wrap(_badge(streak, lit: streak.isOdd)));
+      await t.pumpWidget(_wrap(_badge(streak, lit: lit)));
       expect(
         find.semantics.byLabel(RegExp('^Streak:')).evaluate().single,
         matchesSemantics(isButton: true, hasTapAction: true, label: label),
@@ -87,6 +90,25 @@ void main() {
     expect(count.textScaler, isNull);
     expect(pill(t).width, greaterThan(t.getSize(find.text('128')).width));
     expect(find.byType(FittedBox), findsNothing);
+  });
+
+  testWidgets('its flame an ember while today is open, lit once it counts', (
+    t,
+  ) async {
+    FlameLook look() => t
+        .widget<StreakFlame>(
+          find.descendant(
+            of: find.byType(StreakBadge),
+            matching: find.byType(StreakFlame),
+          ),
+        )
+        .look;
+    await t.pumpWidget(_wrap(_badge(5, lit: false)));
+    expect(look(), FlameLook.ember);
+    await t.pumpWidget(_wrap(_badge(0, lit: false)));
+    expect(look(), FlameLook.ember);
+    await t.pumpWidget(_wrap(_badge(5)));
+    expect(look(), FlameLook.lit);
   });
 
   testWidgets('muted while today is open', (t) async {

@@ -13,9 +13,10 @@ import '../../../widgets/buddy/streak_flame.dart';
 /// below his foot ([kBuddyFoot], [AppConstants.homeFlameBelowFeet]), a
 /// little right of it ([AppConstants.homeFlameOffset]), its tips clearly
 /// above his head, higher the longer the streak ([riseFor]), and without
-/// its bright core. It barely shows through, by how it shows
-/// ([opacityFor]), and is lightly blurred: it reads as fire behind him,
-/// and he stays the hero.
+/// its bright core. It is only a little translucent ([opacityFor]) and
+/// lightly blurred: it reads as fire behind him, and he stays the hero.
+/// While he says one line, his bubble covers its tips, their flicker
+/// included.
 ///
 /// A `CareRing.behindBuddy` layer: it fills the ring and places itself by
 /// his square ([buddy]) and the ring's middle ([middle]) ([placeFor]). Its

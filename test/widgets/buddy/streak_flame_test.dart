@@ -680,5 +680,16 @@ void main() {
         findsNothing,
       );
     });
+
+    testWidgets('an unlit mark is a still ember', (t) async {
+      StreakFlame.ambientEnabled = true;
+
+      await t.pumpWidget(_wrap(const StreakFlame.mark(height: 20, lit: false)));
+      expect(t.hasRunningAnimations, isFalse);
+      final painter = flamePainter(t);
+      expect(painter.look, FlameLook.ember);
+      expect(painter.tier, FlameTier.large);
+      expect(painter.flicker, everyElement(0));
+    });
   });
 }

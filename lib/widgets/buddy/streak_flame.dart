@@ -50,11 +50,11 @@ class StreakFlame extends StatelessWidget {
     this.reach,
   }) : _mark = false;
 
-  /// A still, lit, large flame: a kept day in the week row. Only painted,
-  /// it never moves.
-  const StreakFlame.mark({super.key, required this.height})
+  /// A still, large flame: a kept day in the week row, or, unless [lit], an
+  /// ember (Home's streak badge while today is open). Only painted, it
+  /// never moves.
+  const StreakFlame.mark({super.key, required this.height, this.lit = true})
     : streak = _markStreak,
-      lit = true,
       width = null,
       igniteOnMount = false,
       core = true,
@@ -306,7 +306,7 @@ class FlamePainter extends CustomPainter {
   /// The tallest its body is scaled for a [reach]: its flicker still stays
   /// inside the box.
   static final double _maxReachScale =
-      _boxBaseY / ((_boxBaseY - _tipY) * (1 + _maxStretch));
+      _boxBaseY / ((_boxBaseY - _tipY) * (1 + maxStretch));
 
   /// An ember is its tier squashed this much: low embers at its base.
   static const Size _emberSquash = Size(0.8, 0.4);
@@ -329,7 +329,7 @@ class FlamePainter extends CustomPainter {
   /// A tongue's flicker at its peak: its skew and its stretch (of its
   /// height).
   static const double _maxSkew = 3 * math.pi / 180;
-  static const double _maxStretch = 0.06;
+  static const double maxStretch = 0.06;
 
   final FlameLook look;
   final FlameTier tier;
@@ -712,7 +712,7 @@ class FlamePainter extends CustomPainter {
     canvas.save();
     _aboutBase(canvas, () {
       canvas.skew(math.tan(_maxSkew * math.sin(angle)), 0);
-      canvas.scale(1, 1 + _maxStretch * math.sin(2 * angle));
+      canvas.scale(1, 1 + maxStretch * math.sin(2 * angle));
     });
     draw();
     canvas.restore();

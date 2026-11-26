@@ -144,8 +144,10 @@ Release like round 4 once both are done (Severin's call).
 Decisions (Severin picked each recommended option):
 1. **Streak count as a badge at the flame.** The top-left chip row on Home goes. The count sits as a small badge („🔥 12" with the
    drawn flame, ≥ 48 dp tap target) slightly offset at the flame's lower right, next to the Buddy's feet; tapping it opens „Dein Streak".
-   It shows at 0 too (the way into „Dein Streak"). Semantics: „Streak: 12 Tage, Dein Streak öffnen". The freed row lets the ring and the
-   bubble's room move up. Ich keeps its own chip. Any tour step that pointed at the chip points at the badge.
+   It shows at 0 too (the way into „Dein Streak"). Semantics: „Streak: 12 Tage, Dein Streak öffnen" (with „heute noch offen" while
+   today is open, when its flame is an ember too). The chip row's height stays as headroom above the ring for his bubble and the
+   flame's tips; the ring doesn't move up (ruling 2026-11-26: moving it would clip a 3-line bubble or draw text below the user's
+   text size). Ich keeps its own chip. Any tour step that pointed at the chip points at the badge.
 2. **A flame you recognise.** Taller so its tips rise clearly above his head (≈ 1.5× his height), slightly offset to one side, stronger
    (less transparent, less blur). Still behind him, never over the need bubbles; the speech bubble still paints above it. Anti-goal stays:
    it reads as fire behind him, not him burning. Same look on the success page/streak sheet sizes stays as is.

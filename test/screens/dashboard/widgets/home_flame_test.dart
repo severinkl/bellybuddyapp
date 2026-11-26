@@ -126,6 +126,28 @@ void main() {
       rises[tier] = rise;
       final at = '$tier';
       expect(rise, greaterThanOrEqualTo(0.15), reason: at);
+      // As painted: its top shows above his head by that much.
+      final boundary = tester.renderObject<RenderRepaintBoundary>(
+        find.byKey(shot),
+      );
+      final (bytes, width, height_) = (await tester.runAsync(() async {
+        final image = await boundary.toImage();
+        return ((await image.toByteData())!, image.width, image.height);
+      }))!;
+      var top = height_;
+      for (var y = 0; y < height_ && top == height_; y++) {
+        for (var x = 0; x < width; x++) {
+          if (pixelAt(bytes, width, x, y).a > 0.1) {
+            top = y;
+            break;
+          }
+        }
+      }
+      expect(
+        top - band,
+        lessThanOrEqualTo(headIn(buddy) - 0.15 * height),
+        reason: '$at: painted top $top',
+      );
       // Lodert as high as the band leaves (its flicker inside it).
       if (tier == FlameTier.blazing) {
         expect(rise, lessThanOrEqualTo(HomeFlame.riseFor(tier)), reason: at);
@@ -152,8 +174,6 @@ void main() {
     expect(rises[FlameTier.small], lessThan(rises[FlameTier.medium]!));
     expect(rises[FlameTier.medium], lessThan(rises[FlameTier.large]!));
     expect(rises[FlameTier.large], lessThan(rises[FlameTier.blazing]!));
-    // About his height and a half, at „brennt" past the first week.
-    expect(rises[FlameTier.large], moreOrLessEquals(0.5, epsilon: 0.1));
   });
 
   testWidgets('without room in the band, its tips stop below its top', (
