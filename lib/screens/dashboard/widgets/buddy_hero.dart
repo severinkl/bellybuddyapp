@@ -848,7 +848,12 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     if (ref.read(reminderAskDueProvider).value != true) {
       return _endRemindersAsk();
     }
-    unawaited(recordReminderAsk(ref));
+    unawaited(
+      recordReminderAsk(ref).catchError(
+        (Object e, StackTrace st) =>
+            _log.error('Recording the reminder ask failed', e, st),
+      ),
+    );
     final turnOn = await showRemindersAskSheet(context);
     if (!mounted) return;
     if (turnOn) {

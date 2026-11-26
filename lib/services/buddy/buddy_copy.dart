@@ -185,8 +185,8 @@ class BuddyCopy {
       'Darf ich dich ab und zu ans Eintragen erinnern? 🔔';
   static const remindersAskBody =
       'Deine Erinnerungen sind gerade aus. Schaltest du sie ein, sag ich dir '
-      'Bescheid, wenn Essen und Bauchgefühl dran sind. Ändern kannst du das '
-      'jederzeit in den Einstellungen.';
+      'Bescheid, wenn Essen und Bauchgefühl dran sind und wenn neue Tipps da '
+      'sind. Ändern kannst du das jederzeit in den Einstellungen.';
 
   /// His thanks once they are on.
   static const remindersOn = 'Danke! Ich sag dir Bescheid 🔔';

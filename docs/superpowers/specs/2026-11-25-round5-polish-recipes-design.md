@@ -156,5 +156,8 @@ Decisions (Severin picked each recommended option):
    total, through the existing cue queue (never over another sheet/the tour). „Einschalten" requests the permission, or opens the system
    settings when it was denied for good. Ich shows a row „Erinnerungen sind aus · Einschalten" while they're off. The onboarding step and the
    one-time Home dialog stay as they are.
+   Ruling: any two asks are at least 7 days apart. The first offer (onboarding step / one-time Home dialog) and a deliberate switch-off of
+   all notifications in Einstellungen store today as the last ask date without counting as an ask; so the first re-ask comes at least 7 days
+   after the onboarding offer.
 4. **„Beispiel" goes** from the Muster preview label („Das siehst du dann") and the day-6 reward sheet's label; the fictional values stay
    blurred and the „Beobachtung aus deinen Einträgen" note stays.
