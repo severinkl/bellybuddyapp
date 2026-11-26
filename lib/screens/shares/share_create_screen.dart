@@ -71,26 +71,28 @@ class _ShareCreateScreenState extends ConsumerState<ShareCreateScreen> {
 
   Future<void> _submit() async {
     if (!_canSubmit) return;
+    FocusScope.of(context).unfocus();
     setState(() => _submitting = true);
+    // Taken before the await: the screen may be gone when the call returns.
     final messenger = ScaffoldMessenger.of(context);
     final router = GoRouter.of(context);
+    final justCreated = ref.read(justCreatedShareProvider.notifier);
+    final shares = ref.read(sharesProvider.notifier);
     final CreatedShare created;
     try {
-      created = await ref
-          .read(sharesProvider.notifier)
-          .create(
-            NewShare(
-              displayName: _name.text.trim(),
-              period: _period,
-              validDays: _validDays,
-              meals: _meals,
-              drinks: _drinks,
-              gut: _gut,
-              toilet: _toilet,
-              patterns: _patterns,
-              photos: _photos,
-            ),
-          );
+      created = await shares.create(
+        NewShare(
+          displayName: _name.text.trim(),
+          period: _period,
+          validDays: _validDays,
+          meals: _meals,
+          drinks: _drinks,
+          gut: _gut,
+          toilet: _toilet,
+          patterns: _patterns,
+          photos: _photos,
+        ),
+      );
     } catch (e, st) {
       _log.error('creating a share failed', e, st);
       final message = e is ShareException ? e.message : null;
@@ -98,10 +100,10 @@ class _ShareCreateScreenState extends ConsumerState<ShareCreateScreen> {
       if (mounted) setState(() => _submitting = false);
       return;
     }
-    ref
-        .read(justCreatedShareProvider.notifier)
-        .set(ShareSecret(link: created.link, code: created.code));
-    router.pop();
+    // Leave first, then hand over: the list beneath opens the sheet, also
+    // when this screen was left while the call was on its way.
+    if (mounted) router.pop();
+    justCreated.set(ShareSecret(link: created.link, code: created.code));
   }
 
   @override
@@ -131,18 +133,22 @@ class _ShareCreateScreenState extends ConsumerState<ShareCreateScreen> {
                   ),
                   AppConstants.gap24,
                   const _Heading('Dein Name in der Ansicht'),
-                  TextField(
-                    controller: _name,
-                    maxLength: _maxNameLength,
-                    buildCounter:
-                        (
-                          _, {
-                          required currentLength,
-                          required isFocused,
-                          maxLength,
-                        }) => null,
-                    textCapitalization: TextCapitalization.words,
-                    onChanged: (_) => setState(() {}),
+                  Semantics(
+                    label: 'Dein Name in der Ansicht',
+                    textField: true,
+                    child: TextField(
+                      controller: _name,
+                      maxLength: _maxNameLength,
+                      buildCounter:
+                          (
+                            _, {
+                            required currentLength,
+                            required isFocused,
+                            maxLength,
+                          }) => null,
+                      textCapitalization: TextCapitalization.words,
+                      onChanged: (_) => setState(() {}),
+                    ),
                   ),
                   AppConstants.gap16,
                   const _Heading('Zeitraum'),

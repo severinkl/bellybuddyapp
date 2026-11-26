@@ -151,6 +151,10 @@ class AppTheme {
   static const double fontSizeDisplay = 28;
   static const double fontSizeDisplayLG = 30;
 
+  /// Letter spacing of a share code shown in [fontSizeDisplayLG], so its
+  /// two groups of digits read apart.
+  static const double codeLetterSpacing = 2;
+
   // Line heights (multiples of the font size)
   /// Running text: notes, summaries, explanations.
   static const double lineHeightBody = 1.4;
@@ -184,9 +188,6 @@ class AppTheme {
 
   // The streak moment's big count („1 Tag" beside the flame)
   static const double fontSizeStreakCount = 56;
-
-  /// Space between the digits of a share code.
-  static const double codeLetterSpacing = 2;
 
   // Stool scale colors
   static const List<Color> stoolColors = [

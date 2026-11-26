@@ -25,6 +25,9 @@ Future<void> showShareSecretSheet(
   );
 }
 
+/// The live region around the copy button.
+const shareCopiedLiveKey = ValueKey('share-copied-live');
+
 /// „482913" as „482 913".
 String groupCode(String code) =>
     code.length == 6 ? '${code.substring(0, 3)} ${code.substring(3)}' : code;
@@ -47,7 +50,11 @@ class _ShareSecretSheet extends ConsumerStatefulWidget {
 class _ShareSecretSheetState extends ConsumerState<_ShareSecretSheet> {
   static const _log = AppLogger('ShareSecretSheet');
 
+  static const _failed = 'Das hat nicht geklappt. Versuch es später nochmal.';
+
+  final _sendKey = GlobalKey();
   bool _copied = false;
+  bool _failedShown = false;
   Timer? _copiedTimer;
 
   @override
@@ -57,19 +64,36 @@ class _ShareSecretSheetState extends ConsumerState<_ShareSecretSheet> {
   }
 
   Future<void> _send() async {
+    final box = _sendKey.currentContext?.findRenderObject() as RenderBox?;
+    final origin = box == null
+        ? Rect.zero
+        : box.localToGlobal(Offset.zero) & box.size;
+    final launcher = ref.read(shareLauncherProvider);
     try {
-      await ref.read(shareLauncherProvider)(
+      await launcher(
         'Hier ist mein Belly Buddy Tagebuch: ${widget.link}',
+        origin,
       );
+      if (mounted) setState(() => _failedShown = false);
     } catch (e, st) {
       _log.error('opening the share sheet failed', e, st);
+      if (mounted) setState(() => _failedShown = true);
     }
   }
 
   Future<void> _copy() async {
-    await Clipboard.setData(ClipboardData(text: widget.link));
+    try {
+      await Clipboard.setData(ClipboardData(text: widget.link));
+    } catch (e, st) {
+      _log.error('copying the link failed', e, st);
+      if (mounted) setState(() => _failedShown = true);
+      return;
+    }
     if (!mounted) return;
-    setState(() => _copied = true);
+    setState(() {
+      _copied = true;
+      _failedShown = false;
+    });
     _copiedTimer?.cancel();
     _copiedTimer = Timer(AppConstants.copiedLabelDuration, () {
       if (mounted) setState(() => _copied = false);
@@ -104,6 +128,7 @@ class _ShareSecretSheetState extends ConsumerState<_ShareSecretSheet> {
             children: [
               Expanded(
                 child: BbButton(
+                  tapKey: _sendKey,
                   label: 'Link senden',
                   icon: Icons.ios_share,
                   onPressed: () => unawaited(_send()),
@@ -111,15 +136,33 @@ class _ShareSecretSheetState extends ConsumerState<_ShareSecretSheet> {
               ),
               const SizedBox(width: AppConstants.spacing12),
               Expanded(
-                child: BbButton(
-                  label: _copied ? 'Kopiert' : 'Kopieren',
-                  icon: _copied ? Icons.check : Icons.copy,
-                  isOutlined: true,
-                  onPressed: () => unawaited(_copy()),
+                // A live region: the change to „Kopiert" is announced.
+                child: Semantics(
+                  key: shareCopiedLiveKey,
+                  liveRegion: true,
+                  child: BbButton(
+                    label: _copied ? 'Kopiert' : 'Kopieren',
+                    icon: _copied ? Icons.check : Icons.copy,
+                    isOutlined: true,
+                    onPressed: () => unawaited(_copy()),
+                  ),
                 ),
               ),
             ],
           ),
+          if (_failedShown) ...[
+            AppConstants.gap12,
+            Semantics(
+              liveRegion: true,
+              child: const Text(
+                _failed,
+                style: TextStyle(
+                  fontSize: AppTheme.fontSizeBody,
+                  color: AppTheme.destructive,
+                ),
+              ),
+            ),
+          ],
           AppConstants.gap24,
           Center(
             child: SelectableText(

@@ -13,6 +13,7 @@ import 'package:belly_buddy/models/data_share.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/share_launcher_provider.dart';
+import 'package:belly_buddy/providers/shares_provider.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/shares/share_create_screen.dart';
 import 'package:belly_buddy/screens/shares/shares_screen.dart';
@@ -26,8 +27,12 @@ class _RecordingService extends FakeShareService {
   final List<NewShare> created = [];
   Object? failWith;
 
+  /// While set, a create waits for it.
+  Completer<void>? gate;
+
   @override
   Future<CreatedShare> create(NewShare share) async {
+    await gate?.future;
     if (failWith != null) throw failWith!;
     created.add(share);
     return super.create(share);
@@ -37,10 +42,15 @@ class _RecordingService extends FakeShareService {
 void main() {
   late _RecordingService service;
   late GoRouter router;
+  late ProviderContainer container;
 
   setUpAll(() => initializeDateFormatting('de_DE', null));
 
-  Future<void> pump(WidgetTester tester, {String? savedName}) async {
+  Future<void> pump(
+    WidgetTester tester, {
+    String? savedName,
+    bool openCreate = true,
+  }) async {
     SharedPreferences.setMockInitialValues({});
     if (savedName != null) {
       await ShareSecretsStore(
@@ -52,12 +62,12 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     service = _RecordingService();
-    final container = ProviderContainer.test(
+    container = ProviderContainer.test(
       overrides: [
         currentUserIdProvider.overrideWithValue('u1'),
         shareServiceProvider.overrideWithValue(service),
         buddyClockProvider.overrideWithValue(() => DateTime(2026, 11, 26, 12)),
-        shareLauncherProvider.overrideWithValue((_) async {}),
+        shareLauncherProvider.overrideWithValue((_, _) async {}),
       ],
     );
     router = GoRouter(
@@ -80,6 +90,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    if (!openCreate) return;
     unawaited(router.push(RoutePaths.shareCreate));
     await tester.pumpAndSettle();
   }
@@ -265,5 +276,68 @@ void main() {
     );
     expect(find.byType(ShareCreateScreen), findsOneWidget);
     expect(find.text('Dr. A'), findsOneWidget);
+  });
+
+  testWidgets('the name field carries its heading as semantic label', (
+    tester,
+  ) async {
+    await pump(tester);
+    expect(find.bySemanticsLabel('Dein Name in der Ansicht'), findsWidgets);
+    final handle = tester.ensureSemantics();
+    expect(
+      tester.getSemantics(find.byType(TextField)).label,
+      contains('Dein Name in der Ansicht'),
+    );
+    handle.dispose();
+  });
+
+  testWidgets('leaving while the create is on its way: the list shows the '
+      'sheet once and nothing throws', (tester) async {
+    await pump(tester);
+    service.gate = Completer<void>();
+    await typeName(tester, 'Dr. A');
+    await tester.tap(button());
+    await tester.pump();
+    router.pop();
+    await tester.pumpAndSettle();
+    expect(find.byType(ShareCreateScreen), findsNothing);
+    expect(find.text('Dein Link ist bereit'), findsNothing);
+
+    service.gate!.complete();
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('Deine Freigaben'), findsOneWidget);
+    expect(find.text('Dein Link ist bereit'), findsOneWidget);
+    expect(find.text('482 913'), findsOneWidget);
+    expect(find.byType(SharesScreen, skipOffstage: false), findsOneWidget);
+  });
+
+  group('hand-off to the list', () {
+    testWidgets('nothing pending: no sheet', (tester) async {
+      await pump(tester, openCreate: false);
+      expect(find.byType(BottomSheet), findsNothing);
+      expect(container.read(justCreatedShareProvider), isNull);
+    });
+
+    testWidgets('a pending share opens the sheet once; a rebuild does not '
+        'reopen it; the provider is empty', (tester) async {
+      await pump(tester, openCreate: false);
+      container
+          .read(justCreatedShareProvider.notifier)
+          .set(const ShareSecret(link: 'https://x.test/s/1', code: '111222'));
+      await tester.pumpAndSettle();
+      expect(find.text('Dein Link ist bereit'), findsOneWidget);
+      expect(find.text('111 222'), findsOneWidget);
+      expect(container.read(justCreatedShareProvider), isNull);
+
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsNothing);
+
+      container.invalidate(sharesProvider);
+      await tester.pumpAndSettle();
+      expect(find.byType(BottomSheet), findsNothing);
+      expect(container.read(justCreatedShareProvider), isNull);
+    });
   });
 }
