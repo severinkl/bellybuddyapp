@@ -145,7 +145,7 @@ void main() {
       'Mahlzeiten und Zutaten',
       'Getränke',
       'Bauchgefühl und Symptome',
-      'Stuhlgang',
+      'Toiletten-Einträge',
       'Muster und Unverträglichkeiten',
     ]) {
       expect(switchOn(tester, l), isTrue, reason: l);
@@ -199,7 +199,7 @@ void main() {
       'Mahlzeiten und Zutaten',
       'Getränke',
       'Bauchgefühl und Symptome',
-      'Stuhlgang',
+      'Toiletten-Einträge',
     ]) {
       await tapSwitch(tester, l);
     }
@@ -218,7 +218,7 @@ void main() {
     await tester.tap(find.text('90 Tage'));
     await tester.tap(find.text('Alles').first);
     await tapSwitch(tester, 'Fotos der Mahlzeiten');
-    await tapSwitch(tester, 'Stuhlgang');
+    await tapSwitch(tester, 'Toiletten-Einträge');
     await tester.tap(button());
     await tester.pumpAndSettle();
 

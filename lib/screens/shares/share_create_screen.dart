@@ -237,7 +237,11 @@ class _ShareCreateScreenState extends ConsumerState<ShareCreateScreen> {
               if (!v) _patterns = false;
             }),
           ),
-          _switch('Stuhlgang', _toilet, (v) => setState(() => _toilet = v)),
+          _switch(
+            'Toiletten-Einträge',
+            _toilet,
+            (v) => setState(() => _toilet = v),
+          ),
           _switch(
             'Muster und Unverträglichkeiten',
             _patterns,
