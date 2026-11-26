@@ -850,8 +850,38 @@ class FakeNotificationRepository implements NotificationRepository {
   String? extractRoute(RemoteMessage message) => null;
   @override
   Future<bool> requestPermission() async => true;
+
+  /// How often [requestAllPermissions] was called.
+  int requests = 0;
+
+  /// The answer to the OS dialog, which [requestAllPermissions] shows
+  /// while [permission] is never asked; [permission] follows it, as on iOS.
+  /// Denied, it asks nothing and reports false.
+  bool grantOnRequest = true;
+
   @override
-  Future<bool> requestAllPermissions() async => true;
+  Future<bool> requestAllPermissions() async {
+    requests++;
+    if (permission == NotificationPermission.notDetermined) {
+      permission = grantOnRequest
+          ? NotificationPermission.granted
+          : NotificationPermission.denied;
+    }
+    return permission == NotificationPermission.granted;
+  }
+
+  /// How often [openNotificationSettings] opened the system settings.
+  int settingsOpened = 0;
+
+  /// Whether [openNotificationSettings] manages to open them.
+  bool settingsOpen = true;
+
+  @override
+  Future<bool> openNotificationSettings() async {
+    if (settingsOpen) settingsOpened++;
+    return settingsOpen;
+  }
+
   @override
   Future<void> clearToken() async {}
 }

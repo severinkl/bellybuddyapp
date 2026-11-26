@@ -35,22 +35,9 @@ List<Override> _overrides() {
 /// The OS side: [permission] as the OS reports it; a request shows the
 /// system dialog only while it was never asked ([grant] is the answer).
 class _OsNotifications extends FakeNotificationRepository {
-  _OsNotifications(NotificationPermission initial, {this.grant = true}) {
+  _OsNotifications(NotificationPermission initial, {bool grant = true}) {
     permission = initial;
-  }
-
-  bool grant;
-  int requests = 0;
-
-  @override
-  Future<bool> requestAllPermissions() async {
-    requests++;
-    if (permission == NotificationPermission.notDetermined) {
-      permission = grant
-          ? NotificationPermission.granted
-          : NotificationPermission.denied;
-    }
-    return permission == NotificationPermission.granted;
+    grantOnRequest = grant;
   }
 
   @override
