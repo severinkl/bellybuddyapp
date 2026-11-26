@@ -44,7 +44,7 @@ void main() {
   });
 
   test(
-    'clear removes all secrets and the name of the current user only',
+    'clearFor removes all secrets and the name of the current user only',
     () async {
       await store.save('s1', secret);
       await store.save('s2', secret);
@@ -53,7 +53,7 @@ void main() {
       await store.save('s1', secret);
       await store.rememberDisplayName('Dr. B');
       uid = 'user-a';
-      await store.clear();
+      await store.clearFor('user-a');
       expect(await store.read('s1'), isNull);
       expect(await store.read('s2'), isNull);
       expect(await store.lastDisplayName(), isNull);

@@ -122,7 +122,7 @@ void main() {
       when(() => functions.invoke(any(), body: any(named: 'body'))).thenThrow(
         const FunctionException(
           status: 409,
-          details: {'message': 'Du hast bereits 5 aktive Freigaben.'},
+          details: {'error': 'Du hast bereits 5 aktive Freigaben.'},
         ),
       );
 

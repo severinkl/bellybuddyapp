@@ -55,17 +55,27 @@ class ShareSecretsStore {
     await prefs.remove('${_secretPrefix(uid)}$shareId');
   }
 
-  /// Removes all share secrets of the current user and the remembered
-  /// display name. For sign-out and account deletion.
-  Future<void> clear() async {
-    final uid = _userId();
-    if (uid == null) return;
+  /// Removes all share secrets of [userId] and the remembered display name.
+  /// For sign-out and account deletion, when the signed-in user is already
+  /// gone. Attempts every key, then rethrows the first failure.
+  Future<void> clearFor(String userId) async {
     final prefs = await SharedPreferences.getInstance();
-    final prefix = _secretPrefix(uid);
-    for (final key in prefs.getKeys().where((k) => k.startsWith(prefix))) {
-      await prefs.remove(key);
+    final prefix = _secretPrefix(userId);
+    final keys = [
+      ...prefs.getKeys().where((k) => k.startsWith(prefix)),
+      _nameKey(userId),
+    ];
+    Object? failure;
+    StackTrace? failureStack;
+    for (final key in keys) {
+      try {
+        await prefs.remove(key);
+      } catch (e, st) {
+        failure ??= e;
+        failureStack ??= st;
+      }
     }
-    await prefs.remove(_nameKey(uid));
+    if (failure != null) Error.throwWithStackTrace(failure, failureStack!);
   }
 
   Future<String?> lastDisplayName() async {

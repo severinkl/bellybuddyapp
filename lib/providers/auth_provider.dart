@@ -45,11 +45,13 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
 
   static const _log = AppLogger('AuthNotifier');
 
-  /// Forgets this device's share links and codes of the signed-in user, while
-  /// still known. Best effort: it never blocks signing out.
-  Future<void> _clearShareSecrets() async {
+  /// Forgets this device's share links and codes of [userId], after a
+  /// sign-out or deletion that succeeded. Best effort: a failure is logged
+  /// and never turns the success into a failure.
+  Future<void> _clearShareSecrets(String? userId) async {
+    if (userId == null) return;
     try {
-      await ref.read(shareSecretsStoreProvider).clear();
+      await ref.read(shareSecretsStoreProvider).clearFor(userId);
     } catch (e, st) {
       _log.error('clearing share secrets failed', e, st);
     }
@@ -109,8 +111,9 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
   Future<void> signOut() async {
     state = const AsyncValue.loading();
     try {
-      await _clearShareSecrets();
+      final userId = ref.read(currentUserIdProvider);
       await _repo.signOut();
+      await _clearShareSecrets(userId);
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);
@@ -126,8 +129,9 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
   Future<void> deleteAccount() async {
     state = const AsyncValue.loading();
     try {
-      await _clearShareSecrets();
+      final userId = ref.read(currentUserIdProvider);
       await _repo.deleteAccount();
+      await _clearShareSecrets(userId);
       state = const AsyncValue.data(null);
     } catch (e, st) {
       state = AsyncValue.error(e, st);

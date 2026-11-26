@@ -95,12 +95,12 @@ class ShareService {
     }
   }
 
-  /// The error body's German `message`, falling back to `error`; null when
+  /// The error body's German `error`, falling back to `message`; null when
   /// the body isn't a JSON object (a proxy's text page) or has none.
   static String? _messageOf(FunctionException e) {
     final details = e.details;
     if (details is! Map) return null;
-    final text = details['message'] ?? details['error'];
+    final text = details['error'] ?? details['message'];
     return text is String && text.isNotEmpty ? text : null;
   }
 }
