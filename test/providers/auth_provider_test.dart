@@ -1,10 +1,13 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:belly_buddy/providers/auth_provider.dart';
+import 'package:belly_buddy/models/data_share.dart';
 import 'package:belly_buddy/repositories/auth_repository.dart';
+import 'package:belly_buddy/services/share_secrets_store.dart';
 
 import '../helpers/mocks.dart';
 import '../helpers/riverpod_helpers.dart';
@@ -202,6 +205,42 @@ void main() {
       final result = notifier.detectAuthMethod();
 
       expect(result, isNull);
+    });
+  });
+
+  group('share secrets are cleared', () {
+    const secret = ShareSecret(link: 'l', code: '123456');
+
+    Future<ProviderContainer> containerWithSecret() async {
+      SharedPreferences.setMockInitialValues({});
+      final store = ShareSecretsStore(userId: () => 'u1');
+      await store.save('s1', secret);
+      return createContainer(
+        overrides: [
+          authRepositoryProvider.overrideWithValue(mockRepo),
+          shareSecretsStoreProvider.overrideWithValue(store),
+        ],
+      );
+    }
+
+    test('on sign-out', () async {
+      when(() => mockRepo.signOut()).thenAnswer((_) async {});
+      final container = await containerWithSecret();
+      await container.read(authNotifierProvider.notifier).signOut();
+      expect(
+        await container.read(shareSecretsStoreProvider).read('s1'),
+        isNull,
+      );
+    });
+
+    test('on account deletion', () async {
+      when(() => mockRepo.deleteAccount()).thenAnswer((_) async {});
+      final container = await containerWithSecret();
+      await container.read(authNotifierProvider.notifier).deleteAccount();
+      expect(
+        await container.read(shareSecretsStoreProvider).read('s1'),
+        isNull,
+      );
     });
   });
 }

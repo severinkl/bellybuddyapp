@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../repositories/auth_repository.dart';
+import '../services/share_secrets_store.dart';
+import '../utils/logger.dart';
 
 /// Stream of auth state changes
 final authStateProvider = StreamProvider<AuthState>((ref) {
@@ -40,6 +42,18 @@ final isAuthenticatedProvider = Provider<bool>((ref) {
 /// Centralized auth operations — screens call this instead of AuthService
 class AuthNotifier extends Notifier<AsyncValue<void>> {
   AuthRepository get _repo => ref.read(authRepositoryProvider);
+
+  static const _log = AppLogger('AuthNotifier');
+
+  /// Forgets this device's share links and codes of the signed-in user, while
+  /// still known. Best effort: it never blocks signing out.
+  Future<void> _clearShareSecrets() async {
+    try {
+      await ref.read(shareSecretsStoreProvider).clear();
+    } catch (e, st) {
+      _log.error('clearing share secrets failed', e, st);
+    }
+  }
 
   @override
   AsyncValue<void> build() => const AsyncValue.data(null);
@@ -95,6 +109,7 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
   Future<void> signOut() async {
     state = const AsyncValue.loading();
     try {
+      await _clearShareSecrets();
       await _repo.signOut();
       state = const AsyncValue.data(null);
     } catch (e, st) {
@@ -111,6 +126,7 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
   Future<void> deleteAccount() async {
     state = const AsyncValue.loading();
     try {
+      await _clearShareSecrets();
       await _repo.deleteAccount();
       state = const AsyncValue.data(null);
     } catch (e, st) {
