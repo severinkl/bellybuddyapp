@@ -32,12 +32,12 @@ import '../../../utils/logger.dart';
 import '../../../utils/url_utils.dart';
 import '../../../widgets/buddy/buddy.dart';
 import '../../../widgets/buddy/need_icon.dart';
-import '../../../widgets/buddy/streak_chip.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/weekly_tips_switch.dart';
 import '../../buddy/streak_goal_picker.dart';
 import 'care_ring.dart';
 import 'home_flame.dart';
+import 'home_streak_badge.dart';
 import 'journey_reward_actions.dart';
 import 'journey_day_sheet.dart';
 import 'streak_sheet.dart';
@@ -83,15 +83,16 @@ _Cue _cueFor(BuddyAnnouncement a) => switch (a) {
   BuddyAnnouncement.firstTipFailed => _Cue.firstTipFailed,
 };
 
-/// The Buddy at the top of the dashboard: the streak chip (opens „Dein
-/// Streak"), the Buddy inside the [CareRing] of his four needs (tapping a
-/// need's bubble opens its tracker; tapping the Buddy makes him talk), and
-/// a button that opens the tracker for the next thing to log
-/// ([nextCareAction]). His speech bubble floats over his head
-/// ([CareRing.overBuddy]), wider with large text: it may rise over the chip
-/// row (a line too tall for that is scaled down; none of his are), never
-/// moves the layout and never takes a tap (Essen, Trinken and the chip
-/// under it still open).
+/// The Buddy at the top of the dashboard: the Buddy inside the [CareRing]
+/// of his four needs (tapping a need's bubble opens its tracker; tapping
+/// the Buddy makes him talk), the streak flame behind him with its count's
+/// badge at its foot ([HomeStreakBadge], opens „Dein Streak"), and a button
+/// that opens the tracker for the next thing to log ([nextCareAction]).
+/// His speech bubble floats over his head ([CareRing.overBuddy]), wider
+/// with large text: it may rise into the band above the ring
+/// ([AppConstants.homeHeadroom], where the flame's tips burn too; a line
+/// too tall for that is scaled down; none of his are), never moves the
+/// layout and never takes a tap (Essen and Trinken under it still open).
 ///
 /// The need meters, his mood and the next action follow [careNowProvider]
 /// (when each need was last logged, seen from the current minute); a new
@@ -107,10 +108,10 @@ _Cue _cueFor(BuddyAnnouncement a) => switch (a) {
 /// covered ([homeCoveredProvider]: a page over it or on its way in, a
 /// sheet, dialog or menu over it, another tab, Home's tour); the hero tells
 /// it whether Home's route is on top ([_onRoute]).
-/// The streak flame glows behind him ([HomeFlame]), an ember until today's
+/// The streak flame burns behind him ([HomeFlame]), an ember until today's
 /// first entry ignites it. Without a Buddy status (loading, error, signed
-/// out) the Buddy still shows, named 'Buddy', without the streak chip and
-/// the flame (so the status arriving never looks like an ignite).
+/// out) the Buddy still shows, named 'Buddy', without the flame and its
+/// badge (so the status arriving never looks like an ignite).
 class BuddyHero extends ConsumerStatefulWidget {
   const BuddyHero({
     super.key,
@@ -809,7 +810,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _nextCue();
   }
 
-  /// The StreakChip's tap: „Dein Streak", where the goal can be set or
+  /// The streak badge's tap: „Dein Streak", where the goal can be set or
   /// changed; it covers Home ([HomeCoverNotifier.whileOpen]), so the cues
   /// wait until it has closed. Ignored while a cue's sheet is coming
   /// ([_sheetCueOnStage]) or Home is covered (the sheet already open), so
@@ -844,20 +845,8 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Keeps its height while the chip waits for the Buddy status.
-        SizedBox(
-          height: AppConstants.homeTapTarget,
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: status == null
-                ? null
-                : StreakChip(
-                    streak: status.streak,
-                    todayCounted: status.todayCounted,
-                    onTap: () => unawaited(_openStreakSheet()),
-                  ),
-          ),
-        ),
+        // The band his bubble and the flame's tips rise into.
+        const SizedBox(height: AppConstants.homeHeadroom),
         LayoutBuilder(
           builder: (context, constraints) {
             final width = constraints.maxWidth;
@@ -877,12 +866,23 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
                       lit: status.todayCounted,
                       buddy: buddy,
                       middle: middle,
+                      headroom: AppConstants.homeHeadroom,
                     ),
-              // His bubble may rise over the chip row, never above the hero;
+              onBuddy: status == null
+                  ? null
+                  : (buddy, middle) => HomeStreakBadge(
+                      streak: status.streak,
+                      lit: status.todayCounted,
+                      buddy: buddy,
+                      middle: middle,
+                      headroom: AppConstants.homeHeadroom,
+                      onTap: () => unawaited(_openStreakSheet()),
+                    ),
+              // His bubble may rise into the band, never above the hero;
               // a taller one is scaled down to fit. Wider with large text,
               // so a line breaks as at the base size and shows at the
               // user's size instead of scaled down.
-              overBuddyRoom: AppConstants.homeTapTarget,
+              overBuddyRoom: AppConstants.homeHeadroom,
               overBuddy: !widget.showsBubble
                   ? null
                   : (buddy, _) => BuddyBubbleSlot(

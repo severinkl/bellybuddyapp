@@ -1,6 +1,7 @@
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/screens/dashboard/dashboard_screen.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/home_flame.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/insight_card.dart';
 import 'package:belly_buddy/screens/trackers/drink/drink_tracker_screen.dart';
 import 'package:belly_buddy/screens/trackers/gut_feeling/gut_feeling_tracker_screen.dart';
@@ -10,7 +11,7 @@ import 'package:belly_buddy/services/entry_query_service.dart';
 import 'package:belly_buddy/utils/date_format_utils.dart';
 import 'package:belly_buddy/widgets/buddy/log_success_hero.dart';
 import 'package:belly_buddy/widgets/buddy/need_meter.dart';
-import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
+import 'package:belly_buddy/widgets/buddy/streak_badge.dart';
 import 'package:belly_buddy/widgets/buddy/streak_flame.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
@@ -34,15 +35,15 @@ const _emptyDay = EntryQueryResult(
 
 const _tapToContinue = 'Tippen zum Fortfahren';
 
-/// [text] inside the streak chip on Home.
-Finder _chipText(String text) =>
-    find.descendant(of: find.byType(StreakChip), matching: find.text(text));
+/// [text] inside the streak badge on Home.
+Finder _badgeText(String text) =>
+    find.descendant(of: find.byType(StreakBadge), matching: find.text(text));
 
 /// How Home's streak flame (behind the Buddy) shows.
 FlameLook _homeFlame(WidgetTester tester) => tester
     .widget<StreakFlame>(
       find.descendant(
-        of: find.byType(CareRing),
+        of: find.byType(HomeFlame),
         matching: find.byType(StreakFlame),
       ),
     )
@@ -112,7 +113,7 @@ void main() {
     await tester.pumpWidget(buildTestApp(entryRepo: entryRepo));
     await tester.pumpAndSettle();
 
-    expect(_chipText('3 Tage'), findsOneWidget);
+    expect(_badgeText('3'), findsOneWidget);
     expect(_homeFlame(tester), FlameLook.ember);
 
     await tester.tapVisible(find.byKey(CareRing.needKey(CareNeed.toilet)));
@@ -129,7 +130,7 @@ void main() {
     );
 
     await _continue(tester);
-    await pumpUntilFound(tester, _chipText('4 Tage'));
+    await pumpUntilFound(tester, _badgeText('4'));
     await tester.pumpAndSettle();
     expect(_homeFlame(tester), FlameLook.lit);
   });

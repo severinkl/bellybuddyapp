@@ -36,6 +36,7 @@ void main() {
     double textScale = 1.0,
     Duration settle = const Duration(milliseconds: 400),
     CareRingLayer? behindBuddy,
+    CareRingLayer? onBuddy,
     CareRingLayer? overBuddy,
     double overBuddyRoom = 0,
     Widget? buddy,
@@ -63,6 +64,7 @@ void main() {
                   highlight: highlight,
                   onNeed: tapped.add,
                   behindBuddy: behindBuddy,
+                  onBuddy: onBuddy,
                   overBuddy: overBuddy,
                   overBuddyRoom: overBuddyRoom,
                   buddy:
@@ -275,6 +277,10 @@ void main() {
           handed['behind'] = (buddy, middle);
           return const SizedBox.expand();
         },
+        onBuddy: (buddy, middle) {
+          handed['on'] = (buddy, middle);
+          return const SizedBox();
+        },
         overBuddy: (buddy, middle) {
           handed['over'] = (buddy, middle);
           return const SizedBox();
@@ -289,7 +295,7 @@ void main() {
         bubble(tester, CareNeed.drink).left,
         ring.bottom,
       );
-      expect(handed.keys, unorderedEquals(['behind', 'over']));
+      expect(handed.keys, unorderedEquals(['behind', 'on', 'over']));
       for (final MapEntry(key: layer, value: (buddy, mid)) in handed.entries) {
         expect(
           buddy.shift(ring.topLeft),
@@ -358,6 +364,64 @@ void main() {
     await tester.tapAt(square.topCenter - const Offset(0, 4));
     expect(behindTaps, 0);
     expect(tapped, isEmpty);
+  });
+
+  testWidgets('onBuddy: over him and the bubbles, under overBuddy; taps on '
+      'what it builds, elsewhere on what is under it', (tester) async {
+    var onTaps = 0;
+    const onKey = Key('on');
+    const overKey = Key('over');
+    final tapped = await pump(
+      tester,
+      // A tap target over his foot, as Home's streak badge.
+      onBuddy: (buddy, _) => Stack(
+        children: [
+          Positioned(
+            left: buddy.center.dx - 24,
+            top: buddy.bottom - 48,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => onTaps++,
+              child: const SizedBox(key: onKey, width: 48, height: 48),
+            ),
+          ),
+        ],
+      ),
+      overBuddy: (_, _) => const SizedBox(key: overKey, width: 10, height: 10),
+    );
+
+    expect(
+      find
+          .descendant(
+            of: find.byType(CareRing),
+            matching: find.byWidgetPredicate(
+              (w) =>
+                  w.key == onKey ||
+                  w.key == overKey ||
+                  w.key == const Key('buddy_double') ||
+                  w.key == CareRing.needKey(CareNeed.toilet),
+            ),
+          )
+          .evaluate()
+          .map((e) => e.widget.key),
+      [
+        CareRing.needKey(CareNeed.toilet),
+        const Key('buddy_double'),
+        onKey,
+        overKey,
+      ],
+    );
+
+    // Over him, it takes the tap …
+    await tester.tap(find.byKey(onKey));
+    expect(onTaps, 1);
+    expect(buddyTapsLog, isEmpty);
+    // … elsewhere he and the bubbles still take theirs.
+    await tester.tapAt(tester.getCenter(find.byKey(CareRing.buddyKey)));
+    expect(buddyTapsLog, hasLength(1));
+    await tester.tap(find.byKey(CareRing.needKey(CareNeed.gutFeeling)));
+    expect(tapped, [CareNeed.gutFeeling]);
+    expect(onTaps, 1);
   });
 
   /// The top of the Buddy's head in his [square].

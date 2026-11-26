@@ -30,8 +30,9 @@ import 'widgets/tips_row.dart';
 import 'widgets/tutorial/show_dashboard_tutorial.dart';
 import 'widgets/tutorial/tutorial_keys.dart';
 
-/// Home: the Buddy hero (streak chip, the Buddy in his care ring, the next
-/// action) and what he is learning about the user's gut ([InsightCard]).
+/// Home: the Buddy hero (the Buddy in his care ring with his streak flame
+/// and its badge, the next action) and what he is learning about the
+/// user's gut ([InsightCard]).
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 

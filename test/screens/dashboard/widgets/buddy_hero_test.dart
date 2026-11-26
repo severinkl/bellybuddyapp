@@ -42,6 +42,7 @@ import 'package:belly_buddy/services/journey/journey_copy.dart';
 import 'package:belly_buddy/utils/date_format_utils.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:belly_buddy/widgets/buddy/need_icon.dart';
+import 'package:belly_buddy/widgets/buddy/streak_badge.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
 import 'package:belly_buddy/widgets/buddy/streak_flame.dart';
 import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
@@ -366,9 +367,9 @@ void main() {
     ),
   );
 
-  /// The streak flame behind the Buddy.
+  /// The streak flame behind the Buddy (not its badge's).
   Finder flameFinder() => find.descendant(
-    of: find.byType(CareRing),
+    of: find.byType(HomeFlame),
     matching: find.byType(StreakFlame),
   );
 
@@ -404,9 +405,9 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
   }
 
-  /// Taps the StreakChip and lets „Dein Streak" open.
+  /// Taps the StreakBadge and lets „Dein Streak" open.
   Future<void> openSheet(WidgetTester tester) async {
-    await tester.tap(find.byType(StreakChip));
+    await tester.tap(find.byType(StreakBadge));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 500));
   }
@@ -678,13 +679,73 @@ void main() {
       expect(controller(tester).mood, BuddyMood.happy);
     });
 
-    testWidgets('shows the StreakChip with the Buddy status', (tester) async {
+    testWidgets('no streak chip on Home: the StreakBadge at the flame, with '
+        'the Buddy status', (tester) async {
       await pumpHero(tester);
 
-      final chip = tester.widget<StreakChip>(find.byType(StreakChip));
-      expect(chip.streak, 4);
-      expect(chip.todayCounted, isFalse);
+      expect(find.byType(StreakChip), findsNothing);
+      final badge = tester.widget<StreakBadge>(find.byType(StreakBadge));
+      expect(badge.streak, 4);
+      expect(badge.lit, isFalse);
+      // In the ring, over him (the hero has no row above the ring).
+      expect(
+        find.descendant(
+          of: find.byType(CareRing),
+          matching: find.byType(StreakBadge),
+        ),
+        findsOneWidget,
+      );
+
+      buddy.push(_status(streak: 0));
+      await tester.pump();
+      expect(tester.widget<StreakBadge>(find.byType(StreakBadge)).streak, 0);
     });
+
+    for (final (name, size, scale) in [
+      ('402×874', const Size(402 - 48, 874), 1.0),
+      ('375×667 at text scale 1.3', const Size(375 - 48, 667), 1.3),
+      ('375×667 at text scale 2', const Size(375 - 48, 667), 2.0),
+    ]) {
+      for (final streak in [5, 128]) {
+        testWidgets('$name, streak $streak: the badge sits at the flame\'s '
+            'lower right, next to his feet, clear of the need bubbles', (
+          tester,
+        ) async {
+          // The hero's width on that phone (the harness has no side padding).
+          tester.view
+            ..physicalSize = size
+            ..devicePixelRatio = 1;
+          addTearDown(tester.view.reset);
+          tester.platformDispatcher.textScaleFactorTestValue = scale;
+          addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+          buddy = _FakeBuddy(() => _status(streak: streak, todayCounted: true));
+          await pumpHero(tester);
+
+          final badge = tester.getRect(find.byType(StreakBadge));
+          final flame = tester.getRect(flameFinder());
+          final square = tester.getRect(find.byKey(CareRing.buddyKey));
+          final ring = tester.getRect(find.byType(CareRing));
+          final base = flame.bottom - flame.height * FlamePainter.baseInset;
+          // At its lower right: its right edge, its base.
+          expect(badge.right, moreOrLessEquals(flame.right));
+          expect(badge.center.dy, moreOrLessEquals(base));
+          expect(badge.left, greaterThan(square.left));
+          // Next to his feet, in the ring.
+          expect(badge.top, greaterThan(square.center.dy));
+          expect(badge.bottom, lessThanOrEqualTo(ring.bottom));
+          for (final need in CareNeed.values) {
+            expect(
+              badge.overlaps(
+                tester.getRect(find.byKey(CareRing.needKey(need))),
+              ),
+              isFalse,
+              reason: '$need',
+            );
+          }
+          expect(tester.takeException(), isNull);
+        });
+      }
+    }
 
     testWidgets("the flame glows behind the Buddy: Home's flame for the "
         "streak and today, placed by the ring's square and middle, under "
@@ -711,12 +772,12 @@ void main() {
             .descendant(
               of: find.byType(CareRing),
               matching: find.byWidgetPredicate(
-                (w) => w is StreakFlame || w is AnimatedBuddy,
+                (w) => w is HomeFlame || w is AnimatedBuddy,
               ),
             )
             .evaluate()
             .map((e) => e.widget.runtimeType),
-        [StreakFlame, AnimatedBuddy],
+        [HomeFlame, AnimatedBuddy],
       );
     });
 
@@ -751,7 +812,7 @@ void main() {
       expect(homeFlame(tester).burst, greaterThan(0));
     });
 
-    testWidgets('the StreakChip opens „Dein Streak"; „Ziel ändern" sets a '
+    testWidgets('the StreakBadge opens „Dein Streak"; „Ziel ändern" sets a '
         'new goal', (tester) async {
       await pumpHero(tester);
 
@@ -771,20 +832,20 @@ void main() {
       expect(buddy.goals, [14]);
     });
 
-    testWidgets('a double tap on the StreakChip opens one sheet', (
+    testWidgets('a double tap on the StreakBadge opens one sheet', (
       tester,
     ) async {
       await pumpHero(tester);
 
-      await tester.tap(find.byType(StreakChip));
-      await tester.tap(find.byType(StreakChip));
+      await tester.tap(find.byType(StreakBadge));
+      await tester.tap(find.byType(StreakBadge));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.text(_sheetTitle), findsOneWidget);
     });
 
-    testWidgets('the StreakChip is ignored while a reached goal is '
+    testWidgets('the StreakBadge is ignored while a reached goal is '
         'celebrated and its sheet is open', (tester) async {
       buddy = _FakeBuddy(
         () => _status(
@@ -795,7 +856,7 @@ void main() {
       await pumpHero(tester);
       await tick(tester);
 
-      // Celebrating: a chip tap opens nothing.
+      // Celebrating: a badge tap opens nothing.
       await openSheet(tester);
       expect(find.text(_sheetTitle), findsNothing);
 
@@ -807,12 +868,12 @@ void main() {
       await chooseGoal(tester, '14 Tage');
       expect(buddy.goals, [14]);
 
-      // Done: the chip works again.
+      // Done: the badge works again.
       await openSheet(tester);
       expect(find.text(_sheetTitle), findsOneWidget);
     });
 
-    testWidgets('a goal reached while the StreakChip sheet is open does not '
+    testWidgets('a goal reached while the StreakBadge sheet is open does not '
         'stack its own sheet on top: it waits until that closed', (
       tester,
     ) async {
@@ -930,17 +991,17 @@ void main() {
       expect(find.byKey(StreakSheet.changeGoalKey), findsNothing);
     });
 
-    testWidgets('new user without a Buddy row → chip shows 0 Tage', (
+    testWidgets('new user without a Buddy row → the badge shows 0', (
       tester,
     ) async {
       buddy = _FakeBuddy(() => _status(streak: 0, savers: 0, hasRow: false));
       await pumpHero(tester);
 
-      expect(find.text('0 Tage'), findsOneWidget);
+      expect(tester.widget<StreakBadge>(find.byType(StreakBadge)).streak, 0);
       expect(controller(tester).mood, BuddyMood.hungry);
     });
 
-    testWidgets('buddyProvider error → no StreakChip, Buddy still shown', (
+    testWidgets('buddyProvider error → no StreakBadge, Buddy still shown', (
       tester,
     ) async {
       buddy = _FakeBuddy(() => throw Exception('no buddy_state table'));
@@ -952,7 +1013,7 @@ void main() {
       await pumpHero(tester);
       await tick(tester);
 
-      expect(find.byType(StreakChip), findsNothing);
+      expect(find.byType(StreakBadge), findsNothing);
       expect(find.byType(StreakFlame), findsNothing);
       expect(find.byType(AnimatedBuddy), findsOneWidget);
       final c = controller(tester);
@@ -1221,14 +1282,14 @@ void main() {
       expect(buddy.shown, isEmpty);
     });
 
-    testWidgets('the StreakChip is ignored while the weekly-tips offer is on '
+    testWidgets('the StreakBadge is ignored while the weekly-tips offer is on '
         'stage', (tester) async {
       buddy = _FakeBuddy(
         () => _status(announcements: const [BuddyAnnouncement.weeklyTipsOffer]),
       );
       await pumpHero(tester);
 
-      // Waving: a chip tap opens nothing.
+      // Waving: a badge tap opens nothing.
       await openSheet(tester);
       expect(find.text(_sheetTitle), findsNothing);
 
@@ -1239,7 +1300,7 @@ void main() {
 
       await closeOffer(tester, WeeklyTipsOfferSheet.laterKey);
 
-      // Done: the chip works again.
+      // Done: the badge works again.
       await openSheet(tester);
       expect(find.text(_sheetTitle), findsOneWidget);
     });
@@ -2900,14 +2961,27 @@ void main() {
         expect(controller(tester).bubble, isNull);
       }
 
-      testWidgets('no reserved bubble slot: the ring sits right under the chip '
-          'row, and never moves while he talks', (tester) async {
+      testWidgets('no reserved bubble slot: the ring sits right under the '
+          'band left for his bubble and the flame (where the chip row was), '
+          'and never moves while he talks', (tester) async {
         await pumpHero(tester);
         await afterGreeting(tester);
 
         final hero = tester.getRect(find.byType(BuddyHero));
         final ring = tester.getRect(find.byType(CareRing));
-        expect(ring.top - hero.top, AppConstants.homeTapTarget);
+        expect(ring.top - hero.top, AppConstants.homeHeadroom);
+        // The band holds nothing of its own.
+        expect(
+          find.descendant(
+            of: find.byType(BuddyHero),
+            matching: find.byType(StreakChip),
+          ),
+          findsNothing,
+        );
+        expect(
+          tester.widget<HomeFlame>(find.byType(HomeFlame)).headroom,
+          AppConstants.homeHeadroom,
+        );
 
         controller(tester).say('Hallo, schön dich zu sehen!');
         await tick(tester);
@@ -2997,30 +3071,6 @@ void main() {
           router.go(RoutePaths.dashboard);
           await tester.pump(const Duration(milliseconds: 500));
         }
-      });
-
-      testWidgets('while he talks, the StreakChip still opens under his '
-          'bubble', (tester) async {
-        // The bubble rises over the chip row; on this narrow hero it
-        // reaches over the chip's right end.
-        tester.view
-          ..physicalSize = const Size(345, 852)
-          ..devicePixelRatio = 1;
-        addTearDown(tester.view.reset);
-        await pumpHero(tester);
-        await afterGreeting(tester);
-
-        controller(tester).say(longLine);
-        await tick(tester);
-        final overlap = bubbleRect(
-          tester,
-        ).intersect(tester.getRect(find.byType(StreakChip)));
-        expect(overlap.isEmpty, isFalse);
-
-        await tester.tapAt(overlap.center);
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 500));
-        expect(find.text(_sheetTitle), findsOneWidget);
       });
     });
 
@@ -3335,7 +3385,7 @@ void main() {
     ) async {
       await pumpHero(tester);
 
-      expect(find.byType(StreakChip), findsOneWidget);
+      expect(find.byType(StreakBadge), findsOneWidget);
       expect(find.byType(StreakWeekRow), findsNothing);
     });
   });

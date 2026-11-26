@@ -2,14 +2,15 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
+import 'streak_pop.dart';
 
-/// Compact streak indicator: the count, "5 Tage" (the streak only; savers
-/// are not shown here, and on Home the flame burns behind the Buddy).
+/// Compact streak indicator on Ich: the count, "5 Tage" (the streak only;
+/// savers are not shown here). Home shows a [StreakBadge] at its flame.
 ///
 /// Muted while today is not yet counted; pops when [streak] increases.
 /// With [onTap] it is a button that sets the streak goal. Its tap area is
 /// at least [AppConstants.homeTapTarget] tall, the pill centred in it.
-class StreakChip extends StatefulWidget {
+class StreakChip extends StatelessWidget {
   const StreakChip({
     super.key,
     required this.streak,
@@ -24,52 +25,16 @@ class StreakChip extends StatefulWidget {
   final VoidCallback? onTap;
 
   @override
-  State<StreakChip> createState() => _StreakChipState();
-}
-
-class _StreakChipState extends State<StreakChip>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _pop = AnimationController(
-    vsync: this,
-    duration: AppConstants.animMedium,
-  );
-  late final Animation<double> _scale = TweenSequence<double>([
-    TweenSequenceItem(
-      tween: Tween(begin: 1.0, end: AppConstants.streakChipPopScale),
-      weight: 1,
-    ),
-    TweenSequenceItem(
-      tween: Tween(begin: AppConstants.streakChipPopScale, end: 1.0),
-      weight: 1,
-    ),
-  ]).animate(CurvedAnimation(parent: _pop, curve: Curves.easeOut));
-
-  @override
-  void didUpdateWidget(StreakChip old) {
-    super.didUpdateWidget(old);
-    if (widget.streak > old.streak &&
-        !MediaQuery.disableAnimationsOf(context)) {
-      _pop.forward(from: 0);
-    }
-  }
-
-  @override
-  void dispose() {
-    _pop.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final muted = !widget.todayCounted && widget.streak > 0;
-    final days = '${widget.streak} ${widget.streak == 1 ? 'Tag' : 'Tage'}';
+    final muted = !todayCounted && streak > 0;
+    final days = '$streak ${streak == 1 ? 'Tag' : 'Tage'}';
     final semantics = [
       'Streak: $days',
       if (muted) 'Heute noch offen',
     ].join(', ');
     final color = muted ? AppTheme.mutedForeground : AppTheme.foreground;
 
-    final onTap = widget.onTap;
+    final onTap = this.onTap;
     Widget chip = Semantics(
       label: semantics,
       button: onTap != null,
@@ -86,8 +51,8 @@ class _StreakChipState extends State<StreakChip>
           child: Align(
             widthFactor: 1,
             heightFactor: 1,
-            child: ScaleTransition(
-              scale: _scale,
+            child: StreakPop(
+              streak: streak,
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppConstants.spacing12,

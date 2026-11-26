@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -8,9 +10,13 @@ import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/home_flame.dart';
 import 'package:belly_buddy/services/buddy/care_meters.dart';
 import 'package:belly_buddy/services/buddy/care_now.dart';
+import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
+import 'package:belly_buddy/widgets/buddy/buddy_shape_data.dart'
+    show kBuddyHeight;
 import 'package:belly_buddy/widgets/buddy/streak_flame.dart';
 
+import '../../../helpers/flames.dart';
 import '../../../helpers/pixels.dart';
 
 void main() {
@@ -37,8 +43,15 @@ void main() {
   Offset footIn(Rect buddy) =>
       buddy.topLeft + BuddyLayout(buddy.size).toLocal(kBuddyFoot);
 
-  const shot = Key('shot');
+  /// His height and the top of his head in the ring.
+  double heightOf(Rect buddy) => kBuddyHeight * BuddyLayout(buddy.size).scale;
+  double headIn(Rect buddy) => buddy.top + BuddyLayout(buddy.size).headTop;
 
+  const shot = Key('shot');
+  const band = AppConstants.homeHeadroom;
+
+  /// The ring's box at [band] from the top of the shot, so the shot holds
+  /// the band above the ring too.
   Future<({Rect buddy, Rect middle})> pump(
     WidgetTester tester, {
     required int streak,
@@ -53,13 +66,17 @@ void main() {
           alignment: Alignment.topLeft,
           child: RepaintBoundary(
             key: shot,
-            child: SizedBox.fromSize(
-              size: ring,
-              child: HomeFlame(
-                streak: streak,
-                lit: lit,
-                buddy: buddy,
-                middle: middle,
+            child: Padding(
+              padding: const EdgeInsets.only(top: band),
+              child: SizedBox.fromSize(
+                size: ring,
+                child: HomeFlame(
+                  streak: streak,
+                  lit: lit,
+                  buddy: buddy,
+                  middle: middle,
+                  headroom: band,
+                ),
               ),
             ),
           ),
@@ -69,22 +86,110 @@ void main() {
     return (buddy: buddy, middle: middle);
   }
 
-  testWidgets('the streak flame, larger than his square, without its core; '
-      'its ignite stays inside its box', (tester) async {
+  /// Where the lit flame's tallest tip sits at rest, in the ring.
+  double tipOf(WidgetTester tester) {
+    final box = tester
+        .getRect(find.byType(StreakFlame))
+        .shift(const Offset(0, -band));
+    final painter = flamePainter(tester);
+    final base = box.bottom - box.height * FlamePainter.baseInset;
+    return base - painter.bodyScale.height * FlamePainter.tipReach * box.height;
+  }
+
+  testWidgets('the streak flame, reaching as Home sizes it, without its '
+      'core; its ignite stays inside its box', (tester) async {
     await pump(tester, streak: 12, lit: true);
 
     final flame = tester.widget<StreakFlame>(find.byType(StreakFlame));
     expect(flame.streak, 12);
     expect(flame.lit, isTrue);
-    expect(flame.height, side * AppConstants.homeFlameScale);
+    expect(flame.reach, isNotNull);
     expect(flame.igniteOnMount, isFalse);
     // Its bright core would only show beside his stem.
     expect(flame.core, isFalse);
     expect(flame.contained, isTrue);
   });
 
-  testWidgets('centred on his foot, its base a little below it; as wide as '
-      'the middle leaves around his foot, less its blur', (tester) async {
+  testWidgets('its tips rise clearly above his head, by its tier (≥ 15 % '
+      'of his height), its base a little below his foot; it never reaches '
+      'past the band above the ring', (tester) async {
+    final rises = <FlameTier, double>{};
+    for (final (streak, tier) in [
+      (1, FlameTier.small),
+      (5, FlameTier.medium),
+      (12, FlameTier.large),
+      (42, FlameTier.blazing),
+    ]) {
+      final (:buddy, middle: _) = await pump(tester, streak: streak, lit: true);
+      final height = heightOf(buddy);
+      final rise = (headIn(buddy) - tipOf(tester)) / height;
+      rises[tier] = rise;
+      final at = '$tier';
+      expect(rise, greaterThanOrEqualTo(0.15), reason: at);
+      // Lodert as high as the band leaves (its flicker inside it).
+      if (tier == FlameTier.blazing) {
+        expect(rise, lessThanOrEqualTo(HomeFlame.riseFor(tier)), reason: at);
+      } else {
+        expect(rise, moreOrLessEquals(HomeFlame.riseFor(tier)), reason: at);
+      }
+
+      final box = tester.getRect(find.byType(StreakFlame));
+      final foot = footIn(buddy);
+      expect(
+        box.bottom - band - box.height * FlamePainter.baseInset,
+        moreOrLessEquals(foot.dy + side * AppConstants.homeFlameBelowFeet),
+        reason: at,
+      );
+      // Its box (flicker and ignite inside it), blurred, stays below the
+      // band's top.
+      expect(
+        box.top - 3 * AppConstants.homeFlameBlur,
+        greaterThanOrEqualTo(-0.01),
+        reason: at,
+      );
+    }
+    // It grows with the streak.
+    expect(rises[FlameTier.small], lessThan(rises[FlameTier.medium]!));
+    expect(rises[FlameTier.medium], lessThan(rises[FlameTier.large]!));
+    expect(rises[FlameTier.large], lessThan(rises[FlameTier.blazing]!));
+    // About his height and a half, at „brennt" past the first week.
+    expect(rises[FlameTier.large], moreOrLessEquals(0.5, epsilon: 0.1));
+  });
+
+  testWidgets('without room in the band, its tips stop below its top', (
+    tester,
+  ) async {
+    final (:ring, :buddy, :middle) = places(400);
+    await tester.pumpWidget(
+      Directionality(
+        textDirection: TextDirection.ltr,
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: SizedBox.fromSize(
+            size: ring,
+            child: HomeFlame(
+              streak: 42,
+              lit: true,
+              buddy: buddy,
+              middle: middle,
+              headroom: 0,
+            ),
+          ),
+        ),
+      ),
+    );
+    final box = tester.getRect(find.byType(StreakFlame));
+    expect(
+      box.top - 3 * AppConstants.homeFlameBlur,
+      greaterThanOrEqualTo(-0.01),
+    );
+    // [tipOf] counts from a band above the ring; here there is none.
+    expect(tipOf(tester) + band, greaterThanOrEqualTo(0));
+    expect(tipOf(tester) + band, lessThan(headIn(buddy)));
+  });
+
+  testWidgets('offset to his right, beside his head; as wide as the middle '
+      'leaves around it, less its blur', (tester) async {
     for (final middleWidth in [400.0, 170.0]) {
       final (:buddy, :middle) = await pump(
         tester,
@@ -94,16 +199,12 @@ void main() {
       );
 
       final foot = footIn(buddy);
-      // Right of his square's middle, a little above its bottom.
-      expect(foot.dx, greaterThan(buddy.center.dx));
-      expect(foot.dy, lessThan(buddy.bottom));
       final flame = tester.getRect(find.byType(StreakFlame));
-      expect(flame.center.dx, moreOrLessEquals(foot.dx));
-      expect(
-        flame.bottom - flame.height * FlamePainter.baseInset,
-        moreOrLessEquals(foot.dy + side * AppConstants.homeFlameBelowFeet),
-      );
-      final room = 2 * (middle.right - foot.dx);
+      final centre = foot.dx + AppConstants.homeFlameOffset * heightOf(buddy);
+      expect(AppConstants.homeFlameOffset, greaterThan(0));
+      expect(flame.center.dx, moreOrLessEquals(centre), reason: '$middleWidth');
+      expect(flame.center.dx, greaterThan(buddy.center.dx));
+      final room = 2 * math.min(centre - middle.left, middle.right - centre);
       expect(
         flame.width,
         moreOrLessEquals(room - 2 * 3 * AppConstants.homeFlameBlur),
@@ -147,7 +248,14 @@ void main() {
     }
   });
 
-  test('translucent by its look: an ember, brennt, lodert', () {
+  test('stronger than in round 5: barely translucent, a light blur', () {
+    expect(AppConstants.homeFlameEmberOpacity, 0.95);
+    expect(AppConstants.homeFlameLitOpacity, 0.85);
+    expect(AppConstants.homeFlameBlazingOpacity, 0.9);
+    expect(AppConstants.homeFlameBlur, 1.0);
+  });
+
+  test('its opacity by its look: an ember, brennt, lodert', () {
     for (final (streak, lit, expected) in [
       (5, false, AppConstants.homeFlameEmberOpacity),
       (0, false, AppConstants.homeFlameEmberOpacity),
@@ -211,6 +319,7 @@ void main() {
                     lit: true,
                     buddy: buddy,
                     middle: middle,
+                    headroom: AppConstants.homeHeadroom,
                   ),
                   buddy: AnimatedBuddy(
                     controller: BuddyController(),
@@ -274,4 +383,108 @@ void main() {
     }
     expect(seen, greaterThan(gaps.length ~/ 2));
   });
+
+  for (final phone in [
+    (size: const Size(402, 874), textScale: 1.0),
+    (size: const Size(375, 667), textScale: 1.3),
+  ]) {
+    testWidgets('${phone.size} at text scale ${phone.textScale}: every look '
+        'stays clear of the need bubbles; its tips stay in the band above '
+        'the ring', (tester) async {
+      tester.view.physicalSize = phone.size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      tester.platformDispatcher.textScaleFactorTestValue = phone.textScale;
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      final width = phone.size.width - 2 * AppConstants.spacingLg;
+      final diameter = CareRing.diameterFor(width, phone.size.height);
+      for (final (streak, lit) in [
+        (5, false),
+        (1, true),
+        (5, true),
+        (42, true),
+      ]) {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.theme,
+            home: Scaffold(
+              body: Align(
+                alignment: Alignment.topCenter,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: band),
+                  child: SizedBox(
+                    width: width,
+                    child: CareRing(
+                      care: CareNow.at(
+                        const CareLog(),
+                        DateTime(2026, 11, 23, 14),
+                      ),
+                      diameter: diameter,
+                      onNeed: (_) {},
+                      behindBuddy: (buddy, middle) => RepaintBoundary(
+                        key: shot,
+                        child: HomeFlame(
+                          streak: streak,
+                          lit: lit,
+                          buddy: buddy,
+                          middle: middle,
+                          headroom: band,
+                        ),
+                      ),
+                      buddy: AnimatedBuddy(
+                        controller: BuddyController(),
+                        name: 'Bubu',
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        final at = '$streak, $lit';
+        final ring = tester.getRect(find.byType(CareRing));
+        final flame = tester.getRect(find.byType(StreakFlame));
+        // Blurred, its box stays inside the band and the ring's middle.
+        final painted = flame.inflate(3 * AppConstants.homeFlameBlur);
+        expect(painted.top, greaterThanOrEqualTo(ring.top - band - 0.01));
+        for (final need in CareNeed.values) {
+          final bubble = tester.getRect(find.byKey(CareRing.needKey(need)));
+          expect(
+            painted.overlaps(bubble),
+            isFalse,
+            reason: '$at: $need $bubble, flame $painted',
+          );
+        }
+
+        // What it paints in the ring, pixel by pixel.
+        final boundary = tester.renderObject<RenderRepaintBoundary>(
+          find.byKey(shot),
+        );
+        final origin = boundary.localToGlobal(Offset.zero);
+        final (bytes, imageWidth, imageHeight) = (await tester.runAsync(
+          () async {
+            final image = await boundary.toImage();
+            final data = (await image.toByteData())!;
+            return (data, image.width, image.height);
+          },
+        ))!;
+        for (final need in CareNeed.values) {
+          final bubble = tester
+              .getRect(find.byKey(CareRing.needKey(need)))
+              .shift(-origin);
+          var seen = 0;
+          for (var y = bubble.top.ceil(); y < bubble.bottom.floor(); y++) {
+            for (var x = bubble.left.ceil(); x < bubble.right.floor(); x++) {
+              if (x < 0 || y < 0 || x >= imageWidth || y >= imageHeight) {
+                continue;
+              }
+              if (pixelAt(bytes, imageWidth, x, y).a > 2 / 255) seen++;
+            }
+          }
+          expect(seen, 0, reason: '$at: $need');
+        }
+      }
+    });
+  }
 }

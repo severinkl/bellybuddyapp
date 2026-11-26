@@ -49,6 +49,7 @@ import 'package:belly_buddy/services/buddy/care_meters.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:belly_buddy/widgets/buddy/need_meter.dart';
+import 'package:belly_buddy/widgets/buddy/streak_badge.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
 import 'package:belly_buddy/widgets/buddy/streak_week_row.dart';
 
@@ -371,14 +372,22 @@ void main() {
         find.byKey(InsightCard.cardKey, skipOffstage: false),
         findsOneWidget,
       );
-      // New user without a buddy_state row: the chip still shows the streak.
-      expect(find.byType(StreakChip), findsOneWidget);
+      // New user without a buddy_state row: the badge still shows the
+      // streak, in the ring.
+      expect(find.byType(StreakChip), findsNothing);
+      expect(
+        find.descendant(
+          of: find.byType(CareRing),
+          matching: find.byType(StreakBadge),
+        ),
+        findsOneWidget,
+      );
 
-      // Top to bottom: the hero (chip, ring, button), then the card.
+      // Top to bottom: the hero (band, ring, button), then the card.
       final hero = tester.getRect(find.byType(BuddyHero));
       expect(
-        tester.getRect(find.byType(StreakChip)).top,
-        lessThan(tester.getRect(find.byType(CareRing)).top),
+        tester.getRect(find.byType(CareRing)).top - hero.top,
+        AppConstants.homeHeadroom,
       );
       expect(
         tester.getRect(find.byKey(BuddyHero.actionKey)).top,
@@ -803,7 +812,7 @@ void main() {
 
       expect(tester.takeException(), isNull);
       expect(find.byType(AnimatedBuddy), findsOneWidget);
-      expect(find.byType(StreakChip), findsNothing);
+      expect(find.byType(StreakBadge), findsNothing);
       final fetchesAfterLoad = buddyRepo.fetchCount;
 
       await tester.fling(
@@ -1273,7 +1282,7 @@ void main() {
         final ring = tester.getRect(find.byType(CareRing));
         final room = Rect.fromLTRB(
           ring.left,
-          ring.top - AppConstants.homeTapTarget,
+          ring.top - AppConstants.homeHeadroom,
           ring.right,
           ring.top,
         );

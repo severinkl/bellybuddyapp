@@ -31,8 +31,8 @@ typedef CareRingLayer = Widget Function(Rect buddy, Rect middle);
 /// [highlight]ed need (the one he suggests next) glows and, unless
 /// animations are off, pulses gently on its own clock (paused while
 /// `TickerMode` is off). [behindBuddy] (Home's streak flame) is drawn
-/// under him and the bubbles, [overBuddy] (his speech bubble) on his head,
-/// over it all.
+/// under him and the bubbles, [onBuddy] (the flame's streak badge) over
+/// them, and [overBuddy] (his speech bubble) on his head, over it all.
 class CareRing extends StatelessWidget {
   const CareRing({
     super.key,
@@ -42,6 +42,7 @@ class CareRing extends StatelessWidget {
     required this.onNeed,
     this.highlight,
     this.behindBuddy,
+    this.onBuddy,
     this.overBuddy,
     this.overBuddyRoom = 0,
   });
@@ -102,6 +103,11 @@ class CareRing extends StatelessWidget {
   /// to the middle (never over or under a bubble). It is never a tap
   /// target: a tap on it lands on what is over it.
   final CareRingLayer? behindBuddy;
+
+  /// Drawn over the Buddy and the bubbles, filling the ring, under
+  /// [overBuddy]: it places itself like [behindBuddy]. What it builds takes
+  /// taps (Home's streak badge); a tap beside it lands on what is under it.
+  final CareRingLayer? onBuddy;
 
   /// Drawn over everything in the ring, the bubbles included (Home's
   /// speech bubble): centred on the ring, its bottom on the Buddy's head
@@ -184,14 +190,17 @@ class CareRing extends StatelessWidget {
     return (buddy: buddy, middle: middle);
   }
 
-  /// [layer] in a ring-filling box that takes no tap, handed his square
-  /// and the middle; [place] puts what it builds into that box.
+  /// [layer] in a ring-filling box, handed his square and the middle;
+  /// [place] puts what it builds into that box. It takes no tap unless
+  /// [taps].
   Widget _layer(
     CareRingLayer layer,
     double buddySide, {
     Widget Function(Rect buddy, Widget child)? place,
+    bool taps = false,
   }) => Positioned.fill(
     child: IgnorePointer(
+      ignoring: !taps,
       child: LayoutBuilder(
         builder: (_, constraints) {
           final (:buddy, :middle) = _placesIn(constraints.biggest, buddySide);
@@ -252,6 +261,7 @@ class CareRing extends StatelessWidget {
                 side(CareNeed.drink, CareNeed.gutFeeling),
               ],
             ),
+            if (onBuddy case final on?) _layer(on, buddySide, taps: true),
             if (overBuddy case final over?)
               _layer(
                 over,

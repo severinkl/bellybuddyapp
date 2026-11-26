@@ -53,9 +53,12 @@ class AppConstants {
   /// The smallest tap target (Apple's 44 pt).
   static const double minTapTarget = 44.0;
 
-  /// The smallest tap target on Home; also the height of its streak chip's
-  /// row, which the Buddy's bubble may rise over.
+  /// The smallest tap target on Home.
   static const double homeTapTarget = 48.0;
+
+  /// The band above Home's ring that the Buddy's bubble and the streak
+  /// flame's tips may rise into.
+  static const double homeHeadroom = 48.0;
 
   // Border radius
   static const double radiusXs = 4.0;
@@ -185,15 +188,21 @@ class AppConstants {
   static const double careNeedGlow = 5.0;
   static const Duration careNeedPulse = Duration(milliseconds: 1400);
 
-  // Home's streak flame, a glow behind the Buddy: its height (per side of
-  // his square), how far its base sits below his feet (per side), how
-  // opaque it is as an ember, lit and blazing („lodert"), and its blur
-  static const double homeFlameScale = 1.25;
+  // Home's streak flame behind the Buddy: how far its tips rise above his
+  // head by its tier (per his height), how far right of his foot it burns
+  // (per his height), how far its base sits below his feet (per side of
+  // his square), how opaque it is as an ember, lit and blazing („lodert"),
+  // and its blur
+  static const double homeFlameRiseSmall = 0.4;
+  static const double homeFlameRiseMedium = 0.45;
+  static const double homeFlameRiseLarge = 0.5;
+  static const double homeFlameRiseBlazing = 0.55;
+  static const double homeFlameOffset = 0.04;
   static const double homeFlameBelowFeet = 0.02;
-  static const double homeFlameEmberOpacity = 0.8;
-  static const double homeFlameLitOpacity = 0.55;
-  static const double homeFlameBlazingOpacity = 0.65;
-  static const double homeFlameBlur = 2.5;
+  static const double homeFlameEmberOpacity = 0.95;
+  static const double homeFlameLitOpacity = 0.85;
+  static const double homeFlameBlazingOpacity = 0.9;
+  static const double homeFlameBlur = 1.0;
 
   // „Dein Streak" sheet: the goal progress bar
   static const double streakProgressHeight = 10.0;
