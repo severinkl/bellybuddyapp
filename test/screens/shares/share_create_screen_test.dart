@@ -312,6 +312,25 @@ void main() {
     expect(find.byType(SharesScreen, skipOffstage: false), findsOneWidget);
   });
 
+  testWidgets('an answer during the way back does not close the list too', (
+    tester,
+  ) async {
+    await pump(tester);
+    service.gate = Completer<void>();
+    await typeName(tester, 'Dr. A');
+    await tester.tap(button());
+    await tester.pump();
+    router.pop();
+    // The create screen is still mounted while it slides away.
+    await tester.pump(const Duration(milliseconds: 50));
+    expect(find.byType(ShareCreateScreen), findsOneWidget);
+
+    service.gate!.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('Deine Freigaben'), findsOneWidget);
+    expect(find.text('Dein Link ist bereit'), findsOneWidget);
+  });
+
   group('hand-off to the list', () {
     testWidgets('nothing pending: no sheet', (tester) async {
       await pump(tester, openCreate: false);

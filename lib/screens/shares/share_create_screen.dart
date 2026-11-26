@@ -76,6 +76,7 @@ class _ShareCreateScreenState extends ConsumerState<ShareCreateScreen> {
     // Taken before the await: the screen may be gone when the call returns.
     final messenger = ScaffoldMessenger.of(context);
     final router = GoRouter.of(context);
+    final route = ModalRoute.of(context);
     final justCreated = ref.read(justCreatedShareProvider.notifier);
     final shares = ref.read(sharesProvider.notifier);
     final CreatedShare created;
@@ -101,8 +102,10 @@ class _ShareCreateScreenState extends ConsumerState<ShareCreateScreen> {
       return;
     }
     // Leave first, then hand over: the list beneath opens the sheet, also
-    // when this screen was left while the call was on its way.
-    if (mounted) router.pop();
+    // when this screen was left while the call was on its way. Still on its
+    // way back, this screen is mounted but no longer on top: popping then
+    // would close the list.
+    if (mounted && (route?.isCurrent ?? false)) router.pop();
     justCreated.set(ShareSecret(link: created.link, code: created.code));
   }
 
