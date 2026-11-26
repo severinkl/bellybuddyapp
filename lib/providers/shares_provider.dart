@@ -27,18 +27,22 @@ class SharesNotifier extends AsyncNotifier<List<DataShare>> {
     final store = ref.read(shareSecretsStoreProvider);
     // The share exists on the server: a local write failing must not turn
     // that into a failure (the user would create a second one).
-    await _bestEffort('keeping the new share on this device', () async {
-      await store.save(
-        created.id,
-        ShareSecret(link: created.link, code: created.code),
-      );
-    });
-    await _bestEffort(
-      'remembering the display name',
-      () => store.rememberDisplayName(share.displayName),
-    );
+    await Future.wait([
+      _bestEffort(
+        'keeping the new share on this device',
+        () => store.save(
+          created.id,
+          ShareSecret(link: created.link, code: created.code),
+        ),
+      ),
+      _bestEffort(
+        'remembering the display name',
+        () => store.rememberDisplayName(share.displayName),
+      ),
+    ]);
     ref.invalidate(shareSecretProvider(created.id));
-    await _reload();
+    // A failing reload keeps the list shown; the create itself worked.
+    await refresh();
     return created;
   }
 
@@ -51,19 +55,37 @@ class SharesNotifier extends AsyncNotifier<List<DataShare>> {
       () => ref.read(shareSecretsStoreProvider).remove(id),
     );
     ref.invalidate(shareSecretProvider(id));
-    await _reload();
+    // A failing reload keeps the list shown; the end itself worked.
+    await refresh();
   }
 
-  /// Loads the list again, keeping what is shown while it runs. A failure
-  /// keeps the list shown; with nothing shown yet it becomes the error.
-  Future<void> refresh() async {
+  /// Loads the list again, keeping what is shown while it runs, and tells
+  /// whether that worked. A failure keeps the list shown; with nothing shown
+  /// yet it becomes the error. An answer that arrives after the signed-in
+  /// user changed is dropped: it belongs to the previous account.
+  /// The same goes for an answer overtaken by a later refresh.
+  Future<bool> refresh() async {
+    final userId = ref.read(currentUserIdProvider);
+    final request = ++_latestRequest;
+    bool stale() =>
+        request != _latestRequest ||
+        !ref.mounted ||
+        ref.read(currentUserIdProvider) != userId;
     try {
-      state = AsyncData(await ref.read(shareServiceProvider).list());
+      final shares = await ref.read(shareServiceProvider).list();
+      if (stale()) return true;
+      state = AsyncData(shares);
+      return true;
     } catch (e, st) {
       _log.error('refreshing the shares failed', e, st);
+      if (stale()) return true;
       if (!state.hasValue) state = AsyncError(e, st);
+      return false;
     }
   }
+
+  /// The newest [refresh]; only its answer is written.
+  int _latestRequest = 0;
 
   /// A local write after a server success: logged (never with secrets) and
   /// carried on.
@@ -72,15 +94,6 @@ class SharesNotifier extends AsyncNotifier<List<DataShare>> {
       await write();
     } catch (e, st) {
       _log.error('$what failed', e, st);
-    }
-  }
-
-  /// A failing reload keeps the list shown; the call that led here worked.
-  Future<void> _reload() async {
-    try {
-      state = AsyncData(await ref.read(shareServiceProvider).list());
-    } catch (e, st) {
-      _log.error('reloading the shares failed', e, st);
     }
   }
 }

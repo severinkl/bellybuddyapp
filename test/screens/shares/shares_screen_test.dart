@@ -3,6 +3,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -36,6 +37,7 @@ void main() {
     Map<String, ShareSecret> secrets = const {},
     FakeShareService? using,
     Future<void> Function(ProviderContainer container)? before,
+    List<Override> overrides = const [],
   }) async {
     SharedPreferences.setMockInitialValues({});
     final seed = ShareSecretsStore(userId: () => 'u1');
@@ -52,6 +54,7 @@ void main() {
         currentUserIdProvider.overrideWithValue('u1'),
         shareServiceProvider.overrideWithValue(service),
         buddyClockProvider.overrideWithValue(() => now),
+        ...overrides,
       ],
     );
     if (before != null) await before(container);
@@ -407,6 +410,101 @@ void main() {
     expect(find.textContaining('2-mal geöffnet'), findsOneWidget);
   });
 
+  testWidgets('an end that fails after leaving the list throws nothing', (
+    tester,
+  ) async {
+    final slow = _SlowEnd([testShare()]);
+    SharedPreferences.setMockInitialValues({});
+    final c = ProviderContainer.test(
+      overrides: [
+        currentUserIdProvider.overrideWithValue('u1'),
+        shareServiceProvider.overrideWithValue(slow),
+        buddyClockProvider.overrideWithValue(() => now),
+      ],
+    );
+    final r = GoRouter(
+      routes: [
+        GoRoute(
+          path: '/',
+          builder: (_, _) => const Scaffold(body: Text('Ich')),
+          routes: [
+            GoRoute(path: 'shares', builder: (_, _) => const SharesScreen()),
+          ],
+        ),
+      ],
+    );
+    addTearDown(r.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(container: c, child: germanRouterApp(r)),
+    );
+    unawaited(r.push('/shares'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Freigabe beenden'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Beenden'));
+    await tester.pump();
+    // The list is left before the answer comes.
+    r.pop();
+    await tester.pumpAndSettle();
+    expect(find.byType(SharesScreen), findsNothing);
+
+    slow.gate.completeError(const ShareException());
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('an unreadable stored secret still lets the share be ended', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      [testShare()],
+      overrides: [
+        shareSecretProvider.overrideWith((ref, id) => throw Exception('io')),
+      ],
+    );
+    expect(find.text('Freigabe beenden'), findsOneWidget);
+    expect(find.text('Neu erstellen'), findsOneWidget);
+  });
+
+  testWidgets('the first open loads the list once', (tester) async {
+    await pump(tester, [testShare()]);
+    expect(service.listCalls, 1);
+  });
+
+  const refreshFailed =
+      'Aktualisieren hat nicht geklappt. Versuch es später nochmal.';
+
+  testWidgets('a failed pull to refresh says so and keeps the list', (
+    tester,
+  ) async {
+    await pump(tester, [testShare()]);
+    service.failList = true;
+    await tester.fling(
+      find.byType(Scrollable).first,
+      const Offset(0, 400),
+      800,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text(refreshFailed), findsOneWidget);
+    expect(find.text('Aktiv'), findsOneWidget);
+  });
+
+  testWidgets('a failed refresh on opening says so and keeps the list', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      [testShare()],
+      before: (c) async {
+        await c.read(sharesProvider.future);
+        service.failList = true;
+      },
+    );
+    expect(find.text(refreshFailed), findsOneWidget);
+    expect(find.text('Aktiv'), findsOneWidget);
+  });
+
   testWidgets('refreshing keeps the list, no spinner', (tester) async {
     final slow = _SlowSecond([testShare()]);
     await pump(tester, [], using: slow);
@@ -491,4 +589,12 @@ class _SlowSecond extends FakeShareService {
     if (g != null) await g.future;
     return super.list();
   }
+}
+
+/// An end that waits for [gate], which decides how it ends.
+class _SlowEnd extends FakeShareService {
+  _SlowEnd(super.shares);
+  final gate = Completer<void>();
+  @override
+  Future<void> end(String id) => gate.future;
 }

@@ -14,6 +14,7 @@ import '../../utils/date_format_utils.dart';
 import '../../utils/logger.dart';
 import '../../widgets/common/bb_async_state.dart';
 import '../../widgets/common/bb_button.dart';
+import '../../widgets/common/bb_card.dart';
 import 'widgets/share_created_sheet.dart';
 import 'widgets/share_tile.dart';
 
@@ -25,6 +26,8 @@ const _maxActiveShares = 5;
 const _fullHint =
     'Du hast schon 5 aktive Freigaben. Beende eine, um eine neue zu '
     'erstellen.';
+const _refreshFailed =
+    'Aktualisieren hat nicht geklappt. Versuch es später nochmal.';
 
 /// „Deine Freigaben": the active shares first, then the ones that ended,
 /// expired or were locked in the last 90 days (counted from when they
@@ -48,9 +51,11 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
     try {
       final confirmed = await _confirmEnd();
       if (!confirmed || !mounted) return;
+      // Taken before the await: the list may be gone when the call returns.
       final messenger = ScaffoldMessenger.of(context);
+      final shares = ref.read(sharesProvider.notifier);
       try {
-        await ref.read(sharesProvider.notifier).end(share.id);
+        await shares.end(share.id);
       } catch (e, st) {
         _log.error('Ending a share failed', e, st);
         messenger.showSnackBar(
@@ -61,11 +66,20 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
           ),
         );
         // The share may have ended elsewhere already.
-        unawaited(ref.read(sharesProvider.notifier).refresh());
+        unawaited(shares.refresh());
       }
     } finally {
       _ending = false;
     }
+  }
+
+  /// Loads the list again; a failure keeps it shown and says so. Without a
+  /// list the error view says it already.
+  Future<void> _refresh() async {
+    final messenger = ScaffoldMessenger.of(context);
+    final loaded = await ref.read(sharesProvider.notifier).refresh();
+    if (loaded || !mounted || !ref.read(sharesProvider).hasValue) return;
+    messenger.showSnackBar(const SnackBar(content: Text(_refreshFailed)));
   }
 
   Future<bool> _confirmEnd() async {
@@ -110,12 +124,7 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
         active.add((share, state));
         continue;
       }
-      final stoppedAt = switch (state) {
-        ShareState.ended => share.revokedAt,
-        ShareState.locked => share.lockedAt,
-        _ => share.expiresAt,
-      }!;
-      if (stoppedAt.isAfter(cutoff)) others.add((share, state));
+      if (share.stoppedAt.isAfter(cutoff)) others.add((share, state));
     }
     int newestFirst((DataShare, ShareState) a, (DataShare, ShareState) b) =>
         b.$1.createdAt.compareTo(a.$1.createdAt);
@@ -128,12 +137,7 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
     final secret = ref.read(justCreatedShareProvider.notifier).take();
     if (secret == null) return;
     unawaited(
-      showShareSecretSheet(
-        context,
-        link: secret.link,
-        code: secret.code,
-        title: 'Dein Link ist bereit',
-      ),
+      showShareSecretSheet(context, secret, title: 'Dein Link ist bereit'),
     );
   }
 
@@ -142,8 +146,9 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      // Opened, last opened and the state move on without the app.
-      unawaited(ref.read(sharesProvider.notifier).refresh());
+      // Opened, last opened and the state move on without the app. A list
+      // still on its first load (or a reload for a new account) is fresh.
+      if (!ref.read(sharesProvider).isLoading) unawaited(_refresh());
       _showJustCreated();
     });
   }
@@ -176,16 +181,19 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
   }
 
   Widget _content(List<DataShare> shares) {
-    final now = ref.read(buddyClockProvider)();
-    final full =
-        shares.where((s) => s.stateAt(now) == ShareState.active).length >=
-        _maxActiveShares;
+    // Every active share is visible.
     final visible = _visible(shares);
+    final full =
+        visible.where((v) => v.$2 == ShareState.active).length >=
+        _maxActiveShares;
+    final VoidCallback? onCreate = full
+        ? null
+        : () => unawaited(context.push(RoutePaths.shareCreate));
     return Column(
       children: [
         Expanded(
           child: RefreshIndicator(
-            onRefresh: () => ref.read(sharesProvider.notifier).refresh(),
+            onRefresh: _refresh,
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(AppConstants.spacingMd),
@@ -200,7 +208,7 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
                         height: AppTheme.lineHeightBody,
                       ),
                     )
-                  : _list(visible, full: full),
+                  : _list(visible, onCreate: onCreate),
             ),
           ),
         ),
@@ -215,9 +223,7 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
                     label: visible.isEmpty
                         ? 'Freigabe erstellen'
                         : 'Weitere Freigabe erstellen',
-                    onPressed: full
-                        ? null
-                        : () => unawaited(context.push(RoutePaths.shareCreate)),
+                    onPressed: onCreate,
                   ),
                 ),
                 if (full) ...[
@@ -239,13 +245,13 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
     );
   }
 
-  Widget _list(List<(DataShare, ShareState)> visible, {required bool full}) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppTheme.card,
-        borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-      ),
-      clipBehavior: Clip.antiAlias,
+  Widget _list(
+    List<(DataShare, ShareState)> visible, {
+    required VoidCallback? onCreate,
+  }) {
+    return BbCard(
+      padding: EdgeInsets.zero,
+      showBorder: false,
       child: Column(
         children: [
           for (final (i, (share, state)) in visible.indexed) ...[
@@ -260,16 +266,9 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
               share: share,
               state: state,
               onEnd: () => unawaited(_end(share)),
-              onShowSecret: (secret) => unawaited(
-                showShareSecretSheet(
-                  context,
-                  link: secret.link,
-                  code: secret.code,
-                ),
-              ),
-              onCreateAgain: full
-                  ? null
-                  : () => unawaited(context.push(RoutePaths.shareCreate)),
+              onShowSecret: (secret) =>
+                  unawaited(showShareSecretSheet(context, secret)),
+              onCreateAgain: onCreate,
             ),
           ],
         ],

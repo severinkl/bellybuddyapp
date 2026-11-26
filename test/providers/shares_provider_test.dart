@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -117,6 +119,69 @@ void main() {
     expect(container.read(sharesProvider).value, isNotNull);
   });
 
+  test(
+    'refresh tells whether it loaded, and keeps the list on failure',
+    () async {
+      await container.read(sharesProvider.future);
+      final notifier = container.read(sharesProvider.notifier);
+      expect(await notifier.refresh(), isTrue);
+
+      service.failList = true;
+      expect(await notifier.refresh(), isFalse);
+      final state = container.read(sharesProvider);
+      expect(state.hasError, isFalse);
+      expect(state.value!.map((s) => s.id), ['s1']);
+    },
+  );
+
+  test('a refresh that ends after the user changed writes nothing', () async {
+    final id = NotifierProvider<_Id, String?>(_Id.new);
+    final gated = _GatedService([testShare()]);
+    final c = ProviderContainer.test(
+      overrides: [
+        currentUserIdProvider.overrideWith((ref) => ref.watch(id)),
+        shareServiceProvider.overrideWithValue(gated),
+      ],
+    );
+    c.read(id.notifier).set('u1');
+    await c.read(sharesProvider.future);
+
+    // u1's refresh is on its way when the account changes.
+    final gate = gated.gate = Completer<void>();
+    final pending = c.read(sharesProvider.notifier).refresh();
+    c.read(id.notifier).set('u2');
+    gated.shares = [testShare(id: 'u2-share')];
+    expect((await c.read(sharesProvider.future)).map((s) => s.id), [
+      'u2-share',
+    ]);
+
+    gate.complete();
+    await pending;
+    expect(c.read(sharesProvider).value!.map((s) => s.id), ['u2-share']);
+  });
+
+  test('an older refresh answering last does not undo a newer one', () async {
+    final gated = _GatedService([testShare()]);
+    final c = ProviderContainer.test(
+      overrides: [
+        currentUserIdProvider.overrideWithValue('u1'),
+        shareServiceProvider.overrideWithValue(gated),
+      ],
+    );
+    await c.read(sharesProvider.future);
+    final notifier = c.read(sharesProvider.notifier);
+
+    // A slow pull to refresh, then the share is ended.
+    final gate = gated.gate = Completer<void>();
+    final slow = notifier.refresh();
+    await notifier.end('s1');
+    expect(c.read(sharesProvider).value!.single.revokedAt, isNotNull);
+
+    gate.complete();
+    await slow;
+    expect(c.read(sharesProvider).value!.single.revokedAt, isNotNull);
+  });
+
   group('local storage failing', () {
     setUp(() {
       container = ProviderContainer.test(
@@ -188,4 +253,19 @@ class _BrokenStore extends ShareSecretsStore {
   Future<void> remove(String shareId) => throw Exception('disk full');
   @override
   Future<void> rememberDisplayName(String name) => throw Exception('disk full');
+}
+
+/// Answers with the shares it had when called; the call that finds [gate]
+/// set waits for it (and clears it).
+class _GatedService extends FakeShareService {
+  _GatedService(super.shares);
+  Completer<void>? gate;
+  @override
+  Future<List<DataShare>> list() async {
+    final answer = await super.list();
+    final g = gate;
+    gate = null;
+    if (g != null) await g.future;
+    return answer;
+  }
 }
