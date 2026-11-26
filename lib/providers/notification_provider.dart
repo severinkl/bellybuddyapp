@@ -55,8 +55,8 @@ final notificationSyncProvider = Provider<void>((ref) {
 // flag as on only while the OS allows notifications.
 
 /// Turns reminders on: asks the OS for notification permissions, remembers
-/// that the opt-in was offered ([AppConstants.keyNotificationModalShown], so
-/// the dashboard dialog doesn't show again) and stores the outcome: with
+/// that the opt-in was offered ([markNotificationOptInOffered], so the
+/// dashboard dialog doesn't show again) and stores the outcome: with
 /// permission every notification is on, without it every one is off.
 /// Returns whether permission was granted.
 ///
@@ -69,9 +69,10 @@ Future<bool> enableReminders(WidgetRef ref) async {
   // Read before the async gaps: the caller may unmount during the OS dialog.
   final notifications = ref.read(notificationRepositoryProvider);
   final profiles = ref.read(profileProvider.notifier);
+  final markOffered = _optInOffered(ref);
 
   final granted = await notifications.requestAllPermissions();
-  await markNotificationOptInOffered();
+  await markOffered();
   await profiles.updateProfile(profile.withNotifications(granted));
   return granted;
 }
@@ -87,7 +88,7 @@ Future<void> postponeReminders(WidgetRef ref) async {
   final notifications = ref.read(notificationRepositoryProvider);
   final profiles = ref.read(profileProvider.notifier);
 
-  await markNotificationOptInOffered();
+  await markNotificationOptInOffered(ref);
   if (profile == null || !profile.anyNotificationOn) return;
   final permission = await notifications.permissionStatus();
   if (permission == NotificationPermission.granted) return;
@@ -96,10 +97,20 @@ Future<void> postponeReminders(WidgetRef ref) async {
 
 /// Remembers that the reminder opt-in was offered
 /// ([AppConstants.keyNotificationModalShown]), so the dashboard's opt-in
-/// dialog doesn't ask (again).
-Future<void> markNotificationOptInOffered() async {
-  final prefs = await SharedPreferences.getInstance();
-  await prefs.setBool(AppConstants.keyNotificationModalShown, true);
+/// dialog doesn't ask (again), and holds the Buddy's ask off for a week
+/// from today, as an ask would ([reminderAskScheduled]).
+Future<void> markNotificationOptInOffered(WidgetRef ref) =>
+    _optInOffered(ref)();
+
+/// [markNotificationOptInOffered], with [ref] read right away: it may run
+/// after the caller is gone (e.g. after the OS dialog).
+Future<void> Function() _optInOffered(WidgetRef ref) {
+  final storeAskDay = _askDayStore(ref);
+  return () async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(AppConstants.keyNotificationModalShown, true);
+    await storeAskDay(prefs, counts: false);
+  };
 }
 
 // --- Asking again --------------------------------------------------------------
@@ -130,12 +141,18 @@ const reminderAskFirstDays = 2, reminderAskSecondDays = 7;
 /// Days from one ask to the next, from the third on.
 const reminderAskInterval = 30;
 
+/// Days at least from one ask to the next (also from the first offer, or
+/// from switching them off in Einstellungen, to the first).
+const reminderAskMinGap = 7;
+
 /// Whether the Buddy's next ask for reminders is due [today], after [asks]
 /// asks, the last one on [lastAsk], with [activeDays] days with an entry
 /// (the insights' `activeDays`): the first once there are
 /// [reminderAskFirstDays], the second once there are
 /// [reminderAskSecondDays], then [reminderAskInterval] days after the
-/// last; at most [reminderAsksMax] in all and one a day.
+/// last; at most [reminderAsksMax] in all, and never within
+/// [reminderAskMinGap] days of [lastAsk] (which the first offer and a
+/// switch-off in Einstellungen set, too, [holdOffReminderAsks]).
 bool reminderAskScheduled({
   required int asks,
   required DateTime? lastAsk,
@@ -143,7 +160,9 @@ bool reminderAskScheduled({
   required DateTime today,
 }) {
   if (asks >= reminderAsksMax) return false;
-  if (lastAsk != null && !lastAsk.isBefore(today)) return false;
+  if (lastAsk != null && _daysBetween(lastAsk, today) < reminderAskMinGap) {
+    return false;
+  }
   return switch (asks) {
     0 => activeDays >= reminderAskFirstDays,
     1 => activeDays >= reminderAskSecondDays,
@@ -189,17 +208,38 @@ final reminderAskDueProvider = FutureProvider.autoDispose<bool>((ref) async {
 /// Counts an ask of the Buddy for reminders, today
 /// ([reminderAskDueProvider] then holds off until the next one is due).
 Future<void> recordReminderAsk(WidgetRef ref) async {
+  final storeAskDay = _askDayStore(ref);
+  await storeAskDay(await SharedPreferences.getInstance(), counts: true);
+}
+
+/// Reminders were switched off on purpose (Einstellungen): the Buddy
+/// doesn't ask for them again for [reminderAskMinGap] days; today counts
+/// as his last ask, without counting as one.
+Future<void> holdOffReminderAsks(WidgetRef ref) async {
+  final storeAskDay = _askDayStore(ref);
+  await storeAskDay(await SharedPreferences.getInstance(), counts: false);
+}
+
+/// Stores today as the day of the signed-in user's last ask (and, if it
+/// [counts], one more ask), then has [reminderAskDueProvider] check again.
+/// Reads [ref] right away: it may run after the caller is gone.
+Future<void> Function(SharedPreferences prefs, {required bool counts})
+_askDayStore(WidgetRef ref) {
   final userId = ref.read(currentUserIdProvider);
-  if (userId == null) return;
   final today = ref.read(todayProvider);
-  final prefs = await SharedPreferences.getInstance();
-  final asksKey = '${AppConstants.keyReminderAsksPrefix}$userId';
-  await prefs.setInt(asksKey, (prefs.getInt(asksKey) ?? 0) + 1);
-  await prefs.setString(
-    '${AppConstants.keyReminderAskedOnPrefix}$userId',
-    formatIsoDate(today),
-  );
-  if (ref.context.mounted) ref.invalidate(reminderAskDueProvider);
+  final container = ProviderScope.containerOf(ref.context, listen: false);
+  return (prefs, {required counts}) async {
+    if (userId == null) return;
+    if (counts) {
+      final asksKey = '${AppConstants.keyReminderAsksPrefix}$userId';
+      await prefs.setInt(asksKey, (prefs.getInt(asksKey) ?? 0) + 1);
+    }
+    await prefs.setString(
+      '${AppConstants.keyReminderAskedOnPrefix}$userId',
+      formatIsoDate(today),
+    );
+    container.invalidate(reminderAskDueProvider);
+  };
 }
 
 /// What „Einschalten" (the Buddy's ask, Ich's row) came to.
@@ -242,9 +282,10 @@ Future<RemindersTurnOn> turnOnReminders(WidgetRef ref) async {
     return openSettings();
   }
   if (await enableReminders(ref)) return RemindersTurnOn.on;
-  // Android reports a denial for good that its own plugin didn't ask for
-  // as never asked, and its request then shows nothing: only the settings
-  // can allow them. (A declined dialog reads as denied.)
+  // Android 13+, denied for good after the local-notifications plugin's
+  // request: firebase_messaging never recorded a request, so it reports
+  // never asked, and a request shows nothing: only the settings can allow
+  // them. (A dialog just declined reads as denied.)
   if (await notifications.permissionStatus() ==
       NotificationPermission.notDetermined) {
     return openSettings();

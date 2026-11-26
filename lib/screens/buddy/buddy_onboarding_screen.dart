@@ -449,7 +449,7 @@ class _BuddyOnboardingScreenState extends ConsumerState<BuddyOnboardingScreen> {
   /// The dashboard's opt-in dialog must not ask again.
   Future<void> _markRemindersAsked() => _logErrors(
     'Storing the reminder opt-in flag',
-    markNotificationOptInOffered,
+    () => markNotificationOptInOffered(ref),
   );
 
   Future<void> _logMeal() async {

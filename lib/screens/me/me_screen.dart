@@ -57,6 +57,9 @@ class _MeScreenState extends ConsumerState<MeScreen> {
   /// still saves ([_oneSheet]).
   bool _sheetOpen = false;
 
+  /// „Einschalten" is on its way (the OS dialog may be up).
+  bool _turningOn = false;
+
   @override
   void dispose() {
     _buddy.dispose();
@@ -123,9 +126,6 @@ class _MeScreenState extends ConsumerState<MeScreen> {
       _turningOn = false;
     }
   }
-
-  /// „Einschalten" is on its way (the OS dialog may be up).
-  bool _turningOn = false;
 
   Future<void> _openFeedback() => openExternalUrl(
     context,

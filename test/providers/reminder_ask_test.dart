@@ -17,8 +17,9 @@ import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
 import '../helpers/riverpod_helpers.dart';
 
-/// An Android denial for good that its notification plugin asked for:
-/// the OS reports it as never asked, and a request shows nothing.
+/// Android 13+, denied for good after the local-notifications plugin's
+/// request: firebase_messaging never recorded a request, so it reports
+/// never asked, and a request shows nothing.
 class _AndroidDeniedForGood extends FakeNotificationRepository {
   _AndroidDeniedForGood() {
     permission = NotificationPermission.notDetermined;
@@ -54,12 +55,29 @@ void main() {
       expect(due(activeDays: 5), isTrue);
     });
 
-    test('the second with the 7th active day, never on the first ask\'s '
-        'day', () {
-      final yesterday = DateTime(2026, 11, 25);
-      expect(due(asks: 1, lastAsk: yesterday, activeDays: 6), isFalse);
-      expect(due(asks: 1, lastAsk: yesterday, activeDays: 7), isTrue);
+    test('the second with the 7th active day, a week after the first at '
+        'the earliest', () {
+      final weekAgo = DateTime(2026, 11, 19);
+      expect(due(asks: 1, lastAsk: weekAgo, activeDays: 6), isFalse);
+      expect(due(asks: 1, lastAsk: weekAgo, activeDays: 7), isTrue);
+      // Past the 7th active day already (an existing user): not the next
+      // day, a week later.
+      expect(
+        due(asks: 1, lastAsk: DateTime(2026, 11, 25), activeDays: 30),
+        isFalse,
+      );
+      expect(
+        due(asks: 1, lastAsk: DateTime(2026, 11, 20), activeDays: 30),
+        isFalse,
+      );
       expect(due(asks: 1, lastAsk: today, activeDays: 7), isFalse);
+    });
+
+    test('the first, too, not within a week of the first offer or a '
+        'switch-off (the day stored as the last ask)', () {
+      expect(due(lastAsk: DateTime(2026, 11, 20), activeDays: 5), isFalse);
+      expect(due(lastAsk: DateTime(2026, 11, 19), activeDays: 5), isTrue);
+      expect(due(lastAsk: DateTime(2026, 11, 19), activeDays: 1), isFalse);
     });
 
     test('then every 30 days after the last ask', () {
@@ -76,11 +94,12 @@ void main() {
       expect(due(asks: 2, lastAsk: last, on: DateTime(2026, 10, 31)), isTrue);
     });
 
-    test('never after the 4th ask, never twice a day', () {
+    test('never after the 4th ask, never twice a day or within a week', () {
       final longAgo = DateTime(2025, 1, 1);
       expect(due(asks: 4, lastAsk: longAgo, activeDays: 30), isFalse);
       expect(due(asks: 0, lastAsk: today, activeDays: 30), isFalse);
       expect(due(asks: 2, lastAsk: today), isFalse);
+      expect(due(asks: 3, lastAsk: DateTime(2026, 11, 20)), isFalse);
     });
   });
 
@@ -237,6 +256,59 @@ void main() {
           prefs.getString('${AppConstants.keyReminderAskedOnPrefix}u1'),
           '2026-11-26',
         );
+      });
+
+      testWidgets('the first offer („Später" in the onboarding or the '
+          'dialog) holds him off for a week', (tester) async {
+        os
+          ..permission = NotificationPermission.notDetermined
+          ..grantOnRequest = false;
+        await pump(tester, activeDays: 30, prefs: const {});
+        expect(await due(), isFalse); // not offered yet
+
+        await postponeReminders(widgetRef);
+        expect(await due(), isFalse);
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getBool(AppConstants.keyNotificationModalShown), isTrue);
+        expect(
+          prefs.getString('${AppConstants.keyReminderAskedOnPrefix}u1'),
+          '2026-11-26',
+        );
+        expect(prefs.getInt('${AppConstants.keyReminderAsksPrefix}u1'), isNull);
+      });
+
+      testWidgets('so does the offer declined in the OS dialog', (
+        tester,
+      ) async {
+        os
+          ..permission = NotificationPermission.notDetermined
+          ..grantOnRequest = false;
+        await pump(tester, activeDays: 30, prefs: const {});
+
+        expect(await enableReminders(widgetRef), isFalse);
+        expect(await due(), isFalse);
+      });
+
+      testWidgets('and a switch-off in Einstellungen', (tester) async {
+        await pump(tester, activeDays: 30);
+        expect(await due(), isTrue);
+
+        await holdOffReminderAsks(widgetRef);
+        expect(await due(), isFalse);
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getInt('${AppConstants.keyReminderAsksPrefix}u1'), isNull);
+      });
+
+      testWidgets('a week after it, he may ask', (tester) async {
+        await pump(
+          tester,
+          activeDays: 30,
+          prefs: {
+            AppConstants.keyNotificationModalShown: true,
+            '${AppConstants.keyReminderAskedOnPrefix}u1': '2026-11-19',
+          },
+        );
+        expect(await due(), isTrue);
       });
 
       testWidgets('after the 4th ask, never again', (tester) async {
