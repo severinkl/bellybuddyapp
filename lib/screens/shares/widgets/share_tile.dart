@@ -16,19 +16,25 @@ String shareStateWord(ShareState state) => switch (state) {
   ShareState.locked => 'Gesperrt',
 };
 
+final _day = DateFormat('d. MMM', 'de_DE');
+final _time = DateFormat('HH:mm', 'de_DE');
+
+const _caption = TextStyle(
+  fontSize: AppTheme.fontSizeCaptionLG,
+  color: AppTheme.mutedForeground,
+);
+
 /// „Erstellt am 12. Nov. · noch nicht geöffnet", or with „zuletzt geöffnet
 /// 25. Nov., 16:40" and, from the second opening, „ · 3-mal geöffnet". The
 /// times are real instants, shown in local time.
 String shareInfoLine(DataShare share) {
-  final day = DateFormat('d. MMM', 'de_DE');
-  final created = 'Erstellt am ${day.format(share.createdAt.toLocal())}';
+  final created = 'Erstellt am ${_day.format(share.createdAt.toLocal())}';
   final opened = share.lastOpenedAt?.toLocal();
   if (share.openCount == 0 || opened == null) {
     return '$created · noch nicht geöffnet';
   }
   final last =
-      'zuletzt geöffnet ${day.format(opened)}, '
-      '${DateFormat('HH:mm', 'de_DE').format(opened)}';
+      'zuletzt geöffnet ${_day.format(opened)}, ${_time.format(opened)}';
   final count = share.openCount > 1 ? ' · ${share.openCount}-mal geöffnet' : '';
   return '$created · $last$count';
 }
@@ -61,11 +67,11 @@ class ShareTile extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final active = state == ShareState.active;
-    final secret = active
-        ? ref.watch(shareSecretProvider(share.id)).value
-        : null;
-    final secretLoaded =
-        active && ref.watch(shareSecretProvider(share.id)).hasValue;
+    // Only an active share offers its secret. One that cannot be read
+    // counts as not stored: ending must stay possible.
+    final stored = active ? ref.watch(shareSecretProvider(share.id)) : null;
+    final secretLoaded = stored != null && (stored.hasValue || stored.hasError);
+    final secret = stored?.value;
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppConstants.spacingMd,
@@ -93,44 +99,26 @@ class ShareTile extends ConsumerWidget {
               const SizedBox(width: AppConstants.spacingSm),
               Text(
                 shareStateWord(state),
-                style: TextStyle(
-                  fontSize: AppTheme.fontSizeCaptionLG,
+                style: _caption.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: active
-                      ? AppTheme.shareActive
-                      : AppTheme.mutedForeground,
+                  color: active ? AppTheme.shareActive : null,
                 ),
               ),
             ],
           ),
           AppConstants.gap6,
-          Text(
-            shareInfoLine(share),
-            style: const TextStyle(
-              fontSize: AppTheme.fontSizeCaptionLG,
-              color: AppTheme.mutedForeground,
-            ),
-          ),
+          Text(shareInfoLine(share), style: _caption),
           if (active) ...[
             AppConstants.gap6,
             Text(
-              'gültig bis ${DateFormat('d. MMM', 'de_DE').format(share.expiresAt.toLocal())}',
-              style: const TextStyle(
-                fontSize: AppTheme.fontSizeCaptionLG,
-                color: AppTheme.mutedForeground,
-              ),
+              'gültig bis ${_day.format(share.expiresAt.toLocal())}',
+              style: _caption,
             ),
           ],
-          if (active && secretLoaded) ...[
+          if (secretLoaded) ...[
             if (secret == null) ...[
               AppConstants.gap6,
-              const Text(
-                'Auf diesem Gerät nicht gespeichert',
-                style: TextStyle(
-                  fontSize: AppTheme.fontSizeCaptionLG,
-                  color: AppTheme.mutedForeground,
-                ),
-              ),
+              const Text('Auf diesem Gerät nicht gespeichert', style: _caption),
             ],
             AppConstants.gap10,
             Wrap(

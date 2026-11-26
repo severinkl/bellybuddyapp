@@ -4,12 +4,10 @@ part 'data_share.freezed.dart';
 part 'data_share.g.dart';
 
 /// How far back a share reaches; json `14d` | `30d` | `all`.
+@JsonEnum(valueField: 'jsonValue')
 enum SharePeriod {
-  @JsonValue('14d')
   days14('14d', 'Letzte 14 Tage'),
-  @JsonValue('30d')
   days30('30d', 'Letzte 30 Tage'),
-  @JsonValue('all')
   all('all', 'Alle Einträge');
 
   const SharePeriod(this.jsonValue, this.label);
@@ -58,6 +56,10 @@ abstract class DataShare with _$DataShare {
     if (!expiresAt.isAfter(now)) return ShareState.expired;
     return ShareState.active;
   }
+
+  /// When the share stopped, in [stateAt]'s order; for an active share its
+  /// coming end.
+  DateTime get stoppedAt => revokedAt ?? lockedAt ?? expiresAt;
 
   String get description =>
       '${period.label}, ${sharePhotos ? 'mit' : 'ohne'} Fotos';

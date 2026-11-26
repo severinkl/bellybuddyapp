@@ -65,17 +65,8 @@ class ShareSecretsStore {
       ...prefs.getKeys().where((k) => k.startsWith(prefix)),
       _nameKey(userId),
     ];
-    Object? failure;
-    StackTrace? failureStack;
-    for (final key in keys) {
-      try {
-        await prefs.remove(key);
-      } catch (e, st) {
-        failure ??= e;
-        failureStack ??= st;
-      }
-    }
-    if (failure != null) Error.throwWithStackTrace(failure, failureStack!);
+    // Waits for every removal, then rethrows the first failure.
+    await Future.wait(keys.map(prefs.remove));
   }
 
   Future<String?> lastDisplayName() async {

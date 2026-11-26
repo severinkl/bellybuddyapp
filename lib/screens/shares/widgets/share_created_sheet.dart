@@ -6,22 +6,22 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
+import '../../../models/data_share.dart';
 import '../../../providers/share_launcher_provider.dart';
 import '../../../utils/logger.dart';
 import '../../../widgets/common/bb_bottom_sheet.dart';
 import '../../../widgets/common/bb_button.dart';
 
-/// Shows the [link] and [code] of a share: the link to send or copy, the
-/// code to tell separately. [title] is „Link und Code" for an existing share.
+/// Shows the link and code of a share: the link to send or copy, the code
+/// to tell separately. [title] is „Link und Code" for an existing share.
 Future<void> showShareSecretSheet(
-  BuildContext context, {
-  required String link,
-  required String code,
+  BuildContext context,
+  ShareSecret secret, {
   String title = 'Link und Code',
 }) {
   return showBbBottomSheet<void>(
     context: context,
-    builder: (_) => _ShareSecretSheet(title: title, link: link, code: code),
+    builder: (_) => _ShareSecretSheet(title: title, secret: secret),
   );
 }
 
@@ -33,15 +33,10 @@ String groupCode(String code) =>
     code.length == 6 ? '${code.substring(0, 3)} ${code.substring(3)}' : code;
 
 class _ShareSecretSheet extends ConsumerStatefulWidget {
-  const _ShareSecretSheet({
-    required this.title,
-    required this.link,
-    required this.code,
-  });
+  const _ShareSecretSheet({required this.title, required this.secret});
 
   final String title;
-  final String link;
-  final String code;
+  final ShareSecret secret;
 
   @override
   ConsumerState<_ShareSecretSheet> createState() => _ShareSecretSheetState();
@@ -71,7 +66,7 @@ class _ShareSecretSheetState extends ConsumerState<_ShareSecretSheet> {
     final launcher = ref.read(shareLauncherProvider);
     try {
       await launcher(
-        'Hier ist mein Belly Buddy Tagebuch: ${widget.link}',
+        'Hier ist mein Belly Buddy Tagebuch: ${widget.secret.link}',
         origin,
       );
       if (mounted) setState(() => _failedShown = false);
@@ -83,7 +78,7 @@ class _ShareSecretSheetState extends ConsumerState<_ShareSecretSheet> {
 
   Future<void> _copy() async {
     try {
-      await Clipboard.setData(ClipboardData(text: widget.link));
+      await Clipboard.setData(ClipboardData(text: widget.secret.link));
     } catch (e, st) {
       _log.error('copying the link failed', e, st);
       if (mounted) setState(() => _failedShown = true);
@@ -117,7 +112,7 @@ class _ShareSecretSheetState extends ConsumerState<_ShareSecretSheet> {
           ),
           AppConstants.gap16,
           SelectableText(
-            widget.link,
+            widget.secret.link,
             style: const TextStyle(
               fontSize: AppTheme.fontSizeBody,
               color: AppTheme.foreground,
@@ -166,7 +161,7 @@ class _ShareSecretSheetState extends ConsumerState<_ShareSecretSheet> {
           AppConstants.gap24,
           Center(
             child: SelectableText(
-              groupCode(widget.code),
+              groupCode(widget.secret.code),
               style: const TextStyle(
                 fontSize: AppTheme.fontSizeDisplayLG,
                 fontWeight: FontWeight.w700,

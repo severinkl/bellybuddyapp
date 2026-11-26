@@ -45,30 +45,21 @@ class ShareService {
   }
 
   Future<CreatedShare> create(NewShare share) async {
-    final Object? data;
-    try {
-      final response = await _client.functions.invoke(
-        'shares',
-        body: {
-          'display_name': share.displayName,
-          'period': share.period.jsonValue,
-          'valid_days': share.validDays,
-          'meals': share.meals,
-          'drinks': share.drinks,
-          'gut': share.gut,
-          'toilet': share.toilet,
-          'patterns': share.patterns,
-          'photos': share.photos,
-        },
-      );
-      data = response.data;
-    } on FunctionException catch (e) {
-      _log.warn('create failed (${e.status})');
-      throw ShareException(status: e.status, message: _messageOf(e));
-    } catch (e, st) {
-      _log.error('create failed', e, st);
-      throw const ShareException();
-    }
+    final data = await _invoke(
+      'create',
+      'shares',
+      body: {
+        'display_name': share.displayName,
+        'period': share.period.jsonValue,
+        'valid_days': share.validDays,
+        'meals': share.meals,
+        'drinks': share.drinks,
+        'gut': share.gut,
+        'toilet': share.toilet,
+        'patterns': share.patterns,
+        'photos': share.photos,
+      },
+    );
     try {
       if (data is! Map) throw const FormatException('not a JSON object');
       return CreatedShare(
@@ -83,14 +74,23 @@ class ShareService {
     }
   }
 
-  Future<void> end(String id) async {
+  Future<void> end(String id) => _invoke('end', 'shares/$id/end');
+
+  /// Calls the edge function [path] and returns its data; any failure
+  /// becomes a [ShareException], logged as [op] (never with the body).
+  Future<Object?> _invoke(
+    String op,
+    String path, {
+    Map<String, Object?>? body,
+  }) async {
     try {
-      await _client.functions.invoke('shares/$id/end');
+      final response = await _client.functions.invoke(path, body: body);
+      return response.data;
     } on FunctionException catch (e) {
-      _log.warn('end failed (${e.status})');
+      _log.warn('$op failed (${e.status})');
       throw ShareException(status: e.status, message: _messageOf(e));
     } catch (e, st) {
-      _log.error('end failed', e, st);
+      _log.error('$op failed', e, st);
       throw const ShareException();
     }
   }

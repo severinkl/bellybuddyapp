@@ -4,10 +4,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:belly_buddy/config/app_theme.dart';
+import 'package:belly_buddy/models/data_share.dart';
 import 'package:belly_buddy/providers/share_launcher_provider.dart';
 import 'package:belly_buddy/screens/shares/widgets/share_created_sheet.dart';
 
 const _link = 'https://example.test/s/abc';
+const _secret = ShareSecret(link: _link, code: '482913');
 
 void main() {
   late List<String> shared;
@@ -57,13 +59,8 @@ void main() {
             builder: (context) => Scaffold(
               body: TextButton(
                 onPressed: () => title == null
-                    ? showShareSecretSheet(context, link: _link, code: '482913')
-                    : showShareSecretSheet(
-                        context,
-                        link: _link,
-                        code: '482913',
-                        title: title,
-                      ),
+                    ? showShareSecretSheet(context, _secret)
+                    : showShareSecretSheet(context, _secret, title: title),
                 child: const Text('open'),
               ),
             ),

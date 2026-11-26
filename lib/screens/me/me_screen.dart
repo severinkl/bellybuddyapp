@@ -160,8 +160,9 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     final status = ref.watch(buddyProvider).value;
     final version = ref.watch(currentVersionProvider).value;
     final remindersOff = ref.watch(remindersOffProvider).value ?? false;
-    // Watched so the list is loaded when the row is tapped.
-    ref.watch(sharesProvider);
+    // Watched so the list is loaded when the row is tapped; only whether it
+    // is empty matters here.
+    ref.watch(sharesProvider.select((s) => s.value?.isEmpty));
     final showShareBadge = ref.watch(shareRowBadgeProvider).value ?? false;
 
     final rows = [
