@@ -382,6 +382,10 @@ class AppConstants {
   /// Prefix of the day he last asked (`reminder_asked_on_<userId>`,
   /// yyyy-MM-dd).
   static const String keyReminderAskedOnPrefix = 'reminder_asked_on_';
+
+  /// Whether the Ich row „Mit Berater:in teilen" was tapped once (a bool, on
+  /// the device, not per user): its „Neu" badge is gone after that.
+  static const String keyShareRowTapped = 'share_row_tapped';
   static const String keyKnowledgeFeedCache = 'knowledge_feed_cache_v1';
   static const String keyBuddyStatePrefix = 'buddy_state_';
 

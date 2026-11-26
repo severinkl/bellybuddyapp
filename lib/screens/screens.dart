@@ -21,6 +21,8 @@ export 'recipes/recipe_editor_screen.dart';
 export 'recipes/recipes_screen.dart';
 export 'registration/registration_wizard_screen.dart';
 export 'settings/settings_screen.dart';
+export 'shares/share_create_screen.dart';
+export 'shares/shares_screen.dart';
 export 'settings/widgets/settings_account_screen.dart';
 export 'settings/widgets/settings_notifications_screen.dart';
 export 'settings/widgets/settings_profile_screen.dart';

@@ -289,6 +289,20 @@ final routerProvider = Provider<GoRouter>((ref) {
         ],
       ),
 
+      // Share routes
+      GoRoute(
+        path: RoutePaths.shares,
+        name: RouteNames.shares,
+        builder: (context, state) => const SharesScreen(),
+        routes: [
+          GoRoute(
+            path: 'new',
+            name: RouteNames.shareCreate,
+            builder: (context, state) => const ShareCreateScreen(),
+          ),
+        ],
+      ),
+
       // Feature routes
       GoRoute(
         path: RoutePaths.recommendations,

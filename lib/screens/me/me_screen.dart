@@ -9,6 +9,7 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/buddy_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/shares_provider.dart';
 import '../../providers/tutorial_provider.dart';
 import '../../providers/upgrade_gate_provider.dart';
 import '../../router/route_names.dart';
@@ -37,6 +38,7 @@ class MeScreen extends ConsumerStatefulWidget {
   static const renameKey = Key('me_rename');
   static const remindersKey = Key('me_reminders');
   static const streakKey = Key('me_streak');
+  static const shareKey = Key('me_share');
   static const settingsKey = Key('me_settings');
   static const tutorialKey = Key('me_tutorial');
   static const feedbackKey = Key('me_feedback');
@@ -127,6 +129,20 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     }
   }
 
+  /// The share row: the create screen while there is no share (or the list
+  /// is not there), else the list.
+  void _openShare() {
+    unawaited(ref.read(shareRowBadgeProvider.notifier).markTapped());
+    final shares = ref.read(sharesProvider).value;
+    unawaited(
+      context.push(
+        shares == null || shares.isEmpty
+            ? RoutePaths.shareCreate
+            : RoutePaths.shares,
+      ),
+    );
+  }
+
   Future<void> _openFeedback() => openExternalUrl(
     context,
     AppConstants.feedbackFormUrl,
@@ -139,6 +155,9 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     final status = ref.watch(buddyProvider).value;
     final version = ref.watch(currentVersionProvider).value;
     final remindersOff = ref.watch(remindersOffProvider).value ?? false;
+    // Watched so the list is loaded when the row is tapped.
+    ref.watch(sharesProvider);
+    final showShareBadge = ref.watch(shareRowBadgeProvider).value ?? false;
 
     final rows = [
       if (remindersOff)
@@ -157,6 +176,14 @@ class _MeScreenState extends ConsumerState<MeScreen> {
           subtitle: _streakSubtitle(status),
           onTap: () => unawaited(_openStreak()),
         ),
+      BbSettingsItem(
+        key: MeScreen.shareKey,
+        icon: Icons.person_add_alt_1_outlined,
+        title: 'Mit Berater:in teilen',
+        subtitle: 'Tagebuch für Diätolog:in oder Ärzt:in freigeben',
+        badge: showShareBadge ? 'Neu' : null,
+        onTap: _openShare,
+      ),
       BbSettingsItem(
         key: MeScreen.settingsKey,
         icon: Icons.settings_outlined,
