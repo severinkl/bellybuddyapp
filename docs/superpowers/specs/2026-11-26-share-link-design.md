@@ -4,8 +4,9 @@
 https://claude.ai/artifact/P1iJWvSx1AsFkCyD5rJMYo (the canvas keeps each screen's HTML as `project/<name>.dc.html`:
 `Main`, `Teilen`, `Link`, `Code`, `Bericht`; take colours and layout from there). Screens 6–14 on the same canvas show the
 later stages and are **not** part of this design.
-**Repos:** app `severinkl/bellybuddyapp` (branch `feat/share-link` from `develop` @ 22a9a2b) and core `severinkl/bellybuddy-core`
-(api, migration, web view in `frontend/`; branch from `develop`). App and core ship together.
+**Repos:** app `severinkl/bellybuddyapp` (branch `feat/share-link` from `develop` @ 22a9a2b), core `severinkl/bellybuddy-core`
+(api, migration, edge config, privacy policy; branch from `develop`) and a **new** private repo `severinkl/bellybuddy-connect`
+(the dietitian-facing web, served at `connect.bellybuddy.at`). The three ship together, core first.
 
 ## 1. Intent
 
@@ -35,6 +36,8 @@ read the last weeks at a glance and print them; the client sees whether it was o
 | 2 | Live or frozen | live / frozen at creation | **Live**: new entries appear while the share is valid |
 | 3 | Stage 2: write-back | read-only / one-way recommendations / chat | One-way recommendations (stage 2, not here) |
 | 4 | Stage 3: how much we run | booking + payment, video elsewhere / everything / directory only | Booking and payment with us, video elsewhere (stage 3, not here) |
+| 5 | Where the dietitian web lives | page in the admin web app / second app in core / new repo | **New repo** `bellybuddy-connect`, address **`connect.bellybuddy.at`** |
+| 6 | Privacy-policy version | bump (all users consent again once) / no bump | **Bump** |
 
 Shown in the mockups and not objected to (Severin saw them before deciding 2–4): entry in „Ich" only; photos off by default; a
 six-digit code next to the link; display name only; formal „Sie" in the web view; a portal sign-up box in the view.
@@ -92,7 +95,7 @@ accepted a newer policy version, the view shows the neutral „nicht mehr gülti
 
 ### 5.2 Link and code
 - Creating a share returns a link and a six-digit code, once. The server stores only hashes of both.
-- The link is `https://app.bellybuddy.at/teilen#<token>`. The token sits in the URL fragment so it never reaches the server's
+- The link is `https://connect.bellybuddy.at/teilen#<token>`. The token sits in the URL fragment so it never reaches the server's
   request log or a Referer; the page sends it in a request body. The token has at least 128 bits of randomness.
 - The code is entered on the web page. Five wrong codes lock the share for good; the client sees „Gesperrt" and creates a new
   one. Requests are also rate-limited per address with the api's existing throttle.
@@ -116,8 +119,10 @@ accepted a newer policy version, the view shows the neutral „nicht mehr gülti
 - Deleting the account deletes all shares.
 
 ### 5.4 Web view (mockup screens 4–5)
-- A public page of the existing web app at `/teilen`, German, formal „Sie", not indexed by search engines, usable from 360 px
-  width, built for a desktop browser.
+- A public page at `/teilen` of the new web project „Belly Buddy Connect" (`connect.bellybuddy.at`), German, formal „Sie", not
+  indexed by search engines, usable from 360 px width, built for a desktop browser. It is a separate project and address
+  from the admin web app on purpose: the view renders text typed by clients and must not share an origin with admin logins,
+  and stages 2 and 3 grow it into its own product. The root path stays free for the stage 2 portal.
 - **Code page:** what this is, the code field, „Tagebuch öffnen", and the sentence that the data belongs to the person sharing
   it. Wrong code: how many tries are left. Ended, expired, locked or unknown link: one neutral page („Diese Freigabe ist nicht
   mehr gültig. Bitten Sie Ihre Klientin oder Ihren Klienten um einen neuen Link.") that does not say which of the four it is.
@@ -149,8 +154,9 @@ accepted a newer policy version, the view shows the neutral „nicht mehr gülti
 ### 5.5 Privacy and legal
 - The privacy policy (`frontend/src/pages/legal/privacyPolicy.ts` and `docs/legal` in core) gets a section on sharing: what is
   shared, that the client starts and ends it, the access record, and the portal sign-up.
-- Claude's call: this does **not** raise the policy version that sends every user through the consent screen again. Sharing is
-  optional and has its own confirmation, stored per share.
+- Decision 6: the policy version **is** raised, following core's rule („bump on every change of substance"). Every user
+  confirms the consent screen once after the update; until then their existing shares show the „nicht mehr gültig" page
+  (§5.1).
 - Sentry and logs must not contain token, code, view session or diary content from these routes.
 
 ## 6. Non-goals
@@ -174,6 +180,8 @@ accepted a newer policy version, the view shows the neutral „nicht mehr gülti
 - How the app stores link and code on the device.
 - The exact widget structure, and whether the three app screens are routes or sheets.
 - Whether the system share sheet needs a new package.
+- The new repo's tooling beyond „the same stack as core's `frontend/`" (React, Vite, TypeScript, bun), and how its build
+  reaches the host, as long as core's Caddy serves it and production changes are run by Severin.
 - Print layout details and the colour values of the web view (take them from the mockup and the app's palette; the view has
   one light theme).
 - A flag in `app_config` to hide the Ich row, if that makes the release safer.
@@ -181,7 +189,8 @@ accepted a newer policy version, the view shows the neutral „nicht mehr gülti
 ## 9. Open for Severin (do not block stage 1)
 - What the existing `nutritionist_clients` links and „Belly Buddy Connect" were used for, and whether anything there must
   survive into stage 2.
-- Legal check of two of Claude's calls above: updating the policy without a new consent round, and the portal sign-up without
-  a confirmation mail.
+- Legal check of Claude's call above: the portal sign-up without a confirmation mail.
+- Infra, by Severin (no infra access on the dev box): the DNS record for `connect.bellybuddy.at` and the first deploy of the
+  new project on the production host.
 - Legal check that listing only Diätolog:innen is required in Austria (stage 3), and that consultation payments may bypass the
   stores' in-app purchase (stage 3).

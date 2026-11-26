@@ -4,7 +4,7 @@
 
 **Goal:** A client creates a code-protected, live, read-only share of their diary in the app, and a dietitian opens it in a browser.
 
-**Architecture:** Core gets a `data_shares` table, an authenticated `shares` route (create, end), a public `share-view` route (open with token + code, load data with a short view session) and a public page `/teilen` in the existing web app. The app lists shares through PostgREST, creates and ends them through the api, and keeps link and code on the device. Patterns in the view come from core's existing `insights.py`.
+**Architecture:** Core gets a `data_shares` table, an authenticated `shares` route (create, end) and a public `share-view` route (open with token + code, load data with a short view session). A new repo, `bellybuddy-connect`, holds the dietitian-facing web page `/teilen`, served by core's Caddy at `connect.bellybuddy.at`. The app lists shares through PostgREST, creates and ends them through the api, and keeps link and code on the device. Patterns in the view come from core's existing `insights.py`.
 
 **Tech Stack:** core: FastAPI, SQLAlchemy async, alembic, PyJWT, pytest; React + Vite + TypeScript + vitest (bun). App: Flutter, Riverpod, GoRouter, Freezed, supabase_flutter.
 
@@ -12,12 +12,14 @@
 
 ## Repos and commands
 
-| | Core (tasks C1–C9) | App (tasks A1–A4) |
-|---|---|---|
-| Repo | `severinkl/bellybuddy-core`, clone to `~/projects/bellybuddy-core` if absent | `~/projects/bellybuddy/.worktrees/share-link` |
-| Branch | `feat/share-link` from `origin/develop` | `feat/share-link` (exists) |
-| Tests | `cd backend && TEST_DATABASE_URL=… uv run pytest <path>` against the dev stack (`scripts/dev-env.sh`, `docker compose up -d --wait`, `docker compose stop worker`; see core `README.md`) · `cd frontend && bun run test` | `flutter test <path>` |
-| Gates | `uv run ruff check . && uv run black --check . && uv run mypy --strict app` · `bun run lint && bun run typecheck && bun run build` | `dart format --set-exit-if-changed . && flutter analyze` |
+| | Core (tasks C1–C8) | Connect (tasks W1–W4) | App (tasks A1–A4) |
+|---|---|---|---|
+| Repo | `severinkl/bellybuddy-core`, clone to `~/projects/bellybuddy-core` if absent | `severinkl/bellybuddy-connect` (**new**, private), at `~/projects/bellybuddy-connect` | `~/projects/bellybuddy/.worktrees/share-link` |
+| Branch | `feat/share-link` from `origin/develop` | `feat/share-view` from `develop` | `feat/share-link` (exists) |
+| Tests | `cd backend && TEST_DATABASE_URL=… uv run pytest <path>` against the dev stack (`scripts/dev-env.sh`, `docker compose up -d --wait`, `docker compose stop worker`; see core `README.md`) · `cd frontend && bun run test` | `bun run test` · `bunx playwright test` | `flutter test <path>` |
+| Gates | `uv run ruff check . && uv run black --check . && uv run mypy --strict app` · `bun run lint && bun run typecheck && bun run build` | `bun run lint && bun run typecheck && bun run build` | `dart format --set-exit-if-changed . && flutter analyze` |
+
+Order: C1–C5, then C6–C8 and W1–W4 (W2 needs C5's contract, W4 needs nothing running), then A1–A4.
 
 The app repo's pre-commit hook fails inside a worktree (Flutter reports version `0.0.0-unknown` there). Run the two app gates by hand before each commit and commit with `--no-verify`; Severin approved this on 2026-11-26.
 
@@ -30,16 +32,17 @@ The app repo's pre-commit hook fails inside a worktree (Flutter reports version 
 - The view shows nothing that identifies the client beyond the display name: no email, birth year, gender, height, weight, user id.
 - Period values: `14d`, `30d`, `all`. Validity values: 7, 30, 90 days. At most 5 active shares per user. 5 wrong codes lock a share. View session: 15 minutes.
 - Do not touch `nutritionist_*` tables, their policies or the admin „Nutritionists" tab.
-- Do **not** change `PRIVACY_POLICY_VERSION` (core `app/domain/privacy.py`, `frontend/.../privacyPolicy.ts`, app `AppConstants.privacyPolicyVersion`). See „Open decision" at the end.
+- `PRIVACY_POLICY_VERSION` becomes `"2026-11-27"` in all three places together: core `app/domain/privacy.py` and `frontend/src/pages/legal/privacyPolicy.ts` (Task C7), app `AppConstants.privacyPolicyVersion` (Task A3).
+- The share link is `https://connect.bellybuddy.at/teilen#<token>`. Nothing in this plan changes the production host or DNS; those steps are listed for Severin.
 - Conventional commits. PRs target `develop` in both repos. Never arm auto-merge; stop at `gh pr create`.
 
 ## Review Focus
 
-1. **A share ended while the view is open.** The next data request must fail and the page must switch to the neutral „nicht mehr gültig" page. Tests in C5 and C7.
-2. **A client with no gut-feeling entries, or no entries at all, in the period.** The view must render with „noch nicht genug Einträge" and empty-day cells, not crash or show `0 von 0`. Tests in C4 and C7.
+1. **A share ended while the view is open.** The next data request must fail and the page must switch to the neutral „nicht mehr gültig" page. Tests in C5 and W3.
+2. **A client with no gut-feeling entries, or no entries at all, in the period.** The view must render with „noch nicht genug Einträge" and empty-day cells, not crash or show `0 von 0`. Tests in C4 and W3.
 3. **Wrong codes from several browsers at once.** The count is per share, not per browser; the fifth wrong code locks; a correct code after the lock is refused. Test in C5.
 4. **Period boundaries in the client's time zone.** An entry at 23:30 wall clock on the first day of a 14-day period is included; one at 23:30 the day before is not, also across the October clock change. Test in C4.
-5. **A display name with markup, emoji or surrounding spaces.** It is trimmed, limited to 40 characters, stored as typed and rendered as text. Tests in C3 and C7.
+5. **A display name with markup, emoji or surrounding spaces.** It is trimmed, limited to 40 characters, stored as typed and rendered as text. Tests in C3 and W3.
 
 ---
 
@@ -129,10 +132,10 @@ View sessions are HS256 JWTs signed with `settings.jwt_secret`, audience `share-
 - Modify: `backend/app/routes/delete_account.py` (delete the user's `data_shares` rows explicitly, with the other per-user tables)
 - Test: `backend/tests/routes/test_shares.py`, `backend/tests/routes/test_delete_account.py`
 
-**Interfaces — Consumes:** C1 table, C2 functions, `app.auth.current_user`, `app.domain.privacy.has_current_consent`, `settings.public_app_url`.
+**Interfaces — Consumes:** C1 table, C2 functions, `app.auth.current_user`, `app.domain.privacy.has_current_consent`, `settings.public_connect_url` (added in C6; until then use `public_app_url` and switch in C6).
 **Produces:** `NAME = "shares"`.
 
-`POST /functions/v1/shares` with JSON `{"display_name": str, "period": "14d"|"30d"|"all", "valid_days": 7|30|90, "meals": bool, "drinks": bool, "gut": bool, "toilet": bool, "patterns": bool, "photos": bool}` → `200 {"id": str, "link": "<public_app_url>/teilen#<token>", "code": "482913", "expires_at": iso}`.
+`POST /functions/v1/shares` with JSON `{"display_name": str, "period": "14d"|"30d"|"all", "valid_days": 7|30|90, "meals": bool, "drinks": bool, "gut": bool, "toilet": bool, "patterns": bool, "photos": bool}` → `200 {"id": str, "link": "<connect url>/teilen#<token>", "code": "482913", "expires_at": iso}`.
 `POST /functions/v1/shares/{id}/end` → `200 {"ok": true}`; idempotent; `404` for another user's or an unknown id.
 
 Errors (`ApiError`, German message): `400` invalid body (the same rules as C1's checks; `display_name` is trimmed first), `403` „Bitte stimme zuerst der Datenschutzerklärung zu." without current consent, `409` „Du hast schon 5 aktive Freigaben. Beende eine, um eine neue zu erstellen." when 5 are active as `state_of` sees them.
@@ -141,7 +144,7 @@ Errors (`ApiError`, German message): `400` invalid body (the same rules as C1's 
 
 ```python
 async def test_create_returns_link_and_code_and_stores_only_hashes(...)
-    # link starts with f"{public_app_url}/teilen#"; code ^\d{6}$; row.token_hash == hash_token(token); no column holds token or code
+    # link ends with "/teilen#<token>"; code ^\d{6}$; row.token_hash == hash_token(token); no column holds token or code
 async def test_display_name_is_trimmed_and_kept_as_typed(...)      # "  <b>Anna</b> 🫶 " -> "<b>Anna</b> 🫶"
 @pytest.mark.parametrize("body_change", [...])                     # every C1 check, valid_days 14, name of 41 chars -> 400
 async def test_create_needs_current_health_consent(...)            # 403, no row
@@ -275,12 +278,76 @@ async def test_portal_interest_stores_one_row_per_address_and_validates(...)
 - [ ] **Step 4: Run** `uv run pytest tests/routes/test_share_view.py tests/routes/test_portal_interest.py tests/routes/test_mounting.py` — expected: PASS.
 - [ ] **Step 5: Commit** `feat(api): public share-view and portal-interest routes`.
 
-### Task C6: Web — `/teilen` code page, invalid page, routing, no indexing, no Sentry leak
+### Task C6: Edge and settings for `connect.bellybuddy.at`
 
 **Files:**
-- Create: `frontend/src/pages/share/shareApi.ts`, `frontend/src/pages/share/SharePage.tsx`, `frontend/src/pages/share/CodeForm.tsx`, `frontend/src/pages/share/InvalidShare.tsx`, `frontend/src/pages/share/types.ts`
-- Modify: `frontend/src/App.tsx` (public route `/teilen`, next to `/datenschutz`), `frontend/src/lib/sentry.ts`, `Caddyfile`
-- Test: `frontend/src/pages/share/SharePage.test.tsx`, `frontend/src/pages/share/shareApi.test.ts`
+- Modify: `Caddyfile`, `docker-compose.yml`, `docker-compose.prod.yml`, `environment/ci/config.env`, `environment/production/config.env`, `scripts/dev-env.sh`, `scripts/smoke.sh`, `backend/app/settings.py`, `backend/app/routes/shares.py`, `docs/needs-from-severin.md`, `CLAUDE.md` (one line naming the new repo)
+- Test: `backend/tests/routes/test_shares.py` (link host), the existing settings tests, `scripts/test-deploy.sh` rehearsal
+
+**Interfaces — Produces:**
+- `Settings.public_connect_url: str` (env `PUBLIC_CONNECT_URL`; prod `https://connect.bellybuddy.at`, local `http://localhost:8002`). C3's link becomes `f"{settings.public_connect_url}/teilen#{token}"`.
+- Caddy site `{$CONNECT_HOST}` (prod `connect.bellybuddy.at`, local `http://localhost:8002`): a static SPA from `/srv/connect` (`try_files {path} /index.html`), hashed `/assets/*` cached for good, and on every response `Content-Security-Policy "frame-ancestors 'none'"`, `X-Frame-Options DENY`, `X-Content-Type-Options nosniff`, `X-Robots-Tag "noindex, nofollow"`, `Referrer-Policy no-referrer`.
+- Compose mounts `${CONNECT_WEB_DIR}:/srv/connect:ro` into Caddy (prod `/opt/bellybuddy-connect/dist`; local default `../bellybuddy-connect/dist`). When the directory is empty, Caddy answers 404 and the stack still starts.
+- `CORS_ORIGINS` gains the Connect origin in both environments.
+- `docs/needs-from-severin.md`: the DNS record `connect.bellybuddy.at` → the production host, and creating `/opt/bellybuddy-connect` on it.
+
+- [ ] **Step 1: Write the failing test:** `test_create_returns_link…` expects the link to start with `f"{settings.public_connect_url}/teilen#"`; a settings test expects `public_connect_url` to be required.
+- [ ] **Step 2: Run** — expected: FAIL.
+- [ ] **Step 3: Implement.** Validate the Caddyfile with the pinned Caddy image (`caddy validate`). Add one line to `scripts/smoke.sh`: the Connect host answers (200 with a build present, 404 without).
+- [ ] **Step 4: Run** the backend tests, bring the local stack up and run `scripts/smoke.sh`; rehearse with `scripts/test-deploy.sh` — expected: every line OK.
+- [ ] **Step 5: Commit** `feat(edge): serve Belly Buddy Connect at its own host`.
+
+### Task C7: Privacy policy: sharing section and version bump
+
+**Files:**
+- Modify: `frontend/src/pages/legal/privacyPolicy.ts`, `docs/legal/` (the same text where the policy source lives), `backend/app/domain/privacy.py`
+- Test: `frontend/src/pages/legal/PrivacyPolicyPage.test.tsx`, `backend/tests/domain/test_privacy.py`
+
+Section „Tagebuch teilen", in the policy's existing voice, covering: what a share contains (the chosen categories and the display name), that only the user starts it and can end it at any time, that link and code are stored as hashes, that the time and number of openings are recorded, the validity limits, that the view is served at `connect.bellybuddy.at`, and that its sign-up box stores an email address for one message and deletes it after that or after 12 months.
+
+`PRIVACY_POLICY_VERSION` becomes `"2026-11-27"` in `privacyPolicy.ts` and `privacy.py` (and in the app, Task A3). Every user then passes the consent screen once; until they do, their shares answer 410 (C5).
+
+- [ ] **Step 1: Write the failing test:** the page test expects the heading „Tagebuch teilen" and the version line for 27.11.2026.
+- [ ] **Step 2: Run** — expected: FAIL.
+- [ ] **Step 3: Write the section and bump both constants.**
+- [ ] **Step 4: Run** `bun run test` in `frontend/` and `uv run pytest tests/domain/test_privacy.py` plus the full backend suite (tests that seed consent use the constant) — expected: PASS.
+- [ ] **Step 5: Commit** `feat(legal)!: privacy section for sharing, policy version 2026-11-27`.
+
+### Task C8: Core gates and PR
+
+- [ ] **Step 1:** Run every core gate from the table at the top and the full `uv run pytest`. Expected: all green.
+- [ ] **Step 2:** Push `feat/share-link` and open a PR to `develop` titled `feat: share a diary by link (Berater-Freigabe, stage 1)`, linking the spec. Stop there.
+
+---
+
+## Part 2: Connect (new repo `severinkl/bellybuddy-connect`)
+
+### Task W1: Create and scaffold the repo
+
+**Files (all new, in `~/projects/bellybuddy-connect`):** `package.json`, `bun.lock`, `vite.config.ts`, `tsconfig*.json`, `eslint.config.js`, `tailwind` setup, `index.html`, `src/main.tsx`, `src/App.tsx`, `src/vite-env.d.ts`, `src/test/setup.ts`, `src/App.test.tsx`, `.env.example`, `.gitignore`, `.gitleaks.toml`, `README.md`, `CLAUDE.md`, `.github/workflows/ci.yml`
+
+**Interfaces — Produces:**
+- A **private** GitHub repo `severinkl/bellybuddy-connect` with branches `main` and `develop` (default `develop` for PRs, as in core), created with `gh repo create severinkl/bellybuddy-connect --private`.
+- The same stack and versions as core's `frontend/` (React, Vite, TypeScript, bun, Tailwind, vitest, eslint), copied from its config files where they apply. No Supabase client, no Sentry, no analytics.
+- Scripts: `dev`, `build`, `lint`, `typecheck`, `test` (as in core's `frontend/package.json`).
+- `VITE_API_URL` (local `http://localhost:8000`, prod `https://api.bellybuddy.at`), read in one place: `src/config.ts` → `export const API_URL: string`.
+- `index.html`: `lang="de"`, title „Belly Buddy Connect", `<meta name="robots" content="noindex,nofollow">`.
+- Routes: `/teilen` (placeholder in this task) and a not-found page for everything else, with the text „Diese Seite gibt es nicht."
+- `CLAUDE.md`: what the project is, its relation to core and the app, the conventions (German, formal „Sie"; conventional commits; PRs to `develop`; never auto-merge; no secrets or diary content in logs), the commands.
+- CI: lint, typecheck, test, build, gitleaks, on pushes and PRs.
+
+- [ ] **Step 1: Write the failing test** `src/App.test.tsx`: `/teilen` renders the placeholder; `/anything` renders „Diese Seite gibt es nicht."
+- [ ] **Step 2: Run** `bun run test` — expected: FAIL.
+- [ ] **Step 3: Scaffold**, create the repo, push `main` and `develop`, branch `feat/share-view`.
+- [ ] **Step 4: Run** `bun run lint && bun run typecheck && bun run test && bun run build` — expected: PASS. CI green on the pushed branch.
+- [ ] **Step 5: Commit** `chore: scaffold Belly Buddy Connect`.
+
+### Task W2: `/teilen` code page and invalid page
+
+**Files:**
+- Create: `src/pages/share/shareApi.ts`, `src/pages/share/SharePage.tsx`, `src/pages/share/CodeForm.tsx`, `src/pages/share/InvalidShare.tsx`, `src/pages/share/types.ts`
+- Modify: `src/App.tsx`
+- Test: `src/pages/share/SharePage.test.tsx`, `src/pages/share/shareApi.test.ts`
 
 **Interfaces — Produces:**
 
@@ -297,27 +364,25 @@ export function loadShare(session: string): Promise<{ view: ShareView; session: 
 
 Behaviour:
 - `SharePage` reads the token from `window.location.hash` once, then removes the hash from the address bar with `history.replaceState`. No hash → `InvalidShare`.
-- Calls go by `fetch` to `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/share-view/...` with `content-type: application/json` only (no `apikey`, no `authorization`).
+- Calls go by `fetch` to `${API_URL}/functions/v1/share-view/...` with `content-type: application/json` only.
 - The session lives in React state only: not in `localStorage`, `sessionStorage` or the URL. A reload asks for the code again.
 - `CodeForm` copy, exactly as mockup screen 4: heading „Jemand teilt ein Ernährungstagebuch mit Ihnen", the paragraph, label „Code", button „Tagebuch öffnen", the footer sentence. Wrong code: „Der Code stimmt nicht. Noch N Versuche." (N = 1: „Noch 1 Versuch."). Busy: „Zu viele Versuche. Bitte warten Sie ein paar Minuten." Offline: „Keine Verbindung. Bitte versuchen Sie es erneut."
 - `InvalidShare`: „Diese Freigabe ist nicht mehr gültig. Bitten Sie Ihre Klientin oder Ihren Klienten um einen neuen Link."
-- While `/teilen` is mounted, `document.title` is „Belly Buddy · Geteiltes Tagebuch" and a `<meta name="robots" content="noindex,nofollow">` is in the head. `Caddyfile`: `/teilen` also gets `X-Robots-Tag "noindex, nofollow"` and `Referrer-Policy "no-referrer"`.
-- `sentry.ts`: a `beforeSend` that drops every event whose page path is `/teilen`.
 
-- [ ] **Step 1: Write the failing tests:** renders the code form when a hash is present and clears the hash; `InvalidShare` without a hash and after a 410; the wrong-code line with 3 tries and with 1; the busy and offline lines; after a 200, `DiaryView` (a stub in this task) receives the loaded view; `shareApi` maps 200/401/410/429/network to the five kinds and sends no `apikey` header; nothing is written to `localStorage` or `sessionStorage`.
-- [ ] **Step 2: Run** `bun run test src/pages/share` — expected: FAIL, module not found.
-- [ ] **Step 3: Implement.** Styling follows mockup screen 4 with the palette of `Bericht.dc.html`; one light theme; Tailwind classes as the rest of the frontend.
+- [ ] **Step 1: Write the failing tests:** renders the code form when a hash is present and clears the hash; `InvalidShare` without a hash and after a 410; the wrong-code line with 3 tries and with 1; the busy and offline lines; after a 200, `DiaryView` (a stub in this task) receives the loaded view; `shareApi` maps 200/401/410/429/network to the five kinds and sends only the `content-type` header; nothing is written to `localStorage` or `sessionStorage`.
+- [ ] **Step 2: Run** `bun run test src/pages/share` — expected: FAIL.
+- [ ] **Step 3: Implement.** Styling follows mockup screen 4 with the palette of `Bericht.dc.html`; one light theme.
 - [ ] **Step 4: Run** `bun run test && bun run lint && bun run typecheck` — expected: PASS.
-- [ ] **Step 5: Commit** `feat(web): /teilen code page`.
+- [ ] **Step 5: Commit** `feat: /teilen code page`.
 
-### Task C7: Web — the diary view and print
+### Task W3: The diary view and print
 
 **Files:**
-- Create: `frontend/src/pages/share/DiaryView.tsx`, `frontend/src/pages/share/sections/{ShareHeader,Summary,Course,PatternLists,DayList,PortalBox}.tsx`, `frontend/src/pages/share/share-print.css`
-- Modify: `frontend/src/pages/share/SharePage.tsx` (replace the stub; reload the view every 5 minutes and on window focus; an `"invalid"` answer switches to `InvalidShare`)
-- Test: `frontend/src/pages/share/DiaryView.test.tsx`, `frontend/src/pages/share/sections/PortalBox.test.tsx`
+- Create: `src/pages/share/DiaryView.tsx`, `src/pages/share/sections/{ShareHeader,Summary,Course,PatternLists,DayList,PortalBox}.tsx`, `src/pages/share/share-print.css`
+- Modify: `src/pages/share/SharePage.tsx` (replace the stub; reload the view every 5 minutes and on window focus; an `"invalid"` answer switches to `InvalidShare`)
+- Test: `src/pages/share/DiaryView.test.tsx`, `src/pages/share/sections/PortalBox.test.tsx`
 
-**Interfaces — Consumes:** `ShareView`, `loadShare` from C6; `POST /functions/v1/portal-interest` from C5.
+**Interfaces — Consumes:** `ShareView`, `loadShare` from W2; `POST ${API_URL}/functions/v1/portal-interest` from C5.
 
 Layout and copy follow mockup screen 5 top to bottom, usable from 360 px width (wide tables scroll inside their own box). Fixed points:
 - Header: „Geteiltes Tagebuch, nur lesen", „Freigabe gültig bis <date>", button „Drucken / als PDF sichern" → `window.print()`.
@@ -334,30 +399,28 @@ Layout and copy follow mockup screen 5 top to bottom, usable from 360 px width (
 - [ ] **Step 2: Run** — expected: FAIL.
 - [ ] **Step 3: Implement.**
 - [ ] **Step 4: Run** `bun run test && bun run lint && bun run typecheck && bun run build` — expected: PASS.
-- [ ] **Step 5: Commit** `feat(web): shared diary view with print`.
+- [ ] **Step 5: Commit** `feat: shared diary view with print`.
 
-### Task C8: Privacy policy section and end-to-end test
+### Task W4: Browser test, deploy script, runbook, PR
 
 **Files:**
-- Modify: `frontend/src/pages/legal/privacyPolicy.ts` (new section; **version constant unchanged**), `docs/legal/` (the same text where the policy source lives), `e2e/tests/` (new `share.spec.ts`), `e2e/fixtures/` as needed
-- Test: `frontend/src/pages/legal/PrivacyPolicyPage.test.tsx`, `e2e/tests/share.spec.ts`
+- Create: `e2e/share.spec.ts`, `playwright.config.ts`, `deploy.sh`, `docs/runbooks/deploy.md`, `docs/needs-from-severin.md`
+- Modify: `.github/workflows/ci.yml` (run the browser test), `README.md`
 
-Section „Tagebuch teilen", in the policy's existing voice, covering: what a share contains (the chosen categories and the display name), that only the user starts it and can end it at any time, that link and code are stored as hashes, that the time and number of openings are recorded, the validity limits, and that the web view's sign-up box stores an email address for one message and deletes it after that or after 12 months.
+- `e2e/share.spec.ts` runs the built site against a **mocked** api (Playwright route interception, synthetic data): wrong code shows the tries line; the right code shows „Tagebuch von"; when the next data call answers 410 the invalid page appears; the print stylesheet hides the header button (`page.emulateMedia({ media: "print" })`).
+- `deploy.sh`, run on the host from `/opt/bellybuddy-connect`: `git reset --hard origin/main`, `bun install --frozen-lockfile`, `VITE_API_URL=https://api.bellybuddy.at bun run build` into a fresh directory, then swap it into `dist/` in one move so Caddy never serves a half-written build. It refuses to run with a dirty tree and prints the deployed commit.
+- `docs/runbooks/deploy.md`: first-time setup on the host (clone, deploy key), the deploy command, rollback (deploy the previous commit).
+- `docs/needs-from-severin.md`: the DNS record, the first-time host setup, and running the first deploy. Nothing in this plan changes the production host.
 
-- [ ] **Step 1: Write the failing tests:** the page test expects the heading „Tagebuch teilen"; `share.spec.ts` seeds a user with consent and entries, creates a share through the api, opens `/teilen#<token>`, enters a wrong code (sees the tries line), the right code (sees „Tagebuch von"), ends the share through the api, triggers a reload of the view and sees the invalid page.
-- [ ] **Step 2: Run** — expected: FAIL.
-- [ ] **Step 3: Write the section.** Run `uv run pytest tests/domain/test_privacy.py` to confirm the version guard still passes.
-- [ ] **Step 4: Run** the frontend tests and the e2e suite as CI does — expected: PASS.
-- [ ] **Step 5: Commit** `docs(legal): privacy section for sharing; e2e for /teilen`.
-
-### Task C9: Core gates and PR
-
-- [ ] **Step 1:** Run every core gate from the table at the top and the full `uv run pytest`. Expected: all green.
-- [ ] **Step 2:** Push `feat/share-link` and open a PR to `develop` titled `feat: share a diary by link (Berater-Freigabe, stage 1)`, linking the spec. Stop there.
+- [ ] **Step 1: Write the browser test.** Run `bunx playwright test` — expected: PASS against the build from W3 (the test is new; a failure here is a defect in W2/W3 to fix in this task).
+- [ ] **Step 2: Write `deploy.sh`** and check it with `shellcheck`; rehearse it locally into a temp directory with `VITE_API_URL=http://localhost:8000`.
+- [ ] **Step 3: Write the runbook and the needs list.**
+- [ ] **Step 4: Run** every gate and the browser test — expected: PASS, CI green.
+- [ ] **Step 5: Commit** `test: browser test for /teilen; chore: deploy script and runbook`, push, and open a PR to `develop` titled `feat: shared diary view at /teilen`, linking the spec and the core PR. Stop there.
 
 ---
 
-## Part 2: App
+## Part 3: App
 
 ### Task A1: Model, service and device store
 
@@ -441,7 +504,7 @@ Behaviour:
 
 **Files:**
 - Create: `lib/screens/shares/share_create_screen.dart`, `lib/screens/shares/widgets/share_created_sheet.dart`
-- Modify: `pubspec.yaml` (add `share_plus`, the current major), `lib/router/app_router.dart`
+- Modify: `pubspec.yaml` (add `share_plus`, the current major), `lib/router/app_router.dart`, `lib/config/constants.dart` (`privacyPolicyVersion = '2026-11-27'`, with the test that pins it)
 - Test: `test/screens/shares/share_create_screen_test.dart`, `test/screens/shares/share_created_sheet_test.dart`
 
 **Interfaces — Consumes:** `sharesProvider`, `NewShare`, `ShareSecretsStore`, `healthConsentProvider`.
@@ -462,11 +525,15 @@ Behaviour, as mockup screens 2 and 3 (upper half):
 ### Task A4: App gates, local run against core, PR
 
 - [ ] **Step 1:** Run `dart format --set-exit-if-changed .`, `flutter analyze` and the full `flutter test`. Expected: all green.
-- [ ] **Step 2:** With the core dev stack from Part 1 running, create a share in the app on a simulator or emulator, open the link in a browser, enter the code, and check: the diary shows; a new meal logged in the app appears after a reload; „Freigabe beenden" turns the open page into the invalid page within one reload. Note any deviation in the PR.
-- [ ] **Step 3:** Push `feat/share-link` and open a PR to `develop` titled `feat: share your diary with a dietitian by link`, linking the spec and the core PR. Stop there. App and core are released together, core first.
+- [ ] **Step 2:** With the core dev stack from Part 1 running and Connect's build in `CONNECT_WEB_DIR`, create a share in the app on a simulator or emulator (after passing the new consent screen once), open the link in a browser, enter the code, and check: the diary shows; a new meal logged in the app appears after a reload; „Freigabe beenden" turns the open page into the invalid page within one reload. Note any deviation in the PR.
+- [ ] **Step 3:** Push `feat/share-link` and open a PR to `develop` titled `feat: share your diary with a dietitian by link`, linking the spec and the core and Connect PRs. Stop there. The three are released together: core, then Connect, then the app.
 
 ---
 
-## Open decision (does not block building)
+---
 
-Core's own rule says `PRIVACY_POLICY_VERSION` is bumped „on every change of substance", and a bump sends every user through the consent screen once. The approved spec (§5.5) says the sharing section does **not** bump it. This plan follows the spec. If Severin decides to follow the repo rule instead, the change is three constants (core `app/domain/privacy.py`, `frontend/src/pages/legal/privacyPolicy.ts`, app `AppConstants.privacyPolicyVersion`) in Task C8 and a line in the release notes.
+## Needs from Severin before release
+
+- DNS record `connect.bellybuddy.at` → the production host (`bellybuddy-infra`).
+- First-time setup and first deploy of `bellybuddy-connect` on the host (`docs/runbooks/deploy.md` in that repo).
+- `PUBLIC_CONNECT_URL`, `CONNECT_HOST`, `CONNECT_WEB_DIR` and the extended `CORS_ORIGINS` in the production vaultfile are plain config and are set in C6; no new secret is needed.
