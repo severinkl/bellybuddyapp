@@ -101,4 +101,44 @@ void main() {
       expect(profile.weeklyTipsEnabled, isTrue);
     });
   });
+
+  group('UserProfile daily review', () {
+    test(
+      'profile JSON without the new keys → 19:30 and false; with them → read',
+      () {
+        final plain = UserProfile.fromJson(const {});
+        expect(plain.dailyReviewTime, '19:30');
+        expect(plain.dailyReviewReminder, isFalse);
+
+        final set = UserProfile.fromJson(const {
+          'daily_review_time': '21:00',
+          'daily_review_reminder': true,
+        });
+        expect(set.dailyReviewTime, '21:00');
+        expect(set.dailyReviewReminder, isTrue);
+        expect(set.toJson()['daily_review_time'], '21:00');
+        expect(set.toJson()['daily_review_reminder'], isTrue);
+      },
+    );
+
+    test(
+      'withNotifications(true) keeps dailyReviewReminder false; withNotifications(false) clears true',
+      () {
+        const off = UserProfile(
+          remindersEnabled: false,
+          dailySummaryEnabled: false,
+          pushEnabled: false,
+        );
+        expect(off.anyNotificationOn, isFalse);
+        expect(off.withNotifications(true).dailyReviewReminder, isFalse);
+
+        final onlyReview = off.copyWith(dailyReviewReminder: true);
+        expect(onlyReview.anyNotificationOn, isTrue);
+        expect(onlyReview.withNotifications(true).dailyReviewReminder, isTrue);
+        final cleared = onlyReview.withNotifications(false);
+        expect(cleared.dailyReviewReminder, isFalse);
+        expect(cleared.anyNotificationOn, isFalse);
+      },
+    );
+  });
 }

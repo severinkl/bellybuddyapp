@@ -12,6 +12,15 @@ class ReviewDay {
   /// Local date (time of day ignored).
   final DateTime day;
   final bool yesterday;
+
+  // Equal by value, so what watches the open day hears only of a new one,
+  // not of every minute.
+  @override
+  bool operator ==(Object other) =>
+      other is ReviewDay && other.day == day && other.yesterday == yesterday;
+
+  @override
+  int get hashCode => Object.hash(day, yesterday);
 }
 
 DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
