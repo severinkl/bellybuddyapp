@@ -451,6 +451,27 @@ class AppConstants {
   /// Days between two store rating requests, at least.
   static const int ratingAskMinDays = 90;
 
+  /// Prefix of the day whose daily review was closed
+  /// (`daily_review_closed_<userId>`, yyyy-MM-dd).
+  static const String keyDailyReviewClosedPrefix = 'daily_review_closed_';
+
+  /// Prefix of the review day the Buddy's review line was said for
+  /// (`daily_review_said_<userId>`, yyyy-MM-dd).
+  static const String keyDailyReviewSaidPrefix = 'daily_review_said_';
+
+  /// Until this hour (local) yesterday's review stays open.
+  static const int dailyReviewCarryOverHour = 11;
+
+  /// Days (ending with the review day) in which meals count as recent.
+  static const int dailyReviewRecentDays = 14;
+
+  /// Default time from which the daily review shows (HH:MM).
+  static const String dailyReviewDefaultTime = '19:30';
+
+  /// Bounds of the review time, in minutes since midnight (16:00 to 23:30).
+  static const int dailyReviewEarliestMinutes = 16 * 60;
+  static const int dailyReviewLatestMinutes = 23 * 60 + 30;
+
   /// Whether the Ich row „Mit Berater:in teilen" was tapped once (a bool, on
   /// the device, not per user): its „Neu" badge is gone after that.
   static const String keyShareRowTapped = 'share_row_tapped';
