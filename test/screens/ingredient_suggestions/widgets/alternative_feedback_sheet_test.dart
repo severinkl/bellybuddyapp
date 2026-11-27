@@ -214,7 +214,7 @@ void main() {
       matching: find.byIcon(Icons.check_circle),
     );
     expect(check, findsOneWidget);
-    expect(tester.widget<Icon>(check).color, AppTheme.primary);
+    expect(tester.widget<Icon>(check).color, AppTheme.alternativeFitsCheck);
   });
 
   testWidgets('„Zurücksetzen" appears only with a verdict and restores the '

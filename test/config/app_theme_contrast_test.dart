@@ -48,6 +48,15 @@ void main() {
     });
   }
 
+  // WCAG 1.4.11: the „Passt für mich" check on an alternative's picture
+  // sits on a white disc.
+  test('the „Passt für mich" check has at least 3:1 on white', () {
+    expect(
+      _contrast(AppTheme.alternativeFitsCheck, Colors.white),
+      greaterThanOrEqualTo(3.0),
+    );
+  });
+
   test('each care colour has at least 3:1 on the page', () {
     for (final (name, color) in [
       ('careFood', AppTheme.careFood),

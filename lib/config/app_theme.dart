@@ -40,6 +40,10 @@ class AppTheme {
   static const Color successText = Color(0xFF1F6B1F);
   static const Color infoText = Color(0xFF1D4ED8);
 
+  /// The „Passt für mich" check on an alternative's picture (3:1 on its
+  /// white disc).
+  static const Color alternativeFitsCheck = successText;
+
   /// The „Aktiv" state word of a share (dark enough for text on [card]).
   static const Color shareActive = successText;
 

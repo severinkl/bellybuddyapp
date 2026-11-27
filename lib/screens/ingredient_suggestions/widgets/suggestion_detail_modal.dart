@@ -338,7 +338,7 @@ class _AlternativeTile extends StatelessWidget {
                         child: Icon(
                           Icons.check_circle,
                           size: AppConstants.iconSizeSm,
-                          color: AppTheme.primary,
+                          color: AppTheme.alternativeFitsCheck,
                         ),
                       ),
                     ),
