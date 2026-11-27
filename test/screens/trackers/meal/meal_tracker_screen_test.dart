@@ -1,13 +1,17 @@
 // ignore_for_file: invalid_use_of_internal_member
+import 'package:belly_buddy/models/ingredient_suggestion_group.dart' as model;
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/meal_prefill.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
+import 'package:belly_buddy/providers/ingredient_suggestion_provider.dart';
 import 'package:belly_buddy/providers/meal_tracker_provider.dart';
+import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/repositories/meal_media_repository.dart';
+import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/trackers/meal/meal_tracker_screen.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -17,6 +21,7 @@ import 'package:riverpod/src/internals.dart' show Override;
 
 import '../../../helpers/app_host.dart';
 import '../../../helpers/fakes.dart';
+import '../../../helpers/fixtures.dart';
 import '../../../helpers/riverpod_helpers.dart';
 
 /// Builds a 2-route GoRouter so the tracker screen (reached via /edit) can
@@ -493,6 +498,117 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Änderungen verwerfen?'), findsOneWidget);
+    });
+  });
+
+  group('MealTrackerScreen success screen: flagged ingredients', () {
+    model.IngredientSuggestionGroup groupFor(String name, String mealId) =>
+        testSuggestionGroup(
+          ingredientId: 'ing-$name',
+          ingredientName: name,
+        ).copyWith(
+          meals: [
+            model.MealDetail(
+              id: mealId,
+              title: 'Bowl',
+              trackedAt: DateTime(2026, 11, 27, 12),
+            ),
+          ],
+        );
+
+    Future<ProviderContainer> pumpSuccess(
+      WidgetTester tester,
+      List<model.IngredientSuggestionGroup> groups,
+    ) async {
+      final container = ProviderContainer.test(
+        overrides: [
+          entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
+          ingredientRepositoryProvider.overrideWithValue(
+            FakeIngredientRepository(groups: groups),
+          ),
+          mealMediaRepositoryProvider.overrideWithValue(
+            FakeMealMediaRepository(),
+          ),
+          buddyRepositoryProvider.overrideWithValue(FakeBuddyRepository()),
+          userRecipeRepositoryProvider.overrideWithValue(
+            FakeUserRecipeRepository(),
+          ),
+          currentUserIdProvider.overrideWithValue('user-1'),
+        ],
+      );
+      final router = GoRouter(
+        initialLocation: '/meal-tracker',
+        routes: [
+          GoRoute(
+            path: '/meal-tracker',
+            builder: (_, _) => const MealTrackerScreen(),
+          ),
+          GoRoute(
+            path: RoutePaths.ingredientSuggestions,
+            builder: (_, _) =>
+                const Scaffold(body: Text('alternatives-sentinel')),
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: germanRouterApp(router),
+        ),
+      );
+      await tester.pumpAndSettle();
+      container
+          .read(mealTrackerProvider.notifier)
+          .markShowSuccess(savedMealId: 'meal-1');
+      // The success screen's Buddy animates forever: no pumpAndSettle.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 700));
+      return container;
+    }
+
+    testWidgets('success screen: groups for the meal arrive while it is up '
+        '→ the line and the link appear', (tester) async {
+      final container = await pumpSuccess(tester, [
+        groupFor('Zwiebel', 'meal-1'),
+        groupFor('Knoblauch', 'meal-1'),
+        groupFor('Lauch', 'other-meal'),
+      ]);
+      const line =
+          'Knoblauch und Zwiebel könnten deinem Bauch zu schaffen machen.';
+      expect(find.text(line), findsNothing);
+
+      await container
+          .read(ingredientSuggestionProvider.notifier)
+          .fetchSuggestions();
+      await tester.pump();
+
+      expect(find.text(line), findsOneWidget);
+      expect(
+        tester.getTopLeft(find.text(line)).dy,
+        lessThan(tester.getTopLeft(find.text('Trinken eintragen')).dy),
+      );
+
+      await tester.tap(find.text('Alternativen ansehen ›'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text('alternatives-sentinel'), findsOneWidget);
+    });
+
+    testWidgets('success screen: no groups → no line, no placeholder', (
+      tester,
+    ) async {
+      final container = await pumpSuccess(tester, [
+        groupFor('Lauch', 'other-meal'),
+      ]);
+      await container
+          .read(ingredientSuggestionProvider.notifier)
+          .fetchSuggestions();
+      await tester.pump();
+
+      expect(find.textContaining('zu schaffen machen'), findsNothing);
+      expect(find.text('Alternativen ansehen ›'), findsNothing);
+      expect(find.byType(CircularProgressIndicator), findsNothing);
+      expect(find.text('Trinken eintragen'), findsOneWidget);
     });
   });
 }

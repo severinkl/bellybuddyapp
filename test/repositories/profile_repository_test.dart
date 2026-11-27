@@ -394,6 +394,32 @@ void main() {
       expect(updated.containsKey('weekly_tips_enabled'), isFalse);
     });
 
+    test('create and update send the daily review time and reminder', () async {
+      final profile = testUserProfile(
+        dailyReviewTime: '21:00',
+        dailyReviewReminder: true,
+      );
+      when(() => authService.detectAuthMethod()).thenReturn('email');
+      when(() => profileService.upsert(any())).thenAnswer((_) async {});
+      when(() => profileService.update(any(), any())).thenAnswer((_) async {});
+
+      await repo.createProfile('user-123', profile);
+      await repo.updateProfile('user-123', profile);
+
+      final upserted =
+          verify(() => profileService.upsert(captureAny())).captured.single
+              as Map<String, dynamic>;
+      final updated =
+          verify(
+                () => profileService.update('user-123', captureAny()),
+              ).captured.single
+              as Map<String, dynamic>;
+      for (final data in [upserted, updated]) {
+        expect(data['daily_review_time'], '21:00');
+        expect(data['daily_review_reminder'], isTrue);
+      }
+    });
+
     test('setWeeklyTips writes only that column', () async {
       when(() => profileService.update(any(), any())).thenAnswer((_) async {});
 

@@ -45,10 +45,22 @@ class _OsNotifications extends FakeNotificationRepository {
   Future<bool> requestPermission() => requestAllPermissions();
 }
 
+/// Records every profile written.
+class _RecordingProfiles extends FakeProfileRepository {
+  final updates = <UserProfile>[];
+
+  @override
+  Future<void> updateProfile(String userId, UserProfile profile) {
+    updates.add(profile);
+    return super.updateProfile(userId, profile);
+  }
+}
+
 void main() {
   group('SettingsNotificationsScreen reflects what can arrive', () {
     late ProviderContainer container;
     late _OsNotifications os;
+    late _RecordingProfiles repo;
 
     setUp(() => SharedPreferences.setMockInitialValues({}));
 
@@ -60,7 +72,7 @@ void main() {
     }) async {
       os = _OsNotifications(permission, grant: grant);
       final seeded = profile ?? testUserProfile();
-      final repo = FakeProfileRepository()..seedProfile(seeded);
+      repo = _RecordingProfiles()..seedProfile(seeded);
       container = ProviderContainer.test(
         overrides: [
           profileRepositoryProvider.overrideWithValue(repo),
@@ -314,6 +326,203 @@ void main() {
       expect(stored().dailySummaryEnabled, isFalse);
       expect(stored().pushEnabled, isFalse);
     });
+
+    // --- Tagesrückblick ---
+
+    Finder reviewTimeRow() => find.byKey(
+      SettingsNotificationsScreen.dailyReviewTimeKey,
+      skipOffstage: false,
+    );
+
+    /// Opens the time picker from „Ab", types [hour]:[minute] in its input
+    /// mode and confirms.
+    Future<void> pickTime(WidgetTester tester, int hour, int minute) async {
+      // A phone in portrait: the picker's input mode fits.
+      tester.view.physicalSize = const Size(1080, 2400);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(reviewTimeRow());
+      await tester.tap(reviewTimeRow());
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.keyboard_outlined));
+      await tester.pumpAndSettle();
+      final fields = find.descendant(
+        of: find.byType(Dialog),
+        matching: find.byType(TextField),
+      );
+      await tester.enterText(fields.at(0), '$hour'.padLeft(2, '0'));
+      await tester.enterText(fields.at(1), '$minute'.padLeft(2, '0'));
+      await tester.tap(find.text('Speichern'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('settings: section shows „Ab 19:30"; picking 21:15 stores '
+        '"21:15"; picking 09:00 stores "16:00"', (tester) async {
+      await pump(tester, permission: NotificationPermission.granted);
+
+      expect(find.text('Tagesrückblick'), findsOneWidget);
+      expect(find.byIcon(Icons.nightlight_outlined), findsOneWidget);
+      expect(
+        find.descendant(of: reviewTimeRow(), matching: find.text('Ab')),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: reviewTimeRow(), matching: find.text('19:30')),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          'Ab dieser Uhrzeit zeigt dir Home deinen Rückblick auf den '
+          'Tag.',
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.text(
+          'Ich sag dir Bescheid, wenn er da ist – nur an Tagen mit '
+          'eingetragener Mahlzeit.',
+        ),
+        findsOneWidget,
+      );
+
+      await pickTime(tester, 21, 15);
+      expect(stored().dailyReviewTime, '21:15');
+      expect(
+        find.descendant(of: reviewTimeRow(), matching: find.text('21:15')),
+        findsOneWidget,
+      );
+
+      await pickTime(tester, 9, 0);
+      expect(stored().dailyReviewTime, '16:00');
+      expect(
+        find.descendant(of: reviewTimeRow(), matching: find.text('16:00')),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('settings: the switch is greyed while notifications are not '
+        'allowed; the time row is not', (tester) async {
+      await pump(
+        tester,
+        permission: NotificationPermission.notDetermined,
+        profile: testUserProfile(dailyReviewReminder: true),
+      );
+
+      Finder ignoring(Finder of) => find.ancestor(
+        of: of,
+        matching: find.byWidgetPredicate(
+          (w) => w is IgnorePointer && w.ignoring,
+        ),
+      );
+      expect(
+        ignoring(find.widgetWithText(SwitchListTile, 'Erinnerung am Abend')),
+        findsOneWidget,
+      );
+      expect(switchOn(tester, 'Erinnerung am Abend'), isFalse);
+      expect(ignoring(reviewTimeRow()), findsNothing);
+
+      await pickTime(tester, 20, 0);
+      expect(stored().dailyReviewTime, '20:00');
+    });
+
+    testWidgets('settings: the switch turns the evening notice on and off', (
+      tester,
+    ) async {
+      await pump(tester, permission: NotificationPermission.granted);
+      expect(switchOn(tester, 'Erinnerung am Abend'), isFalse);
+
+      await tester.ensureVisible(find.text('Erinnerung am Abend'));
+      await tester.tap(find.text('Erinnerung am Abend'));
+      await tester.pumpAndSettle();
+      expect(stored().dailyReviewReminder, isTrue);
+      expect(switchOn(tester, 'Erinnerung am Abend'), isTrue);
+
+      await tester.tap(find.text('Erinnerung am Abend'));
+      await tester.pumpAndSettle();
+      expect(stored().dailyReviewReminder, isFalse);
+    });
+
+    testWidgets('settings: a meal time changed, then „Erinnerung am Abend" '
+        'within the debounce: the last write keeps both', (tester) async {
+      await pump(
+        tester,
+        permission: NotificationPermission.granted,
+        profile: testUserProfile(mealReminderTimes: ['08:00', '18:00']),
+      );
+
+      // Removing 08:00 arms the debounced save.
+      await tester.tap(
+        find.descendant(
+          of: find.ancestor(
+            of: find.text('08:00'),
+            matching: find.byType(GestureDetector),
+          ),
+          matching: find.byIcon(Icons.close),
+        ),
+      );
+      await tester.ensureVisible(find.text('Erinnerung am Abend'));
+      await tester.tap(find.text('Erinnerung am Abend'));
+      await tester.pump();
+      await tester.pumpAndSettle(AppConstants.debounceDuration);
+
+      final last = repo.updates.last;
+      expect(last.mealReminderTimes, ['18:00']);
+      expect(last.dailyReviewReminder, isTrue);
+      expect(stored().dailyReviewReminder, isTrue);
+      expect(switchOn(tester, 'Erinnerung am Abend'), isTrue);
+    });
+
+    testWidgets('settings: „Erinnerung am Abend" toggled, then a mood time '
+        'within the debounce: the switch stays on', (tester) async {
+      await pump(
+        tester,
+        permission: NotificationPermission.granted,
+        profile: testUserProfile(
+          dailySummaryEnabled: true,
+          moodReminderTimes: ['09:00', '20:00'],
+        ),
+      );
+
+      await tester.ensureVisible(find.text('Erinnerung am Abend'));
+      await tester.tap(find.text('Erinnerung am Abend'));
+      await tester.pump();
+      await tester.ensureVisible(find.text('09:00'));
+      await tester.tap(
+        find.descendant(
+          of: find.ancestor(
+            of: find.text('09:00'),
+            matching: find.byType(GestureDetector),
+          ),
+          matching: find.byIcon(Icons.close),
+        ),
+      );
+      await tester.pump();
+      await tester.pumpAndSettle(AppConstants.debounceDuration);
+
+      final last = repo.updates.last;
+      expect(last.moodReminderTimes, ['20:00']);
+      expect(last.dailyReviewReminder, isTrue);
+    });
+
+    testWidgets('settings: turning the master switch on leaves „Erinnerung am '
+        'Abend" off', (tester) async {
+      await pump(
+        tester,
+        permission: NotificationPermission.notDetermined,
+        profile: testUserProfile(
+          remindersEnabled: false,
+          dailySummaryEnabled: false,
+        ),
+      );
+
+      await tester.tap(find.text('Benachrichtigungen erlauben'));
+      await tester.pumpAndSettle();
+
+      expect(switchOn(tester, 'Mahlzeiten'), isTrue);
+      expect(switchOn(tester, 'Erinnerung am Abend'), isFalse);
+      expect(stored().dailyReviewReminder, isFalse);
+    });
   });
 
   group('SettingsNotificationsScreen', () {
@@ -375,8 +584,11 @@ void main() {
       );
       await tester.pump();
 
-      // Master toggle + 3 notification toggles + the weekly tips = 5
-      expect(find.byType(SwitchListTile), findsNWidgets(5));
+      // Master toggle + 4 notification toggles + the weekly tips = 6
+      expect(
+        find.byType(SwitchListTile, skipOffstage: false),
+        findsNWidgets(6),
+      );
     });
   });
 }

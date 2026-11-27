@@ -216,4 +216,37 @@ void main() {
       ),
     ).called(1);
   });
+
+  group('the daily review notice', () {
+    test('scheduled today at the time in the device time zone, with the '
+        'Buddy\'s name', () async {
+      when(
+        () => scheduler.scheduleDailyReview(
+          hour: any(named: 'hour'),
+          minute: any(named: 'minute'),
+          timezone: any(named: 'timezone'),
+          buddyName: any(named: 'buddyName'),
+        ),
+      ).thenAnswer((_) async {});
+
+      await repo.scheduleDailyReview(hour: 19, minute: 30, buddyName: 'Bubu');
+
+      verify(
+        () => scheduler.scheduleDailyReview(
+          hour: 19,
+          minute: 30,
+          timezone: 'Europe/Berlin',
+          buddyName: 'Bubu',
+        ),
+      ).called(1);
+    });
+
+    test('cancelled through the scheduler', () async {
+      when(() => scheduler.cancelDailyReview()).thenAnswer((_) async {});
+
+      await repo.cancelDailyReview();
+
+      verify(() => scheduler.cancelDailyReview()).called(1);
+    });
+  });
 }

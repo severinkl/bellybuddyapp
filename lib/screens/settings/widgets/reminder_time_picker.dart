@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../services/haptic_service.dart';
+import '../../../utils/date_format_utils.dart';
 import '../../../widgets/common/bb_icon_tap.dart';
 import '../../../widgets/common/tap_target.dart';
 import '../../../widgets/common/bb_tap_area.dart';
@@ -64,11 +65,8 @@ class ReminderTimePicker extends StatelessWidget {
     onChanged(newTimes);
   }
 
-  static String _formatTimeOfDay(TimeOfDay time) {
-    final h = time.hour.toString().padLeft(2, '0');
-    final m = time.minute.toString().padLeft(2, '0');
-    return '$h:$m';
-  }
+  static String _formatTimeOfDay(TimeOfDay time) =>
+      formatHourMinute(time.hour, time.minute);
 
   static TimeOfDay _parseTimeOfDay(String time) {
     final parts = time.split(':');

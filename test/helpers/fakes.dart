@@ -842,7 +842,7 @@ class FakeMealMediaRepository implements MealMediaRepository {
     'ingredients': ['Reis', 'Gemüse'],
   };
   @override
-  void triggerSuggestionRefresh() {}
+  Future<int> refreshSuggestions() async => 0;
   @override
   Future<String?> resolveSignedUrl(String? urlOrPath) async => urlOrPath;
 }
@@ -887,6 +887,14 @@ class FakeNotificationRepository implements NotificationRepository {
     UserProfile profile, {
     String? buddyName,
   }) async => syncCount++;
+  @override
+  Future<void> scheduleDailyReview({
+    required int hour,
+    required int minute,
+    String? buddyName,
+  }) async {}
+  @override
+  Future<void> cancelDailyReview() async {}
   @override
   Future<void> cancelAll() async {}
   @override

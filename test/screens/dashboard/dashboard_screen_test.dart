@@ -5,6 +5,12 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:belly_buddy/models/alternative_choice.dart';
+import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
+import 'package:belly_buddy/models/replacement_ingredient.dart';
+import 'package:belly_buddy/services/alternative_choice_service.dart';
+import 'package:belly_buddy/services/daily_review/daily_review_copy.dart';
+import 'package:belly_buddy/utils/wall_clock.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/user_profile.dart';
@@ -12,6 +18,7 @@ import 'package:belly_buddy/router/app_router.dart';
 import 'package:belly_buddy/screens/dashboard/dashboard_screen.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/daily_review_card.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/insight_card.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_dots.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_line.dart';
@@ -28,6 +35,7 @@ import 'package:belly_buddy/providers/buddy_offers_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/buddy_welcome_provider.dart';
 import 'package:belly_buddy/config/app_theme.dart';
+import 'package:belly_buddy/providers/daily_review_provider.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/repositories/recommendation_repository.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tips_row.dart';
@@ -47,6 +55,7 @@ import 'package:belly_buddy/services/buddy/buddy_copy.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 import 'package:belly_buddy/services/buddy/care_meters.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
+import 'package:belly_buddy/services/daily_review/daily_review_rules.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:belly_buddy/widgets/buddy/need_meter.dart';
 import 'package:belly_buddy/widgets/buddy/streak_badge.dart';
@@ -72,6 +81,7 @@ List<Override> _overrides({
   FakeEntryRepository? entryRepo,
   FakeProfileRepository? profileRepo,
   FakeRecommendationRepository? recommendationRepo,
+  FakeIngredientRepository? ingredientRepo,
   UserProfile? profile,
   bool switchableUser = false,
 }) => [
@@ -85,7 +95,9 @@ List<Override> _overrides({
             : (FakeProfileRepository()..seedProfile(profile))),
   ),
   entryRepositoryProvider.overrideWithValue(entryRepo ?? FakeEntryRepository()),
-  ingredientRepositoryProvider.overrideWithValue(FakeIngredientRepository()),
+  ingredientRepositoryProvider.overrideWithValue(
+    ingredientRepo ?? FakeIngredientRepository(),
+  ),
   buddyRepositoryProvider.overrideWithValue(buddyRepo ?? FakeBuddyRepository()),
   if (switchableUser)
     _user.override
@@ -441,6 +453,59 @@ void main() {
       expect(
         tester.getRect(find.byKey(InsightCard.cardKey)).top,
         greaterThan(hero.bottom),
+      );
+    });
+
+    testWidgets('Home: the card sits between the Buddy and the insight '
+        'card', (tester) async {
+      final review = DailyReview(
+        day: ReviewDay(DateTime(2026, 11, 27), yesterday: false),
+        meals: 2,
+        lastGut: null,
+        alternative: null,
+        alternativeLocked: false,
+        extras: const [],
+      );
+      await tester.pumpWithProviders(
+        const DashboardScreen(),
+        overrides: [
+          ..._overrides(),
+          dailyReviewProvider.overrideWithValue(review),
+          dailyReviewUpsellRouteProvider.overrideWithValue(null),
+        ],
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final card = tester.getRect(find.byKey(DailyReviewCard.cardKey));
+      expect(
+        card.top,
+        greaterThan(tester.getRect(find.byType(BuddyHero)).bottom),
+      );
+      expect(
+        tester.getRect(find.byKey(InsightCard.cardKey)).top,
+        card.bottom + AppConstants.spacingMd,
+      );
+    });
+
+    testWidgets('no review: no card, the insight card right under the Buddy', (
+      tester,
+    ) async {
+      await tester.pumpWithProviders(
+        const DashboardScreen(),
+        overrides: [
+          ..._overrides(),
+          dailyReviewProvider.overrideWithValue(null),
+        ],
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(
+        find.byKey(DailyReviewCard.cardKey, skipOffstage: false),
+        findsNothing,
+      );
+      expect(
+        tester.getRect(find.byKey(InsightCard.cardKey)).top,
+        tester.getRect(find.byType(BuddyHero)).bottom + AppConstants.spacingMd,
       );
     });
 
@@ -1009,6 +1074,86 @@ void main() {
         );
       });
     }
+  });
+
+  group('Home with the real daily review chain', () {
+    testWidgets('the minute ticks 19:29 → 19:30 with a meal today: the card '
+        'appears and the Buddy says the line once', (tester) async {
+      var now = DateTime(2026, 11, 23, 19, 29);
+      final meal = testMealEntry(
+        id: 'm1',
+        trackedAt: wallClockFromWire('2026-11-23T12:00:00+00:00'),
+      );
+      final entryRepo = FakeEntryRepository()
+        ..seedResult(
+          testEntryQueryResult(
+            meals: [meal],
+            toiletEntries: const [],
+            gutFeelings: const [],
+            drinks: const [],
+          ),
+        );
+      final groups = [
+        IngredientSuggestionGroup(
+          ingredientId: 'onion',
+          ingredientName: 'Zwiebel',
+          mealCount: 1,
+          isNew: false,
+          suggestionIds: const ['s1'],
+          meals: [
+            MealDetail(id: 'm1', title: 'Mittag', trackedAt: meal.trackedAt),
+          ],
+          replacements: const [
+            ReplacementIngredient(id: 'chive', name: 'Schnittlauch'),
+          ],
+        ),
+      ];
+      await tester.pumpWithProviders(
+        const DashboardScreen(),
+        overrides: [
+          ..._overrides(
+            profile: testUserProfile(),
+            buddyRepo: _onboardedBuddy(),
+            entryRepo: entryRepo,
+            ingredientRepo: FakeIngredientRepository(groups: groups),
+          ),
+          alternativeChoiceServiceProvider.overrideWithValue(_NoChoices()),
+          buddyClockProvider.overrideWithValue(() => now),
+        ],
+      );
+      final lines = <String>[];
+      Future<void> watch(Duration d) async {
+        const step = Duration(milliseconds: 100);
+        for (var t = Duration.zero; t < d; t += step) {
+          await tester.pump(step);
+          final buddy = find.byType(AnimatedBuddy);
+          if (buddy.evaluate().isEmpty) continue;
+          final line = tester.widget<AnimatedBuddy>(buddy).controller.bubble;
+          if (line != null && (lines.isEmpty || lines.last != line)) {
+            lines.add(line);
+          }
+        }
+      }
+
+      await watch(const Duration(seconds: 2));
+      expect(find.byKey(DailyReviewCard.cardKey), findsNothing);
+      expect(lines, isNot(contains(DailyReviewCopy.cueLine)));
+
+      now = DateTime(2026, 11, 23, 19, 30);
+      await watch(const Duration(seconds: 60));
+
+      expect(find.byKey(DailyReviewCard.cardKey), findsOneWidget);
+      expect(
+        find.text('Statt Zwiebel könntest du morgen Schnittlauch probieren.'),
+        findsOneWidget,
+      );
+      expect(lines.where((l) => l == DailyReviewCopy.cueLine), hasLength(1));
+
+      // Later minutes: not said again.
+      now = DateTime(2026, 11, 23, 19, 31);
+      await watch(const Duration(seconds: 60));
+      expect(lines.where((l) => l == DailyReviewCopy.cueLine), hasLength(1));
+    });
   });
 
   group('DashboardScreen shows the signed-in user\'s day', () {
@@ -1730,4 +1875,21 @@ void main() {
       ]);
     });
   });
+}
+
+/// No stored alternative choices.
+class _NoChoices implements AlternativeChoiceService {
+  @override
+  Future<List<Map<String, dynamic>>> fetch(String userId) async => const [];
+
+  @override
+  Future<Map<String, dynamic>> upsert({
+    required String userId,
+    required String ingredientId,
+    required String replacementId,
+    required AlternativeChoiceKind kind,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> delete(String id) => throw UnimplementedError();
 }

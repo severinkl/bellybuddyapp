@@ -43,9 +43,14 @@ class MealMediaRepository {
     }
   }
 
-  /// Fire-and-forget call to trigger ingredient suggestion refresh.
-  void triggerSuggestionRefresh() {
-    _edgeFunctionService.invoke('refresh-ingredient-suggestions').ignore();
+  /// Asks the server to look at the user's latest meals for ingredients
+  /// that could trouble the belly; returns how many suggestions it created
+  /// (0 without Plus, which the server checks).
+  Future<int> refreshSuggestions() async {
+    final data = await _edgeFunctionService.invoke(
+      'refresh-ingredient-suggestions',
+    );
+    return (data['created'] as num?)?.toInt() ?? 0;
   }
 
   /// Resolves a meal image URL or storage path to a fresh signed URL.

@@ -53,6 +53,8 @@ UserProfile testUserProfile({
   String? privacyPolicyVersion,
   bool hasHealthConsent = true,
   bool weeklyTipsEnabled = false,
+  String dailyReviewTime = '19:30',
+  bool dailyReviewReminder = false,
 }) => UserProfile(
   userId: userId ?? testUserId,
   birthYear: birthYear ?? 1990,
@@ -78,6 +80,8 @@ UserProfile testUserProfile({
       privacyPolicyVersion ??
       (hasHealthConsent ? AppConstants.privacyPolicyVersion : null),
   weeklyTipsEnabled: weeklyTipsEnabled,
+  dailyReviewTime: dailyReviewTime,
+  dailyReviewReminder: dailyReviewReminder,
 );
 
 MealEntry testMealEntry({

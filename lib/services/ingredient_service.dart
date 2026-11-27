@@ -107,7 +107,10 @@ class IngredientService {
       return await _client
           .from('ingredient_suggestion_replacements')
           .select('suggestion_id, ingredients(id, name, image_url)')
-          .inFilter('suggestion_id', suggestionIds);
+          .inFilter('suggestion_id', suggestionIds)
+          // Rows of one transaction share created_at: id keeps the order stable.
+          .order('created_at')
+          .order('id');
     } catch (e, st) {
       _log.error('fetchReplacements failed', e, st);
       rethrow;

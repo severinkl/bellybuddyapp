@@ -9,11 +9,13 @@ import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../config/constants.dart';
+import '../../../providers/auth_provider.dart';
 import '../../../providers/buddy_events_provider.dart';
 import '../../../providers/buddy_offers_provider.dart';
 import '../../../providers/buddy_provider.dart';
 import '../../../providers/buddy_welcome_provider.dart';
 import '../../../providers/care_log_provider.dart';
+import '../../../providers/daily_review_provider.dart';
 import '../../../providers/entries_provider.dart';
 import '../../../providers/home_cover_provider.dart';
 import '../../../providers/journey_provider.dart';
@@ -28,6 +30,7 @@ import '../../../services/buddy/buddy_copy.dart';
 import '../../../services/buddy/buddy_mood_logic.dart';
 import '../../../services/buddy/care_now.dart';
 import '../../../services/buddy/daily_care.dart';
+import '../../../services/daily_review/daily_review_copy.dart';
 import '../../../services/journey/journey_copy.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/logger.dart';
@@ -49,8 +52,9 @@ import 'weekly_tips_offer_sheet.dart';
 
 /// Lines the hero plays one after another: the onboarding's welcome (ahead
 /// of all others), the follow-up after a log, the [BuddyAnnouncement]s,
-/// his ask for reminders while they are off ([reminderAskDueProvider]) and,
-/// last, the store's rating request ([ratingAskDueProvider]).
+/// his ask for reminders while they are off ([reminderAskDueProvider]), his
+/// line pointing to the open daily review ([dailyReviewProvider]) and, last,
+/// the store's rating request ([ratingAskDueProvider]).
 enum _Cue {
   welcome(null),
   followUp(null),
@@ -65,6 +69,7 @@ enum _Cue {
   patternsUnlocked(BuddyAnnouncement.patternsUnlocked, endsInSheet: true),
   firstTipFailed(BuddyAnnouncement.firstTipFailed),
   remindersAsk(null, endsInSheet: true),
+  dailyReview(null),
   ratingAsk(null);
 
   const _Cue(this.announcement, {this.endsInSheet = false});
@@ -198,6 +203,14 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// for reminders doesn't follow it (it comes on a later visit of Home).
   bool _sheetCuePlayed = false;
 
+  /// His line to the daily review is being checked, queued or waiting on
+  /// stage (until said or ended).
+  bool _dailyReviewQueued = false;
+
+  /// The review day whose line was taken up this visit of Home: it is not
+  /// queued again before the next visit (also when it was skipped).
+  DateTime? _dailyReviewVisitDay;
+
   /// The store's rating request is queued or on stage.
   bool _ratingAskQueued = false;
 
@@ -294,6 +307,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     ref.listenManual(ratingAskDueProvider, (_, due) {
       if (_isRatingDue(due)) _afterFrame(_queueRatingAsk);
     }, fireImmediately: true);
+    ref.listenManual(dailyReviewProvider, (_, review) {
+      if (review != null) _afterFrame(_queueDailyReview);
+    }, fireImmediately: true);
   }
 
   @override
@@ -311,11 +327,13 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _visible = visible;
     if (visible) {
       _visitSheetCuePlayed = false;
+      _dailyReviewVisitDay = null;
       _afterFrame(() {
         _consumeEvent();
         _takeAnnouncements();
         _maybeGreet();
         _queueRemindersAsk();
+        _queueDailyReview();
         _queueRatingAsk();
         _resume();
       });
@@ -447,7 +465,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   }
 
   /// The first mood line, once the Buddy status is known and the hero is
-  /// visible. A pending welcome or announcements greet instead.
+  /// visible. A pending welcome or announcements greet instead, and so does
+  /// his line to the daily review: while it may still come this visit the
+  /// greeting waits ([_queueDailyReview] greets once it is not coming).
   void _maybeGreet() => _whenVisible(() {
     if (_takeWelcome()) {
       if (!_cueRunning) _nextCue();
@@ -457,9 +477,18 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     final buddy = ref.read(buddyProvider);
     if (buddy.isLoading && !buddy.hasValue) return; // first load running
     if (buddy.value?.announcements.isNotEmpty ?? false) return;
+    if (_dailyReviewMayCome) return;
     _greeted = true;
     _sayMoodLine();
   });
+
+  /// A review is open whose line is not decided yet this visit: being
+  /// checked, or not taken up yet ([_queueDailyReview]).
+  bool get _dailyReviewMayCome {
+    final day = ref.read(dailyReviewProvider)?.day.day;
+    if (day == null || ref.read(currentUserIdProvider) == null) return false;
+    return _dailyReviewQueued || _dailyReviewVisitDay != day;
+  }
 
   /// Takes the onboarding's pending welcome ([buddyWelcomeProvider]) ahead
   /// of every queued cue: it greets, and a log's follow-up or the
@@ -483,6 +512,8 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     if (status != null && status.announcements.isNotEmpty) {
       _afterFrame(_takeAnnouncements);
     }
+    // After the announcements, which come first.
+    _afterFrame(_queueDailyReview);
   }
 
   /// Remembers that today already counts, unless a log's follow-up is still
@@ -524,6 +555,40 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _enqueue(const [_Cue.remindersAsk]);
   });
 
+  /// Queues his line to the open daily review ([dailyReviewProvider]),
+  /// after whatever is queued already, unless it was taken up this visit
+  /// or said for that review day ([dailyReviewSaidOn]); it plays once Home
+  /// is free. It waits for the Buddy status (the announcements go first).
+  /// Not queued after all: the rating request may come.
+  void _queueDailyReview() => _whenVisible(() {
+    final status = ref.read(buddyProvider);
+    if (status.isLoading && !status.hasValue) return; // first load running
+    final day = ref.read(dailyReviewProvider)?.day.day;
+    final userId = ref.read(currentUserIdProvider);
+    if (day == null ||
+        userId == null ||
+        _dailyReviewQueued ||
+        _dailyReviewVisitDay == day) {
+      return;
+    }
+    _dailyReviewQueued = true;
+    _dailyReviewVisitDay = day;
+    unawaited(() async {
+      final said = await dailyReviewSaidOn(userId, day);
+      if (!mounted) return;
+      if (!said && _visible) {
+        // The line greets instead ([_maybeGreet]); ended unsaid, the queue
+        // says the mood line ([_nextCue]).
+        _greeted = true;
+        _enqueue(const [_Cue.dailyReview]);
+      } else {
+        _dailyReviewQueued = false;
+        _maybeGreet();
+        _afterFrame(_queueRatingAsk);
+      }
+    }());
+  });
+
   /// Whether [due] says the rating request is due: settled and true (an
   /// error or a check still running is not due).
   static bool _isRatingDue(AsyncValue<bool> due) =>
@@ -540,13 +605,15 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// Whether the Buddy may ask the store for a rating now (rule 4 of the
   /// rating prompt and Home's tour): nothing else is queued or on stage, no
   /// cue of this visit ended in a sheet, his ask for reminders is known not
-  /// to be due and the tour isn't up ([BuddyHero.showsBubble]).
+  /// to be due, his line to the daily review isn't coming and the tour
+  /// isn't up ([BuddyHero.showsBubble]).
   bool get _ratingAskFits =>
       _cues.isEmpty &&
       _playing == null &&
       !_cueRunning &&
       !_visitSheetCuePlayed &&
       !_remindersAskQueued &&
+      !_dailyReviewQueued &&
       _remindersSettledNotDue &&
       widget.showsBubble;
 
@@ -663,8 +730,14 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   void _say(String line) => _speak(line, duration: _lineHold);
 
+  /// Adds [cues] at the queue's end; those ahead of his line to the daily
+  /// review by priority ([_Cue] order) go before it, if it is still waiting.
   void _enqueue(Iterable<_Cue> cues) {
+    final reviewWaits =
+        cues.any((c) => c.index < _Cue.dailyReview.index) &&
+        _cues.remove(_Cue.dailyReview);
     _cues.addAll(cues);
+    if (reviewWaits) _cues.add(_Cue.dailyReview);
     _takeWelcome();
     if (!_cueRunning) _nextCue();
   }
@@ -710,6 +783,8 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     if (!_stillApplies(cue)) return _nextCue();
     // Never a second sheet right after another's: it comes another time.
     if (cue == _Cue.remindersAsk && _sheetCuePlayed) return _endRemindersAsk();
+    // Counts as played only once said ([_playDailyReview]).
+    if (cue == _Cue.dailyReview) return unawaited(_playDailyReview());
     if (cue.endsInSheet) _sheetCuePlayed = true;
     if (cue.endsInSheet && cue != _Cue.patternsUnlocked) {
       _visitSheetCuePlayed = true;
@@ -750,6 +825,8 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
         _sayAnnouncement(cue);
       case _Cue.remindersAsk:
         _playThen(BuddyAction.wave, _askForReminders);
+      case _Cue.dailyReview:
+        break; // played above
       case _Cue.ratingAsk:
         _playRatingAsk();
     }
@@ -970,6 +1047,44 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _nextCue();
   }
 
+  /// His line to the daily review: checks again that a review is open and
+  /// its line not said yet; skipped for this visit after another cue's
+  /// sheet or page ([_sheetCuePlayed]). Then says it, holding the stage
+  /// like an announcement line, and records it as said
+  /// ([recordDailyReviewSaid]). Home covered by then: back to the queue's
+  /// front, said once Home is free again ([_resume]).
+  Future<void> _playDailyReview() async {
+    final userId = ref.read(currentUserIdProvider);
+    final day = ref.read(dailyReviewProvider)?.day.day;
+    if (_sheetCuePlayed || userId == null || day == null) {
+      return _endDailyReview();
+    }
+    final said = await dailyReviewSaidOn(userId, day);
+    if (!mounted) return;
+    if (said ||
+        ref.read(currentUserIdProvider) != userId ||
+        ref.read(dailyReviewProvider)?.day.day != day) {
+      return _endDailyReview();
+    }
+    if (!_homeFree) {
+      _playing = null;
+      _cueRunning = false;
+      _cues.addFirst(_Cue.dailyReview);
+      return;
+    }
+    _cuePlayed = true;
+    _dailyReviewQueued = false;
+    _say(DailyReviewCopy.cueLine);
+    _holdStage();
+    unawaited(recordDailyReviewSaid(userId, day));
+  }
+
+  /// His line to the daily review ends unsaid; the queue goes on.
+  void _endDailyReview() {
+    _dailyReviewQueued = false;
+    _nextCue();
+  }
+
   /// The store's rating request: checks again whether it is due (it may
   /// have waited while Home was covered) and still fits; then the Buddy
   /// celebrates, his bubble down and saying nothing, and the store is asked
@@ -981,13 +1096,15 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   }
 
   /// Whether the rating request on stage may go on: Home is free, the tour
-  /// isn't up, nothing queued behind it and it is still due. Not
+  /// isn't up, nothing queued behind it, his line to the daily review isn't
+  /// coming (its check may still run) and it is still due. Not
   /// [_ratingAskFits]: the cue itself is on stage ([_playing],
   /// [_cueRunning]) and was queued after the visit's checks.
   bool get _ratingAskPlayable =>
       _homeFree &&
       widget.showsBubble &&
       _cues.isEmpty &&
+      !_dailyReviewQueued &&
       _isRatingDue(ref.read(ratingAskDueProvider));
 
   /// After the celebration: the store's own rating dialog (which it may not

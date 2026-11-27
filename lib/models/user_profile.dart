@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import '../config/constants.dart';
 import '../utils/reminder_times_converter.dart';
 import '../utils/symptoms_converter.dart';
 
@@ -54,6 +55,14 @@ abstract class UserProfile with _$UserProfile {
     @JsonKey(name: 'weekly_tips_enabled')
     @Default(false)
     bool weeklyTipsEnabled,
+    // From this local time ('HH:MM') Home shows the daily review.
+    @JsonKey(name: 'daily_review_time')
+    @Default(AppConstants.dailyReviewDefaultTime)
+    String dailyReviewTime,
+    // Opt-in to the evening notice that the daily review is there.
+    @JsonKey(name: 'daily_review_reminder')
+    @Default(false)
+    bool dailyReviewReminder,
   }) = _UserProfile;
 
   const UserProfile._();
@@ -61,15 +70,24 @@ abstract class UserProfile with _$UserProfile {
   factory UserProfile.fromJson(Map<String, dynamic> json) =>
       _$UserProfileFromJson(json);
 
-  /// Whether any notification is on: a meal or Bauchgefühl reminder, tips.
+  /// Whether any notification is on: a meal or Bauchgefühl reminder, tips,
+  /// the daily review's evening notice.
   /// These say what the user wants; they only arrive while the OS allows
   /// notifications (see `NotificationPermission`).
   bool get anyNotificationOn =>
-      remindersEnabled || dailySummaryEnabled || pushEnabled;
+      remindersEnabled ||
+      dailySummaryEnabled ||
+      pushEnabled ||
+      dailyReviewReminder;
 
-  /// This profile with every notification [on] (or off).
-  UserProfile withNotifications(bool on) =>
-      copyWith(remindersEnabled: on, dailySummaryEnabled: on, pushEnabled: on);
+  /// This profile with every notification [on] (or off). The daily review's
+  /// evening notice stays opt-in: switched off with the rest, never on.
+  UserProfile withNotifications(bool on) => copyWith(
+    remindersEnabled: on,
+    dailySummaryEnabled: on,
+    pushEnabled: on,
+    dailyReviewReminder: on && dailyReviewReminder,
+  );
 
   bool get isComplete =>
       birthYear != null &&

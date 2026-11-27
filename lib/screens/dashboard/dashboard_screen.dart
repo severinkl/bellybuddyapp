@@ -10,6 +10,7 @@ import '../../providers/buddy_offers_provider.dart';
 import '../../providers/buddy_onboarding_gate_provider.dart';
 import '../../providers/buddy_provider.dart';
 import '../../providers/buddy_welcome_provider.dart';
+import '../../providers/daily_review_provider.dart';
 import '../../providers/discover_news_provider.dart';
 import '../../providers/entries_provider.dart';
 import '../../providers/home_cover_provider.dart';
@@ -23,6 +24,7 @@ import '../../providers/recommendation_provider.dart';
 import '../../router/route_names.dart';
 import '../../providers/tutorial_provider.dart';
 import 'widgets/buddy_hero.dart';
+import 'widgets/daily_review_card.dart';
 import 'widgets/insight_card.dart';
 import 'widgets/journey_reward_line.dart';
 import 'widgets/notification_opt_in_dialog.dart';
@@ -31,8 +33,9 @@ import 'widgets/tutorial/show_dashboard_tutorial.dart';
 import 'widgets/tutorial/tutorial_keys.dart';
 
 /// Home: the Buddy hero (the Buddy in his care ring with his streak flame
-/// and its badge, the next action) and what he is learning about the
-/// user's gut ([InsightCard]).
+/// and its badge, the next action), the daily review while one is open
+/// ([DailyReviewCard]) and what he is learning about the user's gut
+/// ([InsightCard]).
 class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
@@ -226,6 +229,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                   ),
                 ),
                 AppConstants.gap16,
+                // The daily review, while one is open; keyed by its day, so
+                // a new review starts afresh.
+                Consumer(
+                  builder: (_, ref, _) {
+                    final day = ref.watch(
+                      dailyReviewProvider.select((review) => review?.day),
+                    );
+                    if (day == null) return const SizedBox.shrink();
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        DailyReviewCard(key: ValueKey(day)),
+                        AppConstants.gap16,
+                      ],
+                    );
+                  },
+                ),
                 // Only the card rebuilds with the insights. It shows only
                 // AsyncData: after a user change, the value of a loading or
                 // failed state is still the previous user's. The reward

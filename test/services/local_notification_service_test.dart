@@ -65,4 +65,39 @@ void main() {
       ));
     });
   });
+
+  group('todayAt (the daily review\'s one-shot)', () {
+    late tz.Location vienna;
+    setUp(() => vienna = tz.getLocation('Europe/Vienna'));
+
+    test('still ahead today: today at that time', () {
+      final now = tz.TZDateTime(vienna, 2026, 11, 27, 12);
+      final at = LocalNotificationService.todayAt(19, 30, now)!;
+
+      expect(
+        (at.year, at.month, at.day, at.hour, at.minute),
+        (2026, 11, 27, 19, 30),
+      );
+      expect(at.location, vienna);
+    });
+
+    test('passed (or now): null, never tomorrow', () {
+      expect(
+        LocalNotificationService.todayAt(
+          19,
+          30,
+          tz.TZDateTime(vienna, 2026, 11, 27, 19, 30),
+        ),
+        isNull,
+      );
+      expect(
+        LocalNotificationService.todayAt(
+          19,
+          30,
+          tz.TZDateTime(vienna, 2026, 11, 27, 22),
+        ),
+        isNull,
+      );
+    });
+  });
 }

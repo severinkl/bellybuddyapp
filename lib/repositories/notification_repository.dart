@@ -28,6 +28,16 @@ abstract class NotificationScheduler {
 
   Future<void> cancelMoodReminders();
 
+  /// The daily review's evening notice: once, today at [hour]:[minute].
+  Future<void> scheduleDailyReview({
+    required int hour,
+    required int minute,
+    required String timezone,
+    String? buddyName,
+  });
+
+  Future<void> cancelDailyReview();
+
   Future<void> cancelAll();
 }
 
@@ -62,6 +72,23 @@ class LocalNotificationScheduler implements NotificationScheduler {
   @override
   Future<void> cancelMoodReminders() =>
       LocalNotificationService.cancelMoodReminders();
+
+  @override
+  Future<void> scheduleDailyReview({
+    required int hour,
+    required int minute,
+    required String timezone,
+    String? buddyName,
+  }) => LocalNotificationService.scheduleDailyReview(
+    hour: hour,
+    minute: minute,
+    timezone: timezone,
+    buddyName: buddyName,
+  );
+
+  @override
+  Future<void> cancelDailyReview() =>
+      LocalNotificationService.cancelDailyReview();
 
   @override
   Future<void> cancelAll() => LocalNotificationService.cancelAll();
@@ -129,6 +156,22 @@ class NotificationRepository {
       'push=${profile.pushEnabled}',
     );
   }
+
+  /// Schedules the daily review's evening notice once, today at
+  /// [hour]:[minute] in the device time zone (replacing a pending one).
+  Future<void> scheduleDailyReview({
+    required int hour,
+    required int minute,
+    String? buddyName,
+  }) => _scheduler.scheduleDailyReview(
+    hour: hour,
+    minute: minute,
+    timezone: tz.local.name,
+    buddyName: buddyName,
+  );
+
+  /// Cancels the daily review's pending evening notice.
+  Future<void> cancelDailyReview() => _scheduler.cancelDailyReview();
 
   Future<void> cancelAll() => _scheduler.cancelAll();
 

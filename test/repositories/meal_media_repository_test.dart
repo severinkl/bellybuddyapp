@@ -165,23 +165,27 @@ void main() {
     });
   });
 
-  group('triggerSuggestionRefresh', () {
+  group('refreshSuggestions', () {
     test(
-      'invokes refresh-ingredient-suggestions edge function fire-and-forget',
+      'invokes refresh-ingredient-suggestions and returns created',
       () async {
         when(
           () => edgeFunctionService.invoke(any()),
-        ).thenAnswer((_) async => <String, dynamic>{});
+        ).thenAnswer((_) async => <String, dynamic>{'created': 2});
 
-        repo.triggerSuggestionRefresh();
-
-        // Give the fire-and-forget call a moment to be initiated
-        await Future<void>.delayed(Duration.zero);
-
+        expect(await repo.refreshSuggestions(), 2);
         verify(
           () => edgeFunctionService.invoke('refresh-ingredient-suggestions'),
         ).called(1);
       },
     );
+
+    test('without created (no Plus) it is 0', () async {
+      when(
+        () => edgeFunctionService.invoke(any()),
+      ).thenAnswer((_) async => <String, dynamic>{});
+
+      expect(await repo.refreshSuggestions(), 0);
+    });
   });
 }
