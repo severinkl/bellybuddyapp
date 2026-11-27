@@ -9,6 +9,7 @@ import '../../services/plus/plus_copy.dart';
 import '../../widgets/common/bb_async_state.dart';
 import '../../widgets/common/plus_locked_card.dart';
 import 'widgets/suggestion_card.dart';
+import 'widgets/tried_alternatives_section.dart';
 import 'widgets/suggestion_detail_modal.dart';
 import '../../config/constants.dart';
 
@@ -87,6 +88,7 @@ class _IngredientSuggestionsScreenState
       appBar: AppBar(title: const Text('Alternativen')),
       body: Column(
         children: [
+          const TriedAlternativesSection(),
           Padding(
             padding: const EdgeInsets.fromLTRB(
               AppConstants.spacingMd,
