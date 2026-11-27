@@ -74,6 +74,7 @@ KnowledgeArticle? _parseItem(XmlElement item) {
     category: normalizeFeedCategory(_text(item.getElement('category'))),
     publishedAt: _date(_text(item.getElement('pubDate'))),
     imageUrl: image != null && isHttpUrl(image) ? image : null,
+    teaser: _text(item.getElement('description')),
   );
 }
 

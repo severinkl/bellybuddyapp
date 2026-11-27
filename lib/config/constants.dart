@@ -398,6 +398,14 @@ class AppConstants {
   /// yyyy-MM-dd).
   static const String keyReminderAskedOnPrefix = 'reminder_asked_on_';
   static const String keyKnowledgeFeedCache = 'knowledge_feed_cache_v1';
+
+  /// Prefix of the article links the user opened, per user and device
+  /// (`knowledge_opened_<userId>`, a string list, newest last).
+  static const String keyKnowledgeOpenedPrefix = 'knowledge_opened_';
+
+  /// At most this many opened article links are kept.
+  static const int knowledgeOpenedMax = 50;
+
   static const String keyBuddyStatePrefix = 'buddy_state_';
 
   /// Prefix of the once-per-user-and-device decision whether the user sees
