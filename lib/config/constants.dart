@@ -652,6 +652,10 @@ class AppConstants {
   static const int glassMeterMaxGlasses = 48;
   static const Size glassMeterGlassSize = Size(22, 28);
   static const int drinkTileCount = 5;
+
+  /// Drinks shown when there is no history to build the one-tap drinks
+  /// from (signed out, or no Wasser, recents or starters in the catalogue).
+  static const int drinkFallbackCount = 11;
   static const double dashLengthSm = 3;
   static const double dashGapSm = 3;
 
@@ -661,21 +665,25 @@ class AppConstants {
   /// Text scale from which the drinks screen grids use two columns.
   static const double drinkGridLargeTextScale = 1.5;
 
+  /// Whether [context]'s text is scaled to [drinkGridLargeTextScale] or
+  /// more (the drinks screen's large-text layouts).
+  static bool isLargeText(BuildContext context) =>
+      MediaQuery.textScalerOf(context).scale(1) >= drinkGridLargeTextScale;
+
   /// Columns of those grids at that text scale.
   static const int drinkGridLargeTextColumns = 2;
 
   /// Width of the „Andere Menge" field on the drinks screen.
   static const double customAmountFieldWidth = 180;
 
+  /// Lines the hint under that field may wrap onto.
+  static const int customAmountHintMaxLines = 4;
+
   /// The scroll padding of that field at text scale 1: like
   /// [fieldWithHintScrollPadding], with room for its hint wrapping onto
   /// three lines in the narrow field. The bottom grows with the text scale.
-  static const EdgeInsets customAmountScrollPadding = EdgeInsets.fromLTRB(
-    spacing20,
-    spacing20,
-    spacing20,
-    96,
-  );
+  static final EdgeInsets customAmountScrollPadding = fieldWithHintScrollPadding
+      .copyWith(bottom: 96);
 
   /// Catalogue names (matched case-insensitively) that fill the one-tap
   /// drinks of a user with little history.

@@ -27,26 +27,36 @@ class GlassMeter extends StatelessWidget {
       image: true,
       label: DrinkHelpers.glassesLabel(drunkMl, pendingMl),
       excludeSemantics: true,
-      child: Wrap(
-        spacing: AppConstants.spacing6,
-        runSpacing: AppConstants.spacing6,
-        children: [
-          for (final (i, fill) in fills.indexed)
-            TweenAnimationBuilder<GlassFill>(
-              key: ValueKey(i),
-              tween: _GlassFillTween(end: fill),
-              duration: duration,
-              curve: Curves.easeOut,
-              builder: (_, f, _) => CustomPaint(
-                size: AppConstants.glassMeterGlassSize,
-                painter: GlassPainter(f),
+      // The glasses animate on their own layer, not with the card.
+      child: RepaintBoundary(
+        child: Wrap(
+          spacing: AppConstants.spacing6,
+          runSpacing: AppConstants.spacing6,
+          children: [
+            for (final (i, fill) in fills.indexed)
+              TweenAnimationBuilder<GlassFill>(
+                key: ValueKey(i),
+                tween: _GlassFillTween(end: fill),
+                duration: duration,
+                curve: Curves.easeOut,
+                builder: (_, f, _) => CustomPaint(
+                  size: AppConstants.glassMeterGlassSize,
+                  painter: GlassPainter(f),
+                ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
+
+/// [glassOutline] dashed, for a glass that is only pending.
+final _dashedGlassOutline = dashPath(
+  glassOutline,
+  dash: AppConstants.dashLengthSm,
+  gap: AppConstants.dashGapSm,
+);
 
 class _GlassFillTween extends Tween<GlassFill> {
   _GlassFillTween({super.end});
@@ -78,9 +88,19 @@ class GlassPainter extends CustomPainter {
   static const _top = 2.0;
   static const _bottom = 26.0;
 
+  static final _drunkPaint = Paint()..color = AppTheme.buddyWater;
+  static final _pendingPaint = Paint()..color = AppTheme.careWaterSoft;
+  static final _solidStroke = _stroke(AppTheme.foreground);
+  static final _dashedStroke = _stroke(AppTheme.infoText);
+
+  static Paint _stroke(Color color) => Paint()
+    ..color = color
+    ..style = PaintingStyle.stroke
+    ..strokeWidth = AppConstants.drinkGlyphStroke
+    ..strokeJoin = StrokeJoin.round;
+
   @override
   void paint(Canvas canvas, Size size) {
-    final outline = glassOutline();
     final box = DrinkGlyph.vesselSize(DrinkVessel.glass);
     canvas
       ..save()
@@ -92,37 +112,26 @@ class GlassPainter extends CustomPainter {
     if (fill.drunk > 0 || fill.pending > 0) {
       canvas
         ..save()
-        ..clipPath(outline);
+        ..clipPath(glassOutline);
       if (fill.drunk > 0) {
         canvas.drawRect(
           Rect.fromLTRB(0, drunkTop, box.width, _bottom),
-          Paint()..color = AppTheme.buddyWater,
+          _drunkPaint,
         );
       }
       if (fill.pending > 0) {
         canvas.drawRect(
           Rect.fromLTRB(0, pendingTop, box.width, drunkTop),
-          Paint()..color = AppTheme.careWaterSoft,
+          _pendingPaint,
         );
       }
       canvas.restore();
     }
 
-    final dashed = this.dashed;
     canvas
       ..drawPath(
-        dashed
-            ? dashPath(
-                outline,
-                dash: AppConstants.dashLengthSm,
-                gap: AppConstants.dashGapSm,
-              )
-            : outline,
-        Paint()
-          ..color = dashed ? AppTheme.infoText : AppTheme.foreground
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = AppConstants.drinkGlyphStroke
-          ..strokeJoin = StrokeJoin.round,
+        dashed ? _dashedGlassOutline : glassOutline,
+        dashed ? _dashedStroke : _solidStroke,
       )
       ..restore();
   }

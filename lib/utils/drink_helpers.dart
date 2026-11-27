@@ -76,28 +76,25 @@ abstract final class DrinkHelpers {
     List<String> recentIds,
   ) {
     final quick = <Drink>[];
-    final wasserDrink = allDrinks
-        .where((d) => d.name.toLowerCase() == 'wasser')
-        .firstOrNull;
+    final wasserDrink = allDrinks.where(_isWasser).firstOrNull;
     if (wasserDrink != null) quick.add(wasserDrink);
     for (final id in recentIds) {
       if (id == wasserDrink?.id) continue;
       final drink = allDrinks.where((d) => d.id == id).firstOrNull;
       if (drink != null) quick.add(drink);
     }
-    if (quick.length < AppConstants.drinkTileCount) {
-      for (final starter in AppConstants.starterDrinkNames) {
-        if (quick.length >= AppConstants.drinkTileCount) break;
-        final lower = starter.toLowerCase();
-        final drink = allDrinks
-            .where((d) => d.name.toLowerCase() == lower)
-            .firstOrNull;
-        if (drink != null && !quick.any((d) => d.id == drink.id)) {
-          quick.add(drink);
-        }
-      }
+    final seen = {for (final d in quick) d.id};
+    for (final starter in AppConstants.starterDrinkNames) {
+      if (quick.length >= AppConstants.drinkTileCount) break;
+      final lower = starter.toLowerCase();
+      final drink = allDrinks
+          .where((d) => d.name.toLowerCase() == lower)
+          .firstOrNull;
+      if (drink != null && seen.add(drink.id)) quick.add(drink);
     }
-    if (quick.isEmpty) return allDrinks.take(11).toList();
+    if (quick.isEmpty) {
+      return allDrinks.take(AppConstants.drinkFallbackCount).toList();
+    }
     return quick;
   }
 
@@ -157,6 +154,8 @@ abstract final class DrinkHelpers {
         : drunk;
   }
 
+  static bool _isWasser(Drink d) => d.name.toLowerCase() == 'wasser';
+
   /// The drink tiles: Wasser first, the rest in order without duplicates,
   /// at most [count]; a [selected] drink not among them replaces the last.
   static List<Drink> tileDrinks(
@@ -164,20 +163,13 @@ abstract final class DrinkHelpers {
     Drink? selected, {
     int count = AppConstants.drinkTileCount,
   }) {
-    final wasser = quick
-        .where((d) => d.name.toLowerCase() == 'wasser')
-        .firstOrNull;
-    final ordered = <Drink>[?wasser];
-    for (final d in quick) {
-      if (!ordered.any((o) => o.id == d.id)) ordered.add(d);
-    }
-    final tiles = ordered.take(count).toList();
-    if (selected != null &&
-        !tiles.any((d) => d.id == selected.id) &&
-        tiles.isNotEmpty) {
-      if (tiles.length >= count) tiles.removeLast();
-      tiles.add(selected);
-    } else if (selected != null && tiles.isEmpty) {
+    final seen = <String>{};
+    final tiles = [
+      for (final d in [?quick.where(_isWasser).firstOrNull, ...quick])
+        if (seen.add(d.id)) d,
+    ].take(count).toList();
+    if (selected != null && !tiles.any((d) => d.id == selected.id)) {
+      if (tiles.isNotEmpty && tiles.length >= count) tiles.removeLast();
       tiles.add(selected);
     }
     return tiles;

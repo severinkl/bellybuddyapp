@@ -1,3 +1,5 @@
+import 'package:belly_buddy/config/app_theme.dart';
+import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/widgets/common/bb_button.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -81,5 +83,29 @@ void main() {
       'Wasser, 250 ml eintragen',
     );
     handle.dispose();
+  });
+
+  testWidgets('compact is a pill at least the tap size beside other content, '
+      'not the theme\'s full width', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.theme,
+        home: Scaffold(
+          body: Row(
+            children: [
+              const Expanded(child: Text('Wasser, 250 ml')),
+              BbButton(label: 'Eintragen', compact: true, onPressed: () {}),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final size = tester.getSize(find.byType(ElevatedButton));
+    expect(size.width, greaterThanOrEqualTo(AppConstants.minTapTarget));
+    expect(size.height, greaterThanOrEqualTo(AppConstants.minTapTarget));
+    expect(size.width, lessThan(tester.getSize(find.byType(Row)).width / 2));
+    final style = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
+    expect(style.style?.shape?.resolve({}), isA<StadiumBorder>());
   });
 }

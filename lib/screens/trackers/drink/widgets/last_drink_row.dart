@@ -28,9 +28,7 @@ class LastDrinkRow extends ConsumerWidget {
 
     final what =
         '${last.drink.name}, ${DrinkHelpers.formatAmount(last.amountMl)}';
-    final stacked =
-        MediaQuery.textScalerOf(context).scale(1) >=
-        AppConstants.drinkGridLargeTextScale;
+    final stacked = AppConstants.isLargeText(context);
 
     final text = Semantics(
       container: true,
@@ -65,14 +63,13 @@ class LastDrinkRow extends ConsumerWidget {
       size: AppConstants.drinkRowIconSize,
       color: AppTheme.infoText,
     );
-    final button = _PillButton(
-      child: BbButton(
-        tapKey: saveKey,
-        label: 'Eintragen',
-        semanticLabel: '$what eintragen',
-        isLoading: isSaving,
-        onPressed: onSave,
-      ),
+    final button = BbButton(
+      tapKey: saveKey,
+      label: 'Eintragen',
+      semanticLabel: '$what eintragen',
+      isLoading: isSaving,
+      compact: true,
+      onPressed: onSave,
     );
 
     return Container(
@@ -111,34 +108,6 @@ class LastDrinkRow extends ConsumerWidget {
                 button,
               ],
             ),
-    );
-  }
-}
-
-/// The app's button as a pill at least [AppConstants.minTapSize]: the
-/// theme's full-width minimum would not fit beside the text.
-class _PillButton extends StatelessWidget {
-  const _PillButton({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final base = theme.elevatedButtonTheme.style ?? const ButtonStyle();
-    return Theme(
-      data: theme.copyWith(
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: base.copyWith(
-            minimumSize: const WidgetStatePropertyAll(AppConstants.minTapSize),
-            shape: const WidgetStatePropertyAll(StadiumBorder()),
-            padding: const WidgetStatePropertyAll(
-              EdgeInsets.symmetric(horizontal: AppConstants.spacingLg),
-            ),
-          ),
-        ),
-      ),
-      child: child,
     );
   }
 }

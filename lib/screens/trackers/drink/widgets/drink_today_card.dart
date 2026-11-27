@@ -31,9 +31,7 @@ class DrinkTodayCard extends ConsumerWidget {
         ? 'Heute getrunken'
         : 'Am ${formatDayMonth(trackedAt)} getrunken';
     final total = DrinkHelpers.formatAmount(dayTotal + pending);
-    final stacked =
-        MediaQuery.textScalerOf(context).scale(1) >=
-        AppConstants.drinkGridLargeTextScale;
+    final stacked = AppConstants.isLargeText(context);
 
     final labelText = Text(
       label,

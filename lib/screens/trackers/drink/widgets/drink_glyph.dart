@@ -112,7 +112,7 @@ List<Path> _iconPaths(DrinkIcon icon) => switch (icon) {
 };
 
 List<Path> _vesselPaths(DrinkVessel vessel) => switch (vessel) {
-  DrinkVessel.glass => [glassOutline()],
+  DrinkVessel.glass => [glassOutline],
   DrinkVessel.can => _canVessel,
   DrinkVessel.bottle => _bottleVessel,
   DrinkVessel.large => _largeVessel,
@@ -120,7 +120,7 @@ List<Path> _vesselPaths(DrinkVessel vessel) => switch (vessel) {
 
 /// Mockup glass vessel and today-card glass, 22×28:
 /// `M3 2h16l-1.6 23a1 1 0 0 1-1 1H5.6a1 1 0 0 1-1-1L3 2z`.
-Path glassOutline() => Path()
+final glassOutline = Path()
   ..moveTo(3, 2)
   ..lineTo(19, 2)
   ..relativeLineTo(-1.6, 23)

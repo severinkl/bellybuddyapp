@@ -21,7 +21,8 @@ import 'package:belly_buddy/utils/date_format_utils.dart';
 import 'package:belly_buddy/utils/drink_helpers.dart';
 import 'package:belly_buddy/utils/wall_clock.dart';
 import 'package:belly_buddy/widgets/common/date_time_chips.dart';
-import '../../../helpers/app_host.dart' show germanLocalizations, germanLocale;
+import '../../../helpers/app_host.dart'
+    show germanLocalizations, germanLocale, germanRouterApp;
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
@@ -816,9 +817,10 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('after a save it closes with true for its opener', (
-      tester,
-    ) async {
+    /// The screen pushed from an opener page; `result()` is what the push
+    /// returned ('not closed' until the screen closes).
+    Future<({ProviderContainer container, Object? Function() result})>
+    pumpFromOpener(WidgetTester tester) async {
       SharedPreferences.setMockInitialValues({});
       Object? result = 'not closed';
       final router = GoRouter(
@@ -845,12 +847,19 @@ void main() {
       await tester.pumpWidget(
         UncontrolledProviderScope(
           container: container,
-          child: MaterialApp.router(routerConfig: router),
+          child: germanRouterApp(router),
         ),
       );
       await tester.pumpAndSettle();
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
+      return (container: container, result: () => result);
+    }
+
+    testWidgets('after a save it closes with true for its opener', (
+      tester,
+    ) async {
+      final (:container, :result) = await pumpFromOpener(tester);
 
       container.read(drinkTrackerProvider.notifier)
         ..toggleDrink(testDrink())
@@ -865,45 +874,14 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(result, isTrue);
+      expect(result(), isTrue);
       expect(find.text('open'), findsOneWidget);
     });
 
     testWidgets('after a one-tap save it closes with true for its opener', (
       tester,
     ) async {
-      SharedPreferences.setMockInitialValues({});
-      Object? result = 'not closed';
-      final router = GoRouter(
-        initialLocation: '/opener',
-        routes: [
-          GoRoute(
-            path: '/opener',
-            builder: (context, _) => Scaffold(
-              body: TextButton(
-                onPressed: () async =>
-                    result = await context.push<bool>('/drink'),
-                child: const Text('open'),
-              ),
-            ),
-          ),
-          GoRoute(
-            path: '/drink',
-            builder: (_, _) => const DrinkTrackerScreen(),
-          ),
-        ],
-      );
-      final container = ProviderContainer.test(overrides: _overrides());
-      addTearDown(container.dispose);
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp.router(routerConfig: router),
-        ),
-      );
-      await tester.pumpAndSettle();
-      await tester.tap(find.text('open'));
-      await tester.pumpAndSettle();
+      final (container: _, :result) = await pumpFromOpener(tester);
 
       await tester.ensureVisible(find.byKey(LastDrinkRow.saveKey));
       await tester.tap(find.byKey(LastDrinkRow.saveKey));
@@ -914,7 +892,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
 
-      expect(result, isTrue);
+      expect(result(), isTrue);
       expect(find.text('open'), findsOneWidget);
     });
 

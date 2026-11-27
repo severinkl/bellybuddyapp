@@ -18,9 +18,7 @@ class DrinkTileGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final columns =
-        MediaQuery.textScalerOf(context).scale(1) >=
-            AppConstants.drinkGridLargeTextScale
+    final columns = AppConstants.isLargeText(context)
         ? AppConstants.drinkGridLargeTextColumns
         : normalColumns;
     return Column(

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import '../config/constants.dart';
 import '../models/drink.dart';
 import '../models/drink_entry.dart';
 import '../providers/core_providers.dart';
@@ -102,25 +103,25 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
     try {
       final drinkRepo = ref.read(drinkRepositoryProvider);
       final userId = ref.read(currentUserIdProvider);
-      final drinksFuture = drinkRepo.fetchAll();
-      final recentFuture = userId == null
-          ? Future.value(<String>[])
-          : drinkRepo.fetchRecentDrinkIds(userId);
-      final lastFuture = userId == null
-          ? Future.value(null)
-          : _fetchLastEntry(drinkRepo, userId);
+      if (userId == null) {
+        // Signed out: no history, no last entry.
+        final drinks = await drinkRepo.fetchAll();
+        state = state.copyWith(
+          allDrinks: drinks,
+          quickDrinks: drinks.take(AppConstants.drinkFallbackCount).toList(),
+          lastDrink: null,
+          isLoading: false,
+        );
+        return;
+      }
       final (drinks, recentIds, lastEntry) = await (
-        drinksFuture,
-        recentFuture,
-        lastFuture,
+        drinkRepo.fetchAll(),
+        drinkRepo.fetchRecentDrinkIds(userId),
+        _fetchLastEntry(drinkRepo, userId),
       ).wait;
-
-      final quick = userId != null
-          ? DrinkHelpers.buildQuickDrinks(drinks, recentIds)
-          : drinks.take(11).toList();
       state = state.copyWith(
         allDrinks: drinks,
-        quickDrinks: quick,
+        quickDrinks: DrinkHelpers.buildQuickDrinks(drinks, recentIds),
         lastDrink: _resolveLast(lastEntry, drinks),
         isLoading: false,
       );
@@ -268,12 +269,11 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
       _log.error('failed to delete drink', e, st);
       rethrow;
     }
-    // The delete took the drink's entries with it: the last entry and the
-    // day total may have changed.
-    if (state.lastDrink?.drink.id == drink.id) {
-      state = state.copyWith(lastDrink: null);
-    }
-    await Future.wait([_reloadLast(), loadDayTotal()]);
+    // The delete took the drink's entries with it: the day total may have
+    // changed, and the last entry if it was this drink's.
+    final wasLast = state.lastDrink?.drink.id == drink.id;
+    if (wasLast) state = state.copyWith(lastDrink: null);
+    await Future.wait([if (wasLast) _reloadLast(), loadDayTotal()]);
   }
 
   /// Re-fetches the last entry and resolves it against the loaded drinks.

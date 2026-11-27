@@ -11,6 +11,10 @@ class BbButton extends StatelessWidget {
   final bool isOutlined;
   final bool isDestructive;
   final bool isSecondary;
+
+  /// A pill at least [AppConstants.minTapSize] instead of the theme's
+  /// full-width minimum, to sit beside other content in a row.
+  final bool compact;
   final IconData? icon;
 
   /// Drawn before the label in place of an [icon] (a sticker icon).
@@ -30,6 +34,7 @@ class BbButton extends StatelessWidget {
     this.isOutlined = false,
     this.isDestructive = false,
     this.isSecondary = false,
+    this.compact = false,
     this.icon,
     this.leading,
     this.semanticLabel,
@@ -37,6 +42,12 @@ class BbButton extends StatelessWidget {
          icon == null || leading == null,
          'An icon or a leading widget, not both',
        );
+
+  static final _compactStyle = ElevatedButton.styleFrom(
+    minimumSize: AppConstants.minTapSize,
+    shape: const StadiumBorder(),
+    padding: const EdgeInsets.symmetric(horizontal: AppConstants.spacingLg),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -103,20 +114,21 @@ class BbButton extends StatelessWidget {
       );
     }
 
+    final colors = isDestructive
+        ? ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.destructive,
+            foregroundColor: Colors.white,
+          )
+        : isSecondary
+        ? ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.secondary,
+            foregroundColor: AppTheme.secondaryForeground,
+          )
+        : null;
     return ElevatedButton(
       key: tapKey,
       onPressed: effectiveOnPressed,
-      style: isDestructive
-          ? ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.destructive,
-              foregroundColor: Colors.white,
-            )
-          : isSecondary
-          ? ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.secondary,
-              foregroundColor: AppTheme.secondaryForeground,
-            )
-          : null,
+      style: compact ? _compactStyle.merge(colors) : colors,
       child: named,
     );
   }

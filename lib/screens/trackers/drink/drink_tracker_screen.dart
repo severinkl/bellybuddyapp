@@ -47,14 +47,27 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen>
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(drinkTrackerProvider);
-    final drink = state.selectedDrink;
+    // Only what this build shows: typing elsewhere does not rebuild it.
+    final (:drink, :amount, :hasLast, :isLoading, :isSaving, :showSuccess) = ref
+        .watch(
+          drinkTrackerProvider.select(
+            (s) => (
+              drink: s.selectedDrink,
+              amount: s.selectedAmount,
+              hasLast: s.lastDrink != null,
+              isLoading: s.isLoading,
+              isSaving: s.isSaving,
+              showSuccess: s.showSuccess,
+            ),
+          ),
+        );
+    final notifier = ref.read(drinkTrackerProvider.notifier);
     final moment = logMoment;
 
     return TrackerScreenScaffold(
       trackerKey: DrinkTrackerScreen.trackerKey,
       title: 'Was hast du getrunken?',
-      showSuccess: state.showSuccess,
+      showSuccess: showSuccess,
       successMessage: 'Getränk gespeichert!',
       successIllustration: moment == null
           ? null
@@ -64,7 +77,7 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen>
       onSuccessDismissed: () => context.canPop()
           ? context.pop(true)
           : context.go(RoutePaths.dashboard),
-      body: state.isLoading
+      body: isLoading
           ? const Center(
               child: CircularProgressIndicator(color: AppTheme.primary),
             )
@@ -78,8 +91,8 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen>
                       children: [
                         const DrinkTodayCard(),
                         AppConstants.gap12,
-                        if (state.lastDrink != null && drink == null) ...[
-                          LastDrinkRow(onSave: _saveLast),
+                        if (hasLast && drink == null) ...[
+                          LastDrinkRow(onSave: () => _log(notifier.saveLast)),
                           AppConstants.gap12,
                         ],
                         const QuickDrinkGrid(),
@@ -105,12 +118,11 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen>
                     ),
                     child: BbButton(
                       tapKey: DrinkTrackerScreen.saveKey,
-                      label: DrinkHelpers.saveLabel(
-                        drink,
-                        state.selectedAmount,
-                      ),
-                      isLoading: state.isSaving,
-                      onPressed: state.selectedAmount == null ? null : _save,
+                      label: DrinkHelpers.saveLabel(drink, amount),
+                      isLoading: isSaving,
+                      onPressed: amount == null
+                          ? null
+                          : () => _log(notifier.save),
                     ),
                   ),
               ],
@@ -118,21 +130,14 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen>
     );
   }
 
-  Future<void> _save() => logEntry(
+  /// Logs a drink through [save] (the chosen drink, or „Wie zuletzt") at
+  /// the chosen time.
+  Future<void> _log(Future<void> Function() save) => logEntry(
     kind: EntryKind.drink,
     trackedAt: ref.read(drinkTrackerProvider).trackedAt,
-    save: ref.read(drinkTrackerProvider.notifier).save,
-    // save() is a no-op without a drink and amount; only a stored entry
+    save: save,
+    // A save is a no-op without a drink and amount; only a stored entry
     // (shown as success) is a log the Buddy reacts to.
-    stored: () => ref.read(drinkTrackerProvider).showSuccess,
-  );
-
-  /// „Wie zuletzt": the last drink again, at the chosen time, through the
-  /// same path as [_save].
-  Future<void> _saveLast() => logEntry(
-    kind: EntryKind.drink,
-    trackedAt: ref.read(drinkTrackerProvider).trackedAt,
-    save: ref.read(drinkTrackerProvider.notifier).saveLast,
     stored: () => ref.read(drinkTrackerProvider).showSuccess,
   );
 }

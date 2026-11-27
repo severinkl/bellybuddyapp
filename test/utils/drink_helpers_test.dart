@@ -1,12 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:intl/date_symbol_data_local.dart';
 import 'package:belly_buddy/utils/drink_helpers.dart';
 import 'package:belly_buddy/models/drink.dart';
 import 'package:belly_buddy/config/constants.dart';
 
 void main() {
-  setUpAll(() => initializeDateFormatting('de_DE'));
-
   Drink makeDrink(String id, String name) => Drink(id: id, name: name);
 
   final wasser = makeDrink('w', 'Wasser');

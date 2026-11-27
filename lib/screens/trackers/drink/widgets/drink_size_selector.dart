@@ -204,7 +204,7 @@ class _CustomAmountRow extends StatelessWidget {
     );
     final error = DrinkHelpers.amountError(customAmount);
     final textScaler = MediaQuery.textScalerOf(context);
-    final stacked = textScaler.scale(1) >= AppConstants.drinkGridLargeTextScale;
+    final stacked = AppConstants.isLargeText(context);
 
     const labelText = Text(
       'Andere Menge',
@@ -243,9 +243,9 @@ class _CustomAmountRow extends StatelessWidget {
             fontSize: AppTheme.fontSizeBody,
             color: AppTheme.mutedForeground,
           ),
-          // A widget, not errorText: errorText is cut off with an ellipsis
-          // after errorMaxLines; this wraps onto as many lines as it needs.
-          error: error == null ? null : Text(error, textAlign: TextAlign.end),
+          errorText: error,
+          // Room to wrap in the narrow field instead of an ellipsis.
+          errorMaxLines: AppConstants.customAmountHintMaxLines,
           filled: true,
           fillColor: AppTheme.background,
           contentPadding: const EdgeInsets.symmetric(
