@@ -15,10 +15,17 @@ class TestCopy {
   /// „Verträglichkeits-Test: Zwiebel".
   static String title(TestSubject s) => 'Verträglichkeits-Test: ${s.name}';
 
-  static String introBody(TestSubject s, int leaveOut, int reintro) =>
-      'So geht\'s: $leaveOut Tage lässt du ${s.name} weg, danach isst du es '
-      '$reintro Tage wieder ganz normal. Trag jeden Abend dein Bauchgefühl '
-      'ein – dann vergleiche ich die beiden Phasen.';
+  /// A group reads as its foods: „lässt du Lebensmittel mit Fruktanen
+  /// weg, danach isst du sie …".
+  static String introBody(TestSubject s, int leaveOut, int reintro) {
+    final how = _isGroup(s)
+        ? '$leaveOut Tage lässt du Lebensmittel mit ${_mit(s)} weg, danach '
+              'isst du sie $reintro Tage'
+        : '$leaveOut Tage lässt du ${s.name} weg, danach isst du es '
+              '$reintro Tage';
+    return 'So geht\'s: $how wieder ganz normal. Trag jeden Abend dein '
+        'Bauchgefühl ein – dann vergleiche ich die beiden Phasen.';
+  }
 
   /// „Ohne: 28. Nov – 2. Dez · Mit: 3. Dez – 5. Dez" for a test starting
   /// on [startsOn] (a wall-clock date).
@@ -28,9 +35,11 @@ class TestCopy {
         ' · Mit: ${day(reintroOn)} – ${day(addDays(reintroOn, reintro - 1))}';
   }
 
-  /// „Fruktane stecken bei dir zum Beispiel in Zwiebel, Weizenbrot."
+  /// „Lebensmittel mit Fruktanen sind bei dir zum Beispiel: Zwiebel,
+  /// Weizenbrot."
   static String groupFoods(TestSubject group, List<String> foods) =>
-      '${group.name} stecken bei dir zum Beispiel in ${foods.join(', ')}.';
+      'Lebensmittel mit ${_mit(group)} sind bei dir zum Beispiel: '
+      '${foods.join(', ')}.';
 
   static const doctor =
       'Hast du starke oder anhaltende Beschwerden, sprich bitte mit deiner '
@@ -53,37 +62,58 @@ class TestCopy {
   /// Before the first day: „Los geht's am 28. Nov."
   static String startsOn(DateTime d) => 'Los geht\'s am ${day(d)}.';
 
-  static String notKept(int n, TestSubject s) => n == 1
-      ? 'An 1 Tag war ${s.name} doch dabei – das passiert. Diesen Tag zähle '
-            'ich nicht mit.'
-      : 'An $n Tagen war ${s.name} doch dabei – das passiert. Diese Tage '
-            'zähle ich nicht mit.';
+  static String notKept(int n, TestSubject s) {
+    final what = _isGroup(s)
+        ? 'doch etwas mit ${_mit(s)} dabei'
+        : '${s.name} doch dabei';
+    return n == 1
+        ? 'An 1 Tag war $what – das passiert. Diesen Tag zähle ich nicht mit.'
+        : 'An $n Tagen war $what – das passiert. Diese Tage zähle ich nicht '
+              'mit.';
+  }
 
-  static String notEaten(int n, TestSubject s) => n == 1
-      ? 'An 1 Tag war ${s.name} nicht dabei – den zähle ich nicht mit.'
-      : 'An $n Tagen war ${s.name} nicht dabei – die zähle ich nicht mit.';
+  static String notEaten(int n, TestSubject s) {
+    final what = _isGroup(s)
+        ? 'nichts mit ${_mit(s)} dabei'
+        : '${s.name} nicht dabei';
+    return n == 1
+        ? 'An 1 Tag war $what – den zähle ich nicht mit.'
+        : 'An $n Tagen war $what – die zähle ich nicht mit.';
+  }
 
   static String resultHeadline(TestSubject s, TestResult r) =>
       'In den Tagen ohne ${s.name} ging es dir an ${r.goodWithout} von '
       '${r.countedWithout} Tagen gut, mit ${_mit(s)} an ${r.goodWith} von '
       '${r.countedWith}.';
 
-  static String conclusion(TestOutcome o, TestSubject s) => switch (o) {
-    TestOutcome.worse =>
-      'Mit ${_mit(s)} ging es dir in diesem Test deutlich schlechter. Das '
-          'könnte heißen, dass du ${s.name} gerade nicht so gut verträgst.',
-    TestOutcome.slightlyWorse =>
-      'Mit ${_mit(s)} ging es dir etwas schlechter. Acht Tage sind kurz – '
-          'wenn du magst, wiederhol den Test später.',
-    TestOutcome.noDifference =>
-      '${s.name} hat in diesem Test keinen klaren Unterschied gemacht.',
-    TestOutcome.better =>
-      'Mit ${_mit(s)} ging es dir in diesem Test nicht schlechter – '
-          '${s.name} scheint gerade kein Problem für dich zu sein.',
-    TestOutcome.unclear =>
-      'Dafür hab ich zu wenige Tage mit Bauchgefühl. Magst du es nochmal '
-          'versuchen?',
-  };
+  /// A group's conclusion speaks of „Lebensmittel mit Fruktanen" (plural).
+  static String conclusion(TestOutcome o, TestSubject s) {
+    final g = _isGroup(s);
+    final foods = 'Lebensmittel mit ${_mit(s)}';
+    return switch (o) {
+      TestOutcome.worse =>
+        'Mit ${_mit(s)} ging es dir in diesem Test deutlich schlechter. Das '
+            'könnte heißen, dass du ${g ? foods : s.name} gerade nicht so gut '
+            'verträgst.',
+      TestOutcome.slightlyWorse =>
+        'Mit ${_mit(s)} ging es dir etwas schlechter. Acht Tage sind kurz – '
+            'wenn du magst, wiederhol den Test später.',
+      TestOutcome.noDifference =>
+        g
+            ? '$foods haben in diesem Test keinen klaren Unterschied gemacht.'
+            : '${s.name} hat in diesem Test keinen klaren Unterschied '
+                  'gemacht.',
+      TestOutcome.better =>
+        g
+            ? 'Mit ${_mit(s)} ging es dir in diesem Test nicht schlechter – '
+                  '$foods scheinen gerade kein Problem für dich zu sein.'
+            : 'Mit ${_mit(s)} ging es dir in diesem Test nicht schlechter – '
+                  '${s.name} scheint gerade kein Problem für dich zu sein.',
+      TestOutcome.unclear =>
+        'Dafür hab ich zu wenige Tage mit Bauchgefühl. Magst du es nochmal '
+            'versuchen?',
+    };
+  }
 
   /// The result as shown, in order: headline, conclusion, the not-kept and
   /// not-eaten lines (when there are any), the observation note and the
@@ -172,6 +202,8 @@ class TestCopy {
     TestSubject('group', 'sorbitol', 'Sorbit'),
     TestSubject('group', 'mannitol', 'Mannit'),
   ];
+
+  static bool _isGroup(TestSubject s) => s.kind == 'group';
 
   static String _mit(TestSubject s) =>
       StatsCopy.nameAfterMit(s.kind, s.key, s.name);

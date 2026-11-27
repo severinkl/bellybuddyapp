@@ -24,6 +24,9 @@ List<String> _allCopy() => [
   TestCopy.title(_zwiebel),
   TestCopy.introBody(_zwiebel, 5, 3),
   TestCopy.introBody(_fructans, 5, 3),
+  TestCopy.notKept(2, _fructans),
+  TestCopy.notEaten(1, _fructans),
+  for (final o in TestOutcome.values) TestCopy.conclusion(o, _fructans),
   TestCopy.datesLine(DateTime(2026, 11, 28), 5, 3),
   TestCopy.groupFoods(_fructans, ['Zwiebel', 'Weizenbrot']),
   TestCopy.doctor,
@@ -199,8 +202,8 @@ void main() {
     );
     expect(
       TestCopy.groupFoods(_fructans, ['Zwiebel', 'Weizenbrot', 'Knoblauch']),
-      'Fruktane stecken bei dir zum Beispiel in Zwiebel, Weizenbrot, '
-      'Knoblauch.',
+      'Lebensmittel mit Fruktanen sind bei dir zum Beispiel: Zwiebel, '
+      'Weizenbrot, Knoblauch.',
     );
     expect(
       TestCopy.phaseLine(TestPhase.leaveOut, _zwiebel),
@@ -248,5 +251,72 @@ void main() {
       'Mannit',
     ]);
     expect(TestCopy.groups.every((g) => g.kind == 'group'), isTrue);
+  });
+
+  test('a group reads as its foods („Lebensmittel mit Fruktanen")', () {
+    expect(
+      TestCopy.introBody(_fructans, 5, 3),
+      'So geht\'s: 5 Tage lässt du Lebensmittel mit Fruktanen weg, danach '
+      'isst du sie 3 Tage wieder ganz normal. Trag jeden Abend dein '
+      'Bauchgefühl ein – dann vergleiche ich die beiden Phasen.',
+    );
+    expect(
+      TestCopy.phaseLine(TestPhase.leaveOut, _fructans),
+      'Phase 1: ohne Fruktane',
+    );
+    expect(
+      TestCopy.notKept(1, _fructans),
+      'An 1 Tag war doch etwas mit Fruktanen dabei – das passiert. Diesen '
+      'Tag zähle ich nicht mit.',
+    );
+    expect(
+      TestCopy.notKept(2, _fructans),
+      'An 2 Tagen war doch etwas mit Fruktanen dabei – das passiert. Diese '
+      'Tage zähle ich nicht mit.',
+    );
+    expect(
+      TestCopy.notEaten(1, _fructans),
+      'An 1 Tag war nichts mit Fruktanen dabei – den zähle ich nicht mit.',
+    );
+    expect(
+      TestCopy.notEaten(2, _fructans),
+      'An 2 Tagen war nichts mit Fruktanen dabei – die zähle ich nicht mit.',
+    );
+    expect(
+      TestCopy.conclusion(TestOutcome.worse, _fructans),
+      'Mit Fruktanen ging es dir in diesem Test deutlich schlechter. Das '
+      'könnte heißen, dass du Lebensmittel mit Fruktanen gerade nicht so gut '
+      'verträgst.',
+    );
+    expect(
+      TestCopy.conclusion(TestOutcome.slightlyWorse, _fructans),
+      'Mit Fruktanen ging es dir etwas schlechter. Acht Tage sind kurz – wenn '
+      'du magst, wiederhol den Test später.',
+    );
+    expect(
+      TestCopy.conclusion(TestOutcome.noDifference, _fructans),
+      'Lebensmittel mit Fruktanen haben in diesem Test keinen klaren '
+      'Unterschied gemacht.',
+    );
+    expect(
+      TestCopy.conclusion(TestOutcome.better, _fructans),
+      'Mit Fruktanen ging es dir in diesem Test nicht schlechter – '
+      'Lebensmittel mit Fruktanen scheinen gerade kein Problem für dich zu '
+      'sein.',
+    );
+    expect(
+      TestCopy.conclusion(TestOutcome.unclear, _fructans),
+      TestCopy.conclusion(TestOutcome.unclear, _zwiebel),
+    );
+    // Other groups keep their short name after „mit".
+    const lactose = TestSubject('group', 'lactose', 'Laktose');
+    expect(
+      TestCopy.phaseLine(TestPhase.reintro, lactose),
+      'Phase 2: wieder mit Laktose',
+    );
+    expect(
+      TestCopy.groupFoods(lactose, ['Milch']),
+      'Lebensmittel mit Laktose sind bei dir zum Beispiel: Milch.',
+    );
   });
 }

@@ -39,7 +39,12 @@ class ToleranceTestCard extends ConsumerWidget {
 
     final List<Widget> lines;
     Object? extra;
-    if (test != null && test.phase == TestPhase.done && result != null) {
+    if (test != null &&
+        test.phase == TestPhase.done &&
+        (result != null || test.isActive)) {
+      // Active, over, without a result (should not happen): nothing, never
+      // „Tag 9 von 8", and no proposal until it is completed.
+      if (result == null) return const SizedBox.shrink();
       lines = [
         _title(TestCopy.title(test.subject)),
         Text(
@@ -71,7 +76,7 @@ class ToleranceTestCard extends ConsumerWidget {
         const Text(TestCopy.pageTitle, style: AppTheme.bodyMutedStyle),
         _title(TestCopy.proposal(proposal)),
       ];
-      extra = proposal;
+      extra = ToleranceTestProposed(proposal);
     } else {
       return const SizedBox.shrink();
     }

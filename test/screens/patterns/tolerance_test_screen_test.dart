@@ -208,6 +208,27 @@ void main() {
     expect(repo.starts.single.origin, 'proposed');
   });
 
+  testWidgets('the origin follows the entry point, not the value', (
+    tester,
+  ) async {
+    // From a stats row: picked, even though it is the proposal too.
+    var repo = await _pump(tester, _stats(proposal: _zwiebel), extra: _zwiebel);
+    await tester.tap(_start);
+    await tester.pumpAndSettle();
+    expect(repo.starts.single.origin, 'picked');
+
+    // From the card's proposal.
+    repo = await _pump(
+      tester,
+      _stats(),
+      extra: const ToleranceTestProposed(_zwiebel),
+    );
+    expect(find.text(TestCopy.title(_zwiebel)), findsOneWidget);
+    await tester.tap(_start);
+    await tester.pumpAndSettle();
+    expect(repo.starts.single.origin, 'proposed');
+  });
+
   testWidgets('group intro lists up to five eaten foods of that group', (
     tester,
   ) async {
@@ -240,8 +261,8 @@ void main() {
     );
     expect(
       find.text(
-        'Fruktane stecken bei dir zum Beispiel in Zwiebel, Knoblauch, Lauch, '
-        'Roggenbrot, Weizenbrot.',
+        'Lebensmittel mit Fruktanen sind bei dir zum Beispiel: Zwiebel, '
+        'Knoblauch, Lauch, Roggenbrot, Weizenbrot.',
       ),
       findsOneWidget,
     );
@@ -249,7 +270,7 @@ void main() {
 
   testWidgets('a group nobody ate has no foods line', (tester) async {
     await _pump(tester, _stats(), extra: _fructans);
-    expect(find.textContaining('stecken bei dir'), findsNothing);
+    expect(find.textContaining('sind bei dir zum Beispiel'), findsNothing);
     expect(_start, findsOneWidget);
   });
 

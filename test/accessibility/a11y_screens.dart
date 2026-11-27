@@ -221,6 +221,42 @@ List<Override> _toleranceTestRunning() => baseOverrides(
   ),
 );
 
+/// A finished test (completed, „deutlich schlechter") with a day not kept.
+List<Override> _toleranceTestResult() => baseOverrides(
+  patternStats: FakePatternStatsService(
+    stats: _testStats(
+      test: ToleranceTestView(
+        id: 't1',
+        subject: const TestSubject('ingredient', 'zwiebel', 'Zwiebel'),
+        origin: 'proposed',
+        status: 'completed',
+        phase: TestPhase.done,
+        startsOn: DateTime(2026, 11, 17),
+        leaveOutDays: 5,
+        reintroDays: 3,
+        dayIndex: 9,
+        days: [
+          for (var i = 0; i < 8; i++)
+            TestDayView(
+              day: DateTime(2026, 11, 17 + i),
+              phase: i < 5 ? TestPhase.leaveOut : TestPhase.reintro,
+              dayClass: i < 5 ? DayClass.good : DayClass.hard,
+              exposed: i == 1 || i >= 5,
+            ),
+        ],
+        result: const TestResult(
+          goodWithout: 4,
+          countedWithout: 4,
+          goodWith: 0,
+          countedWith: 3,
+          outcome: TestOutcome.worse,
+          notKept: 1,
+        ),
+      ),
+    ),
+  ),
+);
+
 /// The proposal's intro (a group, so the foods line shows).
 List<Override> _toleranceTestProposal() => baseOverrides(
   patternStats: FakePatternStatsService(
@@ -377,6 +413,11 @@ const a11yScreens = <A11yScreen>[
     'Verträglichkeits-Test',
     RoutePaths.toleranceTest,
     base: _toleranceTestRunning,
+  ),
+  A11yScreen(
+    'Verträglichkeits-Test (Ergebnis)',
+    RoutePaths.toleranceTest,
+    base: _toleranceTestResult,
   ),
   A11yScreen(
     'Verträglichkeits-Test (Vorschlag)',

@@ -244,7 +244,27 @@ void main() {
       expect(find.text('Magst du Zwiebel testen?'), findsOneWidget);
       await tester.tap(_card);
       await tester.pumpAndSettle();
-      expect(_openedWith, _zwiebelSubject);
+      expect(
+        _openedWith,
+        isA<ToleranceTestProposed>().having(
+          (p) => p.subject,
+          'subject',
+          _zwiebelSubject,
+        ),
+      );
+    });
+
+    testWidgets('an active test over without a result: no card, no '
+        '„Tag 9 von 8", no proposal', (tester) async {
+      await _pump(
+        tester,
+        _stats(
+          test: _test(phase: TestPhase.done, dayIndex: 9),
+          proposal: _zwiebelSubject,
+        ),
+      );
+      expect(_card, findsNothing);
+      expect(find.text('Tag 9 von 8'), findsNothing);
     });
 
     testWidgets('nothing to show: no card', (tester) async {

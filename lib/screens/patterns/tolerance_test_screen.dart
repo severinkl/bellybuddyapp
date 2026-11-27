@@ -30,10 +30,20 @@ class ToleranceTestPick {
   const ToleranceTestPick();
 }
 
+/// The `extra` of `/patterns/test` from a proposal (the Muster card, Home's
+/// sheet): [subject]'s intro, started as `proposed`. A bare [TestSubject]
+/// (a stats row, the picker, „Nochmal testen") starts as `picked`.
+class ToleranceTestProposed {
+  const ToleranceTestProposed(this.subject);
+
+  final TestSubject subject;
+}
+
 /// The Verträglichkeits-Test (`/patterns/test`, spec §5.4/§5.6).
 ///
 /// An active test always shows (running, or its result once past its
-/// end). Otherwise: with a [TestSubject] as [extra] its intro; without one
+/// end). Otherwise: with a [TestSubject] or [ToleranceTestProposed] as
+/// [extra] its intro; without one
 /// the last result (completed within 14 days), else the proposal's intro,
 /// else a picker of the six FODMAP groups ([ToleranceTestPick] skips the
 /// last result). While restrictive, the restrictive text instead of intro
@@ -44,7 +54,8 @@ class ToleranceTestPick {
 class ToleranceTestScreen extends ConsumerStatefulWidget {
   const ToleranceTestScreen({super.key, this.extra});
 
-  /// A [TestSubject], a [ToleranceTestPick] or null.
+  /// A [TestSubject], a [ToleranceTestProposed], a [ToleranceTestPick] or
+  /// null.
   final Object? extra;
 
   static const startKey = Key('tolerance_test_start');
@@ -114,24 +125,24 @@ class _ToleranceTestScreenState extends ConsumerState<ToleranceTestScreen> {
 
   List<Widget> _content(PatternStats stats, {required bool canOffer}) {
     final extra = widget.extra;
-    final subject = extra is TestSubject ? extra : null;
+    // Where the intro came from decides the origin, never the value.
+    final (TestSubject? subject, String origin) = switch (extra) {
+      final TestSubject s => (s, 'picked'),
+      ToleranceTestProposed(:final subject) => (subject, 'proposed'),
+      _ => (stats.proposal, 'proposed'),
+    };
+    final hasSubject = extra is TestSubject || extra is ToleranceTestProposed;
     final test = stats.test;
     final shownTest =
         test != null &&
         (test.isActive ||
             (test.status == 'completed' &&
-                subject == null &&
+                !hasSubject &&
                 extra is! ToleranceTestPick));
     if (shownTest) return _testView(test, canOffer: canOffer);
     if (stats.restrictive) return const [_Restrictive()];
-    final intro = subject ?? stats.proposal;
-    if (intro != null) {
-      return _intro(
-        stats,
-        intro,
-        origin: intro == stats.proposal ? 'proposed' : 'picked',
-        canOffer: canOffer,
-      );
+    if (subject != null) {
+      return _intro(stats, subject, origin: origin, canOffer: canOffer);
     }
     return _picker();
   }
