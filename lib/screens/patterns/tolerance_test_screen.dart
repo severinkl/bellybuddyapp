@@ -12,7 +12,6 @@ import '../../providers/plus_provider.dart';
 import '../../providers/today_provider.dart';
 import '../../providers/tolerance_test_provider.dart';
 import '../../router/route_names.dart';
-import '../../services/insights/insight_copy.dart';
 import '../../services/insights/stats_copy.dart';
 import '../../services/insights/test_copy.dart';
 import '../../utils/date_format_utils.dart';
@@ -21,6 +20,7 @@ import '../../widgets/common/bb_button.dart';
 import '../../widgets/common/bb_card.dart';
 import '../../widgets/common/bb_tap_area.dart';
 import 'widgets/day_class_look.dart';
+import 'widgets/insight_calendar.dart';
 import 'widgets/patterns_plus_locked.dart';
 
 /// The `extra` of `/patterns/test` that asks for something new to test
@@ -498,66 +498,30 @@ class _Marker extends StatelessWidget {
 class _Legend extends StatelessWidget {
   const _Legend();
 
+  static Widget _circle({Color? fill}) => Container(
+    width: AppConstants.iconSizeXs,
+    height: AppConstants.iconSizeXs,
+    decoration: BoxDecoration(
+      shape: BoxShape.circle,
+      color: fill,
+      border: dayNoneBorder,
+    ),
+  );
+
   @override
-  Widget build(BuildContext context) {
-    Widget circle({Color? fill, BoxBorder? border}) => Container(
-      width: AppConstants.iconSizeXs,
-      height: AppConstants.iconSizeXs,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: fill,
-        border: border,
-      ),
-    );
-    return ExcludeSemantics(
-      child: Wrap(
-        spacing: AppConstants.spacing14,
-        runSpacing: AppConstants.spacing6,
-        children: [
-          for (final c in DayClass.values)
-            if (dayClassLook(c) case final look?)
-              _item(
-                Icon(
-                  look.icon,
-                  size: AppConstants.iconSizeXs,
-                  color: look.color,
-                ),
-                c,
-              ),
-          _labelled(
-            circle(fill: AppTheme.muted, border: dayNoneBorder),
-            InsightCopy.dayClassLabel(DayClass.none),
+  Widget build(BuildContext context) => ExcludeSemantics(
+    child: DayClassLegend(
+      noneMark: _circle(fill: AppTheme.muted),
+      extra: [
+        (mark: _circle(), label: TestCopy.legendOpen),
+        (
+          mark: const SizedBox.square(
+            dimension: AppConstants.iconSizeXs,
+            child: Center(child: _Marker()),
           ),
-          _labelled(circle(border: dayNoneBorder), TestCopy.legendOpen),
-          _labelled(
-            const SizedBox.square(
-              dimension: AppConstants.iconSizeXs,
-              child: Center(child: _Marker()),
-            ),
-            TestCopy.legendNotKept,
-          ),
-        ],
-      ),
-    );
-  }
-
-  static Widget _item(Widget mark, DayClass c) =>
-      _labelled(mark, InsightCopy.dayClassLabel(c));
-
-  static Widget _labelled(Widget mark, String label) => Row(
-    mainAxisSize: MainAxisSize.min,
-    spacing: AppConstants.spacing6,
-    children: [
-      mark,
-      Flexible(
-        child: Text(
-          label,
-          style: const TextStyle(
-            fontSize: AppTheme.fontSizeCaptionLG,
-            color: AppTheme.mutedForeground,
-          ),
+          label: TestCopy.legendNotKept,
         ),
-      ),
-    ],
+      ],
+    ),
   );
 }

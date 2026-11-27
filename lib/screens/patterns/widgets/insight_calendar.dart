@@ -113,13 +113,24 @@ class _DayCell extends StatelessWidget {
   }
 }
 
+/// One extra [DayClassLegend] entry: its mark and label.
+typedef DayClassLegendItem = ({Widget mark, String label});
+
 /// „gut · mittel · schwer · kein Eintrag", each with its cell's mark;
 /// [withNoGutFeeling] adds „ohne Bauchgefühl" with its dot before „kein
-/// Eintrag" („Dein Verlauf").
+/// Eintrag" („Dein Verlauf"). [noneMark] replaces the „kein Eintrag" mark
+/// and [extra] follows it (the test page's own marks).
 class DayClassLegend extends StatelessWidget {
-  const DayClassLegend({super.key, this.withNoGutFeeling = false});
+  const DayClassLegend({
+    super.key,
+    this.withNoGutFeeling = false,
+    this.noneMark,
+    this.extra = const [],
+  });
 
   final bool withNoGutFeeling;
+  final Widget? noneMark;
+  final List<DayClassLegendItem> extra;
 
   @override
   Widget build(BuildContext context) {
@@ -142,16 +153,21 @@ class DayClassLegend extends StatelessWidget {
               size: AppConstants.iconSizeXs,
               color: look.color,
             ),
-            null => Container(
-              width: AppConstants.iconSizeXs,
-              height: AppConstants.iconSizeXs,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(AppConstants.radiusXs),
-                border: dayNoneBorder,
-              ),
-            ),
+            null =>
+              noneMark ??
+                  Container(
+                    width: AppConstants.iconSizeXs,
+                    height: AppConstants.iconSizeXs,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.radiusXs,
+                      ),
+                      border: dayNoneBorder,
+                    ),
+                  ),
           }, InsightCopy.dayClassLabel(c)),
         ],
+        for (final e in extra) _item(e.mark, e.label),
       ],
     );
   }
@@ -161,11 +177,13 @@ class DayClassLegend extends StatelessWidget {
     spacing: AppConstants.spacing6,
     children: [
       mark,
-      Text(
-        label,
-        style: const TextStyle(
-          fontSize: AppTheme.fontSizeCaptionLG,
-          color: AppTheme.mutedForeground,
+      Flexible(
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: AppTheme.fontSizeCaptionLG,
+            color: AppTheme.mutedForeground,
+          ),
         ),
       ),
     ],

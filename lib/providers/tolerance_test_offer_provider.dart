@@ -82,11 +82,10 @@ bool testLineStillApplies(
   required bool done,
   required String? suffix,
 }) {
-  if (ref.watch(plusLockedProvider) ||
-      ref.watch(patternStatsProvider).isLocked) {
-    return false;
-  }
-  final stats = ref.watch(patternStatsProvider).currentValue;
+  if (ref.watch(plusLockedProvider)) return false;
+  final async = ref.watch(patternStatsProvider);
+  if (async.isLocked) return false;
+  final stats = async.currentValue;
   if (stats == null || suffix == null) return true;
   final t = stats.test;
   if (t == null) return false;
