@@ -72,6 +72,7 @@ class ShareTile extends ConsumerWidget {
     final stored = active ? ref.watch(shareSecretProvider(share.id)) : null;
     final secretLoaded = stored != null && (stored.hasValue || stored.hasError);
     final secret = stored?.value;
+    final expiresAt = share.expiresAt;
     return Padding(
       padding: const EdgeInsets.symmetric(
         horizontal: AppConstants.spacingMd,
@@ -108,10 +109,10 @@ class ShareTile extends ConsumerWidget {
           ),
           AppConstants.gap6,
           Text(shareInfoLine(share), style: _caption),
-          if (active) ...[
+          if (active && expiresAt != null) ...[
             AppConstants.gap6,
             Text(
-              'gültig bis ${_day.format(share.expiresAt.toLocal())}',
+              'gültig bis ${_day.format(expiresAt.toLocal())}',
               style: _caption,
             ),
           ],

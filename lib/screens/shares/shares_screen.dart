@@ -124,7 +124,10 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
         active.add((share, state));
         continue;
       }
-      if (share.stoppedAt.isAfter(cutoff)) others.add((share, state));
+      final stopped = share.stoppedAt;
+      if (stopped != null && stopped.isAfter(cutoff)) {
+        others.add((share, state));
+      }
     }
     int newestFirst((DataShare, ShareState) a, (DataShare, ShareState) b) =>
         b.$1.createdAt.compareTo(a.$1.createdAt);

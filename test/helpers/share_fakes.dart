@@ -1,4 +1,5 @@
 import 'package:belly_buddy/models/data_share.dart';
+import 'package:belly_buddy/models/dietitian_card.dart';
 import 'package:belly_buddy/services/share_service.dart';
 
 /// A [DataShare] with defaults: an active, unopened 14-day share.
@@ -72,4 +73,16 @@ class FakeShareService implements ShareService {
         s.id == id ? s.copyWith(revokedAt: DateTime(2026, 11, 26)) : s,
     ];
   }
+
+  @override
+  Future<DietitianCard> lookup(String code) =>
+      throw UnimplementedError('lookup');
+
+  @override
+  Future<String> connect(String code, DietitianShareTerms terms) =>
+      throw UnimplementedError('connect');
+
+  @override
+  Future<void> update(String id, DietitianShareTerms terms) =>
+      throw UnimplementedError('update');
 }

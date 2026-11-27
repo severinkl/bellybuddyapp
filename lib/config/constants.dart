@@ -350,6 +350,10 @@ class AppConstants {
   static const String privacyPolicyUrl =
       'https://app.bellybuddy.at/datenschutz';
 
+  /// Belly Buddy Connect, the dietitian portal; a practice QR code holds
+  /// `<connectUrl>/c/<code>`.
+  static const String connectUrl = 'https://connect.bellybuddy.at';
+
   /// Version of the privacy policy the health-data consent refers to. Bump it
   /// when the policy changes materially: every user whose stored
   /// `profiles.privacy_policy_version` differs is sent through the consent

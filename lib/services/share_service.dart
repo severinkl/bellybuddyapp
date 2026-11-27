@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/data_share.dart';
+import '../models/dietitian_card.dart';
 import '../providers/core_providers.dart';
 import '../utils/logger.dart';
 
@@ -25,11 +26,17 @@ class ShareService {
 
   static const _log = AppLogger('ShareService');
 
-  /// Never `select *`: the two hash columns are not readable.
+  /// Never `select *`: the two hash columns are not readable. A
+  /// connection embeds its dietitian, a kept link its keeper.
   static const columns =
       'id, display_name, period, share_meals, share_drinks, share_gut, '
       'share_toilet, share_patterns, share_photos, failed_codes, locked_at, '
-      'revoked_at, last_opened_at, open_count, expires_at, created_at';
+      'revoked_at, last_opened_at, open_count, expires_at, created_at, '
+      'kind, dietitian_id, kept_by, '
+      'dietitian:dietitians!data_shares_dietitian_id_fkey'
+      '(name, profession, practice, town, blocked_at), '
+      'keeper:dietitians!data_shares_kept_by_fkey'
+      '(name, profession, practice, town, blocked_at)';
 
   Future<List<DataShare>> list() async {
     try {
@@ -75,6 +82,37 @@ class ShareService {
   }
 
   Future<void> end(String id) => _invoke('end', 'shares/$id/end');
+
+  /// The card behind a practice [code] (normalized by the caller).
+  Future<DietitianCard> lookup(String code) async {
+    final data = await _invoke('lookup', 'practice-code', body: {'code': code});
+    try {
+      if (data is! Map) throw const FormatException('not a JSON object');
+      final card = data['card'];
+      if (card is! Map) throw const FormatException('no card');
+      return DietitianCard.fromJson(Map<String, dynamic>.from(card));
+    } catch (e, st) {
+      _log.error('lookup: unreadable answer', e, st);
+      throw const ShareException();
+    }
+  }
+
+  /// Connects to the dietitian of [code] on [terms]; the new share's id.
+  Future<String> connect(String code, DietitianShareTerms terms) async {
+    final data = await _invoke(
+      'connect',
+      'shares/dietitian',
+      body: {'code': code, ...terms.toBody()},
+    );
+    final id = data is Map ? data['id'] : null;
+    if (id is String) return id;
+    _log.error('connect: unreadable answer');
+    throw const ShareException();
+  }
+
+  /// Changes what connection [id] shares to [terms].
+  Future<void> update(String id, DietitianShareTerms terms) =>
+      _invoke('update', 'shares/$id/update', body: terms.toBody());
 
   /// Calls the edge function [path] and returns its data; any failure
   /// becomes a [ShareException], logged as [op] (never with the body).

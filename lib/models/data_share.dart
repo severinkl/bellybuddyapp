@@ -1,5 +1,7 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 
+import 'dietitian_card.dart';
+
 part 'data_share.freezed.dart';
 part 'data_share.g.dart';
 
@@ -20,13 +22,32 @@ enum SharePeriod {
 
 enum ShareState { active, ended, expired, locked }
 
+/// A share by link (stage 1) or a connection to a dietitian.
+enum ShareKind { link, dietitian }
+
+/// How long a connection to a dietitian lasts; json `90d` | `open`.
+@JsonEnum(valueField: 'jsonValue')
+enum ShareDuration {
+  days90('90d'),
+  open('open');
+
+  const ShareDuration(this.jsonValue);
+
+  final String jsonValue;
+}
+
 /// A share of the user's diary, as PostgREST's `data_shares` returns it
 /// (explicit column list: the hash columns are not readable). The timestamps
 /// are real instants, unlike diary `tracked_at` values.
+///
+/// A `dietitian` share embeds its dietitian as [dietitian] (null once the
+/// dietitian deleted their account); a link a dietitian kept embeds them as
+/// [keeper]. [expiresAt] is null for an open-ended connection.
 @freezed
 abstract class DataShare with _$DataShare {
   const DataShare._();
 
+  @JsonSerializable(explicitToJson: true)
   const factory DataShare({
     required String id,
     @JsonKey(name: 'display_name') required String displayName,
@@ -42,24 +63,37 @@ abstract class DataShare with _$DataShare {
     @JsonKey(name: 'revoked_at') DateTime? revokedAt,
     @JsonKey(name: 'last_opened_at') DateTime? lastOpenedAt,
     @JsonKey(name: 'open_count') @Default(0) int openCount,
-    @JsonKey(name: 'expires_at') required DateTime expiresAt,
+    @JsonKey(name: 'expires_at') DateTime? expiresAt,
     @JsonKey(name: 'created_at') required DateTime createdAt,
+    @Default(ShareKind.link) ShareKind kind,
+    @JsonKey(name: 'dietitian_id') String? dietitianId,
+    @JsonKey(name: 'kept_by') String? keptBy,
+    DietitianCard? dietitian,
+    DietitianCard? keeper,
   }) = _DataShare;
 
   factory DataShare.fromJson(Map<String, dynamic> json) =>
       _$DataShareFromJson(json);
 
   /// As core's `state_of`: ended, then locked, then expired, else active.
+  /// A null [expiresAt] never expires.
   ShareState stateAt(DateTime now) {
     if (revokedAt != null) return ShareState.ended;
     if (lockedAt != null) return ShareState.locked;
-    if (!expiresAt.isAfter(now)) return ShareState.expired;
+    final end = expiresAt;
+    if (end != null && !end.isAfter(now)) return ShareState.expired;
     return ShareState.active;
   }
 
   /// When the share stopped, in [stateAt]'s order; for an active share its
-  /// coming end.
-  DateTime get stoppedAt => revokedAt ?? lockedAt ?? expiresAt;
+  /// coming end, null when it has none. Never null for a share that is not
+  /// active.
+  DateTime? get stoppedAt => revokedAt ?? lockedAt ?? expiresAt;
+
+  /// A connection whose dietitian the Belly Buddy team blocked: core shows
+  /// them nothing until it is lifted.
+  bool get isPaused =>
+      kind == ShareKind.dietitian && dietitian?.isBlocked == true;
 
   String get description =>
       '${period.label}, ${sharePhotos ? 'mit' : 'ohne'} Fotos';
@@ -90,6 +124,44 @@ class NewShare {
   final bool toilet;
   final bool patterns;
   final bool photos;
+}
+
+/// What the user chose for a connection to a dietitian; the body of
+/// `shares/dietitian` (with the code) and `shares/{id}/update`.
+class DietitianShareTerms {
+  const DietitianShareTerms({
+    required this.displayName,
+    required this.period,
+    required this.duration,
+    required this.meals,
+    required this.drinks,
+    required this.gut,
+    required this.toilet,
+    required this.patterns,
+    required this.photos,
+  });
+
+  final String displayName;
+  final SharePeriod period;
+  final ShareDuration duration;
+  final bool meals;
+  final bool drinks;
+  final bool gut;
+  final bool toilet;
+  final bool patterns;
+  final bool photos;
+
+  Map<String, Object> toBody() => {
+    'display_name': displayName,
+    'period': period.jsonValue,
+    'duration': duration.jsonValue,
+    'meals': meals,
+    'drinks': drinks,
+    'gut': gut,
+    'toilet': toilet,
+    'patterns': patterns,
+    'photos': photos,
+  };
 }
 
 /// Core's answer to a created share. [link] and [code] are secrets: never
