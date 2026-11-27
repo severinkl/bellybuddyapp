@@ -1,7 +1,11 @@
 /// Version thresholds read from the Supabase `app_config` table and compared
 /// against the installed app's semver.
 class AppConfig {
-  const AppConfig({required this.minimum, required this.latest});
+  const AppConfig({
+    required this.minimum,
+    required this.latest,
+    this.akuthilfeEnabled = false,
+  });
 
   /// Clients below this version are blocked with the "Update erforderlich"
   /// screen until they update.
@@ -10,4 +14,8 @@ class AppConfig {
   /// Clients below this version (but at or above [minimum]) see a dismissible
   /// "Update verfügbar" nudge on cold start.
   final String latest;
+
+  /// Remote switch of "Ruhe für den Bauch" (`akuthilfe_enabled`); only the
+  /// value `true` turns it on, a missing row means off.
+  final bool akuthilfeEnabled;
 }

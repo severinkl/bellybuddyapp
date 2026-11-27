@@ -393,6 +393,10 @@ class AppConstants {
   /// (`journey_rewards_<userId>`, the JSON of a `JourneyRewards`).
   static const String keyJourneyRewardsPrefix = 'journey_rewards_';
 
+  /// Prefix of the answers to "Ruhe für den Bauch", per user and device
+  /// (`relief_feedback_<userId>`, JSON of exercise id to answer).
+  static const String keyReliefFeedbackPrefix = 'relief_feedback_';
+
   /// Prefix of the Buddy announcement flags
   /// (`buddy_announced_<userId>_<kind>_<yyyy-MM-dd | goal>`), set once an
   /// announcement was shown, so each one shows only once.
