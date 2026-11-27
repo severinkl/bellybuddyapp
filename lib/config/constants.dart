@@ -53,6 +53,17 @@ class AppConstants {
   /// The smallest tap target (Apple's 44 pt).
   static const double minTapTarget = 44.0;
 
+  /// The relief breathing pacer's circle: smallest (empty lungs) and
+  /// largest (full) diameter.
+  static const double reliefPacerMin = 120.0;
+  static const double reliefPacerMax = 220.0;
+
+  /// How long the pacer's circle takes to follow one second of breath.
+  static const Duration reliefPacerTick = Duration(seconds: 1);
+
+  /// The height of the Buddy on the relief done view.
+  static const double reliefDoneBuddyHeight = 160.0;
+
   /// The smallest tap target on Home.
   static const double homeTapTarget = 48.0;
 

@@ -122,6 +122,7 @@ class ReliefCopy {
   static const resume = 'Fortsetzen';
   static const back = 'Zurück';
   static const next = 'Weiter';
+  static const close = 'Schließen';
   static String stepOf(int n, int total) => 'Schritt $n von $total';
   static String minutesLabel(int m) => '$m Min.';
 
@@ -207,6 +208,7 @@ class ReliefCopy {
     resume,
     back,
     next,
+    close,
     doneLine,
     helpedQuestion,
     answerYes,
