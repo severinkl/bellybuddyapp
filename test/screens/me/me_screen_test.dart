@@ -12,11 +12,13 @@ import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:belly_buddy/config/constants.dart';
+import 'package:belly_buddy/models/data_share.dart';
 import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/providers/rating_provider.dart';
+import 'package:belly_buddy/services/share_service.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
 import 'package:belly_buddy/providers/upgrade_gate_provider.dart';
 import 'package:belly_buddy/repositories/notification_repository.dart';
@@ -34,6 +36,7 @@ import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/riverpod_helpers.dart';
+import '../../helpers/share_fakes.dart';
 
 BuddyStatus _status({int streak = 3, int? goal = 14, String name = 'Bruno'}) =>
     buddyStatus(name: name, goal: goal, streak: streak, todayCounted: true);
@@ -45,8 +48,13 @@ void main() {
   late RecordingUrlOpener launches;
   late GoRouter router;
   late ProviderContainer container;
+  late FakeShareService shareService;
 
-  setUp(() => launches = RecordingUrlOpener());
+  setUp(() {
+    launches = RecordingUrlOpener();
+    shareService = FakeShareService();
+    SharedPreferences.setMockInitialValues({});
+  });
 
   Future<FakeBuddyNotifier> pump(
     WidgetTester tester, {
@@ -71,6 +79,7 @@ void main() {
         buddyClockProvider.overrideWithValue(() => today),
         currentUserIdProvider.overrideWithValue('u1'),
         currentVersionProvider.overrideWith((_) async => '1.2.3'),
+        shareServiceProvider.overrideWithValue(shareService),
         ...extra,
       ],
     );
@@ -81,7 +90,12 @@ void main() {
           path: RoutePaths.me,
           builder: (_, _) => MeScreen(openUrl: launches.call),
         ),
-        ...stubRoutes([RoutePaths.settings, RoutePaths.dashboard]),
+        ...stubRoutes([
+          RoutePaths.settings,
+          RoutePaths.dashboard,
+          RoutePaths.shares,
+          RoutePaths.shareCreate,
+        ]),
       ],
     );
     addTearDown(router.dispose);
@@ -160,6 +174,7 @@ void main() {
     expect(find.text('Version 1.2.3'), findsOneWidget);
     for (final key in [
       MeScreen.streakKey,
+      MeScreen.shareKey,
       MeScreen.settingsKey,
       MeScreen.tutorialKey,
       MeScreen.rateKey,
@@ -167,6 +182,98 @@ void main() {
     ]) {
       expect(find.byKey(key), findsOneWidget);
     }
+  });
+
+  group('„Mit Berater:in teilen"', () {
+    testWidgets('sits between Streak & Ziel and Einstellungen', (tester) async {
+      await pump(tester);
+
+      expect(find.text('Mit Berater:in teilen'), findsOneWidget);
+      expect(
+        find.text('Tagebuch für Diätolog:in oder Ärzt:in freigeben'),
+        findsOneWidget,
+      );
+      expect(find.byIcon(Icons.person_add_alt_1_outlined), findsOneWidget);
+      final streak = tester.getTopLeft(find.byKey(MeScreen.streakKey)).dy;
+      final share = tester.getTopLeft(find.byKey(MeScreen.shareKey)).dy;
+      final settings = tester.getTopLeft(find.byKey(MeScreen.settingsKey)).dy;
+      expect(streak, lessThan(share));
+      expect(share, lessThan(settings));
+    });
+
+    testWidgets('„Neu" until the row was tapped once', (tester) async {
+      await pump(tester);
+      expect(find.text('Neu'), findsOneWidget);
+
+      await tapRow(tester, MeScreen.shareKey);
+      router.pop();
+      await tester.pumpAndSettle();
+      expect(find.text('Neu'), findsNothing);
+
+      // Remembered on the device: a fresh screen has no badge either.
+      await pump(tester);
+      expect(find.text('Neu'), findsNothing);
+    });
+
+    testWidgets('no shares: opens the create screen', (tester) async {
+      await pump(tester);
+      await tapRow(tester, MeScreen.shareKey);
+      expect(find.text('page:/shares/new'), findsOneWidget);
+      // The list lies beneath the create screen.
+      expect(find.text('page:/shares', skipOffstage: false), findsOneWidget);
+    });
+
+    testWidgets('with shares: opens the list', (tester) async {
+      shareService.shares = [testShare()];
+      await pump(tester);
+      await tapRow(tester, MeScreen.shareKey);
+      expect(find.text('page:/shares'), findsOneWidget);
+    });
+
+    testWidgets('a double tap opens the list once', (tester) async {
+      shareService.shares = [testShare()];
+      await pump(tester);
+      await tester.ensureVisible(find.byKey(MeScreen.shareKey));
+      await tester.tap(find.byKey(MeScreen.shareKey));
+      await tester.tap(find.byKey(MeScreen.shareKey));
+      await tester.pumpAndSettle();
+      router.pop();
+      await tester.pumpAndSettle();
+      expect(find.text('page:/shares'), findsNothing);
+      expect(find.byKey(MeScreen.shareKey), findsOneWidget);
+    });
+
+    testWidgets('after leaving the list by go, the row opens it again', (
+      tester,
+    ) async {
+      shareService.shares = [testShare()];
+      await pump(tester);
+      await tapRow(tester, MeScreen.shareKey);
+      expect(find.text('page:/shares'), findsOneWidget);
+      // A deep link or a tab switch replaces the stack: the push never
+      // completes.
+      router.go(RoutePaths.me);
+      await tester.pumpAndSettle();
+      await tapRow(tester, MeScreen.shareKey);
+      expect(find.text('page:/shares'), findsOneWidget);
+    });
+
+    testWidgets('failed list: opens the create screen', (tester) async {
+      shareService.failList = true;
+      await pump(tester);
+      await tapRow(tester, MeScreen.shareKey);
+      expect(find.text('page:/shares/new'), findsOneWidget);
+      expect(find.text('page:/shares', skipOffstage: false), findsOneWidget);
+    });
+
+    testWidgets('while the list loads: shown and tappable', (tester) async {
+      shareService = _NeverLoads();
+      await pump(tester);
+      expect(find.byKey(MeScreen.shareKey), findsOneWidget);
+      await tapRow(tester, MeScreen.shareKey);
+      expect(find.text('page:/shares/new'), findsOneWidget);
+      expect(find.text('page:/shares', skipOffstage: false), findsOneWidget);
+    });
   });
 
   testWidgets('rows: no goal yet, a 1-day streak', (tester) async {
@@ -405,12 +512,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(StreakSheet), findsNothing);
 
+    await tester.ensureVisible(find.byType(StreakChip));
     await tester.tap(find.byType(StreakChip));
     await tester.pumpAndSettle();
     expect(find.byType(StreakSheet), findsNothing);
 
     save.complete();
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byType(StreakChip));
     await tester.tap(find.byType(StreakChip));
     await tester.pumpAndSettle();
     expect(find.byType(StreakSheet), findsOneWidget);
@@ -698,4 +807,9 @@ void main() {
       expect(row(), findsNothing);
     });
   });
+}
+
+class _NeverLoads extends FakeShareService {
+  @override
+  Future<List<DataShare>> list() => Completer<List<DataShare>>().future;
 }

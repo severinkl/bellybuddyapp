@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../repositories/auth_repository.dart';
+import '../services/share_secrets_store.dart';
+import '../utils/logger.dart';
 
 /// Stream of auth state changes
 final authStateProvider = StreamProvider<AuthState>((ref) {
@@ -40,6 +42,20 @@ final isAuthenticatedProvider = Provider<bool>((ref) {
 /// Centralized auth operations — screens call this instead of AuthService
 class AuthNotifier extends Notifier<AsyncValue<void>> {
   AuthRepository get _repo => ref.read(authRepositoryProvider);
+
+  static const _log = AppLogger('AuthNotifier');
+
+  /// Forgets this device's share links and codes of [userId], after a
+  /// sign-out or deletion that succeeded. Best effort: a failure is logged
+  /// and never turns the success into a failure.
+  Future<void> _clearShareSecrets(String? userId) async {
+    if (userId == null) return;
+    try {
+      await ref.read(shareSecretsStoreProvider).clearFor(userId);
+    } catch (e, st) {
+      _log.error('clearing share secrets failed', e, st);
+    }
+  }
 
   @override
   AsyncValue<void> build() => const AsyncValue.data(null);
@@ -94,10 +110,15 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
 
   Future<void> signOut() async {
     state = const AsyncValue.loading();
+    final userId = ref.read(currentUserIdProvider);
     try {
       await _repo.signOut();
+      await _clearShareSecrets(userId);
       state = const AsyncValue.data(null);
     } catch (e, st) {
+      // gotrue drops the local session before its server call: signed out
+      // on this device although the call failed, the secrets go too.
+      if (_repo.currentUser == null) await _clearShareSecrets(userId);
       state = AsyncValue.error(e, st);
       rethrow;
     }
@@ -110,10 +131,15 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
 
   Future<void> deleteAccount() async {
     state = const AsyncValue.loading();
+    final userId = ref.read(currentUserIdProvider);
     try {
       await _repo.deleteAccount();
+      await _clearShareSecrets(userId);
       state = const AsyncValue.data(null);
     } catch (e, st) {
+      // gotrue drops the local session before its server call: signed out
+      // on this device although the call failed, the secrets go too.
+      if (_repo.currentUser == null) await _clearShareSecrets(userId);
       state = AsyncValue.error(e, st);
       rethrow;
     }
