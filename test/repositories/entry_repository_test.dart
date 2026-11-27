@@ -4,7 +4,9 @@ import 'package:mocktail/mocktail.dart';
 import 'package:belly_buddy/models/insight_rules.dart';
 import 'package:belly_buddy/models/insight_source.dart';
 import 'package:belly_buddy/models/progress.dart';
+import 'package:belly_buddy/models/progress_rules.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
+import 'package:belly_buddy/utils/date_format_utils.dart';
 
 import '../helpers/mocks.dart';
 import '../helpers/fixtures.dart';
@@ -240,6 +242,29 @@ void main() {
         () => queryService.fetchProgressSource(
           userId: 'user-123',
           since: DateTime(2026, 9, 7),
+        ),
+      ).called(1);
+    });
+
+    test('since follows the local day of a UTC now, like the engine', () async {
+      when(
+        () => queryService.fetchProgressSource(
+          userId: any(named: 'userId'),
+          since: any(named: 'since'),
+        ),
+      ).thenAnswer(
+        (_) async =>
+            const ProgressSource(gutFeelings: [], toilets: [], otherTimes: []),
+      );
+      // Sunday 20:00 UTC: already Monday east of UTC+4 (a new week there).
+      final now = DateTime.utc(2026, 11, 29, 20);
+
+      await repo.fetchProgressSource(userId: 'user-123', now: now);
+
+      verify(
+        () => queryService.fetchProgressSource(
+          userId: 'user-123',
+          since: ProgressRules.windowStart(startOfDay(now.toLocal())),
         ),
       ).called(1);
     });

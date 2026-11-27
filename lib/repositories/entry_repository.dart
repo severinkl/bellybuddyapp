@@ -66,13 +66,14 @@ class EntryRepository {
   }
 
   /// „Dein Verlauf"'s window as of [now]: since the Monday of [now]'s
-  /// local week minus [ProgressRules.weeks] − 1 weeks.
+  /// local week minus [ProgressRules.weeks] − 1 weeks. [now] is an instant
+  /// (the clock), so its local day, as in `computeProgress`.
   Future<ProgressSource> fetchProgressSource({
     required String userId,
     required DateTime now,
   }) => _queryService.fetchProgressSource(
     userId: userId,
-    since: ProgressRules.windowStart(startOfDay(now)),
+    since: ProgressRules.windowStart(startOfDay(now.toLocal())),
   );
 
   Future<void> insertEntry(
