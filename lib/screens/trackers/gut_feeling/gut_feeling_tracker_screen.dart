@@ -1,14 +1,19 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/gut_feeling_entry.dart';
 import '../../../providers/diary_provider.dart';
 import '../../../providers/entries_provider.dart';
+import '../../../providers/relief_provider.dart';
 import '../../../router/navigation_extensions.dart';
+import '../../../router/route_names.dart';
 import '../../../services/buddy/buddy_mood_logic.dart';
 import '../../../services/haptic_service.dart';
+import '../../../services/relief/relief_content.dart';
+import '../../../services/relief/relief_rules.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/gut_feeling_rating.dart';
 import '../../../widgets/buddy/log_success_hero.dart';
@@ -39,6 +44,10 @@ class _GutFeelingTrackerScreenState
 
   /// Set once the entry is saved; shows the success screen.
   bool _saved = false;
+
+  /// Whether the success screen offers „Ruhe für den Bauch": decided at
+  /// save time (a strong symptom just now, the feature on).
+  bool _offerRelief = false;
 
   // Bauchgefuehl values
   int _bloating = 1;
@@ -135,7 +144,13 @@ class _GutFeelingTrackerScreenState
     if (!mounted) return;
     if (!logged) return setState(() => _isSaving = false);
     ref.invalidate(diaryEntriesProvider(startOfDay(_trackedAt)));
-    setState(() => _saved = true);
+    final offerRelief =
+        ref.read(reliefEnabledProvider) &&
+        offersRelief(entry, now: DateTime.now());
+    setState(() {
+      _saved = true;
+      _offerRelief = offerRelief;
+    });
   }
 
   void _animateToTab(int tab) {
@@ -166,6 +181,17 @@ class _GutFeelingTrackerScreenState
         calm: hardDay,
         subMessage: 'Ist jetzt in deinem Tagebuch eingetragen.',
         illustration: LogSuccessHero(moment: moment),
+        actions: _offerRelief
+            ? [
+                BbPillAction(
+                  onTap: () => context.pushReplacement(RoutePaths.relief),
+                  child: const Text(
+                    ReliefCopy.gutFeelingOffer,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ]
+            : null,
         onDismissed: context.popOrGoDashboard,
       );
     }

@@ -14,6 +14,7 @@ import '../../providers/knowledge_provider.dart';
 import '../../providers/profile_provider.dart';
 import '../../providers/recipe_collection_provider.dart';
 import '../../providers/recommendation_provider.dart';
+import '../../providers/relief_provider.dart';
 import '../../providers/user_recipes_provider.dart';
 import '../../router/navigation_extensions.dart';
 import '../../router/route_names.dart';
@@ -21,6 +22,7 @@ import '../../utils/url_utils.dart';
 import 'widgets/discover_alternatives_section.dart';
 import 'widgets/discover_knowledge_section.dart';
 import 'widgets/discover_recipes_section.dart';
+import 'widgets/discover_relief_card.dart';
 import 'widgets/discover_section.dart';
 import 'widgets/discover_tips_card.dart';
 import 'widgets/discover_tips_section.dart';
@@ -28,9 +30,11 @@ import 'widgets/dietitian_tips_section.dart';
 import 'widgets/knowledge_article_tile.dart';
 
 /// The Entdecken tab: the hub over the app's content. Top to bottom:
-/// Von deiner Berater:in (the tips the dietitians sent; only with a tip),
-/// Tipps (the newest recommendation set), Alternativen (the newest
-/// ingredient suggestions), Rezepte (Für dich from the collection, and
+/// „Ruhe für den Bauch" (the card while [reliefEnabledProvider], else its
+/// „Kommt bald" teaser), Von deiner Berater:in (the tips the dietitians
+/// sent; only with a tip), Tipps (the newest recommendation set),
+/// Alternativen (the newest ingredient suggestions), Rezepte (Für dich from
+/// the collection, and
 /// Meine Rezepte: own and saved) and Wissen (the newest myfodmap
 /// blog articles).
 /// Tipps shows only once a loaded set has tips ([newestTipSetProvider]),
@@ -40,6 +44,12 @@ import 'widgets/knowledge_article_tile.dart';
 /// says so and links nowhere.
 class DiscoverScreen extends ConsumerStatefulWidget {
   const DiscoverScreen({super.key, this.openUrl = launchUrl});
+
+  /// The „Ruhe für den Bauch" card, on top while the feature is on.
+  static const reliefKey = DiscoverReliefCard.cardKey;
+
+  /// Its „Kommt bald" teaser, in the same place while the feature is off.
+  static const reliefTeaserKey = DiscoverReliefCard.teaserKey;
 
   /// The Tipps card; opens the Tipps.
   static const tipsKey = DiscoverTipsCard.cardKey;
@@ -102,6 +112,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     final mine = ref.watch(myRecipeItemsProvider);
     final savedFailed = ref.watch(savedRecipesStateProvider).hasError;
     final knowledge = ref.watch(knowledgeFeedProvider);
+    final relief = ref.watch(reliefEnabledProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -120,6 +131,13 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (relief)
+                DiscoverReliefCard(
+                  onOpen: () => context.push(RoutePaths.relief),
+                )
+              else
+                const DiscoverReliefCard.teaser(),
+              AppConstants.gap24,
               // Absent without a tip; brings its own gap below.
               const DietitianTipsSection(),
               if (tipSet != null) ...[

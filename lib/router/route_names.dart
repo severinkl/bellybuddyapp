@@ -27,6 +27,8 @@ class RouteNames {
   static const String recommendations = 'recommendations';
   static const String patterns = 'patterns';
   static const String patternsUnlocked = 'patterns-unlocked';
+  static const String relief = 'relief';
+  static const String reliefExercise = 'relief-exercise';
   static const String ingredientSuggestions = 'ingredient-suggestions';
   static const String recipes = 'recipes';
   static const String recipeNew = 'recipe_new';
@@ -71,6 +73,9 @@ class RoutePaths {
   static const String recommendations = '/recommendations';
   static const String patterns = '/patterns';
   static const String patternsUnlocked = '/patterns-unlocked';
+  static const String relief = '/relief';
+  static const String reliefExercise = '/relief/:id';
+  static String reliefExerciseFor(String id) => '/relief/$id';
   static const String ingredientSuggestions = '/ingredient-suggestions';
   static const String recipes = '/recipes';
   static const String recipeNew = '/recipe/new';

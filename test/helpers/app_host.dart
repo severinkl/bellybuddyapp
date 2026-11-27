@@ -10,6 +10,7 @@ import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/discover_news_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
+import 'package:belly_buddy/providers/relief_provider.dart';
 import 'package:belly_buddy/providers/upgrade_gate_provider.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/repositories/auth_repository.dart';
@@ -107,6 +108,9 @@ List<Override> baseOverrides({
   ),
   knowledgeRepositoryProvider.overrideWithValue(FakeKnowledgeRepository()),
   upgradeDecisionProvider.overrideWith((_) => Future.value(decision)),
+  // Tests run as debug builds, whose preview would show „Ruhe für den
+  // Bauch" everywhere; tests that want it override reliefEnabledProvider.
+  reliefPreviewProvider.overrideWithValue(false),
 ];
 
 /// Pared-down app root: the real router, owning the upgrade decision and
