@@ -87,6 +87,19 @@ void main() {
       expect(container.read(drinkTrackerProvider).lastDrink, isNull);
     });
 
+    for (final amount in [0, 3001]) {
+      test('a last entry of $amount ml shows no row', () async {
+        stubLoad([
+          testDrink(),
+        ], lastEntry: testDrinkEntry(drinkId: 'water-id', amountMl: amount));
+
+        final container = makeContainer();
+        await container.read(drinkTrackerProvider.notifier).loadDrinks();
+
+        expect(container.read(drinkTrackerProvider).lastDrink, isNull);
+      });
+    }
+
     test('no last entry means no row', () async {
       stubLoad([testDrink()]);
 
@@ -264,6 +277,22 @@ void main() {
       expect(container.read(drinkTrackerProvider).isSearchOpen, isFalse);
     });
 
+    test('closing the search drops its suggestions', () async {
+      stubLoad([testDrink()]);
+      final container = makeContainer();
+      final notifier = container.read(drinkTrackerProvider.notifier);
+      await notifier.loadDrinks();
+      notifier
+        ..openSearch()
+        ..searchDrinks('Was');
+      expect(container.read(drinkTrackerProvider).suggestions, isNotEmpty);
+
+      notifier.closeSearch();
+      expect(container.read(drinkTrackerProvider).suggestions, isEmpty);
+      notifier.openSearch();
+      expect(container.read(drinkTrackerProvider).suggestions, isEmpty);
+    });
+
     test('picking a drink closes the search', () {
       final container = makeContainer();
       final notifier = container.read(drinkTrackerProvider.notifier)
@@ -310,6 +339,83 @@ void main() {
     );
   });
 
+  group('DrinkTrackerNotifier.deleteDrink', () {
+    final mate = testDrink(
+      id: 'mate-id',
+      name: 'Mate',
+      addedByUserId: testUserId,
+    );
+    final tee = testDrink(id: 'tee-id', name: 'Tee');
+
+    test('deleting the last drink moves „Wie zuletzt" to the entry before '
+        'and reloads the day total', () async {
+      stubLoad([
+        mate,
+        tee,
+      ], lastEntry: testDrinkEntry(drinkId: 'mate-id', amountMl: 250));
+      when(() => mockDrinkRepo.deleteDrink(any())).thenAnswer((_) async {});
+      when(
+        () => mockDrinkRepo.fetchDayTotal(any(), any()),
+      ).thenAnswer((_) async => 150);
+      final container = makeContainer();
+      final notifier = container.read(drinkTrackerProvider.notifier);
+      await notifier.loadDrinks();
+      expect(container.read(drinkTrackerProvider).lastDrink?.drink, mate);
+      // The delete took Mate's entries with it.
+      when(() => mockDrinkRepo.fetchLastEntry(any())).thenAnswer(
+        (_) async => testDrinkEntry(drinkId: 'tee-id', amountMl: 400),
+      );
+
+      await notifier.deleteDrink(mate);
+
+      final state = container.read(drinkTrackerProvider);
+      expect(state.lastDrink, (drink: tee, amountMl: 400));
+      expect(state.dayTotal, 150);
+      verify(() => mockDrinkRepo.fetchDayTotal(testUserId, any())).called(1);
+    });
+
+    test('deleting the only drink with entries hides the row', () async {
+      stubLoad([
+        mate,
+        tee,
+      ], lastEntry: testDrinkEntry(drinkId: 'mate-id', amountMl: 250));
+      when(() => mockDrinkRepo.deleteDrink(any())).thenAnswer((_) async {});
+      when(
+        () => mockDrinkRepo.fetchDayTotal(any(), any()),
+      ).thenAnswer((_) async => 0);
+      final container = makeContainer();
+      final notifier = container.read(drinkTrackerProvider.notifier);
+      await notifier.loadDrinks();
+      when(
+        () => mockDrinkRepo.fetchLastEntry(any()),
+      ).thenAnswer((_) async => null);
+
+      await notifier.deleteDrink(mate);
+
+      final state = container.read(drinkTrackerProvider);
+      expect(state.lastDrink, isNull);
+      expect(state.dayTotal, 0);
+      expect(state.allDrinks, [tee]);
+    });
+
+    test('a failing delete keeps the row and rethrows', () async {
+      stubLoad([
+        mate,
+      ], lastEntry: testDrinkEntry(drinkId: 'mate-id', amountMl: 250));
+      when(
+        () => mockDrinkRepo.deleteDrink(any()),
+      ).thenAnswer((_) async => throw Exception('db error'));
+      final container = makeContainer();
+      final notifier = container.read(drinkTrackerProvider.notifier);
+      await notifier.loadDrinks();
+
+      await expectLater(notifier.deleteDrink(mate), throwsException);
+
+      expect(container.read(drinkTrackerProvider).lastDrink?.drink, mate);
+      verifyNever(() => mockDrinkRepo.fetchDayTotal(any(), any()));
+    });
+  });
+
   group('DrinkTrackerNotifier.saveLast', () {
     test(
       'stores the last drink at the chosen time and shows success',
@@ -331,7 +437,11 @@ void main() {
         final container = makeContainer();
         final notifier = container.read(drinkTrackerProvider.notifier);
         await notifier.loadDrinks();
-        notifier.setTrackedAt(DateTime(2026, 11, 26, 20));
+        final wasser = testDrink();
+        notifier
+          ..setTrackedAt(DateTime(2026, 11, 26, 20))
+          ..toggleDrink(wasser)
+          ..setCustomAmount('300');
 
         await notifier.saveLast();
 
@@ -347,7 +457,12 @@ void main() {
         expect(data['drink_id'], 'tee-id');
         expect(data['amount_ml'], 400);
         expect(data['tracked_at'], wallClockToWire(DateTime(2026, 11, 26, 20)));
-        expect(container.read(drinkTrackerProvider).showSuccess, isTrue);
+        final state = container.read(drinkTrackerProvider);
+        expect(state.showSuccess, isTrue);
+        // The selection stays as it was.
+        expect(state.selectedDrink, wasser);
+        expect(state.selectedAmount, 300);
+        expect(state.customAmount, '300');
       },
     );
 

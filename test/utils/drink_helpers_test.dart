@@ -104,6 +104,13 @@ void main() {
     });
   });
 
+  test('isValidAmount: 1 to 3000 ml', () {
+    expect(DrinkHelpers.isValidAmount(0), isFalse);
+    expect(DrinkHelpers.isValidAmount(1), isTrue);
+    expect(DrinkHelpers.isValidAmount(3000), isTrue);
+    expect(DrinkHelpers.isValidAmount(3001), isFalse);
+  });
+
   group('parseAmount', () {
     test('valid positive int string returns int', () {
       expect(DrinkHelpers.parseAmount('250'), 250);
@@ -246,6 +253,10 @@ void main() {
       expect(
         DrinkHelpers.glassesLabel(1000, 400),
         '4 Gläser zu je 250 ml getrunken, dazu kommen 400 ml',
+      );
+      expect(
+        DrinkHelpers.glassesLabel(0, 1000),
+        'Nichts eingetragen, dazu kommen 1 l',
       );
       expect(
         DrinkHelpers.glassesLabel(0, 400),

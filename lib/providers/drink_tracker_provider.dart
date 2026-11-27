@@ -118,26 +118,26 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
       final quick = userId != null
           ? DrinkHelpers.buildQuickDrinks(drinks, recentIds)
           : drinks.take(11).toList();
-      LastDrink? lastDrink;
-      if (lastEntry != null) {
-        for (final drink in drinks) {
-          if (drink.id == lastEntry.drinkId) {
-            lastDrink = (drink: drink, amountMl: lastEntry.amountMl);
-            break;
-          }
-        }
-      }
-
       state = state.copyWith(
         allDrinks: drinks,
         quickDrinks: quick,
-        lastDrink: lastDrink,
+        lastDrink: _resolveLast(lastEntry, drinks),
         isLoading: false,
       );
     } catch (e, st) {
       _log.error('failed to load drinks', e, st);
       state = state.copyWith(isLoading: false);
     }
+  }
+
+  /// [entry]'s drink in [drinks] and its amount; null without an entry, for
+  /// an unknown drink or an amount the form would refuse.
+  static LastDrink? _resolveLast(DrinkEntry? entry, List<Drink> drinks) {
+    if (entry == null || !DrinkHelpers.isValidAmount(entry.amountMl)) {
+      return null;
+    }
+    final drink = drinks.where((d) => d.id == entry.drinkId).firstOrNull;
+    return drink == null ? null : (drink: drink, amountMl: entry.amountMl);
   }
 
   /// The latest entry; null when there is none or the fetch fails (the rest
@@ -181,7 +181,8 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
 
   void openSearch() => state = state.copyWith(isSearchOpen: true);
 
-  void closeSearch() => state = state.copyWith(isSearchOpen: false);
+  void closeSearch() =>
+      state = state.copyWith(isSearchOpen: false, suggestions: []);
 
   void toggleDrink(Drink drink) {
     if (state.selectedDrink?.id == drink.id) {
@@ -267,6 +268,24 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
       _log.error('failed to delete drink', e, st);
       rethrow;
     }
+    // The delete took the drink's entries with it: the last entry and the
+    // day total may have changed.
+    if (state.lastDrink?.drink.id == drink.id) {
+      state = state.copyWith(lastDrink: null);
+    }
+    await Future.wait([_reloadLast(), loadDayTotal()]);
+  }
+
+  /// Re-fetches the last entry and resolves it against the loaded drinks.
+  Future<void> _reloadLast() async {
+    final userId = ref.read(currentUserIdProvider);
+    if (userId == null) return;
+    final entry = await _fetchLastEntry(
+      ref.read(drinkRepositoryProvider),
+      userId,
+    );
+    if (!ref.mounted) return;
+    state = state.copyWith(lastDrink: _resolveLast(entry, state.allDrinks));
   }
 
   /// Stores the last drink and its amount at [DrinkTrackerState.trackedAt];

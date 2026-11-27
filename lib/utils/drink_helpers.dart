@@ -152,7 +152,9 @@ abstract final class DrinkHelpers {
           ? '$glasses getrunken'
           : '$glasses und $rest ml getrunken';
     }
-    return pendingMl > 0 ? '$drunk, dazu kommen $pendingMl ml' : drunk;
+    return pendingMl > 0
+        ? '$drunk, dazu kommen ${formatAmount(pendingMl)}'
+        : drunk;
   }
 
   /// The drink tiles: Wasser first, the rest in order without duplicates,
@@ -239,10 +241,11 @@ abstract final class DrinkHelpers {
   /// ml, or null.
   static int? parseAmount(String value) {
     final parsed = int.tryParse(value);
-    return (parsed != null && parsed > 0 && parsed <= maxAmountMl)
-        ? parsed
-        : null;
+    return (parsed != null && isValidAmount(parsed)) ? parsed : null;
   }
+
+  /// Whether [ml] is an amount one drink entry may have: 1 to [maxAmountMl].
+  static bool isValidAmount(int ml) => ml > 0 && ml <= maxAmountMl;
 
   /// The hint for a typed amount that [parseAmount] refuses; null for an
   /// empty field or a valid amount.
