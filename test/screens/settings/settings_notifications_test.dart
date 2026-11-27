@@ -45,10 +45,22 @@ class _OsNotifications extends FakeNotificationRepository {
   Future<bool> requestPermission() => requestAllPermissions();
 }
 
+/// Records every profile written.
+class _RecordingProfiles extends FakeProfileRepository {
+  final updates = <UserProfile>[];
+
+  @override
+  Future<void> updateProfile(String userId, UserProfile profile) {
+    updates.add(profile);
+    return super.updateProfile(userId, profile);
+  }
+}
+
 void main() {
   group('SettingsNotificationsScreen reflects what can arrive', () {
     late ProviderContainer container;
     late _OsNotifications os;
+    late _RecordingProfiles repo;
 
     setUp(() => SharedPreferences.setMockInitialValues({}));
 
@@ -60,7 +72,7 @@ void main() {
     }) async {
       os = _OsNotifications(permission, grant: grant);
       final seeded = profile ?? testUserProfile();
-      final repo = FakeProfileRepository()..seedProfile(seeded);
+      repo = _RecordingProfiles()..seedProfile(seeded);
       container = ProviderContainer.test(
         overrides: [
           profileRepositoryProvider.overrideWithValue(repo),
@@ -429,6 +441,68 @@ void main() {
       await tester.tap(find.text('Erinnerung am Abend'));
       await tester.pumpAndSettle();
       expect(stored().dailyReviewReminder, isFalse);
+    });
+
+    testWidgets('settings: a meal time changed, then „Erinnerung am Abend" '
+        'within the debounce: the last write keeps both', (tester) async {
+      await pump(
+        tester,
+        permission: NotificationPermission.granted,
+        profile: testUserProfile(mealReminderTimes: ['08:00', '18:00']),
+      );
+
+      // Removing 08:00 arms the debounced save.
+      await tester.tap(
+        find.descendant(
+          of: find.ancestor(
+            of: find.text('08:00'),
+            matching: find.byType(GestureDetector),
+          ),
+          matching: find.byIcon(Icons.close),
+        ),
+      );
+      await tester.ensureVisible(find.text('Erinnerung am Abend'));
+      await tester.tap(find.text('Erinnerung am Abend'));
+      await tester.pump();
+      await tester.pumpAndSettle(AppConstants.debounceDuration);
+
+      final last = repo.updates.last;
+      expect(last.mealReminderTimes, ['18:00']);
+      expect(last.dailyReviewReminder, isTrue);
+      expect(stored().dailyReviewReminder, isTrue);
+      expect(switchOn(tester, 'Erinnerung am Abend'), isTrue);
+    });
+
+    testWidgets('settings: „Erinnerung am Abend" toggled, then a mood time '
+        'within the debounce: the switch stays on', (tester) async {
+      await pump(
+        tester,
+        permission: NotificationPermission.granted,
+        profile: testUserProfile(
+          dailySummaryEnabled: true,
+          moodReminderTimes: ['09:00', '20:00'],
+        ),
+      );
+
+      await tester.ensureVisible(find.text('Erinnerung am Abend'));
+      await tester.tap(find.text('Erinnerung am Abend'));
+      await tester.pump();
+      await tester.ensureVisible(find.text('09:00'));
+      await tester.tap(
+        find.descendant(
+          of: find.ancestor(
+            of: find.text('09:00'),
+            matching: find.byType(GestureDetector),
+          ),
+          matching: find.byIcon(Icons.close),
+        ),
+      );
+      await tester.pump();
+      await tester.pumpAndSettle(AppConstants.debounceDuration);
+
+      final last = repo.updates.last;
+      expect(last.moodReminderTimes, ['20:00']);
+      expect(last.dailyReviewReminder, isTrue);
     });
 
     testWidgets('settings: turning the master switch on leaves „Erinnerung am '

@@ -72,24 +72,30 @@ class _SettingsNotificationsScreenState
       return;
     }
     setState(() => _waitingForSettingsApp = false);
-    final profile = ref.read(profileProvider).value;
-    if (profile != null) _save(profile.withNotifications(true));
+    _saveSwitch((p) => p.withNotifications(true));
   }
 
-  void _save(UserProfile profile) {
-    _holdOffIfAllOff(profile);
+  /// Saves [change] made to the profile as it is now, not as it was when
+  /// the screen last built: writes close together (a debounced time, a
+  /// switch) never undo each other. A failure is logged.
+  void _updateLatest(
+    UserProfile Function(UserProfile) change, {
+    bool holdOffIfAllOff = false,
+  }) {
+    final latest = ref.read(profileProvider).value;
+    if (latest == null) return;
+    final profile = change(latest);
+    if (holdOffIfAllOff) _holdOffIfAllOff(profile);
     ref
         .read(profileProvider.notifier)
         .updateProfile(profile)
         .catchError((Object e) => _log.error('saving failed', e));
   }
 
-  /// A switch of one notification: saved; the last one off holds the
-  /// Buddy's ask off ([_holdOffIfAllOff]).
-  void _saveSwitch(UserProfile profile) {
-    _holdOffIfAllOff(profile);
-    ref.read(profileProvider.notifier).updateProfile(profile);
-  }
+  /// A switch of one notification (or all): saved; the last one off holds
+  /// the Buddy's ask off ([_holdOffIfAllOff]).
+  void _saveSwitch(UserProfile Function(UserProfile) change) =>
+      _updateLatest(change, holdOffIfAllOff: true);
 
   /// Every notification off on purpose: the Buddy doesn't ask for them
   /// again for a week ([holdOffReminderAsks]).
@@ -105,10 +111,10 @@ class _SettingsNotificationsScreenState
     _debounce = Timer(AppConstants.debounceDuration, doSave);
   }
 
-  Future<void> _toggleMasterPermission(bool value, UserProfile profile) async {
+  Future<void> _toggleMasterPermission(bool value) async {
     if (!value) {
       setState(() => _waitingForSettingsApp = false);
-      _save(profile.withNotifications(false));
+      _saveSwitch((p) => p.withNotifications(false));
       return;
     }
     setState(() => _isRequestingPermission = true);
@@ -125,7 +131,7 @@ class _SettingsNotificationsScreenState
         _isRequestingPermission = false;
         _waitingForSettingsApp = !granted;
       });
-      if (granted) _save(profile.withNotifications(true));
+      if (granted) _saveSwitch((p) => p.withNotifications(true));
     } catch (e) {
       _log.error('failed to request permission', e);
       if (mounted) setState(() => _isRequestingPermission = false);
@@ -151,15 +157,8 @@ class _SettingsNotificationsScreenState
     final time = _formatMinutes(
       reviewMinutesOf(_formatMinutes(picked.hour * 60 + picked.minute)),
     );
-    // The latest profile: another setting may have been saved meanwhile.
-    final current = ref.read(profileProvider).value ?? profile;
-    if (time == current.dailyReviewTime) return;
-    ref
-        .read(profileProvider.notifier)
-        .updateProfile(current.copyWith(dailyReviewTime: time))
-        .catchError(
-          (Object e) => _log.error('saving the review time failed', e),
-        );
+    if (time == ref.read(profileProvider).value?.dailyReviewTime) return;
+    _updateLatest((p) => p.copyWith(dailyReviewTime: time));
   }
 
   static String _formatMinutes(int minutes) =>
@@ -252,8 +251,7 @@ class _SettingsNotificationsScreenState
                               value: allowed,
                               activeThumbColor: AppTheme.primary,
                               contentPadding: EdgeInsets.zero,
-                              onChanged: (v) =>
-                                  _toggleMasterPermission(v, profile),
+                              onChanged: _toggleMasterPermission,
                             ),
                             if (showSettingsHint) ...[
                               const Text(
@@ -296,7 +294,7 @@ class _SettingsNotificationsScreenState
                               activeThumbColor: AppTheme.primary,
                               contentPadding: EdgeInsets.zero,
                               onChanged: (v) => _saveSwitch(
-                                profile.copyWith(remindersEnabled: v),
+                                (p) => p.copyWith(remindersEnabled: v),
                               ),
                             ),
                             const Text(
@@ -311,15 +309,13 @@ class _SettingsNotificationsScreenState
                               ReminderTimePicker(
                                 selectedTimes: profile.mealReminderTimes,
                                 onChanged: (newTimes) {
-                                  _debounceSave(() {
-                                    ref
-                                        .read(profileProvider.notifier)
-                                        .updateProfile(
-                                          profile.copyWith(
-                                            mealReminderTimes: newTimes,
-                                          ),
-                                        );
-                                  });
+                                  _debounceSave(
+                                    () => _updateLatest(
+                                      (p) => p.copyWith(
+                                        mealReminderTimes: newTimes,
+                                      ),
+                                    ),
+                                  );
                                 },
                               ),
                             ],
@@ -335,7 +331,7 @@ class _SettingsNotificationsScreenState
                               activeThumbColor: AppTheme.primary,
                               contentPadding: EdgeInsets.zero,
                               onChanged: (v) => _saveSwitch(
-                                profile.copyWith(dailySummaryEnabled: v),
+                                (p) => p.copyWith(dailySummaryEnabled: v),
                               ),
                             ),
                             const Text(
@@ -350,15 +346,13 @@ class _SettingsNotificationsScreenState
                               ReminderTimePicker(
                                 selectedTimes: profile.moodReminderTimes,
                                 onChanged: (newTimes) {
-                                  _debounceSave(() {
-                                    ref
-                                        .read(profileProvider.notifier)
-                                        .updateProfile(
-                                          profile.copyWith(
-                                            moodReminderTimes: newTimes,
-                                          ),
-                                        );
-                                  });
+                                  _debounceSave(
+                                    () => _updateLatest(
+                                      (p) => p.copyWith(
+                                        moodReminderTimes: newTimes,
+                                      ),
+                                    ),
+                                  );
                                 },
                               ),
                             ],
@@ -413,7 +407,7 @@ class _SettingsNotificationsScreenState
                               activeThumbColor: AppTheme.primary,
                               contentPadding: EdgeInsets.zero,
                               onChanged: (v) => _saveSwitch(
-                                profile.copyWith(dailyReviewReminder: v),
+                                (p) => p.copyWith(dailyReviewReminder: v),
                               ),
                             ),
                             const Text(
@@ -452,8 +446,9 @@ class _SettingsNotificationsScreenState
                               value: tipsOn,
                               activeThumbColor: AppTheme.primary,
                               contentPadding: EdgeInsets.zero,
-                              onChanged: (v) =>
-                                  _saveSwitch(profile.copyWith(pushEnabled: v)),
+                              onChanged: (v) => _saveSwitch(
+                                (p) => p.copyWith(pushEnabled: v),
+                              ),
                             ),
                             const Text(
                               'Ich sag dir Bescheid, sobald neue Tipps da sind.',
