@@ -14,21 +14,29 @@ class MainActivity : FlutterActivity() {
         super.configureFlutterEngine(flutterEngine)
         // NotificationRepository.openNotificationSettings: where the user
         // allows the app's notifications once the OS won't ask any more.
+        // openAppSettings (url_utils): the app's details page, e.g. for the
+        // camera permission.
         MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "belly_buddy/app_settings")
             .setMethodCallHandler { call, result ->
-                if (call.method != "openNotificationSettings") {
-                    result.notImplemented()
-                    return@setMethodCallHandler
-                }
+                val detailsIntent =
+                    Intent(
+                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.fromParts("package", packageName, null),
+                    )
                 val intent =
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
-                            .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
-                    } else {
-                        Intent(
-                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                            Uri.fromParts("package", packageName, null),
-                        )
+                    when (call.method) {
+                        "openAppSettings" -> detailsIntent
+                        "openNotificationSettings" ->
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                                    .putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                            } else {
+                                detailsIntent
+                            }
+                        else -> {
+                            result.notImplemented()
+                            return@setMethodCallHandler
+                        }
                     }
                 try {
                     startActivity(intent)

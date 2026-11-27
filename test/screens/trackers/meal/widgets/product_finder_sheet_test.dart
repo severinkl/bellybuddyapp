@@ -11,6 +11,7 @@ import 'package:belly_buddy/models/product.dart';
 import 'package:belly_buddy/providers/product_finder_provider.dart';
 import 'package:belly_buddy/screens/trackers/meal/widgets/product_finder_sheet.dart';
 import 'package:belly_buddy/services/product_service.dart';
+import 'package:belly_buddy/utils/url_utils.dart';
 import 'package:belly_buddy/widgets/scanner/barcode_scanner.dart';
 
 import '../../../../helpers/app_host.dart';
@@ -98,9 +99,12 @@ class _Harness {
   ProductPrefill? result;
   bool closed = false;
 
+  /// What [open] answers.
+  bool openResult = true;
+
   Future<bool> open(Uri url, {LaunchMode mode = LaunchMode.platformDefault}) {
     opened.add(url);
-    return Future.value(true);
+    return Future.value(openResult);
   }
 
   Future<void> pump(WidgetTester tester) async {
@@ -370,7 +374,7 @@ void main() {
 
     await _submitSearch(tester, 'Joghurt');
     expect(h.service.searches, ['Joghurt']);
-  });
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
   testWidgets('ProductException with core text shows that text; without '
       'text the fallback; Nochmal versuchen repeats the call', (tester) async {
@@ -533,7 +537,49 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Kein Zugriff auf die Kamera'), findsNothing);
     expect(_scannerActive(tester), isTrue);
-  });
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
+
+  testWidgets('camera denied: Einstellungen öffnen on Android opens the app '
+      'details page', (tester) async {
+    final calls = <String>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      appSettingsChannel,
+      (call) async {
+        calls.add(call.method);
+        return true;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        appSettingsChannel,
+        null,
+      ),
+    );
+    final h = _Harness();
+    await h.pump(tester);
+    await tester.tap(find.text('deny'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Einstellungen öffnen'));
+    await tester.pumpAndSettle();
+    expect(calls, ['openAppSettings']);
+    expect(h.opened, isEmpty);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.android));
+
+  testWidgets('camera denied: a settings page that did not open keeps the '
+      'explanation on the way back', (tester) async {
+    final h = _Harness()..openResult = false;
+    await h.pump(tester);
+    await tester.tap(find.text('deny'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Einstellungen öffnen'));
+    await tester.pumpAndSettle();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pump();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+    expect(find.text('Kein Zugriff auf die Kamera'), findsOneWidget);
+    expect(find.byType(_FakeScanner), findsNothing);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
   Future<void> searchAndPick(WidgetTester tester, _Harness h) async {
     await _submitSearch(tester, 'Joghurt');

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -5,6 +7,10 @@ import 'logger.dart';
 
 /// The iOS Settings page of the app.
 const appSettingsUrl = 'app-settings:';
+
+/// Android's way to the app's system settings (`MainActivity`):
+/// `openAppSettings` (the app's details page) and `openNotificationSettings`.
+const appSettingsChannel = MethodChannel('belly_buddy/app_settings');
 
 /// Whether [url] is a web link: it starts with http:// or https://.
 bool isHttpUrl(String url) =>
@@ -41,12 +47,36 @@ Future<bool> openExternalUrl(
   return opened;
 }
 
-/// Opens the app's page in the iOS Settings with [open]; when that fails,
-/// shows a SnackBar on [context]'s messenger.
-Future<bool> openAppSettings(BuildContext context, {UrlOpener? open}) =>
-    openExternalUrl(
+const _settingsFailed = 'Die Einstellungen konnten nicht geöffnet werden.';
+
+/// Opens the app's page in the system settings — on iOS `app-settings:`
+/// with [open], on Android the app's details page through
+/// [appSettingsChannel] — and completes with whether it opened; when that
+/// fails, shows a SnackBar on [context]'s messenger. [platform] defaults to
+/// [defaultTargetPlatform].
+Future<bool> openAppSettings(
+  BuildContext context, {
+  UrlOpener? open,
+  TargetPlatform? platform,
+}) async {
+  if ((platform ?? defaultTargetPlatform) != TargetPlatform.android) {
+    return openExternalUrl(
       context,
       appSettingsUrl,
-      failureMessage: 'Die Einstellungen konnten nicht geöffnet werden.',
+      failureMessage: _settingsFailed,
       open: open ?? launchUrl,
     );
+  }
+  final messenger = ScaffoldMessenger.maybeOf(context);
+  var opened = false;
+  try {
+    opened =
+        await appSettingsChannel.invokeMethod<bool>('openAppSettings') ?? false;
+  } catch (e, st) {
+    _log.error('Opening the app settings failed (${e.runtimeType})', null, st);
+  }
+  if (!opened) {
+    messenger?.showSnackBar(const SnackBar(content: Text(_settingsFailed)));
+  }
+  return opened;
+}

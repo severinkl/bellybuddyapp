@@ -1,6 +1,5 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:url_launcher/url_launcher.dart';
@@ -141,9 +140,6 @@ class NotificationRepository {
   final NotificationScheduler _scheduler;
   static const _log = AppLogger('NotificationRepository');
 
-  /// Android's way to the app's notification settings (`MainActivity`).
-  static const _androidSettings = MethodChannel('belly_buddy/app_settings');
-
   NotificationRepository(this._scheduler);
 
   /// Schedules or cancels local notifications based on the user's profile
@@ -270,7 +266,7 @@ class NotificationRepository {
           mode: LaunchMode.externalApplication,
         ),
         TargetPlatform.android =>
-          await _androidSettings.invokeMethod<bool>(
+          await appSettingsChannel.invokeMethod<bool>(
                 'openNotificationSettings',
               ) ??
               false,

@@ -161,6 +161,15 @@ class _ProductFinderSheetState extends ConsumerState<ProductFinderSheet> {
     }
   }
 
+  /// Only a settings page that opened clears a denied permission on the
+  /// way back. Set before the open completes: the app may leave and come
+  /// back before it does.
+  Future<void> _openSettings() async {
+    _openedSettings = true;
+    final opened = await openAppSettings(context, open: widget.openUrl);
+    if (!opened) _openedSettings = false;
+  }
+
   Future<void> _open(String url, String failureMessage) => openExternalUrl(
     context,
     url,
@@ -267,13 +276,7 @@ class _ProductFinderSheetState extends ConsumerState<ProductFinderSheet> {
   Widget _scannerArea({required bool scanning}) {
     final failure = _cameraFailure;
     if (failure != null) {
-      return CameraProblemView(
-        failure: failure,
-        onOpenSettings: () {
-          _openedSettings = true;
-          openAppSettings(context, open: widget.openUrl);
-        },
-      );
+      return CameraProblemView(failure: failure, onOpenSettings: _openSettings);
     }
     if (!scanning) {
       return RescanButton(onTap: _rescan);
