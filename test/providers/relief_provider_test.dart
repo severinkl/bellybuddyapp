@@ -143,6 +143,14 @@ void main() {
       expect(lines.single, isNot(contains('gedanken')));
     });
 
+    test('a non-string stored value is empty and logged once', () async {
+      SharedPreferences.setMockInitialValues({'relief_feedback_u': 42});
+      final logs = captureLogs();
+      final c = _feedback('u');
+      expect(await c.read(reliefFeedbackProvider.future), isEmpty);
+      expect(logs.where((l) => l.contains('corrupt')), hasLength(1));
+    });
+
     test('no user stores nothing', () async {
       final c = _feedback(null);
       await c.read(reliefFeedbackProvider.future);

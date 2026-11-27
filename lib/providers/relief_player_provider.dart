@@ -55,6 +55,11 @@ class ReliefPlayer extends Notifier<ReliefPlayerState> {
   int _baseSeconds = 0;
   DateTime? _resumedAt;
 
+  /// Between [appHidden] and [appShown]. On Android the timer keeps firing
+  /// in the background; a quiet step that ends then is held at its end, so
+  /// the next step never starts unseen.
+  bool _hidden = false;
+
   @override
   ReliefPlayerState build() {
     _exercise = null;
@@ -136,15 +141,18 @@ class ReliefPlayer extends Notifier<ReliefPlayerState> {
   }
 
   /// Leaving the app pauses a running step, except a quiet one, which keeps
-  /// counting by wall clock.
+  /// counting by wall clock and is held at its end until [appShown].
   void appHidden() {
+    _hidden = true;
     if (state.status != ReliefPlayerStatus.running) return;
     if (step.quiet) return;
     pause();
   }
 
-  /// Back in the app: catch up with the wall clock.
+  /// Back in the app: catch up with the wall clock; a held quiet step moves
+  /// on to the next step at second 0.
   void appShown() {
+    _hidden = false;
     if (state.status == ReliefPlayerStatus.running) _recompute();
   }
 
@@ -197,10 +205,26 @@ class ReliefPlayer extends Notifier<ReliefPlayerState> {
     if (state.status != ReliefPlayerStatus.running || resumedAt == null) {
       return;
     }
-    var elapsed = _now().difference(resumedAt).inSeconds;
-    if (elapsed < 0) elapsed = 0; // the clock went back
+    final now = _now();
+    final elapsed = now.difference(resumedAt).inSeconds;
+    if (elapsed < 0) {
+      // The clock went back: count on from here.
+      _resumedAt = now;
+      _baseSeconds = state.secondInStep;
+      return;
+    }
     final second = _baseSeconds + elapsed;
     if (second >= step.seconds) {
+      if (_hidden) {
+        // Hold at the end; appShown moves on.
+        _stopTimer();
+        state = ReliefPlayerState(
+          status: ReliefPlayerStatus.running,
+          stepIndex: state.stepIndex,
+          secondInStep: step.seconds,
+        );
+        return;
+      }
       _goTo(state.stepIndex + 1);
       return;
     }

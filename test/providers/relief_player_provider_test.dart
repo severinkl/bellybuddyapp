@@ -144,6 +144,58 @@ void main() {
     });
   });
 
+  test('a quiet step that ends while hidden is held until appShown', () {
+    run('waerme', (h) {
+      h.player().start();
+      for (var i = 0; i < 3; i++) {
+        h.player().next();
+      }
+      h.elapse(590);
+      h.player().appHidden();
+      // Android: the timer keeps firing in the background.
+      h.elapse(30);
+      expect(h.state().status, ReliefPlayerStatus.running);
+      expect(h.state().stepIndex, 3);
+      expect(h.player().secondsLeftInStep, 0);
+      h.elapse(60);
+      expect(h.state().stepIndex, 3);
+      h.player().appShown();
+      expect(h.state().status, ReliefPlayerStatus.running);
+      expect(h.state().stepIndex, 4);
+      expect(h.state().secondInStep, 0);
+      h.elapse(5);
+      expect(h.state().stepIndex, 4);
+      expect(h.state().secondInStep, 5);
+    });
+  });
+
+  test('appShown while paused does nothing', () {
+    run('bauchatmung', (h) {
+      h.player().start();
+      h.elapse(5);
+      h.player().pause();
+      h.jump(const Duration(minutes: 1));
+      h.player().appShown();
+      expect(h.state().status, ReliefPlayerStatus.paused);
+      expect(h.state().secondInStep, 5);
+      h.elapse(3);
+      expect(h.state().secondInStep, 5);
+    });
+  });
+
+  test('a clock set back keeps counting', () {
+    run('bauchatmung', (h) {
+      h.player().start();
+      h.elapse(5);
+      h.jump(const Duration(hours: -1));
+      h.elapse(1);
+      expect(h.state().secondInStep, 5);
+      h.elapse(2);
+      expect(h.state().stepIndex, 0);
+      expect(h.state().secondInStep, 7);
+    });
+  });
+
   test('secondsDone', () {
     run('bauchatmung', (h) {
       h.player().start();
