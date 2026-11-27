@@ -16,6 +16,7 @@ import 'package:belly_buddy/providers/knowledge_opened_provider.dart';
 import 'package:belly_buddy/providers/knowledge_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/providers/progress_provider.dart';
+import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/repositories/knowledge_repository.dart';
 
 import '../helpers/fakes.dart';
@@ -88,6 +89,20 @@ class _ProfileLater extends ProfileNotifier {
   AsyncValue<UserProfile?> build() => const AsyncValue.loading();
 
   void load(UserProfile? profile) => state = AsyncValue.data(profile);
+}
+
+/// A profile repository whose reads wait for [hold] and fail with [error]
+/// when set.
+class _HeldProfileRepository extends FakeProfileRepository {
+  Completer<void>? hold;
+  Object? error;
+
+  @override
+  Future<UserProfile?> getProfile(String userId) async {
+    await hold?.future;
+    if (error case final e?) throw e;
+    return super.getProfile(userId);
+  }
 }
 
 void main() {
@@ -251,6 +266,60 @@ void main() {
       await pumpEventQueue();
       expect(c.read(insightsProvider).isReloading, isTrue);
       expect(links(c), isEmpty, reason: "user B's insights are still loading");
+    },
+  );
+
+  test(
+    'a profile reload keeps the picks; sign-out and an error drop them',
+    () async {
+      final profiles = _HeldProfileRepository()
+        ..seedProfile(testUserProfile(intolerances: const ['Laktose']));
+      final c = ProviderContainer.test(
+        overrides: [
+          user.override,
+          knowledgeRepositoryProvider.overrideWithValue(repo),
+          progressProvider.overrideWith(() => progress),
+          insightsProviderSeededWith(lockedInsights()),
+          profileRepositoryProvider.overrideWithValue(profiles),
+        ],
+      );
+      c.listen(forYouProvider, (_, _) {});
+      final notifier = c.read(profileProvider.notifier);
+      await notifier.fetchProfile();
+      await settle(c);
+      expect(links(c), [_laktose.link]);
+
+      // App resume / pull to refresh: the profile reloads.
+      profiles.hold = Completer<void>();
+      final reload = notifier.fetchProfile();
+      await pumpEventQueue();
+      expect(c.read(profileProvider).isLoading, isTrue);
+      expect(links(c), [_laktose.link], reason: 'same user, reloading');
+      profiles.hold!.complete();
+      await reload;
+      await pumpEventQueue();
+      expect(links(c), [_laktose.link]);
+
+      // A failed reload: no value, no picks.
+      profiles.error = Exception('offline');
+      await notifier.fetchProfile();
+      await pumpEventQueue();
+      expect(c.read(forYouProvider), isEmpty);
+      profiles.error = null;
+      await notifier.fetchProfile();
+      await pumpEventQueue();
+      expect(links(c), [_laktose.link]);
+
+      // Sign-out, then another user's profile loading: never the old picks.
+      notifier.reset();
+      user.set(c, 'other-user');
+      profiles.hold = Completer<void>();
+      final other = notifier.fetchProfile();
+      await pumpEventQueue();
+      expect(c.read(profileProvider).isLoading, isTrue);
+      expect(c.read(forYouProvider), isEmpty);
+      profiles.hold!.complete();
+      await other;
     },
   );
 }
