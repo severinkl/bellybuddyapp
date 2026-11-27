@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:belly_buddy/config/app_theme.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -77,6 +78,20 @@ void main() {
       expect(first.dy, lessThan(tester.getTopLeft(find.text(e.title)).dy));
     }
     expect(find.text(ReliefCopy.helpedLabel), findsOneWidget);
+  });
+
+  testWidgets('the „hat geholfen" label reads at ≥ 4.5:1 on its card', (
+    tester,
+  ) async {
+    await pump(tester, answers: {'gedanken': ReliefAnswer.yes});
+    final color = tester
+        .widget<Text>(find.text(ReliefCopy.helpedLabel))
+        .style!
+        .color!;
+    // (The guideline's screenshot check reads the whole card's node.)
+    final a = color.computeLuminance(), b = AppTheme.card.computeLuminance();
+    final (hi, lo) = a > b ? (a, b) : (b, a);
+    expect((hi + 0.05) / (lo + 0.05), greaterThanOrEqualTo(4.5));
   });
 
   testWidgets('keeps the safety line outside the scroll view', (tester) async {

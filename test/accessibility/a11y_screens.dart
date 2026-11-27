@@ -10,14 +10,20 @@ import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/insight_rules.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
+import 'package:belly_buddy/providers/plus_provider.dart';
+import 'package:belly_buddy/providers/relief_provider.dart';
 import 'package:belly_buddy/providers/upgrade_gate_provider.dart';
 import 'package:belly_buddy/router/app_router.dart';
 import 'package:belly_buddy/router/route_names.dart';
+import 'package:belly_buddy/screens/shares/widgets/practice_code_scanner.dart';
+import 'package:belly_buddy/services/purchases/purchases_gateway.dart';
+import 'package:belly_buddy/services/relief/screen_awake.dart';
 import 'package:belly_buddy/services/share_service.dart';
 
 import '../helpers/app_host.dart';
 import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
+import '../helpers/purchases_fakes.dart';
 import '../helpers/riverpod_helpers.dart';
 import '../helpers/share_fakes.dart';
 import '../helpers/reduce_motion.dart';
@@ -157,6 +163,38 @@ List<Override> _oneShare() => [
   shareServiceProvider.overrideWithValue(FakeShareService([testShare()])),
 ];
 
+/// One link share and one dietitian connection (`d1`).
+List<Override> _dietitianShare() => [
+  shareServiceProvider.overrideWithValue(
+    FakeShareService([testShare(), testDietitianShare()]),
+  ),
+];
+
+/// The connect screen; its camera scan finds nothing.
+List<Override> _connect() => [
+  ..._oneShare(),
+  practiceCodeScanProvider.overrideWithValue((_) async => null),
+];
+
+/// „Ruhe für den Bauch" on, the screen kept awake by a fake.
+List<Override> _reliefOn() => [
+  reliefEnabledProvider.overrideWithValue(true),
+  screenAwakeProvider.overrideWithValue(const _NoScreenAwake()),
+];
+
+/// The Plus switch on, the store answering „no Plus yet".
+List<Override> _plusOn() => [
+  paywallEnabledProvider.overrideWithValue(true),
+  purchasesGatewayProvider.overrideWithValue(FakePurchasesGateway()),
+];
+
+class _NoScreenAwake implements ScreenAwake {
+  const _NoScreenAwake();
+
+  @override
+  Future<void> set(bool on) async {}
+}
+
 List<Override> _mealToEdit() => [
   entriesProviderSeededWith([testMealEntry()]),
 ];
@@ -197,6 +235,11 @@ const a11yScreens = <A11yScreen>[
   A11yScreen('Home', RoutePaths.dashboard),
   A11yScreen('Tagebuch', RoutePaths.diary, base: _diaryBase),
   A11yScreen('Entdecken', RoutePaths.discover),
+  A11yScreen(
+    'Entdecken (Ruhe für den Bauch)',
+    RoutePaths.discover,
+    seed: _reliefOn,
+  ),
   A11yScreen('Wissen', RoutePaths.knowledge),
   A11yScreen('Rezeptsammlung', RoutePaths.discoverRecipes),
   A11yScreen('Ich', RoutePaths.me),
@@ -226,6 +269,17 @@ const a11yScreens = <A11yScreen>[
   ),
   A11yScreen('Muster (frei)', RoutePaths.patterns, base: _patternsUnlockedBase),
   A11yScreen('Muster frei!', RoutePaths.patternsUnlocked),
+  A11yScreen('Dein Verlauf', RoutePaths.progress),
+  A11yScreen(
+    'Dein Verlauf (mit Einträgen)',
+    RoutePaths.progress,
+    base: _diaryBase,
+  ),
+
+  // Ruhe für den Bauch.
+  A11yScreen('Ruhe für den Bauch', RoutePaths.relief, seed: _reliefOn),
+  A11yScreen('Übung: Bauchatmung', '/relief/bauchatmung', seed: _reliefOn),
+  A11yScreen('Übung: Bauchmassage', '/relief/bauchmassage', seed: _reliefOn),
 
   // Ich.
   A11yScreen('Einstellungen', RoutePaths.settings),
@@ -233,7 +287,19 @@ const a11yScreens = <A11yScreen>[
   A11yScreen('Benachrichtigungen', RoutePaths.settingsNotifications),
   A11yScreen('Konto', RoutePaths.settingsAccount),
   A11yScreen('Freigaben', RoutePaths.shares, seed: _oneShare),
+  A11yScreen(
+    'Freigaben (mit Berater:in)',
+    RoutePaths.shares,
+    seed: _dietitianShare,
+  ),
   A11yScreen('Neue Freigabe', RoutePaths.shareCreate, seed: _oneShare),
+  A11yScreen(
+    'Berater:in verbinden',
+    RoutePaths.dietitianConnect,
+    seed: _connect,
+  ),
+  A11yScreen('Verbindung bearbeiten', '/shares/d1/edit', seed: _dietitianShare),
+  A11yScreen('Belly Buddy Plus', RoutePaths.plus, seed: _plusOn),
 ];
 
 /// Once per test file: the German date symbols the screens format with.
