@@ -199,6 +199,74 @@ void main() {
     },
   );
 
+  test('sign-out clears the choices', () async {
+    service.onFetch = (_) async => [row('a1')];
+    final c = make(userId: 'user-a');
+    final sub = c.listen(alternativeChoicesProvider, (_, _) {});
+    addTearDown(sub.close);
+    expect(await c.read(alternativeChoicesProvider.future), hasLength(1));
+    expect(c.read(chosenAlternativesProvider), hasLength(1));
+
+    user.set(c, null);
+    expect(await c.read(alternativeChoicesProvider.future), isEmpty);
+    expect(c.read(chosenAlternativesProvider), isEmpty);
+    expect(c.read(triedAlternativesProvider), isEmpty);
+  });
+
+  test(
+    'a choose result arriving after a switch to user B is dropped',
+    () async {
+      final upsert = Completer<Map<String, dynamic>>();
+      service.onUpsert = () => upsert.future;
+      service.onFetch = (id) async =>
+          id == 'user-a' ? [] : [row('b1', ing: 'i2')];
+      final c = make(userId: 'user-a');
+      final sub = c.listen(alternativeChoicesProvider, (_, _) {});
+      addTearDown(sub.close);
+      await c.read(alternativeChoicesProvider.future);
+
+      final result = c
+          .read(alternativeChoicesProvider.notifier)
+          .choose(
+            ingredientId: 'i1',
+            ingredientName: 'Zwiebel',
+            replacement: rep,
+            kind: AlternativeChoiceKind.tryIt,
+          );
+      user.set(c, 'user-b');
+      expect(
+        (await c.read(alternativeChoicesProvider.future)).map((e) => e.id),
+        ['b1'],
+      );
+
+      upsert.complete(row('a-stored'));
+      expect(await result, isFalse);
+      expect(c.read(alternativeChoicesProvider).value!.map((e) => e.id), [
+        'b1',
+      ]);
+    },
+  );
+
+  test('a failed remove arriving after a switch to user B restores nothing '
+      'into B\'s list', () async {
+    final delete = Completer<void>();
+    service.onDelete = (_) => delete.future;
+    service.onFetch = (id) async =>
+        id == 'user-a' ? [row('a1')] : [row('b1', ing: 'i2')];
+    final c = make(userId: 'user-a');
+    final sub = c.listen(alternativeChoicesProvider, (_, _) {});
+    addTearDown(sub.close);
+    await c.read(alternativeChoicesProvider.future);
+
+    final result = c.read(alternativeChoicesProvider.notifier).remove('a1');
+    user.set(c, 'user-b');
+    await c.read(alternativeChoicesProvider.future);
+
+    delete.completeError(Exception('offline'));
+    expect(await result, isFalse);
+    expect(c.read(alternativeChoicesProvider).value!.map((e) => e.id), ['b1']);
+  });
+
   test('triedAlternatives lists only tryIt rows, newest first', () async {
     service.onFetch = (_) async => [
       row('new', ing: 'i1', at: '2026-11-27T12:00:00+00:00'),
