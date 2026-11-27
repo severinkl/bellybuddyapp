@@ -1,6 +1,12 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+
+import '../../utils/logger.dart';
+
+const _log = AppLogger('BarcodeScanner');
 
 /// Why the camera could not start.
 enum ScannerFailure { permissionDenied, other }
@@ -77,13 +83,23 @@ class _MobileScannerViewState extends State<_MobileScannerView> {
   void didUpdateWidget(_MobileScannerView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.active == oldWidget.active) return;
-    // Start/stop errors surface through the controller's error state.
     if (widget.active) {
-      _controller.start();
+      _failureReported = false;
+      _guard(_controller.start());
     } else {
-      _controller.stop();
+      _guard(_controller.stop());
     }
   }
+
+  /// Rapid toggling can make start/stop throw (initializing, disposed):
+  /// log the error kind only, never anything scanned.
+  void _guard(Future<void> future) => unawaited(
+    future.catchError((Object e, StackTrace st) {
+      _log.error(
+        'Scanner start/stop failed: ${e is MobileScannerException ? e.errorCode.name : e.runtimeType}',
+      );
+    }),
+  );
 
   @override
   void dispose() {
