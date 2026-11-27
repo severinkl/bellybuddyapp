@@ -57,6 +57,12 @@ bool mayStartScanner(
   return !state.isInitialized || state.hasCameraPermission;
 }
 
+/// Whether the view must stop a camera that runs although the view is
+/// inactive: mobile_scanner ignores a stop while a start is still pending,
+/// so the view stops it once that start completes.
+bool mustStopScanner(MobileScannerState state, {required bool active}) =>
+    !active && state.isRunning;
+
 Widget mobileScannerBuilder(
   BuildContext context, {
   required bool active,
@@ -94,6 +100,20 @@ class _MobileScannerViewState extends State<_MobileScannerView> {
   bool _failureReported = false;
 
   @override
+  void initState() {
+    super.initState();
+    _controller.addListener(_onControllerValue);
+  }
+
+  /// A start that completes after [_MobileScannerView.active] turned false
+  /// leaves the camera running: stop it then.
+  void _onControllerValue() {
+    if (mustStopScanner(_controller.value, active: widget.active)) {
+      _guard(_controller.stop());
+    }
+  }
+
+  @override
   void didUpdateWidget(_MobileScannerView oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.active == oldWidget.active) return;
@@ -105,6 +125,7 @@ class _MobileScannerViewState extends State<_MobileScannerView> {
         _guard(_controller.start());
       }
     } else {
+      // A no-op while a start is pending: [_onControllerValue] stops it.
       _guard(_controller.stop());
     }
   }
@@ -121,6 +142,7 @@ class _MobileScannerViewState extends State<_MobileScannerView> {
 
   @override
   void dispose() {
+    _controller.removeListener(_onControllerValue);
     _controller.dispose();
     super.dispose();
   }

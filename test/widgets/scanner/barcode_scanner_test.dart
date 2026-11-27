@@ -79,4 +79,37 @@ void main() {
       );
     });
   });
+
+  group('mustStopScanner', () {
+    const fresh = MobileScannerState.uninitialized();
+    final running = fresh.copyWith(isInitialized: true, isRunning: true);
+
+    test('stops a camera whose start completed after the view turned '
+        'inactive', () {
+      expect(mustStopScanner(running, active: false), isTrue);
+    });
+
+    test('keeps a running camera while active', () {
+      expect(mustStopScanner(running, active: true), isFalse);
+    });
+
+    test('nothing to stop while the start is pending or after it failed', () {
+      expect(
+        mustStopScanner(fresh.copyWith(isStarting: true), active: false),
+        isFalse,
+      );
+      expect(
+        mustStopScanner(
+          fresh.copyWith(
+            isInitialized: true,
+            error: const MobileScannerException(
+              errorCode: MobileScannerErrorCode.permissionDenied,
+            ),
+          ),
+          active: false,
+        ),
+        isFalse,
+      );
+    });
+  });
 }
