@@ -12,6 +12,7 @@ import 'package:belly_buddy/providers/today_provider.dart';
 import 'package:belly_buddy/providers/tolerance_test_provider.dart';
 import 'package:belly_buddy/repositories/tolerance_test_repository.dart';
 import 'package:belly_buddy/services/pattern_stats_service.dart';
+import 'package:belly_buddy/utils/date_format_utils.dart';
 
 import '../helpers/logs.dart';
 import '../helpers/riverpod_helpers.dart';
@@ -171,7 +172,7 @@ void main() {
     final startsOn = repo.starts.single.startsOn;
     expect(startsOn, DateTime(2026, 12, 1));
     expect(startsOn.isUtc, isFalse);
-    expect(toleranceStartsOnWire(startsOn), '2026-12-01');
+    expect(formatIsoDate(startsOn), '2026-12-01');
   });
 
   test(

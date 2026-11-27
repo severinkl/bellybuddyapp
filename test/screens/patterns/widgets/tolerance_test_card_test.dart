@@ -373,35 +373,26 @@ void main() {
 
   group('canOfferTest', () {
     final free = _stats();
-    test('only with loaded stats, Plus open, no active test, not '
+    test('only with loaded stats, no active test, not '
         'restrictive', () {
-      expect(canOfferTest(AsyncData(free), plusLocked: false), isTrue);
-      expect(canOfferTest(AsyncData(free), plusLocked: true), isFalse);
+      expect(canOfferTest(AsyncData(free)), isTrue);
       expect(
         canOfferTest(
           // What a rebuild (a user change) shows: loading over the old value.
           // ignore: invalid_use_of_internal_member
           const AsyncLoading<PatternStats?>().copyWithPrevious(AsyncData(free)),
-          plusLocked: false,
         ),
         isFalse,
       );
       expect(
         canOfferTest(
           AsyncError<PatternStats?>(Exception('x'), StackTrace.empty),
-          plusLocked: false,
         ),
         isFalse,
       );
-      expect(canOfferTest(const AsyncData(null), plusLocked: false), isFalse);
-      expect(
-        canOfferTest(AsyncData(_stats(restrictive: true)), plusLocked: false),
-        isFalse,
-      );
-      expect(
-        canOfferTest(AsyncData(_stats(test: _test())), plusLocked: false),
-        isFalse,
-      );
+      expect(canOfferTest(const AsyncData(null)), isFalse);
+      expect(canOfferTest(AsyncData(_stats(restrictive: true))), isFalse);
+      expect(canOfferTest(AsyncData(_stats(test: _test()))), isFalse);
       expect(
         canOfferTest(
           AsyncData(
@@ -409,7 +400,6 @@ void main() {
               test: _test(status: 'completed', phase: TestPhase.done),
             ),
           ),
-          plusLocked: false,
         ),
         isTrue,
       );
@@ -421,10 +411,7 @@ void main() {
         ready: true,
         hasUnreadableTest: true,
       );
-      expect(
-        canOfferTest(const AsyncData(unreadable), plusLocked: false),
-        isFalse,
-      );
+      expect(canOfferTest(const AsyncData(unreadable)), isFalse);
     });
   });
 }

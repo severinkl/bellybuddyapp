@@ -394,10 +394,10 @@ void main() {
     test('set and clear write the verdict and refresh the provider', () async {
       const hafer = ReplacementIngredient(id: 'r2', name: 'Hafermilch');
       final group = testSuggestionGroup().copyWith(
-        replacements: rankReplacements(
+        replacements: rankKeyedReplacements(
           const [ReplacementIngredient(id: 'r1', name: 'Lauch'), hafer],
           verdicts: const {},
-          meals: const [],
+          meals: KeyedMeals(const []),
           since: null,
         ),
       );
@@ -506,13 +506,13 @@ void main() {
 
     test('choices loaded after the groups rank them', () async {
       final group = testSuggestionGroup().copyWith(
-        replacements: rankReplacements(
+        replacements: rankKeyedReplacements(
           const [
             ReplacementIngredient(id: 'r1', name: 'Lauch'),
             ReplacementIngredient(id: 'r2', name: 'Hafermilch'),
           ],
           verdicts: const {},
-          meals: const [],
+          meals: KeyedMeals(const []),
           since: null,
         ),
       );

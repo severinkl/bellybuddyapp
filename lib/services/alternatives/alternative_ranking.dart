@@ -131,22 +131,8 @@ List<RankedReplacement> _order(
 /// first, then the original order.
 ///
 /// [verdicts] are the choices for the group's ingredient, by replacement
-/// id; [since] is the group's first suggestion's `created_at`.
-List<RankedReplacement> rankReplacements(
-  List<ReplacementIngredient> replacements, {
-  required Map<String, AlternativeChoiceKind> verdicts,
-  Set<String> skippedBaseNames = const {},
-  required List<MealIngredients> meals,
-  required DateTime? since,
-}) => rankKeyedReplacements(
-  replacements,
-  verdicts: verdicts,
-  skippedBaseNames: skippedBaseNames,
-  meals: KeyedMeals(meals),
-  since: since,
-);
-
-/// [rankReplacements] with [meals] keyed already (once for all groups).
+/// id; [meals] are keyed once for all groups; [since] is the group's
+/// first suggestion's `created_at`.
 List<RankedReplacement> rankKeyedReplacements(
   List<ReplacementIngredient> replacements, {
   required Map<String, AlternativeChoiceKind> verdicts,

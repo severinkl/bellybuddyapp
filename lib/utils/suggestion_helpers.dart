@@ -1,4 +1,3 @@
-import '../models/alternative_choice.dart';
 import '../models/ingredient_suggestion_group.dart';
 import '../models/replacement_ingredient.dart';
 import '../services/alternatives/alternative_ranking.dart';
@@ -87,16 +86,15 @@ abstract final class SuggestionHelpers {
 
   /// Transforms raw suggestion rows + replacement rows + meal rows into
   /// grouped, sorted [IngredientSuggestionGroup] list. Each group's
-  /// replacements are ranked ([rankReplacements]) with the user's [choices]
-  /// and [recentMeals] (the last [rankingMealDays] days).
+  /// replacements are ranked ([rankKeyedReplacements]) by [recentMeals]
+  /// (the last [rankingMealDays] days); the user's verdicts are applied
+  /// afterwards ([rerankGroups]).
   static List<IngredientSuggestionGroup> buildGroups({
     required List<Map<String, dynamic>> suggestionData,
     required List<Map<String, dynamic>> replacementsData,
     required List<Map<String, dynamic>> mealsData,
-    List<AlternativeChoice> choices = const [],
     List<MealIngredients> recentMeals = const [],
   }) {
-    final verdicts = AlternativeVerdicts(choices);
     final keyedMeals = KeyedMeals(recentMeals);
 
     // Index meals by id
@@ -209,8 +207,7 @@ abstract final class SuggestionHelpers {
             meals: meals,
             replacements: rankKeyedReplacements(
               replacements,
-              verdicts: verdicts.forIngredient(acc.ingredientId),
-              skippedBaseNames: verdicts.skippedBaseNames,
+              verdicts: const {},
               meals: keyedMeals,
               since: acc.firstSuggestedAt,
             ),

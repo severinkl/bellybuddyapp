@@ -32,7 +32,7 @@ final toleranceTestOfferDueProvider = Provider<TestSubject?>((ref) {
   final ask = ref.watch(reminderAskDueProvider);
   if (ask.isLoading || ask.value == true) return null;
   final stats = ref.watch(patternStatsProvider);
-  if (!canOfferTest(stats, plusLocked: false)) return null;
+  if (!canOfferTest(stats)) return null;
   return stats.value?.proposal;
 });
 
@@ -111,7 +111,7 @@ bool testOfferStillApplies(Ref ref, {required String? suffix}) {
   final stats = ref.watch(patternStatsProvider);
   if (stats.isLocked) return false;
   if (stats is! AsyncData<PatternStats?> || stats.isLoading) return true;
-  if (!canOfferTest(stats, plusLocked: false)) return false;
+  if (!canOfferTest(stats)) return false;
   final proposal = stats.value?.proposal;
   if (proposal == null) return false;
   return suffix == null || testOfferSuffix(proposal) == suffix;

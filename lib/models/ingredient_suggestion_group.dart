@@ -29,7 +29,7 @@ class IngredientSuggestionGroup {
   final List<MealDetail> meals;
 
   /// Every replacement, ranked by the user's own verdicts and meals
-  /// (`rankReplacements`): the skipped ones last.
+  /// (`rankKeyedReplacements`): the skipped ones last.
   final List<RankedReplacement> replacements;
 
   const IngredientSuggestionGroup({

@@ -15,9 +15,6 @@ class TestConflict implements Exception {
   String toString() => 'TestConflict';
 }
 
-/// `starts_on` on the wire: the wall-clock date, `yyyy-MM-dd`.
-String toleranceStartsOnWire(DateTime startsOn) => formatIsoDate(startsOn);
-
 /// The user's `tolerance_tests` rows through PostgREST (RLS, column grants):
 /// insert the subject, origin and `starts_on` (the lengths take the server
 /// defaults); update only `status` and `ended_at`, only while active.
@@ -52,7 +49,7 @@ class ToleranceTestRepository {
         'subject_key': s.key,
         'subject_name': s.name,
         'origin': origin,
-        'starts_on': toleranceStartsOnWire(startsOn),
+        'starts_on': formatIsoDate(startsOn),
       });
     } on PostgrestException catch (e) {
       if (e.code == _pgUniqueViolation) throw const TestConflict();

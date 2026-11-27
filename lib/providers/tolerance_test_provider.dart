@@ -14,8 +14,7 @@ import 'pattern_stats_provider.dart';
 import 'plus_provider.dart';
 import 'today_provider.dart';
 
-export '../repositories/tolerance_test_repository.dart'
-    show TestConflict, toleranceStartsOnWire;
+export '../repositories/tolerance_test_repository.dart' show TestConflict;
 
 const _log = AppLogger('ToleranceTest');
 
@@ -276,15 +275,15 @@ final toleranceTestCompleterProvider = Provider<void>((ref) {
   }, fireImmediately: true);
 });
 
-/// Whether „Test starten" / „Testen" may be offered: Plus open, the stats
-/// loaded ([AsyncData], not a reload or another user's value), not locked,
-/// not restrictive, and no active test (also none past its end that is not
+/// Whether „Test starten" / „Testen" may be offered by the stats: loaded
+/// ([AsyncData], not a reload or another user's value), not locked, not
+/// restrictive, and no active test (also none past its end that is not
 /// completed yet: the one-active-test index would reject the start; nor one
 /// this build cannot read).
-bool canOfferTest(AsyncValue<PatternStats?> stats, {required bool plusLocked}) {
+bool canOfferTest(AsyncValue<PatternStats?> stats) {
   // A rebuild (a user change) is an AsyncData that is still loading, with
   // the previous value.
-  if (plusLocked || stats is! AsyncData<PatternStats?> || stats.isLoading) {
+  if (stats is! AsyncData<PatternStats?> || stats.isLoading) {
     return false;
   }
   final s = stats.value;
@@ -292,10 +291,10 @@ bool canOfferTest(AsyncValue<PatternStats?> stats, {required bool plusLocked}) {
   return !(s.test?.isActive ?? false);
 }
 
-/// [canOfferTest] for the current state.
-final canOfferTestProvider = Provider.autoDispose<bool>(
-  (ref) => canOfferTest(
-    ref.watch(patternStatsProvider),
-    plusLocked: ref.watch(plusLockedProvider),
-  ),
-);
+/// [canOfferTest] for the current state, with Plus open.
+final canOfferTestProvider = Provider.autoDispose<bool>((ref) {
+  // Both watched, locked or not (as before the split).
+  final plusLocked = ref.watch(plusLockedProvider);
+  final stats = ref.watch(patternStatsProvider);
+  return !plusLocked && canOfferTest(stats);
+});

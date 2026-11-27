@@ -43,11 +43,11 @@ void main() {
     });
   });
 
-  group('rankReplacements', () {
+  group('rankKeyedReplacements', () {
     test(
       'liked first, eaten-after next, neutral, sibling of disliked, disliked last',
       () {
-        final ranked = rankReplacements(
+        final ranked = rankKeyedReplacements(
           [
             _r('skip', 'Mandelmilch'),
             _r('sib', 'Reis (Basmati)'),
@@ -62,9 +62,9 @@ void main() {
             'fits': AlternativeChoiceKind.fits,
           },
           skippedBaseNames: {'reis'},
-          meals: [
+          meals: KeyedMeals([
             _meal(later, ['Hirse']),
-          ],
+          ]),
           since: since,
         );
         expect(_ids(ranked), [
@@ -81,15 +81,15 @@ void main() {
 
     test('within a tier: more meals eaten after first, then the original '
         'order', () {
-      final ranked = rankReplacements(
+      final ranked = rankKeyedReplacements(
         [_r('a'), _r('b'), _r('c'), _r('d')],
         verdicts: const {},
-        meals: [
+        meals: KeyedMeals([
           _meal(later, ['c']),
           _meal(later.add(const Duration(days: 1)), ['c', 'b']),
           _meal(later, ['b']),
           _meal(later, ['d']),
-        ],
+        ]),
         since: since,
       );
       expect(_ids(ranked), ['b', 'c', 'd', 'a']);
@@ -97,14 +97,14 @@ void main() {
     });
 
     test('a meal before the suggestion does not count', () {
-      final ranked = rankReplacements(
+      final ranked = rankKeyedReplacements(
         [_r('a'), _r('b')],
         verdicts: const {},
-        meals: [
+        meals: KeyedMeals([
           _meal(DateTime(2026, 11, 9, 20), ['b']),
           // The suggestion's own day: usually the meal that caused it.
           _meal(DateTime(2026, 11, 10, 23, 30), ['b']),
-        ],
+        ]),
         since: since,
       );
       expect(_ids(ranked), ['a', 'b']);
@@ -114,13 +114,13 @@ void main() {
     test('created_at is an instant: its local date decides, tracked_at is '
         'taken as it is', () {
       final at = DateTime.utc(2026, 11, 10, 23, 30).toLocal();
-      final ranked = rankReplacements(
+      final ranked = rankKeyedReplacements(
         [_r('a'), _r('b')],
         verdicts: const {},
-        meals: [
+        meals: KeyedMeals([
           _meal(DateTime(at.year, at.month, at.day, 23, 59), ['a']),
           _meal(DateTime(at.year, at.month, at.day + 1, 0, 1), ['b']),
-        ],
+        ]),
         since: DateTime.utc(2026, 11, 10, 23, 30),
       );
       expect(_ids(ranked), ['b', 'a']);
@@ -128,24 +128,24 @@ void main() {
     });
 
     test('without a suggestion time no meal counts', () {
-      final ranked = rankReplacements(
+      final ranked = rankKeyedReplacements(
         [_r('a'), _r('b')],
         verdicts: const {},
-        meals: [
+        meals: KeyedMeals([
           _meal(later, ['b']),
-        ],
+        ]),
         since: null,
       );
       expect(_ids(ranked), ['a', 'b']);
     });
 
     test('a meal counts once, however many of its ingredients match', () {
-      final ranked = rankReplacements(
+      final ranked = rankKeyedReplacements(
         [_r('t', 'Tofu')],
         verdicts: const {},
-        meals: [
+        meals: KeyedMeals([
           _meal(later, ['Tofu', 'Tofu (geräuchert)']),
-        ],
+        ]),
         since: since,
       );
       expect(ranked.single.eatenAfter, 1);
@@ -153,12 +153,12 @@ void main() {
 
     test('eaten-after matches by base name: „Tofu (fest, natur)" in a meal '
         'counts for „Tofu"', () {
-      final ranked = rankReplacements(
+      final ranked = rankKeyedReplacements(
         [_r('a', 'Quinoa'), _r('t', 'Tofu')],
         verdicts: const {},
-        meals: [
+        meals: KeyedMeals([
           _meal(later, ['Tofu (fest, natur)']),
-        ],
+        ]),
         since: since,
       );
       expect(_ids(ranked), ['t', 'a']);
@@ -166,10 +166,10 @@ void main() {
     });
 
     test('a sibling of a disliked item is demoted but visible', () {
-      final ranked = rankReplacements(
+      final ranked = rankKeyedReplacements(
         [_r('t1', 'Tofu (fest)'), _r('t2', 'Tofu (seiden)'), _r('q', 'Quinoa')],
         verdicts: {'t1': AlternativeChoiceKind.skip},
-        meals: const [],
+        meals: KeyedMeals(const []),
         since: since,
       );
       expect(_ids(ranked), ['q', 't2', 't1']);
@@ -185,13 +185,13 @@ void main() {
     });
 
     test('all disliked: visible list empty', () {
-      final ranked = rankReplacements(
+      final ranked = rankKeyedReplacements(
         [_r('a'), _r('b')],
         verdicts: {
           'a': AlternativeChoiceKind.skip,
           'b': AlternativeChoiceKind.skip,
         },
-        meals: const [],
+        meals: KeyedMeals(const []),
         since: since,
       );
       final group = IngredientSuggestionGroup(
@@ -207,10 +207,10 @@ void main() {
     });
 
     test('no feedback and no meals: original order unchanged', () {
-      final ranked = rankReplacements(
+      final ranked = rankKeyedReplacements(
         [_r('c'), _r('a'), _r('b')],
         verdicts: const {},
-        meals: const [],
+        meals: KeyedMeals(const []),
         since: since,
       );
       expect(_ids(ranked), ['c', 'a', 'b']);
@@ -239,12 +239,12 @@ void main() {
 
   group('rerankGroups', () {
     test('ranks again with new choices, from the original order', () {
-      final first = rankReplacements(
+      final first = rankKeyedReplacements(
         [_r('a'), _r('b'), _r('c')],
         verdicts: const {},
-        meals: [
+        meals: KeyedMeals([
           _meal(later, ['c']),
-        ],
+        ]),
         since: since,
       );
       final group = IngredientSuggestionGroup(
