@@ -147,6 +147,10 @@ class ShareTermsForm extends ConsumerStatefulWidget {
     this.prefillLastName = false,
   });
 
+  /// The toilet category's one word on the shares screens (the switch
+  /// here and the tile's „Sieht …").
+  static const toiletLabel = 'Klo-Einträge';
+
   final ShareTermsController controller;
   final String switchesHeading;
   final bool prefillLastName;
@@ -220,7 +224,11 @@ class _ShareTermsFormState extends ConsumerState<ShareTermsForm> {
                 _switch('Mahlzeiten und Zutaten', c.meals, (v) => c.meals = v),
                 _switch('Getränke', c.drinks, (v) => c.drinks = v),
                 _switch('Bauchgefühl und Symptome', c.gut, (v) => c.gut = v),
-                _switch('Klo-Einträge', c.toilet, (v) => c.toilet = v),
+                _switch(
+                  ShareTermsForm.toiletLabel,
+                  c.toilet,
+                  (v) => c.toilet = v,
+                ),
                 _switch(
                   'Muster und Unverträglichkeiten',
                   c.patterns,

@@ -67,11 +67,11 @@ void main() {
       expect(see(meals: true, gut: true), 'Sieht Mahlzeiten und Bauchgefühl');
       expect(
         see(meals: true, gut: true, toilet: true),
-        'Sieht Mahlzeiten, Bauchgefühl und Toiletten-Einträge',
+        'Sieht Mahlzeiten, Bauchgefühl und Klo-Einträge',
       );
       expect(
         see(meals: true, drinks: true, gut: true, toilet: true, photos: true),
-        'Sieht Mahlzeiten, Getränke, Bauchgefühl, Toiletten-Einträge und '
+        'Sieht Mahlzeiten, Getränke, Bauchgefühl, Klo-Einträge und '
         'Fotos',
       );
     });

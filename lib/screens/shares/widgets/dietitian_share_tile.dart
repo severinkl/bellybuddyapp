@@ -5,6 +5,7 @@ import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/data_share.dart';
 import '../../../widgets/common/bb_button.dart';
+import 'share_terms_form.dart';
 import 'share_tile.dart';
 
 const _deletedName = 'Berater:in (Konto gelöscht)';
@@ -36,7 +37,7 @@ String dietitianSeesLine(DataShare share) {
     if (share.shareMeals) 'Mahlzeiten',
     if (share.shareDrinks) 'Getränke',
     if (share.shareGut) 'Bauchgefühl',
-    if (share.shareToilet) 'Toiletten-Einträge',
+    if (share.shareToilet) ShareTermsForm.toiletLabel,
     if (share.sharePatterns) 'Muster',
     if (share.sharePhotos) 'Fotos',
   ];
