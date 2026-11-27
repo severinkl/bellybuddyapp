@@ -460,7 +460,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   }
 
   /// The first mood line, once the Buddy status is known and the hero is
-  /// visible. A pending welcome or announcements greet instead.
+  /// visible. A pending welcome or announcements greet instead, and so does
+  /// his line to the daily review: while it may still come this visit the
+  /// greeting waits ([_queueDailyReview] greets once it is not coming).
   void _maybeGreet() => _whenVisible(() {
     if (_takeWelcome()) {
       if (!_cueRunning) _nextCue();
@@ -470,9 +472,18 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     final buddy = ref.read(buddyProvider);
     if (buddy.isLoading && !buddy.hasValue) return; // first load running
     if (buddy.value?.announcements.isNotEmpty ?? false) return;
+    if (_dailyReviewMayCome) return;
     _greeted = true;
     _sayMoodLine();
   });
+
+  /// A review is open whose line is not decided yet this visit: being
+  /// checked, or not taken up yet ([_queueDailyReview]).
+  bool get _dailyReviewMayCome {
+    final day = ref.read(dailyReviewProvider)?.day.day;
+    if (day == null || ref.read(currentUserIdProvider) == null) return false;
+    return _dailyReviewQueued || _dailyReviewVisitDay != day;
+  }
 
   /// Takes the onboarding's pending welcome ([buddyWelcomeProvider]) ahead
   /// of every queued cue: it greets, and a log's follow-up or the
@@ -561,9 +572,13 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       final said = await dailyReviewSaidOn(userId, day);
       if (!mounted) return;
       if (!said && _visible) {
+        // The line greets instead ([_maybeGreet]); ended unsaid, the queue
+        // says the mood line ([_nextCue]).
+        _greeted = true;
         _enqueue(const [_Cue.dailyReview]);
       } else {
         _dailyReviewQueued = false;
+        _maybeGreet();
         _afterFrame(_queueRatingAsk);
       }
     }());

@@ -3870,6 +3870,25 @@ void main() {
         isNot(contains(DailyReviewCopy.cueLine)),
       );
     });
+
+    testWidgets('the line is the visit\'s greeting: no mood line is said '
+        'before it (none replaced within a frame)', (tester) async {
+      await pumpHero(tester);
+      await tick(tester);
+      expect(controller(tester).bubble, DailyReviewCopy.cueLine);
+      expect(controller(tester).bubbleId, 1, reason: 'one line said');
+    });
+
+    testWidgets('said already: the mood greeting comes instead', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({saidKey: '2026-11-22'});
+      await pumpHero(tester);
+      await tick(tester);
+      final greeting = controller(tester).bubble;
+      expect(greeting, isNotNull);
+      expect(greeting, isNot(DailyReviewCopy.cueLine));
+    });
   });
   group('the rating request after „Muster frei!"', () {
     late FakeRatingLauncher launcher;
