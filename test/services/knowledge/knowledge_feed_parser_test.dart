@@ -170,4 +170,25 @@ void main() {
     final none = parseKnowledgeFeed(_feed([_item()])).single;
     expect(none.teaser, isNull);
   });
+
+  test('the teaser leaves out HTML tags; only tags → null', () {
+    final a = parseKnowledgeFeed(
+      _feed([
+        _item(
+          description:
+              '<p><img src="https://www.myfodmap.at/glutenfrei-brot.jpg">'
+              ' Tipps   für den\n Alltag</p>',
+        ),
+      ]),
+    ).single;
+    expect(a.teaser, 'Tipps für den Alltag');
+    final escaped = parseKnowledgeFeed(
+      _feed([_item(description: '&lt;b&gt;Reis&lt;/b&gt; hilft')]),
+    ).single;
+    expect(escaped.teaser, 'Reis hilft');
+    final tagsOnly = parseKnowledgeFeed(
+      _feed([_item(description: '<img src="x.jpg"> ')]),
+    ).single;
+    expect(tagsOnly.teaser, isNull);
+  });
 }
