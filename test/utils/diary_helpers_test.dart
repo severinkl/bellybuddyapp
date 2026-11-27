@@ -173,7 +173,7 @@ void main() {
           drinks: [drink(250), drink(1250)],
           gutFeelings: [testGutFeelingEntry()],
         ),
-        '2× Essen · 1,5 L getrunken · 1× Bauchgefühl',
+        '2× Essen · 1,5 l getrunken · 1× Bauchgefühl',
       );
     });
 
@@ -184,7 +184,7 @@ void main() {
           '${DrinkHelpers.formatAmount(ml)} getrunken',
         );
       }
-      expect(totals(drinks: [drink(2000)]), '2 L getrunken');
+      expect(totals(drinks: [drink(2000)]), '2 l getrunken');
     });
 
     test('only one Klo', () {

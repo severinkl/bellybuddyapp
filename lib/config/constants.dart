@@ -642,6 +642,32 @@ class AppConstants {
   // Drink sizes
   static const List<int> drinkSizes = [250, 330, 500, 1000];
 
+  // Drinks screen
+  static const double drinkTileMinHeight = 84;
+  static const double vesselTileMinHeight = 96;
+  static const double drinkTileIconSize = 28;
+  static const double drinkRowIconSize = 26;
+  static const double drinkGlyphStroke = 1.8;
+  static const int drinkGlassMl = 250;
+  static const int glassMeterMaxGlasses = 48;
+  static const Size glassMeterGlassSize = Size(22, 28);
+  static const int drinkTileCount = 5;
+  static const double dashLengthSm = 3;
+  static const double dashGapSm = 3;
+
+  /// Text scale from which the drinks screen grids use two columns.
+  static const double drinkGridLargeTextScale = 1.5;
+
+  /// Catalogue names (matched case-insensitively) that fill the one-tap
+  /// drinks of a user with little history.
+  static const List<String> starterDrinkNames = [
+    'Wasser',
+    'Kaffee',
+    'Pfefferminztee',
+    'Schwarzer Tee',
+    'Apfelsaftschorle',
+  ];
+
   // Gut feeling symptom labels
   static const List<String> gutFeelingSymptoms = [
     'Blähbauch',
