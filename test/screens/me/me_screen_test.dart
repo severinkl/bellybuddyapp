@@ -16,6 +16,7 @@ import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
+import 'package:belly_buddy/providers/rating_provider.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
 import 'package:belly_buddy/providers/upgrade_gate_provider.dart';
 import 'package:belly_buddy/repositories/notification_repository.dart';
@@ -24,6 +25,7 @@ import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/buddy/streak_goal_picker.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/streak_sheet.dart';
 import 'package:belly_buddy/screens/me/me_screen.dart';
+import 'package:belly_buddy/services/app_version_service.dart';
 import 'package:belly_buddy/utils/buddy_name.dart';
 import 'package:belly_buddy/widgets/buddy/animated_buddy.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
@@ -35,6 +37,36 @@ import '../../helpers/riverpod_helpers.dart';
 
 BuddyStatus _status({int streak = 3, int? goal = 14, String name = 'Bruno'}) =>
     buddyStatus(name: name, goal: goal, streak: streak, todayCounted: true);
+
+class _Launcher implements RatingLauncher {
+  _Launcher({this.fails = false});
+  final bool fails;
+  int listings = 0;
+
+  @override
+  Future<bool> isAvailable() async => true;
+
+  @override
+  Future<void> request() async {}
+
+  @override
+  Future<void> openStoreListing() async {
+    listings++;
+    if (fails) throw Exception('no listing');
+  }
+}
+
+class _Version extends AppVersionService {
+  _Version({this.fails = false});
+  final bool fails;
+  int opened = 0;
+
+  @override
+  Future<void> openStore() async {
+    opened++;
+    if (fails) throw Exception('no store');
+  }
+}
 
 const _renameError = 'Bitte gib einen Namen mit 1 bis 20 Zeichen ein.';
 
@@ -160,6 +192,7 @@ void main() {
       MeScreen.streakKey,
       MeScreen.settingsKey,
       MeScreen.tutorialKey,
+      MeScreen.rateKey,
       MeScreen.feedbackKey,
     ]) {
       expect(find.byKey(key), findsOneWidget);
@@ -471,6 +504,98 @@ void main() {
       find.text('Das Feedback-Formular konnte nicht geöffnet werden.'),
       findsOneWidget,
     );
+  });
+
+  group('Belly Buddy bewerten', () {
+    testWidgets('the row sits directly above „Feedback geben" with its title '
+        'and subtitle', (tester) async {
+      await pump(tester);
+
+      expect(find.text('Belly Buddy bewerten'), findsOneWidget);
+      expect(find.text('Sag anderen, wie dir die App gefällt'), findsOneWidget);
+      final rate = tester.getRect(find.byKey(MeScreen.rateKey));
+      final feedback = tester.getRect(find.byKey(MeScreen.feedbackKey));
+      final tutorial = tester.getRect(find.byKey(MeScreen.tutorialKey));
+      expect(rate.top, greaterThan(tutorial.bottom));
+      expect(rate.bottom, lessThan(feedback.top));
+      expect(feedback.top - rate.bottom, lessThan(AppConstants.spacingLg));
+    });
+
+    testWidgets('tap opens the store listing through the launcher', (
+      tester,
+    ) async {
+      final launcher = _Launcher();
+      final version = _Version();
+      await pump(
+        tester,
+        extra: [
+          ratingLauncherProvider.overrideWithValue(launcher),
+          appVersionServiceProvider.overrideWithValue(version),
+        ],
+      );
+
+      await tapRow(tester, MeScreen.rateKey);
+
+      expect(launcher.listings, 1);
+      expect(version.opened, 0);
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('listing fails: the store page opens through '
+        'AppVersionService', (tester) async {
+      final launcher = _Launcher(fails: true);
+      final version = _Version();
+      await pump(
+        tester,
+        extra: [
+          ratingLauncherProvider.overrideWithValue(launcher),
+          appVersionServiceProvider.overrideWithValue(version),
+        ],
+      );
+
+      await tapRow(tester, MeScreen.rateKey);
+
+      expect(launcher.listings, 1);
+      expect(version.opened, 1);
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('both fail: „Der Store konnte nicht geöffnet werden." is '
+        'shown', (tester) async {
+      await pump(
+        tester,
+        extra: [
+          ratingLauncherProvider.overrideWithValue(_Launcher(fails: true)),
+          appVersionServiceProvider.overrideWithValue(_Version(fails: true)),
+        ],
+      );
+
+      await tapRow(tester, MeScreen.rateKey);
+
+      expect(
+        find.text('Der Store konnte nicht geöffnet werden.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('tapping does not record a rating request', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await pump(
+        tester,
+        extra: [
+          ratingLauncherProvider.overrideWithValue(_Launcher()),
+          appVersionServiceProvider.overrideWithValue(_Version()),
+        ],
+      );
+
+      await tapRow(tester, MeScreen.rateKey);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getKeys().where((k) => k.startsWith('rating_asked_')),
+        isEmpty,
+      );
+    });
   });
 
   testWidgets('text scale 1.3 on a small phone: no overflow', (tester) async {

@@ -9,9 +9,11 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/buddy_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/rating_provider.dart';
 import '../../providers/tutorial_provider.dart';
 import '../../providers/upgrade_gate_provider.dart';
 import '../../router/route_names.dart';
+import '../../services/app_version_service.dart';
 import '../../utils/buddy_name.dart';
 import '../../utils/logger.dart';
 import '../../utils/url_utils.dart';
@@ -27,7 +29,7 @@ import 'widgets/rename_buddy_dialog.dart';
 /// his name („Umbenennen") and streak chip, then „Erinnerungen sind aus"
 /// while notifications are off ([remindersOffProvider]; „Einschalten"),
 /// Streak & Ziel („Dein Streak"), Einstellungen, Tutorial wiederholen and
-/// Feedback geben, and the app version in small print.
+/// „Belly Buddy bewerten", Feedback geben, and the app version in small print.
 ///
 /// Without a Buddy status (loading, error) the Buddy shows as 'Buddy',
 /// without the chip, „Umbenennen" and the Streak row.
@@ -39,6 +41,7 @@ class MeScreen extends ConsumerStatefulWidget {
   static const streakKey = Key('me_streak');
   static const settingsKey = Key('me_settings');
   static const tutorialKey = Key('me_tutorial');
+  static const rateKey = Key('me_rate');
   static const feedbackKey = Key('me_feedback');
 
   /// Opens the feedback form.
@@ -127,6 +130,28 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     }
   }
 
+  /// „Belly Buddy bewerten": the store page for a review, else the plain
+  /// store page, else a message. Never counts as the Buddy's rating ask.
+  Future<void> _rate() async {
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await ref.read(ratingLauncherProvider).openStoreListing();
+      return;
+    } catch (e, st) {
+      _log.error('Opening the store listing failed', e, st);
+    }
+    try {
+      await ref.read(appVersionServiceProvider).openStore();
+    } catch (e, st) {
+      _log.error('Opening the store failed', e, st);
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Der Store konnte nicht geöffnet werden.'),
+        ),
+      );
+    }
+  }
+
   Future<void> _openFeedback() => openExternalUrl(
     context,
     AppConstants.feedbackFormUrl,
@@ -170,6 +195,13 @@ class _MeScreenState extends ConsumerState<MeScreen> {
         title: 'Tutorial wiederholen',
         subtitle: 'Die Tour durch Home nochmal ansehen',
         onTap: () => ref.read(tutorialProvider.notifier).replayFrom(context),
+      ),
+      BbSettingsItem(
+        key: MeScreen.rateKey,
+        icon: Icons.star_outline,
+        title: 'Belly Buddy bewerten',
+        subtitle: 'Sag anderen, wie dir die App gefällt',
+        onTap: () => unawaited(_rate()),
       ),
       BbSettingsItem(
         key: MeScreen.feedbackKey,
