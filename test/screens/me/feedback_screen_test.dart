@@ -154,6 +154,13 @@ void main() {
     expect(find.text('0 / 2000'), findsOneWidget);
   });
 
+  testWidgets('the message field is announced once', (tester) async {
+    final handle = tester.ensureSemantics();
+    await pump(tester);
+    expect(find.bySemanticsLabel(RegExp('Deine Nachricht')), findsOneWidget);
+    handle.dispose();
+  });
+
   testWidgets('Senden is disabled until a category and non-blank text', (
     tester,
   ) async {

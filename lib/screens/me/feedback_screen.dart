@@ -154,7 +154,10 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
                     ],
                   ),
                   AppConstants.gap24,
-                  const ShareFormHeading('Deine Nachricht'),
+                  // The field below carries the label for screen readers.
+                  const ExcludeSemantics(
+                    child: ShareFormHeading('Deine Nachricht'),
+                  ),
                   BbLabeledField(
                     label: 'Deine Nachricht',
                     child: TextField(
