@@ -66,6 +66,8 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
       if (route != null) {
         ref.read(routerProvider).go(route);
       }
+      // A kept-alive Entdecken does not load by itself.
+      unawaited(ref.read(discoverNewsProvider.notifier).pushArrived(route));
     });
 
     // Listen for foreground push messages → show snackbar
@@ -95,7 +97,7 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
         }
       }
 
-      // New tips or Alternativen may have arrived.
+      // New tips, Alternativen or a dietitian's tip may have arrived.
       unawaited(ref.read(discoverNewsProvider.notifier).pushArrived(route));
     });
 

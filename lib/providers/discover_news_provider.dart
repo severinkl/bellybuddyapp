@@ -7,6 +7,7 @@ import '../router/route_names.dart';
 import 'app_foreground_provider.dart';
 import 'auth_provider.dart';
 import 'buddy_provider.dart';
+import 'dietitian_tips_provider.dart';
 import 'ingredient_suggestion_provider.dart';
 import 'recommendation_provider.dart';
 
@@ -51,12 +52,17 @@ class DiscoverNewsNotifier extends Notifier<void> {
     unawaited(refresh());
   }
 
-  /// A push arrived while the app is open: one routed to the Tipps or the
-  /// Alternativen brings news of them, so they load; others bring none.
+  /// A push arrived while the app is open, or was opened: one routed to
+  /// the Tipps or the Alternativen brings news of them, so they load; one
+  /// routed to Entdecken brings a dietitian's tip, so the tips load (once
+  /// they are loaded at all; their first load is still to come otherwise);
+  /// others bring none.
   Future<void> pushArrived(String? route) => switch (route == null
       ? null
       : Uri.tryParse(route)?.path) {
     RoutePaths.recommendations || RoutePaths.ingredientSuggestions => refresh(),
+    RoutePaths.discover when ref.read(dietitianTipsProvider.exists) =>
+      ref.read(dietitianTipsProvider.notifier).refresh(),
     _ => Future.value(),
   };
 

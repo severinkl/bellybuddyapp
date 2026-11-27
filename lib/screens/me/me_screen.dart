@@ -9,6 +9,7 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/buddy_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/shares_provider.dart';
 import '../../providers/tutorial_provider.dart';
 import '../../providers/upgrade_gate_provider.dart';
 import '../../router/route_names.dart';
@@ -27,9 +28,9 @@ import 'widgets/rename_buddy_dialog.dart';
 /// Home's does; the Buddy's name is the screen's heading): the Buddy with
 /// his name („Umbenennen") and streak chip, then „Erinnerungen sind aus"
 /// while notifications are off ([remindersOffProvider]; „Einschalten"),
-/// Streak & Ziel („Dein Streak"), Dein Verlauf (always), Einstellungen,
-/// Tutorial wiederholen and Feedback geben, and the app version in small
-/// print.
+/// Streak & Ziel („Dein Streak"), Dein Verlauf (always), Mit Berater:in
+/// teilen, Einstellungen, Tutorial wiederholen and Feedback geben, and the
+/// app version in small print.
 ///
 /// Without a Buddy status (loading, error) the Buddy shows as 'Buddy',
 /// without the chip, „Umbenennen" and the Streak row.
@@ -40,6 +41,7 @@ class MeScreen extends ConsumerStatefulWidget {
   static const remindersKey = Key('me_reminders');
   static const streakKey = Key('me_streak');
   static const progressKey = Key('me_progress');
+  static const shareKey = Key('me_share');
   static const settingsKey = Key('me_settings');
   static const tutorialKey = Key('me_tutorial');
   static const feedbackKey = Key('me_feedback');
@@ -130,6 +132,27 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     }
   }
 
+  /// The share list is on its way: a second tap in the same frame opens
+  /// nothing. From the next frame the pushed route covers this screen and
+  /// takes the taps, so the flag is cleared then, not when the push
+  /// completes: a `go` that replaces the stack never completes it.
+  bool _openingShare = false;
+
+  /// The share row: the list; with no share (or no list) the create screen
+  /// on top of it.
+  void _openShare() {
+    if (_openingShare) return;
+    _openingShare = true;
+    unawaited(ref.read(shareRowBadgeProvider.notifier).markTapped());
+    final shares = ref.read(sharesProvider).value;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _openingShare = false);
+    unawaited(context.push(RoutePaths.shares));
+    // Without a share the create screen goes on top of the list at once.
+    if (shares == null || shares.isEmpty) {
+      unawaited(context.push(RoutePaths.shareCreate));
+    }
+  }
+
   Future<void> _openFeedback() => openExternalUrl(
     context,
     AppConstants.feedbackFormUrl,
@@ -142,6 +165,10 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     final status = ref.watch(buddyProvider).value;
     final version = ref.watch(currentVersionProvider).value;
     final remindersOff = ref.watch(remindersOffProvider).value ?? false;
+    // Watched so the list is loaded when the row is tapped; only whether it
+    // is empty matters here.
+    ref.watch(sharesProvider.select((s) => s.value?.isEmpty));
+    final showShareBadge = ref.watch(shareRowBadgeProvider).value ?? false;
 
     final rows = [
       if (remindersOff)
@@ -166,6 +193,14 @@ class _MeScreenState extends ConsumerState<MeScreen> {
         title: ProgressCopy.title,
         subtitle: ProgressCopy.meSubtitle,
         onTap: () => context.push(RoutePaths.progress),
+      ),
+      BbSettingsItem(
+        key: MeScreen.shareKey,
+        icon: Icons.person_add_alt_1_outlined,
+        title: 'Mit Berater:in teilen',
+        subtitle: 'Tagebuch für Diätolog:in oder Ärzt:in freigeben',
+        badge: showShareBadge ? 'Neu' : null,
+        onTap: _openShare,
       ),
       BbSettingsItem(
         key: MeScreen.settingsKey,

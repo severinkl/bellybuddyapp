@@ -152,6 +152,9 @@ class AppConstants {
   static const double reminderExampleLabelWidth = 112.0;
   static const double reminderExampleDotSize = 16.0;
 
+  /// How long „Kopiert“ replaces „Kopieren“ after a copy.
+  static const Duration copiedLabelDuration = Duration(seconds: 2);
+
   /// Need meters (tunable): how long awake time drains each need from full
   /// (the night pause is in DayParts), and the levels. The floor keeps a
   /// meter from ever looking empty; low and high split the meter's mood
@@ -362,12 +365,16 @@ class AppConstants {
   static const String privacyPolicyUrl =
       'https://app.bellybuddy.at/datenschutz';
 
+  /// Belly Buddy Connect, the dietitian portal; a practice QR code holds
+  /// `<connectUrl>/c/<code>`.
+  static const String connectUrl = 'https://connect.bellybuddy.at';
+
   /// Version of the privacy policy the health-data consent refers to. Bump it
   /// when the policy changes materially: every user whose stored
   /// `profiles.privacy_policy_version` differs is sent through the consent
   /// gate again. It equals core's `PRIVACY_POLICY_VERSION` (the public page's
   /// „Stand") and moves with it.
-  static const String privacyPolicyVersion = '2026-11-24';
+  static const String privacyPolicyVersion = '2026-12-01';
 
   /// The myfodmap blog feed behind Wissen, how long a fetched copy counts as
   /// fresh, and how long a fetch may take.
@@ -397,6 +404,10 @@ class AppConstants {
   /// Prefix of the day he last asked (`reminder_asked_on_<userId>`,
   /// yyyy-MM-dd).
   static const String keyReminderAskedOnPrefix = 'reminder_asked_on_';
+
+  /// Whether the Ich row „Mit Berater:in teilen" was tapped once (a bool, on
+  /// the device, not per user): its „Neu" badge is gone after that.
+  static const String keyShareRowTapped = 'share_row_tapped';
   static const String keyKnowledgeFeedCache = 'knowledge_feed_cache_v1';
 
   /// Prefix of the article links the user opened, per user and device
