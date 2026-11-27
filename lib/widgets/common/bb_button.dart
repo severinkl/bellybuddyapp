@@ -16,6 +16,11 @@ class BbButton extends StatelessWidget {
   /// Drawn before the label in place of an [icon] (a sticker icon).
   final Widget? leading;
 
+  /// Names the button for assistive tech in place of [label] (when the
+  /// visible text needs its context, e.g. „Wasser, 250 ml eintragen" for
+  /// „Eintragen"); the visible text stays [label].
+  final String? semanticLabel;
+
   const BbButton({
     super.key,
     required this.label,
@@ -27,6 +32,7 @@ class BbButton extends StatelessWidget {
     this.isSecondary = false,
     this.icon,
     this.leading,
+    this.semanticLabel,
   }) : assert(
          icon == null || leading == null,
          'An icon or a leading widget, not both',
@@ -46,12 +52,13 @@ class BbButton extends StatelessWidget {
     final lead = icon == null
         ? leading
         : Icon(icon, size: AppConstants.iconSizeClose);
-    final child = isLoading
+    final spoken = semanticLabel;
+    final Widget child = isLoading
         // The label stays in semantics while the spinner shows. It merges
         // into the button's own node, which is already a disabled button
         // (repeating those flags here would split it into a second node).
         ? Semantics(
-            label: label,
+            label: spoken ?? label,
             value: 'lädt',
             child: const ExcludeSemantics(
               child: SizedBox(
@@ -74,6 +81,13 @@ class BbButton extends StatelessWidget {
             ],
           )
         : Text(label);
+    // The spoken name merges into the button's node like the text would.
+    final named = spoken == null || isLoading
+        ? child
+        : Semantics(
+            label: spoken,
+            child: ExcludeSemantics(child: child),
+          );
 
     if (isOutlined) {
       return OutlinedButton(
@@ -85,7 +99,7 @@ class BbButton extends StatelessWidget {
                 side: const BorderSide(color: AppTheme.destructive),
               )
             : null,
-        child: child,
+        child: named,
       );
     }
 
@@ -103,7 +117,7 @@ class BbButton extends StatelessWidget {
               foregroundColor: AppTheme.secondaryForeground,
             )
           : null,
-      child: child,
+      child: named,
     );
   }
 }
