@@ -37,7 +37,10 @@ Future<ProviderContainer> _pump(
     ],
   );
   final router = GoRouter(
-    routes: [GoRoute(path: '/', builder: (_, _) => const PatternsScreen())],
+    routes: [
+      GoRoute(path: '/', builder: (_, _) => const PatternsScreen()),
+      ...stubRoutes([RoutePaths.progress]),
+    ],
   );
   addTearDown(router.dispose);
   await tester.pumpWidget(
@@ -240,6 +243,52 @@ void main() {
         ),
         findsWidgets,
       );
+    });
+  });
+
+  group('the „Dein Verlauf" link', () {
+    const link = 'Deinen Verlauf über 12 Wochen ansehen ›';
+
+    Future<void> tapLink(WidgetTester tester) async {
+      await tester.scrollUntilVisible(find.text(link), 200);
+      await tester.tap(find.text(link));
+      await tester.pumpAndSettle();
+      expect(find.text('page:${RoutePaths.progress}'), findsOneWidget);
+    }
+
+    testWidgets('locked: under the footer, pushes /progress', (tester) async {
+      await _pump(tester, _entries(2, 1));
+      expect(find.text('Ich sammle noch!'), findsOneWidget);
+      await tester.scrollUntilVisible(find.text(link), 200);
+      expect(
+        tester.getTopLeft(find.text(link)).dy,
+        greaterThan(
+          tester
+              .getTopLeft(
+                find.text(
+                  'ⓘ Beobachtung aus deinen Einträgen, kein medizinischer '
+                  'Befund.',
+                ),
+              )
+              .dy,
+        ),
+      );
+      await tapLink(tester);
+    });
+
+    testWidgets('unlocked: under the day definitions, pushes /progress', (
+      tester,
+    ) async {
+      await _pump(tester, _entries(7, 3));
+      expect(find.text('Ich sammle noch!'), findsNothing);
+      await tester.scrollUntilVisible(find.text(link), 200);
+      expect(
+        tester.getTopLeft(find.text(link)).dy,
+        greaterThan(
+          tester.getTopLeft(find.textContaining('Schwerer Tag =')).dy,
+        ),
+      );
+      await tapLink(tester);
     });
   });
 

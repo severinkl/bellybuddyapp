@@ -233,6 +233,21 @@ class AppConstants {
   // Muster page: how blurred the locked state's sample preview is
   static const double patternsPreviewBlur = 5.0;
 
+  // „Dein Verlauf": a day cell's height, the dot of a day logged without
+  // a gut feeling, and the empty state's Buddy
+  static const double progressDayCellHeight = 30.0;
+  static const double progressDayDotSize = 6.0;
+  static const double progressEmptyBuddySize = 120.0;
+
+  // „Beschwerden pro Woche": a symptom's bar row, the gap between its bars,
+  // the hollow marker of a week without means (and its outline), the least
+  // height of a bar so a mean of 1 stays visible
+  static const double progressTrendRowHeight = 48.0;
+  static const double progressTrendBarGap = 4.0;
+  static const double progressTrendMarkerSize = 8.0;
+  static const double progressTrendMarkerStroke = 1.5;
+  static const double progressTrendStubHeight = 3.0;
+
   // „Deine Belohnungen": a row's day circle
   static const double journeyRewardDaySize = 44.0;
 
@@ -424,6 +439,14 @@ class AppConstants {
   /// the device, not per user): its „Neu" badge is gone after that.
   static const String keyShareRowTapped = 'share_row_tapped';
   static const String keyKnowledgeFeedCache = 'knowledge_feed_cache_v1';
+
+  /// Prefix of the article links the user opened, per user and device
+  /// (`knowledge_opened_<userId>`, a string list, newest last).
+  static const String keyKnowledgeOpenedPrefix = 'knowledge_opened_';
+
+  /// At most this many opened article links are kept.
+  static const int knowledgeOpenedMax = 50;
+
   static const String keyBuddyStatePrefix = 'buddy_state_';
 
   /// Prefix of the once-per-user-and-device decision whether the user sees

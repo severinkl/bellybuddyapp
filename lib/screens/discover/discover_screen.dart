@@ -34,9 +34,8 @@ import 'widgets/knowledge_article_tile.dart';
 /// „Kommt bald" teaser), Von deiner Berater:in (the tips the dietitians
 /// sent; only with a tip), Tipps (the newest recommendation set),
 /// Alternativen (the newest ingredient suggestions), Rezepte (Für dich from
-/// the collection, and
-/// Meine Rezepte: own and saved) and Wissen (the newest myfodmap
-/// blog articles).
+/// the collection, and Meine Rezepte: own and saved) and Wissen (the
+/// myfodmap blog articles „Für dich", then the newest).
 /// Tipps shows only once a loaded set has tips ([newestTipSetProvider]),
 /// and stays through a refresh, loading or failed; while the first load
 /// runs, after it failed and without tips it is absent (the weekly tips are
@@ -111,7 +110,6 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     final forYou = ref.watch(forYouRecipesProvider);
     final mine = ref.watch(myRecipeItemsProvider);
     final savedFailed = ref.watch(savedRecipesStateProvider).hasError;
-    final knowledge = ref.watch(knowledgeFeedProvider);
     final relief = ref.watch(reliefEnabledProvider);
 
     return Scaffold(
@@ -171,10 +169,14 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
               ),
               AppConstants.gap24,
               DiscoverKnowledgeSection(
-                feed: knowledge,
                 onOpenAll: () => context.push(RoutePaths.knowledge),
                 onOpen: (article) => unawaited(
-                  openArticle(context, article, open: widget.openUrl),
+                  markOpenedAndOpen(
+                    context,
+                    ref,
+                    article,
+                    open: widget.openUrl,
+                  ),
                 ),
               ),
             ],

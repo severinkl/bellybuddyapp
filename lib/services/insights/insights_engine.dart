@@ -7,8 +7,8 @@ import '../../models/insight_source.dart';
 import '../../models/insights.dart';
 import '../../utils/date_format_utils.dart';
 import '../../utils/german_list.dart';
-import '../../utils/gut_feeling_rating.dart';
 import '../../utils/ingredient_key.dart';
+import 'day_class.dart';
 
 /// What the last [InsightRules.windowDays] local days of [source] show,
 /// as of [now]; every threshold comes from [InsightRules].
@@ -53,7 +53,7 @@ Insights computeInsights(InsightSource source, DateTime now) {
   for (var i = 0; i < InsightRules.windowDays; i++) {
     final day = addDays(start, i);
     final entries = entriesByDay[day];
-    final dayClass = entries == null ? DayClass.none : _dayClassOf(entries);
+    final dayClass = entries == null ? DayClass.none : dayClassOf(entries);
     calendar.add(InsightDay(day: day, dayClass: dayClass));
     final anchors = switch (dayClass) {
       DayClass.hard => hardAnchors,
@@ -64,7 +64,7 @@ Insights computeInsights(InsightSource source, DateTime now) {
       // The anchor is the day's first entry in the day's class; a mean is
       // in a class only if at least one of its entries is too.
       anchors.add(
-        entries!.firstWhere((e) => _entryClassOf(e) == dayClass).trackedAt,
+        entries!.firstWhere((e) => entryClassOf(e) == dayClass).trackedAt,
       );
     }
   }
@@ -79,7 +79,7 @@ Insights computeInsights(InsightSource source, DateTime now) {
 
   final hardEntryDays = {
     for (final e in gutFeelings)
-      if (_entryClassOf(e) == DayClass.hard) _localDay(e.trackedAt),
+      if (entryClassOf(e) == DayClass.hard) _localDay(e.trackedAt),
   };
   final calmDayIngredients = {
     for (final m in meals)
@@ -138,30 +138,6 @@ InsightPick _pick(List<Noticed> noticed, DayColumn goodDays) {
 }
 
 DateTime _localDay(DateTime t) => startOfDay(t);
-
-DayClass _classOf(GutFeelingRatingLevel level) => switch (level) {
-  GutFeelingRatingLevel.spiGut || GutFeelingRatingLevel.gut => DayClass.good,
-  GutFeelingRatingLevel.mittel => DayClass.medium,
-  GutFeelingRatingLevel.schlecht => DayClass.hard,
-};
-
-/// The class of one entry on its own, from its [gutFeelingScore].
-DayClass _entryClassOf(GutFeelingEntry entry) =>
-    _classOf(gutFeelingLevelFor(gutFeelingScore(entry)));
-
-/// The class of a day with [entries] (at least one), from the mean of their
-/// [gutFeelingScore]s.
-///
-/// Exact at the half-step thresholds: the mean is one division of two whole
-/// numbers, rounded once, and a mean that is not on a half step is at least
-/// `1 / (2 · count)` away from it, far more than that rounding can move it.
-DayClass _dayClassOf(List<GutFeelingEntry> entries) {
-  var sum = 0;
-  for (final e in entries) {
-    sum += gutFeelingScore(e);
-  }
-  return _classOf(gutFeelingLevelFor(sum / entries.length));
-}
 
 /// A meal reduced to what the insights match on.
 class _Meal {

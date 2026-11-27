@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../../../config/app_theme.dart';
+import '../../../config/constants.dart';
 import '../../../models/insights.dart';
 
 /// How a day class looks on the Muster page: its icon, the icon's colour
@@ -27,3 +28,22 @@ DayClassLook? dayClassLook(DayClass c) => switch (c) {
   ),
   DayClass.none => null,
 };
+
+/// The outline of a day without a gut-feeling entry.
+final dayNoneBorder = Border.all(
+  color: AppTheme.border,
+  width: AppConstants.borderWidthMd,
+);
+
+/// The mark of a day with entries but without a gut feeling („Dein
+/// Verlauf"): a small muted dot.
+class NoGutFeelingDot extends StatelessWidget {
+  const NoGutFeelingDot({super.key});
+
+  @override
+  Widget build(BuildContext context) => const Icon(
+    Icons.circle,
+    size: AppConstants.progressDayDotSize,
+    color: AppTheme.mutedForeground,
+  );
+}
