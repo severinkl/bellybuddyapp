@@ -14,6 +14,7 @@ import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/mocks.dart';
 import '../../helpers/riverpod_helpers.dart';
+import '../../helpers/semantics_checks.dart';
 import '../../helpers/purchases_fakes.dart';
 
 List<Override> _overrides() => [
@@ -40,7 +41,24 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('Suchen...'), findsOneWidget);
+      expect(find.text('z. B. Zwiebel'), findsOneWidget);
+    });
+
+    testWidgets('while empty, „Alternativen suchen" is read once, with an '
+        'example', (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWithProviders(
+        const IngredientSuggestionsScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expectSearchFieldReadOnce(
+        tester,
+        name: 'Alternativen suchen',
+        example: 'z. B. Zwiebel',
+      );
+      handle.dispose();
     });
 
     testWidgets('renders suggestion card for Zwiebel', (tester) async {

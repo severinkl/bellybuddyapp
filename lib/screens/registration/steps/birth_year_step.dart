@@ -39,6 +39,7 @@ class BirthYearStep extends StatelessWidget {
                 selectedValue: value,
                 onChanged: onChanged,
                 expand: true,
+                semanticLabel: 'Geburtsjahr',
               ),
             ),
           ),

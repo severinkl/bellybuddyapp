@@ -5,6 +5,7 @@ import '../../../config/constants.dart';
 import '../../../providers/notification_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../utils/logger.dart';
+import '../../../widgets/common/bb_icon_tap.dart';
 import '../../../widgets/common/mascot_image.dart';
 
 /// Shows the one-time notification opt-in dialog.
@@ -89,9 +90,11 @@ class _NotificationOptInDialogState
         children: [
           Align(
             alignment: Alignment.topRight,
-            child: GestureDetector(
+            child: BbIconTap(
+              icon: Icons.close,
+              color: AppTheme.mutedForeground,
+              semanticLabel: 'Schließen',
               onTap: _dismiss,
-              child: const Icon(Icons.close, color: AppTheme.mutedForeground),
             ),
           ),
           const MascotImage(

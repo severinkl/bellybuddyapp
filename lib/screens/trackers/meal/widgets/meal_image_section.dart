@@ -2,12 +2,13 @@ import 'dart:ui';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:shimmer/shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../config/constants.dart';
 import '../../../../utils/logger.dart';
+import '../../../../utils/reduced_motion.dart';
 import '../../../../utils/url_utils.dart';
+import '../../../../widgets/common/circle_icon_button.dart';
 import '../../../../widgets/common/dashed_border_painter.dart';
 import '../../../../widgets/common/signed_path_image.dart';
 
@@ -265,31 +266,10 @@ class _ImagePreview extends StatelessWidget {
           fit: StackFit.expand,
           children: [
             Image.memory(imageBytes, fit: BoxFit.cover),
-            // X button
             Positioned(
               top: AppConstants.spacing12,
               right: AppConstants.spacing12,
-              child: GestureDetector(
-                onTap: onClearImage,
-                child: Container(
-                  width: AppConstants.iconBadgeSm,
-                  height: AppConstants.iconBadgeSm,
-                  decoration: BoxDecoration(
-                    color: AppTheme.card,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: AppConstants.shadowBlurSm,
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.close,
-                    size: AppConstants.iconSizeClose,
-                  ),
-                ),
-              ),
+              child: _ClearPhotoButton(onTap: onClearImage),
             ),
             // Analysis overlay
             if (isAnalyzing)
@@ -361,7 +341,8 @@ class _UrlImagePreview extends StatelessWidget {
           children: [
             SignedPathImage(
               pathOrUrl: imageUrl,
-              placeholder: Shimmer.fromColors(
+              placeholder: ReducedMotion.shimmer(
+                context,
                 baseColor: AppTheme.muted,
                 highlightColor: AppTheme.background,
                 child: Container(color: AppTheme.muted),
@@ -371,31 +352,29 @@ class _UrlImagePreview extends StatelessWidget {
             Positioned(
               top: AppConstants.spacing12,
               right: AppConstants.spacing12,
-              child: GestureDetector(
-                onTap: onClearImage,
-                child: Container(
-                  width: AppConstants.iconBadgeSm,
-                  height: AppConstants.iconBadgeSm,
-                  decoration: BoxDecoration(
-                    color: AppTheme.card,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.1),
-                        blurRadius: AppConstants.shadowBlurSm,
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.close,
-                    size: AppConstants.iconSizeClose,
-                  ),
-                ),
-              ),
+              child: _ClearPhotoButton(onTap: onClearImage),
             ),
           ],
         ),
       ),
     );
   }
+}
+
+/// The ✕ over a photo: removes it (the picked one or the saved one).
+class _ClearPhotoButton extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _ClearPhotoButton({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => CircleIconButton(
+    icon: Icons.close,
+    semanticLabel: 'Foto entfernen',
+    size: AppConstants.minTapTarget,
+    iconSize: AppConstants.iconSizeClose,
+    backgroundColor: AppTheme.card,
+    raised: true,
+    onPressed: onTap,
+  );
 }

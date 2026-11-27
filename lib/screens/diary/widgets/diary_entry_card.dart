@@ -56,6 +56,7 @@ class DiaryEntryCard extends StatelessWidget {
             AppConstants.toiletPaperSvg,
             width: 22,
             height: 22,
+            excludeFromSemantics: true,
           ),
         ),
       );
@@ -81,46 +82,44 @@ class DiaryEntryCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: AppConstants.spacingSm),
-      child: GestureDetector(
+      child: BbCard(
         onTap: onTap,
-        child: BbCard(
-          child: Row(
-            children: [
-              _leadingWidget,
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      entry.title,
-                      style: const TextStyle(
-                        fontSize: AppTheme.fontSizeBodyLG,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.foreground,
-                      ),
+        child: Row(
+          children: [
+            _leadingWidget,
+            const SizedBox(width: AppConstants.spacing12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    entry.title,
+                    style: const TextStyle(
+                      fontSize: AppTheme.fontSizeBodyLG,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.foreground,
                     ),
-                    Text(
-                      entry.subtitle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: AppTheme.fontSizeCaptionLG,
-                        color: AppTheme.mutedForeground,
-                      ),
+                  ),
+                  Text(
+                    entry.subtitle,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: AppTheme.fontSizeCaptionLG,
+                      color: AppTheme.mutedForeground,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              Text(
-                formatTime(entry.trackedAt),
-                style: const TextStyle(
-                  fontSize: AppTheme.fontSizeCaptionLG,
-                  color: AppTheme.mutedForeground,
-                ),
+            ),
+            Text(
+              formatTime(entry.trackedAt),
+              style: const TextStyle(
+                fontSize: AppTheme.fontSizeCaptionLG,
+                color: AppTheme.mutedForeground,
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

@@ -16,6 +16,7 @@ import '../../../services/relief/relief_content.dart';
 import '../../../services/relief/relief_rules.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/gut_feeling_rating.dart';
+import '../../../utils/reduced_motion.dart';
 import '../../../widgets/buddy/log_success_hero.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/bb_success_overlay.dart';
@@ -108,8 +109,18 @@ class _GutFeelingTrackerScreenState
         curve: const Interval(0.2, 0.7, curve: Curves.easeOut),
       ),
     );
+  }
 
-    _entryController.forward();
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Started here, once: reduced motion is only readable from the context.
+    // With it the screen is there at once (a zero-length forward).
+    if (_entryController.isDismissed) {
+      _entryController
+        ..duration = ReducedMotion.duration(context, AppConstants.animSlow)
+        ..forward();
+    }
   }
 
   @override
@@ -154,9 +165,10 @@ class _GutFeelingTrackerScreenState
   }
 
   void _animateToTab(int tab) {
+    if (ReducedMotion.of(context)) return _pageController.jumpToPage(tab);
     _pageController.animateToPage(
       tab,
-      duration: const Duration(milliseconds: 350),
+      duration: AppConstants.pageSwitchDuration,
       curve: Curves.easeInOut,
     );
   }

@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
@@ -174,6 +175,45 @@ void main() {
         expect(find.byType(MascotImage), findsNothing);
         expect(find.text('Trinken eintragen'), findsOneWidget);
         expect(find.text('Als Rezept speichern'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'success screen: „Trinken eintragen" is one button with a 48 px target',
+      (tester) async {
+        final handle = tester.ensureSemantics();
+        await tester.pumpWithProviders(
+          const MealTrackerScreen(),
+          overrides: _overrides(),
+        );
+        await tester.pump();
+        await tester.pump();
+        final container = ProviderScope.containerOf(
+          tester.element(find.byType(MealTrackerScreen)),
+        );
+        container.read(mealTrackerProvider.notifier)
+          ..addIngredient('Tomate')
+          ..setTitle('Tomatensalat');
+        await tester.pump();
+        await tester.ensureVisible(
+          find.byKey(MealTrackerScreen.mealEditSaveKey),
+        );
+        await tester.tap(find.byKey(MealTrackerScreen.mealEditSaveKey));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 700));
+
+        final node = tester.getSemantics(find.text('Trinken eintragen'));
+        expect(node.label, 'Trinken eintragen');
+        expect(node, isSemantics(isButton: true, hasTapAction: true));
+        expect(
+          node.rect.height,
+          greaterThanOrEqualTo(AppConstants.minTapTarget),
+        );
+        expect(
+          node.rect.width,
+          greaterThanOrEqualTo(AppConstants.minTapTarget),
+        );
+        handle.dispose();
       },
     );
 

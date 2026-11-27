@@ -110,7 +110,7 @@ class _ExerciseCard extends StatelessWidget {
                     style: TextStyle(
                       fontSize: AppTheme.fontSizeCaption,
                       fontWeight: FontWeight.w600,
-                      color: AppTheme.primary,
+                      color: AppTheme.primaryText,
                     ),
                   ),
                 if (showDraft)

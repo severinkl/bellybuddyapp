@@ -7,7 +7,11 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:belly_buddy/models/diary_entry.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/screens/diary/widgets/detail_sheets/meal_detail_sheet.dart';
+import 'package:belly_buddy/screens/diary/widgets/meal_image.dart';
+import 'package:belly_buddy/screens/diary/widgets/meal_thumbnail.dart';
+import 'package:belly_buddy/repositories/meal_media_repository.dart';
 
+import '../../../../helpers/fakes.dart';
 import '../../../../helpers/riverpod_helpers.dart';
 
 void main() {
@@ -82,5 +86,63 @@ void main() {
           "without an entriesProvider lookup (which the diary's "
           'diaryEntriesProvider path never populates).',
     );
+  });
+
+  testWidgets('the meal detail photo is named „Foto: Pasta mit Tomaten"; the '
+      'list thumbnail adds no node', (tester) async {
+    final semantics = tester.ensureSemantics();
+    final meal = MealEntry(
+      id: 'meal-1',
+      trackedAt: DateTime(2026, 4, 10, 12, 30),
+      title: 'Pasta mit Tomaten',
+      ingredients: const ['Nudeln'],
+      imageUrl: 'https://example.invalid/pasta.jpg',
+    );
+    final entry = DiaryEntry(
+      id: meal.id,
+      type: DiaryEntryType.meal,
+      trackedAt: meal.trackedAt,
+      title: meal.title,
+      subtitle: '',
+      data: MealDiaryData(meal),
+    );
+    await tester.pumpWithProviders(
+      Scaffold(
+        body: Column(
+          children: [
+            MealThumbnail(imageUrl: meal.imageUrl!),
+            Expanded(
+              child: Consumer(
+                builder: (context, ref, _) => MealDetailSheet(
+                  entry: entry,
+                  data: entry.data as MealDiaryData,
+                  parentRef: ref,
+                  scrollController: ScrollController(),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+      overrides: [
+        mealMediaRepositoryProvider.overrideWithValue(
+          FakeMealMediaRepository(),
+        ),
+      ],
+    );
+    await tester.pumpAndSettle();
+
+    // The network never loads in tests: the detail photo is named once it
+    // has loaded (test/screens/diary/widgets/meal_image_test.dart), so here
+    // no image node is shown, and the thumbnail adds none either.
+    final images = find.semantics
+        .byPredicate((n) => n.flagsCollection.isImage)
+        .evaluate();
+    expect(images, isEmpty, reason: 'the thumbnail adds no node');
+    expect(
+      tester.widget<MealImage>(find.byType(MealImage)).semanticLabel,
+      'Foto: Pasta mit Tomaten',
+    );
+    semantics.dispose();
   });
 }

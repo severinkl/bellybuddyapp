@@ -12,6 +12,7 @@ import '../../router/route_names.dart';
 import '../../services/recipes/recipe_copy.dart';
 import '../../services/recipes/recipe_ranking.dart';
 import '../../widgets/common/bb_async_state.dart';
+import '../../widgets/common/bb_labeled_field.dart';
 import '../../widgets/common/bb_chip_selector.dart';
 import 'widgets/recipe_list_tile.dart';
 
@@ -87,20 +88,23 @@ class _CollectionScreenState extends ConsumerState<CollectionScreen> {
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         padding: AppConstants.paddingMd,
         children: [
-          TextField(
-            key: CollectionScreen.searchKey,
-            controller: _search,
-            decoration: InputDecoration(
-              hintText: 'Rezept oder Zutat suchen',
-              prefixIcon: const Icon(Icons.search),
-              filled: true,
-              fillColor: AppTheme.card,
-              border: _pillBorder,
-              enabledBorder: _pillBorder,
-              focusedBorder: _pillBorder,
-              isDense: true,
+          BbLabeledField(
+            label: 'Rezept oder Zutat suchen',
+            child: TextField(
+              key: CollectionScreen.searchKey,
+              controller: _search,
+              decoration: InputDecoration(
+                hintText: 'z. B. Porridge oder Banane',
+                prefixIcon: const Icon(Icons.search),
+                filled: true,
+                fillColor: AppTheme.card,
+                border: _pillBorder,
+                enabledBorder: _pillBorder,
+                focusedBorder: _pillBorder,
+                isDense: true,
+              ),
+              onChanged: (v) => setState(() => _query = v),
             ),
-            onChanged: (v) => setState(() => _query = v),
           ),
           AppConstants.gap12,
           SingleChildScrollView(

@@ -1,4 +1,5 @@
 // ignore_for_file: invalid_use_of_internal_member
+import 'package:belly_buddy/config/app_theme.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -160,6 +161,11 @@ void main() {
 
     expect(find.text('Noch keine Rezepte'), findsOneWidget);
     expect(find.text('Neues Rezept erstellen'), findsOneWidget);
+    // Readable text colour, not the lime fill (about 1.9:1).
+    expect(
+      tester.widget<Text>(find.text('Neues Rezept erstellen')).style?.color,
+      AppTheme.primaryText,
+    );
   });
 
   testWidgets('dismissing the sheet ends its search', (tester) async {

@@ -86,6 +86,88 @@ void main() {
       },
     );
 
+    testWidgets('in display mode the app bar heading (namesRoute) is named by '
+        'the title; a separate button „Titel bearbeiten" edits it', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        _wrap(
+          EditableAppBarTitle(
+            initialTitle: 'Mahlzeit X',
+            placeholder: 'Mahlzeit benennen',
+            onChanged: (_) {},
+          ),
+        ),
+      );
+
+      final heading = find.semantics.byPredicate(
+        (n) => n.flagsCollection.isHeader && n.flagsCollection.namesRoute,
+      );
+      expect(heading, findsOneWidget);
+      expect(heading.evaluate().single.label, 'Mahlzeit X');
+
+      final button = find.semantics.byLabel('Titel bearbeiten');
+      expect(button, findsOneWidget);
+      expect(
+        button.evaluate().single,
+        isSemantics(
+          isButton: true,
+          isHeader: false,
+          namesRoute: false,
+          hasTapAction: true,
+        ),
+      );
+      tester.semantics.tap(button);
+      await tester.pump();
+      expect(find.byType(TextField), findsOneWidget);
+      handle.dispose();
+    });
+
+    testWidgets('an empty title names the heading by the placeholder', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        _wrap(
+          EditableAppBarTitle(
+            initialTitle: '',
+            placeholder: 'Mahlzeit benennen',
+            onChanged: (_) {},
+          ),
+        ),
+      );
+      final heading = find.semantics.byPredicate(
+        (n) => n.flagsCollection.namesRoute,
+      );
+      expect(heading.evaluate().single.label, 'Mahlzeit benennen');
+      handle.dispose();
+    });
+
+    testWidgets('in edit mode the field keeps its name „Titel" after typing', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        _wrap(
+          EditableAppBarTitle(
+            initialTitle: '',
+            placeholder: 'Rezept benennen',
+            autofocusOnMount: true,
+            onChanged: (_) {},
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), 'Curry');
+      await tester.pumpAndSettle();
+
+      final node = tester.getSemantics(find.byType(TextField));
+      expect(node.getSemanticsData().label, contains('Titel'));
+      expect(node, isSemantics(isTextField: true, value: 'Curry'));
+      handle.dispose();
+    });
+
     testWidgets('autofocusOnMount: true starts in edit mode', (tester) async {
       await tester.pumpWidget(
         _wrap(

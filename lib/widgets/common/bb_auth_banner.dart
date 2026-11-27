@@ -16,19 +16,24 @@ class BbAuthBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isError ? AppTheme.destructive : AppTheme.success;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-      ),
-      child: Text(
-        key: loginMessageKey,
-        text,
-        style: TextStyle(color: color, fontSize: AppTheme.fontSizeBody),
-        textAlign: TextAlign.center,
+    final color = isError ? AppTheme.destructive : AppTheme.successText;
+    // A live region, so a new message is read out without moving focus.
+    return Semantics(
+      liveRegion: true,
+      container: true,
+      child: Container(
+        padding: const EdgeInsets.all(AppConstants.spacing12),
+        margin: const EdgeInsets.only(bottom: AppConstants.spacingMd),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+        ),
+        child: Text(
+          key: loginMessageKey,
+          text,
+          style: TextStyle(color: color, fontSize: AppTheme.fontSizeBody),
+          textAlign: TextAlign.center,
+        ),
       ),
     );
   }

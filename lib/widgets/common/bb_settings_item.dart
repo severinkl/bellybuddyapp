@@ -67,7 +67,7 @@ class BbSettingsItem extends StatelessWidget {
                             vertical: AppConstants.spacing2,
                           ),
                           decoration: BoxDecoration(
-                            color: AppTheme.navBadge,
+                            color: AppTheme.badgeFill,
                             borderRadius: BorderRadius.circular(
                               AppConstants.radiusFull,
                             ),

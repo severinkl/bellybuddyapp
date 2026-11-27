@@ -25,6 +25,7 @@ import 'package:belly_buddy/screens/discover/widgets/knowledge_article_tile.dart
 import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
+import '../../helpers/reduce_motion.dart';
 import '../../helpers/riverpod_helpers.dart';
 
 void main() {
@@ -427,9 +428,7 @@ void main() {
   });
 
   testWidgets('with reduced motion the shimmer stands still', (tester) async {
-    tester.platformDispatcher.accessibilityFeaturesTestValue =
-        const FakeAccessibilityFeatures(disableAnimations: true);
-    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    reduceMotion(tester);
     repo = FakeKnowledgeRepository(
       articles: [
         KnowledgeArticle(

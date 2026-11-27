@@ -113,6 +113,12 @@ String formatDateTimeFull(DateTime dt) {
   return '${DateFormat('EEEE, dd.MM.yyyy HH:mm', 'de_DE').format(dt)} Uhr';
 }
 
+/// Formats a DateTime as "EEEE, d. MMMM yyyy" in German locale
+/// (e.g., "Freitag, 13. März 2026"): a date spelled out for screen readers.
+String formatDateWeekdayLong(DateTime dt) {
+  return DateFormat('EEEE, d. MMMM yyyy', 'de_DE').format(dt);
+}
+
 /// Formats a DateTime as "EEEE dd.MM.yyyy" in German locale
 /// (e.g., "Freitag 13.03.2026")
 String formatDateWeekday(DateTime dt) {

@@ -202,6 +202,30 @@ void main() {
     }
   });
 
+  testWidgets('every Ich row is a button named by its title', (tester) async {
+    await pump(tester);
+    final handle = tester.ensureSemantics();
+
+    for (final (key, title) in [
+      (MeScreen.streakKey, 'Streak & Ziel'),
+      (MeScreen.progressKey, 'Dein Verlauf'),
+      (MeScreen.shareKey, 'Mit Berater:in teilen'),
+      (MeScreen.settingsKey, 'Einstellungen'),
+      (MeScreen.tutorialKey, 'Tutorial wiederholen'),
+      (MeScreen.rateKey, 'Belly Buddy bewerten'),
+      (MeScreen.feedbackKey, 'Feedback geben'),
+    ]) {
+      final row = tester.getSemantics(find.byKey(key));
+      expect(
+        row,
+        isSemantics(isButton: true, hasTapAction: true),
+        reason: title,
+      );
+      expect(row.getSemanticsData().label, startsWith(title), reason: title);
+    }
+    handle.dispose();
+  });
+
   group('„Belly Buddy Plus"', () {
     Finder rowText(String t) => find.descendant(
       of: find.byKey(MeScreen.plusKey),

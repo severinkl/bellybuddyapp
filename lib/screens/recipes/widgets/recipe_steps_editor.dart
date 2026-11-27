@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
+import '../../../widgets/common/bb_labeled_field.dart';
 import 'recipe_page_parts.dart';
 
 /// „Zubereitung" of the recipe editor: one multi-line field per step, a
@@ -101,7 +102,7 @@ class _RecipeStepsEditorState extends State<RecipeStepsEditor> {
                   ),
                 ),
                 Expanded(
-                  child: Semantics(
+                  child: BbLabeledField(
                     label: 'Schritt ${i + 1}',
                     child: TextField(
                       key: RecipeStepsEditor.fieldKey(step.id),

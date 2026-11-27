@@ -23,6 +23,7 @@ import '../helpers/app_host.dart';
 import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
 import '../helpers/registration_driver.dart';
+import '../helpers/reduce_motion.dart';
 
 /// A profile repository whose first [getProfile] call blocks until
 /// [release] is called, to observe the router while the profile loads.
@@ -49,14 +50,6 @@ List<Override> _overrides({
   buddies: buddies,
   decision: decision,
 );
-
-/// Signed-out tests start on /welcome, whose hint pulses forever unless
-/// animations are disabled; `pumpAndSettle` needs it steady.
-void _calmWelcome(WidgetTester tester) {
-  tester.platformDispatcher.accessibilityFeaturesTestValue =
-      const FakeAccessibilityFeatures(disableAnimations: true);
-  addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
-}
 
 String _currentPath(ProviderContainer container) =>
     container.read(routerProvider).routerDelegate.currentConfiguration.uri.path;
@@ -229,7 +222,7 @@ void main() {
     });
 
     testWidgets('signed-out users are not gated', (tester) async {
-      _calmWelcome(tester);
+      reduceMotion(tester);
       final container = await _pumpHost(
         tester,
         _overrides(
@@ -263,7 +256,7 @@ void main() {
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
       addTearDown(tester.view.resetDevicePixelRatio);
-      _calmWelcome(tester);
+      reduceMotion(tester);
 
       final profiles = FakeProfileRepository();
       final container = await _pumpHost(

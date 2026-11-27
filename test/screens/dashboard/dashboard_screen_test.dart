@@ -347,6 +347,51 @@ void main() {
   });
 
   group('DashboardScreen', () {
+    testWidgets('Home names its route „Home" and has a heading', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWithProviders(
+        const DashboardScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final home = find.semantics.byLabel('Home');
+      expect(home, findsOne);
+      expect(
+        home.evaluate().single.getSemanticsData(),
+        isSemantics(label: 'Home', isHeader: true, namesRoute: true),
+      );
+      handle.dispose();
+    });
+
+    testWidgets('the opt-in dialog\'s ✕ is „Schließen", 48 × 48', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      SharedPreferences.setMockInitialValues({});
+      await tester.pumpWithProviders(
+        const DashboardScreen(),
+        overrides: _overrides(
+          profile: testUserProfile(),
+          buddyRepo: _onboardedBuddy(),
+        ),
+      );
+      await _settleFirstRun(tester);
+      expect(find.text(_optInTitle), findsOneWidget);
+
+      final close = find.semantics.byLabel('Schließen');
+      expect(close, findsOne);
+      final node = close.evaluate().single;
+      expect(
+        node.getSemanticsData(),
+        isSemantics(isButton: true, hasTapAction: true),
+      );
+      expect(node.rect.size, const Size(48, 48));
+      handle.dispose();
+    });
+
     testWidgets('renders the care ring with all four needs', (tester) async {
       await tester.pumpWithProviders(
         const DashboardScreen(),

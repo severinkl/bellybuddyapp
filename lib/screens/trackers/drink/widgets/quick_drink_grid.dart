@@ -4,6 +4,8 @@ import '../../../../config/app_theme.dart';
 import '../../../../config/constants.dart';
 import '../../../../providers/drink_tracker_provider.dart';
 import '../../../../services/haptic_service.dart';
+import '../../../../utils/reduced_motion.dart';
+import '../../../../widgets/common/bb_tap_area.dart';
 
 class QuickDrinkGrid extends ConsumerWidget {
   const QuickDrinkGrid({super.key});
@@ -34,34 +36,49 @@ class QuickDrinkGrid extends ConsumerWidget {
           ),
         ),
         AppConstants.gap8,
+        // Each drink's hit area is at least 48 high. The rows' 8 px gap is
+        // the pill's own 4 px above and below (inside the hit area), so it
+        // stays at any text size.
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: AppConstants.spacingSm,
           children: quickDrinks.map((drink) {
             final isSelected = selectedDrink?.id == drink.id;
-            return GestureDetector(
+            return BbTapArea(
+              selected: isSelected,
+              // One drink at a time (tapping it again clears it).
+              exclusive: true,
               onTap: () {
                 HapticService.selection();
                 ref.read(drinkTrackerProvider.notifier).toggleDrink(drink);
               },
-              child: AnimatedContainer(
-                duration: AppConstants.animFast,
+              child: Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
+                  vertical: AppConstants.spacingXs,
                 ),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppTheme.info
-                      : AppTheme.muted.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(AppConstants.radiusFull),
-                ),
-                child: Text(
-                  drink.name,
-                  style: TextStyle(
-                    fontSize: AppTheme.fontSizeBody,
-                    fontWeight: FontWeight.w500,
-                    color: isSelected ? Colors.white : AppTheme.foreground,
+                child: AnimatedContainer(
+                  duration: ReducedMotion.duration(
+                    context,
+                    AppConstants.animFast,
+                  ),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppConstants.spacing14,
+                    vertical: AppConstants.spacing10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppTheme.infoText
+                        : AppTheme.muted.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(
+                      AppConstants.radiusFull,
+                    ),
+                  ),
+                  child: Text(
+                    drink.name,
+                    style: TextStyle(
+                      fontSize: AppTheme.fontSizeBody,
+                      fontWeight: FontWeight.w500,
+                      color: isSelected ? Colors.white : AppTheme.foreground,
+                    ),
                   ),
                 ),
               ),

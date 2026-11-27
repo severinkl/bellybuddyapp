@@ -138,5 +138,19 @@ void main() {
       final result = await future;
       expect(result, isNull);
     });
+
+    testWidgets('the meal title field keeps the name „Name der Mahlzeit" with '
+        'text entered', (tester) async {
+      final handle = tester.ensureSemantics();
+      await _openSheet(tester);
+
+      await tester.enterText(find.byKey(kMealTitleSheetFieldKey), 'Pasta');
+      await tester.pump();
+
+      final field = tester.getSemantics(find.byKey(kMealTitleSheetFieldKey));
+      expect(field.label, contains('Name der Mahlzeit'));
+      expect(field, isSemantics(isTextField: true, value: 'Pasta'));
+      handle.dispose();
+    });
   });
 }

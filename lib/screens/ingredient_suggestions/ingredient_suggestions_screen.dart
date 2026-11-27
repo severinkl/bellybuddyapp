@@ -7,6 +7,7 @@ import '../../providers/ingredient_suggestion_provider.dart';
 import '../../providers/plus_provider.dart';
 import '../../services/plus/plus_copy.dart';
 import '../../widgets/common/bb_async_state.dart';
+import '../../widgets/common/bb_labeled_field.dart';
 import '../../widgets/common/plus_locked_card.dart';
 import 'widgets/suggestion_card.dart';
 import 'widgets/tried_alternatives_section.dart';
@@ -96,12 +97,15 @@ class _IngredientSuggestionsScreenState
               AppConstants.spacingMd,
               AppConstants.spacingSm,
             ),
-            child: TextField(
-              decoration: const InputDecoration(
-                hintText: 'Suchen...',
-                prefixIcon: Icon(Icons.search),
+            child: BbLabeledField(
+              label: 'Alternativen suchen',
+              child: TextField(
+                decoration: const InputDecoration(
+                  hintText: 'z. B. Zwiebel',
+                  prefixIcon: Icon(Icons.search),
+                ),
+                onChanged: (v) => setState(() => _searchQuery = v),
               ),
-              onChanged: (v) => setState(() => _searchQuery = v),
             ),
           ),
           Expanded(

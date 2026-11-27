@@ -47,10 +47,21 @@ class BbButton extends StatelessWidget {
         ? leading
         : Icon(icon, size: AppConstants.iconSizeClose);
     final child = isLoading
-        ? const SizedBox(
-            width: 24,
-            height: 24,
-            child: CircularProgressIndicator(strokeWidth: 2),
+        // The label stays in semantics while the spinner shows. It merges
+        // into the button's own node, which is already a disabled button
+        // (repeating those flags here would split it into a second node).
+        ? Semantics(
+            label: label,
+            value: 'lädt',
+            child: const ExcludeSemantics(
+              child: SizedBox(
+                width: AppConstants.iconSizeMd,
+                height: AppConstants.iconSizeMd,
+                child: CircularProgressIndicator(
+                  strokeWidth: AppConstants.borderWidthLg,
+                ),
+              ),
+            ),
           )
         : lead != null
         ? Row(

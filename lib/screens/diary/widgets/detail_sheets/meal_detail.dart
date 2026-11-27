@@ -22,7 +22,13 @@ class MealDetail extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (meal.imageUrl != null) MealImage(imageUrl: meal.imageUrl!),
+        if (meal.imageUrl != null)
+          MealImage(
+            imageUrl: meal.imageUrl!,
+            semanticLabel: meal.title.trim().isEmpty
+                ? 'Foto'
+                : 'Foto: ${meal.title.trim()}',
+          ),
         if (meal.ingredients.isNotEmpty)
           Container(
             width: double.infinity,

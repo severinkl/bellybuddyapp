@@ -328,5 +328,53 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
       expect(find.byKey(WelcomeScreen.registrationButtonKey), findsOneWidget);
     });
+
+    group('the wake hint\'s pulse', () {
+      /// The hint's opacity at each 50 ms over two whole pulses.
+      Future<List<double>> opacities(WidgetTester tester) async {
+        final fade = find.descendant(
+          of: find.byKey(WelcomeScreen.hintKey),
+          matching: find.byType(FadeTransition),
+        );
+        final seen = <double>[];
+        for (var i = 0; i < 56; i++) {
+          seen.add(tester.widget<FadeTransition>(fade).opacity.value);
+          await tester.pump(const Duration(milliseconds: 50));
+        }
+        return seen;
+      }
+
+      /// WCAG contrast of [fg] drawn at [opacity] on [bg].
+      double contrast(Color fg, double opacity, Color bg) {
+        final a = Color.alphaBlend(
+          fg.withValues(alpha: opacity),
+          bg,
+        ).computeLuminance();
+        final b = bg.computeLuminance();
+        final (hi, lo) = a > b ? (a, b) : (b, a);
+        return (hi + 0.05) / (lo + 0.05);
+      }
+
+      testWidgets('breathes but never drops below 4.5:1', (tester) async {
+        await _pump(tester);
+
+        final seen = await opacities(tester);
+        final low = seen.reduce((a, b) => a < b ? a : b);
+        expect(low, lessThan(1), reason: 'it still pulses');
+        expect(low, greaterThanOrEqualTo(0.9));
+        expect(
+          contrast(AppTheme.mutedForeground, low, AppTheme.background),
+          greaterThanOrEqualTo(4.5),
+        );
+      });
+
+      testWidgets('holds still at full opacity under reduced motion', (
+        tester,
+      ) async {
+        await _pump(tester, calm: true);
+
+        expect(await opacities(tester), everyElement(1.0));
+      });
+    });
   });
 }

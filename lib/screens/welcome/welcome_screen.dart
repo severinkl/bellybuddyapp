@@ -11,6 +11,7 @@ import '../../router/route_names.dart';
 import '../../services/haptic_service.dart';
 import '../../widgets/buddy/buddy.dart';
 import '../../widgets/common/bb_button.dart';
+import '../../widgets/common/tap_target.dart';
 
 enum _Phase { asleep, waking, talking, ready }
 
@@ -61,6 +62,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
 
   static const _hintPulse = Duration(milliseconds: 1400);
 
+  /// The pulse's low point: the muted hint keeps at least 4.5:1 on the
+  /// white background there (about 5.0:1; 6.3:1 at full opacity).
+  static const _hintMinOpacity = 0.9;
+
   /// A tap on the area starts the sign-up only once the last line has been
   /// up this long: a quick tap meant to skip a line must not start it.
   static const _startGrace = Duration(milliseconds: 800);
@@ -69,7 +74,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   late final AnimationController _pulse = AnimationController(
     vsync: this,
     duration: _hintPulse,
-    lowerBound: 0.45,
+    lowerBound: _hintMinOpacity,
   );
 
   _Phase _phase = _Phase.asleep;
@@ -277,29 +282,31 @@ class _WakeHint extends StatelessWidget {
         key: WelcomeScreen.hintKey,
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: FadeTransition(
-          opacity: pulse,
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.touch_app_outlined,
-                size: AppConstants.iconSizeSm,
-                color: AppTheme.mutedForeground,
-              ),
-              SizedBox(width: AppConstants.spacingSm),
-              Flexible(
-                child: Text(
-                  'Tippe, um ihn zu wecken',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: AppTheme.fontSizeBodyLG,
-                    fontWeight: FontWeight.w500,
-                    color: AppTheme.mutedForeground,
+        child: TapTarget(
+          child: FadeTransition(
+            opacity: pulse,
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.touch_app_outlined,
+                  size: AppConstants.iconSizeSm,
+                  color: AppTheme.mutedForeground,
+                ),
+                SizedBox(width: AppConstants.spacingSm),
+                Flexible(
+                  child: Text(
+                    'Tippe, um ihn zu wecken',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: AppTheme.fontSizeBodyLG,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.mutedForeground,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

@@ -85,6 +85,31 @@ void main() {
     expect(find.byType(AnimatedBuddy), findsOneWidget);
   });
 
+  testWidgets('Muster frei! reads its title, its line and its button', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await _pump(tester);
+    await tester.pump(const Duration(seconds: 1));
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('Muster frei!')),
+      isSemantics(label: 'Muster frei!', isHeader: true),
+    );
+    expect(
+      tester.getSemantics(find.byKey(PatternsUnlockedScreen.openKey)),
+      matchesSemantics(
+        label: 'Muster ansehen',
+        isButton: true,
+        isEnabled: true,
+        hasEnabledState: true,
+        isFocusable: true,
+        hasTapAction: true,
+        hasFocusAction: true,
+      ),
+    );
+    handle.dispose();
+  });
+
   group('Belly Buddy Plus', () {
     const lockedLine =
         '7 Tage und 3× Bauchgefühl: Ich hab mir deine Einträge angeschaut. '

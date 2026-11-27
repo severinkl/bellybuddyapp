@@ -1,10 +1,11 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/semantics.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:shimmer/shimmer.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/ingredient_suggestion_group.dart';
 import '../../../widgets/common/bb_card.dart';
 import '../../../config/constants.dart';
+import '../../../utils/reduced_motion.dart';
 import '../../../utils/url_utils.dart';
 import 'ingredient_placeholder.dart';
 
@@ -35,9 +36,13 @@ class SuggestionCard extends StatelessWidget {
         ),
         child: const Icon(Icons.close, color: AppTheme.mutedForeground),
       ),
-      child: GestureDetector(
-        onTap: onTap,
+      // Swiping is not the only way: a screen reader offers „Ausblenden".
+      child: Semantics(
+        customSemanticsActions: {
+          const CustomSemanticsAction(label: 'Ausblenden'): onDismiss,
+        },
         child: BbCard(
+          onTap: onTap,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -143,15 +148,17 @@ class SuggestionCard extends StatelessWidget {
                                   width: 24,
                                   height: 24,
                                   fit: BoxFit.cover,
-                                  placeholder: (_, _) => Shimmer.fromColors(
-                                    baseColor: AppTheme.muted,
-                                    highlightColor: AppTheme.background,
-                                    child: Container(
-                                      width: 24,
-                                      height: 24,
-                                      color: AppTheme.muted,
-                                    ),
-                                  ),
+                                  placeholder: (context, _) =>
+                                      ReducedMotion.shimmer(
+                                        context,
+                                        baseColor: AppTheme.muted,
+                                        highlightColor: AppTheme.background,
+                                        child: Container(
+                                          width: 24,
+                                          height: 24,
+                                          color: AppTheme.muted,
+                                        ),
+                                      ),
                                   errorWidget: (_, _, _) =>
                                       const IngredientPlaceholder(size: 24),
                                 ),
@@ -194,7 +201,8 @@ class _IngredientAvatar extends StatelessWidget {
           width: 48,
           height: 48,
           fit: BoxFit.cover,
-          placeholder: (_, _) => Shimmer.fromColors(
+          placeholder: (context, _) => ReducedMotion.shimmer(
+            context,
             baseColor: AppTheme.muted,
             highlightColor: AppTheme.background,
             child: Container(

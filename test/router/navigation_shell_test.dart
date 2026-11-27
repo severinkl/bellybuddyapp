@@ -308,10 +308,14 @@ void main() {
         expect(dot, findsOneWidget);
         final slot = tester.getRect(find.byKey(BbBottomNav.navDiscoverKey));
         expect(slot.contains(tester.getCenter(dot)), isTrue);
-        // The tab's one semantics node carries the dot's label.
+        // The tab's one semantics node: its name, the dot as its value.
         expect(
           tester.getSemantics(find.byKey(BbBottomNav.navDiscoverKey)).label,
-          contains('Neues'),
+          'Entdecken',
+        );
+        expect(
+          tester.getSemantics(find.byKey(BbBottomNav.navDiscoverKey)).value,
+          'neu',
         );
       });
 

@@ -215,9 +215,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                BuddyHero(
-                  key: TutorialKeys.buddy,
-                  showsBubble: _tutorialHandle == null,
+                // Home has no app bar: the hero carries the screen's
+                // heading and route name; its own nodes stay its children.
+                Semantics(
+                  container: true,
+                  explicitChildNodes: true,
+                  header: true,
+                  namesRoute: true,
+                  label: 'Home',
+                  child: BuddyHero(
+                    key: TutorialKeys.buddy,
+                    showsBubble: _tutorialHandle == null,
+                  ),
                 ),
                 AppConstants.gap16,
                 // The daily review, while one is open; keyed by its day, so

@@ -1,10 +1,10 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:shimmer/shimmer.dart';
 import '../../../config/app_theme.dart';
 import '../../../models/ingredient_suggestion_group.dart';
 import '../../../config/constants.dart';
+import '../../../utils/reduced_motion.dart';
 import '../../../repositories/meal_media_repository.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/url_utils.dart';
@@ -242,7 +242,8 @@ class _MealImageState extends ConsumerState<_MealImage> {
   @override
   Widget build(BuildContext context) {
     if (_resolvedUrl == null) {
-      return Shimmer.fromColors(
+      return ReducedMotion.shimmer(
+        context,
         baseColor: AppTheme.muted,
         highlightColor: AppTheme.background,
         child: Container(
@@ -262,7 +263,8 @@ class _MealImageState extends ConsumerState<_MealImage> {
         width: 48,
         height: 48,
         fit: BoxFit.cover,
-        placeholder: (_, _) => Shimmer.fromColors(
+        placeholder: (context, _) => ReducedMotion.shimmer(
+          context,
           baseColor: AppTheme.muted,
           highlightColor: AppTheme.background,
           child: Container(
@@ -309,7 +311,8 @@ class _IngredientImage extends StatelessWidget {
           width: size,
           height: size,
           fit: BoxFit.cover,
-          placeholder: (_, _) => Shimmer.fromColors(
+          placeholder: (context, _) => ReducedMotion.shimmer(
+            context,
             baseColor: AppTheme.muted,
             highlightColor: AppTheme.background,
             child: Container(

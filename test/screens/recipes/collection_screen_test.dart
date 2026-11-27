@@ -17,6 +17,7 @@ import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/layout_checks.dart';
 import '../../helpers/riverpod_helpers.dart';
+import '../../helpers/semantics_checks.dart';
 
 void main() {
   late FakeRecipeRepository repo;
@@ -73,6 +74,20 @@ void main() {
   Finder tile(String title) => find.byWidgetPredicate(
     (w) => w is RecipeListTile && w.recipe.title == title,
   );
+
+  testWidgets('while empty, „Rezept oder Zutat suchen" is read once, with '
+      'an example', (tester) async {
+    final handle = tester.ensureSemantics();
+    await pump(tester);
+
+    expectSearchFieldReadOnce(
+      tester,
+      name: 'Rezept oder Zutat suchen',
+      example: 'z. B. Porridge oder Banane',
+      field: find.byKey(CollectionScreen.searchKey),
+    );
+    handle.dispose();
+  });
 
   testWidgets('chips filter by meal type', (tester) async {
     repo.collection = [
