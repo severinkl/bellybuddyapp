@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:belly_buddy/services/entry_query_service.dart';
 import 'package:belly_buddy/services/ingredient_service.dart';
 
 import '../helpers/fixtures.dart';
@@ -294,7 +295,7 @@ void main() {
       final fb = SettlableFilterBuilder(Future.value([]));
       final paged = _PagedTransform([
         List.generate(
-          IngredientService.mealPageSize,
+          EntryQueryService.trackedAtPageSize,
           (i) => {'id': 'm$i', 'tracked_at': '2026-11-01T12:00:00+00:00'},
         ),
         [
@@ -314,7 +315,7 @@ void main() {
         DateTime(2026, 5, 31),
       );
 
-      expect(rows, hasLength(IngredientService.mealPageSize + 1));
+      expect(rows, hasLength(EntryQueryService.trackedAtPageSize + 1));
       expect(paged.ranges, [(0, 999), (1000, 1999)]);
       verify(
         () => queryBuilder.select('id, tracked_at, ingredients'),

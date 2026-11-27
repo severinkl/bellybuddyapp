@@ -4,6 +4,7 @@ import '../models/ingredient_search_result.dart';
 import '../providers/core_providers.dart';
 import '../utils/logger.dart';
 import '../utils/wall_clock.dart';
+import 'entry_query_service.dart';
 
 export '../models/ingredient_search_result.dart';
 
@@ -134,33 +135,21 @@ class IngredientService {
     }
   }
 
-  /// Matches PostgREST's PGRST_DB_MAX_ROWS on the backend.
-  static const mealPageSize = 1000;
-
-  /// The user's meals (`tracked_at, ingredients`) with `tracked_at` since
-  /// [since] (wall clock), page by page in a total order (`tracked_at`,
-  /// then the unique `id`), for ranking the alternatives.
+  /// The user's meals (`id, tracked_at, ingredients`) with `tracked_at`
+  /// since [since] (wall clock), page by page ([fetchPagedSince]), for
+  /// ranking the alternatives.
   Future<List<Map<String, dynamic>>> fetchMealsSince(
     String userId,
     DateTime since,
   ) async {
     try {
-      final sinceIso = wallClockToWire(since);
-      final all = <Map<String, dynamic>>[];
-      var from = 0;
-      while (true) {
-        final page = await _client
-            .from('meal_entries')
-            .select('id, tracked_at, ingredients')
-            .eq('user_id', userId)
-            .gte('tracked_at', sinceIso)
-            .order('tracked_at', ascending: false)
-            .order('id', ascending: false)
-            .range(from, from + mealPageSize - 1);
-        all.addAll(page.cast<Map<String, dynamic>>());
-        if (page.length < mealPageSize) return all;
-        from += mealPageSize;
-      }
+      return await fetchPagedSince(
+        _client,
+        'meal_entries',
+        'id, tracked_at, ingredients',
+        userId,
+        wallClockToWire(since),
+      );
     } catch (e, st) {
       _log.error('fetchMealsSince failed', e, st);
       rethrow;
