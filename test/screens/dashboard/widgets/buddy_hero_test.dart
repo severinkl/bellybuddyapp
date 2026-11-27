@@ -8,6 +8,8 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences_platform_interface/shared_preferences_platform_interface.dart';
+import 'package:shared_preferences_platform_interface/types.dart';
 
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/journey_rewards.dart';
@@ -3751,8 +3753,8 @@ void main() {
       );
     });
 
-    testWidgets('the reminders ask and a day\'s reward are due: they play '
-        'first; the line is skipped this visit and said on the next', (
+    testWidgets('the reminders ask and a day\'s reward are due: each plays '
+        'on its own visit first; the line waits and is said on the third', (
       tester,
     ) async {
       SharedPreferences.setMockInitialValues({
@@ -4272,6 +4274,41 @@ void main() {
       expect(launcher.requests, 1);
     });
 
+    testWidgets('the review opens during the celebration, its said-check '
+        'still running: no request over the coming line', (tester) async {
+      celebratedBefore();
+      await pumpRating(tester);
+      await tick(tester);
+      expect(controller(tester).currentAction, BuddyAction.celebrate);
+
+      // From here on the preferences answer only once [gate] completes.
+      final gate = Completer<void>();
+      final data = {
+        for (final k in (await SharedPreferences.getInstance()).getKeys())
+          'flutter.$k': (await SharedPreferences.getInstance()).get(k)!,
+      };
+      SharedPreferencesStorePlatform.instance = _SlowPrefs(gate, data);
+      SharedPreferences.resetStatic();
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(BuddyHero)),
+      );
+      container
+          .read(reviewSwitch.notifier)
+          .set(_review(DateTime(2026, 11, 22)));
+      await tester.pump();
+      await tick(tester);
+
+      await afterCelebration(tester);
+      expect(launcher.requests, 0);
+
+      gate.complete();
+      await tester.pump();
+      await tick(tester);
+      expect(controller(tester).bubble, DailyReviewCopy.cueLine);
+      expect(launcher.requests, 0);
+    });
+
     testWidgets('the review line was said already: the request is not held '
         'back', (tester) async {
       celebratedBefore({
@@ -4309,4 +4346,25 @@ void main() {
       expect(await recorded(), (null, null));
     });
   });
+}
+
+/// Preferences whose first read waits for [gate] (a slow device).
+class _SlowPrefs extends InMemorySharedPreferencesStore {
+  _SlowPrefs(this.gate, Map<String, Object> data) : super.withData(data);
+
+  final Completer<void> gate;
+
+  @override
+  Future<Map<String, Object>> getAll() async {
+    await gate.future;
+    return super.getAll();
+  }
+
+  @override
+  Future<Map<String, Object>> getAllWithParameters(
+    GetAllParameters parameters,
+  ) async {
+    await gate.future;
+    return super.getAllWithParameters(parameters);
+  }
 }

@@ -1072,13 +1072,15 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   }
 
   /// Whether the rating request on stage may go on: Home is free, the tour
-  /// isn't up, nothing queued behind it and it is still due. Not
+  /// isn't up, nothing queued behind it, his line to the daily review isn't
+  /// coming (its check may still run) and it is still due. Not
   /// [_ratingAskFits]: the cue itself is on stage ([_playing],
   /// [_cueRunning]) and was queued after the visit's checks.
   bool get _ratingAskPlayable =>
       _homeFree &&
       widget.showsBubble &&
       _cues.isEmpty &&
+      !_dailyReviewQueued &&
       _isRatingDue(ref.read(ratingAskDueProvider));
 
   /// After the celebration: the store's own rating dialog (which it may not
