@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import '../config/constants.dart';
 import '../utils/reminder_times_converter.dart';
 import '../utils/symptoms_converter.dart';
 
@@ -56,7 +57,7 @@ abstract class UserProfile with _$UserProfile {
     bool weeklyTipsEnabled,
     // From this local time ('HH:MM') Home shows the daily review.
     @JsonKey(name: 'daily_review_time')
-    @Default('19:30')
+    @Default(AppConstants.dailyReviewDefaultTime)
     String dailyReviewTime,
     // Opt-in to the evening notice that the daily review is there.
     @JsonKey(name: 'daily_review_reminder')

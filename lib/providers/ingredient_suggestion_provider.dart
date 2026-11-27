@@ -127,8 +127,8 @@ final newIngredientSuggestionCountProvider = Provider<int>((ref) {
 
 /// The suggestion groups that contain [mealId], by ingredient name; empty
 /// while loading or failed.
-final mealSuggestionGroupsProvider =
-    Provider.family<List<IngredientSuggestionGroup>, String>((ref, mealId) {
+final mealSuggestionGroupsProvider = Provider.autoDispose
+    .family<List<IngredientSuggestionGroup>, String>((ref, mealId) {
       final groups = ref.watch(ingredientSuggestionProvider).value ?? const [];
       return [
         for (final g in groups)
