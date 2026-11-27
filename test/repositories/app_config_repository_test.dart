@@ -27,9 +27,13 @@ void main() {
       final config = await AppConfigRepository(client).fetch();
       expect(config.minimum, '1.2.0');
       expect(config.latest, '1.4.2');
+      expect(config.akuthilfeEnabled, isFalse);
       verify(
-        () =>
-            fb.inFilter('key', ['minimum_supported_version', 'latest_version']),
+        () => fb.inFilter('key', [
+          'minimum_supported_version',
+          'latest_version',
+          'akuthilfe_enabled',
+        ]),
       ).called(1);
     });
 
@@ -47,6 +51,33 @@ void main() {
         () => AppConfigRepository(client).fetch(),
         throwsA(isA<StateError>()),
       );
+    });
+
+    Future<bool> switchFor(String? value) async {
+      final fb = mockSelectRows(
+        client,
+        table: 'app_config',
+        rows: [
+          {'key': 'minimum_supported_version', 'value': '1.2.0'},
+          {'key': 'latest_version', 'value': '1.4.2'},
+          if (value != null) {'key': 'akuthilfe_enabled', 'value': value},
+        ],
+      );
+      when(() => fb.inFilter(any(), any())).thenAnswer((_) => fb);
+      return (await AppConfigRepository(client).fetch()).akuthilfeEnabled;
+    }
+
+    test("akuthilfe_enabled 'true' turns the switch on", () async {
+      expect(await switchFor('true'), isTrue);
+    });
+
+    test('a missing akuthilfe_enabled row means off', () async {
+      expect(await switchFor(null), isFalse);
+    });
+
+    test("'TRUE' and '1' mean off", () async {
+      expect(await switchFor('TRUE'), isFalse);
+      expect(await switchFor('1'), isFalse);
     });
   });
 }

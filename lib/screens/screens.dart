@@ -12,6 +12,8 @@ export 'loading_screen.dart';
 export 'me/me_screen.dart';
 export 'patterns/patterns_screen.dart';
 export 'patterns/patterns_unlocked_screen.dart';
+export 'relief/relief_list_screen.dart';
+export 'relief/relief_player_screen.dart';
 export 'recommendations/recommendations_screen.dart';
 export 'recipes/adapt_recipe_screen.dart';
 export 'recipes/collection_recipe_screen.dart';
