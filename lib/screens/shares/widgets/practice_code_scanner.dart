@@ -106,7 +106,10 @@ class _PracticeCodeScannerState extends State<PracticeCodeScanner> {
               right: AppConstants.spacingMd,
               bottom: AppConstants.spacingLg,
               child: SafeArea(
-                child: ScannerScrimLabel(PracticeCodeScanner.rejectedLine),
+                child: ScannerScrimLabel(
+                  PracticeCodeScanner.rejectedLine,
+                  fontSize: AppTheme.fontSizeBodyLG,
+                ),
               ),
             ),
         ],

@@ -6,9 +6,14 @@ import '../../config/constants.dart';
 /// A line of text over the camera picture: white on the scrim, so it stays
 /// readable over any picture.
 class ScannerScrimLabel extends StatelessWidget {
-  const ScannerScrimLabel(this.text, {super.key});
+  const ScannerScrimLabel(
+    this.text, {
+    super.key,
+    this.fontSize = AppTheme.fontSizeBody,
+  });
 
   final String text;
+  final double fontSize;
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
@@ -21,8 +26,8 @@ class ScannerScrimLabel extends StatelessWidget {
       child: Text(
         text,
         textAlign: TextAlign.center,
-        style: const TextStyle(
-          fontSize: AppTheme.fontSizeBody,
+        style: TextStyle(
+          fontSize: fontSize,
           fontWeight: FontWeight.w600,
           color: Colors.white,
         ),
