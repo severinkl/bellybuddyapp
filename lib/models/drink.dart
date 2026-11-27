@@ -48,6 +48,8 @@ abstract class Drink with _$Drink {
         if (s is Map && s['name'] is String) s['name'] as String,
   ];
 
+  static final _iconsByName = DrinkIcon.values.asNameMap();
+
   /// The icon of the category with the lowest position that has a known icon.
   static DrinkIcon? _categoryIcon(Object? embed) {
     if (embed is! List) return null;
@@ -55,7 +57,7 @@ abstract class Drink with _$Drink {
     for (final link in embed) {
       final cat = link is Map ? link['catalog_categories'] : null;
       if (cat is! Map) continue;
-      final icon = DrinkIcon.values.asNameMap()[cat['drink_icon']];
+      final icon = _iconsByName[cat['drink_icon']];
       if (icon == null) continue;
       found.add(((cat['position'] as num?)?.toInt() ?? 1 << 30, icon));
     }
