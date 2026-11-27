@@ -8,7 +8,9 @@ import '../utils/logger.dart';
 import 'upgrade_gate_provider.dart';
 
 const _log = AppLogger('FeedbackContext');
-const _unknown = 'unbekannt';
+
+/// What is sent along for a value that cannot be read.
+const feedbackContextUnknown = 'unbekannt';
 
 /// Reads the OS version (`18.1`, `14`) from the device. Tests replace it.
 final osVersionReaderProvider = Provider<Future<String> Function()>(
@@ -26,10 +28,10 @@ final feedbackContextProvider = FutureProvider<FeedbackContext>((ref) async {
   Future<String> read(Future<String> Function() f, String what) async {
     try {
       final value = await f();
-      return value.isEmpty ? _unknown : value;
+      return value.isEmpty ? feedbackContextUnknown : value;
     } catch (_) {
       _log.warn('$what unreadable');
-      return _unknown;
+      return feedbackContextUnknown;
     }
   }
 

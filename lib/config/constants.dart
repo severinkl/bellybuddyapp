@@ -386,6 +386,11 @@ class AppConstants {
   /// Longest feedback message, in characters a person sees.
   static const int feedbackMaxLength = 2000;
 
+  /// Longest feedback message in Unicode code points; mirrors core's
+  /// `MESSAGE_MAX_CODE_POINTS`. A character a person sees can be several
+  /// code points (a skin-toned family is 11), so this caps the field too.
+  static const int feedbackMaxCodePoints = 16000;
+
   // External URLs
 
   /// The public Belly Buddy site, linked in the invite text.

@@ -185,9 +185,14 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     }
   }
 
+  /// The invite's share sheet is on its way: further taps wait.
+  bool _sharing = false;
+
   /// „Freund:innen einladen": the share sheet with the invite text, anchored
   /// at the row ([rowContext]); a failing launcher says so (the text stays out of the log).
   Future<void> _invite(BuildContext rowContext) async {
+    if (_sharing) return;
+    _sharing = true;
     final origin = shareOriginOf(rowContext);
     final launcher = ref.read(shareLauncherProvider);
     final messenger = ScaffoldMessenger.of(context);
@@ -198,7 +203,22 @@ class _MeScreenState extends ConsumerState<MeScreen> {
       messenger.showSnackBar(
         const SnackBar(content: Text('Das Teilen hat nicht geklappt.')),
       );
+    } finally {
+      _sharing = false;
     }
+  }
+
+  /// „Feedback geben" is on its way: a second tap in the same frame opens
+  /// nothing (cleared on the next frame, as [_openingShare]).
+  bool _openingFeedback = false;
+
+  void _openFeedback() {
+    if (_openingFeedback) return;
+    _openingFeedback = true;
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _openingFeedback = false,
+    );
+    unawaited(context.push(RoutePaths.feedback));
   }
 
   /// The share list is on its way: a second tap in the same frame opens
@@ -318,7 +338,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
         icon: Icons.feedback_outlined,
         title: 'Feedback geben',
         subtitle: 'Teile uns deine Ideen und Wünsche mit',
-        onTap: () => context.push(RoutePaths.feedback),
+        onTap: _openFeedback,
       ),
       // The Builder's context is the row's: its box anchors the share popover.
       Builder(

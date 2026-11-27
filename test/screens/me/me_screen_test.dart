@@ -810,7 +810,47 @@ void main() {
     expect(find.byType(SnackBar), findsNothing);
   });
 
+  testWidgets('a double tap on „Feedback geben" opens one form', (
+    tester,
+  ) async {
+    await pump(tester);
+    await tester.ensureVisible(find.byKey(MeScreen.feedbackKey));
+    await tester.tap(find.byKey(MeScreen.feedbackKey));
+    await tester.tap(find.byKey(MeScreen.feedbackKey));
+    await tester.pumpAndSettle();
+    expect(find.text('page:${RoutePaths.feedback}'), findsOneWidget);
+    router.pop();
+    await tester.pumpAndSettle();
+    expect(find.text('page:${RoutePaths.feedback}'), findsNothing);
+    expect(find.byKey(MeScreen.feedbackKey), findsOneWidget);
+  });
+
   group('Freund:innen einladen', () {
+    testWidgets('two quick taps start one share request', (tester) async {
+      final hold = Completer<void>();
+      var calls = 0;
+      await pump(
+        tester,
+        extra: [
+          shareLauncherProvider.overrideWithValue((text, origin) {
+            calls++;
+            return hold.future;
+          }),
+        ],
+      );
+      await tester.ensureVisible(find.byKey(MeScreen.inviteKey));
+      await tester.tap(find.byKey(MeScreen.inviteKey));
+      await tester.pump();
+      await tester.tap(find.byKey(MeScreen.inviteKey));
+      await tester.pump();
+      expect(calls, 1);
+
+      hold.complete();
+      await tester.pumpAndSettle();
+      await tapRow(tester, MeScreen.inviteKey);
+      expect(calls, 2);
+    });
+
     testWidgets('is the last row, after „Feedback geben"', (tester) async {
       await pump(tester);
 

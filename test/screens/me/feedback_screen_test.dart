@@ -94,7 +94,7 @@ void main() {
     router = GoRouter(
       initialLocation: RoutePaths.me,
       routes: [
-        ...stubRoutes([RoutePaths.me]),
+        ...stubRoutes([RoutePaths.me, RoutePaths.settings]),
         GoRoute(
           path: RoutePaths.feedback,
           builder: (_, _) => const FeedbackScreen(),
@@ -247,6 +247,118 @@ void main() {
     expect(fieldText(tester).characters.length, AppConstants.feedbackMaxLength);
     expect(fieldText(tester), family * AppConstants.feedbackMaxLength);
     expect(find.text('2000 / 2000'), findsOneWidget);
+  });
+
+  testWidgets('feedbackMaxCodePoints caps text within the character limit', (
+    tester,
+  ) async {
+    await pump(tester);
+    // A skin-toned family of four: one character, 11 code points.
+    const family = '👨🏽‍👩🏽‍👧🏽‍👦🏽';
+    expect(family.runes.length, 11);
+    const fits = AppConstants.feedbackMaxCodePoints ~/ 11;
+    await type(tester, family * fits);
+    expect(fieldText(tester), family * fits);
+
+    final over = family * (fits + 100);
+    expect(over.characters.length, lessThan(AppConstants.feedbackMaxLength));
+    expect(over.runes.length, greaterThan(AppConstants.feedbackMaxCodePoints));
+    await type(tester, over);
+    expect(fieldText(tester), family * fits);
+    expect(
+      fieldText(tester).runes.length,
+      lessThanOrEqualTo(AppConstants.feedbackMaxCodePoints),
+    );
+  });
+
+  testWidgets('context lines show „unbekannt" when the provider fails', (
+    tester,
+  ) async {
+    final container = ProviderContainer.test(
+      overrides: [
+        feedbackServiceProvider.overrideWithValue(service),
+        feedbackContextProvider.overrideWith(
+          (_) async => throw StateError('no context'),
+        ),
+        currentUserProvider.overrideWithValue(_user(null)),
+      ],
+    );
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: FeedbackScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('App-Version $feedbackContextUnknown'), findsOneWidget);
+    expect(find.text('System: $feedbackContextUnknown'), findsOneWidget);
+    expect(find.textContaining('…'), findsNothing);
+  });
+
+  testWidgets('sent while covered, the form stays and starts over', (
+    tester,
+  ) async {
+    final answer = Completer<void>();
+    service.answer = () => answer.future;
+    await pump(tester);
+    await choose(tester, FeedbackCategory.idea);
+    await type(tester, 'Idee');
+    await tapSend(tester);
+
+    unawaited(router.push(RoutePaths.settings));
+    await tester.pumpAndSettle();
+    answer.complete();
+    await tester.pumpAndSettle();
+    expect(find.text('page:${RoutePaths.settings}'), findsOneWidget);
+    expect(find.text(_thanks), findsOneWidget);
+
+    router.pop();
+    await tester.pumpAndSettle();
+    expect(find.byType(FeedbackScreen), findsOneWidget);
+    expect(fieldText(tester), isEmpty);
+    expect(
+      tester.widget<TextField>(find.byKey(FeedbackScreen.messageKey)).enabled,
+      isTrue,
+    );
+    for (final c in FeedbackCategory.values) {
+      expect(
+        tester
+            .widget<FilterChip>(
+              find.descendant(
+                of: find.byKey(FeedbackScreen.categoryKey(c)),
+                matching: find.byType(FilterChip),
+              ),
+            )
+            .selected,
+        isFalse,
+      );
+    }
+    expect(find.text(_generic), findsNothing);
+    expect(sendEnabled(tester), isFalse);
+
+    await choose(tester, FeedbackCategory.praise);
+    await type(tester, 'Nochmal');
+    expect(sendEnabled(tester), isTrue);
+  });
+
+  testWidgets('left while sending, a failure says so on the screen below', (
+    tester,
+  ) async {
+    final answer = Completer<void>();
+    service.answer = () => answer.future;
+    await pump(tester);
+    await choose(tester, FeedbackCategory.idea);
+    await type(tester, 'Idee');
+    await tapSend(tester);
+
+    router.pop();
+    await tester.pumpAndSettle();
+    expect(find.byType(FeedbackScreen), findsNothing);
+    answer.completeError(const FeedbackException(status: 500));
+    await tester.pumpAndSettle();
+    expect(find.text('page:${RoutePaths.me}'), findsOneWidget);
+    expect(find.text('Dein Feedback wurde nicht gesendet.'), findsOneWidget);
+    expect(find.text(_thanks), findsNothing);
   });
 
   testWidgets('sends trimmed text with category, reply flag and context, '

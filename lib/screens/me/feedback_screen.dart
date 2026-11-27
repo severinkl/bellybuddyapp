@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -39,6 +40,17 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
   static const _log = AppLogger('FeedbackScreen');
   static const _generic = 'Das hat nicht geklappt. Versuch es später nochmal.';
   static const _thanks = 'Danke! Dein Feedback ist angekommen.';
+  static const _notSent = 'Dein Feedback wurde nicht gesendet.';
+
+  /// Refuses an edit past [AppConstants.feedbackMaxCodePoints] (the old
+  /// text stays): within [AppConstants.feedbackMaxLength] characters a
+  /// text can still be more code points than core accepts.
+  static final _codePointCap = TextInputFormatter.withFunction(
+    (oldValue, newValue) =>
+        newValue.text.runes.length > AppConstants.feedbackMaxCodePoints
+        ? oldValue
+        : newValue,
+  );
 
   final _message = TextEditingController();
   FeedbackCategory? _category;
@@ -80,29 +92,44 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
           );
     } on FeedbackException catch (e) {
       _log.warn('not sent (${e.status ?? 'no answer'})');
-      if (mounted) {
-        setState(() {
-          _sending = false;
-          _error = _messageFor(e);
-        });
-      }
+      _failed(messenger, _messageFor(e));
       return;
     } catch (_) {
       // Only the outcome: the error could echo what was sent.
       _log.warn('not sent (error)');
-      if (mounted) {
-        setState(() {
-          _sending = false;
-          _error = _generic;
-        });
-      }
+      _failed(messenger, _generic);
       return;
     }
     _log.debug('sent');
     // Still on its way back the screen is mounted but not on top: popping
     // then would close the screen below.
-    if (mounted && (route?.isCurrent ?? false)) router.pop();
+    if (mounted) {
+      if (route?.isCurrent ?? false) {
+        router.pop();
+      } else {
+        // Something covers the form: it stays, so it starts over.
+        _message.clear();
+        setState(() {
+          _category = null;
+          _sending = false;
+          _error = null;
+        });
+      }
+    }
     messenger.showSnackBar(const SnackBar(content: Text(_thanks)));
+  }
+
+  /// A failed send: the reason on the form, or, the form left, a SnackBar
+  /// on the screen below through [messenger].
+  void _failed(ScaffoldMessengerState messenger, String error) {
+    if (!mounted) {
+      messenger.showSnackBar(const SnackBar(content: Text(_notSent)));
+      return;
+    }
+    setState(() {
+      _sending = false;
+      _error = error;
+    });
   }
 
   /// Core's text for a refusal (4xx), else the generic line.
@@ -169,6 +196,7 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
                       keyboardType: TextInputType.multiline,
                       textCapitalization: TextCapitalization.sentences,
                       maxLength: AppConstants.feedbackMaxLength,
+                      inputFormatters: [_codePointCap],
                       onChanged: (_) => setState(() {}),
                       buildCounter:
                           (
@@ -269,7 +297,8 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
 }
 
 /// „Das wird mitgeschickt:" with the app version and the system („…" while
-/// they load; the provider reports unreadable values itself).
+/// they load, „unbekannt" if the provider fails; it reports unreadable
+/// values itself).
 class _SentAlong extends StatelessWidget {
   const _SentAlong(this.sent);
 
@@ -279,6 +308,7 @@ class _SentAlong extends StatelessWidget {
   Widget build(BuildContext context) {
     final (version, system) = switch (sent) {
       AsyncData(:final value) => (value.appVersion, value.systemLabel),
+      AsyncError() => (feedbackContextUnknown, feedbackContextUnknown),
       _ => ('…', '…'),
     };
     const style = TextStyle(
