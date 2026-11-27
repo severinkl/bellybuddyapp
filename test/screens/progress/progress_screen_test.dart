@@ -289,6 +289,65 @@ void main() {
 
     expect(find.bySemanticsLabel('24. Nov: schwer'), findsOneWidget);
     expect(find.bySemanticsLabel('26. Nov: kein Eintrag'), findsOneWidget);
+  testWidgets('no current streak tile while the Buddy has no value', (
+    tester,
+  ) async {
+    for (final buddy in [_Buddy.loading, _Buddy.failed]) {
+      await pump(tester, progress: _withLongest(_full(), 9), buddy: buddy);
+      expect(find.text('Aktueller Streak'), findsNothing);
+      expect(find.text('Startet mit deinem nächsten Eintrag'), findsNothing);
+      expect(find.text('Längster Streak'), findsOneWidget);
+      expect(find.text('9 Tage'), findsOneWidget);
+    }
+  });
+
+  testWidgets('a reload shows loading, not the previous data; an error '
+      'with a previous value shows the error', (tester) async {
+    final notifier = await pump(tester, progress: _full());
+    expect(find.text('Die letzten 12 Wochen'), findsOneWidget);
+
+    final gate = notifier.gate = Completer<void>();
+    container.read(_userChange.notifier).bump();
+    await tester.pump();
+    expect(find.byType(BbLoadingState), findsOneWidget);
+    expect(find.text('Die letzten 12 Wochen'), findsNothing);
+
+    gate.completeError(Exception('down'));
+    await tester.pump();
+    await tester.pump();
+    expect(
+      find.text('Dein Verlauf konnte nicht geladen werden.'),
+      findsOneWidget,
+    );
+    expect(find.text('Die letzten 12 Wochen'), findsNothing);
+  });
+
+  testWidgets('trend: the line below two weeks with means, the chart from 2', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      progress: _progress(guts: _goodRun(_day(11, 23), 3)),
+      size: const Size(400, 4000),
+    );
+    expect(find.text('Beschwerden pro Woche'), findsOneWidget);
+    expect(find.textContaining('zeige ich dir, sobald'), findsOneWidget);
+    expect(find.byType(SymptomTrend), findsNothing);
+
+    // Entries of 3 days in each of the last two weeks.
+    final guts = [
+      for (final d in [23, 24, 25]) _gut(_day(11, d), 2),
+      for (final d in [16, 17, 18]) _gut(_day(11, d), 3),
+    ];
+    await pump(
+      tester,
+      progress: _progress(guts: guts),
+      size: const Size(400, 4000),
+    );
+    expect(find.byType(SymptomTrend), findsOneWidget);
+    expect(find.textContaining('zeige ich dir, sobald'), findsNothing);
+  });
+
     for (final day in [27, 28, 29]) {
       expect(find.bySemanticsLabel(RegExp('^$day\\. Nov')), findsNothing);
     }

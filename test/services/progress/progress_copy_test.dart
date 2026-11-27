@@ -168,4 +168,58 @@ void main() {
       '18. Nov: kein Eintrag',
     );
   });
+
+  group('trendSemantics', () {
+    SymptomMeans m(double v) =>
+        SymptomMeans(bloating: v, gas: v, cramps: v, fullness: v);
+
+    /// [n] weeks, oldest first, the last one the current; [means] by index.
+    List<ProgressWeek> weeks(int n, Map<int, SymptomMeans> means) => [
+      for (var i = 0; i < n; i++)
+        ProgressWeek(
+          monday: addDays(DateTime(2026, 11, 23), (i - n + 1) * 7),
+          days: const [],
+          good: 0,
+          medium: 0,
+          hard: 0,
+          activeDays: 0,
+          elapsedDays: 7,
+          gutFeelingEntries: 0,
+          means: means[i],
+        ),
+    ];
+
+    test('names newest and oldest week with means, German comma', () {
+      final w = weeks(13, {
+        0: const SymptomMeans(bloating: 3.1, gas: 1, cramps: 1, fullness: 1),
+        12: const SymptomMeans(bloating: 2.3, gas: 1, cramps: 1, fullness: 1),
+      });
+      expect(
+        ProgressCopy.trendSemantics('Blähbauch', w),
+        'Blähbauch: diese Woche im Schnitt 2,3 von 5; vor 12 Wochen 3,1',
+      );
+    });
+
+    test('last week and 5 weeks ago', () {
+      final w = weeks(12, {
+        6: const SymptomMeans(bloating: 1, gas: 1, cramps: 2.5, fullness: 1),
+        10: const SymptomMeans(bloating: 1, gas: 1, cramps: 1.0, fullness: 1),
+      });
+      expect(
+        ProgressCopy.trendSemantics('Krämpfe', w),
+        'Krämpfe: letzte Woche im Schnitt 1,0 von 5; vor 5 Wochen 2,5',
+      );
+    });
+
+    test('one week with means has no "vor" part; none says too few', () {
+      expect(
+        ProgressCopy.trendSemantics('Blähungen', weeks(12, {11: m(2)})),
+        'Blähungen: diese Woche im Schnitt 2,0 von 5',
+      );
+      expect(
+        ProgressCopy.trendSemantics('Blähungen', weeks(12, {})),
+        'Blähungen: zu wenig Einträge',
+      );
+    });
+  });
 }

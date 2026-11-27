@@ -220,6 +220,15 @@ class AppConstants {
   static const double progressDayDotSize = 6.0;
   static const double progressEmptyBuddySize = 120.0;
 
+  // „Beschwerden pro Woche": a symptom's bar row, the gap between its bars,
+  // the hollow marker of a week without means (and its outline), the least
+  // height of a bar so a mean of 1 stays visible
+  static const double progressTrendRowHeight = 48.0;
+  static const double progressTrendBarGap = 4.0;
+  static const double progressTrendMarkerSize = 8.0;
+  static const double progressTrendMarkerStroke = 1.5;
+  static const double progressTrendStubHeight = 3.0;
+
   // „Deine Belohnungen": a row's day circle
   static const double journeyRewardDaySize = 44.0;
 

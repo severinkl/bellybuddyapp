@@ -127,4 +127,52 @@ abstract final class ProgressCopy {
 
   static const loadError = 'Dein Verlauf konnte nicht geladen werden.';
   static const retry = 'Nochmal versuchen';
+
+  static const trendTitle = 'Beschwerden pro Woche';
+  static const trendCaption =
+      'Im Schnitt pro Woche, 1 = gar nicht, 5 = sehr stark. Niedrige Balken '
+      'heißen weniger Beschwerden. ○ = zu wenig Einträge.';
+  static const trendTooFew =
+      'Wie sich deine Beschwerden entwickeln, zeige ich dir, sobald zwei '
+      'Wochen genug Bauchgefühl-Einträge haben (mindestens 3 pro Woche).';
+
+  /// The mean a tracker label stands for, explicitly (never by index).
+  static double Function(SymptomMeans) trendMean(String symptom) =>
+      switch (symptom) {
+        'Blähbauch' => (m) => m.bloating,
+        'Blähungen' => (m) => m.gas,
+        'Krämpfe' => (m) => m.cramps,
+        'Völlegefühl' => (m) => m.fullness,
+        _ => throw ArgumentError.value(symptom, 'symptom', 'unknown'),
+      };
+
+  /// A symptom row to a screen reader: the newest week with means and the
+  /// oldest one, if another: „Blähbauch: diese Woche im Schnitt 2,3 von 5;
+  /// vor 11 Wochen 3,1". [weeks] is oldest first, the last the current one;
+  static String trendSemantics(String symptom, List<ProgressWeek> weeks) {
+    final mean = trendMean(symptom);
+    final withMeans = [
+      for (var i = 0; i < weeks.length; i++)
+        if (weeks[i].means case final m?) (i, mean(m)),
+    ];
+    if (withMeans.isEmpty) return '$symptom: zu wenig Einträge';
+    final (newest, newestMean) = withMeans.last;
+    final (oldest, oldestMean) = withMeans.first;
+    final head =
+        '$symptom: ${_trendWhen(newest, weeks.length)} im Schnitt '
+        '${_decimal(newestMean)} von 5';
+    if (oldest == newest) return head;
+    return '$head; ${_trendWhen(oldest, weeks.length)} '
+        '${_decimal(oldestMean)}';
+  }
+
+  /// „diese Woche", „letzte Woche", „vor 5 Wochen".
+  static String _trendWhen(int index, int count) => switch (count - 1 - index) {
+    0 => 'diese Woche',
+    1 => 'letzte Woche',
+    final n => 'vor $n Wochen',
+  };
+
+  /// One decimal, German comma: „2,3".
+  static String _decimal(double v) => v.toStringAsFixed(1).replaceAll('.', ',');
 }

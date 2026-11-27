@@ -107,6 +107,7 @@ class AppTheme {
   static const Color careWaterSoft = Color(0xFFE2F0FA);
   static const Color careGut = Color(0xFF3A9A48);
   static const Color careGutSoft = gutFeelingGoodSoft;
+  static const Color progressTrendBar = primary;
   static const Color careLoo = Color(0xFF9C7350);
   static const Color careLooSoft = Color(0xFFF1E7DE);
   static const Color streakFlame = Color(0xFFFF7A2E);

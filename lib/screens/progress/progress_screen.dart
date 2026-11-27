@@ -17,6 +17,7 @@ import '../../widgets/common/bb_button.dart';
 import '../../widgets/common/mascot_image.dart';
 import 'widgets/progress_summary.dart';
 import 'widgets/progress_weeks.dart';
+import 'widgets/symptom_trend.dart';
 
 /// „Dein Verlauf" (`/progress`): the last 12 Monday weeks at a glance, from
 /// Ich and the Muster page. Free: not behind the Plus gate.
@@ -94,8 +95,20 @@ class ProgressScreen extends ConsumerWidget {
     ProgressSummary(progress: progress, currentStreak: currentStreak),
     AppConstants.gap24,
     ProgressWeeks(weeks: progress.weeks, today: today),
-    // „Beschwerden pro Woche" (PRA4).
-    const SizedBox.shrink(),
+    AppConstants.gap24,
+    if (progress.showTrend)
+      SymptomTrend(weeks: progress.weeks)
+    else ...[
+      Semantics(
+        header: true,
+        child: const Text(
+          ProgressCopy.trendTitle,
+          style: AppTheme.bodyMutedStyle,
+        ),
+      ),
+      AppConstants.gap8,
+      const Text(ProgressCopy.trendTooFew, style: AppTheme.bodyMutedStyle),
+    ],
     AppConstants.gap24,
     const Text(InsightCopy.footer, style: _footerStyle),
     AppConstants.gap4,
