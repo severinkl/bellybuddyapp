@@ -5,13 +5,13 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
-import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/discover/widgets/discover_alternatives_section.dart';
 import 'package:belly_buddy/widgets/common/plus_locked_card.dart';
 
 import '../../helpers/app_host.dart';
 import '../../helpers/fixtures.dart';
+import '../../helpers/purchases_fakes.dart';
 
 const _today =
     'Noch keine Alternativen – sie entstehen nach deinen Mahlzeiten.';
@@ -49,9 +49,9 @@ Future<void> _pump(
 }
 
 void main() {
-  final locked = plusAccessProvider.overrideWithValue(PlusAccess.locked);
-  final open = plusAccessProvider.overrideWithValue(PlusAccess.open);
-  final switchOff = paywallEnabledProvider.overrideWithValue(false);
+  final locked = plusLockedOverrides.single;
+  final open = plusOpenOverrides.single;
+  final switchOff = plusSwitchOffOverrides.single;
   final groups = [testSuggestionGroup()];
 
   testWidgets('locked and none: the Plus note and a link to /plus', (

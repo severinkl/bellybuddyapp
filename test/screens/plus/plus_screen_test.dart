@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/plus_status.dart';
@@ -17,6 +16,7 @@ import 'package:belly_buddy/services/plus/plus_copy.dart';
 import 'package:belly_buddy/services/purchases/purchases_gateway.dart';
 
 import '../../helpers/app_host.dart';
+import '../../helpers/fakes.dart';
 import '../../helpers/mocks.dart';
 import '../../helpers/purchases_fakes.dart';
 import '../../helpers/riverpod_helpers.dart';
@@ -29,7 +29,7 @@ class _FakeAppVersionService extends AppVersionService {
 void main() {
   late FakePurchasesGateway gateway;
   late MockEdgeFunctionService edge;
-  late List<Uri> opened;
+  late RecordingUrlOpener launches;
 
   setUpAll(() => registerFallbackValue(<String, dynamic>{}));
 
@@ -39,15 +39,10 @@ void main() {
     when(
       () => edge.invoke(any(), body: any(named: 'body')),
     ).thenAnswer((_) async => {'plus': true, 'expires_at': null});
-    opened = [];
+    launches = RecordingUrlOpener();
   });
 
   tearDown(() => gateway.dispose());
-
-  Future<bool> record(Uri url, {LaunchMode mode = LaunchMode.platformDefault}) {
-    opened.add(url);
-    return Future.value(true);
-  }
 
   /// Home below, the paywall pushed on top.
   Future<GoRouter> pump(WidgetTester tester) async {
@@ -60,7 +55,7 @@ void main() {
         ),
         GoRoute(
           path: '/plus',
-          builder: (_, _) => PlusScreen(openUrl: record),
+          builder: (_, _) => PlusScreen(openUrl: launches.call),
         ),
       ],
     );
@@ -167,7 +162,7 @@ void main() {
     await tester.pumpAndSettle();
     await tapVisible(tester, find.byKey(PlusScreen.privacyKey));
     await tester.pumpAndSettle();
-    expect(opened, [
+    expect(launches.urls, [
       Uri.parse(AppConstants.termsUrl),
       Uri.parse(AppConstants.privacyPolicyUrl),
     ]);
@@ -330,7 +325,7 @@ void main() {
     expect(find.text('Abo verwalten'), findsOneWidget);
     await tapVisible(tester, find.byKey(PlusScreen.manageKey));
     await tester.pumpAndSettle();
-    expect(opened, [
+    expect(launches.urls, [
       Uri.parse('https://apps.apple.com/account/subscriptions?x=1'),
     ]);
   }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
@@ -342,7 +337,7 @@ void main() {
       await pump(tester);
       await tapVisible(tester, find.byKey(PlusScreen.manageKey));
       await tester.pumpAndSettle();
-      expect(opened, [Uri.parse(AppConstants.appleSubscriptionsUrl)]);
+      expect(launches.urls, [Uri.parse(AppConstants.appleSubscriptionsUrl)]);
     },
     variant: TargetPlatformVariant.only(TargetPlatform.iOS),
   );
@@ -354,7 +349,7 @@ void main() {
       await pump(tester);
       await tapVisible(tester, find.byKey(PlusScreen.manageKey));
       await tester.pumpAndSettle();
-      expect(opened, [
+      expect(launches.urls, [
         Uri.parse(
           AppConstants.playSubscriptionsUrl(
             AppConstants.playPlusProductId,
@@ -363,7 +358,7 @@ void main() {
         ),
       ]);
       expect(
-        opened.single.toString(),
+        launches.urls.single.toString(),
         'https://play.google.com/store/account/subscriptions'
         '?sku=bellybuddy_plus&package=at.bellybuddy.app',
       );

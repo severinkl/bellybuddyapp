@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/data_share.dart';
 import '../models/dietitian_card.dart';
 import '../providers/core_providers.dart';
+import '../utils/function_exception_utils.dart';
 import '../utils/logger.dart';
 
 /// What a share screen says when a call fails without core's own text.
@@ -146,7 +147,7 @@ class ShareService {
       throw ShareException(
         status: e.status,
         message: _messageOf(e),
-        code: _codeOf(e),
+        code: e.errorCode,
       );
     } catch (e, st) {
       _log.error('$op failed', e, st);
@@ -162,13 +163,6 @@ class ShareService {
     final text = details['error'] ?? details['message'];
     return text is String && text.isNotEmpty ? text : null;
   }
-
-  /// The error body's `code`; null when the body isn't a JSON object or has
-  /// none.
-  static String? _codeOf(FunctionException e) => switch (e.details) {
-    {'code': final String code} => code,
-    _ => null,
-  };
 }
 
 final shareServiceProvider = Provider<ShareService>(

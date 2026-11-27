@@ -203,33 +203,14 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
 
   Widget _buildEmptyState() {
     // While Plus is locked no new sets come: the way to Plus instead.
-    if (ref.watch(plusAccessProvider) == PlusAccess.locked) {
-      return ListView(
-        padding: AppConstants.paddingMd,
-        children: [
-          SizedBox(height: MediaQuery.of(context).size.height * 0.1),
-          const MascotImage(
-            assetPath: AppConstants.mascotHappy,
-            width: AppConstants.mascotSizeMd,
-            height: AppConstants.mascotSizeMd,
-          ),
-          AppConstants.gap16,
-          const PlusLockedCard(
-            title: PlusCopy.tipsTitle,
-            line: PlusCopy.tipsLine,
-          ),
-          AppConstants.gap16,
-          // The free first tip may still be on its way.
-          Center(child: _refreshButton()),
-        ],
-      );
-    }
+    final locked = ref.watch(plusLockedProvider);
     return ListView(
       children: [
         SizedBox(height: MediaQuery.of(context).size.height * 0.2),
         Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const MascotImage(
                 assetPath: AppConstants.mascotHappy,
@@ -237,21 +218,31 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
                 height: AppConstants.mascotSizeMd,
               ),
               AppConstants.gap16,
-              const Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: AppConstants.spacingXl,
-                ),
-                child: Text(
-                  'Noch keine Tipps — sobald Belly Buddy deine Daten analysiert hat, siehst du sie hier.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: AppTheme.fontSizeBodyLG,
-                    color: AppTheme.mutedForeground,
+              if (locked)
+                const Padding(
+                  padding: AppConstants.paddingMd,
+                  child: PlusLockedCard(
+                    title: PlusCopy.tipsTitle,
+                    line: PlusCopy.tipsLine,
+                  ),
+                )
+              else
+                const Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: AppConstants.spacingXl,
+                  ),
+                  child: Text(
+                    'Noch keine Tipps — sobald Belly Buddy deine Daten analysiert hat, siehst du sie hier.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: AppTheme.fontSizeBodyLG,
+                      color: AppTheme.mutedForeground,
+                    ),
                   ),
                 ),
-              ),
               AppConstants.gap16,
-              _refreshButton(),
+              // The free first tip may still be on its way.
+              Center(child: _refreshButton()),
             ],
           ),
         ),
@@ -415,7 +406,7 @@ class _RecommendationPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final letter = recommendation.isLetter;
-    final plusLocked = ref.watch(plusAccessProvider) == PlusAccess.locked;
+    final plusLocked = ref.watch(plusLockedProvider);
     return RefreshIndicator(
       color: AppTheme.primary,
       // The tips, and a collection that failed to load: its recipe links

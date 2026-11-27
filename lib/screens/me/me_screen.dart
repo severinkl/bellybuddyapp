@@ -13,6 +13,7 @@ import '../../providers/plus_provider.dart';
 import '../../providers/shares_provider.dart';
 import '../../providers/tutorial_provider.dart';
 import '../../providers/upgrade_gate_provider.dart';
+import '../../router/navigation_extensions.dart';
 import '../../router/route_names.dart';
 import '../../services/plus/plus_copy.dart';
 import '../../utils/buddy_name.dart';
@@ -150,9 +151,9 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     // Without a share the create screen goes on top of the list at once —
     // the paywall instead while Plus is locked (a new share needs it).
     if (shares == null || shares.isEmpty) {
-      final locked = ref.read(plusAccessProvider) == PlusAccess.locked;
+      final locked = ref.read(plusLockedProvider);
       unawaited(
-        context.push(locked ? RoutePaths.plus : RoutePaths.shareCreate),
+        locked ? context.openPlus() : context.push(RoutePaths.shareCreate),
       );
     }
   }
@@ -219,7 +220,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
           subtitle: plusSubtitle == null
               ? null
               : PlusCopy.statusLine(plusSubtitle),
-          onTap: () => unawaited(context.push(RoutePaths.plus)),
+          onTap: () => unawaited(context.openPlus()),
         ),
       BbSettingsItem(
         key: MeScreen.settingsKey,

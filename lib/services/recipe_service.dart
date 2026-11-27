@@ -4,6 +4,7 @@ import '../models/adapted_recipe.dart';
 import '../models/intolerance_rules.dart';
 import '../models/recipe.dart';
 import '../providers/core_providers.dart';
+import '../utils/function_exception_utils.dart';
 import '../utils/logger.dart';
 
 class RecipeService {
@@ -144,7 +145,7 @@ class RecipeService {
       if (failure == AdaptFailure.failed || e.status == 400) {
         _log.error('adapt failed (${e.status})', e, st);
       } else {
-        _log.warn('adapt: ${e.status} ${_codeOf(e)}');
+        _log.warn('adapt: ${e.status} ${e.errorCode}');
       }
       throw AdaptRecipeException(failure);
     } catch (e, st) {
@@ -165,7 +166,7 @@ class RecipeService {
   /// The failure for an `adapt-recipe` error, keyed off its `code` (the
   /// server's message is never shown).
   static AdaptFailure _failureOf(FunctionException e) =>
-      switch ((e.status, _codeOf(e))) {
+      switch ((e.status, e.errorCode)) {
         (409, 'nothing_to_adapt') => AdaptFailure.nothingToAdapt,
         (409, 'cannot_judge') => AdaptFailure.cannotJudge,
         (404, 'recipe_not_found') || (400, _) => AdaptFailure.notFound,
@@ -173,13 +174,6 @@ class RecipeService {
         (402, 'plus_required') => AdaptFailure.plusRequired,
         _ => AdaptFailure.failed,
       };
-
-  /// The error body's `code`; null when the body isn't a JSON object (a
-  /// proxy's text page) or has none.
-  static Object? _codeOf(FunctionException e) => switch (e.details) {
-    final Map<dynamic, dynamic> details => details['code'],
-    _ => null,
-  };
 }
 
 final recipeServiceProvider = Provider<RecipeService>(

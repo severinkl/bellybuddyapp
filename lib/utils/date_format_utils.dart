@@ -13,6 +13,10 @@ DateTime endOfDay(DateTime dt) => addDays(dt, 1);
 DateTime addDays(DateTime d, int days) =>
     DateTime(d.year, d.month, d.day + days);
 
+/// „10.12.": day and month of [d] as given (convert to local first for a real
+/// instant).
+String formatDayMonth(DateTime d) => '${d.day}.${d.month}.';
+
 /// The Monday of [d]'s week, at midnight.
 DateTime mondayOf(DateTime d) => addDays(d, 1 - d.weekday);
 

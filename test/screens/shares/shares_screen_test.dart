@@ -13,7 +13,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:belly_buddy/models/data_share.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
-import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/providers/shares_provider.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/shares/shares_screen.dart';
@@ -23,6 +22,7 @@ import 'package:belly_buddy/widgets/common/bb_async_state.dart';
 
 import '../../helpers/app_host.dart';
 import '../../helpers/share_fakes.dart';
+import '../../helpers/purchases_fakes.dart';
 
 void main() {
   final now = DateTime(2026, 11, 26, 12);
@@ -761,7 +761,7 @@ void main() {
   });
 
   group('Plus locked', () {
-    final locked = [plusAccessProvider.overrideWithValue(PlusAccess.locked)];
+    final locked = plusLockedOverrides;
 
     testWidgets('existing shares stay listed', (tester) async {
       await pump(tester, [
@@ -831,11 +831,7 @@ void main() {
     });
 
     testWidgets('open: the buttons create as before', (tester) async {
-      await pump(
-        tester,
-        [],
-        overrides: [plusAccessProvider.overrideWithValue(PlusAccess.open)],
-      );
+      await pump(tester, [], overrides: plusOpenOverrides);
       await tester.tap(find.text('Berater:in verbinden'));
       await tester.pumpAndSettle();
       expect(find.text('page:/shares/connect'), findsOneWidget);

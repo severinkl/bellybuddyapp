@@ -156,7 +156,7 @@ class _IngredientsCard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final plusLocked = ref.watch(plusAccessProvider) == PlusAccess.locked;
+    final plusLocked = ref.watch(plusLockedProvider);
     final recipe = fit.recipe;
     final kritisch = {for (final l in fit.kritisch) l.line.name}.toList();
     return RecipeSectionCard(
@@ -171,22 +171,22 @@ class _IngredientsCard extends ConsumerWidget {
             // `extra: true`: the user asked, so the adapt screen may start
             // the AI call at once.
             onPressed: () => plusLocked
-                ? context.push(RoutePaths.plus)
+                ? context.openPlus()
                 : context.push(
                     RoutePaths.collectionRecipeAdaptFor(recipe.id),
                     extra: true,
                   ),
             icon: const Icon(Icons.auto_awesome),
-            label: plusLocked
-                ? const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Flexible(child: Text('Für mich anpassen')),
-                      SizedBox(width: AppConstants.spacingSm),
-                      PlusBadge(),
-                    ],
-                  )
-                : const Text('Für mich anpassen'),
+            label: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Flexible(child: Text('Für mich anpassen')),
+                if (plusLocked) ...const [
+                  SizedBox(width: AppConstants.spacingSm),
+                  PlusBadge(),
+                ],
+              ],
+            ),
             style: FilledButton.styleFrom(
               minimumSize: const Size.fromHeight(AppConstants.buttonHeight),
               shape: RoundedRectangleBorder(

@@ -40,16 +40,8 @@ import '../../helpers/purchases_fakes.dart';
 import '../../helpers/riverpod_helpers.dart';
 import '../../helpers/share_fakes.dart';
 
-class _FakePlus extends PlusNotifier {
-  _FakePlus(this.answer);
-  final Future<PlusStatus> Function() answer;
-
-  @override
-  Future<PlusStatus> build() => answer();
-}
-
 Override _plus(PlusStatus status) =>
-    plusProvider.overrideWith(() => _FakePlus(() async => status));
+    plusProvider.overrideWith(() => FakePlusNotifier(() async => status));
 
 Override _switch(bool on) => paywallEnabledProvider.overrideWithValue(on);
 
@@ -267,7 +259,7 @@ void main() {
           currentVersionProvider.overrideWith((_) async => '1.2.3'),
           shareServiceProvider.overrideWithValue(shareService),
           _switch(true),
-          plusProvider.overrideWith(() => _FakePlus(() => never.future)),
+          plusProvider.overrideWith(() => FakePlusNotifier(() => never.future)),
         ],
       );
       final r = GoRouter(
@@ -406,10 +398,7 @@ void main() {
     testWidgets('Plus locked, no shares: /plus instead of the create screen', (
       tester,
     ) async {
-      await pump(
-        tester,
-        extra: [plusAccessProvider.overrideWithValue(PlusAccess.locked)],
-      );
+      await pump(tester, extra: plusLockedOverrides);
       await tapRow(tester, MeScreen.shareKey);
       expect(find.text('page:/plus'), findsOneWidget);
       expect(find.text('page:/shares/new', skipOffstage: false), findsNothing);
@@ -419,10 +408,7 @@ void main() {
 
     testWidgets('Plus locked, with shares: opens the list', (tester) async {
       shareService.shares = [testShare()];
-      await pump(
-        tester,
-        extra: [plusAccessProvider.overrideWithValue(PlusAccess.locked)],
-      );
+      await pump(tester, extra: plusLockedOverrides);
       await tapRow(tester, MeScreen.shareKey);
       expect(find.text('page:/shares'), findsOneWidget);
       expect(find.text('page:/plus', skipOffstage: false), findsNothing);

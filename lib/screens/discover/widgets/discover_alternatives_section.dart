@@ -49,7 +49,7 @@ class DiscoverAlternativesSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final plusLocked = ref.watch(plusAccessProvider) == PlusAccess.locked;
+    final plusLocked = ref.watch(plusLockedProvider);
     final list = groups.value;
     final hasAny = list != null && list.isNotEmpty;
     return DiscoverSection(

@@ -33,7 +33,7 @@ class PatternsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(insightsProvider.notifier);
-    final plusLocked = ref.watch(plusAccessProvider) == PlusAccess.locked;
+    final plusLocked = ref.watch(plusLockedProvider);
     final body = ref
         .watch(insightsProvider)
         .when(

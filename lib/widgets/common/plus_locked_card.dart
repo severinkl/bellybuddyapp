@@ -1,9 +1,8 @@
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
-import '../../router/route_names.dart';
+import '../../router/navigation_extensions.dart';
 import '../../services/plus/plus_copy.dart';
 import 'bb_button.dart';
 import 'bb_card.dart';
@@ -47,7 +46,7 @@ class PlusLockedCard extends StatelessWidget {
           BbButton(
             tapKey: openKey,
             label: PlusCopy.openPlus,
-            onPressed: () => context.push(RoutePaths.plus),
+            onPressed: () => context.openPlus(),
           ),
         ],
       ),
@@ -66,7 +65,7 @@ class PlusLink extends StatelessWidget {
   Widget build(BuildContext context) {
     return TextButton(
       key: openKey,
-      onPressed: () => context.push(RoutePaths.plus),
+      onPressed: () => context.openPlus(),
       style: TextButton.styleFrom(foregroundColor: AppTheme.foreground),
       child: const Text('${PlusCopy.openPlus} ›'),
     );

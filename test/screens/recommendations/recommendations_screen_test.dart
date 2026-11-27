@@ -13,7 +13,6 @@ import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
-import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/providers/recipe_collection_provider.dart';
 import 'package:belly_buddy/providers/recommendation_index_provider.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
@@ -34,6 +33,7 @@ import '../../helpers/fixtures.dart';
 import '../../helpers/layout_checks.dart';
 import '../../helpers/mocks.dart';
 import '../../helpers/riverpod_helpers.dart';
+import '../../helpers/purchases_fakes.dart';
 
 List<Override> _overridesFor(List<Recommendation> recommendations) {
   final mock = MockRecommendationRepository();
@@ -908,9 +908,9 @@ void main() {
     const line =
         'Mit Belly Buddy Plus schaut sich Belly Buddy jede Woche deine '
         'Einträge an.';
-    final locked = plusAccessProvider.overrideWithValue(PlusAccess.locked);
-    final open = plusAccessProvider.overrideWithValue(PlusAccess.open);
-    final switchOff = paywallEnabledProvider.overrideWithValue(false);
+    final locked = plusLockedOverrides.single;
+    final open = plusOpenOverrides.single;
+    final switchOff = plusSwitchOffOverrides.single;
 
     Future<GoRouter> pumpRouted(
       WidgetTester tester,

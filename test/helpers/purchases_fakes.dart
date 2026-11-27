@@ -1,6 +1,10 @@
 import 'dart:async';
 
+// ignore_for_file: invalid_use_of_internal_member
+import 'package:riverpod/src/internals.dart' show Override;
+
 import 'package:belly_buddy/models/plus_status.dart';
+import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/services/purchases/purchases_gateway.dart';
 
 /// A [PlusOffer] with defaults: 6,90 € a month, 14 trial days.
@@ -150,3 +154,31 @@ class FakePurchasesGateway implements PurchasesGateway {
 
   Future<void> dispose() => statusController.close();
 }
+
+/// A [PlusNotifier] that answers [answer] instead of asking the SDK.
+class FakePlusNotifier extends PlusNotifier {
+  FakePlusNotifier(this.answer);
+
+  /// Always answers [status].
+  FakePlusNotifier.status(PlusStatus status) : answer = (() async => status);
+
+  final Future<PlusStatus> Function() answer;
+
+  @override
+  Future<PlusStatus> build() => answer();
+}
+
+/// Plus is locked (the switch is on, the user has no Plus).
+final plusLockedOverrides = <Override>[
+  plusAccessProvider.overrideWithValue(PlusAccess.locked),
+];
+
+/// Plus is usable.
+final plusOpenOverrides = <Override>[
+  plusAccessProvider.overrideWithValue(PlusAccess.open),
+];
+
+/// The remote Plus switch is off.
+final plusSwitchOffOverrides = <Override>[
+  paywallEnabledProvider.overrideWithValue(false),
+];

@@ -10,6 +10,7 @@ import '../../models/data_share.dart';
 import '../../providers/buddy_provider.dart';
 import '../../providers/plus_provider.dart';
 import '../../providers/shares_provider.dart';
+import '../../router/navigation_extensions.dart';
 import '../../router/route_names.dart';
 import '../../utils/date_format_utils.dart';
 import '../../utils/logger.dart';
@@ -205,8 +206,8 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
         ref.watch(activeDietitianCountProvider) >= maxActiveDietitians;
     // New shares need Plus: while it is locked, both buttons and „Neu
     // erstellen" open the paywall; the list, „Ändern" and ending stay.
-    final plusLocked = ref.watch(plusAccessProvider) == PlusAccess.locked;
-    void openPlus() => unawaited(context.push(RoutePaths.plus));
+    final plusLocked = ref.watch(plusLockedProvider);
+    void openPlus() => unawaited(context.openPlus());
     final VoidCallback? onCreate = linksFull
         ? null
         : plusLocked

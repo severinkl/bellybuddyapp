@@ -81,6 +81,7 @@ class _IngredientSuggestionsScreenState
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(ingredientSuggestionProvider);
+    final plusLocked = ref.watch(plusLockedProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Alternativen')),
@@ -125,8 +126,7 @@ class _IngredientSuggestionsScreenState
                 ]..sort(IngredientSuggestionGroup.compareNewFirst);
 
                 // None received while Plus is locked: where they come from.
-                if (groups.isEmpty &&
-                    ref.watch(plusAccessProvider) == PlusAccess.locked) {
+                if (groups.isEmpty && plusLocked) {
                   return const Center(
                     child: Padding(
                       padding: AppConstants.paddingLg,

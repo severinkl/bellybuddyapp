@@ -9,7 +9,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:belly_buddy/providers/core_providers.dart';
-import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/widgets/common/weekly_tips_switch.dart';
@@ -18,6 +17,7 @@ import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/riverpod_helpers.dart';
+import '../../helpers/purchases_fakes.dart';
 
 /// A repository whose weekly-tips write waits for [release].
 class _SlowRepo extends FakeProfileRepository {
@@ -143,9 +143,9 @@ void main() {
   });
 
   group('Belly Buddy Plus', () {
-    final locked = [plusAccessProvider.overrideWithValue(PlusAccess.locked)];
-    final open = [plusAccessProvider.overrideWithValue(PlusAccess.open)];
-    final switchOff = [paywallEnabledProvider.overrideWithValue(false)];
+    final locked = plusLockedOverrides;
+    final open = plusOpenOverrides;
+    final switchOff = plusSwitchOffOverrides;
 
     testWidgets('locked, off: the Plus subline; turning it on opens /plus '
         'and saves nothing', (tester) async {

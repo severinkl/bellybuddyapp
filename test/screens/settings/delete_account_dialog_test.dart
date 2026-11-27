@@ -16,14 +16,6 @@ import '../../helpers/fakes.dart';
 import '../../helpers/purchases_fakes.dart';
 import '../../helpers/riverpod_helpers.dart';
 
-class _FakePlus extends PlusNotifier {
-  _FakePlus(this.status);
-  final PlusStatus status;
-
-  @override
-  Future<PlusStatus> build() async => status;
-}
-
 class _CountingAuthRepository extends FakeAuthRepository {
   int deletes = 0;
   bool fail = false;
@@ -65,7 +57,8 @@ void main() {
         if (plusOverrides == null) ...[
           ...overrides(),
           paywallEnabledProvider.overrideWithValue(plus != null),
-          if (plus != null) plusProvider.overrideWith(() => _FakePlus(plus)),
+          if (plus != null)
+            plusProvider.overrideWith(() => FakePlusNotifier.status(plus)),
         ],
       ],
     );
@@ -173,7 +166,7 @@ void main() {
           authRepositoryProvider.overrideWithValue(auth),
           profileRepositoryProvider.overrideWithValue(FakeProfileRepository()),
           currentUserIdProvider.overrideWithValue('u1'),
-          paywallEnabledProvider.overrideWithValue(false),
+          ...plusSwitchOffOverrides,
           purchasesGatewayProvider.overrideWithValue(gateway),
         ],
       );

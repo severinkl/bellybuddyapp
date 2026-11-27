@@ -1,4 +1,5 @@
 import '../../models/plus_status.dart';
+import '../../utils/date_format_utils.dart';
 
 /// Every German string of the Belly Buddy Plus paywall (spec 4.5) and the
 /// status line of the Ich row (spec 4.6).
@@ -109,7 +110,7 @@ abstract final class PlusCopy {
       return 'Zahlung offen – bitte im Store prüfen';
     }
     final at = status.expiresAt;
-    final date = at == null ? null : _dayMonth(at);
+    final date = at == null ? null : formatDayMonth(at.toLocal());
     return switch (status.state) {
       PlusState.none => 'Alle Funktionen freischalten',
       PlusState.lapsed => 'Abgelaufen · Wieder abonnieren',
@@ -121,12 +122,5 @@ abstract final class PlusCopy {
         'Aktiv · verlängert sich am $date',
       PlusState.active => 'Aktiv bis $date',
     };
-  }
-
-  /// „10.12.": [at] is a real instant (the store's expiry, UTC), so it is
-  /// shown in the device's time zone.
-  static String _dayMonth(DateTime at) {
-    final local = at.toLocal();
-    return '${local.day}.${local.month}.';
   }
 }

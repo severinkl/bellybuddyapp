@@ -1,11 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../config/app_theme.dart';
 import '../../providers/plus_provider.dart';
 import '../../providers/profile_provider.dart';
-import '../../router/route_names.dart';
+import '../../router/navigation_extensions.dart';
 import '../../services/plus/plus_copy.dart';
 import '../../utils/logger.dart';
 
@@ -56,7 +55,7 @@ class _WeeklyTipsSwitchState extends ConsumerState<WeeklyTipsSwitch> {
   Widget build(BuildContext context) {
     final enabled = ref.watch(weeklyTipsEnabledProvider);
     if (enabled == null) return const SizedBox.shrink();
-    final plusLocked = ref.watch(plusAccessProvider) == PlusAccess.locked;
+    final plusLocked = ref.watch(plusLockedProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -69,8 +68,7 @@ class _WeeklyTipsSwitchState extends ConsumerState<WeeklyTipsSwitch> {
           value: enabled,
           activeThumbColor: AppTheme.primary,
           contentPadding: EdgeInsets.zero,
-          onChanged: (on) =>
-              plusLocked && on ? context.push(RoutePaths.plus) : _set(on),
+          onChanged: (on) => plusLocked && on ? context.openPlus() : _set(on),
         ),
         const Text(
           WeeklyTipsSwitch.sentence,

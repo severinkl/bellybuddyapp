@@ -6,7 +6,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
-import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/screens/patterns/patterns_unlocked_screen.dart';
 import 'package:belly_buddy/widgets/buddy/animated_buddy.dart';
 import 'package:belly_buddy/widgets/buddy/buddy_actions.dart';
@@ -15,6 +14,7 @@ import 'package:belly_buddy/widgets/buddy/buddy_stage.dart';
 
 import '../../helpers/app_host.dart';
 import '../../helpers/layout_checks.dart';
+import '../../helpers/purchases_fakes.dart';
 
 /// The router: /dashboard, with the celebration pushed on top; [alone],
 /// the celebration opened directly (a deep link, restored state).
@@ -96,10 +96,7 @@ void main() {
     testWidgets(
       'locked: the line says the Muster are there, button unchanged',
       (tester) async {
-        final router = await _pump(
-          tester,
-          plus: [plusAccessProvider.overrideWithValue(PlusAccess.locked)],
-        );
+        final router = await _pump(tester, plus: plusLockedOverrides);
         expect(find.text(lockedLine), findsOneWidget);
         expect(find.text(todayLine), findsNothing);
         expect(find.text('Muster ansehen'), findsOneWidget);
@@ -111,19 +108,13 @@ void main() {
     );
 
     testWidgets('open: today\'s line', (tester) async {
-      await _pump(
-        tester,
-        plus: [plusAccessProvider.overrideWithValue(PlusAccess.open)],
-      );
+      await _pump(tester, plus: plusOpenOverrides);
       expect(find.text(todayLine), findsOneWidget);
       expect(find.text(lockedLine), findsNothing);
     });
 
     testWidgets('switch off: today\'s line', (tester) async {
-      await _pump(
-        tester,
-        plus: [paywallEnabledProvider.overrideWithValue(false)],
-      );
+      await _pump(tester, plus: plusSwitchOffOverrides);
       expect(find.text(todayLine), findsOneWidget);
       expect(find.text(lockedLine), findsNothing);
     });

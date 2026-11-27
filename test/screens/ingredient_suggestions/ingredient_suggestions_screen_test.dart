@@ -7,7 +7,6 @@ import 'package:riverpod/src/internals.dart' show Override;
 import 'package:belly_buddy/screens/ingredient_suggestions/ingredient_suggestions_screen.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/ingredient_suggestion_provider.dart';
-import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/widgets/common/plus_locked_card.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
 
@@ -15,6 +14,7 @@ import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/mocks.dart';
 import '../../helpers/riverpod_helpers.dart';
+import '../../helpers/purchases_fakes.dart';
 
 List<Override> _overrides() => [
   ingredientRepositoryProvider.overrideWithValue(FakeIngredientRepository()),
@@ -135,9 +135,7 @@ void main() {
     ) async {
       await tester.pumpWithProviders(
         const IngredientSuggestionsScreen(),
-        overrides: none(
-          plusAccessProvider.overrideWithValue(PlusAccess.locked),
-        ),
+        overrides: none(plusLockedOverrides.single),
       );
       await tester.pump(const Duration(milliseconds: 200));
 
@@ -147,8 +145,8 @@ void main() {
     });
 
     for (final (name, plus) in [
-      ('open', plusAccessProvider.overrideWithValue(PlusAccess.open)),
-      ('switch off', paywallEnabledProvider.overrideWithValue(false)),
+      ('open', plusOpenOverrides.single),
+      ('switch off', plusSwitchOffOverrides.single),
     ]) {
       testWidgets('$name: today\'s empty line', (tester) async {
         await tester.pumpWithProviders(
@@ -168,10 +166,7 @@ void main() {
     ) async {
       await tester.pumpWithProviders(
         const IngredientSuggestionsScreen(),
-        overrides: [
-          ..._overrides(),
-          plusAccessProvider.overrideWithValue(PlusAccess.locked),
-        ],
+        overrides: [..._overrides(), ...plusLockedOverrides],
       );
       await tester.pump(const Duration(milliseconds: 200));
       await tester.enterText(find.byType(TextField), 'xyz');

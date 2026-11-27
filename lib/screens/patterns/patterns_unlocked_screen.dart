@@ -58,7 +58,7 @@ class _PatternsUnlockedScreenState
 
   @override
   Widget build(BuildContext context) {
-    final plusLocked = ref.watch(plusAccessProvider) == PlusAccess.locked;
+    final plusLocked = ref.watch(plusLockedProvider);
     return Scaffold(
       body: BbSuccessOverlay(
         message: PatternsUnlockedScreen.title,

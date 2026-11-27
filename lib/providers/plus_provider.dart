@@ -18,6 +18,15 @@ final paywallEnabledProvider = Provider<bool>(
   (ref) => ref.watch(appConfigProvider).value?.paywallEnabled ?? false,
 );
 
+/// The user id Plus can act for: the switch is on, somebody is signed in and
+/// the build has a purchases SDK key. Null otherwise (nothing to identify,
+/// nothing can be bought).
+final plusUserProvider = Provider<String?>((ref) {
+  if (!ref.watch(paywallEnabledProvider)) return null;
+  if (!ref.watch(purchasesGatewayProvider).available) return null;
+  return ref.watch(currentUserIdProvider);
+});
+
 /// The signed-in user's Plus status from the purchases SDK.
 ///
 /// Switch off, nobody signed in or no SDK key → [PlusStatus.none] without any
@@ -43,8 +52,7 @@ class PlusNotifier extends AsyncNotifier<PlusStatus> {
   @override
   Future<PlusStatus> build() async {
     final ref = this.ref;
-    final enabled = ref.watch(paywallEnabledProvider);
-    final userId = ref.watch(currentUserIdProvider);
+    final userId = ref.watch(plusUserProvider);
     final gateway = ref.watch(purchasesGatewayProvider);
 
     // Never show the previous user's status while the next one loads:
@@ -56,9 +64,7 @@ class PlusNotifier extends AsyncNotifier<PlusStatus> {
       state = const AsyncLoading();
     }
 
-    if (!enabled || userId == null || !gateway.available) {
-      return PlusStatus.none;
-    }
+    if (userId == null) return PlusStatus.none;
 
     if (!await _identify(ref, gateway, userId)) return PlusStatus.none;
     // A rebuild may land between the identify and here: never subscribe for
@@ -126,14 +132,9 @@ class PlusNotifier extends AsyncNotifier<PlusStatus> {
   /// False when the switch is off, nobody is signed in, there is no SDK key
   /// or the user changed meanwhile.
   Future<bool> identifyCurrent(Ref caller) async {
-    final userId = caller.read(currentUserIdProvider);
-    final gateway = caller.read(purchasesGatewayProvider);
-    if (!caller.read(paywallEnabledProvider) ||
-        userId == null ||
-        !gateway.available) {
-      return false;
-    }
-    return _identify(caller, gateway, userId);
+    final userId = caller.read(plusUserProvider);
+    if (userId == null) return false;
+    return _identify(caller, caller.read(purchasesGatewayProvider), userId);
   }
 
   /// Buys [offer] for the signed-in user.
@@ -161,13 +162,9 @@ class PlusNotifier extends AsyncNotifier<PlusStatus> {
     String what,
     Future<PurchaseOutcome> Function(PurchasesGateway) run,
   ) async {
-    final userId = ref.read(currentUserIdProvider);
+    final userId = ref.read(plusUserProvider);
+    if (userId == null) return const PurchaseFailed();
     final gateway = ref.read(purchasesGatewayProvider);
-    if (!ref.read(paywallEnabledProvider) ||
-        userId == null ||
-        !gateway.available) {
-      return const PurchaseFailed();
-    }
     await _identifying;
     if (_identity != userId || !_stillSignedIn(userId)) {
       _log.warn('$what: not identified');
@@ -213,10 +210,9 @@ final plusProvider = AsyncNotifierProvider<PlusNotifier, PlusStatus>(
 /// The store's monthly offer for the signed-in user; null with the switch
 /// off, nobody signed in, no SDK key, or no offer in the store.
 final plusOfferProvider = FutureProvider.autoDispose<PlusOffer?>((ref) async {
-  final enabled = ref.watch(paywallEnabledProvider);
-  final userId = ref.watch(currentUserIdProvider);
+  final userId = ref.watch(plusUserProvider);
+  if (userId == null) return null;
   final gateway = ref.watch(purchasesGatewayProvider);
-  if (!enabled || userId == null || !gateway.available) return null;
 
   if (!await ref.read(plusProvider.notifier).identifyCurrent(ref)) return null;
   final offer = await gateway.offer();
@@ -230,12 +226,15 @@ enum PlusAccess { open, locked }
 /// (nothing can be bought, R14), status unknown (loading, error) or
 /// trial/active → open; none/lapsed → locked.
 final plusAccessProvider = Provider<PlusAccess>((ref) {
-  if (!ref.watch(paywallEnabledProvider)) return PlusAccess.open;
-  if (ref.watch(currentUserIdProvider) == null) return PlusAccess.open;
-  if (!ref.watch(purchasesGatewayProvider).available) return PlusAccess.open;
+  if (ref.watch(plusUserProvider) == null) return PlusAccess.open;
   final plus = ref.watch(plusProvider);
   if (plus.isLoading || plus.hasError) return PlusAccess.open;
   final status = plus.value;
   if (status == null || status.granted) return PlusAccess.open;
   return PlusAccess.locked;
 });
+
+/// True while Plus features are locked (see [plusAccessProvider]).
+final plusLockedProvider = Provider<bool>(
+  (ref) => ref.watch(plusAccessProvider) == PlusAccess.locked,
+);

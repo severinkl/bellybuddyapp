@@ -7,7 +7,6 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:belly_buddy/providers/buddy_provider.dart';
-import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/router/app_router.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/patterns/patterns_screen.dart';
@@ -20,6 +19,7 @@ import 'package:belly_buddy/widgets/common/plus_locked_card.dart';
 import '../../helpers/app_lifecycle.dart';
 import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
+import '../../helpers/purchases_fakes.dart';
 
 /// The app's clock, pinned: the entries ([_entries]) lie before it, in the
 /// insights' window on any date.
@@ -258,9 +258,9 @@ void main() {
   });
 
   group('Belly Buddy Plus', () {
-    final locked = [plusAccessProvider.overrideWithValue(PlusAccess.locked)];
-    final open = [plusAccessProvider.overrideWithValue(PlusAccess.open)];
-    final switchOff = [paywallEnabledProvider.overrideWithValue(false)];
+    final locked = plusLockedOverrides;
+    final open = plusOpenOverrides;
+    final switchOff = plusSwitchOffOverrides;
 
     testWidgets('locked after the unlock: the Plus card and the preview', (
       tester,
