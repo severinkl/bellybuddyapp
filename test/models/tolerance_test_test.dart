@@ -212,6 +212,21 @@ void main() {
     expect(PatternStats.fromJson(_stats({})).restrictive, isFalse);
   });
 
+  test('a test this build cannot read is kept as unreadable', () {
+    final stats = PatternStats.fromJson(
+      _stats({
+        'test': {'id': 't1', 'phase': 'later'},
+      }),
+    );
+    expect(stats.test, isNull);
+    expect(stats.hasUnreadableTest, isTrue);
+    expect(PatternStats.fromJson(_stats({})).hasUnreadableTest, isFalse);
+    expect(
+      PatternStats.fromJson(_stats({'test': null})).hasUnreadableTest,
+      isFalse,
+    );
+  });
+
   test('a tested value that is not a list is empty, the rest parses', () {
     final stats = PatternStats.fromJson(
       _stats({

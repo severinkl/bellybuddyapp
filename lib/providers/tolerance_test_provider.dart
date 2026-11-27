@@ -248,7 +248,8 @@ final toleranceTestCompleterProvider = Provider<void>((ref) {
 /// Whether „Test starten" / „Testen" may be offered: Plus open, the stats
 /// loaded ([AsyncData], not a reload or another user's value), not locked,
 /// not restrictive, and no active test (also none past its end that is not
-/// completed yet: the one-active-test index would reject the start).
+/// completed yet: the one-active-test index would reject the start; nor one
+/// this build cannot read).
 bool canOfferTest(AsyncValue<PatternStats?> stats, {required bool plusLocked}) {
   // A rebuild (a user change) is an AsyncData that is still loading, with
   // the previous value.
@@ -256,7 +257,7 @@ bool canOfferTest(AsyncValue<PatternStats?> stats, {required bool plusLocked}) {
     return false;
   }
   final s = stats.value;
-  if (s == null || s.restrictive) return false;
+  if (s == null || s.restrictive || s.hasUnreadableTest) return false;
   return !(s.test?.isActive ?? false);
 }
 

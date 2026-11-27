@@ -413,6 +413,18 @@ void main() {
         ),
         isTrue,
       );
+      // The server holds a test this build cannot read: maybe active.
+      const unreadable = PatternStats(
+        windowDays: 90,
+        ratedDays: 41,
+        hardDays: 9,
+        ready: true,
+        hasUnreadableTest: true,
+      );
+      expect(
+        canOfferTest(const AsyncData(unreadable), plusLocked: false),
+        isFalse,
+      );
     });
   });
 }

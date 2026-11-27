@@ -81,6 +81,7 @@ class PatternStats {
     this.tested = const [],
     this.proposal,
     this.restrictive = false,
+    this.hasUnreadableTest = false,
   });
 
   final int windowDays;
@@ -93,6 +94,10 @@ class PatternStats {
 
   /// The active test, or the latest completed one ending within 14 days.
   final ToleranceTestView? test;
+
+  /// The server sent a [test] this build cannot read (so [test] is null): it
+  /// may be active, so no test is offered.
+  final bool hasUnreadableTest;
 
   /// Completed tests of the last 180 days, newest first.
   final List<TestedItem> tested;
@@ -119,23 +124,29 @@ class PatternStats {
   }
 
   /// Unknown keys are ignored; an item with an unknown level is dropped, as
-  /// are a test, tested item or proposal this build cannot read.
-  factory PatternStats.fromJson(Map<String, dynamic> j) => PatternStats(
-    windowDays: j['window_days'] as int,
-    ratedDays: j['rated_days'] as int,
-    hardDays: j['hard_days'] as int,
-    ready: j['ready'] as bool,
-    groups: _items(j['groups']),
-    ingredients: _items(j['ingredients']),
-    calm: _items(j['calm']),
-    test: _tryParse(j['test'], ToleranceTestView.fromJson),
-    tested: [
-      for (final row in j['tested'] is List ? j['tested'] as List : const [])
-        ?_tryParse(row, TestedItem.fromJson),
-    ],
-    proposal: _tryParse(j['proposal'], TestSubject.fromJson),
-    restrictive: j['restrictive'] as bool? ?? true,
-  );
+  /// are a tested item or proposal this build cannot read. A test it cannot
+  /// read is dropped too, but marked ([hasUnreadableTest]).
+  factory PatternStats.fromJson(Map<String, dynamic> j) {
+    final rawTest = j['test'];
+    final test = _tryParse(rawTest, ToleranceTestView.fromJson);
+    return PatternStats(
+      windowDays: j['window_days'] as int,
+      ratedDays: j['rated_days'] as int,
+      hardDays: j['hard_days'] as int,
+      ready: j['ready'] as bool,
+      groups: _items(j['groups']),
+      ingredients: _items(j['ingredients']),
+      calm: _items(j['calm']),
+      test: test,
+      hasUnreadableTest: rawTest != null && test == null,
+      tested: [
+        for (final row in j['tested'] is List ? j['tested'] as List : const [])
+          ?_tryParse(row, TestedItem.fromJson),
+      ],
+      proposal: _tryParse(j['proposal'], TestSubject.fromJson),
+      restrictive: j['restrictive'] as bool? ?? true,
+    );
+  }
 
   static T? _tryParse<T>(Object? raw, T Function(Map<String, dynamic>) parse) {
     if (raw is! Map<String, dynamic>) return null;
