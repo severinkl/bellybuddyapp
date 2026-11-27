@@ -12,6 +12,7 @@ import 'package:belly_buddy/router/app_router.dart';
 import 'package:belly_buddy/screens/dashboard/dashboard_screen.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/buddy_hero.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/daily_review_card.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/insight_card.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_dots.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_line.dart';
@@ -28,6 +29,7 @@ import 'package:belly_buddy/providers/buddy_offers_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/buddy_welcome_provider.dart';
 import 'package:belly_buddy/config/app_theme.dart';
+import 'package:belly_buddy/providers/daily_review_provider.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/repositories/recommendation_repository.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/tips_row.dart';
@@ -47,6 +49,7 @@ import 'package:belly_buddy/services/buddy/buddy_copy.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 import 'package:belly_buddy/services/buddy/care_meters.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
+import 'package:belly_buddy/services/daily_review/daily_review_rules.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
 import 'package:belly_buddy/widgets/buddy/need_meter.dart';
 import 'package:belly_buddy/widgets/buddy/streak_badge.dart';
@@ -396,6 +399,59 @@ void main() {
       expect(
         tester.getRect(find.byKey(InsightCard.cardKey)).top,
         greaterThan(hero.bottom),
+      );
+    });
+
+    testWidgets('Home: the card sits between the Buddy and the insight '
+        'card', (tester) async {
+      final review = DailyReview(
+        day: ReviewDay(DateTime(2026, 11, 27), yesterday: false),
+        meals: 2,
+        lastGut: null,
+        alternative: null,
+        alternativeLocked: false,
+        extras: const [],
+      );
+      await tester.pumpWithProviders(
+        const DashboardScreen(),
+        overrides: [
+          ..._overrides(),
+          dailyReviewProvider.overrideWithValue(review),
+          dailyReviewUpsellRouteProvider.overrideWithValue(null),
+        ],
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final card = tester.getRect(find.byKey(DailyReviewCard.cardKey));
+      expect(
+        card.top,
+        greaterThan(tester.getRect(find.byType(BuddyHero)).bottom),
+      );
+      expect(
+        tester.getRect(find.byKey(InsightCard.cardKey)).top,
+        card.bottom + AppConstants.spacingMd,
+      );
+    });
+
+    testWidgets('no review: no card, the insight card right under the Buddy', (
+      tester,
+    ) async {
+      await tester.pumpWithProviders(
+        const DashboardScreen(),
+        overrides: [
+          ..._overrides(),
+          dailyReviewProvider.overrideWithValue(null),
+        ],
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(
+        find.byKey(DailyReviewCard.cardKey, skipOffstage: false),
+        findsNothing,
+      );
+      expect(
+        tester.getRect(find.byKey(InsightCard.cardKey)).top,
+        tester.getRect(find.byType(BuddyHero)).bottom + AppConstants.spacingMd,
       );
     });
 
