@@ -64,7 +64,7 @@ final class NotFound extends ProductFinderState {
 }
 
 /// A call failed: [message] says so; [canRetry] when repeating can help
-/// (not when core rejected the barcode); [search] when it was a search (the
+/// (not when core rejected the barcode or the search term); [search] when it was a search (the
 /// sheet keeps the search field then). [from] as for [Found].
 final class Failed extends ProductFinderState {
   const Failed(
@@ -235,8 +235,9 @@ class ProductFinderNotifier extends Notifier<ProductFinderState> {
     } on ProductException catch (e) {
       next = Failed(
         e.message ?? productFinderFallbackError,
-        // 400: core rejected the barcode; the same lookup fails again.
-        canRetry: e.status != 400 || loading is! LookingUp,
+        // 400: core rejected the barcode or the term (too short, too
+        // long); the same call fails again.
+        canRetry: e.status != 400,
         search: loading is Searching,
         from: switch (loading) {
           LookingUp(:final from) => from,

@@ -235,8 +235,11 @@ class _ProductFinderSheetState extends ConsumerState<ProductFinderSheet> {
                 if (state is Failed)
                   ProductFailedView(
                     message: state.message,
-                    // The field may have been edited since.
-                    onRetry: () => _finder.retry(query: _query.text),
+                    // The field may have been edited since. A rejected term
+                    // is fixed in the field instead.
+                    onRetry: state.canRetry
+                        ? () => _finder.retry(query: _query.text)
+                        : null,
                   ),
               ],
               // The way back while the lookup runs; its answer is dropped.

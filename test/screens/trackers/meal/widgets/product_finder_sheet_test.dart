@@ -747,6 +747,27 @@ void main() {
     expect(_scannerActive(tester), isTrue);
   });
 
+  testWidgets('a search rejected with 400 offers no retry; the field stays '
+      'editable', (tester) async {
+    final h = _Harness();
+    await h.pump(tester);
+    await _submitSearch(tester, 'J');
+    h.service.searchAnswers.single.completeError(
+      const ProductException(
+        status: 400,
+        message: 'Gib mindestens 2 Zeichen ein.',
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Gib mindestens 2 Zeichen ein.'), findsOneWidget);
+    expect(find.byKey(ProductFinderSheet.retryKey), findsNothing);
+    expect(find.text('Nochmal versuchen'), findsNothing);
+
+    await _submitSearch(tester, 'Joghurt');
+    expect(fieldText(tester), 'Joghurt');
+    expect(h.service.searches, ['J', 'Joghurt']);
+  });
+
   group('accessibility guidelines', () {
     testWidgets('scanning', (tester) async {
       final handle = tester.ensureSemantics();

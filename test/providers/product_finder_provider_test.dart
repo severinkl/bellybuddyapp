@@ -270,4 +270,17 @@ void main() {
     await pumpEventQueue();
     expect((state() as Failed).canRetry, isTrue);
   });
+
+  test('a search rejected with 400 offers no retry', () async {
+    notifier().search('J');
+    service.searchAnswers.single.completeError(
+      const ProductException(status: 400, message: 'Zu kurz.'),
+    );
+    await pumpEventQueue();
+    final failed = state() as Failed;
+    expect(failed.canRetry, isFalse);
+    expect(failed.search, isTrue);
+    notifier().retry(query: 'Joghurt');
+    expect(service.searches, ['J']);
+  });
 }
