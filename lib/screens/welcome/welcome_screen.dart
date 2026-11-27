@@ -11,6 +11,7 @@ import '../../router/route_names.dart';
 import '../../services/haptic_service.dart';
 import '../../widgets/buddy/buddy.dart';
 import '../../widgets/common/bb_button.dart';
+import '../../widgets/common/tap_target.dart';
 
 enum _Phase { asleep, waking, talking, ready }
 
@@ -277,29 +278,31 @@ class _WakeHint extends StatelessWidget {
         key: WelcomeScreen.hintKey,
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: FadeTransition(
-          opacity: pulse,
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.touch_app_outlined,
-                size: AppConstants.iconSizeSm,
-                color: AppTheme.mutedForeground,
-              ),
-              SizedBox(width: AppConstants.spacingSm),
-              Flexible(
-                child: Text(
-                  'Tippe, um ihn zu wecken',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: AppTheme.fontSizeBodyLG,
-                    fontWeight: FontWeight.w500,
-                    color: AppTheme.mutedForeground,
+        child: TapTarget(
+          child: FadeTransition(
+            opacity: pulse,
+            child: const Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.touch_app_outlined,
+                  size: AppConstants.iconSizeSm,
+                  color: AppTheme.mutedForeground,
+                ),
+                SizedBox(width: AppConstants.spacingSm),
+                Flexible(
+                  child: Text(
+                    'Tippe, um ihn zu wecken',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: AppTheme.fontSizeBodyLG,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.mutedForeground,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

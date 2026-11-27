@@ -56,6 +56,7 @@ class A11yScreen {
     this.base = baseOverrides,
     this.seed = _noSeed,
     this.pending = const {},
+    this.reducedMotion = false,
   });
 
   /// German screen name, e.g. 'Tagebuch'.
@@ -71,6 +72,11 @@ class A11yScreen {
 
   /// Check → owning task id, e.g. `{A11yCheck.textContrast: 'XA5'}`.
   final Map<A11yCheck, String> pending;
+
+  /// Opens the screen with reduced motion on, for a screen that animates
+  /// for ever and whose resting look is the one reduced motion shows (so
+  /// the checks don't read whatever frame the endless animation is at).
+  final bool reducedMotion;
 }
 
 /// The app's clock in the harness: Friday, 27 Nov 2026, 12:40.
@@ -162,12 +168,11 @@ const a11yScreens = <A11yScreen>[
     'Willkommen',
     RoutePaths.welcome,
     base: _signedOut,
-    // „Tippe, um ihn zu wecken": 42 px tall; 2.71:1 mid-pulse.
-    pending: {
-      A11yCheck.androidTapTarget: 'XA10',
-      A11yCheck.iosTapTarget: 'XA10',
-      A11yCheck.textContrast: 'XA10',
-    },
+    // „Tippe, um ihn zu wecken" breathes (opacity 0.45–1) until the Buddy
+    // wakes; its resting look, shown at the pulse's peak and steadily under
+    // reduced motion, is full opacity. The checks read that one instead of
+    // the frame the pulse happens to be at after the settle limit.
+    reducedMotion: true,
   ),
   A11yScreen('Anmelden', RoutePaths.auth, base: _signedOut),
   A11yScreen(
@@ -247,8 +252,9 @@ void setUpA11yScreens() {
 
 /// Pumps frames until nothing is scheduled, for at most [_settleLimit] of
 /// fake time. Unlike `pumpAndSettle` it doesn't fail on a screen that
-/// animates for ever (the welcome hint breathes until the Buddy wakes): the
-/// checks then run on the frame shown after [_settleLimit].
+/// animates for ever: the checks then run on the frame shown after
+/// [_settleLimit] (the welcome hint, which breathes until the Buddy wakes,
+/// is opened with [A11yScreen.reducedMotion] instead).
 Future<void> _settle(WidgetTester tester) async {
   await tester.pump();
   for (
@@ -276,6 +282,11 @@ Future<void> pumpA11yScreen(
     ..devicePixelRatio = 1
     ..padding = const FakeViewPadding(top: 62, bottom: 34);
   addTearDown(tester.view.reset);
+  if (s.reducedMotion) {
+    tester.platformDispatcher.accessibilityFeaturesTestValue =
+        const FakeAccessibilityFeatures(disableAnimations: true);
+    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+  }
   final container = ProviderContainer.test(
     overrides: [
       ...s.base(),

@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/rendering.dart' show SemanticsNode;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:belly_buddy/config/buddy_reactions.dart';
@@ -1507,5 +1508,116 @@ void main() {
         expect(profileRepo.lastWrittenEmail, isNull);
       },
     );
+  });
+
+  group('Screen readers', () {
+    /// The picker's node named [label].
+    SemanticsNode picker(WidgetTester tester, String label) =>
+        find.semantics.byLabel(label).evaluate().single;
+
+    testWidgets('the height and weight steps can be completed with '
+        'increase/decrease alone', (tester) async {
+      final handle = tester.ensureSemantics();
+      final app = await _pumpRoutedWizard(tester);
+      await _walkTo(tester, BirthYearStep.birthYearTitleKey);
+
+      expect(
+        picker(tester, 'Geburtsjahr'),
+        isSemantics(label: 'Geburtsjahr', value: '1985'),
+      );
+      // The wheel lists the years newest first: the next one is older.
+      tester.semantics.increase(find.semantics.byLabel('Geburtsjahr'));
+      await tester.pumpAndSettle();
+      expect(
+        picker(tester, 'Geburtsjahr'),
+        isSemantics(label: 'Geburtsjahr', value: '1984'),
+      );
+      await _tapNext(tester);
+      await tester.tap(find.byKey(GenderStep.genderMaennlichKey));
+      await tester.pumpAndSettle();
+      await _tapNext(tester);
+
+      expect(find.byKey(HeightWeightStep.heightWeightTitleKey), findsOneWidget);
+      expect(
+        picker(tester, 'Größe'),
+        isSemantics(
+          label: 'Größe',
+          value: '170 cm',
+          increasedValue: '171 cm',
+          decreasedValue: '169 cm',
+          hasIncreaseAction: true,
+          hasDecreaseAction: true,
+        ),
+      );
+      expect(
+        picker(tester, 'Gewicht'),
+        isSemantics(label: 'Gewicht', value: '70 kg'),
+      );
+      for (var i = 0; i < 2; i++) {
+        tester.semantics.increase(find.semantics.byLabel('Größe'));
+        await tester.pumpAndSettle();
+        tester.semantics.decrease(find.semantics.byLabel('Gewicht'));
+        await tester.pumpAndSettle();
+      }
+      expect(
+        picker(tester, 'Größe'),
+        isSemantics(label: 'Größe', value: '172 cm'),
+      );
+      expect(
+        picker(tester, 'Gewicht'),
+        isSemantics(label: 'Gewicht', value: '68 kg'),
+      );
+
+      await _tapNext(tester);
+      await tester.tap(find.byKey(DietStep.dietAllesKey));
+      await tester.pumpAndSettle();
+      await _tapNext(tester);
+      await _tapNext(tester);
+      await _tapNext(tester);
+      await _signUpWithEmail(tester);
+
+      expect(app.path, RoutePaths.buddyOnboarding);
+      final stored = app.profileRepo.storedProfile!;
+      expect(stored.birthYear, 1984);
+      expect(stored.height, 172);
+      expect(stored.weight, 68);
+      handle.dispose();
+    });
+
+    testWidgets('the selected gender option is selected to assistive tech', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await _pumpWizard(tester);
+      await _walkTo(tester, GenderStep.genderTitleKey);
+
+      await tester.tap(find.byKey(GenderStep.genderWeiblichKey));
+      await tester.pumpAndSettle();
+
+      expect(
+        tester.getSemantics(find.byKey(GenderStep.genderWeiblichKey)),
+        isSemantics(
+          label: 'Weiblich',
+          isButton: true,
+          hasSelectedState: true,
+          isSelected: true,
+          isInMutuallyExclusiveGroup: true,
+        ),
+      );
+      for (final other in [
+        GenderStep.genderMaennlichKey,
+        GenderStep.genderAndereKey,
+      ]) {
+        expect(
+          tester.getSemantics(find.byKey(other)),
+          isSemantics(
+            isButton: true,
+            hasSelectedState: true,
+            isSelected: false,
+          ),
+        );
+      }
+      handle.dispose();
+    });
   });
 }
