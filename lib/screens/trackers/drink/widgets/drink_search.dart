@@ -118,7 +118,7 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
             textInputAction: TextInputAction.done,
             onSubmitted: (_) => _focusNode.unfocus(),
             decoration: InputDecoration(
-              hintText: 'Getränk suchen...',
+              hintText: 'z. B. Pfefferminztee',
               prefixIcon: const Icon(
                 Icons.search,
                 size: AppConstants.iconSizeClose,

@@ -94,7 +94,7 @@ class _CollectionScreenState extends ConsumerState<CollectionScreen> {
               key: CollectionScreen.searchKey,
               controller: _search,
               decoration: InputDecoration(
-                hintText: 'Rezept oder Zutat suchen',
+                hintText: 'z. B. Porridge oder Banane',
                 prefixIcon: const Icon(Icons.search),
                 filled: true,
                 fillColor: AppTheme.card,

@@ -219,7 +219,7 @@ class _IngredientSearchState extends State<IngredientSearch> {
                       focusNode: _focusNode,
                       style: const TextStyle(fontSize: AppTheme.fontSizeBody),
                       decoration: InputDecoration(
-                        hintText: 'Zutat suchen…',
+                        hintText: 'z. B. Haferflocken',
                         isDense: true,
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: AppConstants.spacing12,

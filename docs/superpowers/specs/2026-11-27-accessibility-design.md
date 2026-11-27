@@ -257,3 +257,8 @@ None. No new data, processor or purpose.
   height left over as before. „Muster frei!" now runs all guardrail checks.
 - **Welcome hint pulse, 2026-11-27:** „Tippe, um ihn zu wecken" breathes between 90 % and 100 % opacity (was 45 %), so it
   never drops below 4.5:1 (about 5.0:1 at its low point on white). Under reduced motion it stays at 100 %.
+- **Search fields, 2026-11-27:** the label names the field, the placeholder gives an example in one form („z. B. …"), so a
+  screen reader reads the name once: Rezeptsammlung „Rezept oder Zutat suchen" / „z. B. Porridge oder Banane", Meine Rezepte
+  „Rezept suchen" / „z. B. Porridge", Getränk „Getränk suchen" / „z. B. Pfefferminztee", Zutat „Zutat suchen" /
+  „z. B. Haferflocken", Alternativen „Alternativen suchen" / „z. B. Zwiebel". The visible placeholders change (old: the
+  label again, „Suchen..." on Alternativen).

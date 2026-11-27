@@ -10,6 +10,7 @@ import 'package:belly_buddy/screens/recipes/widgets/recipes_search_field.dart';
 
 import '../../../helpers/fixtures.dart';
 import '../../../helpers/mocks.dart';
+import '../../../helpers/semantics_checks.dart';
 
 void main() {
   late MockUserRecipeRepository repo;
@@ -59,6 +60,20 @@ void main() {
     await tester.tap(clear);
     await tester.pump();
     expect(find.text('curry'), findsNothing);
+  });
+
+  testWidgets('while empty, „Rezept suchen" is read once, with an example', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await pump(tester);
+
+    expectSearchFieldReadOnce(
+      tester,
+      name: 'Rezept suchen',
+      example: 'z. B. Porridge',
+    );
+    handle.dispose();
   });
 
   testWidgets('the recipe search keeps „Rezept suchen" with text entered; '

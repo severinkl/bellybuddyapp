@@ -34,6 +34,7 @@ import '../../../helpers/fixtures.dart';
 import '../../../helpers/layout_checks.dart';
 import '../../../helpers/riverpod_helpers.dart';
 import '../../../helpers/widget_tester_helpers.dart';
+import '../../../helpers/semantics_checks.dart';
 
 List<Override> _overrides({FakeDrinkRepository? drinkRepo}) => [
   entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
@@ -573,6 +574,20 @@ void main() {
               below.first.top - above.map((r) => r.bottom).reduce(math.max);
           expect(gap, greaterThanOrEqualTo(8), reason: 'row $i');
         }
+      });
+
+      testWidgets('while empty, „Getränk suchen" is read once, with an '
+          'example', (tester) async {
+        final handle = tester.ensureSemantics();
+        await pumpWithDrink(tester);
+
+        expectSearchFieldReadOnce(
+          tester,
+          name: 'Getränk suchen',
+          example: 'z. B. Pfefferminztee',
+          field: find.byKey(DrinkSearch.searchFieldKey),
+        );
+        handle.dispose();
       });
 
       testWidgets('the search field keeps „Getränk suchen" with text entered', (

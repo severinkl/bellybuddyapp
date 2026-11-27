@@ -95,7 +95,7 @@ class _IngredientSuggestionsScreenState
               label: 'Alternativen suchen',
               child: TextField(
                 decoration: const InputDecoration(
-                  hintText: 'Suchen...',
+                  hintText: 'z. B. Zwiebel',
                   prefixIcon: Icon(Icons.search),
                 ),
                 onChanged: (v) => setState(() => _searchQuery = v),

@@ -55,7 +55,7 @@ class _RecipesSearchFieldState extends ConsumerState<RecipesSearchField> {
           child: TextField(
             controller: _controller,
             decoration: InputDecoration(
-              hintText: 'Rezept suchen…',
+              hintText: 'z. B. Porridge',
               prefixIcon: const Icon(Icons.search),
               suffixIcon: value.text.isEmpty
                   ? null

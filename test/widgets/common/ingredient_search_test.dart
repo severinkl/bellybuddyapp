@@ -5,6 +5,7 @@ import 'package:belly_buddy/models/ingredient_search_result.dart';
 import 'package:belly_buddy/widgets/common/ingredient_search.dart';
 
 import '../../helpers/riverpod_helpers.dart';
+import '../../helpers/semantics_checks.dart';
 
 IngredientSearchResult _result(String name, {bool isOwn = false}) =>
     IngredientSearchResult(id: 'id-$name', name: name, isOwn: isOwn);
@@ -263,6 +264,24 @@ void main() {
     tester.semantics.tap(find.semantics.byLabel('Suche schließen'));
     await tester.pumpAndSettle();
     expect(field(), findsNothing);
+    handle.dispose();
+  });
+
+  testWidgets('while empty, „Zutat suchen" is read once, with an example', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWithProviders(_Host(catalog: catalog, added: added));
+    await tester.tap(find.text('+ Hinzufügen'));
+    await tester.pumpAndSettle();
+
+    expectSearchFieldReadOnce(
+      tester,
+      name: 'Zutat suchen',
+      example: 'z. B. Haferflocken',
+    );
+    // The scroll to the field waits for the keyboard.
+    await tester.pump(const Duration(seconds: 1));
     handle.dispose();
   });
 

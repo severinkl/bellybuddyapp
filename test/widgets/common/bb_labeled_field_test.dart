@@ -52,7 +52,7 @@ void main() {
             child: TextField(
               key: key,
               decoration: InputDecoration(
-                hintText: 'Rezept suchen…',
+                hintText: 'z. B. Porridge',
                 prefixIcon: const Icon(Icons.search),
                 suffixIcon: IconButton(
                   tooltip: 'Suche löschen',
