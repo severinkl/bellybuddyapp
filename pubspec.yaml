@@ -61,6 +61,7 @@ dependencies:
 
   # App version info
   package_info_plus: ^10.2.2
+  in_app_review: ^2.0.12
 
 dev_dependencies:
   sentry_dart_plugin: ^3.6.0

@@ -382,6 +382,17 @@ class AppConstants {
   /// Prefix of the day he last asked (`reminder_asked_on_<userId>`,
   /// yyyy-MM-dd).
   static const String keyReminderAskedOnPrefix = 'reminder_asked_on_';
+
+  /// Prefix of the app version the store rating was last requested in, per
+  /// user and device (`rating_asked_version_<userId>`).
+  static const String keyRatingAskedVersionPrefix = 'rating_asked_version_';
+
+  /// Prefix of the day the store rating was last requested
+  /// (`rating_asked_on_<userId>`, yyyy-MM-dd).
+  static const String keyRatingAskedOnPrefix = 'rating_asked_on_';
+
+  /// Days between two store rating requests, at least.
+  static const int ratingAskMinDays = 90;
   static const String keyKnowledgeFeedCache = 'knowledge_feed_cache_v1';
   static const String keyBuddyStatePrefix = 'buddy_state_';
 

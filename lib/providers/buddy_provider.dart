@@ -517,6 +517,15 @@ class BuddyNotifier extends AsyncNotifier<BuddyStatus?> {
     };
   }
 
+  /// Whether [kind] (offered with [suffix]) was already shown to the
+  /// signed-in user: its flag is set. False while signed out or when the
+  /// flags can't be read.
+  Future<bool> announcementShown(BuddyAnnouncement kind, String suffix) async {
+    final userId = ref.read(currentUserIdProvider);
+    if (userId == null) return false;
+    return _flagged(_announcementKey(userId, kind, suffix));
+  }
+
   /// Whether the flag [key] is set; false when the flags can't be read.
   Future<bool> _flagged(String key) async =>
       (await _flags())?.getBool(key) ?? false;
