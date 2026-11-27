@@ -60,9 +60,14 @@ class PlusNotifier extends AsyncNotifier<PlusStatus> {
     }
 
     if (!await _identify(ref, gateway, userId)) return PlusStatus.none;
+    // A rebuild may land between the identify and here: never subscribe for
+    // a gone build (onDispose would throw on an unmounted ref).
+    if (!ref.isCurrentUser(userId)) return PlusStatus.none;
 
+    PlusStatus? pushed;
     final sub = gateway.statusChanges.listen((status) {
       if (ref.isCurrentUser(userId) && _identity == userId) {
+        pushed = status;
         state = AsyncData(status);
       }
     });
@@ -71,7 +76,8 @@ class PlusNotifier extends AsyncNotifier<PlusStatus> {
     final status = await gateway.status();
     // A stale build's answer is dropped; the newer build owns the state.
     if (!ref.isCurrentUser(userId)) return PlusStatus.none;
-    return status;
+    // A push that arrived while status() ran is newer than its answer.
+    return pushed ?? status;
   }
 
   /// Makes the SDK identify as [userId] (configure first time, else logIn),
@@ -116,11 +122,24 @@ class PlusNotifier extends AsyncNotifier<PlusStatus> {
   /// Restores earlier purchases for the signed-in user.
   Future<PurchaseOutcome> restore() => _settle('restore', (g) => g.restore());
 
+  /// [userId] is still signed in. Reads the notifier's current ref: the
+  /// ref of an earlier build unmounts on any rebuild, even for the same user.
+  bool _stillSignedIn(String userId) {
+    final ref = this.ref;
+    return ref.mounted && ref.read(currentUserIdProvider) == userId;
+  }
+
+  /// Runs a purchase or restore for the signed-in user.
+  ///
+  /// When the user changed while the store sheet was open, a [PurchaseDone]
+  /// belongs to the previous user: it is neither applied nor synced (the
+  /// webhook records it for that user) and the caller gets
+  /// [PurchaseCancelled], so the new user's paywall stays as it was instead
+  /// of welcoming them to Plus they don't have.
   Future<PurchaseOutcome> _settle(
     String what,
     Future<PurchaseOutcome> Function(PurchasesGateway) run,
   ) async {
-    final ref = this.ref;
     final userId = ref.read(currentUserIdProvider);
     final gateway = ref.read(purchasesGatewayProvider);
     if (!ref.read(paywallEnabledProvider) ||
@@ -129,7 +148,7 @@ class PlusNotifier extends AsyncNotifier<PlusStatus> {
       return const PurchaseFailed();
     }
     await _identifying;
-    if (_identity != userId || !ref.isCurrentUser(userId)) {
+    if (_identity != userId || !_stillSignedIn(userId)) {
       _log.warn('$what: not identified');
       return const PurchaseFailed();
     }
@@ -142,19 +161,19 @@ class PlusNotifier extends AsyncNotifier<PlusStatus> {
       return const PurchaseFailed();
     }
     if (outcome is! PurchaseDone) return outcome;
-    if (!ref.isCurrentUser(userId)) {
+    if (!_stillSignedIn(userId)) {
       _log.warn('$what: user changed');
-      return outcome;
+      return const PurchaseCancelled();
     }
 
     state = AsyncData(outcome.status);
-    await _sync(ref);
+    await _sync();
     return outcome;
   }
 
   /// Tells core to look the entitlement up now (best effort: the webhook and
   /// the server's own lookup catch up otherwise).
-  Future<void> _sync(Ref ref) async {
+  Future<void> _sync() async {
     try {
       await ref.read(edgeFunctionServiceProvider).invoke('plus-sync');
       _log.debug('plus-sync: done');
@@ -186,11 +205,13 @@ final plusOfferProvider = FutureProvider.autoDispose<PlusOffer?>((ref) async {
 enum PlusAccess { open, locked }
 
 /// Whether Plus features are usable — every lock in the UI reads only this.
-/// Switch off, nobody signed in (nothing to lock), status unknown (loading,
-/// error) or trial/active → open; none/lapsed → locked.
+/// Switch off, nobody signed in (nothing to lock), no SDK key in this build
+/// (nothing can be bought, R14), status unknown (loading, error) or
+/// trial/active → open; none/lapsed → locked.
 final plusAccessProvider = Provider<PlusAccess>((ref) {
   if (!ref.watch(paywallEnabledProvider)) return PlusAccess.open;
   if (ref.watch(currentUserIdProvider) == null) return PlusAccess.open;
+  if (!ref.watch(purchasesGatewayProvider).available) return PlusAccess.open;
   final plus = ref.watch(plusProvider);
   if (plus.isLoading || plus.hasError) return PlusAccess.open;
   final status = plus.value;

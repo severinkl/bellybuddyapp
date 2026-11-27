@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -120,18 +122,15 @@ void main() {
     expect(gateway.calls, isEmpty);
   });
 
-  test(
-    'no SDK key: no gateway call, none (paywall says unavailable)',
-    () async {
-      gateway.available = false;
-      final c = make();
-      final status = await statusOf(c);
+  test('no SDK key: no gateway call, none, access open (R14)', () async {
+    gateway.available = false;
+    final c = make();
+    final status = await statusOf(c);
 
-      expect(status.state, PlusState.none);
-      expect(gateway.calls, isEmpty);
-      expect(c.read(plusAccessProvider), PlusAccess.locked);
-    },
-  );
+    expect(status.state, PlusState.none);
+    expect(gateway.calls, isEmpty);
+    expect(c.read(plusAccessProvider), PlusAccess.open);
+  });
 
   test('first user configures with the Supabase id', () async {
     gateway.statusAnswer = _active;
@@ -275,6 +274,46 @@ void main() {
       expect(gateway.statusController.hasListener, isFalse);
     },
   );
+
+  test('a push while status() runs is not overwritten by its answer', () async {
+    final held = gateway.holdNextStatus();
+    final c = make();
+    await c.read(appConfigProvider.future);
+    await _settle();
+    expect(gateway.calls, ['configure:$_a', 'status']);
+
+    gateway.emit(_trial);
+    await _settle();
+    held.complete(PlusStatus.none); // older answer
+    final status = await c.read(plusProvider.future);
+
+    expect(status.state, PlusState.trial);
+    expect(c.read(plusProvider).value?.state, PlusState.trial);
+  });
+
+  // A sign-out (and the rebuild it causes) at any point right after
+  // configure: the gone build never subscribes (and never throws on its
+  // unmounted ref).
+  for (var depth = 0; depth < 12; depth++) {
+    test('sign-out $depth microtasks after configure leaves no '
+        'subscription', () async {
+      final configuring = gateway.holdNextConfigure();
+      final c = make();
+      await c.read(appConfigProvider.future);
+      await _settle();
+
+      void signOutAfter(int n) => n == 0
+          ? (user..set(c, null), c.read(plusProvider))
+          : scheduleMicrotask(() => signOutAfter(n - 1));
+      configuring.complete();
+      signOutAfter(depth);
+      await _settle();
+      await _settle();
+
+      expect(gateway.statusController.hasListener, isFalse);
+      expect((await c.read(plusProvider.future)).state, PlusState.none);
+    });
+  }
 
   group('plusAccessProvider', () {
     for (final (status, access) in [
@@ -460,13 +499,32 @@ void main() {
         user.set(c, _b);
         await c.read(plusProvider.future);
         sheet.complete(const PurchaseDone(_active));
-        await pending;
+        final result = await pending;
         await _settle();
 
+        expect(result, isA<PurchaseCancelled>());
         expect(c.read(plusProvider).value?.state, PlusState.none);
         verifyNever(() => edge.invoke(any(), body: any(named: 'body')));
       },
     );
+
+    test('a rebuild for the same user during the purchase still applies it '
+        'and syncs', () async {
+      final c = make();
+      await statusOf(c);
+      final sheet = gateway.holdNextPurchase();
+      final pending = c.read(plusProvider.notifier).purchase(testPlusOffer());
+      await _settle();
+
+      c.invalidate(plusProvider);
+      await c.read(plusProvider.future);
+      sheet.complete(const PurchaseDone(_active));
+      final result = await pending;
+
+      expect(result, isA<PurchaseDone>());
+      expect(c.read(plusProvider).value?.state, PlusState.active);
+      verify(() => edge.invoke('plus-sync')).called(1);
+    });
   });
 
   group('plusOfferProvider', () {
