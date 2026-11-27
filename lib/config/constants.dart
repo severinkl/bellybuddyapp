@@ -52,6 +52,22 @@ class AppConstants {
 
   /// The smallest tap target (Apple's 44 pt).
   static const double minTapTarget = 44.0;
+  static const Size minTapSize = Size(minTapTarget, minTapTarget);
+
+  /// The relief breathing pacer's circle: smallest (empty lungs) and
+  /// largest (full) diameter.
+  static const double reliefPacerMin = 120.0;
+  static const double reliefPacerMax = 220.0;
+
+  /// How long the pacer's circle takes to follow one second of breath.
+  static const Duration reliefPacerTick = Duration(seconds: 1);
+
+  /// The height of the Buddy on top of the relief list and on its done
+  /// view.
+  static const double reliefBuddyHeight = 160.0;
+
+  /// The relief player's total progress bar.
+  static const double reliefProgressHeight = 4.0;
 
   /// The smallest tap target on Home.
   static const double homeTapTarget = 48.0;
@@ -237,6 +253,9 @@ class AppConstants {
 
   // Entdecken: a recipe card's width in the Meine Rezepte row
   static const double discoverRecipeCardWidth = 148.0;
+
+  // Entdecken: the zen Buddy on the Ruhe-für-den-Bauch card
+  static const double discoverReliefBuddySize = 44.0;
 
   // Rezepte: a recipe page's and a card's picture (width / height), a list
   // row's thumbnail, an ingredient line's mark and amount column, and the
@@ -426,6 +445,10 @@ class AppConstants {
   /// Prefix of the rewards of the first 7 days, per user and device
   /// (`journey_rewards_<userId>`, the JSON of a `JourneyRewards`).
   static const String keyJourneyRewardsPrefix = 'journey_rewards_';
+
+  /// Prefix of the answers to "Ruhe für den Bauch", per user and device
+  /// (`relief_feedback_<userId>`, JSON of exercise id to answer).
+  static const String keyReliefFeedbackPrefix = 'relief_feedback_';
 
   /// Prefix of the Buddy announcement flags
   /// (`buddy_announced_<userId>_<kind>_<yyyy-MM-dd | goal>`), set once an

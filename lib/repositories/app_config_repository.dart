@@ -14,7 +14,7 @@ class AppConfigRepository {
   Future<AppConfig> fetch() async {
     final rows = await _client.from('app_config').select('key, value').inFilter(
       'key',
-      ['minimum_supported_version', 'latest_version'],
+      ['minimum_supported_version', 'latest_version', 'akuthilfe_enabled'],
     );
 
     final byKey = <String, String>{
@@ -29,7 +29,11 @@ class AppConfigRepository {
         'got ${byKey.keys.toList()}',
       );
     }
-    return AppConfig(minimum: minimum, latest: latest);
+    return AppConfig(
+      minimum: minimum,
+      latest: latest,
+      akuthilfeEnabled: byKey['akuthilfe_enabled'] == 'true',
+    );
   }
 }
 
