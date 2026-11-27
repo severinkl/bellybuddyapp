@@ -128,7 +128,9 @@ class ReliefCopy {
 
   /// Semantics label of the pacer's phase container.
   static String phaseSemantics(String label, int secondsLeft) =>
-      '$label, noch $secondsLeft Sekunden';
+      secondsLeft == 1
+      ? '$label, noch 1 Sekunde'
+      : '$label, noch $secondsLeft Sekunden';
 
   static const doneLine = 'Schön, dass du dir die Zeit genommen hast.';
   static const helpedQuestion = "Hat's geholfen?";

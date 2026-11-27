@@ -220,6 +220,21 @@ void main() {
       );
     });
 
+    testWidgets('entering a breathing step announces only its text', (
+      tester,
+    ) async {
+      await pumpPlayer(tester, 'bauchatmung');
+      await tapAndPump(tester, ReliefCopy.start);
+      await tapAndPump(tester, ReliefCopy.next);
+      tester.takeAnnouncements();
+      await tapAndPump(tester, ReliefCopy.next);
+      expect(tester.takeAnnouncements().map((a) => a.message), [
+        exercise('bauchatmung').steps[2].text,
+      ]);
+      await seconds(tester, 4);
+      expect(tester.takeAnnouncements().map((a) => a.message), ['Ausatmen']);
+    });
+
     testWidgets('breathing announces phase words only, never digits', (
       tester,
     ) async {

@@ -77,17 +77,19 @@ class _ReliefPlayerScreenState extends ConsumerState<ReliefPlayerScreen> {
         prev.status == ReliefPlayerStatus.ready ||
         prev.stepIndex != next.stepIndex ||
         next.secondInStep < prev.secondInStep;
+    final phase = step.breath?.phaseAt(next.secondInStep);
     if (stepChanged) {
-      _phase = null;
+      // Only the step text: a phase word right after it would cut it off
+      // (VoiceOver interrupts a running announcement).
+      _phase = phase;
       _announce(step.text);
       if (running) HapticService.light();
     }
 
-    final phase = step.breath?.phaseAt(next.secondInStep);
     if (phase != null && phase != _phase) {
       _phase = phase;
       _announce(breathPhaseLabel(phase));
-      if (running && !stepChanged) HapticService.selection();
+      if (running) HapticService.selection();
     }
   }
 
