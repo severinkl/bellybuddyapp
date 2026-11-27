@@ -7,6 +7,8 @@ import '../providers/auth_provider.dart';
 import '../providers/buddy_onboarding_gate_provider.dart';
 import '../providers/health_consent_provider.dart';
 import '../providers/home_cover_provider.dart';
+import '../providers/relief_provider.dart';
+import '../services/relief/relief_content.dart';
 import '../providers/upgrade_gate_provider.dart';
 import '../utils/logger.dart';
 import '../screens/screens.dart';
@@ -306,6 +308,26 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.patternsUnlocked,
         name: RouteNames.patternsUnlocked,
         builder: (context, state) => const PatternsUnlockedScreen(),
+      ),
+      // Ruhe für den Bauch. Invisible while the gate is off; never behind
+      // the paywall.
+      GoRoute(
+        path: RoutePaths.relief,
+        name: RouteNames.relief,
+        redirect: (context, state) =>
+            ref.read(reliefEnabledProvider) ? null : RoutePaths.discover,
+        builder: (context, state) => const ReliefListScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.reliefExercise,
+        name: RouteNames.reliefExercise,
+        redirect: (context, state) {
+          if (!ref.read(reliefEnabledProvider)) return RoutePaths.discover;
+          final id = state.pathParameters['id']!;
+          return reliefExerciseById(id) == null ? RoutePaths.relief : null;
+        },
+        builder: (context, state) =>
+            ReliefPlayerScreen(exerciseId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: RoutePaths.ingredientSuggestions,

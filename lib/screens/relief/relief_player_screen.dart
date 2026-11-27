@@ -2,12 +2,14 @@ import 'dart:async';
 
 import 'package:flutter/semantics.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/relief_player_provider.dart';
 import '../../providers/relief_provider.dart';
+import '../../router/route_names.dart';
 import '../../services/haptic_service.dart';
 import '../../services/relief/relief_content.dart';
 import '../../services/relief/screen_awake.dart';
@@ -107,7 +109,16 @@ class _ReliefPlayerScreenState extends ConsumerState<ReliefPlayerScreen> {
     ),
   );
 
-  void _close() => Navigator.of(context).maybePop();
+  /// Leaves the player; after a deep-link start with nothing below, goes to
+  /// the list instead.
+  void _close() {
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.maybePop();
+    } else {
+      context.go(RoutePaths.relief);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

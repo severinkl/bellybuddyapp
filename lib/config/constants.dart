@@ -64,6 +64,9 @@ class AppConstants {
   /// The height of the Buddy on the relief done view.
   static const double reliefDoneBuddyHeight = 160.0;
 
+  /// The height of the Buddy on top of the relief list.
+  static const double reliefListBuddyHeight = 160.0;
+
   /// The smallest tap target on Home.
   static const double homeTapTarget = 48.0;
 
