@@ -51,7 +51,7 @@ abstract final class DiaryHelpers {
     return entries;
   }
 
-  /// The day's totals for the Tagebuch („2× Essen · 1,5 L getrunken"),
+  /// The day's totals for the Tagebuch („2× Essen · 1,5 l getrunken"),
   /// parts left out at 0. Null when there is nothing to count (no entries,
   /// or only drinks of 0 ml).
   static String? dayTotals(List<DiaryEntry> entries) {

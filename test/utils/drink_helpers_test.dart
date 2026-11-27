@@ -161,7 +161,7 @@ void main() {
       expect(DrinkHelpers.formatAmount(1500), '1,5 l');
     });
 
-    test('2000 shows 2 L without .0', () {
+    test('2000 shows 2 l without .0', () {
       expect(DrinkHelpers.formatAmount(2000), '2 l');
     });
 
