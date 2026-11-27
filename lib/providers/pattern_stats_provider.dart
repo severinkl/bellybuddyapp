@@ -38,11 +38,22 @@ class PatternStatsNotifier extends AsyncNotifier<PatternStats?> {
     }
   }
 
-  /// Fetches again. Never throws: a failure keeps the last value (an error
+  /// Fetches again, after a running load. Never throws: a failure keeps the last value (an error
   /// without one stays an error), except a lock, which replaces it. A
   /// result for another user, or older than one applied, is dropped.
   Future<void> refresh() async {
     final opRef = ref;
+    // A running load (the first one, or after a user change) may have
+    // fetched before the write that asks for this: wait for it, so it
+    // never overwrites the newer result.
+    while (opRef.mounted && state.isLoading) {
+      try {
+        await future;
+      } catch (_) {
+        // Logged by build.
+      }
+    }
+    if (!opRef.mounted) return;
     final userId = opRef.read(currentUserIdProvider);
     if (userId == null) return;
     final seq = ++_seq;

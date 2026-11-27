@@ -125,4 +125,37 @@ void main() {
 
     expect(c.read(patternStatsProvider).value?.ratedDays, 99);
   });
+
+  test('a write during the first load: the fresh result stays', () async {
+    final first = Completer<PatternStats>();
+    service.answer = (c) => c == 1 ? first.future : Future.value(_stats(c));
+    final c = make();
+    c.listen(patternStatsProvider, (_, _) {});
+    await settle();
+    (c.read(entriesRevisionProvider.notifier) as _Revision).bump();
+    await settle();
+    first.complete(_stats(1));
+    await settle();
+
+    expect(c.read(patternStatsProvider).value?.ratedDays, 2);
+  });
+
+  test('a lock during refresh replaces the value', () async {
+    final c = make();
+    c.listen(patternStatsProvider, (_, _) {});
+    await c.read(patternStatsProvider.future);
+    service.answer = (_) async => throw const PatternStatsLockedException();
+    await c.read(patternStatsProvider.notifier).refresh();
+    expect(c.read(patternStatsProvider).isLocked, isTrue);
+  });
+
+  test('another refresh failure keeps the last value', () async {
+    final c = make();
+    c.listen(patternStatsProvider, (_, _) {});
+    await c.read(patternStatsProvider.future);
+    service.answer = (_) async => throw StateError('x');
+    await c.read(patternStatsProvider.notifier).refresh();
+    expect(c.read(patternStatsProvider).value?.ratedDays, 1);
+    expect(c.read(patternStatsProvider).isLocked, isFalse);
+  });
 }
