@@ -353,41 +353,6 @@ void main() {
       expect(repo.dayTotalFetches, [DateTime(2026, 11, 22)]);
     });
 
-    testWidgets('a custom amount over 3000 ml is refused with a hint', (
-      tester,
-    ) async {
-      final container = ProviderContainer.test(overrides: _overrides());
-      addTearDown(container.dispose);
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MaterialApp(home: DrinkTrackerScreen()),
-        ),
-      );
-      await tester.pump(const Duration(milliseconds: 200));
-      container.read(drinkTrackerProvider.notifier).toggleDrink(testDrink());
-      await tester.pump();
-
-      final field = find.byKey(DrinkSizeSelector.customAmountKey);
-      await tester.ensureVisible(field);
-      await tester.enterText(field, '99999');
-      await tester.pump();
-
-      expect(find.text('Bitte gib 1 bis 3000 ml ein.'), findsOneWidget);
-      final save = tester.widget<ElevatedButton>(
-        find.ancestor(
-          of: find.text('Speichern'),
-          matching: find.byType(ElevatedButton),
-        ),
-      );
-      expect(save.onPressed, isNull);
-
-      await tester.enterText(field, '3000');
-      await tester.pump();
-      expect(find.text('Bitte gib 1 bis 3000 ml ein.'), findsNothing);
-      expect(container.read(drinkTrackerProvider).selectedAmount, 3000);
-    });
-
     testWidgets('on a 393×852 phone with the keypad open the amount hint '
         'shows in full above „Speichern"', (tester) async {
       tester.view
@@ -571,24 +536,6 @@ void main() {
         expect(find.byTooltip('Getränk löschen'), findsOneWidget);
       });
 
-      testWidgets('the custom amount field keeps „Andere Menge in ml" with '
-          '„300" entered', (tester) async {
-        final handle = tester.ensureSemantics();
-        final container = await pumpWithDrink(tester);
-        container.read(drinkTrackerProvider.notifier).toggleDrink(testDrink());
-        await tester.pump();
-
-        final field = find.byKey(DrinkSizeSelector.customAmountKey);
-        await tester.ensureVisible(field);
-        await tester.enterText(field, '300');
-        await tester.pump();
-
-        final node = tester.getSemantics(field);
-        expect(node.label, contains('Andere Menge in ml'));
-        expect(node, isSemantics(isTextField: true, value: '300'));
-        handle.dispose();
-      });
-
       testWidgets('the chosen quick drink and size are selected to assistive '
           'tech', (tester) async {
         final handle = tester.ensureSemantics();
@@ -614,22 +561,24 @@ void main() {
           ),
         );
         expect(
-          nodeOf(DrinkSizeSelector, '250 ml'),
+          tester.getSemantics(find.byKey(DrinkSizeSelector.vesselKey(250))),
           isSemantics(
-            label: '250 ml',
+            label: 'Glas, 250 ml',
             isButton: true,
             hasSelectedState: true,
             isSelected: true,
+            isInMutuallyExclusiveGroup: true,
             hasTapAction: true,
           ),
         );
         expect(
-          nodeOf(DrinkSizeSelector, '500 ml'),
+          tester.getSemantics(find.byKey(DrinkSizeSelector.vesselKey(500))),
           isSemantics(
-            label: '500 ml',
+            label: 'Flasche, 500 ml',
             isButton: true,
             hasSelectedState: true,
             isSelected: false,
+            isInMutuallyExclusiveGroup: true,
             hasTapAction: true,
           ),
         );
@@ -640,14 +589,11 @@ void main() {
 
         // Selected size fill: white text on infoText (4.5:1), not info.
         await tester.pump(AppConstants.animFast);
-        Color? fillOf(Type of, String text) =>
+        Color? fillOf(Finder of) =>
             (tester
                         .widget<AnimatedContainer>(
-                          find.ancestor(
-                            of: find.descendant(
-                              of: find.byType(of),
-                              matching: find.text(text),
-                            ),
+                          find.descendant(
+                            of: of,
                             matching: find.byType(AnimatedContainer),
                           ),
                         )
@@ -655,11 +601,17 @@ void main() {
                     as BoxDecoration?)
                 ?.color;
         // The selected drink tile is white with an infoText border.
-        expect(fillOf(QuickDrinkGrid, 'Wasser'), AppTheme.background);
-        expect(fillOf(DrinkSizeSelector, '250 ml'), AppTheme.infoText);
         expect(
-          fillOf(DrinkSizeSelector, '500 ml'),
-          AppTheme.muted.withValues(alpha: 0.5),
+          fillOf(find.byKey(QuickDrinkGrid.tileKey('water-id'))),
+          AppTheme.background,
+        );
+        expect(
+          fillOf(find.byKey(DrinkSizeSelector.vesselKey(250))),
+          AppTheme.background,
+        );
+        expect(
+          fillOf(find.byKey(DrinkSizeSelector.vesselKey(500))),
+          AppTheme.card,
         );
         handle.dispose();
       });

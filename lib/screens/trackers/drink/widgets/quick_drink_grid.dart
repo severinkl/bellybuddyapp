@@ -11,6 +11,7 @@ import '../../../../widgets/common/bb_tap_area.dart';
 import '../../../../widgets/common/dashed_border_painter.dart';
 import 'drink_glyph.dart';
 import 'drink_search.dart';
+import 'drink_tile_grid.dart';
 
 /// The „Was?" section: up to five drink tiles and „Anderes suchen", which
 /// opens the search in place of the heading.
@@ -38,11 +39,6 @@ class QuickDrinkGrid extends ConsumerWidget {
     );
     final notifier = ref.read(drinkTrackerProvider.notifier);
 
-    final columns =
-        MediaQuery.textScalerOf(context).scale(1) >=
-            AppConstants.drinkGridLargeTextScale
-        ? 2
-        : 3;
     final drinks = DrinkHelpers.tileDrinks(quickDrinks, selectedDrink);
     final cells = <Widget>[
       for (final drink in drinks)
@@ -79,24 +75,7 @@ class QuickDrinkGrid extends ConsumerWidget {
             ),
           ),
         AppConstants.gap8,
-        for (var i = 0; i < cells.length; i += columns) ...[
-          if (i > 0) const SizedBox(height: AppConstants.spacingSm),
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                for (var c = 0; c < columns; c++) ...[
-                  if (c > 0) const SizedBox(width: AppConstants.spacingSm),
-                  Expanded(
-                    child: i + c < cells.length
-                        ? cells[i + c]
-                        : const SizedBox(),
-                  ),
-                ],
-              ],
-            ),
-          ),
-        ],
+        DrinkTileGrid(normalColumns: 3, children: cells),
       ],
     );
   }
@@ -138,14 +117,7 @@ class _DrinkTile extends StatelessWidget {
           minHeight: AppConstants.drinkTileMinHeight,
         ),
         padding: const EdgeInsets.all(AppConstants.spacingXs),
-        decoration: BoxDecoration(
-          color: isSelected ? AppTheme.background : AppTheme.card,
-          borderRadius: BorderRadius.circular(AppConstants.radiusLg),
-          border: Border.all(
-            color: isSelected ? AppTheme.infoText : Colors.transparent,
-            width: AppConstants.borderWidthLg,
-          ),
-        ),
+        decoration: drinkTileDecoration(selected: isSelected),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
