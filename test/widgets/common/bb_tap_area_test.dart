@@ -90,4 +90,30 @@ void main() {
     );
     handle.dispose();
   });
+
+  testWidgets('hint reaches the semantics node', (tester) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWidget(
+      _host(
+        const BbTapArea(
+          label: 'Glas, 250 ml',
+          hint: 'Wähle zuerst ein Getränk.',
+          onTap: null,
+          child: SizedBox(width: 16, height: 16),
+        ),
+      ),
+    );
+
+    expect(
+      tester.getSemantics(find.byType(BbTapArea)),
+      isSemantics(
+        label: 'Glas, 250 ml',
+        hint: 'Wähle zuerst ein Getränk.',
+        isButton: true,
+        hasEnabledState: true,
+        isEnabled: false,
+      ),
+    );
+    handle.dispose();
+  });
 }

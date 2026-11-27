@@ -82,6 +82,7 @@ List<Override> baseOverrides({
   FakeProfileRepository? profiles,
   FakeBuddyRepository? buddies,
   FakeEntryRepository? entries,
+  FakeDrinkRepository? drinks,
   FakeIngredientRepository? ingredients,
   FakeRecommendationRepository? tips,
   FakeUserRecipeRepository? userRecipes,
@@ -95,7 +96,7 @@ List<Override> baseOverrides({
     buddies ?? onboardedBuddyRepository(),
   ),
   entryRepositoryProvider.overrideWithValue(entries ?? FakeEntryRepository()),
-  drinkRepositoryProvider.overrideWithValue(FakeDrinkRepository()),
+  drinkRepositoryProvider.overrideWithValue(drinks ?? FakeDrinkRepository()),
   ingredientRepositoryProvider.overrideWithValue(
     ingredients ?? FakeIngredientRepository(),
   ),

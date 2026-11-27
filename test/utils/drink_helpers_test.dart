@@ -40,7 +40,7 @@ void main() {
     });
 
     test('falls back when recent IDs dont match any drink', () {
-      final drinks = [kaffee, tee];
+      final drinks = [tee, orangensaft]; // no starter drink among them
       final result = DrinkHelpers.buildQuickDrinks(drinks, ['nonexistent']);
       expect(result.length, 2); // fallback: take first 11
     });
@@ -100,6 +100,13 @@ void main() {
     });
   });
 
+  test('isValidAmount: 1 to 3000 ml', () {
+    expect(DrinkHelpers.isValidAmount(0), isFalse);
+    expect(DrinkHelpers.isValidAmount(1), isTrue);
+    expect(DrinkHelpers.isValidAmount(3000), isTrue);
+    expect(DrinkHelpers.isValidAmount(3001), isFalse);
+  });
+
   group('parseAmount', () {
     test('valid positive int string returns int', () {
       expect(DrinkHelpers.parseAmount('250'), 250);
@@ -149,20 +156,211 @@ void main() {
       expect(DrinkHelpers.formatAmount(250), '250 ml');
     });
 
-    test('exactly 1000 shows 1 L without .0', () {
-      expect(DrinkHelpers.formatAmount(1000), '1 L');
+    test('exactly 1000 shows 1 l without .0', () {
+      expect(DrinkHelpers.formatAmount(1000), '1 l');
     });
 
-    test('1500 shows 1.5 L', () {
-      expect(DrinkHelpers.formatAmount(1500), '1,5 L');
+    test('1500 shows 1.5 l', () {
+      expect(DrinkHelpers.formatAmount(1500), '1,5 l');
     });
 
-    test('2000 shows 2 L without .0', () {
-      expect(DrinkHelpers.formatAmount(2000), '2 L');
+    test('2000 shows 2 l without .0', () {
+      expect(DrinkHelpers.formatAmount(2000), '2 l');
     });
 
     test('0 shows 0 ml', () {
       expect(DrinkHelpers.formatAmount(0), '0 ml');
+    });
+  });
+
+  group('drinks screen helpers', () {
+    test('iconFor maps names by keyword in order', () {
+      final cases = {
+        'Wasser': DrinkIcon.glass,
+        'Mineralwasser': DrinkIcon.glass,
+        'Rotwein': DrinkIcon.glass,
+        'Pfefferminztee': DrinkIcon.hotCup,
+        'Kakao': DrinkIcon.hotCup,
+        'Gemüsebrühe': DrinkIcon.hotCup,
+        'Kaffee': DrinkIcon.cup,
+        'Milchkaffee': DrinkIcon.cup,
+        'Chai Latte': DrinkIcon.cup,
+        'Apfelsaft gespritzt': DrinkIcon.bottle,
+        'Eistee': DrinkIcon.bottle,
+        'Tomatensaft': DrinkIcon.bottle,
+        'Zitronenlimo': DrinkIcon.bottle,
+        'Hafermilch': DrinkIcon.carton,
+        'Sojadrink': DrinkIcon.carton,
+        'Kefir': DrinkIcon.carton,
+        'Cola Zero': DrinkIcon.can,
+        'Energy Drink': DrinkIcon.can,
+        'Alkoholfreies Bier': DrinkIcon.can,
+      };
+      cases.forEach(
+        (name, icon) => expect(DrinkHelpers.iconFor(name), icon, reason: name),
+      );
+    });
+
+    test('iconFor ignores case and falls back to glass', () {
+      expect(DrinkHelpers.iconFor('KAFFEE'), DrinkIcon.cup);
+      expect(DrinkHelpers.iconFor('Xyz'), DrinkIcon.glass);
+      expect(DrinkHelpers.iconFor(''), DrinkIcon.glass);
+    });
+
+    test('glassFills: 1000 drunk gives four full glasses', () {
+      expect(
+        DrinkHelpers.glassFills(1000, 0),
+        List.filled(4, (drunk: 1.0, pending: 0.0)),
+      );
+    });
+
+    test('glassFills: 1100 drunk + 400 pending splits the fifth glass', () {
+      expect(DrinkHelpers.glassFills(1100, 400), [
+        ...List.filled(4, (drunk: 1.0, pending: 0.0)),
+        (drunk: 0.4, pending: 0.6),
+        (drunk: 0.0, pending: 1.0),
+      ]);
+    });
+
+    test('glassFills: 1000 + 400 gives two pending glasses, last 60 %', () {
+      final f = DrinkHelpers.glassFills(1000, 400);
+      expect(f.length, 6);
+      expect(f[4], (drunk: 0.0, pending: 1.0));
+      expect(f[5].pending, closeTo(0.6, 1e-9));
+    });
+
+    test('glassFills: 0 ml is one empty glass; 15 l is capped at 48', () {
+      expect(DrinkHelpers.glassFills(0, 0), [(drunk: 0.0, pending: 0.0)]);
+      expect(DrinkHelpers.glassFills(15000, 0).length, 48);
+    });
+
+    test('glassesLabel', () {
+      expect(DrinkHelpers.glassesLabel(0, 0), 'Nichts eingetragen');
+      expect(DrinkHelpers.glassesLabel(250, 0), '1 Glas zu 250 ml getrunken');
+      expect(
+        DrinkHelpers.glassesLabel(1000, 0),
+        '4 Gläser zu je 250 ml getrunken',
+      );
+      expect(
+        DrinkHelpers.glassesLabel(1100, 0),
+        '4 Gläser zu je 250 ml und 100 ml getrunken',
+      );
+      expect(DrinkHelpers.glassesLabel(100, 0), '100 ml getrunken');
+      expect(
+        DrinkHelpers.glassesLabel(1000, 400),
+        '4 Gläser zu je 250 ml getrunken, dazu kommen 400 ml',
+      );
+      expect(
+        DrinkHelpers.glassesLabel(0, 1000),
+        'Nichts eingetragen, dazu kommen 1 l',
+      );
+      expect(
+        DrinkHelpers.glassesLabel(0, 400),
+        'Nichts eingetragen, dazu kommen 400 ml',
+      );
+    });
+
+    final saft = makeDrink('s', 'Saft');
+    final milch = makeDrink('m', 'Milch');
+    final kakao = makeDrink('c', 'Kakao');
+    final mate = makeDrink('x', 'Mate');
+
+    test('tileDrinks: Wasser first, at most five, no duplicates', () {
+      final r = DrinkHelpers.tileDrinks([
+        kaffee,
+        wasser,
+        tee,
+        saft,
+        milch,
+        kakao,
+        kaffee,
+      ], null);
+      expect(r, [wasser, kaffee, tee, saft, milch]);
+    });
+
+    test('tileDrinks: a selected drink outside the five takes the fifth', () {
+      final r = DrinkHelpers.tileDrinks([
+        kaffee,
+        wasser,
+        tee,
+        saft,
+        milch,
+        kakao,
+      ], mate);
+      expect(r, [wasser, kaffee, tee, saft, mate]);
+    });
+
+    test('tileDrinks: a selected drink among the five changes nothing', () {
+      final r = DrinkHelpers.tileDrinks([
+        kaffee,
+        wasser,
+        tee,
+        saft,
+        milch,
+        kakao,
+      ], tee);
+      expect(r, [wasser, kaffee, tee, saft, milch]);
+    });
+
+    test('saveLabel', () {
+      final t = makeDrink('p', 'Pfefferminztee');
+      expect(DrinkHelpers.saveLabel(t, 400), '400 ml Pfefferminztee eintragen');
+      expect(DrinkHelpers.saveLabel(t, 1000), '1 l Pfefferminztee eintragen');
+      expect(DrinkHelpers.saveLabel(t, null), 'Pfefferminztee eintragen');
+    });
+
+    test('timeLabel', () {
+      final now = DateTime(2026, 11, 27, 15);
+      expect(
+        DrinkHelpers.timeLabel(DateTime(2026, 11, 27, 14, 30), now),
+        'Heute, 14:30',
+      );
+      expect(
+        DrinkHelpers.timeLabel(DateTime(2026, 11, 26, 14, 30), now),
+        'Gestern, 14:30',
+      );
+      expect(
+        DrinkHelpers.timeLabel(DateTime(2026, 11, 19, 9, 5), now),
+        '19. Nov., 09:05',
+      );
+    });
+
+    test('buildQuickDrinks fills a user without history with starters', () {
+      final all = [
+        makeDrink('a', 'Apfelsaftschorle'),
+        makeDrink('c', 'Cola'),
+        makeDrink('k', 'kaffee'),
+        makeDrink('w', 'Wasser'),
+      ];
+      expect(DrinkHelpers.buildQuickDrinks(all, []).map((d) => d.name), [
+        'Wasser',
+        'kaffee',
+        'Apfelsaftschorle',
+      ]);
+    });
+
+    test('buildQuickDrinks with five recents adds no starters', () {
+      final all = [
+        wasser,
+        kaffee,
+        tee,
+        saft,
+        milch,
+        kakao,
+        makeDrink('p', 'Pfefferminztee'),
+      ];
+      final r = DrinkHelpers.buildQuickDrinks(all, ['k', 't', 's', 'm']);
+      expect(r.map((d) => d.id), ['w', 'k', 't', 's', 'm']);
+    });
+
+    test('vessels are 250, 330, 500 and 1000 ml', () {
+      expect(DrinkVessel.values.map((v) => v.ml), [250, 330, 500, 1000]);
+      expect(DrinkVessel.values.map((v) => v.label), [
+        'Glas',
+        'Dose',
+        'Flasche',
+        'Große',
+      ]);
     });
   });
 }

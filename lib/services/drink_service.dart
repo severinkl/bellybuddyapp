@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/drink.dart';
+import '../models/drink_entry.dart';
 import '../providers/core_providers.dart';
 import '../utils/date_format_utils.dart';
 import '../utils/logger.dart';
@@ -56,6 +57,25 @@ class DrinkService {
           .toList();
     } catch (e, st) {
       _log.error('fetchRecentDrinkIds failed', e, st);
+      rethrow;
+    }
+  }
+
+  /// The user's newest entry (latest `tracked_at`, ties by latest
+  /// `created_at`) with its drink name, or null without entries.
+  Future<DrinkEntry?> fetchLastEntry(String userId) async {
+    try {
+      final data = await _client
+          .from('drink_entries')
+          .select('*, drinks(name)')
+          .eq('user_id', userId)
+          .order('tracked_at', ascending: false)
+          .order('created_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      return data == null ? null : DrinkEntry.fromDbRow(data);
+    } catch (e, st) {
+      _log.error('fetchLastEntry failed', e, st);
       rethrow;
     }
   }

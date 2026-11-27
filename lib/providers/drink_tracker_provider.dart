@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import '../config/constants.dart';
 import '../models/drink.dart';
 import '../models/drink_entry.dart';
 import '../providers/core_providers.dart';
@@ -24,8 +25,11 @@ class DrinkTrackerState {
   /// The ml drunk on [trackedAt]'s day (without the drink being entered).
   final int dayTotal;
 
-  /// The user has logged drinks before; [quickDrinks] are their last ones.
-  final bool hasRecentDrinks;
+  /// The drink and amount of the user's latest entry; null without one.
+  final LastDrink? lastDrink;
+
+  /// The drink search is open.
+  final bool isSearchOpen;
   final DateTime trackedAt;
 
   DrinkTrackerState({
@@ -39,7 +43,8 @@ class DrinkTrackerState {
     this.isSaving = false,
     this.showSuccess = false,
     this.dayTotal = 0,
-    this.hasRecentDrinks = false,
+    this.lastDrink,
+    this.isSearchOpen = false,
     DateTime? trackedAt,
   }) : trackedAt = trackedAt ?? DateTime.now();
 
@@ -56,7 +61,8 @@ class DrinkTrackerState {
     bool? isSaving,
     bool? showSuccess,
     int? dayTotal,
-    bool? hasRecentDrinks,
+    Object? lastDrink = _unset,
+    bool? isSearchOpen,
     DateTime? trackedAt,
   }) {
     return DrinkTrackerState(
@@ -74,7 +80,10 @@ class DrinkTrackerState {
       isSaving: isSaving ?? this.isSaving,
       showSuccess: showSuccess ?? this.showSuccess,
       dayTotal: dayTotal ?? this.dayTotal,
-      hasRecentDrinks: hasRecentDrinks ?? this.hasRecentDrinks,
+      lastDrink: identical(lastDrink, _unset)
+          ? this.lastDrink
+          : lastDrink as LastDrink?,
+      isSearchOpen: isSearchOpen ?? this.isSearchOpen,
       trackedAt: trackedAt ?? this.trackedAt,
     );
   }
@@ -86,36 +95,77 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
   DrinkTrackerState build() => DrinkTrackerState(trackedAt: DateTime.now());
 
   /// Reset to fresh state at [trackedAt] (default: now) — call when
-  /// opening the tracker screen.
+  /// opening the tracker screen. The search is closed, without suggestions.
   void reset({DateTime? trackedAt}) =>
       state = DrinkTrackerState(trackedAt: trackedAt ?? DateTime.now());
 
   Future<void> loadDrinks() async {
     try {
       final drinkRepo = ref.read(drinkRepositoryProvider);
-      final drinks = await drinkRepo.fetchAll();
-
-      // Build quick drinks from recent entries
       final userId = ref.read(currentUserIdProvider);
-      List<Drink> quick;
-      var hasRecent = false;
-      if (userId != null) {
-        final recentIds = await drinkRepo.fetchRecentDrinkIds(userId);
-        quick = DrinkHelpers.buildQuickDrinks(drinks, recentIds);
-        hasRecent = recentIds.isNotEmpty;
-      } else {
-        quick = drinks.take(11).toList();
+      if (userId == null) {
+        // Signed out: no history, no last entry.
+        final drinks = await drinkRepo.fetchAll();
+        state = state.copyWith(
+          allDrinks: drinks,
+          quickDrinks: drinks.take(AppConstants.drinkFallbackCount).toList(),
+          lastDrink: null,
+          isLoading: false,
+        );
+        return;
       }
-
+      final (drinks, recentIds, lastEntry) = await (
+        drinkRepo.fetchAll(),
+        _fetchRecentIds(drinkRepo, userId),
+        _fetchLastEntry(drinkRepo, userId),
+      ).wait;
       state = state.copyWith(
         allDrinks: drinks,
-        quickDrinks: quick,
-        hasRecentDrinks: hasRecent,
+        quickDrinks: DrinkHelpers.buildQuickDrinks(drinks, recentIds),
+        lastDrink: _resolveLast(lastEntry, drinks),
         isLoading: false,
       );
     } catch (e, st) {
       _log.error('failed to load drinks', e, st);
       state = state.copyWith(isLoading: false);
+    }
+  }
+
+  /// [entry]'s drink in [drinks] and its amount; null without an entry, for
+  /// an unknown drink or an amount the form would refuse.
+  static LastDrink? _resolveLast(DrinkEntry? entry, List<Drink> drinks) {
+    if (entry == null || !DrinkHelpers.isValidAmount(entry.amountMl)) {
+      return null;
+    }
+    final drink = drinks.where((d) => d.id == entry.drinkId).firstOrNull;
+    return drink == null ? null : (drink: drink, amountMl: entry.amountMl);
+  }
+
+  /// The ids of recently drunk drinks; empty when the fetch fails (the
+  /// catalogue and the starter tiles still show).
+  Future<List<String>> _fetchRecentIds(
+    DrinkRepository repo,
+    String userId,
+  ) async {
+    try {
+      return await repo.fetchRecentDrinkIds(userId);
+    } catch (e, st) {
+      _log.error('failed to load recent drinks', e, st);
+      return const [];
+    }
+  }
+
+  /// The latest entry; null when there is none or the fetch fails (the rest
+  /// of the screen loads without the one-tap row).
+  Future<DrinkEntry?> _fetchLastEntry(
+    DrinkRepository repo,
+    String userId,
+  ) async {
+    try {
+      return await repo.fetchLastEntry(userId);
+    } catch (e, st) {
+      _log.error('failed to load the last drink', e, st);
+      return null;
     }
   }
 
@@ -144,6 +194,11 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
     state = state.copyWith(suggestions: results);
   }
 
+  void openSearch() => state = state.copyWith(isSearchOpen: true);
+
+  void closeSearch() =>
+      state = state.copyWith(isSearchOpen: false, suggestions: []);
+
   void toggleDrink(Drink drink) {
     if (state.selectedDrink?.id == drink.id) {
       state = state.copyWith(
@@ -151,10 +206,25 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
         selectedAmount: null,
         customAmount: '',
         suggestions: [],
+        isSearchOpen: false,
       );
     } else {
-      state = state.copyWith(selectedDrink: drink, suggestions: []);
+      state = state.copyWith(
+        selectedDrink: drink,
+        suggestions: [],
+        isSearchOpen: false,
+      );
     }
+  }
+
+  /// Selects [drink] as picked in the search, which closes: never
+  /// deselects, and the chosen amount stays.
+  void selectDrink(Drink drink) {
+    state = state.copyWith(
+      selectedDrink: drink,
+      suggestions: [],
+      isSearchOpen: false,
+    );
   }
 
   void clearSelection() {
@@ -193,9 +263,9 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
       ..sort((a, b) => a.name.compareTo(b.name));
     state = state.copyWith(
       allDrinks: updatedAll,
-      quickDrinks: [newDrink, ...state.quickDrinks],
       selectedDrink: newDrink,
       suggestions: [],
+      isSearchOpen: false,
     );
   }
 
@@ -223,18 +293,49 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
       _log.error('failed to delete drink', e, st);
       rethrow;
     }
+    // The delete took the drink's entries with it: the day total may have
+    // changed, and the last entry if it was this drink's.
+    final wasLast = state.lastDrink?.drink.id == drink.id;
+    if (wasLast) state = state.copyWith(lastDrink: null);
+    await Future.wait([if (wasLast) _reloadLast(), loadDayTotal()]);
+  }
+
+  /// Re-fetches the last entry and resolves it against the loaded drinks.
+  Future<void> _reloadLast() async {
+    final userId = ref.read(currentUserIdProvider);
+    if (userId == null) return;
+    final entry = await _fetchLastEntry(
+      ref.read(drinkRepositoryProvider),
+      userId,
+    );
+    if (!ref.mounted) return;
+    state = state.copyWith(lastDrink: _resolveLast(entry, state.allDrinks));
+  }
+
+  /// Stores the last drink and its amount at [DrinkTrackerState.trackedAt];
+  /// the selection stays untouched.
+  Future<void> saveLast() async {
+    final last = state.lastDrink;
+    if (last == null) return;
+    await _store(last.drink, last.amountMl);
   }
 
   Future<void> save() async {
-    if (state.selectedDrink == null || state.selectedAmount == null) return;
+    final drink = state.selectedDrink;
+    final amount = state.selectedAmount;
+    if (drink == null || amount == null) return;
+    await _store(drink, amount);
+  }
+
+  Future<void> _store(Drink drink, int amountMl) async {
     state = state.copyWith(isSaving: true);
     try {
       final entry = DrinkEntry(
         id: const Uuid().v4(),
         trackedAt: state.trackedAt,
-        drinkId: state.selectedDrink!.id,
-        drinkName: state.selectedDrink!.name,
-        amountMl: state.selectedAmount!,
+        drinkId: drink.id,
+        drinkName: drink.name,
+        amountMl: amountMl,
       );
       await ref.read(entriesProvider.notifier).addDrinkEntry(entry);
       await loadDayTotal();
