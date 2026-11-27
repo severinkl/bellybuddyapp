@@ -19,6 +19,12 @@ PlusOffer testPlusOffer({
 /// out) takes precedence — put a [Completer] future there to answer later,
 /// e.g. to prove a late answer for the previous user is dropped. Use
 /// [holdNextStatus] for that. [statusError] makes [status] throw.
+///
+/// [configureError] / [logInError] make those calls throw (recorded first);
+/// [holdNextConfigure], [holdNextLogIn], [holdNextOffer], [holdNextPurchase]
+/// and [holdNextRestore] make the next such call answer only when the
+/// returned completer completes (a purchase sheet still open, a slow
+/// network).
 class FakePurchasesGateway implements PurchasesGateway {
   FakePurchasesGateway({
     this.available = true,
@@ -42,6 +48,14 @@ class FakePurchasesGateway implements PurchasesGateway {
   PurchaseOutcome purchaseAnswer;
   PurchaseOutcome restoreAnswer;
 
+  Object? configureError;
+  Object? logInError;
+  final _configureQueue = <Future<void>>[];
+  final _logInQueue = <Future<void>>[];
+  final _offerQueue = <Future<PlusOffer?>>[];
+  final _purchaseQueue = <Future<PurchaseOutcome>>[];
+  final _restoreQueue = <Future<PurchaseOutcome>>[];
+
   final calls = <String>[];
   final statusController = StreamController<PlusStatus>.broadcast();
 
@@ -59,15 +73,36 @@ class FakePurchasesGateway implements PurchasesGateway {
     return completer;
   }
 
+  Completer<void> holdNextConfigure() => _hold(_configureQueue);
+  Completer<void> holdNextLogIn() => _hold(_logInQueue);
+  Completer<PlusOffer?> holdNextOffer() => _hold(_offerQueue);
+  Completer<PurchaseOutcome> holdNextPurchase() => _hold(_purchaseQueue);
+  Completer<PurchaseOutcome> holdNextRestore() => _hold(_restoreQueue);
+
+  static Completer<T> _hold<T>(List<Future<T>> queue) {
+    final completer = Completer<T>();
+    queue.add(completer.future);
+    return completer;
+  }
+
   /// Pushes [status] to [statusChanges] as the SDK listener would.
   void emit(PlusStatus status) => statusController.add(status);
 
   @override
-  Future<void> configure(String appUserId) async =>
-      calls.add('configure:$appUserId');
+  Future<void> configure(String appUserId) async {
+    calls.add('configure:$appUserId');
+    final error = configureError;
+    if (error != null) throw error;
+    if (_configureQueue.isNotEmpty) await _configureQueue.removeAt(0);
+  }
 
   @override
-  Future<void> logIn(String appUserId) async => calls.add('logIn:$appUserId');
+  Future<void> logIn(String appUserId) async {
+    calls.add('logIn:$appUserId');
+    final error = logInError;
+    if (error != null) throw error;
+    if (_logInQueue.isNotEmpty) await _logInQueue.removeAt(0);
+  }
 
   @override
   Future<void> logOut() async => calls.add('logOut');
@@ -89,6 +124,7 @@ class FakePurchasesGateway implements PurchasesGateway {
     calls.add('offer');
     final error = offerError;
     if (error != null) throw error;
+    if (_offerQueue.isNotEmpty) return _offerQueue.removeAt(0);
     return offerAnswer;
   }
 
@@ -96,12 +132,14 @@ class FakePurchasesGateway implements PurchasesGateway {
   Future<PurchaseOutcome> purchase(PlusOffer offer) async {
     calls.add('purchase:${offer.priceString}');
     purchasedOffers.add(offer);
+    if (_purchaseQueue.isNotEmpty) return _purchaseQueue.removeAt(0);
     return purchaseAnswer;
   }
 
   @override
   Future<PurchaseOutcome> restore() async {
     calls.add('restore');
+    if (_restoreQueue.isNotEmpty) return _restoreQueue.removeAt(0);
     return restoreAnswer;
   }
 
