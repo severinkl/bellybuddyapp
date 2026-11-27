@@ -15,6 +15,7 @@ import '../../utils/logger.dart';
 import '../../widgets/common/bb_async_state.dart';
 import '../../widgets/common/bb_button.dart';
 import '../../widgets/common/bb_card.dart';
+import 'dietitian_connect_screen.dart';
 import 'widgets/dietitian_share_tile.dart';
 import 'widgets/share_created_sheet.dart';
 import 'widgets/share_tile.dart';
@@ -28,11 +29,6 @@ const _linksFullHint =
     'Du hast schon 5 aktive Links. Beende einen, um einen neuen zu '
     'erstellen.';
 
-/// As many active connections to dietitians as the server allows.
-const _maxActiveDietitians = 3;
-const _dietitiansFullHint =
-    'Du hast 3 Berater:innen verbunden. Beende eine Verbindung, um eine neue '
-    'hinzuzufügen.';
 const _refreshFailed =
     'Aktualisieren hat nicht geklappt. Versuch es später nochmal.';
 
@@ -204,7 +200,7 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
     final linksFull =
         links.where((v) => v.$2 == ShareState.active).length >= _maxActiveLinks;
     final dietitiansFull =
-        ref.watch(activeDietitianCountProvider) >= _maxActiveDietitians;
+        ref.watch(activeDietitianCountProvider) >= maxActiveDietitians;
     final VoidCallback? onCreate = linksFull
         ? null
         : () => unawaited(context.push(RoutePaths.shareCreate));
@@ -288,7 +284,7 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
                 ),
                 if (dietitiansFull) ...[
                   AppConstants.gap8,
-                  const _Hint(_dietitiansFullHint),
+                  const _Hint(dietitiansFullHint),
                 ],
                 AppConstants.gap8,
                 SizedBox(
