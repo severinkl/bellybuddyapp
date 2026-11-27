@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:belly_buddy/services/entry_query_service.dart';
 import 'package:belly_buddy/services/ingredient_service.dart';
 
 import '../helpers/fixtures.dart';
@@ -286,6 +289,42 @@ void main() {
     });
   });
 
+  group('IngredientService.fetchMealsSince', () {
+    test('pages the user\'s meals since the wall-clock bound', () async {
+      final queryBuilder = MockSupabaseQueryBuilder();
+      final fb = SettlableFilterBuilder(Future.value([]));
+      final paged = _PagedTransform([
+        List.generate(
+          EntryQueryService.trackedAtPageSize,
+          (i) => {'id': 'm$i', 'tracked_at': '2026-11-01T12:00:00+00:00'},
+        ),
+        [
+          {'id': 'last', 'tracked_at': '2026-11-01T11:00:00+00:00'},
+        ],
+      ]);
+      when(() => client.from('meal_entries')).thenAnswer((_) => queryBuilder);
+      when(() => queryBuilder.select(any())).thenAnswer((_) => fb);
+      when(() => fb.eq(any(), any())).thenAnswer((_) => fb);
+      when(() => fb.gte(any(), any())).thenAnswer((_) => fb);
+      when(
+        () => fb.order(any(), ascending: any(named: 'ascending')),
+      ).thenAnswer((_) => paged);
+
+      final rows = await service.fetchMealsSince(
+        testUserId,
+        DateTime(2026, 5, 31),
+      );
+
+      expect(rows, hasLength(EntryQueryService.trackedAtPageSize + 1));
+      expect(paged.ranges, [(0, 999), (1000, 1999)]);
+      verify(
+        () => queryBuilder.select('id, tracked_at, ingredients'),
+      ).called(2);
+      verify(() => fb.eq('user_id', testUserId)).called(2);
+      verify(() => fb.gte('tracked_at', '2026-05-31T00:00:00.000Z')).called(2);
+    });
+  });
+
   group('IngredientService.markAllSeen', () {
     test('returns early without DB call when ids is empty', () async {
       await service.markAllSeen([]);
@@ -379,4 +418,45 @@ void main() {
       expect(count, 0);
     });
   });
+}
+
+/// Transform builder whose `range` returns successive pages and records the
+/// requested ranges.
+class _PagedTransform extends MockPostgrestTransformBuilder {
+  _PagedTransform(this._pages);
+
+  final List<List<Map<String, dynamic>>> _pages;
+  final ranges = <(int, int)>[];
+
+  @override
+  PostgrestTransformBuilder<PostgrestList> order(
+    String column, {
+    bool ascending = false,
+    bool nullsFirst = false,
+    String? referencedTable,
+  }) => this;
+
+  @override
+  PostgrestTransformBuilder<PostgrestList> range(
+    int from,
+    int to, {
+    String? referencedTable,
+  }) {
+    ranges.add((from, to));
+    final i = ranges.length - 1;
+    final page = i < _pages.length ? _pages[i] : <Map<String, dynamic>>[];
+    return _SettledTransform(Future.value(page));
+  }
+}
+
+class _SettledTransform extends MockPostgrestTransformBuilder {
+  _SettledTransform(this._future);
+
+  final Future<PostgrestList> _future;
+
+  @override
+  Future<R> then<R>(
+    FutureOr<R> Function(PostgrestList value) onValue, {
+    Function? onError,
+  }) => _future.then(onValue, onError: onError);
 }

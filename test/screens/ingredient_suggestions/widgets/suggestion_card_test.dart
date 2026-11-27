@@ -1,13 +1,17 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/semantics.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shimmer/shimmer.dart';
 
+import 'package:belly_buddy/models/alternative_choice.dart';
+import 'package:belly_buddy/models/ranked_replacement.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/replacement_ingredient.dart';
 import 'package:belly_buddy/screens/ingredient_suggestions/widgets/suggestion_card.dart';
 import 'package:belly_buddy/screens/ingredient_suggestions/widgets/suggestion_detail_modal.dart';
+import '../../../helpers/purchases_fakes.dart';
 import '../../../helpers/reduce_motion.dart';
 
 void main() {
@@ -35,8 +39,11 @@ void main() {
 
   testWidgets('the detail sheet too', (tester) async {
     await tester.pumpWidget(
-      const MaterialApp(
-        home: Scaffold(body: SuggestionDetailModal(group: tofu)),
+      ProviderScope(
+        overrides: plusOpenOverrides,
+        child: const MaterialApp(
+          home: Scaffold(body: SuggestionDetailModal(group: tofu)),
+        ),
       ),
     );
 
@@ -100,26 +107,98 @@ void main() {
     handle.dispose();
   });
 
+  testWidgets('the card row leaves out the ones that do not fit', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SuggestionCard(
+            group: const IngredientSuggestionGroup(
+              ingredientId: 'ing-zwiebel',
+              ingredientName: 'Zwiebel',
+              mealCount: 1,
+              isNew: false,
+              suggestionIds: ['s1'],
+              replacements: [
+                RankedReplacement(
+                  replacement: ReplacementIngredient(id: 'r1', name: 'Lauch'),
+                  verdict: AlternativeChoiceKind.fits,
+                  tier: 0,
+                ),
+                RankedReplacement(
+                  replacement: ReplacementIngredient(id: 'r2', name: 'Ingwer'),
+                  verdict: AlternativeChoiceKind.skip,
+                  tier: 4,
+                ),
+              ],
+            ),
+            onTap: () {},
+            onDismiss: () {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Lauch'), findsOneWidget);
+    expect(find.text('Ingwer'), findsNothing);
+  });
+
+  testWidgets('with every one skipped the card shows no row', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SuggestionCard(
+            group: const IngredientSuggestionGroup(
+              ingredientId: 'ing-zwiebel',
+              ingredientName: 'Zwiebel',
+              mealCount: 1,
+              isNew: false,
+              suggestionIds: ['s1'],
+              replacements: [
+                RankedReplacement(
+                  replacement: ReplacementIngredient(id: 'r2', name: 'Ingwer'),
+                  verdict: AlternativeChoiceKind.skip,
+                  tier: 4,
+                ),
+              ],
+            ),
+            onTap: () {},
+            onDismiss: () {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('Ingwer'), findsNothing);
+    expect(find.byType(ListView), findsNothing);
+  });
+
   group('with disableAnimations the Alternativen placeholders', () {
-    const withImages = IngredientSuggestionGroup(
+    final withImages = IngredientSuggestionGroup(
       ingredientId: 'ing-milk',
       ingredientName: 'Milch',
       ingredientImageUrl: 'https://x.test/milk.jpg',
       mealCount: 2,
       isNew: false,
       suggestionIds: ['s2'],
-      replacements: [
+      replacements: RankedReplacement.inOrder(const [
         ReplacementIngredient(
           id: 'r1',
           name: 'Haferdrink',
           imageUrl: 'https://x.test/oat.jpg',
         ),
-      ],
+      ]),
     );
 
     Future<void> expectCalm(WidgetTester tester, Widget child) async {
       reduceMotion(tester);
-      await tester.pumpWidget(MaterialApp(home: Scaffold(body: child)));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: plusOpenOverrides,
+          child: MaterialApp(home: Scaffold(body: child)),
+        ),
+      );
       final images = find.byType(CachedNetworkImage);
       expect(images, findsWidgets);
       for (final element in images.evaluate()) {
@@ -139,7 +218,7 @@ void main() {
     });
 
     testWidgets('do not shimmer in the detail sheet', (tester) async {
-      await expectCalm(tester, const SuggestionDetailModal(group: withImages));
+      await expectCalm(tester, SuggestionDetailModal(group: withImages));
     });
   });
 }

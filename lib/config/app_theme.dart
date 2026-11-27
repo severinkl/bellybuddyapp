@@ -40,8 +40,17 @@ class AppTheme {
   static const Color successText = Color(0xFF1F6B1F);
   static const Color infoText = Color(0xFF1D4ED8);
 
+  /// The „Passt für mich" check on an alternative's picture (3:1 on its
+  /// white disc).
+  static const Color alternativeFitsCheck = successText;
+
   /// The „Aktiv" state word of a share (dark enough for text on [card]).
   static const Color shareActive = successText;
+
+  /// „Genauer hingeschaut"'s „deutlich auffällig" badge: light text on the
+  /// dark fill (the other levels use [muted]/[card] with dark text).
+  static const Color statBadgeStrongFill = foreground;
+  static const Color statBadgeStrongText = background;
   static const Color border = Color(0xFFE3DFDA);
   static const Color input = Color(0xFFE3DFDA);
   static const Color ring = Color(0xFFB5CC47);

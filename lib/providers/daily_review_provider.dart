@@ -6,8 +6,10 @@ import '../models/gut_feeling_entry.dart';
 import '../models/meal_entry.dart';
 import '../router/route_names.dart';
 import '../services/daily_review/daily_review_rules.dart';
+import '../services/insights/test_copy.dart';
 import '../utils/date_format_utils.dart';
 import '../utils/logger.dart';
+import '../utils/settled_value.dart';
 import 'alternative_choices_provider.dart';
 import 'auth_provider.dart';
 import 'buddy_onboarding_gate_provider.dart';
@@ -15,6 +17,7 @@ import 'diary_provider.dart';
 import 'entries_provider.dart';
 import 'ingredient_suggestion_provider.dart';
 import 'minute_provider.dart';
+import 'pattern_stats_provider.dart';
 import 'plus_provider.dart';
 import 'profile_provider.dart';
 
@@ -34,10 +37,22 @@ final dailyReviewUpsellRouteProvider = Provider<String?>(
   (ref) => ref.watch(plusLockedProvider) ? RoutePaths.plus : null,
 );
 
-/// Lines of other tracks on the card (Insights v2); none yet.
-final dailyReviewExtrasProvider = Provider<List<DailyReviewLine>>(
-  (ref) => const [],
-);
+/// Lines of other tracks on the card (Insights v2): one while a
+/// Verträglichkeits-Test runs and Plus is open
+/// ([TestCopy.dailyReviewLine], to the test page); none otherwise, also
+/// while the stats load for another user or are locked.
+final dailyReviewExtrasProvider = Provider<List<DailyReviewLine>>((ref) {
+  if (ref.watch(plusLockedProvider)) return const [];
+  final stats = ref.watch(patternStatsProvider);
+  if (stats.isLocked) return const [];
+  final test = stats.currentValue?.test;
+  if (test == null || !test.isActive) return const [];
+  if (test.dayIndex < 1 || test.dayIndex > test.totalDays) return const [];
+  final line = TestCopy.dailyReviewLine(test);
+  return line == null
+      ? const []
+      : [DailyReviewLine(line, route: RoutePaths.toleranceTest)];
+});
 
 String _closedKey(String userId) =>
     '${AppConstants.keyDailyReviewClosedPrefix}$userId';

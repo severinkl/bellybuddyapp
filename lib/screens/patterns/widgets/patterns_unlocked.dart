@@ -8,10 +8,14 @@ import '../../registration/widgets/step_field_label.dart';
 import 'day_columns.dart';
 import 'insight_calendar.dart';
 import 'noticed_list.dart';
+import 'stats_section.dart';
+import 'tolerance_test_card.dart';
 
 /// The Muster page once the first patterns unlock: the last 30 days as a
 /// calendar, the good and the hard days with what was often there, and
-/// „Fällt mir auf" ([Insights.showNoticed]).
+/// „Fällt mir auf" ([Insights.showNoticed]), then the 90-day comparison
+/// „Genauer hingeschaut" ([StatsSection], with the test actions) under the
+/// Verträglichkeits-Test card ([ToleranceTestCard]).
 class PatternsUnlocked extends StatelessWidget {
   const PatternsUnlocked({super.key, required this.insights});
 
@@ -41,6 +45,9 @@ class PatternsUnlocked extends StatelessWidget {
           AppConstants.gap8,
           NoticedList(noticed: insights.noticed),
         ],
+        AppConstants.gap24,
+        const ToleranceTestCard(),
+        const StatsSectionWithTests(),
       ],
     );
   }

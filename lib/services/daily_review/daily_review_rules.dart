@@ -93,7 +93,13 @@ int _recentMeals(IngredientSuggestionGroup g, DateTime day) =>
       return back >= 0 && back <= AppConstants.dailyReviewRecentDays - 1;
     }).length;
 
-/// The alternative for the review of [day]: spec §4.2.
+/// The tier from which a replacement is never picked: a sibling (same base
+/// name) of one skipped on any pairing, or skipped itself.
+const _neverPickedTier = 3;
+
+/// The alternative for the review of [day]: spec §4.2. Never one whose base
+/// name the user skipped on any pairing ([RankedReplacement.tier] ≥ 3; the
+/// groups are ranked with the choices).
 AlternativePick? pickAlternative({
   required List<IngredientSuggestionGroup> groups,
   required Set<String> dayMealIds,
@@ -121,10 +127,11 @@ AlternativePick? pickAlternative({
   });
   for (final c in candidates) {
     for (final r in c.group.replacements) {
-      if (!chosen.contains((c.group.ingredientId, r.id))) {
+      if (r.tier < _neverPickedTier &&
+          !chosen.contains((c.group.ingredientId, r.id))) {
         return AlternativePick(
           group: c.group,
-          replacement: r,
+          replacement: r.replacement,
           recentMeals: c.recent,
         );
       }

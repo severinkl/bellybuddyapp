@@ -18,6 +18,7 @@ import 'providers/profile_provider.dart';
 import 'providers/recommendation_provider.dart';
 import 'providers/upgrade_gate_provider.dart';
 import 'providers/user_recipes_provider.dart';
+import 'providers/tolerance_test_provider.dart';
 import 'router/app_router.dart';
 import 'screens/splash/splash_screen.dart';
 import 'providers/pending_route_provider.dart';
@@ -130,6 +131,8 @@ class _BellyBuddyAppState extends ConsumerState<BellyBuddyApp> {
     // Activate notification sync provider
     ref.watch(notificationSyncProvider);
     ref.watch(dailyReviewReminderSyncProvider);
+    // Completes a tolerance test that is over (`phase: done`) on first sight.
+    ref.watch(toleranceTestCompleterProvider);
     // Keeps the tips and the Alternativen loaded (sign-in, foreground).
     ref.watch(discoverNewsProvider);
 

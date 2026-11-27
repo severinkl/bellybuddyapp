@@ -48,7 +48,13 @@ final buddyClockProvider = Provider<DateTime Function()>(
 /// - `journeyReward` once per journey day (1–6, suffix `day<n>`): the
 ///   newest earned day's reward;
 /// - `patternsUnlocked` once ever: the journey's day 7, „Muster frei!";
-/// - `firstTipFailed` once ever: day 3's first tip failed.
+/// - `firstTipFailed` once ever: day 3's first tip failed;
+/// - `testOffer` once per subject (suffix `<kind>_<key>`): his offer of a
+///   Verträglichkeits-Test, in a sheet;
+/// - `testReintro` once per test (`<id>_reintro`): his line on the first
+///   reintroduction day;
+/// - `testDone` once per test (`<id>_done`): his line once the result is
+///   there.
 enum BuddyAnnouncement {
   saverUsed,
   streakBroken,
@@ -60,6 +66,9 @@ enum BuddyAnnouncement {
   journeyReward,
   patternsUnlocked,
   firstTipFailed,
+  testOffer,
+  testReintro,
+  testDone,
 }
 
 /// The signed-in user's Buddy after today's streak evaluation.

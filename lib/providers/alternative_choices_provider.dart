@@ -7,6 +7,13 @@ import '../utils/logger.dart';
 import '../utils/retry_helper.dart';
 import 'auth_provider.dart';
 
+const _localIdPrefix = 'local-';
+
+extension AlternativeChoicePending on AlternativeChoice {
+  /// Shown at once, its write still on the way (no stored row yet).
+  bool get isPending => id.startsWith(_localIdPrefix);
+}
+
 class AlternativeChoicesNotifier
     extends AsyncNotifier<List<AlternativeChoice>> {
   static const _log = AppLogger('AlternativeChoices');
@@ -66,7 +73,7 @@ class AlternativeChoicesNotifier
     );
     // A stored row keeps its created_at when the choice changes.
     final provisional = AlternativeChoice(
-      id: 'local-${_localIds++}',
+      id: '$_localIdPrefix${_localIds++}',
       ingredientId: ingredientId,
       ingredientName: ingredientName,
       replacementId: replacement.id,
@@ -161,14 +168,27 @@ final alternativeChoicesProvider =
       retry: noRetry,
     );
 
-/// (ingredientId, replacementId) of every choice, try or skip; empty while
+/// (ingredientId, replacementId) of every choice, fits, try or skip (a pair
+/// with a verdict is never offered again by the daily review); empty while
 /// loading or failed.
 final chosenAlternativesProvider = Provider<Set<(String, String)>>((ref) {
   final choices = ref.watch(alternativeChoicesProvider).value ?? const [];
   return {for (final c in choices) (c.ingredientId, c.replacementId)};
 });
 
-/// The „Probiere ich" rows, newest first.
+/// The choice for (ingredientId, replacementId), for the feedback sheet;
+/// null without one, while loading or failed.
+final alternativeChoiceForPairProvider = Provider.autoDispose
+    .family<AlternativeChoice?, (String, String)>((ref, pair) {
+      final choices = ref.watch(alternativeChoicesProvider).value ?? const [];
+      for (final c in choices) {
+        if (c.ingredientId == pair.$1 && c.replacementId == pair.$2) return c;
+      }
+      return null;
+    });
+
+/// The „Probiere ich" rows, newest first („Passt für mich" is not among
+/// them).
 final triedAlternativesProvider = Provider<List<AlternativeChoice>>((ref) {
   final choices = ref.watch(alternativeChoicesProvider).value ?? const [];
   return [

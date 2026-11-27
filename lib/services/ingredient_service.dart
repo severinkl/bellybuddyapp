@@ -3,6 +3,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/ingredient_search_result.dart';
 import '../providers/core_providers.dart';
 import '../utils/logger.dart';
+import '../utils/wall_clock.dart';
+import 'entry_query_service.dart';
 
 export '../models/ingredient_search_result.dart';
 
@@ -89,6 +91,7 @@ class IngredientService {
           .from('ingredient_suggestions')
           .select(
             'id, detected_ingredient_id, helptext, meal_id, seen_at, dismissed_at, '
+            'created_at, '
             'ingredients!ingredient_suggestions_detected_ingredient_id_fkey(id, name, image_url)',
           )
           .eq('user_id', userId)
@@ -128,6 +131,27 @@ class IngredientService {
           .inFilter('id', mealIds);
     } catch (e, st) {
       _log.error('fetchMealDetails failed', e, st);
+      rethrow;
+    }
+  }
+
+  /// The user's meals (`id, tracked_at, ingredients`) with `tracked_at`
+  /// since [since] (wall clock), page by page ([fetchPagedSince]), for
+  /// ranking the alternatives.
+  Future<List<Map<String, dynamic>>> fetchMealsSince(
+    String userId,
+    DateTime since,
+  ) async {
+    try {
+      return await fetchPagedSince(
+        _client,
+        'meal_entries',
+        'id, tracked_at, ingredients',
+        userId,
+        wallClockToWire(since),
+      );
+    } catch (e, st) {
+      _log.error('fetchMealsSince failed', e, st);
       rethrow;
     }
   }

@@ -1,4 +1,4 @@
-import 'replacement_ingredient.dart';
+import 'ranked_replacement.dart';
 
 class MealDetail {
   final String id;
@@ -27,7 +27,10 @@ class IngredientSuggestionGroup {
   final bool isNew;
   final List<String> suggestionIds;
   final List<MealDetail> meals;
-  final List<ReplacementIngredient> replacements;
+
+  /// Every replacement, ranked by the user's own verdicts and meals
+  /// (`rankKeyedReplacements`): the skipped ones last.
+  final List<RankedReplacement> replacements;
 
   const IngredientSuggestionGroup({
     required this.ingredientId,
@@ -40,6 +43,13 @@ class IngredientSuggestionGroup {
     this.meals = const [],
     this.replacements = const [],
   });
+
+  /// [replacements] without the skipped ones („Passt nicht für mich"), for
+  /// the summaries (the card row, Discover's „Stattdessen:").
+  List<RankedReplacement> get visibleReplacements => [
+    for (final r in replacements)
+      if (!r.skipped) r,
+  ];
 
   /// When the latest of [meals] was eaten; null without meals.
   DateTime? get latestMeal {
@@ -77,7 +87,7 @@ class IngredientSuggestionGroup {
 
   IngredientSuggestionGroup copyWith({
     bool? isNew,
-    List<ReplacementIngredient>? replacements,
+    List<RankedReplacement>? replacements,
     List<MealDetail>? meals,
   }) {
     return IngredientSuggestionGroup(

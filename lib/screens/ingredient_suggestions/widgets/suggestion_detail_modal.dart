@@ -5,211 +5,380 @@ import '../../../config/app_theme.dart';
 import '../../../models/ingredient_suggestion_group.dart';
 import '../../../config/constants.dart';
 import '../../../utils/reduced_motion.dart';
+import '../../../models/alternative_choice.dart';
+import '../../../models/ranked_replacement.dart';
+import '../../../providers/ingredient_suggestion_provider.dart';
+import '../../../providers/plus_provider.dart';
 import '../../../repositories/meal_media_repository.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/url_utils.dart';
+import 'alternative_feedback_sheet.dart';
 import 'ingredient_placeholder.dart';
 
-class SuggestionDetailModal extends StatelessWidget {
+/// A suggestion group in detail: the ingredient, its meals and its
+/// alternatives, live from [ingredientSuggestionProvider] (a verdict ranks
+/// them again at once). Tapping an alternative opens its verdict sheet,
+/// behind the Plus lock like the Alternativen themselves.
+class SuggestionDetailModal extends ConsumerWidget {
   final IngredientSuggestionGroup group;
 
   const SuggestionDetailModal({super.key, required this.group});
 
+  /// The row of the alternatives that are not skipped.
+  static const mainRowKey = Key('suggestion_detail_alternatives');
+
+  /// The row under „Passt nicht für mich".
+  static const skippedRowKey = Key('suggestion_detail_skipped');
+
+  /// The tile of the replacement [id].
+  static Key tileKey(String id) => Key('suggestion_detail_tile_$id');
+
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final groups = ref.watch(ingredientSuggestionProvider).value;
+    final live =
+        groups
+            ?.where((g) => g.ingredientId == group.ingredientId)
+            .firstOrNull ??
+        group;
+    final visible = live.visibleReplacements;
+    final skipped = [
+      for (final r in live.replacements)
+        if (r.skipped) r,
+    ];
+    final canRate = !ref.watch(plusLockedProvider);
     return DraggableScrollableSheet(
       initialChildSize: 0.7,
       minChildSize: 0.4,
       maxChildSize: 0.9,
       expand: false,
-      builder: (context, scrollController) {
-        return SingleChildScrollView(
-          controller: scrollController,
-          padding: const EdgeInsets.fromLTRB(
-            AppConstants.spacingLg,
-            0,
-            AppConstants.spacingLg,
-            AppConstants.spacingLg,
+      // The modal's own messenger, so the verdict sheet's failure SnackBar
+      // shows in it: the page's messenger paints under this sheet.
+      builder: (context, scrollController) => ScaffoldMessenger(
+        child: Scaffold(
+          backgroundColor: Colors.transparent,
+          resizeToAvoidBottomInset: false,
+          body: _content(
+            context,
+            live,
+            visible,
+            skipped,
+            canRate,
+            scrollController,
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+        ),
+      ),
+    );
+  }
+
+  Widget _content(
+    BuildContext context,
+    IngredientSuggestionGroup live,
+    List<RankedReplacement> visible,
+    List<RankedReplacement> skipped,
+    bool canRate,
+    ScrollController scrollController,
+  ) {
+    return SingleChildScrollView(
+      controller: scrollController,
+      padding: const EdgeInsets.fromLTRB(
+        AppConstants.spacingLg,
+        0,
+        AppConstants.spacingLg,
+        AppConstants.spacingLg,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with image and name
+          Row(
             children: [
-              // Header with image and name
-              Row(
+              _IngredientImage(imageUrl: live.ingredientImageUrl),
+              const SizedBox(width: AppConstants.spacingMd),
+              Expanded(
+                child: Text(
+                  live.ingredientName,
+                  style: const TextStyle(
+                    fontSize: AppTheme.fontSizeTitleLG,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.foreground,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          AppConstants.gap20,
+
+          // Helptext info box
+          if (live.helptext != null && live.helptext!.isNotEmpty) ...[
+            Container(
+              width: double.infinity,
+              padding: AppConstants.paddingMd,
+              decoration: BoxDecoration(
+                color: AppTheme.info.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+                border: Border.all(color: AppTheme.info.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _IngredientImage(imageUrl: group.ingredientImageUrl),
-                  const SizedBox(width: AppConstants.spacingMd),
+                  const Icon(
+                    Icons.info_outline,
+                    size: 20,
+                    color: AppTheme.info,
+                  ),
+                  const SizedBox(width: AppConstants.spacing12),
                   Expanded(
                     child: Text(
-                      group.ingredientName,
+                      live.helptext!,
                       style: const TextStyle(
-                        fontSize: AppTheme.fontSizeTitleLG,
-                        fontWeight: FontWeight.w600,
+                        fontSize: AppTheme.fontSizeBody,
                         color: AppTheme.foreground,
+                        height: AppTheme.lineHeightBody,
                       ),
                     ),
                   ),
                 ],
               ),
-              AppConstants.gap20,
+            ),
+            AppConstants.gap20,
+          ],
 
-              // Helptext info box
-              if (group.helptext != null && group.helptext!.isNotEmpty) ...[
-                Container(
-                  width: double.infinity,
-                  padding: AppConstants.paddingMd,
+          // Meals section
+          if (live.meals.isNotEmpty) ...[
+            Text(
+              'Gefunden in ${live.mealCount} ${live.mealCount == 1 ? 'Mahlzeit' : 'Mahlzeiten'}',
+              style: const TextStyle(
+                fontSize: AppTheme.fontSizeSubtitle,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.foreground,
+              ),
+            ),
+            AppConstants.gap12,
+            ...live.meals.map(
+              (meal) => Padding(
+                padding: const EdgeInsets.only(bottom: AppConstants.spacingSm),
+                child: Container(
+                  padding: const EdgeInsets.all(AppConstants.spacing12),
                   decoration: BoxDecoration(
-                    color: AppTheme.info.withValues(alpha: 0.08),
+                    color: AppTheme.card,
                     borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-                    border: Border.all(
-                      color: AppTheme.info.withValues(alpha: 0.2),
-                    ),
+                    border: Border.all(color: AppTheme.border, width: 0.5),
                   ),
                   child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(
-                        Icons.info_outline,
-                        size: 20,
-                        color: AppTheme.info,
-                      ),
-                      const SizedBox(width: AppConstants.spacing12),
+                      if (meal.imageUrl != null) ...[
+                        _MealImage(imageUrl: meal.imageUrl!),
+                        const SizedBox(width: AppConstants.spacing12),
+                      ],
                       Expanded(
-                        child: Text(
-                          group.helptext!,
-                          style: const TextStyle(
-                            fontSize: AppTheme.fontSizeBody,
-                            color: AppTheme.foreground,
-                            height: AppTheme.lineHeightBody,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              meal.title,
+                              style: const TextStyle(
+                                fontSize: AppTheme.fontSizeBody,
+                                fontWeight: FontWeight.w500,
+                                color: AppTheme.foreground,
+                              ),
+                            ),
+                            const SizedBox(height: AppConstants.spacing2),
+                            Text(
+                              formatDateShort(meal.trackedAt),
+                              style: const TextStyle(
+                                fontSize: AppTheme.fontSizeCaption,
+                                color: AppTheme.mutedForeground,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-                AppConstants.gap20,
-              ],
+              ),
+            ),
+            AppConstants.gap12,
+          ],
 
-              // Meals section
-              if (group.meals.isNotEmpty) ...[
-                Text(
-                  'Gefunden in ${group.mealCount} ${group.mealCount == 1 ? 'Mahlzeit' : 'Mahlzeiten'}',
-                  style: const TextStyle(
-                    fontSize: AppTheme.fontSizeSubtitle,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.foreground,
-                  ),
-                ),
-                AppConstants.gap12,
-                ...group.meals.map(
-                  (meal) => Padding(
-                    padding: const EdgeInsets.only(
-                      bottom: AppConstants.spacingSm,
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.all(AppConstants.spacing12),
-                      decoration: BoxDecoration(
-                        color: AppTheme.card,
-                        borderRadius: BorderRadius.circular(
-                          AppConstants.radiusMd,
+          // Alternatives: the ones that fit or may, then those that do
+          // not under their own heading, dimmed.
+          if (visible.isNotEmpty) ...[
+            const _SectionTitle('Alternativen'),
+            AppConstants.gap12,
+            _AlternativeRow(
+              key: mainRowKey,
+              group: live,
+              replacements: visible,
+              canRate: canRate,
+            ),
+            AppConstants.gap12,
+          ],
+          if (skipped.isNotEmpty) ...[
+            const _SectionTitle(AlternativeVerdictCopy.skip),
+            AppConstants.gap12,
+            _AlternativeRow(
+              key: skippedRowKey,
+              group: live,
+              replacements: skipped,
+              canRate: canRate,
+            ),
+            AppConstants.gap12,
+          ],
+
+          // Close button
+          AppConstants.gap8,
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Schließen'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SectionTitle extends StatelessWidget {
+  const _SectionTitle(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    header: true,
+    child: Text(
+      text,
+      style: const TextStyle(
+        fontSize: AppTheme.fontSizeSubtitle,
+        fontWeight: FontWeight.w600,
+        color: AppTheme.foreground,
+      ),
+    ),
+  );
+}
+
+/// A horizontal row of alternative tiles.
+class _AlternativeRow extends StatelessWidget {
+  const _AlternativeRow({
+    super.key,
+    required this.group,
+    required this.replacements,
+    required this.canRate,
+  });
+
+  final IngredientSuggestionGroup group;
+  final List<RankedReplacement> replacements;
+  final bool canRate;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: AppConstants.alternativeTileHeight,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: replacements.length,
+        separatorBuilder: (c, i) =>
+            const SizedBox(width: AppConstants.spacing12),
+        itemBuilder: (context, index) => _AlternativeTile(
+          group: group,
+          replacement: replacements[index],
+          canRate: canRate,
+        ),
+      ),
+    );
+  }
+}
+
+/// An alternative: its picture and name; „Passt für mich" adds a check,
+/// „Passt nicht für mich" dims the picture. The verdict is also its
+/// semantics value, so it is never told by look alone.
+class _AlternativeTile extends StatelessWidget {
+  const _AlternativeTile({
+    required this.group,
+    required this.replacement,
+    required this.canRate,
+  });
+
+  final IngredientSuggestionGroup group;
+  final RankedReplacement replacement;
+  final bool canRate;
+
+  @override
+  Widget build(BuildContext context) {
+    final verdict = replacement.verdict;
+    final image = _IngredientImage(
+      imageUrl: replacement.imageUrl,
+      size: AppConstants.alternativeTileImage,
+    );
+    void open() => showAlternativeFeedbackSheet(
+      context,
+      group: group,
+      replacement: replacement.replacement,
+    );
+    return Semantics(
+      key: SuggestionDetailModal.tileKey(replacement.id),
+      container: true,
+      button: canRate,
+      label: replacement.name,
+      value: verdict == null ? null : AlternativeVerdictCopy.of(verdict),
+      excludeSemantics: true,
+      onTap: canRate ? open : null,
+      child: InkWell(
+        onTap: canRate ? open : null,
+        borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+        child: SizedBox(
+          width: AppConstants.alternativeTileWidth,
+          child: Column(
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  if (replacement.skipped)
+                    Opacity(
+                      opacity: AppConstants.skippedAlternativeOpacity,
+                      child: image,
+                    )
+                  else
+                    image,
+                  if (verdict == AlternativeChoiceKind.fits)
+                    const PositionedDirectional(
+                      end: 0,
+                      bottom: 0,
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
                         ),
-                        border: Border.all(color: AppTheme.border, width: 0.5),
-                      ),
-                      child: Row(
-                        children: [
-                          if (meal.imageUrl != null) ...[
-                            _MealImage(imageUrl: meal.imageUrl!),
-                            const SizedBox(width: AppConstants.spacing12),
-                          ],
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  meal.title,
-                                  style: const TextStyle(
-                                    fontSize: AppTheme.fontSizeBody,
-                                    fontWeight: FontWeight.w500,
-                                    color: AppTheme.foreground,
-                                  ),
-                                ),
-                                const SizedBox(height: AppConstants.spacing2),
-                                Text(
-                                  formatDateShort(meal.trackedAt),
-                                  style: const TextStyle(
-                                    fontSize: AppTheme.fontSizeCaption,
-                                    color: AppTheme.mutedForeground,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+                        child: Icon(
+                          Icons.check_circle,
+                          size: AppConstants.iconSizeSm,
+                          color: AppTheme.alternativeFitsCheck,
+                        ),
                       ),
                     ),
-                  ),
-                ),
-                AppConstants.gap12,
-              ],
-
-              // Alternatives section
-              if (group.replacements.isNotEmpty) ...[
-                const Text(
-                  'Alternativen',
-                  style: TextStyle(
-                    fontSize: AppTheme.fontSizeSubtitle,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.foreground,
-                  ),
-                ),
-                AppConstants.gap12,
-                SizedBox(
-                  height: 100,
-                  child: ListView.separated(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: group.replacements.length,
-                    separatorBuilder: (c, i) =>
-                        const SizedBox(width: AppConstants.spacing12),
-                    itemBuilder: (context, index) {
-                      final repl = group.replacements[index];
-                      return SizedBox(
-                        width: 80,
-                        child: Column(
-                          children: [
-                            _IngredientImage(imageUrl: repl.imageUrl, size: 56),
-                            AppConstants.gap6,
-                            Text(
-                              repl.name,
-                              textAlign: TextAlign.center,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                fontSize: AppTheme.fontSizeCaption,
-                                color: AppTheme.foreground,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                AppConstants.gap12,
-              ],
-
-              // Close button
-              AppConstants.gap8,
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Schließen'),
+                ],
+              ),
+              AppConstants.gap6,
+              Text(
+                replacement.name,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: AppTheme.fontSizeCaption,
+                  color: replacement.skipped
+                      ? AppTheme.mutedForeground
+                      : AppTheme.foreground,
                 ),
               ),
             ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }

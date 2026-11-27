@@ -1,4 +1,7 @@
+/// A verdict on an alternative: „Passt für mich" ([fits]), „Probiere ich"
+/// ([tryIt]), „Passt nicht für mich" ([skip]).
 enum AlternativeChoiceKind {
+  fits('fits'),
   tryIt('try'),
   skip('skip');
 
@@ -11,8 +14,9 @@ enum AlternativeChoiceKind {
       values.firstWhere((k) => k.db == value);
 }
 
-/// A user's choice on an alternative ingredient: „Probiere ich" or „Passt
-/// nicht für mich" (core table `alternative_choices`).
+/// A user's choice on an alternative ingredient for one ingredient: „Passt
+/// für mich", „Probiere ich" or „Passt nicht für mich" (core table
+/// `alternative_choices`).
 class AlternativeChoice {
   const AlternativeChoice({
     required this.id,

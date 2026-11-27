@@ -25,6 +25,7 @@ import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/repositories/recipe_repository.dart';
 import 'package:belly_buddy/repositories/recommendation_repository.dart';
 import 'package:belly_buddy/router/app_router.dart';
+import 'package:belly_buddy/services/pattern_stats_service.dart';
 
 import 'fakes.dart';
 import 'fixtures.dart';
@@ -75,8 +76,9 @@ FakeBuddyRepository onboardedBuddyRepository() => FakeBuddyRepository()
 /// Every repository the real router's screens reach, faked: signed in
 /// ([auth]), [testUserProfile] ([profiles]), an onboarded Buddy
 /// ([buddies]), one entry of each kind ([entries]), no own recipes
-/// ([userRecipes]), one seen tip set ([tips]), and the
-/// upgrade [decision].
+/// ([userRecipes]), one seen tip set ([tips]), a not-ready pattern
+/// comparison unless [patternStats] says otherwise, and the upgrade
+/// [decision].
 List<Override> baseOverrides({
   FakeAuthRepository? auth,
   FakeProfileRepository? profiles,
@@ -86,6 +88,7 @@ List<Override> baseOverrides({
   FakeIngredientRepository? ingredients,
   FakeRecommendationRepository? tips,
   FakeUserRecipeRepository? userRecipes,
+  FakePatternStatsService? patternStats,
   UpgradeDecision decision = UpgradeDecision.ok,
 }) => [
   authRepositoryProvider.overrideWithValue(auth ?? FakeAuthRepository()),
@@ -112,6 +115,9 @@ List<Override> baseOverrides({
     FakeNotificationRepository(),
   ),
   knowledgeRepositoryProvider.overrideWithValue(FakeKnowledgeRepository()),
+  patternStatsServiceProvider.overrideWithValue(
+    patternStats ?? FakePatternStatsService(),
+  ),
   upgradeDecisionProvider.overrideWith((_) => Future.value(decision)),
   // Tests run as debug builds, whose preview would show „Ruhe für den
   // Bauch" everywhere; tests that want it override reliefEnabledProvider.
