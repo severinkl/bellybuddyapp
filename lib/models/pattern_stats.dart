@@ -100,7 +100,8 @@ class PatternStats {
   /// The subject core proposes to test; null while restrictive.
   final TestSubject? proposal;
 
-  /// The restrictive-eating guard (spec §5.3): no „Testen" anywhere.
+  /// The restrictive-eating guard (spec §5.3): no „Testen" anywhere. A
+  /// response without it reads as restrictive (safety).
   final bool restrictive;
 
   /// The latest completed test of [kind]/[key] that ended fewer than 60
@@ -133,7 +134,7 @@ class PatternStats {
         ?_tryParse(row, TestedItem.fromJson),
     ],
     proposal: _tryParse(j['proposal'], TestSubject.fromJson),
-    restrictive: j['restrictive'] as bool? ?? false,
+    restrictive: j['restrictive'] as bool? ?? true,
   );
 
   static T? _tryParse<T>(Object? raw, T Function(Map<String, dynamic>) parse) {

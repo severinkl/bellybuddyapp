@@ -12,6 +12,7 @@ Map<String, dynamic> _stats(Map<String, dynamic> extra) => {
   'groups': <Object>[],
   'ingredients': <Object>[],
   'calm': <Object>[],
+  'restrictive': false,
   ...extra,
 };
 
@@ -203,6 +204,12 @@ void main() {
       stats.testedFor('ingredient', 'zwiebel', today: DateTime(2027, 2, 8)),
       isNull,
     );
+  });
+
+  test('a missing restrictive reads as restrictive (safety)', () {
+    final j = _stats({})..remove('restrictive');
+    expect(PatternStats.fromJson(j).restrictive, isTrue);
+    expect(PatternStats.fromJson(_stats({})).restrictive, isFalse);
   });
 
   test('a tested value that is not a list is empty, the rest parses', () {
