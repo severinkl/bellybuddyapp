@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show listEquals;
+
 import '../../config/constants.dart';
 import '../../config/symptom_options.dart';
 import '../../models/insights.dart';
@@ -79,7 +81,7 @@ class ForYouSignal {
       other is ForYouSignal &&
       other.kind == kind &&
       other.reason == reason &&
-      _listEquals(other.keywords, keywords);
+      listEquals(other.keywords, keywords);
 
   @override
   int get hashCode => Object.hash(kind, reason, Object.hashAll(keywords));
@@ -234,7 +236,8 @@ List<ForYouSignal> forYouSignals({
 /// At most this many picks.
 const forYouMax = 3;
 
-/// The articles „Für dich": those [signals] match and whose link is not in
+/// The articles „Für dich": those [signals] (distinct, as [forYouSignals]
+/// gives them) match and whose link is not in
 /// [opened], by score (desc), then newest (undated last), then link; at
 /// most [forYouMax]. Each with the reason of its heaviest matching signal
 /// (ties: table order, then [signals]' order).
@@ -244,9 +247,8 @@ List<ForYouPick> pickForYou(
   required Set<String> opened,
 }) {
   if (signals.isEmpty) return const [];
-  final distinct = signals.toSet().toList();
   // Heaviest first, so the first match gives the reason.
-  final byWeight = [...distinct.indexed]
+  final byWeight = [...signals.indexed]
     ..sort((x, y) {
       final c = y.$2.weight.compareTo(x.$2.weight);
       if (c != 0) return c;
@@ -282,12 +284,4 @@ List<ForYouPick> pickForYou(
     return x.article.link.toString().compareTo(y.article.link.toString());
   });
   return picks.take(forYouMax).toList();
-}
-
-bool _listEquals<T>(List<T> a, List<T> b) {
-  if (a.length != b.length) return false;
-  for (var i = 0; i < a.length; i++) {
-    if (a[i] != b[i]) return false;
-  }
-  return true;
 }

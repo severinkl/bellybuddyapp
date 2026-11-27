@@ -27,7 +27,7 @@ Progress computeProgress(
   Set<DateTime> savedDays = const {},
 }) {
   final today = startOfDay(now.toLocal());
-  final start = addDays(mondayOf(today), -7 * (ProgressRules.weeks - 1));
+  final start = ProgressRules.windowStart(today);
 
   final entriesByDay = <DateTime, List<GutFeelingEntry>>{};
   for (final e in source.gutFeelings) {
@@ -79,7 +79,6 @@ Progress computeProgress(
         hard: count(DayClass.hard),
         activeDays: days.where((d) => d.active).length,
         elapsedDays: days.where((d) => !d.future).length,
-        gutFeelingEntries: weekEntries.length,
         means:
             weekEntries.length >= ProgressRules.minEntriesForMeans &&
                 daysWithEntries >= ProgressRules.minDaysForMeans

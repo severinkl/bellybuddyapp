@@ -102,7 +102,6 @@ class ProgressWeek {
     required this.hard,
     required this.activeDays,
     required this.elapsedDays,
-    required this.gutFeelingEntries,
     this.means,
   });
 
@@ -122,8 +121,6 @@ class ProgressWeek {
   /// 7, or for the current week the days up to today.
   final int elapsedDays;
 
-  final int gutFeelingEntries;
-
   /// The week's symptom means, only with
   /// [ProgressRules.minEntriesForMeans] entries on
   /// [ProgressRules.minDaysForMeans] days; otherwise null.
@@ -142,7 +139,6 @@ class ProgressWeek {
       other.hard == hard &&
       other.activeDays == activeDays &&
       other.elapsedDays == elapsedDays &&
-      other.gutFeelingEntries == gutFeelingEntries &&
       other.means == means;
 
   @override
@@ -154,15 +150,13 @@ class ProgressWeek {
     hard,
     activeDays,
     elapsedDays,
-    gutFeelingEntries,
     means,
   );
 
   @override
   String toString() =>
       'ProgressWeek($monday, good: $good, medium: $medium, hard: $hard, '
-      'active: $activeDays of $elapsedDays, entries: $gutFeelingEntries, '
-      'means: $means)';
+      'active: $activeDays of $elapsedDays, means: $means)';
 }
 
 /// The last [ProgressRules.recentDays] local days, today included, for

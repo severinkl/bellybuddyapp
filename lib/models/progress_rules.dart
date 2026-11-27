@@ -1,8 +1,15 @@
+import '../utils/date_format_utils.dart';
+
 /// Every threshold of „Dein Verlauf" (`computeProgress`) and of the
 /// recent signals the knowledge feed's „Für dich" reads.
 abstract final class ProgressRules {
   /// The window: this many Monday weeks, the current one last.
   static const weeks = 12;
+
+  /// The window's first day for [today] (midnight): the Monday of
+  /// [weeks] − 1 weeks before [today]'s week.
+  static DateTime windowStart(DateTime today) =>
+      addDays(mondayOf(today), -7 * (weeks - 1));
 
   /// A week's symptom means need at least this many gut-feeling entries …
   static const minEntriesForMeans = 3;

@@ -31,7 +31,6 @@ ProgressWeek week({
     hard: hard,
     activeDays: active,
     elapsedDays: elapsed,
-    gutFeelingEntries: good + medium + hard,
   );
 }
 
@@ -184,7 +183,6 @@ void main() {
           hard: 0,
           activeDays: 0,
           elapsedDays: 7,
-          gutFeelingEntries: 0,
           means: means[i],
         ),
     ];

@@ -30,6 +30,31 @@ void main() {
     );
   });
 
+  test('currentValue: null while reloading or after an error, else value', () {
+    expect(const AsyncData(3).currentValue, 3);
+    expect(const AsyncLoading<int>().currentValue, isNull);
+    // A refetch of the same user (loading, holding its value) keeps it.
+    final refetch = const AsyncLoading<int>().copyWithPrevious(
+      const AsyncData(3),
+    );
+    expect(refetch.isLoading, isTrue);
+    expect(refetch.currentValue, 3);
+    // A rebuild (another user) drops it.
+    final rebuild = const AsyncLoading<int>().copyWithPrevious(
+      const AsyncData(3),
+      isRefresh: false,
+    );
+    expect(rebuild.isReloading, isTrue);
+    expect(rebuild.currentValue, isNull);
+    expect(
+      AsyncError<int>(
+        StateError('x'),
+        StackTrace.empty,
+      ).copyWithPrevious(const AsyncData(3)).currentValue,
+      isNull,
+    );
+  });
+
   group('in a container', () {
     final user = NotifierProvider<Switchable<String>, String>(
       () => Switchable('a'),

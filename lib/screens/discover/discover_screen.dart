@@ -8,7 +8,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/discover_news_provider.dart';
-import '../../providers/for_you_provider.dart';
 import '../../providers/ingredient_suggestion_provider.dart';
 import '../../providers/knowledge_provider.dart';
 import '../../providers/profile_provider.dart';
@@ -95,8 +94,6 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     final forYou = ref.watch(forYouRecipesProvider);
     final mine = ref.watch(myRecipeItemsProvider);
     final savedFailed = ref.watch(savedRecipesStateProvider).hasError;
-    final knowledge = ref.watch(knowledgeFeedProvider);
-    final articlePicks = ref.watch(forYouProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -146,8 +143,6 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
               ),
               AppConstants.gap24,
               DiscoverKnowledgeSection(
-                feed: knowledge,
-                picks: articlePicks,
                 onOpenAll: () => context.push(RoutePaths.knowledge),
                 onOpen: (article) => unawaited(
                   markOpenedAndOpen(

@@ -9,10 +9,14 @@ import '../../../services/progress/progress_copy.dart';
 /// „Beschwerden pro Woche": a row per gut symptom, one bar per week, oldest
 /// left, newest right; a week without means is a hollow marker.
 class SymptomTrend extends StatelessWidget {
-  const SymptomTrend({super.key, required this.weeks});
+  const SymptomTrend({super.key, required this.weeks, required this.enough});
 
   /// Oldest first, the last the current week.
   final List<ProgressWeek> weeks;
+
+  /// Whether enough weeks have means for the chart ([Progress.showTrend]);
+  /// otherwise a line says when it comes.
+  final bool enough;
 
   @override
   Widget build(BuildContext context) {
@@ -27,18 +31,21 @@ class SymptomTrend extends StatelessWidget {
           ),
         ),
         AppConstants.gap8,
-        for (final symptom in AppConstants.gutFeelingSymptoms) ...[
-          _Row(symptom: symptom, weeks: weeks),
-          AppConstants.gap12,
-        ],
-        const Text(
-          ProgressCopy.trendCaption,
-          style: TextStyle(
-            fontSize: AppTheme.fontSizeCaption,
-            height: AppTheme.lineHeightSnug,
-            color: AppTheme.mutedForeground,
+        if (enough) ...[
+          for (final symptom in AppConstants.gutFeelingSymptoms) ...[
+            _Row(symptom: symptom, weeks: weeks),
+            AppConstants.gap12,
+          ],
+          const Text(
+            ProgressCopy.trendCaption,
+            style: TextStyle(
+              fontSize: AppTheme.fontSizeCaption,
+              height: AppTheme.lineHeightSnug,
+              color: AppTheme.mutedForeground,
+            ),
           ),
-        ),
+        ] else
+          const Text(ProgressCopy.trendTooFew, style: AppTheme.bodyMutedStyle),
       ],
     );
   }

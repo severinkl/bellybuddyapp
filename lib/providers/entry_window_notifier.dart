@@ -24,8 +24,8 @@ import 'today_provider.dart';
 ///
 /// After a user change Riverpod keeps the previous user's value in the
 /// state while the new user's value loads ([AsyncValue.isReloading]) and
-/// when that load fails (an [AsyncError] with a value): show a value only
-/// from [AsyncData] (e.g. through [AsyncValue.whenData]).
+/// when that load fails (an [AsyncError] with a value): read it through
+/// `currentValue` (`utils/settled_value.dart`).
 abstract class EntryWindowNotifier<T> extends AsyncNotifier<T> {
   /// Where failures are logged.
   AppLogger get log;

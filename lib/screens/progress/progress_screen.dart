@@ -12,6 +12,7 @@ import '../../router/tracker_routes.dart';
 import '../../services/buddy/daily_care.dart';
 import '../../services/insights/insight_copy.dart';
 import '../../services/progress/progress_copy.dart';
+import '../../utils/settled_value.dart';
 import '../../widgets/common/bb_async_state.dart';
 import '../../widgets/common/bb_button.dart';
 import '../../widgets/common/mascot_image.dart';
@@ -32,17 +33,11 @@ class ProgressScreen extends ConsumerWidget {
 
   static const emptyKey = Key('progress_empty');
 
-  /// A week's row, by its Monday.
-  static Key weekKey(DateTime monday) => ProgressWeeks.weekKey(monday);
-
   static const _footerStyle = TextStyle(
     fontSize: AppTheme.fontSizeCaptionLG,
     height: AppTheme.lineHeightSnug,
     color: AppTheme.mutedForeground,
   );
-
-  static int? _streakOf(AsyncValue<BuddyStatus?> buddy) =>
-      buddy.isReloading || buddy.hasError ? null : buddy.value?.streak;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -71,7 +66,7 @@ class ProgressScreen extends ConsumerWidget {
                   progress,
                   // The Buddy's streak, as on Home (null while it loads, reloads
                   // for another user or fails).
-                  currentStreak: _streakOf(ref.watch(buddyProvider)),
+                  currentStreak: ref.watch(buddyProvider).currentValue?.streak,
                   today: ref.read(buddyClockProvider)(),
                 ),
         ),
@@ -100,19 +95,7 @@ class ProgressScreen extends ConsumerWidget {
     AppConstants.gap24,
     ProgressWeeks(weeks: progress.weeks, today: today),
     AppConstants.gap24,
-    if (progress.showTrend)
-      SymptomTrend(weeks: progress.weeks)
-    else ...[
-      Semantics(
-        header: true,
-        child: const Text(
-          ProgressCopy.trendTitle,
-          style: AppTheme.bodyMutedStyle,
-        ),
-      ),
-      AppConstants.gap8,
-      const Text(ProgressCopy.trendTooFew, style: AppTheme.bodyMutedStyle),
-    ],
+    SymptomTrend(weeks: progress.weeks, enough: progress.showTrend),
     AppConstants.gap24,
     const Text(InsightCopy.footer, style: _footerStyle),
     AppConstants.gap4,

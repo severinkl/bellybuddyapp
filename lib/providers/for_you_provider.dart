@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../services/knowledge/knowledge_matcher.dart';
+import '../utils/settled_value.dart';
 import 'insights_provider.dart';
 import 'knowledge_opened_provider.dart';
 import 'knowledge_provider.dart';
@@ -23,13 +24,13 @@ import 'progress_provider.dart';
 final forYouProvider = Provider<List<ForYouPick>>((ref) {
   final feed = ref.watch(knowledgeFeedProvider).value;
   final profile = ref.watch(profileProvider);
-  final opened = _current(ref.watch(knowledgeOpenedProvider));
+  final opened = ref.watch(knowledgeOpenedProvider).currentValue;
   if (feed == null || profile is! AsyncData || opened == null) {
     return const [];
   }
   // Watched only once the rest is there, so they load only when needed.
-  final insights = _current(ref.watch(insightsProvider));
-  final progress = _current(ref.watch(progressProvider));
+  final insights = ref.watch(insightsProvider).currentValue;
+  final progress = ref.watch(progressProvider).currentValue;
   return pickForYou(
     feed.articles,
     forYouSignals(
@@ -41,8 +42,3 @@ final forYouProvider = Provider<List<ForYouPick>>((ref) {
     opened: opened,
   );
 });
-
-/// [value]'s value unless it is the previous user's (reloading after a
-/// user change) or failed.
-T? _current<T>(AsyncValue<T> value) =>
-    value.isReloading || value.hasError ? null : value.value;

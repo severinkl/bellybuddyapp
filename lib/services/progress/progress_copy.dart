@@ -108,11 +108,14 @@ abstract final class ProgressCopy {
   /// A day cell, to a screen reader: „18. Nov: gut", „18. Nov:
   /// eingetragen, ohne Bauchgefühl", „18. Nov: kein Eintrag".
   static String daySemantics(ProgressDay d) {
-    final what = d.dayClass != DayClass.none
-        ? InsightCopy.dayClassLabel(d.dayClass)
-        : d.active
-        ? 'eingetragen, $noGutFeelingLegend'
-        : InsightCopy.dayClassLabel(DayClass.none);
+    final String what;
+    if (d.dayClass != DayClass.none) {
+      what = InsightCopy.dayClassLabel(d.dayClass);
+    } else if (d.active) {
+      what = 'eingetragen, $noGutFeelingLegend';
+    } else {
+      what = InsightCopy.dayClassLabel(DayClass.none);
+    }
     return '${d.day.day}. ${_month(d.day)}: $what';
   }
 

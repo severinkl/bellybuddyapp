@@ -18,7 +18,6 @@ List<ProgressWeek> _weeks(Map<int, SymptomMeans> means, {int n = 12}) => [
       hard: 0,
       activeDays: 0,
       elapsedDays: 7,
-      gutFeelingEntries: 0,
       means: means[i],
     ),
 ];
@@ -26,7 +25,7 @@ List<ProgressWeek> _weeks(Map<int, SymptomMeans> means, {int n = 12}) => [
 Future<void> _pump(WidgetTester tester, List<ProgressWeek> weeks) =>
     tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(body: SymptomTrend(weeks: weeks)),
+        home: Scaffold(body: SymptomTrend(weeks: weeks, enough: true)),
       ),
     );
 

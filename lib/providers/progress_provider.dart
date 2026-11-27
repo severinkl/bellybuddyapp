@@ -16,11 +16,9 @@ import 'entry_window_notifier.dart';
 /// Computed again after every entry write, on a new day and on [refresh];
 /// see [EntryWindowNotifier]. How a screen reads the state:
 /// 1. [AsyncValue.hasError]: the error state.
-/// 2. [AsyncValue.isReloading] (a rebuild, i.e. a user change): loading;
-///    never show its value, it is the previous user's.
-/// 3. Otherwise [AsyncValue.value]: a refetch after an entry write or on a
-///    new day stays [AsyncData], so the previous value keeps showing while
-///    it loads.
+/// 2. [AsyncValue.isReloading] (a user change): loading.
+/// 3. Otherwise the value, which stays while a refetch loads.
+/// (`currentValue` in `utils/settled_value.dart` is steps 1-3 as a null.)
 class ProgressNotifier extends EntryWindowNotifier<Progress?> {
   static const _log = AppLogger('Progress');
 

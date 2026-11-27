@@ -72,7 +72,7 @@ class EntryRepository {
     required DateTime now,
   }) => _queryService.fetchProgressSource(
     userId: userId,
-    since: addDays(mondayOf(startOfDay(now)), -7 * (ProgressRules.weeks - 1)),
+    since: ProgressRules.windowStart(startOfDay(now)),
   );
 
   Future<void> insertEntry(

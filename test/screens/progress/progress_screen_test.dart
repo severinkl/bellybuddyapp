@@ -11,8 +11,8 @@ import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/progress_provider.dart';
 import 'package:belly_buddy/router/app_router.dart';
 import 'package:belly_buddy/router/route_names.dart';
+import 'package:belly_buddy/screens/progress/widgets/progress_weeks.dart';
 import 'package:belly_buddy/screens/progress/progress_screen.dart';
-import 'package:belly_buddy/screens/progress/widgets/symptom_trend.dart';
 import 'package:belly_buddy/widgets/common/bb_async_state.dart';
 import 'package:belly_buddy/services/progress/progress_engine.dart';
 
@@ -198,13 +198,13 @@ void main() {
     expect(mondays, hasLength(12));
     final tops = [
       for (final m in mondays)
-        tester.getTopLeft(find.byKey(ProgressScreen.weekKey(m))).dy,
+        tester.getTopLeft(find.byKey(ProgressWeeks.weekKey(m))).dy,
     ];
     for (var i = 1; i < tops.length; i++) {
       expect(tops[i], greaterThan(tops[i - 1]));
     }
     Finder labelIn(DateTime monday, String text) => find.descendant(
-      of: find.byKey(ProgressScreen.weekKey(monday)),
+      of: find.byKey(ProgressWeeks.weekKey(monday)),
       matching: find.text(text),
     );
     expect(labelIn(DateTime(2026, 11, 23), 'Diese Woche'), findsOneWidget);
@@ -332,7 +332,7 @@ void main() {
     );
     expect(find.text('Beschwerden pro Woche'), findsOneWidget);
     expect(find.textContaining('zeige ich dir, sobald'), findsOneWidget);
-    expect(find.byType(SymptomTrend), findsNothing);
+    expect(find.text('Blähbauch'), findsNothing);
 
     // Entries of 3 days in each of the last two weeks.
     final guts = [
@@ -344,7 +344,7 @@ void main() {
       progress: _progress(guts: guts),
       size: const Size(400, 4000),
     );
-    expect(find.byType(SymptomTrend), findsOneWidget);
+    expect(find.text('Blähbauch'), findsOneWidget);
     expect(find.textContaining('zeige ich dir, sobald'), findsNothing);
   });
 

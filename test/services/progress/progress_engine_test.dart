@@ -88,7 +88,6 @@ void main() {
     // Entries after today are never counted.
     expect(last.days.every((d) => !d.active), isTrue);
     expect(last.days.every((d) => d.dayClass == DayClass.none), isTrue);
-    expect(last.gutFeelingEntries, 0);
     expect(p.weeks.take(11).every((w) => w.elapsedDays == 7), isTrue);
     // Today counts.
     final today = compute(guts: [gut(nov(26, 23), 1)]);
@@ -175,7 +174,6 @@ void main() {
     final week = weekOf(p, DateTime(2026, 11, 9));
     expect(week.activeDays, 3);
     expect(week.good, 1);
-    expect(week.gutFeelingEntries, 1);
     expect(p.activeDays, 3);
   });
 
@@ -184,7 +182,6 @@ void main() {
       guts: [gut(nov(2), 2), gut(nov(2), 3), gut(nov(2), 5)],
     );
     expect(weekOf(oneDay, DateTime(2026, 11, 2)).means, isNull);
-    expect(weekOf(oneDay, DateTime(2026, 11, 2)).gutFeelingEntries, 3);
 
     final twoEntries = compute(guts: [gut(nov(2), 2), gut(nov(3), 3)]);
     expect(weekOf(twoEntries, DateTime(2026, 11, 2)).means, isNull);
