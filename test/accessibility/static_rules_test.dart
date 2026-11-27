@@ -154,19 +154,9 @@ bool _childIsIcon(Map<String, String> args) {
 }
 
 const _rules = [
-  _Rule(
-    'every IconButton has a tooltip',
-    {'IconButton': r'(?<![\w.])IconButton(\.(?!styleFrom)\w+)?\('},
-    offends: _noTooltip,
-    allowed: {
-      'lib/screens/settings/widgets/password_change_section.dart:IconButton#1':
-          'XA9', // current password eye
-      'lib/screens/settings/widgets/password_change_section.dart:IconButton#2':
-          'XA9', // new password eye
-      'lib/screens/settings/widgets/password_change_section.dart:IconButton#3':
-          'XA9', // repeat password eye
-    },
-  ),
+  _Rule('every IconButton has a tooltip', {
+    'IconButton': r'(?<![\w.])IconButton(\.(?!styleFrom)\w+)?\(',
+  }, offends: _noTooltip),
   _Rule(
     // „Directly": the Icon is the child, or the only thing inside boxes
     // that just place or paint it (the audit's five ✕s, spec §2.1).
@@ -178,8 +168,6 @@ const _rules = [
     },
     offends: _childIsIcon,
     allowed: {
-      'lib/screens/settings/widgets/reminder_time_picker.dart:GestureDetector#2':
-          'XA9', // ✕ remove a time
       'lib/widgets/common/circle_icon_button.dart:GestureDetector#1':
           'the shared round icon button: a Semantics button with its label '
           'wraps it (spec §2.1)',
@@ -200,12 +188,6 @@ const _rules = [
       'shrinkWrap': r'MaterialTapTargetSize\.shrinkWrap',
       'minimumSize':
           r'minimumSize:\s*(const\s+)?Size(\.zero\b|\(\s*0(\.0)?\s*,\s*0(\.0)?\s*\))',
-    },
-    allowed: {
-      'lib/screens/settings/widgets/password_change_section.dart:shrinkWrap#1':
-          'XA9', // „Passwort vergessen?"
-      'lib/screens/settings/widgets/password_change_section.dart:minimumSize#1':
-          'XA9', // „Passwort vergessen?"
     },
   ),
   _Rule('no foreground.withValues(alpha: 0.6) (use foregroundInactive)', {

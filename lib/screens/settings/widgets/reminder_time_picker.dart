@@ -2,6 +2,8 @@ import 'package:material_ui/material_ui.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../services/haptic_service.dart';
+import '../../../widgets/common/bb_icon_tap.dart';
+import '../../../widgets/common/tap_target.dart';
 
 class ReminderTimePicker extends StatelessWidget {
   final List<String> selectedTimes;
@@ -82,84 +84,121 @@ class ReminderTimePicker extends StatelessWidget {
           runSpacing: AppConstants.spacingSm,
           children: [
             for (var i = 0; i < selectedTimes.length; i++)
-              GestureDetector(
-                onTap: () => _editTime(context, i),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppConstants.spacing14,
-                    vertical: AppConstants.spacingSm,
-                  ),
-                  decoration: BoxDecoration(
+              Semantics(
+                container: true,
+                button: true,
+                selected: true,
+                child: GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: () => _editTime(context, i),
+                  child: _Pill(
                     color: AppTheme.primary,
-                    borderRadius: BorderRadius.circular(
-                      AppConstants.radiusFull,
-                    ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        selectedTimes[i],
-                        style: const TextStyle(
-                          fontSize: AppTheme.fontSizeBody,
-                          fontWeight: FontWeight.w500,
-                          color: AppTheme.primaryForeground,
-                        ),
+                    trailing: selectedTimes.length > 1
+                        ? BbIconTap(
+                            icon: Icons.close,
+                            semanticLabel:
+                                'Uhrzeit ${selectedTimes[i]} entfernen',
+                            iconSize: AppConstants.iconSizeXs,
+                            color: AppTheme.primaryForeground,
+                            onTap: () => _removeTime(i),
+                          )
+                        : null,
+                    child: Text(
+                      selectedTimes[i],
+                      style: const TextStyle(
+                        fontSize: AppTheme.fontSizeBody,
+                        fontWeight: FontWeight.w500,
+                        color: AppTheme.primaryForeground,
                       ),
-                      if (selectedTimes.length > 1) ...[
-                        const SizedBox(width: AppConstants.spacingXs),
-                        GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () => _removeTime(i),
-                          child: const Padding(
-                            padding: EdgeInsets.all(AppConstants.spacingXs),
-                            child: Icon(
-                              Icons.close,
-                              size: AppConstants.iconSizeXs,
-                              color: AppTheme.primaryForeground,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ],
+                    ),
                   ),
                 ),
               ),
-            GestureDetector(
-              onTap: () => _addTime(context),
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.spacing14,
-                  vertical: AppConstants.spacingSm,
-                ),
-                decoration: BoxDecoration(
+            Semantics(
+              container: true,
+              button: true,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () => _addTime(context),
+                child: const _Pill(
                   color: AppTheme.secondary,
-                  borderRadius: BorderRadius.circular(AppConstants.radiusFull),
-                ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.add,
-                      size: AppConstants.spacingMd,
-                      color: AppTheme.foreground,
-                    ),
-                    SizedBox(width: AppConstants.spacingXs),
-                    Text(
-                      'Hinzufügen',
-                      style: TextStyle(
-                        fontSize: AppTheme.fontSizeBody,
-                        fontWeight: FontWeight.w500,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.add,
+                        size: AppConstants.spacingMd,
                         color: AppTheme.foreground,
                       ),
-                    ),
-                  ],
+                      SizedBox(width: AppConstants.spacingXs),
+                      Text(
+                        'Hinzufügen',
+                        style: TextStyle(
+                          fontSize: AppTheme.fontSizeBody,
+                          fontWeight: FontWeight.w500,
+                          color: AppTheme.foreground,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
           ],
         ),
       ],
+    );
+  }
+}
+
+/// A rounded chip drawn as before, with a hit area of at least
+/// [AppConstants.minTapTarget] around it: the pill is inset from the hit
+/// area, and a [trailing] ✕ takes its 48 × 48 across the pill's edge.
+class _Pill extends StatelessWidget {
+  const _Pill({required this.color, required this.child, this.trailing});
+
+  final Color color;
+  final Widget child;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    // Without a ✕ the pill is the label plus its padding (36 px); with one,
+    // the ✕ used to make it 40 px. The ✕'s 48 px sit 4 px past the pill.
+    final inset = trailing == null
+        ? AppConstants.spacing6
+        : AppConstants.spacingXs;
+    return TapTarget(
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: Padding(
+              padding: EdgeInsets.symmetric(vertical: inset),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+                ),
+              ),
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: EdgeInsetsDirectional.only(
+                  start: AppConstants.spacing14,
+                  end: trailing == null ? AppConstants.spacing14 : 0,
+                  top: AppConstants.spacingSm + inset,
+                  bottom: AppConstants.spacingSm + inset,
+                ),
+                child: child,
+              ),
+              ?trailing,
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

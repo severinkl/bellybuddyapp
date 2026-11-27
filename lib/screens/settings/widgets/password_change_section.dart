@@ -7,6 +7,7 @@ import '../../../providers/auth_provider.dart';
 import '../../../utils/password_validator.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/bb_password_hint.dart';
+import '../../../widgets/common/tap_target.dart';
 import '../../../config/constants.dart';
 
 class PasswordChangeSection extends ConsumerStatefulWidget {
@@ -100,6 +101,10 @@ class _PasswordChangeSectionState extends ConsumerState<PasswordChangeSection> {
     }
   }
 
+  /// What the eye of a password field says it does (as `BbPasswordField`).
+  static String _eyeTooltip(bool shown) =>
+      shown ? 'Passwort verbergen' : 'Passwort anzeigen';
+
   String _mapForgotPasswordError(Object e) {
     if (e is AuthApiException && e.code == 'over_email_send_rate_limit') {
       return 'Zu viele Anfragen. Bitte warte einen Moment und versuche es erneut.';
@@ -113,31 +118,33 @@ class _PasswordChangeSectionState extends ConsumerState<PasswordChangeSection> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Divider(height: 1, color: AppTheme.border),
-        AppConstants.gap12,
+        // No gap: the row's 48 px hit area keeps the text 12 below the line.
         GestureDetector(
           onTap: () => setState(() => _expanded = !_expanded),
           behavior: HitTestBehavior.opaque,
-          child: Row(
-            children: [
-              const Icon(
-                Icons.lock_outline,
-                size: 20,
-                color: AppTheme.mutedForeground,
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                'Passwort ändern',
-                style: TextStyle(
-                  fontSize: AppTheme.fontSizeBody,
-                  fontWeight: FontWeight.w500,
+          child: TapTarget(
+            child: Row(
+              children: [
+                const Icon(
+                  Icons.lock_outline,
+                  size: 20,
+                  color: AppTheme.mutedForeground,
                 ),
-              ),
-              const Spacer(),
-              Icon(
-                _expanded ? Icons.expand_less : Icons.expand_more,
-                color: AppTheme.mutedForeground,
-              ),
-            ],
+                const SizedBox(width: 8),
+                const Text(
+                  'Passwort ändern',
+                  style: TextStyle(
+                    fontSize: AppTheme.fontSizeBody,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const Spacer(),
+                Icon(
+                  _expanded ? Icons.expand_less : Icons.expand_more,
+                  color: AppTheme.mutedForeground,
+                ),
+              ],
+            ),
           ),
         ),
         AnimatedCrossFade(
@@ -167,6 +174,7 @@ class _PasswordChangeSectionState extends ConsumerState<PasswordChangeSection> {
                 labelText: 'Aktuelles Passwort',
                 prefixIcon: const Icon(Icons.lock_outline),
                 suffixIcon: IconButton(
+                  tooltip: _eyeTooltip(_showCurrentPassword),
                   icon: Icon(
                     _showCurrentPassword
                         ? Icons.visibility_off
@@ -187,6 +195,7 @@ class _PasswordChangeSectionState extends ConsumerState<PasswordChangeSection> {
                 labelText: 'Neues Passwort',
                 prefixIcon: const Icon(Icons.lock_outline),
                 suffixIcon: IconButton(
+                  tooltip: _eyeTooltip(_showNewPassword),
                   icon: Icon(
                     _showNewPassword ? Icons.visibility_off : Icons.visibility,
                   ),
@@ -221,6 +230,7 @@ class _PasswordChangeSectionState extends ConsumerState<PasswordChangeSection> {
                 labelText: 'Passwort bestätigen',
                 prefixIcon: const Icon(Icons.lock_outline),
                 suffixIcon: IconButton(
+                  tooltip: _eyeTooltip(_showConfirmPassword),
                   icon: Icon(
                     _showConfirmPassword
                         ? Icons.visibility_off
@@ -262,16 +272,14 @@ class _PasswordChangeSectionState extends ConsumerState<PasswordChangeSection> {
             AppConstants.gap8,
             Align(
               alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: _forgotPassword,
-                style: TextButton.styleFrom(
-                  padding: EdgeInsets.zero,
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: const Text(
-                  'Passwort vergessen?',
-                  style: TextStyle(fontSize: AppTheme.fontSizeCaptionLG),
+              child: TapTarget(
+                child: TextButton(
+                  onPressed: _forgotPassword,
+                  style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                  child: const Text(
+                    'Passwort vergessen?',
+                    style: TextStyle(fontSize: AppTheme.fontSizeCaptionLG),
+                  ),
                 ),
               ),
             ),

@@ -167,14 +167,18 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
         title: const Text('Mein Profil'),
         actions: [
           if (_saved)
-            const Padding(
-              padding: EdgeInsets.only(right: 16),
+            Padding(
+              padding: const EdgeInsets.only(right: AppConstants.spacingMd),
               child: Center(
-                child: Text(
-                  'Gespeichert',
-                  style: TextStyle(
-                    color: AppTheme.successText,
-                    fontSize: AppTheme.fontSizeBody,
+                // A status: spoken when it shows.
+                child: Semantics(
+                  liveRegion: true,
+                  child: const Text(
+                    'Gespeichert',
+                    style: TextStyle(
+                      color: AppTheme.successText,
+                      fontSize: AppTheme.fontSizeBody,
+                    ),
                   ),
                 ),
               ),
@@ -257,7 +261,11 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                               controller: _heightController,
                               maxLength: 3,
                               decoration: InputDecoration(
-                                labelText: 'Größe (cm)',
+                                // The unit read as words, not as „(cm)".
+                                label: const Text(
+                                  'Größe (cm)',
+                                  semanticsLabel: 'Größe in cm',
+                                ),
                                 errorText: _heightError,
                                 errorMaxLines: 3,
                               ),
@@ -271,7 +279,10 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                               controller: _weightController,
                               maxLength: 3,
                               decoration: InputDecoration(
-                                labelText: 'Gewicht (kg)',
+                                label: const Text(
+                                  'Gewicht (kg)',
+                                  semanticsLabel: 'Gewicht in kg',
+                                ),
                                 errorText: _weightError,
                                 errorMaxLines: 3,
                               ),

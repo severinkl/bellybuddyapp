@@ -15,6 +15,7 @@ import '../../utils/logger.dart';
 import '../../widgets/common/bb_button.dart';
 import '../../widgets/common/bb_card.dart';
 import '../../widgets/common/bb_chip_selector.dart';
+import '../../widgets/common/bb_labeled_field.dart';
 
 /// „Mit Berater:in teilen": what a new share shows and for how long. The
 /// health consent gate has already sent the user away when the consent is
@@ -137,9 +138,8 @@ class _ShareCreateScreenState extends ConsumerState<ShareCreateScreen> {
                   ),
                   AppConstants.gap24,
                   const _Heading('Dein Name in der Ansicht'),
-                  Semantics(
+                  BbLabeledField(
                     label: 'Dein Name in der Ansicht',
-                    textField: true,
                     child: TextField(
                       controller: _name,
                       inputFormatters: const [_CodePointLimit(_maxNameLength)],

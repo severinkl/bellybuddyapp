@@ -180,6 +180,28 @@ void main() {
     }
   });
 
+  testWidgets('every Ich row is a button named by its title', (tester) async {
+    await pump(tester);
+    final handle = tester.ensureSemantics();
+
+    for (final (key, title) in [
+      (MeScreen.streakKey, 'Streak & Ziel'),
+      (MeScreen.shareKey, 'Mit Berater:in teilen'),
+      (MeScreen.settingsKey, 'Einstellungen'),
+      (MeScreen.tutorialKey, 'Tutorial wiederholen'),
+      (MeScreen.feedbackKey, 'Feedback geben'),
+    ]) {
+      final row = tester.getSemantics(find.byKey(key));
+      expect(
+        row,
+        isSemantics(isButton: true, hasTapAction: true),
+        reason: title,
+      );
+      expect(row.getSemanticsData().label, startsWith(title), reason: title);
+    }
+    handle.dispose();
+  });
+
   group('„Mit Berater:in teilen"', () {
     testWidgets('sits between Streak & Ziel and Einstellungen', (tester) async {
       await pump(tester);

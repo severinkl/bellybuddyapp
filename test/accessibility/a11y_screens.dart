@@ -152,13 +152,6 @@ List<Override> _mealToEdit() => [
   entriesProviderSeededWith([testMealEntry()]),
 ];
 
-// -- Pending checks -----------------------------------------------------------
-
-const _tapTargets9 = {
-  A11yCheck.androidTapTarget: 'XA9',
-  A11yCheck.iosTapTarget: 'XA9',
-};
-
 // -- The screens --------------------------------------------------------------
 
 /// Every [RoutePaths] route except loading (and the not-found page, which
@@ -235,21 +228,9 @@ const a11yScreens = <A11yScreen>[
 
   // Ich.
   A11yScreen('Einstellungen', RoutePaths.settings),
-  // The diet chips, 40 px.
-  A11yScreen(
-    'Profil',
-    RoutePaths.settingsProfile,
-    base: _profileBase,
-    pending: _tapTargets9,
-  ),
-  // The reminder-time chips and „Hinzufügen", 36 px.
-  A11yScreen(
-    'Benachrichtigungen',
-    RoutePaths.settingsNotifications,
-    pending: _tapTargets9,
-  ),
-  // „Passwort ändern", 24 px.
-  A11yScreen('Konto', RoutePaths.settingsAccount, pending: _tapTargets9),
+  A11yScreen('Profil', RoutePaths.settingsProfile, base: _profileBase),
+  A11yScreen('Benachrichtigungen', RoutePaths.settingsNotifications),
+  A11yScreen('Konto', RoutePaths.settingsAccount),
   A11yScreen('Freigaben', RoutePaths.shares, seed: _oneShare),
   A11yScreen('Neue Freigabe', RoutePaths.shareCreate, seed: _oneShare),
 ];
