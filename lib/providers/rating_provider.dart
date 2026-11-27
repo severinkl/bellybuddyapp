@@ -83,7 +83,8 @@ Future<bool> _patternsCelebrated(Ref ref) async {
 
 /// Rules 1, 2, 3, 5 and 6 of the rating prompt (the hero's queue is rule
 /// 4): the first patterns are unlocked and celebrated, no onboarding or
-/// tutorial runs, today has no „Schlecht" Bauchgefühl, this version was not
+/// tutorial runs, today's entries are known (loaded for today, without an
+/// error) and have no „Schlecht" Bauchgefühl, this version was not
 /// asked yet and the last request is 90 days ago, and the system can show
 /// the dialog. False while signed out.
 final ratingAskDueProvider = FutureProvider.autoDispose<bool>((ref) async {
@@ -95,8 +96,20 @@ final ratingAskDueProvider = FutureProvider.autoDispose<bool>((ref) async {
       ref.watch(tutorialProvider)) {
     return false;
   }
-  final gutFeelings = ref.watch(entriesProvider.select((s) => s.gutFeelings));
-  if (hasHardEntryToday(gutFeelings, today)) return false;
+  final (:known, :gutFeelings) = ref.watch(
+    entriesProvider.select(
+      (s) => (
+        known:
+            s.day != null &&
+            isSameDay(s.day!, today) &&
+            !s.isLoading &&
+            s.error == null,
+        gutFeelings: s.gutFeelings,
+      ),
+    ),
+  );
+  // Unknown (not loaded yet, loading, failed): a „Schlecht" entry may hide.
+  if (!known || hasHardEntryToday(gutFeelings, today)) return false;
 
   final version = await ref.watch(appVersionServiceProvider).currentVersion();
   final prefs = await SharedPreferences.getInstance();
@@ -132,13 +145,15 @@ Future<void> recordRatingAsk(WidgetRef ref) async {
   final container = ProviderScope.containerOf(ref.context, listen: false);
   final version = await versions.currentVersion();
   final prefs = await SharedPreferences.getInstance();
-  await prefs.setString(
-    '${AppConstants.keyRatingAskedVersionPrefix}$userId',
-    version,
-  );
+  // The day first: a failed second write never leaves a version without
+  // its day.
   await prefs.setString(
     '${AppConstants.keyRatingAskedOnPrefix}$userId',
     formatIsoDate(today),
+  );
+  await prefs.setString(
+    '${AppConstants.keyRatingAskedVersionPrefix}$userId',
+    version,
   );
   container.invalidate(ratingAskDueProvider);
 }

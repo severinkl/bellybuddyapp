@@ -17,6 +17,7 @@ import 'package:belly_buddy/providers/tutorial_provider.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/services/app_version_service.dart';
+import 'package:belly_buddy/utils/date_format_utils.dart';
 
 import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
@@ -60,6 +61,14 @@ class _Entries extends EntriesNotifier {
   EntriesState build() => _state;
 }
 
+/// Today's entries still loading until [land].
+class _Loading extends EntriesNotifier {
+  @override
+  EntriesState build() => const EntriesState(isLoading: true);
+
+  void land(DateTime day) => state = EntriesState(day: day);
+}
+
 final _user = SwitchableUserId();
 
 void main() {
@@ -83,6 +92,8 @@ void main() {
     bool tutorial = false,
     List<Override> overrides = const [],
     List<GutFeelingEntry> gutFeelings = const [],
+    EntriesState? entries,
+    EntriesNotifier? entriesNotifier,
     Map<String, Object> prefs = const {},
   }) async {
     SharedPreferences.setMockInitialValues({
@@ -109,7 +120,15 @@ void main() {
         buddyOnboardingRequiredProvider.overrideWithValue(onboarding),
         tutorialProvider.overrideWith(() => _Tutorial(tutorial)),
         entriesProvider.overrideWith(
-          () => _Entries(EntriesState(gutFeelings: gutFeelings)),
+          () =>
+              entriesNotifier ??
+              _Entries(
+                entries ??
+                    EntriesState(
+                      gutFeelings: gutFeelings,
+                      day: startOfDay(now),
+                    ),
+              ),
         ),
         ...overrides,
       ],
@@ -186,6 +205,35 @@ void main() {
     );
     await pump(tester, gutFeelings: [hard]);
     expect(await due(), isFalse);
+  });
+
+  testWidgets("not due until today's entries are known: loading, failed, "
+      'or another day loaded; due once loaded for today', (tester) async {
+    final today = startOfDay(now);
+    await pump(tester, entries: const EntriesState());
+    expect(await due(), isFalse, reason: 'nothing loaded yet');
+    await pump(tester, entries: EntriesState(isLoading: true, day: today));
+    expect(await due(), isFalse, reason: 'loading');
+    await pump(
+      tester,
+      entries: EntriesState(error: Exception('x'), day: today),
+    );
+    expect(await due(), isFalse, reason: 'failed');
+    await pump(
+      tester,
+      entries: EntriesState(day: today.subtract(const Duration(days: 1))),
+    );
+    expect(await due(), isFalse, reason: 'yesterday loaded');
+    await pump(tester, entries: EntriesState(day: today));
+    expect(await due(), isTrue);
+  });
+
+  testWidgets('re-checks once the load of today lands', (tester) async {
+    final entries = _Loading();
+    await pump(tester, entriesNotifier: entries);
+    expect(await due(), isFalse);
+    entries.land(startOfDay(now));
+    expect(await due(), isTrue);
   });
 
   testWidgets('not due when the launcher is unavailable, or when '

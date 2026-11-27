@@ -980,15 +980,17 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   /// After the celebration: the store's own rating dialog (which it may not
   /// show), recorded as it is made ([recordRatingAsk]), also when the
-  /// request fails; a failure is only logged. Home covered by then, or
-  /// something else came up meanwhile (a cue queued behind it, his ask for
-  /// reminders due or still checking): none, nothing recorded, so no sheet
-  /// opens over the store's dialog (it comes another time).
+  /// request fails; a failure is only logged. Home covered by then, no
+  /// longer due (a „Schlecht" entry or a reload landed meanwhile), or
+  /// something else came up (a cue queued behind it, his ask for reminders
+  /// due or still checking): none, nothing recorded, so no sheet opens over
+  /// the store's dialog (it comes another time).
   Future<void> _requestRating() async {
     if (!_homeFree ||
         !widget.showsBubble ||
         _cues.isNotEmpty ||
-        !_remindersSettledNotDue) {
+        !_remindersSettledNotDue ||
+        !_isRatingDue(ref.read(ratingAskDueProvider))) {
       return _endRatingAsk();
     }
     final launcher = ref.read(ratingLauncherProvider);

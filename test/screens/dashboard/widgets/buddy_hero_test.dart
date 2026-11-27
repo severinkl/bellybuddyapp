@@ -3707,6 +3707,8 @@ void main() {
     setUp(() {
       journey = true;
       rewards = const JourneyRewards(earnedDay: 7, patternsFreed: true);
+      // Today's entries known (the rating waits for them).
+      entries = _FakeEntries(EntriesState(day: startOfDay(now)));
       launcher = _FakeRatingLauncher();
       SharedPreferences.setMockInitialValues({});
     });
@@ -3881,6 +3883,7 @@ void main() {
 
       entries.push(
         EntriesState(
+          day: startOfDay(now),
           gutFeelings: [
             testGutFeelingEntry(
               trackedAt: DateTime(2026, 11, 22, 13),
@@ -3901,7 +3904,48 @@ void main() {
       expect(await recorded(), (null, null));
     });
 
-    testWidgets('request() throws: logged, recorded, Home keeps working', (
+    testWidgets('a Schlecht entry lands during the celebration: no request, '
+        'nothing recorded', (tester) async {
+      celebratedBefore();
+      await pumpRating(tester);
+      await tick(tester);
+      expect(controller(tester).currentAction, BuddyAction.celebrate);
+
+      entries.push(
+        EntriesState(
+          day: startOfDay(now),
+          gutFeelings: [
+            testGutFeelingEntry(
+              trackedAt: DateTime(2026, 11, 22, 13),
+              bloating: 5,
+            ),
+          ],
+        ),
+      );
+      await tester.pump();
+      await afterCelebration(tester);
+      await advance(tester, const Duration(seconds: 3));
+      expect(launcher.requests, 0);
+      expect(await recorded(), (null, null));
+    });
+
+    testWidgets("today's entries not loaded yet: no request until they land", (
+      tester,
+    ) async {
+      celebratedBefore();
+      entries = _FakeEntries(const EntriesState(isLoading: true));
+      await pumpRating(tester);
+      await advance(tester, const Duration(seconds: 3));
+      expect(launcher.requests, 0);
+
+      entries.push(EntriesState(day: startOfDay(now)));
+      await tester.pump();
+      await tick(tester);
+      await afterCelebration(tester);
+      expect(launcher.requests, 1);
+    });
+
+    testWidgets('request() throws: recorded anyway, Home keeps working', (
       tester,
     ) async {
       celebratedBefore();
