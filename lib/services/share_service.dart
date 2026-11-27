@@ -6,12 +6,12 @@ import '../models/dietitian_card.dart';
 import '../providers/core_providers.dart';
 import '../utils/logger.dart';
 
-/// A failed share call. [status] is the HTTP status of an error answer
-/// (null: no answer or unreadable); [message] is core's German text for it,
-/// when the body had one. Never carries link, code or token.
 /// What a share screen says when a call fails without core's own text.
 const shareFailedLine = 'Das hat nicht geklappt. Versuch es später nochmal.';
 
+/// A failed share call. [status] is the HTTP status of an error answer
+/// (null: no answer or unreadable); [message] is core's German text for it,
+/// when the body had one. Never carries link, code or token.
 class ShareException implements Exception {
   const ShareException({this.status, this.message});
 
@@ -28,6 +28,8 @@ class ShareService {
   final SupabaseClient _client;
 
   static const _log = AppLogger('ShareService');
+
+  static final _knownKinds = {for (final k in ShareKind.values) k.name};
 
   /// Never `select *`: the two hash columns are not readable. A
   /// connection embeds its dietitian, a kept link its keeper.
@@ -47,7 +49,13 @@ class ShareService {
           .from('data_shares')
           .select(columns)
           .order('created_at', ascending: false);
-      return rows.map(DataShare.fromJson).toList();
+      // A kind this build does not know (a newer core) is left out rather
+      // than failing the whole list.
+      return [
+        for (final row in rows)
+          if (_knownKinds.contains(row['kind'] ?? ShareKind.link.name))
+            DataShare.fromJson(row),
+      ];
     } catch (e, st) {
       _log.error('list failed', e, st);
       rethrow;

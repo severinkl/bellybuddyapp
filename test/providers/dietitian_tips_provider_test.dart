@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -155,6 +157,45 @@ void main() {
     expect(
       container.read(dietitianTipsProvider).requireValue.map((t) => t.id),
       ['c', 'a', 'b'],
+    );
+  });
+
+  test(
+    'a second „Probiere ich" while the first is under way is dropped',
+    () async {
+      await container.read(dietitianTipsProvider.future);
+      final notifier = container.read(dietitianTipsProvider.notifier);
+      final gate = Completer<void>();
+      service.gate = gate.future;
+
+      final first = notifier.toggleTrying('a');
+      final second = notifier.toggleTrying('a');
+      gate.complete();
+      await Future.wait([first, second]);
+
+      expect(service.tryingCalls, [('a', true)]);
+      expect(
+        container.read(dietitianTipsProvider).requireValue.first.tryingAt,
+        isNotNull,
+      );
+    },
+  );
+
+  test('a list fetched before a remove does not bring the tip back', () async {
+    await container.read(dietitianTipsProvider.future);
+    final notifier = container.read(dietitianTipsProvider.notifier);
+    final gate = Completer<void>();
+    service.gate = gate.future;
+
+    final reload = notifier.refresh();
+    service.gate = null;
+    await notifier.remove('a');
+    gate.complete();
+    await reload;
+
+    expect(
+      container.read(dietitianTipsProvider).requireValue.map((t) => t.id),
+      ['b'],
     );
   });
 }

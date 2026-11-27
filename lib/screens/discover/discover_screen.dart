@@ -75,8 +75,10 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     if (!mounted) return;
     final news = ref.read(discoverNewsProvider.notifier);
     await Future.wait([
-      // Every load, also the first: a tip may have arrived by push.
-      ref.read(dietitianTipsProvider.notifier).refresh(),
+      // Every load, as a tip may have arrived by push; but not while the
+      // first one is still under way (it is fresh).
+      if (refresh || !ref.read(dietitianTipsProvider).isLoading)
+        ref.read(dietitianTipsProvider.notifier).refresh(),
       if (refresh) news.refresh() else news.ensureLoaded(),
       ref.read(userRecipesProvider.notifier).fetch(force: refresh),
       if (refresh) ...[

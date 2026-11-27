@@ -195,6 +195,17 @@ void main() {
     expect(find.text(_notFound), findsOneWidget);
   });
 
+  testWidgets('the keyboard search key on an empty field does nothing', (
+    tester,
+  ) async {
+    await pump(tester);
+    await tester.showKeyboard(find.byType(TextField));
+    await tester.testTextInput.receiveAction(TextInputAction.search);
+    await tester.pump();
+    expect(service.lookedUp, isEmpty);
+    expect(find.text(_notFound), findsNothing);
+  });
+
   testWidgets('the scanner result fills the field and looks it up', (
     tester,
   ) async {

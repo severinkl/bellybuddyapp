@@ -110,6 +110,25 @@ void main() {
       expect(cols!, isNot(contains('hash')));
       verify(() => fb.order('created_at', ascending: false)).called(1);
     });
+
+    test('a kind this build does not know is left out', () async {
+      final fb = SettlableFilterBuilder(
+        Future.value([
+          _row('a'),
+          {..._row('b'), 'kind': 'group'},
+        ]),
+      );
+      final qb = MockSupabaseQueryBuilder();
+      when(() => client.from('data_shares')).thenAnswer((_) => qb);
+      when(() => qb.select(any())).thenAnswer((_) => fb);
+      when(
+        () => fb.order(any(), ascending: any(named: 'ascending')),
+      ).thenAnswer((_) => fb);
+
+      final result = await service.list();
+
+      expect(result.map((s) => s.id), ['a']);
+    });
   });
 
   group('create', () {

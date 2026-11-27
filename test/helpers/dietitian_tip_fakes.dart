@@ -30,6 +30,10 @@ class FakeDietitianTipService implements DietitianTipService {
   bool failList = false;
   bool failWrite = false;
   int listCalls = 0;
+
+  /// While set, [list] and [setTrying] wait for it (the answer is taken
+  /// before the wait, as a request in flight).
+  Future<void>? gate;
   final List<List<String>> seenCalls = [];
   final List<(String, bool)> tryingCalls = [];
   final List<String> removed = [];
@@ -38,7 +42,9 @@ class FakeDietitianTipService implements DietitianTipService {
   Future<List<DietitianTip>> list() async {
     listCalls++;
     if (failList) throw Exception('offline');
-    return List.of(tips);
+    final answer = List.of(tips);
+    await gate;
+    return answer;
   }
 
   @override
@@ -57,6 +63,7 @@ class FakeDietitianTipService implements DietitianTipService {
   Future<void> setTrying(String id, bool trying) async {
     if (failWrite) throw Exception('offline');
     tryingCalls.add((id, trying));
+    await gate;
     tips = [
       for (final t in tips)
         t.id == id

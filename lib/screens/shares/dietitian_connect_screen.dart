@@ -70,7 +70,7 @@ class _DietitianConnectScreenState
   }
 
   Future<void> _lookUp() async {
-    if (_lookingUp) return;
+    if (_lookingUp || _codeField.text.trim().isEmpty) return;
     final code = normalizePracticeCode(_codeField.text);
     if (code == null) {
       setState(() => _lookupError = _notFound);
@@ -125,6 +125,8 @@ class _DietitianConnectScreenState
             _found = null;
             _lookupError = message ?? _notFound;
           });
+        } else {
+          messenger.showSnackBar(SnackBar(content: Text(message ?? _notFound)));
         }
         return;
       }
