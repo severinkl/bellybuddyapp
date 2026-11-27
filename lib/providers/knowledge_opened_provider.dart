@@ -39,13 +39,15 @@ class KnowledgeOpenedNotifier extends AsyncNotifier<Set<String>> {
     final userId = ref.read(currentUserIdProvider);
     if (userId == null) return;
     final opRef = ref;
-    final Set<String> current;
+    final Set<String> loaded;
     try {
-      current = await future;
+      loaded = await future;
     } catch (_) {
       return;
     }
     if (!opRef.isCurrentUser(userId)) return;
+    // Another call waiting on the same load may have added one meanwhile.
+    final current = state.value ?? loaded;
     final url = link.toString();
     final list = [...current.where((l) => l != url), url];
     final kept = list.length > AppConstants.knowledgeOpenedMax

@@ -59,4 +59,20 @@ void main() {
     user.set(c, 'a');
     expect(await c.read(knowledgeOpenedProvider.future), {_link(1).toString()});
   });
+
+  test('two markOpened calls before the load completes both land', () async {
+    final c = ProviderContainer.test(
+      overrides: [SwitchableUserId('u1').override],
+    );
+    c.listen(knowledgeOpenedProvider, (_, _) {});
+    final notifier = c.read(knowledgeOpenedProvider.notifier);
+    await Future.wait([
+      notifier.markOpened(_link(1)),
+      notifier.markOpened(_link(2)),
+    ]);
+    final expected = [_link(1).toString(), _link(2).toString()];
+    expect(c.read(knowledgeOpenedProvider).value!.toList(), expected);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getStringList('knowledge_opened_u1'), expected);
+  });
 }
