@@ -8,11 +8,13 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
+import 'package:belly_buddy/models/feedback.dart';
 import 'package:belly_buddy/models/insight_rules.dart';
 import 'package:belly_buddy/models/insights.dart';
 import 'package:belly_buddy/models/pattern_stats.dart';
 import 'package:belly_buddy/models/tolerance_test.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
+import 'package:belly_buddy/providers/feedback_context_provider.dart';
 import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/providers/relief_provider.dart';
 import 'package:belly_buddy/providers/upgrade_gate_provider.dart';
@@ -342,6 +344,21 @@ List<Override> _drinkNoHistoryBase() => baseOverrides(
     ..lastEntry = null,
 );
 
+/// An account with an address (so „Antwort erwünscht" shows) and the
+/// context read.
+List<Override> _feedbackBase() =>
+    baseOverrides(auth: FakeAuthRepository(signInEmail: 'mia@example.com'));
+
+List<Override> _feedbackContext() => [
+  feedbackContextProvider.overrideWith(
+    (_) async => const FeedbackContext(
+      appVersion: '1.3.0',
+      platform: 'ios',
+      osVersion: '18.1',
+    ),
+  ),
+];
+
 List<Override> _mealToEdit() => [
   entriesProviderSeededWith([testMealEntry()]),
 ];
@@ -472,6 +489,12 @@ const a11yScreens = <A11yScreen>[
   ),
   A11yScreen('Verbindung bearbeiten', '/shares/d1/edit', seed: _dietitianShare),
   A11yScreen('Belly Buddy Plus', RoutePaths.plus, seed: _plusOn),
+  A11yScreen(
+    'Feedback geben',
+    RoutePaths.feedback,
+    base: _feedbackBase,
+    seed: _feedbackContext,
+  ),
 ];
 
 /// Once per test file: the German date symbols the screens format with.

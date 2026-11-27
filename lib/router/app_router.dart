@@ -214,6 +214,15 @@ final routerProvider = Provider<GoRouter>((ref) {
                 path: RoutePaths.me,
                 name: RouteNames.me,
                 builder: (context, state) => const MeScreen(),
+                routes: [
+                  // „Feedback geben", over the bottom bar.
+                  GoRoute(
+                    path: 'feedback',
+                    name: RouteNames.feedback,
+                    parentNavigatorKey: navigatorKey,
+                    builder: (context, state) => const FeedbackScreen(),
+                  ),
+                ],
               ),
             ],
           ),

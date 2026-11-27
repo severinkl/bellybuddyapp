@@ -397,9 +397,18 @@ class AppConstants {
   // counter doubles as a visible limit so the user isn't surprised.
   static const int dislikeCommentMaxLength = 1000;
 
+  /// Longest feedback message, in characters a person sees.
+  static const int feedbackMaxLength = 2000;
+
+  /// Longest feedback message in Unicode code points; mirrors core's
+  /// `MESSAGE_MAX_CODE_POINTS`. A character a person sees can be several
+  /// code points (a skin-toned family is 11), so this caps the field too.
+  static const int feedbackMaxCodePoints = 16000;
+
   // External URLs
-  static const String feedbackFormUrl =
-      'https://us20.list-manage.com/survey?u=526bdf1360ec4bf225504e006&id=d47032793c&attribution=false';
+
+  /// The public Belly Buddy site, linked in the invite text.
+  static const String inviteUrl = 'https://bellybuddy.at';
 
   /// Where the password-reset email link lands: the reset-password page of the
   /// Belly Buddy web app, where the user sets the new password.
@@ -409,6 +418,13 @@ class AppConstants {
   /// Public privacy policy (Datenschutzerklärung) of the Belly Buddy web app.
   static const String privacyPolicyUrl =
       'https://app.bellybuddy.at/datenschutz';
+
+  /// The text „Freund:innen einladen" shares: it describes the app, not the
+  /// sender, so forwarding it reveals nothing about their health.
+  static const String inviteShareText =
+      'Schau dir mal Belly Buddy an: Damit schreibst du auf, was du isst und '
+      'wie es deinem Bauch geht, und ein kleiner Buddy begleitet dich dabei. '
+      '$inviteUrl';
 
   /// Terms of use (Nutzungsbedingungen) of Belly Buddy Plus on the web app.
   static const String termsUrl =

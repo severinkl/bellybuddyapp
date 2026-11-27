@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
@@ -11,6 +10,7 @@ import '../../providers/buddy_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/plus_provider.dart';
 import '../../providers/rating_provider.dart';
+import '../../providers/share_launcher_provider.dart';
 import '../../providers/shares_provider.dart';
 import '../../providers/tutorial_provider.dart';
 import '../../providers/upgrade_gate_provider.dart';
@@ -22,7 +22,7 @@ import '../../services/progress/progress_copy.dart';
 import '../../services/purchases/purchases_gateway.dart';
 import '../../utils/buddy_name.dart';
 import '../../utils/logger.dart';
-import '../../utils/url_utils.dart';
+import '../../utils/share_origin.dart';
 import '../../widgets/buddy/buddy.dart';
 import '../../widgets/buddy/streak_chip.dart';
 import '../../widgets/common/bb_settings_item.dart';
@@ -36,12 +36,13 @@ import 'widgets/rename_buddy_dialog.dart';
 /// while notifications are off ([remindersOffProvider]; „Einschalten"),
 /// Streak & Ziel („Dein Streak"), Dein Verlauf (always), Mit Berater:in
 /// teilen, Einstellungen, Tutorial wiederholen, „Belly Buddy bewerten" and
-/// Feedback geben, and the app version in small print.
+/// Feedback geben (the in-app form), „Freund:innen einladen" (the system
+/// share sheet with a fixed text) as the last row, and the app version in small print.
 ///
 /// Without a Buddy status (loading, error) the Buddy shows as 'Buddy',
 /// without the chip, „Umbenennen" and the Streak row.
 class MeScreen extends ConsumerStatefulWidget {
-  const MeScreen({super.key, this.openUrl = launchUrl});
+  const MeScreen({super.key});
 
   static const renameKey = Key('me_rename');
   static const remindersKey = Key('me_reminders');
@@ -53,9 +54,7 @@ class MeScreen extends ConsumerStatefulWidget {
   static const tutorialKey = Key('me_tutorial');
   static const rateKey = Key('me_rate');
   static const feedbackKey = Key('me_feedback');
-
-  /// Opens the feedback form.
-  final UrlOpener openUrl;
+  static const inviteKey = Key('me_invite');
 
   @override
   ConsumerState<MeScreen> createState() => _MeScreenState();
@@ -186,6 +185,42 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     }
   }
 
+  /// The invite's share sheet is on its way: further taps wait.
+  bool _sharing = false;
+
+  /// „Freund:innen einladen": the share sheet with the invite text, anchored
+  /// at the row ([rowContext]); a failing launcher says so (the text stays out of the log).
+  Future<void> _invite(BuildContext rowContext) async {
+    if (_sharing) return;
+    _sharing = true;
+    final origin = shareOriginOf(rowContext);
+    final launcher = ref.read(shareLauncherProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await launcher(AppConstants.inviteShareText, origin);
+    } catch (e, st) {
+      _log.error('Opening the share sheet for the invite failed', e, st);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Das Teilen hat nicht geklappt.')),
+      );
+    } finally {
+      _sharing = false;
+    }
+  }
+
+  /// „Feedback geben" is on its way: a second tap in the same frame opens
+  /// nothing (cleared on the next frame, as [_openingShare]).
+  bool _openingFeedback = false;
+
+  void _openFeedback() {
+    if (_openingFeedback) return;
+    _openingFeedback = true;
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _openingFeedback = false,
+    );
+    unawaited(context.push(RoutePaths.feedback));
+  }
+
   /// The share list is on its way: a second tap in the same frame opens
   /// nothing. From the next frame the pushed route covers this screen and
   /// takes the taps, so the flag is cleared then, not when the push
@@ -209,13 +244,6 @@ class _MeScreenState extends ConsumerState<MeScreen> {
       unawaited(context.push(RoutePaths.shareCreate));
     }
   }
-
-  Future<void> _openFeedback() => openExternalUrl(
-    context,
-    AppConstants.feedbackFormUrl,
-    failureMessage: 'Das Feedback-Formular konnte nicht geöffnet werden.',
-    open: widget.openUrl,
-  );
 
   @override
   Widget build(BuildContext context) {
@@ -310,7 +338,17 @@ class _MeScreenState extends ConsumerState<MeScreen> {
         icon: Icons.feedback_outlined,
         title: 'Feedback geben',
         subtitle: 'Teile uns deine Ideen und Wünsche mit',
-        onTap: () => unawaited(_openFeedback()),
+        onTap: _openFeedback,
+      ),
+      // The Builder's context is the row's: its box anchors the share popover.
+      Builder(
+        builder: (rowContext) => BbSettingsItem(
+          key: MeScreen.inviteKey,
+          icon: Icons.share_outlined,
+          title: 'Freund:innen einladen',
+          subtitle: 'Erzähl anderen von Belly Buddy',
+          onTap: () => unawaited(_invite(rowContext)),
+        ),
       ),
     ];
 
