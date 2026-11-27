@@ -1,3 +1,4 @@
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -55,16 +56,18 @@ void main() {
     entryRepo = FakeEntryRepository()..progressSource = _source(now);
   });
 
-  ProviderContainer makeContainer({List<Override> overrides = const []}) =>
-      ProviderContainer.test(
-        overrides: [
-          entryRepositoryProvider.overrideWithValue(entryRepo),
-          buddyRepositoryProvider.overrideWithValue(FakeBuddyRepository()),
-          _user.override,
-          buddyClockProvider.overrideWithValue(() => now),
-          ...overrides,
-        ],
-      );
+  ProviderContainer makeContainer({
+    List<Override> overrides = const [],
+    DateTime Function()? clock,
+  }) => ProviderContainer.test(
+    overrides: [
+      entryRepositoryProvider.overrideWithValue(entryRepo),
+      buddyRepositoryProvider.overrideWithValue(FakeBuddyRepository()),
+      _user.override,
+      buddyClockProvider.overrideWithValue(clock ?? () => now),
+      ...overrides,
+    ],
+  );
 
   ProgressNotifier notifier(ProviderContainer c) =>
       c.read(progressProvider.notifier);
@@ -140,6 +143,34 @@ void main() {
 
     expect(entryRepo.progressSourceRequests, hasLength(2));
     expect(c.read(progressProvider).value, computeProgress(next, now: now));
+  });
+
+  test('a new day refetches, still showing the previous value meanwhile', () {
+    fakeAsync((async) {
+      final beforeMidnight = DateTime(2026, 11, 26, 23, 59, 30);
+      final c = makeContainer(clock: () => beforeMidnight.add(async.elapsed));
+      c.listen(progressProvider, (_, _) {});
+      async.flushMicrotasks();
+      final loaded = c.read(progressProvider).value;
+      expect(loaded, isNotNull);
+      entryRepo.holdProgressSource = true;
+
+      async.elapse(const Duration(seconds: 31));
+
+      expect(entryRepo.progressSourceRequests, hasLength(2));
+      expect(entryRepo.progressSourceRequests.last.now, DateTime(2026, 11, 27));
+      // Not a reload: screens keep showing the previous value.
+      expect(c.read(progressProvider), isA<AsyncData<Progress?>>());
+      expect(c.read(progressProvider).value, loaded);
+
+      final next = _source(DateTime(2026, 11, 27), gutFeelings: 2);
+      entryRepo.heldProgressSources.single.complete(next);
+      async.flushMicrotasks();
+      expect(
+        c.read(progressProvider).value,
+        computeProgress(next, now: DateTime(2026, 11, 27)),
+      );
+    });
   });
 
   test('user change reloads', () async {

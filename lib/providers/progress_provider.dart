@@ -14,9 +14,13 @@ import 'entry_window_notifier.dart';
 /// count for the longest streak (none without a Buddy or when it fails).
 ///
 /// Computed again after every entry write, on a new day and on [refresh];
-/// the previous value stays while that loads (screens read `.value`). See
-/// [EntryWindowNotifier], also for what the state holds after a user
-/// change.
+/// see [EntryWindowNotifier]. How a screen reads the state:
+/// 1. [AsyncValue.hasError]: the error state.
+/// 2. [AsyncValue.isReloading] (a rebuild, i.e. a user change): loading;
+///    never show its value, it is the previous user's.
+/// 3. Otherwise [AsyncValue.value]: a refetch after an entry write or on a
+///    new day stays [AsyncData], so the previous value keeps showing while
+///    it loads.
 class ProgressNotifier extends EntryWindowNotifier<Progress?> {
   static const _log = AppLogger('Progress');
 

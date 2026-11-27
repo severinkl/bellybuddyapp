@@ -19,8 +19,8 @@ import 'today_provider.dart';
 ///   up once watched again;
 /// - on [refresh].
 ///
-/// A write or a new day during a load is fetched after it, and the
-/// previous value stays meanwhile (screens read `.value`).
+/// A write or a new day during a load is fetched after it. Those refetches
+/// leave the state [AsyncData]: the previous value stays meanwhile.
 ///
 /// After a user change Riverpod keeps the previous user's value in the
 /// state while the new user's value loads ([AsyncValue.isReloading]) and
