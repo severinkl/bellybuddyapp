@@ -208,6 +208,24 @@ void main() {
     expect(find.text('Von deiner Berater:in'), findsNothing);
   });
 
+  testWidgets('remove failing: the tip stays and it says so', (tester) async {
+    await pump(tester, [testTip()]);
+    service.failWrite = true;
+    await openRemove(tester);
+
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AlertDialog),
+        matching: find.text('Entfernen'),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(service.removed, isEmpty);
+    expect(find.text('Probier Haferflocken am Morgen.'), findsOneWidget);
+    expect(find.text(DietitianTipsSection.failedLine), findsOneWidget);
+  });
+
   testWidgets('offstage (no tickers): nothing is stamped until visible', (
     tester,
   ) async {
