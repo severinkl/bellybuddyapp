@@ -73,7 +73,10 @@ void main() {
 
     expect(find.text('Von deiner Berater:in'), findsOneWidget);
     expect(find.text('Julia Berger'), findsOneWidget);
-    expect(find.text('Diätolog:in · heute, 09:12'), findsOneWidget);
+    expect(
+      find.text('Diätolog:in (eigene Angabe) · heute, 09:12'),
+      findsOneWidget,
+    );
     expect(find.text('JB'), findsOneWidget);
     expect(find.text('Neu'), findsOneWidget);
     expect(find.text('Probier Haferflocken am Morgen.'), findsOneWidget);
@@ -84,7 +87,10 @@ void main() {
     await pump(tester, [
       testTip(profession: 'zauberin', createdAt: DateTime(2026, 11, 25, 9, 12)),
     ]);
-    expect(find.text('Andere · gestern, 09:12'), findsOneWidget);
+    expect(
+      find.text('Andere (eigene Angabe) · gestern, 09:12'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('no „Neu" badge on a seen tip', (tester) async {

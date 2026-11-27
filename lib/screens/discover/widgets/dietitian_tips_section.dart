@@ -282,7 +282,8 @@ class _NewestTip extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '${tipProfessionLabel(tip.senderProfession)} · '
+                      '${tipProfessionLabel(tip.senderProfession)} '
+                      '(eigene Angabe) · '
                       '${tipWhen(tip.createdAt, now)}',
                       style: const TextStyle(
                         fontSize: AppTheme.fontSizeCaption,
