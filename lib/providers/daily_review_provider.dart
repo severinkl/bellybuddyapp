@@ -119,8 +119,10 @@ bool _firstLoad(AsyncValue<Object?> v) => !v.hasValue && !v.hasError;
 /// The open review built from that day's entries: [entriesProvider] while
 /// it holds that day (today: only then); otherwise, for yesterday,
 /// `diaryEntriesProvider(day)`. With the suggestion groups (none if
-/// failed), the user's choices (none if failed) and the seams; no pick
-/// while either is on its first load ([DailyReview.alternativePending]). Null while not
+/// failed), the user's choices and the seams; no pick while the groups are
+/// on their first load or the choices are not loaded (loading or failed:
+/// a rejected pair must not show) ([DailyReview.alternativePending]).
+/// Null while not
 /// open, signed out, during the Buddy onboarding, while the day's entries
 /// are not there, or without a meal that day.
 final dailyReviewProvider = Provider<DailyReview?>((ref) {
@@ -152,8 +154,10 @@ final dailyReviewProvider = Provider<DailyReview?>((ref) {
   }
 
   final suggestions = ref.watch(ingredientSuggestionProvider);
-  final choicesLoading = ref.watch(
-    alternativeChoicesProvider.select(_firstLoad),
+  // A failed load counts as loading: without the choices a rejected pair
+  // could be shown. The card retries it on the next Home visit.
+  final choicesPending = ref.watch(
+    alternativeChoicesProvider.select((v) => !v.hasValue),
   );
   return buildDailyReview(
     day: day,
@@ -162,7 +166,7 @@ final dailyReviewProvider = Provider<DailyReview?>((ref) {
     groups: suggestions.value ?? const [],
     chosen: ref.watch(chosenAlternativesProvider),
     alternativeLocked: ref.watch(dailyReviewAlternativeLockedProvider),
-    alternativePending: _firstLoad(suggestions) || choicesLoading,
+    alternativePending: _firstLoad(suggestions) || choicesPending,
     extras: ref.watch(dailyReviewExtrasProvider),
   );
 });

@@ -356,7 +356,9 @@ void main() {
     expect(loaded.alternative?.replacement.id, 'leek');
   });
 
-  test('choices failed → not pending, the pick from no choices', () async {
+  test('choices failed → pending like loading: no alternative block (a '
+      'rejected pair is never shown); loaded later → the pick skips the '
+      'chosen pair', () async {
     final c = container(
       now: _at(_today, 20),
       todayMeals: [_meal('m1', _today)],
@@ -364,9 +366,16 @@ void main() {
       choices: AsyncError(Exception('offline'), StackTrace.empty),
     );
     await settle(c);
-    final review = c.read(dailyReviewProvider)!;
-    expect(review.alternativePending, isFalse);
-    expect(review.alternative?.replacement.id, 'chive');
+    final failed = c.read(dailyReviewProvider)!;
+    expect(failed.alternativePending, isTrue);
+    expect(failed.alternative, isNull);
+
+    (c.read(alternativeChoicesProvider.notifier) as _Choices).set(
+      AsyncData([_choice('chive')]),
+    );
+    final loaded = c.read(dailyReviewProvider)!;
+    expect(loaded.alternativePending, isFalse);
+    expect(loaded.alternative?.replacement.id, 'leek');
   });
 
   test('locked without groups (no analysis without Plus) → alternativeLocked, '

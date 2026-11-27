@@ -87,6 +87,7 @@ class _DailyReviewCardState extends ConsumerState<DailyReviewCard> {
           unawaited(
             ref.read(ingredientSuggestionProvider.notifier).fetchSuggestions(),
           );
+          ref.read(alternativeChoicesProvider.notifier).retryIfFailed();
         }
       });
     }

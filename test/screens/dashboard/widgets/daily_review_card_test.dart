@@ -64,8 +64,17 @@ class _Service implements AlternativeChoiceService {
   /// While set, [upsert] answers only once it completes.
   Completer<void>? gate;
 
+  /// While set, [fetch] fails.
+  bool fetchFails = false;
+  List<Map<String, dynamic>> stored = const [];
+  int fetches = 0;
+
   @override
-  Future<List<Map<String, dynamic>>> fetch(String userId) async => const [];
+  Future<List<Map<String, dynamic>>> fetch(String userId) async {
+    fetches++;
+    if (fetchFails) throw Exception('offline');
+    return stored;
+  }
 
   @override
   Future<Map<String, dynamic>> upsert({
@@ -673,6 +682,44 @@ void main() {
       await tester.pump();
       await tester.pump();
       expect(h.suggestions.fetches, 2);
+    });
+
+    testWidgets('choices failed on the first visit: retried on the next '
+        'visit, the pick then skips the chosen pair', (tester) async {
+      final h = _Harness();
+      h.service.fetchFails = true;
+      await h.pump(tester);
+      expect(h.service.fetches, 1);
+
+      h.service.fetchFails = false;
+      h.service.stored = [
+        {
+          'id': 'c-old',
+          'ingredient_id': 'i-zwiebel',
+          'replacement_ingredient_id': 'r-lauch',
+          'choice': 'skip',
+          'created_at': '2026-11-26T20:00:00Z',
+          'ingredient': {'name': 'Zwiebel'},
+          'replacement': {'name': 'Lauchgrün'},
+        },
+      ];
+      h.visible.value = false;
+      await tester.pump();
+      h.visible.value = true;
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+      expect(h.service.fetches, 2);
+      expect(find.textContaining('Schnittlauch'), findsOneWidget);
+      expect(find.textContaining('Lauchgrün'), findsNothing);
+
+      // Loaded: later visits fetch no choices again.
+      h.visible.value = false;
+      await tester.pump();
+      h.visible.value = true;
+      await tester.pump();
+      await tester.pump();
+      expect(h.service.fetches, 2);
     });
   });
 }

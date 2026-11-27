@@ -143,6 +143,91 @@ void main() {
     expect(c.read(alternativeChoicesProvider).value!.map((e) => e.id), ['old']);
   });
 
+  test('retryIfFailed after a failed first load: fetches again and '
+      'loads; once loaded it fetches nothing more', () async {
+    var fail = true;
+    service.onFetch = (_) async {
+      if (fail) throw Exception('offline');
+      return [row('old')];
+    };
+    final c = make();
+    c.listen(alternativeChoicesProvider, (_, _) {});
+    await expectLater(
+      c.read(alternativeChoicesProvider.future),
+      throwsA(anything),
+    );
+    expect(service.fetches, 1);
+
+    fail = false;
+    c.read(alternativeChoicesProvider.notifier).retryIfFailed();
+    final list = await c.read(alternativeChoicesProvider.future);
+    expect(list.map((e) => e.id), ['old']);
+    expect(service.fetches, 2);
+
+    c.read(alternativeChoicesProvider.notifier).retryIfFailed();
+    await Future<void>.delayed(Duration.zero);
+    expect(service.fetches, 2);
+  });
+
+  test('choose on a failed first load: retries the load once, then stores '
+      'next to the loaded rows', () async {
+    var fail = true;
+    service.onFetch = (_) async {
+      if (fail) throw Exception('offline');
+      return [row('old', ing: 'i9', rep: 'r9')];
+    };
+    final c = make();
+    c.listen(alternativeChoicesProvider, (_, _) {});
+    await expectLater(
+      c.read(alternativeChoicesProvider.future),
+      throwsA(anything),
+    );
+
+    fail = false;
+    final ok = await c
+        .read(alternativeChoicesProvider.notifier)
+        .choose(
+          ingredientId: 'i1',
+          ingredientName: 'Zwiebel',
+          replacement: rep,
+          kind: AlternativeChoiceKind.tryIt,
+        );
+    expect(ok, isTrue);
+    expect(service.fetches, 2);
+    expect(c.read(alternativeChoicesProvider).value!.map((e) => e.id), [
+      'srv',
+      'old',
+    ]);
+  });
+
+  test('choose on a failed first load whose retry fails too: false, one '
+      'retry only, nothing stored', () async {
+    service.onFetch = (_) async => throw Exception('offline');
+    var upserts = 0;
+    service.onUpsert = () async {
+      upserts++;
+      return row('srv');
+    };
+    final c = make();
+    c.listen(alternativeChoicesProvider, (_, _) {});
+    await expectLater(
+      c.read(alternativeChoicesProvider.future),
+      throwsA(anything),
+    );
+
+    final ok = await c
+        .read(alternativeChoicesProvider.notifier)
+        .choose(
+          ingredientId: 'i1',
+          ingredientName: 'Zwiebel',
+          replacement: rep,
+          kind: AlternativeChoiceKind.tryIt,
+        );
+    expect(ok, isFalse);
+    expect(service.fetches, 2);
+    expect(upserts, 0);
+  });
+
   test('choose fails over an existing row: the old row is restored', () async {
     service.onFetch = (_) async => [row('old', choice: 'skip')];
     final c = make();

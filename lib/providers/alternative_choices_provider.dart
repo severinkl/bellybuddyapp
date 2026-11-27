@@ -4,6 +4,7 @@ import '../models/alternative_choice.dart';
 import '../models/replacement_ingredient.dart';
 import '../services/alternative_choice_service.dart';
 import '../utils/logger.dart';
+import '../utils/retry_helper.dart';
 import 'auth_provider.dart';
 
 class AlternativeChoicesNotifier
@@ -20,6 +21,14 @@ class AlternativeChoicesNotifier
     return [for (final r in rows) AlternativeChoice.fromRow(r)];
   }
 
+  /// After a failed first load (no list yet, not loading): loads again.
+  /// Otherwise nothing. The card asks on every Home visit.
+  void retryIfFailed() {
+    if (state.hasError && !state.hasValue && !state.isLoading) {
+      ref.invalidateSelf();
+    }
+  }
+
   bool _samePair(
     AlternativeChoice c,
     String ingredientId,
@@ -28,7 +37,9 @@ class AlternativeChoicesNotifier
 
   /// Stores [kind] for [replacement] on [ingredientId]: in the list at once,
   /// then replaced by the stored row. A choice already there for the pair is
-  /// replaced, not doubled. On failure the list is as before; false.
+  /// replaced, not doubled. After a failed first load the load is retried
+  /// once first (still failing: false). On failure the list is as before;
+  /// false.
   Future<bool> choose({
     required String ingredientId,
     required String ingredientName,
@@ -36,8 +47,19 @@ class AlternativeChoicesNotifier
     required AlternativeChoiceKind kind,
   }) async {
     final userId = ref.read(currentUserIdProvider);
-    final before = state.value;
-    if (userId == null || before == null) return false;
+    if (userId == null) return false;
+    var before = state.value;
+    if (before == null && state.hasError) {
+      retryIfFailed();
+      try {
+        before = await future;
+      } catch (e, st) {
+        _log.error('choose: loading the choices failed', e, st);
+        return false;
+      }
+      if (!ref.isCurrentUser(userId)) return false;
+    }
+    if (before == null) return false;
 
     final existing = before.indexWhere(
       (c) => _samePair(c, ingredientId, replacement.id),
@@ -129,9 +151,14 @@ class AlternativeChoicesNotifier
   }
 }
 
+/// No automatic retry: a failed load stays an error (the review shows no
+/// alternative) until [AlternativeChoicesNotifier.retryIfFailed] or a
+/// choice loads it again; Riverpod's backoff would hold a choice for tens of
+/// seconds.
 final alternativeChoicesProvider =
     AsyncNotifierProvider<AlternativeChoicesNotifier, List<AlternativeChoice>>(
       AlternativeChoicesNotifier.new,
+      retry: noRetry,
     );
 
 /// (ingredientId, replacementId) of every choice, try or skip; empty while

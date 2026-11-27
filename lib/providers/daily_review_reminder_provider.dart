@@ -35,6 +35,11 @@ class DailyReviewNoticeQueue {
   Future<void> Function()? _next;
   Future<void>? _running;
 
+  /// When the last requested schedule fires (in this app run); null after a
+  /// cancel. Lets the sync cancel a notice still pending after the review
+  /// time moved before now.
+  DateTime? scheduledAt;
+
   /// Done once every request so far has run.
   Future<void> get idle => _running ?? Future.value();
 
@@ -65,13 +70,16 @@ final dailyReviewNoticeQueueProvider = Provider<DailyReviewNoticeQueue>(
 /// whenever the profile's switch or time, today's meals ([entriesProvider]
 /// while it holds today), the day, the closed day or the Buddy's name
 /// change; not every minute (a notice already due fires on its own).
-/// Signed out: cancelled. Waits for the profile, the closed day and the
+/// From the review time on nothing is cancelled (the shown notice stays in
+/// the tray) unless a notice for a later time is pending. Signed out:
+/// cancelled. Waits for the profile, the closed day and the
 /// Buddy's first load. The calls go through [dailyReviewNoticeQueueProvider].
 final dailyReviewReminderSyncProvider = Provider<void>((ref) {
   final queue = ref.watch(dailyReviewNoticeQueueProvider);
   final notifications = ref.read(notificationRepositoryProvider);
   // After any schedule still in flight, also after the sign-out cancelAll.
   if (ref.watch(currentUserIdProvider) == null) {
+    queue.scheduledAt = null;
     queue.request(notifications.cancelDailyReview);
     return;
   }
@@ -107,20 +115,34 @@ final dailyReviewReminderSyncProvider = Provider<void>((ref) {
   if (todayMeals == null && settings.on) return;
 
   final reviewMinutes = reviewMinutesOf(settings.time);
+  final now = ref.read(buddyClockProvider)();
   final due = dailyReviewNoticeDue(
     reminderOn: settings.on,
     todayMeals: todayMeals ?? 0,
-    now: ref.read(buddyClockProvider)(),
+    now: now,
     reviewMinutes: reviewMinutes,
     closedDay: closed.value,
   );
-  queue.request(
-    due
-        ? () => notifications.scheduleDailyReview(
-            hour: reviewMinutes ~/ 60,
-            minute: reviewMinutes % 60,
-            buddyName: buddy.name,
-          )
-        : notifications.cancelDailyReview,
-  );
+  if (due) {
+    queue.scheduledAt = DateTime(
+      now.year,
+      now.month,
+      now.day,
+    ).add(Duration(minutes: reviewMinutes));
+    queue.request(
+      () => notifications.scheduleDailyReview(
+        hour: reviewMinutes ~/ 60,
+        minute: reviewMinutes % 60,
+        buddyName: buddy.name,
+      ),
+    );
+    return;
+  }
+  // From the review time on, today's one-shot has fired (or was never
+  // set): a cancel would only take the shown notice out of the tray. Only
+  // a notice set for later (the time moved before now) is still cancelled.
+  final pastTime = now.hour * 60 + now.minute >= reviewMinutes;
+  if (pastTime && !(queue.scheduledAt?.isAfter(now) ?? false)) return;
+  queue.scheduledAt = null;
+  queue.request(notifications.cancelDailyReview);
 });

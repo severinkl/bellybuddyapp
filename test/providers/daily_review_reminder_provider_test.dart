@@ -331,14 +331,46 @@ void main() {
       final on = testUserProfile(dailyReviewReminder: true);
       final c = container(profile: on, meals: [_meal('m1')]);
       await settle(c);
-      // Past 19:30: nothing pending.
-      expect(log, ['cancel']);
+      // Past 19:30: nothing pending, and no cancel (it would take a shown
+      // notice out of the tray).
+      expect(log, isEmpty);
 
       (c.read(profileProvider.notifier) as _Profile).set(
         on.copyWith(dailyReviewTime: '21:00'),
       );
       await settle(c);
-      expect(log, ['cancel', 'schedule 21:0', 'scheduled 21:0']);
+      expect(log, ['schedule 21:0', 'scheduled 21:0']);
+    });
+
+    test('sync: at 19:45 with the switch on and a meal (review 19:30) → no '
+        'cancel: the shown notice stays in the tray; card closed then → no '
+        'cancel either', () async {
+      now = _at(19, 45);
+      final c = container(meals: [_meal('m1')]);
+      await settle(c);
+      expect(log, isEmpty);
+
+      (c.read(dailyReviewClosedProvider.notifier) as _Closed).set(_today);
+      await settle(c);
+      expect(log, isEmpty);
+      verifyNever(() => notifications.cancelDailyReview());
+    });
+
+    test('sync: a later notice pending, then the time moved before now '
+        '(20:00: 21:00 → 19:30) → cancelled', () async {
+      now = _at(20);
+      final late = testUserProfile(
+        dailyReviewReminder: true,
+      ).copyWith(dailyReviewTime: '21:00');
+      final c = container(profile: late, meals: [_meal('m1')]);
+      await settle(c);
+      expect(log, ['schedule 21:0', 'scheduled 21:0']);
+
+      (c.read(profileProvider.notifier) as _Profile).set(
+        late.copyWith(dailyReviewTime: '19:30'),
+      );
+      await settle(c);
+      expect(log, ['schedule 21:0', 'scheduled 21:0', 'cancel']);
     });
 
     test(
