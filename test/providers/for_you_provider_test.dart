@@ -1,0 +1,184 @@
+import 'dart:async';
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'package:belly_buddy/models/knowledge_article.dart';
+import 'package:belly_buddy/models/progress.dart';
+import 'package:belly_buddy/models/user_profile.dart';
+import 'package:belly_buddy/providers/auth_provider.dart';
+import 'package:belly_buddy/providers/for_you_provider.dart';
+import 'package:belly_buddy/providers/knowledge_opened_provider.dart';
+import 'package:belly_buddy/providers/knowledge_provider.dart';
+import 'package:belly_buddy/providers/profile_provider.dart';
+import 'package:belly_buddy/providers/progress_provider.dart';
+import 'package:belly_buddy/repositories/knowledge_repository.dart';
+
+import '../helpers/fakes.dart';
+import '../helpers/fixtures.dart';
+import '../helpers/riverpod_helpers.dart';
+
+final _laktose = KnowledgeArticle(
+  title: 'Laktose im Alltag',
+  link: Uri.parse('https://www.myfodmap.at/laktose'),
+  category: 'Gesund verdauen',
+  publishedAt: DateTime.utc(2026, 11, 22, 8),
+);
+
+final _verstopfung = KnowledgeArticle(
+  title: 'Reizdarm Typ: Verstopfung',
+  link: Uri.parse('https://www.myfodmap.at/verstopfung'),
+  category: 'Gesund verdauen',
+  publishedAt: DateTime.utc(2026, 11, 21, 8),
+);
+
+/// A week with three Klo entries, two of them hard.
+const _hardWeek = RecentSignals(klo: 3, kloHard: 2, kloLoose: 0);
+
+Progress _progress(RecentSignals recent) => Progress(
+  weeks: const [],
+  good: 0,
+  medium: 0,
+  hard: 0,
+  activeDays: 0,
+  elapsedDays: 0,
+  longestStreak: 0,
+  recent: recent,
+);
+
+/// Serves [value] once [gate] (when set at build time) completes; follows
+/// the signed-in user like the real one.
+class _GatedProgress extends ProgressNotifier {
+  _GatedProgress(this.value);
+
+  Progress? value;
+  Completer<void>? gate;
+
+  @override
+  Future<Progress?> build() async {
+    ref.watch(currentUserIdProvider);
+    await gate?.future;
+    return value;
+  }
+}
+
+/// The profile, set by the test; starts loading.
+class _ProfileLater extends ProfileNotifier {
+  @override
+  AsyncValue<UserProfile?> build() => const AsyncValue.loading();
+
+  void load(UserProfile? profile) => state = AsyncValue.data(profile);
+}
+
+void main() {
+  late FakeKnowledgeRepository repo;
+  late _GatedProgress progress;
+  late SwitchableUserId user;
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+    repo = FakeKnowledgeRepository(
+      articles: [_laktose, _verstopfung, ...testKnowledgeArticles()],
+    );
+    progress = _GatedProgress(null);
+    user = SwitchableUserId();
+  });
+
+  ProviderContainer container({ProfileNotifier Function()? profile}) {
+    final c = ProviderContainer.test(
+      overrides: [
+        user.override,
+        knowledgeRepositoryProvider.overrideWithValue(repo),
+        progressProvider.overrideWith(() => progress),
+        insightsProviderSeededWith(lockedInsights()),
+        profile == null
+            ? profileProviderSeededWith(
+                testUserProfile(intolerances: const ['Laktose']),
+              )
+            : profileProvider.overrideWith(profile),
+      ],
+    );
+    c.listen(forYouProvider, (_, _) {});
+    return c;
+  }
+
+  Future<void> settle(ProviderContainer c) async {
+    await c.read(knowledgeFeedProvider.future);
+    await c.read(knowledgeOpenedProvider.future);
+    await c.read(progressProvider.future).catchError((_) => null);
+    await pumpEventQueue();
+  }
+
+  List<Uri> links(ProviderContainer c) => [
+    for (final p in c.read(forYouProvider)) p.article.link,
+  ];
+
+  test('empty while the feed or the profile is loading', () async {
+    final hold = Completer<void>();
+    repo.fetchHold = hold;
+    final profile = _ProfileLater();
+    final c = container(profile: () => profile);
+
+    expect(c.read(forYouProvider), isEmpty);
+
+    hold.complete();
+    await settle(c);
+    expect(
+      c.read(forYouProvider),
+      isEmpty,
+      reason: 'the feed is there, the profile still loading',
+    );
+
+    profile.load(testUserProfile(intolerances: const ['Laktose']));
+    await pumpEventQueue();
+    expect(links(c), [_laktose.link]);
+    expect(
+      c.read(forYouProvider).single.reason,
+      'Weil du Laktose angegeben hast',
+    );
+  });
+
+  test(
+    'uses recent signals once progress has a value; works without it',
+    () async {
+      final gate = Completer<void>();
+      progress
+        ..value = _progress(_hardWeek)
+        ..gate = gate;
+      final c = container();
+      await c.read(knowledgeFeedProvider.future);
+      await c.read(knowledgeOpenedProvider.future);
+      await pumpEventQueue();
+
+      expect(links(c), [_laktose.link], reason: 'progress still loading');
+
+      gate.complete();
+      await settle(c);
+      expect(links(c), [_verstopfung.link, _laktose.link]);
+      expect(
+        c.read(forYouProvider).first.reason,
+        'Weil es beim Klo diese Woche öfter hart war',
+      );
+
+      // Another user: the previous user's week never shapes the picks while
+      // the new one's loads.
+      progress
+        ..value = _progress(_hardWeek)
+        ..gate = Completer<void>();
+      user.set(c, 'other-user');
+      await pumpEventQueue();
+      expect(c.read(progressProvider).isReloading, isTrue);
+      expect(links(c), isNot(contains(_verstopfung.link)));
+    },
+  );
+
+  test('an opened article leaves the picks', () async {
+    final c = container();
+    await settle(c);
+    expect(links(c), [_laktose.link]);
+
+    await c.read(knowledgeOpenedProvider.notifier).markOpened(_laktose.link);
+    expect(c.read(forYouProvider), isEmpty);
+  });
+}

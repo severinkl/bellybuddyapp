@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/discover_news_provider.dart';
+import '../../providers/for_you_provider.dart';
 import '../../providers/ingredient_suggestion_provider.dart';
 import '../../providers/knowledge_provider.dart';
 import '../../providers/profile_provider.dart';
@@ -28,8 +29,8 @@ import 'widgets/knowledge_article_tile.dart';
 /// The Entdecken tab: the hub over the app's content. Top to bottom:
 /// Tipps (the newest recommendation set), Alternativen (the newest
 /// ingredient suggestions), Rezepte (Für dich from the collection, and
-/// Meine Rezepte: own and saved) and Wissen (the newest myfodmap
-/// blog articles).
+/// Meine Rezepte: own and saved) and Wissen (the myfodmap blog articles
+/// „Für dich", then the newest).
 /// Tipps shows only once a loaded set has tips ([newestTipSetProvider]),
 /// and stays through a refresh, loading or failed; while the first load
 /// runs, after it failed and without tips it is absent (the weekly tips are
@@ -95,6 +96,7 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     final mine = ref.watch(myRecipeItemsProvider);
     final savedFailed = ref.watch(savedRecipesStateProvider).hasError;
     final knowledge = ref.watch(knowledgeFeedProvider);
+    final articlePicks = ref.watch(forYouProvider);
 
     return Scaffold(
       backgroundColor: AppTheme.background,
@@ -145,9 +147,15 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
               AppConstants.gap24,
               DiscoverKnowledgeSection(
                 feed: knowledge,
+                picks: articlePicks,
                 onOpenAll: () => context.push(RoutePaths.knowledge),
                 onOpen: (article) => unawaited(
-                  openArticle(context, article, open: widget.openUrl),
+                  markOpenedAndOpen(
+                    context,
+                    ref,
+                    article,
+                    open: widget.openUrl,
+                  ),
                 ),
               ),
             ],

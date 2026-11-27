@@ -4,11 +4,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shimmer/shimmer.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/knowledge_article.dart';
+import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/knowledge_provider.dart';
+import 'package:belly_buddy/providers/buddy_provider.dart';
+import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/repositories/knowledge_repository.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/discover/knowledge_screen.dart';
@@ -17,6 +21,7 @@ import 'package:belly_buddy/screens/discover/widgets/knowledge_article_tile.dart
 import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
+import '../../helpers/riverpod_helpers.dart';
 
 void main() {
   late RecordingUrlOpener launches;
@@ -26,12 +31,15 @@ void main() {
   setUp(() {
     launches = RecordingUrlOpener();
     repo = FakeKnowledgeRepository();
+    SharedPreferences.setMockInitialValues({});
   });
 
   Future<void> pump(
     WidgetTester tester, {
     double textScale = 1,
     bool settle = true,
+    // Seeds a signed-in user's profile with these (the „Für dich" source).
+    List<String>? intolerances,
   }) async {
     final router = GoRouter(
       initialLocation: RoutePaths.knowledge,
@@ -44,7 +52,17 @@ void main() {
     );
     addTearDown(router.dispose);
     container = ProviderContainer.test(
-      overrides: [knowledgeRepositoryProvider.overrideWithValue(repo)],
+      overrides: [
+        knowledgeRepositoryProvider.overrideWithValue(repo),
+        currentUserIdProvider.overrideWithValue(testUserId),
+        entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
+        // No Buddy: the picks reads the progress, which asks for it.
+        buddyProvider.overrideWith(() => FakeBuddyNotifier(() => null)),
+        if (intolerances != null)
+          profileProviderSeededWith(
+            testUserProfile(intolerances: intolerances),
+          ),
+      ],
     );
     await tester.pumpWidget(
       UncontrolledProviderScope(
@@ -159,6 +177,114 @@ void main() {
       ),
       findsOneWidget,
     );
+  });
+
+  group('Für dich', () {
+    final laktose = KnowledgeArticle(
+      title: 'Laktose im Alltag',
+      link: Uri.parse('https://www.myfodmap.at/laktose'),
+      category: 'Gesund verdauen',
+      publishedAt: DateTime.utc(2026, 9, 1, 8),
+    );
+
+    /// The tiles' titles, top to bottom.
+    List<String> titles(WidgetTester tester) => [
+      for (final t in tester.widgetList<KnowledgeArticleTile>(
+        find.byType(KnowledgeArticleTile),
+      ))
+        t.article.title,
+    ];
+
+    double top(WidgetTester tester, Finder f) => tester.getTopLeft(f).dy;
+
+    testWidgets('Für dich block above the list under Alle, picks not '
+        'repeated in Alle Artikel', (tester) async {
+      repo = FakeKnowledgeRepository(
+        articles: [...testKnowledgeArticles(), laktose],
+      );
+      await pump(tester, intolerances: const ['Laktose']);
+
+      final forYou = find.text(KnowledgeScreen.forYouTitle);
+      final caption = find.text(KnowledgeScreen.forYouCaption);
+      final all = find.text(KnowledgeScreen.allArticlesTitle);
+      expect(KnowledgeScreen.forYouTitle, 'Für dich');
+      expect(
+        KnowledgeScreen.forYouCaption,
+        'Ausgewählt nach deinen Einträgen und Angaben.',
+      );
+      expect(KnowledgeScreen.allArticlesTitle, 'Alle Artikel');
+      expect(forYou, findsOneWidget);
+      expect(caption, findsOneWidget);
+      expect(all, findsOneWidget);
+      expect(find.text('Weil du Laktose angegeben hast'), findsOneWidget);
+      expect(titles(tester), [
+        'Laktose im Alltag',
+        for (final a in testKnowledgeArticles()) a.title,
+      ]);
+      final pick = tile(laktose);
+      expect(top(tester, chip(null)), lessThan(top(tester, forYou)));
+      expect(top(tester, forYou), lessThan(top(tester, caption)));
+      expect(top(tester, caption), lessThan(top(tester, pick)));
+      expect(top(tester, pick), lessThan(top(tester, all)));
+      expect(
+        top(tester, all),
+        lessThan(top(tester, tile(testKnowledgeArticles()[0]))),
+      );
+    });
+
+    testWidgets('another chip hides Für dich', (tester) async {
+      repo = FakeKnowledgeRepository(
+        articles: [...testKnowledgeArticles(), laktose],
+      );
+      await pump(tester, intolerances: const ['Laktose']);
+
+      await tester.tap(chip('Gesund verdauen'));
+      await tester.pumpAndSettle();
+
+      expect(find.text(KnowledgeScreen.forYouTitle), findsNothing);
+      expect(find.text(KnowledgeScreen.forYouCaption), findsNothing);
+      expect(find.text(KnowledgeScreen.allArticlesTitle), findsNothing);
+      expect(find.text('Weil du Laktose angegeben hast'), findsNothing);
+      expect(titles(tester), [
+        'Was ist FODMAP?',
+        'Ballaststoffe verstehen',
+        'Laktose im Alltag',
+      ]);
+      expect(find.text('Gesund verdauen · 1. Sep 2026'), findsOneWidget);
+    });
+
+    testWidgets('no pick: no Für dich, the list as before', (tester) async {
+      await pump(tester, intolerances: const ['Laktose']);
+
+      expect(find.text(KnowledgeScreen.forYouTitle), findsNothing);
+      expect(find.text(KnowledgeScreen.allArticlesTitle), findsNothing);
+      expect(titles(tester), [
+        for (final a in testKnowledgeArticles()) a.title,
+      ]);
+    });
+
+    testWidgets('tapping a pick marks it opened and opens it; it leaves '
+        'Für dich', (tester) async {
+      repo = FakeKnowledgeRepository(
+        articles: [...testKnowledgeArticles(), laktose],
+      );
+      await pump(tester, intolerances: const ['Laktose']);
+
+      await tester.tap(tile(laktose));
+      await tester.pumpAndSettle();
+
+      expect(launches.urls, [laktose.link]);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getStringList('knowledge_opened_$testUserId'), [
+        laktose.link.toString(),
+      ]);
+      expect(find.text(KnowledgeScreen.forYouTitle), findsNothing);
+      expect(find.text('Weil du Laktose angegeben hast'), findsNothing);
+      expect(titles(tester), [
+        for (final a in testKnowledgeArticles()) a.title,
+        'Laktose im Alltag',
+      ]);
+    });
   });
 
   testWidgets('error without a copy offers a retry', (tester) async {
