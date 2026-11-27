@@ -14,6 +14,7 @@ import '../../utils/logger.dart';
 import '../../utils/practice_code.dart';
 import '../../widgets/common/bb_button.dart';
 import '../../widgets/common/bb_card.dart';
+import 'plus_required.dart';
 import 'widgets/practice_code_scanner.dart';
 import 'widgets/share_duration_picker.dart';
 import 'widgets/share_terms_form.dart';
@@ -115,6 +116,11 @@ class _DietitianConnectScreenState
           .connect(code, _terms.dietitianTerms(_duration));
     } catch (e, st) {
       _log.error('connecting a dietitian failed', e, st);
+      if (e is ShareException && e.plusRequired) {
+        replaceWithPlus(router, mounted ? route : null, messenger, e.message);
+        if (mounted) setState(() => _submitting = false);
+        return;
+      }
       final message = e is ShareException ? e.message : null;
       if (e is ShareException && e.status == 404) {
         // The code went away since the lookup (replaced, or the dietitian

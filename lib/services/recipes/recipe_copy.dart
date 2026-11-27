@@ -1,4 +1,5 @@
 import '../../models/adapted_recipe.dart';
+import '../plus/plus_copy.dart';
 import '../../utils/german_list.dart';
 
 /// German copy for how a collection recipe fits the user: observations
@@ -100,6 +101,8 @@ abstract final class RecipeCopy {
       'Ob ich hier etwas tauschen muss, kann ich nicht prüfen: Mir fehlen '
           'Angaben zu den Zutaten.',
     AdaptFailure.notFound => 'Dieses Rezept kann ich nicht finden.',
+    // Shown for a frame at most: the screen makes way for the paywall.
+    AdaptFailure.plusRequired => PlusCopy.plusRequired,
   };
 
   /// When an adapted recipe is longer than an own recipe may be.

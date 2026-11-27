@@ -101,6 +101,10 @@ void main() {
             ),
           ],
         ),
+        GoRoute(
+          path: RoutePaths.plus,
+          builder: (_, _) => const Scaffold(body: Text('page:/plus')),
+        ),
       ],
     );
     addTearDown(router.dispose);
@@ -344,6 +348,44 @@ void main() {
     expect(field.decoration?.errorText, gone);
     expect(field.controller?.text, 'BERGER-7K2');
     expect(find.byType(SnackBar), findsNothing);
+  });
+
+  testWidgets('a 402 plus_required on Freigeben replaces the screen with '
+      '/plus', (tester) async {
+    await pump(tester, savedName: 'Maria');
+    await lookUp(tester, 'BERGER-7K2');
+    service.connectFails = const ShareException(
+      status: 402,
+      message: 'Dafür brauchst du Belly Buddy Plus.',
+      code: 'plus_required',
+    );
+    await tester.tap(submit());
+    await tester.pumpAndSettle();
+
+    expect(find.text('page:/plus'), findsOneWidget);
+    expect(find.byType(DietitianConnectScreen), findsNothing);
+    router.pop();
+    await tester.pumpAndSettle();
+    expect(find.byType(SharesScreen), findsOneWidget);
+    expect(find.byType(DietitianConnectScreen), findsNothing);
+  });
+
+  testWidgets('a 402 without the code keeps the form with the usual text', (
+    tester,
+  ) async {
+    await pump(tester, savedName: 'Maria');
+    await lookUp(tester, 'BERGER-7K2');
+    service.connectFails = const ShareException(status: 402);
+    await tester.tap(submit());
+    await tester.pumpAndSettle();
+
+    expect(find.text('page:/plus'), findsNothing);
+    expect(find.byType(DietitianConnectScreen), findsOneWidget);
+    expect(find.text('Gefunden'), findsOneWidget);
+    expect(
+      find.text('Das hat nicht geklappt. Versuch es später nochmal.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a failure without a message shows the usual text', (

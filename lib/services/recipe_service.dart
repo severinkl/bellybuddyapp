@@ -170,6 +170,7 @@ class RecipeService {
         (409, 'cannot_judge') => AdaptFailure.cannotJudge,
         (404, 'recipe_not_found') || (400, _) => AdaptFailure.notFound,
         (429, _) => AdaptFailure.later,
+        (402, 'plus_required') => AdaptFailure.plusRequired,
         _ => AdaptFailure.failed,
       };
 

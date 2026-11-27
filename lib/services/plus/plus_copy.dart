@@ -82,6 +82,12 @@ abstract final class PlusCopy {
   static const alternativesNote =
       'Alternativen zu auffälligen Zutaten gibt es mit Belly Buddy Plus.';
 
+  /// The small badge on a button that needs Plus („Für mich anpassen").
+  static const plusBadge = 'Plus';
+
+  /// Core's 402 text, for the moment before the paywall opens.
+  static const plusRequired = 'Dafür brauchst du Belly Buddy Plus.';
+
   static const restore = 'Käufe wiederherstellen';
   static const terms = 'Nutzungsbedingungen';
   static const privacy = 'Datenschutz';

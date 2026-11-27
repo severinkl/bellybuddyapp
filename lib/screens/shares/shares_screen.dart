@@ -8,6 +8,7 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../models/data_share.dart';
 import '../../providers/buddy_provider.dart';
+import '../../providers/plus_provider.dart';
 import '../../providers/shares_provider.dart';
 import '../../router/route_names.dart';
 import '../../utils/date_format_utils.dart';
@@ -202,8 +203,14 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
         links.where((v) => v.$2 == ShareState.active).length >= _maxActiveLinks;
     final dietitiansFull =
         ref.watch(activeDietitianCountProvider) >= maxActiveDietitians;
+    // New shares need Plus: while it is locked, both buttons and „Neu
+    // erstellen" open the paywall; the list, „Ändern" and ending stay.
+    final plusLocked = ref.watch(plusAccessProvider) == PlusAccess.locked;
+    void openPlus() => unawaited(context.push(RoutePaths.plus));
     final VoidCallback? onCreate = linksFull
         ? null
+        : plusLocked
+        ? openPlus
         : () => unawaited(context.push(RoutePaths.shareCreate));
     final now = ref.read(buddyClockProvider)();
     return Column(
@@ -278,6 +285,8 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
                     label: 'Berater:in verbinden',
                     onPressed: dietitiansFull
                         ? null
+                        : plusLocked
+                        ? openPlus
                         : () => unawaited(
                             context.push(RoutePaths.dietitianConnect),
                           ),

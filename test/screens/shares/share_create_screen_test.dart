@@ -80,6 +80,10 @@ void main() {
             GoRoute(path: 'new', builder: (_, _) => const ShareCreateScreen()),
           ],
         ),
+        GoRoute(
+          path: RoutePaths.plus,
+          builder: (_, _) => const Scaffold(body: Text('page:/plus')),
+        ),
       ],
     );
     addTearDown(router.dispose);
@@ -282,6 +286,46 @@ void main() {
     expect(switchOn(tester, 'Getränke'), isFalse);
     expect(service.created, isEmpty);
     expect(buttonEnabled(tester), isTrue);
+  });
+
+  testWidgets('a 402 plus_required replaces the form with /plus', (
+    tester,
+  ) async {
+    await pump(tester);
+    service.failWith = const ShareException(
+      status: 402,
+      message: 'Dafür brauchst du Belly Buddy Plus.',
+      code: 'plus_required',
+    );
+    await typeName(tester, 'Dr. A');
+    await tester.tap(button());
+    await tester.pumpAndSettle();
+
+    expect(find.text('page:/plus'), findsOneWidget);
+    expect(find.byType(ShareCreateScreen), findsNothing);
+    expect(service.created, isEmpty);
+    // Back from the paywall lands on the list, not the form.
+    router.pop();
+    await tester.pumpAndSettle();
+    expect(find.byType(SharesScreen), findsOneWidget);
+    expect(find.byType(ShareCreateScreen), findsNothing);
+  });
+
+  testWidgets('a 402 without the code is a failure like any other', (
+    tester,
+  ) async {
+    await pump(tester);
+    service.failWith = const ShareException(status: 402);
+    await typeName(tester, 'Dr. A');
+    await tester.tap(button());
+    await tester.pumpAndSettle();
+
+    expect(find.text('page:/plus'), findsNothing);
+    expect(find.byType(ShareCreateScreen), findsOneWidget);
+    expect(
+      find.text('Das hat nicht geklappt. Versuch es später nochmal.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a generic failure shows the usual text', (tester) async {

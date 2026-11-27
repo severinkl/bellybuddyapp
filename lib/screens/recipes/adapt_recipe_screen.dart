@@ -79,6 +79,15 @@ class _AdaptRecipeScreenState extends ConsumerState<AdaptRecipeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Core says Plus is needed (the lock state was stale): the paywall takes
+    // this screen's place, so back from it lands on the recipe.
+    ref.listen(adaptRecipeProvider(widget.recipeId), (_, next) {
+      if (next case AsyncError(
+        error: AdaptRecipeException(failure: AdaptFailure.plusRequired),
+      )) {
+        context.pushReplacement(RoutePaths.plus);
+      }
+    });
     final state = ref.watch(adaptRecipeProvider(widget.recipeId));
     // From the first frame, so the original (picture, meta, servings) is
     // loaded by the time the answer comes, also on a deep link.

@@ -102,6 +102,7 @@ void main() {
         ),
         stub(RoutePaths.recipeDetail),
         stub(RoutePaths.mealTracker),
+        stub(RoutePaths.plus),
       ],
     );
     addTearDown(router.dispose);
@@ -583,6 +584,16 @@ void main() {
         }
       });
     }
+
+    testWidgets('plusRequired replaces the screen with /plus', (tester) async {
+      answer(failure: AdaptFailure.plusRequired);
+      await pump(tester);
+
+      expect(repo.adaptCalls, 1);
+      expect(find.text('page:/plus'), findsOneWidget);
+      expect(find.byType(AdaptRecipeScreen), findsNothing);
+      expect(AdaptFailure.plusRequired.retryable, isFalse);
+    });
 
     testWidgets('retry calls again', (tester) async {
       answer(failure: AdaptFailure.later);

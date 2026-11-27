@@ -16,6 +16,7 @@ import 'package:belly_buddy/models/data_share.dart';
 import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
+import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/services/share_service.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
@@ -93,6 +94,7 @@ void main() {
           RoutePaths.dashboard,
           RoutePaths.shares,
           RoutePaths.shareCreate,
+          RoutePaths.plus,
         ]),
       ],
     );
@@ -224,6 +226,31 @@ void main() {
       await pump(tester);
       await tapRow(tester, MeScreen.shareKey);
       expect(find.text('page:/shares'), findsOneWidget);
+    });
+
+    testWidgets('Plus locked, no shares: /plus instead of the create screen', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        extra: [plusAccessProvider.overrideWithValue(PlusAccess.locked)],
+      );
+      await tapRow(tester, MeScreen.shareKey);
+      expect(find.text('page:/plus'), findsOneWidget);
+      expect(find.text('page:/shares/new', skipOffstage: false), findsNothing);
+      // The list lies beneath the paywall.
+      expect(find.text('page:/shares', skipOffstage: false), findsOneWidget);
+    });
+
+    testWidgets('Plus locked, with shares: opens the list', (tester) async {
+      shareService.shares = [testShare()];
+      await pump(
+        tester,
+        extra: [plusAccessProvider.overrideWithValue(PlusAccess.locked)],
+      );
+      await tapRow(tester, MeScreen.shareKey);
+      expect(find.text('page:/shares'), findsOneWidget);
+      expect(find.text('page:/plus', skipOffstage: false), findsNothing);
     });
 
     testWidgets('a double tap opens the list once', (tester) async {

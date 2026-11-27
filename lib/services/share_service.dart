@@ -11,12 +11,18 @@ const shareFailedLine = 'Das hat nicht geklappt. Versuch es später nochmal.';
 
 /// A failed share call. [status] is the HTTP status of an error answer
 /// (null: no answer or unreadable); [message] is core's German text for it,
-/// when the body had one. Never carries link, code or token.
+/// when the body had one; [code] is the body's machine `code`. Never carries
+/// link, share code or token.
 class ShareException implements Exception {
-  const ShareException({this.status, this.message});
+  const ShareException({this.status, this.message, this.code});
 
   final int? status;
   final String? message;
+  final String? code;
+
+  /// Core answered that creating a share needs Belly Buddy Plus (402
+  /// `plus_required`); a 402 without that code is an ordinary failure.
+  bool get plusRequired => status == 402 && code == 'plus_required';
 
   @override
   String toString() => 'ShareException($status)';
@@ -137,7 +143,11 @@ class ShareService {
       return response.data;
     } on FunctionException catch (e) {
       _log.warn('$op failed (${e.status})');
-      throw ShareException(status: e.status, message: _messageOf(e));
+      throw ShareException(
+        status: e.status,
+        message: _messageOf(e),
+        code: _codeOf(e),
+      );
     } catch (e, st) {
       _log.error('$op failed', e, st);
       throw const ShareException();
@@ -152,6 +162,13 @@ class ShareService {
     final text = details['error'] ?? details['message'];
     return text is String && text.isNotEmpty ? text : null;
   }
+
+  /// The error body's `code`; null when the body isn't a JSON object or has
+  /// none.
+  static String? _codeOf(FunctionException e) => switch (e.details) {
+    {'code': final String code} => code,
+    _ => null,
+  };
 }
 
 final shareServiceProvider = Provider<ShareService>(

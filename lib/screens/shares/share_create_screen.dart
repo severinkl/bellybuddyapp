@@ -12,6 +12,7 @@ import '../../services/share_service.dart';
 import '../../utils/logger.dart';
 import '../../widgets/common/bb_button.dart';
 import '../../widgets/common/bb_chip_selector.dart';
+import 'plus_required.dart';
 import 'widgets/share_terms_form.dart';
 
 /// „Mit Berater:in teilen": what a new share shows and for how long. The
@@ -55,6 +56,11 @@ class _ShareCreateScreenState extends ConsumerState<ShareCreateScreen> {
       created = await shares.create(_terms.newShare(_validDays));
     } catch (e, st) {
       _log.error('creating a share failed', e, st);
+      if (e is ShareException && e.plusRequired) {
+        replaceWithPlus(router, mounted ? route : null, messenger, e.message);
+        if (mounted) setState(() => _submitting = false);
+        return;
+      }
       final message = e is ShareException ? e.message : null;
       messenger.showSnackBar(
         SnackBar(content: Text(message ?? shareFailedLine)),

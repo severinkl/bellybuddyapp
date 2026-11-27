@@ -9,6 +9,7 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/buddy_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/plus_provider.dart';
 import '../../providers/shares_provider.dart';
 import '../../providers/tutorial_provider.dart';
 import '../../providers/upgrade_gate_provider.dart';
@@ -144,9 +145,13 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     final shares = ref.read(sharesProvider).value;
     WidgetsBinding.instance.addPostFrameCallback((_) => _openingShare = false);
     unawaited(context.push(RoutePaths.shares));
-    // Without a share the create screen goes on top of the list at once.
+    // Without a share the create screen goes on top of the list at once —
+    // the paywall instead while Plus is locked (a new share needs it).
     if (shares == null || shares.isEmpty) {
-      unawaited(context.push(RoutePaths.shareCreate));
+      final locked = ref.read(plusAccessProvider) == PlusAccess.locked;
+      unawaited(
+        context.push(locked ? RoutePaths.plus : RoutePaths.shareCreate),
+      );
     }
   }
 
