@@ -377,6 +377,23 @@ void main() {
     },
   );
 
+  test('a completion that ended no row is a failure: no cancel, tried '
+      'again', () async {
+    service.answer = (_) => _stats(test: _view(phase: TestPhase.done));
+    final c = await loaded();
+    final actions = c.read(toleranceTestActionsProvider);
+    final done = _view(phase: TestPhase.done);
+    repo.completeError = const TestNotEnded();
+
+    expect(await actions.completeIfDone(done), isFalse);
+    expect(reminders.cancels, 0);
+
+    repo.completeError = null;
+    expect(await actions.completeIfDone(done), isTrue);
+    expect(repo.completeCalls, 2);
+    expect(reminders.cancels, 1);
+  });
+
   test('completing a test cancels its reminders', () async {
     service.answer = (_) => _stats(test: _view(phase: TestPhase.done));
     final c = make();

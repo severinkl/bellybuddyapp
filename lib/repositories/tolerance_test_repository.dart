@@ -15,6 +15,15 @@ class TestConflict implements Exception {
   String toString() => 'TestConflict';
 }
 
+/// An update to end a test changed no row: it is no longer active (or
+/// not visible to the user), so nothing was stored.
+class TestNotEnded implements Exception {
+  const TestNotEnded();
+
+  @override
+  String toString() => 'TestNotEnded';
+}
+
 /// The user's `tolerance_tests` rows through PostgREST (RLS, column grants):
 /// insert the subject, origin and `starts_on` (the lengths take the server
 /// defaults); update only `status` and `ended_at`, only while active.
@@ -63,15 +72,18 @@ class ToleranceTestRepository {
     }
   }
 
-  /// Stops the test; a no-op once it is no longer active.
+  /// Stops the test. Throws [TestNotEnded] when no row changed (no longer
+  /// active).
   Future<void> stop(String id) => _end(id, 'stopped');
 
-  /// Completes the test; a no-op once it is no longer active.
+  /// Completes the test. Throws [TestNotEnded] when no row changed (no
+  /// longer active).
   Future<void> complete(String id) => _end(id, 'completed');
 
   Future<void> _end(String id, String status) async {
+    final List<Map<String, dynamic>> rows;
     try {
-      await _client
+      rows = await _client
           .from(_table)
           .update({
             'status': status,
@@ -79,13 +91,18 @@ class ToleranceTestRepository {
             'ended_at': _now().toUtc().toIso8601String(),
           })
           .eq('id', id)
-          .eq('status', 'active');
+          .eq('status', 'active')
+          .select('id');
     } on PostgrestException catch (e) {
       _log.error('setting $status failed (${e.code})');
       rethrow;
     } catch (e, st) {
       _log.error('setting $status failed', e, st);
       rethrow;
+    }
+    if (rows.isEmpty) {
+      _log.error('setting $status changed no row');
+      throw const TestNotEnded();
     }
   }
 }

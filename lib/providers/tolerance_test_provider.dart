@@ -14,7 +14,8 @@ import 'pattern_stats_provider.dart';
 import 'plus_provider.dart';
 import 'today_provider.dart';
 
-export '../repositories/tolerance_test_repository.dart' show TestConflict;
+export '../repositories/tolerance_test_repository.dart'
+    show TestConflict, TestNotEnded;
 
 const _log = AppLogger('ToleranceTest');
 
@@ -132,10 +133,17 @@ class ToleranceTestActions {
   }
 
   /// Stops the test (`stopped`, `ended_at` now), cancels its reminders and
-  /// refreshes the stats. Throws when the stop fails (reminders kept).
+  /// refreshes the stats. Throws when the stop fails (reminders kept); one
+  /// that changed no row ([TestNotEnded]: ended elsewhere) refreshes the
+  /// stats first, so they show how it ended.
   Future<void> stop(String id) async {
     if (_locked) return;
-    await _ref.read(toleranceTestRepositoryProvider).stop(id);
+    try {
+      await _ref.read(toleranceTestRepositoryProvider).stop(id);
+    } on TestNotEnded {
+      unawaited(_refresh());
+      rethrow;
+    }
     await cancelReminders();
     await _refresh();
   }
