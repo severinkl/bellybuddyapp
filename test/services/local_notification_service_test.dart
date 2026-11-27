@@ -1,3 +1,5 @@
+import 'package:flutter/services.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -95,6 +97,103 @@ void main() {
           19,
           30,
           tz.TZDateTime(vienna, 2026, 11, 27, 22),
+        ),
+        isNull,
+      );
+    });
+  });
+
+  group('the test reminders', () {
+    const channel = MethodChannel('dexterous.com/flutter/local_notifications');
+    late List<MethodCall> calls;
+
+    setUp(() {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      calls = [];
+      FlutterLocalNotificationsPlatform.instance =
+          AndroidFlutterLocalNotificationsPlugin();
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, (call) async {
+            calls.add(call);
+            return null;
+          });
+    });
+
+    tearDown(
+      () => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(channel, null),
+    );
+
+    List<Map<Object?, Object?>> scheduled() => [
+      for (final c in calls)
+        if (c.method == 'zonedSchedule') c.arguments as Map<Object?, Object?>,
+    ];
+
+    test('test reminders: ids 3001 and 3002 at 09:00 local on the reintro '
+        'and result days', () async {
+      await LocalNotificationService.scheduleTestReminders(
+        subjectName: 'Zwiebel',
+        reintroDay: DateTime(2099, 3, 6),
+        resultDay: DateTime(2099, 3, 9),
+        timezone: 'Europe/Vienna',
+      );
+
+      final s = scheduled();
+      expect([for (final n in s) n['id']], [3001, 3002]);
+      expect(
+        [for (final n in s) n['scheduledDateTime']],
+        ['2099-03-06T09:00:00', '2099-03-09T09:00:00'],
+      );
+      expect({for (final n in s) n['timeZoneName']}, {'Europe/Vienna'});
+      expect({for (final n in s) n['payload']}, {'/patterns/test'});
+      expect(
+        s[0]['body'],
+        'Ab heute darf Zwiebel wieder auf den Teller – ich schau, wie\'s '
+        'deinem Bauch damit geht.',
+      );
+      expect(
+        s[1]['body'],
+        'Dein Verträglichkeits-Test ist fertig. Magst du reinschauen?',
+      );
+      // Pending ones replaced first.
+      expect(calls.first.method, 'cancel');
+    });
+
+    test('a day already passed schedules none', () async {
+      await LocalNotificationService.scheduleTestReminders(
+        subjectName: 'Zwiebel',
+        reintroDay: DateTime(2020, 3, 6),
+        resultDay: DateTime(2099, 3, 9),
+        timezone: 'Europe/Vienna',
+      );
+
+      expect([for (final n in scheduled()) n['id']], [3002]);
+    });
+
+    test('cancelTestReminders cancels both ids', () async {
+      await LocalNotificationService.cancelTestReminders();
+
+      expect(
+        [
+          for (final c in calls)
+            if (c.method == 'cancel') (c.arguments as Map)['id'],
+        ],
+        [3001, 3002],
+      );
+    });
+
+    test('testReminderAt: 09:00 on the wall-clock date; null once passed', () {
+      final vienna = tz.getLocation('Europe/Vienna');
+      final now = tz.TZDateTime(vienna, 2026, 12, 6, 8, 59);
+      final at = LocalNotificationService.testReminderAt(
+        DateTime(2026, 12, 6),
+        now,
+      )!;
+      expect((at.year, at.month, at.day, at.hour), (2026, 12, 6, 9));
+      expect(
+        LocalNotificationService.testReminderAt(
+          DateTime(2026, 12, 6),
+          tz.TZDateTime(vienna, 2026, 12, 6, 9),
         ),
         isNull,
       );

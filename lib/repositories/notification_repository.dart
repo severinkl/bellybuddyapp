@@ -38,6 +38,16 @@ abstract class NotificationScheduler {
 
   Future<void> cancelDailyReview();
 
+  /// The tolerance test's reminders: 09:00 on [reintroDay] and [resultDay].
+  Future<void> scheduleTestReminders({
+    required String subjectName,
+    required DateTime reintroDay,
+    required DateTime resultDay,
+    required String timezone,
+  });
+
+  Future<void> cancelTestReminders();
+
   Future<void> cancelAll();
 }
 
@@ -89,6 +99,23 @@ class LocalNotificationScheduler implements NotificationScheduler {
   @override
   Future<void> cancelDailyReview() =>
       LocalNotificationService.cancelDailyReview();
+
+  @override
+  Future<void> scheduleTestReminders({
+    required String subjectName,
+    required DateTime reintroDay,
+    required DateTime resultDay,
+    required String timezone,
+  }) => LocalNotificationService.scheduleTestReminders(
+    subjectName: subjectName,
+    reintroDay: reintroDay,
+    resultDay: resultDay,
+    timezone: timezone,
+  );
+
+  @override
+  Future<void> cancelTestReminders() =>
+      LocalNotificationService.cancelTestReminders();
 
   @override
   Future<void> cancelAll() => LocalNotificationService.cancelAll();
@@ -172,6 +199,23 @@ class NotificationRepository {
 
   /// Cancels the daily review's pending evening notice.
   Future<void> cancelDailyReview() => _scheduler.cancelDailyReview();
+
+  /// Schedules the tolerance test's reminders (09:00 on [reintroDay] and
+  /// [resultDay], wall-clock dates) in the device time zone, replacing
+  /// pending ones.
+  Future<void> scheduleTestReminders({
+    required String subjectName,
+    required DateTime reintroDay,
+    required DateTime resultDay,
+  }) => _scheduler.scheduleTestReminders(
+    subjectName: subjectName,
+    reintroDay: reintroDay,
+    resultDay: resultDay,
+    timezone: tz.local.name,
+  );
+
+  /// Cancels the tolerance test's reminders.
+  Future<void> cancelTestReminders() => _scheduler.cancelTestReminders();
 
   Future<void> cancelAll() => _scheduler.cancelAll();
 

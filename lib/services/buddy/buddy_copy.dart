@@ -171,7 +171,11 @@ class BuddyCopy {
     BuddyAnnouncement.weeklyTipsOffer ||
     BuddyAnnouncement.firstTipOffer ||
     BuddyAnnouncement.journeyReward ||
-    BuddyAnnouncement.patternsUnlocked => null,
+    BuddyAnnouncement.patternsUnlocked ||
+    // The test's cues name their subject: the hero says them.
+    BuddyAnnouncement.testOffer ||
+    BuddyAnnouncement.testReintro ||
+    BuddyAnnouncement.testDone => null,
   };
 
   static const saverUsed = 'Puh! Dein Streak-Saver hat uns gestern gerettet 🛡';

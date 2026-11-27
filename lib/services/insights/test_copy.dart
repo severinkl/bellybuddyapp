@@ -193,6 +193,47 @@ class TestCopy {
   /// [d] as „28. Nov".
   static String day(DateTime d) => '${d.day}. ${kMonthShortNames[d.month - 1]}';
 
+  // --- Home and reminders (spec §5.5) ---------------------------------------
+
+  /// The notification on the first reintroduction day.
+  static String reintroNotification(String name) =>
+      'Ab heute darf $name wieder auf den Teller – ich schau, wie\'s deinem '
+      'Bauch damit geht.';
+
+  /// The notification on the result day.
+  static const resultNotification =
+      'Dein Verträglichkeits-Test ist fertig. Magst du reinschauen?';
+
+  /// The Buddy's offer on Home.
+  static const offerTitle = 'Magst du was ausprobieren?';
+
+  static String offerBody(String name) =>
+      'An schweren Tagen war oft $name dabei. Wollen wir testen, ob dein '
+      'Bauch ohne besser klarkommt? 5 Tage ohne, dann 3 Tage mit.';
+
+  static const offerOpen = 'Ansehen';
+  static const offerLater = 'Später';
+
+  /// The Buddy's line on the first reintroduction day.
+  static String reintroLine(String name) =>
+      'Ab heute darf $name wieder auf den Teller. Trag abends dein '
+      'Bauchgefühl ein!';
+
+  /// The Buddy's line once the result is there.
+  static const doneLine = 'Dein Test ist fertig – schau mal in die Muster.';
+
+  /// The daily review's line while a test runs: „Verträglichkeits-Test:
+  /// heute ohne Zwiebel (Tag 2 von 8)"; none once it is over.
+  static String? dailyReviewLine(ToleranceTestView t) {
+    final what = switch (t.phase) {
+      TestPhase.leaveOut => 'ohne ${t.subject.name}',
+      TestPhase.reintro => 'wieder mit ${_mit(t.subject)}',
+      TestPhase.done => null,
+    };
+    if (what == null) return null;
+    return '$pageTitle: heute $what (Tag ${t.dayIndex} von ${t.totalDays})';
+  }
+
   /// The six FODMAP groups, in the catalog's order, with their short names.
   static const groups = [
     TestSubject('group', 'fructans', 'Fruktane'),

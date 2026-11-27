@@ -14,7 +14,9 @@ import 'package:shared_preferences_platform_interface/types.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/journey_rewards.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
+import 'package:belly_buddy/models/pattern_stats.dart';
 import 'package:belly_buddy/models/recommendation.dart';
+import 'package:belly_buddy/models/tolerance_test.dart';
 import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
@@ -27,9 +29,12 @@ import 'package:belly_buddy/providers/home_cover_provider.dart';
 import 'package:belly_buddy/providers/journey_provider.dart';
 import 'package:belly_buddy/providers/journey_rewards_provider.dart';
 import 'package:belly_buddy/providers/notification_provider.dart';
+import 'package:belly_buddy/providers/pattern_stats_provider.dart';
+import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/providers/rating_provider.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
+import 'package:belly_buddy/providers/tolerance_test_offer_provider.dart';
 import 'package:belly_buddy/repositories/notification_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/repositories/recipe_repository.dart';
@@ -43,6 +48,8 @@ import 'package:belly_buddy/screens/dashboard/widgets/journey_day_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_list_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/reminders_ask_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/streak_sheet.dart';
+import 'package:belly_buddy/screens/dashboard/widgets/test_offer_sheet.dart';
+import 'package:belly_buddy/screens/patterns/tolerance_test_screen.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/weekly_tips_offer_sheet.dart';
 import 'package:belly_buddy/services/app_version_service.dart';
 import 'package:belly_buddy/services/buddy/buddy_copy.dart';
@@ -51,6 +58,7 @@ import 'package:belly_buddy/services/buddy/daily_care.dart';
 import 'package:belly_buddy/services/daily_review/daily_review_copy.dart';
 import 'package:belly_buddy/services/daily_review/daily_review_rules.dart';
 import 'package:belly_buddy/services/entry_query_service.dart';
+import 'package:belly_buddy/services/insights/test_copy.dart';
 import 'package:belly_buddy/services/journey/journey_copy.dart';
 import 'package:belly_buddy/utils/date_format_utils.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
@@ -240,6 +248,9 @@ void main() {
   late DailyReview? review;
   late NotifierProvider<Switchable<DailyReview?>, DailyReview?> reviewSwitch;
 
+  /// The extra the test page (`/patterns/test`) was pushed with.
+  Object? testPageExtra;
+
   // The hero's bubble and actions need ticking Buddies.
   tickBuddiesInTests();
 
@@ -258,6 +269,7 @@ void main() {
     redirectUnlocked = false;
     showsBubble = true;
     review = null;
+    testPageExtra = null;
   });
 
   tearDown(() {
@@ -365,6 +377,13 @@ void main() {
         GoRoute(
           path: RoutePaths.diary,
           builder: (_, _) => const Scaffold(body: Text('diary-page')),
+        ),
+        GoRoute(
+          path: RoutePaths.toleranceTest,
+          builder: (_, state) {
+            testPageExtra = state.extra;
+            return const Scaffold(body: Text('test-page'));
+          },
         ),
         ...stubRoutes([
           RoutePaths.mealTracker,
@@ -4393,6 +4412,254 @@ void main() {
       expect(await recorded(), (null, null));
     });
   });
+
+  group('the Verträglichkeits-Test cues', () {
+    const zwiebel = TestSubject('ingredient', 'zwiebel', 'Zwiebel');
+
+    String key(BuddyAnnouncement kind, String suffix) =>
+        '${AppConstants.keyBuddyAnnouncedPrefix}u1_${kind.name}_$suffix';
+
+    ToleranceTestView testView({
+      TestPhase phase = TestPhase.reintro,
+      int dayIndex = 6,
+      String status = 'active',
+      TestResult? result,
+    }) => ToleranceTestView(
+      id: 't1',
+      subject: zwiebel,
+      origin: 'proposed',
+      status: status,
+      phase: phase,
+      startsOn: DateTime(2026, 11, 17),
+      leaveOutDays: 5,
+      reintroDays: 3,
+      dayIndex: dayIndex,
+      days: const [],
+      result: result,
+    );
+
+    /// The hero with loaded pattern stats ([stats]) and Plus open; the
+    /// offer due for [zwiebel] unless [offerDue] is false.
+    Future<ProviderContainer> pumpWithStats(
+      WidgetTester tester, {
+      PatternStats? stats,
+      bool offerDue = true,
+    }) {
+      final s =
+          stats ??
+          const PatternStats(
+            windowDays: 90,
+            ratedDays: 41,
+            hardDays: 9,
+            ready: true,
+            proposal: zwiebel,
+          );
+      return pumpHero(
+        tester,
+        extra: [
+          plusLockedProvider.overrideWithValue(false),
+          patternStatsProvider.overrideWith(() => _SeededStats(s)),
+          toleranceTestOfferDueProvider.overrideWithValue(
+            offerDue ? zwiebel : null,
+          ),
+        ],
+      );
+    }
+
+    BuddyStatus offerPending({List<BuddyAnnouncement> before = const []}) =>
+        _status(
+          announcements: [...before, BuddyAnnouncement.testOffer],
+          announcementKeys: {
+            for (final a in before) a: key(a, 'x'),
+            BuddyAnnouncement.testOffer: key(
+              BuddyAnnouncement.testOffer,
+              'ingredient_zwiebel',
+            ),
+          },
+        );
+
+    testWidgets('the offer plays as a sheet when nothing else played', (
+      tester,
+    ) async {
+      buddy = _FakeBuddy(offerPending);
+      await pumpWithStats(tester);
+      await tick(tester);
+
+      expect(controller(tester).currentAction, BuddyAction.wave);
+      await afterWave(tester);
+      expect(find.byType(TestOfferSheet), findsOneWidget);
+      expect(find.text(TestCopy.offerTitle), findsWidgets);
+      expect(
+        find.text(
+          'An schweren Tagen war oft Zwiebel dabei. Wollen wir testen, ob '
+          'dein Bauch ohne besser klarkommt? 5 Tage ohne, dann 3 Tage mit.',
+        ),
+        findsOneWidget,
+      );
+      expect(buddy.shown, isEmpty);
+    });
+
+    testWidgets('after a reward sheet in the same run the offer ends unshown '
+        'and plays on the next visit', (tester) async {
+      journey = true;
+      rewards = const JourneyRewards(
+        earnedDay: 1,
+        picks: {1: RecipePick(id: 'r1', title: 'Apfel-Reis')},
+      );
+      buddy = _FakeBuddy(
+        () => offerPending(before: const [BuddyAnnouncement.journeyReward]),
+      );
+      await pumpWithStats(tester);
+      await tick(tester);
+
+      await afterCelebration(tester);
+      expect(find.byType(JourneyDaySheet), findsOneWidget);
+      await closeOffer(tester, JourneyDaySheet.laterKey);
+
+      // The reward's flag lands (a status update): still no offer.
+      await advance(tester, const Duration(seconds: 6));
+      expect(find.byType(TestOfferSheet), findsNothing);
+      expect(buddy.shown, [BuddyAnnouncement.journeyReward]);
+      expect(
+        buddy.state.value!.announcements,
+        contains(BuddyAnnouncement.testOffer),
+      );
+
+      // Next visit: the offer.
+      visible.value = false;
+      await tester.pump();
+      visible.value = true;
+      await tester.pump();
+      await tick(tester);
+      await afterWave(tester);
+      expect(find.byType(TestOfferSheet), findsOneWidget);
+    });
+
+    testWidgets('„Ansehen" opens /patterns/test with the subject; „Später" '
+        'closes', (tester) async {
+      buddy = _FakeBuddy(offerPending);
+      await pumpWithStats(tester);
+      await tick(tester);
+      await afterWave(tester);
+
+      await closeOffer(tester, TestOfferSheet.openKey);
+      await tester.pumpAndSettle();
+      expect(location(), RoutePaths.toleranceTest);
+      expect(testPageExtra, isA<ToleranceTestProposed>());
+      expect((testPageExtra! as ToleranceTestProposed).subject, zwiebel);
+      expect(buddy.shown, [BuddyAnnouncement.testOffer]);
+    });
+
+    testWidgets('„Später" closes the offer and counts it as shown', (
+      tester,
+    ) async {
+      buddy = _FakeBuddy(offerPending);
+      await pumpWithStats(tester);
+      await tick(tester);
+      await afterWave(tester);
+
+      await closeOffer(tester, TestOfferSheet.laterKey);
+      expect(find.byType(TestOfferSheet), findsNothing);
+      expect(location(), RoutePaths.dashboard);
+      expect(buddy.shown, [BuddyAnnouncement.testOffer]);
+    });
+
+    testWidgets('an offer not due right now (stats reloading) stays pending', (
+      tester,
+    ) async {
+      buddy = _FakeBuddy(offerPending);
+      await pumpWithStats(tester, offerDue: false);
+      await tick(tester);
+      await afterWave(tester);
+
+      expect(find.byType(TestOfferSheet), findsNothing);
+      expect(buddy.shown, isEmpty);
+    });
+
+    testWidgets('reintro and done are lines, never sheets', (tester) async {
+      final pending = _status(
+        announcements: const [BuddyAnnouncement.testReintro],
+        announcementKeys: {
+          BuddyAnnouncement.testReintro: key(
+            BuddyAnnouncement.testReintro,
+            't1_reintro',
+          ),
+        },
+      );
+      final c = await pumpWithStats(
+        tester,
+        offerDue: false,
+        stats: PatternStats(
+          windowDays: 90,
+          ratedDays: 41,
+          hardDays: 9,
+          ready: true,
+          test: testView(),
+        ),
+      );
+      // As in the app: the stats load (the completer keeps them), the
+      // offer arrives once they did.
+      c.listen(patternStatsProvider, (_, _) {});
+      await tester.pump();
+      buddy.push(pending);
+      await tester.pump();
+      await tick(tester);
+      expect(
+        controller(tester).bubble,
+        'Ab heute darf Zwiebel wieder auf den Teller. Trag abends dein '
+        'Bauchgefühl ein!',
+      );
+      expect(find.byType(BottomSheet), findsNothing);
+      await advance(tester, const Duration(seconds: 5));
+      expect(buddy.shown, [BuddyAnnouncement.testReintro]);
+    });
+
+    testWidgets('done: its line', (tester) async {
+      final pending = _status(
+        announcements: const [BuddyAnnouncement.testDone],
+        announcementKeys: {
+          BuddyAnnouncement.testDone: key(
+            BuddyAnnouncement.testDone,
+            't1_done',
+          ),
+        },
+      );
+      final c = await pumpWithStats(
+        tester,
+        offerDue: false,
+        stats: PatternStats(
+          windowDays: 90,
+          ratedDays: 41,
+          hardDays: 9,
+          ready: true,
+          test: testView(
+            status: 'completed',
+            phase: TestPhase.done,
+            dayIndex: 9,
+            result: const TestResult(
+              goodWithout: 4,
+              countedWithout: 5,
+              goodWith: 1,
+              countedWith: 3,
+              outcome: TestOutcome.worse,
+            ),
+          ),
+        ),
+      );
+      // As in the app: the stats load (the completer keeps them), the
+      // offer arrives once they did.
+      c.listen(patternStatsProvider, (_, _) {});
+      await tester.pump();
+      buddy.push(pending);
+      await tester.pump();
+      await tick(tester);
+      expect(
+        controller(tester).bubble,
+        'Dein Test ist fertig – schau mal in die Muster.',
+      );
+      expect(find.byType(BottomSheet), findsNothing);
+    });
+  });
 }
 
 /// Preferences whose first read waits for [gate] (a slow device).
@@ -4414,4 +4681,13 @@ class _SlowPrefs extends InMemorySharedPreferencesStore {
     await gate.future;
     return super.getAllWithParameters(parameters);
   }
+}
+
+/// Pattern stats loaded with [_value].
+class _SeededStats extends PatternStatsNotifier {
+  _SeededStats(this._value);
+  final PatternStats _value;
+
+  @override
+  Future<PatternStats?> build() async => _value;
 }

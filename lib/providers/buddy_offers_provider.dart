@@ -8,6 +8,7 @@ import 'journey_provider.dart';
 import 'journey_rewards_provider.dart';
 import 'profile_provider.dart';
 import 'recommendation_provider.dart';
+import 'tolerance_test_offer_provider.dart';
 
 /// The flag suffix of the announcements offered once per user, ever:
 /// [BuddyAnnouncement.weeklyTipsOffer], [BuddyAnnouncement.firstTipOffer],
@@ -54,10 +55,18 @@ final firstTipOfferDueProvider = Provider<bool>((ref) {
 ///   offer still open sees the celebration first and the offer once back
 ///   on Home;
 /// - `weeklyTipsOffer` while it is due ([weeklyTipsOfferDueProvider]);
-/// - `firstTipFailed` once the day-3 first tip failed.
+/// - `firstTipFailed` once the day-3 first tip failed;
+/// - `testOffer` while a subject is due ([toleranceTestOfferDueProvider]),
+///   once per subject ([testOfferSuffix]);
+/// - `testReintro` on a test's first reintroduction day
+///   ([testReintroDueProvider]) and `testDone` while its result is shown
+///   ([testDoneDueProvider]), once per test.
 final buddyOffersProvider = Provider<Map<BuddyAnnouncement, String>>((ref) {
   final set = ref.watch(unseenTipSetProvider);
   final day = ref.watch(journeyRewardAnnouncementProvider);
+  final testOffer = ref.watch(toleranceTestOfferDueProvider);
+  final reintro = ref.watch(testReintroDueProvider);
+  final done = ref.watch(testDoneDueProvider);
   return {
     if (set != null) BuddyAnnouncement.tipsArrived: set.id,
     if (day != null)
@@ -70,6 +79,11 @@ final buddyOffersProvider = Provider<Map<BuddyAnnouncement, String>>((ref) {
       BuddyAnnouncement.weeklyTipsOffer: onceSuffix,
     if (ref.watch(firstTipFailedProvider))
       BuddyAnnouncement.firstTipFailed: onceSuffix,
+    if (testOffer != null)
+      BuddyAnnouncement.testOffer: testOfferSuffix(testOffer),
+    if (reintro != null)
+      BuddyAnnouncement.testReintro: testReintroSuffix(reintro),
+    if (done != null) BuddyAnnouncement.testDone: testDoneSuffix(done),
   };
 });
 
@@ -88,7 +102,10 @@ final buddyOffersProvider = Provider<Map<BuddyAnnouncement, String>>((ref) {
 /// the goal: one picked meanwhile (in „Dein Streak") withdraws it. A day's
 /// reward applies while there is a day to announce
 /// ([journeyRewardAnnouncementProvider]): superseded (day 3's offer stands
-/// for it, the rewards gone), it doesn't celebrate for nothing. The others
+/// for it, the rewards gone), it doesn't celebrate for nothing. A test
+/// offer applies while its subject is still the one to offer, its stats
+/// loading included ([testOfferStillApplies]); a test line while its
+/// condition holds for its test ([testLineStillApplies]). The others
 /// always apply.
 final offerStillAppliesProvider = Provider.family<bool, BuddyAnnouncement>(
   (ref, announcement) => switch (announcement) {
@@ -100,6 +117,20 @@ final offerStillAppliesProvider = Provider.family<bool, BuddyAnnouncement>(
     BuddyAnnouncement.goalReached => _goalStillApplies(ref),
     BuddyAnnouncement.journeyReward =>
       ref.watch(journeyRewardAnnouncementProvider) != null,
+    BuddyAnnouncement.testOffer => testOfferStillApplies(
+      ref,
+      suffix: _pendingSuffix(ref, announcement),
+    ),
+    BuddyAnnouncement.testReintro => testLineStillApplies(
+      ref,
+      done: false,
+      suffix: _pendingSuffix(ref, announcement),
+    ),
+    BuddyAnnouncement.testDone => testLineStillApplies(
+      ref,
+      done: true,
+      suffix: _pendingSuffix(ref, announcement),
+    ),
     BuddyAnnouncement.saverUsed ||
     BuddyAnnouncement.streakBroken ||
     BuddyAnnouncement.saverEarned ||
@@ -107,6 +138,15 @@ final offerStillAppliesProvider = Provider.family<bool, BuddyAnnouncement>(
     BuddyAnnouncement.firstTipFailed => true,
   },
 );
+
+/// The flag suffix of the pending [kind] (its flag is
+/// `<prefix><userId>_<kind>_<suffix>`); null while none is pending.
+String? _pendingSuffix(Ref ref, BuddyAnnouncement kind) {
+  final key = ref.watch(buddyProvider).value?.announcementKeys[kind];
+  final marker = '_${kind.name}_';
+  final at = key?.indexOf(marker) ?? -1;
+  return at < 0 ? null : key!.substring(at + marker.length);
+}
 
 /// [offerStillAppliesProvider] of a reached goal: the goal it was announced
 /// for ([BuddyStatus.reachedGoal]) is still the goal; unknown, it applies.

@@ -356,4 +356,66 @@ void main() {
       expect(repo.completeCalls, 1);
     },
   );
+
+  test('completing a test cancels its reminders', () async {
+    service.answer = (_) => _stats(test: _view(phase: TestPhase.done));
+    final c = make();
+    c.listen(toleranceTestCompleterProvider, (_, _) {});
+    await settle();
+
+    expect(repo.completes, ['t1']);
+    expect(reminders.cancels, 1);
+    expect(reminders.scheduled, isEmpty);
+  });
+
+  test('a running test found at app start gets its reminders once; another '
+      'user\'s test again', () async {
+    final user = SwitchableUserId('u1');
+    service.answer = (_) => _stats(test: _view(phase: TestPhase.reintro));
+    final c = make(user: user);
+    c.listen(toleranceTestCompleterProvider, (_, _) {});
+    await settle();
+    expect([for (final t in reminders.scheduled) t.id], ['t1']);
+
+    (c.read(entriesRevisionProvider.notifier) as _Revision).bump();
+    await settle();
+    expect(reminders.scheduled, hasLength(1));
+
+    service.answer = (_) => _stats(test: _view(id: 't2'));
+    user.set(c, 'u2');
+    await settle();
+    expect([for (final t in reminders.scheduled) t.id], ['t1', 't2']);
+  });
+
+  test('no reminders rescheduled for a finished test or while Plus is '
+      'locked', () async {
+    service.answer = (_) => _stats(
+      test: _view(status: 'completed', phase: TestPhase.done),
+    );
+    var c = make();
+    c.listen(toleranceTestCompleterProvider, (_, _) {});
+    await settle();
+    expect(reminders.scheduled, isEmpty);
+
+    service.answer = (_) => _stats(test: _view());
+    c = make(plusLocked: true);
+    c.listen(toleranceTestCompleterProvider, (_, _) {});
+    await settle();
+    expect(reminders.scheduled, isEmpty);
+  });
+
+  test('a start schedules its reminders once, though the completer sees '
+      'the new test too', () async {
+    service.answer = (call) => call == 1 ? _stats() : _stats(test: _view());
+    final c = make();
+    c.listen(toleranceTestCompleterProvider, (_, _) {});
+    await settle();
+
+    await c
+        .read(toleranceTestActionsProvider)
+        .start(_zwiebel, origin: 'picked');
+    await settle();
+
+    expect([for (final t in reminders.scheduled) t.id], ['t1']);
+  });
 }

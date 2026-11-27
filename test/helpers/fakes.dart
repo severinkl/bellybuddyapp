@@ -885,6 +885,24 @@ class FakeNotificationRepository implements NotificationRepository {
   }) async {}
   @override
   Future<void> cancelDailyReview() async {}
+
+  /// The test reminders scheduled, in order.
+  final testReminders =
+      <({String subjectName, DateTime reintroDay, DateTime resultDay})>[];
+  int testReminderCancels = 0;
+
+  @override
+  Future<void> scheduleTestReminders({
+    required String subjectName,
+    required DateTime reintroDay,
+    required DateTime resultDay,
+  }) async => testReminders.add((
+    subjectName: subjectName,
+    reintroDay: reintroDay,
+    resultDay: resultDay,
+  ));
+  @override
+  Future<void> cancelTestReminders() async => testReminderCancels++;
   @override
   Future<void> cancelAll() async {}
   @override
