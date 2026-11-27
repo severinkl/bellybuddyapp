@@ -18,6 +18,7 @@ import '../../../utils/date_format_utils.dart';
 import '../../../utils/logger.dart';
 import '../../../utils/save_helper.dart';
 import '../../../widgets/buddy/log_success_hero.dart';
+import '../../../widgets/common/bb_success_overlay.dart' show BbPillAction;
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/date_time_chips.dart';
 import '../../../widgets/common/editable_app_bar_title.dart';
@@ -229,7 +230,8 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen>
             ? null
             : LogSuccessHero(moment: moment, foodImageBytes: state.imageBytes),
         successActions: [
-          GestureDetector(
+          BbPillAction(
+            shrinkWrap: true,
             onTap: () => _logDrinkAfterMeal(state.trackedAt),
             child: const Row(
               mainAxisSize: MainAxisSize.min,
