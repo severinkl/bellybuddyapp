@@ -160,22 +160,15 @@ bool reminderAskScheduled({
   required DateTime today,
 }) {
   if (asks >= reminderAsksMax) return false;
-  if (lastAsk != null && _daysBetween(lastAsk, today) < reminderAskMinGap) {
+  if (lastAsk != null && daysBetween(lastAsk, today) < reminderAskMinGap) {
     return false;
   }
   return switch (asks) {
     0 => activeDays >= reminderAskFirstDays,
     1 => activeDays >= reminderAskSecondDays,
-    _ => lastAsk == null || _daysBetween(lastAsk, today) >= reminderAskInterval,
+    _ => lastAsk == null || daysBetween(lastAsk, today) >= reminderAskInterval,
   };
 }
-
-/// Calendar days from [from] to [to] (local dates; DST doesn't count).
-int _daysBetween(DateTime from, DateTime to) => DateTime.utc(
-  to.year,
-  to.month,
-  to.day,
-).difference(DateTime.utc(from.year, from.month, from.day)).inDays;
 
 /// Whether the Buddy asks again for reminders now ([reminderAskScheduled]):
 /// they are off ([remindersOffProvider]), the first offer (the onboarding's

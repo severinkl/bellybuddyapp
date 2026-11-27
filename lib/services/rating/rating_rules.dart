@@ -14,14 +14,8 @@ bool ratingAskAllowed({
   required DateTime today,
 }) {
   if (askedVersion == currentVersion) return false;
-  if (lastAsk == null) return true;
-  // UTC dates: whole calendar days, whatever a DST change does to the hours.
-  final days = DateTime.utc(
-    today.year,
-    today.month,
-    today.day,
-  ).difference(DateTime.utc(lastAsk.year, lastAsk.month, lastAsk.day)).inDays;
-  return days >= AppConstants.ratingAskMinDays;
+  return lastAsk == null ||
+      daysBetween(lastAsk, today) >= AppConstants.ratingAskMinDays;
 }
 
 /// Whether one of [entries] is of [today] (by its wall-clock date, never

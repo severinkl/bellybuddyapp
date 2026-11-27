@@ -154,34 +154,6 @@ class _FakeEntries extends EntriesNotifier {
   void push(EntriesState s) => state = s;
 }
 
-/// The store's rating dialog, counting the requests.
-class _FakeRatingLauncher implements RatingLauncher {
-  int requests = 0;
-
-  /// [request] throws (a broken store service).
-  bool requestThrows = false;
-
-  /// While set and not completed, [isAvailable] waits for it.
-  Completer<bool>? availableHold;
-
-  @override
-  Future<bool> isAvailable() async => await availableHold?.future ?? true;
-
-  @override
-  Future<void> request() async {
-    requests++;
-    if (requestThrows) throw Exception('no store');
-  }
-
-  @override
-  Future<void> openStoreListing() async {}
-}
-
-class _FakeVersion extends AppVersionService {
-  @override
-  Future<String> currentVersion() async => '1.3.0';
-}
-
 BuddyStatus _status({
   int streak = 4,
   int? goal,
@@ -3698,7 +3670,7 @@ void main() {
     });
   });
   group('the rating request after „Muster frei!"', () {
-    late _FakeRatingLauncher launcher;
+    late FakeRatingLauncher launcher;
     const patternsKey =
         '${AppConstants.keyBuddyAnnouncedPrefix}u1_patternsUnlocked_once';
     const tipOfferKey =
@@ -3709,7 +3681,7 @@ void main() {
       rewards = const JourneyRewards(earnedDay: 7, patternsFreed: true);
       // Today's entries known (the rating waits for them).
       entries = _FakeEntries(EntriesState(day: startOfDay(now)));
-      launcher = _FakeRatingLauncher();
+      launcher = FakeRatingLauncher();
       SharedPreferences.setMockInitialValues({});
     });
 
@@ -3738,7 +3710,7 @@ void main() {
       tester,
       extra: [
         ratingLauncherProvider.overrideWithValue(launcher),
-        appVersionServiceProvider.overrideWithValue(_FakeVersion()),
+        appVersionServiceProvider.overrideWithValue(FakeAppVersionService()),
         ...extra,
       ],
     );

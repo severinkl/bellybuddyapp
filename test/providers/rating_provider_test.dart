@@ -23,28 +23,6 @@ import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
 import '../helpers/riverpod_helpers.dart';
 
-class _FakeLauncher implements RatingLauncher {
-  bool available = true;
-  bool throws = false;
-
-  @override
-  Future<bool> isAvailable() async {
-    if (throws) throw Exception('no store');
-    return available;
-  }
-
-  @override
-  Future<void> request() async {}
-
-  @override
-  Future<void> openStoreListing() async {}
-}
-
-class _FakeVersion extends AppVersionService {
-  @override
-  Future<String> currentVersion() async => '1.3.0';
-}
-
 class _Tutorial extends TutorialNotifier {
   _Tutorial(this._running);
   final bool _running;
@@ -73,7 +51,7 @@ final _user = SwitchableUserId();
 
 void main() {
   final now = DateTime(2026, 11, 26, 9);
-  late _FakeLauncher launcher;
+  late FakeRatingLauncher launcher;
   late ProviderContainer container;
   late WidgetRef widgetRef;
 
@@ -107,7 +85,7 @@ void main() {
         buddyRepositoryProvider.overrideWithValue(FakeBuddyRepository()),
         entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
         ratingLauncherProvider.overrideWithValue(launcher),
-        appVersionServiceProvider.overrideWithValue(_FakeVersion()),
+        appVersionServiceProvider.overrideWithValue(FakeAppVersionService()),
         journeySeededWith(journey),
         journeyRewardsSeededWith(
           journey == true ? JourneyRewards(patternsFreed: freed) : null,
@@ -156,7 +134,7 @@ void main() {
     }
   }
 
-  setUp(() => launcher = _FakeLauncher());
+  setUp(() => launcher = FakeRatingLauncher());
 
   testWidgets('due for a journey user once patterns are freed and the '
       'celebration was shown', (tester) async {
@@ -243,7 +221,7 @@ void main() {
     expect(await due(), isFalse);
     launcher
       ..available = true
-      ..throws = true;
+      ..availableThrows = true;
     await pump(tester);
     expect(await due(), isFalse);
   });

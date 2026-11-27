@@ -283,8 +283,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     });
     ref.listenManual(reminderAskDueProvider, (_, due) {
       if (_isDue(due)) _afterFrame(_queueRemindersAsk);
-      // Settled not due: the rating request that waited for it may come.
-      if (_remindersSettledNotDue) _afterFrame(_queueRatingAsk);
+      // Settled not due: the rating request that waited for it may come
+      // ([_ratingAskFits] checks it).
+      _afterFrame(_queueRatingAsk);
     }, fireImmediately: true);
     ref.listenManual(ratingAskDueProvider, (_, due) {
       if (_isRatingDue(due)) _afterFrame(_queueRatingAsk);
@@ -528,9 +529,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// come due.
   bool get _remindersSettledNotDue {
     final due = ref.read(reminderAskDueProvider);
-    return !due.isLoading &&
-        due.value != true &&
-        (due.hasValue || due.hasError);
+    return !due.isLoading && due.value != true;
   }
 
   /// Whether the Buddy may ask the store for a rating now (rule 4 of the
@@ -551,11 +550,12 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// request back.
   Future<bool> _offersShown() async {
     final buddy = ref.read(buddyProvider.notifier);
-    for (final MapEntry(key: kind, value: suffix)
-        in ref.read(buddyOffersProvider).entries) {
-      if (!await buddy.announcementShown(kind, suffix)) return false;
-    }
-    return true;
+    final shown = await Future.wait([
+      for (final MapEntry(key: kind, value: suffix)
+          in ref.read(buddyOffersProvider).entries)
+        buddy.announcementShown(kind, suffix),
+    ]);
+    return shown.every((s) => s);
   }
 
   /// Queues the store's rating request, last, once it is due
@@ -739,7 +739,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       case _Cue.remindersAsk:
         _playThen(BuddyAction.wave, _askForReminders);
       case _Cue.ratingAsk:
-        unawaited(_playRatingAsk());
+        _playRatingAsk();
     }
   }
 
@@ -962,21 +962,21 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// have waited while Home was covered) and still fits; then the Buddy
   /// celebrates, his bubble down and saying nothing, and the store is asked
   /// ([_requestRating]). Not any more: it ends silently, nothing recorded.
-  Future<void> _playRatingAsk() async {
-    bool due;
-    try {
-      due = await ref.read(ratingAskDueProvider.future);
-    } catch (e, st) {
-      _log.error('Checking the rating request failed', e, st);
-      due = false;
-    }
-    if (!mounted) return;
-    if (!due || _cues.isNotEmpty || !widget.showsBubble || !_homeFree) {
-      return _endRatingAsk();
-    }
+  void _playRatingAsk() {
+    if (!_ratingAskPlayable) return _endRatingAsk();
     _buddy.hush();
     _playThen(BuddyAction.celebrate, _requestRating);
   }
+
+  /// Whether the rating request on stage may go on: Home is free, the tour
+  /// isn't up, nothing queued behind it and it is still due. Not
+  /// [_ratingAskFits]: the cue itself is on stage ([_playing],
+  /// [_cueRunning]) and was queued after the visit's checks.
+  bool get _ratingAskPlayable =>
+      _homeFree &&
+      widget.showsBubble &&
+      _cues.isEmpty &&
+      _isRatingDue(ref.read(ratingAskDueProvider));
 
   /// After the celebration: the store's own rating dialog (which it may not
   /// show), recorded as it is made ([recordRatingAsk]), also when the
@@ -986,20 +986,13 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// due or still checking): none, nothing recorded, so no sheet opens over
   /// the store's dialog (it comes another time).
   Future<void> _requestRating() async {
-    if (!_homeFree ||
-        !widget.showsBubble ||
-        _cues.isNotEmpty ||
-        !_remindersSettledNotDue ||
-        !_isRatingDue(ref.read(ratingAskDueProvider))) {
+    // Also his ask for reminders known not due: it may have come due
+    // during the celebration.
+    if (!_ratingAskPlayable || !_remindersSettledNotDue) {
       return _endRatingAsk();
     }
     final launcher = ref.read(ratingLauncherProvider);
-    unawaited(
-      recordRatingAsk(ref).catchError(
-        (Object e, StackTrace st) =>
-            _log.error('Recording the rating request failed', e, st),
-      ),
-    );
+    unawaited(recordRatingAsk(ref));
     try {
       await launcher.request();
     } catch (e, st) {

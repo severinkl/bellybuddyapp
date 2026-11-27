@@ -111,17 +111,14 @@ final ratingAskDueProvider = FutureProvider.autoDispose<bool>((ref) async {
   // Unknown (not loaded yet, loading, failed): a „Schlecht" entry may hide.
   if (!known || hasHardEntryToday(gutFeelings, today)) return false;
 
-  final version = await ref.watch(appVersionServiceProvider).currentVersion();
-  final prefs = await SharedPreferences.getInstance();
-  final lastAsk = prefs.getString(
-    '${AppConstants.keyRatingAskedOnPrefix}$userId',
-  );
+  final (version, prefs) = await (
+    ref.watch(appVersionServiceProvider).currentVersion(),
+    SharedPreferences.getInstance(),
+  ).wait;
   final allowed = ratingAskAllowed(
     currentVersion: version,
-    askedVersion: prefs.getString(
-      '${AppConstants.keyRatingAskedVersionPrefix}$userId',
-    ),
-    lastAsk: lastAsk == null ? null : DateTime.tryParse(lastAsk),
+    askedVersion: prefs.getString(_askedVersionKey(userId)),
+    lastAsk: DateTime.tryParse(prefs.getString(_askedOnKey(userId)) ?? ''),
     today: today,
   );
   if (!allowed) return false;
@@ -134,26 +131,34 @@ final ratingAskDueProvider = FutureProvider.autoDispose<bool>((ref) async {
   }
 });
 
+/// The preference keys of [userId]'s last rating request: its day and its
+/// app version.
+String _askedOnKey(String userId) =>
+    '${AppConstants.keyRatingAskedOnPrefix}$userId';
+String _askedVersionKey(String userId) =>
+    '${AppConstants.keyRatingAskedVersionPrefix}$userId';
+
 /// Records a rating request of the signed-in user: this app version, today
-/// ([ratingAskDueProvider] is false afterwards). Completes once stored.
-/// Reads [ref] right away: it may run after the caller is gone.
+/// ([ratingAskDueProvider] is false afterwards). Completes once stored; a
+/// failure is only logged. Reads [ref] right away: it may run after the
+/// caller is gone.
 Future<void> recordRatingAsk(WidgetRef ref) async {
-  final userId = ref.read(currentUserIdProvider);
-  if (userId == null) return;
-  final today = ref.read(todayProvider);
-  final versions = ref.read(appVersionServiceProvider);
-  final container = ProviderScope.containerOf(ref.context, listen: false);
-  final version = await versions.currentVersion();
-  final prefs = await SharedPreferences.getInstance();
-  // The day first: a failed second write never leaves a version without
-  // its day.
-  await prefs.setString(
-    '${AppConstants.keyRatingAskedOnPrefix}$userId',
-    formatIsoDate(today),
-  );
-  await prefs.setString(
-    '${AppConstants.keyRatingAskedVersionPrefix}$userId',
-    version,
-  );
-  container.invalidate(ratingAskDueProvider);
+  try {
+    final userId = ref.read(currentUserIdProvider);
+    if (userId == null) return;
+    final today = ref.read(todayProvider);
+    final versions = ref.read(appVersionServiceProvider);
+    final container = ProviderScope.containerOf(ref.context, listen: false);
+    final (version, prefs) = await (
+      versions.currentVersion(),
+      SharedPreferences.getInstance(),
+    ).wait;
+    // The day first: a failed second write never leaves a version without
+    // its day.
+    await prefs.setString(_askedOnKey(userId), formatIsoDate(today));
+    await prefs.setString(_askedVersionKey(userId), version);
+    container.invalidate(ratingAskDueProvider);
+  } catch (e, st) {
+    _log.error('Recording the rating request failed', e, st);
+  }
 }

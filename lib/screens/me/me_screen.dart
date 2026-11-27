@@ -134,23 +134,37 @@ class _MeScreenState extends ConsumerState<MeScreen> {
   /// store page, else a message. Never counts as the Buddy's rating ask.
   Future<void> _rate() async {
     final messenger = ScaffoldMessenger.of(context);
+    final ok = await _openListing() || await _openStorePage();
+    if (!ok) {
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Der Store konnte nicht geöffnet werden.'),
+        ),
+      );
+    }
+  }
+
+  /// The store page, ready for a review; whether it opened.
+  Future<bool> _openListing() async {
     try {
       await ref.read(ratingLauncherProvider).openStoreListing();
-      return;
+      return true;
     } catch (e, st) {
       _log.error('Opening the store listing failed', e, st);
+      return false;
     }
-    var opened = false;
+  }
+
+  /// The plain store page; whether it opened.
+  Future<bool> _openStorePage() async {
     try {
-      opened = await ref.read(appVersionServiceProvider).openStore();
+      final opened = await ref.read(appVersionServiceProvider).openStore();
       if (!opened) _log.error('The store page did not open');
+      return opened;
     } catch (e, st) {
       _log.error('Opening the store failed', e, st);
+      return false;
     }
-    if (opened) return;
-    messenger.showSnackBar(
-      const SnackBar(content: Text('Der Store konnte nicht geöffnet werden.')),
-    );
   }
 
   Future<void> _openFeedback() => openExternalUrl(

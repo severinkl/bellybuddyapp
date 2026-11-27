@@ -236,8 +236,7 @@ class BuddyController extends ChangeNotifier {
     });
   }
 
-  /// Takes the speech bubble down now (and a pending return to the
-  /// resting line), e.g. for a cue that says nothing.
+  /// Clears the bubble and any pending return to rest.
   void hush() {
     _backToRest?.cancel();
     _backToRest = null;

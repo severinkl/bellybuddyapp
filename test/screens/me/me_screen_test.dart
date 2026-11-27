@@ -38,38 +38,6 @@ import '../../helpers/riverpod_helpers.dart';
 BuddyStatus _status({int streak = 3, int? goal = 14, String name = 'Bruno'}) =>
     buddyStatus(name: name, goal: goal, streak: streak, todayCounted: true);
 
-class _Launcher implements RatingLauncher {
-  _Launcher({this.fails = false});
-  final bool fails;
-  int listings = 0;
-
-  @override
-  Future<bool> isAvailable() async => true;
-
-  @override
-  Future<void> request() async {}
-
-  @override
-  Future<void> openStoreListing() async {
-    listings++;
-    if (fails) throw Exception('no listing');
-  }
-}
-
-class _Version extends AppVersionService {
-  _Version({this.fails = false, this.result = true});
-  final bool fails;
-  final bool result;
-  int opened = 0;
-
-  @override
-  Future<bool> openStore() async {
-    opened++;
-    if (fails) throw Exception('no store');
-    return result;
-  }
-}
-
 const _renameError = 'Bitte gib einen Namen mit 1 bis 20 Zeichen ein.';
 
 void main() {
@@ -526,8 +494,8 @@ void main() {
     testWidgets('tap opens the store listing through the launcher', (
       tester,
     ) async {
-      final launcher = _Launcher();
-      final version = _Version();
+      final launcher = FakeRatingLauncher();
+      final version = FakeAppVersionService();
       await pump(
         tester,
         extra: [
@@ -545,8 +513,8 @@ void main() {
 
     testWidgets('listing fails: the store page opens through '
         'AppVersionService', (tester) async {
-      final launcher = _Launcher(fails: true);
-      final version = _Version();
+      final launcher = FakeRatingLauncher(listingThrows: true);
+      final version = FakeAppVersionService();
       await pump(
         tester,
         extra: [
@@ -567,8 +535,12 @@ void main() {
       await pump(
         tester,
         extra: [
-          ratingLauncherProvider.overrideWithValue(_Launcher(fails: true)),
-          appVersionServiceProvider.overrideWithValue(_Version(fails: true)),
+          ratingLauncherProvider.overrideWithValue(
+            FakeRatingLauncher(listingThrows: true),
+          ),
+          appVersionServiceProvider.overrideWithValue(
+            FakeAppVersionService(openStoreThrows: true),
+          ),
         ],
       );
 
@@ -585,8 +557,12 @@ void main() {
       await pump(
         tester,
         extra: [
-          ratingLauncherProvider.overrideWithValue(_Launcher(fails: true)),
-          appVersionServiceProvider.overrideWithValue(_Version(result: false)),
+          ratingLauncherProvider.overrideWithValue(
+            FakeRatingLauncher(listingThrows: true),
+          ),
+          appVersionServiceProvider.overrideWithValue(
+            FakeAppVersionService(openStoreResult: false),
+          ),
         ],
       );
 
@@ -603,8 +579,8 @@ void main() {
       await pump(
         tester,
         extra: [
-          ratingLauncherProvider.overrideWithValue(_Launcher()),
-          appVersionServiceProvider.overrideWithValue(_Version()),
+          ratingLauncherProvider.overrideWithValue(FakeRatingLauncher()),
+          appVersionServiceProvider.overrideWithValue(FakeAppVersionService()),
         ],
       );
 
