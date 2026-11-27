@@ -89,9 +89,14 @@ class _ProductFinderSheetState extends ConsumerState<ProductFinderSheet> {
     _ => false,
   };
 
-  /// Why the camera could not start; cleared when the app comes back to
-  /// the front (the user may have allowed it in the settings meanwhile).
+  /// Why the camera could not start. A denied permission is cleared when
+  /// the app comes back from the settings only: on Android every start
+  /// asks again, and the permission dialog itself sends the app to the
+  /// background and back. Any other failure is cleared on every return.
   ScannerFailure? _cameraFailure;
+
+  /// „Einstellungen öffnen" was tapped since the camera failed.
+  bool _openedSettings = false;
 
   @override
   void initState() {
@@ -112,7 +117,11 @@ class _ProductFinderSheetState extends ConsumerState<ProductFinderSheet> {
 
   void _onLifecycle(AppLifecycleState s) => setState(() {
     _resumed = s == AppLifecycleState.resumed;
-    if (_resumed) _cameraFailure = null;
+    if (!_resumed) return;
+    if (_openedSettings || _cameraFailure == ScannerFailure.other) {
+      _cameraFailure = null;
+      _openedSettings = false;
+    }
   });
 
   ProductFinderNotifier get _finder => ref.read(productFinderProvider.notifier);
@@ -124,9 +133,15 @@ class _ProductFinderSheetState extends ConsumerState<ProductFinderSheet> {
   void _onFailure(ScannerFailure failure) =>
       setState(() => _cameraFailure = failure);
 
-  void _rescan() {
-    _query.clear();
-    _finder.reset();
+  /// „Nochmal scannen" in the scanner area: back to the camera; the field
+  /// keeps its text.
+  void _rescan() => _finder.reset();
+
+  /// The way back from a product, not-found or failed lookup: to the hits
+  /// it was picked from (the field holds that term again), else scanning.
+  void _back() {
+    if (_finder.canReturnToSearch) _query.text = _finder.lastQuery;
+    _finder.back();
   }
 
   void _clearQuery() {
@@ -205,7 +220,8 @@ class _ProductFinderSheetState extends ConsumerState<ProductFinderSheet> {
                   ProductFailedView(
                     message: state.message,
                     retryKey: ProductFinderSheet.retryKey,
-                    onRetry: _finder.retry,
+                    // The field may have been edited since.
+                    onRetry: () => _finder.retry(query: _query.text),
                   ),
               ],
               LookingUp() => [const ProductFinderLoading()],
@@ -216,7 +232,7 @@ class _ProductFinderSheetState extends ConsumerState<ProductFinderSheet> {
                   otherProductKey: ProductFinderSheet.otherProductKey,
                   attributionKey: ProductFinderSheet.attributionKey,
                   onApply: () => Navigator.of(context).pop(product),
-                  onOtherProduct: _rescan,
+                  onOtherProduct: _back,
                   onAttribution: () => _open(
                     AppConstants.offProductUrl(product.barcode),
                     _pageFailed,
@@ -233,16 +249,18 @@ class _ProductFinderSheetState extends ConsumerState<ProductFinderSheet> {
                     AppConstants.offAddProductUrl(barcode),
                     _pageFailed,
                   ),
-                  onRescan: _rescan,
+                  onRescan: _back,
+                  toSearch: _finder.canReturnToSearch,
                 ),
               ],
-              Failed(:final message) => [
+              Failed(:final message, :final retry) => [
                 ProductFailedView(
                   message: message,
                   retryKey: ProductFinderSheet.retryKey,
                   rescanKey: ProductFinderSheet.rescanKey,
-                  onRetry: _finder.retry,
-                  onRescan: _rescan,
+                  onRetry: retry == null ? null : _finder.retry,
+                  onRescan: _back,
+                  toSearch: _finder.canReturnToSearch,
                 ),
               ],
             },
@@ -259,10 +277,13 @@ class _ProductFinderSheetState extends ConsumerState<ProductFinderSheet> {
     if (failure != null) {
       return CameraProblemView(
         failure: failure,
-        onOpenSettings: () => _open(
-          appSettingsUrl,
-          'Die Einstellungen konnten nicht geöffnet werden.',
-        ),
+        onOpenSettings: () {
+          _openedSettings = true;
+          _open(
+            appSettingsUrl,
+            'Die Einstellungen konnten nicht geöffnet werden.',
+          );
+        },
       );
     }
     if (!scanning) {

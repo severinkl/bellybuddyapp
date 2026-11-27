@@ -43,13 +43,14 @@ final class NotFound extends ProductFinderState {
   final String barcode;
 }
 
-/// A call failed: [message] says so, [retry] repeats that call; [search]
-/// when it was a search (the sheet keeps the search field then).
+/// A call failed: [message] says so, [retry] repeats that call (null when
+/// repeating cannot help: core rejected the barcode); [search] when it was
+/// a search (the sheet keeps the search field then).
 final class Failed extends ProductFinderState {
   const Failed(this.message, this.retry, {this.search = false});
 
   final String message;
-  final void Function() retry;
+  final void Function()? retry;
   final bool search;
 }
 
@@ -63,6 +64,19 @@ class ProductFinderNotifier extends Notifier<ProductFinderState> {
   /// Bumped by every call and by [reset]: older answers are dropped.
   int _call = 0;
 
+  /// The term of the last search.
+  String _lastQuery = '';
+
+  /// The hits the shown product was picked from; null when it was scanned.
+  List<ProductHit>? _pickedFrom;
+
+  /// The term of the last search (the sheet puts it back in the field).
+  String get lastQuery => _lastQuery;
+
+  /// The shown product (or its failure) came from a search hit: [back]
+  /// returns to those hits.
+  bool get canReturnToSearch => _pickedFrom != null;
+
   @override
   ProductFinderState build() => const Scanning();
 
@@ -72,6 +86,7 @@ class ProductFinderNotifier extends Notifier<ProductFinderState> {
   /// the first detection counts.
   bool onBarcode(String barcode) {
     if (state is! Scanning) return false;
+    _pickedFrom = null;
     _lookup(barcode);
     return true;
   }
@@ -80,21 +95,47 @@ class ProductFinderNotifier extends Notifier<ProductFinderState> {
   void search(String query) {
     final q = query.trim();
     if (q.isEmpty) return;
+    _lastQuery = q;
+    _pickedFrom = null;
     _search(q);
   }
 
-  void pick(ProductHit hit) => _lookup(hit.barcode);
-
-  /// Repeats the failed call.
-  void retry() {
+  void pick(ProductHit hit) {
     final s = state;
-    if (s is Failed) s.retry();
+    _pickedFrom = s is SearchResults ? s.hits : null;
+    _lookup(hit.barcode);
+  }
+
+  /// Repeats the failed call. A failed search searches [query] instead
+  /// when it is not blank: the field may have been edited since.
+  void retry({String? query}) {
+    final s = state;
+    if (s is! Failed) return;
+    if (s.search && query != null && query.trim().isNotEmpty) {
+      search(query);
+    } else {
+      s.retry?.call();
+    }
   }
 
   /// Back to scanning; a pending answer is dropped.
   void reset() {
     _call++;
+    _pickedFrom = null;
     state = const Scanning();
+  }
+
+  /// Back to the hits the product was picked from ([canReturnToSearch]),
+  /// else [reset]. A pending answer is dropped.
+  void back() {
+    final hits = _pickedFrom;
+    if (hits == null) {
+      reset();
+      return;
+    }
+    _call++;
+    _pickedFrom = null;
+    state = SearchResults(hits);
   }
 
   Future<void> _lookup(String barcode) => _run(
@@ -130,7 +171,8 @@ class ProductFinderNotifier extends Notifier<ProductFinderState> {
     } on ProductException catch (e) {
       next = Failed(
         e.message ?? productFinderFallbackError,
-        again,
+        // 400: core rejected the barcode; the same lookup fails again.
+        !search && e.status == 400 ? null : again,
         search: search,
       );
     }

@@ -113,6 +113,21 @@ Widget _scannerStub(
   child: const Text('emit'),
 );
 
+/// Holds the meal insert until [answer] completes: the screen stays saving.
+class _HangingEntryRepository extends FakeEntryRepository {
+  final answer = Completer<void>();
+
+  @override
+  Future<void> insertEntry(
+    String table,
+    Map<String, dynamic> data, {
+    required String userId,
+  }) async {
+    await answer.future;
+    return super.insertEntry(table, data, userId: userId);
+  }
+}
+
 class _HangingMediaRepository extends FakeMealMediaRepository {
   final answer = Completer<Map<String, dynamic>>();
 
@@ -248,6 +263,32 @@ void _productTests() {
       media.answer.complete({'title': 'X', 'ingredients': <String>[]});
       await analysis;
       await tester.pump();
+    });
+
+    testWidgets('disabled while the meal is saved', (tester) async {
+      final entries = _HangingEntryRepository();
+      await _pumpEditScreen(
+        tester,
+        mealId: null,
+        overrides: _productOverrides(entries: entries),
+      );
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MealTrackerScreen)),
+        listen: false,
+      );
+      OutlinedButton button() => tester.widget<OutlinedButton>(
+        find.byKey(MealTrackerScreen.productButtonKey),
+      );
+      expect(button().onPressed, isNotNull);
+
+      final saving = container.read(mealTrackerProvider.notifier).save();
+      await tester.pump();
+      expect(container.read(mealTrackerProvider).isSaving, isTrue);
+      expect(button().onPressed, isNull);
+
+      entries.answer.complete();
+      await saving;
+      await tester.pumpAndSettle();
     });
   });
 }

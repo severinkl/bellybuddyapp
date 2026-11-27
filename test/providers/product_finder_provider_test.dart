@@ -174,4 +174,101 @@ void main() {
     await pumpEventQueue();
     expect((state() as SearchResults).hits, isEmpty);
   });
+
+  group('back to the search', () {
+    const hits = [
+      ProductHit(barcode: '4000000000013', name: 'Testjoghurt'),
+      ProductHit(barcode: '4000000000020', name: 'Joghurt Natur'),
+    ];
+
+    Future<void> searchAndPick() async {
+      notifier().search(' Joghurt ');
+      service.searchAnswers.single.complete(hits);
+      await pumpEventQueue();
+      notifier().pick(hits.first);
+    }
+
+    test('a product picked from hits goes back to those hits', () async {
+      await searchAndPick();
+      expect(notifier().canReturnToSearch, isTrue);
+      expect(notifier().lastQuery, 'Joghurt');
+      service.lookupAnswers.single.complete(ProductFound(_product));
+      await pumpEventQueue();
+
+      notifier().back();
+      expect((state() as SearchResults).hits, hits);
+      expect(notifier().canReturnToSearch, isFalse);
+    });
+
+    test('not found and a failed lookup from a hit go back too', () async {
+      await searchAndPick();
+      service.lookupAnswers.single.complete(ProductNotFound('4000000000013'));
+      await pumpEventQueue();
+      notifier().back();
+      expect((state() as SearchResults).hits, hits);
+
+      notifier().pick(hits.last);
+      service.lookupAnswers.last.completeError(const ProductException());
+      await pumpEventQueue();
+      expect(notifier().canReturnToSearch, isTrue);
+      notifier().back();
+      expect((state() as SearchResults).hits, hits);
+    });
+
+    test('back drops a pending lookup', () async {
+      await searchAndPick();
+      notifier().back();
+      service.lookupAnswers.single.complete(ProductFound(_product));
+      await pumpEventQueue();
+      expect(state(), isA<SearchResults>());
+    });
+
+    test('a scanned product goes back to scanning', () async {
+      await searchAndPick();
+      notifier().reset();
+      expect(notifier().canReturnToSearch, isFalse);
+      notifier().onBarcode('4000000000013');
+      service.lookupAnswers.last.complete(ProductFound(_product));
+      await pumpEventQueue();
+      expect(notifier().canReturnToSearch, isFalse);
+      notifier().back();
+      expect(state(), isA<Scanning>());
+    });
+  });
+
+  test('retry after a failed search searches the edited term; a blank one '
+      'repeats the old term', () async {
+    notifier().search('Joghurt');
+    service.searchAnswers.single.completeError(const ProductException());
+    await pumpEventQueue();
+
+    notifier().retry(query: '  ');
+    expect(service.searches, ['Joghurt', 'Joghurt']);
+    service.searchAnswers.last.completeError(const ProductException());
+    await pumpEventQueue();
+
+    notifier().retry(query: ' Käse ');
+    expect(service.searches, ['Joghurt', 'Joghurt', 'Käse']);
+    expect(notifier().lastQuery, 'Käse');
+  });
+
+  test('a lookup rejected with 400 offers no retry; other failures '
+      'do', () async {
+    notifier().onBarcode('123');
+    service.lookupAnswers.single.completeError(
+      const ProductException(status: 400, message: 'Ungültiger Barcode.'),
+    );
+    await pumpEventQueue();
+    expect((state() as Failed).retry, isNull);
+    notifier().retry();
+    expect(service.lookups, ['123']);
+
+    notifier().reset();
+    notifier().onBarcode('4000000000013');
+    service.lookupAnswers.last.completeError(
+      const ProductException(status: 503),
+    );
+    await pumpEventQueue();
+    expect((state() as Failed).retry, isNotNull);
+  });
 }

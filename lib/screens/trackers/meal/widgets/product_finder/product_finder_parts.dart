@@ -148,18 +148,25 @@ class CameraProblemView extends StatelessWidget {
   );
 }
 
-/// „Nochmal scannen": back to the camera.
+/// „Nochmal scannen": back to the camera; „Zurück zur Suche" with
+/// [toSearch] (the product was picked from search hits).
 class RescanButton extends StatelessWidget {
-  const RescanButton({super.key, required this.tapKey, required this.onTap});
+  const RescanButton({
+    super.key,
+    required this.tapKey,
+    required this.onTap,
+    this.toSearch = false,
+  });
 
   final Key? tapKey;
   final VoidCallback onTap;
+  final bool toSearch;
 
   @override
   Widget build(BuildContext context) => BbButton(
     tapKey: tapKey,
-    label: 'Nochmal scannen',
-    icon: Icons.qr_code_scanner,
+    label: toSearch ? 'Zurück zur Suche' : 'Nochmal scannen',
+    icon: toSearch ? Icons.search : Icons.qr_code_scanner,
     isOutlined: true,
     onPressed: onTap,
   );
@@ -400,7 +407,7 @@ class ProductCard extends StatelessWidget {
 }
 
 /// Core doesn't know the code: enter the meal by hand, add the product to
-/// Open Food Facts, or scan again.
+/// Open Food Facts, or scan again (back to the search with [toSearch]).
 class ProductNotFoundView extends StatelessWidget {
   const ProductNotFoundView({
     super.key,
@@ -410,6 +417,7 @@ class ProductNotFoundView extends StatelessWidget {
     required this.onTypeIt,
     required this.onAddToOff,
     required this.onRescan,
+    this.toSearch = false,
   });
 
   final Key typeItKey;
@@ -418,6 +426,7 @@ class ProductNotFoundView extends StatelessWidget {
   final VoidCallback onTypeIt;
   final VoidCallback onAddToOff;
   final VoidCallback onRescan;
+  final bool toSearch;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -443,7 +452,7 @@ class ProductNotFoundView extends StatelessWidget {
         onPressed: onTypeIt,
       ),
       AppConstants.gap8,
-      RescanButton(tapKey: rescanKey, onTap: onRescan),
+      RescanButton(tapKey: rescanKey, onTap: onRescan, toSearch: toSearch),
       AppConstants.gap8,
       Semantics(
         link: true,
@@ -460,8 +469,8 @@ class ProductNotFoundView extends StatelessWidget {
   );
 }
 
-/// A call failed: the message, „Nochmal versuchen" and maybe „Nochmal
-/// scannen".
+/// A call failed: the message, maybe „Nochmal versuchen" and maybe
+/// „Nochmal scannen" (or „Zurück zur Suche" with [toSearch]).
 class ProductFailedView extends StatelessWidget {
   const ProductFailedView({
     super.key,
@@ -470,15 +479,19 @@ class ProductFailedView extends StatelessWidget {
     this.rescanKey,
     required this.onRetry,
     this.onRescan,
+    this.toSearch = false,
   });
 
   final String message;
   final Key retryKey;
   final Key? rescanKey;
-  final VoidCallback onRetry;
+
+  /// „Nochmal versuchen", unless null (repeating cannot help).
+  final VoidCallback? onRetry;
 
   /// „Nochmal scannen" below the retry, unless null.
   final VoidCallback? onRescan;
+  final bool toSearch;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -497,15 +510,17 @@ class ProductFailedView extends StatelessWidget {
           ),
         ),
       ),
-      AppConstants.gap16,
-      BbButton(
-        tapKey: retryKey,
-        label: 'Nochmal versuchen',
-        onPressed: onRetry,
-      ),
+      if (onRetry case final onRetry?) ...[
+        AppConstants.gap16,
+        BbButton(
+          tapKey: retryKey,
+          label: 'Nochmal versuchen',
+          onPressed: onRetry,
+        ),
+      ],
       if (onRescan case final onRescan?) ...[
         AppConstants.gap8,
-        RescanButton(tapKey: rescanKey, onTap: onRescan),
+        RescanButton(tapKey: rescanKey, onTap: onRescan, toSearch: toSearch),
       ],
     ],
   );

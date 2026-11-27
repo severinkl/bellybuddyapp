@@ -506,6 +506,161 @@ void main() {
     );
   });
 
+  testWidgets('camera denied: coming back from the permission dialog keeps '
+      'the explanation and does not start the camera again', (tester) async {
+    final h = _Harness();
+    await h.pump(tester);
+    // The permission dialog sends the app to the background and back.
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pump();
+    await tester.tap(find.text('deny'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+    expect(find.text('Kein Zugriff auf die Kamera'), findsOneWidget);
+    expect(find.byType(_FakeScanner), findsNothing);
+
+    // Any later trip to the background and back: the same.
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pump();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+    expect(find.text('Kein Zugriff auf die Kamera'), findsOneWidget);
+    expect(find.byType(_FakeScanner), findsNothing);
+  });
+
+  testWidgets('camera denied: back from Einstellungen öffnen the scanner runs '
+      'again', (tester) async {
+    final h = _Harness();
+    await h.pump(tester);
+    await tester.tap(find.text('deny'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Einstellungen öffnen'));
+    await tester.pump();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    await tester.pump();
+    expect(find.text('Kein Zugriff auf die Kamera'), findsOneWidget);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pumpAndSettle();
+    expect(find.text('Kein Zugriff auf die Kamera'), findsNothing);
+    expect(_scannerActive(tester), isTrue);
+  });
+
+  Future<void> searchAndPick(WidgetTester tester, _Harness h) async {
+    await _submitSearch(tester, 'Joghurt');
+    h.service.searchAnswers.single.complete(const [
+      ProductHit(barcode: '4000000000020', name: 'Joghurt Natur'),
+      ProductHit(barcode: _code, name: 'Testjoghurt'),
+    ]);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Testjoghurt'));
+    await tester.pump();
+  }
+
+  String fieldText(WidgetTester tester) => tester
+      .widget<TextField>(find.byKey(ProductFinderSheet.searchFieldKey))
+      .controller!
+      .text;
+
+  testWidgets('Anderes Produkt after a search hit goes back to the hits with '
+      'the term in the field', (tester) async {
+    final h = _Harness();
+    await h.pump(tester);
+    await searchAndPick(tester, h);
+    await _answer(
+      tester,
+      h.service.lookupAnswers.single,
+      ProductFound(_product),
+    );
+
+    await tester.tap(find.byKey(ProductFinderSheet.otherProductKey));
+    await tester.pumpAndSettle();
+    expect(find.text('Joghurt Natur'), findsOneWidget);
+    expect(find.text('Testjoghurt'), findsOneWidget);
+    expect(fieldText(tester), 'Joghurt');
+    expect(h.service.searches, ['Joghurt']);
+  });
+
+  testWidgets('not found and a failed lookup after a search hit offer '
+      'Zurück zur Suche', (tester) async {
+    final h = _Harness();
+    await h.pump(tester);
+    await searchAndPick(tester, h);
+    await _answer(
+      tester,
+      h.service.lookupAnswers.single,
+      ProductNotFound(_code),
+    );
+    expect(find.text('Nochmal scannen'), findsNothing);
+    await tester.tap(find.text('Zurück zur Suche'));
+    await tester.pumpAndSettle();
+    expect(find.text('Joghurt Natur'), findsOneWidget);
+    expect(fieldText(tester), 'Joghurt');
+
+    await tester.tap(find.text('Testjoghurt'));
+    await tester.pump();
+    h.service.lookupAnswers.last.completeError(const ProductException());
+    await tester.pumpAndSettle();
+    expect(find.byKey(ProductFinderSheet.retryKey), findsOneWidget);
+    await tester.tap(find.text('Zurück zur Suche'));
+    await tester.pumpAndSettle();
+    expect(find.text('Joghurt Natur'), findsOneWidget);
+    expect(fieldText(tester), 'Joghurt');
+  });
+
+  testWidgets('Nochmal scannen from the hits goes to the camera and keeps '
+      'the field text', (tester) async {
+    final h = _Harness();
+    await h.pump(tester);
+    await _submitSearch(tester, 'Joghurt');
+    h.service.searchAnswers.single.complete(const [
+      ProductHit(barcode: '4000000000020', name: 'Joghurt Natur'),
+    ]);
+    await tester.pumpAndSettle();
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.tap(find.byKey(ProductFinderSheet.rescanKey));
+    await tester.pumpAndSettle();
+    expect(_scannerActive(tester), isTrue);
+    expect(find.text('Joghurt Natur'), findsNothing);
+    expect(fieldText(tester), 'Joghurt');
+  });
+
+  testWidgets('Nochmal versuchen after a failed search searches the edited '
+      'term', (tester) async {
+    final h = _Harness();
+    await h.pump(tester);
+    await _submitSearch(tester, 'Joghurt');
+    h.service.searchAnswers.single.completeError(const ProductException());
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+      find.byKey(ProductFinderSheet.searchFieldKey),
+      'Käse',
+    );
+    await tester.pump();
+    await tester.tap(find.byKey(ProductFinderSheet.retryKey));
+    await tester.pump();
+    expect(h.service.searches, ['Joghurt', 'Käse']);
+  });
+
+  testWidgets('a barcode rejected with 400 offers Nochmal scannen only', (
+    tester,
+  ) async {
+    final h = _Harness();
+    await h.pump(tester);
+    await _scan(tester, h);
+    h.service.lookupAnswers.single.completeError(
+      const ProductException(status: 400, message: 'Ungültiger Barcode.'),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Ungültiger Barcode.'), findsOneWidget);
+    expect(find.byKey(ProductFinderSheet.retryKey), findsNothing);
+    expect(find.text('Nochmal versuchen'), findsNothing);
+    await tester.tap(find.byKey(ProductFinderSheet.rescanKey));
+    await tester.pumpAndSettle();
+    expect(_scannerActive(tester), isTrue);
+  });
+
   group('accessibility guidelines', () {
     testWidgets('scanning', (tester) async {
       final handle = tester.ensureSemantics();
@@ -560,6 +715,18 @@ void main() {
         h.service.lookupAnswers.single,
         ProductNotFound(_code),
       );
+      await _meetsGuidelines(tester);
+      handle.dispose();
+    });
+
+    testWidgets('failed search', (tester) async {
+      final handle = tester.ensureSemantics();
+      final h = _Harness();
+      await h.pump(tester);
+      await _submitSearch(tester, 'Joghurt');
+      h.service.searchAnswers.single.completeError(const ProductException());
+      await tester.pumpAndSettle();
+      expect(find.byKey(ProductFinderSheet.retryKey), findsOneWidget);
       await _meetsGuidelines(tester);
       handle.dispose();
     });
