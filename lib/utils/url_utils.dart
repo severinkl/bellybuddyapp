@@ -3,6 +3,9 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'logger.dart';
 
+/// The iOS Settings page of the app.
+const appSettingsUrl = 'app-settings:';
+
 /// Whether [url] is a web link: it starts with http:// or https://.
 bool isHttpUrl(String url) =>
     url.startsWith('https://') || url.startsWith('http://');
