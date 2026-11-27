@@ -182,6 +182,25 @@ void main() {
     expect(c.read(sharesProvider).value!.single.revokedAt, isNotNull);
   });
 
+  test('a create during the first load is not undone by that load', () async {
+    final gated = _GatedService([testShare()]);
+    final c = ProviderContainer.test(
+      overrides: [
+        currentUserIdProvider.overrideWithValue('u1'),
+        shareServiceProvider.overrideWithValue(gated),
+      ],
+    );
+    // The first load is slow; a create finishes before it.
+    final gate = gated.gate = Completer<void>();
+    final first = c.read(sharesProvider.future);
+    final creating = c.read(sharesProvider.notifier).create(newShare);
+    await Future<void>.delayed(Duration.zero);
+    gate.complete();
+    await first;
+    await creating;
+    expect(c.read(sharesProvider).value!.map((s) => s.id), ['new1', 's1']);
+  });
+
   group('local storage failing', () {
     setUp(() {
       container = ProviderContainer.test(

@@ -67,6 +67,15 @@ class SharesNotifier extends AsyncNotifier<List<DataShare>> {
   Future<bool> refresh() async {
     final userId = ref.read(currentUserIdProvider);
     final request = ++_latestRequest;
+    // A load still on its way (the first, or one for a new account) would
+    // land after this answer and undo it: wait for it first.
+    if (state.isLoading) {
+      try {
+        await future;
+      } catch (_) {
+        // Its error is the state already; this load may still work.
+      }
+    }
     bool stale() =>
         request != _latestRequest ||
         !ref.mounted ||
