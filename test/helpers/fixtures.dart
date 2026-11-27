@@ -266,10 +266,12 @@ EntryQueryResult testEntryQueryResult({
 IngredientSearchResult testIngredientSearchResult({
   String? id,
   String? name,
+  String? matchedName,
   bool isOwn = false,
 }) => IngredientSearchResult(
   id: id ?? 'ing-1',
   name: name ?? 'Zwiebel',
+  matchedName: matchedName ?? name ?? 'Zwiebel',
   isOwn: isOwn,
 );
 

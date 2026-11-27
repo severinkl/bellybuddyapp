@@ -45,7 +45,12 @@ void main() {
         () => mockRepo.search(any(), userId: any(named: 'userId')),
       ).thenAnswer(
         (_) async => const [
-          IngredientSearchResult(id: 'i-1', name: 'Zwiebel', isOwn: false),
+          IngredientSearchResult(
+            id: 'i-1',
+            name: 'Zwiebel',
+            matchedName: 'Zwiebel',
+            isOwn: false,
+          ),
         ],
       );
 
@@ -114,8 +119,18 @@ void main() {
         () => mockRepo.search(any(), userId: any(named: 'userId')),
       ).thenAnswer(
         (_) async => const [
-          IngredientSearchResult(id: 'i-1', name: 'A', isOwn: true),
-          IngredientSearchResult(id: 'i-2', name: 'B', isOwn: false),
+          IngredientSearchResult(
+            id: 'i-1',
+            name: 'A',
+            matchedName: 'A',
+            isOwn: true,
+          ),
+          IngredientSearchResult(
+            id: 'i-2',
+            name: 'B',
+            matchedName: 'B',
+            isOwn: false,
+          ),
         ],
       );
       when(() => mockRepo.deleteUserIngredient('i-1')).thenAnswer((_) async {});
@@ -156,7 +171,12 @@ void main() {
         () => mockRepo.search(any(), userId: any(named: 'userId')),
       ).thenAnswer(
         (_) async => const [
-          IngredientSearchResult(id: 'i-1', name: 'Zwiebel', isOwn: false),
+          IngredientSearchResult(
+            id: 'i-1',
+            name: 'Zwiebel',
+            matchedName: 'Zwiebel',
+            isOwn: false,
+          ),
         ],
       );
 

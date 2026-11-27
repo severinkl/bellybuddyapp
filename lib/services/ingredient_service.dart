@@ -15,28 +15,27 @@ class IngredientService {
 
   static const _log = AppLogger('IngredientService');
 
-  /// Ingredients whose name contains [query] (ignoring case), best matches
-  /// first ([IngredientSearchResult.rank]): at most [limit].
-  ///
-  /// Two queries, so the best matches are never cut off by the limit: the
-  /// names starting with [query] (alphabetically, so an exact match comes
-  /// first) and a wider set of names containing it.
+  /// Ingredients matching [query] by their name or one of their other
+  /// names, best matches first ([IngredientSearchResult.rank]): at most
+  /// [limit]. `search_ingredients` (core) finds them; each result keeps the
+  /// word that matched ([IngredientSearchResult.matchedName]).
   Future<List<IngredientSearchResult>> search(
     String query, {
     int limit = 10,
     required String? userId,
   }) async {
     try {
-      final rows = await Future.wait([
-        _searchRows('$query%', limit),
-        _searchRows('%$query%', limit * _containsFactor),
-      ]);
+      final rows = await _client.rpc(
+        'search_ingredients',
+        params: {'p_query': query, 'p_limit': limit},
+      );
       return IngredientSearchResult.rank(
         [
-          for (final e in rows.expand((r) => r))
+          for (final e in (rows as List).cast<Map<String, dynamic>>())
             IngredientSearchResult(
               id: e['id'] as String,
               name: e['name'] as String,
+              matchedName: e['matched_name'] as String,
               isOwn: e['added_by_user_id'] == userId,
             ),
         ],
@@ -48,18 +47,6 @@ class IngredientService {
       rethrow;
     }
   }
-
-  /// How many more rows the contains query fetches than are shown, so the
-  /// ranking has enough to choose from.
-  static const _containsFactor = 3;
-
-  Future<List<Map<String, dynamic>>> _searchRows(String pattern, int limit) =>
-      _client
-          .from('ingredients')
-          .select('id, name, added_by_user_id')
-          .ilike('name', pattern)
-          .order('name', ascending: true)
-          .limit(limit);
 
   /// Adds [name] to the catalog as the user's own ingredient, unless the
   /// user can read it already (own or shared): `ensure_ingredient` (core

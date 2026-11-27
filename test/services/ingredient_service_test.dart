@@ -31,87 +31,99 @@ void main() {
   });
 
   group('IngredientService.search', () {
-    /// Stubs the select chain of both search queries (prefix and
-    /// contains), which resolve with the same [rows].
-    SettlableFilterBuilder stubSearch(List<Map<String, dynamic>> rows) {
-      final fb = mockSelectRows(client, table: 'ingredients', rows: rows);
-      when(() => fb.ilike(any(), any())).thenAnswer((_) => fb);
+    void stubRpc(List<Map<String, dynamic>> rows) {
       when(
-        () => fb.order(any(), ascending: any(named: 'ascending')),
-      ).thenAnswer((_) => fb);
-      when(() => fb.limit(any())).thenAnswer((_) => fb);
-      return fb;
+        () => client.rpc('search_ingredients', params: any(named: 'params')),
+      ).thenAnswer((_) => SettlableFilterBuilder(Future.value(rows)));
     }
 
-    test('maps rows to results, once each', () async {
-      stubSearch([
+    test('calls search_ingredients with the query and limit', () async {
+      stubRpc([]);
+
+      await service.search('Hafer', limit: 7, userId: testUserId);
+
+      verify(
+        () => client.rpc(
+          'search_ingredients',
+          params: {'p_query': 'Hafer', 'p_limit': 7},
+        ),
+      ).called(1);
+      verifyNever(() => client.from(any()));
+    });
+
+    test('maps rows to results, once each, own flagged', () async {
+      stubRpc([
         {
           'id': 'ing-1',
           'name': 'Rote Zwiebel',
+          'matched_name': 'Rote Zwiebel',
           'added_by_user_id': 'other-user',
         },
-        {'id': 'ing-2', 'name': 'Zwiebel', 'added_by_user_id': testUserId},
+        {
+          'id': 'ing-2',
+          'name': 'Zwiebel',
+          'matched_name': 'Zwiebel',
+          'added_by_user_id': testUserId,
+        },
+        {
+          'id': 'ing-2',
+          'name': 'Zwiebel',
+          'matched_name': 'Zwiebel',
+          'added_by_user_id': testUserId,
+        },
       ]);
 
       final result = await service.search('zwiebel', userId: testUserId);
 
-      // Both queries returned both rows: still one result per row.
       expect(result.map((r) => r.id), ['ing-2', 'ing-1']);
-      expect(result.first.name, 'Zwiebel');
       expect(result.first.isOwn, isTrue);
       expect(result.last.isOwn, isFalse);
     });
 
+    test('keeps the matched word and the canonical name', () async {
+      stubRpc([
+        {
+          'id': 'ing-1',
+          'name': 'Tomate',
+          'matched_name': 'Paradeiser',
+          'added_by_user_id': null,
+        },
+      ]);
+
+      final result = await service.search('parad', userId: testUserId);
+
+      expect(result.single.matchedName, 'Paradeiser');
+      expect(result.single.name, 'Tomate');
+    });
+
     test('sets isOwn=false when userId is null', () async {
-      stubSearch([
-        {'id': 'ing-1', 'name': 'Zwiebel', 'added_by_user_id': testUserId},
+      stubRpc([
+        {
+          'id': 'ing-1',
+          'name': 'Zwiebel',
+          'matched_name': 'Zwiebel',
+          'added_by_user_id': testUserId,
+        },
       ]);
 
       final result = await service.search('zwi', userId: null);
 
-      // null userId never matches added_by_user_id
       expect(result.first.isOwn, isFalse);
     });
 
-    test('asks for names starting with the query (ordered) and for names '
-        'containing it', () async {
-      final fb = stubSearch([]);
+    test('a PostgREST error is rethrown', () async {
+      when(
+        () => client.rpc('search_ingredients', params: any(named: 'params')),
+      ).thenAnswer(
+        (_) => SettlableFilterBuilder(
+          Future.error(const PostgrestException(message: 'boom', code: '500')),
+        ),
+      );
 
-      await service.search('Hafer', userId: testUserId);
-
-      verify(() => fb.ilike('name', 'Hafer%')).called(1);
-      verify(() => fb.ilike('name', '%Hafer%')).called(1);
-      verify(() => fb.order('name', ascending: true)).called(2);
-    });
-
-    test('ranks exact, then prefix, then word start, then contains', () async {
-      stubSearch([
-        {'id': '1', 'name': 'Hafermilch', 'added_by_user_id': null},
-        {
-          'id': '2',
-          'name': 'glutenfreie Haferflocken',
-          'added_by_user_id': null,
-        },
-        {'id': '3', 'name': 'Haferkleie', 'added_by_user_id': null},
-        {'id': '4', 'name': 'Schafermilch', 'added_by_user_id': null},
-        {'id': '5', 'name': 'Haferflocken', 'added_by_user_id': null},
-      ]);
-
-      final result = await service.search('haferflocken', userId: testUserId);
-
-      expect(result.map((r) => r.name), [
-        'Haferflocken',
-        'glutenfreie Haferflocken',
-      ]);
-
-      final hafer = await service.search('Hafer', userId: testUserId);
-      expect(hafer.map((r) => r.name), [
-        'Haferkleie',
-        'Hafermilch',
-        'Haferflocken',
-        'glutenfreie Haferflocken',
-        'Schafermilch',
-      ]);
+      await expectLater(
+        service.search('x', userId: testUserId),
+        throwsA(isA<PostgrestException>()),
+      );
     });
   });
 
