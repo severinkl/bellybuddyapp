@@ -15,6 +15,7 @@ import '../../router/route_names.dart';
 import '../../services/insights/stats_copy.dart';
 import '../../services/insights/test_copy.dart';
 import '../../utils/date_format_utils.dart';
+import '../../utils/settled_value.dart';
 import '../../widgets/common/bb_async_state.dart';
 import '../../widgets/common/bb_button.dart';
 import '../../widgets/common/bb_card.dart';
@@ -88,14 +89,15 @@ class _ToleranceTestScreenState extends ConsumerState<ToleranceTestScreen> {
   Widget build(BuildContext context) {
     final plusLocked = ref.watch(plusLockedProvider);
     final state = ref.watch(patternStatsProvider);
+    // Null while reloading after a user change (maybe another user's).
+    final stats = state.currentValue;
     final Widget body;
     if (plusLocked || state.isLocked) {
       body = _list([const PatternsPlusLocked()]);
-    } else if (state.hasValue) {
-      final stats = state.value;
-      body = stats == null
-          ? const SizedBox.shrink()
-          : _list(_content(stats, canOffer: ref.watch(canOfferTestProvider)));
+    } else if (stats != null) {
+      body = _list(_content(stats, canOffer: ref.watch(canOfferTestProvider)));
+    } else if (state is AsyncData<PatternStats?> && !state.isLoading) {
+      body = const SizedBox.shrink(); // no stats (signed out)
     } else if (state.hasError) {
       body = BbErrorState(
         message: StatsCopy.error,

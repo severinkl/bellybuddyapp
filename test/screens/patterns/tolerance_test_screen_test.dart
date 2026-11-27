@@ -17,10 +17,12 @@ import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/patterns/tolerance_test_screen.dart';
 import 'package:belly_buddy/services/insights/test_copy.dart';
 import 'package:belly_buddy/services/pattern_stats_service.dart';
+import 'package:belly_buddy/widgets/common/bb_async_state.dart';
 import 'package:belly_buddy/widgets/common/plus_locked_card.dart';
 
 import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
+import '../../helpers/riverpod_helpers.dart';
 
 const _zwiebel = TestSubject('ingredient', 'zwiebel', 'Zwiebel');
 const _fructans = TestSubject('group', 'fructans', 'Fruktane');
@@ -126,12 +128,21 @@ class _HeldService extends FakePatternStatsService {
   }
 }
 
+/// A stats service whose fetches after the first never answer (another
+/// user's stats loading).
+class _HangsAfterFirst extends FakePatternStatsService {
+  @override
+  Future<PatternStats> fetch() =>
+      calls == 0 ? super.fetch() : Completer<PatternStats>().future;
+}
+
 Future<_FakeRepo> _pump(
   WidgetTester tester,
   PatternStats stats, {
   Object? extra,
   bool plusLocked = false,
   FakePatternStatsService? service,
+  SwitchableUserId? user,
 }) async {
   tester.view
     ..physicalSize = const Size(402, 2400)
@@ -155,7 +166,7 @@ Future<_FakeRepo> _pump(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        currentUserIdProvider.overrideWithValue('u1'),
+        user?.override ?? currentUserIdProvider.overrideWithValue('u1'),
         buddyClockProvider.overrideWithValue(() => _now),
         plusAccessProvider.overrideWithValue(
           plusLocked ? PlusAccess.locked : PlusAccess.open,
@@ -173,6 +184,28 @@ Future<_FakeRepo> _pump(
 final _start = find.byKey(ToleranceTestScreen.startKey);
 
 void main() {
+  testWidgets('reloading after a user change: loading, not the previous '
+      'user\'s test', (tester) async {
+    final user = SwitchableUserId('u1');
+    await _pump(
+      tester,
+      _stats(test: _test()),
+      service: _HangsAfterFirst(),
+      user: user,
+    );
+    expect(find.byKey(ToleranceTestScreen.stopKey), findsOneWidget);
+
+    user.set(
+      ProviderScope.containerOf(
+        tester.element(find.byType(ToleranceTestScreen)),
+      ),
+      'u2',
+    );
+    await tester.pump();
+    expect(find.byKey(ToleranceTestScreen.stopKey), findsNothing);
+    expect(find.byType(BbLoadingState), findsOneWidget);
+  });
+
   testWidgets('opening the page within 30 s of a fetch does not refetch; '
       'the first load is not fetched twice', (tester) async {
     final svc = FakePatternStatsService();

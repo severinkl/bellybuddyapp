@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -42,6 +44,27 @@ class _FakeStats extends PatternStatsNotifier {
 
   @override
   Future<void> refresh() async {}
+}
+
+/// Flipped to reload the stats as a user change does.
+class _UserChange extends Notifier<bool> {
+  @override
+  bool build() => false;
+
+  void flip() => state = true;
+}
+
+final _userChange = NotifierProvider<_UserChange, bool>(_UserChange.new);
+
+/// [value] until [_userChange] flips; then a reload that never ends (its
+/// previous value kept, maybe another user's).
+class _ReloadingStats extends _FakeStats {
+  _ReloadingStats(super.value);
+
+  @override
+  Future<PatternStats?> build() => ref.watch(_userChange)
+      ? Completer<PatternStats?>().future
+      : super.build();
 }
 
 final _insights = Insights(
@@ -126,6 +149,7 @@ Future<void> _pump(
   WidgetTester tester,
   PatternStats stats, {
   bool plusLocked = false,
+  bool reloadable = false,
 }) async {
   _openedWith = 'unopened';
   tester.view
@@ -149,7 +173,9 @@ Future<void> _pump(
     ProviderScope(
       overrides: [
         insightsProvider.overrideWith(() => _FixedInsights(_insights)),
-        patternStatsProvider.overrideWith(() => _FakeStats(stats)),
+        patternStatsProvider.overrideWith(
+          () => reloadable ? _ReloadingStats(stats) : _FakeStats(stats),
+        ),
         buddyClockProvider.overrideWithValue(() => _now),
         plusAccessProvider.overrideWithValue(
           plusLocked ? PlusAccess.locked : PlusAccess.open,
@@ -160,6 +186,11 @@ Future<void> _pump(
   );
   await tester.pumpAndSettle();
 }
+
+/// Reloads the stats as a user change does.
+void _flipUser(WidgetTester tester) => ProviderScope.containerOf(
+  tester.element(find.byType(PatternsScreen)),
+).read(_userChange.notifier).flip();
 
 final _card = find.byKey(ToleranceTestCard.tapKey);
 final _testen = find.text(TestCopy.testAction);
@@ -191,6 +222,16 @@ void main() {
       await tester.tap(_card);
       await tester.pumpAndSettle();
       expect(_openedWith, 'none');
+    });
+
+    testWidgets('reloading after a user change: no card (the test may be '
+        'the previous user\'s)', (tester) async {
+      await _pump(tester, _stats(test: _test()), reloadable: true);
+      expect(_card, findsOneWidget);
+
+      _flipUser(tester);
+      await tester.pump();
+      expect(_card, findsNothing);
     });
 
     testWidgets('a test that starts tomorrow says when', (tester) async {
@@ -334,6 +375,29 @@ void main() {
       );
       expect(find.descendant(of: row, matching: _testen), findsNothing);
       expect(_rowTest(_kaffee), findsOneWidget);
+    });
+
+    testWidgets('reloading after a user change: no „getestet" badge', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        _stats(
+          tested: [
+            TestedItem(
+              subject: _zwiebelSubject,
+              outcome: TestOutcome.worse,
+              endedOn: DateTime(2026, 11, 10),
+            ),
+          ],
+        ),
+        reloadable: true,
+      );
+      expect(find.text('getestet: deutlich schlechter'), findsOneWidget);
+
+      _flipUser(tester);
+      await tester.pump();
+      expect(find.text('getestet: deutlich schlechter'), findsNothing);
     });
 
     testWidgets('a test of more than 60 days ago gives „Testen" back', (

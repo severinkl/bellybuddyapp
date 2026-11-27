@@ -11,6 +11,7 @@ import '../../../providers/today_provider.dart';
 import '../../../providers/tolerance_test_provider.dart';
 import '../../../router/route_names.dart';
 import '../../../services/insights/test_copy.dart';
+import '../../../utils/settled_value.dart';
 import '../../../widgets/common/bb_card.dart';
 import '../../../widgets/common/bb_tap_area.dart';
 import '../tolerance_test_screen.dart';
@@ -31,8 +32,9 @@ class ToleranceTestCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     if (ref.watch(plusLockedProvider)) return const SizedBox.shrink();
     final state = ref.watch(patternStatsProvider);
-    if (!state.hasValue || state.isLocked) return const SizedBox.shrink();
-    final stats = state.value;
+    if (state.isLocked) return const SizedBox.shrink();
+    // Null while reloading after a user change (maybe another user's).
+    final stats = state.currentValue;
     if (stats == null) return const SizedBox.shrink();
     final test = stats.test;
     final result = test?.result;
@@ -136,7 +138,8 @@ class StatsSectionWithTests extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     if (ref.watch(plusLockedProvider)) return const StatsSection();
-    final stats = ref.watch(patternStatsProvider).value;
+    // Null while reloading after a user change (maybe another user's).
+    final stats = ref.watch(patternStatsProvider).currentValue;
     final today = ref.watch(todayProvider);
     final canOffer = ref.watch(canOfferTestProvider);
     return StatsSection(
