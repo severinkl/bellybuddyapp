@@ -15,7 +15,6 @@ import '../../../widgets/common/bb_icon_tap.dart';
 import '../../../widgets/common/date_time_chips.dart';
 import '../../../widgets/common/tracker_screen_scaffold.dart';
 import '../entry_logger.dart';
-import 'widgets/drink_search.dart';
 import 'widgets/drink_size_selector.dart';
 import 'widgets/quick_drink_grid.dart';
 
@@ -89,10 +88,6 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen>
                               .read(drinkTrackerProvider.notifier)
                               .setTrackedAt,
                         ),
-                        AppConstants.gap16,
-
-                        // Autocomplete search
-                        const DrinkSearch(),
                         AppConstants.gap16,
 
                         // Selected drink chip with deselect

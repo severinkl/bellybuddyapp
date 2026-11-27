@@ -13,7 +13,10 @@ import '../../../../widgets/common/bb_labeled_field.dart';
 /// list scrolls the enclosing page naturally and taps on the list do not
 /// collapse the dropdown. Mirrors the pattern used in `IngredientSearch`.
 class DrinkSearch extends ConsumerStatefulWidget {
-  const DrinkSearch({super.key});
+  const DrinkSearch({super.key, this.autofocus = false});
+
+  /// Focus the field (and so show its suggestions) as soon as it appears.
+  final bool autofocus;
 
   static const searchFieldKey = Key('drink_search_field');
   static const suggestionsKey = Key('drink_search_suggestions');
@@ -111,6 +114,7 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
           child: TextField(
             key: DrinkSearch.searchFieldKey,
             controller: _controller,
+            autofocus: widget.autofocus,
             focusNode: _focusNode,
             // The inline suggestion list replaces the old onTapOutside-to-
             // dismiss path. Expose an explicit keyboard submit so the user

@@ -1,5 +1,4 @@
 // ignore_for_file: invalid_use_of_internal_member
-import 'dart:math' as math;
 
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart' show SemanticsNode;
@@ -14,7 +13,6 @@ import 'package:belly_buddy/screens/trackers/drink/drink_tracker_screen.dart';
 import 'package:belly_buddy/screens/trackers/drink/widgets/drink_search.dart';
 import 'package:belly_buddy/screens/trackers/drink/widgets/drink_size_selector.dart';
 import 'package:belly_buddy/screens/trackers/drink/widgets/quick_drink_grid.dart';
-import 'package:belly_buddy/widgets/common/tap_target.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
@@ -150,8 +148,10 @@ void main() {
         );
         await tester.pump(const Duration(milliseconds: 200));
 
-        // Focus the search field and type a query that matches multiple
+        // Open the search and type a query that matches multiple
         // teas so the suggestion list renders with several items.
+        await tester.tap(find.byKey(QuickDrinkGrid.searchTileKey));
+        await tester.pump();
         await tester.tap(find.byKey(DrinkSearch.searchFieldKey));
         await tester.enterText(find.byKey(DrinkSearch.searchFieldKey), 'Tee');
         await tester.pump(const Duration(milliseconds: 100));
@@ -353,34 +353,6 @@ void main() {
       expect(repo.dayTotalFetches, [DateTime(2026, 11, 22)]);
     });
 
-    testWidgets('a user without drink history sees „Häufige Getränke"', (
-      tester,
-    ) async {
-      final repo = FakeDrinkRepository()
-        ..recentDrinkIds = []
-        ..lastEntry = null;
-      await tester.pumpWithProviders(
-        const DrinkTrackerScreen(),
-        overrides: _overrides(drinkRepo: repo),
-      );
-      await tester.pump(const Duration(milliseconds: 200));
-
-      expect(find.text('Häufige Getränke'), findsOneWidget);
-      expect(find.text('Wähle aus deinen letzten Getränken'), findsNothing);
-    });
-
-    testWidgets('a user with history picks from the last drinks', (
-      tester,
-    ) async {
-      await tester.pumpWithProviders(
-        const DrinkTrackerScreen(),
-        overrides: _overrides(),
-      );
-      await tester.pump(const Duration(milliseconds: 200));
-
-      expect(find.text('Wähle aus deinen letzten Getränken'), findsOneWidget);
-    });
-
     testWidgets('a custom amount over 3000 ml is refused with a hint', (
       tester,
     ) async {
@@ -538,7 +510,8 @@ void main() {
           tester.widget<Text>(find.text('Heute: ')).style?.color,
           AppTheme.infoText,
         );
-        await tester.tap(find.byKey(DrinkSearch.searchFieldKey));
+        await tester.tap(find.byKey(QuickDrinkGrid.searchTileKey));
+        await tester.pump();
         await tester.enterText(find.byKey(DrinkSearch.searchFieldKey), 'Mate');
         await tester.pump();
         expect(
@@ -547,41 +520,12 @@ void main() {
         );
       });
 
-      testWidgets('at 200 % text the quick-drink rows keep an 8 px gap', (
-        tester,
-      ) async {
-        final repo = FakeDrinkRepository()
-          ..seedDrinks([
-            for (final n in ['Wasser', 'Kaffee', 'Tee', 'Saft', 'Milch'])
-              testDrink(id: n, name: n),
-          ]);
-        tester.platformDispatcher.textScaleFactorTestValue = 2;
-        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
-        await pumpWithDrink(tester, drinkRepo: repo);
-
-        final pills = find
-            .descendant(
-              of: find.byType(QuickDrinkGrid),
-              matching: find.byType(AnimatedContainer),
-            )
-            .evaluate()
-            .map((e) => tester.getRect(find.byWidget(e.widget)))
-            .toList();
-        final rows = <double>{for (final r in pills) r.top}.toList()..sort();
-        expect(rows.length, greaterThan(1), reason: 'needs two rows');
-        for (var i = 1; i < rows.length; i++) {
-          final above = pills.where((r) => r.top == rows[i - 1]);
-          final below = pills.where((r) => r.top == rows[i]);
-          final gap =
-              below.first.top - above.map((r) => r.bottom).reduce(math.max);
-          expect(gap, greaterThanOrEqualTo(8), reason: 'row $i');
-        }
-      });
-
       testWidgets('while empty, „Getränk suchen" is read once, with an '
           'example', (tester) async {
         final handle = tester.ensureSemantics();
         await pumpWithDrink(tester);
+        await tester.tap(find.byKey(QuickDrinkGrid.searchTileKey));
+        await tester.pump();
 
         expectSearchFieldReadOnce(
           tester,
@@ -597,6 +541,8 @@ void main() {
       ) async {
         final handle = tester.ensureSemantics();
         await pumpWithDrink(tester);
+        await tester.tap(find.byKey(QuickDrinkGrid.searchTileKey));
+        await tester.pump();
         await tester.enterText(find.byKey(DrinkSearch.searchFieldKey), 'Tee');
         await tester.pump();
 
@@ -616,7 +562,8 @@ void main() {
             testDrink(id: 'own', name: 'Eistee', addedByUserId: 'test-user'),
           ]);
         final container = await pumpWithDrink(tester, drinkRepo: repo);
-        await tester.tap(find.byKey(DrinkSearch.searchFieldKey));
+        await tester.tap(find.byKey(QuickDrinkGrid.searchTileKey));
+        await tester.pump();
         await tester.enterText(find.byKey(DrinkSearch.searchFieldKey), 'Eis');
         container.read(drinkTrackerProvider.notifier).searchDrinks('Eis');
         await tester.pump(const Duration(milliseconds: 500));
@@ -687,21 +634,11 @@ void main() {
           ),
         );
         expect(
-          tester
-              .getSize(
-                find.ancestor(
-                  of: find.descendant(
-                    of: find.byType(QuickDrinkGrid),
-                    matching: find.text('Wasser'),
-                  ),
-                  matching: find.byType(TapTarget),
-                ),
-              )
-              .height,
+          tester.getSize(find.byKey(QuickDrinkGrid.tileKey('water-id'))).height,
           greaterThanOrEqualTo(48),
         );
 
-        // White text on the selected fill needs 4.5:1: infoText, not info.
+        // Selected size fill: white text on infoText (4.5:1), not info.
         await tester.pump(AppConstants.animFast);
         Color? fillOf(Type of, String text) =>
             (tester
@@ -717,7 +654,8 @@ void main() {
                         .decoration
                     as BoxDecoration?)
                 ?.color;
-        expect(fillOf(QuickDrinkGrid, 'Wasser'), AppTheme.infoText);
+        // The selected drink tile is white with an infoText border.
+        expect(fillOf(QuickDrinkGrid, 'Wasser'), AppTheme.background);
         expect(fillOf(DrinkSizeSelector, '250 ml'), AppTheme.infoText);
         expect(
           fillOf(DrinkSizeSelector, '500 ml'),
