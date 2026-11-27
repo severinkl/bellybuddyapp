@@ -84,6 +84,10 @@ class ToleranceTestActions {
   /// The reminders were cancelled since an active test was last seen.
   bool _cancelled = false;
 
+  /// Bumped by every [cancelReminders]: a scheduling that started before
+  /// it is stale and must not leave its reminders posted.
+  int _generation = 0;
+
   bool get _locked =>
       _ref.read(plusLockedProvider) || _ref.read(patternStatsProvider).isLocked;
 
@@ -182,19 +186,34 @@ class ToleranceTestActions {
   }
 
   Future<bool> _schedule(ToleranceTestView test) async {
+    final generation = _generation;
+    final reminders = _ref.read(toleranceTestRemindersProvider);
+    bool ok;
     try {
-      return await _ref.read(toleranceTestRemindersProvider).schedule(test);
+      ok = await reminders.schedule(test);
     } catch (e) {
       // The type only: an error's details may carry the subject.
       _log.error('scheduling the test reminders failed: ${e.runtimeType}');
       return false;
     }
+    if (!ok || generation == _generation) return ok;
+    // Cancelled while it posted: take them down again. A newer scheduling
+    // may have been replaced by this one, so the next sight schedules anew.
+    _log.debug('test reminders: cancelled while scheduling, taken down');
+    _scheduled.clear();
+    try {
+      await reminders.cancel();
+    } catch (e, st) {
+      _log.error('cancelling the test reminders failed', e, st);
+    }
+    return false;
   }
 
   /// Cancels the test reminders (stop, completion, Plus locked, no active
   /// test seen); never throws. The next active test seen is scheduled
   /// again.
   Future<void> cancelReminders() async {
+    _generation++;
     _cancelled = true;
     _scheduled.clear();
     try {

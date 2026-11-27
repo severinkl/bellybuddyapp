@@ -95,15 +95,27 @@ class _FakeReminders implements ToleranceTestReminders {
   /// What [schedule] answers (false: no permission).
   bool permitted = true;
 
+  /// While set, [schedule] waits for it before posting (the permission
+  /// check under way).
+  Completer<void>? gate;
+
+  /// Whether reminders are posted right now (scheduled, not cancelled).
+  bool posted = false;
+
   @override
   Future<bool> schedule(ToleranceTestView test) async {
+    if (gate != null) await gate!.future;
     if (!permitted) return false;
     scheduled.add(test);
+    posted = true;
     return true;
   }
 
   @override
-  Future<void> cancel() async => cancels++;
+  Future<void> cancel() async {
+    cancels++;
+    posted = false;
+  }
 }
 
 class _Today extends TodayNotifier {
@@ -491,6 +503,23 @@ void main() {
     await settle();
 
     expect([for (final t in reminders.scheduled) t.id], ['t1']);
+  });
+
+  test('a scheduling still under way when the reminders are cancelled '
+      'leaves none posted', () async {
+    service.answer = (_) => _stats(test: _view(phase: TestPhase.reintro));
+    final c = await loaded();
+    final actions = c.read(toleranceTestActionsProvider);
+    reminders.gate = Completer<void>();
+
+    final scheduling = actions.rescheduleIfRunning(_view());
+    await settle();
+    await actions.cancelReminders();
+    reminders.gate!.complete();
+    await scheduling;
+    await settle();
+
+    expect(reminders.posted, isFalse);
   });
 
   test('a stale answer without the test, after a start, cancels its '
