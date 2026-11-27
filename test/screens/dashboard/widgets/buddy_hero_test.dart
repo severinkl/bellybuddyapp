@@ -23,6 +23,7 @@ import 'package:belly_buddy/providers/first_tip_provider.dart';
 import 'package:belly_buddy/providers/home_cover_provider.dart';
 import 'package:belly_buddy/providers/journey_provider.dart';
 import 'package:belly_buddy/providers/journey_rewards_provider.dart';
+import 'package:belly_buddy/providers/notification_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/providers/rating_provider.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
@@ -3922,6 +3923,66 @@ void main() {
       await revisit(tester);
       await advance(tester, const Duration(seconds: 3));
       expect(launcher.requests, 1);
+    });
+
+    testWidgets('celebrated before, cold start: the greeting gives way, no '
+        'bubble during the celebration or the request', (tester) async {
+      celebratedBefore();
+      await pumpRating(tester);
+      await tick(tester);
+      expect(controller(tester).currentAction, BuddyAction.celebrate);
+      expect(controller(tester).bubble, isNull);
+      await tester.pump(buddyActionDuration(BuddyAction.celebrate));
+      await tick(tester);
+      expect(launcher.requests, 1);
+      expect(controller(tester).bubble, isNull);
+    });
+
+    testWidgets('the reminders check still running: no request until it '
+        'settles not due, then one in the same visit', (tester) async {
+      celebratedBefore();
+      final reminders = Completer<bool>();
+      await pumpRating(
+        tester,
+        extra: [reminderAskDueProvider.overrideWith((ref) => reminders.future)],
+      );
+      await advance(tester, const Duration(seconds: 3));
+      expect(launcher.requests, 0);
+
+      reminders.complete(false);
+      await tester.pump();
+      await tick(tester);
+      await afterCelebration(tester);
+      expect(launcher.requests, 1);
+    });
+
+    testWidgets('the reminders ask comes due during the celebration: no '
+        'request, nothing recorded, the reminders ask plays', (tester) async {
+      celebratedBefore();
+      final remindersDue = NotifierProvider<Switchable<bool>, bool>(
+        () => Switchable(false),
+      );
+      final container = await pumpRating(
+        tester,
+        extra: [
+          reminderAskDueProvider.overrideWith(
+            (ref) async => ref.watch(remindersDue),
+          ),
+        ],
+      );
+      await tick(tester);
+      expect(controller(tester).currentAction, BuddyAction.celebrate);
+
+      container.read(remindersDue.notifier).set(true);
+      await tester.pump();
+      await tester.pump(buddyActionDuration(BuddyAction.celebrate));
+      await tick(tester);
+      expect(launcher.requests, 0);
+      expect(await recorded(), (null, null));
+
+      await afterWave(tester);
+      expect(find.byType(RemindersAskSheet), findsOneWidget);
+      expect(launcher.requests, 0);
     });
 
     testWidgets('already asked in this version: never queued', (tester) async {

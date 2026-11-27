@@ -283,6 +283,8 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     });
     ref.listenManual(reminderAskDueProvider, (_, due) {
       if (_isDue(due)) _afterFrame(_queueRemindersAsk);
+      // Settled not due: the rating request that waited for it may come.
+      if (_remindersSettledNotDue) _afterFrame(_queueRatingAsk);
     }, fireImmediately: true);
     ref.listenManual(ratingAskDueProvider, (_, due) {
       if (_isRatingDue(due)) _afterFrame(_queueRatingAsk);
@@ -521,17 +523,27 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   static bool _isRatingDue(AsyncValue<bool> due) =>
       !due.isLoading && !due.hasError && due.value == true;
 
+  /// Whether [reminderAskDueProvider] has settled to not due (false, or
+  /// failed: then his ask never comes either); still checking, it may yet
+  /// come due.
+  bool get _remindersSettledNotDue {
+    final due = ref.read(reminderAskDueProvider);
+    return !due.isLoading &&
+        due.value != true &&
+        (due.hasValue || due.hasError);
+  }
+
   /// Whether the Buddy may ask the store for a rating now (rule 4 of the
   /// rating prompt and Home's tour): nothing else is queued or on stage, no
-  /// cue of this visit ended in a sheet, his ask for reminders isn't due
-  /// and the tour isn't up ([BuddyHero.showsBubble]).
+  /// cue of this visit ended in a sheet, his ask for reminders is known not
+  /// to be due and the tour isn't up ([BuddyHero.showsBubble]).
   bool get _ratingAskFits =>
       _cues.isEmpty &&
       _playing == null &&
       !_cueRunning &&
       !_visitSheetCuePlayed &&
       !_remindersAskQueued &&
-      ref.read(reminderAskDueProvider).value != true &&
+      _remindersSettledNotDue &&
       widget.showsBubble;
 
   /// Whether every offer of Home ([buddyOffersProvider]) was shown already:
@@ -948,8 +960,8 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   /// The store's rating request: checks again whether it is due (it may
   /// have waited while Home was covered) and still fits; then the Buddy
-  /// celebrates, saying nothing, and the store is asked ([_requestRating]).
-  /// Not any more: it ends silently, nothing recorded.
+  /// celebrates, his bubble down and saying nothing, and the store is asked
+  /// ([_requestRating]). Not any more: it ends silently, nothing recorded.
   Future<void> _playRatingAsk() async {
     bool due;
     try {
@@ -962,15 +974,23 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     if (!due || _cues.isNotEmpty || !widget.showsBubble || !_homeFree) {
       return _endRatingAsk();
     }
+    _buddy.hush();
     _playThen(BuddyAction.celebrate, _requestRating);
   }
 
   /// After the celebration: the store's own rating dialog (which it may not
   /// show), recorded as it is made ([recordRatingAsk]), also when the
-  /// request fails; a failure is only logged. Home covered by then: none,
-  /// nothing recorded (it comes again).
+  /// request fails; a failure is only logged. Home covered by then, or
+  /// something else came up meanwhile (a cue queued behind it, his ask for
+  /// reminders due or still checking): none, nothing recorded, so no sheet
+  /// opens over the store's dialog (it comes another time).
   Future<void> _requestRating() async {
-    if (!_homeFree || !widget.showsBubble) return _endRatingAsk();
+    if (!_homeFree ||
+        !widget.showsBubble ||
+        _cues.isNotEmpty ||
+        !_remindersSettledNotDue) {
+      return _endRatingAsk();
+    }
     final launcher = ref.read(ratingLauncherProvider);
     unawaited(
       recordRatingAsk(ref).catchError(
