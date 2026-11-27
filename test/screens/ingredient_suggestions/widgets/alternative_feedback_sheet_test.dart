@@ -1,4 +1,6 @@
 // ignore_for_file: invalid_use_of_internal_member
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -40,6 +42,9 @@ class _Service implements AlternativeChoiceService {
   _Service([List<Map<String, dynamic>>? rows]) : rows = rows ?? [];
   final List<Map<String, dynamic>> rows;
   bool fail = false;
+
+  /// While set, an upsert waits for it.
+  Completer<void>? hold;
   int _ids = 0;
   final writes = <String>[];
 
@@ -54,6 +59,7 @@ class _Service implements AlternativeChoiceService {
     required AlternativeChoiceKind kind,
   }) async {
     writes.add('${kind.db} $replacementId');
+    await hold?.future;
     if (fail) throw Exception('offline');
     return _row('c-${_ids++}', replacementId, kind.db);
   }
@@ -261,6 +267,31 @@ void main() {
       ),
     );
     handle.dispose();
+  });
+
+  testWidgets('while a verdict is being stored, reset and the verdicts are '
+      'disabled', (tester) async {
+    final service = _Service()..hold = Completer<void>();
+    await pump(tester, service: service);
+
+    await openSheet(tester, 'r-ing');
+    await act(tester, AlternativeFeedbackSheet.fitsKey);
+    await openSheet(tester, 'r-ing');
+
+    bool enabled(Key key) =>
+        tester.widget<ButtonStyleButton>(find.byKey(key)).enabled;
+    expect(enabled(AlternativeFeedbackSheet.resetKey), isFalse);
+    expect(enabled(AlternativeFeedbackSheet.fitsKey), isFalse);
+    expect(enabled(AlternativeFeedbackSheet.tryKey), isFalse);
+    expect(enabled(AlternativeFeedbackSheet.skipKey), isFalse);
+
+    service.hold!.complete();
+    await tester.pump();
+    await tester.pump();
+
+    expect(enabled(AlternativeFeedbackSheet.resetKey), isTrue);
+    expect(enabled(AlternativeFeedbackSheet.skipKey), isTrue);
+    expect(service.writes, ['fits r-ing']);
   });
 
   testWidgets('a failed write shows „Konnte nicht gespeichert werden." and '

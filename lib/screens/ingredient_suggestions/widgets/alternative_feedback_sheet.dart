@@ -50,7 +50,8 @@ Future<void> showAlternativeFeedbackSheet(
 
 /// [replacement]'s name and „Passt für mich", „Probiere ich", „Passt nicht
 /// für mich"; „Zurücksetzen" once a verdict is set. The current verdict is
-/// marked (and read as selected).
+/// marked (and read as selected). While it is still being stored, the
+/// actions are disabled (a reset needs the stored row).
 class AlternativeFeedbackSheet extends ConsumerWidget {
   const AlternativeFeedbackSheet({
     super.key,
@@ -88,11 +89,12 @@ class AlternativeFeedbackSheet extends ConsumerWidget {
       alternativeChoiceForPairProvider((group.ingredientId, replacement.id)),
     );
     final notifier = ref.read(alternativeChoicesProvider.notifier);
+    final pending = choice?.isPending ?? false;
 
     Widget verdict(Key key, AlternativeChoiceKind kind) {
       final selected = choice?.kind == kind;
       final label = Text(AlternativeVerdictCopy.of(kind));
-      void onPressed() => selected
+      void write() => selected
           ? Navigator.of(context).pop()
           : _write(
               context,
@@ -103,6 +105,7 @@ class AlternativeFeedbackSheet extends ConsumerWidget {
                 kind: kind,
               ),
             );
+      final onPressed = pending ? null : write;
       return Padding(
         padding: const EdgeInsets.only(bottom: AppConstants.spacingSm),
         child: Semantics(
@@ -161,8 +164,9 @@ class AlternativeFeedbackSheet extends ConsumerWidget {
               if (choice != null)
                 TextButton(
                   key: resetKey,
-                  onPressed: () =>
-                      _write(context, () => notifier.remove(choice.id)),
+                  onPressed: pending
+                      ? null
+                      : () => _write(context, () => notifier.remove(choice.id)),
                   child: const Text(AlternativeVerdictCopy.reset),
                 ),
             ],

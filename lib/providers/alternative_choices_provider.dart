@@ -7,6 +7,13 @@ import '../utils/logger.dart';
 import '../utils/retry_helper.dart';
 import 'auth_provider.dart';
 
+const _localIdPrefix = 'local-';
+
+extension AlternativeChoicePending on AlternativeChoice {
+  /// Shown at once, its write still on the way (no stored row yet).
+  bool get isPending => id.startsWith(_localIdPrefix);
+}
+
 class AlternativeChoicesNotifier
     extends AsyncNotifier<List<AlternativeChoice>> {
   static const _log = AppLogger('AlternativeChoices');
@@ -66,7 +73,7 @@ class AlternativeChoicesNotifier
     );
     // A stored row keeps its created_at when the choice changes.
     final provisional = AlternativeChoice(
-      id: 'local-${_localIds++}',
+      id: '$_localIdPrefix${_localIds++}',
       ingredientId: ingredientId,
       ingredientName: ingredientName,
       replacementId: replacement.id,
