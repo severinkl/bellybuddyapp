@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -46,9 +48,14 @@ PatternStats _stats({ToleranceTestView? test, bool restrictive = false}) =>
 class _FakeService implements PatternStatsService {
   int calls = 0;
   PatternStats Function(int call) answer = (_) => _stats();
+  Future<void>? gate;
 
   @override
-  Future<PatternStats> fetch() async => answer(++calls);
+  Future<PatternStats> fetch() async {
+    final call = ++calls;
+    if (gate != null) await gate;
+    return answer(call);
+  }
 }
 
 class _FakeRepo implements ToleranceTestRepository {
@@ -56,6 +63,8 @@ class _FakeRepo implements ToleranceTestRepository {
   final stops = <String>[];
   final completes = <String>[];
   Object? startError;
+  Object? completeError;
+  int completeCalls = 0;
 
   @override
   Future<void> start(
@@ -71,7 +80,11 @@ class _FakeRepo implements ToleranceTestRepository {
   Future<void> stop(String id) async => stops.add(id);
 
   @override
-  Future<void> complete(String id) async => completes.add(id);
+  Future<void> complete(String id) async {
+    completeCalls++;
+    if (completeError != null) throw completeError!;
+    completes.add(id);
+  }
 }
 
 class _FakeReminders implements ToleranceTestReminders {
@@ -114,20 +127,21 @@ void main() {
     reminders = _FakeReminders();
   });
 
-  ProviderContainer make({bool plusLocked = false, DateTime? today}) =>
-      ProviderContainer.test(
-        overrides: [
-          patternStatsServiceProvider.overrideWithValue(service),
-          toleranceTestRepositoryProvider.overrideWithValue(repo),
-          toleranceTestRemindersProvider.overrideWithValue(reminders),
-          entriesRevisionProvider.overrideWith(_Revision.new),
-          plusLockedProvider.overrideWithValue(plusLocked),
-          todayProvider.overrideWith(
-            () => _Today(today ?? DateTime(2026, 11, 30)),
-          ),
-          SwitchableUserId('u1').override,
-        ],
-      );
+  ProviderContainer make({
+    bool plusLocked = false,
+    DateTime? today,
+    SwitchableUserId? user,
+  }) => ProviderContainer.test(
+    overrides: [
+      patternStatsServiceProvider.overrideWithValue(service),
+      toleranceTestRepositoryProvider.overrideWithValue(repo),
+      toleranceTestRemindersProvider.overrideWithValue(reminders),
+      entriesRevisionProvider.overrideWith(_Revision.new),
+      plusLockedProvider.overrideWithValue(plusLocked),
+      todayProvider.overrideWith(() => _Today(today ?? DateTime(2026, 11, 30))),
+      (user ?? SwitchableUserId('u1')).override,
+    ],
+  );
 
   Future<ProviderContainer> loaded({bool plusLocked = false}) async {
     final c = make(plusLocked: plusLocked);
@@ -308,4 +322,38 @@ void main() {
     expect(c.read(patternStatsProvider).isLocked, isTrue);
     expect(repo.completes, isEmpty);
   });
+
+  test(
+    'the completer ignores loading stats (the previous user\'s value)',
+    () async {
+      final logs = captureLogs();
+      final user = SwitchableUserId('u1');
+      service.answer = (call) => call == 1
+          ? _stats(
+              test: _view(id: 'a', phase: TestPhase.done),
+            )
+          : _stats();
+      // u1's completion fails, so 'a' would be tried again on a later arrival.
+      repo.completeError = StateError('offline');
+      final c = make(user: user);
+      c.listen(toleranceTestCompleterProvider, (_, _) {});
+      await settle();
+      expect(repo.completeCalls, 1);
+      expect(logs, isNotEmpty);
+
+      // Another user signs in; while their stats load, the state still holds
+      // u1's done test.
+      final release = Completer<void>();
+      service.gate = release.future;
+      user.set(c, 'u2');
+      await settle();
+      expect(c.read(patternStatsProvider).isLoading, isTrue);
+      expect(c.read(patternStatsProvider).value?.test?.id, 'a');
+      expect(repo.completeCalls, 1);
+
+      release.complete();
+      await settle();
+      expect(repo.completeCalls, 1);
+    },
+  );
 }

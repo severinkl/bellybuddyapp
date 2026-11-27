@@ -164,7 +164,8 @@ Future<void> stopToleranceTest(WidgetRef ref, String id) =>
 final toleranceTestCompleterProvider = Provider<void>((ref) {
   if (ref.watch(plusLockedProvider)) return;
   ref.listen<AsyncValue<PatternStats?>>(patternStatsProvider, (_, next) {
-    if (next.isLocked) return;
+    // While loading (a user change) the value may be the previous user's.
+    if (next.isLoading || next.isLocked) return;
     final test = next.value?.test;
     if (test == null) return;
     unawaited(ref.read(toleranceTestActionsProvider).completeIfDone(test));

@@ -193,14 +193,27 @@ void main() {
     expect(stats.testedFor('group', 'zwiebel', today: today), isNull);
     expect(stats.testedFor('ingredient', 'knoblauch', today: today), isNull);
 
-    // 2026-12-10 + 60 days = 2027-02-08: still in; a day later out.
+    // Core's bound: age < 60. 2026-12-10 + 59 days = 2027-02-07 is in,
+    // 2027-02-08 (age 60) is out.
     expect(
-      stats.testedFor('ingredient', 'zwiebel', today: DateTime(2027, 2, 8)),
+      stats.testedFor('ingredient', 'zwiebel', today: DateTime(2027, 2, 7)),
       isNotNull,
     );
     expect(
-      stats.testedFor('ingredient', 'zwiebel', today: DateTime(2027, 2, 9)),
+      stats.testedFor('ingredient', 'zwiebel', today: DateTime(2027, 2, 8)),
       isNull,
     );
+  });
+
+  test('a tested value that is not a list is empty, the rest parses', () {
+    final stats = PatternStats.fromJson(
+      _stats({
+        'tested': {'oops': true},
+        'proposal': {'kind': 'group', 'key': 'fructans', 'name': 'Fruktane'},
+      }),
+    );
+    expect(stats.tested, isEmpty);
+    expect(stats.proposal?.key, 'fructans');
+    expect(stats.ready, isTrue);
   });
 }

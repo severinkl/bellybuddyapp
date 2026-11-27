@@ -103,15 +103,15 @@ class PatternStats {
   /// The restrictive-eating guard (spec §5.3): no „Testen" anywhere.
   final bool restrictive;
 
-  /// The latest completed test of [kind]/[key] that ended at most 60 days
-  /// before [today] (the device's today when omitted); null otherwise.
+  /// The latest completed test of [kind]/[key] that ended fewer than 60
+  /// days before [today] (core's bound: ages 0–59) (the device's today when omitted); null otherwise.
   TestedItem? testedFor(String kind, String key, {DateTime? today}) {
     final day = startOfDay(today ?? DateTime.now());
     TestedItem? latest;
     for (final t in tested) {
       if (t.subject.kind != kind || t.subject.key != key) continue;
       final age = daysBetween(t.endedOn, day);
-      if (age < 0 || age > 60) continue;
+      if (age < 0 || age >= 60) continue;
       if (latest == null || t.endedOn.isAfter(latest.endedOn)) latest = t;
     }
     return latest;
@@ -129,7 +129,7 @@ class PatternStats {
     calm: _items(j['calm']),
     test: _tryParse(j['test'], ToleranceTestView.fromJson),
     tested: [
-      for (final row in (j['tested'] as List?) ?? const [])
+      for (final row in j['tested'] is List ? j['tested'] as List : const [])
         ?_tryParse(row, TestedItem.fromJson),
     ],
     proposal: _tryParse(j['proposal'], TestSubject.fromJson),
