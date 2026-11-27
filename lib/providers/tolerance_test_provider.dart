@@ -76,12 +76,11 @@ class ToleranceTestActions {
   /// is completed once, however often the stats arrive.
   final _completions = <String, Future<bool>>{};
 
-  /// The tests whose reminders were scheduled in this app run (and since
-  /// the last [forgetScheduled]): each is scheduled once.
-  final _scheduled = <String>{};
-
-  /// The tests whose reminders are being scheduled right now.
-  final _scheduling = <String>{};
+  /// The reminder schedulings under way or done in this app run, by test
+  /// id, since the last [forgetScheduled] or [cancelReminders]: each test
+  /// is scheduled once. One that scheduled nothing (no permission, a
+  /// failure) is dropped, so the next sight tries again.
+  final _scheduled = <String, Future<bool>>{};
 
   /// The reminders were cancelled since an active test was last seen.
   bool _cancelled = false;
@@ -134,7 +133,6 @@ class ToleranceTestActions {
   Future<void> stop(String id) async {
     if (_locked) return;
     await _ref.read(toleranceTestRepositoryProvider).stop(id);
-    _scheduled.remove(id);
     await cancelReminders();
     await _refresh();
   }
@@ -171,25 +169,35 @@ class ToleranceTestActions {
   /// Schedules [test]'s reminders unless they were (or are being) in this
   /// run; counts as done only once they really were (no permission or a
   /// failure: tried again on the next sight).
-  Future<void> _scheduleOnce(ToleranceTestView test) async {
+  Future<void> _scheduleOnce(ToleranceTestView test) {
     final id = test.id;
-    if (_scheduled.contains(id) || !_scheduling.add(id)) return;
+    final running = _scheduled[id];
+    if (running != null) return running;
+    late final Future<bool> scheduling;
+    scheduling = _schedule(test).then((ok) {
+      // A cancel since may have dropped it, and a newer one taken its place.
+      if (!ok && identical(_scheduled[id], scheduling)) _scheduled.remove(id);
+      return ok;
+    });
+    return _scheduled[id] = scheduling;
+  }
+
+  Future<bool> _schedule(ToleranceTestView test) async {
     try {
-      if (await _ref.read(toleranceTestRemindersProvider).schedule(test)) {
-        _scheduled.add(id);
-      }
+      return await _ref.read(toleranceTestRemindersProvider).schedule(test);
     } catch (e) {
       // The type only: an error's details may carry the subject.
       _log.error('scheduling the test reminders failed: ${e.runtimeType}');
-    } finally {
-      _scheduling.remove(id);
+      return false;
     }
   }
 
-  /// Cancels the test reminders (stop, completion, Plus locked); never
-  /// throws.
+  /// Cancels the test reminders (stop, completion, Plus locked, no active
+  /// test seen); never throws. The next active test seen is scheduled
+  /// again.
   Future<void> cancelReminders() async {
     _cancelled = true;
+    _scheduled.clear();
     try {
       await _ref.read(toleranceTestRemindersProvider).cancel();
     } catch (e, st) {

@@ -491,4 +491,30 @@ void main() {
 
     expect([for (final t in reminders.scheduled) t.id], ['t1']);
   });
+
+  test('a stale answer without the test, after a start, cancels its '
+      'reminders; the next sight of the test schedules them again', () async {
+    // 1: before the start; 2: after it; 3: stale, from before the start;
+    // 4: fresh again.
+    service.answer = (call) =>
+        call == 2 || call == 4 ? _stats(test: _view()) : _stats();
+    final c = make();
+    c.listen(toleranceTestCompleterProvider, (_, _) {});
+    await settle();
+    expect(reminders.cancels, 1);
+
+    await c
+        .read(toleranceTestActionsProvider)
+        .start(_zwiebel, origin: 'picked');
+    await settle();
+    expect([for (final t in reminders.scheduled) t.id], ['t1']);
+
+    (c.read(entriesRevisionProvider.notifier) as _Revision).bump();
+    await settle();
+    expect(reminders.cancels, 2);
+
+    (c.read(entriesRevisionProvider.notifier) as _Revision).bump();
+    await settle();
+    expect([for (final t in reminders.scheduled) t.id], ['t1', 't1']);
+  });
 }
