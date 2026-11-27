@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../models/meal_entry.dart';
 import '../models/meal_prefill.dart';
+import '../models/product.dart';
 import '../providers/core_providers.dart';
 import '../repositories/meal_media_repository.dart';
 import '../utils/date_format_utils.dart';
@@ -220,6 +221,33 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
     if (trimmed.isEmpty || state.ingredients.contains(trimmed)) return;
     state = state.copyWith(ingredients: [...state.ingredients, trimmed]);
     ref.read(ingredientAutocompleteProvider.notifier).addIngredient(trimmed);
+  }
+
+  /// Applies a looked-up product: its name becomes the title while the title
+  /// is still the default, and its ingredients not yet present
+  /// (case-insensitive) are appended in order. Names core did not match to
+  /// the catalogue also go to the user's own ingredient list, as typing does.
+  /// Photo, date and notes are left alone.
+  void applyProduct(ProductPrefill product) {
+    final seen = state.ingredients.map((i) => i.toLowerCase()).toSet();
+    final added = <ProductIngredient>[];
+    for (final ingredient in product.ingredients) {
+      final name = ingredient.name.trim();
+      if (name.isEmpty || !seen.add(name.toLowerCase())) continue;
+      added.add(
+        ProductIngredient(name: name, ingredientId: ingredient.ingredientId),
+      );
+    }
+    state = state.copyWith(
+      title: state.title == kDefaultMealTitle ? product.title : null,
+      ingredients: [...state.ingredients, ...added.map((i) => i.name)],
+    );
+    final autocomplete = ref.read(ingredientAutocompleteProvider.notifier);
+    for (final ingredient in added) {
+      if (ingredient.ingredientId == null) {
+        autocomplete.addIngredient(ingredient.name);
+      }
+    }
   }
 
   void removeIngredient(String name) {

@@ -7,6 +7,7 @@ import 'package:mocktail/mocktail.dart';
 
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/meal_prefill.dart';
+import 'package:belly_buddy/models/product.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/diary_provider.dart';
 import 'package:belly_buddy/providers/ingredient_suggestion_provider.dart';
@@ -637,6 +638,129 @@ void main() {
         seeded.copyWith(ingredients: ['Nudeln', 'Speck']).hasUnsavedChanges,
         isTrue,
       );
+    });
+  });
+
+  group('MealTrackerNotifier.applyProduct', () {
+    ProductPrefill product(
+      List<ProductIngredient> ingredients, {
+      String title = 'Haferflocken Zart',
+    }) => ProductPrefill(
+      barcode: '4000000000000',
+      title: title,
+      ingredients: ingredients,
+    );
+
+    setUp(() {
+      when(
+        () =>
+            mockIngredientRepo.insertIfNew(any(), userId: any(named: 'userId')),
+      ).thenAnswer((_) async {});
+    });
+
+    test(
+      'empty tracker: title becomes the product name, ingredients in order',
+      () {
+        final container = makeContainer();
+        container
+            .read(mealTrackerProvider.notifier)
+            .applyProduct(
+              product(const [
+                ProductIngredient(name: 'Hafer'),
+                ProductIngredient(name: 'Wasser', ingredientId: 'i-2'),
+              ]),
+            );
+        final state = container.read(mealTrackerProvider);
+        expect(state.title, 'Haferflocken Zart');
+        expect(state.ingredients, ['Hafer', 'Wasser']);
+      },
+    );
+
+    test(
+      'own title kept; ingredients appended without case-insensitive duplicates',
+      () {
+        final container = makeContainer();
+        final notifier = container.read(mealTrackerProvider.notifier)
+          ..setTitle('Mein Frühstück')
+          ..addIngredient('hafer');
+        notifier.applyProduct(
+          product(const [
+            ProductIngredient(name: 'Hafer'),
+            ProductIngredient(name: 'Wasser'),
+            ProductIngredient(name: ' wasser '),
+            ProductIngredient(name: '  '),
+          ]),
+        );
+        final state = container.read(mealTrackerProvider);
+        expect(state.title, 'Mein Frühstück');
+        expect(state.ingredients, ['hafer', 'Wasser']);
+      },
+    );
+
+    test('photo bytes, imageUrl, trackedAt and notes are untouched', () {
+      final container = makeContainer();
+      final notifier = container.read(mealTrackerProvider.notifier)
+        ..setImage(Uint8List.fromList([1, 2, 3]), 'a.jpg')
+        ..setNotes('Notiz')
+        ..setTrackedAt(DateTime(2026, 5, 1, 8, 0));
+      notifier.applyProduct(product(const [ProductIngredient(name: 'Hafer')]));
+      final state = container.read(mealTrackerProvider);
+      expect(state.imageBytes, Uint8List.fromList([1, 2, 3]));
+      expect(state.imageFileName, 'a.jpg');
+      expect(state.notes, 'Notiz');
+      expect(state.trackedAt, DateTime(2026, 5, 1, 8, 0));
+
+      final seeded = makeContainer();
+      final n2 = seeded.read(mealTrackerProvider.notifier)
+        ..seed(testMealEntry(imageUrl: 'https://example.com/x.jpg'));
+      n2.applyProduct(product(const [ProductIngredient(name: 'Hafer')]));
+      expect(
+        seeded.read(mealTrackerProvider).imageUrl,
+        'https://example.com/x.jpg',
+      );
+    });
+
+    test(
+      'names without ingredientId go through the autocomplete provider; names with an id do not',
+      () {
+        final container = makeContainer();
+        container
+            .read(mealTrackerProvider.notifier)
+            .applyProduct(
+              product(const [
+                ProductIngredient(name: 'Hafer'),
+                ProductIngredient(name: 'Wasser', ingredientId: 'i-2'),
+              ]),
+            );
+        verify(
+          () => mockIngredientRepo.insertIfNew('Hafer', userId: testUserId),
+        ).called(1);
+        verifyNever(
+          () => mockIngredientRepo.insertIfNew(
+            'Wasser',
+            userId: any(named: 'userId'),
+          ),
+        );
+      },
+    );
+
+    test('a product without ingredients only sets the title', () {
+      final container = makeContainer();
+      container
+          .read(mealTrackerProvider.notifier)
+          .applyProduct(product(const []));
+      final state = container.read(mealTrackerProvider);
+      expect(state.title, 'Haferflocken Zart');
+      expect(state.ingredients, isEmpty);
+    });
+
+    test('edit mode: applying makes the state dirty', () {
+      final container = makeContainer();
+      final notifier = container.read(mealTrackerProvider.notifier)
+        ..seed(testMealEntry(ingredients: ['Reis']));
+      expect(container.read(mealTrackerProvider).isDirty, isFalse);
+      notifier.applyProduct(product(const [ProductIngredient(name: 'Hafer')]));
+      expect(container.read(mealTrackerProvider).isDirty, isTrue);
     });
   });
 }
