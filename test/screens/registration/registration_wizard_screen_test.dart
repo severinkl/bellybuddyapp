@@ -1525,12 +1525,17 @@ void main() {
         picker(tester, 'Geburtsjahr'),
         isSemantics(label: 'Geburtsjahr', value: '1985'),
       );
-      // The wheel lists the years newest first: the next one is older.
+      // The wheel lists the years newest first; increase still means later.
       tester.semantics.increase(find.semantics.byLabel('Geburtsjahr'));
       await tester.pumpAndSettle();
       expect(
         picker(tester, 'Geburtsjahr'),
-        isSemantics(label: 'Geburtsjahr', value: '1984'),
+        isSemantics(
+          label: 'Geburtsjahr',
+          value: '1986',
+          increasedValue: '1987',
+          decreasedValue: '1985',
+        ),
       );
       await _tapNext(tester);
       await tester.tap(find.byKey(GenderStep.genderMaennlichKey));
@@ -1578,7 +1583,7 @@ void main() {
 
       expect(app.path, RoutePaths.buddyOnboarding);
       final stored = app.profileRepo.storedProfile!;
-      expect(stored.birthYear, 1984);
+      expect(stored.birthYear, 1986);
       expect(stored.height, 172);
       expect(stored.weight, 68);
       handle.dispose();

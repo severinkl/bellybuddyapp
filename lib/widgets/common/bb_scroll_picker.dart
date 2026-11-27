@@ -18,7 +18,8 @@ class BbScrollPicker extends StatefulWidget {
   /// What the picker sets, e.g. 'Geburtsjahr'. Screen readers read it with
   /// the current item as the value and step through the items with
   /// increase/decrease (swipe up/down), since the wheel can't be scrolled
-  /// with one.
+  /// with one. Increase goes to the higher value, whether [items] run up
+  /// or down.
   final String semanticLabel;
 
   const BbScrollPicker({
@@ -72,8 +73,9 @@ class _BbScrollPickerState extends State<BbScrollPicker> {
     widget.onChanged(widget.items[index]);
   }
 
-  /// A screen reader's increase/decrease: selects the item [delta] away and
-  /// moves the wheel there (at once under reduced motion).
+  /// A screen reader's increase/decrease: selects the item [delta] places
+  /// further down the list and moves the wheel there (at once under reduced
+  /// motion).
   void _step(int delta) {
     final index = _index + delta;
     if (index < 0 || index >= widget.items.length) return;
@@ -166,16 +168,21 @@ class _BbScrollPickerState extends State<BbScrollPicker> {
 
   @override
   Widget build(BuildContext context) {
-    final canIncrease = _index < widget.items.length - 1;
-    final canDecrease = _index > 0;
+    // Increase means a higher value, whichever way the list runs (the
+    // birth years run newest first).
+    final items = widget.items;
+    final up = items.length < 2 || items.last >= items.first ? 1 : -1;
+    bool inRange(int i) => i >= 0 && i < items.length;
+    final canIncrease = inRange(_index + up);
+    final canDecrease = inRange(_index - up);
     final picker = Semantics(
       container: true,
       label: widget.semanticLabel,
       value: _label(_index),
-      increasedValue: canIncrease ? _label(_index + 1) : null,
-      decreasedValue: canDecrease ? _label(_index - 1) : null,
-      onIncrease: canIncrease ? () => _step(1) : null,
-      onDecrease: canDecrease ? () => _step(-1) : null,
+      increasedValue: canIncrease ? _label(_index + up) : null,
+      decreasedValue: canDecrease ? _label(_index - up) : null,
+      onIncrease: canIncrease ? () => _step(up) : null,
+      onDecrease: canDecrease ? () => _step(-up) : null,
       child: ExcludeSemantics(child: _buildContent()),
     );
     if (widget.expand) return picker;

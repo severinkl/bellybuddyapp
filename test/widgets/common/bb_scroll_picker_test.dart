@@ -72,6 +72,58 @@ void main() {
     handle.dispose();
   });
 
+  testWidgets('on a list running newest first, increase still goes to the '
+      'higher value; at the highest there is no increase', (tester) async {
+    final handle = tester.ensureSemantics();
+    final changes = <int>[];
+    await tester.pumpWidget(
+      _picker(
+        items: [1991, 1990, 1989],
+        selected: 1990,
+        onChanged: changes.add,
+      ),
+    );
+
+    expect(
+      _node(),
+      isSemantics(
+        label: 'Geburtsjahr',
+        value: '1990',
+        increasedValue: '1991',
+        decreasedValue: '1989',
+      ),
+    );
+    tester.semantics.increase(find.semantics.byLabel('Geburtsjahr'));
+    await tester.pumpAndSettle();
+    expect(changes, [1991]);
+    expect(
+      _node(),
+      isSemantics(
+        label: 'Geburtsjahr',
+        value: '1991',
+        decreasedValue: '1990',
+        hasIncreaseAction: false,
+        hasDecreaseAction: true,
+      ),
+    );
+
+    tester.semantics.decrease(find.semantics.byLabel('Geburtsjahr'));
+    await tester.pumpAndSettle();
+    tester.semantics.decrease(find.semantics.byLabel('Geburtsjahr'));
+    await tester.pumpAndSettle();
+    expect(changes, [1991, 1990, 1989]);
+    expect(
+      _node(),
+      isSemantics(
+        label: 'Geburtsjahr',
+        value: '1989',
+        hasIncreaseAction: true,
+        hasDecreaseAction: false,
+      ),
+    );
+    handle.dispose();
+  });
+
   testWidgets('the wheel itself is hidden: its items are not read one by one', (
     tester,
   ) async {
