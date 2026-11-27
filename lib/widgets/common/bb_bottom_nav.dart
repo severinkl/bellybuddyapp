@@ -253,7 +253,7 @@ class _NavItem extends StatelessWidget {
                 isActive ? activeIcon : icon,
                 color: isActive
                     ? AppTheme.foreground
-                    : AppTheme.foreground.withValues(alpha: 0.6),
+                    : AppTheme.foregroundInactive,
                 size: AppConstants.iconSizeLg,
               ),
               if (badge)
@@ -292,7 +292,7 @@ class _NavItem extends StatelessWidget {
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
                 color: isActive
                     ? AppTheme.foreground
-                    : AppTheme.foreground.withValues(alpha: 0.6),
+                    : AppTheme.foregroundInactive,
               ),
             ),
           ),

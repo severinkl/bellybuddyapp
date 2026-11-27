@@ -173,7 +173,7 @@ class _SettingsProfileScreenState extends ConsumerState<SettingsProfileScreen> {
                 child: Text(
                   'Gespeichert',
                   style: TextStyle(
-                    color: AppTheme.success,
+                    color: AppTheme.successText,
                     fontSize: AppTheme.fontSizeBody,
                   ),
                 ),

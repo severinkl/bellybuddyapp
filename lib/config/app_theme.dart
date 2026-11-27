@@ -27,15 +27,21 @@ class AppTheme {
   static const Color secondary = Color(0xFFEFEBE6);
   static const Color secondaryForeground = Color(0xFF302820);
   static const Color muted = Color(0xFFE8E4DF);
-  static const Color mutedForeground = Color(0xFF796F67);
+  static const Color mutedForeground = Color(0xFF675E57);
   static const Color accent = Color(0xFFB5CC47);
-  static const Color destructive = Color(0xFFEF4444);
+  static const Color destructive = Color(0xFFC62828);
   static const Color success = Color(0xFF22C55E);
   static const Color warning = Color(0xFFF59E0B);
   static const Color info = Color(0xFF3B82F6);
 
+  /// Text-safe variants (4.5:1) of the brand fills; the fills keep their
+  /// own tokens for backgrounds and decorative icons.
+  static const Color primaryText = Color(0xFF56631A);
+  static const Color successText = Color(0xFF1F6B1F);
+  static const Color infoText = Color(0xFF1D4ED8);
+
   /// The „Aktiv" state word of a share (dark enough for text on [card]).
-  static const Color shareActive = Color(0xFF1F6B1F);
+  static const Color shareActive = successText;
   static const Color border = Color(0xFFE3DFDA);
   static const Color input = Color(0xFFE3DFDA);
   static const Color ring = Color(0xFFB5CC47);
@@ -49,6 +55,17 @@ class AppTheme {
   // Bottom nav gradient
   static const Color navGradientStart = Color(0xFFFFB5C1);
   static const Color navGradientEnd = Color(0xFFFFD5C1);
+
+  /// Inactive bar icons, labels and tab text: [foreground] at 75 %.
+  static const Color foregroundInactive = Color.from(
+    alpha: 0.75,
+    red: 0x30 / 255,
+    green: 0x28 / 255,
+    blue: 0x20 / 255,
+  );
+
+  /// Fill of the „Neu" pill (white text on it).
+  static const Color badgeFill = Color(0xFFC8325A);
 
   /// The dot on a bottom-bar tab that holds news.
   static const Color navBadge = Color(0xFFE8456F);
@@ -68,6 +85,8 @@ class AppTheme {
   static const Color gutFeelingGoodSoft = Color(0xFFE5F5E5);
   static const Color gutFeelingNeutralSoft = Color(0xFFFCF4D6);
   static const Color gutFeelingBadSoft = Color(0xFFF9E1E1);
+  static const Color gutFeelingGoodText = successText;
+  static const Color gutFeelingNeutralText = Color(0xFF7A5F00);
   static const Color gutFeelingGoodIcon = Color(0xFF2E8B2E);
   static const Color gutFeelingNeutralIcon = Color(0xFF9A7A00);
   static const Color gutFeelingBadIcon = gutFeelingBad;
@@ -276,7 +295,7 @@ class AppTheme {
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
-        foregroundColor: primary,
+        foregroundColor: primaryText,
         textStyle: const TextStyle(
           fontSize: fontSizeSubtitle,
           fontWeight: FontWeight.w500,

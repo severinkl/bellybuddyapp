@@ -16,7 +16,7 @@ class BbAuthBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = isError ? AppTheme.destructive : AppTheme.success;
+    final color = isError ? AppTheme.destructive : AppTheme.successText;
     return Container(
       padding: const EdgeInsets.all(12),
       margin: const EdgeInsets.only(bottom: 16),

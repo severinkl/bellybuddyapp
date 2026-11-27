@@ -262,7 +262,7 @@ class _IngredientSearchState extends State<IngredientSearch> {
                       '+ Hinzufügen',
                       style: TextStyle(
                         fontSize: AppTheme.fontSizeBody,
-                        color: AppTheme.primary,
+                        color: AppTheme.primaryText,
                         fontWeight: FontWeight.w500,
                       ),
                     ),

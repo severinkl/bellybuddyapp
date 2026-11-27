@@ -242,7 +242,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen>
                 SizedBox(width: AppConstants.spacingSm),
                 Text(
                   'Trinken eintragen',
-                  style: TextStyle(color: AppTheme.info),
+                  style: TextStyle(color: AppTheme.infoText),
                 ),
               ],
             ),

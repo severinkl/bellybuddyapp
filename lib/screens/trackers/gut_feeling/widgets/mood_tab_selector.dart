@@ -61,7 +61,7 @@ class MoodTabSelector extends StatelessWidget {
               fontWeight: FontWeight.w500,
               color: isActive
                   ? AppTheme.foreground
-                  : AppTheme.foreground.withValues(alpha: 0.6),
+                  : AppTheme.foregroundInactive,
             ),
             child: Text(label, textAlign: TextAlign.center),
           ),

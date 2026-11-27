@@ -113,7 +113,7 @@ class RecommendationCard extends StatelessWidget {
                     ? AppTheme.fontSizeCaptionLG
                     : AppTheme.fontSizeBody,
                 fontWeight: FontWeight.w500,
-                color: AppTheme.success,
+                color: AppTheme.successText,
               ),
             ),
           ],

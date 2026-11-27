@@ -177,7 +177,7 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen>
               style: const TextStyle(
                 fontSize: AppTheme.fontSizeBody,
                 fontWeight: FontWeight.w500,
-                color: AppTheme.info,
+                color: AppTheme.infoText,
               ),
             ),
           ],
@@ -203,7 +203,7 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen>
             vertical: AppConstants.spacingSm,
           ),
           decoration: BoxDecoration(
-            color: AppTheme.info,
+            color: AppTheme.infoText,
             borderRadius: BorderRadius.circular(AppConstants.radiusFull),
           ),
           child: Text(

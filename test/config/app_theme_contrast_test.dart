@@ -19,6 +19,10 @@ double _contrast(Color a, Color b) {
   return (math.max(la, lb) + 0.05) / (math.min(la, lb) + 0.05);
 }
 
+/// [fg] at [alpha] blended over opaque [bg].
+Color _over(Color fg, double alpha, Color bg) =>
+    Color.alphaBlend(fg.withValues(alpha: alpha), bg);
+
 void main() {
   test('the contrast helper matches the WCAG extremes', () {
     expect(_contrast(Colors.black, Colors.white), closeTo(21, 0.01));
@@ -77,5 +81,78 @@ void main() {
       AppTheme.placeholderGlyph,
       AppTheme.foreground.withValues(alpha: 0.45),
     );
+  });
+
+  test('every text pair has at least 4.5:1', () {
+    final pages = [
+      AppTheme.background,
+      AppTheme.card,
+      AppTheme.screenBackground,
+    ];
+    final pairs = <(String, Color, Color)>[
+      for (final bg in [
+        ...pages,
+        AppTheme.muted,
+        AppTheme.secondary,
+        AppTheme.beige,
+        AppTheme.primarySoft,
+        AppTheme.gutFeelingGoodSoft,
+      ])
+        ('mutedForeground on $bg', AppTheme.mutedForeground, bg),
+      for (final bg in [...pages, _over(AppTheme.primary, 0.15, Colors.white)])
+        ('primaryText on $bg', AppTheme.primaryText, bg),
+      for (final bg in [
+        AppTheme.background,
+        AppTheme.card,
+        _over(AppTheme.destructive, 0.1, Colors.white),
+      ])
+        ('destructive on $bg', AppTheme.destructive, bg),
+      ('white on destructive', Colors.white, AppTheme.destructive),
+      for (final bg in [
+        AppTheme.background,
+        AppTheme.card,
+        _over(AppTheme.successText, 0.1, Colors.white),
+        AppTheme.gutFeelingGoodSoft,
+      ])
+        ('successText on $bg', AppTheme.successText, bg),
+      (
+        'gutFeelingNeutralText on soft',
+        AppTheme.gutFeelingNeutralText,
+        AppTheme.gutFeelingNeutralSoft,
+      ),
+      for (final bg in [
+        AppTheme.background,
+        _over(AppTheme.infoText, 0.1, Colors.white),
+        AppTheme.screenBackground,
+      ])
+        ('infoText on $bg', AppTheme.infoText, bg),
+      ('white on infoText', Colors.white, AppTheme.infoText),
+      for (final bg in [
+        AppTheme.navGradientStart,
+        AppTheme.navGradientEnd,
+        _over(Colors.white, 0.6, AppTheme.screenBackground),
+      ])
+        (
+          'foregroundInactive on $bg',
+          _over(AppTheme.foregroundInactive, AppTheme.foregroundInactive.a, bg),
+          bg,
+        ),
+      ('white on badgeFill', Colors.white, AppTheme.badgeFill),
+    ];
+    for (final (name, fg, bg) in pairs) {
+      expect(_contrast(fg, bg), greaterThanOrEqualTo(4.5), reason: name);
+    }
+  });
+
+  test('the theme\'s TextButton draws its text in primaryText', () {
+    expect(
+      AppTheme.theme.textButtonTheme.style!.foregroundColor!.resolve({}),
+      AppTheme.primaryText,
+    );
+  });
+
+  test('shareActive and gutFeelingGoodText are successText', () {
+    expect(AppTheme.shareActive, AppTheme.successText);
+    expect(AppTheme.gutFeelingGoodText, AppTheme.successText);
   });
 }
