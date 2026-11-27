@@ -20,6 +20,7 @@ import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
 import '../helpers/riverpod_helpers.dart';
 import '../helpers/share_fakes.dart';
+import '../helpers/reduce_motion.dart';
 
 /// The checks the guardrail runs on every screen.
 enum A11yCheck {
@@ -288,11 +289,7 @@ Future<void> pumpA11yScreen(
     ..devicePixelRatio = 1
     ..padding = const FakeViewPadding(top: 62, bottom: 34);
   addTearDown(tester.view.reset);
-  if (s.reducedMotion) {
-    tester.platformDispatcher.accessibilityFeaturesTestValue =
-        const FakeAccessibilityFeatures(disableAnimations: true);
-    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
-  }
+  if (s.reducedMotion) reduceMotion(tester);
   final container = ProviderContainer.test(
     overrides: [
       ...s.base(),
@@ -306,7 +303,7 @@ Future<void> pumpA11yScreen(
       child: AppTestHost(textScale: textScale),
     ),
   );
-  await _settle(tester);
+  await tester.pump();
   final router = container.read(routerProvider)..go(s.path);
   await _settle(tester);
   expect(

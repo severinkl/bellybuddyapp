@@ -34,6 +34,7 @@ import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/registration_driver.dart';
 import '../../helpers/riverpod_helpers.dart';
+import '../../helpers/reduce_motion.dart';
 
 List<Override> _overrides() => [
   authRepositoryProvider.overrideWithValue(FakeAuthRepository()),
@@ -610,11 +611,7 @@ void main() {
     testWidgets('the stage resizes instantly and the walk still works', (
       tester,
     ) async {
-      tester.platformDispatcher.accessibilityFeaturesTestValue =
-          const FakeAccessibilityFeatures(disableAnimations: true);
-      addTearDown(
-        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
-      );
+      reduceMotion(tester);
       _phone(tester, const Size(402, 874));
       await tester.pumpWithProviders(
         const RegistrationWizardScreen(),

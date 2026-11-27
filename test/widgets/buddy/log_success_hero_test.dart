@@ -22,6 +22,7 @@ import '../../helpers/flames.dart';
 import '../../helpers/layout_checks.dart';
 import '../../helpers/riverpod_helpers.dart';
 import '../../helpers/widget_tester_helpers.dart';
+import '../../helpers/reduce_motion.dart';
 
 List<Override> _overrides() => [
   buddyRepositoryProvider.overrideWithValue(FakeBuddyRepository()),
@@ -163,11 +164,7 @@ void main() {
       expect(_level(tester), lessThan(1.0));
       expect(flamePainter(tester).look, FlameLook.ember);
 
-      tester.platformDispatcher.accessibilityFeaturesTestValue =
-          const FakeAccessibilityFeatures(disableAnimations: true);
-      addTearDown(
-        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
-      );
+      reduceMotion(tester);
       await tester.pump();
 
       expect(_level(tester), 1.0);
@@ -184,11 +181,7 @@ void main() {
         'circle stays full under the lit flame, no second charge', (
       tester,
     ) async {
-      tester.platformDispatcher.accessibilityFeaturesTestValue =
-          const FakeAccessibilityFeatures(disableAnimations: true);
-      addTearDown(
-        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
-      );
+      reduceMotion(tester);
       await _pump(tester, _hero(_ignites));
       await tester.pump();
       expect(_level(tester), 1.0);
@@ -211,11 +204,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(_level(tester), 1.0);
 
-      tester.platformDispatcher.accessibilityFeaturesTestValue =
-          const FakeAccessibilityFeatures(disableAnimations: true);
-      addTearDown(
-        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
-      );
+      reduceMotion(tester);
       await tester.pump();
       tester.platformDispatcher.clearAccessibilityFeaturesTestValue();
       await tester.pump();

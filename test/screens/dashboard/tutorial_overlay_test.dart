@@ -12,6 +12,7 @@ import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tooltip_bubble.da
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_step.dart';
 
 import '../../helpers/riverpod_helpers.dart';
+import '../../helpers/reduce_motion.dart';
 
 /// The rect the spotlight cuts out.
 Rect _spotlight(WidgetTester tester) => tester
@@ -160,11 +161,7 @@ void main() {
     testWidgets('the tour shows without fading with disableAnimations', (
       tester,
     ) async {
-      tester.platformDispatcher.accessibilityFeaturesTestValue =
-          const FakeAccessibilityFeatures(disableAnimations: true);
-      addTearDown(
-        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
-      );
+      reduceMotion(tester);
       var finished = false;
       await tester.pumpWithProviders(
         harness(

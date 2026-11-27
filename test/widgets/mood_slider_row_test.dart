@@ -5,6 +5,7 @@ import 'package:belly_buddy/widgets/common/bb_slider.dart';
 import 'package:belly_buddy/config/constants.dart';
 
 import '../helpers/riverpod_helpers.dart';
+import '../helpers/reduce_motion.dart';
 
 void main() {
   group('MoodSliderRow', () {
@@ -124,11 +125,7 @@ void main() {
     testWidgets('with disableAnimations the mascot does not scale', (
       tester,
     ) async {
-      tester.platformDispatcher.accessibilityFeaturesTestValue =
-          const FakeAccessibilityFeatures(disableAnimations: true);
-      addTearDown(
-        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
-      );
+      reduceMotion(tester);
       await tester.pumpWithProviders(row(value: 3));
       // Left becomes active: it would bounce (and grow from 0.9 to 1.1).
       await tester.pumpWithProviders(row(value: 1));

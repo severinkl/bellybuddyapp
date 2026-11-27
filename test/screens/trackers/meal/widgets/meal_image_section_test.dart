@@ -9,6 +9,7 @@ import 'package:belly_buddy/repositories/meal_media_repository.dart';
 import 'package:belly_buddy/screens/trackers/meal/widgets/meal_image_section.dart';
 
 import '../../../../helpers/fakes.dart';
+import '../../../../helpers/reduce_motion.dart';
 
 Widget _wrap(Widget child) => MaterialApp(
   home: Scaffold(body: SingleChildScrollView(child: child)),
@@ -215,11 +216,7 @@ void main() {
 
     testWidgets('with reduced motion the saved photo\'s placeholder does not '
         'shimmer', (tester) async {
-      tester.platformDispatcher.accessibilityFeaturesTestValue =
-          const FakeAccessibilityFeatures(disableAnimations: true);
-      addTearDown(
-        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
-      );
+      reduceMotion(tester);
       await pumpPreview(tester, saved: true, onClear: () {});
 
       expect(find.byType(Shimmer), findsNothing);

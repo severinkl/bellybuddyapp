@@ -32,6 +32,7 @@ import '../../../helpers/fixtures.dart';
 import '../../../helpers/layout_checks.dart';
 import '../../../helpers/riverpod_helpers.dart';
 import '../../../helpers/widget_tester_helpers.dart';
+import '../../../helpers/reduce_motion.dart';
 
 List<Override> _overrides([FakeEntryRepository? entries]) => [
   entryRepositoryProvider.overrideWithValue(entries ?? FakeEntryRepository()),
@@ -503,11 +504,7 @@ void main() {
     testWidgets('with disableAnimations the screen enters without animating', (
       tester,
     ) async {
-      tester.platformDispatcher.accessibilityFeaturesTestValue =
-          const FakeAccessibilityFeatures(disableAnimations: true);
-      addTearDown(
-        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
-      );
+      reduceMotion(tester);
       await tester.pumpWithProviders(
         const GutFeelingTrackerScreen(),
         overrides: _overrides(),

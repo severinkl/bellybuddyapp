@@ -8,6 +8,7 @@ import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/replacement_ingredient.dart';
 import 'package:belly_buddy/screens/ingredient_suggestions/widgets/suggestion_card.dart';
 import 'package:belly_buddy/screens/ingredient_suggestions/widgets/suggestion_detail_modal.dart';
+import '../../../helpers/reduce_motion.dart';
 
 void main() {
   const tofu = IngredientSuggestionGroup(
@@ -117,11 +118,7 @@ void main() {
     );
 
     Future<void> expectCalm(WidgetTester tester, Widget child) async {
-      tester.platformDispatcher.accessibilityFeaturesTestValue =
-          const FakeAccessibilityFeatures(disableAnimations: true);
-      addTearDown(
-        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
-      );
+      reduceMotion(tester);
       await tester.pumpWidget(MaterialApp(home: Scaffold(body: child)));
       final images = find.byType(CachedNetworkImage);
       expect(images, findsWidgets);
