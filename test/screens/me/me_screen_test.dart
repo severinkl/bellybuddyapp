@@ -13,6 +13,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/data_share.dart';
+import 'package:belly_buddy/models/plus_status.dart';
+import 'package:belly_buddy/services/plus/plus_copy.dart';
 import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
@@ -36,6 +38,19 @@ import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/riverpod_helpers.dart';
 import '../../helpers/share_fakes.dart';
+
+class _FakePlus extends PlusNotifier {
+  _FakePlus(this.answer);
+  final Future<PlusStatus> Function() answer;
+
+  @override
+  Future<PlusStatus> build() => answer();
+}
+
+Override _plus(PlusStatus status) =>
+    plusProvider.overrideWith(() => _FakePlus(() async => status));
+
+Override _switch(bool on) => paywallEnabledProvider.overrideWithValue(on);
 
 BuddyStatus _status({int streak = 3, int? goal = 14, String name = 'Bruno'}) =>
     buddyStatus(name: name, goal: goal, streak: streak, todayCounted: true);
@@ -62,6 +77,7 @@ void main() {
     Size size = const Size(393, 852),
     double textScale = 1,
     FakeViewPadding padding = FakeViewPadding.zero,
+    bool paywall = false,
     List<Override> extra = const [],
   }) async {
     tester.view.physicalSize = size;
@@ -79,6 +95,7 @@ void main() {
         currentUserIdProvider.overrideWithValue('u1'),
         currentVersionProvider.overrideWith((_) async => '1.2.3'),
         shareServiceProvider.overrideWithValue(shareService),
+        _switch(paywall),
         ...extra,
       ],
     );
@@ -180,6 +197,105 @@ void main() {
     ]) {
       expect(find.byKey(key), findsOneWidget);
     }
+  });
+
+  group('„Belly Buddy Plus"', () {
+    Finder rowText(String t) => find.descendant(
+      of: find.byKey(MeScreen.plusKey),
+      matching: find.text(t),
+    );
+
+    testWidgets('switch off: no row', (tester) async {
+      await pump(tester);
+      expect(find.byKey(MeScreen.plusKey), findsNothing);
+    });
+
+    testWidgets('sits directly below „Mit Berater:in teilen"', (tester) async {
+      await pump(tester, paywall: true, extra: [_plus(PlusStatus.none)]);
+      expect(find.byIcon(Icons.workspace_premium_outlined), findsOneWidget);
+      expect(rowText('Belly Buddy Plus'), findsOneWidget);
+      final share = tester.getTopLeft(find.byKey(MeScreen.shareKey)).dy;
+      final plus = tester.getTopLeft(find.byKey(MeScreen.plusKey)).dy;
+      final settings = tester.getTopLeft(find.byKey(MeScreen.settingsKey)).dy;
+      expect(share, lessThan(plus));
+      expect(plus, lessThan(settings));
+    });
+
+    testWidgets('none: „Alle Funktionen freischalten"', (tester) async {
+      await pump(tester, paywall: true, extra: [_plus(PlusStatus.none)]);
+      expect(rowText('Alle Funktionen freischalten'), findsOneWidget);
+    });
+
+    testWidgets('trial ending 10.12., renewal off', (tester) async {
+      await pump(
+        tester,
+        paywall: true,
+        extra: [
+          _plus(
+            PlusStatus(
+              state: PlusState.trial,
+              expiresAt: DateTime(2026, 12, 10, 12).toUtc(),
+            ),
+          ),
+        ],
+      );
+      expect(rowText('Gratis-Test endet am 10.12.'), findsOneWidget);
+    });
+
+    testWidgets('lapsed', (tester) async {
+      await pump(
+        tester,
+        paywall: true,
+        extra: [_plus(const PlusStatus(state: PlusState.lapsed))],
+      );
+      expect(rowText('Abgelaufen · Wieder abonnieren'), findsOneWidget);
+    });
+
+    testWidgets('loading: the row shows, with no subtitle', (tester) async {
+      final never = Completer<PlusStatus>();
+      await tester.runAsync(() async {});
+      tester.view.physicalSize = const Size(393, 852);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final c = ProviderContainer.test(
+        overrides: [
+          buddyProvider.overrideWith(() => FakeBuddyNotifier(_status)),
+          buddyClockProvider.overrideWithValue(() => today),
+          currentUserIdProvider.overrideWithValue('u1'),
+          currentVersionProvider.overrideWith((_) async => '1.2.3'),
+          shareServiceProvider.overrideWithValue(shareService),
+          _switch(true),
+          plusProvider.overrideWith(() => _FakePlus(() => never.future)),
+        ],
+      );
+      final r = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => MeScreen(openUrl: launches.call),
+          ),
+        ],
+      );
+      addTearDown(r.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(container: c, child: germanRouterApp(r)),
+      );
+      await tester.pump();
+      expect(find.byKey(MeScreen.plusKey), findsOneWidget);
+      for (final t in [
+        'Alle Funktionen freischalten',
+        'Abgelaufen · Wieder abonnieren',
+      ]) {
+        expect(rowText(t), findsNothing);
+      }
+    });
+
+    testWidgets('tap pushes /plus', (tester) async {
+      await pump(tester, paywall: true, extra: [_plus(PlusStatus.none)]);
+      await tapRow(tester, MeScreen.plusKey);
+      expect(find.text('page:/plus'), findsOneWidget);
+    });
   });
 
   group('„Mit Berater:in teilen"', () {

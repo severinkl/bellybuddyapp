@@ -95,6 +95,12 @@ abstract final class PlusCopy {
   static const close = 'Schließen';
   static const linkFailed = 'Die Seite konnte nicht geöffnet werden.';
 
+  /// Account deletion while Plus is trial/active (spec 4.6): deleting the
+  /// account does not cancel the store subscription.
+  static const deleteWarning =
+      'Dein Abo läuft über den Store weiter. Kündige es dort, sonst wird es '
+      'weiter verrechnet.';
+
   /// The status line of spec 4.6 (Ich row subtitle, paywall with Plus).
   /// A payment problem wins; a trial or subscription without an end date
   /// (lifetime, promotional) reads „Gratis-Test" / „Aktiv".

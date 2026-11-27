@@ -3,13 +3,24 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 
+import 'package:belly_buddy/models/plus_status.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
+import 'package:belly_buddy/providers/plus_provider.dart';
+import 'package:belly_buddy/services/plus/plus_copy.dart';
 import 'package:belly_buddy/repositories/auth_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/screens/settings/widgets/delete_account_dialog.dart';
 
 import '../../helpers/fakes.dart';
 import '../../helpers/riverpod_helpers.dart';
+
+class _FakePlus extends PlusNotifier {
+  _FakePlus(this.status);
+  final PlusStatus status;
+
+  @override
+  Future<PlusStatus> build() async => status;
+}
 
 class _CountingAuthRepository extends FakeAuthRepository {
   int deletes = 0;
@@ -33,7 +44,7 @@ void main() {
 
   setUp(() => auth = _CountingAuthRepository());
 
-  Future<void> openDialog(WidgetTester tester) async {
+  Future<void> openDialog(WidgetTester tester, {PlusStatus? plus}) async {
     await tester.pumpWithProviders(
       Scaffold(
         body: Builder(
@@ -43,7 +54,11 @@ void main() {
           ),
         ),
       ),
-      overrides: overrides(),
+      overrides: [
+        ...overrides(),
+        paywallEnabledProvider.overrideWithValue(plus != null),
+        if (plus != null) plusProvider.overrideWith(() => _FakePlus(plus)),
+      ],
     );
     await tester.tap(find.text('open'));
     await tester.pumpAndSettle();
@@ -111,5 +126,40 @@ void main() {
 
     expect(find.text('Fehler beim Löschen.'), findsOneWidget);
     expect(find.text('Dein Konto wurde gelöscht.'), findsNothing);
+  });
+
+  group('subscription warning', () {
+    for (final (name, status, shown) in [
+      ('trial', const PlusStatus(state: PlusState.trial), true),
+      ('active', const PlusStatus(state: PlusState.active), true),
+      ('none', PlusStatus.none, false),
+      ('lapsed', const PlusStatus(state: PlusState.lapsed), false),
+      (
+        'active with a payment problem',
+        const PlusStatus(state: PlusState.active, billingIssue: true),
+        true,
+      ),
+    ]) {
+      testWidgets('$name: ${shown ? 'shown' : 'not shown'}', (tester) async {
+        await openDialog(tester, plus: status);
+        expect(
+          find.text(PlusCopy.deleteWarning),
+          shown ? findsOneWidget : findsNothing,
+        );
+      });
+    }
+
+    testWidgets('switch off: not shown', (tester) async {
+      await openDialog(tester);
+      expect(find.text(PlusCopy.deleteWarning), findsNothing);
+    });
+
+    test('wording', () {
+      expect(
+        PlusCopy.deleteWarning,
+        'Dein Abo läuft über den Store weiter. Kündige es dort, sonst wird es '
+        'weiter verrechnet.',
+      );
+    });
   });
 }

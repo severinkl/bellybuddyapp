@@ -14,6 +14,7 @@ import '../../providers/shares_provider.dart';
 import '../../providers/tutorial_provider.dart';
 import '../../providers/upgrade_gate_provider.dart';
 import '../../router/route_names.dart';
+import '../../services/plus/plus_copy.dart';
 import '../../utils/buddy_name.dart';
 import '../../utils/logger.dart';
 import '../../utils/url_utils.dart';
@@ -40,6 +41,7 @@ class MeScreen extends ConsumerStatefulWidget {
   static const remindersKey = Key('me_reminders');
   static const streakKey = Key('me_streak');
   static const shareKey = Key('me_share');
+  static const plusKey = Key('me_plus');
   static const settingsKey = Key('me_settings');
   static const tutorialKey = Key('me_tutorial');
   static const feedbackKey = Key('me_feedback');
@@ -170,6 +172,12 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     // Watched so the list is loaded when the row is tapped; only whether it
     // is empty matters here.
     ref.watch(sharesProvider.select((s) => s.value?.isEmpty));
+    final paywallOn = ref.watch(paywallEnabledProvider);
+    // While the status loads or fails the row shows without a subtitle: any
+    // line could be wrong for a subscriber.
+    final plusSubtitle = paywallOn
+        ? ref.watch(plusProvider.select((p) => p.value))
+        : null;
     final showShareBadge = ref.watch(shareRowBadgeProvider).value ?? false;
 
     final rows = [
@@ -197,6 +205,16 @@ class _MeScreenState extends ConsumerState<MeScreen> {
         badge: showShareBadge ? 'Neu' : null,
         onTap: _openShare,
       ),
+      if (paywallOn)
+        BbSettingsItem(
+          key: MeScreen.plusKey,
+          icon: Icons.workspace_premium_outlined,
+          title: PlusCopy.title,
+          subtitle: plusSubtitle == null
+              ? null
+              : PlusCopy.statusLine(plusSubtitle),
+          onTap: () => unawaited(context.push(RoutePaths.plus)),
+        ),
       BbSettingsItem(
         key: MeScreen.settingsKey,
         icon: Icons.settings_outlined,
