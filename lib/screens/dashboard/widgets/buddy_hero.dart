@@ -24,6 +24,7 @@ import '../../../providers/notification_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../providers/rating_provider.dart';
 import '../../../providers/today_provider.dart';
+import '../../../providers/tolerance_test_offer_provider.dart';
 import '../../../router/route_names.dart';
 import '../../../router/tracker_routes.dart';
 import '../../../services/buddy/buddy_copy.dart';
@@ -31,6 +32,7 @@ import '../../../services/buddy/buddy_mood_logic.dart';
 import '../../../services/buddy/care_now.dart';
 import '../../../services/buddy/daily_care.dart';
 import '../../../services/daily_review/daily_review_copy.dart';
+import '../../../services/insights/test_copy.dart';
 import '../../../services/journey/journey_copy.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/logger.dart';
@@ -40,6 +42,7 @@ import '../../../widgets/buddy/need_icon.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/weekly_tips_switch.dart';
 import '../../buddy/streak_goal_picker.dart';
+import '../../patterns/tolerance_test_screen.dart';
 import 'care_ring.dart';
 import 'home_flame.dart';
 import 'home_streak_badge.dart';
@@ -47,6 +50,7 @@ import 'journey_reward_actions.dart';
 import 'journey_day_sheet.dart';
 import 'reminders_ask_sheet.dart';
 import 'streak_sheet.dart';
+import 'test_offer_sheet.dart';
 import 'tutorial/tutorial_keys.dart';
 import 'weekly_tips_offer_sheet.dart';
 
@@ -68,7 +72,10 @@ enum _Cue {
   journeyReward(BuddyAnnouncement.journeyReward, endsInSheet: true),
   patternsUnlocked(BuddyAnnouncement.patternsUnlocked, endsInSheet: true),
   firstTipFailed(BuddyAnnouncement.firstTipFailed),
+  testReintro(BuddyAnnouncement.testReintro),
+  testDone(BuddyAnnouncement.testDone),
   remindersAsk(null, endsInSheet: true),
+  testOffer(BuddyAnnouncement.testOffer, endsInSheet: true),
   dailyReview(null),
   ratingAsk(null);
 
@@ -79,7 +86,7 @@ enum _Cue {
 
   /// Whether the cue ends in a sheet or page (the new goal, the weekly-tips
   /// or first-tip offer, a day's reward, „Muster frei!", the ask for
-  /// reminders).
+  /// reminders, the test offer).
   final bool endsInSheet;
 }
 
@@ -94,6 +101,9 @@ _Cue _cueFor(BuddyAnnouncement a) => switch (a) {
   BuddyAnnouncement.journeyReward => _Cue.journeyReward,
   BuddyAnnouncement.patternsUnlocked => _Cue.patternsUnlocked,
   BuddyAnnouncement.firstTipFailed => _Cue.firstTipFailed,
+  BuddyAnnouncement.testOffer => _Cue.testOffer,
+  BuddyAnnouncement.testReintro => _Cue.testReintro,
+  BuddyAnnouncement.testDone => _Cue.testDone,
 };
 
 /// The Buddy at the top of the dashboard: the Buddy inside the [CareRing]
@@ -219,6 +229,11 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// request waits for a later visit.
   bool _visitSheetCuePlayed = false;
 
+  /// The test offer ended unshown after another sheet this visit: it stays
+  /// pending but is not taken up again before the next visit (a status
+  /// update would queue it, and its end the mood line, again and again).
+  bool _testOfferHeldBack = false;
+
   /// The Buddy refresh of the latest log ([BuddyEventsNotifier.lastRefresh]).
   Future<void>? _logRefresh;
 
@@ -327,6 +342,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _visible = visible;
     if (visible) {
       _visitSheetCuePlayed = false;
+      _testOfferHeldBack = false;
       _dailyReviewVisitDay = null;
       _afterFrame(() {
         _consumeEvent();
@@ -532,7 +548,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     if (status == null) return;
     final fresh = [
       for (final a in status.announcements)
-        if (!_taken.contains(a)) a,
+        if (!_taken.contains(a) &&
+            !(a == BuddyAnnouncement.testOffer && _testOfferHeldBack))
+          a,
     ];
     if (fresh.isEmpty) return;
     _taken.addAll(fresh);
@@ -783,13 +801,20 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     if (!_stillApplies(cue)) return _nextCue();
     // Never a second sheet right after another's: it comes another time.
     if (cue == _Cue.remindersAsk && _sheetCuePlayed) return _endRemindersAsk();
+    // The test offer likewise, also after a sheet earlier this visit; held
+    // back until the next visit ([_testOfferHeldBack]).
+    if (cue == _Cue.testOffer && (_sheetCuePlayed || _visitSheetCuePlayed)) {
+      _testOfferHeldBack = true;
+      return _endUnshown();
+    }
     // Counts as played only once said ([_playDailyReview]).
     if (cue == _Cue.dailyReview) return unawaited(_playDailyReview());
-    if (cue.endsInSheet) _sheetCuePlayed = true;
-    if (cue.endsInSheet && cue != _Cue.patternsUnlocked) {
-      _visitSheetCuePlayed = true;
-    }
-    _cuePlayed = true;
+    // The test offer counts as a sheet only once its sheet opens
+    // ([_offerTest]): ended unshown, the cues after it still come.
+    if (cue.endsInSheet && cue != _Cue.testOffer) _noteSheetCue(cue);
+    // The test cues count as played only once said or shown
+    // ([_sayTestLine], [_offerTest]): ended unshown, his line still comes.
+    if (!_isTestCue(cue)) _cuePlayed = true;
     switch (cue) {
       case _Cue.welcome:
         _say(_welcome);
@@ -823,6 +848,10 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
         _playThen(BuddyAction.celebrate, _openPatternsUnlocked);
       case _Cue.firstTipFailed:
         _sayAnnouncement(cue);
+      case _Cue.testReintro || _Cue.testDone:
+        _sayTestLine(cue);
+      case _Cue.testOffer:
+        _playThen(BuddyAction.wave, _offerTest);
       case _Cue.remindersAsk:
         _playThen(BuddyAction.wave, _askForReminders);
       case _Cue.dailyReview:
@@ -830,6 +859,16 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       case _Cue.ratingAsk:
         _playRatingAsk();
     }
+  }
+
+  static bool _isTestCue(_Cue cue) =>
+      cue == _Cue.testOffer || cue == _Cue.testReintro || cue == _Cue.testDone;
+
+  /// [cue] ends in a sheet or page this run ([_sheetCuePlayed]) and visit
+  /// ([_visitSheetCuePlayed]; „Muster frei!" aside).
+  void _noteSheetCue(_Cue cue) {
+    _sheetCuePlayed = true;
+    if (cue != _Cue.patternsUnlocked) _visitSheetCuePlayed = true;
   }
 
   /// Says [cue]'s announcement ([BuddyCopy.announcementLine]) and holds
@@ -840,6 +879,18 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
         cue.announcement!,
         weeklyTipsOn: ref.read(weeklyTipsEnabledProvider) == true,
       )!,
+    );
+    _holdStage();
+  }
+
+  /// Says a test line (spec §5.5) naming the stats' test, holding the
+  /// stage; its name unknown by now, it ends unshown (comes again).
+  void _sayTestLine(_Cue cue) {
+    final subject = ref.read(testLineSubjectProvider);
+    if (subject == null) return _endUnshown();
+    _cuePlayed = true;
+    _say(
+      cue == _Cue.testDone ? TestCopy.doneLine : TestCopy.reintroLine(subject),
     );
     _holdStage();
   }
@@ -1006,6 +1057,33 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
           ? _nextCue()
           : _endUnshown(),
     );
+  }
+
+  /// After the wave: his offer of a Verträglichkeits-Test
+  /// ([TestOfferSheet]) of the due subject ([toleranceTestOfferDueProvider]),
+  /// then continues; waits like every cue's sheet ([_deferSheet]).
+  /// „Ansehen" opens the test page with the subject as proposed; either
+  /// answer (or a dismissal) counts as shown. Withdrawn by now: none; not
+  /// due right now (the stats reloading, his ask for reminders due): it
+  /// stays pending and comes again ([_endUnshown]).
+  Future<void> _offerTest() async {
+    if (_deferSheet(_offerTest)) return;
+    if (!_stillApplies(_playing)) return _nextCue();
+    final subject = ref.read(toleranceTestOfferDueProvider);
+    if (subject == null) return _endUnshown();
+    _noteSheetCue(_Cue.testOffer);
+    _cuePlayed = true;
+    final open = await showTestOfferSheet(context, subject: subject);
+    if (!mounted) return;
+    if (open) {
+      unawaited(
+        context.push(
+          RoutePaths.toleranceTest,
+          extra: ToleranceTestProposed(subject),
+        ),
+      );
+    }
+    _nextCue();
   }
 
   /// After the wave: his ask for reminders while they are off

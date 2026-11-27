@@ -15,6 +15,7 @@ import 'package:belly_buddy/models/insight_rules.dart';
 import 'package:belly_buddy/models/insight_source.dart';
 import 'package:belly_buddy/models/intolerance_rules.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
+import 'package:belly_buddy/models/pattern_stats.dart';
 import 'package:belly_buddy/models/progress.dart';
 import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/models/recommendation.dart';
@@ -38,6 +39,7 @@ import 'package:belly_buddy/repositories/user_recipe_repository.dart';
 import 'package:belly_buddy/services/app_version_service.dart';
 import 'package:belly_buddy/services/entry_query_service.dart';
 import 'package:belly_buddy/services/ingredient_service.dart';
+import 'package:belly_buddy/services/pattern_stats_service.dart';
 import 'package:belly_buddy/utils/date_format_utils.dart';
 import 'package:belly_buddy/utils/wall_clock.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -895,6 +897,24 @@ class FakeNotificationRepository implements NotificationRepository {
   }) async {}
   @override
   Future<void> cancelDailyReview() async {}
+
+  /// The test reminders scheduled, in order.
+  final testReminders =
+      <({String reintroBody, DateTime reintroDay, DateTime resultDay})>[];
+  int testReminderCancels = 0;
+
+  @override
+  Future<void> scheduleTestReminders({
+    required String reintroBody,
+    required DateTime reintroDay,
+    required DateTime resultDay,
+  }) async => testReminders.add((
+    reintroBody: reintroBody,
+    reintroDay: reintroDay,
+    resultDay: resultDay,
+  ));
+  @override
+  Future<void> cancelTestReminders() async => testReminderCancels++;
   @override
   Future<void> cancelAll() async {}
   @override
@@ -1223,5 +1243,31 @@ class FakeAppVersionService extends AppVersionService {
     opened++;
     if (openStoreThrows) throw Exception('no store');
     return openStoreResult;
+  }
+}
+
+/// Core's `pattern-stats` route, faked: answers [stats] (by default not
+/// ready, 0 rated days), or throws [error] when set. Counts [calls].
+class FakePatternStatsService implements PatternStatsService {
+  FakePatternStatsService({PatternStats? stats, this.error})
+    : stats =
+          stats ??
+          const PatternStats(
+            windowDays: 90,
+            ratedDays: 0,
+            hardDays: 0,
+            ready: false,
+          );
+
+  PatternStats stats;
+  Object? error;
+  int calls = 0;
+
+  @override
+  Future<PatternStats> fetch() async {
+    calls++;
+    final e = error;
+    if (e != null) throw e;
+    return stats;
   }
 }

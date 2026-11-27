@@ -34,4 +34,11 @@ void main() {
     });
     expect(c.kind, AlternativeChoiceKind.tryIt);
   });
+
+  test('fromDb reads every value of the choice column', () {
+    expect(AlternativeChoiceKind.fromDb('fits'), AlternativeChoiceKind.fits);
+    expect(AlternativeChoiceKind.fromDb('try'), AlternativeChoiceKind.tryIt);
+    expect(AlternativeChoiceKind.fromDb('skip'), AlternativeChoiceKind.skip);
+    expect(AlternativeChoiceKind.fits.db, 'fits');
+  });
 }

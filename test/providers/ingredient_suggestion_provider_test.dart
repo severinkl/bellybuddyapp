@@ -4,7 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
+import 'package:belly_buddy/models/alternative_choice.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
+import 'package:belly_buddy/models/replacement_ingredient.dart';
+import 'package:belly_buddy/providers/alternative_choices_provider.dart';
+import 'package:belly_buddy/services/alternative_choice_service.dart';
+import 'package:belly_buddy/services/alternatives/alternative_ranking.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/ingredient_suggestion_provider.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
@@ -384,4 +389,191 @@ void main() {
       },
     );
   });
+
+  group('verdicts', () {
+    test('set and clear write the verdict and refresh the provider', () async {
+      const hafer = ReplacementIngredient(id: 'r2', name: 'Hafermilch');
+      final group = testSuggestionGroup().copyWith(
+        replacements: rankKeyedReplacements(
+          const [ReplacementIngredient(id: 'r1', name: 'Lauch'), hafer],
+          verdicts: const {},
+          meals: KeyedMeals(const []),
+          since: null,
+        ),
+      );
+      when(
+        () => mockRepo.fetchSuggestionGroups(any()),
+      ).thenAnswer((_) async => [group]);
+      final service = _ChoiceService();
+      final container = createContainer(
+        overrides: [
+          ingredientRepositoryProvider.overrideWithValue(mockRepo),
+          currentUserIdProvider.overrideWithValue(testUserId),
+          alternativeChoiceServiceProvider.overrideWithValue(service),
+        ],
+      );
+      List<String> order() => [
+        for (final r
+            in container
+                .read(ingredientSuggestionProvider)
+                .value!
+                .single
+                .replacements)
+          r.id,
+      ];
+
+      await container
+          .read(ingredientSuggestionProvider.notifier)
+          .fetchSuggestions();
+      await container.read(alternativeChoicesProvider.future);
+      expect(order(), ['r1', 'r2']);
+
+      final choices = container.read(alternativeChoicesProvider.notifier);
+      final saved = choices.choose(
+        ingredientId: group.ingredientId,
+        ingredientName: group.ingredientName,
+        replacement: hafer,
+        kind: AlternativeChoiceKind.fits,
+      );
+      // At once, before the server answers.
+      expect(order(), ['r2', 'r1']);
+      expect(await saved, isTrue);
+      expect(service.stored, [('ing-1', 'r2', AlternativeChoiceKind.fits)]);
+      expect(order(), ['r2', 'r1']);
+      final choice = container.read(
+        alternativeChoiceForPairProvider((group.ingredientId, 'r2')),
+      );
+      expect(choice?.kind, AlternativeChoiceKind.fits);
+
+      expect(await choices.remove(choice!.id), isTrue);
+      expect(service.deleted, [choice.id]);
+      expect(order(), ['r1', 'r2']);
+      expect(
+        container.read(
+          alternativeChoiceForPairProvider((group.ingredientId, 'r2')),
+        ),
+        isNull,
+      );
+    });
+
+    test('while the choices load (a user switch) the previous user\'s are '
+        'not used', () async {
+      final group = testSuggestionGroup().copyWith(
+        replacements: RankedReplacement.inOrder(const [
+          ReplacementIngredient(id: 'r1', name: 'Lauch'),
+          ReplacementIngredient(id: 'r2', name: 'Hafermilch'),
+        ]),
+      );
+      when(
+        () => mockRepo.fetchSuggestionGroups(any()),
+      ).thenAnswer((_) async => [group]);
+      final held = Completer<List<Map<String, dynamic>>>();
+      final service = _ChoiceService()
+        ..onFetch = () async => [_choiceRow('c1', 'r1', 'skip')];
+      final user = SwitchableUserId();
+      final container = createContainer(
+        overrides: [
+          ingredientRepositoryProvider.overrideWithValue(mockRepo),
+          user.override,
+          alternativeChoiceServiceProvider.overrideWithValue(service),
+        ],
+      );
+      List<String> order() => [
+        for (final r
+            in container
+                .read(ingredientSuggestionProvider)
+                .value!
+                .single
+                .replacements)
+          r.id,
+      ];
+      final notifier = container.read(ingredientSuggestionProvider.notifier);
+      await container.read(alternativeChoicesProvider.future);
+      await notifier.fetchSuggestions();
+      expect(order(), ['r2', 'r1']);
+
+      service.onFetch = () => held.future;
+      user.set(container, 'other-user');
+      container.read(alternativeChoicesProvider);
+      await notifier.fetchSuggestions();
+      expect(container.read(alternativeChoicesProvider).isLoading, isTrue);
+      expect(order(), ['r1', 'r2']);
+
+      held.complete([]);
+      await container.read(alternativeChoicesProvider.future);
+      expect(order(), ['r1', 'r2']);
+    });
+
+    test('choices loaded after the groups rank them', () async {
+      final group = testSuggestionGroup().copyWith(
+        replacements: rankKeyedReplacements(
+          const [
+            ReplacementIngredient(id: 'r1', name: 'Lauch'),
+            ReplacementIngredient(id: 'r2', name: 'Hafermilch'),
+          ],
+          verdicts: const {},
+          meals: KeyedMeals(const []),
+          since: null,
+        ),
+      );
+      when(
+        () => mockRepo.fetchSuggestionGroups(any()),
+      ).thenAnswer((_) async => [group]);
+      final held = Completer<List<Map<String, dynamic>>>();
+      final service = _ChoiceService()..onFetch = () => held.future;
+      final container = createContainer(
+        overrides: [
+          ingredientRepositoryProvider.overrideWithValue(mockRepo),
+          currentUserIdProvider.overrideWithValue(testUserId),
+          alternativeChoiceServiceProvider.overrideWithValue(service),
+        ],
+      );
+      await container
+          .read(ingredientSuggestionProvider.notifier)
+          .fetchSuggestions();
+      held.complete([_choiceRow('c1', 'r1', 'skip')]);
+      await container.read(alternativeChoicesProvider.future);
+
+      final ranked = container
+          .read(ingredientSuggestionProvider)
+          .value!
+          .single
+          .replacements;
+      expect([for (final r in ranked) r.id], ['r2', 'r1']);
+      expect(ranked.last.skipped, isTrue);
+    });
+  });
+}
+
+Map<String, dynamic> _choiceRow(String id, String rep, String choice) => {
+  'id': id,
+  'ingredient_id': 'ing-1',
+  'replacement_ingredient_id': rep,
+  'choice': choice,
+  'created_at': '2026-11-27T10:00:00+00:00',
+  'ingredient': {'name': 'Zwiebel'},
+  'replacement': {'name': rep},
+};
+
+class _ChoiceService implements AlternativeChoiceService {
+  Future<List<Map<String, dynamic>>> Function() onFetch = () async => [];
+  final stored = <(String, String, AlternativeChoiceKind)>[];
+  final deleted = <String>[];
+
+  @override
+  Future<List<Map<String, dynamic>>> fetch(String userId) => onFetch();
+
+  @override
+  Future<Map<String, dynamic>> upsert({
+    required String userId,
+    required String ingredientId,
+    required String replacementId,
+    required AlternativeChoiceKind kind,
+  }) async {
+    stored.add((ingredientId, replacementId, kind));
+    return _choiceRow('srv-${stored.length}', replacementId, kind.db);
+  }
+
+  @override
+  Future<void> delete(String id) async => deleted.add(id);
 }

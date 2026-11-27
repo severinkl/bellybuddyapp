@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:belly_buddy/models/ranked_replacement.dart';
 import 'package:belly_buddy/models/alternative_choice.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
@@ -56,10 +57,10 @@ IngredientSuggestionGroup _group(String mealId, DateTime day) =>
       isNew: false,
       suggestionIds: const ['s1'],
       meals: [MealDetail(id: mealId, title: mealId, trackedAt: _wall(day, 12))],
-      replacements: const [
+      replacements: RankedReplacement.inOrder(const [
         ReplacementIngredient(id: 'chive', name: 'Schnittlauch'),
         ReplacementIngredient(id: 'leek', name: 'Lauchgrün'),
-      ],
+      ]),
     );
 
 AlternativeChoice _choice(String replacementId) => AlternativeChoice(

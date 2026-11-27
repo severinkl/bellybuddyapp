@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 
+import 'package:belly_buddy/models/ranked_replacement.dart';
 import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/replacement_ingredient.dart';
@@ -11,18 +12,18 @@ import '../../../helpers/purchases_fakes.dart';
 
 void main() {
   testWidgets('„Stattdessen: …" shows on two lines', (tester) async {
-    const group = IngredientSuggestionGroup(
+    final group = IngredientSuggestionGroup(
       ingredientId: 'ing-onion',
       ingredientName: 'Zwiebel',
       mealCount: 1,
       isNew: false,
       suggestionIds: ['s1'],
-      replacements: [
+      replacements: RankedReplacement.inOrder(const [
         ReplacementIngredient(id: 'r1', name: 'Schnittlauch'),
         ReplacementIngredient(id: 'r2', name: 'Lauchgrün'),
         ReplacementIngredient(id: 'r3', name: 'Asafoetida'),
         ReplacementIngredient(id: 'r4', name: 'Knoblauchöl'),
-      ],
+      ]),
     );
     await tester.pumpWidget(
       ProviderScope(
@@ -32,7 +33,7 @@ void main() {
             body: SizedBox(
               width: 320,
               child: DiscoverAlternativesSection(
-                groups: const AsyncValue.data([group]),
+                groups: AsyncValue.data([group]),
                 newCount: 0,
                 onOpen: () {},
               ),

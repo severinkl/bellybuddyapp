@@ -77,7 +77,8 @@ class DiscoverAlternativesSection extends ConsumerWidget {
   }
 }
 
-/// A suggestion group's ingredient and what can replace it.
+/// A suggestion group's ingredient and what can replace it, without the
+/// ones that do not fit („Passt nicht für mich").
 class _AlternativeRow extends StatelessWidget {
   const _AlternativeRow({required this.group});
 
@@ -85,7 +86,9 @@ class _AlternativeRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final replacements = group.replacements.map((r) => r.name).join(', ');
+    final replacements = group.visibleReplacements
+        .map((r) => r.name)
+        .join(', ');
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppConstants.spacing10),
       child: Column(

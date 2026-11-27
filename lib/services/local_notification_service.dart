@@ -9,6 +9,7 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import '../router/route_names.dart';
 import '../utils/logger.dart';
 import 'daily_review/daily_review_copy.dart';
+import 'insights/test_copy.dart';
 import 'reminder_copy.dart';
 
 class LocalNotificationService {
@@ -20,6 +21,14 @@ class LocalNotificationService {
   static const _mealReminderIdBase = 1000;
   static const _moodReminderIdBase = 2000;
   static const _dailyReviewId = 3000;
+
+  /// The tolerance test's two reminders (spec §5.5 names 3000/3001; 3000
+  /// is the daily review's): the first reintroduction day, the result day.
+  static const testReintroId = 3001;
+  static const testResultId = 3002;
+
+  /// The test reminders' time of day (local).
+  static const _testReminderHour = 9;
 
   // Android channels
   static const _mealReminderChannel = AndroidNotificationChannel(
@@ -40,6 +49,13 @@ class LocalNotificationService {
     'daily_review',
     'Tagesrückblick',
     description: 'Sagt dir Bescheid, wenn dein Tagesrückblick da ist',
+    importance: Importance.high,
+  );
+
+  static const _toleranceTestChannel = AndroidNotificationChannel(
+    'tolerance_test',
+    'Verträglichkeits-Test',
+    description: 'Erinnert dich an die Phasen deines Verträglichkeits-Tests',
     importance: Importance.high,
   );
 
@@ -102,6 +118,14 @@ class LocalNotificationService {
         _dailyReviewChannel.name,
         description: _dailyReviewChannel.description,
         importance: _dailyReviewChannel.importance,
+      ),
+    );
+    await androidPlugin?.createNotificationChannel(
+      AndroidNotificationChannel(
+        _toleranceTestChannel.id,
+        _toleranceTestChannel.name,
+        description: _toleranceTestChannel.description,
+        importance: _toleranceTestChannel.importance,
       ),
     );
 
@@ -328,6 +352,57 @@ class LocalNotificationService {
     _log.debug('cancelled the daily review notice');
   }
 
+  /// Schedules the tolerance test's reminders (spec §5.5), replacing
+  /// pending ones: [testReintroId] on [reintroDay], [testResultId] on
+  /// [resultDay], each at 09:00 in [timezone] on that wall-clock date,
+  /// opening the test page; [reintroBody] is the first one's text
+  /// ([TestCopy.reintroNotification]). A time already passed schedules none.
+  static Future<void> scheduleTestReminders({
+    required String reintroBody,
+    required DateTime reintroDay,
+    required DateTime resultDay,
+    required String timezone,
+  }) async {
+    await cancelTestReminders();
+    final now = tz.TZDateTime.now(tz.getLocation(timezone));
+    for (final (id, day, body) in [
+      (testReintroId, reintroDay, reintroBody),
+      (testResultId, resultDay, TestCopy.resultNotification),
+    ]) {
+      final at = testReminderAt(day, now);
+      if (at == null) {
+        _log.debug('test reminder $id: its day has passed');
+        continue;
+      }
+      await _plugin.zonedSchedule(
+        id: id,
+        title: 'Belly Buddy',
+        body: body,
+        scheduledDate: at,
+        notificationDetails: NotificationDetails(
+          android: AndroidNotificationDetails(
+            _toleranceTestChannel.id,
+            _toleranceTestChannel.name,
+            channelDescription: _toleranceTestChannel.description,
+            importance: Importance.high,
+            priority: Priority.high,
+          ),
+          iOS: const DarwinNotificationDetails(),
+        ),
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        payload: RoutePaths.toleranceTest,
+      );
+      _log.debug('test reminder $id scheduled for $at');
+    }
+  }
+
+  /// Cancels both tolerance test reminders.
+  static Future<void> cancelTestReminders() async {
+    await _plugin.cancel(id: testReintroId);
+    await _plugin.cancel(id: testResultId);
+    _log.debug('cancelled the test reminders');
+  }
+
   /// Cancel all notifications.
   static Future<void> cancelAll() async {
     await _plugin.cancelAll();
@@ -345,6 +420,20 @@ class LocalNotificationService {
       now.day,
       hour,
       minute,
+    );
+    return at.isAfter(now) ? at : null;
+  }
+
+  /// 09:00 on [day]'s wall-clock date in [now]'s time zone, or null once
+  /// it is not after [now].
+  @visibleForTesting
+  static tz.TZDateTime? testReminderAt(DateTime day, tz.TZDateTime now) {
+    final at = tz.TZDateTime(
+      now.location,
+      day.year,
+      day.month,
+      day.day,
+      _testReminderHour,
     );
     return at.isAfter(now) ? at : null;
   }

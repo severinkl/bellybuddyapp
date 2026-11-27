@@ -23,6 +23,8 @@ class SuggestionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // The skipped ones („Passt nicht für mich") are left out.
+    final replacements = group.visibleReplacements;
     return Dismissible(
       key: Key(group.ingredientId),
       direction: DismissDirection.endToStart,
@@ -116,16 +118,16 @@ class SuggestionCard extends StatelessWidget {
                   ),
                 ],
               ),
-              if (group.replacements.isNotEmpty) ...[
+              if (replacements.isNotEmpty) ...[
                 AppConstants.gap12,
                 SizedBox(
                   height: 44,
                   child: ListView.separated(
                     scrollDirection: Axis.horizontal,
-                    itemCount: group.replacements.length,
+                    itemCount: replacements.length,
                     separatorBuilder: (c, i) => const SizedBox(width: 8),
                     itemBuilder: (context, index) {
-                      final repl = group.replacements[index];
+                      final repl = replacements[index];
                       return Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 10,
