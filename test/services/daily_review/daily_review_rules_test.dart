@@ -1,8 +1,9 @@
-import 'package:belly_buddy/models/ranked_replacement.dart';
+import 'package:belly_buddy/models/alternative_choice.dart';
 import 'package:belly_buddy/models/gut_feeling_entry.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/models/replacement_ingredient.dart';
+import 'package:belly_buddy/services/alternatives/alternative_ranking.dart';
 import 'package:belly_buddy/services/daily_review/daily_review_rules.dart';
 import 'package:belly_buddy/utils/gut_feeling_rating.dart';
 import 'package:belly_buddy/utils/wall_clock.dart';
@@ -271,6 +272,34 @@ void main() {
       final b = _group('b', [today]);
       final p = pick([a, b], chosen: {('a', 'a1'), ('a', 'a2')})!;
       expect(p.group.ingredientId, 'b');
+    });
+
+    test('never a sibling of one skipped on another pairing (tier 3); '
+        'only such left → the next group', () {
+      // „Tofu" skipped for Milch: „Tofu (fest)" is its sibling.
+      final choices = [
+        AlternativeChoice(
+          id: 'c1',
+          ingredientId: 'milch',
+          ingredientName: 'Milch',
+          replacementId: 'tofu',
+          replacementName: 'Tofu',
+          kind: AlternativeChoiceKind.skip,
+          createdAt: DateTime.utc(2026, 11, 1),
+        ),
+      ];
+      final a = _group(
+        'a',
+        [today, _md('m', _wall(2026, 11, 20))],
+        replacements: const [
+          ReplacementIngredient(id: 'tofu-fest', name: 'Tofu (fest)'),
+          ReplacementIngredient(id: 'reis', name: 'Reis'),
+        ],
+      );
+      final b = _group('b', [today]);
+      final ranked = rerankGroups([a, b], choices);
+      expect(pick(ranked)!.replacement.id, 'reis');
+      expect(pick(ranked, chosen: {('a', 'reis')})!.group.ingredientId, 'b');
     });
 
     test(
