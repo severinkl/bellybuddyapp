@@ -36,4 +36,47 @@ void main() {
       expect(isScannableFormat(BarcodeFormat.code128), isFalse);
     });
   });
+
+  group('mayStartScanner', () {
+    const fresh = MobileScannerState.uninitialized();
+    final running = fresh.copyWith(isInitialized: true, isRunning: true);
+    final denied = fresh.copyWith(
+      isInitialized: true,
+      error: const MobileScannerException(
+        errorCode: MobileScannerErrorCode.permissionDenied,
+      ),
+    );
+    final otherError = fresh.copyWith(
+      isInitialized: true,
+      error: const MobileScannerException(
+        errorCode: MobileScannerErrorCode.genericError,
+      ),
+    );
+
+    test('starts a fresh controller and one with the permission', () {
+      expect(mayStartScanner(fresh, failureReported: false), isTrue);
+      expect(mayStartScanner(running, failureReported: false), isTrue);
+    });
+
+    test('never restarts once the permission was denied (Android would '
+        'ask again)', () {
+      expect(mayStartScanner(denied, failureReported: false), isFalse);
+      expect(mayStartScanner(denied, failureReported: true), isFalse);
+    });
+
+    test('not after a reported failure', () {
+      expect(mayStartScanner(fresh, failureReported: true), isFalse);
+      expect(mayStartScanner(otherError, failureReported: true), isFalse);
+    });
+
+    test('not while a start (the permission dialog) is still running', () {
+      expect(
+        mayStartScanner(
+          fresh.copyWith(isStarting: true),
+          failureReported: false,
+        ),
+        isFalse,
+      );
+    });
+  });
 }

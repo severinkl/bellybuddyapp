@@ -44,6 +44,19 @@ ScannerFailure scannerFailureOf(MobileScannerErrorCode code) =>
     ? ScannerFailure.permissionDenied
     : ScannerFailure.other;
 
+/// Whether the view may (re)start the camera when it becomes active. Not
+/// after a failure was reported, not while a start is still running, and —
+/// as mobile_scanner's own lifecycle handler — not once the controller
+/// knows the permission is missing: on Android every start asks for the
+/// permission again.
+bool mayStartScanner(
+  MobileScannerState state, {
+  required bool failureReported,
+}) {
+  if (failureReported || state.isStarting) return false;
+  return !state.isInitialized || state.hasCameraPermission;
+}
+
 Widget mobileScannerBuilder(
   BuildContext context, {
   required bool active,
@@ -76,7 +89,8 @@ class _MobileScannerViewState extends State<_MobileScannerView> {
     autoStart: widget.active,
   );
 
-  /// The failure was reported; the errorBuilder runs on every rebuild.
+  /// The failure was reported; the errorBuilder runs on every rebuild. It
+  /// stays for this view: the sheet mounts a new one to try again.
   bool _failureReported = false;
 
   @override
@@ -84,8 +98,12 @@ class _MobileScannerViewState extends State<_MobileScannerView> {
     super.didUpdateWidget(oldWidget);
     if (widget.active == oldWidget.active) return;
     if (widget.active) {
-      _failureReported = false;
-      _guard(_controller.start());
+      if (mayStartScanner(
+        _controller.value,
+        failureReported: _failureReported,
+      )) {
+        _guard(_controller.start());
+      }
     } else {
       _guard(_controller.stop());
     }
