@@ -45,6 +45,8 @@ class QuickDrinkGrid extends ConsumerWidget {
             final isSelected = selectedDrink?.id == drink.id;
             return BbTapArea(
               selected: isSelected,
+              // One drink at a time (tapping it again clears it).
+              exclusive: true,
               onTap: () {
                 HapticService.selection();
                 ref.read(drinkTrackerProvider.notifier).toggleDrink(drink);

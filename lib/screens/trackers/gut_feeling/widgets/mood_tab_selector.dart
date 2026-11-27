@@ -39,6 +39,7 @@ class MoodTabSelector extends StatelessWidget {
     return Expanded(
       child: BbTapArea(
         selected: isActive,
+        exclusive: true,
         label: label,
         tapTarget: false,
         excludeChild: true,

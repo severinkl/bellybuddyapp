@@ -298,6 +298,7 @@ void main() {
             isButton: true,
             hasSelectedState: true,
             isSelected: chosen,
+            isInMutuallyExclusiveGroup: true,
             hasTapAction: true,
           ),
           reason: diet,

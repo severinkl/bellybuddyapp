@@ -220,6 +220,28 @@ void main() {
       },
     );
 
+    testWidgets('on today the missing next arrow keeps the arrow\'s width', (
+      tester,
+    ) async {
+      await tester.pumpWithProviders(
+        const DiaryScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(DiaryScreen.nextDayKey), findsNothing);
+      final placeholder = find.descendant(
+        of: find.byType(AppBar),
+        matching: find.byWidgetPredicate(
+          (w) => w is SizedBox && w.child == null && w.width != null,
+        ),
+      );
+      expect(
+        tester.getSize(placeholder).width,
+        tester.getSize(find.byKey(DiaryScreen.previousDayKey)).width,
+      );
+    });
+
     testWidgets('renders navigation chevrons', (tester) async {
       await tester.pumpWithProviders(
         const DiaryScreen(),

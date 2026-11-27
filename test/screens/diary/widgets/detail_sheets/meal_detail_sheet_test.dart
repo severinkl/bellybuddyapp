@@ -7,6 +7,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:belly_buddy/models/diary_entry.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
 import 'package:belly_buddy/screens/diary/widgets/detail_sheets/meal_detail_sheet.dart';
+import 'package:belly_buddy/screens/diary/widgets/meal_image.dart';
 import 'package:belly_buddy/screens/diary/widgets/meal_thumbnail.dart';
 import 'package:belly_buddy/repositories/meal_media_repository.dart';
 
@@ -87,7 +88,7 @@ void main() {
     );
   });
 
-  testWidgets('the meal detail photo reads „Foto: Pasta mit Tomaten"; the '
+  testWidgets('the meal detail photo is named „Foto: Pasta mit Tomaten"; the '
       'list thumbnail adds no node', (tester) async {
     final semantics = tester.ensureSemantics();
     final meal = MealEntry(
@@ -131,12 +132,17 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    // The network never loads in tests: the detail photo is named once it
+    // has loaded (test/screens/diary/widgets/meal_image_test.dart), so here
+    // no image node is shown, and the thumbnail adds none either.
     final images = find.semantics
         .byPredicate((n) => n.flagsCollection.isImage)
         .evaluate();
-    expect(images.map((n) => n.label), [
+    expect(images, isEmpty, reason: 'the thumbnail adds no node');
+    expect(
+      tester.widget<MealImage>(find.byType(MealImage)).semanticLabel,
       'Foto: Pasta mit Tomaten',
-    ], reason: 'one image node, the detail photo; the thumbnail adds none');
+    );
     semantics.dispose();
   });
 }

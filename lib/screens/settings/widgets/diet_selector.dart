@@ -31,6 +31,7 @@ class DietSelector extends StatelessWidget {
         // The 40 px chip keeps its look inside a 48 px hit area.
         return BbTapArea(
           selected: isSelected,
+          exclusive: true,
           onTap: () {
             HapticService.selection();
             onChanged(diet);

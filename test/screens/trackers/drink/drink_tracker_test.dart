@@ -645,6 +645,7 @@ void main() {
             isButton: true,
             hasSelectedState: true,
             isSelected: true,
+            isInMutuallyExclusiveGroup: true,
             hasTapAction: true,
           ),
         );

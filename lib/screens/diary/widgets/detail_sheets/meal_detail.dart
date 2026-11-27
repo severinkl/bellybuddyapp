@@ -17,7 +17,9 @@ class MealDetail extends StatelessWidget {
         if (meal.imageUrl != null)
           MealImage(
             imageUrl: meal.imageUrl!,
-            semanticLabel: 'Foto: ${meal.title}',
+            semanticLabel: meal.title.trim().isEmpty
+                ? 'Foto'
+                : 'Foto: ${meal.title.trim()}',
           ),
         if (meal.ingredients.isNotEmpty)
           Container(

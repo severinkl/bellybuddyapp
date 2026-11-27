@@ -145,7 +145,9 @@ class _BbScrollPickerState extends State<BbScrollPicker> {
                   child: Text(
                     _label(index),
                     style: TextStyle(
-                      fontSize: isSelected ? 20 : 16,
+                      fontSize: isSelected
+                          ? AppTheme.fontSizeTitleLG
+                          : AppTheme.fontSizeSubtitle,
                       fontWeight: isSelected
                           ? FontWeight.w600
                           : FontWeight.w400,

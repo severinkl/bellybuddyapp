@@ -565,6 +565,7 @@ void main() {
             isButton: true,
             hasSelectedState: true,
             isSelected: selected,
+            isInMutuallyExclusiveGroup: true,
             hasTapAction: true,
           ),
         );
@@ -584,6 +585,7 @@ void main() {
           label: 'Stimmung',
           isSelected: true,
           hasSelectedState: true,
+          isInMutuallyExclusiveGroup: true,
           isButton: true,
           hasTapAction: true,
         ),
