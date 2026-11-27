@@ -204,8 +204,9 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
         links.where((v) => v.$2 == ShareState.active).length >= _maxActiveLinks;
     final dietitiansFull =
         ref.watch(activeDietitianCountProvider) >= maxActiveDietitians;
-    // New shares need Plus: while it is locked, both buttons and „Neu
-    // erstellen" open the paywall; the list, „Ändern" and ending stay.
+    // New links need Plus: while it is locked, „Link erstellen" and „Neu
+    // erstellen" open the paywall. Connecting to a dietitian, „Ändern" and
+    // ending stay free.
     final plusLocked = ref.watch(plusLockedProvider);
     void openPlus() => unawaited(context.openPlus());
     final VoidCallback? onCreate = linksFull
@@ -286,8 +287,6 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
                     label: 'Berater:in verbinden',
                     onPressed: dietitiansFull
                         ? null
-                        : plusLocked
-                        ? openPlus
                         : () => unawaited(
                             context.push(RoutePaths.dietitianConnect),
                           ),

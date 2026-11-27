@@ -353,43 +353,27 @@ void main() {
     expect(find.byType(SnackBar), findsNothing);
   });
 
-  testWidgets('a 402 plus_required on Freigeben replaces the screen with '
-      '/plus', (tester) async {
-    await pump(tester, savedName: 'Maria');
-    await lookUp(tester, 'BERGER-7K2');
-    service.connectFails = const ShareException(
-      status: 402,
-      message: 'Dafür brauchst du Belly Buddy Plus.',
-      code: 'plus_required',
-    );
-    await tester.tap(submit());
-    await tester.pumpAndSettle();
+  // Connecting is free (decision 16): a 402 plus_required is no longer
+  // expected and is handled like any other error.
+  for (final paywallOn in [true, false]) {
+    testWidgets('a 402 plus_required keeps the form with core\'s text, no '
+        'paywall (switch ${paywallOn ? 'on' : 'off'})', (tester) async {
+      await pump(tester, savedName: 'Maria', paywallOn: paywallOn);
+      await lookUp(tester, 'BERGER-7K2');
+      service.connectFails = const ShareException(
+        status: 402,
+        message: 'Dafür brauchst du Belly Buddy Plus.',
+        code: 'plus_required',
+      );
+      await tester.tap(submit());
+      await tester.pumpAndSettle();
 
-    expect(find.text('page:/plus'), findsOneWidget);
-    expect(find.byType(DietitianConnectScreen), findsNothing);
-    router.pop();
-    await tester.pumpAndSettle();
-    expect(find.byType(SharesScreen), findsOneWidget);
-    expect(find.byType(DietitianConnectScreen), findsNothing);
-  });
-
-  testWidgets('a 402 plus_required with the switch off keeps the form and '
-      'says Plus is needed', (tester) async {
-    await pump(tester, savedName: 'Maria', paywallOn: false);
-    await lookUp(tester, 'BERGER-7K2');
-    service.connectFails = const ShareException(
-      status: 402,
-      message: 'Dafür brauchst du Belly Buddy Plus.',
-      code: 'plus_required',
-    );
-    await tester.tap(submit());
-    await tester.pumpAndSettle();
-
-    expect(find.text('page:/plus'), findsNothing);
-    expect(find.byType(DietitianConnectScreen), findsOneWidget);
-    expect(find.text('Gefunden'), findsOneWidget);
-    expect(find.text('Dafür brauchst du Belly Buddy Plus.'), findsOneWidget);
-  });
+      expect(find.text('page:/plus'), findsNothing);
+      expect(find.byType(DietitianConnectScreen), findsOneWidget);
+      expect(find.text('Gefunden'), findsOneWidget);
+      expect(find.text('Dafür brauchst du Belly Buddy Plus.'), findsOneWidget);
+    });
+  }
 
   testWidgets('a 402 without the code keeps the form with the usual text', (
     tester,

@@ -14,7 +14,7 @@ abstract final class PlusCopy {
     'Jeden Montag neue Tipps zu deinen Einträgen',
     'Alternativen zu Zutaten, die bei dir auffällig sind',
     'Rezepte für dich anpassen',
-    'Dein Tagebuch mit Diätolog:in oder Ärzt:in teilen',
+    'Dein Tagebuch per Link mit Diätolog:in oder Ärzt:in teilen',
   ];
   static const free =
       'Immer gratis: Mahlzeiten, Getränke, Bauchgefühl und Klo eintragen, '

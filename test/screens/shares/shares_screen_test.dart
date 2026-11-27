@@ -808,12 +808,13 @@ void main() {
       expect(find.text('page:/shares/new'), findsNothing);
     });
 
-    testWidgets('„Berater:in verbinden" opens /plus', (tester) async {
+    testWidgets('„Berater:in verbinden" stays free: opens the connect '
+        'screen', (tester) async {
       await pump(tester, [], overrides: locked);
       await tester.tap(find.text('Berater:in verbinden'));
       await tester.pumpAndSettle();
-      expect(find.text('page:/plus'), findsOneWidget);
-      expect(find.text('page:/shares/connect'), findsNothing);
+      expect(find.text('page:/plus'), findsNothing);
+      expect(find.text('page:${RoutePaths.dietitianConnect}'), findsOneWidget);
     });
 
     testWidgets('„Neu erstellen" opens /plus', (tester) async {

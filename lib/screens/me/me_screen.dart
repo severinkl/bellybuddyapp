@@ -193,7 +193,8 @@ class _MeScreenState extends ConsumerState<MeScreen> {
   bool _openingShare = false;
 
   /// The share row: the list; with no share (or no list) the create screen
-  /// on top of it.
+  /// on top of it, unless Plus is locked (a new link needs it, connecting
+  /// to a dietitian from the list is free).
   void _openShare() {
     if (_openingShare) return;
     _openingShare = true;
@@ -201,13 +202,11 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     final shares = ref.read(sharesProvider).value;
     WidgetsBinding.instance.addPostFrameCallback((_) => _openingShare = false);
     unawaited(context.push(RoutePaths.shares));
-    // Without a share the create screen goes on top of the list at once —
-    // the paywall instead while Plus is locked (a new share needs it).
-    if (shares == null || shares.isEmpty) {
-      final locked = ref.read(plusLockedProvider);
-      unawaited(
-        locked ? context.openPlus() : context.push(RoutePaths.shareCreate),
-      );
+    // Without a share the create screen goes on top of the list at once;
+    // while Plus is locked the list alone, so no paywall stands before the
+    // free „Berater:in verbinden".
+    if ((shares == null || shares.isEmpty) && !ref.read(plusLockedProvider)) {
+      unawaited(context.push(RoutePaths.shareCreate));
     }
   }
 

@@ -26,10 +26,10 @@ the logging flow; any health data reaching RevenueCat.
 |---|---|---|---|
 | 1 | Product | „Belly Buddy Plus", one auto-renewing monthly subscription, 6,90 €, 14 days free | Severin |
 | 2 | Free forever | Meals, drinks, Bauchgefühl, Klo; Tagebuch; Buddy, streaks, the 7-day journey | Severin |
-| 3 | Paid | Muster, Tipps, Alternativen, recipe adapting, creating shares | Severin |
+| 3 | Paid | Muster, Tipps, Alternativen, recipe adapting, creating share links | Severin |
 | 4 | Purchases | RevenueCat (`purchases_flutter`); Severin creates products and the RevenueCat project | Severin |
 | 5 | Ships off | App config key `paywall_enabled` (`'false'`); app and core both read it | Severin (key name: Claude) |
-| 6 | Shares on lapse | Existing shares work until they expire or are ended; creating needs Plus | Severin |
+| 6 | Shares on lapse | Existing shares work until they expire or are ended; creating a link needs Plus (connections: decision 16) | Severin |
 | 7 | Entitlement | One RevenueCat entitlement `plus`; in the app RevenueCat's customer info is the truth, on the server a `plus_entitlements` row kept by a webhook and by on-demand lookups | Claude's call — wrong: one more table to migrate if RevenueCat's v2 API is wanted later |
 | 8 | Trial | Store-managed introductory offer (14 days free), no app-side trial | Claude's call — wrong: an app trial would need its own server clock and abuse checks |
 | 9 | What a lapse takes | „What you got stays": tips and alternatives already received stay readable; only *new* ones (weekly tips, new alternatives, adapting, new shares) need Plus. Muster (computed live) locks, Home's one-line Muster pick stays free | Claude's call — wrong: lapsed users keep more value; easy to tighten later in the app alone |
@@ -39,6 +39,7 @@ the logging flow; any health data reaching RevenueCat.
 | 13 | RevenueCat before switch-on | The SDK is not configured at all while the switch is off (no network, no identifiers) | Claude's call — wrong: the first switch-on day has no RevenueCat history (none needed) |
 | 14 | Alternativen backlog | With the switch on, `refresh-ingredient-suggestions` analyses only meals of the last 14 days (wall clock) | Claude's call — wrong: a resubscriber misses alternatives for older meals |
 | 15 | Account deletion | Also deletes the RevenueCat customer (best effort); the dialog warns that the store subscription continues until cancelled | Claude's call |
+| 16 | Dietitian connection | Free, also with the switch on: entering or scanning a practice code, connecting, editing and ending a connection, and the dietitian's tips on Entdecken. Only creating a share link needs Plus. Overrides the planner's ruling R10 (connect gated as „sharing with a dietitian") | Severin, 2026-11-27 |
 
 ## 3. Approaches
 
@@ -76,6 +77,7 @@ the logging flow; any health data reaching RevenueCat.
 - Paid server work answers **402** `{"error": "Dafür brauchst du Belly Buddy Plus.", "code": "plus_required"}`:
   - `adapt-recipe` (before the throttle and the AI call);
   - `shares` create (`/end` stays free); `share-view` untouched, so existing shares keep working (decision 6);
+    `shares/dietitian` (portal connect) and `shares/{id}/update` stay free (decision 16);
   - `diet-recommendations`, except when the user has no own non-broadcast recommendation yet (the journey's first tip);
   - `refresh-ingredient-suggestions` without Plus answers `200 {"created": 0}` and leaves the meals unanalysed (it is
     fire-and-forget after a meal; no error for the app to show); with the switch on it analyses meals of the last 14 days only;
@@ -125,7 +127,7 @@ One widget, `PlusLockedCard` (title, one line, button „Belly Buddy Plus ansehe
 | Day-3 first tip offer | Unchanged and free |
 | Alternativen (Entdecken section, list screen) | Received ones stay; with none, the note „Alternativen zu auffälligen Zutaten gibt es mit Belly Buddy Plus." and a link to `/plus` instead of „sie entstehen nach deinen Mahlzeiten" |
 | „Für mich anpassen" | Button stays with a small „Plus" badge; tap → `/plus`. A 402 from core (stale app state) → `AdaptFailure.plusRequired` → `/plus` |
-| „Mit Berater:in teilen" | Row stays (existing shares must stay reachable to see and end them). „Neue Freigabe" → `/plus`; with no share the row opens `/plus` instead of the create screen. A 402 on create → `/plus` |
+| „Mit Berater:in teilen" | Row stays and opens the list (existing shares must stay reachable; with no share the list alone, not the create screen). „Link erstellen" and „Neu erstellen" → `/plus`; a 402 on link create → `/plus`. „Berater:in verbinden", the connect flow, „Ändern" and ending stay free (decision 16) |
 
 ### 4.5 Paywall `/plus`
 Route `/plus` (redirects to Home while the switch is off). Opened from every lock and the Ich row. Close button top left,
@@ -134,7 +136,7 @@ always visible. No timers, no „nur heute".
 - Title „Belly Buddy Plus", the Buddy (happy).
 - „Damit holst du mehr aus deinen Einträgen:" then five lines: „Muster: was an guten und schwierigen Tagen auffällig oft
   dabei war" · „Jeden Montag neue Tipps zu deinen Einträgen" · „Alternativen zu Zutaten, die bei dir auffällig sind" ·
-  „Rezepte für dich anpassen" · „Dein Tagebuch mit Diätolog:in oder Ärzt:in teilen".
+  „Rezepte für dich anpassen" · „Dein Tagebuch per Link mit Diätolog:in oder Ärzt:in teilen" (decision 16: connecting is free).
 - „Immer gratis: Mahlzeiten, Getränke, Bauchgefühl und Klo eintragen, dein Tagebuch, Belly Buddy, Streaks und die Reise."
 - Price block from the store offer only: eligible for the trial → „{n} Tage gratis, danach {price} pro Monat"; else
   „{price} pro Monat". `{price}` = the store's `priceString`, `{n}` = the intro offer's length from the store. Button:
@@ -225,7 +227,7 @@ New section for the shared „policy text" task (no version bump in this track):
 1. Switch off (default): app looks and behaves exactly as today; no Plus row; no RevenueCat traffic (proxy or RevenueCat
    dashboard shows no new customer).
 2. Switch on, iOS sandbox account: Muster → lock → paywall shows store price and „14 Tage gratis"; buy; Muster opens; Ich
-   row „Gratis-Test bis …"; adapt a recipe works; create a share works.
+   row „Gratis-Test bis …"; adapt a recipe works; create a share link works. Without Plus: connecting to a dietitian by practice code works.
 3. Same on Android with a license tester (Play internal track).
 4. Cancel in the store's subscription settings → Ich row „… endet am …"; let the sandbox subscription expire → locks return,
    existing share link still opens on Connect, received tips still readable.

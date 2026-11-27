@@ -421,15 +421,13 @@ void main() {
       expect(find.text('page:/shares'), findsOneWidget);
     });
 
-    testWidgets('Plus locked, no shares: /plus instead of the create screen', (
-      tester,
-    ) async {
+    testWidgets('Plus locked, no shares: the list alone (connecting is '
+        'free), no paywall, no create screen', (tester) async {
       await pump(tester, extra: plusLockedOverrides);
       await tapRow(tester, MeScreen.shareKey);
-      expect(find.text('page:/plus'), findsOneWidget);
+      expect(find.text('page:/shares'), findsOneWidget);
+      expect(find.text('page:/plus', skipOffstage: false), findsNothing);
       expect(find.text('page:/shares/new', skipOffstage: false), findsNothing);
-      // The list lies beneath the paywall.
-      expect(find.text('page:/shares', skipOffstage: false), findsOneWidget);
     });
 
     testWidgets('Plus locked, with shares: opens the list', (tester) async {
