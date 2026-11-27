@@ -195,10 +195,10 @@ class TestCopy {
 
   // --- Home and reminders (spec §5.5) ---------------------------------------
 
-  /// The notification on the first reintroduction day.
-  static String reintroNotification(String name) =>
-      'Ab heute darf $name wieder auf den Teller – ich schau, wie\'s deinem '
-      'Bauch damit geht.';
+  /// The notification on the first reintroduction day; a group reads as
+  /// its foods („Ab heute dürfen Lebensmittel mit Fruktanen …").
+  static String reintroNotification(TestSubject s) =>
+      '${_backOnThePlate(s)} – ich schau, wie\'s deinem Bauch damit geht.';
 
   /// The notification on the result day.
   static const resultNotification =
@@ -207,17 +207,27 @@ class TestCopy {
   /// The Buddy's offer on Home.
   static const offerTitle = 'Magst du was ausprobieren?';
 
-  static String offerBody(String name) =>
-      'An schweren Tagen war oft $name dabei. Wollen wir testen, ob dein '
-      'Bauch ohne besser klarkommt? 5 Tage ohne, dann 3 Tage mit.';
+  /// A group reads as its foods („waren oft Lebensmittel mit Fruktanen").
+  static String offerBody(TestSubject s) {
+    final often = _isGroup(s)
+        ? 'waren oft Lebensmittel mit ${_mit(s)}'
+        : 'war oft ${s.name}';
+    return 'An schweren Tagen $often dabei. Wollen wir testen, ob dein '
+        'Bauch ohne besser klarkommt? 5 Tage ohne, dann 3 Tage mit.';
+  }
 
   static const offerOpen = 'Ansehen';
   static const offerLater = 'Später';
 
   /// The Buddy's line on the first reintroduction day.
-  static String reintroLine(String name) =>
-      'Ab heute darf $name wieder auf den Teller. Trag abends dein '
-      'Bauchgefühl ein!';
+  static String reintroLine(TestSubject s) =>
+      '${_backOnThePlate(s)}. Trag abends dein Bauchgefühl ein!';
+
+  /// „Ab heute darf Zwiebel wieder auf den Teller" / „Ab heute dürfen
+  /// Lebensmittel mit Fruktanen wieder auf den Teller".
+  static String _backOnThePlate(TestSubject s) => _isGroup(s)
+      ? 'Ab heute dürfen Lebensmittel mit ${_mit(s)} wieder auf den Teller'
+      : 'Ab heute darf ${s.name} wieder auf den Teller';
 
   /// The Buddy's line once the result is there.
   static const doneLine = 'Dein Test ist fertig – schau mal in die Muster.';

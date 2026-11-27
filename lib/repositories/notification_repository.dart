@@ -40,7 +40,7 @@ abstract class NotificationScheduler {
 
   /// The tolerance test's reminders: 09:00 on [reintroDay] and [resultDay].
   Future<void> scheduleTestReminders({
-    required String subjectName,
+    required String reintroBody,
     required DateTime reintroDay,
     required DateTime resultDay,
     required String timezone,
@@ -102,12 +102,12 @@ class LocalNotificationScheduler implements NotificationScheduler {
 
   @override
   Future<void> scheduleTestReminders({
-    required String subjectName,
+    required String reintroBody,
     required DateTime reintroDay,
     required DateTime resultDay,
     required String timezone,
   }) => LocalNotificationService.scheduleTestReminders(
-    subjectName: subjectName,
+    reintroBody: reintroBody,
     reintroDay: reintroDay,
     resultDay: resultDay,
     timezone: timezone,
@@ -204,11 +204,11 @@ class NotificationRepository {
   /// [resultDay], wall-clock dates) in the device time zone, replacing
   /// pending ones.
   Future<void> scheduleTestReminders({
-    required String subjectName,
+    required String reintroBody,
     required DateTime reintroDay,
     required DateTime resultDay,
   }) => _scheduler.scheduleTestReminders(
-    subjectName: subjectName,
+    reintroBody: reintroBody,
     reintroDay: reintroDay,
     resultDay: resultDay,
     timezone: tz.local.name,

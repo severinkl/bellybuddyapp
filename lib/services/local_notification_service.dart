@@ -355,9 +355,10 @@ class LocalNotificationService {
   /// Schedules the tolerance test's reminders (spec §5.5), replacing
   /// pending ones: [testReintroId] on [reintroDay], [testResultId] on
   /// [resultDay], each at 09:00 in [timezone] on that wall-clock date,
-  /// opening the test page. A time already passed schedules none.
+  /// opening the test page; [reintroBody] is the first one's text
+  /// ([TestCopy.reintroNotification]). A time already passed schedules none.
   static Future<void> scheduleTestReminders({
-    required String subjectName,
+    required String reintroBody,
     required DateTime reintroDay,
     required DateTime resultDay,
     required String timezone,
@@ -365,7 +366,7 @@ class LocalNotificationService {
     await cancelTestReminders();
     final now = tz.TZDateTime.now(tz.getLocation(timezone));
     for (final (id, day, body) in [
-      (testReintroId, reintroDay, TestCopy.reintroNotification(subjectName)),
+      (testReintroId, reintroDay, reintroBody),
       (testResultId, resultDay, TestCopy.resultNotification),
     ]) {
       final at = testReminderAt(day, now);

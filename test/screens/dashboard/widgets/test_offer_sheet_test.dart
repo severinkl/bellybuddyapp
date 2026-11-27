@@ -7,25 +7,29 @@ import 'package:belly_buddy/screens/dashboard/widgets/test_offer_sheet.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
 
 const _zwiebel = TestSubject('ingredient', 'zwiebel', 'Zwiebel');
+const _fruktane = TestSubject('group', 'fructans', 'Fruktane');
 
 void main() {
   /// A page whose „open" button opens the sheet; each result goes to
   /// [results].
-  Future<void> pumpOpener(WidgetTester tester, List<bool> results) =>
-      tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.theme,
-          home: Scaffold(
-            body: Builder(
-              builder: (c) => TextButton(
-                onPressed: () async =>
-                    results.add(await showTestOfferSheet(c, subject: _zwiebel)),
-                child: const Text('open'),
-              ),
-            ),
+  Future<void> pumpOpener(
+    WidgetTester tester,
+    List<bool> results, {
+    TestSubject subject = _zwiebel,
+  }) => tester.pumpWidget(
+    MaterialApp(
+      theme: AppTheme.theme,
+      home: Scaffold(
+        body: Builder(
+          builder: (c) => TextButton(
+            onPressed: () async =>
+                results.add(await showTestOfferSheet(c, subject: subject)),
+            child: const Text('open'),
           ),
         ),
-      );
+      ),
+    ),
+  );
 
   Future<void> openSheet(WidgetTester tester) async {
     await tester.tap(find.text('open'));
@@ -67,6 +71,20 @@ void main() {
       find.descendant(
         of: find.byKey(TestOfferSheet.laterKey),
         matching: find.text('Später'),
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('a group reads as its foods', (tester) async {
+    await pumpOpener(tester, [], subject: _fruktane);
+    await openSheet(tester);
+
+    expect(
+      find.text(
+        'An schweren Tagen waren oft Lebensmittel mit Fruktanen dabei. Wollen '
+        'wir testen, ob dein Bauch ohne besser klarkommt? 5 Tage ohne, dann 3 '
+        'Tage mit.',
       ),
       findsOneWidget,
     );

@@ -4415,18 +4415,20 @@ void main() {
 
   group('the Verträglichkeits-Test cues', () {
     const zwiebel = TestSubject('ingredient', 'zwiebel', 'Zwiebel');
+    const fruktane = TestSubject('group', 'fructans', 'Fruktane');
 
     String key(BuddyAnnouncement kind, String suffix) =>
         '${AppConstants.keyBuddyAnnouncedPrefix}u1_${kind.name}_$suffix';
 
     ToleranceTestView testView({
+      TestSubject subject = zwiebel,
       TestPhase phase = TestPhase.reintro,
       int dayIndex = 6,
       String status = 'active',
       TestResult? result,
     }) => ToleranceTestView(
       id: 't1',
-      subject: zwiebel,
+      subject: subject,
       origin: 'proposed',
       status: status,
       phase: phase,
@@ -4525,6 +4527,20 @@ void main() {
         contains(BuddyAnnouncement.testOffer),
       );
 
+      // Further status updates this visit neither take it up again nor
+      // make him say his mood line each time.
+      await advance(tester, const Duration(seconds: 6));
+      expect(controller(tester).bubble, isNull);
+      for (var i = 0; i < 3; i++) {
+        buddy.push(buddy.state.value!.copyWith());
+        await tester.pump();
+        await tick(tester);
+        expect(controller(tester).bubble, isNull);
+        expect(controller(tester).currentAction, isNot(BuddyAction.wave));
+      }
+      await advance(tester, const Duration(seconds: 2));
+      expect(find.byType(TestOfferSheet), findsNothing);
+
       // Next visit: the offer.
       visible.value = false;
       await tester.pump();
@@ -4608,6 +4624,44 @@ void main() {
         controller(tester).bubble,
         'Ab heute darf Zwiebel wieder auf den Teller. Trag abends dein '
         'Bauchgefühl ein!',
+      );
+      expect(find.byType(BottomSheet), findsNothing);
+      await advance(tester, const Duration(seconds: 5));
+      expect(buddy.shown, [BuddyAnnouncement.testReintro]);
+    });
+
+    testWidgets('a group\'s reintro line reads as its foods', (tester) async {
+      final pending = _status(
+        announcements: const [BuddyAnnouncement.testReintro],
+        announcementKeys: {
+          BuddyAnnouncement.testReintro: key(
+            BuddyAnnouncement.testReintro,
+            't1_reintro',
+          ),
+        },
+      );
+      final c = await pumpWithStats(
+        tester,
+        offerDue: false,
+        stats: PatternStats(
+          windowDays: 90,
+          ratedDays: 41,
+          hardDays: 9,
+          ready: true,
+          test: testView(subject: fruktane),
+        ),
+      );
+      // As in the app: the stats load (the completer keeps them), the
+      // offer arrives once they did.
+      c.listen(patternStatsProvider, (_, _) {});
+      await tester.pump();
+      buddy.push(pending);
+      await tester.pump();
+      await tick(tester);
+      expect(
+        controller(tester).bubble,
+        'Ab heute dürfen Lebensmittel mit Fruktanen wieder auf den Teller. '
+        'Trag abends dein Bauchgefühl ein!',
       );
       expect(find.byType(BottomSheet), findsNothing);
       await advance(tester, const Duration(seconds: 5));

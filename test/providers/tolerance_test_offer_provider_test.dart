@@ -450,13 +450,17 @@ void main() {
       final reminders = ToleranceTestReminders(os);
       final t = _test();
 
-      await reminders.schedule(t);
-      expect(os.testReminders.single.subjectName, 'Zwiebel');
+      expect(await reminders.schedule(t), isTrue);
+      expect(
+        os.testReminders.single.reintroBody,
+        'Ab heute darf Zwiebel wieder auf den Teller – ich schau, wie\'s '
+        'deinem Bauch damit geht.',
+      );
       expect(os.testReminders.single.reintroDay, DateTime(2026, 12, 6));
       expect(os.testReminders.single.resultDay, DateTime(2026, 12, 9));
 
       os.permission = NotificationPermission.notDetermined;
-      await reminders.schedule(t);
+      expect(await reminders.schedule(t), isFalse);
       os.permission = NotificationPermission.denied;
       await reminders.schedule(t);
       expect(os.testReminders, hasLength(1));
@@ -464,6 +468,30 @@ void main() {
 
       await reminders.cancel();
       expect(os.testReminderCancels, 1);
+    });
+
+    test('a group\'s reintro notification reads as its foods', () async {
+      final os = FakeNotificationRepository();
+      final group = ToleranceTestView(
+        id: 'g1',
+        subject: _fruktane,
+        origin: 'proposed',
+        status: 'active',
+        phase: TestPhase.leaveOut,
+        startsOn: DateTime(2026, 12, 1),
+        leaveOutDays: 5,
+        reintroDays: 3,
+        dayIndex: 1,
+        days: const [],
+      );
+
+      await ToleranceTestReminders(os).schedule(group);
+
+      expect(
+        os.testReminders.single.reintroBody,
+        'Ab heute dürfen Lebensmittel mit Fruktanen wieder auf den Teller – '
+        'ich schau, wie\'s deinem Bauch damit geht.',
+      );
     });
   });
 }

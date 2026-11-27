@@ -91,8 +91,15 @@ class _FakeReminders implements ToleranceTestReminders {
   final scheduled = <ToleranceTestView>[];
   int cancels = 0;
 
+  /// What [schedule] answers (false: no permission).
+  bool permitted = true;
+
   @override
-  Future<void> schedule(ToleranceTestView test) async => scheduled.add(test);
+  Future<bool> schedule(ToleranceTestView test) async {
+    if (!permitted) return false;
+    scheduled.add(test);
+    return true;
+  }
 
   @override
   Future<void> cancel() async => cancels++;
@@ -402,6 +409,38 @@ void main() {
     c.listen(toleranceTestCompleterProvider, (_, _) {});
     await settle();
     expect(reminders.scheduled, isEmpty);
+  });
+
+  test('Plus known locked: pending test reminders are cancelled; open: '
+      'not', () async {
+    var c = make(plusLocked: true);
+    c.listen(toleranceTestCompleterProvider, (_, _) {});
+    await settle();
+    expect(reminders.cancels, 1);
+
+    c = make();
+    c.listen(toleranceTestCompleterProvider, (_, _) {});
+    await settle();
+    expect(reminders.cancels, 1);
+  });
+
+  test('reminders not scheduled (no permission) are tried again on the '
+      'next sight', () async {
+    reminders.permitted = false;
+    service.answer = (_) => _stats(test: _view(phase: TestPhase.reintro));
+    final c = make();
+    c.listen(toleranceTestCompleterProvider, (_, _) {});
+    await settle();
+    expect(reminders.scheduled, isEmpty);
+
+    reminders.permitted = true;
+    (c.read(entriesRevisionProvider.notifier) as _Revision).bump();
+    await settle();
+    expect([for (final t in reminders.scheduled) t.id], ['t1']);
+
+    (c.read(entriesRevisionProvider.notifier) as _Revision).bump();
+    await settle();
+    expect(reminders.scheduled, hasLength(1));
   });
 
   test('a start schedules its reminders once, though the completer sees '

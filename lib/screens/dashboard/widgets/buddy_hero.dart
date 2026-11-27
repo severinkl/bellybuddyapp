@@ -229,6 +229,11 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// request waits for a later visit.
   bool _visitSheetCuePlayed = false;
 
+  /// The test offer ended unshown after another sheet this visit: it stays
+  /// pending but is not taken up again before the next visit (a status
+  /// update would queue it, and its end the mood line, again and again).
+  bool _testOfferHeldBack = false;
+
   /// The Buddy refresh of the latest log ([BuddyEventsNotifier.lastRefresh]).
   Future<void>? _logRefresh;
 
@@ -337,6 +342,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _visible = visible;
     if (visible) {
       _visitSheetCuePlayed = false;
+      _testOfferHeldBack = false;
       _dailyReviewVisitDay = null;
       _afterFrame(() {
         _consumeEvent();
@@ -542,7 +548,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     if (status == null) return;
     final fresh = [
       for (final a in status.announcements)
-        if (!_taken.contains(a)) a,
+        if (!_taken.contains(a) &&
+            !(a == BuddyAnnouncement.testOffer && _testOfferHeldBack))
+          a,
     ];
     if (fresh.isEmpty) return;
     _taken.addAll(fresh);
@@ -793,9 +801,10 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     if (!_stillApplies(cue)) return _nextCue();
     // Never a second sheet right after another's: it comes another time.
     if (cue == _Cue.remindersAsk && _sheetCuePlayed) return _endRemindersAsk();
-    // The test offer likewise, also after a sheet earlier this visit (its
-    // flag stays pending, so a status update would take it up again).
+    // The test offer likewise, also after a sheet earlier this visit; held
+    // back until the next visit ([_testOfferHeldBack]).
     if (cue == _Cue.testOffer && (_sheetCuePlayed || _visitSheetCuePlayed)) {
+      _testOfferHeldBack = true;
       return _endUnshown();
     }
     // Counts as played only once said ([_playDailyReview]).
@@ -866,9 +875,11 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// Says a test line (spec §5.5) naming the stats' test, holding the
   /// stage; its name unknown by now, it ends unshown (comes again).
   void _sayTestLine(_Cue cue) {
-    final name = ref.read(testLineNameProvider);
-    if (name == null) return _endUnshown();
-    _say(cue == _Cue.testDone ? TestCopy.doneLine : TestCopy.reintroLine(name));
+    final subject = ref.read(testLineSubjectProvider);
+    if (subject == null) return _endUnshown();
+    _say(
+      cue == _Cue.testDone ? TestCopy.doneLine : TestCopy.reintroLine(subject),
+    );
     _holdStage();
   }
 

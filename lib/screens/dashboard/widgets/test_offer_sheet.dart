@@ -39,7 +39,7 @@ class TestOfferSheet extends StatelessWidget {
         secondary: TestCopy.offerLater,
         onSecondary: () => Navigator.pop(context, false),
       ),
-      child: BuddySheetText(TestCopy.offerBody(subject.name)),
+      child: BuddySheetText(TestCopy.offerBody(subject)),
     );
   }
 }

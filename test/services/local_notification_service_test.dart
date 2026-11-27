@@ -4,6 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
+import 'package:belly_buddy/models/tolerance_test.dart';
+import 'package:belly_buddy/services/insights/test_copy.dart';
 import 'package:belly_buddy/services/local_notification_service.dart';
 
 void main() {
@@ -132,7 +134,9 @@ void main() {
     test('test reminders: ids 3001 and 3002 at 09:00 local on the reintro '
         'and result days', () async {
       await LocalNotificationService.scheduleTestReminders(
-        subjectName: 'Zwiebel',
+        reintroBody: TestCopy.reintroNotification(
+          const TestSubject('ingredient', 'zwiebel', 'Zwiebel'),
+        ),
         reintroDay: DateTime(2099, 3, 6),
         resultDay: DateTime(2099, 3, 9),
         timezone: 'Europe/Vienna',
@@ -161,7 +165,9 @@ void main() {
 
     test('a day already passed schedules none', () async {
       await LocalNotificationService.scheduleTestReminders(
-        subjectName: 'Zwiebel',
+        reintroBody: TestCopy.reintroNotification(
+          const TestSubject('ingredient', 'zwiebel', 'Zwiebel'),
+        ),
         reintroDay: DateTime(2020, 3, 6),
         resultDay: DateTime(2099, 3, 9),
         timezone: 'Europe/Vienna',

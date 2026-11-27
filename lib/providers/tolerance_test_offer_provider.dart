@@ -95,10 +95,10 @@ bool testLineStillApplies(
       : _onFirstReintroDay(t) && testReintroSuffix(t) == suffix;
 }
 
-/// The name the pending test line names: the stats' test (kept while
+/// The subject the pending test line names: the stats' test (kept while
 /// refetching); null when unknown.
-final testLineNameProvider = Provider<String?>(
-  (ref) => _lineTest(ref, settled: false)?.subject.name,
+final testLineSubjectProvider = Provider<TestSubject?>(
+  (ref) => _lineTest(ref, settled: false)?.subject,
 );
 
 /// Whether a pending test offer with flag suffix [suffix] still applies as

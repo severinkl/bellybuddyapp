@@ -888,16 +888,16 @@ class FakeNotificationRepository implements NotificationRepository {
 
   /// The test reminders scheduled, in order.
   final testReminders =
-      <({String subjectName, DateTime reintroDay, DateTime resultDay})>[];
+      <({String reintroBody, DateTime reintroDay, DateTime resultDay})>[];
   int testReminderCancels = 0;
 
   @override
   Future<void> scheduleTestReminders({
-    required String subjectName,
+    required String reintroBody,
     required DateTime reintroDay,
     required DateTime resultDay,
   }) async => testReminders.add((
-    subjectName: subjectName,
+    reintroBody: reintroBody,
     reintroDay: reintroDay,
     resultDay: resultDay,
   ));

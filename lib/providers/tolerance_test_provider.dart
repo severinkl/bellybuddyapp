@@ -6,6 +6,7 @@ import '../models/pattern_stats.dart';
 import '../models/tolerance_test.dart';
 import '../repositories/notification_repository.dart';
 import '../repositories/tolerance_test_repository.dart';
+import '../services/insights/test_copy.dart';
 import '../utils/date_format_utils.dart';
 import '../utils/logger.dart';
 import 'auth_provider.dart';
@@ -28,18 +29,20 @@ class ToleranceTestReminders {
   final NotificationRepository _notifications;
 
   /// Schedules [test]'s reminders (first reintroduction day and result
-  /// day), replacing pending ones; without the permission none.
-  Future<void> schedule(ToleranceTestView test) async {
+  /// day), replacing pending ones; without the permission none. True when
+  /// they were scheduled.
+  Future<bool> schedule(ToleranceTestView test) async {
     if (await _notifications.permissionStatus() !=
         NotificationPermission.granted) {
       _log.debug('test reminders: no permission, none scheduled');
-      return;
+      return false;
     }
     await _notifications.scheduleTestReminders(
-      subjectName: test.subject.name,
+      reintroBody: TestCopy.reintroNotification(test.subject),
       reintroDay: test.reintroStartsOn,
       resultDay: test.resultDay,
     );
+    return true;
   }
 
   /// Cancels the test reminders.
@@ -76,6 +79,9 @@ class ToleranceTestActions {
   /// The tests whose reminders were scheduled in this app run (and since
   /// the last [forgetScheduled]): each is scheduled once.
   final _scheduled = <String>{};
+
+  /// The tests whose reminders are being scheduled right now.
+  final _scheduling = <String>{};
 
   bool get _locked =>
       _ref.read(plusLockedProvider) || _ref.read(patternStatsProvider).isLocked;
@@ -126,7 +132,7 @@ class ToleranceTestActions {
     if (_locked) return;
     await _ref.read(toleranceTestRepositoryProvider).stop(id);
     _scheduled.remove(id);
-    await _cancelReminders();
+    await cancelReminders();
     await _refresh();
   }
 
@@ -145,17 +151,27 @@ class ToleranceTestActions {
   /// scheduled again.
   void forgetScheduled() => _scheduled.clear();
 
+  /// Schedules [test]'s reminders unless they were (or are being) in this
+  /// run; counts as done only once they really were (no permission or a
+  /// failure: tried again on the next sight).
   Future<void> _scheduleOnce(ToleranceTestView test) async {
-    if (!_scheduled.add(test.id)) return;
+    final id = test.id;
+    if (_scheduled.contains(id) || !_scheduling.add(id)) return;
     try {
-      await _ref.read(toleranceTestRemindersProvider).schedule(test);
-    } catch (e, st) {
-      _scheduled.remove(test.id);
-      _log.error('scheduling the test reminders failed', e, st);
+      if (await _ref.read(toleranceTestRemindersProvider).schedule(test)) {
+        _scheduled.add(id);
+      }
+    } catch (e) {
+      // The type only: an error's details may carry the subject.
+      _log.error('scheduling the test reminders failed: ${e.runtimeType}');
+    } finally {
+      _scheduling.remove(id);
     }
   }
 
-  Future<void> _cancelReminders() async {
+  /// Cancels the test reminders (stop, completion, Plus locked); never
+  /// throws.
+  Future<void> cancelReminders() async {
     try {
       await _ref.read(toleranceTestRemindersProvider).cancel();
     } catch (e, st) {
@@ -182,7 +198,7 @@ class ToleranceTestActions {
       _completions.remove(id);
       return false;
     }
-    await _cancelReminders();
+    await cancelReminders();
     unawaited(_refresh());
     return true;
   }
@@ -209,11 +225,16 @@ Future<void> stopToleranceTest(WidgetRef ref, String id) =>
 /// phase done and status active, completes it; an active test still
 /// running gets its reminders scheduled again, once per app run and user
 /// ([ToleranceTestActions.rescheduleIfRunning]). Watched from the app
-/// shell; while Plus is locked it does not listen (no stats load for it).
+/// shell; while Plus is locked it cancels pending test reminders and does
+/// not listen (no stats load for it).
 final toleranceTestCompleterProvider = Provider<void>((ref) {
   ref.watch(currentUserIdProvider);
   final actions = ref.read(toleranceTestActionsProvider)..forgetScheduled();
-  if (ref.watch(plusLockedProvider)) return;
+  // Known locked (an unknown status reads open): no test reminders.
+  if (ref.watch(plusLockedProvider)) {
+    unawaited(actions.cancelReminders());
+    return;
+  }
   ref.listen<AsyncValue<PatternStats?>>(patternStatsProvider, (_, next) {
     // While loading (a user change) the value may be the previous user's.
     if (next.isLoading || next.isLocked) return;
