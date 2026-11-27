@@ -374,6 +374,26 @@ void main() {
         isTrue,
       );
     });
+
+    test('testReintro / testDone: withdrawn while their test is unknown '
+        '(stats loading without a value)', () async {
+      expect(
+        await applies(
+          BuddyAnnouncement.testReintro,
+          't1_reintro',
+          value: const AsyncLoading(),
+        ),
+        isFalse,
+      );
+      expect(
+        await applies(
+          BuddyAnnouncement.testDone,
+          't1_done',
+          value: const AsyncLoading(),
+        ),
+        isFalse,
+      );
+    });
   });
 
   group('dailyReviewExtrasProvider', () {

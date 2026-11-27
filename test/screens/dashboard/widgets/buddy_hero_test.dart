@@ -34,6 +34,7 @@ import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/providers/rating_provider.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
+import 'package:belly_buddy/providers/buddy_offers_provider.dart';
 import 'package:belly_buddy/providers/tolerance_test_offer_provider.dart';
 import 'package:belly_buddy/repositories/notification_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
@@ -4622,6 +4623,33 @@ void main() {
       await afterWave(tester);
       await afterWave(tester);
       expect(find.byType(RemindersAskSheet), findsOneWidget);
+      expect(buddy.shown, isEmpty);
+    });
+
+    testWidgets('a test line ending unshown (its name unknown) still lets '
+        'him say his line', (tester) async {
+      buddy = _FakeBuddy(
+        () => _status(
+          announcements: const [BuddyAnnouncement.testReintro],
+          announcementKeys: {
+            BuddyAnnouncement.testReintro: key(
+              BuddyAnnouncement.testReintro,
+              't1_reintro',
+            ),
+          },
+        ),
+      );
+      await pumpHero(
+        tester,
+        extra: [
+          plusLockedProvider.overrideWithValue(false),
+          offerStillAppliesProvider.overrideWith((ref, _) => true),
+          testLineSubjectProvider.overrideWithValue(null),
+        ],
+      );
+      await tick(tester);
+      await tick(tester);
+      expect(controller(tester).bubble, isNotNull);
       expect(buddy.shown, isEmpty);
     });
 

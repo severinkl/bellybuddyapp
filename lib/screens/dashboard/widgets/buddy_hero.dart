@@ -812,7 +812,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     // The test offer counts as a sheet only once its sheet opens
     // ([_offerTest]): ended unshown, the cues after it still come.
     if (cue.endsInSheet && cue != _Cue.testOffer) _noteSheetCue(cue);
-    _cuePlayed = true;
+    // The test cues count as played only once said or shown
+    // ([_sayTestLine], [_offerTest]): ended unshown, his line still comes.
+    if (!_isTestCue(cue)) _cuePlayed = true;
     switch (cue) {
       case _Cue.welcome:
         _say(_welcome);
@@ -859,6 +861,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     }
   }
 
+  static bool _isTestCue(_Cue cue) =>
+      cue == _Cue.testOffer || cue == _Cue.testReintro || cue == _Cue.testDone;
+
   /// [cue] ends in a sheet or page this run ([_sheetCuePlayed]) and visit
   /// ([_visitSheetCuePlayed]; „Muster frei!" aside).
   void _noteSheetCue(_Cue cue) {
@@ -883,6 +888,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   void _sayTestLine(_Cue cue) {
     final subject = ref.read(testLineSubjectProvider);
     if (subject == null) return _endUnshown();
+    _cuePlayed = true;
     _say(
       cue == _Cue.testDone ? TestCopy.doneLine : TestCopy.reintroLine(subject),
     );
@@ -1066,6 +1072,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     final subject = ref.read(toleranceTestOfferDueProvider);
     if (subject == null) return _endUnshown();
     _noteSheetCue(_Cue.testOffer);
+    _cuePlayed = true;
     final open = await showTestOfferSheet(context, subject: subject);
     if (!mounted) return;
     if (open) {

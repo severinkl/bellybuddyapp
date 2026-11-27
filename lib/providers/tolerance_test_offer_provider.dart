@@ -75,8 +75,9 @@ final testDoneDueProvider = Provider<ToleranceTestView?>((ref) {
 
 /// Whether a pending test line with flag suffix [suffix] still applies as
 /// it plays: the stats (kept while refetching) still show its condition
-/// for that test. Unknown (stats loading or failed) it applies; Plus or the
-/// stats locked, it does not.
+/// for that test. Plus or the stats locked, or the test unknown (no stats
+/// kept: another user's loading, failed), it does not: the line can't name
+/// its test ([testLineSubjectProvider]). None pending, it applies.
 bool testLineStillApplies(
   Ref ref, {
   required bool done,
@@ -85,8 +86,9 @@ bool testLineStillApplies(
   if (ref.watch(plusLockedProvider)) return false;
   final async = ref.watch(patternStatsProvider);
   if (async.isLocked) return false;
+  if (suffix == null) return true;
   final stats = async.currentValue;
-  if (stats == null || suffix == null) return true;
+  if (stats == null) return false;
   final t = stats.test;
   if (t == null) return false;
   return done
