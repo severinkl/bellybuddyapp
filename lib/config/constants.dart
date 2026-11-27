@@ -359,7 +359,7 @@ class AppConstants {
   /// `profiles.privacy_policy_version` differs is sent through the consent
   /// gate again. It equals core's `PRIVACY_POLICY_VERSION` (the public page's
   /// „Stand") and moves with it.
-  static const String privacyPolicyVersion = '2026-11-27';
+  static const String privacyPolicyVersion = '2026-12-01';
 
   /// The myfodmap blog feed behind Wissen, how long a fetched copy counts as
   /// fresh, and how long a fetch may take.

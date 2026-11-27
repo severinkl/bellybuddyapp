@@ -18,4 +18,8 @@ void main() {
       );
     });
   });
+
+  test('the privacy policy version is pinned to core and the admin', () {
+    expect(AppConstants.privacyPolicyVersion, '2026-12-01');
+  });
 }

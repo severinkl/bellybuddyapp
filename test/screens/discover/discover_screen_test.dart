@@ -5,6 +5,7 @@ import 'dart:io' show SocketException;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:riverpod/src/internals.dart' show Override;
@@ -20,7 +21,9 @@ import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/screens/recipes/widgets/fit_badge_view.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_collection_card.dart';
 import 'package:belly_buddy/services/recipes/recipe_copy.dart';
+import 'package:belly_buddy/models/dietitian_tip.dart';
 import 'package:belly_buddy/models/recommendation.dart';
+import 'package:belly_buddy/services/dietitian_tip_service.dart';
 import 'package:belly_buddy/models/recommendation_item.dart';
 import 'package:belly_buddy/models/replacement_ingredient.dart';
 import 'package:belly_buddy/models/user_recipe.dart';
@@ -43,6 +46,7 @@ import 'package:belly_buddy/screens/recipes/recipes_screen.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_card.dart';
 
 import '../../helpers/app_host.dart';
+import '../../helpers/dietitian_tip_fakes.dart';
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/mocks.dart';
@@ -72,6 +76,8 @@ IngredientSuggestionGroup _group(
 );
 
 void main() {
+  setUpAll(() => initializeDateFormatting('de_DE', null));
+
   late FakeProfileRepository profileRepo;
   late MockRecommendationRepository recommendations;
   late MockIngredientRepository ingredients;
@@ -79,6 +85,7 @@ void main() {
   late RecordingUrlOpener launches;
   late FakeKnowledgeRepository knowledge;
   late FakeRecipeRepository collection;
+  late FakeDietitianTipService tipService;
 
   setUp(() {
     recommendations = MockRecommendationRepository();
@@ -88,6 +95,7 @@ void main() {
     knowledge = FakeKnowledgeRepository();
     profileRepo = FakeProfileRepository();
     collection = FakeRecipeRepository();
+    tipService = FakeDietitianTipService();
   });
 
   Future<void> pump(
@@ -104,7 +112,9 @@ void main() {
     List<String>? intolerances,
     // How the tips load, in place of answering [tips].
     Future<List<Recommendation>> Function()? fetchTips,
+    List<DietitianTip> dietitianTips = const [],
   }) async {
+    tipService.tips = List.of(dietitianTips);
     when(
       () => recommendations.fetchByUserId(any()),
     ).thenAnswer((_) => fetchTips?.call() ?? Future.value(tips));
@@ -149,6 +159,7 @@ void main() {
       knowledgeRepositoryProvider.overrideWithValue(knowledge),
       profileRepositoryProvider.overrideWithValue(profileRepo),
       recipeRepositoryProvider.overrideWithValue(collection),
+      dietitianTipServiceProvider.overrideWithValue(tipService),
       entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
       if (weeklyTips != null || intolerances != null)
         profileProviderSeededWith(
@@ -742,6 +753,57 @@ void main() {
     expect(find.bySemanticsLabel('Alle meine Rezepte'), findsNothing);
     await tester.tapVisible(find.text('Erstes Rezept erstellen'));
     expect(find.text('Rezept hinzufügen'), findsOneWidget);
+  });
+
+  group('Von deiner Berater:in', () {
+    testWidgets('no tip: no section', (tester) async {
+      await pump(tester);
+      expect(find.text('Von deiner Berater:in'), findsNothing);
+    });
+
+    testWidgets('a tip: the section sits above Tipps, loaded by _load', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        weeklyTips: false,
+        tips: [
+          testRecommendation(
+            id: 'r',
+            recommendations: const [_item],
+            createdAt: DateTime.utc(2026, 11, 16, 10),
+          ),
+        ],
+        dietitianTips: [testTip(body: 'Mehr trinken.')],
+      );
+
+      expect(tipService.listCalls, greaterThanOrEqualTo(1));
+      expect(find.text('Mehr trinken.'), findsOneWidget);
+      final tops = sectionTops(tester, ['Von deiner Berater:in', 'Tipps']);
+      expect(tops[0], lessThan(tops[1]));
+      expect(tipService.seenCalls, [
+        ['t1'],
+      ]);
+    });
+
+    testWidgets('pull to refresh loads the tips again', (tester) async {
+      await pump(tester, dietitianTips: [testTip()]);
+      final before = tipService.listCalls;
+      tipService.tips = [
+        testTip(id: 't2', body: 'Neuer Tipp.'),
+        ...tipService.tips,
+      ];
+
+      await tester.fling(
+        find.byType(SingleChildScrollView).first,
+        const Offset(0, 400),
+        1000,
+      );
+      await tester.pumpAndSettle();
+
+      expect(tipService.listCalls, greaterThan(before));
+      expect(find.text('Neuer Tipp.'), findsOneWidget);
+    });
   });
 
   group('Rezepte', () {

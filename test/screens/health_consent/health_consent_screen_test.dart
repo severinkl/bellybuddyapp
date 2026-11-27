@@ -11,9 +11,9 @@ import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/riverpod_helpers.dart';
 
-/// The re-consent line for the policy of 27.11.2026.
+/// The re-consent line for the policy of 01.12.2026.
 const _policyUpdated =
-    'Wir haben unsere Datenschutzerklärung aktualisiert (Stand 27.11.2026).';
+    'Wir haben unsere Datenschutzerklärung aktualisiert (Stand 01.12.2026).';
 
 /// What the copy says goes to the KI-Dienst, sentence by sentence.
 const _aiSentences = [
