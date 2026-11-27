@@ -14,12 +14,14 @@ import 'package:belly_buddy/models/insight_rules.dart';
 import 'package:belly_buddy/models/insight_source.dart';
 import 'package:belly_buddy/models/intolerance_rules.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
+import 'package:belly_buddy/models/progress.dart';
 import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/models/user_recipe.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/first_tip_provider.dart';
+import 'package:belly_buddy/providers/rating_provider.dart';
 import 'package:belly_buddy/repositories/auth_repository.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/drink_repository.dart';
@@ -32,6 +34,7 @@ import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/repositories/recipe_repository.dart';
 import 'package:belly_buddy/repositories/recommendation_repository.dart';
 import 'package:belly_buddy/repositories/user_recipe_repository.dart';
+import 'package:belly_buddy/services/app_version_service.dart';
 import 'package:belly_buddy/services/entry_query_service.dart';
 import 'package:belly_buddy/services/ingredient_service.dart';
 import 'package:belly_buddy/utils/date_format_utils.dart';
@@ -366,6 +369,40 @@ class FakeEntryRepository implements EntryRepository {
     final error = insightSourceError;
     if (error != null) throw error;
     return insightSource;
+  }
+
+  /// What [fetchProgressSource] returns.
+  ProgressSource progressSource = const ProgressSource(
+    gutFeelings: [],
+    toilets: [],
+    otherTimes: [],
+  );
+
+  /// When set, [fetchProgressSource] throws it.
+  Object? progressSourceError;
+
+  /// The `userId` and `now` of each [fetchProgressSource] call, in order.
+  final progressSourceRequests = <({String userId, DateTime now})>[];
+
+  /// While true, each [fetchProgressSource] call waits for its own
+  /// completer, added to [heldProgressSources].
+  bool holdProgressSource = false;
+  final heldProgressSources = <Completer<ProgressSource>>[];
+
+  @override
+  Future<ProgressSource> fetchProgressSource({
+    required String userId,
+    required DateTime now,
+  }) async {
+    progressSourceRequests.add((userId: userId, now: now));
+    if (holdProgressSource) {
+      final held = Completer<ProgressSource>();
+      heldProgressSources.add(held);
+      return held.future;
+    }
+    final error = progressSourceError;
+    if (error != null) throw error;
+    return progressSource;
   }
 
   @override
@@ -1084,5 +1121,87 @@ class RecordingUrlOpener {
     urls.add(url);
     modes.add(mode);
     return Future.value(result);
+  }
+}
+
+/// The store's rating dialog and page, counting [requests] and [listings].
+class FakeRatingLauncher implements RatingLauncher {
+  FakeRatingLauncher({this.listingThrows = false});
+
+  /// What [isAvailable] answers.
+  bool available = true;
+
+  /// [isAvailable] throws (a broken store service).
+  bool availableThrows = false;
+
+  /// While set and not completed, [isAvailable] waits for it (and answers
+  /// what it completes with).
+  Completer<bool>? availableHold;
+
+  /// [request] throws.
+  bool requestThrows = false;
+
+  /// [openStoreListing] throws.
+  final bool listingThrows;
+
+  int requests = 0;
+  int listings = 0;
+
+  /// While set and not completed, [openStoreListing] waits for it.
+  Completer<void>? listingHold;
+
+  @override
+  Future<bool> isAvailable() async {
+    if (availableThrows) throw Exception('no store');
+    return await availableHold?.future ?? available;
+  }
+
+  @override
+  Future<void> request() async {
+    requests++;
+    if (requestThrows) throw Exception('no store');
+  }
+
+  @override
+  Future<void> openStoreListing() async {
+    listings++;
+    await listingHold?.future;
+    if (listingThrows) throw Exception('no listing');
+  }
+}
+
+/// An [AppVersionService] of app version [version] whose [openStore]
+/// answers [openStoreResult] (or throws: [openStoreThrows]), counting
+/// [opened].
+class FakeAppVersionService extends AppVersionService {
+  FakeAppVersionService({
+    this.version = '1.3.0',
+    this.openStoreThrows = false,
+    this.openStoreResult = true,
+  });
+
+  final String version;
+  final bool openStoreThrows;
+  final bool openStoreResult;
+  int opened = 0;
+
+  /// While set and not completed, [currentVersion] waits for it (a slow
+  /// platform call).
+  Completer<String>? versionHold;
+
+  /// [currentVersion] throws.
+  bool versionThrows = false;
+
+  @override
+  Future<String> currentVersion() async {
+    if (versionThrows) throw Exception('no version');
+    return await versionHold?.future ?? version;
+  }
+
+  @override
+  Future<bool> openStore() async {
+    opened++;
+    if (openStoreThrows) throw Exception('no store');
+    return openStoreResult;
   }
 }

@@ -15,6 +15,7 @@ import 'package:belly_buddy/models/meal_prefill.dart';
 import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/models/user_recipe.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
+import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/repositories/recipe_repository.dart';
 import 'package:belly_buddy/router/route_names.dart';
@@ -23,6 +24,7 @@ import 'package:belly_buddy/screens/recipes/widgets/ingredient_line_view.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_collection_card.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_image.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_steps.dart';
+import 'package:belly_buddy/services/plus/plus_copy.dart';
 import 'package:belly_buddy/services/recipes/recipe_copy.dart';
 import 'package:belly_buddy/widgets/buddy/buddy.dart';
 
@@ -80,6 +82,7 @@ void main() {
     bool requested = true,
     List<String> intolerances = const ['Fruktose'],
     double textScale = 1,
+    bool paywallOn = true,
   }) async {
     GoRoute stub(String path) => GoRoute(
       path: path,
@@ -102,6 +105,7 @@ void main() {
         ),
         stub(RoutePaths.recipeDetail),
         stub(RoutePaths.mealTracker),
+        stub(RoutePaths.plus),
       ],
     );
     addTearDown(router.dispose);
@@ -114,6 +118,7 @@ void main() {
             testUserProfile(intolerances: intolerances),
           ),
           currentUserIdProvider.overrideWithValue(testUserId),
+          paywallEnabledProvider.overrideWithValue(paywallOn),
         ],
         child: germanRouterApp(router, textScale: textScale),
       ),
@@ -583,6 +588,50 @@ void main() {
         }
       });
     }
+
+    testWidgets('plusRequired replaces the screen with /plus', (tester) async {
+      answer(failure: AdaptFailure.plusRequired);
+      await pump(tester);
+
+      expect(repo.adaptCalls, 1);
+      expect(find.text('page:/plus'), findsOneWidget);
+      expect(find.byType(AdaptRecipeScreen), findsNothing);
+      expect(AdaptFailure.plusRequired.retryable, isFalse);
+    });
+
+    testWidgets('plusRequired with the switch off: the screen stays and says '
+        'Plus is needed (/plus would land on Home)', (tester) async {
+      answer(failure: AdaptFailure.plusRequired);
+      await pump(tester, paywallOn: false);
+
+      expect(repo.adaptCalls, 1);
+      expect(find.text('page:/plus'), findsNothing);
+      expect(find.byType(AdaptRecipeScreen), findsOneWidget);
+      expect(find.text(PlusCopy.plusRequired), findsOneWidget);
+      expect(find.text('Zurück zum Rezept'), findsOneWidget);
+    });
+
+    testWidgets('plusRequired while another screen is on top: that screen '
+        'stays, the failure waits below', (tester) async {
+      final held = Completer<AdaptedRecipe>();
+      repo.onAdapt = (_) => held.future;
+      await pump(tester);
+      final router = GoRouter.of(
+        tester.element(find.byType(AdaptRecipeScreen)),
+      );
+      unawaited(router.push(RoutePaths.mealTracker));
+      await tester.pumpAndSettle();
+
+      held.completeError(const AdaptRecipeException(AdaptFailure.plusRequired));
+      await tester.pumpAndSettle();
+      expect(find.text('page:${RoutePaths.mealTracker}'), findsOneWidget);
+      expect(find.text('page:/plus'), findsNothing);
+
+      router.pop();
+      await tester.pumpAndSettle();
+      expect(find.byType(AdaptRecipeScreen), findsOneWidget);
+      expect(find.text(PlusCopy.plusRequired), findsOneWidget);
+    });
 
     testWidgets('retry calls again', (tester) async {
       answer(failure: AdaptFailure.later);

@@ -5,8 +5,10 @@ import 'dart:io' show SocketException;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:url_launcher/url_launcher.dart';
 
@@ -16,11 +18,14 @@ import 'package:belly_buddy/models/fodmap_flags.dart';
 import 'package:belly_buddy/models/knowledge_article.dart';
 import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/repositories/recipe_repository.dart';
+import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/screens/recipes/widgets/fit_badge_view.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_collection_card.dart';
 import 'package:belly_buddy/services/recipes/recipe_copy.dart';
+import 'package:belly_buddy/models/dietitian_tip.dart';
 import 'package:belly_buddy/models/recommendation.dart';
+import 'package:belly_buddy/services/dietitian_tip_service.dart';
 import 'package:belly_buddy/models/recommendation_item.dart';
 import 'package:belly_buddy/models/replacement_ingredient.dart';
 import 'package:belly_buddy/models/user_recipe.dart';
@@ -32,6 +37,8 @@ import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/discover_news_provider.dart';
 import 'package:belly_buddy/providers/ingredient_suggestion_provider.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
+import 'package:belly_buddy/providers/relief_provider.dart';
+import 'package:belly_buddy/services/relief/relief_content.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/repositories/knowledge_repository.dart';
@@ -43,6 +50,7 @@ import 'package:belly_buddy/screens/recipes/recipes_screen.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_card.dart';
 
 import '../../helpers/app_host.dart';
+import '../../helpers/dietitian_tip_fakes.dart';
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
 import '../../helpers/mocks.dart';
@@ -72,6 +80,8 @@ IngredientSuggestionGroup _group(
 );
 
 void main() {
+  setUpAll(() => initializeDateFormatting('de_DE', null));
+
   late FakeProfileRepository profileRepo;
   late MockRecommendationRepository recommendations;
   late MockIngredientRepository ingredients;
@@ -79,6 +89,7 @@ void main() {
   late RecordingUrlOpener launches;
   late FakeKnowledgeRepository knowledge;
   late FakeRecipeRepository collection;
+  late FakeDietitianTipService tipService;
 
   setUp(() {
     recommendations = MockRecommendationRepository();
@@ -88,6 +99,8 @@ void main() {
     knowledge = FakeKnowledgeRepository();
     profileRepo = FakeProfileRepository();
     collection = FakeRecipeRepository();
+    SharedPreferences.setMockInitialValues({});
+    tipService = FakeDietitianTipService();
   });
 
   Future<void> pump(
@@ -104,7 +117,11 @@ void main() {
     List<String>? intolerances,
     // How the tips load, in place of answering [tips].
     Future<List<Recommendation>> Function()? fetchTips,
+    // Whether „Ruhe für den Bauch" is on; off shows its teaser on top.
+    bool relief = false,
+    List<DietitianTip> dietitianTips = const [],
   }) async {
+    tipService.tips = List.of(dietitianTips);
     when(
       () => recommendations.fetchByUserId(any()),
     ).thenAnswer((_) => fetchTips?.call() ?? Future.value(tips));
@@ -136,6 +153,7 @@ void main() {
           RoutePaths.discoverRecipes,
           RoutePaths.collectionRecipe,
           RoutePaths.knowledge,
+          RoutePaths.relief,
         ]),
       ],
     );
@@ -149,7 +167,11 @@ void main() {
       knowledgeRepositoryProvider.overrideWithValue(knowledge),
       profileRepositoryProvider.overrideWithValue(profileRepo),
       recipeRepositoryProvider.overrideWithValue(collection),
+      dietitianTipServiceProvider.overrideWithValue(tipService),
       entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
+      // No Buddy: the picks reads the progress, which asks for it.
+      buddyProvider.overrideWith(() => FakeBuddyNotifier(() => null)),
+      reliefEnabledProvider.overrideWithValue(relief),
       if (weeklyTips != null || intolerances != null)
         profileProviderSeededWith(
           testUserProfile(
@@ -194,7 +216,7 @@ void main() {
       ),
     ];
 
-    /// No Tipps section at all, Alternativen at the top.
+    /// No Tipps section at all, Alternativen right under the relief teaser.
     void expectNoTipps(WidgetTester tester) {
       expect(find.text('Tipps'), findsNothing);
       expect(find.byKey(DiscoverScreen.tipsKey), findsNothing);
@@ -202,8 +224,8 @@ void main() {
       expect(find.byKey(WeeklyTipsSwitch.switchKey), findsNothing);
       expect(
         tester.getTopLeft(find.byKey(DiscoverScreen.alternativesKey)).dy,
-        tester.getTopLeft(find.byType(RefreshIndicator)).dy +
-            AppConstants.spacingSm,
+        tester.getBottomLeft(find.byKey(DiscoverScreen.reliefTeaserKey)).dy +
+            AppConstants.spacingLg,
       );
     }
 
@@ -346,6 +368,105 @@ void main() {
     ]);
     expect(tops, orderedEquals([...tops]..sort()));
     expect(tops.toSet(), hasLength(4));
+  });
+
+  group('Ruhe für den Bauch', () {
+    testWidgets('on: the card sits on top, above Tipps and Alternativen', (
+      tester,
+    ) async {
+      await pump(tester, relief: true, tips: [testRecommendation()]);
+
+      final card = find.byKey(DiscoverScreen.reliefKey);
+      expect(card, findsOneWidget);
+      expect(
+        find.descendant(of: card, matching: find.text(ReliefCopy.title)),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: card, matching: find.text(ReliefCopy.cardSubtitle)),
+        findsOneWidget,
+      );
+      final top = tester.getTopLeft(card).dy;
+      expect(
+        top,
+        lessThan(tester.getTopLeft(find.byKey(DiscoverScreen.tipsKey)).dy),
+      );
+      expect(
+        top,
+        lessThan(
+          tester.getTopLeft(find.byKey(DiscoverScreen.alternativesKey)).dy,
+        ),
+      );
+      expect(
+        tester.getSize(card).height,
+        greaterThanOrEqualTo(AppConstants.minTapTarget),
+      );
+    });
+
+    testWidgets('a tap opens /relief', (tester) async {
+      await pump(tester, relief: true);
+
+      await tester.tapVisible(find.byKey(DiscoverScreen.reliefKey));
+
+      expect(find.text('page:${RoutePaths.relief}'), findsOneWidget);
+    });
+
+    testWidgets('on: no teaser, no „Kommt bald"', (tester) async {
+      await pump(tester, relief: true);
+
+      expect(find.byKey(DiscoverScreen.reliefTeaserKey), findsNothing);
+      expect(find.text(ReliefCopy.comingSoon), findsNothing);
+    });
+
+    testWidgets('off: the teaser on top instead of the card', (tester) async {
+      await pump(tester, tips: [testRecommendation()]);
+
+      expect(find.byKey(DiscoverScreen.reliefKey), findsNothing);
+      final teaser = find.byKey(DiscoverScreen.reliefTeaserKey);
+      expect(teaser, findsOneWidget);
+      for (final text in [
+        ReliefCopy.title,
+        ReliefCopy.teaserLine,
+        ReliefCopy.comingSoon,
+      ]) {
+        expect(
+          find.descendant(of: teaser, matching: find.text(text)),
+          findsOneWidget,
+        );
+      }
+      expect(find.text(ReliefCopy.cardSubtitle), findsNothing);
+      expect(
+        tester.getTopLeft(teaser).dy,
+        lessThan(tester.getTopLeft(find.byKey(DiscoverScreen.tipsKey)).dy),
+      );
+    });
+
+    testWidgets('off: a tap on the teaser opens nothing', (tester) async {
+      await pump(tester);
+
+      await tester.tapVisible(find.byKey(DiscoverScreen.reliefTeaserKey));
+      await tester.pumpAndSettle();
+
+      expect(find.text('page:${RoutePaths.relief}'), findsNothing);
+      expect(find.byKey(DiscoverScreen.reliefTeaserKey), findsOneWidget);
+    });
+
+    testWidgets('off: the teaser reads as one item, not a button', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await pump(tester);
+
+      expect(
+        tester.getSemantics(find.byKey(DiscoverScreen.reliefTeaserKey)),
+        matchesSemantics(
+          label:
+              '${ReliefCopy.title}\n${ReliefCopy.teaserLine}\n'
+              '${ReliefCopy.comingSoon}',
+        ),
+      );
+      semantics.dispose();
+    });
   });
 
   testWidgets('without tips: Alternativen, Rezepte, Wissen', (tester) async {
@@ -744,6 +865,57 @@ void main() {
     expect(find.text('Rezept hinzufügen'), findsOneWidget);
   });
 
+  group('Von deiner Berater:in', () {
+    testWidgets('no tip: no section', (tester) async {
+      await pump(tester);
+      expect(find.text('Von deiner Berater:in'), findsNothing);
+    });
+
+    testWidgets('a tip: the section sits above Tipps, loaded by _load', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        weeklyTips: false,
+        tips: [
+          testRecommendation(
+            id: 'r',
+            recommendations: const [_item],
+            createdAt: DateTime.utc(2026, 11, 16, 10),
+          ),
+        ],
+        dietitianTips: [testTip(body: 'Mehr trinken.')],
+      );
+
+      expect(tipService.listCalls, greaterThanOrEqualTo(1));
+      expect(find.text('Mehr trinken.'), findsOneWidget);
+      final tops = sectionTops(tester, ['Von deiner Berater:in', 'Tipps']);
+      expect(tops[0], lessThan(tops[1]));
+      expect(tipService.seenCalls, [
+        ['t1'],
+      ]);
+    });
+
+    testWidgets('pull to refresh loads the tips again', (tester) async {
+      await pump(tester, dietitianTips: [testTip()]);
+      final before = tipService.listCalls;
+      tipService.tips = [
+        testTip(id: 't2', body: 'Neuer Tipp.'),
+        ...tipService.tips,
+      ];
+
+      await tester.fling(
+        find.byType(SingleChildScrollView).first,
+        const Offset(0, 400),
+        1000,
+      );
+      await tester.pumpAndSettle();
+
+      expect(tipService.listCalls, greaterThan(before));
+      expect(find.text('Neuer Tipp.'), findsOneWidget);
+    });
+  });
+
   group('Rezepte', () {
     final milch = testLine('Milch', fodmaps: const FodmapFlags(lactose: true));
 
@@ -989,6 +1161,96 @@ void main() {
       inSection(DiscoverScreen.knowledgeKey, find.text('Alle ›')),
     );
     expect(find.text('page:${RoutePaths.knowledge}'), findsOneWidget);
+  });
+
+  group('Wissen: Für dich', () {
+    // Older than the fixtures' newest three, so only a pick shows it.
+    final laktose = KnowledgeArticle(
+      title: 'Laktose im Alltag',
+      link: Uri.parse('https://www.myfodmap.at/laktose'),
+      category: 'Gesund verdauen',
+      publishedAt: DateTime.utc(2026, 9, 1, 8),
+    );
+
+    List<String> tileTitles(WidgetTester tester) => [
+      for (final t in tester.widgetList<KnowledgeArticleTile>(
+        tilesIn(DiscoverScreen.knowledgeKey),
+      ))
+        t.article.title,
+    ];
+
+    testWidgets('Entdecken: picks first with reason, filled to 3 with the '
+        'newest', (tester) async {
+      knowledge = FakeKnowledgeRepository(
+        articles: [...testKnowledgeArticles(), laktose],
+      );
+      await pump(tester, intolerances: const ['Laktose']);
+
+      expect(tileTitles(tester), [
+        'Laktose im Alltag',
+        'Was ist FODMAP?',
+        'Suppe für kalte Tage',
+      ]);
+      final pick = find.byKey(KnowledgeArticleTile.keyFor(laktose));
+      expect(
+        find.descendant(
+          of: pick,
+          matching: find.text('Weil du Laktose angegeben hast'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(
+          of: pick,
+          matching: find.text('Gesund verdauen · 1. Sep 2026'),
+        ),
+        findsNothing,
+      );
+      expect(find.text('Rezepte · 10. Nov 2026'), findsOneWidget);
+      expect(
+        tester.getSemantics(pick),
+        isSemantics(
+          label: 'Laktose im Alltag, Weil du Laktose angegeben hast',
+          isButton: true,
+        ),
+      );
+    });
+
+    testWidgets('Entdecken: no pick → newest 3 with meta lines, as before', (
+      tester,
+    ) async {
+      await pump(tester, intolerances: const ['Laktose']);
+
+      expect(tileTitles(tester), [
+        'Was ist FODMAP?',
+        'Suppe für kalte Tage',
+        'Mein Weg zum Bauchgefühl',
+      ]);
+      expect(find.text('Gesund verdauen · 20. Nov 2026'), findsOneWidget);
+      expect(find.textContaining('Weil '), findsNothing);
+    });
+
+    testWidgets('Entdecken: tapping a pick marks it opened and opens it', (
+      tester,
+    ) async {
+      knowledge = FakeKnowledgeRepository(
+        articles: [...testKnowledgeArticles(), laktose],
+      );
+      await pump(tester, intolerances: const ['Laktose']);
+
+      await tester.tapVisible(find.byKey(KnowledgeArticleTile.keyFor(laktose)));
+
+      expect(launches.urls, [laktose.link]);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getStringList('knowledge_opened_$testUserId'), [
+        laktose.link.toString(),
+      ]);
+      expect(tileTitles(tester), [
+        'Was ist FODMAP?',
+        'Suppe für kalte Tage',
+        'Mein Weg zum Bauchgefühl',
+      ]);
+    });
   });
 
   testWidgets('a fresh copy of the articles: opening fetches none', (

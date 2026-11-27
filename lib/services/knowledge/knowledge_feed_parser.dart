@@ -74,12 +74,24 @@ KnowledgeArticle? _parseItem(XmlElement item) {
     category: normalizeFeedCategory(_text(item.getElement('category'))),
     publishedAt: _date(_text(item.getElement('pubDate'))),
     imageUrl: image != null && isHttpUrl(image) ? image : null,
+    teaser: _plain(_text(item.getElement('description'))),
   );
 }
 
 String? _text(XmlElement? e) {
   if (e == null) return null;
   final text = const XmlDefaultEntityMapping.html5().decode(e.innerText).trim();
+  return text.isEmpty ? null : text;
+}
+
+/// [html] without its tags (an image's URL would match keywords), the
+/// whitespace collapsed; null when nothing is left.
+String? _plain(String? html) {
+  if (html == null) return null;
+  final text = html
+      .replaceAll(RegExp('<[^>]*>'), ' ')
+      .replaceAll(RegExp(r'\s+'), ' ')
+      .trim();
   return text.isEmpty ? null : text;
 }
 

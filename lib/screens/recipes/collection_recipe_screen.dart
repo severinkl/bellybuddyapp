@@ -9,6 +9,7 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../models/meal_prefill.dart';
 import '../../models/recipe.dart';
+import '../../providers/plus_provider.dart';
 import '../../providers/recipe_collection_provider.dart';
 import '../../router/navigation_extensions.dart';
 import '../../router/route_names.dart';
@@ -17,6 +18,7 @@ import '../../services/recipes/recipe_fit.dart';
 import '../../utils/url_utils.dart';
 import '../../widgets/common/bb_async_state.dart';
 import '../../widgets/common/bb_button.dart';
+import '../../widgets/common/plus_badge.dart';
 import 'widgets/ingredient_line_view.dart';
 import 'widgets/recipe_image.dart';
 import 'widgets/recipe_page_parts.dart';
@@ -145,13 +147,16 @@ class _RecipeBody extends StatelessWidget {
 
 /// „Zutaten": each line with its mark, and „Für mich anpassen" while one is
 /// kritisch or the recipe is against the diet (core adapts it for both).
-class _IngredientsCard extends StatelessWidget {
+/// While Plus is locked the button keeps a „Plus" badge and opens the
+/// paywall instead.
+class _IngredientsCard extends ConsumerWidget {
   const _IngredientsCard({required this.fit});
 
   final RecipeFit fit;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final plusLocked = ref.watch(plusLockedProvider);
     final recipe = fit.recipe;
     final kritisch = {for (final l in fit.kritisch) l.line.name}.toList();
     return RecipeSectionCard(
@@ -165,12 +170,23 @@ class _IngredientsCard extends StatelessWidget {
             key: CollectionRecipeScreen.adaptKey,
             // `extra: true`: the user asked, so the adapt screen may start
             // the AI call at once.
-            onPressed: () => context.push(
-              RoutePaths.collectionRecipeAdaptFor(recipe.id),
-              extra: true,
-            ),
+            onPressed: () => plusLocked
+                ? context.openPlus()
+                : context.push(
+                    RoutePaths.collectionRecipeAdaptFor(recipe.id),
+                    extra: true,
+                  ),
             icon: const Icon(Icons.auto_awesome),
-            label: const Text('Für mich anpassen'),
+            label: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Flexible(child: Text('Für mich anpassen')),
+                if (plusLocked) ...const [
+                  SizedBox(width: AppConstants.spacingSm),
+                  PlusBadge(),
+                ],
+              ],
+            ),
             style: FilledButton.styleFrom(
               minimumSize: const Size.fromHeight(AppConstants.buttonHeight),
               shape: RoundedRectangleBorder(

@@ -13,6 +13,9 @@ extension BellyBuddyNavigation on BuildContext {
   /// [popOr] `/dashboard`.
   void popOrGoDashboard() => popOr(RoutePaths.dashboard);
 
+  /// Pushes the Belly Buddy Plus paywall.
+  Future<void> openPlus() => push<void>(RoutePaths.plus);
+
   /// Pushes the collection recipe [recipeId] (its detail, without the bar).
   Future<void> openRecipe(String recipeId) =>
       push<void>(RoutePaths.collectionRecipeFor(recipeId));

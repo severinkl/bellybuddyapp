@@ -11,6 +11,7 @@ String _item({
   String? category = ' Gesund verdauen',
   String? pubDate = 'Thu, 27 Mar 2025 23:00:00 GMT',
   String? enclosure = 'https://static.wixstatic.com/media/file.png',
+  String? description,
 }) =>
     '<item><title><![CDATA[$title]]></title>'
     '${switch (link) {
@@ -21,6 +22,7 @@ String _item({
     '${category == null ? '' : '<category><![CDATA[$category]]></category>'}'
     '${pubDate == null ? '' : '<pubDate>$pubDate</pubDate>'}'
     '${enclosure == null ? '' : '<enclosure url="$enclosure" type="image/png"/>'}'
+    '${description == null ? '' : '<description><![CDATA[$description]]></description>'}'
     '</item>';
 
 String _feed(List<String> items) =>
@@ -156,5 +158,37 @@ void main() {
       () => parseKnowledgeFeed('<html><body>Wartung</body></html>'),
       throwsFormatException,
     );
+  });
+
+  test('reads the teaser from description, entities decoded, empty → null', () {
+    final a = parseKnowledgeFeed(
+      _feed([_item(description: '  Reis &#38; Hafer: was hilft  ')]),
+    ).single;
+    expect(a.teaser, 'Reis & Hafer: was hilft');
+    final empty = parseKnowledgeFeed(_feed([_item(description: '   ')])).single;
+    expect(empty.teaser, isNull);
+    final none = parseKnowledgeFeed(_feed([_item()])).single;
+    expect(none.teaser, isNull);
+  });
+
+  test('the teaser leaves out HTML tags; only tags → null', () {
+    final a = parseKnowledgeFeed(
+      _feed([
+        _item(
+          description:
+              '<p><img src="https://www.myfodmap.at/glutenfrei-brot.jpg">'
+              ' Tipps   für den\n Alltag</p>',
+        ),
+      ]),
+    ).single;
+    expect(a.teaser, 'Tipps für den Alltag');
+    final escaped = parseKnowledgeFeed(
+      _feed([_item(description: '&lt;b&gt;Reis&lt;/b&gt; hilft')]),
+    ).single;
+    expect(escaped.teaser, 'Reis hilft');
+    final tagsOnly = parseKnowledgeFeed(
+      _feed([_item(description: '<img src="x.jpg"> ')]),
+    ).single;
+    expect(tagsOnly.teaser, isNull);
   });
 }

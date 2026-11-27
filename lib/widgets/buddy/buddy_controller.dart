@@ -236,6 +236,13 @@ class BuddyController extends ChangeNotifier {
     });
   }
 
+  /// Clears the bubble and any pending return to rest.
+  void hush() {
+    _backToRest?.cancel();
+    _backToRest = null;
+    _bubble = null;
+  }
+
   /// Current speech-bubble text; null when nothing to say.
   String? get bubble => _bubble;
 

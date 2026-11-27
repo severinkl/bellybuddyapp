@@ -11,6 +11,7 @@ import '../../models/adapted_recipe.dart';
 import '../../models/meal_prefill.dart';
 import '../../models/user_recipe.dart';
 import '../../providers/adapt_recipe_provider.dart';
+import '../../providers/plus_provider.dart';
 import '../../providers/recipe_collection_provider.dart';
 import '../../providers/user_recipes_provider.dart';
 import '../../router/navigation_extensions.dart';
@@ -22,6 +23,7 @@ import '../../utils/url_utils.dart';
 import '../../widgets/buddy/buddy_pose.dart';
 import '../../widgets/buddy/buddy_says.dart';
 import '../../widgets/common/bb_button.dart';
+import '../shares/plus_required.dart';
 import 'widgets/adapted_recipe_view.dart';
 
 /// „Für mich anpassen" for the collection recipe [recipeId]
@@ -79,6 +81,20 @@ class _AdaptRecipeScreenState extends ConsumerState<AdaptRecipeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Core says Plus is needed (the lock state was stale): the paywall takes
+    // this screen's place, so back from it lands on the recipe — only with
+    // the switch on and this screen on top; else the failure view says it.
+    ref.listen(adaptRecipeProvider(widget.recipeId), (_, next) {
+      if (next case AsyncError(
+        error: AdaptRecipeException(failure: AdaptFailure.plusRequired),
+      )) {
+        showPlusInstead(
+          paywallOn: ref.read(paywallEnabledProvider),
+          router: GoRouter.of(context),
+          route: ModalRoute.of(context),
+        );
+      }
+    });
     final state = ref.watch(adaptRecipeProvider(widget.recipeId));
     // From the first frame, so the original (picture, meta, servings) is
     // loaded by the time the answer comes, also on a deep link.

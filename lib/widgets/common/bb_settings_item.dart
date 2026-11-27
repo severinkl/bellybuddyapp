@@ -1,20 +1,27 @@
 import 'package:material_ui/material_ui.dart';
 import '../../config/app_theme.dart';
+import '../../config/constants.dart';
 import 'bb_card.dart';
 import 'press_scale_wrapper.dart';
 
 class BbSettingsItem extends StatelessWidget {
   final IconData icon;
   final String title;
-  final String subtitle;
+
+  /// Small line under the title; none while it cannot be told truthfully.
+  final String? subtitle;
   final VoidCallback onTap;
+
+  /// A small pill after the title (e.g. Neu).
+  final String? badge;
 
   const BbSettingsItem({
     super.key,
     required this.icon,
     required this.title,
-    required this.subtitle,
+    this.subtitle,
     required this.onTap,
+    this.badge,
   });
 
   @override
@@ -40,21 +47,51 @@ class BbSettingsItem extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: AppTheme.fontSizeSubtitle,
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.foreground,
-                    ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          title,
+                          style: const TextStyle(
+                            fontSize: AppTheme.fontSizeSubtitle,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.foreground,
+                          ),
+                        ),
+                      ),
+                      if (badge != null) ...[
+                        const SizedBox(width: AppConstants.spacingSm),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppConstants.spacing6,
+                            vertical: AppConstants.spacing2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppTheme.navBadge,
+                            borderRadius: BorderRadius.circular(
+                              AppConstants.radiusFull,
+                            ),
+                          ),
+                          child: Text(
+                            badge!,
+                            style: const TextStyle(
+                              fontSize: AppTheme.fontSizeSM,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: AppTheme.fontSizeCaptionLG,
-                      color: AppTheme.mutedForeground,
+                  if (subtitle != null)
+                    Text(
+                      subtitle!,
+                      style: const TextStyle(
+                        fontSize: AppTheme.fontSizeCaptionLG,
+                        color: AppTheme.mutedForeground,
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),

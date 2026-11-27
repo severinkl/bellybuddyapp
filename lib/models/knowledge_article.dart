@@ -9,6 +9,7 @@ class KnowledgeArticle {
     this.category,
     this.publishedAt,
     this.imageUrl,
+    this.teaser,
   });
 
   final String title;
@@ -19,15 +20,20 @@ class KnowledgeArticle {
   final DateTime? publishedAt;
   final String? imageUrl;
 
+  /// The item's `<description>`: entities decoded, trimmed; null when empty.
+  final String? teaser;
+
   Map<String, Object?> toJson() => {
     'title': title,
     'link': link.toString(),
     'category': category,
     'publishedAt': publishedAt?.toUtc().toIso8601String(),
     'imageUrl': imageUrl,
+    'teaser': teaser,
   };
 
-  /// Throws [FormatException] on any other shape than [toJson]'s.
+  /// Throws [FormatException] on any other shape than [toJson]'s; a copy
+  /// cached before the teaser existed reads with none.
   factory KnowledgeArticle.fromJson(Map<String, Object?> json) =>
       switch (json) {
         {
@@ -45,6 +51,11 @@ class KnowledgeArticle {
                 ? null
                 : DateTime.parse(publishedAt).toUtc(),
             imageUrl: imageUrl,
+            teaser: switch (json['teaser']) {
+              null => null,
+              final String teaser => teaser,
+              _ => throw const FormatException('Invalid KnowledgeArticle JSON'),
+            },
           ),
         _ => throw const FormatException('Invalid KnowledgeArticle JSON'),
       };
@@ -56,10 +67,12 @@ class KnowledgeArticle {
       other.link == link &&
       other.category == category &&
       other.publishedAt == publishedAt &&
-      other.imageUrl == imageUrl;
+      other.imageUrl == imageUrl &&
+      other.teaser == teaser;
 
   @override
-  int get hashCode => Object.hash(title, link, category, publishedAt, imageUrl);
+  int get hashCode =>
+      Object.hash(title, link, category, publishedAt, imageUrl, teaser);
 }
 
 /// The parsed blog feed, newest article first.

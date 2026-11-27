@@ -18,6 +18,7 @@ analyzer:
     - build/**
     - android/**
     - ios/**
+    - third_party/**
 
 linter:
   rules:

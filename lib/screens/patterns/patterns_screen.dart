@@ -5,21 +5,29 @@ import 'package:material_ui/material_ui.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/insights_provider.dart';
+import '../../providers/plus_provider.dart';
 import '../../router/route_names.dart';
 import '../../services/insights/insight_copy.dart';
+import '../../services/progress/progress_copy.dart';
 import '../../widgets/common/bb_async_state.dart';
 import 'widgets/patterns_locked.dart';
+import 'widgets/patterns_plus_locked.dart';
 import 'widgets/patterns_unlocked.dart';
 
 /// The Muster page behind Home's insight card (`/patterns`): what the last
-/// 30 days of entries show. Locked until the first patterns unlock.
+/// 30 days of entries show. Locked until the first patterns unlock; after
+/// that, while Belly Buddy Plus is locked, [PatternsPlusLocked].
 ///
 /// Shows only [AsyncData]: loading (also while the next user's insights
 /// load) is [BbLoadingState], a failure [BbErrorState] with a retry. Pull to
-/// refresh. Opened without a page below (a cold start on `/patterns`), back
-/// goes Home.
+/// refresh. Under the footer, locked or not, the link to „Dein Verlauf".
+/// Opened without a page below (a cold start on `/patterns`), back goes
+/// Home.
 class PatternsScreen extends ConsumerWidget {
   const PatternsScreen({super.key});
+
+  /// „Deinen Verlauf über 12 Wochen ansehen ›", under the footer.
+  static const progressLinkKey = Key('patterns_progress_link');
 
   static const _footerStyle = TextStyle(
     fontSize: AppTheme.fontSizeCaptionLG,
@@ -30,6 +38,7 @@ class PatternsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(insightsProvider.notifier);
+    final plusLocked = ref.watch(plusLockedProvider);
     final body = ref
         .watch(insightsProvider)
         .when(
@@ -45,16 +54,28 @@ class PatternsScreen extends ConsumerWidget {
               physics: const AlwaysScrollableScrollPhysics(),
               padding: AppConstants.paddingMd,
               children: [
-                if (insights.unlocked)
+                if (insights.unlocked && plusLocked)
+                  const PatternsPlusLocked()
+                else if (insights.unlocked)
                   PatternsUnlocked(insights: insights)
                 else
                   PatternsLocked(progress: insights.progress),
                 AppConstants.gap24,
                 const Text(InsightCopy.footer, style: _footerStyle),
-                if (insights.unlocked) ...[
+                if (insights.unlocked && !plusLocked) ...[
                   AppConstants.gap4,
                   const Text(InsightCopy.dayDefinitions, style: _footerStyle),
                 ],
+                AppConstants.gap8,
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: TextButton(
+                    key: PatternsScreen.progressLinkKey,
+                    onPressed: () => context.push(RoutePaths.progress),
+                    style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                    child: const Text(ProgressCopy.patternsLink),
+                  ),
+                ),
               ],
             ),
           ),

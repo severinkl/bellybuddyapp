@@ -20,9 +20,16 @@ class RouteNames {
   static const String settingsProfile = 'settings-profile';
   static const String settingsNotifications = 'settings-notifications';
   static const String settingsAccount = 'settings-account';
+  static const String shares = 'shares';
+  static const String shareCreate = 'share-create';
+  static const String dietitianConnect = 'dietitian-connect';
+  static const String dietitianShareEdit = 'dietitian-share-edit';
   static const String recommendations = 'recommendations';
   static const String patterns = 'patterns';
   static const String patternsUnlocked = 'patterns-unlocked';
+  static const String progress = 'progress';
+  static const String relief = 'relief';
+  static const String reliefExercise = 'relief-exercise';
   static const String ingredientSuggestions = 'ingredient-suggestions';
   static const String recipes = 'recipes';
   static const String recipeNew = 'recipe_new';
@@ -30,6 +37,7 @@ class RouteNames {
   static const String recipeEdit = 'recipe_edit';
   static const String collectionRecipe = 'collection-recipe';
   static const String collectionRecipeAdapt = 'collection-recipe-adapt';
+  static const String plus = 'plus';
   static const String upgradeRequired = 'upgrade-required';
   static const String healthConsent = 'health-consent';
   static const String buddyOnboarding = 'buddy-onboarding';
@@ -59,9 +67,18 @@ class RoutePaths {
   static const String settingsProfile = '/settings/profile';
   static const String settingsNotifications = '/settings/notifications';
   static const String settingsAccount = '/settings/account';
+  static const String shares = '/shares';
+  static const String shareCreate = '/shares/new';
+  static const String dietitianConnect = '/shares/connect';
+  static const String dietitianShareEdit = '/shares/:id/edit';
+  static String dietitianShareEditFor(String id) => '/shares/$id/edit';
   static const String recommendations = '/recommendations';
   static const String patterns = '/patterns';
   static const String patternsUnlocked = '/patterns-unlocked';
+  static const String progress = '/progress';
+  static const String relief = '/relief';
+  static const String reliefExercise = '/relief/:id';
+  static String reliefExerciseFor(String id) => '/relief/$id';
   static const String ingredientSuggestions = '/ingredient-suggestions';
   static const String recipes = '/recipes';
   static const String recipeNew = '/recipe/new';
@@ -75,6 +92,9 @@ class RoutePaths {
   static const String collectionRecipeAdapt = '/collection/:id/adapt';
   static String collectionRecipeFor(String id) => '/collection/$id';
   static String collectionRecipeAdaptFor(String id) => '/collection/$id/adapt';
+
+  /// The Belly Buddy Plus paywall (Home while the switch is off).
+  static const String plus = '/plus';
   static const String upgradeRequired = '/upgrade-required';
   static const String healthConsent = '/health-consent';
   static const String buddyOnboarding = '/buddy-onboarding';

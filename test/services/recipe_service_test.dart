@@ -425,6 +425,11 @@ void main() {
         (401, null, AdaptFailure.failed, 'ERROR'),
         (500, null, AdaptFailure.failed, 'ERROR'),
         (409, 'something_new', AdaptFailure.failed, 'ERROR'),
+        // Plus needed (the app's lock state was stale).
+        (402, 'plus_required', AdaptFailure.plusRequired, 'WARN'),
+        // A 402 without core's code is not the Plus answer.
+        (402, null, AdaptFailure.failed, 'ERROR'),
+        (402, 'something_new', AdaptFailure.failed, 'ERROR'),
       ]) {
         final logs = captureLogs();
         stubThrow(

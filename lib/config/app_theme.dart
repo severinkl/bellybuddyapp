@@ -33,6 +33,9 @@ class AppTheme {
   static const Color success = Color(0xFF22C55E);
   static const Color warning = Color(0xFFF59E0B);
   static const Color info = Color(0xFF3B82F6);
+
+  /// The „Aktiv" state word of a share (dark enough for text on [card]).
+  static const Color shareActive = Color(0xFF1F6B1F);
   static const Color border = Color(0xFFE3DFDA);
   static const Color input = Color(0xFFE3DFDA);
   static const Color ring = Color(0xFFB5CC47);
@@ -84,6 +87,11 @@ class AppTheme {
   // Streak: a day with an entry (week row circle), the selected goal
   static const Color primarySoft = Color(0xFFF3F7DF);
 
+  // Belly Buddy Plus: the „Plus" badge on a button that needs it (on the
+  // tonal button's light green)
+  static const Color plusBadge = Color(0xFF302820);
+  static const Color plusBadgeForeground = Color(0xFFF9F7F4);
+
   // Rezepte: the illustration background per meal type (the placeholder of a
   // recipe without a photo), and the mark of a step the Buddy changed
   static const Color recipeTintBreakfast = Color(0xFFFCF1CF);
@@ -107,6 +115,7 @@ class AppTheme {
   static const Color careWaterSoft = Color(0xFFE2F0FA);
   static const Color careGut = Color(0xFF3A9A48);
   static const Color careGutSoft = gutFeelingGoodSoft;
+  static const Color progressTrendBar = primary;
   static const Color careLoo = Color(0xFF9C7350);
   static const Color careLooSoft = Color(0xFFF1E7DE);
   static const Color streakFlame = Color(0xFFFF7A2E);
@@ -147,6 +156,10 @@ class AppTheme {
   static const double fontSizeHeadingLG = 24;
   static const double fontSizeDisplay = 28;
   static const double fontSizeDisplayLG = 30;
+
+  /// Letter spacing of a share code shown in [fontSizeDisplayLG], so its
+  /// two groups of digits read apart.
+  static const double codeLetterSpacing = 2;
 
   // Line heights (multiples of the font size)
   /// Running text: notes, summaries, explanations.

@@ -41,6 +41,11 @@ void main() {
     RegExp(r'\b[Ee]rfass'),
     // The four Bauchgefühl levels: sehr gut, gut, mittel, schlecht.
     RegExp(r'[Dd]urchschnittlich'),
+    // Akuthilfe: nothing reads as diagnosis or treatment.
+    RegExp(r'Therapie'),
+    RegExp(r'Behandlung'),
+    RegExp(r'\b[Hh]eil(t|en|ung)\b'),
+    RegExp(r'Diagnose'),
   ];
 
   // Never used outside of copy, so a hit anywhere in code is copy.
@@ -139,6 +144,16 @@ void main() {
           "final i = 'Dein Eintrag ist eingetragen.';",
         ]).map((o) => o.split(':').first),
         ['1', '2', '3', '4', '5'],
+      );
+    });
+
+    test('finds treatment and diagnosis words', () {
+      expect(
+        offendersIn([
+          "final a = 'Das heilt deinen Bauch';",
+          "final b = 'Keine Behandlung';",
+        ]),
+        hasLength(2),
       );
     });
 

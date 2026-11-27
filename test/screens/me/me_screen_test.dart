@@ -12,10 +12,16 @@ import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
 import 'package:url_launcher/url_launcher.dart';
 
 import 'package:belly_buddy/config/constants.dart';
+import 'package:belly_buddy/models/data_share.dart';
+import 'package:belly_buddy/models/plus_status.dart';
 import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
+import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
+import 'package:belly_buddy/providers/rating_provider.dart';
+import 'package:belly_buddy/services/purchases/purchases_gateway.dart';
+import 'package:belly_buddy/services/share_service.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
 import 'package:belly_buddy/providers/upgrade_gate_provider.dart';
 import 'package:belly_buddy/repositories/notification_repository.dart';
@@ -24,6 +30,7 @@ import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/buddy/streak_goal_picker.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/streak_sheet.dart';
 import 'package:belly_buddy/screens/me/me_screen.dart';
+import 'package:belly_buddy/services/app_version_service.dart';
 import 'package:belly_buddy/utils/buddy_name.dart';
 import 'package:belly_buddy/widgets/buddy/animated_buddy.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
@@ -31,7 +38,14 @@ import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
 import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
+import '../../helpers/purchases_fakes.dart';
 import '../../helpers/riverpod_helpers.dart';
+import '../../helpers/share_fakes.dart';
+
+Override _plus(PlusStatus status) =>
+    plusProvider.overrideWith(() => FakePlusNotifier(() async => status));
+
+Override _switch(bool on) => paywallEnabledProvider.overrideWithValue(on);
 
 BuddyStatus _status({int streak = 3, int? goal = 14, String name = 'Bruno'}) =>
     buddyStatus(name: name, goal: goal, streak: streak, todayCounted: true);
@@ -43,8 +57,13 @@ void main() {
   late RecordingUrlOpener launches;
   late GoRouter router;
   late ProviderContainer container;
+  late FakeShareService shareService;
 
-  setUp(() => launches = RecordingUrlOpener());
+  setUp(() {
+    launches = RecordingUrlOpener();
+    shareService = FakeShareService();
+    SharedPreferences.setMockInitialValues({});
+  });
 
   Future<FakeBuddyNotifier> pump(
     WidgetTester tester, {
@@ -53,8 +72,12 @@ void main() {
     Size size = const Size(393, 852),
     double textScale = 1,
     FakeViewPadding padding = FakeViewPadding.zero,
+    bool paywall = false,
+    bool sdk = true,
     List<Override> extra = const [],
   }) async {
+    final gateway = FakePurchasesGateway(available: sdk);
+    addTearDown(gateway.dispose);
     tester.view.physicalSize = size;
     tester.view.padding = padding;
     addTearDown(tester.view.resetPadding);
@@ -69,6 +92,9 @@ void main() {
         buddyClockProvider.overrideWithValue(() => today),
         currentUserIdProvider.overrideWithValue('u1'),
         currentVersionProvider.overrideWith((_) async => '1.2.3'),
+        shareServiceProvider.overrideWithValue(shareService),
+        _switch(paywall),
+        purchasesGatewayProvider.overrideWithValue(gateway),
         ...extra,
       ],
     );
@@ -79,7 +105,14 @@ void main() {
           path: RoutePaths.me,
           builder: (_, _) => MeScreen(openUrl: launches.call),
         ),
-        ...stubRoutes([RoutePaths.settings, RoutePaths.dashboard]),
+        ...stubRoutes([
+          RoutePaths.settings,
+          RoutePaths.dashboard,
+          RoutePaths.progress,
+          RoutePaths.shares,
+          RoutePaths.shareCreate,
+          RoutePaths.plus,
+        ]),
       ],
     );
     addTearDown(router.dispose);
@@ -158,12 +191,297 @@ void main() {
     expect(find.text('Version 1.2.3'), findsOneWidget);
     for (final key in [
       MeScreen.streakKey,
+      MeScreen.progressKey,
+      MeScreen.shareKey,
       MeScreen.settingsKey,
       MeScreen.tutorialKey,
+      MeScreen.rateKey,
       MeScreen.feedbackKey,
     ]) {
       expect(find.byKey(key), findsOneWidget);
     }
+  });
+
+  group('„Belly Buddy Plus"', () {
+    Finder rowText(String t) => find.descendant(
+      of: find.byKey(MeScreen.plusKey),
+      matching: find.text(t),
+    );
+
+    testWidgets('switch off: no row', (tester) async {
+      await pump(tester);
+      expect(find.byKey(MeScreen.plusKey), findsNothing);
+    });
+
+    testWidgets('no SDK key in this build: no row (nothing can be bought)', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        paywall: true,
+        sdk: false,
+        extra: [_plus(PlusStatus.none)],
+      );
+      expect(find.byKey(MeScreen.plusKey), findsNothing);
+      expect(find.byKey(MeScreen.shareKey), findsOneWidget);
+    });
+
+    testWidgets('sits directly below „Mit Berater:in teilen"', (tester) async {
+      await pump(tester, paywall: true, extra: [_plus(PlusStatus.none)]);
+      expect(find.byIcon(Icons.workspace_premium_outlined), findsOneWidget);
+      expect(rowText('Belly Buddy Plus'), findsOneWidget);
+      final share = tester.getTopLeft(find.byKey(MeScreen.shareKey)).dy;
+      final plus = tester.getTopLeft(find.byKey(MeScreen.plusKey)).dy;
+      final settings = tester.getTopLeft(find.byKey(MeScreen.settingsKey)).dy;
+      expect(share, lessThan(plus));
+      expect(plus, lessThan(settings));
+    });
+
+    testWidgets('none: „Alle Funktionen freischalten"', (tester) async {
+      await pump(tester, paywall: true, extra: [_plus(PlusStatus.none)]);
+      expect(rowText('Alle Funktionen freischalten'), findsOneWidget);
+    });
+
+    testWidgets('trial ending 10.12., renewal off', (tester) async {
+      await pump(
+        tester,
+        paywall: true,
+        extra: [
+          _plus(
+            PlusStatus(
+              state: PlusState.trial,
+              expiresAt: DateTime(2026, 12, 10, 12).toUtc(),
+            ),
+          ),
+        ],
+      );
+      expect(rowText('Gratis-Test endet am 10.12.'), findsOneWidget);
+    });
+
+    testWidgets('lapsed', (tester) async {
+      await pump(
+        tester,
+        paywall: true,
+        extra: [_plus(const PlusStatus(state: PlusState.lapsed))],
+      );
+      expect(rowText('Abgelaufen · Wieder abonnieren'), findsOneWidget);
+    });
+
+    testWidgets('loading: the row shows, with no subtitle', (tester) async {
+      final never = Completer<PlusStatus>();
+      final sdkGateway = FakePurchasesGateway();
+      addTearDown(sdkGateway.dispose);
+      await tester.runAsync(() async {});
+      tester.view.physicalSize = const Size(393, 852);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final c = ProviderContainer.test(
+        overrides: [
+          buddyProvider.overrideWith(() => FakeBuddyNotifier(_status)),
+          buddyClockProvider.overrideWithValue(() => today),
+          currentUserIdProvider.overrideWithValue('u1'),
+          currentVersionProvider.overrideWith((_) async => '1.2.3'),
+          shareServiceProvider.overrideWithValue(shareService),
+          _switch(true),
+          purchasesGatewayProvider.overrideWithValue(sdkGateway),
+          plusProvider.overrideWith(() => FakePlusNotifier(() => never.future)),
+        ],
+      );
+      final r = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => MeScreen(openUrl: launches.call),
+          ),
+        ],
+      );
+      addTearDown(r.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(container: c, child: germanRouterApp(r)),
+      );
+      await tester.pump();
+      expect(find.byKey(MeScreen.plusKey), findsOneWidget);
+      for (final t in [
+        'Alle Funktionen freischalten',
+        'Abgelaufen · Wieder abonnieren',
+      ]) {
+        expect(rowText(t), findsNothing);
+      }
+    });
+
+    testWidgets('account switch: no line while the next user loads, then '
+        'theirs', (tester) async {
+      tester.view.physicalSize = const Size(393, 852);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final gateway = FakePurchasesGateway(
+        statusAnswer: PlusStatus(
+          state: PlusState.trial,
+          expiresAt: DateTime(2026, 12, 10, 12).toUtc(),
+        ),
+      );
+      addTearDown(gateway.dispose);
+      final user = SwitchableUserId('a');
+      final c = ProviderContainer.test(
+        overrides: [
+          buddyProvider.overrideWith(() => FakeBuddyNotifier(_status)),
+          buddyClockProvider.overrideWithValue(() => today),
+          user.override,
+          currentVersionProvider.overrideWith((_) async => '1.2.3'),
+          shareServiceProvider.overrideWithValue(shareService),
+          _switch(true),
+          purchasesGatewayProvider.overrideWithValue(gateway),
+        ],
+      );
+      final r = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => MeScreen(openUrl: launches.call),
+          ),
+        ],
+      );
+      addTearDown(r.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(container: c, child: germanRouterApp(r)),
+      );
+      await tester.pumpAndSettle();
+      expect(rowText('Gratis-Test endet am 10.12.'), findsOneWidget);
+
+      final bStatus = gateway.holdNextStatus();
+      user.set(c, 'b');
+      await tester.pump();
+      await tester.pump();
+      expect(c.read(plusProvider).isLoading, isTrue);
+      expect(find.byKey(MeScreen.plusKey), findsOneWidget);
+      for (final t in [
+        'Alle Funktionen freischalten',
+        'Gratis-Test endet am 10.12.',
+      ]) {
+        expect(rowText(t), findsNothing);
+      }
+
+      bStatus.complete(const PlusStatus(state: PlusState.lapsed));
+      await tester.pumpAndSettle();
+      expect(rowText('Abgelaufen · Wieder abonnieren'), findsOneWidget);
+    });
+
+    testWidgets('tap pushes /plus', (tester) async {
+      await pump(tester, paywall: true, extra: [_plus(PlusStatus.none)]);
+      await tapRow(tester, MeScreen.plusKey);
+      expect(find.text('page:/plus'), findsOneWidget);
+    });
+  });
+
+  group('„Mit Berater:in teilen"', () {
+    testWidgets('sits between Streak & Ziel and Einstellungen', (tester) async {
+      await pump(tester);
+
+      expect(find.text('Mit Berater:in teilen'), findsOneWidget);
+      expect(
+        find.text('Tagebuch für Diätolog:in oder Ärzt:in freigeben'),
+        findsOneWidget,
+      );
+      expect(find.byIcon(Icons.person_add_alt_1_outlined), findsOneWidget);
+      final streak = tester.getTopLeft(find.byKey(MeScreen.streakKey)).dy;
+      final share = tester.getTopLeft(find.byKey(MeScreen.shareKey)).dy;
+      final settings = tester.getTopLeft(find.byKey(MeScreen.settingsKey)).dy;
+      expect(streak, lessThan(share));
+      expect(share, lessThan(settings));
+    });
+
+    testWidgets('„Neu" until the row was tapped once', (tester) async {
+      await pump(tester);
+      expect(find.text('Neu'), findsOneWidget);
+
+      await tapRow(tester, MeScreen.shareKey);
+      router.pop();
+      await tester.pumpAndSettle();
+      expect(find.text('Neu'), findsNothing);
+
+      // Remembered on the device: a fresh screen has no badge either.
+      await pump(tester);
+      expect(find.text('Neu'), findsNothing);
+    });
+
+    testWidgets('no shares: opens the create screen', (tester) async {
+      await pump(tester);
+      await tapRow(tester, MeScreen.shareKey);
+      expect(find.text('page:/shares/new'), findsOneWidget);
+      // The list lies beneath the create screen.
+      expect(find.text('page:/shares', skipOffstage: false), findsOneWidget);
+    });
+
+    testWidgets('with shares: opens the list', (tester) async {
+      shareService.shares = [testShare()];
+      await pump(tester);
+      await tapRow(tester, MeScreen.shareKey);
+      expect(find.text('page:/shares'), findsOneWidget);
+    });
+
+    testWidgets('Plus locked, no shares: the list alone (connecting is '
+        'free), no paywall, no create screen', (tester) async {
+      await pump(tester, extra: plusLockedOverrides);
+      await tapRow(tester, MeScreen.shareKey);
+      expect(find.text('page:/shares'), findsOneWidget);
+      expect(find.text('page:/plus', skipOffstage: false), findsNothing);
+      expect(find.text('page:/shares/new', skipOffstage: false), findsNothing);
+    });
+
+    testWidgets('Plus locked, with shares: opens the list', (tester) async {
+      shareService.shares = [testShare()];
+      await pump(tester, extra: plusLockedOverrides);
+      await tapRow(tester, MeScreen.shareKey);
+      expect(find.text('page:/shares'), findsOneWidget);
+      expect(find.text('page:/plus', skipOffstage: false), findsNothing);
+    });
+
+    testWidgets('a double tap opens the list once', (tester) async {
+      shareService.shares = [testShare()];
+      await pump(tester);
+      await tester.ensureVisible(find.byKey(MeScreen.shareKey));
+      await tester.tap(find.byKey(MeScreen.shareKey));
+      await tester.tap(find.byKey(MeScreen.shareKey));
+      await tester.pumpAndSettle();
+      router.pop();
+      await tester.pumpAndSettle();
+      expect(find.text('page:/shares'), findsNothing);
+      expect(find.byKey(MeScreen.shareKey), findsOneWidget);
+    });
+
+    testWidgets('after leaving the list by go, the row opens it again', (
+      tester,
+    ) async {
+      shareService.shares = [testShare()];
+      await pump(tester);
+      await tapRow(tester, MeScreen.shareKey);
+      expect(find.text('page:/shares'), findsOneWidget);
+      // A deep link or a tab switch replaces the stack: the push never
+      // completes.
+      router.go(RoutePaths.me);
+      await tester.pumpAndSettle();
+      await tapRow(tester, MeScreen.shareKey);
+      expect(find.text('page:/shares'), findsOneWidget);
+    });
+
+    testWidgets('failed list: opens the create screen', (tester) async {
+      shareService.failList = true;
+      await pump(tester);
+      await tapRow(tester, MeScreen.shareKey);
+      expect(find.text('page:/shares/new'), findsOneWidget);
+      expect(find.text('page:/shares', skipOffstage: false), findsOneWidget);
+    });
+
+    testWidgets('while the list loads: shown and tappable', (tester) async {
+      shareService = _NeverLoads();
+      await pump(tester);
+      expect(find.byKey(MeScreen.shareKey), findsOneWidget);
+      await tapRow(tester, MeScreen.shareKey);
+      expect(find.text('page:/shares/new'), findsOneWidget);
+      expect(find.text('page:/shares', skipOffstage: false), findsOneWidget);
+    });
   });
 
   testWidgets('rows: no goal yet, a 1-day streak', (tester) async {
@@ -188,6 +506,8 @@ void main() {
     expect(find.byType(StreakChip), findsNothing);
     expect(find.byKey(MeScreen.renameKey), findsNothing);
     expect(find.byKey(MeScreen.streakKey), findsNothing);
+    // „Dein Verlauf" does not need a Buddy status.
+    expect(find.byKey(MeScreen.progressKey), findsOneWidget);
     expect(find.byKey(MeScreen.settingsKey), findsOneWidget);
     expect(find.byKey(MeScreen.feedbackKey), findsOneWidget);
   });
@@ -367,6 +687,23 @@ void main() {
     expect(router.canPop(), isTrue);
   });
 
+  testWidgets('„Dein Verlauf" after „Streak & Ziel" pushes /progress', (
+    tester,
+  ) async {
+    await pump(tester);
+
+    expect(find.text('Dein Verlauf'), findsOneWidget);
+    expect(find.text('Wie es dir über die Wochen geht'), findsOneWidget);
+    double top(Key key) => tester.getTopLeft(find.byKey(key)).dy;
+    expect(top(MeScreen.progressKey), greaterThan(top(MeScreen.streakKey)));
+    expect(top(MeScreen.progressKey), lessThan(top(MeScreen.settingsKey)));
+
+    await tapRow(tester, MeScreen.progressKey);
+
+    expect(find.text('page:${RoutePaths.progress}'), findsOneWidget);
+    expect(router.canPop(), isTrue);
+  });
+
   testWidgets('Streak & Ziel opens „Dein Streak"', (tester) async {
     final buddy = await pump(tester);
 
@@ -402,12 +739,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(StreakSheet), findsNothing);
 
+    await tester.ensureVisible(find.byType(StreakChip));
     await tester.tap(find.byType(StreakChip));
     await tester.pumpAndSettle();
     expect(find.byType(StreakSheet), findsNothing);
 
     save.complete();
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byType(StreakChip));
     await tester.tap(find.byType(StreakChip));
     await tester.pumpAndSettle();
     expect(find.byType(StreakSheet), findsOneWidget);
@@ -471,6 +810,145 @@ void main() {
       find.text('Das Feedback-Formular konnte nicht geöffnet werden.'),
       findsOneWidget,
     );
+  });
+
+  group('Belly Buddy bewerten', () {
+    testWidgets('the row sits directly above „Feedback geben" with its title '
+        'and subtitle', (tester) async {
+      await pump(tester);
+
+      expect(find.text('Belly Buddy bewerten'), findsOneWidget);
+      expect(find.text('Sag anderen, wie dir die App gefällt'), findsOneWidget);
+      final rate = tester.getRect(find.byKey(MeScreen.rateKey));
+      final feedback = tester.getRect(find.byKey(MeScreen.feedbackKey));
+      final tutorial = tester.getRect(find.byKey(MeScreen.tutorialKey));
+      expect(rate.top, greaterThan(tutorial.bottom));
+      expect(rate.bottom, lessThan(feedback.top));
+      expect(feedback.top - rate.bottom, lessThan(AppConstants.spacingLg));
+    });
+
+    testWidgets('two quick taps open the store listing once', (tester) async {
+      final launcher = FakeRatingLauncher()..listingHold = Completer();
+      await pump(
+        tester,
+        extra: [
+          ratingLauncherProvider.overrideWithValue(launcher),
+          appVersionServiceProvider.overrideWithValue(FakeAppVersionService()),
+        ],
+      );
+      await tester.ensureVisible(find.byKey(MeScreen.rateKey));
+      await tester.tap(find.byKey(MeScreen.rateKey));
+      await tester.pump();
+      await tester.tap(find.byKey(MeScreen.rateKey));
+      await tester.pump();
+      launcher.listingHold!.complete();
+      await tester.pumpAndSettle();
+
+      expect(launcher.listings, 1);
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('tap opens the store listing through the launcher', (
+      tester,
+    ) async {
+      final launcher = FakeRatingLauncher();
+      final version = FakeAppVersionService();
+      await pump(
+        tester,
+        extra: [
+          ratingLauncherProvider.overrideWithValue(launcher),
+          appVersionServiceProvider.overrideWithValue(version),
+        ],
+      );
+
+      await tapRow(tester, MeScreen.rateKey);
+
+      expect(launcher.listings, 1);
+      expect(version.opened, 0);
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('listing fails: the store page opens through '
+        'AppVersionService', (tester) async {
+      final launcher = FakeRatingLauncher(listingThrows: true);
+      final version = FakeAppVersionService();
+      await pump(
+        tester,
+        extra: [
+          ratingLauncherProvider.overrideWithValue(launcher),
+          appVersionServiceProvider.overrideWithValue(version),
+        ],
+      );
+
+      await tapRow(tester, MeScreen.rateKey);
+
+      expect(launcher.listings, 1);
+      expect(version.opened, 1);
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('both fail: „Der Store konnte nicht geöffnet werden." is '
+        'shown', (tester) async {
+      await pump(
+        tester,
+        extra: [
+          ratingLauncherProvider.overrideWithValue(
+            FakeRatingLauncher(listingThrows: true),
+          ),
+          appVersionServiceProvider.overrideWithValue(
+            FakeAppVersionService(openStoreThrows: true),
+          ),
+        ],
+      );
+
+      await tapRow(tester, MeScreen.rateKey);
+
+      expect(
+        find.text('Der Store konnte nicht geöffnet werden.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('listing fails and the store page does not launch (false): '
+        'the message is shown', (tester) async {
+      await pump(
+        tester,
+        extra: [
+          ratingLauncherProvider.overrideWithValue(
+            FakeRatingLauncher(listingThrows: true),
+          ),
+          appVersionServiceProvider.overrideWithValue(
+            FakeAppVersionService(openStoreResult: false),
+          ),
+        ],
+      );
+
+      await tapRow(tester, MeScreen.rateKey);
+
+      expect(
+        find.text('Der Store konnte nicht geöffnet werden.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('tapping does not record a rating request', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await pump(
+        tester,
+        extra: [
+          ratingLauncherProvider.overrideWithValue(FakeRatingLauncher()),
+          appVersionServiceProvider.overrideWithValue(FakeAppVersionService()),
+        ],
+      );
+
+      await tapRow(tester, MeScreen.rateKey);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getKeys().where((k) => k.startsWith('rating_asked_')),
+        isEmpty,
+      );
+    });
   });
 
   testWidgets('text scale 1.3 on a small phone: no overflow', (tester) async {
@@ -556,4 +1034,9 @@ void main() {
       expect(row(), findsNothing);
     });
   });
+}
+
+class _NeverLoads extends FakeShareService {
+  @override
+  Future<List<DataShare>> list() => Completer<List<DataShare>>().future;
 }

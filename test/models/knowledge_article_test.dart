@@ -18,6 +18,7 @@ void main() {
           category: 'Rezepte',
           publishedAt: DateTime.utc(2025, 3, 27, 23),
           imageUrl: 'https://static.wixstatic.com/a.png',
+          teaser: 'Ein kurzer Anriss',
         ),
         _a('B'),
       ],
@@ -65,5 +66,25 @@ void main() {
       }),
       throwsFormatException,
     );
+  });
+
+  test('a cached feed without teaser still reads', () {
+    // The v1 cache shape, written before the teaser existed.
+    final feed = KnowledgeFeed.fromJson(const {
+      'articles': [
+        {
+          'title': 'Alt',
+          'link': 'https://www.myfodmap.at/alt',
+          'category': 'Rezepte',
+          'publishedAt': '2025-03-27T23:00:00.000Z',
+          'imageUrl': null,
+        },
+      ],
+      'fetchedAt': '2026-01-01T00:00:00.000Z',
+    });
+    final a = feed.articles.single;
+    expect(a.title, 'Alt');
+    expect(a.teaser, isNull);
+    expect(a.toJson()['teaser'], isNull);
   });
 }

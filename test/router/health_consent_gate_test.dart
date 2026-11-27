@@ -131,7 +131,7 @@ void main() {
     });
 
     testWidgets('a consent to the policy of 22.11.2026 is asked again, with '
-        'the update line; accepting stores 2026-11-24 and lifts the gate', (
+        'the update line; accepting stores 2026-12-01 and lifts the gate', (
       tester,
     ) async {
       final profiles = _profilesWith(
@@ -144,7 +144,7 @@ void main() {
       expect(
         find.text(
           'Wir haben unsere Datenschutzerklärung aktualisiert '
-          '(Stand 24.11.2026).',
+          '(Stand 01.12.2026).',
         ),
         findsOneWidget,
       );
@@ -166,7 +166,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(profiles.acceptHealthConsentCount, 1);
-      expect(profiles.storedProfile!.privacyPolicyVersion, '2026-11-24');
+      expect(profiles.storedProfile!.privacyPolicyVersion, '2026-12-01');
       expect(container.read(healthConsentRequiredProvider), isFalse);
       expect(_currentPath(container), RoutePaths.dashboard);
 

@@ -167,6 +167,7 @@ void main() {
         AdaptFailure.later: true,
         AdaptFailure.notFound: false,
         AdaptFailure.failed: true,
+        AdaptFailure.plusRequired: false,
       },
     );
   });

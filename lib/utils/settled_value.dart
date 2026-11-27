@@ -9,4 +9,11 @@ extension SettledValue<T> on AsyncValue<T> {
     AsyncData(:final value, isLoading: false) => value,
     _ => null,
   };
+
+  /// The value to show now: null while it refreshes, rebuilds or after an
+  /// error, else [value]. Unlike [settledValue] it keeps the previous value
+  /// while a refetch of the same user loads (an [AsyncData] with
+  /// [isLoading]), and drops it when it may be another user's (reloading
+  /// after a rebuild) or the load failed.
+  T? get currentValue => isReloading || hasError ? null : value;
 }

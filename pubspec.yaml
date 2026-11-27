@@ -61,6 +61,17 @@ dependencies:
 
   # App version info
   package_info_plus: ^10.2.2
+  # Vendored 2.0.12 with an AGP 9 built-in-Kotlin fix (see
+  # third_party/in_app_review/android/build.gradle); back to ^2.0.13+ once
+  # upstream migrates.
+  in_app_review:
+    path: third_party/in_app_review
+  wakelock_plus: ^1.8.2
+  share_plus: ^13.3.1
+  mobile_scanner: ^7.5.0
+
+  # Store subscriptions (Belly Buddy Plus); only revenuecat_gateway.dart imports it
+  purchases_flutter: ^11.0.4
 
 dev_dependencies:
   sentry_dart_plugin: ^3.6.0
