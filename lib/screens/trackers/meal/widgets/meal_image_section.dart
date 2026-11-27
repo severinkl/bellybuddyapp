@@ -114,12 +114,7 @@ class MealImageSection extends StatelessWidget {
       ),
     );
     if (openSettings != true || !context.mounted) return;
-    await openExternalUrl(
-      context,
-      appSettingsUrl,
-      failureMessage: 'Die Einstellungen konnten nicht geöffnet werden.',
-      open: openUrl,
-    );
+    await openAppSettings(context, open: openUrl);
   }
 
   @override

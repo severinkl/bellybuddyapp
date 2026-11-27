@@ -32,15 +32,21 @@ Future<bool> openExternalUrl(
   try {
     opened = await open(Uri.parse(url), mode: mode);
   } catch (e, st) {
-    // Scheme and host only: a path can hold what the user scanned.
-    final uri = Uri.tryParse(url);
-    final where = uri == null
-        ? 'an unparsable url'
-        : '${uri.scheme}://${uri.host}';
-    _log.error('Opening $where failed', e, st);
+    // The failure kind only: the url can hold what the user scanned.
+    _log.error('Opening a link failed (${e.runtimeType})', null, st);
   }
   if (!opened) {
     messenger?.showSnackBar(SnackBar(content: Text(failureMessage)));
   }
   return opened;
 }
+
+/// Opens the app's page in the iOS Settings with [open]; when that fails,
+/// shows a SnackBar on [context]'s messenger.
+Future<bool> openAppSettings(BuildContext context, {UrlOpener? open}) =>
+    openExternalUrl(
+      context,
+      appSettingsUrl,
+      failureMessage: 'Die Einstellungen konnten nicht geöffnet werden.',
+      open: open ?? launchUrl,
+    );

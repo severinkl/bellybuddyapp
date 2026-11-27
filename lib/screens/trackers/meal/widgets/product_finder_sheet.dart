@@ -62,14 +62,14 @@ class ProductFinderSheet extends ConsumerStatefulWidget {
     required this.openUrl,
   });
 
-  static const searchFieldKey = Key('productFinder.search');
-  static const applyKey = Key('productFinder.apply');
-  static const otherProductKey = Key('productFinder.otherProduct');
-  static const typeItKey = Key('productFinder.typeIt');
-  static const offAddLinkKey = Key('productFinder.offAdd');
-  static const attributionKey = Key('productFinder.attribution');
-  static const retryKey = Key('productFinder.retry');
-  static const rescanKey = Key('productFinder.rescan');
+  static const searchFieldKey = ProductFinderKeys.search;
+  static const applyKey = ProductFinderKeys.apply;
+  static const otherProductKey = ProductFinderKeys.otherProduct;
+  static const typeItKey = ProductFinderKeys.typeIt;
+  static const offAddLinkKey = ProductFinderKeys.offAddLink;
+  static const attributionKey = ProductFinderKeys.attribution;
+  static const retryKey = ProductFinderKeys.retry;
+  static const rescanKey = ProductFinderKeys.rescan;
 
   final ScrollController scrollController;
   final UrlOpener openUrl;
@@ -101,7 +101,6 @@ class _ProductFinderSheetState extends ConsumerState<ProductFinderSheet> {
   @override
   void initState() {
     super.initState();
-    _searchFocus.addListener(_rebuild);
     _lifecycle = AppLifecycleListener(onStateChange: _onLifecycle);
   }
 
@@ -113,16 +112,19 @@ class _ProductFinderSheetState extends ConsumerState<ProductFinderSheet> {
     super.dispose();
   }
 
-  void _rebuild() => setState(() {});
-
-  void _onLifecycle(AppLifecycleState s) => setState(() {
-    _resumed = s == AppLifecycleState.resumed;
-    if (!_resumed) return;
-    if (_openedSettings || _cameraFailure == ScannerFailure.other) {
-      _cameraFailure = null;
-      _openedSettings = false;
-    }
-  });
+  void _onLifecycle(AppLifecycleState s) {
+    final resumed = s == AppLifecycleState.resumed;
+    final clearFailure =
+        resumed && (_openedSettings || _cameraFailure == ScannerFailure.other);
+    if (resumed == _resumed && !clearFailure) return;
+    setState(() {
+      _resumed = resumed;
+      if (clearFailure) {
+        _cameraFailure = null;
+        _openedSettings = false;
+      }
+    });
+  }
 
   ProductFinderNotifier get _finder => ref.read(productFinderProvider.notifier);
 
@@ -138,11 +140,17 @@ class _ProductFinderSheetState extends ConsumerState<ProductFinderSheet> {
   void _rescan() => _finder.reset();
 
   /// The way back from a product, not-found or failed lookup: to the hits
-  /// it was picked from (the field holds that term again), else scanning.
-  void _back() {
-    if (_finder.canReturnToSearch) _query.text = _finder.lastQuery;
+  /// it was picked from [from] (the field holds that term again), else
+  /// scanning.
+  void _back(SearchResults? from) {
+    if (from != null) _query.text = from.query;
     _finder.back();
   }
+
+  /// „Nochmal scannen", or „Zurück zur Suche" when the product came from
+  /// [from].
+  Widget _backButton(SearchResults? from) =>
+      RescanButton(onTap: () => _back(from), toSearch: from != null);
 
   void _clearQuery() {
     _query.clear();
@@ -177,13 +185,9 @@ class _ProductFinderSheetState extends ConsumerState<ProductFinderSheet> {
           ),
           child: Semantics(
             header: true,
-            child: const Text(
+            child: Text(
               'Produkt finden',
-              style: TextStyle(
-                fontSize: AppTheme.fontSizeTitle,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.foreground,
-              ),
+              style: productFinderHeading(AppTheme.fontSizeTitle),
             ),
           ),
         ),
@@ -205,7 +209,6 @@ class _ProductFinderSheetState extends ConsumerState<ProductFinderSheet> {
                 _scannerArea(scanning: state is Scanning),
                 AppConstants.gap16,
                 ProductSearchField(
-                  fieldKey: ProductFinderSheet.searchFieldKey,
                   controller: _query,
                   focusNode: _searchFocus,
                   onSubmitted: _finder.search,
@@ -219,48 +222,37 @@ class _ProductFinderSheetState extends ConsumerState<ProductFinderSheet> {
                 if (state is Failed)
                   ProductFailedView(
                     message: state.message,
-                    retryKey: ProductFinderSheet.retryKey,
                     // The field may have been edited since.
                     onRetry: () => _finder.retry(query: _query.text),
                   ),
               ],
               LookingUp() => [const ProductFinderLoading()],
-              Found(:final product) => [
+              Found(:final product, :final from) => [
                 ProductCard(
                   product: product,
-                  applyKey: ProductFinderSheet.applyKey,
-                  otherProductKey: ProductFinderSheet.otherProductKey,
-                  attributionKey: ProductFinderSheet.attributionKey,
                   onApply: () => Navigator.of(context).pop(product),
-                  onOtherProduct: _back,
+                  onOtherProduct: () => _back(from),
                   onAttribution: () => _open(
                     AppConstants.offProductUrl(product.barcode),
                     _pageFailed,
                   ),
                 ),
               ],
-              NotFound(:final barcode) => [
+              NotFound(:final barcode, :final from) => [
                 ProductNotFoundView(
-                  typeItKey: ProductFinderSheet.typeItKey,
-                  offAddLinkKey: ProductFinderSheet.offAddLinkKey,
-                  rescanKey: ProductFinderSheet.rescanKey,
                   onTypeIt: () => Navigator.of(context).pop(),
                   onAddToOff: () => _open(
                     AppConstants.offAddProductUrl(barcode),
                     _pageFailed,
                   ),
-                  onRescan: _back,
-                  toSearch: _finder.canReturnToSearch,
+                  rescan: _backButton(from),
                 ),
               ],
-              Failed(:final message, :final retry) => [
+              Failed(:final message, :final canRetry, :final from) => [
                 ProductFailedView(
                   message: message,
-                  retryKey: ProductFinderSheet.retryKey,
-                  rescanKey: ProductFinderSheet.rescanKey,
-                  onRetry: retry == null ? null : _finder.retry,
-                  onRescan: _back,
-                  toSearch: _finder.canReturnToSearch,
+                  onRetry: canRetry ? _finder.retry : null,
+                  rescan: _backButton(from),
                 ),
               ],
             },
@@ -279,23 +271,23 @@ class _ProductFinderSheetState extends ConsumerState<ProductFinderSheet> {
         failure: failure,
         onOpenSettings: () {
           _openedSettings = true;
-          _open(
-            appSettingsUrl,
-            'Die Einstellungen konnten nicht geöffnet werden.',
-          );
+          openAppSettings(context, open: widget.openUrl);
         },
       );
     }
     if (!scanning) {
-      return RescanButton(tapKey: ProductFinderSheet.rescanKey, onTap: _rescan);
+      return RescanButton(onTap: _rescan);
     }
     final scanner = ref.watch(barcodeScannerProvider);
-    return ScannerPreview(
-      scanner: scanner(
-        context,
-        active: _resumed && !_searchFocus.hasFocus,
-        onBarcode: _onBarcode,
-        onFailure: _onFailure,
+    return ListenableBuilder(
+      listenable: _searchFocus,
+      builder: (context, _) => ScannerPreview(
+        scanner: scanner(
+          context,
+          active: _resumed && !_searchFocus.hasFocus,
+          onBarcode: _onBarcode,
+          onFailure: _onFailure,
+        ),
       ),
     );
   }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/product.dart';
@@ -18,40 +19,94 @@ final class Searching extends ProductFinderState {
   const Searching();
 }
 
-/// The hits of the last search (maybe none).
+/// The hits of the last search for [query] (maybe none).
 final class SearchResults extends ProductFinderState {
-  const SearchResults(this.hits);
+  const SearchResults(this.hits, this.query);
 
   final List<ProductHit> hits;
+
+  /// The trimmed term searched (the sheet puts it back in its field).
+  final String query;
+
+  @override
+  bool operator ==(Object other) =>
+      other is SearchResults &&
+      other.query == query &&
+      listEquals(other.hits, hits);
+
+  @override
+  int get hashCode => Object.hash(query, Object.hashAll(hits));
 }
 
-/// A barcode is being looked up.
+/// A barcode is being looked up; [from] are the hits it was picked from
+/// (null: scanned).
 final class LookingUp extends ProductFinderState {
-  const LookingUp();
+  const LookingUp({this.from});
+
+  final SearchResults? from;
 }
 
+/// [from]: the hits the product was picked from (null: scanned); [back]
+/// returns to them.
 final class Found extends ProductFinderState {
-  const Found(this.product);
+  const Found(this.product, {this.from});
 
   final ProductPrefill product;
+  final SearchResults? from;
 }
 
-/// Core knows no product with [barcode].
+/// Core knows no product with [barcode]. [from] as for [Found].
 final class NotFound extends ProductFinderState {
-  const NotFound(this.barcode);
+  const NotFound(this.barcode, {this.from});
 
   final String barcode;
+  final SearchResults? from;
 }
 
-/// A call failed: [message] says so, [retry] repeats that call (null when
-/// repeating cannot help: core rejected the barcode); [search] when it was
-/// a search (the sheet keeps the search field then).
+/// A call failed: [message] says so; [canRetry] when repeating can help
+/// (not when core rejected the barcode); [search] when it was a search (the
+/// sheet keeps the search field then). [from] as for [Found].
 final class Failed extends ProductFinderState {
-  const Failed(this.message, this.retry, {this.search = false});
+  const Failed(
+    this.message, {
+    required this.canRetry,
+    required this.search,
+    this.from,
+  });
 
   final String message;
-  final void Function()? retry;
+  final bool canRetry;
   final bool search;
+  final SearchResults? from;
+
+  @override
+  bool operator ==(Object other) =>
+      other is Failed &&
+      other.message == message &&
+      other.canRetry == canRetry &&
+      other.search == search &&
+      other.from == from;
+
+  @override
+  int get hashCode => Object.hash(message, canRetry, search, from);
+}
+
+/// What the notifier repeats on [ProductFinderNotifier.retry].
+sealed class _Request {
+  const _Request();
+}
+
+final class _LookupRequest extends _Request {
+  const _LookupRequest(this.barcode, this.from);
+
+  final String barcode;
+  final SearchResults? from;
+}
+
+final class _SearchRequest extends _Request {
+  const _SearchRequest(this.query);
+
+  final String query;
 }
 
 /// Shown when a failed call carries no German text from core.
@@ -64,18 +119,25 @@ class ProductFinderNotifier extends Notifier<ProductFinderState> {
   /// Bumped by every call and by [reset]: older answers are dropped.
   int _call = 0;
 
-  /// The term of the last search.
-  String _lastQuery = '';
+  /// The call a failure repeats.
+  _Request? _last;
 
-  /// The hits the shown product was picked from; null when it was scanned.
-  List<ProductHit>? _pickedFrom;
+  /// The hits the shown product (or its failure) was picked from.
+  SearchResults? get _from => switch (state) {
+    LookingUp(:final from) ||
+    Found(:final from) ||
+    NotFound(:final from) ||
+    Failed(:final from) => from,
+    _ => null,
+  };
 
-  /// The term of the last search (the sheet puts it back in the field).
-  String get lastQuery => _lastQuery;
+  /// The term of the search the shown product came from (the sheet puts it
+  /// back in the field); empty when it was scanned.
+  String get lastQuery => _from?.query ?? '';
 
   /// The shown product (or its failure) came from a search hit: [back]
   /// returns to those hits.
-  bool get canReturnToSearch => _pickedFrom != null;
+  bool get canReturnToSearch => _from != null;
 
   @override
   ProductFinderState build() => const Scanning();
@@ -86,8 +148,7 @@ class ProductFinderNotifier extends Notifier<ProductFinderState> {
   /// the first detection counts.
   bool onBarcode(String barcode) {
     if (state is! Scanning) return false;
-    _pickedFrom = null;
-    _lookup(barcode);
+    _lookup(barcode, null);
     return true;
   }
 
@@ -95,74 +156,77 @@ class ProductFinderNotifier extends Notifier<ProductFinderState> {
   void search(String query) {
     final q = query.trim();
     if (q.isEmpty) return;
-    _lastQuery = q;
-    _pickedFrom = null;
     _search(q);
   }
 
   void pick(ProductHit hit) {
     final s = state;
-    _pickedFrom = s is SearchResults ? s.hits : null;
-    _lookup(hit.barcode);
+    _lookup(hit.barcode, s is SearchResults ? s : null);
   }
 
   /// Repeats the failed call. A failed search searches [query] instead
   /// when it is not blank: the field may have been edited since.
   void retry({String? query}) {
     final s = state;
-    if (s is! Failed) return;
+    if (s is! Failed || !s.canRetry) return;
     if (s.search && query != null && query.trim().isNotEmpty) {
       search(query);
-    } else {
-      s.retry?.call();
+      return;
+    }
+    switch (_last) {
+      case _LookupRequest(:final barcode, :final from):
+        _lookup(barcode, from);
+      case _SearchRequest(:final query):
+        _search(query);
+      case null:
+        break;
     }
   }
 
   /// Back to scanning; a pending answer is dropped.
   void reset() {
     _call++;
-    _pickedFrom = null;
     state = const Scanning();
   }
 
   /// Back to the hits the product was picked from ([canReturnToSearch]),
   /// else [reset]. A pending answer is dropped.
   void back() {
-    final hits = _pickedFrom;
+    final hits = _from;
     if (hits == null) {
       reset();
       return;
     }
     _call++;
-    _pickedFrom = null;
-    state = SearchResults(hits);
+    state = hits;
   }
 
-  Future<void> _lookup(String barcode) => _run(
-    const LookingUp(),
-    () => _service.lookup(barcode),
-    (result) => switch (result) {
-      ProductFound(:final product) => Found(product),
-      ProductNotFound(:final barcode) => NotFound(barcode),
-    },
-    () => _lookup(barcode),
-  );
+  Future<void> _lookup(String barcode, SearchResults? from) {
+    _last = _LookupRequest(barcode, from);
+    return _run(
+      LookingUp(from: from),
+      () => _service.lookup(barcode),
+      (result) => switch (result) {
+        ProductFound(:final product) => Found(product, from: from),
+        ProductNotFound(:final barcode) => NotFound(barcode, from: from),
+      },
+    );
+  }
 
-  Future<void> _search(String query) => _run(
-    const Searching(),
-    () => _service.search(query),
-    SearchResults.new,
-    () => _search(query),
-    search: true,
-  );
+  Future<void> _search(String query) {
+    _last = _SearchRequest(query);
+    return _run(
+      const Searching(),
+      () => _service.search(query),
+      (hits) => SearchResults(hits, query),
+    );
+  }
 
   Future<void> _run<T>(
     ProductFinderState loading,
     Future<T> Function() call,
     ProductFinderState Function(T) done,
-    void Function() again, {
-    bool search = false,
-  }) async {
+  ) async {
     final id = ++_call;
     state = loading;
     ProductFinderState next;
@@ -172,8 +236,12 @@ class ProductFinderNotifier extends Notifier<ProductFinderState> {
       next = Failed(
         e.message ?? productFinderFallbackError,
         // 400: core rejected the barcode; the same lookup fails again.
-        !search && e.status == 400 ? null : again,
-        search: search,
+        canRetry: e.status != 400 || loading is! LookingUp,
+        search: loading is Searching,
+        from: switch (loading) {
+          LookingUp(:final from) => from,
+          _ => null,
+        },
       );
     }
     if (!ref.mounted || id != _call) return;

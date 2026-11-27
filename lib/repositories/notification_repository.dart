@@ -8,6 +8,7 @@ import '../models/user_profile.dart';
 import '../services/local_notification_service.dart';
 import '../services/push_notification_service.dart';
 import '../utils/logger.dart';
+import '../utils/url_utils.dart';
 
 /// Abstract interface for scheduling/cancelling local notifications.
 /// Inject this into [NotificationRepository] to enable testability.
@@ -140,9 +141,6 @@ class NotificationRepository {
   final NotificationScheduler _scheduler;
   static const _log = AppLogger('NotificationRepository');
 
-  /// The iOS Settings page of the app (`UIApplication.openSettingsURLString`).
-  static const _iosAppSettingsUrl = 'app-settings:';
-
   /// Android's way to the app's notification settings (`MainActivity`).
   static const _androidSettings = MethodChannel('belly_buddy/app_settings');
 
@@ -268,7 +266,7 @@ class NotificationRepository {
     try {
       return switch (defaultTargetPlatform) {
         TargetPlatform.iOS => await launchUrl(
-          Uri.parse(_iosAppSettingsUrl),
+          Uri.parse(appSettingsUrl),
           mode: LaunchMode.externalApplication,
         ),
         TargetPlatform.android =>

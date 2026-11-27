@@ -142,7 +142,7 @@ bool _scannerActive(WidgetTester tester) => tester
     .widgetList<_FakeScanner>(find.byType(_FakeScanner))
     .any((s) => s.active);
 
-Future<void> _scan(WidgetTester tester, _Harness h) async {
+Future<void> _scan(WidgetTester tester) async {
   await tester.tap(find.text('emit $_code'));
   await tester.pump();
 }
@@ -154,6 +154,16 @@ Future<void> _answer(
 ) async {
   c.complete(answer);
   await tester.pumpAndSettle();
+}
+
+/// Scans [_code] and has the lookup answer [answer].
+Future<void> _scanAndAnswer(
+  WidgetTester tester,
+  _Harness h,
+  ProductLookup answer,
+) async {
+  await _scan(tester);
+  await _answer(tester, h.service.lookupAnswers.single, answer);
 }
 
 Future<void> _submitSearch(WidgetTester tester, String q) async {
@@ -178,7 +188,7 @@ void main() {
     expect(find.text('Halte den Barcode in den Rahmen'), findsOneWidget);
     expect(_scannerActive(tester), isTrue);
 
-    await _scan(tester, h);
+    await _scan(tester);
     expect(find.text('Suche Produkt …'), findsOneWidget);
     expect(h.service.lookups, [_code]);
 
@@ -198,12 +208,7 @@ void main() {
   testWidgets('Übernehmen pops the ProductPrefill', (tester) async {
     final h = _Harness();
     await h.pump(tester);
-    await _scan(tester, h);
-    await _answer(
-      tester,
-      h.service.lookupAnswers.single,
-      ProductFound(_product),
-    );
+    await _scanAndAnswer(tester, h, ProductFound(_product));
 
     await tester.tap(find.byKey(ProductFinderSheet.applyKey));
     await tester.pumpAndSettle();
@@ -216,12 +221,7 @@ void main() {
   ) async {
     final h = _Harness();
     await h.pump(tester);
-    await _scan(tester, h);
-    await _answer(
-      tester,
-      h.service.lookupAnswers.single,
-      ProductFound(_product),
-    );
+    await _scanAndAnswer(tester, h, ProductFound(_product));
 
     await tester.tap(find.byKey(ProductFinderSheet.otherProductKey));
     await tester.pumpAndSettle();
@@ -299,12 +299,7 @@ void main() {
       'offAddProductUrl(barcode)', (tester) async {
     final h = _Harness();
     await h.pump(tester);
-    await _scan(tester, h);
-    await _answer(
-      tester,
-      h.service.lookupAnswers.single,
-      ProductNotFound(_code),
-    );
+    await _scanAndAnswer(tester, h, ProductNotFound(_code));
 
     expect(find.text('Dieses Produkt kennen wir noch nicht.'), findsOneWidget);
     expect(
@@ -332,10 +327,9 @@ void main() {
       'enabled', (tester) async {
     final h = _Harness();
     await h.pump(tester);
-    await _scan(tester, h);
-    await _answer(
+    await _scanAndAnswer(
       tester,
-      h.service.lookupAnswers.single,
+      h,
       ProductFound(
         const ProductPrefill(barcode: _code, title: 'Wasser', ingredients: []),
       ),
@@ -382,7 +376,7 @@ void main() {
       'text the fallback; Nochmal versuchen repeats the call', (tester) async {
     final h = _Harness();
     await h.pump(tester);
-    await _scan(tester, h);
+    await _scan(tester);
     h.service.lookupAnswers.single.completeError(
       const ProductException(status: 503, message: 'Open Food Facts ruht.'),
     );
@@ -415,7 +409,7 @@ void main() {
     await tester.pump();
     expect(_scannerActive(tester), isTrue);
 
-    await _scan(tester, h);
+    await _scan(tester);
     expect(_scannerActive(tester), isFalse);
     await _answer(
       tester,
@@ -447,7 +441,7 @@ void main() {
 
     await tester.tap(find.byKey(ProductFinderSheet.rescanKey));
     await tester.pumpAndSettle();
-    await _scan(tester, h);
+    await _scan(tester);
     h.service.lookupAnswers.single.completeError(const ProductException());
     await tester.pumpAndSettle();
     expect(find.byKey(ProductFinderSheet.searchFieldKey), findsNothing);
@@ -488,12 +482,7 @@ void main() {
   testWidgets('attribution opens offProductUrl(barcode)', (tester) async {
     final h = _Harness();
     await h.pump(tester);
-    await _scan(tester, h);
-    await _answer(
-      tester,
-      h.service.lookupAnswers.single,
-      ProductFound(_product),
-    );
+    await _scanAndAnswer(tester, h, ProductFound(_product));
 
     await tester.tap(find.byKey(ProductFinderSheet.attributionKey));
     await tester.pump();
@@ -648,7 +637,7 @@ void main() {
   ) async {
     final h = _Harness();
     await h.pump(tester);
-    await _scan(tester, h);
+    await _scan(tester);
     h.service.lookupAnswers.single.completeError(
       const ProductException(status: 400, message: 'Ungültiger Barcode.'),
     );
@@ -695,12 +684,7 @@ void main() {
       final handle = tester.ensureSemantics();
       final h = _Harness();
       await h.pump(tester);
-      await _scan(tester, h);
-      await _answer(
-        tester,
-        h.service.lookupAnswers.single,
-        ProductFound(_product),
-      );
+      await _scanAndAnswer(tester, h, ProductFound(_product));
       await _meetsGuidelines(tester);
       handle.dispose();
     });
@@ -709,12 +693,7 @@ void main() {
       final handle = tester.ensureSemantics();
       final h = _Harness();
       await h.pump(tester);
-      await _scan(tester, h);
-      await _answer(
-        tester,
-        h.service.lookupAnswers.single,
-        ProductNotFound(_code),
-      );
+      await _scanAndAnswer(tester, h, ProductNotFound(_code));
       await _meetsGuidelines(tester);
       handle.dispose();
     });
@@ -735,7 +714,7 @@ void main() {
       final handle = tester.ensureSemantics();
       final h = _Harness();
       await h.pump(tester);
-      await _scan(tester, h);
+      await _scan(tester);
       h.service.lookupAnswers.single.completeError(const ProductException());
       await tester.pumpAndSettle();
       await _meetsGuidelines(tester);

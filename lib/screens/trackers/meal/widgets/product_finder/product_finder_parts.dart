@@ -7,19 +7,43 @@ import '../../../../../widgets/common/bb_button.dart';
 import '../../../../../widgets/common/bb_ingredient_chip.dart';
 import '../../../../../widgets/common/bb_sheet_row.dart';
 import '../../../../../widgets/scanner/barcode_scanner.dart';
+import '../../../../../widgets/scanner/scanner_scrim_label.dart';
 
 // The pieces of the product sheet (product_finder_sheet.dart).
 
-const _titleStyle = TextStyle(
-  fontSize: AppTheme.fontSizeSubtitle,
+/// The keys the tests find the sheet's controls by.
+abstract final class ProductFinderKeys {
+  static const search = Key('productFinder.search');
+  static const apply = Key('productFinder.apply');
+  static const otherProduct = Key('productFinder.otherProduct');
+  static const typeIt = Key('productFinder.typeIt');
+  static const offAddLink = Key('productFinder.offAdd');
+  static const attribution = Key('productFinder.attribution');
+  static const retry = Key('productFinder.retry');
+  static const rescan = Key('productFinder.rescan');
+}
+
+/// Semibold text in the foreground colour, of [size].
+TextStyle productFinderHeading(double size) => TextStyle(
+  fontSize: size,
   fontWeight: FontWeight.w600,
   color: AppTheme.foreground,
 );
+
+final _titleStyle = productFinderHeading(AppTheme.fontSizeSubtitle);
 
 const _bodyStyle = TextStyle(
   fontSize: AppTheme.fontSizeBody,
   color: AppTheme.mutedForeground,
   height: AppTheme.lineHeightBody,
+);
+
+/// Body text in the foreground colour (a message that must stand out).
+final _messageStyle = _bodyStyle.copyWith(color: AppTheme.foreground);
+
+const _captionStyle = TextStyle(
+  fontSize: AppTheme.fontSizeCaption,
+  color: AppTheme.mutedForeground,
 );
 
 /// A white card on the sheet.
@@ -77,27 +101,7 @@ class ScannerPreview extends StatelessWidget {
             right: AppConstants.spacingMd,
             bottom: AppConstants.spacingSm,
             child: IgnorePointer(
-              // On the scrim: white text stays readable over any picture.
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: AppTheme.scrim,
-                  borderRadius: BorderRadius.all(
-                    Radius.circular(AppConstants.radiusMd),
-                  ),
-                ),
-                child: Padding(
-                  padding: AppConstants.paddingSm,
-                  child: Text(
-                    'Halte den Barcode in den Rahmen',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: AppTheme.fontSizeBody,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
+              child: ScannerScrimLabel('Halte den Barcode in den Rahmen'),
             ),
           ),
         ],
@@ -124,7 +128,7 @@ class CameraProblemView extends StatelessWidget {
       ScannerFailure.permissionDenied => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Kein Zugriff auf die Kamera', style: _titleStyle),
+          Text('Kein Zugriff auf die Kamera', style: _titleStyle),
           AppConstants.gap8,
           const Text(
             'Erlaube Belly Buddy in den Einstellungen den Zugriff auf die '
@@ -151,20 +155,14 @@ class CameraProblemView extends StatelessWidget {
 /// „Nochmal scannen": back to the camera; „Zurück zur Suche" with
 /// [toSearch] (the product was picked from search hits).
 class RescanButton extends StatelessWidget {
-  const RescanButton({
-    super.key,
-    required this.tapKey,
-    required this.onTap,
-    this.toSearch = false,
-  });
+  const RescanButton({super.key, required this.onTap, this.toSearch = false});
 
-  final Key? tapKey;
   final VoidCallback onTap;
   final bool toSearch;
 
   @override
   Widget build(BuildContext context) => BbButton(
-    tapKey: tapKey,
+    tapKey: ProductFinderKeys.rescan,
     label: toSearch ? 'Zurück zur Suche' : 'Nochmal scannen',
     icon: toSearch ? Icons.search : Icons.qr_code_scanner,
     isOutlined: true,
@@ -176,14 +174,12 @@ class RescanButton extends StatelessWidget {
 class ProductSearchField extends StatelessWidget {
   const ProductSearchField({
     super.key,
-    required this.fieldKey,
     required this.controller,
     required this.focusNode,
     required this.onSubmitted,
     required this.onClear,
   });
 
-  final Key fieldKey;
   final TextEditingController controller;
   final FocusNode focusNode;
   final ValueChanged<String> onSubmitted;
@@ -198,7 +194,7 @@ class ProductSearchField extends StatelessWidget {
     return ValueListenableBuilder<TextEditingValue>(
       valueListenable: controller,
       builder: (context, value, _) => TextField(
-        key: fieldKey,
+        key: ProductFinderKeys.search,
         controller: controller,
         focusNode: focusNode,
         textInputAction: TextInputAction.search,
@@ -295,21 +291,14 @@ class ProductSearchResults extends StatelessWidget {
                   hit.name,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    fontSize: AppTheme.fontSizeBody,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.foreground,
-                  ),
+                  style: productFinderHeading(AppTheme.fontSizeBody),
                 ),
                 if (hit.brand case final brand?)
                   Text(
                     brand,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: AppTheme.fontSizeCaption,
-                      color: AppTheme.mutedForeground,
-                    ),
+                    style: _captionStyle,
                   ),
               ],
             ),
@@ -326,18 +315,12 @@ class ProductCard extends StatelessWidget {
   const ProductCard({
     super.key,
     required this.product,
-    required this.applyKey,
-    required this.otherProductKey,
-    required this.attributionKey,
     required this.onApply,
     required this.onOtherProduct,
     required this.onAttribution,
   });
 
   final ProductPrefill product;
-  final Key applyKey;
-  final Key otherProductKey;
-  final Key attributionKey;
   final VoidCallback onApply;
   final VoidCallback onOtherProduct;
   final VoidCallback onAttribution;
@@ -352,11 +335,7 @@ class ProductCard extends StatelessWidget {
           children: [
             Text(
               product.title,
-              style: const TextStyle(
-                fontSize: AppTheme.fontSizeTitle,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.foreground,
-              ),
+              style: productFinderHeading(AppTheme.fontSizeTitle),
             ),
             if (product.brand case final brand?) ...[
               AppConstants.gap4,
@@ -382,7 +361,7 @@ class ProductCard extends StatelessWidget {
             Semantics(
               link: true,
               child: TextButton(
-                key: attributionKey,
+                key: ProductFinderKeys.attribution,
                 onPressed: onAttribution,
                 child: const Text(
                   'Produktdaten: Open Food Facts (ODbL)',
@@ -394,10 +373,14 @@ class ProductCard extends StatelessWidget {
         ),
       ),
       AppConstants.gap16,
-      BbButton(tapKey: applyKey, label: 'Übernehmen', onPressed: onApply),
+      BbButton(
+        tapKey: ProductFinderKeys.apply,
+        label: 'Übernehmen',
+        onPressed: onApply,
+      ),
       AppConstants.gap8,
       BbButton(
-        tapKey: otherProductKey,
+        tapKey: ProductFinderKeys.otherProduct,
         label: 'Anderes Produkt',
         isOutlined: true,
         onPressed: onOtherProduct,
@@ -407,38 +390,30 @@ class ProductCard extends StatelessWidget {
 }
 
 /// Core doesn't know the code: enter the meal by hand, add the product to
-/// Open Food Facts, or scan again (back to the search with [toSearch]).
+/// Open Food Facts, or go [rescan] (the sheet's back button).
 class ProductNotFoundView extends StatelessWidget {
   const ProductNotFoundView({
     super.key,
-    required this.typeItKey,
-    required this.offAddLinkKey,
-    required this.rescanKey,
     required this.onTypeIt,
     required this.onAddToOff,
-    required this.onRescan,
-    this.toSearch = false,
+    required this.rescan,
   });
 
-  final Key typeItKey;
-  final Key offAddLinkKey;
-  final Key rescanKey;
   final VoidCallback onTypeIt;
   final VoidCallback onAddToOff;
-  final VoidCallback onRescan;
-  final bool toSearch;
+  final Widget rescan;
 
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      const _Panel(
+      _Panel(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Dieses Produkt kennen wir noch nicht.', style: _titleStyle),
             AppConstants.gap8,
-            Text(
+            const Text(
               'Du kannst die Mahlzeit einfach selbst eintragen.',
               style: _bodyStyle,
             ),
@@ -447,17 +422,17 @@ class ProductNotFoundView extends StatelessWidget {
       ),
       AppConstants.gap16,
       BbButton(
-        tapKey: typeItKey,
+        tapKey: ProductFinderKeys.typeIt,
         label: 'Selbst eintragen',
         onPressed: onTypeIt,
       ),
       AppConstants.gap8,
-      RescanButton(tapKey: rescanKey, onTap: onRescan, toSearch: toSearch),
+      rescan,
       AppConstants.gap8,
       Semantics(
         link: true,
         child: TextButton(
-          key: offAddLinkKey,
+          key: ProductFinderKeys.offAddLink,
           onPressed: onAddToOff,
           child: const Text(
             'Produkt bei Open Food Facts ergänzen',
@@ -470,28 +445,22 @@ class ProductNotFoundView extends StatelessWidget {
 }
 
 /// A call failed: the message, maybe „Nochmal versuchen" and maybe
-/// „Nochmal scannen" (or „Zurück zur Suche" with [toSearch]).
+/// the sheet's back button ([rescan]).
 class ProductFailedView extends StatelessWidget {
   const ProductFailedView({
     super.key,
     required this.message,
-    required this.retryKey,
-    this.rescanKey,
     required this.onRetry,
-    this.onRescan,
-    this.toSearch = false,
+    this.rescan,
   });
 
   final String message;
-  final Key retryKey;
-  final Key? rescanKey;
 
   /// „Nochmal versuchen", unless null (repeating cannot help).
   final VoidCallback? onRetry;
 
-  /// „Nochmal scannen" below the retry, unless null.
-  final VoidCallback? onRescan;
-  final bool toSearch;
+  /// The back button below the retry, unless null.
+  final Widget? rescan;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -500,28 +469,18 @@ class ProductFailedView extends StatelessWidget {
       _Panel(
         child: Semantics(
           liveRegion: true,
-          child: Text(
-            message,
-            style: const TextStyle(
-              fontSize: AppTheme.fontSizeBody,
-              color: AppTheme.foreground,
-              height: AppTheme.lineHeightBody,
-            ),
-          ),
+          child: Text(message, style: _messageStyle),
         ),
       ),
       if (onRetry case final onRetry?) ...[
         AppConstants.gap16,
         BbButton(
-          tapKey: retryKey,
+          tapKey: ProductFinderKeys.retry,
           label: 'Nochmal versuchen',
           onPressed: onRetry,
         ),
       ],
-      if (onRescan case final onRescan?) ...[
-        AppConstants.gap8,
-        RescanButton(tapKey: rescanKey, onTap: onRescan, toSearch: toSearch),
-      ],
+      if (rescan case final rescan?) ...[AppConstants.gap8, rescan],
     ],
   );
 }

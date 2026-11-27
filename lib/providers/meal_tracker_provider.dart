@@ -230,24 +230,20 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
   /// Photo, date and notes are left alone.
   void applyProduct(ProductPrefill product) {
     final seen = state.ingredients.map((i) => i.toLowerCase()).toSet();
-    final added = <ProductIngredient>[];
+    final added = <String>[];
+    final unmatched = <String>[];
     for (final ingredient in product.ingredients) {
       final name = ingredient.name.trim();
       if (name.isEmpty || !seen.add(name.toLowerCase())) continue;
-      added.add(
-        ProductIngredient(name: name, ingredientId: ingredient.ingredientId),
-      );
+      added.add(name);
+      if (ingredient.ingredientId == null) unmatched.add(name);
     }
     state = state.copyWith(
       title: state.title == kDefaultMealTitle ? product.title : null,
-      ingredients: [...state.ingredients, ...added.map((i) => i.name)],
+      ingredients: [...state.ingredients, ...added],
     );
     final autocomplete = ref.read(ingredientAutocompleteProvider.notifier);
-    for (final ingredient in added) {
-      if (ingredient.ingredientId == null) {
-        autocomplete.addIngredient(ingredient.name);
-      }
-    }
+    unmatched.forEach(autocomplete.addIngredient);
   }
 
   void removeIngredient(String name) {

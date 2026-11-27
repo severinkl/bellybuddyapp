@@ -249,7 +249,6 @@ void main() {
 
     notifier().retry(query: ' Käse ');
     expect(service.searches, ['Joghurt', 'Joghurt', 'Käse']);
-    expect(notifier().lastQuery, 'Käse');
   });
 
   test('a lookup rejected with 400 offers no retry; other failures '
@@ -259,7 +258,7 @@ void main() {
       const ProductException(status: 400, message: 'Ungültiger Barcode.'),
     );
     await pumpEventQueue();
-    expect((state() as Failed).retry, isNull);
+    expect((state() as Failed).canRetry, isFalse);
     notifier().retry();
     expect(service.lookups, ['123']);
 
@@ -269,6 +268,6 @@ void main() {
       const ProductException(status: 503),
     );
     await pumpEventQueue();
-    expect((state() as Failed).retry, isNotNull);
+    expect((state() as Failed).canRetry, isTrue);
   });
 }

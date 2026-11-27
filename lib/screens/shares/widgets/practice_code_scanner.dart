@@ -5,6 +5,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../utils/practice_code.dart';
+import '../../../widgets/scanner/scanner_scrim_label.dart';
 
 /// Opens the scanner; the practice code it read, or null when closed.
 typedef PracticeCodeScan = Future<String?> Function(BuildContext context);
@@ -104,28 +105,8 @@ class _PracticeCodeScannerState extends State<PracticeCodeScanner> {
               left: AppConstants.spacingMd,
               right: AppConstants.spacingMd,
               bottom: AppConstants.spacingLg,
-              // On the scrim: white text stays readable over any picture.
               child: SafeArea(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    color: AppTheme.scrim,
-                    borderRadius: BorderRadius.all(
-                      Radius.circular(AppConstants.radiusMd),
-                    ),
-                  ),
-                  child: Padding(
-                    padding: AppConstants.paddingSm,
-                    child: Text(
-                      PracticeCodeScanner.rejectedLine,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: AppTheme.fontSizeBodyLG,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
+                child: ScannerScrimLabel(PracticeCodeScanner.rejectedLine),
               ),
             ),
         ],
