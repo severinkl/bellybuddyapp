@@ -116,6 +116,18 @@ class _DietitianConnectScreenState
     } catch (e, st) {
       _log.error('connecting a dietitian failed', e, st);
       final message = e is ShareException ? e.message : null;
+      if (e is ShareException && e.status == 404) {
+        // The code went away since the lookup (replaced, or the dietitian
+        // blocked): back to step 1, core's text under the field.
+        if (mounted) {
+          setState(() {
+            _submitting = false;
+            _found = null;
+            _lookupError = message ?? _notFound;
+          });
+        }
+        return;
+      }
       messenger.showSnackBar(SnackBar(content: Text(message ?? _failed)));
       if (mounted) setState(() => _submitting = false);
       return;

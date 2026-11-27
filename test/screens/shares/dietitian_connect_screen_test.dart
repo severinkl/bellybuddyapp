@@ -317,6 +317,24 @@ void main() {
     });
   }
 
+  testWidgets('a 404 on Freigeben (the code went away since the lookup) '
+      'returns to step 1 with core’s text under the field', (tester) async {
+    const gone = 'Diesen Code gibt es nicht mehr.';
+    await pump(tester, savedName: 'Maria');
+    await lookUp(tester, 'BERGER-7K2');
+    service.connectFails = const ShareException(status: 404, message: gone);
+    await tester.tap(submit());
+    await tester.pumpAndSettle();
+
+    expect(find.byType(DietitianConnectScreen), findsOneWidget);
+    expect(find.text('Gefunden'), findsNothing);
+    expect(codeField(), findsOneWidget);
+    final field = tester.widget<TextField>(codeField());
+    expect(field.decoration?.errorText, gone);
+    expect(field.controller?.text, 'BERGER-7K2');
+    expect(find.byType(SnackBar), findsNothing);
+  });
+
   testWidgets('a failure without a message shows the usual text', (
     tester,
   ) async {
@@ -394,9 +412,15 @@ void main() {
       );
       await tester.tap(find.text('open'));
       await tester.pumpAndSettle();
+      feed([null]);
+      await tester.pump();
+      // Nothing readable: no line.
+      expect(find.text(PracticeCodeScanner.rejectedLine), findsNothing);
       feed([null, 'kein Code!', 'https://evil.test/c/BERGER-7K2']);
       await tester.pump();
+      // A rejected QR code says so; the scanner keeps running.
       expect(find.byType(PracticeCodeScanner), findsOneWidget);
+      expect(find.text(PracticeCodeScanner.rejectedLine), findsOneWidget);
       feed(['https://connect.bellybuddy.at/c/berger-7k2', 'ANNA-ABC']);
       // A second detection while popping is ignored.
       feed(['ANNA-ABC']);
