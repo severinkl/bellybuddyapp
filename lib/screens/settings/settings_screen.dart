@@ -71,12 +71,21 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
-  Future<void> _openLink(BuildContext context, String url) => openExternalUrl(
-    context,
-    url,
-    failureMessage: 'Link konnte nicht geöffnet werden.',
-    open: openUrl,
-  );
+  /// Closes the dialog first: a failure SnackBar would sit behind its
+  /// barrier otherwise.
+  Future<void> _openLink(
+    BuildContext context,
+    BuildContext dialogContext,
+    String url,
+  ) {
+    Navigator.of(dialogContext).pop();
+    return openExternalUrl(
+      context,
+      url,
+      failureMessage: 'Link konnte nicht geöffnet werden.',
+      open: openUrl,
+    );
+  }
 
   Future<void> _showProductDataDialog(BuildContext context) {
     return showDialog<void>(
@@ -91,11 +100,12 @@ class SettingsScreen extends StatelessWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => _openLink(context, AppConstants.offHomeUrl),
+            onPressed: () => _openLink(context, ctx, AppConstants.offHomeUrl),
             child: const Text('Open Food Facts öffnen'),
           ),
           TextButton(
-            onPressed: () => _openLink(context, AppConstants.odblLicenseUrl),
+            onPressed: () =>
+                _openLink(context, ctx, AppConstants.odblLicenseUrl),
             child: const Text('Lizenz ansehen'),
           ),
           TextButton(

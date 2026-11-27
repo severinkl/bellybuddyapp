@@ -80,18 +80,47 @@ void main() {
         findsOneWidget,
       );
 
+      // A link closes the dialog before it opens.
       await tester.tap(find.text('Open Food Facts öffnen'));
-      await tester.pump();
+      await tester.pumpAndSettle();
+      expect(find.text('Produktdaten von Open Food Facts'), findsNothing);
+      await tester.tap(find.byKey(SettingsScreen.productDataKey));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Lizenz ansehen'));
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(opened, [
         Uri.parse(AppConstants.offHomeUrl),
         Uri.parse(AppConstants.odblLicenseUrl),
       ]);
 
+      await tester.tap(find.byKey(SettingsScreen.productDataKey));
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Schließen'));
       await tester.pumpAndSettle();
       expect(find.text('Produktdaten von Open Food Facts'), findsNothing);
+    });
+
+    testWidgets('a link that fails to open shows the message with no dialog '
+        'barrier above it', (tester) async {
+      Future<bool> open(
+        Uri url, {
+        LaunchMode mode = LaunchMode.platformDefault,
+      }) async => false;
+
+      await tester.pumpWithProviders(SettingsScreen(openUrl: open));
+      await tester.pump();
+      await tester.tap(find.byKey(SettingsScreen.productDataKey));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Lizenz ansehen'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Produktdaten von Open Food Facts'), findsNothing);
+      expect(find.text('Link konnte nicht geöffnet werden.'), findsOneWidget);
+      // Visible: the SnackBar takes the tap (no barrier in front of it).
+      expect(
+        find.text('Link konnte nicht geöffnet werden.').hitTestable(),
+        findsOneWidget,
+      );
     });
   });
 }
