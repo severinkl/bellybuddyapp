@@ -474,6 +474,69 @@ void main() {
       expect(find.text('Beendet'), findsOneWidget);
     });
 
+    testWidgets('a deleted dietitian ends the connection, not counted', (
+      tester,
+    ) async {
+      await pump(tester, [
+        testDietitianShare(id: 'a'),
+        testDietitianShare(id: 'b'),
+        testDietitianShare(id: 'g', dietitianId: null),
+      ]);
+      expect(find.text('Berater:in (Konto gelöscht)'), findsOneWidget);
+      expect(find.text('Beendet'), findsOneWidget);
+      expect(find.text(dietitiansFull), findsNothing);
+    });
+
+    testWidgets('a deleted dietitian without dates ages out after 90 days', (
+      tester,
+    ) async {
+      await pump(tester, [
+        testDietitianShare(
+          id: 'old',
+          dietitianId: null,
+          createdAt: DateTime(2026, 6, 1),
+        ),
+        testDietitianShare(
+          id: 'new',
+          dietitianId: null,
+          createdAt: DateTime(2026, 11, 1),
+        ),
+      ]);
+      expect(find.text('Berater:in (Konto gelöscht)'), findsOneWidget);
+    });
+
+    testWidgets('a paused connection: word, only Beenden', (tester) async {
+      await pump(tester, [
+        testDietitianShare(
+          dietitian: testCard(blockedAt: DateTime(2026, 11, 20)),
+        ),
+      ]);
+      expect(find.text('Pausiert'), findsOneWidget);
+      expect(
+        find.text('Diese Verbindung ist gerade pausiert.'),
+        findsOneWidget,
+      );
+      expect(find.text('Ändern'), findsNothing);
+      expect(find.text('Beenden'), findsOneWidget);
+    });
+
+    testWidgets('3 connections with one paused: connect disabled', (
+      tester,
+    ) async {
+      await pump(tester, [
+        testDietitianShare(id: 'a'),
+        testDietitianShare(id: 'b'),
+        testDietitianShare(
+          id: 'c',
+          dietitian: testCard(blockedAt: DateTime(2026, 11, 20)),
+        ),
+      ]);
+      expect(find.text(dietitiansFull), findsOneWidget);
+      await tester.tap(find.text('Berater:in verbinden'));
+      await tester.pumpAndSettle();
+      expect(find.text('page:/shares/connect'), findsNothing);
+    });
+
     testWidgets('a link a dietitian kept says who keeps it', (tester) async {
       await pump(tester, [
         testShare(

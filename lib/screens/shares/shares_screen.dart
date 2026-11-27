@@ -126,16 +126,13 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
     final active = <(DataShare, ShareState)>[];
     final others = <(DataShare, ShareState)>[];
     for (final share in shares) {
-      // A dietitian who deleted their account has ended the connection.
-      final state = dietitianGone(share)
-          ? ShareState.ended
-          : share.stateAt(now);
+      final state = share.stateAt(now);
       if (state == ShareState.active) {
         active.add((share, state));
         continue;
       }
       final stopped = share.stoppedAt;
-      if (stopped == null || stopped.isAfter(cutoff)) {
+      if (stopped != null && stopped.isAfter(cutoff)) {
         others.add((share, state));
       }
     }

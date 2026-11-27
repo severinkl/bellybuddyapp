@@ -265,6 +265,7 @@ void main() {
           dietitian: testCard(blockedAt: DateTime(2026, 11, 1)),
         ),
         testDietitianShare(id: 'd', expiresAt: DateTime(2026, 11, 1)),
+        testDietitianShare(id: 'e', dietitianId: null),
       ];
       final c = ProviderContainer.test(
         overrides: [

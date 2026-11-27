@@ -19,13 +19,6 @@ const _caption = TextStyle(
   color: AppTheme.mutedForeground,
 );
 
-/// A connection whose dietitian deleted their account: core removed the
-/// dietitian, nothing can be changed any more.
-bool dietitianGone(DataShare share) =>
-    share.kind == ShareKind.dietitian &&
-    share.dietitianId == null &&
-    share.dietitian == null;
-
 /// „Sieht alles außer Fotos", „Sieht alles", or the switched-on names:
 /// „Sieht Mahlzeiten und Bauchgefühl".
 String dietitianSeesLine(DataShare share) {
@@ -95,8 +88,7 @@ class DietitianShareTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final gone = dietitianGone(share);
-    final shown = gone ? ShareState.ended : state;
+    final shown = share.isDietitianGone ? ShareState.ended : state;
     final active = shown == ShareState.active;
     final paused = active && share.isPaused;
     final card = share.dietitian;

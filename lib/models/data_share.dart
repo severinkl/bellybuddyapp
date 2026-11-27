@@ -75,10 +75,16 @@ abstract class DataShare with _$DataShare {
   factory DataShare.fromJson(Map<String, dynamic> json) =>
       _$DataShareFromJson(json);
 
+  /// A connection whose dietitian deleted their account: core removed the
+  /// dietitian, so it is over whatever its dates say.
+  bool get isDietitianGone =>
+      kind == ShareKind.dietitian && dietitianId == null && dietitian == null;
+
   /// As core's `state_of`: ended, then locked, then expired, else active.
-  /// A null [expiresAt] never expires.
+  /// A null [expiresAt] never expires. A connection to a deleted dietitian
+  /// is ended.
   ShareState stateAt(DateTime now) {
-    if (revokedAt != null) return ShareState.ended;
+    if (revokedAt != null || isDietitianGone) return ShareState.ended;
     if (lockedAt != null) return ShareState.locked;
     final end = expiresAt;
     if (end != null && !end.isAfter(now)) return ShareState.expired;
@@ -87,8 +93,13 @@ abstract class DataShare with _$DataShare {
 
   /// When the share stopped, in [stateAt]'s order; for an active share its
   /// coming end, null when it has none. Never null for a share that is not
-  /// active.
-  DateTime? get stoppedAt => revokedAt ?? lockedAt ?? expiresAt;
+  /// active. A deleted dietitian's connection without any stop date counts
+  /// from [createdAt], so it still ages out of the list.
+  DateTime? get stoppedAt =>
+      revokedAt ??
+      lockedAt ??
+      expiresAt ??
+      (isDietitianGone ? createdAt : null);
 
   /// A connection whose dietitian the Belly Buddy team blocked: core shows
   /// them nothing until it is lifted.
