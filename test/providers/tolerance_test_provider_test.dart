@@ -418,10 +418,44 @@ void main() {
     await settle();
     expect(reminders.cancels, 1);
 
+    // Open with a running test: nothing cancelled.
+    service.answer = (_) => _stats(test: _view(phase: TestPhase.reintro));
     c = make();
     c.listen(toleranceTestCompleterProvider, (_, _) {});
     await settle();
     expect(reminders.cancels, 1);
+  });
+
+  test('loaded stats without an active test (stopped or completed '
+      'elsewhere) cancel the reminders once', () async {
+    service.answer = (call) =>
+        call == 1 ? _stats(test: _view(phase: TestPhase.reintro)) : _stats();
+    final c = make();
+    c.listen(toleranceTestCompleterProvider, (_, _) {});
+    await settle();
+    expect(reminders.cancels, 0);
+
+    (c.read(entriesRevisionProvider.notifier) as _Revision).bump();
+    await settle();
+    expect(reminders.cancels, 1);
+
+    (c.read(entriesRevisionProvider.notifier) as _Revision).bump();
+    await settle();
+    expect(reminders.cancels, 1);
+  });
+
+  test('a test this build cannot read cancels no reminders', () async {
+    service.answer = (_) => const PatternStats(
+      windowDays: 90,
+      ratedDays: 41,
+      hardDays: 9,
+      ready: true,
+      hasUnreadableTest: true,
+    );
+    final c = make();
+    c.listen(toleranceTestCompleterProvider, (_, _) {});
+    await settle();
+    expect(reminders.cancels, 0);
   });
 
   test('reminders not scheduled (no permission) are tried again on the '

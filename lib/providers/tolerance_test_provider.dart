@@ -83,6 +83,9 @@ class ToleranceTestActions {
   /// The tests whose reminders are being scheduled right now.
   final _scheduling = <String>{};
 
+  /// The reminders were cancelled since an active test was last seen.
+  bool _cancelled = false;
+
   bool get _locked =>
       _ref.read(plusLockedProvider) || _ref.read(patternStatsProvider).isLocked;
 
@@ -148,8 +151,22 @@ class ToleranceTestActions {
   }
 
   /// Another user, or Plus switched: the next active test seen is
-  /// scheduled again.
-  void forgetScheduled() => _scheduled.clear();
+  /// scheduled again, and the next sight of none cancels again.
+  void forgetScheduled() {
+    _scheduled.clear();
+    _cancelled = false;
+  }
+
+  /// Loaded stats of the current user: an active test (or one this build
+  /// cannot read) keeps the reminders; none (stopped or completed on
+  /// another device) cancels them, once until an active test is seen again.
+  void cancelUnlessActive(PatternStats stats) {
+    if ((stats.test?.isActive ?? false) || stats.hasUnreadableTest) {
+      _cancelled = false;
+    } else if (!_cancelled) {
+      unawaited(cancelReminders());
+    }
+  }
 
   /// Schedules [test]'s reminders unless they were (or are being) in this
   /// run; counts as done only once they really were (no permission or a
@@ -172,6 +189,7 @@ class ToleranceTestActions {
   /// Cancels the test reminders (stop, completion, Plus locked); never
   /// throws.
   Future<void> cancelReminders() async {
+    _cancelled = true;
     try {
       await _ref.read(toleranceTestRemindersProvider).cancel();
     } catch (e, st) {
@@ -224,7 +242,9 @@ Future<void> stopToleranceTest(WidgetRef ref, String id) =>
 /// Listens to [patternStatsProvider]: the first time a test arrives with
 /// phase done and status active, completes it; an active test still
 /// running gets its reminders scheduled again, once per app run and user
-/// ([ToleranceTestActions.rescheduleIfRunning]). Watched from the app
+/// ([ToleranceTestActions.rescheduleIfRunning]); none active (stopped or
+/// completed elsewhere) cancels them once
+/// ([ToleranceTestActions.cancelUnlessActive]). Watched from the app
 /// shell; while Plus is locked it cancels pending test reminders and does
 /// not listen (no stats load for it).
 final toleranceTestCompleterProvider = Provider<void>((ref) {
@@ -238,7 +258,10 @@ final toleranceTestCompleterProvider = Provider<void>((ref) {
   ref.listen<AsyncValue<PatternStats?>>(patternStatsProvider, (_, next) {
     // While loading (a user change) the value may be the previous user's.
     if (next.isLoading || next.isLocked) return;
-    final test = next.value?.test;
+    final stats = next.value;
+    if (stats == null) return;
+    actions.cancelUnlessActive(stats);
+    final test = stats.test;
     if (test == null) return;
     unawaited(actions.completeIfDone(test));
     unawaited(actions.rescheduleIfRunning(test));
