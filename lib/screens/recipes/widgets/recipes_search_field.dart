@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../providers/recipe_search_provider.dart';
+import '../../../widgets/common/bb_labeled_field.dart';
 
 /// The search of the [host] it sits on ([recipeSearchProvider]), kept
 /// alive while the field shows.
@@ -49,22 +50,29 @@ class _RecipesSearchFieldState extends ConsumerState<RecipesSearchField> {
     return ValueListenableBuilder<TextEditingValue>(
       valueListenable: _controller,
       builder: (context, value, _) {
-        return TextField(
-          controller: _controller,
-          decoration: InputDecoration(
-            hintText: 'Rezept suchen…',
-            prefixIcon: const Icon(Icons.search),
-            suffixIcon: value.text.isEmpty
-                ? null
-                : IconButton(icon: const Icon(Icons.clear), onPressed: _clear),
-            filled: true,
-            fillColor: AppTheme.card,
-            border: pillBorder,
-            enabledBorder: pillBorder,
-            focusedBorder: pillBorder,
-            isDense: true,
+        return BbLabeledField(
+          label: 'Rezept suchen',
+          child: TextField(
+            controller: _controller,
+            decoration: InputDecoration(
+              hintText: 'Rezept suchen…',
+              prefixIcon: const Icon(Icons.search),
+              suffixIcon: value.text.isEmpty
+                  ? null
+                  : IconButton(
+                      icon: const Icon(Icons.clear),
+                      tooltip: 'Suche löschen',
+                      onPressed: _clear,
+                    ),
+              filled: true,
+              fillColor: AppTheme.card,
+              border: pillBorder,
+              enabledBorder: pillBorder,
+              focusedBorder: pillBorder,
+              isDense: true,
+            ),
+            onChanged: search.setQuery,
           ),
-          onChanged: search.setQuery,
         );
       },
     );

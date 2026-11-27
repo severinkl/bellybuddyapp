@@ -5,6 +5,7 @@ import '../../config/app_theme.dart';
 import '../../models/ingredient_suggestion_group.dart';
 import '../../providers/ingredient_suggestion_provider.dart';
 import '../../widgets/common/bb_async_state.dart';
+import '../../widgets/common/bb_labeled_field.dart';
 import 'widgets/suggestion_card.dart';
 import 'widgets/suggestion_detail_modal.dart';
 import '../../config/constants.dart';
@@ -90,12 +91,15 @@ class _IngredientSuggestionsScreenState
               AppConstants.spacingMd,
               AppConstants.spacingSm,
             ),
-            child: TextField(
-              decoration: const InputDecoration(
-                hintText: 'Suchen...',
-                prefixIcon: Icon(Icons.search),
+            child: BbLabeledField(
+              label: 'Alternativen suchen',
+              child: TextField(
+                decoration: const InputDecoration(
+                  hintText: 'Suchen...',
+                  prefixIcon: Icon(Icons.search),
+                ),
+                onChanged: (v) => setState(() => _searchQuery = v),
               ),
-              onChanged: (v) => setState(() => _searchQuery = v),
             ),
           ),
           Expanded(

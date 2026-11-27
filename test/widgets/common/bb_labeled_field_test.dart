@@ -37,4 +37,49 @@ void main() {
     expect(named, hasLength(1));
     handle.dispose();
   });
+
+  testWidgets('a button in the field\'s decoration keeps its own node', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    const key = Key('field');
+    var cleared = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: BbLabeledField(
+            label: 'Rezept suchen',
+            child: TextField(
+              key: key,
+              decoration: InputDecoration(
+                hintText: 'Rezept suchen…',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: IconButton(
+                  tooltip: 'Suche löschen',
+                  icon: const Icon(Icons.clear),
+                  onPressed: () => cleared++,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.enterText(find.byKey(key), 'Curry');
+    await tester.pumpAndSettle();
+
+    final node = tester.getSemantics(find.byType(EditableText));
+    expect(node.getSemanticsData().label, 'Rezept suchen');
+    expect(node, isSemantics(isTextField: true, value: 'Curry'));
+    final clear = find.semantics.byPredicate(
+      (n) => n.tooltip == 'Suche löschen',
+    );
+    expect(clear, findsOneWidget);
+    // Reachable on its own, not folded into the field.
+    expect(clear.evaluate().single.isMergedIntoParent, isFalse);
+    expect(node.mergeAllDescendantsIntoThisNode, isFalse);
+    tester.semantics.tap(clear);
+    expect(cleared, 1);
+    handle.dispose();
+  });
 }

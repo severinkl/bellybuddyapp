@@ -154,11 +154,6 @@ List<Override> _mealToEdit() => [
 
 // -- Pending checks -----------------------------------------------------------
 
-const _tapTargets7 = {
-  A11yCheck.androidTapTarget: 'XA7',
-  A11yCheck.iosTapTarget: 'XA7',
-};
-
 const _tapTargets9 = {
   A11yCheck.androidTapTarget: 'XA9',
   A11yCheck.iosTapTarget: 'XA9',
@@ -207,15 +202,8 @@ const a11yScreens = <A11yScreen>[
   A11yScreen('Ich', RoutePaths.me),
 
   // Trackers.
-  // The ingredient search's „+ Hinzufügen" (20 px), XA7's, which lands
-  // last.
-  A11yScreen('Mahlzeit', RoutePaths.mealTracker, pending: _tapTargets7),
-  A11yScreen(
-    'Mahlzeit bearbeiten',
-    '/meal-tracker/meal-1',
-    seed: _mealToEdit,
-    pending: _tapTargets7,
-  ),
+  A11yScreen('Mahlzeit', RoutePaths.mealTracker),
+  A11yScreen('Mahlzeit bearbeiten', '/meal-tracker/meal-1', seed: _mealToEdit),
   A11yScreen('Klo', RoutePaths.toiletTracker),
   A11yScreen('Bauchgefühl', RoutePaths.gutFeelingTracker),
   A11yScreen('Getränk', RoutePaths.drinkTracker),
@@ -223,23 +211,10 @@ const a11yScreens = <A11yScreen>[
   // Entdecken.
   A11yScreen('Tipps', RoutePaths.recommendations),
   A11yScreen('Alternativen', RoutePaths.ingredientSuggestions),
-  A11yScreen(
-    'Meine Rezepte',
-    RoutePaths.recipes,
-    base: _ownRecipeBase,
-    // The add IconButton has no tooltip; the collection card's Column
-    // overflows (9.5 px at 100 %, 66 px at 200 %).
-    pending: {A11yCheck.labeledTapTarget: 'XA7', A11yCheck.textScale200: 'XA7'},
-  ),
-  // „+ Hinzufügen" (20 px); in the editor also the title (18 px).
-  A11yScreen('Neues Rezept', RoutePaths.recipeNew, pending: _tapTargets7),
+  A11yScreen('Meine Rezepte', RoutePaths.recipes, base: _ownRecipeBase),
+  A11yScreen('Neues Rezept', RoutePaths.recipeNew),
   A11yScreen('Eigenes Rezept', '/recipe/rec-1', base: _ownRecipeBase),
-  A11yScreen(
-    'Rezept bearbeiten',
-    '/recipe/rec-1/edit',
-    base: _ownRecipeBase,
-    pending: _tapTargets7,
-  ),
+  A11yScreen('Rezept bearbeiten', '/recipe/rec-1/edit', base: _ownRecipeBase),
   A11yScreen('Sammlungsrezept', '/collection/recipe-1'),
   A11yScreen('Rezept anpassen', '/collection/recipe-1/adapt'),
 

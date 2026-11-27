@@ -229,6 +229,9 @@ class AppConstants {
   // most steps and characters a recipe's steps may have
   static const double recipePageImageAspect = 16 / 9;
   static const double recipeCardImageAspect = 1.1;
+
+  /// Meine Rezepte: a card's width / its least height in the two-column grid.
+  static const double recipeGridCardAspect = 0.78;
   static const double recipeListThumbSize = 88.0;
   static const double recipeMarkSize = 24.0;
   static const double recipeNeutralDotSize = 6.0;

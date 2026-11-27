@@ -61,6 +61,27 @@ void main() {
     expect(find.text('curry'), findsNothing);
   });
 
+  testWidgets('the recipe search keeps „Rezept suchen" with text entered; '
+      'its clear button is „Suche löschen"', (tester) async {
+    final handle = tester.ensureSemantics();
+    await pump(tester);
+    await tester.enterText(find.byType(TextField), 'curry');
+    await tester.pump(const Duration(milliseconds: 350));
+
+    final field = tester.getSemantics(find.byType(EditableText));
+    expect(field.getSemanticsData().label, contains('Rezept suchen'));
+    expect(field, isSemantics(isTextField: true, value: 'curry'));
+
+    final clear = find.semantics.byPredicate(
+      (n) => n.tooltip == 'Suche löschen' && !n.isMergedIntoParent,
+    );
+    expect(clear, findsOneWidget);
+    tester.semantics.tap(clear);
+    await tester.pump(const Duration(milliseconds: 350));
+    expect(find.text('curry'), findsNothing);
+    handle.dispose();
+  });
+
   testWidgets('prefills the field from the notifier active query', (
     tester,
   ) async {

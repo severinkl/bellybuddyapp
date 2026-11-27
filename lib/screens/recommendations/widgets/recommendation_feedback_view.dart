@@ -4,6 +4,7 @@ import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/recommendation.dart';
 import '../../../providers/recommendation_provider.dart';
+import '../../../widgets/common/tap_target.dart';
 import 'recommendation_dislike_sheet.dart';
 
 /// Feedback row shown at the bottom of a single recommendation page. Two
@@ -131,20 +132,20 @@ class RecommendationFeedbackView extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: AppConstants.spacingSm),
-                TextButton(
-                  onPressed: () =>
-                      showRecommendationDislikeSheet(context, recommendation),
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    minimumSize: const Size(0, 0),
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    foregroundColor: AppTheme.foreground,
-                  ),
-                  child: const Text(
-                    'Bearbeiten',
-                    style: TextStyle(
-                      fontSize: AppTheme.fontSizeCaptionLG,
-                      decoration: TextDecoration.underline,
+                TapTarget(
+                  child: TextButton(
+                    onPressed: () =>
+                        showRecommendationDislikeSheet(context, recommendation),
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      foregroundColor: AppTheme.foreground,
+                    ),
+                    child: const Text(
+                      'Bearbeiten',
+                      style: TextStyle(
+                        fontSize: AppTheme.fontSizeCaptionLG,
+                        decoration: TextDecoration.underline,
+                      ),
                     ),
                   ),
                 ),

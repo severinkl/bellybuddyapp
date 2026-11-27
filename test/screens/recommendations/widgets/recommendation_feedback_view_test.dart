@@ -217,6 +217,30 @@ void main() {
       },
     );
 
+    testWidgets('the tip feedback „Bearbeiten" is at least 48 high', (
+      tester,
+    ) async {
+      final rec = testRecommendation(
+        id: 'r1',
+      ).copyWith(state: RecommendationState.disliked);
+      await _pump(
+        tester,
+        rec: rec,
+        overrides: [
+          recommendationRepositoryProvider.overrideWithValue(
+            MockRecommendationRepository(),
+          ),
+          currentUserIdProvider.overrideWithValue('test-user'),
+        ],
+      );
+
+      final button = find.ancestor(
+        of: find.text('Bearbeiten'),
+        matching: find.byType(TextButton),
+      );
+      expect(tester.getSize(button).height, greaterThanOrEqualTo(48));
+    });
+
     testWidgets('repo error shows SnackBar', (tester) async {
       final repo = MockRecommendationRepository();
       when(

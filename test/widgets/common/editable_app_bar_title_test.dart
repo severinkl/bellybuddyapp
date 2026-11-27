@@ -86,6 +86,55 @@ void main() {
       },
     );
 
+    testWidgets('in display mode the title is a button „Titel bearbeiten" '
+        'with the title as its value; tapping it edits', (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        _wrap(
+          EditableAppBarTitle(
+            initialTitle: 'Mahlzeit X',
+            placeholder: 'Mahlzeit benennen',
+            onChanged: (_) {},
+          ),
+        ),
+      );
+
+      final title = find.semantics.byLabel('Titel bearbeiten');
+      expect(title, findsOneWidget);
+      expect(
+        tester.getSemantics(find.bySemanticsLabel('Titel bearbeiten')),
+        isSemantics(isButton: true, value: 'Mahlzeit X', hasTapAction: true),
+      );
+      tester.semantics.tap(title);
+      await tester.pump();
+      expect(find.byType(TextField), findsOneWidget);
+      handle.dispose();
+    });
+
+    testWidgets('in edit mode the field keeps its name „Titel" after typing', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        _wrap(
+          EditableAppBarTitle(
+            initialTitle: '',
+            placeholder: 'Rezept benennen',
+            autofocusOnMount: true,
+            onChanged: (_) {},
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.enterText(find.byType(TextField), 'Curry');
+      await tester.pumpAndSettle();
+
+      final node = tester.getSemantics(find.byType(TextField));
+      expect(node.getSemanticsData().label, contains('Titel'));
+      expect(node, isSemantics(isTextField: true, value: 'Curry'));
+      handle.dispose();
+    });
+
     testWidgets('autofocusOnMount: true starts in edit mode', (tester) async {
       await tester.pumpWidget(
         _wrap(

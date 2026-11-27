@@ -159,11 +159,6 @@ const _rules = [
     {'IconButton': r'(?<![\w.])IconButton(\.(?!styleFrom)\w+)?\('},
     offends: _noTooltip,
     allowed: {
-      'lib/screens/recipes/recipes_screen.dart:IconButton#2': 'XA7', // add
-      'lib/screens/recipes/widgets/recipes_search_field.dart:IconButton#1':
-          'XA7', // clear the search
-      'lib/widgets/common/ingredient_search.dart:IconButton#1':
-          'XA7', // delete an own ingredient
       'lib/screens/settings/widgets/password_change_section.dart:IconButton#1':
           'XA9', // current password eye
       'lib/screens/settings/widgets/password_change_section.dart:IconButton#2':
@@ -185,8 +180,6 @@ const _rules = [
     allowed: {
       'lib/screens/settings/widgets/reminder_time_picker.dart:GestureDetector#2':
           'XA9', // ✕ remove a time
-      'lib/widgets/common/ingredient_search.dart:GestureDetector#1':
-          'XA7', // ✕ close the search
       'lib/widgets/common/circle_icon_button.dart:GestureDetector#1':
           'the shared round icon button: a Semantics button with its label '
           'wraps it (spec §2.1)',
@@ -209,10 +202,6 @@ const _rules = [
           r'minimumSize:\s*(const\s+)?Size(\.zero\b|\(\s*0(\.0)?\s*,\s*0(\.0)?\s*\))',
     },
     allowed: {
-      'lib/screens/recommendations/widgets/recommendation_feedback_view.dart:shrinkWrap#1':
-          'XA7', // „Bearbeiten"
-      'lib/screens/recommendations/widgets/recommendation_feedback_view.dart:minimumSize#1':
-          'XA7', // „Bearbeiten"
       'lib/screens/settings/widgets/password_change_section.dart:shrinkWrap#1':
           'XA9', // „Passwort vergessen?"
       'lib/screens/settings/widgets/password_change_section.dart:minimumSize#1':
