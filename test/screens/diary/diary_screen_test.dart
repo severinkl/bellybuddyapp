@@ -9,6 +9,7 @@ import 'package:belly_buddy/screens/diary/diary_screen.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
 import 'package:belly_buddy/utils/date_format_utils.dart';
+import 'package:belly_buddy/widgets/common/bb_card.dart';
 import 'package:belly_buddy/widgets/common/mascot_image.dart';
 import 'package:belly_buddy/screens/diary/widgets/diary_entry_card.dart';
 
@@ -138,6 +139,86 @@ void main() {
       );
       semantics.dispose();
     });
+
+    testWidgets('an entry card is a button named by its title and subtitle', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await tester.pumpWithProviders(
+        const DiaryScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pumpAndSettle();
+
+      final node = tester.getSemantics(
+        find
+            .descendant(
+              of: find.widgetWithText(DiaryEntryCard, 'Testmahlzeit'),
+              matching: find.byType(BbCard),
+            )
+            .first,
+      );
+      expect(node.flagsCollection.isButton, isTrue);
+      expect(node.label, contains('Testmahlzeit'));
+      expect(node.label, contains('2 Zutaten'));
+      semantics.dispose();
+    });
+
+    testWidgets('a long subtitle shows on two lines', (tester) async {
+      final entry = DiaryEntry(
+        id: 'm',
+        type: DiaryEntryType.meal,
+        trackedAt: DateTime(2026, 3, 25, 12),
+        title: 'Titel',
+        subtitle: List.filled(30, 'Zutat').join(', '),
+        data: MealDiaryData(testMealEntry()),
+      );
+      await tester.pumpWithProviders(
+        SizedBox(
+          width: 320,
+          child: DiaryEntryCard(entry: entry, onTap: () {}),
+        ),
+        overrides: _overrides(),
+      );
+      final text = tester.widget<Text>(find.text(entry.subtitle));
+      expect(text.maxLines, 2);
+      expect(
+        tester.getSize(find.text(entry.subtitle)).height,
+        greaterThan(tester.getSize(find.text('Titel')).height * 1.5),
+      );
+    });
+
+    testWidgets(
+      'the day arrows are 48 × 48 „Vorheriger Tag" / „Nächster Tag"',
+      (tester) async {
+        final semantics = tester.ensureSemantics();
+        await tester.pumpWithProviders(
+          const DiaryScreen(),
+          overrides: _overrides(),
+        );
+        await tester.pumpAndSettle();
+
+        expect(
+          tester.getSemantics(find.byKey(DiaryScreen.previousDayKey)).label,
+          'Vorheriger Tag',
+        );
+        expect(
+          tester.getSize(find.byKey(DiaryScreen.previousDayKey)),
+          const Size(48, 48),
+        );
+        await tester.tap(find.byKey(DiaryScreen.previousDayKey));
+        await tester.pumpAndSettle();
+        expect(
+          tester.getSemantics(find.byKey(DiaryScreen.nextDayKey)).label,
+          'Nächster Tag',
+        );
+        expect(
+          tester.getSize(find.byKey(DiaryScreen.nextDayKey)),
+          const Size(48, 48),
+        );
+        semantics.dispose();
+      },
+    );
 
     testWidgets('renders navigation chevrons', (tester) async {
       await tester.pumpWithProviders(

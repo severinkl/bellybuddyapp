@@ -56,32 +56,34 @@ class _MealThumbnailState extends ConsumerState<MealThumbnail> {
         child: const Icon(Icons.restaurant, color: AppTheme.primary, size: 20),
       );
     }
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppConstants.radiusIcon),
-      child: CachedNetworkImage(
-        imageUrl: _resolvedUrl!,
-        width: AppConstants.iconBadgeSm,
-        height: AppConstants.iconBadgeSm,
-        fit: BoxFit.cover,
-        placeholder: (_, _) => Container(
+    return ExcludeSemantics(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppConstants.radiusIcon),
+        child: CachedNetworkImage(
+          imageUrl: _resolvedUrl!,
           width: AppConstants.iconBadgeSm,
           height: AppConstants.iconBadgeSm,
-          decoration: BoxDecoration(
-            color: AppTheme.primary.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(AppConstants.radiusIcon),
+          fit: BoxFit.cover,
+          placeholder: (_, _) => Container(
+            width: AppConstants.iconBadgeSm,
+            height: AppConstants.iconBadgeSm,
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(AppConstants.radiusIcon),
+            ),
           ),
-        ),
-        errorWidget: (_, _, _) => Container(
-          width: AppConstants.iconBadgeSm,
-          height: AppConstants.iconBadgeSm,
-          decoration: BoxDecoration(
-            color: AppTheme.primary.withValues(alpha: 0.15),
-            borderRadius: BorderRadius.circular(AppConstants.radiusIcon),
-          ),
-          child: const Icon(
-            Icons.restaurant,
-            color: AppTheme.primary,
-            size: 20,
+          errorWidget: (_, _, _) => Container(
+            width: AppConstants.iconBadgeSm,
+            height: AppConstants.iconBadgeSm,
+            decoration: BoxDecoration(
+              color: AppTheme.primary.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(AppConstants.radiusIcon),
+            ),
+            child: const Icon(
+              Icons.restaurant,
+              color: AppTheme.primary,
+              size: 20,
+            ),
           ),
         ),
       ),

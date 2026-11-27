@@ -7,7 +7,11 @@ import '../../../repositories/meal_media_repository.dart';
 
 class MealImage extends ConsumerStatefulWidget {
   final String imageUrl;
-  const MealImage({super.key, required this.imageUrl});
+
+  /// What a screen reader calls the photo; null leaves it out (a list's
+  /// decoration).
+  final String? semanticLabel;
+  const MealImage({super.key, required this.imageUrl, this.semanticLabel});
 
   @override
   ConsumerState<MealImage> createState() => _MealImageState();
@@ -50,6 +54,16 @@ class _MealImageState extends ConsumerState<MealImage> {
 
   @override
   Widget build(BuildContext context) {
+    final label = widget.semanticLabel;
+    return Semantics(
+      image: label != null,
+      label: label,
+      excludeSemantics: true,
+      child: _content(),
+    );
+  }
+
+  Widget _content() {
     if (_loading) {
       return Container(
         height: AppConstants.mealImageHeight,
