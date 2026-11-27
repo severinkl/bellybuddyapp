@@ -12,6 +12,7 @@ import '../../providers/notification_provider.dart';
 import '../../providers/tutorial_provider.dart';
 import '../../providers/upgrade_gate_provider.dart';
 import '../../router/route_names.dart';
+import '../../services/progress/progress_copy.dart';
 import '../../utils/buddy_name.dart';
 import '../../utils/logger.dart';
 import '../../utils/url_utils.dart';
@@ -26,8 +27,9 @@ import 'widgets/rename_buddy_dialog.dart';
 /// Home's does; the Buddy's name is the screen's heading): the Buddy with
 /// his name („Umbenennen") and streak chip, then „Erinnerungen sind aus"
 /// while notifications are off ([remindersOffProvider]; „Einschalten"),
-/// Streak & Ziel („Dein Streak"), Einstellungen, Tutorial wiederholen and
-/// Feedback geben, and the app version in small print.
+/// Streak & Ziel („Dein Streak"), Dein Verlauf (always), Einstellungen,
+/// Tutorial wiederholen and Feedback geben, and the app version in small
+/// print.
 ///
 /// Without a Buddy status (loading, error) the Buddy shows as 'Buddy',
 /// without the chip, „Umbenennen" and the Streak row.
@@ -37,6 +39,7 @@ class MeScreen extends ConsumerStatefulWidget {
   static const renameKey = Key('me_rename');
   static const remindersKey = Key('me_reminders');
   static const streakKey = Key('me_streak');
+  static const progressKey = Key('me_progress');
   static const settingsKey = Key('me_settings');
   static const tutorialKey = Key('me_tutorial');
   static const feedbackKey = Key('me_feedback');
@@ -157,6 +160,13 @@ class _MeScreenState extends ConsumerState<MeScreen> {
           subtitle: _streakSubtitle(status),
           onTap: () => unawaited(_openStreak()),
         ),
+      BbSettingsItem(
+        key: MeScreen.progressKey,
+        icon: Icons.calendar_view_week_outlined,
+        title: ProgressCopy.title,
+        subtitle: ProgressCopy.meSubtitle,
+        onTap: () => context.push(RoutePaths.progress),
+      ),
       BbSettingsItem(
         key: MeScreen.settingsKey,
         icon: Icons.settings_outlined,

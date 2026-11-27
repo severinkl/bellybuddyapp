@@ -307,6 +307,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: RouteNames.patternsUnlocked,
         builder: (context, state) => const PatternsUnlockedScreen(),
       ),
+      // „Dein Verlauf", from Ich and the Muster page; free (no Plus gate).
+      GoRoute(
+        path: RoutePaths.progress,
+        name: RouteNames.progress,
+        builder: (context, state) => const ProgressScreen(),
+      ),
       GoRoute(
         path: RoutePaths.ingredientSuggestions,
         name: RouteNames.ingredientSuggestions,

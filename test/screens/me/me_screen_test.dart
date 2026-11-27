@@ -79,7 +79,11 @@ void main() {
           path: RoutePaths.me,
           builder: (_, _) => MeScreen(openUrl: launches.call),
         ),
-        ...stubRoutes([RoutePaths.settings, RoutePaths.dashboard]),
+        ...stubRoutes([
+          RoutePaths.settings,
+          RoutePaths.dashboard,
+          RoutePaths.progress,
+        ]),
       ],
     );
     addTearDown(router.dispose);
@@ -188,6 +192,8 @@ void main() {
     expect(find.byType(StreakChip), findsNothing);
     expect(find.byKey(MeScreen.renameKey), findsNothing);
     expect(find.byKey(MeScreen.streakKey), findsNothing);
+    // „Dein Verlauf" does not need a Buddy status.
+    expect(find.byKey(MeScreen.progressKey), findsOneWidget);
     expect(find.byKey(MeScreen.settingsKey), findsOneWidget);
     expect(find.byKey(MeScreen.feedbackKey), findsOneWidget);
   });
@@ -364,6 +370,23 @@ void main() {
     await tapRow(tester, MeScreen.settingsKey);
 
     expect(find.text('page:${RoutePaths.settings}'), findsOneWidget);
+    expect(router.canPop(), isTrue);
+  });
+
+  testWidgets('„Dein Verlauf" after „Streak & Ziel" pushes /progress', (
+    tester,
+  ) async {
+    await pump(tester);
+
+    expect(find.text('Dein Verlauf'), findsOneWidget);
+    expect(find.text('Wie es dir über die Wochen geht'), findsOneWidget);
+    double top(Key key) => tester.getTopLeft(find.byKey(key)).dy;
+    expect(top(MeScreen.progressKey), greaterThan(top(MeScreen.streakKey)));
+    expect(top(MeScreen.progressKey), lessThan(top(MeScreen.settingsKey)));
+
+    await tapRow(tester, MeScreen.progressKey);
+
+    expect(find.text('page:${RoutePaths.progress}'), findsOneWidget);
     expect(router.canPop(), isTrue);
   });
 

@@ -214,6 +214,12 @@ class AppConstants {
   // Muster page: how blurred the locked state's sample preview is
   static const double patternsPreviewBlur = 5.0;
 
+  // „Dein Verlauf": a day cell's height, the dot of a day logged without
+  // a gut feeling, and the empty state's Buddy
+  static const double progressDayCellHeight = 30.0;
+  static const double progressDayDotSize = 6.0;
+  static const double progressEmptyBuddySize = 120.0;
+
   // „Deine Belohnungen": a row's day circle
   static const double journeyRewardDaySize = 44.0;
 
