@@ -1,3 +1,6 @@
+import '../utils/date_format_utils.dart';
+import 'tolerance_test.dart';
+
 /// How noticeable a food or FODMAP group is in the pattern comparison
 /// (wire values of core's `pattern-stats`). Always relative, never a verdict.
 enum StatLevel {
@@ -74,6 +77,10 @@ class PatternStats {
     this.groups = const [],
     this.ingredients = const [],
     this.calm = const [],
+    this.test,
+    this.tested = const [],
+    this.proposal,
+    this.restrictive = false,
   });
 
   final int windowDays;
@@ -84,7 +91,34 @@ class PatternStats {
   final List<StatItem> ingredients;
   final List<StatItem> calm;
 
-  /// Unknown keys are ignored; an item with an unknown level is dropped.
+  /// The active test, or the latest completed one ending within 14 days.
+  final ToleranceTestView? test;
+
+  /// Completed tests of the last 180 days, newest first.
+  final List<TestedItem> tested;
+
+  /// The subject core proposes to test; null while restrictive.
+  final TestSubject? proposal;
+
+  /// The restrictive-eating guard (spec §5.3): no „Testen" anywhere.
+  final bool restrictive;
+
+  /// The latest completed test of [kind]/[key] that ended at most 60 days
+  /// before [today] (the device's today when omitted); null otherwise.
+  TestedItem? testedFor(String kind, String key, {DateTime? today}) {
+    final day = startOfDay(today ?? DateTime.now());
+    TestedItem? latest;
+    for (final t in tested) {
+      if (t.subject.kind != kind || t.subject.key != key) continue;
+      final age = daysBetween(t.endedOn, day);
+      if (age < 0 || age > 60) continue;
+      if (latest == null || t.endedOn.isAfter(latest.endedOn)) latest = t;
+    }
+    return latest;
+  }
+
+  /// Unknown keys are ignored; an item with an unknown level is dropped, as
+  /// are a test, tested item or proposal this build cannot read.
   factory PatternStats.fromJson(Map<String, dynamic> j) => PatternStats(
     windowDays: j['window_days'] as int,
     ratedDays: j['rated_days'] as int,
@@ -93,7 +127,25 @@ class PatternStats {
     groups: _items(j['groups']),
     ingredients: _items(j['ingredients']),
     calm: _items(j['calm']),
+    test: _tryParse(j['test'], ToleranceTestView.fromJson),
+    tested: [
+      for (final row in (j['tested'] as List?) ?? const [])
+        ?_tryParse(row, TestedItem.fromJson),
+    ],
+    proposal: _tryParse(j['proposal'], TestSubject.fromJson),
+    restrictive: j['restrictive'] as bool? ?? false,
   );
+
+  static T? _tryParse<T>(Object? raw, T Function(Map<String, dynamic>) parse) {
+    if (raw is! Map<String, dynamic>) return null;
+    try {
+      return parse(raw);
+    } on FormatException {
+      return null;
+    } on TypeError {
+      return null;
+    }
+  }
 
   static List<StatItem> _items(Object? raw) {
     final items = <StatItem>[];
