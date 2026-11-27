@@ -290,6 +290,15 @@ void main() {
     c.dispose();
   });
 
+  test('hush takes the bubble down at once, also a held one', () {
+    final c = BuddyController()..say('Hallo', duration: null);
+    c.hush();
+    expect(c.bubble, isNull);
+    c.sayThenRest('Danke', hold: const Duration(milliseconds: 10));
+    c.hush();
+    expect(c.bubble, isNull);
+  });
+
   test('lookAt steers the gaze toward the point', () {
     final c = BuddyController()..lookAt(const Offset(467, 2000));
     _run(c, 0.5);

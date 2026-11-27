@@ -25,6 +25,7 @@ import 'package:belly_buddy/screens/recommendations/widgets/tip_recipe_link.dart
 import 'package:belly_buddy/utils/date_format_utils.dart';
 import 'package:belly_buddy/widgets/common/bb_async_state.dart';
 import 'package:belly_buddy/widgets/common/bb_card.dart';
+import 'package:belly_buddy/widgets/common/plus_locked_card.dart';
 
 import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
@@ -32,6 +33,7 @@ import '../../helpers/fixtures.dart';
 import '../../helpers/layout_checks.dart';
 import '../../helpers/mocks.dart';
 import '../../helpers/riverpod_helpers.dart';
+import '../../helpers/purchases_fakes.dart';
 
 List<Override> _overridesFor(List<Recommendation> recommendations) {
   final mock = MockRecommendationRepository();
@@ -899,6 +901,139 @@ void main() {
       );
       expect(find.text('Empfehlungen'), findsNothing);
     });
+  });
+
+  group('Belly Buddy Plus', () {
+    const title = 'Jeden Montag neue Tipps';
+    const line =
+        'Mit Belly Buddy Plus schaut sich Belly Buddy jede Woche deine '
+        'Einträge an.';
+    final locked = plusLockedOverrides.single;
+    final open = plusOpenOverrides.single;
+    final switchOff = plusSwitchOffOverrides.single;
+
+    Future<GoRouter> pumpRouted(
+      WidgetTester tester,
+      List<Recommendation> recs,
+      Override plus,
+    ) async {
+      final router = GoRouter(
+        routes: [
+          GoRoute(path: '/', builder: (_, _) => const RecommendationsScreen()),
+          GoRoute(
+            path: RoutePaths.plus,
+            builder: (_, _) => const Scaffold(body: Text('page:/plus')),
+          ),
+        ],
+      );
+      addTearDown(router.dispose);
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [..._overridesFor(recs), plus],
+          child: germanRouterApp(router),
+        ),
+      );
+      await tester.pumpAndSettle();
+      return router;
+    }
+
+    Future<void> scrollToCard(WidgetTester tester) async {
+      await tester.ensureVisible(find.byKey(PlusLockedCard.openKey));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('locked with sets: the sets, feedback, and the card below', (
+      tester,
+    ) async {
+      await pumpRouted(tester, [_rec('1', summary: 'Mein Tipp')], locked);
+
+      expect(find.text('Mein Tipp'), findsOneWidget);
+      expect(find.text('War dieser Tipp hilfreich?'), findsOneWidget);
+      await scrollToCard(tester);
+      expect(find.text(title), findsOneWidget);
+      expect(find.text(line), findsOneWidget);
+
+      await tester.tap(find.byKey(PlusLockedCard.openKey));
+      await tester.pumpAndSettle();
+      expect(find.text('page:/plus'), findsOneWidget);
+    });
+
+    testWidgets('locked and empty: the card instead of „Noch keine Tipps"', (
+      tester,
+    ) async {
+      await pumpRouted(tester, const [], locked);
+
+      expect(find.byType(PlusLockedCard), findsOneWidget);
+      expect(find.text(title), findsOneWidget);
+      expect(find.text(line), findsOneWidget);
+      expect(find.textContaining('Noch keine Tipps'), findsNothing);
+
+      await tester.tap(find.byKey(PlusLockedCard.openKey));
+      await tester.pumpAndSettle();
+      expect(find.text('page:/plus'), findsOneWidget);
+    });
+
+    testWidgets('locked and empty: „Aktualisieren" below the card loads the '
+        'free first tip', (tester) async {
+      final repo = MockRecommendationRepository();
+      var answers = <List<Recommendation>>[
+        const [],
+        [_rec('1', summary: 'Erster Tipp')],
+      ];
+      when(() => repo.fetchByUserId(any())).thenAnswer((_) async {
+        final next = answers.first;
+        if (answers.length > 1) answers = answers.sublist(1);
+        return next;
+      });
+      when(() => repo.markSeen(any(), any())).thenAnswer((_) async {});
+      await tester.pumpWithProviders(
+        const RecommendationsScreen(),
+        overrides: [
+          recommendationRepositoryProvider.overrideWithValue(repo),
+          currentUserIdProvider.overrideWithValue('test-user'),
+          locked,
+        ],
+      );
+      await tester.pumpAndSettle();
+
+      final refresh = find.byKey(RecommendationsScreen.emptyStateRefreshKey);
+      expect(find.byType(PlusLockedCard), findsOneWidget);
+      expect(refresh, findsOneWidget);
+      expect(find.text('Aktualisieren'), findsOneWidget);
+      expect(
+        tester.getTopLeft(refresh).dy,
+        greaterThan(tester.getTopLeft(find.byType(PlusLockedCard)).dy),
+      );
+
+      await tester.ensureVisible(refresh);
+      await tester.pumpAndSettle();
+      await tester.tap(refresh);
+      await tester.pumpAndSettle();
+      verify(() => repo.fetchByUserId('test-user')).called(2);
+      expect(find.text('Erster Tipp'), findsOneWidget);
+    });
+
+    for (final (name, plus) in [('open', open), ('switch off', switchOff)]) {
+      testWidgets('$name with sets: no card', (tester) async {
+        await pumpRouted(tester, [_rec('1', summary: 'Mein Tipp')], plus);
+
+        expect(find.text('Mein Tipp'), findsOneWidget);
+        await tester.drag(find.byType(ListView), const Offset(0, -2000));
+        await tester.pumpAndSettle();
+        expect(find.byType(PlusLockedCard, skipOffstage: false), findsNothing);
+      });
+
+      testWidgets('$name and empty: today\'s empty state', (tester) async {
+        await pumpRouted(tester, const [], plus);
+
+        expect(find.textContaining('Noch keine Tipps'), findsOneWidget);
+        expect(
+          find.byKey(RecommendationsScreen.emptyStateRefreshKey),
+          findsOneWidget,
+        );
+        expect(find.byType(PlusLockedCard), findsNothing);
+      });
+    }
   });
 
   group('a letter, a focus and a recipe link (core #12)', () {

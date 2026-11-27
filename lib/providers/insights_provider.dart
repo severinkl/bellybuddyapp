@@ -1,39 +1,22 @@
-import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/insight_source.dart';
 import '../models/insights.dart';
 import '../repositories/entry_repository.dart';
 import '../services/insights/insights_engine.dart';
-import '../utils/coalesced_runner.dart';
 import '../utils/logger.dart';
 import '../utils/retry_helper.dart';
-import 'auth_provider.dart';
 import 'buddy_provider.dart';
-import 'entries_provider.dart';
-import 'today_provider.dart';
+import 'entry_window_notifier.dart';
 
 /// The signed-in user's [Insights] over the last 30 local days as of the
 /// app's clock ([buddyClockProvider]); while signed out, those of no
 /// entries (progress 0/0, 30 empty days, nothing yet).
 ///
-/// Computed again:
-/// - after every entry write ([entriesRevisionProvider]: a log, an edit, a
-///   move, a delete), whoever made it;
-/// - when the day changes ([todayProvider]: at local midnight, or back in
-///   the foreground after the device slept through it), so the window
-///   moves on; a new day while unwatched (e.g. on a hidden tab) is caught
-///   up once watched again;
-/// - on [refresh] (Home's load and pull-to-refresh).
-///
-/// A write or a new day during a load is fetched after it.
-///
-/// After a user change Riverpod keeps the previous user's value in the
-/// state while the new user's insights load ([AsyncValue.isReloading]) and
-/// when that load fails (an [AsyncError] with a value): show a value only
-/// from [AsyncData] (e.g. through [AsyncValue.whenData]).
-class InsightsNotifier extends AsyncNotifier<Insights> {
+/// Computed again after every entry write, on a new day and on [refresh]
+/// (Home's load and pull-to-refresh); see [EntryWindowNotifier], also for
+/// what the state holds after a user change.
+class InsightsNotifier extends EntryWindowNotifier<Insights> {
   static const _log = AppLogger('Insights');
 
   static const _noEntries = InsightSource(
@@ -42,99 +25,14 @@ class InsightsNotifier extends AsyncNotifier<Insights> {
     activityTimes: [],
   );
 
-  /// Counts computations outside build, in the order they start.
-  int _seq = 0;
-
-  /// The [_seq] of the last computation outside build that applied its
-  /// result: a result applies only if its computation started after that
-  /// one, so an older one never overwrites a newer one, and when the newest
-  /// fails, an older one that succeeds (with a write the state lacks) still
-  /// applies.
-  int _appliedSeq = 0;
-
-  /// The [_refetch]es, coalesced per build (its ref): another write or new
-  /// day for it meanwhile asks for one more.
-  final _refetches = CoalescedRunner();
+  @override
+  AppLogger get log => _log;
 
   @override
-  Future<Insights> build() async {
-    final userId = ref.watch(currentUserIdProvider);
-    ref.listen(entriesRevisionProvider, (_, _) => unawaited(_refetch()));
-    // Listened, not watched: a rebuild would hide the insights while the
-    // new day loads. Unwatched (e.g. Home on a hidden tab), a new day
-    // waits: resuming replays it, inside a life-cycle callback where ref
-    // can't be used, hence the microtask.
-    final newDay = ref.listen(todayProvider, (_, _) {
-      final opRef = ref;
-      scheduleMicrotask(() {
-        if (opRef.mounted) unawaited(_refetch());
-      });
-    });
-    ref
-      ..onCancel(newDay.pause)
-      ..onResume(newDay.resume);
-    try {
-      return await _compute(userId);
-    } catch (e, st) {
-      _log.error('Loading the insights failed', e, st);
-      rethrow;
-    }
-  }
+  String get subject => 'insights';
 
-  /// Computes the insights again. While a load runs (the first one, or the
-  /// one after a user change), waits for it instead. Never throws: on
-  /// failure the last insights stay (an error without them stays an
-  /// error). A result applies only if no newer computation has applied
-  /// one meanwhile and the user is still the same.
-  Future<void> refresh() async {
-    if (state.isLoading) {
-      await _loadDone();
-      return;
-    }
-    await _fetchAndApply();
-  }
-
-  /// After an entry write or on a new day: a running load may have fetched
-  /// before it, so this waits for that load to apply and then computes
-  /// again (fetching only afterwards, an older load never overwrites it).
-  ///
-  /// Coalesced: while this runs, more writes only ask for one more fetch
-  /// after the running one, so a burst of writes fetches at most twice.
-  Future<void> _refetch() {
-    final opRef = ref;
-    return _refetches.run(key: opRef, () async {
-      while (opRef.mounted && state.isLoading) {
-        await _loadDone();
-      }
-      // A rebuild (another user) meanwhile loads on its own, after this.
-      if (opRef.mounted) await _fetchAndApply();
-    });
-  }
-
-  Future<void> _loadDone() async {
-    try {
-      await future;
-    } catch (_) {
-      // Logged by build.
-    }
-  }
-
-  Future<void> _fetchAndApply() async {
-    final opRef = ref;
-    final userId = opRef.read(currentUserIdProvider);
-    final seq = ++_seq;
-    try {
-      final insights = await _compute(userId);
-      if (seq > _appliedSeq && opRef.isCurrentUser(userId)) {
-        _appliedSeq = seq;
-        state = AsyncData(insights);
-      }
-    } catch (e, st) {
-      _log.error('Refreshing the insights failed', e, st);
-    }
-  }
-
-  Future<Insights> _compute(String? userId) async {
+  @override
+  Future<Insights> compute(String? userId) async {
     final now = ref.read(buddyClockProvider)();
     if (userId == null) return computeInsights(_noEntries, now);
     final source = await ref

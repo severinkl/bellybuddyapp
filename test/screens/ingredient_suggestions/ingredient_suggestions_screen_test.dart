@@ -1,11 +1,13 @@
 // ignore_for_file: invalid_use_of_internal_member
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:belly_buddy/screens/ingredient_suggestions/ingredient_suggestions_screen.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/ingredient_suggestion_provider.dart';
+import 'package:belly_buddy/widgets/common/plus_locked_card.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
 
 import '../../helpers/fakes.dart';
@@ -13,6 +15,7 @@ import '../../helpers/fixtures.dart';
 import '../../helpers/mocks.dart';
 import '../../helpers/riverpod_helpers.dart';
 import '../../helpers/semantics_checks.dart';
+import '../../helpers/purchases_fakes.dart';
 
 List<Override> _overrides() => [
   ingredientRepositoryProvider.overrideWithValue(FakeIngredientRepository()),
@@ -125,6 +128,70 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
 
       expect(find.textContaining('Vorschlag'), findsOneWidget);
+    });
+  });
+
+  group('Belly Buddy Plus, none received', () {
+    const note =
+        'Alternativen zu auffälligen Zutaten gibt es mit Belly Buddy Plus.';
+
+    List<Override> none(Override plus) {
+      final repo = MockIngredientRepository();
+      when(
+        () => repo.fetchSuggestionGroups(any()),
+      ).thenAnswer((_) async => const []);
+      when(() => repo.markAllSeen(any())).thenAnswer((_) async {});
+      return [
+        ingredientRepositoryProvider.overrideWithValue(repo),
+        currentUserIdProvider.overrideWithValue('test-user'),
+        plus,
+      ];
+    }
+
+    testWidgets('locked: the note and the link instead of the empty line', (
+      tester,
+    ) async {
+      await tester.pumpWithProviders(
+        const IngredientSuggestionsScreen(),
+        overrides: none(plusLockedOverrides.single),
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text(note), findsOneWidget);
+      expect(find.byKey(PlusLink.openKey), findsOneWidget);
+      expect(find.text('Keine Vorschläge vorhanden.'), findsNothing);
+    });
+
+    for (final (name, plus) in [
+      ('open', plusOpenOverrides.single),
+      ('switch off', plusSwitchOffOverrides.single),
+    ]) {
+      testWidgets('$name: today\'s empty line', (tester) async {
+        await tester.pumpWithProviders(
+          const IngredientSuggestionsScreen(),
+          overrides: none(plus),
+        );
+        await tester.pump(const Duration(milliseconds: 200));
+
+        expect(find.text('Keine Vorschläge vorhanden.'), findsOneWidget);
+        expect(find.text(note), findsNothing);
+        expect(find.byKey(PlusLink.openKey), findsNothing);
+      });
+    }
+
+    testWidgets('locked with groups, a search with no match: the empty line', (
+      tester,
+    ) async {
+      await tester.pumpWithProviders(
+        const IngredientSuggestionsScreen(),
+        overrides: [..._overrides(), ...plusLockedOverrides],
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.enterText(find.byType(TextField), 'xyz');
+      await tester.pump();
+
+      expect(find.text('Keine Vorschläge vorhanden.'), findsOneWidget);
+      expect(find.text(note), findsNothing);
     });
   });
 }

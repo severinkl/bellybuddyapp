@@ -332,6 +332,25 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
   }
 }
 
+/// An action for [BbSuccessOverlay.actions] whose whole pill is the tap
+/// target (and a button to assistive tech), not only its [child].
+class BbPillAction extends StatelessWidget {
+  const BbPillAction({super.key, required this.child, required this.onTap});
+
+  final Widget child;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    child: GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: onTap,
+      child: child,
+    ),
+  );
+}
+
 /// Pill-shaped action button container — absorbs taps to prevent dismiss.
 /// Renders each child in its own pill, separated by [AppConstants.gap8].
 class _PillActionButton extends StatelessWidget {
@@ -350,26 +369,44 @@ class _PillActionButton extends StatelessWidget {
         children: [
           for (int i = 0; i < children.length; i++) ...[
             if (i > 0) AppConstants.gap8,
-            Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppConstants.spacingLg,
-                vertical: AppConstants.spacing12,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.85),
-                borderRadius: BorderRadius.circular(AppConstants.radiusFull),
-              ),
-              child: DefaultTextStyle.merge(
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: AppTheme.fontSizeBody,
-                  decoration: TextDecoration.none,
-                ),
-                child: children[i],
-              ),
-            ),
+            _pill(children[i]),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _pill(Widget action) {
+    final whole = action is BbPillAction;
+    final pill = Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.spacingLg,
+        vertical: AppConstants.spacing12,
+      ),
+      constraints: whole
+          ? const BoxConstraints(minHeight: AppConstants.minTapTarget)
+          : null,
+      alignment: whole ? Alignment.center : null,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.85),
+        borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+      ),
+      child: DefaultTextStyle.merge(
+        style: const TextStyle(
+          fontWeight: FontWeight.w600,
+          fontSize: AppTheme.fontSizeBody,
+          decoration: TextDecoration.none,
+        ),
+        child: whole ? action.child : action,
+      ),
+    );
+    if (!whole) return pill;
+    return Semantics(
+      button: true,
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: action.onTap,
+        child: pill,
       ),
     );
   }

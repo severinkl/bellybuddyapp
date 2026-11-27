@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:belly_buddy/models/data_share.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
+import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/providers/share_launcher_provider.dart';
 import 'package:belly_buddy/providers/shares_provider.dart';
 import 'package:belly_buddy/router/route_names.dart';
@@ -50,6 +51,7 @@ void main() {
     WidgetTester tester, {
     String? savedName,
     bool openCreate = true,
+    bool paywallOn = true,
   }) async {
     SharedPreferences.setMockInitialValues({});
     if (savedName != null) {
@@ -65,6 +67,7 @@ void main() {
     container = ProviderContainer.test(
       overrides: [
         currentUserIdProvider.overrideWithValue('u1'),
+        paywallEnabledProvider.overrideWithValue(paywallOn),
         shareServiceProvider.overrideWithValue(service),
         buddyClockProvider.overrideWithValue(() => DateTime(2026, 11, 26, 12)),
         shareLauncherProvider.overrideWithValue((_, _) async {}),
@@ -79,6 +82,10 @@ void main() {
           routes: [
             GoRoute(path: 'new', builder: (_, _) => const ShareCreateScreen()),
           ],
+        ),
+        GoRoute(
+          path: RoutePaths.plus,
+          builder: (_, _) => const Scaffold(body: Text('page:/plus')),
         ),
       ],
     );
@@ -282,6 +289,65 @@ void main() {
     expect(switchOn(tester, 'Getränke'), isFalse);
     expect(service.created, isEmpty);
     expect(buttonEnabled(tester), isTrue);
+  });
+
+  testWidgets('a 402 plus_required replaces the form with /plus', (
+    tester,
+  ) async {
+    await pump(tester);
+    service.failWith = const ShareException(
+      status: 402,
+      message: 'Dafür brauchst du Belly Buddy Plus.',
+      code: 'plus_required',
+    );
+    await typeName(tester, 'Dr. A');
+    await tester.tap(button());
+    await tester.pumpAndSettle();
+
+    expect(find.text('page:/plus'), findsOneWidget);
+    expect(find.byType(ShareCreateScreen), findsNothing);
+    expect(service.created, isEmpty);
+    // Back from the paywall lands on the list, not the form.
+    router.pop();
+    await tester.pumpAndSettle();
+    expect(find.byType(SharesScreen), findsOneWidget);
+    expect(find.byType(ShareCreateScreen), findsNothing);
+  });
+
+  testWidgets('a 402 plus_required with the switch off keeps the form and '
+      'says Plus is needed', (tester) async {
+    await pump(tester, paywallOn: false);
+    service.failWith = const ShareException(
+      status: 402,
+      message: 'Dafür brauchst du Belly Buddy Plus.',
+      code: 'plus_required',
+    );
+    await typeName(tester, 'Dr. A');
+    await tester.tap(button());
+    await tester.pumpAndSettle();
+
+    expect(find.text('page:/plus'), findsNothing);
+    expect(find.byType(ShareCreateScreen), findsOneWidget);
+    expect(find.text('Dr. A'), findsOneWidget);
+    expect(find.text('Dafür brauchst du Belly Buddy Plus.'), findsOneWidget);
+    expect(buttonEnabled(tester), isTrue);
+  });
+
+  testWidgets('a 402 without the code is a failure like any other', (
+    tester,
+  ) async {
+    await pump(tester);
+    service.failWith = const ShareException(status: 402);
+    await typeName(tester, 'Dr. A');
+    await tester.tap(button());
+    await tester.pumpAndSettle();
+
+    expect(find.text('page:/plus'), findsNothing);
+    expect(find.byType(ShareCreateScreen), findsOneWidget);
+    expect(
+      find.text('Das hat nicht geklappt. Versuch es später nochmal.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a generic failure shows the usual text', (tester) async {

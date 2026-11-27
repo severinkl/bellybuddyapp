@@ -1,0 +1,246 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../services/relief/relief_content.dart';
+import 'relief_provider.dart';
+
+enum ReliefPlayerStatus { ready, running, paused, done }
+
+@immutable
+class ReliefPlayerState {
+  const ReliefPlayerState({
+    required this.status,
+    required this.stepIndex,
+    required this.secondInStep,
+  });
+
+  final ReliefPlayerStatus status;
+  final int stepIndex;
+  final int secondInStep;
+
+  /// In a step: running or paused.
+  bool get isActive =>
+      status == ReliefPlayerStatus.running ||
+      status == ReliefPlayerStatus.paused;
+
+  ReliefPlayerState copyWith({
+    ReliefPlayerStatus? status,
+    int? stepIndex,
+    int? secondInStep,
+  }) => ReliefPlayerState(
+    status: status ?? this.status,
+    stepIndex: stepIndex ?? this.stepIndex,
+    secondInStep: secondInStep ?? this.secondInStep,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      other is ReliefPlayerState &&
+      other.status == status &&
+      other.stepIndex == stepIndex &&
+      other.secondInStep == secondInStep;
+
+  @override
+  int get hashCode => Object.hash(status, stepIndex, secondInStep);
+
+  @override
+  String toString() =>
+      'ReliefPlayerState($status, step $stepIndex, second $secondInStep)';
+}
+
+/// The wall clock the player counts with; tests override it.
+final reliefClockProvider = Provider<DateTime Function()>((_) => DateTime.now);
+
+/// Plays the exercise [exerciseId] step by step.
+///
+/// Time is wall clock: while running, the second in the step is the seconds
+/// counted before the last (re)start plus the time since then. The timer only
+/// triggers the recompute, so a late or suspended timer loses nothing.
+class ReliefPlayer extends Notifier<ReliefPlayerState> {
+  ReliefPlayer(this.exerciseId);
+
+  final String exerciseId;
+
+  ReliefExercise? _exercise;
+  Timer? _timer;
+
+  /// Milliseconds in the step counted before [_resumedAt]; whole seconds
+  /// would drop up to a second on every pause.
+  int _baseMs = 0;
+
+  /// Milliseconds in the step as of the last recompute.
+  int _progressMs = 0;
+  DateTime? _resumedAt;
+
+  /// Between [appHidden] and [appShown]. On Android the timer keeps firing
+  /// in the background; a quiet step that ends then is held at its end, so
+  /// the next step never starts unseen.
+  bool _hidden = false;
+
+  @override
+  ReliefPlayerState build() {
+    _exercise = exerciseIn(ref.watch(reliefContentProvider), exerciseId);
+    ref.onDispose(_stopTimer);
+    return const ReliefPlayerState(
+      status: ReliefPlayerStatus.ready,
+      stepIndex: 0,
+      secondInStep: 0,
+    );
+  }
+
+  /// Throws a [StateError] for an unknown id; the screen redirects first.
+  ReliefExercise get exercise =>
+      _exercise ?? (throw StateError('Unknown relief exercise'));
+
+  ReliefStep get step => exercise.steps[state.stepIndex];
+
+  int get secondsLeftInStep {
+    final left = step.seconds - state.secondInStep;
+    return left < 0 ? 0 : left;
+  }
+
+  /// Seconds across all steps, for the progress bar.
+  int get secondsDone {
+    if (state.status == ReliefPlayerStatus.done) return exercise.totalSeconds;
+    var done = 0;
+    for (var i = 0; i < state.stepIndex; i++) {
+      done += exercise.steps[i].seconds;
+    }
+    return done + state.secondInStep;
+  }
+
+  DateTime _now() => ref.read(reliefClockProvider)();
+
+  /// Ready → running at step 0, second 0.
+  void start() {
+    if (state.status != ReliefPlayerStatus.ready) return;
+    _runStep(0);
+  }
+
+  void pause() {
+    if (state.status != ReliefPlayerStatus.running) return;
+    _recompute();
+    if (state.status != ReliefPlayerStatus.running) return;
+    _stopTimer();
+    _baseMs = _progressMs;
+    state = state.copyWith(status: ReliefPlayerStatus.paused);
+  }
+
+  void resume() {
+    if (state.status != ReliefPlayerStatus.paused) return;
+    _resumedAt = _now();
+    state = state.copyWith(status: ReliefPlayerStatus.running);
+    _startTimer();
+  }
+
+  /// The next step at its start; on the last step finishes.
+  void next() {
+    if (!state.isActive) return;
+    _goTo(state.stepIndex + 1);
+  }
+
+  /// The previous step at its start; on step 0 restarts it.
+  void back() {
+    if (!state.isActive) return;
+    _goTo(state.stepIndex > 0 ? state.stepIndex - 1 : 0);
+  }
+
+  /// Leaving the app pauses a running step, except a quiet one, which keeps
+  /// counting by wall clock and is held at its end until [appShown].
+  void appHidden() {
+    _hidden = true;
+    if (state.status != ReliefPlayerStatus.running) return;
+    if (step.quiet) return;
+    pause();
+  }
+
+  /// Back in the app: catch up with the wall clock; a held quiet step moves
+  /// on to the next step at second 0.
+  void appShown() {
+    _hidden = false;
+    if (state.status == ReliefPlayerStatus.running) _recompute();
+  }
+
+  /// Moves to [index] at second 0 keeping running/paused; past the end → done.
+  void _goTo(int index) {
+    if (index >= exercise.steps.length) {
+      _finish();
+      return;
+    }
+    if (state.status == ReliefPlayerStatus.paused) {
+      _baseMs = 0;
+      _progressMs = 0;
+      state = state.copyWith(stepIndex: index, secondInStep: 0);
+    } else {
+      _runStep(index);
+    }
+  }
+
+  void _runStep(int index) {
+    _baseMs = 0;
+    _progressMs = 0;
+    _resumedAt = _now();
+    state = ReliefPlayerState(
+      status: ReliefPlayerStatus.running,
+      stepIndex: index,
+      secondInStep: 0,
+    );
+    _startTimer();
+  }
+
+  void _finish() {
+    _stopTimer();
+    state = ReliefPlayerState(
+      status: ReliefPlayerStatus.done,
+      stepIndex: exercise.steps.length - 1,
+      secondInStep: exercise.steps.last.seconds,
+    );
+  }
+
+  /// Recomputes the second from the clock; a step whose time is up moves on
+  /// to the next step at second 0 (overrun is not carried).
+  void _recompute() {
+    final resumedAt = _resumedAt;
+    if (state.status != ReliefPlayerStatus.running || resumedAt == null) {
+      return;
+    }
+    final now = _now();
+    final elapsed = now.difference(resumedAt).inMilliseconds;
+    if (elapsed < 0) {
+      // The clock went back: count on from here.
+      _resumedAt = now;
+      _baseMs = _progressMs;
+      return;
+    }
+    final ms = _baseMs + elapsed;
+    final second = ms ~/ 1000;
+    if (second >= step.seconds) {
+      if (_hidden) {
+        // Hold at the end; appShown moves on.
+        _stopTimer();
+        _progressMs = step.seconds * 1000;
+        state = state.copyWith(secondInStep: step.seconds);
+        return;
+      }
+      _goTo(state.stepIndex + 1);
+      return;
+    }
+    _progressMs = ms;
+    state = state.copyWith(secondInStep: second);
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (_) => _recompute());
+  }
+
+  void _stopTimer() {
+    _timer?.cancel();
+    _timer = null;
+  }
+}
+
+final reliefPlayerProvider = NotifierProvider.autoDispose
+    .family<ReliefPlayer, ReliefPlayerState, String>((id) => ReliefPlayer(id));

@@ -4,8 +4,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/app_theme.dart';
 import '../../models/ingredient_suggestion_group.dart';
 import '../../providers/ingredient_suggestion_provider.dart';
+import '../../providers/plus_provider.dart';
+import '../../services/plus/plus_copy.dart';
 import '../../widgets/common/bb_async_state.dart';
 import '../../widgets/common/bb_labeled_field.dart';
+import '../../widgets/common/plus_locked_card.dart';
 import 'widgets/suggestion_card.dart';
 import 'widgets/suggestion_detail_modal.dart';
 import '../../config/constants.dart';
@@ -79,6 +82,7 @@ class _IngredientSuggestionsScreenState
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(ingredientSuggestionProvider);
+    final plusLocked = ref.watch(plusLockedProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Alternativen')),
@@ -124,6 +128,27 @@ class _IngredientSuggestionsScreenState
                           ? g.copyWith(isNew: true)
                           : g,
                 ]..sort(IngredientSuggestionGroup.compareNewFirst);
+
+                // None received while Plus is locked: where they come from.
+                if (groups.isEmpty && plusLocked) {
+                  return const Center(
+                    child: Padding(
+                      padding: AppConstants.paddingLg,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            PlusCopy.alternativesNote,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: AppTheme.mutedForeground),
+                          ),
+                          AppConstants.gap8,
+                          PlusLink(),
+                        ],
+                      ),
+                    ),
+                  );
+                }
 
                 if (filtered.isEmpty) {
                   return const Center(

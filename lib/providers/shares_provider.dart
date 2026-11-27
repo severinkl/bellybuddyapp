@@ -7,6 +7,7 @@ import '../services/share_secrets_store.dart';
 import '../services/share_service.dart';
 import '../utils/logger.dart';
 import '../utils/retry_helper.dart';
+import 'buddy_provider.dart';
 import 'core_providers.dart';
 
 /// The user's shares, newest first. Empty while nobody is signed in.
@@ -44,6 +45,30 @@ class SharesNotifier extends AsyncNotifier<List<DataShare>> {
     // A failing reload keeps the list shown; the create itself worked.
     await refresh();
     return created;
+  }
+
+  /// Connects to the dietitian of [code], keeps the name for the next one
+  /// and reloads the list. Throws what the service throws; returns the new
+  /// share's id.
+  Future<String> connect(String code, DietitianShareTerms terms) async {
+    final id = await ref.read(shareServiceProvider).connect(code, terms);
+    // The connection exists on the server: a local write failing must not
+    // turn that into a failure.
+    await _bestEffort(
+      'remembering the display name',
+      () => ref
+          .read(shareSecretsStoreProvider)
+          .rememberDisplayName(terms.displayName),
+    );
+    await refresh();
+    return id;
+  }
+
+  /// Changes what connection [id] shares and reloads the list. A failing
+  /// call throws and leaves the state as it was.
+  Future<void> updateTerms(String id, DietitianShareTerms terms) async {
+    await ref.read(shareServiceProvider).update(id, terms);
+    await refresh();
   }
 
   /// Ends a share, drops its secret from this device and reloads the list.
@@ -113,6 +138,20 @@ final sharesProvider = AsyncNotifierProvider<SharesNotifier, List<DataShare>>(
   SharesNotifier.new,
   retry: noRetry,
 );
+
+/// How many connections to dietitians are active (a paused one counts: core
+/// counts it against the limit of 3).
+final activeDietitianCountProvider = Provider<int>((ref) {
+  final shares = ref.watch(sharesProvider).value ?? const <DataShare>[];
+  final now = ref.watch(buddyClockProvider)();
+  return shares
+      .where(
+        (s) =>
+            s.kind == ShareKind.dietitian &&
+            s.stateAt(now) == ShareState.active,
+      )
+      .length;
+});
 
 /// The link and code of a share, when this device still has them.
 final shareSecretProvider = FutureProvider.autoDispose

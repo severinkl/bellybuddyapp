@@ -2,6 +2,7 @@
 import 'dart:ui' show SemanticsFlag;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
@@ -13,6 +14,10 @@ import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/care_log_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/insights_provider.dart';
+import 'package:belly_buddy/providers/relief_provider.dart';
+import 'package:belly_buddy/router/route_names.dart';
+import 'package:belly_buddy/services/relief/relief_content.dart';
+import 'package:belly_buddy/widgets/common/mood_slider_row.dart';
 import 'package:belly_buddy/services/buddy/care_meters.dart';
 import 'package:belly_buddy/repositories/buddy_repository.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
@@ -27,6 +32,7 @@ import 'package:belly_buddy/widgets/common/bb_success_overlay.dart';
 import 'package:belly_buddy/widgets/common/mascot_image.dart';
 import 'package:belly_buddy/config/constants.dart';
 
+import '../../../helpers/app_host.dart';
 import '../../../helpers/fakes.dart';
 import '../../../helpers/fixtures.dart';
 import '../../../helpers/layout_checks.dart';
@@ -591,6 +597,178 @@ void main() {
         ),
       );
       handle.dispose();
+    });
+
+    group('Ruhe für den Bauch offer', () {
+      final offer = find.text(ReliefCopy.gutFeelingOffer);
+
+      /// The tracker pushed over `page:/from` in a router with `/relief`;
+      /// the feature gate is [relief].
+      Future<GoRouter> pumpRouted(
+        WidgetTester tester, {
+        bool relief = true,
+        DateTime? initialDate,
+        double textScale = 1,
+      }) async {
+        SharedPreferences.setMockInitialValues({});
+        final router = GoRouter(
+          initialLocation: '/from',
+          routes: [
+            ...stubRoutes(['/from', RoutePaths.relief, RoutePaths.dashboard]),
+            GoRoute(
+              path: '/track',
+              builder: (_, _) =>
+                  GutFeelingTrackerScreen(initialDate: initialDate),
+            ),
+          ],
+        );
+        addTearDown(router.dispose);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              ..._overrides(),
+              reliefEnabledProvider.overrideWithValue(relief),
+            ],
+            child: germanRouterApp(router, textScale: textScale),
+          ),
+        );
+        router.push('/track');
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 700));
+        return router;
+      }
+
+      testWidgets('Krämpfe 5: the success page offers calm; the tap opens '
+          '/relief in place of the tracker', (tester) async {
+        final router = await pumpRouted(tester);
+
+        await tapMascot(tester, AppConstants.mascotCramp);
+        await goToStimmungAndSave(tester);
+
+        expect(offer, findsOneWidget);
+        await tester.tap(offer);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(find.text('page:${RoutePaths.relief}'), findsOneWidget);
+        // Not dismissed as well: the tracker was replaced, nothing popped.
+        expect(find.text('page:/from'), findsNothing);
+        expect(
+          find.byType(GutFeelingTrackerScreen, skipOffstage: false),
+          findsNothing,
+        );
+        // Back returns to where the entry was logged from.
+        router.pop();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(find.text('page:/from'), findsOneWidget);
+        expect(find.text('page:${RoutePaths.relief}'), findsNothing);
+      });
+
+      testWidgets('the whole pill is the target, edge included', (
+        tester,
+      ) async {
+        await pumpRouted(tester);
+        await tapMascot(tester, AppConstants.mascotCramp);
+        await goToStimmungAndSave(tester);
+
+        final pill = find.ancestor(of: offer, matching: find.byType(Container));
+        final rect = tester.getRect(pill.first);
+        expect(rect.height, greaterThanOrEqualTo(AppConstants.minTapTarget));
+        await tester.tapAt(rect.topCenter + const Offset(0, 3));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(find.text('page:${RoutePaths.relief}'), findsOneWidget);
+      });
+
+      testWidgets('every symptom at 2: no offer', (tester) async {
+        await pumpRouted(tester);
+
+        for (final row in tester.widgetList<MoodSliderRow>(
+          find.byType(MoodSliderRow),
+        )) {
+          row.onChanged(2);
+        }
+        await tester.pump();
+        await goToStimmungAndSave(tester);
+
+        expect(find.byType(BbSuccessOverlay), findsOneWidget);
+        expect(offer, findsNothing);
+      });
+
+      testWidgets('the feature off: Krämpfe 5 offers nothing', (tester) async {
+        await pumpRouted(tester, relief: false);
+
+        await tapMascot(tester, AppConstants.mascotCramp);
+        await goToStimmungAndSave(tester);
+
+        expect(find.byType(BbSuccessOverlay), findsOneWidget);
+        expect(offer, findsNothing);
+      });
+
+      testWidgets('Krämpfe 5 logged for yesterday: no offer', (tester) async {
+        await pumpRouted(
+          tester,
+          initialDate: DateTime.now().subtract(const Duration(days: 1)),
+        );
+
+        await tapMascot(tester, AppConstants.mascotCramp);
+        await goToStimmungAndSave(tester);
+
+        expect(find.byType(BbSuccessOverlay), findsOneWidget);
+        expect(offer, findsNothing);
+      });
+
+      for (final scale in [1.0, 1.3]) {
+        testWidgets('fits 375×667 at text scale $scale with the offer', (
+          tester,
+        ) async {
+          tester.view.physicalSize = const Size(750, 1334);
+          tester.view.devicePixelRatio = 2;
+          tester.platformDispatcher.textScaleFactorTestValue = scale;
+          addTearDown(tester.view.reset);
+          addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+
+          final errors = await collectFlutterErrors(() async {
+            await pumpRouted(tester);
+            await tapMascot(tester, AppConstants.mascotCramp);
+            await goToStimmungAndSave(tester);
+            await pumpPastCharge(tester);
+          });
+
+          expect(offer, findsOneWidget);
+          expectSuccessPageFits(
+            tester,
+            errors,
+            page: find.byType(BbSuccessOverlay),
+          );
+        });
+      }
+
+      // At text scale 2 the wrapped offer leaves the Buddy too little room
+      // on smaller phones (iPhone 17: 12 px); the largest phone fits.
+      testWidgets('fits 440×956 at text scale 2 with the offer', (
+        tester,
+      ) async {
+        tester.view.physicalSize = const Size(1320, 2868);
+        tester.view.devicePixelRatio = 3;
+        addTearDown(tester.view.reset);
+
+        final errors = await collectFlutterErrors(() async {
+          await pumpRouted(tester, textScale: 2);
+          await tapMascot(tester, AppConstants.mascotCramp);
+          await goToStimmungAndSave(tester);
+          await pumpPastCharge(tester);
+        });
+
+        expect(offer, findsOneWidget);
+        expectSuccessPageFits(
+          tester,
+          errors,
+          page: find.byType(BbSuccessOverlay),
+        );
+      });
     });
   });
 }

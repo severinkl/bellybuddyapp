@@ -8,24 +8,30 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../models/data_share.dart';
 import '../../providers/buddy_provider.dart';
+import '../../providers/plus_provider.dart';
 import '../../providers/shares_provider.dart';
+import '../../router/navigation_extensions.dart';
 import '../../router/route_names.dart';
 import '../../utils/date_format_utils.dart';
 import '../../utils/logger.dart';
 import '../../widgets/common/bb_async_state.dart';
 import '../../widgets/common/bb_button.dart';
 import '../../widgets/common/bb_card.dart';
+import 'dietitian_connect_screen.dart';
+import 'widgets/dietitian_share_tile.dart';
 import 'widgets/share_created_sheet.dart';
+import 'widgets/share_terms_form.dart';
 import 'widgets/share_tile.dart';
 
 /// Ended, expired and locked shares stay in the list this long.
 const _inactiveShownDays = 90;
 
-/// As many active shares as the server allows.
-const _maxActiveShares = 5;
-const _fullHint =
-    'Du hast schon 5 aktive Freigaben. Beende eine, um eine neue zu '
+/// As many active link shares as the server allows.
+const _maxActiveLinks = 5;
+const _linksFullHint =
+    'Du hast schon $_maxActiveLinks aktive Links. Beende einen, um einen neuen zu '
     'erstellen.';
+
 const _refreshFailed =
     'Aktualisieren hat nicht geklappt. Versuch es später nochmal.';
 
@@ -124,7 +130,10 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
         active.add((share, state));
         continue;
       }
-      if (share.stoppedAt.isAfter(cutoff)) others.add((share, state));
+      final stopped = share.stoppedAt;
+      if (stopped != null && stopped.isAfter(cutoff)) {
+        others.add((share, state));
+      }
     }
     int newestFirst((DataShare, ShareState) a, (DataShare, ShareState) b) =>
         b.$1.createdAt.compareTo(a.$1.createdAt);
@@ -183,12 +192,29 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
   Widget _content(List<DataShare> shares) {
     // Every active share is visible.
     final visible = _visible(shares);
-    final full =
-        visible.where((v) => v.$2 == ShareState.active).length >=
-        _maxActiveShares;
-    final VoidCallback? onCreate = full
+    final links = [
+      for (final v in visible)
+        if (v.$1.kind == ShareKind.link) v,
+    ];
+    final dietitians = [
+      for (final v in visible)
+        if (v.$1.kind == ShareKind.dietitian) v,
+    ];
+    final linksFull =
+        links.where((v) => v.$2 == ShareState.active).length >= _maxActiveLinks;
+    final dietitiansFull =
+        ref.watch(activeDietitianCountProvider) >= maxActiveDietitians;
+    // New links need Plus: while it is locked, „Link erstellen" and „Neu
+    // erstellen" open the paywall. Connecting to a dietitian, „Ändern" and
+    // ending stay free.
+    final plusLocked = ref.watch(plusLockedProvider);
+    void openPlus() => unawaited(context.openPlus());
+    final VoidCallback? onCreate = linksFull
         ? null
+        : plusLocked
+        ? openPlus
         : () => unawaited(context.push(RoutePaths.shareCreate));
+    final now = ref.read(buddyClockProvider)();
     return Column(
       children: [
         Expanded(
@@ -208,7 +234,45 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
                         height: AppTheme.lineHeightBody,
                       ),
                     )
-                  : _list(visible, onCreate: onCreate),
+                  : Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (dietitians.isNotEmpty)
+                          _section(
+                            'Verbundene Berater:innen',
+                            dietitians,
+                            (share, state) => DietitianShareTile(
+                              key: ValueKey(share.id),
+                              share: share,
+                              state: state,
+                              now: now,
+                              onEdit: () => unawaited(
+                                context.push(
+                                  RoutePaths.dietitianShareEditFor(share.id),
+                                ),
+                              ),
+                              onEnd: () => unawaited(_end(share)),
+                            ),
+                          ),
+                        if (dietitians.isNotEmpty && links.isNotEmpty)
+                          AppConstants.gap20,
+                        if (links.isNotEmpty)
+                          _section(
+                            'Links',
+                            links,
+                            (share, state) => ShareTile(
+                              key: ValueKey(share.id),
+                              share: share,
+                              state: state,
+                              onEnd: () => unawaited(_end(share)),
+                              onShowSecret: (secret) => unawaited(
+                                showShareSecretSheet(context, secret),
+                              ),
+                              onCreateAgain: onCreate,
+                            ),
+                          ),
+                      ],
+                    ),
             ),
           ),
         ),
@@ -220,22 +284,30 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: BbButton(
-                    label: visible.isEmpty
-                        ? 'Freigabe erstellen'
-                        : 'Weitere Freigabe erstellen',
+                    label: 'Berater:in verbinden',
+                    onPressed: dietitiansFull
+                        ? null
+                        : () => unawaited(
+                            context.push(RoutePaths.dietitianConnect),
+                          ),
+                  ),
+                ),
+                if (dietitiansFull) ...[
+                  AppConstants.gap8,
+                  const _Hint(dietitiansFullHint),
+                ],
+                AppConstants.gap8,
+                SizedBox(
+                  width: double.infinity,
+                  child: BbButton(
+                    label: 'Link erstellen',
+                    isOutlined: true,
                     onPressed: onCreate,
                   ),
                 ),
-                if (full) ...[
+                if (linksFull) ...[
                   AppConstants.gap8,
-                  const Text(
-                    _fullHint,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: AppTheme.fontSizeCaptionLG,
-                      color: AppTheme.mutedForeground,
-                    ),
-                  ),
+                  const _Hint(_linksFullHint),
                 ],
               ],
             ),
@@ -245,34 +317,49 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
     );
   }
 
-  Widget _list(
-    List<(DataShare, ShareState)> visible, {
-    required VoidCallback? onCreate,
-  }) {
-    return BbCard(
-      padding: EdgeInsets.zero,
-      showBorder: false,
-      child: Column(
-        children: [
-          for (final (i, (share, state)) in visible.indexed) ...[
-            if (i > 0)
-              const Divider(
-                height: AppConstants.borderWidthSm,
-                thickness: AppConstants.borderWidthSm,
-                color: AppTheme.border,
-              ),
-            ShareTile(
-              key: ValueKey(share.id),
-              share: share,
-              state: state,
-              onEnd: () => unawaited(_end(share)),
-              onShowSecret: (secret) =>
-                  unawaited(showShareSecretSheet(context, secret)),
-              onCreateAgain: onCreate,
-            ),
-          ],
-        ],
-      ),
+  Widget _section(
+    String title,
+    List<(DataShare, ShareState)> rows,
+    Widget Function(DataShare share, ShareState state) tile,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ShareFormHeading(title),
+        BbCard(
+          padding: EdgeInsets.zero,
+          showBorder: false,
+          child: Column(
+            children: [
+              for (final (i, (share, state)) in rows.indexed) ...[
+                if (i > 0)
+                  const Divider(
+                    height: AppConstants.borderWidthSm,
+                    thickness: AppConstants.borderWidthSm,
+                    color: AppTheme.border,
+                  ),
+                tile(share, state),
+              ],
+            ],
+          ),
+        ),
+      ],
     );
   }
+}
+
+class _Hint extends StatelessWidget {
+  const _Hint(this.text);
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) => Text(
+    text,
+    textAlign: TextAlign.center,
+    style: const TextStyle(
+      fontSize: AppTheme.fontSizeCaptionLG,
+      color: AppTheme.mutedForeground,
+    ),
+  );
 }

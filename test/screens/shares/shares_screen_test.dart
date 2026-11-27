@@ -22,6 +22,7 @@ import 'package:belly_buddy/widgets/common/bb_async_state.dart';
 
 import '../../helpers/app_host.dart';
 import '../../helpers/share_fakes.dart';
+import '../../helpers/purchases_fakes.dart';
 
 void main() {
   final now = DateTime(2026, 11, 26, 12);
@@ -65,7 +66,12 @@ void main() {
           path: RoutePaths.shares,
           builder: (_, _) => const SharesScreen(),
         ),
-        ...stubRoutes([RoutePaths.shareCreate]),
+        ...stubRoutes([
+          RoutePaths.shareCreate,
+          RoutePaths.dietitianConnect,
+          RoutePaths.dietitianShareEdit,
+          RoutePaths.plus,
+        ]),
       ],
     );
     addTearDown(router.dispose);
@@ -88,8 +94,7 @@ void main() {
       ),
       findsOneWidget,
     );
-    expect(find.text('Weitere Freigabe erstellen'), findsNothing);
-    await tester.tap(find.text('Freigabe erstellen'));
+    await tester.tap(find.text('Link erstellen'));
     await tester.pumpAndSettle();
     expect(find.text('page:/shares/new'), findsOneWidget);
   });
@@ -127,7 +132,7 @@ void main() {
     expect(ended.dy, lessThan(expired.dy));
     // 'old' expired on 1 Aug, more than 90 days ago.
     expect(find.text('Alle Einträge, ohne Fotos'), findsNothing);
-    expect(find.text('Weitere Freigabe erstellen'), findsOneWidget);
+    expect(find.text('Link erstellen'), findsOneWidget);
   });
 
   testWidgets('the ninety days run from when a share stopped', (tester) async {
@@ -279,7 +284,7 @@ void main() {
 
   testWidgets('the bottom button creates another share', (tester) async {
     await pump(tester, [testShare()]);
-    await tester.tap(find.text('Weitere Freigabe erstellen'));
+    await tester.tap(find.text('Link erstellen'));
     await tester.pumpAndSettle();
     expect(find.text('page:/shares/new'), findsOneWidget);
   });
@@ -328,7 +333,7 @@ void main() {
   group('5 active shares', () {
     final five = [for (var i = 0; i < 5; i++) testShare(id: 's$i')];
     const hint =
-        'Du hast schon 5 aktive Freigaben. Beende eine, um eine neue zu '
+        'Du hast schon 5 aktive Links. Beende einen, um einen neuen zu '
         'erstellen.';
 
     testWidgets('create buttons are disabled and the line says why', (
@@ -336,7 +341,7 @@ void main() {
     ) async {
       await pump(tester, five);
       expect(find.text(hint), findsOneWidget);
-      await tester.tap(find.text('Weitere Freigabe erstellen'));
+      await tester.tap(find.text('Link erstellen'));
       await tester.pumpAndSettle();
       expect(find.text('page:/shares/new'), findsNothing);
       // „Neu erstellen" on a tile is disabled too.
@@ -359,6 +364,190 @@ void main() {
         testShare(id: 'x', revokedAt: DateTime(2026, 11, 21)),
       ]);
       expect(find.text(hint), findsNothing);
+    });
+  });
+
+  group('connected dietitians', () {
+    const dietitiansFull =
+        'Du hast 3 Berater:innen verbunden. Beende eine Verbindung, um eine '
+        'neue hinzuzufügen.';
+
+    testWidgets('sections: dietitians above links; empty one hidden', (
+      tester,
+    ) async {
+      await pump(tester, [testShare(), testDietitianShare()]);
+      final dietitians = tester.getTopLeft(
+        find.text('Verbundene Berater:innen'),
+      );
+      final links = tester.getTopLeft(find.text('Links'));
+      expect(dietitians.dy, lessThan(links.dy));
+      expect(find.text('Anna Berger'), findsOneWidget);
+      expect(find.text('Letzte 14 Tage, ohne Fotos'), findsOneWidget);
+    });
+
+    testWidgets('only links: no dietitian section', (tester) async {
+      await pump(tester, [testShare()]);
+      expect(find.text('Verbundene Berater:innen'), findsNothing);
+      expect(find.text('Links'), findsOneWidget);
+    });
+
+    testWidgets('only dietitians: no links section; link tile unused', (
+      tester,
+    ) async {
+      await pump(tester, [testDietitianShare()]);
+      expect(find.text('Verbundene Berater:innen'), findsOneWidget);
+      expect(find.text('Links'), findsNothing);
+      expect(find.text('Auf diesem Gerät nicht gespeichert'), findsNothing);
+      expect(find.textContaining('gültig bis'), findsNothing);
+    });
+
+    testWidgets('both buttons are shown, also without shares', (tester) async {
+      await pump(tester, []);
+      expect(find.text('Berater:in verbinden'), findsOneWidget);
+      expect(find.text('Link erstellen'), findsOneWidget);
+      await tester.tap(find.text('Berater:in verbinden'));
+      await tester.pumpAndSettle();
+      expect(find.text('page:/shares/connect'), findsOneWidget);
+    });
+
+    testWidgets('2 active: connect still enabled', (tester) async {
+      await pump(tester, [
+        testDietitianShare(id: 'a'),
+        testDietitianShare(id: 'b'),
+      ]);
+      expect(find.text(dietitiansFull), findsNothing);
+      await tester.tap(find.text('Berater:in verbinden'));
+      await tester.pumpAndSettle();
+      expect(find.text('page:/shares/connect'), findsOneWidget);
+    });
+
+    testWidgets('3 active: connect disabled, the line says why', (
+      tester,
+    ) async {
+      await pump(tester, [
+        for (final id in ['a', 'b', 'c']) testDietitianShare(id: id),
+      ]);
+      expect(find.text(dietitiansFull), findsOneWidget);
+      await tester.tap(find.text('Berater:in verbinden'));
+      await tester.pumpAndSettle();
+      expect(find.text('page:/shares/connect'), findsNothing);
+      // Links are a separate limit.
+      await tester.tap(find.text('Link erstellen'));
+      await tester.pumpAndSettle();
+      expect(find.text('page:/shares/new'), findsOneWidget);
+    });
+
+    testWidgets('an ended connection does not count', (tester) async {
+      await pump(tester, [
+        testDietitianShare(id: 'a'),
+        testDietitianShare(id: 'b'),
+        testDietitianShare(id: 'c', revokedAt: DateTime(2026, 11, 20)),
+      ]);
+      expect(find.text(dietitiansFull), findsNothing);
+    });
+
+    testWidgets('„Ändern" pushes the edit route with the id', (tester) async {
+      await pump(tester, [testDietitianShare(id: 'abc')]);
+      await tester.tap(find.text('Ändern'));
+      await tester.pumpAndSettle();
+      expect(find.text('page:/shares/:id/edit'), findsOneWidget);
+      expect(
+        router.routerDelegate.currentConfiguration.last.matchedLocation,
+        '/shares/abc/edit',
+      );
+    });
+
+    testWidgets('„Beenden" asks, then ends the connection', (tester) async {
+      await pump(tester, [testDietitianShare(id: 'abc')]);
+      await tester.tap(find.text('Beenden'));
+      await tester.pumpAndSettle();
+      expect(
+        find.text('Die Berater:in kann dein Tagebuch dann nicht mehr sehen.'),
+        findsOneWidget,
+      );
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('Beenden'),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(service.ended, ['abc']);
+      expect(find.text('Beendet'), findsOneWidget);
+    });
+
+    testWidgets('a deleted dietitian ends the connection, not counted', (
+      tester,
+    ) async {
+      await pump(tester, [
+        testDietitianShare(id: 'a'),
+        testDietitianShare(id: 'b'),
+        testDietitianShare(id: 'g', dietitianId: null),
+      ]);
+      expect(find.text('Berater:in (Konto gelöscht)'), findsOneWidget);
+      expect(find.text('Beendet'), findsOneWidget);
+      expect(find.text(dietitiansFull), findsNothing);
+    });
+
+    testWidgets('a deleted dietitian without dates ages out after 90 days', (
+      tester,
+    ) async {
+      await pump(tester, [
+        testDietitianShare(
+          id: 'old',
+          dietitianId: null,
+          createdAt: DateTime(2026, 6, 1),
+        ),
+        testDietitianShare(
+          id: 'new',
+          dietitianId: null,
+          createdAt: DateTime(2026, 11, 1),
+        ),
+      ]);
+      expect(find.text('Berater:in (Konto gelöscht)'), findsOneWidget);
+    });
+
+    testWidgets('a paused connection: word, only Beenden', (tester) async {
+      await pump(tester, [
+        testDietitianShare(
+          dietitian: testCard(blockedAt: DateTime(2026, 11, 20)),
+        ),
+      ]);
+      expect(find.text('Pausiert'), findsOneWidget);
+      expect(
+        find.text('Diese Verbindung ist gerade pausiert.'),
+        findsOneWidget,
+      );
+      expect(find.text('Ändern'), findsNothing);
+      expect(find.text('Beenden'), findsOneWidget);
+    });
+
+    testWidgets('3 connections with one paused: connect disabled', (
+      tester,
+    ) async {
+      await pump(tester, [
+        testDietitianShare(id: 'a'),
+        testDietitianShare(id: 'b'),
+        testDietitianShare(
+          id: 'c',
+          dietitian: testCard(blockedAt: DateTime(2026, 11, 20)),
+        ),
+      ]);
+      expect(find.text(dietitiansFull), findsOneWidget);
+      await tester.tap(find.text('Berater:in verbinden'));
+      await tester.pumpAndSettle();
+      expect(find.text('page:/shares/connect'), findsNothing);
+    });
+
+    testWidgets('a link a dietitian kept says who keeps it', (tester) async {
+      await pump(tester, [
+        testShare(
+          keeper: testCard(name: 'Berta Huber'),
+          keptBy: 'dt2',
+        ),
+        testShare(id: 's2'),
+      ]);
+      expect(find.text('Behalten von Berta Huber'), findsOneWidget);
     });
   });
 
@@ -569,6 +758,85 @@ void main() {
     );
     await tester.pump();
     expect(find.byType(BbLoadingState), findsOneWidget);
+  });
+
+  group('Plus locked', () {
+    final locked = plusLockedOverrides;
+
+    testWidgets('existing shares stay listed', (tester) async {
+      await pump(tester, [
+        testShare(),
+        testDietitianShare(id: 'd1'),
+      ], overrides: locked);
+      expect(find.text('Verbundene Berater:innen'), findsOneWidget);
+      expect(find.text('Links'), findsOneWidget);
+      expect(find.text('Freigabe beenden'), findsOneWidget);
+    });
+
+    testWidgets('ending a link still works', (tester) async {
+      await pump(tester, [testShare()], overrides: locked);
+      await tester.tap(find.text('Freigabe beenden'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Beenden'));
+      await tester.pumpAndSettle();
+
+      expect(service.ended, ['s1']);
+      expect(find.text('page:/plus'), findsNothing);
+    });
+
+    testWidgets('ending a connection still works', (tester) async {
+      await pump(tester, [testDietitianShare(id: 'abc')], overrides: locked);
+      await tester.tap(find.text('Beenden'));
+      await tester.pumpAndSettle();
+      await tester.tap(
+        find.descendant(
+          of: find.byType(AlertDialog),
+          matching: find.text('Beenden'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(service.ended, ['abc']);
+      expect(find.text('page:/plus'), findsNothing);
+    });
+
+    testWidgets('„Link erstellen" opens /plus', (tester) async {
+      await pump(tester, [], overrides: locked);
+      await tester.tap(find.text('Link erstellen'));
+      await tester.pumpAndSettle();
+      expect(find.text('page:/plus'), findsOneWidget);
+      expect(find.text('page:/shares/new'), findsNothing);
+    });
+
+    testWidgets('„Berater:in verbinden" stays free: opens the connect '
+        'screen', (tester) async {
+      await pump(tester, [], overrides: locked);
+      await tester.tap(find.text('Berater:in verbinden'));
+      await tester.pumpAndSettle();
+      expect(find.text('page:/plus'), findsNothing);
+      expect(find.text('page:${RoutePaths.dietitianConnect}'), findsOneWidget);
+    });
+
+    testWidgets('„Neu erstellen" opens /plus', (tester) async {
+      await pump(tester, [testShare()], overrides: locked);
+      await tester.tap(find.text('Neu erstellen'));
+      await tester.pumpAndSettle();
+      expect(find.text('page:/plus'), findsOneWidget);
+    });
+
+    testWidgets('„Ändern" still opens the edit screen', (tester) async {
+      await pump(tester, [testDietitianShare(id: 'abc')], overrides: locked);
+      await tester.tap(find.text('Ändern'));
+      await tester.pumpAndSettle();
+      expect(find.text('page:/shares/:id/edit'), findsOneWidget);
+    });
+
+    testWidgets('open: the buttons create as before', (tester) async {
+      await pump(tester, [], overrides: plusOpenOverrides);
+      await tester.tap(find.text('Berater:in verbinden'));
+      await tester.pumpAndSettle();
+      expect(find.text('page:/shares/connect'), findsOneWidget);
+    });
   });
 }
 

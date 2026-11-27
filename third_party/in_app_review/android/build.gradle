@@ -1,0 +1,71 @@
+// Vendored from in_app_review 2.0.12 (pub.dev, MIT). The only change: the
+// plugin no longer applies `kotlin-android` itself, which fails under AGP 9
+// with built-in Kotlin (android.builtInKotlin=true in the app). Same pattern
+// as firebase_core 5. Drop this copy once upstream ships the migration.
+group = "dev.britannio.in_app_review"
+version = "1.0-SNAPSHOT"
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath("com.android.tools.build:gradle:8.7.3")
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+    }
+}
+
+apply plugin: "com.android.library"
+
+android {
+    namespace = "dev.britannio.in_app_review"
+
+    compileSdk = 35
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
+    }
+
+    sourceSets {
+        main.java.srcDirs += "src/main/kotlin"
+    }
+
+    defaultConfig {
+        minSdk = 21
+    }
+
+    dependencies {
+        // Release notes: https://developer.android.com/reference/com/google/android/play/core/release-notes-in_app_reviews
+        implementation 'com.google.android.play:review:2.0.2'
+        implementation 'com.google.android.play:review-ktx:2.0.2'
+        // Release notes: https://developers.google.com/android/guides/releases
+        implementation 'com.google.android.gms:play-services-base:18.7.2'
+    }
+}
+
+// Built-in Kotlin registers this extension before the script gets here.
+// When it is off, Flutter applies the Kotlin plugin after this script.
+if (extensions.findByName("kotlin") != null) {
+    kotlin {
+        compilerOptions {
+            jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
+        }
+    }
+} else {
+    plugins.withId("org.jetbrains.kotlin.android") {
+        kotlin {
+            compilerOptions {
+                jvmTarget = org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11
+            }
+        }
+    }
+}

@@ -128,13 +128,17 @@ enum AdaptFailure {
   /// request core can't read (400).
   notFound,
 
+  /// Belly Buddy Plus is needed (402 `plus_required`: the app's lock state
+  /// was stale); the screen opens the paywall.
+  plusRequired,
+
   /// Anything else.
   failed;
 
   /// Whether trying again may help (else nothing would change).
   bool get retryable => switch (this) {
     later || failed => true,
-    nothingToAdapt || cannotJudge || notFound => false,
+    nothingToAdapt || cannotJudge || notFound || plusRequired => false,
   };
 }
 

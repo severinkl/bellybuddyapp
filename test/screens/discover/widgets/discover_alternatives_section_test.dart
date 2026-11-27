@@ -7,6 +7,8 @@ import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/replacement_ingredient.dart';
 import 'package:belly_buddy/screens/discover/widgets/discover_alternatives_section.dart';
 
+import '../../../helpers/purchases_fakes.dart';
+
 void main() {
   testWidgets('„Stattdessen: …" shows on two lines', (tester) async {
     const group = IngredientSuggestionGroup(
@@ -23,14 +25,17 @@ void main() {
       ],
     );
     await tester.pumpWidget(
-      MaterialApp(
-        home: Scaffold(
-          body: SizedBox(
-            width: 320,
-            child: DiscoverAlternativesSection(
-              groups: const AsyncValue.data([group]),
-              newCount: 0,
-              onOpen: () {},
+      ProviderScope(
+        overrides: plusOpenOverrides,
+        child: MaterialApp(
+          home: Scaffold(
+            body: SizedBox(
+              width: 320,
+              child: DiscoverAlternativesSection(
+                groups: const AsyncValue.data([group]),
+                newCount: 0,
+                onOpen: () {},
+              ),
             ),
           ),
         ),

@@ -13,6 +13,19 @@ DateTime endOfDay(DateTime dt) => addDays(dt, 1);
 DateTime addDays(DateTime d, int days) =>
     DateTime(d.year, d.month, d.day + days);
 
+/// „10.12.": day and month of [d] as given (convert to local first for a real
+/// instant).
+String formatDayMonth(DateTime d) => '${d.day}.${d.month}.';
+
+/// Whole calendar days from [from]'s date to [to]'s (negative when [to] is
+/// earlier). Counted in UTC, so a DST switch never shortens or lengthens a
+/// day.
+int daysBetween(DateTime from, DateTime to) => DateTime.utc(
+  to.year,
+  to.month,
+  to.day,
+).difference(DateTime.utc(from.year, from.month, from.day)).inDays;
+
 /// The Monday of [d]'s week, at midnight.
 DateTime mondayOf(DateTime d) => addDays(d, 1 - d.weekday);
 
@@ -163,3 +176,15 @@ String formatLogTargetDay(DateTime day) =>
 /// [d] as „28. Mär 2025".
 String formatDayMonthYear(DateTime d) =>
     '${d.day}. ${kMonthShortNames[d.month - 1]} ${d.year}';
+
+/// [at] (a local time) as „heute, 09:12", „gestern, 09:12" or
+/// „19. Nov., 09:12", by calendar days back from [now] (by date, so a
+/// 23-hour DST day is still one day).
+String formatRecentDayTime(DateTime at, DateTime now) {
+  final day = isSameDay(at, now)
+      ? 'heute'
+      : isSameDay(at, addDays(now, -1))
+      ? 'gestern'
+      : DateFormat('d. MMM', 'de_DE').format(at);
+  return '$day, ${formatTime(at)}';
+}

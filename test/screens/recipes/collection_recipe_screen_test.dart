@@ -12,6 +12,7 @@ import 'package:belly_buddy/models/fodmap_flags.dart';
 import 'package:belly_buddy/models/meal_prefill.dart';
 import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
+import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/providers/recipe_collection_provider.dart';
 import 'package:belly_buddy/repositories/recipe_repository.dart';
 import 'package:belly_buddy/router/route_names.dart';
@@ -20,8 +21,10 @@ import 'package:belly_buddy/screens/recipes/widgets/fit_badge_view.dart';
 import 'package:belly_buddy/screens/recipes/widgets/ingredient_line_view.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_image.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_steps.dart';
+import 'package:belly_buddy/services/plus/plus_copy.dart';
 import 'package:belly_buddy/services/recipes/recipe_copy.dart';
 import 'package:belly_buddy/widgets/common/bb_async_state.dart';
+import 'package:belly_buddy/widgets/common/plus_badge.dart';
 
 import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
@@ -70,6 +73,7 @@ void main() {
     String? diet,
     String id = 'recipe-1',
     double textScale = 1,
+    PlusAccess plus = PlusAccess.open,
   }) async {
     GoRoute stub(String path) => GoRoute(
       path: path,
@@ -87,6 +91,7 @@ void main() {
         ),
         stub(RoutePaths.collectionRecipeAdapt),
         stub(RoutePaths.mealTracker),
+        stub(RoutePaths.plus),
       ],
     );
     addTearDown(router.dispose);
@@ -98,6 +103,7 @@ void main() {
             testUserProfile(intolerances: intolerances, diet: diet),
           ),
           currentUserIdProvider.overrideWithValue(testUserId),
+          plusAccessProvider.overrideWithValue(plus),
         ],
         child: germanRouterApp(router, textScale: textScale),
       ),
@@ -167,6 +173,47 @@ void main() {
 
     expect(find.text('page:/collection/recipe-1/adapt'), findsOneWidget);
     expect(pushed, {'/collection/recipe-1/adapt': true});
+  });
+
+  testWidgets('open: no Plus badge', (tester) async {
+    await pump(tester);
+
+    expect(find.byType(PlusBadge), findsNothing);
+  });
+
+  testWidgets('Plus locked: the button keeps a Plus badge and opens /plus', (
+    tester,
+  ) async {
+    await pump(tester, plus: PlusAccess.locked);
+
+    expect(find.text('Für mich anpassen'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byKey(CollectionRecipeScreen.adaptKey),
+        matching: find.text(PlusCopy.plusBadge),
+      ),
+      findsOneWidget,
+    );
+
+    await tester.tapVisible(find.byKey(CollectionRecipeScreen.adaptKey));
+
+    expect(find.text('page:/plus'), findsOneWidget);
+    // The adapt screen (and its AI call) never opened.
+    expect(pushed.keys, ['/plus']);
+  });
+
+  testWidgets('Plus locked fits 375×667 at text scale 1.3', (tester) async {
+    tester.view
+      ..physicalSize = const Size(375, 667)
+      ..devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+
+    final errors = await collectFlutterErrors(
+      () => pump(tester, plus: PlusAccess.locked, textScale: 1.3),
+    );
+
+    expect(find.text(PlusCopy.plusBadge), findsOneWidget);
+    expect(errors, isEmpty);
   });
 
   testWidgets('nothing kritisch → no adapt button', (tester) async {

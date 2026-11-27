@@ -52,6 +52,22 @@ class AppConstants {
 
   /// The smallest tap target (Android's 48 dp; covers Apple's 44 pt).
   static const double minTapTarget = 48.0;
+  static const Size minTapSize = Size(minTapTarget, minTapTarget);
+
+  /// The relief breathing pacer's circle: smallest (empty lungs) and
+  /// largest (full) diameter.
+  static const double reliefPacerMin = 120.0;
+  static const double reliefPacerMax = 220.0;
+
+  /// How long the pacer's circle takes to follow one second of breath.
+  static const Duration reliefPacerTick = Duration(seconds: 1);
+
+  /// The height of the Buddy on top of the relief list and on its done
+  /// view.
+  static const double reliefBuddyHeight = 160.0;
+
+  /// The relief player's total progress bar.
+  static const double reliefProgressHeight = 4.0;
 
   /// The smallest tap target on Home.
   static const double homeTapTarget = 48.0;
@@ -218,11 +234,29 @@ class AppConstants {
   // Muster page: how blurred the locked state's sample preview is
   static const double patternsPreviewBlur = 5.0;
 
+  // „Dein Verlauf": a day cell's height, the dot of a day logged without
+  // a gut feeling, and the empty state's Buddy
+  static const double progressDayCellHeight = 30.0;
+  static const double progressDayDotSize = 6.0;
+  static const double progressEmptyBuddySize = 120.0;
+
+  // „Beschwerden pro Woche": a symptom's bar row, the gap between its bars,
+  // the hollow marker of a week without means (and its outline), the least
+  // height of a bar so a mean of 1 stays visible
+  static const double progressTrendRowHeight = 48.0;
+  static const double progressTrendBarGap = 4.0;
+  static const double progressTrendMarkerSize = 8.0;
+  static const double progressTrendMarkerStroke = 1.5;
+  static const double progressTrendStubHeight = 3.0;
+
   // „Deine Belohnungen": a row's day circle
   static const double journeyRewardDaySize = 44.0;
 
   // Entdecken: a recipe card's width in the Meine Rezepte row
   static const double discoverRecipeCardWidth = 148.0;
+
+  // Entdecken: the zen Buddy on the Ruhe-für-den-Bauch card
+  static const double discoverReliefBuddySize = 44.0;
 
   // Rezepte: a recipe page's and a card's picture (width / height), a list
   // row's thumbnail, an ingredient line's mark and amount column, and the
@@ -359,12 +393,32 @@ class AppConstants {
   static const String privacyPolicyUrl =
       'https://app.bellybuddy.at/datenschutz';
 
+  /// Terms of use (Nutzungsbedingungen) of Belly Buddy Plus on the web app.
+  static const String termsUrl =
+      'https://app.bellybuddy.at/nutzungsbedingungen';
+
+  /// Where an iPhone user manages their App Store subscriptions.
+  static const String appleSubscriptionsUrl =
+      'https://apps.apple.com/account/subscriptions';
+
+  /// Google Play product id of the Belly Buddy Plus subscription.
+  static const String playPlusProductId = 'bellybuddy_plus';
+
+  /// Google Play's page for the subscription [productId] of [packageName].
+  static String playSubscriptionsUrl(String productId, String packageName) =>
+      'https://play.google.com/store/account/subscriptions'
+      '?sku=$productId&package=$packageName';
+
+  /// Belly Buddy Connect, the dietitian portal; a practice QR code holds
+  /// `<connectUrl>/c/<code>`.
+  static const String connectUrl = 'https://connect.bellybuddy.at';
+
   /// Version of the privacy policy the health-data consent refers to. Bump it
   /// when the policy changes materially: every user whose stored
   /// `profiles.privacy_policy_version` differs is sent through the consent
   /// gate again. It equals core's `PRIVACY_POLICY_VERSION` (the public page's
   /// „Stand") and moves with it.
-  static const String privacyPolicyVersion = '2026-11-27';
+  static const String privacyPolicyVersion = '2026-12-01';
 
   /// The myfodmap blog feed behind Wissen, how long a fetched copy counts as
   /// fresh, and how long a fetch may take.
@@ -395,10 +449,29 @@ class AppConstants {
   /// yyyy-MM-dd).
   static const String keyReminderAskedOnPrefix = 'reminder_asked_on_';
 
+  /// Prefix of the app version the store rating was last requested in, per
+  /// user and device (`rating_asked_version_<userId>`).
+  static const String keyRatingAskedVersionPrefix = 'rating_asked_version_';
+
+  /// Prefix of the day the store rating was last requested
+  /// (`rating_asked_on_<userId>`, yyyy-MM-dd).
+  static const String keyRatingAskedOnPrefix = 'rating_asked_on_';
+
+  /// Days between two store rating requests, at least.
+  static const int ratingAskMinDays = 90;
+
   /// Whether the Ich row „Mit Berater:in teilen" was tapped once (a bool, on
   /// the device, not per user): its „Neu" badge is gone after that.
   static const String keyShareRowTapped = 'share_row_tapped';
   static const String keyKnowledgeFeedCache = 'knowledge_feed_cache_v1';
+
+  /// Prefix of the article links the user opened, per user and device
+  /// (`knowledge_opened_<userId>`, a string list, newest last).
+  static const String keyKnowledgeOpenedPrefix = 'knowledge_opened_';
+
+  /// At most this many opened article links are kept.
+  static const int knowledgeOpenedMax = 50;
+
   static const String keyBuddyStatePrefix = 'buddy_state_';
 
   /// Prefix of the once-per-user-and-device decision whether the user sees
@@ -408,6 +481,10 @@ class AppConstants {
   /// Prefix of the rewards of the first 7 days, per user and device
   /// (`journey_rewards_<userId>`, the JSON of a `JourneyRewards`).
   static const String keyJourneyRewardsPrefix = 'journey_rewards_';
+
+  /// Prefix of the answers to "Ruhe für den Bauch", per user and device
+  /// (`relief_feedback_<userId>`, JSON of exercise id to answer).
+  static const String keyReliefFeedbackPrefix = 'relief_feedback_';
 
   /// Prefix of the Buddy announcement flags
   /// (`buddy_announced_<userId>_<kind>_<yyyy-MM-dd | goal>`), set once an

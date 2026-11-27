@@ -7,7 +7,9 @@ import 'press_scale_wrapper.dart';
 class BbSettingsItem extends StatelessWidget {
   final IconData icon;
   final String title;
-  final String subtitle;
+
+  /// Small line under the title; none while it cannot be told truthfully.
+  final String? subtitle;
   final VoidCallback onTap;
 
   /// A small pill after the title (e.g. Neu).
@@ -17,7 +19,7 @@ class BbSettingsItem extends StatelessWidget {
     super.key,
     required this.icon,
     required this.title,
-    required this.subtitle,
+    this.subtitle,
     required this.onTap,
     this.badge,
   });
@@ -82,13 +84,14 @@ class BbSettingsItem extends StatelessWidget {
                       ],
                     ],
                   ),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontSize: AppTheme.fontSizeCaptionLG,
-                      color: AppTheme.mutedForeground,
+                  if (subtitle != null)
+                    Text(
+                      subtitle!,
+                      style: const TextStyle(
+                        fontSize: AppTheme.fontSizeCaptionLG,
+                        color: AppTheme.mutedForeground,
+                      ),
                     ),
-                  ),
                 ],
               ),
             ),

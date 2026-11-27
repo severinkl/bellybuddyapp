@@ -1,4 +1,7 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -6,7 +9,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/knowledge_article.dart';
+import '../../../providers/knowledge_opened_provider.dart';
 import '../../../utils/date_format_utils.dart';
+import '../../../utils/logger.dart';
 import '../../../utils/url_utils.dart';
 
 /// Opens [article] in the in-app browser; a SnackBar says when that fails.
@@ -22,12 +27,37 @@ Future<void> openArticle(
   mode: LaunchMode.inAppBrowserView,
 );
 
-/// One article in the Wissen list: thumbnail, title, „Rezepte · 13. Mär 2025".
+const _log = AppLogger('KnowledgeArticle');
+
+/// Marks [article] opened („Für dich" leaves it out) and [openArticle]s it
+/// right away, without waiting for the mark to be stored. A failed mark is
+/// logged and never keeps it from opening.
+Future<void> markOpenedAndOpen(
+  BuildContext context,
+  WidgetRef ref,
+  KnowledgeArticle article, {
+  UrlOpener open = launchUrl,
+}) {
+  unawaited(
+    ref
+        .read(knowledgeOpenedProvider.notifier)
+        .markOpened(article.link)
+        .catchError(
+          (Object e, StackTrace st) =>
+              _log.error('Marking an article opened failed', e, st),
+        ),
+  );
+  return openArticle(context, article, open: open);
+}
+
+/// One article in the Wissen list: thumbnail, title, „Rezepte · 13. Mär 2025"
+/// (a „Für dich" pick: its [reason] instead).
 class KnowledgeArticleTile extends StatelessWidget {
   const KnowledgeArticleTile({
     super.key,
     required this.article,
     required this.onTap,
+    this.reason,
   });
 
   /// The tile of [a].
@@ -36,6 +66,10 @@ class KnowledgeArticleTile extends StatelessWidget {
 
   final KnowledgeArticle article;
   final VoidCallback onTap;
+
+  /// Why the article is „Für dich"; shown in place of the meta line and
+  /// read after the title.
+  final String? reason;
 
   String? get _meta {
     final parts = [
@@ -48,42 +82,50 @@ class KnowledgeArticleTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final meta = _meta;
+    final reason = this.reason;
+    final meta = reason ?? _meta;
     return Semantics(
       button: true,
+      label: reason == null ? null : '${article.title}, $reason',
       child: InkWell(
         key: keyFor(article),
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: AppConstants.spacingSm),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _Thumbnail(imageUrl: article.imageUrl),
-              const SizedBox(width: AppConstants.spacing12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      article.title,
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: AppTheme.fontSizeBodyLG,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.foreground,
+        // A pick reads its label: the title, then the reason.
+        child: ExcludeSemantics(
+          excluding: reason != null,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+              vertical: AppConstants.spacingSm,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _Thumbnail(imageUrl: article.imageUrl),
+                const SizedBox(width: AppConstants.spacing12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        article.title,
+                        maxLines: 3,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: AppTheme.fontSizeBodyLG,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.foreground,
+                        ),
                       ),
-                    ),
-                    if (meta != null) ...[
-                      AppConstants.gap4,
-                      Text(meta, style: AppTheme.captionMutedStyle),
+                      if (meta != null) ...[
+                        AppConstants.gap4,
+                        Text(meta, style: AppTheme.captionMutedStyle),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

@@ -9,10 +9,17 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/buddy_provider.dart';
 import '../../providers/notification_provider.dart';
+import '../../providers/plus_provider.dart';
+import '../../providers/rating_provider.dart';
 import '../../providers/shares_provider.dart';
 import '../../providers/tutorial_provider.dart';
 import '../../providers/upgrade_gate_provider.dart';
+import '../../router/navigation_extensions.dart';
 import '../../router/route_names.dart';
+import '../../services/app_version_service.dart';
+import '../../services/plus/plus_copy.dart';
+import '../../services/progress/progress_copy.dart';
+import '../../services/purchases/purchases_gateway.dart';
 import '../../utils/buddy_name.dart';
 import '../../utils/logger.dart';
 import '../../utils/url_utils.dart';
@@ -27,7 +34,8 @@ import 'widgets/rename_buddy_dialog.dart';
 /// Home's does; the Buddy's name is the screen's heading): the Buddy with
 /// his name („Umbenennen") and streak chip, then „Erinnerungen sind aus"
 /// while notifications are off ([remindersOffProvider]; „Einschalten"),
-/// Streak & Ziel („Dein Streak"), Einstellungen, Tutorial wiederholen and
+/// Streak & Ziel („Dein Streak"), Dein Verlauf (always), Mit Berater:in
+/// teilen, Einstellungen, Tutorial wiederholen, „Belly Buddy bewerten" and
 /// Feedback geben, and the app version in small print.
 ///
 /// Without a Buddy status (loading, error) the Buddy shows as 'Buddy',
@@ -38,9 +46,12 @@ class MeScreen extends ConsumerStatefulWidget {
   static const renameKey = Key('me_rename');
   static const remindersKey = Key('me_reminders');
   static const streakKey = Key('me_streak');
+  static const progressKey = Key('me_progress');
   static const shareKey = Key('me_share');
+  static const plusKey = Key('me_plus');
   static const settingsKey = Key('me_settings');
   static const tutorialKey = Key('me_tutorial');
+  static const rateKey = Key('me_rate');
   static const feedbackKey = Key('me_feedback');
 
   /// Opens the feedback form.
@@ -61,6 +72,9 @@ class _MeScreenState extends ConsumerState<MeScreen> {
 
   /// „Einschalten" is on its way (the OS dialog may be up).
   bool _turningOn = false;
+
+  /// „Belly Buddy bewerten" is opening the store: further taps wait.
+  bool _rating = false;
 
   @override
   void dispose() {
@@ -129,6 +143,49 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     }
   }
 
+  /// „Belly Buddy bewerten": the store page for a review, else the plain
+  /// store page, else a message. Never counts as the Buddy's rating ask.
+  Future<void> _rate() async {
+    if (_rating) return;
+    _rating = true;
+    try {
+      final messenger = ScaffoldMessenger.of(context);
+      final ok = await _openListing() || await _openStorePage();
+      if (!ok) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Der Store konnte nicht geöffnet werden.'),
+          ),
+        );
+      }
+    } finally {
+      _rating = false;
+    }
+  }
+
+  /// The store page, ready for a review; whether it opened.
+  Future<bool> _openListing() async {
+    try {
+      await ref.read(ratingLauncherProvider).openStoreListing();
+      return true;
+    } catch (e, st) {
+      _log.error('Opening the store listing failed', e, st);
+      return false;
+    }
+  }
+
+  /// The plain store page; whether it opened.
+  Future<bool> _openStorePage() async {
+    try {
+      final opened = await ref.read(appVersionServiceProvider).openStore();
+      if (!opened) _log.error('The store page did not open');
+      return opened;
+    } catch (e, st) {
+      _log.error('Opening the store failed', e, st);
+      return false;
+    }
+  }
+
   /// The share list is on its way: a second tap in the same frame opens
   /// nothing. From the next frame the pushed route covers this screen and
   /// takes the taps, so the flag is cleared then, not when the push
@@ -136,7 +193,8 @@ class _MeScreenState extends ConsumerState<MeScreen> {
   bool _openingShare = false;
 
   /// The share row: the list; with no share (or no list) the create screen
-  /// on top of it.
+  /// on top of it, unless Plus is locked (a new link needs it, connecting
+  /// to a dietitian from the list is free).
   void _openShare() {
     if (_openingShare) return;
     _openingShare = true;
@@ -144,8 +202,10 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     final shares = ref.read(sharesProvider).value;
     WidgetsBinding.instance.addPostFrameCallback((_) => _openingShare = false);
     unawaited(context.push(RoutePaths.shares));
-    // Without a share the create screen goes on top of the list at once.
-    if (shares == null || shares.isEmpty) {
+    // Without a share the create screen goes on top of the list at once;
+    // while Plus is locked the list alone, so no paywall stands before the
+    // free „Berater:in verbinden".
+    if ((shares == null || shares.isEmpty) && !ref.read(plusLockedProvider)) {
       unawaited(context.push(RoutePaths.shareCreate));
     }
   }
@@ -165,6 +225,21 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     // Watched so the list is loaded when the row is tapped; only whether it
     // is empty matters here.
     ref.watch(sharesProvider.select((s) => s.value?.isEmpty));
+    // Without an SDK key (R14) nothing can be bought: no row.
+    final paywallOn =
+        ref.watch(paywallEnabledProvider) &&
+        ref.watch(purchasesGatewayProvider.select((g) => g.available));
+    // While the status loads or fails the row shows without a subtitle: any
+    // line could be wrong for a subscriber. The value is not enough: after
+    // an account switch Riverpod keeps the previous (blanked) value while
+    // the next user's status loads.
+    final plusSubtitle = paywallOn
+        ? ref.watch(
+            plusProvider.select(
+              (p) => p.isLoading || p.hasError ? null : p.value,
+            ),
+          )
+        : null;
     final showShareBadge = ref.watch(shareRowBadgeProvider).value ?? false;
 
     final rows = [
@@ -185,6 +260,13 @@ class _MeScreenState extends ConsumerState<MeScreen> {
           onTap: () => unawaited(_openStreak()),
         ),
       BbSettingsItem(
+        key: MeScreen.progressKey,
+        icon: Icons.calendar_view_week_outlined,
+        title: ProgressCopy.title,
+        subtitle: ProgressCopy.meSubtitle,
+        onTap: () => context.push(RoutePaths.progress),
+      ),
+      BbSettingsItem(
         key: MeScreen.shareKey,
         icon: Icons.person_add_alt_1_outlined,
         title: 'Mit Berater:in teilen',
@@ -192,6 +274,16 @@ class _MeScreenState extends ConsumerState<MeScreen> {
         badge: showShareBadge ? 'Neu' : null,
         onTap: _openShare,
       ),
+      if (paywallOn)
+        BbSettingsItem(
+          key: MeScreen.plusKey,
+          icon: Icons.workspace_premium_outlined,
+          title: PlusCopy.title,
+          subtitle: plusSubtitle == null
+              ? null
+              : PlusCopy.statusLine(plusSubtitle),
+          onTap: () => unawaited(context.openPlus()),
+        ),
       BbSettingsItem(
         key: MeScreen.settingsKey,
         icon: Icons.settings_outlined,
@@ -205,6 +297,13 @@ class _MeScreenState extends ConsumerState<MeScreen> {
         title: 'Tutorial wiederholen',
         subtitle: 'Die Tour durch Home nochmal ansehen',
         onTap: () => ref.read(tutorialProvider.notifier).replayFrom(context),
+      ),
+      BbSettingsItem(
+        key: MeScreen.rateKey,
+        icon: Icons.star_outline,
+        title: 'Belly Buddy bewerten',
+        subtitle: 'Sag anderen, wie dir die App gefällt',
+        onTap: () => unawaited(_rate()),
       ),
       BbSettingsItem(
         key: MeScreen.feedbackKey,

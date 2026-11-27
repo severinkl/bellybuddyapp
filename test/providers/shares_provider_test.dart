@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:belly_buddy/models/data_share.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
+import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/shares_provider.dart';
 import 'package:belly_buddy/services/share_secrets_store.dart';
 import 'package:belly_buddy/services/share_service.dart';
@@ -199,6 +200,83 @@ void main() {
     await first;
     await creating;
     expect(c.read(sharesProvider).value!.map((s) => s.id), ['new1', 's1']);
+  });
+
+  group('dietitian connections', () {
+    const terms = DietitianShareTerms(
+      displayName: 'Anna',
+      period: SharePeriod.days30,
+      duration: ShareDuration.open,
+      meals: false,
+      drinks: true,
+      gut: true,
+      toilet: true,
+      patterns: false,
+      photos: false,
+    );
+
+    test('updateTerms reloads the list', () async {
+      await container.read(sharesProvider.future);
+      await container.read(sharesProvider.notifier).updateTerms('s1', terms);
+      expect(service.updated.single.$1, 's1');
+      expect(container.read(sharesProvider).value!.single.shareMeals, isFalse);
+    });
+
+    test('a failing updateTerms throws and leaves the state', () async {
+      await container.read(sharesProvider.future);
+      service.failUpdate = true;
+      await expectLater(
+        container.read(sharesProvider.notifier).updateTerms('s1', terms),
+        throwsA(isA<ShareException>()),
+      );
+      final state = container.read(sharesProvider);
+      expect(state.hasError, isFalse);
+      expect(state.value!.single.shareMeals, isTrue);
+    });
+
+    test('connect reloads, remembers the name and returns the id', () async {
+      await container.read(sharesProvider.future);
+      final id = await container
+          .read(sharesProvider.notifier)
+          .connect('BERGER-7K2', terms);
+      expect(id, 'c1');
+      expect(container.read(sharesProvider).value!.first.id, 'c1');
+      expect(await store.lastDisplayName(), 'Anna');
+    });
+
+    test('a failing connect throws and changes nothing', () async {
+      await container.read(sharesProvider.future);
+      service.failConnect = true;
+      await expectLater(
+        container.read(sharesProvider.notifier).connect('BERGER-7K2', terms),
+        throwsA(isA<ShareException>()),
+      );
+      expect(container.read(sharesProvider).value!.length, 1);
+      expect(await store.lastDisplayName(), isNull);
+    });
+
+    test('activeDietitianCount counts active dietitian shares only', () async {
+      service.shares = [
+        testShare(id: 'link'),
+        testDietitianShare(id: 'a'),
+        testDietitianShare(id: 'b', revokedAt: DateTime(2026, 11, 20)),
+        testDietitianShare(
+          id: 'c',
+          dietitian: testCard(blockedAt: DateTime(2026, 11, 1)),
+        ),
+        testDietitianShare(id: 'd', expiresAt: DateTime(2026, 11, 1)),
+        testDietitianShare(id: 'e', dietitianId: null),
+      ];
+      final c = ProviderContainer.test(
+        overrides: [
+          currentUserIdProvider.overrideWithValue('u1'),
+          shareServiceProvider.overrideWithValue(service),
+          buddyClockProvider.overrideWithValue(() => DateTime(2026, 11, 26)),
+        ],
+      );
+      await c.read(sharesProvider.future);
+      expect(c.read(activeDietitianCountProvider), 2);
+    });
   });
 
   group('local storage failing', () {
