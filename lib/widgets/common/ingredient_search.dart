@@ -105,6 +105,8 @@ class _IngredientSearchState extends State<IngredientSearch> {
     widget.onSearch(value);
   }
 
+  static String _norm(String s) => s.trim().toLowerCase();
+
   String get _typed => _controller.text.trim();
 
   /// The suggestion named exactly like the typed text (ignoring case).
@@ -112,7 +114,7 @@ class _IngredientSearchState extends State<IngredientSearch> {
     final typed = _typed.toLowerCase();
     if (typed.isEmpty) return null;
     for (final s in widget.suggestions) {
-      if (s.matchedName.toLowerCase() == typed) return s;
+      if (s.matchedName.trim().toLowerCase() == typed) return s;
     }
     return null;
   }
@@ -180,8 +182,12 @@ class _IngredientSearchState extends State<IngredientSearch> {
 
   @override
   Widget build(BuildContext context) {
+    // One food once: a suggestion is hidden when its name or the word it
+    // was found by is added already (ignoring case and outer spaces).
+    final added = {for (final i in widget.ingredients) _norm(i)};
     final filteredSuggestions = widget.suggestions
-        .where((s) => !widget.ingredients.contains(s.matchedName))
+        .where((s) => !added.contains(_norm(s.name)))
+        .where((s) => !added.contains(_norm(s.matchedName)))
         .take(_maxSuggestions)
         .toList();
     final typed = _typed;

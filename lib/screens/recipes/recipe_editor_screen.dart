@@ -242,7 +242,12 @@ class _RecipeEditorScreenState extends ConsumerState<RecipeEditorScreen> {
                           suggestions: autocomplete.suggestions,
                           onSearch: autocompleteNotifier.searchIngredients,
                           onAdd: (name) {
-                            if (_ingredients.contains(name)) return;
+                            final key = name.trim().toLowerCase();
+                            if (_ingredients.any(
+                              (i) => i.trim().toLowerCase() == key,
+                            )) {
+                              return;
+                            }
                             setState(
                               () => _ingredients = [..._ingredients, name],
                             );

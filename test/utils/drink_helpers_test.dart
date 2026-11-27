@@ -93,6 +93,15 @@ void main() {
       expect(result.first.name, 'Eis Kaffee');
     });
 
+    test('ranks a drink by its best text: a synonym can win', () {
+      final drinks = [
+        makeDrink('1', 'Eiscola'),
+        const Drink(id: '2', name: 'Coca-Cola', synonyms: ['Cola']),
+      ];
+      final result = DrinkHelpers.search('cola', drinks);
+      expect(result.first.name, 'Coca-Cola');
+    });
+
     test('case insensitive', () {
       final result = DrinkHelpers.search('WASSER', allDrinks);
       expect(result.length, 1);

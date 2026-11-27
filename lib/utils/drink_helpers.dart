@@ -203,33 +203,28 @@ abstract final class DrinkHelpers {
         .split(' ')
         .where((w) => w.isNotEmpty)
         .toList();
-    // The name, else the first synonym that holds every word, is what
-    // matched and what the ranking looks at.
-    String? matched(Drink d) {
-      for (final text in [d.name, ...d.synonyms]) {
-        final lower = text.toLowerCase();
-        if (words.every(lower.contains)) return lower;
-      }
-      return null;
+    final firstWord = words.first;
+    // 0 exact, 1 starts with, 2 word start, 3 contains; null: no match.
+    int? score(String text) {
+      final lower = text.toLowerCase();
+      if (!words.every(lower.contains)) return null;
+      if (lower == firstWord) return 0;
+      if (lower.startsWith(firstWord)) return 1;
+      if (lower.split(' ').any((w) => w.startsWith(firstWord))) return 2;
+      return 3;
     }
 
-    final hits = <(Drink, String)>[
-      for (final d in allDrinks)
-        if (matched(d) case final m?) (d, m),
-    ];
-    final firstWord = words.first;
+    // A drink ranks by its best-scoring text: its name or any synonym.
+    final hits = <(Drink, int)>[];
+    for (final d in allDrinks) {
+      final scores = [
+        for (final t in [d.name, ...d.synonyms]) ?score(t),
+      ];
+      if (scores.isNotEmpty) hits.add((d, scores.reduce(math.min)));
+    }
     hits.sort((a, b) {
-      final aStarts = a.$2.startsWith(firstWord);
-      final bStarts = b.$2.startsWith(firstWord);
-      if (aStarts && !bStarts) return -1;
-      if (!aStarts && bStarts) return 1;
-
-      final aWordStarts = a.$2.split(' ').any((w) => w.startsWith(firstWord));
-      final bWordStarts = b.$2.split(' ').any((w) => w.startsWith(firstWord));
-      if (aWordStarts && !bWordStarts) return -1;
-      if (!aWordStarts && bWordStarts) return 1;
-
-      return a.$1.name.compareTo(b.$1.name);
+      final byScore = a.$2.compareTo(b.$2);
+      return byScore != 0 ? byScore : a.$1.name.compareTo(b.$1.name);
     });
     final filtered = [for (final h in hits) h.$1];
     return filtered.take(searchResultLimit).toList();

@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/ingredient_search_result.dart';
@@ -27,7 +29,9 @@ class IngredientService {
     try {
       final rows = await _client.rpc(
         'search_ingredients',
-        params: {'p_query': query, 'p_limit': limit},
+        // A small margin: the own row wins over a shared one found under the
+        // same word, and that may drop rows after the server's limit.
+        params: {'p_query': query, 'p_limit': min(limit + 5, 50)},
       );
       return IngredientSearchResult.rank(
         [

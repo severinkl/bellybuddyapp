@@ -41,7 +41,10 @@ abstract class Drink with _$Drink {
     );
   }
 
-  /// The `drink_synonyms(name)` embed; absent on an older server.
+  /// The `drink_synonyms(name)` embed. Absent in a row without it (the
+  /// parser tolerates that), but an older server answers the embedding
+  /// request itself with PGRST200: the app requires core 0025/0026 to be
+  /// deployed first.
   static List<String> _synonyms(Object? embed) => [
     if (embed is List)
       for (final s in embed)

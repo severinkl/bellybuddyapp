@@ -45,7 +45,7 @@ void main() {
       verify(
         () => client.rpc(
           'search_ingredients',
-          params: {'p_query': 'Hafer', 'p_limit': 7},
+          params: {'p_query': 'Hafer', 'p_limit': 12},
         ),
       ).called(1);
       verifyNever(() => client.from(any()));

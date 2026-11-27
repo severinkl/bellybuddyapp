@@ -37,7 +37,7 @@ class IngredientSearchResult {
     required int limit,
   }) {
     final q = query.trim().toLowerCase();
-    final wordStart = RegExp('(^|[\\s\\-/(),.])${RegExp.escape(q)}');
+    final wordStart = RegExp('(^|[ \\-/(),.])${RegExp.escape(q)}');
     int tier(IngredientSearchResult r) {
       final name = r.matchedName.toLowerCase();
       if (name == q) return 0;

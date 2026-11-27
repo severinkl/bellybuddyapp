@@ -183,6 +183,16 @@ void main() {
     handle.dispose();
   });
 
+  testWidgets('a food added once is not offered under another word', (
+    tester,
+  ) async {
+    added.add('Tomate');
+    await pump(tester, synonyms: const {'Paradeiser': 'Tomate'});
+    await type(tester, 'Para');
+
+    expect(find.text('Paradeiser'), findsNothing);
+  });
+
   testWidgets('a short name like „Ei" can be added too', (tester) async {
     await pump(tester);
     await type(tester, 'Ei');

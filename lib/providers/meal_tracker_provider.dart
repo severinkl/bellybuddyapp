@@ -218,7 +218,11 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
 
   void addIngredient(String name) {
     final trimmed = name.trim();
-    if (trimmed.isEmpty || state.ingredients.contains(trimmed)) return;
+    final key = trimmed.toLowerCase();
+    if (trimmed.isEmpty ||
+        state.ingredients.any((i) => i.trim().toLowerCase() == key)) {
+      return;
+    }
     state = state.copyWith(ingredients: [...state.ingredients, trimmed]);
     ref.read(ingredientAutocompleteProvider.notifier).addIngredient(trimmed);
   }
