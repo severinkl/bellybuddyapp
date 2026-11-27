@@ -7,7 +7,9 @@ import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/models/insight_progress.dart';
 import 'package:belly_buddy/models/insight_rules.dart';
 import 'package:belly_buddy/models/insights.dart';
+import 'package:belly_buddy/models/pattern_stats.dart';
 import 'package:belly_buddy/providers/insights_provider.dart';
+import 'package:belly_buddy/providers/pattern_stats_provider.dart';
 import 'package:belly_buddy/screens/patterns/patterns_screen.dart';
 import 'package:belly_buddy/services/insights/insight_copy.dart';
 
@@ -23,13 +25,32 @@ class _FixedInsights extends InsightsNotifier {
   Future<Insights> build() async => value;
 }
 
-/// The Muster page showing [insights], on a view tall enough to build all
+/// Serves a fixed [PatternStats] value instead of fetching one.
+class _FixedStats extends PatternStatsNotifier {
+  _FixedStats(this.value);
+
+  final PatternStats value;
+
+  @override
+  Future<PatternStats?> build() async => value;
+}
+
+const _notReady = PatternStats(
+  windowDays: 90,
+  ratedDays: 9,
+  hardDays: 2,
+  ready: false,
+);
+
+/// The Muster page showing [insights] (and [stats] in „Genauer
+/// hingeschaut"), on a view tall enough to build all
 /// of it by default.
 Future<void> _pump(
   WidgetTester tester,
   Insights insights, {
   Size size = const Size(390, 3200),
   double textScale = 1,
+  PatternStats stats = _notReady,
 }) async {
   tester.view
     ..physicalSize = size
@@ -43,6 +64,7 @@ Future<void> _pump(
     ProviderScope(
       overrides: [
         insightsProvider.overrideWith(() => _FixedInsights(insights)),
+        patternStatsProvider.overrideWith(() => _FixedStats(stats)),
       ],
       child: germanRouterApp(router, textScale: textScale),
     ),
@@ -109,6 +131,24 @@ const _definitions =
 
 /// „Fällt mir auf" as its section label draws it.
 final _noticedTitle = find.text(InsightCopy.noticedTitle.toUpperCase());
+
+StatItem _stat(
+  String kind,
+  String key,
+  String name,
+  StatLevel level, {
+  String? nestedIn,
+}) => StatItem(
+  kind: kind,
+  key: key,
+  name: name,
+  level: level,
+  exposed: 40,
+  exposedHard: 18,
+  unexposed: 20,
+  unexposedHard: 2,
+  nestedIn: nestedIn,
+);
 
 void main() {
   group('calendar', () {
@@ -413,9 +453,24 @@ void main() {
       ),
       size: const Size(375, 667),
       textScale: 1.3,
+      stats: PatternStats(
+        windowDays: 90,
+        ratedDays: 60,
+        hardDays: 20,
+        ready: true,
+        groups: [_stat('group', 'fructans', 'Fruktane', StatLevel.strong)],
+        ingredients: [
+          for (final n in names.take(3))
+            _stat('ingredient', n, n, StatLevel.noticed, nestedIn: 'fructans'),
+          for (final n in names.skip(3).take(3))
+            _stat('ingredient', n, n, StatLevel.unsure),
+        ],
+        calm: [_stat('ingredient', 'reis', 'Rindfleischbrühe', StatLevel.calm)],
+      ),
     );
     expect(tester.takeException(), isNull);
-    expect(find.text('noch unsicher'), findsNWidgets(3));
+    // Fällt mir auf's three, then the comparison's three.
+    expect(find.text('noch unsicher'), findsNWidgets(6));
 
     // Scrolls to the footer.
     await tester.scrollUntilVisible(find.text(_definitions), 200);

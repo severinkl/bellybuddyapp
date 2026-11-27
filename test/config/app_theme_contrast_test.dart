@@ -138,6 +138,13 @@ void main() {
           bg,
         ),
       ('white on badgeFill', Colors.white, AppTheme.badgeFill),
+      // „Genauer hingeschaut"'s level badges.
+      (
+        'statBadgeStrongText on its fill',
+        AppTheme.statBadgeStrongText,
+        AppTheme.statBadgeStrongFill,
+      ),
+      ('foreground on muted', AppTheme.foreground, AppTheme.muted),
     ];
     for (final (name, fg, bg) in pairs) {
       expect(_contrast(fg, bg), greaterThanOrEqualTo(4.5), reason: name);

@@ -42,6 +42,11 @@ class AppTheme {
 
   /// The „Aktiv" state word of a share (dark enough for text on [card]).
   static const Color shareActive = successText;
+
+  /// „Genauer hingeschaut"'s „deutlich auffällig" badge: light text on the
+  /// dark fill (the other levels use [muted]/[card] with dark text).
+  static const Color statBadgeStrongFill = foreground;
+  static const Color statBadgeStrongText = background;
   static const Color border = Color(0xFFE3DFDA);
   static const Color input = Color(0xFFE3DFDA);
   static const Color ring = Color(0xFFB5CC47);

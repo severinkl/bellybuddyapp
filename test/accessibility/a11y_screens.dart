@@ -9,6 +9,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/insight_rules.dart';
+import 'package:belly_buddy/models/pattern_stats.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/providers/relief_provider.dart';
@@ -121,6 +122,22 @@ List<Override> _patternsLockedBase() => baseOverrides(
     ),
 );
 
+StatItem _stat(String kind, String key, String name, StatLevel level) =>
+    StatItem(
+      kind: kind,
+      key: key,
+      name: name,
+      level: level,
+      exposed: 12,
+      exposedHard: 7,
+      unexposed: 30,
+      unexposedHard: 3,
+      nestedIn: kind == 'ingredient' && level == StatLevel.strong
+          ? 'fructans'
+          : null,
+    );
+
+/// „Genauer hingeschaut" with every level and heading.
 List<Override> _patternsUnlockedBase() => baseOverrides(
   entries: FakeEntryRepository()
     ..insightSource = insightSourceFor(
@@ -128,6 +145,20 @@ List<Override> _patternsUnlockedBase() => baseOverrides(
       gutFeelings: InsightRules.gutFeelingsNeeded,
       now: a11yNow,
     ),
+  patternStats: FakePatternStatsService(
+    stats: PatternStats(
+      windowDays: 90,
+      ratedDays: 42,
+      hardDays: 10,
+      ready: true,
+      groups: [_stat('group', 'fructans', 'Fruktane', StatLevel.noticed)],
+      ingredients: [
+        _stat('ingredient', 'zwiebel', 'Zwiebel', StatLevel.strong),
+        _stat('ingredient', 'kaffee', 'Kaffee', StatLevel.unsure),
+      ],
+      calm: [_stat('ingredient', 'reis', 'Reis', StatLevel.calm)],
+    ),
+  ),
 );
 
 /// One own recipe, `rec-1` (the collection's `recipe-1` is
