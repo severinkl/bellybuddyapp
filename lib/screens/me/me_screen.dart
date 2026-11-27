@@ -140,16 +140,17 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     } catch (e, st) {
       _log.error('Opening the store listing failed', e, st);
     }
+    var opened = false;
     try {
-      await ref.read(appVersionServiceProvider).openStore();
+      opened = await ref.read(appVersionServiceProvider).openStore();
+      if (!opened) _log.error('The store page did not open');
     } catch (e, st) {
       _log.error('Opening the store failed', e, st);
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Der Store konnte nicht geöffnet werden.'),
-        ),
-      );
     }
+    if (opened) return;
+    messenger.showSnackBar(
+      const SnackBar(content: Text('Der Store konnte nicht geöffnet werden.')),
+    );
   }
 
   Future<void> _openFeedback() => openExternalUrl(

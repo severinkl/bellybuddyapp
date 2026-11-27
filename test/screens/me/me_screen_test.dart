@@ -57,14 +57,16 @@ class _Launcher implements RatingLauncher {
 }
 
 class _Version extends AppVersionService {
-  _Version({this.fails = false});
+  _Version({this.fails = false, this.result = true});
   final bool fails;
+  final bool result;
   int opened = 0;
 
   @override
-  Future<void> openStore() async {
+  Future<bool> openStore() async {
     opened++;
     if (fails) throw Exception('no store');
+    return result;
   }
 }
 
@@ -567,6 +569,24 @@ void main() {
         extra: [
           ratingLauncherProvider.overrideWithValue(_Launcher(fails: true)),
           appVersionServiceProvider.overrideWithValue(_Version(fails: true)),
+        ],
+      );
+
+      await tapRow(tester, MeScreen.rateKey);
+
+      expect(
+        find.text('Der Store konnte nicht geöffnet werden.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('listing fails and the store page does not launch (false): '
+        'the message is shown', (tester) async {
+      await pump(
+        tester,
+        extra: [
+          ratingLauncherProvider.overrideWithValue(_Launcher(fails: true)),
+          appVersionServiceProvider.overrideWithValue(_Version(result: false)),
         ],
       );
 
