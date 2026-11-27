@@ -50,8 +50,7 @@ class _DailyReviewCardState extends ConsumerState<DailyReviewCard> {
 
   /// The pick being stored: shown (buttons off) until the write is done,
   /// while the provider may already have moved on to the next.
-  AlternativePick? _pending;
-  AlternativeChoiceKind? _pendingKind;
+  ({AlternativePick pick, AlternativeChoiceKind kind})? _pending;
 
   /// „Probiere ich" was stored.
   bool _saved = false;
@@ -95,10 +94,7 @@ class _DailyReviewCardState extends ConsumerState<DailyReviewCard> {
 
   Future<void> _choose(AlternativePick pick, AlternativeChoiceKind kind) async {
     if (_pending != null) return;
-    setState(() {
-      _pending = pick;
-      _pendingKind = kind;
-    });
+    setState(() => _pending = (pick: pick, kind: kind));
     final ok = await ref
         .read(alternativeChoicesProvider.notifier)
         .choose(
@@ -110,7 +106,6 @@ class _DailyReviewCardState extends ConsumerState<DailyReviewCard> {
     if (!mounted) return;
     setState(() {
       _pending = null;
-      _pendingKind = null;
       if (ok && kind == AlternativeChoiceKind.tryIt) _saved = true;
     });
     if (!ok) {
@@ -120,20 +115,20 @@ class _DailyReviewCardState extends ConsumerState<DailyReviewCard> {
     }
   }
 
+  Widget line(String text, {TextStyle style = _lineStyle}) =>
+      Text(text, style: style);
+
+  Widget textButton(Key key, String label, VoidCallback onPressed) => Align(
+    alignment: AlignmentDirectional.centerStart,
+    child: TextButton(key: key, onPressed: onPressed, child: Text(label)),
+  );
+
   @override
   Widget build(BuildContext context) {
     final review = ref.watch(dailyReviewProvider);
     if (review == null) return const SizedBox.shrink();
     final yesterday = review.day.yesterday;
     final upsellRoute = ref.watch(dailyReviewUpsellRouteProvider);
-
-    Widget line(String text, {TextStyle style = _lineStyle}) =>
-        Text(text, style: style);
-
-    Widget textButton(Key key, String label, VoidCallback onPressed) => Align(
-      alignment: AlignmentDirectional.centerStart,
-      child: TextButton(key: key, onPressed: onPressed, child: Text(label)),
-    );
 
     final lastGut = review.lastGut;
     final day = <Widget>[
@@ -164,7 +159,7 @@ class _DailyReviewCardState extends ConsumerState<DailyReviewCard> {
         },
     ];
 
-    final alternative = _alternative(review, upsellRoute, line, textButton);
+    final alternative = _alternative(review, upsellRoute);
 
     return BbCard(
       key: DailyReviewCard.cardKey,
@@ -223,12 +218,7 @@ class _DailyReviewCardState extends ConsumerState<DailyReviewCard> {
     );
   }
 
-  List<Widget> _alternative(
-    DailyReview review,
-    String? upsellRoute,
-    Widget Function(String, {TextStyle style}) line,
-    Widget Function(Key, String, VoidCallback) textButton,
-  ) {
+  List<Widget> _alternative(DailyReview review, String? upsellRoute) {
     final yesterday = review.day.yesterday;
     if (_saved) {
       return [
@@ -240,7 +230,7 @@ class _DailyReviewCardState extends ConsumerState<DailyReviewCard> {
         ),
       ];
     }
-    final pick = _pending ?? review.alternative;
+    final pick = _pending?.pick ?? review.alternative;
     // Still loading: nothing yet, no claim to take back.
     if (pick == null && review.alternativePending) return const [];
     if (review.alternativeLocked) {
@@ -279,7 +269,7 @@ class _DailyReviewCardState extends ConsumerState<DailyReviewCard> {
       BbButton(
         tapKey: DailyReviewCard.tryKey,
         label: DailyReviewCopy.tryIt,
-        isLoading: _pendingKind == AlternativeChoiceKind.tryIt,
+        isLoading: _pending?.kind == AlternativeChoiceKind.tryIt,
         onPressed: busy
             ? null
             : () => _choose(pick, AlternativeChoiceKind.tryIt),

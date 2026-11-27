@@ -98,6 +98,10 @@ String formatDateLong(DateTime dt) {
   return DateFormat('d. MMMM yyyy', 'de_DE').format(dt);
 }
 
+/// [hour] and [minute] as zero-padded „HH:MM" (e.g., "07:05").
+String formatHourMinute(int hour, int minute) =>
+    '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+
 /// Formats a DateTime as "HH:mm" (e.g., "14:30")
 String formatTime(DateTime dt) {
   return DateFormat('HH:mm', 'de_DE').format(dt);

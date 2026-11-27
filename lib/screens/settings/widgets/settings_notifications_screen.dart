@@ -8,6 +8,7 @@ import '../../../providers/notification_provider.dart';
 import '../../../providers/profile_provider.dart';
 import '../../../repositories/notification_repository.dart';
 import '../../../services/daily_review/daily_review_rules.dart';
+import '../../../utils/date_format_utils.dart';
 import '../../../utils/logger.dart';
 import '../../../widgets/common/bb_async_state.dart';
 import '../../../widgets/common/bb_card.dart';
@@ -82,13 +83,13 @@ class _SettingsNotificationsScreenState
     UserProfile Function(UserProfile) change, {
     bool holdOffIfAllOff = false,
   }) {
-    final latest = ref.read(profileProvider).value;
-    if (latest == null) return;
-    final profile = change(latest);
-    if (holdOffIfAllOff) _holdOffIfAllOff(profile);
     ref
         .read(profileProvider.notifier)
-        .updateProfile(profile)
+        .updateWith((latest) {
+          final profile = change(latest);
+          if (holdOffIfAllOff) _holdOffIfAllOff(profile);
+          return profile;
+        })
         .catchError((Object e) => _log.error('saving failed', e));
   }
 
@@ -154,16 +155,14 @@ class _SettingsNotificationsScreenState
       ),
     );
     if (picked == null || !mounted) return;
-    final time = _formatMinutes(
-      reviewMinutesOf(_formatMinutes(picked.hour * 60 + picked.minute)),
-    );
+    final clamped = clampReviewMinutes(picked.hour * 60 + picked.minute);
+    final time = _formatMinutes(clamped);
     if (time == ref.read(profileProvider).value?.dailyReviewTime) return;
     _updateLatest((p) => p.copyWith(dailyReviewTime: time));
   }
 
   static String _formatMinutes(int minutes) =>
-      '${(minutes ~/ 60).toString().padLeft(2, '0')}:'
-      '${(minutes % 60).toString().padLeft(2, '0')}';
+      formatHourMinute(minutes ~/ 60, minutes % 60);
 
   /// The system settings where this app's notifications are allowed (iOS
   /// and Android); a SnackBar if they don't open.

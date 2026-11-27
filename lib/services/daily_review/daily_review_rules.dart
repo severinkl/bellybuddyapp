@@ -3,6 +3,7 @@ import '../../models/gut_feeling_entry.dart';
 import '../../models/ingredient_suggestion_group.dart';
 import '../../models/meal_entry.dart';
 import '../../models/replacement_ingredient.dart';
+import '../../utils/date_format_utils.dart';
 import '../../utils/gut_feeling_rating.dart';
 
 /// The day a review is about; [yesterday] when it is the carried-over one.
@@ -23,11 +24,6 @@ class ReviewDay {
   int get hashCode => Object.hash(day, yesterday);
 }
 
-DateTime _dateOnly(DateTime d) => DateTime(d.year, d.month, d.day);
-
-bool _sameDay(DateTime a, DateTime b) =>
-    a.year == b.year && a.month == b.month && a.day == b.day;
-
 /// The day whose review is open at [now] (local), or null: today from
 /// [reviewMinutes] on; otherwise yesterday until
 /// [AppConstants.dailyReviewCarryOverHour]; a closed day is never open.
@@ -36,15 +32,15 @@ ReviewDay? openReviewDay({
   required int reviewMinutes,
   required DateTime? closedDay,
 }) {
-  final today = _dateOnly(now);
-  final isClosed = closedDay != null && _sameDay(closedDay, today);
+  final today = startOfDay(now);
+  final isClosed = closedDay != null && isSameDay(closedDay, today);
   final minutes = now.hour * 60 + now.minute;
   if (minutes >= reviewMinutes) {
     return isClosed ? null : ReviewDay(today, yesterday: false);
   }
   if (now.hour < AppConstants.dailyReviewCarryOverHour) {
-    final yesterday = DateTime(today.year, today.month, today.day - 1);
-    if (closedDay != null && _sameDay(closedDay, yesterday)) return null;
+    final yesterday = addDays(today, -1);
+    if (closedDay != null && isSameDay(closedDay, yesterday)) return null;
     return ReviewDay(yesterday, yesterday: true);
   }
   return null;
@@ -63,16 +59,19 @@ int reviewMinutesOf(String? time) {
 
   var minutes = time == null ? -1 : parse(time);
   if (minutes < 0) minutes = parse(AppConstants.dailyReviewDefaultTime);
-  return minutes.clamp(
-    AppConstants.dailyReviewEarliestMinutes,
-    AppConstants.dailyReviewLatestMinutes,
-  );
+  return clampReviewMinutes(minutes);
 }
+
+/// [minutes] (since midnight) within the allowed range for the review time.
+int clampReviewMinutes(int minutes) => minutes.clamp(
+  AppConstants.dailyReviewEarliestMinutes,
+  AppConstants.dailyReviewLatestMinutes,
+);
 
 /// Whether [trackedAt] (wall clock in the UTC slot) falls on local [day]:
 /// compares the y/m/d fields only.
 bool onWallClockDay(DateTime trackedAt, DateTime day) =>
-    _sameDay(trackedAt, day);
+    isSameDay(trackedAt, day);
 
 class AlternativePick {
   const AlternativePick({
@@ -88,18 +87,11 @@ class AlternativePick {
   final int recentMeals;
 }
 
-/// Wall-clock fields as a comparable number of days (no DST/zone effects).
-int _dayNumber(DateTime d) =>
-    DateTime.utc(d.year, d.month, d.day).millisecondsSinceEpoch ~/ 86400000;
-
-int _recentMeals(IngredientSuggestionGroup g, DateTime day) {
-  final end = _dayNumber(day);
-  final start = end - (AppConstants.dailyReviewRecentDays - 1);
-  return g.meals.where((m) {
-    final n = _dayNumber(m.trackedAt);
-    return n >= start && n <= end;
-  }).length;
-}
+int _recentMeals(IngredientSuggestionGroup g, DateTime day) =>
+    g.meals.where((m) {
+      final back = daysBetween(m.trackedAt, day);
+      return back >= 0 && back <= AppConstants.dailyReviewRecentDays - 1;
+    }).length;
 
 /// The alternative for the review of [day]: spec §4.2.
 AlternativePick? pickAlternative({
