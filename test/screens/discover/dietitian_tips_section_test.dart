@@ -4,6 +4,7 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'package:belly_buddy/config/app_theme.dart';
+import 'package:belly_buddy/models/dietitian_card.dart';
 import 'package:belly_buddy/models/dietitian_tip.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
@@ -83,9 +84,12 @@ void main() {
     expect(find.text(quiet), findsOneWidget);
   });
 
-  testWidgets('an unknown profession key reads „Andere"', (tester) async {
+  testWidgets('„Andere" as the profession', (tester) async {
     await pump(tester, [
-      testTip(profession: 'zauberin', createdAt: DateTime(2026, 11, 25, 9, 12)),
+      testTip(
+        profession: DietitianProfession.andere,
+        createdAt: DateTime(2026, 11, 25, 9, 12),
+      ),
     ]);
     expect(
       find.text('Andere (eigene Angabe) · gestern, 09:12'),

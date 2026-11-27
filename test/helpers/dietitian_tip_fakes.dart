@@ -1,3 +1,4 @@
+import 'package:belly_buddy/models/dietitian_card.dart';
 import 'package:belly_buddy/models/dietitian_tip.dart';
 import 'package:belly_buddy/services/dietitian_tip_service.dart';
 
@@ -5,7 +6,7 @@ import 'package:belly_buddy/services/dietitian_tip_service.dart';
 DietitianTip testTip({
   String id = 't1',
   String sender = 'Julia Berger',
-  String profession = 'dietologin',
+  DietitianProfession profession = DietitianProfession.dietologin,
   String body = 'Probier Haferflocken am Morgen.',
   DateTime? createdAt,
   DateTime? seenAt,

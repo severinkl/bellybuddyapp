@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:belly_buddy/models/dietitian_card.dart';
 import 'package:belly_buddy/models/dietitian_tip.dart';
 import 'package:belly_buddy/services/dietitian_tip_service.dart';
 
@@ -63,11 +64,12 @@ void main() {
     test('parses, keeps the body as typed, round trips', () {
       final tip = DietitianTip.fromJson(_row('t1'));
       expect(tip.senderName, 'Julia Berger');
-      expect(tip.senderProfession, 'dietologin');
+      expect(tip.senderProfession, DietitianProfession.dietologin);
       expect(tip.body, 'Probier <b>Haferflocken</b> 🌾\nam Morgen.');
       expect(tip.createdAt, DateTime.utc(2026, 11, 26, 8));
       expect(tip.isNew, isTrue);
       expect(DietitianTip.fromJson(tip.toJson()), tip);
+      expect(tip.toJson()['sender_profession'], 'dietologin');
     });
 
     test('seen is not new', () {
@@ -76,6 +78,14 @@ void main() {
       );
       expect(tip.isNew, isFalse);
       expect(tip.seenAt, DateTime.utc(2026, 11, 26, 9));
+    });
+
+    test('an unknown profession key reads „Andere"', () {
+      final tip = DietitianTip.fromJson({
+        ..._row('t1'),
+        'sender_profession': 'zauberin',
+      });
+      expect(tip.senderProfession, DietitianProfession.andere);
     });
   });
 

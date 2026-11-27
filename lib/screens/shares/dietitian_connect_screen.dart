@@ -23,12 +23,11 @@ const maxActiveDietitians = 3;
 
 /// Shown instead of a way to connect while [maxActiveDietitians] are.
 const dietitiansFullHint =
-    'Du hast 3 Berater:innen verbunden. Beende eine Verbindung, um eine neue '
+    'Du hast $maxActiveDietitians Berater:innen verbunden. Beende eine Verbindung, um eine neue '
     'hinzuzufügen.';
 
 /// Core's text for an unknown code; also for a text that cannot be one.
 const _notFound = 'Diesen Code gibt es nicht. Bitte prüfe ihn.';
-const _failed = 'Das hat nicht geklappt. Versuch es später nochmal.';
 
 /// „Berater:in verbinden": step 1 finds a dietitian by practice code (typed
 /// or scanned), step 2 chooses what they see and connects. The health
@@ -94,7 +93,8 @@ class _DietitianConnectScreenState
       if (!mounted) return;
       setState(() {
         _lookingUp = false;
-        _lookupError = (e is ShareException ? e.message : null) ?? _failed;
+        _lookupError =
+            (e is ShareException ? e.message : null) ?? shareFailedLine;
       });
     }
   }
@@ -128,7 +128,9 @@ class _DietitianConnectScreenState
         }
         return;
       }
-      messenger.showSnackBar(SnackBar(content: Text(message ?? _failed)));
+      messenger.showSnackBar(
+        SnackBar(content: Text(message ?? shareFailedLine)),
+      );
       if (mounted) setState(() => _submitting = false);
       return;
     }

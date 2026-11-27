@@ -18,6 +18,7 @@ import '../../widgets/common/bb_card.dart';
 import 'dietitian_connect_screen.dart';
 import 'widgets/dietitian_share_tile.dart';
 import 'widgets/share_created_sheet.dart';
+import 'widgets/share_terms_form.dart';
 import 'widgets/share_tile.dart';
 
 /// Ended, expired and locked shares stay in the list this long.
@@ -26,7 +27,7 @@ const _inactiveShownDays = 90;
 /// As many active link shares as the server allows.
 const _maxActiveLinks = 5;
 const _linksFullHint =
-    'Du hast schon 5 aktive Links. Beende einen, um einen neuen zu '
+    'Du hast schon $_maxActiveLinks aktive Links. Beende einen, um einen neuen zu '
     'erstellen.';
 
 const _refreshFailed =
@@ -315,15 +316,7 @@ class _SharesScreenState extends ConsumerState<SharesScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: AppTheme.fontSizeBodyLG,
-            fontWeight: FontWeight.w600,
-            color: AppTheme.foreground,
-          ),
-        ),
-        AppConstants.gap8,
+        ShareFormHeading(title),
         BbCard(
           padding: EdgeInsets.zero,
           showBorder: false,

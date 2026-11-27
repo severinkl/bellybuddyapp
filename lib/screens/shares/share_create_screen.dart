@@ -26,7 +26,6 @@ class ShareCreateScreen extends ConsumerStatefulWidget {
 
 class _ShareCreateScreenState extends ConsumerState<ShareCreateScreen> {
   static const _log = AppLogger('ShareCreate');
-  static const _failed = 'Das hat nicht geklappt. Versuch es später nochmal.';
   static const _validDaysOptions = [7, 30, 90];
 
   final _terms = ShareTermsController();
@@ -57,7 +56,9 @@ class _ShareCreateScreenState extends ConsumerState<ShareCreateScreen> {
     } catch (e, st) {
       _log.error('creating a share failed', e, st);
       final message = e is ShareException ? e.message : null;
-      messenger.showSnackBar(SnackBar(content: Text(message ?? _failed)));
+      messenger.showSnackBar(
+        SnackBar(content: Text(message ?? shareFailedLine)),
+      );
       if (mounted) setState(() => _submitting = false);
       return;
     }

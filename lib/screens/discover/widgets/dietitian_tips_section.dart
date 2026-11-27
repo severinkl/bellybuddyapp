@@ -6,25 +6,18 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
-import '../../../models/dietitian_card.dart';
 import '../../../models/dietitian_tip.dart';
 import '../../../providers/buddy_provider.dart';
 import '../../../providers/dietitian_tips_provider.dart';
+import '../../../utils/date_format_utils.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/bb_card.dart';
 import 'discover_section.dart';
 
 final _day = DateFormat('d. MMM', 'de_DE');
-final _time = DateFormat('HH:mm', 'de_DE');
 
 /// How many older tips show before „Alle anzeigen".
 const _olderShown = 5;
-
-/// The profession key of a tip as its label; a key the app does not know
-/// reads „Andere".
-String tipProfessionLabel(String key) => DietitianProfession.values
-    .firstWhere((p) => p.name == key, orElse: () => DietitianProfession.andere)
-    .label;
 
 /// „JB" for „Julia Berger": the first letters of the first and the last
 /// word; „?" for a blank name.
@@ -38,20 +31,8 @@ String tipInitials(String name) {
 
 /// „heute, 09:12", „gestern, 09:12" or „19. Nov., 09:12". [at] is a real
 /// instant, shown in local time; [now] is the app's clock.
-String tipWhen(DateTime at, DateTime now) {
-  final local = at.toLocal();
-  final days = DateTime(
-    now.year,
-    now.month,
-    now.day,
-  ).difference(DateTime(local.year, local.month, local.day)).inDays;
-  final day = switch (days) {
-    0 => 'heute',
-    1 => 'gestern',
-    _ => _day.format(local),
-  };
-  return '$day, ${_time.format(local)}';
-}
+String tipWhen(DateTime at, DateTime now) =>
+    formatRecentDayTime(at.toLocal(), now);
 
 /// Entdecken's „Von deiner Berater:in": the tips the user's dietitians
 /// sent, the newest large, older ones as a short list. Absent without a
@@ -282,8 +263,7 @@ class _NewestTip extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '${tipProfessionLabel(tip.senderProfession)} '
-                      '(eigene Angabe) · '
+                      '${tip.senderProfession.selfStated} · '
                       '${tipWhen(tip.createdAt, now)}',
                       style: const TextStyle(
                         fontSize: AppTheme.fontSizeCaption,

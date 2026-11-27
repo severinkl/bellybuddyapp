@@ -16,8 +16,6 @@ import '../../widgets/common/bb_button.dart';
 import 'widgets/share_duration_picker.dart';
 import 'widgets/share_terms_form.dart';
 
-const _failed = 'Das hat nicht geklappt. Versuch es später nochmal.';
-
 /// „Freigabe ändern": what the connection [id] shares and for how long.
 class DietitianShareEditScreen extends ConsumerStatefulWidget {
   const DietitianShareEditScreen({super.key, required this.id});
@@ -59,7 +57,9 @@ class _DietitianShareEditScreenState
     } catch (e, st) {
       _log.error('updating a connection failed', e, st);
       final message = e is ShareException ? e.message : null;
-      messenger.showSnackBar(SnackBar(content: Text(message ?? _failed)));
+      messenger.showSnackBar(
+        SnackBar(content: Text(message ?? shareFailedLine)),
+      );
       if (mounted) setState(() => _submitting = false);
       return;
     }
@@ -88,10 +88,9 @@ class _DietitianShareEditScreenState
 
   Widget _content(List<DataShare> shares) {
     final now = ref.read(buddyClockProvider)();
-    DataShare? share;
-    for (final s in shares) {
-      if (s.id == widget.id && s.kind == ShareKind.dietitian) share = s;
-    }
+    final share = shares
+        .where((s) => s.id == widget.id && s.kind == ShareKind.dietitian)
+        .firstOrNull;
     // A form already open stays while the list reloads under it.
     if (_terms == null &&
         (share == null || share.stateAt(now) != ShareState.active)) {

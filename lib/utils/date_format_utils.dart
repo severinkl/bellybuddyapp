@@ -157,3 +157,14 @@ String formatLogTargetDay(DateTime day) =>
 /// [d] as „28. Mär 2025".
 String formatDayMonthYear(DateTime d) =>
     '${d.day}. ${kMonthShortNames[d.month - 1]} ${d.year}';
+
+/// [at] (a local time) as „heute, 09:12", „gestern, 09:12" or
+/// „19. Nov., 09:12", by calendar days back from [now].
+String formatRecentDayTime(DateTime at, DateTime now) {
+  final day = switch (startOfDay(now).difference(startOfDay(at)).inDays) {
+    0 => 'heute',
+    1 => 'gestern',
+    _ => DateFormat('d. MMM', 'de_DE').format(at),
+  };
+  return '$day, ${formatTime(at)}';
+}

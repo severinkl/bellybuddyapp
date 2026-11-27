@@ -14,6 +14,9 @@ enum DietitianProfession {
   const DietitianProfession(this.label);
 
   final String label;
+
+  /// [label] as a client always sees it: „Diätolog:in (eigene Angabe)".
+  String get selfStated => '$label (eigene Angabe)';
 }
 
 /// A dietitian as the client sees them: the `practice-code` card, or the
@@ -39,6 +42,6 @@ abstract class DietitianCard with _$DietitianCard {
 
   /// „Diätolog:in (eigene Angabe) · Praxis …, Innsbruck".
   String get line =>
-      '${profession.label} (eigene Angabe) · '
+      '${profession.selfStated} · '
       '${practice == null ? '' : '$practice, '}$town';
 }

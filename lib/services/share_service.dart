@@ -9,6 +9,9 @@ import '../utils/logger.dart';
 /// A failed share call. [status] is the HTTP status of an error answer
 /// (null: no answer or unreadable); [message] is core's German text for it,
 /// when the body had one. Never carries link, code or token.
+/// What a share screen says when a call fails without core's own text.
+const shareFailedLine = 'Das hat nicht geklappt. Versuch es später nochmal.';
+
 class ShareException implements Exception {
   const ShareException({this.status, this.message});
 

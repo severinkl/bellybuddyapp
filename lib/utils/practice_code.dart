@@ -3,6 +3,9 @@ import '../config/constants.dart';
 /// A practice code as core's `normalize_code` checks it.
 final _code = RegExp(r'[A-Z]{2,6}-[23456789ABCDEFGHJKMNPQRSTUVWXYZ]{3}');
 
+/// The host of Belly Buddy Connect, which a practice QR code links to.
+final _connectHost = Uri.parse(AppConstants.connectUrl).host;
+
 /// The ASCII characters a typed code may carry: space, tab, CR, LF, `-`.
 final _stripped = RegExp('[ \t\r\n-]');
 
@@ -28,10 +31,9 @@ String? practiceCodeFromScan(String raw) {
   final text = raw.trim();
   final uri = Uri.tryParse(text);
   if (uri == null || !uri.hasScheme) return normalizePracticeCode(text);
-  final connect = Uri.parse(AppConstants.connectUrl);
   final segments = uri.pathSegments;
   if (uri.scheme != 'https' ||
-      uri.host != connect.host ||
+      uri.host != _connectHost ||
       uri.hasPort ||
       uri.hasQuery ||
       uri.hasFragment ||

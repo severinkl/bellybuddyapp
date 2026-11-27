@@ -4,6 +4,8 @@ import 'package:material_ui/material_ui.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/data_share.dart';
+import '../../../utils/date_format_utils.dart';
+import '../../../utils/german_list.dart';
 import '../../../widgets/common/bb_button.dart';
 import 'share_terms_form.dart';
 import 'share_tile.dart';
@@ -13,7 +15,6 @@ const _pausedWord = 'Pausiert';
 const _pausedLine = 'Diese Verbindung ist gerade pausiert.';
 
 final _day = DateFormat('d. MMM', 'de_DE');
-final _time = DateFormat('HH:mm', 'de_DE');
 
 const _caption = TextStyle(
   fontSize: AppTheme.fontSizeCaptionLG,
@@ -42,10 +43,7 @@ String dietitianSeesLine(DataShare share) {
     if (share.sharePhotos) 'Fotos',
   ];
   if (names.isEmpty) return 'Sieht nichts';
-  final joined = names.length == 1
-      ? names.single
-      : '${names.sublist(0, names.length - 1).join(', ')} und ${names.last}';
-  return 'Sieht $joined';
+  return 'Sieht ${joinGerman(names)}';
 }
 
 /// „zuletzt angesehen gestern, 16:40" or „noch nicht angesehen". The time is
@@ -53,15 +51,7 @@ String dietitianSeesLine(DataShare share) {
 String dietitianSeenLine(DataShare share, DateTime now) {
   final seen = share.lastOpenedAt?.toLocal();
   if (seen == null) return 'noch nicht angesehen';
-  final today = DateTime(now.year, now.month, now.day);
-  final seenDay = DateTime(seen.year, seen.month, seen.day);
-  final days = today.difference(seenDay).inDays;
-  final when = switch (days) {
-    0 => 'heute',
-    1 => 'gestern',
-    _ => _day.format(seen),
-  };
-  return 'zuletzt angesehen $when, ${_time.format(seen)}';
+  return 'zuletzt angesehen ${formatRecentDayTime(seen, now)}';
 }
 
 /// One connection to a dietitian: name, card line, state, what they see and
@@ -89,8 +79,7 @@ class DietitianShareTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final shown = share.isDietitianGone ? ShareState.ended : state;
-    final active = shown == ShareState.active;
+    final active = state == ShareState.active;
     final paused = active && share.isPaused;
     final card = share.dietitian;
     final end = share.expiresAt;
@@ -120,7 +109,7 @@ class DietitianShareTile extends StatelessWidget {
               ),
               const SizedBox(width: AppConstants.spacingSm),
               Text(
-                paused ? _pausedWord : shareStateWord(shown),
+                paused ? _pausedWord : shareStateWord(state),
                 style: _caption.copyWith(
                   fontWeight: FontWeight.w600,
                   color: active && !paused ? AppTheme.shareActive : null,
