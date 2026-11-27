@@ -173,6 +173,10 @@ class ToleranceTestView {
     this.result,
   });
 
+  /// The server's default lengths (core inserts them; the app sends none).
+  static const defaultLeaveOutDays = 5;
+  static const defaultReintroDays = 3;
+
   final String id;
   final TestSubject subject;
 

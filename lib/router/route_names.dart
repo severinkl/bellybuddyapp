@@ -27,6 +27,7 @@ class RouteNames {
   static const String recommendations = 'recommendations';
   static const String patterns = 'patterns';
   static const String patternsUnlocked = 'patterns-unlocked';
+  static const String toleranceTest = 'tolerance-test';
   static const String progress = 'progress';
   static const String relief = 'relief';
   static const String reliefExercise = 'relief-exercise';
@@ -75,6 +76,10 @@ class RoutePaths {
   static const String recommendations = '/recommendations';
   static const String patterns = '/patterns';
   static const String patternsUnlocked = '/patterns-unlocked';
+
+  /// The Verträglichkeits-Test; `extra` may carry a `TestSubject` (its
+  /// intro) or `ToleranceTestPick` (the proposal or the group picker).
+  static const String toleranceTest = '/patterns/test';
   static const String progress = '/progress';
   static const String relief = '/relief';
   static const String reliefExercise = '/relief/:id';

@@ -67,6 +67,9 @@ class StatsCopy {
   /// other short labels (GOS, Laktose, Fruktose, Sorbit, Mannit) stay.
   static const _groupDative = {'fructans': 'Fruktanen'};
 
-  static String _dative(StatItem i) =>
-      (i.kind == 'group' ? _groupDative[i.key] : null) ?? i.name;
+  static String _dative(StatItem i) => nameAfterMit(i.kind, i.key, i.name);
+
+  /// [name] as it reads after „mit" (`group`/`ingredient` [kind], [key]).
+  static String nameAfterMit(String kind, String key, String name) =>
+      (kind == 'group' ? _groupDative[key] : null) ?? name;
 }

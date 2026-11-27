@@ -12,6 +12,7 @@ export 'loading_screen.dart';
 export 'me/me_screen.dart';
 export 'patterns/patterns_screen.dart';
 export 'patterns/patterns_unlocked_screen.dart';
+export 'patterns/tolerance_test_screen.dart';
 export 'plus/plus_screen.dart';
 export 'progress/progress_screen.dart';
 export 'relief/relief_list_screen.dart';

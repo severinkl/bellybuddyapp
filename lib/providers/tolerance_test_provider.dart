@@ -171,3 +171,26 @@ final toleranceTestCompleterProvider = Provider<void>((ref) {
     unawaited(ref.read(toleranceTestActionsProvider).completeIfDone(test));
   }, fireImmediately: true);
 });
+
+/// Whether „Test starten" / „Testen" may be offered: Plus open, the stats
+/// loaded ([AsyncData], not a reload or another user's value), not locked,
+/// not restrictive, and no active test (also none past its end that is not
+/// completed yet: the one-active-test index would reject the start).
+bool canOfferTest(AsyncValue<PatternStats?> stats, {required bool plusLocked}) {
+  // A rebuild (a user change) is an AsyncData that is still loading, with
+  // the previous value.
+  if (plusLocked || stats is! AsyncData<PatternStats?> || stats.isLoading) {
+    return false;
+  }
+  final s = stats.value;
+  if (s == null || s.restrictive) return false;
+  return !(s.test?.isActive ?? false);
+}
+
+/// [canOfferTest] for the current state.
+final canOfferTestProvider = Provider.autoDispose<bool>(
+  (ref) => canOfferTest(
+    ref.watch(patternStatsProvider),
+    plusLocked: ref.watch(plusLockedProvider),
+  ),
+);

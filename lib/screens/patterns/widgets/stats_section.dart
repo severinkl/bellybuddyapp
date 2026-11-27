@@ -22,10 +22,13 @@ typedef StatsRowTrailing = Widget? Function(StatItem item);
 /// (402) or signed out: nothing. Only built where the 30-day Muster show,
 /// so Plus gating is the page's ([PatternsUnlocked]).
 class StatsSection extends ConsumerWidget {
-  const StatsSection({super.key, this.trailing});
+  const StatsSection({super.key, this.trailing, this.closingAction});
 
   /// Per shown row (groups and ingredients, not calm ones).
   final StatsRowTrailing? trailing;
+
+  /// After the closing line („Testen", IA4); none when null.
+  final Widget? closingAction;
 
   /// The row of the item of [kind] (`group` / `ingredient`) and [key].
   static Key rowKey(String kind, String key) =>
@@ -43,7 +46,11 @@ class StatsSection extends ConsumerWidget {
       final stats = state.value;
       if (stats == null) return const SizedBox.shrink();
       body = stats.ready
-          ? _Ready(stats: stats, trailing: trailing)
+          ? _Ready(
+              stats: stats,
+              trailing: trailing,
+              closingAction: closingAction,
+            )
           : _Line(StatsCopy.notReady(stats.ratedDays));
     } else if (state.hasError) {
       body = _Failed(
@@ -107,10 +114,15 @@ class _Failed extends StatelessWidget {
 }
 
 class _Ready extends StatelessWidget {
-  const _Ready({required this.stats, required this.trailing});
+  const _Ready({
+    required this.stats,
+    required this.trailing,
+    required this.closingAction,
+  });
 
   final PatternStats stats;
   final StatsRowTrailing? trailing;
+  final Widget? closingAction;
 
   @override
   Widget build(BuildContext context) {
@@ -137,7 +149,17 @@ class _Ready extends StatelessWidget {
       children: [
         if (shown.isEmpty) const _Line(StatsCopy.nothingShown) else ...shown,
         const _Limits(),
-        const Text(StatsCopy.closing, style: AppTheme.bodyStyle),
+        if (closingAction case final action?)
+          Wrap(
+            spacing: AppConstants.spacingSm,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: [
+              const Text(StatsCopy.closing, style: AppTheme.bodyStyle),
+              action,
+            ],
+          )
+        else
+          const Text(StatsCopy.closing, style: AppTheme.bodyStyle),
       ],
     );
   }
@@ -192,6 +214,7 @@ class _Row extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Expanded(
+            flex: 3,
             child: MergeSemantics(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -213,7 +236,14 @@ class _Row extends StatelessWidget {
           ),
           if (end != null) ...[
             const SizedBox(width: AppConstants.spacingSm),
-            end,
+            // A long „getestet" badge wraps instead of squeezing the name.
+            Flexible(
+              flex: 2,
+              child: Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: end,
+              ),
+            ),
           ],
         ],
       ),

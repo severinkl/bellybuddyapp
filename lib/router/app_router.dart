@@ -344,6 +344,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         name: RouteNames.patterns,
         builder: (context, state) => const PatternsScreen(),
       ),
+      // The Verträglichkeits-Test (Plus, gated on the page itself).
+      GoRoute(
+        path: RoutePaths.toleranceTest,
+        name: RouteNames.toleranceTest,
+        builder: (context, state) => ToleranceTestScreen(extra: state.extra),
+      ),
       // Day 7's celebration; the Buddy pushes it when the patterns unlock.
       GoRoute(
         path: RoutePaths.patternsUnlocked,

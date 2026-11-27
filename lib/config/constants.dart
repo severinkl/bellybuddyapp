@@ -243,6 +243,11 @@ class AppConstants {
   static const double progressDayDotSize = 6.0;
   static const double progressEmptyBuddySize = 120.0;
 
+  // Verträglichkeits-Test: a test day's dot and its marker for a day that
+  // was not kept („nicht eingehalten" / „nicht gegessen")
+  static const double testDayDotSize = 32.0;
+  static const double testDayMarkerSize = 10.0;
+
   // „Beschwerden pro Woche": a symptom's bar row, the gap between its bars,
   // the hollow marker of a week without means (and its outline), the least
   // height of a bar so a mean of 1 stays visible

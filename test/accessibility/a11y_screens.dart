@@ -9,7 +9,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/buddy_state.dart';
 import 'package:belly_buddy/models/insight_rules.dart';
+import 'package:belly_buddy/models/insights.dart';
 import 'package:belly_buddy/models/pattern_stats.dart';
+import 'package:belly_buddy/models/tolerance_test.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/providers/relief_provider.dart';
@@ -161,6 +163,77 @@ List<Override> _patternsUnlockedBase() => baseOverrides(
   ),
 );
 
+PatternStats _testStats({ToleranceTestView? test, TestSubject? proposal}) =>
+    PatternStats(
+      windowDays: 90,
+      ratedDays: 42,
+      hardDays: 10,
+      ready: true,
+      groups: [_stat('group', 'fructans', 'Fruktane', StatLevel.noticed)],
+      ingredients: [
+        const StatItem(
+          kind: 'ingredient',
+          key: 'zwiebel',
+          name: 'Zwiebel',
+          level: StatLevel.strong,
+          exposed: 12,
+          exposedHard: 7,
+          unexposed: 30,
+          unexposedHard: 3,
+          groups: ['fructans'],
+          nestedIn: 'fructans',
+        ),
+      ],
+      test: test,
+      proposal: proposal,
+    );
+
+/// A running Verträglichkeits-Test on its third day: a good day, a day not
+/// kept, a day without entry, five to come.
+List<Override> _toleranceTestRunning() => baseOverrides(
+  patternStats: FakePatternStatsService(
+    stats: _testStats(
+      test: ToleranceTestView(
+        id: 't1',
+        subject: const TestSubject('ingredient', 'zwiebel', 'Zwiebel'),
+        origin: 'proposed',
+        status: 'active',
+        phase: TestPhase.leaveOut,
+        startsOn: DateTime(2026, 11, 25),
+        leaveOutDays: 5,
+        reintroDays: 3,
+        dayIndex: 3,
+        days: [
+          for (final (i, c, exposed) in [
+            (0, DayClass.good, false),
+            (1, DayClass.hard, true),
+            (2, DayClass.none, false),
+          ])
+            TestDayView(
+              day: DateTime(2026, 11, 25 + i),
+              phase: TestPhase.leaveOut,
+              dayClass: c,
+              exposed: exposed,
+            ),
+        ],
+      ),
+    ),
+  ),
+);
+
+/// The proposal's intro (a group, so the foods line shows).
+List<Override> _toleranceTestProposal() => baseOverrides(
+  patternStats: FakePatternStatsService(
+    stats: _testStats(
+      proposal: const TestSubject('group', 'fructans', 'Fruktane'),
+    ),
+  ),
+);
+
+/// No test, no proposal: the six groups.
+List<Override> _toleranceTestPicker() =>
+    baseOverrides(patternStats: FakePatternStatsService(stats: _testStats()));
+
 /// One own recipe, `rec-1` (the collection's `recipe-1` is
 /// [FakeRecipeRepository]'s default).
 List<Override> _ownRecipeBase() => baseOverrides(
@@ -300,6 +373,21 @@ const a11yScreens = <A11yScreen>[
   ),
   A11yScreen('Muster (frei)', RoutePaths.patterns, base: _patternsUnlockedBase),
   A11yScreen('Muster frei!', RoutePaths.patternsUnlocked),
+  A11yScreen(
+    'Verträglichkeits-Test',
+    RoutePaths.toleranceTest,
+    base: _toleranceTestRunning,
+  ),
+  A11yScreen(
+    'Verträglichkeits-Test (Vorschlag)',
+    RoutePaths.toleranceTest,
+    base: _toleranceTestProposal,
+  ),
+  A11yScreen(
+    'Verträglichkeits-Test (Auswahl)',
+    RoutePaths.toleranceTest,
+    base: _toleranceTestPicker,
+  ),
   A11yScreen('Dein Verlauf', RoutePaths.progress),
   A11yScreen(
     'Dein Verlauf (mit Einträgen)',
