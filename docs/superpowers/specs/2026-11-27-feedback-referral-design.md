@@ -30,7 +30,7 @@ invited whom; a new ask that competes with the rating prompt or the Buddy's othe
 |---|---|---|---|---|
 | 1 | Feedback channel | In-app form, stored in core; the Mailchimp link and its constant go | Controller | — |
 | 2 | Categories | „Idee", „Problem", „Lob", „Sonstiges" (stored `idea`, `problem`, `praise`, `other`); none preselected, one required | Claude's call | One more tap; a default would bias the counts |
-| 3 | Text | 1–2,000 characters as a person sees them (trimmed); the server accepts up to 4,000 code points so a text full of emoji the app allowed is never refused | Claude's call | Same pattern as the Buddy name; low |
+| 3 | Text | 1–2,000 characters as a person sees them (trimmed); the server accepts up to 16,000 code points (raised from 4000 in the final review: ZWJ emoji) so a text full of emoji the app allowed is never refused | Claude's call | Same pattern as the Buddy name; low |
 | 4 | „Antwort erwünscht" | Switch, off by default; the form shows the account address („Wir antworten an <E-Mail>.") and the api stores that address (from the token) with the row only when the switch is on. Without an address in the account the switch is hidden | Claude's call | A changed address later still gets the reply at the old one; fine for a one-off answer |
 | 5 | Context | App version, platform, OS version, listed on the form under „Das wird mitgeschickt:"; no device model, no diary or health data | Controller + Claude (no model) | Slightly harder bug triage without the model; asking for it in the reply covers it |
 | 6 | OS version source | New package `device_info_plus` (same family as `package_info_plus`): „iOS 18.1", „Android 14". `Platform.operatingSystemVersion` gives a kernel string on Android | Claude's call | One dependency |
@@ -103,7 +103,7 @@ public.feedback
   id            uuid pk default gen_random_uuid()
   user_id       uuid not null references auth.users(id) on delete cascade
   category      text not null check (category in ('idea','problem','praise','other'))
-  message       text not null check (char_length(message) between 1 and 4000 and message ~ '\S')
+  message       text not null check (char_length(message) between 1 and 16000 and message ~ '\S')
   reply_email   text null check (reply_email is null or char_length(reply_email) between 3 and 254)
   app_version   text not null check (char_length(app_version) between 1 and 32)
   platform      text not null check (platform in ('ios','android'))

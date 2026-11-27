@@ -29,7 +29,7 @@ Order: FC1–FC4, then FA1–FA4 (FA2 needs FC2's contract). The app repo's pre-
 - `test/utils/vocabulary_test.dart` must stay green: no „Empfehlung", „Stuhlgang", „tracken", „erfassen", „Serie", „Speise(n)" in app strings. Mascot is „Belly Buddy" / „Buddy".
 - Feedback text, category and reply address never appear in a log line, exception message or Sentry event, in app or core. Log status codes and outcome words only.
 - Feedback carries no diary or health data from the app: only category, the user's text, `reply_wanted`, app version, platform, OS version.
-- Category keys `idea`, `problem`, `praise`, `other` ↔ labels „Idee", „Problem", „Lob", „Sonstiges". Text: 1–2,000 characters in the app (`AppConstants.feedbackMaxLength = 2000`, grapheme clusters, trimmed); the server accepts 1–4,000 code points (`MESSAGE_MAX_CODE_POINTS = 4000`).
+- Category keys `idea`, `problem`, `praise`, `other` ↔ labels „Idee", „Problem", „Lob", „Sonstiges". Text: 1–2,000 characters in the app (`AppConstants.feedbackMaxLength = 2000`, grapheme clusters, trimmed); the server accepts 1–16,000 code points (`MESSAGE_MAX_CODE_POINTS = 16000`; raised from 4000 in the final review: ZWJ emoji).
 - Limit: 5 feedback rows per user per rolling 24 hours. Retention: 24 months. Account deletion cascades.
 - Invite URL `https://bellybuddy.at`; no counting, no analytics, no data about the invited person.
 - Core: `mypy --strict`; synthetic test data only; fixtures delete the `profiles` row as well as `auth.users`; German user-facing text.
