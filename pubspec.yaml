@@ -61,7 +61,11 @@ dependencies:
 
   # App version info
   package_info_plus: ^10.2.2
-  in_app_review: ^2.0.12
+  # Vendored 2.0.12 with an AGP 9 built-in-Kotlin fix (see
+  # third_party/in_app_review/android/build.gradle); back to ^2.0.13+ once
+  # upstream migrates.
+  in_app_review:
+    path: third_party/in_app_review
 
 dev_dependencies:
   sentry_dart_plugin: ^3.6.0
