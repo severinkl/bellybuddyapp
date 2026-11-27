@@ -109,6 +109,10 @@ class ShareTile extends ConsumerWidget {
           ),
           AppConstants.gap6,
           Text(shareInfoLine(share), style: _caption),
+          if (share.keeper != null) ...[
+            AppConstants.gap6,
+            Text('Behalten von ${share.keeper!.name}', style: _caption),
+          ],
           if (active && expiresAt != null) ...[
             AppConstants.gap6,
             Text(
