@@ -8,6 +8,7 @@ import '../services/purchases/purchases_gateway.dart';
 import '../utils/logger.dart';
 import '../utils/retry_helper.dart';
 import 'app_config_provider.dart';
+import 'app_foreground_provider.dart';
 import 'auth_provider.dart';
 
 const _log = AppLogger('Plus');
@@ -66,11 +67,13 @@ class PlusNotifier extends AsyncNotifier<PlusStatus> {
 
     if (userId == null) return PlusStatus.none;
 
-    if (!await _identify(ref, gateway, userId)) return PlusStatus.none;
-    // A rebuild may land between the identify and here: never subscribe for
-    // a gone build (onDispose would throw on an unmounted ref).
-    if (!ref.isCurrentUser(userId)) return PlusStatus.none;
+    // A failed identify or status (offline) is not retried by Riverpod
+    // (noRetry): back in the foreground, an errored status tries again.
+    ref.listen(appForegroundProvider, (_, _) => _retryIfFailed());
 
+    // Subscribed before the identify, so a push still lands after a failed
+    // identify that a later [identifyCurrent] repaired; pushes count only
+    // while the SDK is identified as this user.
     PlusStatus? pushed;
     final sub = gateway.statusChanges.listen((status) {
       if (ref.isCurrentUser(userId) && _identity == userId) {
@@ -79,6 +82,9 @@ class PlusNotifier extends AsyncNotifier<PlusStatus> {
       }
     });
     ref.onDispose(sub.cancel);
+
+    if (!await _identify(ref, gateway, userId)) return PlusStatus.none;
+    if (!ref.isCurrentUser(userId)) return PlusStatus.none;
 
     final status = await gateway.status();
     // A stale build's answer is dropped; the newer build owns the state.
@@ -131,10 +137,24 @@ class PlusNotifier extends AsyncNotifier<PlusStatus> {
   /// Ensures the SDK is identified as the signed-in user (for the offer).
   /// False when the switch is off, nobody is signed in, there is no SDK key
   /// or the user changed meanwhile.
+  /// Identified now after the status build failed: the status is loaded
+  /// again.
   Future<bool> identifyCurrent(Ref caller) async {
     final userId = caller.read(plusUserProvider);
     if (userId == null) return false;
-    return _identify(caller, caller.read(purchasesGatewayProvider), userId);
+    final gateway = caller.read(purchasesGatewayProvider);
+    final identified = await _identify(caller, gateway, userId);
+    if (identified) _retryIfFailed();
+    return identified;
+  }
+
+  /// Rebuilds when the status could not be loaded (a failed identify or
+  /// status call); a loaded or loading status is left alone.
+  void _retryIfFailed() {
+    final ref = this.ref;
+    if (ref.mounted && state.hasError && !state.isLoading) {
+      ref.invalidateSelf();
+    }
   }
 
   /// Buys [offer] for the signed-in user.

@@ -16,6 +16,7 @@ import '../../providers/upgrade_gate_provider.dart';
 import '../../router/navigation_extensions.dart';
 import '../../router/route_names.dart';
 import '../../services/plus/plus_copy.dart';
+import '../../services/purchases/purchases_gateway.dart';
 import '../../utils/buddy_name.dart';
 import '../../utils/logger.dart';
 import '../../utils/url_utils.dart';
@@ -173,7 +174,10 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     // Watched so the list is loaded when the row is tapped; only whether it
     // is empty matters here.
     ref.watch(sharesProvider.select((s) => s.value?.isEmpty));
-    final paywallOn = ref.watch(paywallEnabledProvider);
+    // Without an SDK key (R14) nothing can be bought: no row.
+    final paywallOn =
+        ref.watch(paywallEnabledProvider) &&
+        ref.watch(purchasesGatewayProvider.select((g) => g.available));
     // While the status loads or fails the row shows without a subtitle: any
     // line could be wrong for a subscriber. The value is not enough: after
     // an account switch Riverpod keeps the previous (blanked) value while

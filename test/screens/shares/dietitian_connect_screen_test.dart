@@ -14,6 +14,7 @@ import 'package:belly_buddy/models/data_share.dart';
 import 'package:belly_buddy/models/dietitian_card.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
+import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/providers/share_launcher_provider.dart';
 import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/shares/dietitian_connect_screen.dart';
@@ -64,6 +65,7 @@ void main() {
     WidgetTester tester, {
     List<DataShare> shares = const [],
     String? savedName,
+    bool paywallOn = true,
   }) async {
     SharedPreferences.setMockInitialValues({});
     if (savedName != null) {
@@ -80,6 +82,7 @@ void main() {
     final container = ProviderContainer.test(
       overrides: [
         currentUserIdProvider.overrideWithValue('u1'),
+        paywallEnabledProvider.overrideWithValue(paywallOn),
         shareServiceProvider.overrideWithValue(service),
         buddyClockProvider.overrideWithValue(() => DateTime(2026, 11, 26, 12)),
         shareLauncherProvider.overrideWithValue((_, _) async {}),
@@ -368,6 +371,24 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(SharesScreen), findsOneWidget);
     expect(find.byType(DietitianConnectScreen), findsNothing);
+  });
+
+  testWidgets('a 402 plus_required with the switch off keeps the form and '
+      'says Plus is needed', (tester) async {
+    await pump(tester, savedName: 'Maria', paywallOn: false);
+    await lookUp(tester, 'BERGER-7K2');
+    service.connectFails = const ShareException(
+      status: 402,
+      message: 'Dafür brauchst du Belly Buddy Plus.',
+      code: 'plus_required',
+    );
+    await tester.tap(submit());
+    await tester.pumpAndSettle();
+
+    expect(find.text('page:/plus'), findsNothing);
+    expect(find.byType(DietitianConnectScreen), findsOneWidget);
+    expect(find.text('Gefunden'), findsOneWidget);
+    expect(find.text('Dafür brauchst du Belly Buddy Plus.'), findsOneWidget);
   });
 
   testWidgets('a 402 without the code keeps the form with the usual text', (

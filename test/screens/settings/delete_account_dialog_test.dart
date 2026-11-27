@@ -1,3 +1,5 @@
+import 'dart:async';
+
 // ignore_for_file: invalid_use_of_internal_member
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -41,8 +43,13 @@ void main() {
   Future<void> openDialog(
     WidgetTester tester, {
     PlusStatus? plus,
+    Future<PlusStatus> Function()? plusAnswer,
+    bool sdk = true,
     List<Override>? plusOverrides,
   }) async {
+    final gateway = FakePurchasesGateway(available: sdk);
+    addTearDown(gateway.dispose);
+    final answer = plusAnswer ?? (plus == null ? null : () async => plus);
     await tester.pumpWithProviders(
       Scaffold(
         body: Builder(
@@ -56,9 +63,10 @@ void main() {
         ...?plusOverrides,
         if (plusOverrides == null) ...[
           ...overrides(),
-          paywallEnabledProvider.overrideWithValue(plus != null),
-          if (plus != null)
-            plusProvider.overrideWith(() => FakePlusNotifier.status(plus)),
+          paywallEnabledProvider.overrideWithValue(answer != null),
+          purchasesGatewayProvider.overrideWithValue(gateway),
+          if (answer != null)
+            plusProvider.overrideWith(() => FakePlusNotifier(answer)),
         ],
       ],
     );
@@ -132,13 +140,35 @@ void main() {
 
   group('subscription warning', () {
     for (final (name, status, shown) in [
-      ('trial', const PlusStatus(state: PlusState.trial), true),
-      ('active', const PlusStatus(state: PlusState.active), true),
+      (
+        'trial',
+        const PlusStatus(state: PlusState.trial, willRenew: true),
+        true,
+      ),
+      (
+        'active',
+        const PlusStatus(state: PlusState.active, willRenew: true),
+        true,
+      ),
+      (
+        'active, already cancelled',
+        const PlusStatus(state: PlusState.active),
+        false,
+      ),
+      (
+        'trial, already cancelled',
+        const PlusStatus(state: PlusState.trial),
+        false,
+      ),
       ('none', PlusStatus.none, false),
       ('lapsed', const PlusStatus(state: PlusState.lapsed), false),
       (
         'active with a payment problem',
-        const PlusStatus(state: PlusState.active, billingIssue: true),
+        const PlusStatus(
+          state: PlusState.active,
+          willRenew: true,
+          billingIssue: true,
+        ),
         true,
       ),
     ]) {
@@ -150,6 +180,32 @@ void main() {
         );
       });
     }
+
+    testWidgets('status still loading: shown (a subscriber must not miss '
+        'it)', (tester) async {
+      final never = Completer<PlusStatus>();
+      await openDialog(tester, plusAnswer: () => never.future);
+      expect(find.text(PlusCopy.deleteWarning), findsOneWidget);
+    });
+
+    testWidgets('status failed: shown', (tester) async {
+      await openDialog(
+        tester,
+        plusAnswer: () async => throw Exception('offline'),
+      );
+      expect(find.text(PlusCopy.deleteWarning), findsOneWidget);
+    });
+
+    testWidgets('no SDK key: not shown, even while the status is unknown', (
+      tester,
+    ) async {
+      await openDialog(
+        tester,
+        sdk: false,
+        plusAnswer: () async => throw Exception('offline'),
+      );
+      expect(find.text(PlusCopy.deleteWarning), findsNothing);
+    });
 
     testWidgets('switch off: not shown, even for a store subscriber', (
       tester,

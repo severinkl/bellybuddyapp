@@ -71,8 +71,11 @@ void main() {
     double textScale = 1,
     FakeViewPadding padding = FakeViewPadding.zero,
     bool paywall = false,
+    bool sdk = true,
     List<Override> extra = const [],
   }) async {
+    final gateway = FakePurchasesGateway(available: sdk);
+    addTearDown(gateway.dispose);
     tester.view.physicalSize = size;
     tester.view.padding = padding;
     addTearDown(tester.view.resetPadding);
@@ -89,6 +92,7 @@ void main() {
         currentVersionProvider.overrideWith((_) async => '1.2.3'),
         shareServiceProvider.overrideWithValue(shareService),
         _switch(paywall),
+        purchasesGatewayProvider.overrideWithValue(gateway),
         ...extra,
       ],
     );
@@ -203,6 +207,19 @@ void main() {
       expect(find.byKey(MeScreen.plusKey), findsNothing);
     });
 
+    testWidgets('no SDK key in this build: no row (nothing can be bought)', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        paywall: true,
+        sdk: false,
+        extra: [_plus(PlusStatus.none)],
+      );
+      expect(find.byKey(MeScreen.plusKey), findsNothing);
+      expect(find.byKey(MeScreen.shareKey), findsOneWidget);
+    });
+
     testWidgets('sits directly below „Mit Berater:in teilen"', (tester) async {
       await pump(tester, paywall: true, extra: [_plus(PlusStatus.none)]);
       expect(find.byIcon(Icons.workspace_premium_outlined), findsOneWidget);
@@ -246,6 +263,8 @@ void main() {
 
     testWidgets('loading: the row shows, with no subtitle', (tester) async {
       final never = Completer<PlusStatus>();
+      final sdkGateway = FakePurchasesGateway();
+      addTearDown(sdkGateway.dispose);
       await tester.runAsync(() async {});
       tester.view.physicalSize = const Size(393, 852);
       tester.view.devicePixelRatio = 1.0;
@@ -259,6 +278,7 @@ void main() {
           currentVersionProvider.overrideWith((_) async => '1.2.3'),
           shareServiceProvider.overrideWithValue(shareService),
           _switch(true),
+          purchasesGatewayProvider.overrideWithValue(sdkGateway),
           plusProvider.overrideWith(() => FakePlusNotifier(() => never.future)),
         ],
       );

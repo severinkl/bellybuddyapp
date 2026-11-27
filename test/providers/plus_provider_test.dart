@@ -15,6 +15,7 @@ import 'package:belly_buddy/repositories/auth_repository.dart';
 import 'package:belly_buddy/services/edge_function_service.dart';
 import 'package:belly_buddy/services/purchases/purchases_gateway.dart';
 
+import '../helpers/app_lifecycle.dart';
 import '../helpers/mocks.dart';
 import '../helpers/purchases_fakes.dart';
 import '../helpers/riverpod_helpers.dart';
@@ -37,6 +38,10 @@ AppConfig _config(bool on) =>
 Future<void> _settle() => Future<void>.delayed(Duration.zero);
 
 void main() {
+  // The status retries on the AppLifecycleListener's return to the
+  // foreground, which needs the binding.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late FakePurchasesGateway gateway;
   late MockEdgeFunctionService edge;
   late SwitchableUserId user;
@@ -392,6 +397,68 @@ void main() {
         expect(c.read(plusProvider).hasError, isTrue);
       },
     );
+
+    test('a failed logIn is repaired by the paywall\'s identify: the status '
+        'loads, and pushes count again', () async {
+      final c = make();
+      await statusOf(c);
+      gateway.logInError = PlatformException(code: '10');
+      user.set(c, _b);
+      await _settle();
+      await _settle();
+      expect(c.read(plusProvider).hasError, isTrue);
+
+      gateway
+        ..logInError = null
+        ..statusAnswer = _trial;
+      c.listen(plusOfferProvider, (_, _) {});
+      await c.read(plusOfferProvider.future);
+      expect(await c.read(plusProvider.future), _trial);
+      expect(gateway.callsNamed('logIn'), ['logIn:$_b', 'logIn:$_b']);
+
+      gateway.emit(_active);
+      await _settle();
+      expect(c.read(plusProvider).value, _active);
+    });
+
+    test('a failed configure is tried again on the return to the '
+        'foreground', () async {
+      gateway.configureError = PlatformException(code: '10');
+      final c = make();
+      await c.read(appConfigProvider.future);
+      await _settle();
+      expect(c.read(plusProvider).hasError, isTrue);
+
+      gateway
+        ..configureError = null
+        ..statusAnswer = _active;
+      returnFromBackground();
+      expect(await c.read(plusProvider.future), _active);
+      expect(gateway.callsNamed('configure'), [
+        'configure:$_a',
+        'configure:$_a',
+      ]);
+    });
+
+    test(
+      'a loaded status is not reloaded on the return to the foreground',
+      () async {
+        final c = make();
+        await statusOf(c);
+        final before = List.of(gateway.calls);
+        returnFromBackground();
+        await _settle();
+        expect(gateway.calls, before);
+      },
+    );
+
+    test('switch off: the return to the foreground calls nothing', () async {
+      final c = make(on: false);
+      await statusOf(c);
+      returnFromBackground();
+      await _settle();
+      expect(gateway.calls, isEmpty);
+    });
 
     test('a failed configure is tried again on the next build', () async {
       gateway.configureError = PlatformException(code: '10');

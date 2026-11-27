@@ -8,6 +8,7 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../models/data_share.dart';
 import '../../models/dietitian_card.dart';
+import '../../providers/plus_provider.dart';
 import '../../providers/shares_provider.dart';
 import '../../services/share_service.dart';
 import '../../utils/logger.dart';
@@ -117,7 +118,13 @@ class _DietitianConnectScreenState
     } catch (e, st) {
       _log.error('connecting a dietitian failed', e, st);
       if (e is ShareException && e.plusRequired) {
-        replaceWithPlus(router, mounted ? route : null, messenger, e.message);
+        replaceWithPlus(
+          router,
+          mounted ? route : null,
+          messenger,
+          e.message,
+          paywallOn: mounted && ref.read(paywallEnabledProvider),
+        );
         if (mounted) setState(() => _submitting = false);
         return;
       }
