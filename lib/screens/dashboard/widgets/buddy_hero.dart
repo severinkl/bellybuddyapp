@@ -574,7 +574,12 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   // --- Cue queue --------------------------------------------------------------
 
-  void _say(String line) => _speak(line, duration: _cueLineDuration);
+  /// [_cueLineDuration], twice as long while a screen reader is on (a slow
+  /// listener keeps up with the next line).
+  Duration get _lineHold =>
+      _cueLineDuration * (MediaQuery.accessibleNavigationOf(context) ? 2 : 1);
+
+  void _say(String line) => _speak(line, duration: _lineHold);
 
   void _enqueue(Iterable<_Cue> cues) {
     _cues.addAll(cues);
@@ -582,7 +587,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     if (!_cueRunning) _nextCue();
   }
 
-  void _holdStage() => _cueTimer = Timer(_cueLineDuration, _nextCue);
+  void _holdStage() => _cueTimer = Timer(_lineHold, _nextCue);
 
   void _nextCue() {
     _cueTimer?.cancel();

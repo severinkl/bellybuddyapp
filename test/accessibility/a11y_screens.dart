@@ -154,9 +154,6 @@ List<Override> _mealToEdit() => [
 
 // -- Pending checks -----------------------------------------------------------
 
-/// The bottom bar's „Entdecken" tab is 47.9 px tall (XA4's bar).
-const _barTabs = {A11yCheck.androidTapTarget: 'XA4'};
-
 const _tapTargets5 = {
   A11yCheck.androidTapTarget: 'XA5',
   A11yCheck.iosTapTarget: 'XA5',
@@ -207,12 +204,12 @@ const a11yScreens = <A11yScreen>[
   ),
 
   // The four tabs.
-  A11yScreen('Home', RoutePaths.dashboard, pending: _barTabs),
-  A11yScreen('Tagebuch', RoutePaths.diary, base: _diaryBase, pending: _barTabs),
-  A11yScreen('Entdecken', RoutePaths.discover, pending: _barTabs),
-  A11yScreen('Wissen', RoutePaths.knowledge, pending: _barTabs),
-  A11yScreen('Rezeptsammlung', RoutePaths.discoverRecipes, pending: _barTabs),
-  A11yScreen('Ich', RoutePaths.me, pending: _barTabs),
+  A11yScreen('Home', RoutePaths.dashboard),
+  A11yScreen('Tagebuch', RoutePaths.diary, base: _diaryBase),
+  A11yScreen('Entdecken', RoutePaths.discover),
+  A11yScreen('Wissen', RoutePaths.knowledge),
+  A11yScreen('Rezeptsammlung', RoutePaths.discoverRecipes),
+  A11yScreen('Ich', RoutePaths.me),
 
   // Trackers.
   // The date/time chips (43 px) and the title (18 px) are XA5's, the

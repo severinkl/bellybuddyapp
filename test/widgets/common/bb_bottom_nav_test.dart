@@ -127,6 +127,43 @@ void main() {
       expect(find.byIcon(Icons.explore_outlined), findsOneWidget);
     });
 
+    testWidgets('the active tab is selected to assistive tech, the others are '
+        'not; „Eintragen" is a button', (tester) async {
+      final handle = tester.ensureSemantics();
+      await _pumpNav(tester);
+
+      void expectTabs(Key active) {
+        for (final (key, label) in [
+          (BbBottomNav.navHomeKey, 'Home'),
+          (BbBottomNav.navDiaryKey, 'Tagebuch'),
+          (BbBottomNav.navDiscoverKey, 'Entdecken'),
+          (BbBottomNav.navMeKey, 'Ich'),
+        ]) {
+          expect(
+            tester.getSemantics(find.byKey(key)),
+            isSemantics(
+              label: label,
+              isButton: true,
+              hasSelectedState: true,
+              isSelected: key == active,
+              hasTapAction: true,
+            ),
+            reason: label,
+          );
+        }
+      }
+
+      expectTabs(BbBottomNav.navHomeKey);
+      await _tap(tester, BbBottomNav.navDiscoverKey);
+      expectTabs(BbBottomNav.navDiscoverKey);
+
+      expect(
+        tester.getSemantics(find.byKey(BbBottomNav.centerButtonKey)),
+        isSemantics(label: 'Eintragen', isButton: true, hasTapAction: true),
+      );
+      handle.dispose();
+    });
+
     testWidgets('the tour targets the plus, Tagebuch, Entdecken and Ich', (
       tester,
     ) async {

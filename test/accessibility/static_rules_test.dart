@@ -185,8 +185,6 @@ const _rules = [
     },
     offends: _childIsIcon,
     allowed: {
-      'lib/screens/dashboard/widgets/notification_opt_in_dialog.dart:GestureDetector#1':
-          'XA4', // ✕
       'lib/screens/settings/widgets/reminder_time_picker.dart:GestureDetector#2':
           'XA9', // ✕ remove a time
       'lib/screens/trackers/meal/widgets/meal_image_section.dart:GestureDetector#2':

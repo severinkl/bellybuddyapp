@@ -120,6 +120,73 @@ void main() {
       expect(finished, isTrue);
     });
 
+    testWidgets('the tour can be stepped with the „Weiter" action and closed '
+        'with „Überspringen"', (tester) async {
+      final handle = tester.ensureSemantics();
+      var finished = false;
+      await tester.pumpWithProviders(
+        harness(
+          overlay: DashboardTutorialOverlay(
+            steps: twoSteps(),
+            onFinish: () => finished = true,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final weiter = find.semantics.byLabel('Weiter');
+      expect(
+        tester.getSemantics(find.byKey(DashboardTutorialOverlay.advanceKey)),
+        isSemantics(label: 'Weiter', isButton: true, hasTapAction: true),
+      );
+      tester.semantics.tap(weiter);
+      await tester.pumpAndSettle();
+      expect(find.text('step b', findRichText: true), findsOneWidget);
+
+      // The last step's action finishes the tour.
+      expect(find.semantics.byLabel('Weiter'), findsNothing);
+      expect(find.semantics.byLabel('Fertig'), findsOne);
+
+      tester.semantics.tap(find.semantics.byLabel('Überspringen'));
+      await tester.pumpAndSettle();
+      expect(finished, isTrue);
+      handle.dispose();
+    });
+
+    testWidgets('the tour shows without fading with disableAnimations', (
+      tester,
+    ) async {
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      var finished = false;
+      await tester.pumpWithProviders(
+        harness(
+          overlay: DashboardTutorialOverlay(
+            steps: twoSteps(),
+            onFinish: () => finished = true,
+          ),
+        ),
+      );
+
+      FadeTransition fade() => tester.widget<FadeTransition>(
+        find
+            .descendant(
+              of: find.byType(DashboardTutorialOverlay),
+              matching: find.byType(FadeTransition),
+            )
+            .first,
+      );
+      // Fully there on its first frame, gone without a fade.
+      expect(fade().opacity.value, 1);
+      await tester.pump();
+      await tester.tap(find.text('Überspringen'));
+      await tester.pump();
+      expect(finished, isTrue);
+    });
+
     testWidgets('tapping Überspringen finishes immediately', (tester) async {
       var finished = false;
       await tester.pumpWithProviders(
