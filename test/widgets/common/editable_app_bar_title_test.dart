@@ -86,8 +86,10 @@ void main() {
       },
     );
 
-    testWidgets('in display mode the title is a button „Titel bearbeiten" '
-        'with the title as its value; tapping it edits', (tester) async {
+    testWidgets('in display mode the app bar heading (namesRoute) is named by '
+        'the title; a separate button „Titel bearbeiten" edits it', (
+      tester,
+    ) async {
       final handle = tester.ensureSemantics();
       await tester.pumpWidget(
         _wrap(
@@ -99,15 +101,46 @@ void main() {
         ),
       );
 
-      final title = find.semantics.byLabel('Titel bearbeiten');
-      expect(title, findsOneWidget);
-      expect(
-        tester.getSemantics(find.bySemanticsLabel('Titel bearbeiten')),
-        isSemantics(isButton: true, value: 'Mahlzeit X', hasTapAction: true),
+      final heading = find.semantics.byPredicate(
+        (n) => n.flagsCollection.isHeader && n.flagsCollection.namesRoute,
       );
-      tester.semantics.tap(title);
+      expect(heading, findsOneWidget);
+      expect(heading.evaluate().single.label, 'Mahlzeit X');
+
+      final button = find.semantics.byLabel('Titel bearbeiten');
+      expect(button, findsOneWidget);
+      expect(
+        button.evaluate().single,
+        isSemantics(
+          isButton: true,
+          isHeader: false,
+          namesRoute: false,
+          hasTapAction: true,
+        ),
+      );
+      tester.semantics.tap(button);
       await tester.pump();
       expect(find.byType(TextField), findsOneWidget);
+      handle.dispose();
+    });
+
+    testWidgets('an empty title names the heading by the placeholder', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWidget(
+        _wrap(
+          EditableAppBarTitle(
+            initialTitle: '',
+            placeholder: 'Mahlzeit benennen',
+            onChanged: (_) {},
+          ),
+        ),
+      );
+      final heading = find.semantics.byPredicate(
+        (n) => n.flagsCollection.namesRoute,
+      );
+      expect(heading.evaluate().single.label, 'Mahlzeit benennen');
       handle.dispose();
     });
 

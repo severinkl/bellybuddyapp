@@ -436,6 +436,52 @@ void main() {
       expect(_spotlight(tester), target.inflate(AppConstants.spacingXs));
     });
 
+    testWidgets('with reduce motion the off-screen target is jumped to, '
+        'not scrolled to', (tester) async {
+      reduceMotion(tester);
+      final scroll = ScrollController();
+      addTearDown(scroll.dispose);
+      await tester.pumpWithProviders(
+        Scaffold(
+          body: Stack(
+            children: [
+              CustomScrollView(
+                controller: scroll,
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Column(
+                      children: [
+                        Container(key: keyA, height: 80, color: Colors.blue),
+                        const SizedBox(height: 1500),
+                        Container(key: keyB, height: 80, color: Colors.green),
+                        const SizedBox(height: 300),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              Positioned.fill(
+                child: DashboardTutorialOverlay(
+                  steps: twoSteps(),
+                  onFinish: () {},
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(scroll.offset, 0);
+
+      await tester.tap(find.byKey(DashboardTutorialOverlay.advanceKey));
+      // One frame: a jump lands at once; an animated scroll would not.
+      await tester.pump();
+      final landed = scroll.offset;
+      expect(landed, greaterThan(0));
+      await tester.pumpAndSettle();
+      expect(scroll.offset, landed);
+    });
+
     testWidgets('follows a target that is still moving when its step starts', (
       tester,
     ) async {

@@ -5,6 +5,7 @@ import '../../../config/app_theme.dart';
 import '../../../providers/auth_provider.dart';
 
 import '../../../utils/password_validator.dart';
+import '../../../utils/reduced_motion.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/bb_password_hint.dart';
 import '../../../widgets/common/bb_password_field.dart';
@@ -144,14 +145,19 @@ class _PasswordChangeSectionState extends ConsumerState<PasswordChangeSection> {
             ],
           ),
         ),
-        AnimatedCrossFade(
-          firstChild: const SizedBox.shrink(),
-          secondChild: _buildPasswordFields(),
-          crossFadeState: _expanded
-              ? CrossFadeState.showSecond
-              : CrossFadeState.showFirst,
-          duration: const Duration(milliseconds: 250),
-        ),
+        // Under reduce motion the fields simply appear: a zero-length
+        // AnimatedCrossFade re-dirties its AnimatedSize during layout.
+        if (ReducedMotion.of(context))
+          _expanded ? _buildPasswordFields() : const SizedBox.shrink()
+        else
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: _buildPasswordFields(),
+            crossFadeState: _expanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
+            duration: AppConstants.animDisclosure,
+          ),
       ],
     );
   }

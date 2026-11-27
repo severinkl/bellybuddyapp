@@ -483,6 +483,9 @@ class AppConstants {
   // Animation durations
   static const Duration animFast = Duration(milliseconds: 150);
   static const Duration animNormal = Duration(milliseconds: 200);
+
+  /// A folded section opening or closing (e.g. „Passwort ändern").
+  static const Duration animDisclosure = Duration(milliseconds: 250);
   static const Duration animMedium = Duration(milliseconds: 300);
   static const Duration animSlow = Duration(milliseconds: 500);
   static const Duration animSlower = Duration(milliseconds: 600);

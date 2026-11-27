@@ -123,37 +123,41 @@ class _EditableAppBarTitleState extends State<EditableAppBarTitle> {
 
     final text = _controller.text.trim();
     final isEmpty = text.isEmpty;
-    // A button named for what it does; the shown title is its value.
+    // The shown title names the app bar heading (and the route) it merges
+    // into; the edit button is its own node, named for what it does.
     return Semantics(
-      button: true,
-      label: 'Titel bearbeiten',
-      value: isEmpty ? widget.placeholder : text,
-      onTap: _enterEdit,
-      excludeSemantics: true,
-      child: GestureDetector(
+      label: isEmpty ? widget.placeholder : text,
+      child: Semantics(
+        container: true,
+        button: true,
+        label: 'Titel bearbeiten',
         onTap: _enterEdit,
-        behavior: HitTestBehavior.opaque,
-        // 48 high within the app bar's toolbar: nothing moves.
-        child: TapTarget(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Flexible(
-                child: Text(
-                  isEmpty ? widget.placeholder : text,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: AppTheme.fontSizeTitle,
-                    fontWeight: FontWeight.w600,
-                    color: isEmpty ? AppTheme.mutedForeground : null,
+        excludeSemantics: true,
+        child: GestureDetector(
+          onTap: _enterEdit,
+          behavior: HitTestBehavior.opaque,
+          // 48 high within the app bar's toolbar: nothing moves.
+          child: TapTarget(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    isEmpty ? widget.placeholder : text,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: AppTheme.fontSizeTitle,
+                      fontWeight: FontWeight.w600,
+                      color: isEmpty ? AppTheme.mutedForeground : null,
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: AppConstants.spacingXs),
-              const Icon(Icons.edit, size: AppConstants.iconSizeXs),
-            ],
+                const SizedBox(width: AppConstants.spacingXs),
+                const Icon(Icons.edit, size: AppConstants.iconSizeXs),
+              ],
+            ),
           ),
         ),
       ),

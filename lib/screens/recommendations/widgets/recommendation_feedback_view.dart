@@ -117,7 +117,7 @@ class RecommendationFeedbackView extends ConsumerWidget {
               '✓ Danke für dein Feedback',
               style: TextStyle(
                 fontSize: AppTheme.fontSizeCaptionLG,
-                color: AppTheme.primary,
+                color: AppTheme.primaryText,
               ),
             ),
           ] else if (state == RecommendationState.disliked) ...[

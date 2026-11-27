@@ -103,7 +103,7 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
       await Scrollable.ensureVisible(
         ctx,
         alignment: 0.5,
-        duration: AppConstants.animFast,
+        duration: ReducedMotion.duration(context, AppConstants.animFast),
       );
       // The scroll lands in a frame's animation phase; slivers only move in
       // its layout, so measure once that frame is done.

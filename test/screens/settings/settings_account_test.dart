@@ -8,6 +8,7 @@ import 'package:belly_buddy/repositories/auth_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 
 import '../../helpers/fakes.dart';
+import '../../helpers/reduce_motion.dart';
 import '../../helpers/riverpod_helpers.dart';
 
 List<Override> _buildOverrides() {
@@ -78,6 +79,26 @@ void main() {
         }
       },
     );
+
+    testWidgets('with reduce motion the password fields open without a fade', (
+      tester,
+    ) async {
+      reduceMotion(tester);
+      await tester.pumpWithProviders(
+        const SettingsAccountScreen(),
+        overrides: _buildOverrides(),
+      );
+      await tester.pump();
+      await tester.ensureVisible(find.text('Passwort ändern').first);
+      await tester.tap(find.text('Passwort ändern').first);
+      await tester.pump();
+
+      // Open after one frame, with nothing left to animate.
+      expect(find.byType(AnimatedCrossFade), findsNothing);
+      expect(find.text('Aktuelles Passwort'), findsWidgets);
+      expect(tester.hasRunningAnimations, isFalse);
+      expect(tester.takeException(), isNull);
+    });
 
     testWidgets('„Passwort vergessen?" is at least 48 high', (tester) async {
       await _openPasswordChange(tester);
