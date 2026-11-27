@@ -6,8 +6,10 @@ import '../models/meal_prefill.dart';
 import '../providers/core_providers.dart';
 import '../repositories/meal_media_repository.dart';
 import '../utils/date_format_utils.dart';
+import '../utils/logger.dart';
 import 'diary_provider.dart';
 import 'entries_provider.dart';
+import 'ingredient_suggestion_provider.dart';
 import 'ingredient_autocomplete_provider.dart';
 
 /// Placeholder title written to state when the user hasn't given the meal
@@ -33,6 +35,10 @@ class MealTrackerState {
   /// offer "Als Rezept speichern" with the correct image.
   final String? savedImageUrl;
 
+  /// The id of the meal that was just saved (create-mode only), so the
+  /// success screen can show its flagged ingredients; null until then.
+  final String? savedMealId;
+
   MealTrackerState({
     this.seed,
     this.imageUrl,
@@ -46,6 +52,7 @@ class MealTrackerState {
     this.notes,
     DateTime? trackedAt,
     this.savedImageUrl,
+    this.savedMealId,
   }) : trackedAt = trackedAt ?? DateTime.now();
 
   /// True only in edit mode when any seeded field has been modified.
@@ -104,6 +111,8 @@ class MealTrackerState {
     bool clearImageBytes = false,
     String? savedImageUrl,
     bool clearSavedImageUrl = false,
+    String? savedMealId,
+    bool clearSavedMealId = false,
   }) {
     return MealTrackerState(
       seed: seed ?? this.seed,
@@ -122,11 +131,14 @@ class MealTrackerState {
       savedImageUrl: clearSavedImageUrl
           ? null
           : (savedImageUrl ?? this.savedImageUrl),
+      savedMealId: clearSavedMealId ? null : (savedMealId ?? this.savedMealId),
     );
   }
 }
 
 class MealTrackerNotifier extends Notifier<MealTrackerState> {
+  static const _log = AppLogger('MealTracker');
+
   @override
   MealTrackerState build() => MealTrackerState(trackedAt: DateTime.now());
 
@@ -165,7 +177,8 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
   void setTrackedAt(DateTime dt) => state = state.copyWith(trackedAt: dt);
 
   @visibleForTesting
-  void markShowSuccess() => state = state.copyWith(showSuccess: true);
+  void markShowSuccess({String? savedMealId}) =>
+      state = state.copyWith(showSuccess: true, savedMealId: savedMealId);
 
   void setImage(Uint8List bytes, String fileName) {
     // Clear the remote URL so UI reading state.imageUrl doesn't render the
@@ -257,8 +270,7 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
         );
       }
 
-      // Fire and forget
-      ref.read(mealMediaRepositoryProvider).triggerSuggestionRefresh();
+      _refreshSuggestions();
 
       // showSuccess is the create-mode "nice job" screen. Edit mode pops
       // instead — the screen listens to isSaving transitions and pops.
@@ -269,11 +281,28 @@ class MealTrackerNotifier extends Notifier<MealTrackerState> {
         showSuccess: existingSeed == null,
         savedImageUrl: existingSeed == null ? resolvedImageUrl : null,
         clearSavedImageUrl: existingSeed != null,
+        savedMealId: existingSeed == null ? meal.id : null,
+        clearSavedMealId: existingSeed != null,
       );
     } catch (e) {
       state = state.copyWith(isSaving: false);
       rethrow;
     }
+  }
+
+  /// Has the server look at the meal in the background and, once it is
+  /// done (whatever it created), loads the suggestions again, so the
+  /// success screen and the diary show the meal's flagged ingredients.
+  /// Never blocks the save; a failure is only logged.
+  void _refreshSuggestions() {
+    final suggestions = ref.read(ingredientSuggestionProvider.notifier);
+    ref
+        .read(mealMediaRepositoryProvider)
+        .refreshSuggestions()
+        .then((_) => suggestions.fetchSuggestions())
+        .catchError((Object e, StackTrace st) {
+          _log.error('refreshSuggestions failed', e, st);
+        });
   }
 }
 

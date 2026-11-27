@@ -830,7 +830,7 @@ class FakeMealMediaRepository implements MealMediaRepository {
     'ingredients': ['Reis', 'Gemüse'],
   };
   @override
-  void triggerSuggestionRefresh() {}
+  Future<int> refreshSuggestions() async => 0;
   @override
   Future<String?> resolveSignedUrl(String? urlOrPath) async => urlOrPath;
 }
