@@ -4,6 +4,8 @@ import 'package:belly_buddy/screens/dashboard/widgets/care_ring.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/home_flame.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/insight_card.dart';
 import 'package:belly_buddy/screens/trackers/drink/drink_tracker_screen.dart';
+import 'package:belly_buddy/screens/trackers/drink/widgets/drink_size_selector.dart';
+import 'package:belly_buddy/screens/trackers/drink/widgets/quick_drink_grid.dart';
 import 'package:belly_buddy/screens/trackers/gut_feeling/gut_feeling_tracker_screen.dart';
 import 'package:belly_buddy/screens/trackers/toilet/toilet_tracker_screen.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
@@ -82,9 +84,9 @@ void main() {
 
     await tester.tapVisible(find.byKey(CareRing.needKey(CareNeed.drink)));
     expect(find.byType(DrinkTrackerScreen), findsOneWidget);
-    await tester.tapVisible(find.text('Wasser'));
-    await tester.tapVisible(find.text('250 ml'));
-    await tester.tap(find.text('Speichern'));
+    await tester.tapVisible(find.byKey(QuickDrinkGrid.tileKey('water-id')));
+    await tester.tapVisible(find.byKey(DrinkSizeSelector.vesselKey(250)));
+    await tester.tap(find.byKey(DrinkTrackerScreen.saveKey));
 
     final meter = find.byType(ChargingMeter);
     await pumpUntilFound(tester, meter);

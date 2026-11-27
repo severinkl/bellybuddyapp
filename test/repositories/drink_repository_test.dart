@@ -41,6 +41,20 @@ void main() {
     });
   });
 
+  group('fetchLastEntry', () {
+    test('delegates to drinkService.fetchLastEntry', () async {
+      final entry = testDrinkEntry();
+      when(
+        () => drinkService.fetchLastEntry(any()),
+      ).thenAnswer((_) async => entry);
+
+      final result = await repo.fetchLastEntry('user-123');
+
+      expect(result, equals(entry));
+      verify(() => drinkService.fetchLastEntry('user-123')).called(1);
+    });
+  });
+
   group('insertDrink', () {
     test('delegates to drinkService.insertDrink with userId', () async {
       final drink = testDrink(name: 'Tee', addedByUserId: 'user-123');

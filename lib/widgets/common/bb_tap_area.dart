@@ -4,7 +4,7 @@ import 'tap_target.dart';
 
 /// Something you tap that is one button to assistive tech: a single node
 /// (named by [label], or by the text in [child] unless [excludeChild]),
-/// disabled while [onTap] is null, with [selected], [value] and [expanded]
+/// disabled while [onTap] is null, with [selected], [value], [hint] and [expanded]
 /// as given and, with [exclusive], part of a one-of group. [tapTarget] pads
 /// the hit area to 48×48 ([TapTarget]); the whole area takes taps.
 class BbTapArea extends StatelessWidget {
@@ -15,6 +15,7 @@ class BbTapArea extends StatelessWidget {
     required this.child,
     this.label,
     this.value,
+    this.hint,
     this.selected,
     this.exclusive = false,
     this.expanded,
@@ -28,6 +29,9 @@ class BbTapArea extends StatelessWidget {
   final Widget child;
   final String? label;
   final String? value;
+
+  /// Read after the name, e.g. why the area is disabled.
+  final String? hint;
   final bool? selected;
 
   /// One choice of several (a radio-like group).
@@ -51,6 +55,7 @@ class BbTapArea extends StatelessWidget {
       expanded: expanded,
       label: label,
       value: value,
+      hint: hint,
       child: GestureDetector(
         key: tapKey,
         behavior: HitTestBehavior.opaque,
