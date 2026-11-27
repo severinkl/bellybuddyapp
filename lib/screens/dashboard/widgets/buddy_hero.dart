@@ -809,10 +809,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     }
     // Counts as played only once said ([_playDailyReview]).
     if (cue == _Cue.dailyReview) return unawaited(_playDailyReview());
-    if (cue.endsInSheet) _sheetCuePlayed = true;
-    if (cue.endsInSheet && cue != _Cue.patternsUnlocked) {
-      _visitSheetCuePlayed = true;
-    }
+    // The test offer counts as a sheet only once its sheet opens
+    // ([_offerTest]): ended unshown, the cues after it still come.
+    if (cue.endsInSheet && cue != _Cue.testOffer) _noteSheetCue(cue);
     _cuePlayed = true;
     switch (cue) {
       case _Cue.welcome:
@@ -858,6 +857,13 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       case _Cue.ratingAsk:
         _playRatingAsk();
     }
+  }
+
+  /// [cue] ends in a sheet or page this run ([_sheetCuePlayed]) and visit
+  /// ([_visitSheetCuePlayed]; „Muster frei!" aside).
+  void _noteSheetCue(_Cue cue) {
+    _sheetCuePlayed = true;
+    if (cue != _Cue.patternsUnlocked) _visitSheetCuePlayed = true;
   }
 
   /// Says [cue]'s announcement ([BuddyCopy.announcementLine]) and holds
@@ -1059,6 +1065,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     if (!_stillApplies(_playing)) return _nextCue();
     final subject = ref.read(toleranceTestOfferDueProvider);
     if (subject == null) return _endUnshown();
+    _noteSheetCue(_Cue.testOffer);
     final open = await showTestOfferSheet(context, subject: subject);
     if (!mounted) return;
     if (open) {

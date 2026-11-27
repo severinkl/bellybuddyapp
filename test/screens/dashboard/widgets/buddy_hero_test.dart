@@ -4592,6 +4592,39 @@ void main() {
       expect(buddy.shown, isEmpty);
     });
 
+    testWidgets('an offer ending unshown because his ask for reminders is due '
+        'leaves the stage to that ask', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      buddy = _FakeBuddy(offerPending);
+      await pumpHero(
+        tester,
+        extra: [
+          plusLockedProvider.overrideWithValue(false),
+          patternStatsProvider.overrideWith(
+            () => _SeededStats(
+              const PatternStats(
+                windowDays: 90,
+                ratedDays: 41,
+                hardDays: 9,
+                ready: true,
+                proposal: zwiebel,
+              ),
+            ),
+          ),
+          // The ask is due, so no subject is due right now.
+          toleranceTestOfferDueProvider.overrideWithValue(null),
+          reminderAskDueProvider.overrideWith((ref) async => true),
+        ],
+      );
+      await tick(tester);
+      await afterWave(tester);
+      expect(find.byType(TestOfferSheet), findsNothing);
+      await afterWave(tester);
+      await afterWave(tester);
+      expect(find.byType(RemindersAskSheet), findsOneWidget);
+      expect(buddy.shown, isEmpty);
+    });
+
     testWidgets('reintro and done are lines, never sheets', (tester) async {
       final pending = _status(
         announcements: const [BuddyAnnouncement.testReintro],
