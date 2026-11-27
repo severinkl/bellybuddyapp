@@ -184,6 +184,18 @@ Future<_FakeRepo> _pump(
 final _start = find.byKey(ToleranceTestScreen.startKey);
 
 void main() {
+  testWidgets('an active test over without its result yet: being evaluated, '
+      'not the running view', (tester) async {
+    await _pump(
+      tester,
+      _stats(test: _test(phase: TestPhase.done, dayIndex: 9)),
+    );
+    expect(find.text('Ich werte deinen Test gerade aus.'), findsOneWidget);
+    expect(find.text(TestCopy.dayOf(9, 8)), findsNothing);
+    expect(find.byKey(ToleranceTestScreen.stopKey), findsNothing);
+    expect(_start, findsNothing);
+  });
+
   testWidgets('reloading after a user change: loading, not the previous '
       'user\'s test', (tester) async {
     final user = SwitchableUserId('u1');

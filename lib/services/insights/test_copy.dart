@@ -41,6 +41,9 @@ class TestCopy {
       'Lebensmittel mit ${_mit(group)} sind bei dir zum Beispiel: '
       '${foods.join(', ')}.';
 
+  /// An active test past its end whose result has not come yet.
+  static const evaluating = 'Ich werte deinen Test gerade aus.';
+
   static const doctor =
       'Hast du starke oder anhaltende Beschwerden, sprich bitte mit deiner '
       'Ärztin, deinem Arzt oder einer Ernährungsfachkraft.';

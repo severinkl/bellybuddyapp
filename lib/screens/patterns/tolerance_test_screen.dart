@@ -214,6 +214,13 @@ class _ToleranceTestScreenState extends ConsumerState<ToleranceTestScreen> {
   List<Widget> _testView(ToleranceTestView t, {required bool canOffer}) {
     final s = t.subject;
     final result = t.result;
+    // Over without its result yet: never „Tag 9 von 8".
+    if (t.phase == TestPhase.done && result == null) {
+      return [
+        _Title(TestCopy.title(s)),
+        const BbLoadingState(message: TestCopy.evaluating),
+      ];
+    }
     final header = [
       _Title(TestCopy.title(s)),
       Text(
