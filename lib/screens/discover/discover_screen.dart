@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../providers/discover_news_provider.dart';
+import '../../providers/dietitian_tips_provider.dart';
 import '../../providers/ingredient_suggestion_provider.dart';
 import '../../providers/knowledge_provider.dart';
 import '../../providers/profile_provider.dart';
@@ -25,12 +26,15 @@ import 'widgets/discover_relief_card.dart';
 import 'widgets/discover_section.dart';
 import 'widgets/discover_tips_card.dart';
 import 'widgets/discover_tips_section.dart';
+import 'widgets/dietitian_tips_section.dart';
 import 'widgets/knowledge_article_tile.dart';
 
 /// The Entdecken tab: the hub over the app's content. Top to bottom:
 /// „Ruhe für den Bauch" (the card while [reliefEnabledProvider], else its
-/// „Kommt bald" teaser), Tipps (the newest
-/// recommendation set), Alternativen (the newest ingredient suggestions), Rezepte (Für dich from the collection, and
+/// „Kommt bald" teaser), Von deiner Berater:in (the tips the dietitians
+/// sent; only with a tip), Tipps (the newest recommendation set),
+/// Alternativen (the newest ingredient suggestions), Rezepte (Für dich from
+/// the collection, and
 /// Meine Rezepte: own and saved) and Wissen (the newest myfodmap
 /// blog articles).
 /// Tipps shows only once a loaded set has tips ([newestTipSetProvider]),
@@ -81,6 +85,10 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
     if (!mounted) return;
     final news = ref.read(discoverNewsProvider.notifier);
     await Future.wait([
+      // Every load, as a tip may have arrived by push; but not while the
+      // first one is still under way (it is fresh).
+      if (refresh || !ref.read(dietitianTipsProvider).isLoading)
+        ref.read(dietitianTipsProvider.notifier).refresh(),
       if (refresh) news.refresh() else news.ensureLoaded(),
       ref.read(userRecipesProvider.notifier).fetch(force: refresh),
       if (refresh) ...[
@@ -130,6 +138,8 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
               else
                 const DiscoverReliefCard.teaser(),
               AppConstants.gap24,
+              // Absent without a tip; brings its own gap below.
+              const DietitianTipsSection(),
               if (tipSet != null) ...[
                 DiscoverSection(
                   title: 'Tipps',

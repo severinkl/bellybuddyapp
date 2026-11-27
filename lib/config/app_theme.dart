@@ -33,6 +33,9 @@ class AppTheme {
   static const Color success = Color(0xFF22C55E);
   static const Color warning = Color(0xFFF59E0B);
   static const Color info = Color(0xFF3B82F6);
+
+  /// The „Aktiv" state word of a share (dark enough for text on [card]).
+  static const Color shareActive = Color(0xFF1F6B1F);
   static const Color border = Color(0xFFE3DFDA);
   static const Color input = Color(0xFFE3DFDA);
   static const Color ring = Color(0xFFB5CC47);
@@ -147,6 +150,10 @@ class AppTheme {
   static const double fontSizeHeadingLG = 24;
   static const double fontSizeDisplay = 28;
   static const double fontSizeDisplayLG = 30;
+
+  /// Letter spacing of a share code shown in [fontSizeDisplayLG], so its
+  /// two groups of digits read apart.
+  static const double codeLetterSpacing = 2;
 
   // Line heights (multiples of the font size)
   /// Running text: notes, summaries, explanations.

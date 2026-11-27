@@ -302,4 +302,31 @@ void main() {
     expect(formatDayMonthYear(DateTime(2025, 3, 28)), '28. Mär 2025');
     expect(formatDayMonthYear(DateTime(2025, 12, 1)), '1. Dez 2025');
   });
+
+  group('formatRecentDayTime', () {
+    final now = DateTime(2027, 3, 29, 10);
+
+    test('heute, gestern, else the date', () {
+      expect(
+        formatRecentDayTime(DateTime(2027, 3, 29, 9, 5), now),
+        'heute, 09:05',
+      );
+      expect(
+        formatRecentDayTime(DateTime(2027, 3, 28, 9), now),
+        'gestern, 09:00',
+      );
+      expect(
+        formatRecentDayTime(DateTime(2027, 3, 27, 9), now),
+        '27. März, 09:00',
+      );
+    });
+
+    test('by date, so a 23-hour DST day (Vienna, 2027-03-28) is one day', () {
+      // Days counted by hours between midnights would read this „heute".
+      expect(
+        formatRecentDayTime(DateTime(2027, 3, 28, 23, 30), now),
+        'gestern, 23:30',
+      );
+    });
+  });
 }

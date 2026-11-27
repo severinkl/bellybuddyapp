@@ -20,6 +20,10 @@ class RouteNames {
   static const String settingsProfile = 'settings-profile';
   static const String settingsNotifications = 'settings-notifications';
   static const String settingsAccount = 'settings-account';
+  static const String shares = 'shares';
+  static const String shareCreate = 'share-create';
+  static const String dietitianConnect = 'dietitian-connect';
+  static const String dietitianShareEdit = 'dietitian-share-edit';
   static const String recommendations = 'recommendations';
   static const String patterns = 'patterns';
   static const String patternsUnlocked = 'patterns-unlocked';
@@ -61,6 +65,11 @@ class RoutePaths {
   static const String settingsProfile = '/settings/profile';
   static const String settingsNotifications = '/settings/notifications';
   static const String settingsAccount = '/settings/account';
+  static const String shares = '/shares';
+  static const String shareCreate = '/shares/new';
+  static const String dietitianConnect = '/shares/connect';
+  static const String dietitianShareEdit = '/shares/:id/edit';
+  static String dietitianShareEditFor(String id) => '/shares/$id/edit';
   static const String recommendations = '/recommendations';
   static const String patterns = '/patterns';
   static const String patternsUnlocked = '/patterns-unlocked';
