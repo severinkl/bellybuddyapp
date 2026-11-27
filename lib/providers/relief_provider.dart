@@ -14,10 +14,14 @@ import 'auth_provider.dart';
 const _log = AppLogger('Relief');
 
 bool _warned = false;
+bool _corruptLogged = false;
 
 /// Lets a test see the once-per-process warning again.
 @visibleForTesting
-void resetReliefWarningForTest() => _warned = false;
+void resetReliefWarningForTest() {
+  _warned = false;
+  _corruptLogged = false;
+}
 
 /// The exercises; tests override it.
 final reliefContentProvider = Provider<List<ReliefExercise>>(
@@ -57,9 +61,16 @@ class ReliefFeedbackNotifier extends AsyncNotifier<Map<String, ReliefAnswer>> {
     final userId = ref.watch(currentUserIdProvider);
     if (userId == null) return {};
     final prefs = await SharedPreferences.getInstance();
-    return parseReliefAnswers(
-      prefs.getString('${AppConstants.keyReliefFeedbackPrefix}$userId'),
+    final stored = prefs.getString(
+      '${AppConstants.keyReliefFeedbackPrefix}$userId',
     );
+    final parsed = tryParseReliefAnswers(stored);
+    if (parsed != null) return parsed;
+    if (!_corruptLogged) {
+      _corruptLogged = true;
+      _log.warn('Stored feedback is corrupt; treating it as empty');
+    }
+    return {};
   }
 
   /// Stores [answer] for [exerciseId]; does nothing while signed out.
@@ -67,6 +78,7 @@ class ReliefFeedbackNotifier extends AsyncNotifier<Map<String, ReliefAnswer>> {
     final userId = ref.read(currentUserIdProvider);
     if (userId == null) return;
     final current = await future;
+    if (!ref.mounted) return;
     final next = {...current, exerciseId: answer};
     state = AsyncData(next);
     try {

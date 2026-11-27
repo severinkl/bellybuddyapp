@@ -129,6 +129,20 @@ void main() {
       expect(prefs.getString('relief_feedback_b'), '{"waerme":"no"}');
     });
 
+    test('corrupt stored value is empty and logged once', () async {
+      SharedPreferences.setMockInitialValues({
+        'relief_feedback_u': 'not json {"gedanken":"yes"}',
+      });
+      final logs = captureLogs();
+      final c = _feedback('u');
+      expect(await c.read(reliefFeedbackProvider.future), isEmpty);
+      c.invalidate(reliefFeedbackProvider);
+      expect(await c.read(reliefFeedbackProvider.future), isEmpty);
+      final lines = logs.where((l) => l.contains('corrupt')).toList();
+      expect(lines, hasLength(1));
+      expect(lines.single, isNot(contains('gedanken')));
+    });
+
     test('no user stores nothing', () async {
       final c = _feedback(null);
       await c.read(reliefFeedbackProvider.future);

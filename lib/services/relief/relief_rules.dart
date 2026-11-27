@@ -24,11 +24,16 @@ List<ReliefExercise> orderedExercises(
 
 /// The answers stored as JSON; anything invalid gives `{}`, unknown ids and
 /// answers are dropped.
-Map<String, ReliefAnswer> parseReliefAnswers(String? json) {
+Map<String, ReliefAnswer> parseReliefAnswers(String? json) =>
+    tryParseReliefAnswers(json) ?? {};
+
+/// Like [parseReliefAnswers], but null when [json] is corrupt (not JSON, or
+/// not a map); null input is simply empty.
+Map<String, ReliefAnswer>? tryParseReliefAnswers(String? json) {
   if (json == null) return {};
   try {
     final decoded = jsonDecode(json);
-    if (decoded is! Map) return {};
+    if (decoded is! Map) return null;
     final result = <String, ReliefAnswer>{};
     for (final entry in decoded.entries) {
       final id = entry.key;
@@ -41,7 +46,7 @@ Map<String, ReliefAnswer> parseReliefAnswers(String? json) {
     }
     return result;
   } on FormatException {
-    return {};
+    return null;
   }
 }
 
