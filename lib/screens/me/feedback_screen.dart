@@ -269,7 +269,7 @@ class _FeedbackScreenState extends ConsumerState<FeedbackScreen> {
 }
 
 /// „Das wird mitgeschickt:" with the app version and the system („…" while
-/// they load, „unbekannt" when they cannot be read).
+/// they load; the provider reports unreadable values itself).
 class _SentAlong extends StatelessWidget {
   const _SentAlong(this.sent);
 
@@ -279,7 +279,6 @@ class _SentAlong extends StatelessWidget {
   Widget build(BuildContext context) {
     final (version, system) = switch (sent) {
       AsyncData(:final value) => (value.appVersion, value.systemLabel),
-      AsyncError() => ('unbekannt', 'unbekannt'),
       _ => ('…', '…'),
     };
     const style = TextStyle(

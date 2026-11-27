@@ -388,6 +388,9 @@ class AppConstants {
 
   // External URLs
 
+  /// The public Belly Buddy site, linked in the invite text.
+  static const String inviteUrl = 'https://bellybuddy.at';
+
   /// Where the password-reset email link lands: the reset-password page of the
   /// Belly Buddy web app, where the user sets the new password.
   static const String resetPasswordRedirectUrl =
@@ -396,9 +399,6 @@ class AppConstants {
   /// Public privacy policy (Datenschutzerklärung) of the Belly Buddy web app.
   static const String privacyPolicyUrl =
       'https://app.bellybuddy.at/datenschutz';
-
-  /// The public Belly Buddy site, linked in the invite text.
-  static const String inviteUrl = 'https://bellybuddy.at';
 
   /// The text „Freund:innen einladen" shares: it describes the app, not the
   /// sender, so forwarding it reveals nothing about their health.

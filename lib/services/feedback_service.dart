@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/feedback.dart';
 import '../providers/core_providers.dart';
+import '../utils/function_exception_utils.dart';
 import '../utils/logger.dart';
 
 /// A failed feedback call. [status] is the HTTP status of an error answer
@@ -46,21 +47,12 @@ class FeedbackService {
       _log.debug('sent (200)');
     } on FunctionException catch (e) {
       _log.warn('failed (${e.status})');
-      throw FeedbackException(status: e.status, message: _messageOf(e));
+      throw FeedbackException(status: e.status, message: e.errorMessage());
     } catch (_) {
       // Only the outcome: the error object could echo the request.
       _log.warn('failed (no answer)');
       throw const FeedbackException();
     }
-  }
-
-  /// The error body's German `error`; null when the body isn't a JSON
-  /// object (a proxy's text page) or has none.
-  static String? _messageOf(FunctionException e) {
-    final details = e.details;
-    if (details is! Map) return null;
-    final text = details['error'];
-    return text is String && text.isNotEmpty ? text : null;
   }
 }
 

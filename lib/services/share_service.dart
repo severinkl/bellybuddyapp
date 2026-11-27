@@ -146,22 +146,13 @@ class ShareService {
       _log.warn('$op failed (${e.status})');
       throw ShareException(
         status: e.status,
-        message: _messageOf(e),
+        message: e.errorMessage(orMessage: true),
         code: e.errorCode,
       );
     } catch (e, st) {
       _log.error('$op failed', e, st);
       throw const ShareException();
     }
-  }
-
-  /// The error body's German `error`, falling back to `message`; null when
-  /// the body isn't a JSON object (a proxy's text page) or has none.
-  static String? _messageOf(FunctionException e) {
-    final details = e.details;
-    if (details is! Map) return null;
-    final text = details['error'] ?? details['message'];
-    return text is String && text.isNotEmpty ? text : null;
   }
 }
 
