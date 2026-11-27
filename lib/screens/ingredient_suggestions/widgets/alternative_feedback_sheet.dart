@@ -29,7 +29,8 @@ abstract final class AlternativeVerdictCopy {
 
 /// Opens the verdict sheet for [replacement] in [group] (spec §6.2). It
 /// closes on a choice; the choice shows at once and is undone with
-/// [AlternativeVerdictCopy.failed] when it cannot be stored.
+/// [AlternativeVerdictCopy.failed] when it cannot be stored, in the
+/// messenger of [context] (the detail modal's own, above the page's).
 Future<void> showAlternativeFeedbackSheet(
   BuildContext context, {
   required IngredientSuggestionGroup group,
@@ -44,8 +45,11 @@ Future<void> showAlternativeFeedbackSheet(
       top: Radius.circular(AppConstants.radiusXl),
     ),
   ),
-  builder: (_) =>
-      AlternativeFeedbackSheet(group: group, replacement: replacement),
+  builder: (_) => AlternativeFeedbackSheet(
+    group: group,
+    replacement: replacement,
+    messenger: ScaffoldMessenger.maybeOf(context),
+  ),
 );
 
 /// [replacement]'s name and „Passt für mich", „Probiere ich", „Passt nicht
@@ -57,10 +61,15 @@ class AlternativeFeedbackSheet extends ConsumerWidget {
     super.key,
     required this.group,
     required this.replacement,
+    this.messenger,
   });
 
   final IngredientSuggestionGroup group;
   final ReplacementIngredient replacement;
+
+  /// Where the failure SnackBar shows (the opener's, where the user looks
+  /// once the sheet closed); null: the sheet's own context's.
+  final ScaffoldMessengerState? messenger;
 
   static const fitsKey = Key('alternative_feedback_fits');
   static const tryKey = Key('alternative_feedback_try');
@@ -72,7 +81,7 @@ class AlternativeFeedbackSheet extends ConsumerWidget {
     BuildContext context,
     Future<bool> Function() write,
   ) async {
-    final messenger = ScaffoldMessenger.of(context);
+    final messenger = this.messenger ?? ScaffoldMessenger.of(context);
     Navigator.of(context).pop();
     if (!await write()) {
       messenger

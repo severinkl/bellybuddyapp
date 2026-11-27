@@ -89,6 +89,7 @@ void main() {
     WidgetTester tester, {
     _Service? service,
     List<Override> plus = const [],
+    bool inModal = false,
   }) async {
     final s = service ?? _Service();
     await tester.pumpWidget(
@@ -103,10 +104,29 @@ void main() {
         ],
         child: MaterialApp(
           theme: AppTheme.theme,
-          home: Scaffold(body: SuggestionDetailModal(group: _zwiebel)),
+          home: inModal
+              ? Scaffold(
+                  body: Builder(
+                    // As the Alternativen screen opens it.
+                    builder: (context) => TextButton(
+                      onPressed: () => showModalBottomSheet<void>(
+                        context: context,
+                        isScrollControlled: true,
+                        builder: (_) => SuggestionDetailModal(group: _zwiebel),
+                      ),
+                      child: const Text('open'),
+                    ),
+                  ),
+                )
+              : Scaffold(body: SuggestionDetailModal(group: _zwiebel)),
         ),
       ),
     );
+    if (inModal) {
+      await tester.tap(find.text('open'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+    }
     final container = ProviderScope.containerOf(
       tester.element(find.byType(SuggestionDetailModal)),
     );
@@ -305,6 +325,27 @@ void main() {
     expect(find.text('Konnte nicht gespeichert werden.'), findsOneWidget);
     expect(mainRow(tester), ['Lauch', 'Schnittlauch', 'Ingwer']);
     expect(find.byKey(SuggestionDetailModal.skippedRowKey), findsNothing);
+  });
+
+  testWidgets('in the detail modal, the failure shows above it', (
+    tester,
+  ) async {
+    final service = _Service()..fail = true;
+    await pump(tester, service: service, inModal: true);
+
+    await openSheet(tester, 'r-lauch');
+    await act(tester, AlternativeFeedbackSheet.skipKey);
+    await tester.pump(const Duration(milliseconds: 500));
+
+    final message = find.text(AlternativeVerdictCopy.failed);
+    expect(
+      find.descendant(
+        of: find.byType(SuggestionDetailModal),
+        matching: message,
+      ),
+      findsOneWidget,
+    );
+    expect(message.hitTestable(), findsOneWidget);
   });
 
   testWidgets('a failed reset shows it too and keeps the verdict', (
