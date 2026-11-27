@@ -31,6 +31,11 @@ class DrinkTrackerScreen extends ConsumerStatefulWidget {
 
 class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen>
     with EntryLogger {
+  /// False until the post-frame reset: the provider outlives the screen, so
+  /// the first frame would build the previous visit's state (an open,
+  /// autofocused search among it).
+  bool _ready = false;
+
   @override
   void initState() {
     super.initState();
@@ -40,6 +45,7 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
       notifier.reset(trackedAt: widget.initialTrackedAt);
+      setState(() => _ready = true);
       notifier.loadDrinks();
       notifier.loadDayTotal();
     });
@@ -77,7 +83,7 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen>
       onSuccessDismissed: () => context.canPop()
           ? context.pop(true)
           : context.go(RoutePaths.dashboard),
-      body: isLoading
+      body: !_ready || isLoading
           ? const Center(
               child: CircularProgressIndicator(color: AppTheme.primary),
             )

@@ -108,4 +108,59 @@ void main() {
     final style = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
     expect(style.style?.shape?.resolve({}), isA<StadiumBorder>());
   });
+
+  testWidgets('compact applies to the outlined button too', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.theme,
+        home: Scaffold(
+          body: Row(
+            children: [
+              const Expanded(child: Text('Wasser, 250 ml')),
+              BbButton(
+                label: 'Eintragen',
+                compact: true,
+                isOutlined: true,
+                onPressed: () {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    final size = tester.getSize(find.byType(OutlinedButton));
+    expect(size.width, greaterThanOrEqualTo(AppConstants.minTapTarget));
+    expect(size.height, greaterThanOrEqualTo(AppConstants.minTapTarget));
+    expect(size.width, lessThan(tester.getSize(find.byType(Row)).width / 2));
+    final button = tester.widget<OutlinedButton>(find.byType(OutlinedButton));
+    expect(button.style?.shape?.resolve({}), isA<StadiumBorder>());
+  });
+
+  testWidgets('compact and destructive outlined keeps the destructive colour', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.theme,
+        home: Scaffold(
+          body: Center(
+            child: BbButton(
+              label: 'Löschen',
+              compact: true,
+              isOutlined: true,
+              isDestructive: true,
+              onPressed: () {},
+            ),
+          ),
+        ),
+      ),
+    );
+
+    final style = tester
+        .widget<OutlinedButton>(find.byType(OutlinedButton))
+        .style;
+    expect(style?.shape?.resolve({}), isA<StadiumBorder>());
+    expect(style?.foregroundColor?.resolve({}), AppTheme.destructive);
+  });
 }

@@ -43,10 +43,13 @@ class BbButton extends StatelessWidget {
          'An icon or a leading widget, not both',
        );
 
-  static final _compactStyle = ElevatedButton.styleFrom(
-    minimumSize: AppConstants.minTapSize,
-    shape: const StadiumBorder(),
-    padding: const EdgeInsets.symmetric(horizontal: AppConstants.spacingLg),
+  /// Size and shape only, so it fits the elevated and the outlined button.
+  static const _compactStyle = ButtonStyle(
+    minimumSize: WidgetStatePropertyAll(AppConstants.minTapSize),
+    shape: WidgetStatePropertyAll(StadiumBorder()),
+    padding: WidgetStatePropertyAll(
+      EdgeInsets.symmetric(horizontal: AppConstants.spacingLg),
+    ),
   );
 
   @override
@@ -101,15 +104,16 @@ class BbButton extends StatelessWidget {
           );
 
     if (isOutlined) {
+      final outlineColors = isDestructive
+          ? OutlinedButton.styleFrom(
+              foregroundColor: AppTheme.destructive,
+              side: const BorderSide(color: AppTheme.destructive),
+            )
+          : null;
       return OutlinedButton(
         key: tapKey,
         onPressed: effectiveOnPressed,
-        style: isDestructive
-            ? OutlinedButton.styleFrom(
-                foregroundColor: AppTheme.destructive,
-                side: const BorderSide(color: AppTheme.destructive),
-              )
-            : null,
+        style: compact ? _compactStyle.merge(outlineColors) : outlineColors,
         child: named,
       );
     }

@@ -37,6 +37,8 @@ class QuickDrinkGrid extends ConsumerWidget {
     final isSearchOpen = ref.watch(
       drinkTrackerProvider.select((s) => s.isSearchOpen),
     );
+    // A pending save keeps its drink: the tiles do nothing meanwhile.
+    final isSaving = ref.watch(drinkTrackerProvider.select((s) => s.isSaving));
     final notifier = ref.read(drinkTrackerProvider.notifier);
 
     final drinks = DrinkHelpers.tileDrinks(quickDrinks, selectedDrink);
@@ -45,10 +47,12 @@ class QuickDrinkGrid extends ConsumerWidget {
         _DrinkTile(
           drink: drink,
           isSelected: selectedDrink?.id == drink.id,
-          onTap: () {
-            HapticService.selection();
-            notifier.toggleDrink(drink);
-          },
+          onTap: isSaving
+              ? null
+              : () {
+                  HapticService.selection();
+                  notifier.toggleDrink(drink);
+                },
         ),
       _SearchTile(
         isOpen: isSearchOpen,
@@ -99,7 +103,7 @@ class _DrinkTile extends StatelessWidget {
 
   final Drink drink;
   final bool isSelected;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {

@@ -46,6 +46,9 @@ class _DrinkSizeSelectorState extends ConsumerState<DrinkSizeSelector> {
     final customAmount = ref.watch(
       drinkTrackerProvider.select((s) => s.customAmount),
     );
+    // A pending save keeps its amount: the tiles do nothing meanwhile (and
+    // keep their look).
+    final isSaving = ref.watch(drinkTrackerProvider.select((s) => s.isSaving));
     final notifier = ref.read(drinkTrackerProvider.notifier);
 
     // Sync text controller when provider clears customAmount (e.g. a vessel
@@ -82,10 +85,12 @@ class _DrinkSizeSelectorState extends ConsumerState<DrinkSizeSelector> {
                     hasDrink &&
                     selectedAmount == vessel.ml &&
                     customAmount.isEmpty,
-                onTap: () {
-                  HapticService.selection();
-                  notifier.selectAmount(vessel.ml);
-                },
+                onTap: isSaving
+                    ? null
+                    : () {
+                        HapticService.selection();
+                        notifier.selectAmount(vessel.ml);
+                      },
               ),
           ],
         ),
@@ -122,7 +127,9 @@ class _VesselTile extends StatelessWidget {
   final DrinkVessel vessel;
   final bool enabled;
   final bool isSelected;
-  final VoidCallback onTap;
+
+  /// Null while a save is pending.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {

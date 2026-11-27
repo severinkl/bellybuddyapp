@@ -277,6 +277,38 @@ void main() {
       expect(find.byKey(QuickDrinkGrid.tileKey('oat')), findsNothing);
     });
 
+    testWidgets('picking the already selected drink in search keeps it and '
+        'its amount selected and closes the search', (tester) async {
+      final container = await _pump(tester);
+      await tester.tap(find.byKey(QuickDrinkGrid.tileKey('tea')));
+      await tester.pump();
+      container.read(drinkTrackerProvider.notifier).selectAmount(250);
+      await tester.tap(find.byKey(QuickDrinkGrid.searchTileKey));
+      await tester.pump();
+      await tester.enterText(
+        find.byKey(DrinkSearch.searchFieldKey),
+        'Pfefferminz',
+      );
+      await tester.pump();
+      await tester.tap(
+        find.descendant(
+          of: find.byKey(DrinkSearch.suggestionsKey),
+          matching: find.text('Pfefferminztee'),
+        ),
+      );
+      await tester.pump(AppConstants.animFast);
+
+      final state = container.read(drinkTrackerProvider);
+      expect(state.selectedDrink?.id, 'tea');
+      expect(state.selectedAmount, 250);
+      expect(state.isSearchOpen, isFalse);
+      expect(find.byKey(DrinkSearch.searchFieldKey), findsNothing);
+      expect(
+        (_decoration(tester, 'tea').border! as Border).top.color,
+        AppTheme.infoText,
+      );
+    });
+
     testWidgets('„„Zitronenwasser" hinzufügen" creates, selects and shows the '
         'new drink as a tile', (tester) async {
       await _pump(tester);

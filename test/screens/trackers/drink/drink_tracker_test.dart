@@ -1,5 +1,7 @@
 // ignore_for_file: invalid_use_of_internal_member
 
+import 'dart:async';
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart' show RenderParagraph, SemanticsNode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -53,6 +55,21 @@ List<Override> _overrides({
   buddyRepositoryProvider.overrideWithValue(FakeBuddyRepository()),
   currentUserIdProvider.overrideWithValue('test-user'),
 ];
+
+/// Holds every insert until [gate] completes: a save stays pending.
+class _GatedEntryRepository extends FakeEntryRepository {
+  final gate = Completer<void>();
+
+  @override
+  Future<void> insertEntry(
+    String table,
+    Map<String, dynamic> data, {
+    required String userId,
+  }) async {
+    await gate.future;
+    return super.insertEntry(table, data, userId: userId);
+  }
+}
 
 final _tea = testDrink(id: 'tea-id', name: 'Pfefferminztee');
 
@@ -894,6 +911,122 @@ void main() {
 
       expect(result(), isTrue);
       expect(find.text('open'), findsOneWidget);
+    });
+
+    testWidgets('a search left open does not show (or take focus) on the '
+        'next visit, not even in its first frame', (tester) async {
+      final (:container, result: _) = await pumpFromOpener(tester);
+      await tester.tap(find.byKey(QuickDrinkGrid.searchTileKey));
+      await tester.pump();
+      expect(find.byType(DrinkSearch), findsOneWidget);
+      expect(container.read(drinkTrackerProvider).isSearchOpen, isTrue);
+
+      GoRouter.of(tester.element(find.byType(DrinkTrackerScreen))).pop();
+      await tester.pumpAndSettle();
+      expect(find.text('open'), findsOneWidget);
+
+      await tester.tap(find.text('open'));
+      // Up to the first frame that builds the next visit (the pushed route's
+      // first frame is built offstage).
+      final screen = find.byType(DrinkTrackerScreen, skipOffstage: false);
+      for (var i = 0; i < 10 && screen.evaluate().isEmpty; i++) {
+        await tester.pump();
+      }
+      expect(screen, findsOneWidget);
+      expect(find.byType(DrinkSearch, skipOffstage: false), findsNothing);
+      expect(
+        tester.binding.focusManager.primaryFocus?.context?.widget,
+        isNot(isA<EditableText>()),
+      );
+
+      await tester.pumpAndSettle();
+      expect(find.byType(DrinkSearch), findsNothing);
+      expect(find.byKey(QuickDrinkGrid.searchTileKey), findsOneWidget);
+    });
+
+    group('while a save is pending', () {
+      Future<({ProviderContainer container, Completer<void> gate})> pumpGated(
+        WidgetTester tester,
+      ) async {
+        final entryRepo = _GatedEntryRepository();
+        final container = ProviderContainer.test(
+          overrides: _overrides(drinkRepo: _teaRepo(), entryRepo: entryRepo),
+        );
+        addTearDown(container.dispose);
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              theme: AppTheme.theme,
+              localizationsDelegates: germanLocalizations,
+              supportedLocales: const [germanLocale],
+              locale: germanLocale,
+              home: const DrinkTrackerScreen(),
+            ),
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 200));
+        return (container: container, gate: entryRepo.gate);
+      }
+
+      Future<void> finish(WidgetTester tester, Completer<void> gate) async {
+        gate.complete();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 700));
+      }
+
+      testWidgets('„Eintragen" on the row: a drink tile selects nothing', (
+        tester,
+      ) async {
+        final (:container, :gate) = await pumpGated(tester);
+        await tester.tap(find.byKey(LastDrinkRow.saveKey));
+        await tester.pump();
+        expect(container.read(drinkTrackerProvider).isSaving, isTrue);
+
+        await tester.tap(find.byKey(QuickDrinkGrid.tileKey('tea-id')));
+        await tester.pump();
+        expect(container.read(drinkTrackerProvider).selectedDrink, isNull);
+        expect(find.byKey(DrinkTrackerScreen.saveKey), findsNothing);
+
+        await finish(tester, gate);
+      });
+
+      testWidgets('the bottom button: drink and vessel tiles change nothing '
+          'and keep their look', (tester) async {
+        final (:container, :gate) = await pumpGated(tester);
+        container.read(drinkTrackerProvider.notifier)
+          ..toggleDrink(_tea)
+          ..selectAmount(250);
+        await tester.pump();
+        await tester.ensureVisible(find.byKey(DrinkTrackerScreen.saveKey));
+        await tester.tap(find.byKey(DrinkTrackerScreen.saveKey));
+        await tester.pump();
+        expect(container.read(drinkTrackerProvider).isSaving, isTrue);
+
+        final water = find.byKey(QuickDrinkGrid.tileKey('water-id'));
+        await tester.ensureVisible(water);
+        await tester.tap(water);
+        await tester.pump();
+        final vessel = find.byKey(DrinkSizeSelector.vesselKey(500));
+        await tester.ensureVisible(vessel);
+        await tester.tap(vessel);
+        await tester.pump();
+
+        final state = container.read(drinkTrackerProvider);
+        expect(state.selectedDrink, _tea);
+        expect(state.selectedAmount, 250);
+        // No dimming: the vessel's amount keeps the enabled text colour.
+        expect(
+          tester
+              .widget<Text>(
+                find.descendant(of: vessel, matching: find.text('500 ml')),
+              )
+              .style
+              ?.color,
+          AppTheme.foreground,
+        );
+        await finish(tester, gate);
+      });
     });
 
     group('for assistive tech', () {

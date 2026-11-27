@@ -95,7 +95,7 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
   DrinkTrackerState build() => DrinkTrackerState(trackedAt: DateTime.now());
 
   /// Reset to fresh state at [trackedAt] (default: now) — call when
-  /// opening the tracker screen.
+  /// opening the tracker screen. The search is closed, without suggestions.
   void reset({DateTime? trackedAt}) =>
       state = DrinkTrackerState(trackedAt: trackedAt ?? DateTime.now());
 
@@ -116,7 +116,7 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
       }
       final (drinks, recentIds, lastEntry) = await (
         drinkRepo.fetchAll(),
-        drinkRepo.fetchRecentDrinkIds(userId),
+        _fetchRecentIds(drinkRepo, userId),
         _fetchLastEntry(drinkRepo, userId),
       ).wait;
       state = state.copyWith(
@@ -139,6 +139,20 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
     }
     final drink = drinks.where((d) => d.id == entry.drinkId).firstOrNull;
     return drink == null ? null : (drink: drink, amountMl: entry.amountMl);
+  }
+
+  /// The ids of recently drunk drinks; empty when the fetch fails (the
+  /// catalogue and the starter tiles still show).
+  Future<List<String>> _fetchRecentIds(
+    DrinkRepository repo,
+    String userId,
+  ) async {
+    try {
+      return await repo.fetchRecentDrinkIds(userId);
+    } catch (e, st) {
+      _log.error('failed to load recent drinks', e, st);
+      return const [];
+    }
   }
 
   /// The latest entry; null when there is none or the fetch fails (the rest
@@ -201,6 +215,16 @@ class DrinkTrackerNotifier extends Notifier<DrinkTrackerState> {
         isSearchOpen: false,
       );
     }
+  }
+
+  /// Selects [drink] as picked in the search, which closes: never
+  /// deselects, and the chosen amount stays.
+  void selectDrink(Drink drink) {
+    state = state.copyWith(
+      selectedDrink: drink,
+      suggestions: [],
+      isSearchOpen: false,
+    );
   }
 
   void clearSelection() {

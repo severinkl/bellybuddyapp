@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:belly_buddy/utils/drink_helpers.dart';
 import 'package:belly_buddy/models/drink.dart';
-import 'package:belly_buddy/config/constants.dart';
 
 void main() {
   Drink makeDrink(String id, String name) => Drink(id: id, name: name);
@@ -354,8 +353,8 @@ void main() {
       expect(r.map((d) => d.id), ['w', 'k', 't', 's', 'm']);
     });
 
-    test('vessels match AppConstants.drinkSizes', () {
-      expect(DrinkVessel.values.map((v) => v.ml), AppConstants.drinkSizes);
+    test('vessels are 250, 330, 500 and 1000 ml', () {
+      expect(DrinkVessel.values.map((v) => v.ml), [250, 330, 500, 1000]);
       expect(DrinkVessel.values.map((v) => v.label), [
         'Glas',
         'Dose',

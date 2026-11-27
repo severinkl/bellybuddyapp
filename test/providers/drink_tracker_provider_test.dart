@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -127,6 +128,36 @@ void main() {
       },
     );
 
+    test('a failing recent-drinks fetch is logged and still loads the '
+        'catalogue and the starter tiles', () async {
+      final wasser = testDrink();
+      final kaffee = testDrink(id: 'kaffee-id', name: 'Kaffee');
+      final mate = testDrink(id: 'mate-id', name: 'Mate');
+      stubLoad([kaffee, mate, wasser]);
+      when(
+        () => mockDrinkRepo.fetchRecentDrinkIds(any()),
+      ).thenAnswer((_) async => throw Exception('db error'));
+      final logs = <String>[];
+      final print = debugPrint;
+      debugPrint = (message, {wrapWidth}) => logs.add(message ?? '');
+      addTearDown(() => debugPrint = print);
+
+      final container = makeContainer();
+      await container.read(drinkTrackerProvider.notifier).loadDrinks();
+      debugPrint = print;
+
+      final state = container.read(drinkTrackerProvider);
+      expect(state.allDrinks, hasLength(3));
+      expect(state.quickDrinks, [wasser, kaffee]);
+      expect(state.isLoading, isFalse);
+      expect(
+        logs,
+        contains('DrinkTracker [ERROR]: failed to load recent drinks'),
+      );
+      expect(logs, contains('DrinkTracker [ERROR]: Exception: db error'));
+      expect(logs.where((l) => l.contains('failed to load drinks')), isEmpty);
+    });
+
     test('sets isLoading false on error', () async {
       when(() => mockDrinkRepo.fetchAll()).thenThrow(Exception('db error'));
 
@@ -156,6 +187,64 @@ void main() {
       notifier.toggleDrink(drink);
 
       expect(container.read(drinkTrackerProvider).selectedDrink, isNull);
+    });
+  });
+
+  group('DrinkTrackerNotifier.selectDrink', () {
+    test('the already selected drink stays selected with its amount, and '
+        'the search closes without suggestions', () async {
+      final tee = testDrink(id: 'tee-id', name: 'Tee');
+      stubLoad([testDrink(), tee]);
+      final container = makeContainer();
+      final notifier = container.read(drinkTrackerProvider.notifier);
+      await notifier.loadDrinks();
+      notifier
+        ..toggleDrink(tee)
+        ..selectAmount(330)
+        ..openSearch()
+        ..searchDrinks('Te');
+      expect(container.read(drinkTrackerProvider).suggestions, isNotEmpty);
+
+      notifier.selectDrink(tee);
+
+      final state = container.read(drinkTrackerProvider);
+      expect(state.selectedDrink, tee);
+      expect(state.selectedAmount, 330);
+      expect(state.isSearchOpen, isFalse);
+      expect(state.suggestions, isEmpty);
+    });
+
+    test('another drink becomes the selected one', () {
+      final container = makeContainer();
+      final notifier = container.read(drinkTrackerProvider.notifier);
+      final tee = testDrink(id: 'tee-id', name: 'Tee');
+      notifier
+        ..toggleDrink(testDrink())
+        ..openSearch()
+        ..selectDrink(tee);
+
+      final state = container.read(drinkTrackerProvider);
+      expect(state.selectedDrink, tee);
+      expect(state.isSearchOpen, isFalse);
+    });
+  });
+
+  group('DrinkTrackerNotifier.reset', () {
+    test('closes an open search and drops its suggestions', () async {
+      stubLoad([testDrink()]);
+      final container = makeContainer();
+      final notifier = container.read(drinkTrackerProvider.notifier);
+      await notifier.loadDrinks();
+      notifier
+        ..openSearch()
+        ..searchDrinks('Was');
+      expect(container.read(drinkTrackerProvider).suggestions, isNotEmpty);
+
+      notifier.reset();
+
+      final state = container.read(drinkTrackerProvider);
+      expect(state.isSearchOpen, isFalse);
+      expect(state.suggestions, isEmpty);
     });
   });
 

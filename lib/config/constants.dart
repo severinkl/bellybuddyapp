@@ -639,9 +639,6 @@ class AppConstants {
 
   // Symptom options: kSymptomOptions in symptom_options.dart.
 
-  // Drink sizes
-  static const List<int> drinkSizes = [250, 330, 500, 1000];
-
   // Drinks screen
   static const double drinkTileMinHeight = 84;
   static const double vesselTileMinHeight = 96;

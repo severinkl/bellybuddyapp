@@ -58,7 +58,7 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
     HapticService.selection();
     _controller.clear();
     _focusNode.unfocus();
-    ref.read(drinkTrackerProvider.notifier).toggleDrink(drink);
+    ref.read(drinkTrackerProvider.notifier).selectDrink(drink);
   }
 
   Future<void> _createDrink() async {
