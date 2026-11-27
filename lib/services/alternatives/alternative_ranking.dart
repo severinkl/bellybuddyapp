@@ -46,23 +46,36 @@ class AlternativeVerdicts {
       _byIngredient[ingredientId] ?? const {};
 }
 
-/// How many of [meals] list [name] (by base name) on a later local day
-/// than [since]. [since] is a real instant (`created_at`), so its local
-/// date is taken; `tracked_at` is wall clock and taken as it is. A meal on
-/// the suggestion's own day does not count: it is usually the one that
-/// caused it.
-int _eatenAfter(String name, List<MealIngredients> meals, DateTime? since) {
-  if (since == null) return 0;
-  final local = since.toLocal();
-  final sinceDay = DateTime(local.year, local.month, local.day);
-  final base = baseName(name);
-  var count = 0;
-  for (final meal in meals) {
-    final t = meal.trackedAt;
-    if (!DateTime(t.year, t.month, t.day).isAfter(sinceDay)) continue;
-    if (meal.ingredients.any((i) => baseName(i) == base)) count++;
+/// Meals keyed once for ranking: each meal's wall-clock day and the base
+/// names of its ingredients.
+class KeyedMeals {
+  KeyedMeals(List<MealIngredients> meals)
+    : _meals = [
+        for (final m in meals)
+          (
+            day: DateTime(m.trackedAt.year, m.trackedAt.month, m.trackedAt.day),
+            names: {for (final i in m.ingredients) baseName(i)},
+          ),
+      ];
+
+  final List<({DateTime day, Set<String> names})> _meals;
+
+  /// How many meals list [name] (by base name) on a later local day than
+  /// [since]. [since] is a real instant (`created_at`), so its local date
+  /// is taken; `tracked_at` is wall clock and taken as it is. A meal on the
+  /// suggestion's own day does not count: it is usually the one that
+  /// caused it.
+  int eatenAfter(String name, DateTime? since) {
+    if (since == null) return 0;
+    final local = since.toLocal();
+    final sinceDay = DateTime(local.year, local.month, local.day);
+    final base = baseName(name);
+    var count = 0;
+    for (final meal in _meals) {
+      if (meal.day.isAfter(sinceDay) && meal.names.contains(base)) count++;
+    }
+    return count;
   }
-  return count;
 }
 
 int _tier(
@@ -125,12 +138,27 @@ List<RankedReplacement> rankReplacements(
   Set<String> skippedBaseNames = const {},
   required List<MealIngredients> meals,
   required DateTime? since,
+}) => rankKeyedReplacements(
+  replacements,
+  verdicts: verdicts,
+  skippedBaseNames: skippedBaseNames,
+  meals: KeyedMeals(meals),
+  since: since,
+);
+
+/// [rankReplacements] with [meals] keyed already (once for all groups).
+List<RankedReplacement> rankKeyedReplacements(
+  List<ReplacementIngredient> replacements, {
+  required Map<String, AlternativeChoiceKind> verdicts,
+  Set<String> skippedBaseNames = const {},
+  required KeyedMeals meals,
+  required DateTime? since,
 }) => _order(
   [
     for (final (i, r) in replacements.indexed)
       RankedReplacement(
         replacement: r,
-        eatenAfter: _eatenAfter(r.name, meals, since),
+        eatenAfter: meals.eatenAfter(r.name, since),
         index: i,
       ),
   ],

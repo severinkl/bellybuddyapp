@@ -24,8 +24,9 @@ class IngredientSuggestionNotifier
     _seenIds.clear();
     // A choice („Passt für mich", „Probiere ich", „Passt nicht für mich")
     // ranks the replacements again at once, optimistic writes included.
+    // While loading the value may be the previous user's: skipped.
     ref.listen(alternativeChoicesProvider, (_, next) {
-      final choices = next.value;
+      final choices = next.isLoading ? null : next.value;
       if (choices != null) {
         state = state.whenData((g) => rerankGroups(g, choices));
       }
@@ -34,11 +35,13 @@ class IngredientSuggestionNotifier
   }
 
   /// [groups] ranked with the choices loaded now; as they come without
-  /// choices while those are loading or failed.
+  /// choices while those are loading (the value may be the previous
+  /// user's; the listener ranks them once loaded) or failed.
   List<IngredientSuggestionGroup> _ranked(
     List<IngredientSuggestionGroup> groups,
   ) {
-    final choices = ref.read(alternativeChoicesProvider).value;
+    final current = ref.read(alternativeChoicesProvider);
+    final choices = current.isLoading ? null : current.value;
     return choices == null ? groups : rerankGroups(groups, choices);
   }
 

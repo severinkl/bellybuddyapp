@@ -97,6 +97,7 @@ abstract final class SuggestionHelpers {
     List<MealIngredients> recentMeals = const [],
   }) {
     final verdicts = AlternativeVerdicts(choices);
+    final keyedMeals = KeyedMeals(recentMeals);
 
     // Index meals by id
     final mealsById = <String, MealDetail>{};
@@ -206,11 +207,11 @@ abstract final class SuggestionHelpers {
             isNew: acc.hasUnseen,
             suggestionIds: acc.suggestionIds,
             meals: meals,
-            replacements: rankReplacements(
+            replacements: rankKeyedReplacements(
               replacements,
               verdicts: verdicts.forIngredient(acc.ingredientId),
               skippedBaseNames: verdicts.skippedBaseNames,
-              meals: recentMeals,
+              meals: keyedMeals,
               since: acc.firstSuggestedAt,
             ),
           );

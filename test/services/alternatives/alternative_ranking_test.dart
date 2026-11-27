@@ -111,6 +111,22 @@ void main() {
       expect(ranked.every((r) => r.eatenAfter == 0), isTrue);
     });
 
+    test('created_at is an instant: its local date decides, tracked_at is '
+        'taken as it is', () {
+      final at = DateTime.utc(2026, 11, 10, 23, 30).toLocal();
+      final ranked = rankReplacements(
+        [_r('a'), _r('b')],
+        verdicts: const {},
+        meals: [
+          _meal(DateTime(at.year, at.month, at.day, 23, 59), ['a']),
+          _meal(DateTime(at.year, at.month, at.day + 1, 0, 1), ['b']),
+        ],
+        since: DateTime.utc(2026, 11, 10, 23, 30),
+      );
+      expect(_ids(ranked), ['b', 'a']);
+      expect([for (final r in ranked) r.eatenAfter], [1, 0]);
+    });
+
     test('without a suggestion time no meal counts', () {
       final ranked = rankReplacements(
         [_r('a'), _r('b')],

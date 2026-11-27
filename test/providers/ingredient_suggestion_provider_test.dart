@@ -456,6 +456,54 @@ void main() {
       );
     });
 
+    test('while the choices load (a user switch) the previous user\'s are '
+        'not used', () async {
+      final group = testSuggestionGroup().copyWith(
+        replacements: RankedReplacement.inOrder(const [
+          ReplacementIngredient(id: 'r1', name: 'Lauch'),
+          ReplacementIngredient(id: 'r2', name: 'Hafermilch'),
+        ]),
+      );
+      when(
+        () => mockRepo.fetchSuggestionGroups(any()),
+      ).thenAnswer((_) async => [group]);
+      final held = Completer<List<Map<String, dynamic>>>();
+      final service = _ChoiceService()
+        ..onFetch = () async => [_choiceRow('c1', 'r1', 'skip')];
+      final user = SwitchableUserId();
+      final container = createContainer(
+        overrides: [
+          ingredientRepositoryProvider.overrideWithValue(mockRepo),
+          user.override,
+          alternativeChoiceServiceProvider.overrideWithValue(service),
+        ],
+      );
+      List<String> order() => [
+        for (final r
+            in container
+                .read(ingredientSuggestionProvider)
+                .value!
+                .single
+                .replacements)
+          r.id,
+      ];
+      final notifier = container.read(ingredientSuggestionProvider.notifier);
+      await container.read(alternativeChoicesProvider.future);
+      await notifier.fetchSuggestions();
+      expect(order(), ['r2', 'r1']);
+
+      service.onFetch = () => held.future;
+      user.set(container, 'other-user');
+      container.read(alternativeChoicesProvider);
+      await notifier.fetchSuggestions();
+      expect(container.read(alternativeChoicesProvider).isLoading, isTrue);
+      expect(order(), ['r1', 'r2']);
+
+      held.complete([]);
+      await container.read(alternativeChoicesProvider.future);
+      expect(order(), ['r1', 'r2']);
+    });
+
     test('choices loaded after the groups rank them', () async {
       final group = testSuggestionGroup().copyWith(
         replacements: rankReplacements(
