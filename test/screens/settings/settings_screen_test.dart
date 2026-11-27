@@ -76,7 +76,12 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Produktdaten von Open Food Facts'), findsOneWidget);
       expect(
-        find.textContaining('Open Database License (ODbL).'),
+        find.text(
+          'Name, Marke und Zutaten von Produkten, die du scannst oder '
+          'suchst, sowie ein Teil der Zutatennamen in unserem Katalog '
+          'stammen aus Open Food Facts, einer freien Lebensmitteldatenbank. '
+          'Die Daten stehen unter der Open Database License (ODbL).',
+        ),
         findsOneWidget,
       );
 
