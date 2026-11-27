@@ -1,13 +1,17 @@
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:belly_buddy/models/data_share.dart';
+import 'package:belly_buddy/models/dietitian_card.dart';
 
 Map<String, dynamic> _json({
   String period = '30d',
   bool photos = false,
   String? lockedAt,
   String? revokedAt,
-  String expiresAt = '2026-12-10T12:00:00Z',
+  String? expiresAt = '2026-12-10T12:00:00Z',
+  String kind = 'link',
+  Map<String, dynamic>? dietitian,
+  Map<String, dynamic>? keeper,
 }) => {
   'id': 'share-1',
   'display_name': 'Dr. Muster',
@@ -25,6 +29,19 @@ Map<String, dynamic> _json({
   'open_count': 3,
   'expires_at': expiresAt,
   'created_at': '2026-11-20T10:00:00+00:00',
+  'kind': kind,
+  'dietitian_id': dietitian == null ? null : 'd-1',
+  'kept_by': keeper == null ? null : 'd-2',
+  'dietitian': dietitian,
+  'keeper': keeper,
+};
+
+Map<String, dynamic> _card({String? blockedAt}) => {
+  'name': 'Julia Berger',
+  'profession': 'dietologin',
+  'practice': null,
+  'town': 'Innsbruck',
+  'blocked_at': blockedAt,
 };
 
 void main() {
@@ -117,6 +134,77 @@ void main() {
         DataShare.fromJson(_json(period: 'all')).description,
         'Alle Einträge, ohne Fotos',
       );
+    });
+  });
+
+  group('dietitian shares', () {
+    test('kind defaults to link, no embeds', () {
+      final s = DataShare.fromJson(_json());
+      expect(s.kind, ShareKind.link);
+      expect(s.dietitian, isNull);
+      expect(s.keeper, isNull);
+      expect(s.isPaused, isFalse);
+    });
+
+    test('a connection parses and round trips with its embed', () {
+      final s = DataShare.fromJson(
+        _json(kind: 'dietitian', expiresAt: null, dietitian: _card()),
+      );
+      expect(s.kind, ShareKind.dietitian);
+      expect(s.dietitianId, 'd-1');
+      expect(s.expiresAt, isNull);
+      expect(s.dietitian!.name, 'Julia Berger');
+      expect(s.dietitian!.profession, DietitianProfession.dietologin);
+      expect(DataShare.fromJson(s.toJson()), s);
+      expect(s.toJson()['kind'], 'dietitian');
+      expect(s.toJson()['dietitian'], isA<Map<String, dynamic>>());
+    });
+
+    test('a kept link round trips with its keeper', () {
+      final s = DataShare.fromJson(_json(keeper: _card()));
+      expect(s.kind, ShareKind.link);
+      expect(s.keptBy, 'd-2');
+      expect(s.keeper!.town, 'Innsbruck');
+      expect(DataShare.fromJson(s.toJson()), s);
+    });
+
+    test('dietitian null after the dietitian deleted their account', () {
+      final s = DataShare.fromJson(
+        _json(kind: 'dietitian', expiresAt: null, dietitian: null),
+      );
+      expect(s.dietitian, isNull);
+      expect(s.dietitianId, isNull);
+      expect(s.isPaused, isFalse);
+      expect(DataShare.fromJson(s.toJson()), s);
+    });
+
+    test('null expiresAt never expires', () {
+      final s = DataShare.fromJson(_json(expiresAt: null));
+      expect(s.stateAt(DateTime.utc(2100)), ShareState.active);
+      expect(s.stoppedAt, isNull);
+      final ended = DataShare.fromJson(
+        _json(expiresAt: null, revokedAt: '2026-11-25T00:00:00Z'),
+      );
+      expect(ended.stateAt(now), ShareState.ended);
+      expect(ended.stoppedAt, DateTime.utc(2026, 11, 25));
+    });
+
+    test('isPaused: a connection to a blocked dietitian', () {
+      final blocked = _card(blockedAt: '2026-11-25T00:00:00Z');
+      expect(
+        DataShare.fromJson(
+          _json(kind: 'dietitian', dietitian: blocked),
+        ).isPaused,
+        isTrue,
+      );
+      expect(
+        DataShare.fromJson(
+          _json(kind: 'dietitian', dietitian: _card()),
+        ).isPaused,
+        isFalse,
+      );
+      // A kept link of a blocked dietitian is not a paused connection.
+      expect(DataShare.fromJson(_json(keeper: blocked)).isPaused, isFalse);
     });
   });
 }

@@ -350,12 +350,16 @@ class AppConstants {
   static const String privacyPolicyUrl =
       'https://app.bellybuddy.at/datenschutz';
 
+  /// Belly Buddy Connect, the dietitian portal; a practice QR code holds
+  /// `<connectUrl>/c/<code>`.
+  static const String connectUrl = 'https://connect.bellybuddy.at';
+
   /// Version of the privacy policy the health-data consent refers to. Bump it
   /// when the policy changes materially: every user whose stored
   /// `profiles.privacy_policy_version` differs is sent through the consent
   /// gate again. It equals core's `PRIVACY_POLICY_VERSION` (the public page's
   /// „Stand") and moves with it.
-  static const String privacyPolicyVersion = '2026-11-27';
+  static const String privacyPolicyVersion = '2026-12-01';
 
   /// The myfodmap blog feed behind Wissen, how long a fetched copy counts as
   /// fresh, and how long a fetch may take.

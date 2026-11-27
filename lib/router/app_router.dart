@@ -300,6 +300,17 @@ final routerProvider = Provider<GoRouter>((ref) {
             name: RouteNames.shareCreate,
             builder: (context, state) => const ShareCreateScreen(),
           ),
+          GoRoute(
+            path: 'connect',
+            name: RouteNames.dietitianConnect,
+            builder: (context, state) => const DietitianConnectScreen(),
+          ),
+          GoRoute(
+            path: ':id/edit',
+            name: RouteNames.dietitianShareEdit,
+            builder: (context, state) =>
+                DietitianShareEditScreen(id: state.pathParameters['id']!),
+          ),
         ],
       ),
 

@@ -2,8 +2,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/data_share.dart';
+import '../models/dietitian_card.dart';
 import '../providers/core_providers.dart';
 import '../utils/logger.dart';
+
+/// What a share screen says when a call fails without core's own text.
+const shareFailedLine = 'Das hat nicht geklappt. Versuch es später nochmal.';
 
 /// A failed share call. [status] is the HTTP status of an error answer
 /// (null: no answer or unreadable); [message] is core's German text for it,
@@ -25,11 +29,19 @@ class ShareService {
 
   static const _log = AppLogger('ShareService');
 
-  /// Never `select *`: the two hash columns are not readable.
+  static final _knownKinds = {for (final k in ShareKind.values) k.name};
+
+  /// Never `select *`: the two hash columns are not readable. A
+  /// connection embeds its dietitian, a kept link its keeper.
   static const columns =
       'id, display_name, period, share_meals, share_drinks, share_gut, '
       'share_toilet, share_patterns, share_photos, failed_codes, locked_at, '
-      'revoked_at, last_opened_at, open_count, expires_at, created_at';
+      'revoked_at, last_opened_at, open_count, expires_at, created_at, '
+      'kind, dietitian_id, kept_by, '
+      'dietitian:dietitians!data_shares_dietitian_id_fkey'
+      '(name, profession, practice, town, blocked_at), '
+      'keeper:dietitians!data_shares_kept_by_fkey'
+      '(name, profession, practice, town, blocked_at)';
 
   Future<List<DataShare>> list() async {
     try {
@@ -37,7 +49,13 @@ class ShareService {
           .from('data_shares')
           .select(columns)
           .order('created_at', ascending: false);
-      return rows.map(DataShare.fromJson).toList();
+      // A kind this build does not know (a newer core) is left out rather
+      // than failing the whole list.
+      return [
+        for (final row in rows)
+          if (_knownKinds.contains(row['kind'] ?? ShareKind.link.name))
+            DataShare.fromJson(row),
+      ];
     } catch (e, st) {
       _log.error('list failed', e, st);
       rethrow;
@@ -75,6 +93,37 @@ class ShareService {
   }
 
   Future<void> end(String id) => _invoke('end', 'shares/$id/end');
+
+  /// The card behind a practice [code] (normalized by the caller).
+  Future<DietitianCard> lookup(String code) async {
+    final data = await _invoke('lookup', 'practice-code', body: {'code': code});
+    try {
+      if (data is! Map) throw const FormatException('not a JSON object');
+      final card = data['card'];
+      if (card is! Map) throw const FormatException('no card');
+      return DietitianCard.fromJson(Map<String, dynamic>.from(card));
+    } catch (e, st) {
+      _log.error('lookup: unreadable answer', e, st);
+      throw const ShareException();
+    }
+  }
+
+  /// Connects to the dietitian of [code] on [terms]; the new share's id.
+  Future<String> connect(String code, DietitianShareTerms terms) async {
+    final data = await _invoke(
+      'connect',
+      'shares/dietitian',
+      body: {'code': code, ...terms.toBody()},
+    );
+    final id = data is Map ? data['id'] : null;
+    if (id is String) return id;
+    _log.error('connect: unreadable answer');
+    throw const ShareException();
+  }
+
+  /// Changes what connection [id] shares to [terms].
+  Future<void> update(String id, DietitianShareTerms terms) =>
+      _invoke('update', 'shares/$id/update', body: terms.toBody());
 
   /// Calls the edge function [path] and returns its data; any failure
   /// becomes a [ShareException], logged as [op] (never with the body).
