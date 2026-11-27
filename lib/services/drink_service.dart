@@ -16,7 +16,13 @@ class DrinkService {
 
   Future<List<Drink>> fetchAll() async {
     try {
-      final data = await _client.from('drinks').select().order('name');
+      final data = await _client
+          .from('drinks')
+          .select(
+            '*, drink_synonyms(name), '
+            'drink_categories(catalog_categories(drink_icon, position))',
+          )
+          .order('name');
       return data.map((e) => Drink.fromDbRow(e)).toList();
     } catch (e, st) {
       _log.error('fetchAll failed', e, st);

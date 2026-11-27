@@ -59,7 +59,7 @@ class LastDrinkRow extends ConsumerWidget {
       ),
     );
     final glyph = DrinkGlyph.icon(
-      DrinkHelpers.iconFor(last.drink.name),
+      DrinkHelpers.iconFor(last.drink),
       size: AppConstants.drinkRowIconSize,
       color: AppTheme.infoText,
     );

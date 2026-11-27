@@ -98,9 +98,13 @@ abstract final class DrinkHelpers {
     return quick;
   }
 
+  /// The icon of a drink: its category's, else by its name.
+  static DrinkIcon iconFor(Drink drink) =>
+      drink.categoryIcon ?? iconForName(drink.name);
+
   /// The icon for a drink name: the first keyword group (can, bottle, cup,
   /// hot cup, carton) with a keyword in the lower-cased name, else glass.
-  static DrinkIcon iconFor(String name) {
+  static DrinkIcon iconForName(String name) {
     final n = name.toLowerCase();
     bool has(List<String> keywords) => keywords.any(n.contains);
     if (has(_canKeywords)) return DrinkIcon.can;
@@ -198,31 +202,35 @@ abstract final class DrinkHelpers {
         .split(' ')
         .where((w) => w.isNotEmpty)
         .toList();
-    final filtered =
-        allDrinks.where((d) {
-          final name = d.name.toLowerCase();
-          return words.every((w) => name.contains(w));
-        }).toList()..sort((a, b) {
-          final firstWord = words.first;
-          final aName = a.name.toLowerCase();
-          final bName = b.name.toLowerCase();
+    // The name, else the first synonym that holds every word, is what
+    // matched and what the ranking looks at.
+    String? matched(Drink d) {
+      for (final text in [d.name, ...d.synonyms]) {
+        final lower = text.toLowerCase();
+        if (words.every(lower.contains)) return lower;
+      }
+      return null;
+    }
 
-          final aStarts = aName.startsWith(firstWord);
-          final bStarts = bName.startsWith(firstWord);
-          if (aStarts && !bStarts) return -1;
-          if (!aStarts && bStarts) return 1;
+    final hits = <(Drink, String)>[
+      for (final d in allDrinks)
+        if (matched(d) case final m?) (d, m),
+    ];
+    final firstWord = words.first;
+    hits.sort((a, b) {
+      final aStarts = a.$2.startsWith(firstWord);
+      final bStarts = b.$2.startsWith(firstWord);
+      if (aStarts && !bStarts) return -1;
+      if (!aStarts && bStarts) return 1;
 
-          final aWordStarts = aName
-              .split(' ')
-              .any((w) => w.startsWith(firstWord));
-          final bWordStarts = bName
-              .split(' ')
-              .any((w) => w.startsWith(firstWord));
-          if (aWordStarts && !bWordStarts) return -1;
-          if (!aWordStarts && bWordStarts) return 1;
+      final aWordStarts = a.$2.split(' ').any((w) => w.startsWith(firstWord));
+      final bWordStarts = b.$2.split(' ').any((w) => w.startsWith(firstWord));
+      if (aWordStarts && !bWordStarts) return -1;
+      if (!aWordStarts && bWordStarts) return 1;
 
-          return a.name.compareTo(b.name);
-        });
+      return a.$1.name.compareTo(b.$1.name);
+    });
+    final filtered = [for (final h in hits) h.$1];
     return filtered.take(searchResultLimit).toList();
   }
 

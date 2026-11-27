@@ -1,6 +1,7 @@
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/drink.dart';
 import 'package:belly_buddy/models/drink_entry.dart';
+import 'package:belly_buddy/utils/drink_helpers.dart' show DrinkIcon;
 import 'package:belly_buddy/models/fodmap_flags.dart';
 import 'package:belly_buddy/models/gut_feeling_entry.dart';
 import 'package:belly_buddy/models/ingredient_suggestion.dart' as model;
@@ -138,10 +139,18 @@ DrinkEntry testDrinkEntry({
   amountMl: amountMl ?? 250,
 );
 
-Drink testDrink({String? id, String? name, String? addedByUserId}) => Drink(
+Drink testDrink({
+  String? id,
+  String? name,
+  String? addedByUserId,
+  List<String> synonyms = const [],
+  DrinkIcon? categoryIcon,
+}) => Drink(
   id: id ?? 'water-id',
   name: name ?? 'Wasser',
   addedByUserId: addedByUserId,
+  synonyms: synonyms,
+  categoryIcon: categoryIcon,
 );
 
 /// A collection recipe line. A mapped line has `catalogId: 'ing-$name'` and
