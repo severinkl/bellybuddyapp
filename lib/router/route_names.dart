@@ -78,7 +78,9 @@ class RoutePaths {
   static const String patternsUnlocked = '/patterns-unlocked';
 
   /// The Verträglichkeits-Test; `extra` may carry a `TestSubject` (its
-  /// intro) or `ToleranceTestPick` (the proposal or the group picker).
+  /// intro, started as `picked`), a `ToleranceTestProposed` (a proposal's
+  /// intro, started as `proposed`) or `ToleranceTestPick` (the proposal or
+  /// the group picker).
   static const String toleranceTest = '/patterns/test';
   static const String progress = '/progress';
   static const String relief = '/relief';
