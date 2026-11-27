@@ -234,6 +234,9 @@ class AppConstants {
   // Entdecken: a recipe card's width in the Meine Rezepte row
   static const double discoverRecipeCardWidth = 148.0;
 
+  // Entdecken: the zen Buddy on the Ruhe-für-den-Bauch card
+  static const double discoverReliefBuddySize = 44.0;
+
   // Rezepte: a recipe page's and a card's picture (width / height), a list
   // row's thumbnail, an ingredient line's mark and amount column, and the
   // most steps and characters a recipe's steps may have

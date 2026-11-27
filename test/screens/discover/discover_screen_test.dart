@@ -32,6 +32,8 @@ import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/discover_news_provider.dart';
 import 'package:belly_buddy/providers/ingredient_suggestion_provider.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
+import 'package:belly_buddy/providers/relief_provider.dart';
+import 'package:belly_buddy/services/relief/relief_content.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
 import 'package:belly_buddy/repositories/ingredient_repository.dart';
 import 'package:belly_buddy/repositories/knowledge_repository.dart';
@@ -104,6 +106,9 @@ void main() {
     List<String>? intolerances,
     // How the tips load, in place of answering [tips].
     Future<List<Recommendation>> Function()? fetchTips,
+    // Whether „Ruhe für den Bauch" is on; off keeps its card out of the
+    // layout the other tests check.
+    bool relief = false,
   }) async {
     when(
       () => recommendations.fetchByUserId(any()),
@@ -136,6 +141,7 @@ void main() {
           RoutePaths.discoverRecipes,
           RoutePaths.collectionRecipe,
           RoutePaths.knowledge,
+          RoutePaths.relief,
         ]),
       ],
     );
@@ -150,6 +156,7 @@ void main() {
       profileRepositoryProvider.overrideWithValue(profileRepo),
       recipeRepositoryProvider.overrideWithValue(collection),
       entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
+      reliefEnabledProvider.overrideWithValue(relief),
       if (weeklyTips != null || intolerances != null)
         profileProviderSeededWith(
           testUserProfile(
@@ -346,6 +353,55 @@ void main() {
     ]);
     expect(tops, orderedEquals([...tops]..sort()));
     expect(tops.toSet(), hasLength(4));
+  });
+
+  group('Ruhe für den Bauch', () {
+    testWidgets('on: the card sits on top, above Tipps and Alternativen', (
+      tester,
+    ) async {
+      await pump(tester, relief: true, tips: [testRecommendation()]);
+
+      final card = find.byKey(DiscoverScreen.reliefKey);
+      expect(card, findsOneWidget);
+      expect(
+        find.descendant(of: card, matching: find.text(ReliefCopy.title)),
+        findsOneWidget,
+      );
+      expect(
+        find.descendant(of: card, matching: find.text(ReliefCopy.cardSubtitle)),
+        findsOneWidget,
+      );
+      final top = tester.getTopLeft(card).dy;
+      expect(
+        top,
+        lessThan(tester.getTopLeft(find.byKey(DiscoverScreen.tipsKey)).dy),
+      );
+      expect(
+        top,
+        lessThan(
+          tester.getTopLeft(find.byKey(DiscoverScreen.alternativesKey)).dy,
+        ),
+      );
+      expect(
+        tester.getSize(card).height,
+        greaterThanOrEqualTo(AppConstants.minTapTarget),
+      );
+    });
+
+    testWidgets('a tap opens /relief', (tester) async {
+      await pump(tester, relief: true);
+
+      await tester.tapVisible(find.byKey(DiscoverScreen.reliefKey));
+
+      expect(find.text('page:${RoutePaths.relief}'), findsOneWidget);
+    });
+
+    testWidgets('off: no card', (tester) async {
+      await pump(tester, tips: [testRecommendation()]);
+
+      expect(find.byKey(DiscoverScreen.reliefKey), findsNothing);
+      expect(find.text(ReliefCopy.title), findsNothing);
+    });
   });
 
   testWidgets('without tips: Alternativen, Rezepte, Wissen', (tester) async {

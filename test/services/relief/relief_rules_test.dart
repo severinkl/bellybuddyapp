@@ -3,15 +3,30 @@ import 'package:belly_buddy/services/relief/relief_content.dart';
 import 'package:belly_buddy/services/relief/relief_rules.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-GutFeelingEntry _entry(DateTime at, {int bloating = 1, int cramps = 1}) =>
-    GutFeelingEntry(
-      id: 'e',
-      trackedAt: at,
-      bloating: bloating,
-      gas: 1,
-      cramps: cramps,
-      fullness: 1,
-    );
+GutFeelingEntry _entry(
+  DateTime at, {
+  int bloating = 1,
+  int gas = 1,
+  int cramps = 1,
+  int fullness = 1,
+  int? stress,
+  int? happiness,
+  int? energy,
+  int? focus,
+  int? bodyFeel,
+}) => GutFeelingEntry(
+  id: 'e',
+  trackedAt: at,
+  bloating: bloating,
+  gas: gas,
+  cramps: cramps,
+  fullness: fullness,
+  stress: stress,
+  happiness: happiness,
+  energy: energy,
+  focus: focus,
+  bodyFeel: bodyFeel,
+);
 
 void main() {
   group('orderedExercises', () {
@@ -76,6 +91,75 @@ void main() {
         ),
         isFalse,
       );
+    });
+    group('offersRelief, the matrix', () {
+      // Plain wall clock, no zone: as the tracker sees it.
+      final now = DateTime(2026, 11, 27, 12);
+
+      test('Krämpfe 4 right now offers', () {
+        expect(offersRelief(_entry(now, cramps: 4), now: now), isTrue);
+      });
+
+      test('Blähungen 4 and Völlegefühl 5 offer too', () {
+        expect(offersRelief(_entry(now, gas: 4), now: now), isTrue);
+        expect(offersRelief(_entry(now, fullness: 5), now: now), isTrue);
+      });
+
+      test('every symptom at 3 does not offer', () {
+        expect(
+          offersRelief(
+            _entry(now, bloating: 3, gas: 3, cramps: 3, fullness: 3),
+            now: now,
+          ),
+          isFalse,
+        );
+      });
+
+      test('Blähbauch 5 exactly 2 h ago offers, a minute earlier not', () {
+        final edge = now.subtract(const Duration(hours: 2));
+        expect(offersRelief(_entry(edge, bloating: 5), now: now), isTrue);
+        expect(
+          offersRelief(
+            _entry(edge.subtract(const Duration(minutes: 1)), bloating: 5),
+            now: now,
+          ),
+          isFalse,
+        );
+      });
+
+      test('up to 5 min ahead offers, 10 min ahead not', () {
+        expect(
+          offersRelief(
+            _entry(now.add(const Duration(minutes: 5)), bloating: 5),
+            now: now,
+          ),
+          isTrue,
+        );
+        expect(
+          offersRelief(
+            _entry(now.add(const Duration(minutes: 10)), bloating: 5),
+            now: now,
+          ),
+          isFalse,
+        );
+      });
+
+      test('high mood values with symptoms at 1 do not offer', () {
+        expect(
+          offersRelief(
+            _entry(
+              now,
+              stress: 5,
+              happiness: 5,
+              energy: 5,
+              focus: 5,
+              bodyFeel: 5,
+            ),
+            now: now,
+          ),
+          isFalse,
+        );
+      });
     });
   });
 }
