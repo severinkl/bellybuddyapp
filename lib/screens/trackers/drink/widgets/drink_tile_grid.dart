@@ -21,7 +21,7 @@ class DrinkTileGrid extends StatelessWidget {
     final columns =
         MediaQuery.textScalerOf(context).scale(1) >=
             AppConstants.drinkGridLargeTextScale
-        ? 2
+        ? AppConstants.drinkGridLargeTextColumns
         : normalColumns;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,

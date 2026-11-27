@@ -658,6 +658,12 @@ class AppConstants {
   /// Text scale from which the drinks screen grids use two columns.
   static const double drinkGridLargeTextScale = 1.5;
 
+  /// Columns of those grids at that text scale.
+  static const int drinkGridLargeTextColumns = 2;
+
+  /// Width of the „Andere Menge" field on the drinks screen.
+  static const double customAmountFieldWidth = 180;
+
   /// Catalogue names (matched case-insensitively) that fill the one-tap
   /// drinks of a user with little history.
   static const List<String> starterDrinkNames = [

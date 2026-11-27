@@ -193,8 +193,6 @@ class _CustomAmountRow extends StatelessWidget {
   final String customAmount;
   final ValueChanged<String> onChanged;
 
-  static const _fieldWidth = 180.0;
-
   @override
   Widget build(BuildContext context) {
     OutlineInputBorder pill(Color color) => OutlineInputBorder(
@@ -228,7 +226,7 @@ class _CustomAmountRow extends StatelessWidget {
         ),
         const SizedBox(width: AppConstants.spacing10),
         SizedBox(
-          width: _fieldWidth,
+          width: AppConstants.customAmountFieldWidth,
           child: BbLabeledField(
             label: 'Andere Menge in ml',
             child: TextField(

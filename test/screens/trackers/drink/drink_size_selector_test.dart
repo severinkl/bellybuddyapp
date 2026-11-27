@@ -69,7 +69,7 @@ void main() {
     tester,
   ) async {
     final handle = tester.ensureSemantics();
-    await _pump(tester, withDrink: false);
+    final container = await _pump(tester, withDrink: false);
 
     expect(
       tester.getSemantics(_vessel(250)),
@@ -120,6 +120,7 @@ void main() {
     // A tap does nothing.
     await tester.tap(_vessel(250), warnIfMissed: false);
     expect(tester.takeException(), isNull);
+    expect(container.read(drinkTrackerProvider).selectedAmount, isNull);
     handle.dispose();
   });
 
