@@ -655,6 +655,9 @@ class AppConstants {
   static const double dashLengthSm = 3;
   static const double dashGapSm = 3;
 
+  /// Columns of the drink tile grid at normal text sizes.
+  static const int drinkGridColumns = 3;
+
   /// Text scale from which the drinks screen grids use two columns.
   static const double drinkGridLargeTextScale = 1.5;
 
@@ -663,6 +666,16 @@ class AppConstants {
 
   /// Width of the „Andere Menge" field on the drinks screen.
   static const double customAmountFieldWidth = 180;
+
+  /// The scroll padding of that field at text scale 1: like
+  /// [fieldWithHintScrollPadding], with room for its hint wrapping onto
+  /// three lines in the narrow field. The bottom grows with the text scale.
+  static const EdgeInsets customAmountScrollPadding = EdgeInsets.fromLTRB(
+    spacing20,
+    spacing20,
+    spacing20,
+    96,
+  );
 
   /// Catalogue names (matched case-insensitively) that fill the one-tap
   /// drinks of a user with little history.

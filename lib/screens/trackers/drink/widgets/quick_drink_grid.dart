@@ -75,7 +75,10 @@ class QuickDrinkGrid extends ConsumerWidget {
             ),
           ),
         AppConstants.gap8,
-        DrinkTileGrid(normalColumns: 3, children: cells),
+        DrinkTileGrid(
+          normalColumns: AppConstants.drinkGridColumns,
+          children: cells,
+        ),
       ],
     );
   }

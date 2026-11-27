@@ -1,5 +1,6 @@
 // ignore_for_file: invalid_use_of_internal_member
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/rendering.dart' show RenderParagraph;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:belly_buddy/config/app_theme.dart';
@@ -12,6 +13,7 @@ import 'package:belly_buddy/utils/drink_helpers.dart';
 
 import '../../../helpers/fakes.dart';
 import '../../../helpers/fixtures.dart';
+import '../../../helpers/layout_checks.dart';
 
 Future<ProviderContainer> _pump(
   WidgetTester tester, {
@@ -260,6 +262,68 @@ void main() {
     expect(
       tester.getTopLeft(_vessel(500)).dy,
       greaterThan(tester.getTopLeft(_vessel(250)).dy),
+    );
+  });
+
+  testWidgets('at 200 % text „Andere Menge" sits over a full-width field and '
+      'its hint shows in full', (tester) async {
+    const hint = 'Bitte gib 1 bis 3000 ml ein.';
+    final errors = await collectFlutterErrors(() async {
+      await _pump(tester, textScale: 2);
+      await tester.enterText(
+        find.byKey(DrinkSizeSelector.customAmountKey),
+        '99999',
+      );
+      await tester.pump();
+    });
+    expect(verticalOverflows(errors), isEmpty);
+
+    final label = tester.getRect(find.text('Andere Menge'));
+    final field = tester.getRect(find.byKey(DrinkSizeSelector.customAmountKey));
+    final selector = tester.getRect(find.byType(DrinkSizeSelector));
+    // Stacked: the field under the label, across the section.
+    expect(field.top, greaterThanOrEqualTo(label.bottom));
+    expect(field.width, greaterThan(selector.width * 0.8));
+    // The label keeps all of its lines inside its own space, under the
+    // vessels.
+    expect(
+      label.top,
+      greaterThanOrEqualTo(tester.getRect(_vessel(1000)).bottom),
+    );
+    final labelText = tester.renderObject<RenderParagraph>(
+      find.text('Andere Menge'),
+    );
+    expect(labelText.didExceedMaxLines, isFalse);
+    expect(label.height, labelText.getMaxIntrinsicHeight(label.width));
+
+    // The hint wraps instead of ending in an ellipsis.
+    expect(find.text(hint), findsOneWidget);
+    final hintText = tester.renderObject<RenderParagraph>(find.text(hint));
+    expect(hintText.didExceedMaxLines, isFalse);
+    expect(
+      tester.getRect(find.text(hint)).bottom,
+      lessThanOrEqualTo(selector.bottom),
+    );
+  });
+
+  testWidgets('at 130 % text the label stays beside the field and the hint '
+      'is not cut off', (tester) async {
+    const hint = 'Bitte gib 1 bis 3000 ml ein.';
+    final errors = await collectFlutterErrors(() async {
+      await _pump(tester, textScale: 1.3);
+      await tester.enterText(
+        find.byKey(DrinkSizeSelector.customAmountKey),
+        '99999',
+      );
+      await tester.pump();
+    });
+    expect(verticalOverflows(errors), isEmpty);
+    final label = tester.getRect(find.text('Andere Menge'));
+    final field = tester.getRect(find.byKey(DrinkSizeSelector.customAmountKey));
+    expect(field.left, greaterThan(label.right));
+    expect(
+      tester.renderObject<RenderParagraph>(find.text(hint)).didExceedMaxLines,
+      isFalse,
     );
   });
 }

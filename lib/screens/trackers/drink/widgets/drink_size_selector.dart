@@ -202,74 +202,96 @@ class _CustomAmountRow extends StatelessWidget {
     final edge = pill(
       customAmount.isEmpty ? AppTheme.border : AppTheme.infoText,
     );
+    final error = DrinkHelpers.amountError(customAmount);
+    final textScaler = MediaQuery.textScalerOf(context);
+    final stacked = textScaler.scale(1) >= AppConstants.drinkGridLargeTextScale;
+
+    const labelText = Text(
+      'Andere Menge',
+      style: TextStyle(
+        fontSize: AppTheme.fontSizeBody,
+        fontWeight: FontWeight.w500,
+        color: AppTheme.foreground,
+      ),
+    );
+    final field = BbLabeledField(
+      label: 'Andere Menge in ml',
+      child: TextField(
+        key: DrinkSizeSelector.customAmountKey,
+        controller: controller,
+        keyboardType: TextInputType.number,
+        textAlign: TextAlign.end,
+        style: const TextStyle(
+          fontSize: AppTheme.fontSizeSubtitle,
+          fontWeight: FontWeight.w600,
+          color: AppTheme.foreground,
+        ),
+        // Scrolls the hint under the field into view with the
+        // field, not just the digits, also when it wraps.
+        scrollPadding: AppConstants.customAmountScrollPadding.copyWith(
+          bottom: textScaler.scale(
+            AppConstants.customAmountScrollPadding.bottom,
+          ),
+        ),
+        inputFormatters: [
+          FilteringTextInputFormatter.digitsOnly,
+          LengthLimitingTextInputFormatter(5),
+        ],
+        decoration: InputDecoration(
+          suffixText: 'ml',
+          suffixStyle: const TextStyle(
+            fontSize: AppTheme.fontSizeBody,
+            color: AppTheme.mutedForeground,
+          ),
+          // A widget, not errorText: errorText is cut off with an ellipsis
+          // after errorMaxLines; this wraps onto as many lines as it needs.
+          error: error == null ? null : Text(error, textAlign: TextAlign.end),
+          filled: true,
+          fillColor: AppTheme.background,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: AppConstants.spacingMd,
+            vertical: AppConstants.spacing14,
+          ),
+          border: edge,
+          enabledBorder: edge,
+          focusedBorder: edge,
+          errorBorder: pill(AppTheme.destructive),
+          focusedErrorBorder: pill(AppTheme.destructive),
+        ),
+        onChanged: onChanged,
+      ),
+    );
+    if (stacked) {
+      // Large text: the label over a full-width field, so neither is cut.
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const ExcludeSemantics(child: labelText),
+          AppConstants.gap8,
+          field,
+        ],
+      );
+    }
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Expanded(
+        Expanded(
           child: ExcludeSemantics(
-            child: SizedBox(
-              // As tall as the field, so the label centres on it.
-              height: AppConstants.minTapTarget,
-              child: Align(
+            child: ConstrainedBox(
+              // At least as tall as the field, so the label centres on it;
+              // taller when it wraps.
+              constraints: const BoxConstraints(
+                minHeight: AppConstants.minTapTarget,
+              ),
+              child: const Align(
                 alignment: Alignment.centerLeft,
-                child: Text(
-                  'Andere Menge',
-                  style: TextStyle(
-                    fontSize: AppTheme.fontSizeBody,
-                    fontWeight: FontWeight.w500,
-                    color: AppTheme.foreground,
-                  ),
-                ),
+                child: labelText,
               ),
             ),
           ),
         ),
         const SizedBox(width: AppConstants.spacing10),
-        SizedBox(
-          width: AppConstants.customAmountFieldWidth,
-          child: BbLabeledField(
-            label: 'Andere Menge in ml',
-            child: TextField(
-              key: DrinkSizeSelector.customAmountKey,
-              controller: controller,
-              keyboardType: TextInputType.number,
-              textAlign: TextAlign.end,
-              style: const TextStyle(
-                fontSize: AppTheme.fontSizeSubtitle,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.foreground,
-              ),
-              // Scrolls the hint under the field into view with the
-              // field, not just the digits.
-              scrollPadding: AppConstants.fieldWithHintScrollPadding,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(5),
-              ],
-              decoration: InputDecoration(
-                suffixText: 'ml',
-                suffixStyle: const TextStyle(
-                  fontSize: AppTheme.fontSizeBody,
-                  color: AppTheme.mutedForeground,
-                ),
-                errorText: DrinkHelpers.amountError(customAmount),
-                errorMaxLines: 2,
-                filled: true,
-                fillColor: AppTheme.background,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.spacingMd,
-                  vertical: AppConstants.spacing14,
-                ),
-                border: edge,
-                enabledBorder: edge,
-                focusedBorder: edge,
-                errorBorder: pill(AppTheme.destructive),
-                focusedErrorBorder: pill(AppTheme.destructive),
-              ),
-              onChanged: onChanged,
-            ),
-          ),
-        ),
+        SizedBox(width: AppConstants.customAmountFieldWidth, child: field),
       ],
     );
   }
