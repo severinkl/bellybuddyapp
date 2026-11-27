@@ -409,6 +409,17 @@ class AppConstants {
   /// yyyy-MM-dd).
   static const String keyReminderAskedOnPrefix = 'reminder_asked_on_';
 
+  /// Prefix of the app version the store rating was last requested in, per
+  /// user and device (`rating_asked_version_<userId>`).
+  static const String keyRatingAskedVersionPrefix = 'rating_asked_version_';
+
+  /// Prefix of the day the store rating was last requested
+  /// (`rating_asked_on_<userId>`, yyyy-MM-dd).
+  static const String keyRatingAskedOnPrefix = 'rating_asked_on_';
+
+  /// Days between two store rating requests, at least.
+  static const int ratingAskMinDays = 90;
+
   /// Whether the Ich row „Mit Berater:in teilen" was tapped once (a bool, on
   /// the device, not per user): its „Neu" badge is gone after that.
   static const String keyShareRowTapped = 'share_row_tapped';

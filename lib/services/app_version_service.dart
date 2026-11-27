@@ -16,12 +16,13 @@ class AppVersionService {
     return info.packageName;
   }
 
-  /// Opens the platform-appropriate store page for the app.
-  Future<void> openStore() async {
+  /// Opens the platform-appropriate store page for the app; whether it
+  /// opened.
+  Future<bool> openStore() async {
     final url = defaultTargetPlatform == TargetPlatform.iOS
         ? AppConstants.appStoreUrl()
         : AppConstants.playStoreUrl(await packageName());
-    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+    return launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
   }
 }
 
