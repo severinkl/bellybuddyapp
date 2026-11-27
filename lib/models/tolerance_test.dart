@@ -1,4 +1,5 @@
 import '../utils/date_format_utils.dart';
+import '../utils/json_values.dart';
 import 'insights.dart';
 
 /// Where a tolerance test stands (wire values of core's `pattern-stats`):
@@ -12,12 +13,12 @@ enum TestPhase {
   final String wire;
 
   /// The phase for a wire value; null for one this build does not know.
-  static TestPhase? fromWire(Object? value) {
-    for (final p in values) {
-      if (p.wire == value) return p;
-    }
-    return null;
-  }
+  static TestPhase? fromWire(Object? value) =>
+      lookupWire(values, (p) => p.wire, value);
+
+  /// The phase for a wire value; throws for one this build does not know.
+  static TestPhase _require(Object? value) =>
+      requireWire(values, (p) => p.wire, value, 'phase');
 }
 
 /// A finished test's outcome (spec §5.2). Always relative, never a verdict.
@@ -32,12 +33,12 @@ enum TestOutcome {
   final String wire;
 
   /// The outcome for a wire value; null for one this build does not know.
-  static TestOutcome? fromWire(Object? value) {
-    for (final o in values) {
-      if (o.wire == value) return o;
-    }
-    return null;
-  }
+  static TestOutcome? fromWire(Object? value) =>
+      lookupWire(values, (o) => o.wire, value);
+
+  /// The outcome for a wire value; throws for one this build does not know.
+  static TestOutcome _require(Object? value) =>
+      requireWire(values, (o) => o.wire, value, 'outcome');
 }
 
 /// What a test is about: a FODMAP group or an ingredient.
@@ -73,10 +74,7 @@ class TestSubject {
 
 /// A `yyyy-MM-dd` wire date as the local wall-clock day, at midnight (as
 /// `todayProvider`); never converted from or to UTC.
-DateTime _day(Object? raw) {
-  final d = DateTime.parse(raw as String);
-  return DateTime(d.year, d.month, d.day);
-}
+DateTime _day(Object? raw) => startOfDay(DateTime.parse(raw as String));
 
 /// One day of a test: its phase, how it went and whether the subject was
 /// eaten (in the day's exposure window).
@@ -97,14 +95,17 @@ class TestDayView {
 
   /// Throws on a missing field or an unknown phase or class.
   factory TestDayView.fromJson(Map<String, dynamic> j) {
-    final phase = TestPhase.fromWire(j['phase']);
-    if (phase == null) throw FormatException('unknown phase: ${j['phase']}');
-    final cls = DayClass.values.where((c) => c.name == j['class']);
-    if (cls.isEmpty) throw FormatException('unknown class: ${j['class']}');
+    final phase = TestPhase._require(j['phase']);
+    final cls = requireWire(
+      DayClass.values,
+      (c) => c.name,
+      j['class'],
+      'class',
+    );
     return TestDayView(
       day: _day(j['day']),
       phase: phase,
-      dayClass: cls.single,
+      dayClass: cls,
       exposed: j['exposed'] as bool,
     );
   }
@@ -137,10 +138,7 @@ class TestResult {
 
   /// Throws on a missing field or an unknown outcome.
   factory TestResult.fromJson(Map<String, dynamic> j) {
-    final outcome = TestOutcome.fromWire(j['outcome']);
-    if (outcome == null) {
-      throw FormatException('unknown outcome: ${j['outcome']}');
-    }
+    final outcome = TestOutcome._require(j['outcome']);
     final without = j['without'] as Map<String, dynamic>;
     final with_ = j['with'] as Map<String, dynamic>;
     return TestResult(
@@ -211,8 +209,7 @@ class ToleranceTestView {
 
   /// Throws on a missing field or an unknown wire value.
   factory ToleranceTestView.fromJson(Map<String, dynamic> j) {
-    final phase = TestPhase.fromWire(j['phase']);
-    if (phase == null) throw FormatException('unknown phase: ${j['phase']}');
+    final phase = TestPhase._require(j['phase']);
     final result = j['result'];
     return ToleranceTestView(
       id: j['id'] as String,
@@ -251,10 +248,7 @@ class TestedItem {
 
   /// Throws on a missing field or an unknown outcome.
   factory TestedItem.fromJson(Map<String, dynamic> j) {
-    final outcome = TestOutcome.fromWire(j['outcome']);
-    if (outcome == null) {
-      throw FormatException('unknown outcome: ${j['outcome']}');
-    }
+    final outcome = TestOutcome._require(j['outcome']);
     return TestedItem(
       subject: TestSubject.fromJson(j),
       outcome: outcome,

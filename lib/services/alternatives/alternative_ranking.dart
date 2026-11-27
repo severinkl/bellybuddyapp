@@ -2,6 +2,7 @@ import '../../models/alternative_choice.dart';
 import '../../models/ingredient_suggestion_group.dart';
 import '../../models/ranked_replacement.dart';
 import '../../models/replacement_ingredient.dart';
+import '../../utils/date_format_utils.dart';
 
 export '../../models/ranked_replacement.dart';
 
@@ -53,7 +54,7 @@ class KeyedMeals {
     : _meals = [
         for (final m in meals)
           (
-            day: DateTime(m.trackedAt.year, m.trackedAt.month, m.trackedAt.day),
+            day: startOfDay(m.trackedAt),
             names: {for (final i in m.ingredients) baseName(i)},
           ),
       ];
@@ -67,8 +68,7 @@ class KeyedMeals {
   /// caused it.
   int eatenAfter(String name, DateTime? since) {
     if (since == null) return 0;
-    final local = since.toLocal();
-    final sinceDay = DateTime(local.year, local.month, local.day);
+    final sinceDay = startOfDay(since.toLocal());
     final base = baseName(name);
     var count = 0;
     for (final meal in _meals) {

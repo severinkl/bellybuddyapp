@@ -1,4 +1,5 @@
 import '../utils/date_format_utils.dart';
+import '../utils/json_values.dart';
 import 'tolerance_test.dart';
 
 /// How noticeable a food or FODMAP group is in the pattern comparison
@@ -10,12 +11,8 @@ enum StatLevel {
   calm;
 
   /// The level for a wire value; null for one this build does not know.
-  static StatLevel? fromWire(Object? value) {
-    for (final level in values) {
-      if (level.name == value) return level;
-    }
-    return null;
-  }
+  static StatLevel? fromWire(Object? value) =>
+      lookupWire(values, (l) => l.name, value);
 }
 
 /// One row of the comparison: a group or an ingredient, with how often a
@@ -50,8 +47,12 @@ class StatItem {
   /// Throws when a field is missing or of the wrong type, or the level is
   /// unknown (the caller drops such items, see [PatternStats.fromJson]).
   factory StatItem.fromJson(Map<String, dynamic> j) {
-    final level = StatLevel.fromWire(j['level']);
-    if (level == null) throw FormatException('unknown level: ${j['level']}');
+    final level = requireWire(
+      StatLevel.values,
+      (l) => l.name,
+      j['level'],
+      'level',
+    );
     return StatItem(
       kind: j['kind'] as String,
       key: j['key'] as String,
@@ -134,15 +135,12 @@ class PatternStats {
       ratedDays: j['rated_days'] as int,
       hardDays: j['hard_days'] as int,
       ready: j['ready'] as bool,
-      groups: _items(j['groups']),
-      ingredients: _items(j['ingredients']),
-      calm: _items(j['calm']),
+      groups: _list(j['groups'], StatItem.fromJson),
+      ingredients: _list(j['ingredients'], StatItem.fromJson),
+      calm: _list(j['calm'], StatItem.fromJson),
       test: test,
       hasUnreadableTest: rawTest != null && test == null,
-      tested: [
-        for (final row in j['tested'] is List ? j['tested'] as List : const [])
-          ?_tryParse(row, TestedItem.fromJson),
-      ],
+      tested: _list(j['tested'], TestedItem.fromJson),
       proposal: _tryParse(j['proposal'], TestSubject.fromJson),
       restrictive: j['restrictive'] as bool? ?? true,
     );
@@ -159,12 +157,13 @@ class PatternStats {
     }
   }
 
-  /// The items this build can read; a malformed one (unknown level,
-  /// missing field, wrong type) is dropped, never failing the whole fetch.
-  static List<StatItem> _items(Object? raw) => [
-    for (final row in raw is List ? raw : const [])
-      ?_tryParse(row, StatItem.fromJson),
-  ];
+  /// The items of [raw] this build can read; a malformed one (unknown wire
+  /// value, missing field, wrong type) is dropped, never failing the whole
+  /// fetch.
+  static List<T> _list<T>(
+    Object? raw,
+    T Function(Map<String, dynamic>) parse,
+  ) => [for (final row in raw is List ? raw : const []) ?_tryParse(row, parse)];
 
   /// Ingredients with `nestedIn == group.key`, in server order.
   List<StatItem> membersOf(StatItem group) => [
