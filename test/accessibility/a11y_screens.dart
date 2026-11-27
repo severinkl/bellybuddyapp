@@ -171,12 +171,9 @@ const a11yScreens = <A11yScreen>[
     'Willkommen',
     RoutePaths.welcome,
     base: _signedOut,
-    // „Tippe, um ihn zu wecken" breathes (opacity 0.45–1) until the Buddy
-    // wakes; its resting look, shown at the pulse's peak and steadily under
-    // reduced motion, is full opacity. The checks read that one instead of
-    // the frame the pulse happens to be at after the settle limit.
-    // Known, left for Severin: with motion on, the pulse's low point
-    // (opacity 0.45, about 2.0:1) fails text contrast.
+    // „Tippe, um ihn zu wecken" breathes (opacity 0.9–1, never below
+    // 4.5:1) until the Buddy wakes; the checks read its steady look under
+    // reduced motion instead of whatever frame the pulse is at.
     reducedMotion: true,
   ),
   A11yScreen('Anmelden', RoutePaths.auth, base: _signedOut),

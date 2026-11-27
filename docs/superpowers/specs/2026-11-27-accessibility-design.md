@@ -255,3 +255,5 @@ None. No new data, processor or purpose.
   „Tippen zum Fortfahren" hint, now a button named „Schließen" with a 48 px hit area. The title is a heading. The page
   scrolls when its texts need more than the screen (200 % text); the illustration then gets at least 160 px, otherwise the
   height left over as before. „Muster frei!" now runs all guardrail checks.
+- **Welcome hint pulse, 2026-11-27:** „Tippe, um ihn zu wecken" breathes between 90 % and 100 % opacity (was 45 %), so it
+  never drops below 4.5:1 (about 5.0:1 at its low point on white). Under reduced motion it stays at 100 %.

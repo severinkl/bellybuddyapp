@@ -62,6 +62,10 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
 
   static const _hintPulse = Duration(milliseconds: 1400);
 
+  /// The pulse's low point: the muted hint keeps at least 4.5:1 on the
+  /// white background there (about 5.0:1; 6.3:1 at full opacity).
+  static const _hintMinOpacity = 0.9;
+
   /// A tap on the area starts the sign-up only once the last line has been
   /// up this long: a quick tap meant to skip a line must not start it.
   static const _startGrace = Duration(milliseconds: 800);
@@ -70,7 +74,7 @@ class _WelcomeScreenState extends ConsumerState<WelcomeScreen>
   late final AnimationController _pulse = AnimationController(
     vsync: this,
     duration: _hintPulse,
-    lowerBound: 0.45,
+    lowerBound: _hintMinOpacity,
   );
 
   _Phase _phase = _Phase.asleep;
