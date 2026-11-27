@@ -149,8 +149,8 @@ class _DietitianShareEditScreenState
                 ),
                 AppConstants.gap8,
                 const Text(
-                  'Mehr freigeben gilt ab jetzt. Weniger freigeben gilt '
-                  'sofort.',
+                  'Änderungen gelten sofort – auch für frühere Einträge im '
+                  'gewählten Zeitraum.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: AppTheme.fontSizeCaptionLG,

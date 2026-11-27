@@ -120,7 +120,10 @@ void main() {
     expect(switchOn(tester, 'Muster und Unverträglichkeiten'), isFalse);
     expect(switchOn(tester, 'Fotos der Mahlzeiten'), isTrue);
     expect(
-      find.text('Mehr freigeben gilt ab jetzt. Weniger freigeben gilt sofort.'),
+      find.text(
+        'Änderungen gelten sofort – auch für frühere Einträge im gewählten '
+        'Zeitraum.',
+      ),
       findsOneWidget,
     );
     expect(tester.widget<ElevatedButton>(save()).onPressed, isNotNull);
