@@ -230,10 +230,12 @@ void main() {
         ],
       );
       when(() => fb.inFilter(any(), any())).thenAnswer((_) => fb);
+      when(() => fb.order(any())).thenAnswer((_) => fb);
 
       final result = await service.fetchReplacements(['sug-1', 'sug-2']);
 
       expect(result, hasLength(1));
+      verify(() => fb.order('created_at')).called(1);
       verify(() => fb.inFilter('suggestion_id', ['sug-1', 'sug-2'])).called(1);
     });
   });
