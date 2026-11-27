@@ -1112,6 +1112,9 @@ class FakeRatingLauncher implements RatingLauncher {
   int requests = 0;
   int listings = 0;
 
+  /// While set and not completed, [openStoreListing] waits for it.
+  Completer<void>? listingHold;
+
   @override
   Future<bool> isAvailable() async {
     if (availableThrows) throw Exception('no store');
@@ -1127,6 +1130,7 @@ class FakeRatingLauncher implements RatingLauncher {
   @override
   Future<void> openStoreListing() async {
     listings++;
+    await listingHold?.future;
     if (listingThrows) throw Exception('no listing');
   }
 }
@@ -1146,8 +1150,18 @@ class FakeAppVersionService extends AppVersionService {
   final bool openStoreResult;
   int opened = 0;
 
+  /// While set and not completed, [currentVersion] waits for it (a slow
+  /// platform call).
+  Completer<String>? versionHold;
+
+  /// [currentVersion] throws.
+  bool versionThrows = false;
+
   @override
-  Future<String> currentVersion() async => version;
+  Future<String> currentVersion() async {
+    if (versionThrows) throw Exception('no version');
+    return await versionHold?.future ?? version;
+  }
 
   @override
   Future<bool> openStore() async {

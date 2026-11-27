@@ -3671,6 +3671,7 @@ void main() {
   });
   group('the rating request after „Muster frei!"', () {
     late FakeRatingLauncher launcher;
+    late FakeAppVersionService version;
     const patternsKey =
         '${AppConstants.keyBuddyAnnouncedPrefix}u1_patternsUnlocked_once';
     const tipOfferKey =
@@ -3682,6 +3683,7 @@ void main() {
       // Today's entries known (the rating waits for them).
       entries = _FakeEntries(EntriesState(day: startOfDay(now)));
       launcher = FakeRatingLauncher();
+      version = FakeAppVersionService();
       SharedPreferences.setMockInitialValues({});
     });
 
@@ -3710,7 +3712,7 @@ void main() {
       tester,
       extra: [
         ratingLauncherProvider.overrideWithValue(launcher),
-        appVersionServiceProvider.overrideWithValue(FakeAppVersionService()),
+        appVersionServiceProvider.overrideWithValue(version),
         ...extra,
       ],
     );
@@ -3865,9 +3867,15 @@ void main() {
         ),
       );
       await tester.pump();
+      // Whatever he said meanwhile is over.
+      await advance(tester, const Duration(seconds: 4));
+      expect(controller(tester).bubble, isNull);
       await tester.tapAt(const Offset(10, 10)); // „Dein Streak"'s barrier
       await tester.pump();
       await tester.pump();
+      await tick(tester);
+      // The request ended silently: his line, as without it.
+      expect(controller(tester).bubble, isNotNull);
       await afterCelebration(tester);
       await advance(tester, const Duration(seconds: 3));
 
@@ -3999,6 +4007,53 @@ void main() {
       await afterWave(tester);
       expect(find.byType(RemindersAskSheet), findsOneWidget);
       expect(launcher.requests, 0);
+    });
+
+    for (final (name, slowOrFailing) in [
+      ('slow', (FakeAppVersionService v) => v.versionHold = Completer()),
+      ('failing', (FakeAppVersionService v) => v.versionThrows = true),
+    ]) {
+      testWidgets('back on Home right after a request, its record $name: no '
+          'second request this session', (tester) async {
+        celebratedBefore();
+        await pumpRating(tester);
+        await tick(tester);
+        expect(controller(tester).currentAction, BuddyAction.celebrate);
+        // The record's writes wait for the version (or never happen).
+        slowOrFailing(version);
+        await afterCelebration(tester);
+        expect(launcher.requests, 1);
+
+        await revisit(tester);
+        await advance(tester, const Duration(seconds: 6));
+        await revisit(tester);
+        await advance(tester, const Duration(seconds: 6));
+        expect(launcher.requests, 1);
+      });
+    }
+
+    testWidgets('back from „Muster frei!" with a line still queued: the '
+        'request follows once it is said', (tester) async {
+      buddy = _FakeBuddy(
+        () => _status(
+          announcements: const [
+            BuddyAnnouncement.patternsUnlocked,
+            BuddyAnnouncement.saverEarned,
+          ],
+          announcementKeys: const {
+            BuddyAnnouncement.patternsUnlocked: patternsKey,
+          },
+        ),
+      );
+      await pumpRating(tester);
+      await backFromPatterns(tester);
+      expect(controller(tester).bubble, _saverEarnedLine);
+      expect(launcher.requests, 0);
+
+      await advance(tester, const Duration(seconds: 4));
+      await tick(tester);
+      await afterCelebration(tester);
+      expect(launcher.requests, 1);
     });
 
     testWidgets('already asked in this version: never queued', (tester) async {

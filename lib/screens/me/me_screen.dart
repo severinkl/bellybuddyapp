@@ -63,6 +63,9 @@ class _MeScreenState extends ConsumerState<MeScreen> {
   /// „Einschalten" is on its way (the OS dialog may be up).
   bool _turningOn = false;
 
+  /// „Belly Buddy bewerten" is opening the store: further taps wait.
+  bool _rating = false;
+
   @override
   void dispose() {
     _buddy.dispose();
@@ -133,14 +136,20 @@ class _MeScreenState extends ConsumerState<MeScreen> {
   /// „Belly Buddy bewerten": the store page for a review, else the plain
   /// store page, else a message. Never counts as the Buddy's rating ask.
   Future<void> _rate() async {
-    final messenger = ScaffoldMessenger.of(context);
-    final ok = await _openListing() || await _openStorePage();
-    if (!ok) {
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Der Store konnte nicht geöffnet werden.'),
-        ),
-      );
+    if (_rating) return;
+    _rating = true;
+    try {
+      final messenger = ScaffoldMessenger.of(context);
+      final ok = await _openListing() || await _openStorePage();
+      if (!ok) {
+        messenger.showSnackBar(
+          const SnackBar(
+            content: Text('Der Store konnte nicht geöffnet werden.'),
+          ),
+        );
+      }
+    } finally {
+      _rating = false;
     }
   }
 

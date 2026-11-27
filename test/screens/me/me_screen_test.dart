@@ -491,6 +491,27 @@ void main() {
       expect(feedback.top - rate.bottom, lessThan(AppConstants.spacingLg));
     });
 
+    testWidgets('two quick taps open the store listing once', (tester) async {
+      final launcher = FakeRatingLauncher()..listingHold = Completer();
+      await pump(
+        tester,
+        extra: [
+          ratingLauncherProvider.overrideWithValue(launcher),
+          appVersionServiceProvider.overrideWithValue(FakeAppVersionService()),
+        ],
+      );
+      await tester.ensureVisible(find.byKey(MeScreen.rateKey));
+      await tester.tap(find.byKey(MeScreen.rateKey));
+      await tester.pump();
+      await tester.tap(find.byKey(MeScreen.rateKey));
+      await tester.pump();
+      launcher.listingHold!.complete();
+      await tester.pumpAndSettle();
+
+      expect(launcher.listings, 1);
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
     testWidgets('tap opens the store listing through the launcher', (
       tester,
     ) async {

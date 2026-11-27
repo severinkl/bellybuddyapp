@@ -1,4 +1,6 @@
 // ignore_for_file: invalid_use_of_internal_member
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -72,6 +74,7 @@ void main() {
     List<GutFeelingEntry> gutFeelings = const [],
     EntriesState? entries,
     EntriesNotifier? entriesNotifier,
+    FakeAppVersionService? version,
     Map<String, Object> prefs = const {},
   }) async {
     SharedPreferences.setMockInitialValues({
@@ -85,7 +88,9 @@ void main() {
         buddyRepositoryProvider.overrideWithValue(FakeBuddyRepository()),
         entryRepositoryProvider.overrideWithValue(FakeEntryRepository()),
         ratingLauncherProvider.overrideWithValue(launcher),
-        appVersionServiceProvider.overrideWithValue(FakeAppVersionService()),
+        appVersionServiceProvider.overrideWithValue(
+          version ?? FakeAppVersionService(),
+        ),
         journeySeededWith(journey),
         journeyRewardsSeededWith(
           journey == true ? JourneyRewards(patternsFreed: freed) : null,
@@ -212,6 +217,23 @@ void main() {
     expect(await due(), isFalse);
     entries.land(startOfDay(now));
     expect(await due(), isTrue);
+  });
+
+  testWidgets('recordRatingAsk: not due any more at once, while its writes '
+      'are still running', (tester) async {
+    final version = FakeAppVersionService();
+    await pump(tester, version: version);
+    expect(await due(), isTrue);
+
+    version.versionHold = Completer();
+    unawaited(recordRatingAsk(widgetRef));
+    expect(await due(), isFalse);
+    final prefs = await SharedPreferences.getInstance();
+    expect(
+      prefs.getString('${AppConstants.keyRatingAskedOnPrefix}$testUserId'),
+      isNull,
+    );
+    version.versionHold!.complete('1.3.0');
   });
 
   testWidgets('not due when the launcher is unavailable, or when '

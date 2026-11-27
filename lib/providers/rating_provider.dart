@@ -91,6 +91,7 @@ final ratingAskDueProvider = FutureProvider.autoDispose<bool>((ref) async {
   final userId = ref.watch(currentUserIdProvider);
   final today = ref.watch(todayProvider);
   if (userId == null) return false;
+  if (ref.watch(ratingAskedThisSessionProvider).contains(userId)) return false;
   if (!await _patternsCelebrated(ref)) return false;
   if (ref.watch(buddyOnboardingRequiredProvider) ||
       ref.watch(tutorialProvider)) {
@@ -138,17 +139,38 @@ String _askedOnKey(String userId) =>
 String _askedVersionKey(String userId) =>
     '${AppConstants.keyRatingAskedVersionPrefix}$userId';
 
-/// Records a rating request of the signed-in user: this app version, today
-/// ([ratingAskDueProvider] is false afterwards). Completes once stored; a
-/// failure is only logged. Reads [ref] right away: it may run after the
+/// The users the Buddy asked for a rating in this app session
+/// ([recordRatingAsk]): [ratingAskDueProvider] is false for them at once,
+/// before (and whether or not) the request's record is stored.
+final ratingAskedThisSessionProvider =
+    NotifierProvider<RatingAskedThisSession, Set<String>>(
+      RatingAskedThisSession.new,
+    );
+
+class RatingAskedThisSession extends Notifier<Set<String>> {
+  @override
+  Set<String> build() => const {};
+
+  void add(String userId) => state = {...state, userId};
+}
+
+/// Records a rating request of the signed-in user: at once for this
+/// session ([ratingAskedThisSessionProvider]), then this app version and
+/// today in the preferences. [ratingAskDueProvider] is false from the
+/// call on and checked again once the writes are done, also when they
+/// failed (only logged). Reads [ref] right away: it may run after the
 /// caller is gone.
 Future<void> recordRatingAsk(WidgetRef ref) async {
+  ProviderContainer? container;
   try {
     final userId = ref.read(currentUserIdProvider);
     if (userId == null) return;
+    // Before any await: no second request this session, however the
+    // writes go.
+    ref.read(ratingAskedThisSessionProvider.notifier).add(userId);
     final today = ref.read(todayProvider);
     final versions = ref.read(appVersionServiceProvider);
-    final container = ProviderScope.containerOf(ref.context, listen: false);
+    container = ProviderScope.containerOf(ref.context, listen: false);
     final (version, prefs) = await (
       versions.currentVersion(),
       SharedPreferences.getInstance(),
@@ -157,8 +179,9 @@ Future<void> recordRatingAsk(WidgetRef ref) async {
     // its day.
     await prefs.setString(_askedOnKey(userId), formatIsoDate(today));
     await prefs.setString(_askedVersionKey(userId), version);
-    container.invalidate(ratingAskDueProvider);
   } catch (e, st) {
     _log.error('Recording the rating request failed', e, st);
+  } finally {
+    container?.invalidate(ratingAskDueProvider);
   }
 }

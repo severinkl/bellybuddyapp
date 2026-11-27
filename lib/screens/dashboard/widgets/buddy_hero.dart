@@ -684,6 +684,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       // greeting they replaced is still due.
       if (!_cuePlayed) _sayMoodLine();
       _cuePlayed = false;
+      // The rating request may have waited for the queue (e.g. a line
+      // after „Muster frei!"); after a sheet cue the visit's flag holds it.
+      _afterFrame(_queueRatingAsk);
       return;
     }
     if (!_homeFree) {
@@ -963,7 +966,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// celebrates, his bubble down and saying nothing, and the store is asked
   /// ([_requestRating]). Not any more: it ends silently, nothing recorded.
   void _playRatingAsk() {
-    if (!_ratingAskPlayable) return _endRatingAsk();
+    if (!_ratingAskPlayable) return _endRatingAskUnplayed();
     _buddy.hush();
     _playThen(BuddyAction.celebrate, _requestRating);
   }
@@ -989,7 +992,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     // Also his ask for reminders known not due: it may have come due
     // during the celebration.
     if (!_ratingAskPlayable || !_remindersSettledNotDue) {
-      return _endRatingAsk();
+      return _endRatingAskUnplayed();
     }
     final launcher = ref.read(ratingLauncherProvider);
     unawaited(recordRatingAsk(ref));
@@ -1006,6 +1009,14 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   void _endRatingAsk() {
     _ratingAskQueued = false;
     _nextCue();
+  }
+
+  /// The rating request ends without asking: as if it never played, so
+  /// his line comes if the queue is done (never after a real request: the
+  /// store's dialog may be up).
+  void _endRatingAskUnplayed() {
+    _cuePlayed = false;
+    _endRatingAsk();
   }
 
   /// The cue on stage ends without counting as shown: its announcement
