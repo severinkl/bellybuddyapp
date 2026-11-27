@@ -9,6 +9,7 @@ import '../../../../providers/product_finder_provider.dart';
 import '../../../../services/haptic_service.dart';
 import '../../../../utils/url_utils.dart';
 import '../../../../widgets/common/bb_drag_handle.dart';
+import '../../../../widgets/common/bb_sheet_messenger.dart';
 import '../../../../widgets/scanner/barcode_scanner.dart';
 import 'product_finder/product_finder_parts.dart';
 
@@ -41,11 +42,14 @@ Future<ProductPrefill?> showProductFinderSheet(
         minChildSize: 0.5,
         maxChildSize: 0.95,
         expand: false,
-        builder: (_, scrollController) => SafeArea(
-          top: false,
-          child: ProductFinderSheet(
-            scrollController: scrollController,
-            openUrl: openUrl,
+        // A link that did not open says so in the sheet.
+        builder: (_, scrollController) => BbSheetMessenger(
+          child: SafeArea(
+            top: false,
+            child: ProductFinderSheet(
+              scrollController: scrollController,
+              openUrl: openUrl,
+            ),
           ),
         ),
       ),

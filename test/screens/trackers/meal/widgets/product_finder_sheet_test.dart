@@ -483,6 +483,24 @@ void main() {
     expect(_scannerActive(tester), isTrue);
   });
 
+  testWidgets('a link that did not open says so inside the sheet', (
+    tester,
+  ) async {
+    final h = _Harness()..openResult = false;
+    await h.pump(tester);
+    await _scanAndAnswer(tester, h, ProductFound(_product));
+
+    await tester.tap(find.byKey(ProductFinderSheet.attributionKey));
+    await tester.pumpAndSettle();
+    expect(
+      find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.text('Die Seite konnte nicht geöffnet werden.'),
+      ),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('attribution opens offProductUrl(barcode)', (tester) async {
     final h = _Harness();
     await h.pump(tester);
