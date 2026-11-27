@@ -253,25 +253,33 @@ class _IngredientSearchState extends State<IngredientSearch> {
               else
                 // Wraps rather than overflows at a large text size.
                 Flexible(
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() => _isAdding = true);
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        _focusNode.requestFocus();
-                        // Delay to let the keyboard fully animate in before
-                        // scrolling, otherwise the scroll target is wrong.
-                        Future.delayed(AppConstants.animSlow, _scrollToField);
-                      });
-                    },
-                    // 48 high to tap; the text stays where it was.
-                    child: const TapTarget(
-                      alignment: AlignmentDirectional.centerStart,
-                      child: Text(
-                        '+ Hinzufügen',
-                        style: TextStyle(
-                          fontSize: AppTheme.fontSizeBody,
-                          color: AppTheme.primaryText,
-                          fontWeight: FontWeight.w500,
+                  // One button; its name says what it adds.
+                  child: Semantics(
+                    container: true,
+                    button: true,
+                    label: 'Zutat hinzufügen',
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() => _isAdding = true);
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          _focusNode.requestFocus();
+                          // Delay to let the keyboard fully animate in before
+                          // scrolling, otherwise the scroll target is wrong.
+                          Future.delayed(AppConstants.animSlow, _scrollToField);
+                        });
+                      },
+                      // 48 high to tap; the text stays where it was.
+                      child: const TapTarget(
+                        alignment: AlignmentDirectional.centerStart,
+                        child: ExcludeSemantics(
+                          child: Text(
+                            '+ Hinzufügen',
+                            style: TextStyle(
+                              fontSize: AppTheme.fontSizeBody,
+                              color: AppTheme.primaryText,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
                         ),
                       ),
                     ),

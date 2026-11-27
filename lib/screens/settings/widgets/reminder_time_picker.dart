@@ -87,7 +87,6 @@ class ReminderTimePicker extends StatelessWidget {
               Semantics(
                 container: true,
                 button: true,
-                selected: true,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onTap: () => _editTime(context, i),

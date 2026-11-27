@@ -275,4 +275,28 @@ void main() {
     );
     expect(tester.getSize(add.first).height, greaterThanOrEqualTo(48));
   });
+
+  testWidgets('„+ Hinzufügen" is one button „Zutat hinzufügen" that opens '
+      'the search', (tester) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWithProviders(_Host(catalog: catalog, added: added));
+
+    final add = find.semantics.byLabel('Zutat hinzufügen');
+    expect(add, findsOne);
+    expect(find.semantics.byLabel('+ Hinzufügen'), findsNothing);
+    expect(
+      tester.getSemantics(find.text('+ Hinzufügen')),
+      isSemantics(
+        label: 'Zutat hinzufügen',
+        isButton: true,
+        hasTapAction: true,
+      ),
+    );
+    tester.semantics.tap(add);
+    await tester.pumpAndSettle();
+    expect(find.byType(TextField), findsOneWidget);
+    // The scroll to the field waits for the keyboard.
+    await tester.pump(const Duration(seconds: 1));
+    handle.dispose();
+  });
 }

@@ -76,6 +76,8 @@ class A11yScreen {
   /// Opens the screen with reduced motion on, for a screen that animates
   /// for ever and whose resting look is the one reduced motion shows (so
   /// the checks don't read whatever frame the endless animation is at).
+  /// Never use it to hide an animated state that fails a check: it only
+  /// reads a resting look; a failing frame stays a recorded concern.
   final bool reducedMotion;
 }
 
@@ -172,6 +174,8 @@ const a11yScreens = <A11yScreen>[
     // wakes; its resting look, shown at the pulse's peak and steadily under
     // reduced motion, is full opacity. The checks read that one instead of
     // the frame the pulse happens to be at after the settle limit.
+    // Known, left for Severin: with motion on, the pulse's low point
+    // (opacity 0.45, about 2.0:1) fails text contrast.
     reducedMotion: true,
   ),
   A11yScreen('Anmelden', RoutePaths.auth, base: _signedOut),
@@ -227,7 +231,9 @@ const a11yScreens = <A11yScreen>[
     'Muster frei!',
     RoutePaths.patternsUnlocked,
     // An unlabelled tap area (32–370 × 601–681); the success overlay's
-    // Column overflows 184 px at 200 %.
+    // Column overflows 184 px at 200 %. Both come from
+    // lib/widgets/common/bb_success_overlay.dart — the same overlay is every
+    // tracker's success screen, so they share these failures.
     pending: {A11yCheck.labeledTapTarget: 'XA8', A11yCheck.textScale200: 'XA8'},
   ),
 

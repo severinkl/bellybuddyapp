@@ -682,6 +682,59 @@ void main() {
               .height,
           greaterThanOrEqualTo(48),
         );
+
+        // White text on the selected fill needs 4.5:1: infoText, not info.
+        await tester.pump(AppConstants.animFast);
+        Color? fillOf(Type of, String text) =>
+            (tester
+                        .widget<AnimatedContainer>(
+                          find.ancestor(
+                            of: find.descendant(
+                              of: find.byType(of),
+                              matching: find.text(text),
+                            ),
+                            matching: find.byType(AnimatedContainer),
+                          ),
+                        )
+                        .decoration
+                    as BoxDecoration?)
+                ?.color;
+        expect(fillOf(QuickDrinkGrid, 'Wasser'), AppTheme.infoText);
+        expect(fillOf(DrinkSizeSelector, '250 ml'), AppTheme.infoText);
+        expect(
+          fillOf(DrinkSizeSelector, '500 ml'),
+          AppTheme.muted.withValues(alpha: 0.5),
+        );
+        handle.dispose();
+      });
+
+      testWidgets('the chosen drink\'s ✕ is a named 48 px button that clears '
+          'the choice', (tester) async {
+        final handle = tester.ensureSemantics();
+        final container = await pumpWithDrink(tester);
+        container.read(drinkTrackerProvider.notifier).toggleDrink(testDrink());
+        await tester.pump();
+
+        final clear = find.bySemanticsLabel('Auswahl entfernen');
+        expect(clear, findsOneWidget);
+        expect(
+          tester.getSemantics(clear),
+          isSemantics(
+            label: 'Auswahl entfernen',
+            isButton: true,
+            hasEnabledState: true,
+            isEnabled: true,
+            hasTapAction: true,
+          ),
+        );
+        final size = tester.getSize(clear);
+        expect(size.width, greaterThanOrEqualTo(48));
+        expect(size.height, greaterThanOrEqualTo(48));
+        expect(find.text('\u{2715}'), findsNothing);
+
+        await tester.tap(clear);
+        await tester.pump();
+        expect(container.read(drinkTrackerProvider).selectedDrink, isNull);
         handle.dispose();
       });
     });

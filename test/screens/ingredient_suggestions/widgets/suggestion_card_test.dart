@@ -72,6 +72,33 @@ void main() {
     handle.dispose();
   });
 
+  testWidgets('an Alternativen card is a button that opens it, one node that '
+      'still offers „Ausblenden"', (tester) async {
+    final handle = tester.ensureSemantics();
+    var opened = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: SuggestionCard(
+            group: tofu,
+            onTap: () => opened++,
+            onDismiss: () {},
+          ),
+        ),
+      ),
+    );
+
+    final actionId = CustomSemanticsAction.getIdentifier(
+      const CustomSemanticsAction(label: 'Ausblenden'),
+    );
+    final card = tester.getSemantics(find.text('Tofu'));
+    expect(card, isSemantics(isButton: true, hasTapAction: true));
+    expect(card.getSemanticsData().customSemanticsActionIds, [actionId]);
+    tester.semantics.tap(find.semantics.byFlag(SemanticsFlag.isButton));
+    expect(opened, 1);
+    handle.dispose();
+  });
+
   group('with disableAnimations the Alternativen placeholders', () {
     const withImages = IngredientSuggestionGroup(
       ingredientId: 'ing-milk',

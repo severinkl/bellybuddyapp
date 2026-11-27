@@ -147,6 +147,10 @@ void main() {
       expect(find.semantics.byLabel('Weiter'), findsNothing);
       expect(find.semantics.byLabel('Fertig'), findsOne);
 
+      expect(
+        tester.getSemantics(find.byKey(DashboardTutorialOverlay.skipKey)),
+        isSemantics(label: 'Überspringen', isButton: true, hasTapAction: true),
+      );
       tester.semantics.tap(find.semantics.byLabel('Überspringen'));
       await tester.pumpAndSettle();
       expect(finished, isTrue);

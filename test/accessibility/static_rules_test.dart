@@ -92,6 +92,27 @@ GestureDetector(child: Container(decoration: d, child: Center(child: Icon(i))));
         ],
       );
     });
+
+    test('so does one around just a close glyph as text', () {
+      final rule = _rules[1];
+      expect(
+        rule.offences('f.dart', r'''
+GestureDetector(onTap: f, child: const Text('\u{2715}', style: s));
+InkWell(onTap: f, child: Padding(padding: p, child: Text('×')));
+GestureDetector(onTap: f, child: Text("x"));
+InkWell(onTap: f, child: Center(child: Text('✕')));
+GestureDetector(onTap: f, child: Text('xy'));
+GestureDetector(onTap: f, child: Text(label));
+InkWell(onTap: f, child: Row(children: [Text('✕'), Text('Aus')]));
+'''),
+        [
+          'f.dart:GestureDetector#1',
+          'f.dart:GestureDetector#2',
+          'f.dart:InkWell#1',
+          'f.dart:InkWell#2',
+        ],
+      );
+    });
   });
 }
 
@@ -114,8 +135,10 @@ class _Rule {
   /// Anchor name → the call or expression it matches.
   final Map<String, String> patterns;
 
-  /// Whether a match whose top-level arguments are [args] offends.
-  final bool Function(Map<String, String> args) offends;
+  /// Whether a match whose top-level arguments are [args] offends, in the
+  /// masked [code] of a file whose text is [source].
+  final bool Function(Map<String, _Arg> args, String code, String source)
+  offends;
 
   /// Files (path suffixes) the rule doesn't apply to.
   final List<String> exempt;
@@ -128,13 +151,21 @@ class _Rule {
     return [
       for (final MapEntry(key: anchor, value: pattern) in patterns.entries)
         for (final (i, m) in RegExp(pattern).allMatches(code).indexed)
-          if (offends(_topLevelArgs(code, m.end)))
+          if (offends(_topLevelArgs(code, m.end), code, source))
             '${path.replaceAll(r'\', '/')}:$anchor#${i + 1}',
     ];
   }
 }
 
-bool _always(Map<String, String> _) => true;
+bool _always(Map<String, _Arg> _, String _, String _) => true;
+
+/// A top-level argument: its masked [code], from offset [at] of the file.
+class _Arg {
+  const _Arg(this.code, this.at);
+
+  final String code;
+  final int at;
+}
 
 final _icon = RegExp(r'^(const\s+)?Icon\(');
 
@@ -144,13 +175,40 @@ final _wrapper = RegExp(
   r'ConstrainedBox|Opacity)\(',
 );
 
-/// Whether the [args]' `child:` is an Icon, directly or through boxes that
-/// only place or paint it ([_wrapper]): the icon is all there is to tap.
-bool _childIsIcon(Map<String, String> args) {
-  final child = args['child']?.trim() ?? '';
-  if (_icon.hasMatch(child)) return true;
+final _text = RegExp(r'^(const\s+)?Text\(');
+
+/// A close glyph drawn as text: an icon in all but name.
+const _glyphs = {'✕', '×', r'\u{2715}', r'\u2715', 'x'};
+
+/// Whether the [args]' `child:` is an Icon or a single close glyph
+/// ([_glyphs]) as a `Text`, directly or through boxes that only place or
+/// paint it ([_wrapper]): the icon is all there is to tap.
+bool _childIsIcon(Map<String, _Arg> args, String code, String source) {
+  final arg = args['child'];
+  if (arg == null) return false;
+  final lead = arg.code.length - arg.code.trimLeft().length;
+  final child = arg.code.trim();
+  if (_icon.hasMatch(child) || _isGlyph(child, arg.at + lead, code, source)) {
+    return true;
+  }
   final box = _wrapper.firstMatch(child);
-  return box != null && _childIsIcon(_topLevelArgs(child, box.end));
+  return box != null &&
+      _childIsIcon(_topLevelArgs(code, arg.at + lead + box.end), code, source);
+}
+
+/// Whether [child] (masked, from offset [at]) is `Text('<glyph>', …)`.
+bool _isGlyph(String child, int at, String code, String source) {
+  final call = _text.firstMatch(child);
+  if (call == null) return false;
+  final text = _topLevelArgs(code, at + call.end)['#0'];
+  if (text == null) return false;
+  final lead = text.code.length - text.code.trimLeft().length;
+  final literal = source.substring(
+    text.at + lead,
+    text.at + lead + text.code.trim().length,
+  );
+  final m = RegExp(r'''^(['"])(.*)\1$''').firstMatch(literal);
+  return m != null && _glyphs.contains(m.group(2));
 }
 
 const _rules = [
@@ -196,18 +254,28 @@ const _rules = [
   }),
 ];
 
-bool _noTooltip(Map<String, String> args) => !args.containsKey('tooltip');
+bool _noTooltip(Map<String, _Arg> args, String _, String _) =>
+    !args.containsKey('tooltip');
 
-/// The named arguments at the top level of the call whose `(` ends at
-/// [open] in [code] (masked): name → its value's source.
-Map<String, String> _topLevelArgs(String code, int open) {
-  final args = <String, String>{};
+/// The arguments at the top level of the call whose `(` ends at [open] in
+/// [code] (masked): name → its value, the positional ones as `#0`, `#1` ….
+Map<String, _Arg> _topLevelArgs(String code, int open) {
+  final args = <String, _Arg>{};
   var depth = 0;
   var start = open;
+  var positional = 0;
   void take(int end) {
-    final arg = code.substring(start, end).trim();
-    final m = RegExp(r'^(\w+)\s*:(?!:)').firstMatch(arg);
-    if (m != null) args[m.group(1)!] = arg.substring(m.end);
+    final arg = code.substring(start, end);
+    final lead = arg.length - arg.trimLeft().length;
+    final m = RegExp(r'^(\w+)\s*:(?!:)').firstMatch(arg.trimLeft());
+    if (m != null) {
+      args[m.group(1)!] = _Arg(
+        arg.substring(lead + m.end).trimRight(),
+        start + lead + m.end,
+      );
+    } else if (arg.trim().isNotEmpty) {
+      args['#${positional++}'] = _Arg(arg.trimRight(), start);
+    }
   }
 
   for (var i = open; i < code.length; i++) {

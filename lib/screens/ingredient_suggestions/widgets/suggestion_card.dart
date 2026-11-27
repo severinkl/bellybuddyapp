@@ -41,147 +41,145 @@ class SuggestionCard extends StatelessWidget {
         customSemanticsActions: {
           const CustomSemanticsAction(label: 'Ausblenden'): onDismiss,
         },
-        child: GestureDetector(
+        child: BbCard(
           onTap: onTap,
-          child: BbCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    _IngredientAvatar(imageUrl: group.ingredientImageUrl),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Flexible(
-                                child: Text(
-                                  group.ingredientName,
-                                  style: const TextStyle(
-                                    fontSize: AppTheme.fontSizeSubtitle,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _IngredientAvatar(imageUrl: group.ingredientImageUrl),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                group.ingredientName,
+                                style: const TextStyle(
+                                  fontSize: AppTheme.fontSizeSubtitle,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            if (group.isNew) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primary,
+                                  borderRadius: BorderRadius.circular(
+                                    AppConstants.radiusSm,
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Neu',
+                                  style: TextStyle(
+                                    fontSize: AppTheme.fontSizeSM,
+                                    color: AppTheme.primaryForeground,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
                               ),
-                              if (group.isNew) ...[
-                                const SizedBox(width: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 6,
-                                    vertical: 2,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.primary,
-                                    borderRadius: BorderRadius.circular(
-                                      AppConstants.radiusSm,
-                                    ),
-                                  ),
-                                  child: const Text(
-                                    'Neu',
-                                    style: TextStyle(
-                                      fontSize: AppTheme.fontSizeSM,
-                                      color: AppTheme.primaryForeground,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                              ],
                             ],
+                          ],
+                        ),
+                        AppConstants.gap4,
+                        Text(
+                          'gefunden in ${group.mealCount} ${group.mealCount == 1 ? 'Mahlzeit' : 'Mahlzeiten'}',
+                          style: const TextStyle(
+                            fontSize: AppTheme.fontSizeCaption,
+                            color: AppTheme.mutedForeground,
                           ),
-                          AppConstants.gap4,
-                          Text(
-                            'gefunden in ${group.mealCount} ${group.mealCount == 1 ? 'Mahlzeit' : 'Mahlzeiten'}',
-                            style: const TextStyle(
-                              fontSize: AppTheme.fontSizeCaption,
-                              color: AppTheme.mutedForeground,
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: AppTheme.muted,
-                      ),
-                      child: const Icon(
-                        Icons.info_outline,
-                        size: 18,
-                        color: AppTheme.mutedForeground,
-                      ),
+                  ),
+                  Container(
+                    width: 32,
+                    height: 32,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppTheme.muted,
                     ),
-                  ],
-                ),
-                if (group.replacements.isNotEmpty) ...[
-                  AppConstants.gap12,
-                  SizedBox(
-                    height: 44,
-                    child: ListView.separated(
-                      scrollDirection: Axis.horizontal,
-                      itemCount: group.replacements.length,
-                      separatorBuilder: (c, i) => const SizedBox(width: 8),
-                      itemBuilder: (context, index) {
-                        final repl = group.replacements[index];
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 10,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppTheme.beige,
-                            borderRadius: BorderRadius.circular(
-                              AppConstants.radiusRound,
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (repl.imageUrl != null &&
-                                  isHttpUrl(repl.imageUrl!)) ...[
-                                ClipOval(
-                                  child: CachedNetworkImage(
-                                    imageUrl: repl.imageUrl!,
-                                    width: 24,
-                                    height: 24,
-                                    fit: BoxFit.cover,
-                                    placeholder: (context, _) =>
-                                        ReducedMotion.shimmer(
-                                          context,
-                                          baseColor: AppTheme.muted,
-                                          highlightColor: AppTheme.background,
-                                          child: Container(
-                                            width: 24,
-                                            height: 24,
-                                            color: AppTheme.muted,
-                                          ),
-                                        ),
-                                    errorWidget: (_, _, _) =>
-                                        const IngredientPlaceholder(size: 24),
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                              ],
-                              Text(
-                                repl.name,
-                                style: const TextStyle(
-                                  fontSize: AppTheme.fontSizeCaptionLG,
-                                  color: AppTheme.foreground,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
+                    child: const Icon(
+                      Icons.info_outline,
+                      size: 18,
+                      color: AppTheme.mutedForeground,
                     ),
                   ),
                 ],
+              ),
+              if (group.replacements.isNotEmpty) ...[
+                AppConstants.gap12,
+                SizedBox(
+                  height: 44,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: group.replacements.length,
+                    separatorBuilder: (c, i) => const SizedBox(width: 8),
+                    itemBuilder: (context, index) {
+                      final repl = group.replacements[index];
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.beige,
+                          borderRadius: BorderRadius.circular(
+                            AppConstants.radiusRound,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (repl.imageUrl != null &&
+                                isHttpUrl(repl.imageUrl!)) ...[
+                              ClipOval(
+                                child: CachedNetworkImage(
+                                  imageUrl: repl.imageUrl!,
+                                  width: 24,
+                                  height: 24,
+                                  fit: BoxFit.cover,
+                                  placeholder: (context, _) =>
+                                      ReducedMotion.shimmer(
+                                        context,
+                                        baseColor: AppTheme.muted,
+                                        highlightColor: AppTheme.background,
+                                        child: Container(
+                                          width: 24,
+                                          height: 24,
+                                          color: AppTheme.muted,
+                                        ),
+                                      ),
+                                  errorWidget: (_, _, _) =>
+                                      const IngredientPlaceholder(size: 24),
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                            ],
+                            Text(
+                              repl.name,
+                              style: const TextStyle(
+                                fontSize: AppTheme.fontSizeCaptionLG,
+                                color: AppTheme.foreground,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
               ],
-            ),
+            ],
           ),
         ),
       ),

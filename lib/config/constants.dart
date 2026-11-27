@@ -327,6 +327,7 @@ class AppConstants {
   static const double mascotSizeSm = 80.0;
   static const double mascotSizeMd = 96.0;
   static const double mascotSizeLg = 160.0;
+  static const double splashLogoSize = 96.0;
 
   // Divider
   static const double dividerThickness = 0.5;

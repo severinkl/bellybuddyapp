@@ -11,6 +11,7 @@ import '../../../utils/date_format_utils.dart';
 import '../../../utils/drink_helpers.dart';
 import '../../../widgets/buddy/log_success_hero.dart';
 import '../../../widgets/common/bb_button.dart';
+import '../../../widgets/common/bb_icon_tap.dart';
 import '../../../widgets/common/date_time_chips.dart';
 import '../../../widgets/common/tracker_screen_scaffold.dart';
 import '../entry_logger.dart';
@@ -216,15 +217,12 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen>
           ),
         ),
         const SizedBox(width: AppConstants.spacingSm),
-        GestureDetector(
+        BbIconTap(
+          icon: Icons.close,
+          iconSize: AppConstants.iconSizeSm,
+          color: AppTheme.mutedForeground,
+          semanticLabel: 'Auswahl entfernen',
           onTap: () => ref.read(drinkTrackerProvider.notifier).clearSelection(),
-          child: const Text(
-            '\u{2715}',
-            style: TextStyle(
-              fontSize: AppTheme.fontSizeBody,
-              color: AppTheme.mutedForeground,
-            ),
-          ),
         ),
       ],
     );

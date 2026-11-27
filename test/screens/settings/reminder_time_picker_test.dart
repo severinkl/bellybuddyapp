@@ -60,7 +60,8 @@ void main() {
       handle.dispose();
     });
 
-    testWidgets('a reminder time is a selected button, at least 48 high; '
+    testWidgets('a reminder time is a button (no selected state: a list '
+        'item that opens the picker), at least 48 high; '
         '„Hinzufügen" a button', (tester) async {
       final handle = tester.ensureSemantics();
       await tester.pumpWithProviders(
@@ -70,7 +71,11 @@ void main() {
       final time = tester.getSemantics(find.text('08:00'));
       expect(
         time,
-        isSemantics(isButton: true, isSelected: true, hasTapAction: true),
+        isSemantics(
+          isButton: true,
+          hasSelectedState: false,
+          hasTapAction: true,
+        ),
       );
       expect(time.rect.height, greaterThanOrEqualTo(48));
       final add = tester.getSemantics(find.text('Hinzufügen'));

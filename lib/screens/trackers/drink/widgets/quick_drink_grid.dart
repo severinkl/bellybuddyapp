@@ -65,7 +65,7 @@ class QuickDrinkGrid extends ConsumerWidget {
                       ),
                       decoration: BoxDecoration(
                         color: isSelected
-                            ? AppTheme.info
+                            ? AppTheme.infoText
                             : AppTheme.muted.withValues(alpha: 0.5),
                         borderRadius: BorderRadius.circular(
                           AppConstants.radiusFull,

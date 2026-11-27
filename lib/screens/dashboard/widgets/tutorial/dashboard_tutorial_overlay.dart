@@ -274,36 +274,40 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
                 Positioned(
                   top: safe.top + AppConstants.spacingSm,
                   right: AppConstants.spacingMd,
-                  child: GestureDetector(
-                    key: DashboardTutorialOverlay.skipKey,
-                    behavior: HitTestBehavior.opaque,
-                    onTap: _finish,
-                    child: Container(
-                      key: _skipBox,
-                      constraints: BoxConstraints(
-                        minHeight: AppConstants.minTapTarget,
-                        maxWidth: screenSize.width * _skipMaxWidth,
-                      ),
-                      alignment: Alignment.center,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: AppConstants.spacingMd,
-                        vertical: AppConstants.spacingMd,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.background.withValues(alpha: 0.9),
-                        borderRadius: BorderRadius.circular(
-                          AppConstants.radiusRound,
+                  child: Semantics(
+                    container: true,
+                    button: true,
+                    child: GestureDetector(
+                      key: DashboardTutorialOverlay.skipKey,
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _finish,
+                      child: Container(
+                        key: _skipBox,
+                        constraints: BoxConstraints(
+                          minHeight: AppConstants.minTapTarget,
+                          maxWidth: screenSize.width * _skipMaxWidth,
                         ),
-                      ),
-                      child: const FittedBox(
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          'Überspringen',
-                          maxLines: 1,
-                          style: TextStyle(
-                            fontSize: AppTheme.fontSizeBody,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.foreground,
+                        alignment: Alignment.center,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppConstants.spacingMd,
+                          vertical: AppConstants.spacingMd,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.background.withValues(alpha: 0.9),
+                          borderRadius: BorderRadius.circular(
+                            AppConstants.radiusRound,
+                          ),
+                        ),
+                        child: const FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            'Überspringen',
+                            maxLines: 1,
+                            style: TextStyle(
+                              fontSize: AppTheme.fontSizeBody,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.foreground,
+                            ),
                           ),
                         ),
                       ),

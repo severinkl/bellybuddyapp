@@ -107,6 +107,44 @@ void main() {
       expect(row.rect.height, greaterThanOrEqualTo(48));
       handle.dispose();
     });
+
+    testWidgets('„Passwort ändern" is a button that says whether it is open', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWithProviders(
+        const SettingsAccountScreen(),
+        overrides: _buildOverrides(),
+      );
+      await tester.pump();
+
+      final row = find.text('Passwort ändern').first;
+      await tester.ensureVisible(row);
+      expect(
+        tester.getSemantics(row),
+        isSemantics(
+          label: 'Passwort ändern',
+          isButton: true,
+          hasExpandedState: true,
+          isExpanded: false,
+          hasTapAction: true,
+        ),
+      );
+
+      await tester.tap(row);
+      await tester.pumpAndSettle();
+      expect(
+        tester.getSemantics(find.text('Passwort ändern').first),
+        isSemantics(
+          label: 'Passwort ändern',
+          isButton: true,
+          hasExpandedState: true,
+          isExpanded: true,
+          hasTapAction: true,
+        ),
+      );
+      handle.dispose();
+    });
   });
 }
 

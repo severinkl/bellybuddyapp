@@ -119,31 +119,36 @@ class _PasswordChangeSectionState extends ConsumerState<PasswordChangeSection> {
       children: [
         const Divider(height: 1, color: AppTheme.border),
         // No gap: the row's 48 px hit area keeps the text 12 below the line.
-        GestureDetector(
-          onTap: () => setState(() => _expanded = !_expanded),
-          behavior: HitTestBehavior.opaque,
-          child: TapTarget(
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.lock_outline,
-                  size: 20,
-                  color: AppTheme.mutedForeground,
-                ),
-                const SizedBox(width: 8),
-                const Text(
-                  'Passwort ändern',
-                  style: TextStyle(
-                    fontSize: AppTheme.fontSizeBody,
-                    fontWeight: FontWeight.w500,
+        // A disclosure row: says to assistive tech whether it is open.
+        Semantics(
+          button: true,
+          expanded: _expanded,
+          child: GestureDetector(
+            onTap: () => setState(() => _expanded = !_expanded),
+            behavior: HitTestBehavior.opaque,
+            child: TapTarget(
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.lock_outline,
+                    size: 20,
+                    color: AppTheme.mutedForeground,
                   ),
-                ),
-                const Spacer(),
-                Icon(
-                  _expanded ? Icons.expand_less : Icons.expand_more,
-                  color: AppTheme.mutedForeground,
-                ),
-              ],
+                  const SizedBox(width: AppConstants.spacingSm),
+                  const Text(
+                    'Passwort ändern',
+                    style: TextStyle(
+                      fontSize: AppTheme.fontSizeBody,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const Spacer(),
+                  Icon(
+                    _expanded ? Icons.expand_less : Icons.expand_more,
+                    color: AppTheme.mutedForeground,
+                  ),
+                ],
+              ),
             ),
           ),
         ),
