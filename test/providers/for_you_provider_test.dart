@@ -4,11 +4,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'package:belly_buddy/models/insight_progress.dart';
+import 'package:belly_buddy/models/insights.dart';
 import 'package:belly_buddy/models/knowledge_article.dart';
 import 'package:belly_buddy/models/progress.dart';
 import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/for_you_provider.dart';
+import 'package:belly_buddy/providers/insights_provider.dart';
 import 'package:belly_buddy/providers/knowledge_opened_provider.dart';
 import 'package:belly_buddy/providers/knowledge_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
@@ -57,6 +60,22 @@ class _GatedProgress extends ProgressNotifier {
 
   @override
   Future<Progress?> build() async {
+    ref.watch(currentUserIdProvider);
+    await gate?.future;
+    return value;
+  }
+}
+
+/// Serves [value] once [gate] (when set at build time) completes; follows
+/// the signed-in user like the real one.
+class _GatedInsights extends InsightsNotifier {
+  _GatedInsights(this.value);
+
+  Insights value;
+  Completer<void>? gate;
+
+  @override
+  Future<Insights> build() async {
     ref.watch(currentUserIdProvider);
     await gate?.future;
     return value;
@@ -181,4 +200,57 @@ void main() {
     await c.read(knowledgeOpenedProvider.notifier).markOpened(_laktose.link);
     expect(c.read(forYouProvider), isEmpty);
   });
+
+  test(
+    "another user's Muster items never shape the picks while theirs load",
+    () async {
+      final zwiebel = KnowledgeArticle(
+        title: 'Zwiebel und Co.',
+        link: Uri.parse('https://www.myfodmap.at/zwiebel'),
+        category: 'Gesund verdauen',
+        publishedAt: DateTime.utc(2026, 11, 20, 8),
+      );
+      repo = FakeKnowledgeRepository(articles: [zwiebel]);
+      final insights = _GatedInsights(
+        const Insights(
+          progress: InsightProgress(activeDays: 30, gutFeelingEntries: 30),
+          calendar: [],
+          goodDays: DayColumn(days: 0),
+          hardDays: DayColumn(days: 0),
+          noticed: [
+            Noticed(
+              name: 'Zwiebel',
+              hard: 9,
+              hardDays: 10,
+              good: 1,
+              goodDays: 10,
+            ),
+          ],
+          pick: NothingYetPick(),
+          journey: [],
+        ),
+      );
+      final c = ProviderContainer.test(
+        overrides: [
+          user.override,
+          knowledgeRepositoryProvider.overrideWithValue(repo),
+          progressProvider.overrideWith(() => progress),
+          insightsProvider.overrideWith(() => insights),
+          profileProviderSeededWith(testUserProfile(intolerances: const [])),
+        ],
+      );
+      c.listen(forYouProvider, (_, _) {});
+      await c.read(knowledgeFeedProvider.future);
+      await c.read(knowledgeOpenedProvider.future);
+      await c.read(insightsProvider.future);
+      await pumpEventQueue();
+      expect(links(c), [zwiebel.link], reason: 'user A: the Muster item picks');
+
+      insights.gate = Completer<void>();
+      user.set(c, 'other-user');
+      await pumpEventQueue();
+      expect(c.read(insightsProvider).isReloading, isTrue);
+      expect(links(c), isEmpty, reason: "user B's insights are still loading");
+    },
+  );
 }

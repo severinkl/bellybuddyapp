@@ -148,7 +148,7 @@ abstract final class ProgressCopy {
 
   /// A symptom row to a screen reader: the newest week with means and the
   /// oldest one, if another: „Blähbauch: diese Woche im Schnitt 2,3 von 5;
-  /// vor 11 Wochen 3,1". [weeks] is oldest first, the last the current one;
+  /// vor 11 Wochen 3,1". [weeks] is oldest first, the last one the current week.
   static String trendSemantics(String symptom, List<ProgressWeek> weeks) {
     final mean = trendMean(symptom);
     final withMeans = [

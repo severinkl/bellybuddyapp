@@ -41,6 +41,9 @@ class ProgressScreen extends ConsumerWidget {
     color: AppTheme.mutedForeground,
   );
 
+  static int? _streakOf(AsyncValue<BuddyStatus?> buddy) =>
+      buddy.isReloading || buddy.hasError ? null : buddy.value?.streak;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notifier = ref.read(progressProvider.notifier);
@@ -66,8 +69,9 @@ class ProgressScreen extends ConsumerWidget {
               ? const [_Empty()]
               : _page(
                   progress,
-                  // The Buddy's streak, as on Home (null while it loads or fails).
-                  currentStreak: ref.watch(buddyProvider).value?.streak,
+                  // The Buddy's streak, as on Home (null while it loads, reloads
+                  // for another user or fails).
+                  currentStreak: _streakOf(ref.watch(buddyProvider)),
                   today: ref.read(buddyClockProvider)(),
                 ),
         ),

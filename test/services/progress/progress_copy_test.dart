@@ -190,13 +190,13 @@ void main() {
     ];
 
     test('names newest and oldest week with means, German comma', () {
-      final w = weeks(13, {
+      final w = weeks(12, {
         0: const SymptomMeans(bloating: 3.1, gas: 1, cramps: 1, fullness: 1),
-        12: const SymptomMeans(bloating: 2.3, gas: 1, cramps: 1, fullness: 1),
+        11: const SymptomMeans(bloating: 2.3, gas: 1, cramps: 1, fullness: 1),
       });
       expect(
         ProgressCopy.trendSemantics('Blähbauch', w),
-        'Blähbauch: diese Woche im Schnitt 2,3 von 5; vor 12 Wochen 3,1',
+        'Blähbauch: diese Woche im Schnitt 2,3 von 5; vor 11 Wochen 3,1',
       );
     });
 
