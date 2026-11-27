@@ -132,6 +132,26 @@ void main() {
     expect(StatLevel.fromWire('nope'), isNull);
   });
 
+  test('a malformed item (missing count, wrong type) is dropped, the rest '
+      'stays', () {
+    final stats = PatternStats.fromJson({
+      'window_days': 90,
+      'rated_days': 41,
+      'hard_days': 9,
+      'ready': true,
+      'groups': [_item('a', kind: 'group')..remove('exposed')],
+      'ingredients': [
+        _item('c'),
+        _item('d')..['unexposed_hard'] = 'vier',
+        'not a map',
+        _item('e'),
+      ],
+      'calm': [],
+    });
+    expect(stats.groups, isEmpty);
+    expect([for (final i in stats.ingredients) i.key], ['c', 'e']);
+  });
+
   test('membersOf and loose split ingredients by nestedIn', () {
     final stats = PatternStats.fromJson({
       'window_days': 90,

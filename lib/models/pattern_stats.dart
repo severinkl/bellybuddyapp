@@ -123,8 +123,8 @@ class PatternStats {
     return latest;
   }
 
-  /// Unknown keys are ignored; an item with an unknown level is dropped, as
-  /// are a tested item or proposal this build cannot read. A test it cannot
+  /// Unknown keys are ignored; an item that is malformed or has an unknown
+  /// level is dropped, as are a tested item or proposal this build cannot read. A test it cannot
   /// read is dropped too, but marked ([hasUnreadableTest]).
   factory PatternStats.fromJson(Map<String, dynamic> j) {
     final rawTest = j['test'];
@@ -159,16 +159,12 @@ class PatternStats {
     }
   }
 
-  static List<StatItem> _items(Object? raw) {
-    final items = <StatItem>[];
-    for (final row in (raw as List?) ?? const []) {
-      if (row is Map<String, dynamic> &&
-          StatLevel.fromWire(row['level']) != null) {
-        items.add(StatItem.fromJson(row));
-      }
-    }
-    return items;
-  }
+  /// The items this build can read; a malformed one (unknown level,
+  /// missing field, wrong type) is dropped, never failing the whole fetch.
+  static List<StatItem> _items(Object? raw) => [
+    for (final row in raw is List ? raw : const [])
+      ?_tryParse(row, StatItem.fromJson),
+  ];
 
   /// Ingredients with `nestedIn == group.key`, in server order.
   List<StatItem> membersOf(StatItem group) => [
