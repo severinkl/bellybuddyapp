@@ -24,6 +24,7 @@ import 'package:belly_buddy/providers/home_cover_provider.dart';
 import 'package:belly_buddy/providers/journey_provider.dart';
 import 'package:belly_buddy/providers/journey_rewards_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
+import 'package:belly_buddy/providers/rating_provider.dart';
 import 'package:belly_buddy/providers/recommendation_provider.dart';
 import 'package:belly_buddy/repositories/notification_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
@@ -39,6 +40,7 @@ import 'package:belly_buddy/screens/dashboard/widgets/journey_reward_list_sheet.
 import 'package:belly_buddy/screens/dashboard/widgets/reminders_ask_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/streak_sheet.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/weekly_tips_offer_sheet.dart';
+import 'package:belly_buddy/services/app_version_service.dart';
 import 'package:belly_buddy/services/buddy/buddy_copy.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
@@ -151,6 +153,34 @@ class _FakeEntries extends EntriesNotifier {
   void push(EntriesState s) => state = s;
 }
 
+/// The store's rating dialog, counting the requests.
+class _FakeRatingLauncher implements RatingLauncher {
+  int requests = 0;
+
+  /// [request] throws (a broken store service).
+  bool requestThrows = false;
+
+  /// While set and not completed, [isAvailable] waits for it.
+  Completer<bool>? availableHold;
+
+  @override
+  Future<bool> isAvailable() async => await availableHold?.future ?? true;
+
+  @override
+  Future<void> request() async {
+    requests++;
+    if (requestThrows) throw Exception('no store');
+  }
+
+  @override
+  Future<void> openStoreListing() async {}
+}
+
+class _FakeVersion extends AppVersionService {
+  @override
+  Future<String> currentVersion() async => '1.3.0';
+}
+
 BuddyStatus _status({
   int streak = 4,
   int? goal,
@@ -213,6 +243,9 @@ void main() {
   /// as a gate's redirect does.
   late bool redirectUnlocked;
 
+  /// Whether Home lets his bubble show (false while its tour is up).
+  late bool showsBubble;
+
   // The hero's bubble and actions need ticking Buddies.
   tickBuddiesInTests();
 
@@ -229,6 +262,7 @@ void main() {
     firstTip = FakeFirstTipNotifier();
     opener = RecordingUrlOpener();
     redirectUnlocked = false;
+    showsBubble = true;
   });
 
   tearDown(() {
@@ -293,7 +327,10 @@ void main() {
                     ? SingleChildScrollView(
                         child: Column(
                           children: [
-                            BuddyHero(openUrl: opener.call),
+                            BuddyHero(
+                              openUrl: opener.call,
+                              showsBubble: showsBubble,
+                            ),
                             Consumer(
                               builder: (context, ref, _) => TextButton(
                                 key: _rewardsButton,
@@ -3657,6 +3694,259 @@ void main() {
       await tick(tester);
       await afterWave(tester);
       expect(find.byType(RemindersAskSheet), findsOneWidget);
+    });
+  });
+  group('the rating request after „Muster frei!"', () {
+    late _FakeRatingLauncher launcher;
+    const patternsKey =
+        '${AppConstants.keyBuddyAnnouncedPrefix}u1_patternsUnlocked_once';
+    const tipOfferKey =
+        '${AppConstants.keyBuddyAnnouncedPrefix}u1_firstTipOffer_once';
+
+    setUp(() {
+      journey = true;
+      rewards = const JourneyRewards(earnedDay: 7, patternsFreed: true);
+      launcher = _FakeRatingLauncher();
+      SharedPreferences.setMockInitialValues({});
+    });
+
+    /// „Muster frei!" pending (with [also] after it), as Home offers it.
+    void patternsPending({List<BuddyAnnouncement> also = const []}) {
+      buddy = _FakeBuddy(
+        () => _status(
+          announcements: [BuddyAnnouncement.patternsUnlocked, ...also],
+          announcementKeys: {
+            BuddyAnnouncement.patternsUnlocked: patternsKey,
+            if (also.contains(BuddyAnnouncement.firstTipOffer))
+              BuddyAnnouncement.firstTipOffer: tipOfferKey,
+          },
+        ),
+      );
+    }
+
+    /// „Muster frei!" was celebrated on an earlier visit.
+    void celebratedBefore([Map<String, Object> more = const {}]) =>
+        SharedPreferences.setMockInitialValues({patternsKey: true, ...more});
+
+    Future<ProviderContainer> pumpRating(
+      WidgetTester tester, {
+      List<Override> extra = const [],
+    }) => pumpHero(
+      tester,
+      extra: [
+        ratingLauncherProvider.overrideWithValue(launcher),
+        appVersionServiceProvider.overrideWithValue(_FakeVersion()),
+        ...extra,
+      ],
+    );
+
+    /// The celebration plays, „Muster frei!" opens and closes again.
+    Future<void> backFromPatterns(WidgetTester tester) async {
+      await tick(tester);
+      await afterCelebration(tester);
+      expect(location(), RoutePaths.patternsUnlocked);
+      router.pop();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tick(tester);
+      expect(location(), RoutePaths.dashboard);
+    }
+
+    /// Leaves Home and comes back.
+    Future<void> revisit(WidgetTester tester) async {
+      visible.value = false;
+      await tester.pump();
+      visible.value = true;
+      await tester.pump();
+      await tick(tester);
+    }
+
+    Future<(String?, String?)> recorded() async {
+      final prefs = await SharedPreferences.getInstance();
+      return (
+        prefs.getString('${AppConstants.keyRatingAskedVersionPrefix}u1'),
+        prefs.getString('${AppConstants.keyRatingAskedOnPrefix}u1'),
+      );
+    }
+
+    testWidgets('back on Home after „Muster frei!": the request is made once '
+        'and recorded', (tester) async {
+      patternsPending();
+      await pumpRating(tester);
+      await backFromPatterns(tester);
+
+      expect(controller(tester).currentAction, BuddyAction.celebrate);
+      expect(launcher.requests, 0);
+      await afterCelebration(tester);
+      expect(launcher.requests, 1);
+      expect(await recorded(), ('1.3.0', '2026-11-22'));
+
+      await revisit(tester);
+      await advance(tester, const Duration(seconds: 6));
+      expect(launcher.requests, 1);
+    });
+
+    testWidgets('nothing is shown before or after the request: no sheet, no '
+        'bubble text', (tester) async {
+      patternsPending();
+      await pumpRating(tester);
+      await backFromPatterns(tester);
+
+      expect(controller(tester).bubble, isNull);
+      await tester.pump(buddyActionDuration(BuddyAction.celebrate));
+      await tick(tester);
+      expect(launcher.requests, 1);
+      expect(controller(tester).bubble, isNull);
+      expect(find.byType(BuddySays), findsNothing);
+      expect(find.byType(BottomSheet), findsNothing);
+      expect(location(), RoutePaths.dashboard);
+
+      await advance(tester, const Duration(seconds: 5));
+      expect(controller(tester).bubble, isNull);
+      expect(find.byType(BottomSheet), findsNothing);
+      expect(location(), RoutePaths.dashboard);
+    });
+
+    testWidgets('the day-3 offer still open after the celebration: the offer '
+        'plays, no request this visit; next visit with nothing else due: one '
+        'request', (tester) async {
+      rewards = const JourneyRewards(
+        earnedDay: 7,
+        patternsFreed: true,
+        tipOffer: TipOffer.offered,
+      );
+      patternsPending(also: const [BuddyAnnouncement.firstTipOffer]);
+      await pumpRating(tester);
+      await backFromPatterns(tester);
+
+      await afterWave(tester);
+      expect(find.byType(FirstTipOfferSheet), findsOneWidget);
+      await tester.tapAt(const Offset(10, 10)); // the offer's barrier
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await advance(tester, const Duration(seconds: 6));
+      expect(launcher.requests, 0);
+
+      await revisit(tester);
+      await afterCelebration(tester);
+      expect(launcher.requests, 1);
+    });
+
+    testWidgets('the reminders ask is due: it plays, no request this visit', (
+      tester,
+    ) async {
+      celebratedBefore({AppConstants.keyNotificationModalShown: true});
+      final profile = testUserProfile().withNotifications(false);
+      await pumpRating(
+        tester,
+        extra: [
+          notificationRepositoryProvider.overrideWithValue(
+            FakeNotificationRepository(),
+          ),
+          profileRepositoryProvider.overrideWithValue(
+            FakeProfileRepository()..seedProfile(profile),
+          ),
+          profileProviderSeededWith(profile),
+          insightsProviderSeededWith(lockedInsights(activeDays: 2)),
+        ],
+      );
+      await tick(tester);
+      await afterWave(tester);
+      expect(find.byType(RemindersAskSheet), findsOneWidget);
+      await tester.ensureVisible(find.byKey(RemindersAskSheet.laterKey));
+      await tester.tap(find.byKey(RemindersAskSheet.laterKey));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await advance(tester, const Duration(seconds: 6));
+      expect(launcher.requests, 0);
+      expect(await recorded(), (null, null));
+    });
+
+    testWidgets('a Schlecht entry logged while the cue waited: no request, '
+        'nothing recorded', (tester) async {
+      celebratedBefore();
+      launcher.availableHold = Completer();
+      await pumpRating(tester);
+      await advance(tester, const Duration(seconds: 3));
+      await openSheet(tester);
+      expect(find.text(_sheetTitle), findsOneWidget);
+
+      // Due while „Dein Streak" covers Home: the cue waits.
+      launcher.availableHold!.complete(true);
+      await tester.pump();
+      await advance(tester, const Duration(seconds: 2));
+      expect(launcher.requests, 0);
+
+      entries.push(
+        EntriesState(
+          gutFeelings: [
+            testGutFeelingEntry(
+              trackedAt: DateTime(2026, 11, 22, 13),
+              bloating: 5,
+            ),
+          ],
+        ),
+      );
+      await tester.pump();
+      await tester.tapAt(const Offset(10, 10)); // „Dein Streak"'s barrier
+      await tester.pump();
+      await tester.pump();
+      await afterCelebration(tester);
+      await advance(tester, const Duration(seconds: 3));
+
+      expect(find.text(_sheetTitle), findsNothing);
+      expect(launcher.requests, 0);
+      expect(await recorded(), (null, null));
+    });
+
+    testWidgets('request() throws: logged, recorded, Home keeps working', (
+      tester,
+    ) async {
+      celebratedBefore();
+      launcher.requestThrows = true;
+      await pumpRating(tester);
+      await tick(tester);
+      expect(controller(tester).currentAction, BuddyAction.celebrate);
+      await afterCelebration(tester);
+
+      expect(launcher.requests, 1);
+      expect(await recorded(), ('1.3.0', '2026-11-22'));
+      expect(tester.takeException(), isNull);
+
+      await advance(tester, const Duration(seconds: 5));
+      await tester.tap(find.byType(AnimatedBuddy));
+      await tick(tester);
+      expect(controller(tester).bubble, isNotNull);
+
+      await revisit(tester);
+      await advance(tester, const Duration(seconds: 3));
+      expect(launcher.requests, 1);
+    });
+
+    testWidgets('already asked in this version: never queued', (tester) async {
+      celebratedBefore({
+        '${AppConstants.keyRatingAskedVersionPrefix}u1': '1.3.0',
+        '${AppConstants.keyRatingAskedOnPrefix}u1': '2026-01-02',
+      });
+      await pumpRating(tester);
+      await tick(tester);
+      expect(controller(tester).currentAction, isNot(BuddyAction.celebrate));
+      await advance(tester, const Duration(seconds: 5));
+      expect(launcher.requests, 0);
+    });
+
+    testWidgets('while Home\'s tour is up: never queued or played', (
+      tester,
+    ) async {
+      celebratedBefore();
+      showsBubble = false;
+      await pumpRating(tester);
+      await tick(tester);
+      expect(controller(tester).currentAction, isNot(BuddyAction.celebrate));
+      await advance(tester, const Duration(seconds: 5));
+      expect(launcher.requests, 0);
+      expect(await recorded(), (null, null));
     });
   });
 }
