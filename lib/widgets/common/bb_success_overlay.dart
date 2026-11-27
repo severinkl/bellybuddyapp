@@ -4,6 +4,7 @@ import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../services/haptic_service.dart';
 import 'bb_tap_area.dart';
+import 'tap_target.dart';
 import 'mascot_image.dart';
 
 class BbSuccessOverlay extends StatefulWidget {
@@ -335,10 +336,18 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
 /// An action for [BbSuccessOverlay.actions] whose whole pill is the tap
 /// target (and a button to assistive tech), not only its [child].
 class BbPillAction extends StatelessWidget {
-  const BbPillAction({super.key, required this.child, required this.onTap});
+  const BbPillAction({
+    super.key,
+    required this.child,
+    required this.onTap,
+    this.shrinkWrap = false,
+  });
 
   final Widget child;
   final VoidCallback onTap;
+
+  /// The pill is only as wide as its [child] instead of the full width.
+  final bool shrinkWrap;
 
   @override
   Widget build(BuildContext context) => Semantics(
@@ -346,7 +355,8 @@ class BbPillAction extends StatelessWidget {
     child: GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: child,
+      // Without a pill around it (no hero) the area is still 48 px tall.
+      child: TapTarget(child: child),
     ),
   );
 }
@@ -386,7 +396,7 @@ class _PillActionButton extends StatelessWidget {
       constraints: whole
           ? const BoxConstraints(minHeight: AppConstants.minTapTarget)
           : null,
-      alignment: whole ? Alignment.center : null,
+      alignment: whole && !action.shrinkWrap ? Alignment.center : null,
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.85),
         borderRadius: BorderRadius.circular(AppConstants.radiusFull),
@@ -401,7 +411,7 @@ class _PillActionButton extends StatelessWidget {
       ),
     );
     if (!whole) return pill;
-    return Semantics(
+    final button = Semantics(
       button: true,
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
@@ -409,6 +419,7 @@ class _PillActionButton extends StatelessWidget {
         child: pill,
       ),
     );
+    return action.shrinkWrap ? Center(child: button) : button;
   }
 }
 
