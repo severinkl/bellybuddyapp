@@ -8,6 +8,7 @@ import '../../providers/insights_provider.dart';
 import '../../providers/plus_provider.dart';
 import '../../router/route_names.dart';
 import '../../services/insights/insight_copy.dart';
+import '../../services/progress/progress_copy.dart';
 import '../../widgets/common/bb_async_state.dart';
 import 'widgets/patterns_locked.dart';
 import 'widgets/patterns_plus_locked.dart';
@@ -19,10 +20,14 @@ import 'widgets/patterns_unlocked.dart';
 ///
 /// Shows only [AsyncData]: loading (also while the next user's insights
 /// load) is [BbLoadingState], a failure [BbErrorState] with a retry. Pull to
-/// refresh. Opened without a page below (a cold start on `/patterns`), back
-/// goes Home.
+/// refresh. Under the footer, locked or not, the link to „Dein Verlauf".
+/// Opened without a page below (a cold start on `/patterns`), back goes
+/// Home.
 class PatternsScreen extends ConsumerWidget {
   const PatternsScreen({super.key});
+
+  /// „Deinen Verlauf über 12 Wochen ansehen ›", under the footer.
+  static const progressLinkKey = Key('patterns_progress_link');
 
   static const _footerStyle = TextStyle(
     fontSize: AppTheme.fontSizeCaptionLG,
@@ -61,6 +66,16 @@ class PatternsScreen extends ConsumerWidget {
                   AppConstants.gap4,
                   const Text(InsightCopy.dayDefinitions, style: _footerStyle),
                 ],
+                AppConstants.gap8,
+                Align(
+                  alignment: AlignmentDirectional.centerStart,
+                  child: TextButton(
+                    key: PatternsScreen.progressLinkKey,
+                    onPressed: () => context.push(RoutePaths.progress),
+                    style: TextButton.styleFrom(padding: EdgeInsets.zero),
+                    child: const Text(ProgressCopy.patternsLink),
+                  ),
+                ),
               ],
             ),
           ),

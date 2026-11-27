@@ -17,6 +17,15 @@ DateTime addDays(DateTime d, int days) =>
 /// instant).
 String formatDayMonth(DateTime d) => '${d.day}.${d.month}.';
 
+/// Whole calendar days from [from]'s date to [to]'s (negative when [to] is
+/// earlier). Counted in UTC, so a DST switch never shortens or lengthens a
+/// day.
+int daysBetween(DateTime from, DateTime to) => DateTime.utc(
+  to.year,
+  to.month,
+  to.day,
+).difference(DateTime.utc(from.year, from.month, from.day)).inDays;
+
 /// The Monday of [d]'s week, at midnight.
 DateTime mondayOf(DateTime d) => addDays(d, 1 - d.weekday);
 

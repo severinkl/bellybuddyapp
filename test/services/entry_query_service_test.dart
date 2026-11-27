@@ -827,4 +827,94 @@ void main() {
       expect(result.gutFeelings.single.trackedAt, DateTime(2026, 11, 3, 8));
     });
   });
+
+  group('EntryQueryService.fetchProgressSource', () {
+    final since = DateTime(2026, 9, 7);
+
+    test('query service: four tables, wall-clock since, stool_type '
+        'mapped', () async {
+      List<Map<String, dynamic>> full(Map<String, dynamic> row) =>
+          List.generate(EntryQueryService.trackedAtPageSize, (_) => row);
+      final columns = {
+        'gut_feeling_entries': '*',
+        'toilet_entries': 'tracked_at, stool_type',
+        'meal_entries': 'tracked_at',
+        'drink_entries': 'tracked_at',
+      };
+      final pages = {
+        'gut_feeling_entries': [
+          [
+            {..._gutRow(), 'tracked_at': '2026-11-03T08:00:00.000Z'},
+          ],
+        ],
+        'toilet_entries': [
+          full({'tracked_at': '2026-11-02T08:00:00.000Z', 'stool_type': 4}),
+          [
+            {'tracked_at': '2026-11-01T23:30:00.000Z', 'stool_type': 1},
+          ],
+        ],
+        'meal_entries': [
+          [
+            {'tracked_at': '2026-11-04T08:00:00.000Z'},
+          ],
+        ],
+        'drink_entries': [
+          [
+            {'tracked_at': '2026-11-05T08:00:00.000Z'},
+          ],
+        ],
+      };
+      final builders = <String, MockSupabaseQueryBuilder>{};
+      final filters = <String, SettlableFilterBuilder>{};
+      final paged = <String, _PagedTransform>{};
+      for (final t in columns.keys) {
+        final qb = MockSupabaseQueryBuilder();
+        final f = SettlableFilterBuilder(
+          Future.value(<Map<String, dynamic>>[]),
+        );
+        final p = _PagedTransform(pages[t]!);
+        when(() => client.from(t)).thenAnswer((_) => qb);
+        when(() => qb.select(any())).thenAnswer((_) => f);
+        when(() => f.eq(any(), any())).thenAnswer((_) => f);
+        when(() => f.gte(any(), any())).thenAnswer((_) => f);
+        when(
+          () => f.order(any(), ascending: any(named: 'ascending')),
+        ).thenAnswer((_) => p);
+        builders[t] = qb;
+        filters[t] = f;
+        paged[t] = p;
+      }
+
+      final result = await service.fetchProgressSource(
+        userId: testUserId,
+        since: since,
+      );
+
+      for (final MapEntry(key: t, value: cols) in columns.entries) {
+        // One select per page.
+        final pageCount = pages[t]!.length;
+        verify(() => builders[t]!.select(cols)).called(pageCount);
+        verify(() => filters[t]!.eq('user_id', testUserId)).called(pageCount);
+        // Local midnight, sent as the wall clock in the UTC slot.
+        verify(
+          () => filters[t]!.gte('tracked_at', wallClockToWire(since)),
+        ).called(pageCount);
+      }
+      expect(paged['toilet_entries']!.ranges, [(0, 999), (1000, 1999)]);
+      expect(result.gutFeelings.single.trackedAt, DateTime(2026, 11, 3, 8));
+      expect(result.toilets, hasLength(1001));
+      expect(result.toilets.first, (
+        trackedAt: DateTime(2026, 11, 2, 8),
+        stoolType: 4,
+      ));
+      expect(result.toilets.last, (
+        trackedAt: DateTime(2026, 11, 1, 23, 30),
+        stoolType: 1,
+      ));
+      expect(result.otherTimes.toSet(), {
+        DateTime(2026, 11, 4, 8),
+        DateTime(2026, 11, 5, 8),
+      });
+    });
+  });
 }

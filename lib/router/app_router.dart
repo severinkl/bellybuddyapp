@@ -8,9 +8,11 @@ import '../providers/buddy_onboarding_gate_provider.dart';
 import '../providers/health_consent_provider.dart';
 import '../providers/home_cover_provider.dart';
 import '../providers/plus_provider.dart';
+import '../providers/relief_provider.dart';
 import '../providers/upgrade_gate_provider.dart';
 import '../utils/logger.dart';
 import '../screens/screens.dart';
+import '../services/relief/relief_content.dart';
 import '../config/app_theme.dart';
 import '../widgets/common/bb_bottom_nav.dart';
 import 'route_names.dart';
@@ -23,6 +25,7 @@ class _RouterRefreshNotifier extends ChangeNotifier {
     ref.listen(buddyOnboardingRequiredProvider, (_, _) => notifyListeners());
     ref.listen(buddyOnboardingGatePendingProvider, (_, _) => notifyListeners());
     ref.listen(paywallEnabledProvider, (_, _) => notifyListeners());
+    ref.listen(reliefEnabledProvider, (_, _) => notifyListeners());
   }
 }
 
@@ -114,6 +117,14 @@ final routerProvider = Provider<GoRouter>((ref) {
       // The paywall exists only while the Plus switch is on.
       if (path == RoutePaths.plus && !ref.read(paywallEnabledProvider)) {
         return RoutePaths.dashboard;
+      }
+
+      // Ruhe für den Bauch is invisible while its gate is off; never behind
+      // the paywall.
+      final isRelief =
+          path == RoutePaths.relief || path.startsWith('${RoutePaths.relief}/');
+      if (isRelief && !ref.read(reliefEnabledProvider)) {
+        return RoutePaths.discover;
       }
 
       // Authenticated on auth route → dashboard
@@ -338,6 +349,29 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: RoutePaths.patternsUnlocked,
         name: RouteNames.patternsUnlocked,
         builder: (context, state) => const PatternsUnlockedScreen(),
+      ),
+      // „Dein Verlauf", from Ich and the Muster page; free (no Plus gate).
+      GoRoute(
+        path: RoutePaths.progress,
+        name: RouteNames.progress,
+        builder: (context, state) => const ProgressScreen(),
+      ),
+      // Ruhe für den Bauch; the global redirect gates it.
+      GoRoute(
+        path: RoutePaths.relief,
+        name: RouteNames.relief,
+        builder: (context, state) => const ReliefListScreen(),
+      ),
+      GoRoute(
+        path: RoutePaths.reliefExercise,
+        name: RouteNames.reliefExercise,
+        redirect: (context, state) {
+          final id = state.pathParameters['id']!;
+          final known = exerciseIn(ref.read(reliefContentProvider), id);
+          return known == null ? RoutePaths.relief : null;
+        },
+        builder: (context, state) =>
+            ReliefPlayerScreen(exerciseId: state.pathParameters['id']!),
       ),
       GoRoute(
         path: RoutePaths.ingredientSuggestions,

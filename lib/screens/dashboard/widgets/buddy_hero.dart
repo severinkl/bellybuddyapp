@@ -20,6 +20,7 @@ import '../../../providers/journey_provider.dart';
 import '../../../providers/journey_rewards_provider.dart';
 import '../../../providers/notification_provider.dart';
 import '../../../providers/profile_provider.dart';
+import '../../../providers/rating_provider.dart';
 import '../../../providers/today_provider.dart';
 import '../../../router/route_names.dart';
 import '../../../router/tracker_routes.dart';
@@ -47,8 +48,9 @@ import 'tutorial/tutorial_keys.dart';
 import 'weekly_tips_offer_sheet.dart';
 
 /// Lines the hero plays one after another: the onboarding's welcome (ahead
-/// of all others), the follow-up after a log, the [BuddyAnnouncement]s and
-/// his ask for reminders while they are off ([reminderAskDueProvider]).
+/// of all others), the follow-up after a log, the [BuddyAnnouncement]s,
+/// his ask for reminders while they are off ([reminderAskDueProvider]) and,
+/// last, the store's rating request ([ratingAskDueProvider]).
 enum _Cue {
   welcome(null),
   followUp(null),
@@ -62,7 +64,8 @@ enum _Cue {
   journeyReward(BuddyAnnouncement.journeyReward, endsInSheet: true),
   patternsUnlocked(BuddyAnnouncement.patternsUnlocked, endsInSheet: true),
   firstTipFailed(BuddyAnnouncement.firstTipFailed),
-  remindersAsk(null, endsInSheet: true);
+  remindersAsk(null, endsInSheet: true),
+  ratingAsk(null);
 
   const _Cue(this.announcement, {this.endsInSheet = false});
 
@@ -195,6 +198,14 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// for reminders doesn't follow it (it comes on a later visit of Home).
   bool _sheetCuePlayed = false;
 
+  /// The store's rating request is queued or on stage.
+  bool _ratingAskQueued = false;
+
+  /// A cue that ends in a sheet or page played since Home became visible
+  /// („Muster frei!" aside: coming back from it is the moment): the rating
+  /// request waits for a later visit.
+  bool _visitSheetCuePlayed = false;
+
   /// The Buddy refresh of the latest log ([BuddyEventsNotifier.lastRefresh]).
   Future<void>? _logRefresh;
 
@@ -272,6 +283,12 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     });
     ref.listenManual(reminderAskDueProvider, (_, due) {
       if (_isDue(due)) _afterFrame(_queueRemindersAsk);
+      // Settled not due: the rating request that waited for it may come
+      // ([_ratingAskFits] checks it).
+      _afterFrame(_queueRatingAsk);
+    }, fireImmediately: true);
+    ref.listenManual(ratingAskDueProvider, (_, due) {
+      if (_isRatingDue(due)) _afterFrame(_queueRatingAsk);
     }, fireImmediately: true);
   }
 
@@ -288,11 +305,13 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     if (visible == _visible) return;
     _visible = visible;
     if (visible) {
+      _visitSheetCuePlayed = false;
       _afterFrame(() {
         _consumeEvent();
         _takeAnnouncements();
         _maybeGreet();
         _queueRemindersAsk();
+        _queueRatingAsk();
         _resume();
       });
     } else if (_override == BuddyMood.empathetic) {
@@ -500,6 +519,65 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     _enqueue(const [_Cue.remindersAsk]);
   });
 
+  /// Whether [due] says the rating request is due: settled and true (an
+  /// error or a check still running is not due).
+  static bool _isRatingDue(AsyncValue<bool> due) =>
+      !due.isLoading && !due.hasError && due.value == true;
+
+  /// Whether [reminderAskDueProvider] has settled to not due (false, or
+  /// failed: then his ask never comes either); still checking, it may yet
+  /// come due.
+  bool get _remindersSettledNotDue {
+    final due = ref.read(reminderAskDueProvider);
+    return !due.isLoading && due.value != true;
+  }
+
+  /// Whether the Buddy may ask the store for a rating now (rule 4 of the
+  /// rating prompt and Home's tour): nothing else is queued or on stage, no
+  /// cue of this visit ended in a sheet, his ask for reminders is known not
+  /// to be due and the tour isn't up ([BuddyHero.showsBubble]).
+  bool get _ratingAskFits =>
+      _cues.isEmpty &&
+      _playing == null &&
+      !_cueRunning &&
+      !_visitSheetCuePlayed &&
+      !_remindersAskQueued &&
+      _remindersSettledNotDue &&
+      widget.showsBubble;
+
+  /// Whether every offer of Home ([buddyOffersProvider]) was shown already:
+  /// one still to come (offered but not yet pending) keeps the rating
+  /// request back.
+  Future<bool> _offersShown() async {
+    final buddy = ref.read(buddyProvider.notifier);
+    final shown = await Future.wait([
+      for (final MapEntry(key: kind, value: suffix)
+          in ref.read(buddyOffersProvider).entries)
+        buddy.announcementShown(kind, suffix),
+    ]);
+    return shown.every((s) => s);
+  }
+
+  /// Queues the store's rating request, last, once it is due
+  /// ([ratingAskDueProvider]) and nothing else is asked ([_ratingAskFits],
+  /// every offer shown); it plays once Home is free.
+  void _queueRatingAsk() => _whenVisible(() {
+    if (_ratingAskQueued ||
+        !_ratingAskFits ||
+        !_isRatingDue(ref.read(ratingAskDueProvider))) {
+      return;
+    }
+    _ratingAskQueued = true;
+    unawaited(() async {
+      final shown = await _offersShown();
+      if (mounted && shown && _visible && _ratingAskFits) {
+        _enqueue(const [_Cue.ratingAsk]);
+      } else {
+        _ratingAskQueued = false;
+      }
+    }());
+  });
+
   // --- Log events -------------------------------------------------------------
 
   void _consumeEvent() => _whenVisible(() {
@@ -606,6 +684,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
       // greeting they replaced is still due.
       if (!_cuePlayed) _sayMoodLine();
       _cuePlayed = false;
+      // The rating request may have waited for the queue (e.g. a line
+      // after „Muster frei!"); after a sheet cue the visit's flag holds it.
+      _afterFrame(_queueRatingAsk);
       return;
     }
     if (!_homeFree) {
@@ -621,6 +702,9 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
     // Never a second sheet right after another's: it comes another time.
     if (cue == _Cue.remindersAsk && _sheetCuePlayed) return _endRemindersAsk();
     if (cue.endsInSheet) _sheetCuePlayed = true;
+    if (cue.endsInSheet && cue != _Cue.patternsUnlocked) {
+      _visitSheetCuePlayed = true;
+    }
     _cuePlayed = true;
     switch (cue) {
       case _Cue.welcome:
@@ -657,6 +741,8 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
         _sayAnnouncement(cue);
       case _Cue.remindersAsk:
         _playThen(BuddyAction.wave, _askForReminders);
+      case _Cue.ratingAsk:
+        _playRatingAsk();
     }
   }
 
@@ -873,6 +959,64 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   void _endRemindersAsk() {
     _remindersAskQueued = false;
     _nextCue();
+  }
+
+  /// The store's rating request: checks again whether it is due (it may
+  /// have waited while Home was covered) and still fits; then the Buddy
+  /// celebrates, his bubble down and saying nothing, and the store is asked
+  /// ([_requestRating]). Not any more: it ends silently, nothing recorded.
+  void _playRatingAsk() {
+    if (!_ratingAskPlayable) return _endRatingAskUnplayed();
+    _buddy.hush();
+    _playThen(BuddyAction.celebrate, _requestRating);
+  }
+
+  /// Whether the rating request on stage may go on: Home is free, the tour
+  /// isn't up, nothing queued behind it and it is still due. Not
+  /// [_ratingAskFits]: the cue itself is on stage ([_playing],
+  /// [_cueRunning]) and was queued after the visit's checks.
+  bool get _ratingAskPlayable =>
+      _homeFree &&
+      widget.showsBubble &&
+      _cues.isEmpty &&
+      _isRatingDue(ref.read(ratingAskDueProvider));
+
+  /// After the celebration: the store's own rating dialog (which it may not
+  /// show), recorded as it is made ([recordRatingAsk]), also when the
+  /// request fails; a failure is only logged. Home covered by then, no
+  /// longer due (a „Schlecht" entry or a reload landed meanwhile), or
+  /// something else came up (a cue queued behind it, his ask for reminders
+  /// due or still checking): none, nothing recorded, so no sheet opens over
+  /// the store's dialog (it comes another time).
+  Future<void> _requestRating() async {
+    // Also his ask for reminders known not due: it may have come due
+    // during the celebration.
+    if (!_ratingAskPlayable || !_remindersSettledNotDue) {
+      return _endRatingAskUnplayed();
+    }
+    final launcher = ref.read(ratingLauncherProvider);
+    unawaited(recordRatingAsk(ref));
+    try {
+      await launcher.request();
+    } catch (e, st) {
+      _log.error('The rating request failed', e, st);
+    }
+    if (!mounted) return;
+    _endRatingAsk();
+  }
+
+  /// The rating request ends; the queue goes on.
+  void _endRatingAsk() {
+    _ratingAskQueued = false;
+    _nextCue();
+  }
+
+  /// The rating request ends without asking: as if it never played, so
+  /// his line comes if the queue is done (never after a real request: the
+  /// store's dialog may be up).
+  void _endRatingAskUnplayed() {
+    _cuePlayed = false;
+    _endRatingAsk();
   }
 
   /// The cue on stage ends without counting as shown: its announcement

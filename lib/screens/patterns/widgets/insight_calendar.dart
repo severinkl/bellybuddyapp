@@ -4,6 +4,7 @@ import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../models/insights.dart';
 import '../../../services/insights/insight_copy.dart';
+import '../../../services/progress/progress_copy.dart';
 import '../../../utils/date_format_utils.dart';
 import 'day_class_look.dart';
 
@@ -53,7 +54,7 @@ class InsightCalendar extends StatelessWidget {
               day == null ? const SizedBox.shrink() : _DayCell(day),
           ]),
         AppConstants.gap8,
-        const _Legend(),
+        const DayClassLegend(),
       ],
     );
   }
@@ -64,12 +65,6 @@ class InsightCalendar extends StatelessWidget {
     children: [for (final day in days) Expanded(child: day)],
   );
 }
-
-/// The outline of a day without a gut-feeling entry.
-final _noneBorder = Border.all(
-  color: AppTheme.border,
-  width: AppConstants.borderWidthMd,
-);
 
 /// A day: its number over its class's icon, read as „18. Nov: schwer".
 class _DayCell extends StatelessWidget {
@@ -89,7 +84,7 @@ class _DayCell extends StatelessWidget {
         decoration: BoxDecoration(
           color: look?.fill,
           borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-          border: look == null ? _noneBorder : null,
+          border: look == null ? dayNoneBorder : null,
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -118,9 +113,13 @@ class _DayCell extends StatelessWidget {
   }
 }
 
-/// „gut · mittel · schwer · kein Eintrag", each with its cell's mark.
-class _Legend extends StatelessWidget {
-  const _Legend();
+/// „gut · mittel · schwer · kein Eintrag", each with its cell's mark;
+/// [withNoGutFeeling] adds „ohne Bauchgefühl" with its dot before „kein
+/// Eintrag" („Dein Verlauf").
+class DayClassLegend extends StatelessWidget {
+  const DayClassLegend({super.key, this.withNoGutFeeling = false});
+
+  final bool withNoGutFeeling;
 
   @override
   Widget build(BuildContext context) {
@@ -128,36 +127,47 @@ class _Legend extends StatelessWidget {
       spacing: AppConstants.spacing14,
       runSpacing: AppConstants.spacing6,
       children: [
-        for (final c in DayClass.values)
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            spacing: AppConstants.spacing6,
-            children: [
-              switch (dayClassLook(c)) {
-                final look? => Icon(
-                  look.icon,
-                  size: AppConstants.iconSizeXs,
-                  color: look.color,
-                ),
-                null => Container(
-                  width: AppConstants.iconSizeXs,
-                  height: AppConstants.iconSizeXs,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(AppConstants.radiusXs),
-                    border: _noneBorder,
-                  ),
-                ),
-              },
-              Text(
-                InsightCopy.dayClassLabel(c),
-                style: const TextStyle(
-                  fontSize: AppTheme.fontSizeCaptionLG,
-                  color: AppTheme.mutedForeground,
-                ),
+        for (final c in DayClass.values) ...[
+          if (c == DayClass.none && withNoGutFeeling)
+            _item(
+              const SizedBox.square(
+                dimension: AppConstants.iconSizeXs,
+                child: Center(child: NoGutFeelingDot()),
               ),
-            ],
-          ),
+              ProgressCopy.noGutFeelingLegend,
+            ),
+          _item(switch (dayClassLook(c)) {
+            final look? => Icon(
+              look.icon,
+              size: AppConstants.iconSizeXs,
+              color: look.color,
+            ),
+            null => Container(
+              width: AppConstants.iconSizeXs,
+              height: AppConstants.iconSizeXs,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(AppConstants.radiusXs),
+                border: dayNoneBorder,
+              ),
+            ),
+          }, InsightCopy.dayClassLabel(c)),
+        ],
       ],
     );
   }
+
+  static Widget _item(Widget mark, String label) => Row(
+    mainAxisSize: MainAxisSize.min,
+    spacing: AppConstants.spacing6,
+    children: [
+      mark,
+      Text(
+        label,
+        style: const TextStyle(
+          fontSize: AppTheme.fontSizeCaptionLG,
+          color: AppTheme.mutedForeground,
+        ),
+      ),
+    ],
+  );
 }

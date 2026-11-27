@@ -13,10 +13,15 @@ class AppConfigRepository {
   /// Throws [StateError] if either `minimum_supported_version` or
   /// `latest_version` is missing. A missing `paywall_enabled` means off.
   Future<AppConfig> fetch() async {
-    final rows = await _client.from('app_config').select('key, value').inFilter(
-      'key',
-      ['minimum_supported_version', 'latest_version', 'paywall_enabled'],
-    );
+    final rows = await _client
+        .from('app_config')
+        .select('key, value')
+        .inFilter('key', [
+          'minimum_supported_version',
+          'latest_version',
+          'paywall_enabled',
+          'akuthilfe_enabled',
+        ]);
 
     final byKey = <String, String>{
       for (final row in rows as List)
@@ -34,6 +39,7 @@ class AppConfigRepository {
       minimum: minimum,
       latest: latest,
       paywallEnabled: byKey['paywall_enabled'] == 'true',
+      akuthilfeEnabled: byKey['akuthilfe_enabled'] == 'true',
     );
   }
 }

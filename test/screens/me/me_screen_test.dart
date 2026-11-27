@@ -19,6 +19,7 @@ import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
+import 'package:belly_buddy/providers/rating_provider.dart';
 import 'package:belly_buddy/services/purchases/purchases_gateway.dart';
 import 'package:belly_buddy/services/share_service.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
@@ -29,6 +30,7 @@ import 'package:belly_buddy/router/route_names.dart';
 import 'package:belly_buddy/screens/buddy/streak_goal_picker.dart';
 import 'package:belly_buddy/screens/dashboard/widgets/streak_sheet.dart';
 import 'package:belly_buddy/screens/me/me_screen.dart';
+import 'package:belly_buddy/services/app_version_service.dart';
 import 'package:belly_buddy/utils/buddy_name.dart';
 import 'package:belly_buddy/widgets/buddy/animated_buddy.dart';
 import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
@@ -106,6 +108,7 @@ void main() {
         ...stubRoutes([
           RoutePaths.settings,
           RoutePaths.dashboard,
+          RoutePaths.progress,
           RoutePaths.shares,
           RoutePaths.shareCreate,
           RoutePaths.plus,
@@ -188,8 +191,11 @@ void main() {
     expect(find.text('Version 1.2.3'), findsOneWidget);
     for (final key in [
       MeScreen.streakKey,
+      MeScreen.progressKey,
+      MeScreen.shareKey,
       MeScreen.settingsKey,
       MeScreen.tutorialKey,
+      MeScreen.rateKey,
       MeScreen.feedbackKey,
     ]) {
       expect(find.byKey(key), findsOneWidget);
@@ -502,6 +508,8 @@ void main() {
     expect(find.byType(StreakChip), findsNothing);
     expect(find.byKey(MeScreen.renameKey), findsNothing);
     expect(find.byKey(MeScreen.streakKey), findsNothing);
+    // „Dein Verlauf" does not need a Buddy status.
+    expect(find.byKey(MeScreen.progressKey), findsOneWidget);
     expect(find.byKey(MeScreen.settingsKey), findsOneWidget);
     expect(find.byKey(MeScreen.feedbackKey), findsOneWidget);
   });
@@ -681,6 +689,23 @@ void main() {
     expect(router.canPop(), isTrue);
   });
 
+  testWidgets('„Dein Verlauf" after „Streak & Ziel" pushes /progress', (
+    tester,
+  ) async {
+    await pump(tester);
+
+    expect(find.text('Dein Verlauf'), findsOneWidget);
+    expect(find.text('Wie es dir über die Wochen geht'), findsOneWidget);
+    double top(Key key) => tester.getTopLeft(find.byKey(key)).dy;
+    expect(top(MeScreen.progressKey), greaterThan(top(MeScreen.streakKey)));
+    expect(top(MeScreen.progressKey), lessThan(top(MeScreen.settingsKey)));
+
+    await tapRow(tester, MeScreen.progressKey);
+
+    expect(find.text('page:${RoutePaths.progress}'), findsOneWidget);
+    expect(router.canPop(), isTrue);
+  });
+
   testWidgets('Streak & Ziel opens „Dein Streak"', (tester) async {
     final buddy = await pump(tester);
 
@@ -716,12 +741,14 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(StreakSheet), findsNothing);
 
+    await tester.ensureVisible(find.byType(StreakChip));
     await tester.tap(find.byType(StreakChip));
     await tester.pumpAndSettle();
     expect(find.byType(StreakSheet), findsNothing);
 
     save.complete();
     await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byType(StreakChip));
     await tester.tap(find.byType(StreakChip));
     await tester.pumpAndSettle();
     expect(find.byType(StreakSheet), findsOneWidget);
@@ -785,6 +812,145 @@ void main() {
       find.text('Das Feedback-Formular konnte nicht geöffnet werden.'),
       findsOneWidget,
     );
+  });
+
+  group('Belly Buddy bewerten', () {
+    testWidgets('the row sits directly above „Feedback geben" with its title '
+        'and subtitle', (tester) async {
+      await pump(tester);
+
+      expect(find.text('Belly Buddy bewerten'), findsOneWidget);
+      expect(find.text('Sag anderen, wie dir die App gefällt'), findsOneWidget);
+      final rate = tester.getRect(find.byKey(MeScreen.rateKey));
+      final feedback = tester.getRect(find.byKey(MeScreen.feedbackKey));
+      final tutorial = tester.getRect(find.byKey(MeScreen.tutorialKey));
+      expect(rate.top, greaterThan(tutorial.bottom));
+      expect(rate.bottom, lessThan(feedback.top));
+      expect(feedback.top - rate.bottom, lessThan(AppConstants.spacingLg));
+    });
+
+    testWidgets('two quick taps open the store listing once', (tester) async {
+      final launcher = FakeRatingLauncher()..listingHold = Completer();
+      await pump(
+        tester,
+        extra: [
+          ratingLauncherProvider.overrideWithValue(launcher),
+          appVersionServiceProvider.overrideWithValue(FakeAppVersionService()),
+        ],
+      );
+      await tester.ensureVisible(find.byKey(MeScreen.rateKey));
+      await tester.tap(find.byKey(MeScreen.rateKey));
+      await tester.pump();
+      await tester.tap(find.byKey(MeScreen.rateKey));
+      await tester.pump();
+      launcher.listingHold!.complete();
+      await tester.pumpAndSettle();
+
+      expect(launcher.listings, 1);
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('tap opens the store listing through the launcher', (
+      tester,
+    ) async {
+      final launcher = FakeRatingLauncher();
+      final version = FakeAppVersionService();
+      await pump(
+        tester,
+        extra: [
+          ratingLauncherProvider.overrideWithValue(launcher),
+          appVersionServiceProvider.overrideWithValue(version),
+        ],
+      );
+
+      await tapRow(tester, MeScreen.rateKey);
+
+      expect(launcher.listings, 1);
+      expect(version.opened, 0);
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('listing fails: the store page opens through '
+        'AppVersionService', (tester) async {
+      final launcher = FakeRatingLauncher(listingThrows: true);
+      final version = FakeAppVersionService();
+      await pump(
+        tester,
+        extra: [
+          ratingLauncherProvider.overrideWithValue(launcher),
+          appVersionServiceProvider.overrideWithValue(version),
+        ],
+      );
+
+      await tapRow(tester, MeScreen.rateKey);
+
+      expect(launcher.listings, 1);
+      expect(version.opened, 1);
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('both fail: „Der Store konnte nicht geöffnet werden." is '
+        'shown', (tester) async {
+      await pump(
+        tester,
+        extra: [
+          ratingLauncherProvider.overrideWithValue(
+            FakeRatingLauncher(listingThrows: true),
+          ),
+          appVersionServiceProvider.overrideWithValue(
+            FakeAppVersionService(openStoreThrows: true),
+          ),
+        ],
+      );
+
+      await tapRow(tester, MeScreen.rateKey);
+
+      expect(
+        find.text('Der Store konnte nicht geöffnet werden.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('listing fails and the store page does not launch (false): '
+        'the message is shown', (tester) async {
+      await pump(
+        tester,
+        extra: [
+          ratingLauncherProvider.overrideWithValue(
+            FakeRatingLauncher(listingThrows: true),
+          ),
+          appVersionServiceProvider.overrideWithValue(
+            FakeAppVersionService(openStoreResult: false),
+          ),
+        ],
+      );
+
+      await tapRow(tester, MeScreen.rateKey);
+
+      expect(
+        find.text('Der Store konnte nicht geöffnet werden.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('tapping does not record a rating request', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      await pump(
+        tester,
+        extra: [
+          ratingLauncherProvider.overrideWithValue(FakeRatingLauncher()),
+          appVersionServiceProvider.overrideWithValue(FakeAppVersionService()),
+        ],
+      );
+
+      await tapRow(tester, MeScreen.rateKey);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getKeys().where((k) => k.startsWith('rating_asked_')),
+        isEmpty,
+      );
+    });
   });
 
   testWidgets('text scale 1.3 on a small phone: no overflow', (tester) async {
