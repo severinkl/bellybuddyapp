@@ -55,8 +55,10 @@ String tipWhen(DateTime at, DateTime now) {
 
 /// Entdecken's „Von deiner Berater:in": the tips the user's dietitians
 /// sent, the newest large, older ones as a short list. Absent without a
-/// tip (and while loading or failed). Once shown it stamps the new tips
-/// seen; the „Neu" badge stays until the next load.
+/// tip (and while loading or failed). Once actually visible (its tickers
+/// run: not an offstage shell branch, not under a pushed route or the
+/// splash) it stamps the new tips seen, once per load; the „Neu" badge
+/// stays until the next load.
 class DietitianTipsSection extends ConsumerStatefulWidget {
   const DietitianTipsSection({super.key});
 
@@ -77,9 +79,26 @@ class DietitianTipsSection extends ConsumerStatefulWidget {
 class _DietitianTipsSectionState extends ConsumerState<DietitianTipsSection> {
   bool _showAll = false;
 
+  /// The loaded tips a stamp was scheduled for, so a rebuild of the same
+  /// load schedules none again.
+  List<DietitianTip>? _stampedLoad;
+
+  /// Whether the last build was visible (its tickers run).
+  bool _visible = false;
+
   void _stampSeen() {
-    if (!mounted) return;
+    if (!mounted || !_visible) return;
     unawaited(ref.read(dietitianTipsProvider.notifier).markShownSeen());
+  }
+
+  /// Schedules the „seen" stamp for [tips] once, and only while the
+  /// section is visible; becoming visible rebuilds it (TickerMode).
+  void _scheduleStamp(List<DietitianTip> tips) {
+    _visible = TickerMode.valuesOf(context).enabled;
+    if (!_visible || identical(tips, _stampedLoad)) return;
+    if (!tips.any((t) => t.isNew)) return;
+    _stampedLoad = tips;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _stampSeen());
   }
 
   void _tellFailed() {
@@ -132,9 +151,7 @@ class _DietitianTipsSectionState extends ConsumerState<DietitianTipsSection> {
     final tips = ref.watch(dietitianTipsProvider).value ?? const [];
     if (tips.isEmpty) return const SizedBox.shrink();
     final now = ref.watch(buddyClockProvider)();
-    if (tips.any((t) => t.isNew)) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _stampSeen());
-    }
+    _scheduleStamp(tips);
     final older = tips.skip(1).toList();
     final shownOlder = _showAll ? older : older.take(_olderShown).toList();
 

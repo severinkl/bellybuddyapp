@@ -21,6 +21,11 @@ void main() {
   final now = DateTime(2026, 11, 26, 11);
   late FakeDietitianTipService service;
 
+  /// Whether the section is visible (its tickers run); an offstage shell
+  /// branch or a covered route runs none.
+  final visible = ValueNotifier(true);
+  tearDown(() => visible.value = true);
+
   Future<void> pump(WidgetTester tester, List<DietitianTip> tips) async {
     service = FakeDietitianTipService(tips);
     await tester.pumpWidget(
@@ -35,8 +40,16 @@ void main() {
           localizationsDelegates: germanLocalizations,
           supportedLocales: const [germanLocale],
           locale: germanLocale,
-          home: const Scaffold(
-            body: SingleChildScrollView(child: DietitianTipsSection()),
+          home: Scaffold(
+            body: ValueListenableBuilder<bool>(
+              valueListenable: visible,
+              builder: (_, on, _) => TickerMode(
+                enabled: on,
+                child: const SingleChildScrollView(
+                  child: DietitianTipsSection(),
+                ),
+              ),
+            ),
           ),
         ),
       ),
@@ -187,6 +200,36 @@ void main() {
 
     expect(service.removed, ['t1']);
     expect(find.text('Von deiner Berater:in'), findsNothing);
+  });
+
+  testWidgets('offstage (no tickers): nothing is stamped until visible', (
+    tester,
+  ) async {
+    visible.value = false;
+    await pump(tester, [testTip(id: 'a')]);
+    await tester.pump();
+    expect(service.seenCalls, isEmpty);
+
+    visible.value = true;
+    await tester.pumpAndSettle();
+    expect(service.seenCalls, [
+      ['a'],
+    ]);
+  });
+
+  testWidgets('rebuilds of the same load schedule no further stamp', (
+    tester,
+  ) async {
+    await pump(tester, [testTip(id: 'a')]);
+    expect(service.seenCalls, hasLength(1));
+
+    // The section rebuilds (hidden and shown again), same load.
+    visible.value = false;
+    await tester.pump();
+    visible.value = true;
+    await tester.pumpAndSettle();
+
+    expect(service.seenCalls, hasLength(1));
   });
 
   testWidgets('shown once: the unseen tips are stamped once', (tester) async {

@@ -1,14 +1,20 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/dietitian_tip.dart';
 import '../services/dietitian_tip_service.dart';
 import '../utils/logger.dart';
 import '../utils/retry_helper.dart';
+import 'app_foreground_provider.dart';
 import 'auth_provider.dart';
 import 'user_scoped_refresh.dart';
 
 /// The tips from the user's dietitians, newest first. Empty while nobody
-/// is signed in. Logs ids at most, never a tip's text.
+/// is signed in. Loads again when the app is back in the foreground
+/// ([appForegroundProvider]) and on a push about a tip
+/// (`DiscoverNewsNotifier.pushArrived`), since a kept-alive Entdecken does
+/// not load by itself. Logs ids at most, never a tip's text.
 class DietitianTipsNotifier extends AsyncNotifier<List<DietitianTip>>
     with UserScopedRefresh<List<DietitianTip>> {
   static const _log = AppLogger('DietitianTipsProvider');
@@ -19,6 +25,7 @@ class DietitianTipsNotifier extends AsyncNotifier<List<DietitianTip>>
 
   @override
   Future<List<DietitianTip>> build() async {
+    ref.listen(appForegroundProvider, (_, _) => unawaited(refresh()));
     final userId = ref.watch(currentUserIdProvider);
     if (userId == null) return const [];
     return ref.read(dietitianTipServiceProvider).list();

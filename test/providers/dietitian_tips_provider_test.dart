@@ -5,9 +5,13 @@ import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/dietitian_tips_provider.dart';
 import 'package:belly_buddy/services/dietitian_tip_service.dart';
 
+import '../helpers/app_lifecycle.dart';
 import '../helpers/dietitian_tip_fakes.dart';
 
 void main() {
+  // The foreground signal's AppLifecycleListener needs the binding.
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   late FakeDietitianTipService service;
   late ProviderContainer container;
 
@@ -134,6 +138,23 @@ void main() {
     expect(
       container.read(dietitianTipsProvider).requireValue.map((t) => t.id),
       ['b'],
+    );
+  });
+
+  test('back in the foreground: loads the tips again (a kept-alive '
+      'Entdecken does not)', () async {
+    container.listen(dietitianTipsProvider, (_, _) {});
+    await container.read(dietitianTipsProvider.future);
+    expect(service.listCalls, 1);
+
+    service.tips = [testTip(id: 'c'), ...service.tips];
+    returnFromBackground();
+    await pumpEventQueue();
+
+    expect(service.listCalls, 2);
+    expect(
+      container.read(dietitianTipsProvider).requireValue.map((t) => t.id),
+      ['c', 'a', 'b'],
     );
   });
 }
