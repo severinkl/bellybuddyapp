@@ -179,4 +179,50 @@ void main() {
     expect(c.read(patternStatsProvider).value?.ratedDays, 1);
     expect(c.read(patternStatsProvider).isLocked, isFalse);
   });
+
+  test('a burst of writes: one fetch running, one more after it', () async {
+    final c = make();
+    c.listen(patternStatsProvider, (_, _) {});
+    await c.read(patternStatsProvider.future);
+
+    final slow = Completer<PatternStats>();
+    service.answer = (call) =>
+        call == 2 ? slow.future : Future.value(_stats(call));
+    final revision = c.read(entriesRevisionProvider.notifier) as _Revision;
+    revision.bump();
+    await settle();
+    revision
+      ..bump()
+      ..bump();
+    (c.read(todayProvider.notifier) as _Today).next();
+    await settle();
+    expect(service.calls, 2);
+
+    slow.complete(_stats(2));
+    await settle();
+    expect(service.calls, 3);
+    expect(c.read(patternStatsProvider).value?.ratedDays, 3);
+  });
+
+  test('a page opening right after a fetch does not fetch again', () async {
+    final c = make();
+    c.listen(patternStatsProvider, (_, _) {});
+    await c.read(patternStatsProvider.future);
+
+    c.read(patternStatsProvider.notifier).refreshOnOpen();
+    await settle();
+    expect(service.calls, 1);
+  });
+
+  test('a page opening after a failed first load fetches again', () async {
+    service.answer = (c) async => c == 1 ? throw StateError('x') : _stats(c);
+    final c = make();
+    c.listen(patternStatsProvider, (_, _) {});
+    await c.read(patternStatsProvider.future).then((_) {}, onError: (_) {});
+
+    c.read(patternStatsProvider.notifier).refreshOnOpen();
+    await settle();
+    expect(service.calls, 2);
+    expect(c.read(patternStatsProvider).value?.ratedDays, 2);
+  });
 }

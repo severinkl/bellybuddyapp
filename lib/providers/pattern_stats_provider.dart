@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/pattern_stats.dart';
 import '../services/pattern_stats_service.dart';
+import '../utils/coalesced_runner.dart';
 import '../utils/logger.dart';
 import '../utils/retry_helper.dart';
 import 'auth_provider.dart';
@@ -25,12 +26,22 @@ extension PatternStatsStateX on AsyncValue<PatternStats?> {
 class PatternStatsNotifier extends AsyncNotifier<PatternStats?> {
   static const _log = AppLogger('PatternStats');
 
+  /// A page opening within this of the last fetch does not fetch again.
+  static const _openFreshFor = Duration(seconds: 30);
+
   int _seq = 0;
   int _appliedSeq = 0;
+
+  /// When the last fetch for the current user succeeded.
+  DateTime? _fetchedAt;
+
+  /// The refreshes, coalesced per user.
+  final _refreshes = CoalescedRunner();
 
   @override
   Future<PatternStats?> build() async {
     final userId = ref.watch(currentUserIdProvider);
+    _fetchedAt = null;
     ref
       ..listen(entriesRevisionProvider, (_, _) => unawaited(refresh()))
       // The window and a test's phase follow the day; the provider lives
@@ -38,7 +49,9 @@ class PatternStatsNotifier extends AsyncNotifier<PatternStats?> {
       ..listen(todayProvider, (_, _) => unawaited(refresh()));
     if (userId == null) return null;
     try {
-      return await ref.read(patternStatsServiceProvider).fetch();
+      final value = await ref.read(patternStatsServiceProvider).fetch();
+      _fetchedAt = DateTime.now();
+      return value;
     } catch (e, st) {
       _logFailure('Loading', e, st);
       rethrow;
@@ -46,15 +59,32 @@ class PatternStatsNotifier extends AsyncNotifier<PatternStats?> {
   }
 
   /// A page that shows the stats opened (spec §4.7): fetches again, unless
-  /// a load is running (the first read's, which is fresh anyway).
+  /// a load is running (the first read's, which is fresh anyway) or the
+  /// last fetch succeeded less than 30 s ago.
   void refreshOnOpen() {
-    if (!state.isLoading) unawaited(refresh());
+    if (state.isLoading) return;
+    final fetchedAt = _fetchedAt;
+    if (fetchedAt != null &&
+        DateTime.now().difference(fetchedAt) < _openFreshFor) {
+      return;
+    }
+    unawaited(refresh());
   }
 
-  /// Fetches again, after a running load. Never throws: a failure keeps the last value (an error
-  /// without one stays an error), except a lock, which replaces it. A
-  /// result for another user, or older than one applied, is dropped.
-  Future<void> refresh() async {
+  /// Fetches again, after a running load. Never throws: a failure keeps the
+  /// last value (an error without one stays an error), except a lock,
+  /// which replaces it. A result for another user, or older than one
+  /// applied, is dropped.
+  ///
+  /// Coalesced per user: a call while a refresh runs (a burst of entry
+  /// writes, a day change) makes exactly one more after it and completes
+  /// once that one is done.
+  Future<void> refresh() {
+    if (!ref.mounted) return Future.value();
+    return _refreshes.run(key: ref.read(currentUserIdProvider), _refreshOnce);
+  }
+
+  Future<void> _refreshOnce() async {
     final opRef = ref;
     // A running load (the first one, or after a user change) may have
     // fetched before the write that asks for this: wait for it, so it
@@ -74,6 +104,7 @@ class PatternStatsNotifier extends AsyncNotifier<PatternStats?> {
       final value = await opRef.read(patternStatsServiceProvider).fetch();
       if (seq > _appliedSeq && opRef.isCurrentUser(userId)) {
         _appliedSeq = seq;
+        _fetchedAt = DateTime.now();
         state = AsyncData(value);
       }
     } catch (e, st) {
