@@ -1,5 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import '../utils/drink_helpers.dart' show DrinkIcon;
+import 'drink_icon.dart';
 import 'fodmap_flags.dart';
 
 part 'drink.freezed.dart';

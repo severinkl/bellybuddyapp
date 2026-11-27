@@ -1,7 +1,7 @@
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/drink.dart';
 import 'package:belly_buddy/models/drink_entry.dart';
-import 'package:belly_buddy/utils/drink_helpers.dart' show DrinkIcon;
+import 'package:belly_buddy/models/drink_icon.dart';
 import 'package:belly_buddy/models/fodmap_flags.dart';
 import 'package:belly_buddy/models/gut_feeling_entry.dart';
 import 'package:belly_buddy/models/ingredient_suggestion.dart' as model;

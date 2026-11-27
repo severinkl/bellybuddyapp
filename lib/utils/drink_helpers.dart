@@ -4,9 +4,10 @@ import 'package:intl/intl.dart';
 
 import '../config/constants.dart';
 import '../models/drink.dart';
+import '../models/drink_icon.dart';
 import 'date_format_utils.dart';
 
-enum DrinkIcon { glass, hotCup, cup, bottle, carton, can }
+export '../models/drink_icon.dart';
 
 enum DrinkVessel {
   glass('Glas', 250),
