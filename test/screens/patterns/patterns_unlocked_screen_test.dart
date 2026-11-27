@@ -81,6 +81,30 @@ void main() {
     expect(find.byType(AnimatedBuddy), findsOneWidget);
   });
 
+  testWidgets('Muster frei! reads its title, its line and its button', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await _pump(tester);
+    await tester.pump(const Duration(seconds: 1));
+    // The title is not yet a heading node (the shared overlay draws it
+    // as plain text, see the XA8 report); it is in the tree and read.
+    expect(find.bySemanticsLabel(RegExp('Muster frei!')), findsWidgets);
+    expect(
+      tester.getSemantics(find.byKey(PatternsUnlockedScreen.openKey)),
+      matchesSemantics(
+        label: 'Muster ansehen',
+        isButton: true,
+        isEnabled: true,
+        hasEnabledState: true,
+        isFocusable: true,
+        hasTapAction: true,
+        hasFocusAction: true,
+      ),
+    );
+    handle.dispose();
+  });
+
   testWidgets('„Muster ansehen" replaces it with Muster', (tester) async {
     final router = await _pump(tester);
     await tester.tap(find.byKey(PatternsUnlockedScreen.openKey));
