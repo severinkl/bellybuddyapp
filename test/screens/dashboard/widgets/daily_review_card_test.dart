@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 
+import 'package:belly_buddy/models/ranked_replacement.dart';
 import 'package:belly_buddy/models/alternative_choice.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/plus_status.dart';
@@ -50,10 +51,10 @@ IngredientSuggestionGroup _zwiebel({int recent = 3}) =>
             ),
           ),
       ],
-      replacements: const [
+      replacements: RankedReplacement.inOrder(const [
         ReplacementIngredient(id: 'r-lauch', name: 'Lauchgrün'),
         ReplacementIngredient(id: 'r-schnittlauch', name: 'Schnittlauch'),
-      ],
+      ]),
     );
 
 /// The choice service: answers [upsert] with the stored row, or fails.

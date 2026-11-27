@@ -124,7 +124,7 @@ AlternativePick? pickAlternative({
       if (!chosen.contains((c.group.ingredientId, r.id))) {
         return AlternativePick(
           group: c.group,
-          replacement: r,
+          replacement: r.replacement,
           recentMeals: c.recent,
         );
       }

@@ -10,9 +10,14 @@ void main() {
   late MockIngredientService ingredientService;
   late IngredientRepository repo;
 
+  setUpAll(() => registerFallbackValue(DateTime(2026)));
+
   setUp(() {
     ingredientService = MockIngredientService();
     repo = IngredientRepository(ingredientService);
+    when(
+      () => ingredientService.fetchMealsSince(any(), any()),
+    ).thenAnswer((_) async => []);
   });
 
   group('search', () {
@@ -165,6 +170,79 @@ void main() {
         expect(capturedMealIds, containsAll(['meal-X', 'meal-Y']));
       },
     );
+
+    group('ranking by the meals eaten afterwards', () {
+      void stub() {
+        when(() => ingredientService.fetchSuggestions(any())).thenAnswer(
+          (_) async => [
+            {
+              'id': 'sug-1',
+              'detected_ingredient_id': 'ing-1',
+              'meal_id': null,
+              'helptext': null,
+              'seen_at': null,
+              'created_at': '2026-11-01T10:00:00+00:00',
+              'ingredients': {'id': 'ing-1', 'name': 'Milch'},
+            },
+          ],
+        );
+        when(() => ingredientService.fetchReplacements(any())).thenAnswer(
+          (_) async => [
+            for (final (id, name) in [('r1', 'Mandelmilch'), ('r2', 'Tofu')])
+              {
+                'suggestion_id': 'sug-1',
+                'ingredients': {'id': id, 'name': name, 'image_url': null},
+              },
+          ],
+        );
+        when(
+          () => ingredientService.fetchMealDetails(any()),
+        ).thenAnswer((_) async => []);
+      }
+
+      test('reads the last 180 days and ranks the eaten ones first', () async {
+        stub();
+        when(() => ingredientService.fetchMealsSince(any(), any())).thenAnswer(
+          (_) async => [
+            {
+              'id': 'm1',
+              'tracked_at': '2026-11-05T12:00:00+00:00',
+              'ingredients': ['Tofu (fest, natur)', 'Reis'],
+            },
+          ],
+        );
+
+        final groups = await repo.fetchSuggestionGroups(testUserId);
+
+        final ranked = groups.single.replacements;
+        expect([for (final r in ranked) r.id], ['r2', 'r1']);
+        expect(ranked.first.eatenAfter, 1);
+        final since =
+            verify(
+                  () => ingredientService.fetchMealsSince(
+                    testUserId,
+                    captureAny(),
+                  ),
+                ).captured.single
+                as DateTime;
+        final now = DateTime.now();
+        expect(since, DateTime(now.year, now.month, now.day - 180));
+      });
+
+      test('failing meals: ranked without them', () async {
+        stub();
+        when(
+          () => ingredientService.fetchMealsSince(any(), any()),
+        ).thenThrow(Exception('offline'));
+
+        final groups = await repo.fetchSuggestionGroups(testUserId);
+
+        expect(
+          [for (final r in groups.single.replacements) r.id],
+          ['r1', 'r2'],
+        );
+      });
+    });
 
     test('handles empty suggestion data and returns empty list', () async {
       when(

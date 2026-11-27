@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:belly_buddy/models/alternative_choice.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/utils/suggestion_helpers.dart';
 
@@ -344,6 +345,80 @@ void main() {
       );
 
       expect(groups.single.ingredientName, 'Unbekannte Zutat');
+    });
+  });
+
+  group('SuggestionHelpers.buildGroups ranking', () {
+    Map<String, dynamic> suggestion(String id, String createdAt) => {
+      'id': id,
+      'detected_ingredient_id': 'ing1',
+      'ingredients': {'name': 'Milch'},
+      'meal_id': null,
+      'seen_at': null,
+      'created_at': createdAt,
+    };
+    Map<String, dynamic> replacement(String sid, String id, String name) => {
+      'suggestion_id': sid,
+      'ingredients': {'id': id, 'name': name, 'image_url': null},
+    };
+
+    test('buildGroups ranks each group with the verdicts', () {
+      final groups = SuggestionHelpers.buildGroups(
+        suggestionData: [
+          suggestion('s2', '2026-11-12T09:00:00+00:00'),
+          suggestion('s1', '2026-11-05T09:00:00+00:00'),
+        ],
+        replacementsData: [
+          replacement('s1', 'r1', 'Mandelmilch'),
+          replacement('s1', 'r2', 'Reismilch'),
+          replacement('s2', 'r3', 'Hafermilch'),
+          replacement('s2', 'r4', 'Laktosefreie Milch'),
+        ],
+        mealsData: [],
+        choices: [
+          AlternativeChoice(
+            id: 'c1',
+            ingredientId: 'ing1',
+            ingredientName: 'Milch',
+            replacementId: 'r1',
+            replacementName: 'Mandelmilch',
+            kind: AlternativeChoiceKind.skip,
+            createdAt: DateTime.utc(2026, 11, 6),
+          ),
+          AlternativeChoice(
+            id: 'c2',
+            ingredientId: 'ing1',
+            ingredientName: 'Milch',
+            replacementId: 'r3',
+            replacementName: 'Hafermilch',
+            kind: AlternativeChoiceKind.fits,
+            createdAt: DateTime.utc(2026, 11, 13),
+          ),
+          // Another pairing: no verdict for this group.
+          AlternativeChoice(
+            id: 'c3',
+            ingredientId: 'ing2',
+            ingredientName: 'Sahne',
+            replacementId: 'r2',
+            replacementName: 'Reismilch',
+            kind: AlternativeChoiceKind.fits,
+            createdAt: DateTime.utc(2026, 11, 13),
+          ),
+        ],
+        // Eaten after the first suggestion (05.11.), before the second.
+        recentMeals: [
+          (trackedAt: DateTime(2026, 11, 8, 12), ingredients: ['Reismilch']),
+        ],
+      );
+
+      final ranked = groups.single.replacements;
+      expect([for (final r in ranked) r.id], ['r3', 'r2', 'r4', 'r1']);
+      expect([for (final r in ranked) r.tier], [0, 1, 2, 4]);
+      expect(ranked[1].eatenAfter, 1);
+      expect(
+        [for (final r in groups.single.visibleReplacements) r.id],
+        ['r3', 'r2', 'r4'],
+      );
     });
   });
 }

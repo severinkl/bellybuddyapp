@@ -1,3 +1,4 @@
+import 'package:belly_buddy/models/ranked_replacement.dart';
 import 'package:belly_buddy/models/gut_feeling_entry.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
@@ -47,7 +48,9 @@ IngredientSuggestionGroup _group(
   isNew: false,
   suggestionIds: const [],
   meals: meals,
-  replacements: replacements ?? [_r('${id}1'), _r('${id}2')],
+  replacements: RankedReplacement.inOrder(
+    replacements ?? [_r('${id}1'), _r('${id}2')],
+  ),
 );
 
 void main() {

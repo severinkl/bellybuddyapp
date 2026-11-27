@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:shimmer/shimmer.dart';
 
+import 'package:belly_buddy/models/ranked_replacement.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/replacement_ingredient.dart';
 import 'package:belly_buddy/screens/ingredient_suggestions/widgets/suggestion_card.dart';
@@ -101,20 +102,20 @@ void main() {
   });
 
   group('with disableAnimations the Alternativen placeholders', () {
-    const withImages = IngredientSuggestionGroup(
+    final withImages = IngredientSuggestionGroup(
       ingredientId: 'ing-milk',
       ingredientName: 'Milch',
       ingredientImageUrl: 'https://x.test/milk.jpg',
       mealCount: 2,
       isNew: false,
       suggestionIds: ['s2'],
-      replacements: [
+      replacements: RankedReplacement.inOrder(const [
         ReplacementIngredient(
           id: 'r1',
           name: 'Haferdrink',
           imageUrl: 'https://x.test/oat.jpg',
         ),
-      ],
+      ]),
     );
 
     Future<void> expectCalm(WidgetTester tester, Widget child) async {
@@ -139,7 +140,7 @@ void main() {
     });
 
     testWidgets('do not shimmer in the detail sheet', (tester) async {
-      await expectCalm(tester, const SuggestionDetailModal(group: withImages));
+      await expectCalm(tester, SuggestionDetailModal(group: withImages));
     });
   });
 }

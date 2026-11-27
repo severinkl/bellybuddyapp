@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:belly_buddy/models/ranked_replacement.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/fodmap_flags.dart';
@@ -743,16 +744,16 @@ void main() {
     await pump(
       tester,
       groups: [
-        const IngredientSuggestionGroup(
+        IngredientSuggestionGroup(
           ingredientId: 'ing-1',
           ingredientName: 'Zwiebel',
           mealCount: 1,
           isNew: false,
           suggestionIds: ['sug-1'],
-          replacements: [
+          replacements: RankedReplacement.inOrder(const [
             ReplacementIngredient(id: 'r1', name: 'Schnittlauch'),
             ReplacementIngredient(id: 'r2', name: 'Lauchgrün'),
-          ],
+          ]),
         ),
       ],
     );

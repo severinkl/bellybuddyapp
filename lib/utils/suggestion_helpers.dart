@@ -1,5 +1,7 @@
+import '../models/alternative_choice.dart';
 import '../models/ingredient_suggestion_group.dart';
 import '../models/replacement_ingredient.dart';
+import '../services/alternatives/alternative_ranking.dart';
 import 'url_utils.dart';
 import 'wall_clock.dart';
 
@@ -14,6 +16,9 @@ class _GroupAccumulator {
   final List<String> suggestionIds = [];
   final Set<String> mealIds = {};
   bool hasUnseen = false;
+
+  /// The earliest `created_at` of its suggestions (an instant).
+  DateTime? firstSuggestedAt;
 
   _GroupAccumulator({
     required this.ingredientId,
@@ -81,12 +86,18 @@ abstract final class SuggestionHelpers {
   }
 
   /// Transforms raw suggestion rows + replacement rows + meal rows into
-  /// grouped, sorted [IngredientSuggestionGroup] list.
+  /// grouped, sorted [IngredientSuggestionGroup] list. Each group's
+  /// replacements are ranked ([rankReplacements]) with the user's [choices]
+  /// and [recentMeals] (the last [rankingMealDays] days).
   static List<IngredientSuggestionGroup> buildGroups({
     required List<Map<String, dynamic>> suggestionData,
     required List<Map<String, dynamic>> replacementsData,
     required List<Map<String, dynamic>> mealsData,
+    List<AlternativeChoice> choices = const [],
+    List<MealIngredients> recentMeals = const [],
   }) {
+    final verdicts = AlternativeVerdicts(choices);
+
     // Index meals by id
     final mealsById = <String, MealDetail>{};
     for (final row in mealsData) {
@@ -123,6 +134,12 @@ abstract final class SuggestionHelpers {
       final mealId = row['meal_id'] as String?;
       if (mealId != null) acc.mealIds.add(mealId);
       if (row['seen_at'] == null) acc.hasUnseen = true;
+      final createdAt = row['created_at'] as String?;
+      if (createdAt != null) {
+        final at = DateTime.parse(createdAt);
+        final first = acc.firstSuggestedAt;
+        if (first == null || at.isBefore(first)) acc.firstSuggestedAt = at;
+      }
     }
 
     // Build lookup: suggestion_id → ingredient_id
@@ -189,7 +206,13 @@ abstract final class SuggestionHelpers {
             isNew: acc.hasUnseen,
             suggestionIds: acc.suggestionIds,
             meals: meals,
-            replacements: replacements,
+            replacements: rankReplacements(
+              replacements,
+              verdicts: verdicts.forIngredient(acc.ingredientId),
+              skippedBaseNames: verdicts.skippedBaseNames,
+              meals: recentMeals,
+              since: acc.firstSuggestedAt,
+            ),
           );
         }).toList()..sort(
           (a, b) => a.ingredientName.toLowerCase().compareTo(

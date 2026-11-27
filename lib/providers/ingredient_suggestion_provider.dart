@@ -1,8 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/ingredient_suggestion_group.dart';
 import '../repositories/ingredient_repository.dart';
+import '../services/alternatives/alternative_ranking.dart';
 import '../utils/coalesced_runner.dart';
 import '../utils/logger.dart';
+import 'alternative_choices_provider.dart';
 import 'auth_provider.dart';
 
 class IngredientSuggestionNotifier
@@ -20,7 +22,24 @@ class IngredientSuggestionNotifier
   @override
   AsyncValue<List<IngredientSuggestionGroup>> build() {
     _seenIds.clear();
+    // A choice („Passt für mich", „Probiere ich", „Passt nicht für mich")
+    // ranks the replacements again at once, optimistic writes included.
+    ref.listen(alternativeChoicesProvider, (_, next) {
+      final choices = next.value;
+      if (choices != null) {
+        state = state.whenData((g) => rerankGroups(g, choices));
+      }
+    });
     return const AsyncValue.loading();
+  }
+
+  /// [groups] ranked with the choices loaded now; as they come without
+  /// choices while those are loading or failed.
+  List<IngredientSuggestionGroup> _ranked(
+    List<IngredientSuggestionGroup> groups,
+  ) {
+    final choices = ref.read(alternativeChoicesProvider).value;
+    return choices == null ? groups : rerankGroups(groups, choices);
   }
 
   /// Loads the groups; while some are loaded, they stay until the new ones
@@ -45,7 +64,9 @@ class IngredientSuggestionNotifier
     try {
       final repo = ref.read(ingredientRepositoryProvider);
       final groups = await repo.fetchSuggestionGroups(userId);
-      if (ref.isCurrentUser(userId)) state = AsyncValue.data(_keepSeen(groups));
+      if (ref.isCurrentUser(userId)) {
+        state = AsyncValue.data(_keepSeen(_ranked(groups)));
+      }
     } catch (e, st) {
       _log.error('fetchSuggestions failed', e, st);
       if (ref.isCurrentUser(userId) && !state.hasValue) {

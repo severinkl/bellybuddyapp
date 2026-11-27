@@ -363,4 +363,21 @@ void main() {
     expect(c.read(triedAlternativesProvider).map((e) => e.id), ['new', 'old']);
     expect(c.read(chosenAlternativesProvider), hasLength(3));
   });
+
+  test('a „Passt für mich" is chosen (the review offers it no more) but not '
+      '„Probiere ich"', () async {
+    service.onFetch = (_) async => [
+      row('fits', ing: 'i1', choice: 'fits'),
+      row('try', ing: 'i2'),
+    ];
+    final c = make();
+    await c.read(alternativeChoicesProvider.future);
+    expect(c.read(triedAlternativesProvider).map((e) => e.id), ['try']);
+    expect(c.read(chosenAlternativesProvider), {('i1', 'r1'), ('i2', 'r1')});
+    expect(
+      c.read(alternativeChoiceForPairProvider(('i1', 'r1')))?.kind,
+      AlternativeChoiceKind.fits,
+    );
+    expect(c.read(alternativeChoiceForPairProvider(('i1', 'r9'))), isNull);
+  });
 }

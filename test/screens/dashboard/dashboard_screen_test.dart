@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:belly_buddy/models/ranked_replacement.dart';
 import 'package:belly_buddy/models/alternative_choice.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
 import 'package:belly_buddy/models/replacement_ingredient.dart';
@@ -1103,9 +1104,9 @@ void main() {
           meals: [
             MealDetail(id: 'm1', title: 'Mittag', trackedAt: meal.trackedAt),
           ],
-          replacements: const [
+          replacements: RankedReplacement.inOrder(const [
             ReplacementIngredient(id: 'chive', name: 'Schnittlauch'),
-          ],
+          ]),
         ),
       ];
       await tester.pumpWithProviders(
