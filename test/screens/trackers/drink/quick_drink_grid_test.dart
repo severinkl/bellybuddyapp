@@ -277,8 +277,8 @@ void main() {
       expect(find.byKey(QuickDrinkGrid.tileKey('oat')), findsNothing);
     });
 
-    testWidgets('„„Mate" hinzufügen" creates, selects and shows the new drink '
-        'as a tile', (tester) async {
+    testWidgets('„„Zitronenwasser" hinzufügen" creates, selects and shows the '
+        'new drink as a tile', (tester) async {
       await _pump(tester);
       await tester.tap(find.byKey(QuickDrinkGrid.searchTileKey));
       await tester.pump();
@@ -315,7 +315,7 @@ void main() {
       expect(painter.color, AppTheme.mutedForeground);
     });
 
-    testWidgets('every tile is at least 48 px and at 200 % text the grid has '
+    testWidgets('every tile is at least 84 px and at 200 % text the grid has '
         '2 columns without vertical overflow', (tester) async {
       tester.view.physicalSize = const Size(375, 667);
       tester.view.devicePixelRatio = 1;
@@ -324,7 +324,6 @@ void main() {
       final ids = ['water-id', 'tea', 'coffee', 'juice', 'oat'];
       for (final id in [...ids]) {
         final size = tester.getSize(find.byKey(QuickDrinkGrid.tileKey(id)));
-        expect(size.height, greaterThanOrEqualTo(48));
         expect(size.height, greaterThanOrEqualTo(84));
       }
       expect(

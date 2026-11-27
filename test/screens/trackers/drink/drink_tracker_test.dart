@@ -1,7 +1,7 @@
 // ignore_for_file: invalid_use_of_internal_member
 
 import 'package:material_ui/material_ui.dart';
-import 'package:flutter/rendering.dart' show SemanticsNode;
+import 'package:flutter/rendering.dart' show RenderParagraph, SemanticsNode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -687,47 +687,133 @@ void main() {
       expect(find.byType(BuddyReactionView), findsNothing);
     });
 
-    testWidgets('on a 393×852 phone with the keypad open the amount hint '
-        'shows in full above the save button', (tester) async {
+    for (final scale in [1.0, 2.0]) {
+      testWidgets(
+        'on a 393×852 phone at text scale $scale with the keypad open '
+        'the amount hint shows in full above the save button',
+        (tester) async {
+          tester.view
+            ..physicalSize = const Size(393, 852)
+            ..devicePixelRatio = 1
+            ..padding = const FakeViewPadding(top: 59, bottom: 34);
+          tester.platformDispatcher.textScaleFactorTestValue = scale;
+          addTearDown(tester.view.reset);
+          addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+          final container = ProviderContainer.test(overrides: _overrides());
+          addTearDown(container.dispose);
+          await tester.pumpWidget(
+            UncontrolledProviderScope(
+              container: container,
+              child: const MaterialApp(home: DrinkTrackerScreen()),
+            ),
+          );
+          await tester.pump(const Duration(milliseconds: 200));
+          container
+              .read(drinkTrackerProvider.notifier)
+              .toggleDrink(testDrink());
+          await tester.pumpAndSettle();
+
+          final field = find.byKey(DrinkSizeSelector.customAmountKey);
+          await tester.ensureVisible(field);
+          await tester.showKeyboard(field);
+          // The iOS number pad.
+          tester.view.viewInsets = const FakeViewPadding(bottom: 309);
+          await tester.pumpAndSettle();
+          await tester.enterText(field, '99999');
+          await tester.pumpAndSettle();
+
+          const hint = 'Bitte gib 1 bis 3000 ml ein.';
+          expect(find.text(hint), findsOneWidget);
+          final viewport = tester.getRect(
+            find.ancestor(of: field, matching: find.byType(Scrollable)).first,
+          );
+          final hintRect = tester.getRect(find.text(hint));
+          expect(hintRect.top, greaterThanOrEqualTo(viewport.top));
+          // With room to spare: the phone's font sets a taller line than the
+          // test font, and a hint flush with the edge was cut off there.
+          expect(
+            hintRect.bottom,
+            lessThanOrEqualTo(viewport.bottom - AppConstants.spacingMd),
+          );
+          expect(
+            tester
+                .renderObject<RenderParagraph>(find.text(hint))
+                .didExceedMaxLines,
+            isFalse,
+          );
+        },
+      );
+    }
+
+    testWidgets('375×667 at 200 % text with a 41-character drink, 400 ml and '
+        'the search open: no overflow, the tile name ellipsised, the button '
+        'label wrapped', (tester) async {
+      final handle = tester.ensureSemantics();
       tester.view
-        ..physicalSize = const Size(393, 852)
-        ..devicePixelRatio = 1
-        ..padding = const FakeViewPadding(top: 59, bottom: 34);
+        ..physicalSize = const Size(375, 667)
+        ..devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
       addTearDown(tester.view.reset);
-      final container = ProviderContainer.test(overrides: _overrides());
-      addTearDown(container.dispose);
-      await tester.pumpWidget(
-        UncontrolledProviderScope(
-          container: container,
-          child: const MaterialApp(home: DrinkTrackerScreen()),
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      const name = 'Hausgemachter Ingwer-Zitronen-Kurkuma-Tee';
+      expect(name.length, 41);
+      final long = testDrink(id: 'long-id', name: name);
+      final container = ProviderContainer.test(
+        overrides: _overrides(
+          drinkRepo: FakeDrinkRepository()..seedDrinks([testDrink(), long]),
         ),
       );
-      await tester.pump(const Duration(milliseconds: 200));
-      container.read(drinkTrackerProvider.notifier).toggleDrink(testDrink());
-      await tester.pumpAndSettle();
+      addTearDown(container.dispose);
+      final errors = await collectFlutterErrors(() async {
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(home: DrinkTrackerScreen()),
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 200));
+        container.read(drinkTrackerProvider.notifier)
+          ..toggleDrink(long)
+          ..setCustomAmount('400')
+          ..openSearch();
+        await tester.pumpAndSettle();
+      });
+      expect(verticalOverflows(errors), isEmpty);
+      expect(find.byKey(DrinkSearch.searchFieldKey), findsOneWidget);
 
-      final field = find.byKey(DrinkSizeSelector.customAmountKey);
-      await tester.ensureVisible(field);
-      await tester.showKeyboard(field);
-      // The iOS number pad.
-      tester.view.viewInsets = const FakeViewPadding(bottom: 309);
-      await tester.pumpAndSettle();
-      await tester.enterText(field, '99999');
-      await tester.pumpAndSettle();
+      // The tile shows two lines of the name and an ellipsis, and reads the
+      // whole name.
+      final tile = find.byKey(QuickDrinkGrid.tileKey('long-id'));
+      final tileName = tester.renderObject<RenderParagraph>(
+        find.descendant(of: tile, matching: find.text(name)),
+      );
+      expect(tileName.maxLines, 2);
+      expect(tileName.didExceedMaxLines, isTrue);
+      expect(tester.getSemantics(tile).label, name);
 
-      const hint = 'Bitte gib 1 bis 3000 ml ein.';
-      expect(find.text(hint), findsOneWidget);
-      final viewport = tester.getRect(
-        find.ancestor(of: field, matching: find.byType(Scrollable)).first,
+      // The button's label wraps onto more than one line, inside it.
+      final saveLabel = DrinkHelpers.saveLabel(long, 400);
+      final button = find.byKey(DrinkTrackerScreen.saveKey);
+      await tester.ensureVisible(button);
+      await tester.pumpAndSettle();
+      final labelFinder = find.descendant(
+        of: button,
+        matching: find.text(saveLabel),
       );
-      final hintRect = tester.getRect(find.text(hint));
-      expect(hintRect.top, greaterThanOrEqualTo(viewport.top));
-      // With room to spare: the phone's font sets a taller line than the
-      // test font, and a hint flush with the edge was cut off there.
-      expect(
-        hintRect.bottom,
-        lessThanOrEqualTo(viewport.bottom - AppConstants.spacingMd),
-      );
+      final label = tester.renderObject<RenderParagraph>(labelFinder);
+      final oneLine = TextPainter(
+        text: label.text,
+        textDirection: TextDirection.ltr,
+        textScaler: label.textScaler,
+      )..layout();
+      expect(label.size.height, greaterThan(oneLine.height));
+      expect(label.didExceedMaxLines, isFalse);
+      final buttonRect = tester.getRect(button);
+      final labelRect = tester.getRect(labelFinder);
+      expect(labelRect.top, greaterThanOrEqualTo(buttonRect.top));
+      expect(labelRect.bottom, lessThanOrEqualTo(buttonRect.bottom));
+      oneLine.dispose();
+      handle.dispose();
     });
 
     testWidgets('after a save it closes with true for its opener', (
