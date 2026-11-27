@@ -179,7 +179,7 @@ void main() {
 
     expect(find.text('Tipp entfernen?'), findsOneWidget);
     expect(
-      find.text('Deine Berater:in sieht ihn dann nicht mehr als gelesen.'),
+      find.text('Er verschwindet dann auch aus der Liste deiner Berater:in.'),
       findsOneWidget,
     );
 

@@ -123,7 +123,7 @@ class _DietitianTipsSectionState extends ConsumerState<DietitianTipsSection> {
       builder: (ctx) => AlertDialog(
         title: const Text('Tipp entfernen?'),
         content: const Text(
-          'Deine Berater:in sieht ihn dann nicht mehr als gelesen.',
+          'Er verschwindet dann auch aus der Liste deiner Berater:in.',
         ),
         actions: [
           TextButton(
