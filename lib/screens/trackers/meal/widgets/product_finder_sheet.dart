@@ -143,7 +143,7 @@ class _ProductFinderSheetState extends ConsumerState<ProductFinderSheet> {
   /// keeps its text.
   void _rescan() => _finder.reset();
 
-  /// The way back from a product, not-found or failed lookup: to the hits
+  /// The way back from a running, found, not-found or failed lookup: to the hits
   /// it was picked from [from] (the field holds that term again), else
   /// scanning.
   void _back(SearchResults? from) {
@@ -239,7 +239,12 @@ class _ProductFinderSheetState extends ConsumerState<ProductFinderSheet> {
                     onRetry: () => _finder.retry(query: _query.text),
                   ),
               ],
-              LookingUp() => [const ProductFinderLoading()],
+              // The way back while the lookup runs; its answer is dropped.
+              LookingUp(:final from) => [
+                const ProductFinderLoading(),
+                AppConstants.gap16,
+                _backButton(from),
+              ],
               Found(:final product, :final from) => [
                 ProductCard(
                   product: product,

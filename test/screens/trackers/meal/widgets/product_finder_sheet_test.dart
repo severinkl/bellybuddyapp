@@ -661,6 +661,39 @@ void main() {
     expect(fieldText(tester), 'Joghurt');
   });
 
+  testWidgets('while looking up: Nochmal scannen under the spinner; its late '
+      'answer is dropped', (tester) async {
+    final h = _Harness();
+    await h.pump(tester);
+    await _scan(tester);
+    expect(find.text('Suche Produkt …'), findsOneWidget);
+    expect(find.text('Zurück zur Suche'), findsNothing);
+
+    await tester.tap(find.byKey(ProductFinderSheet.rescanKey));
+    await tester.pumpAndSettle();
+    expect(_scannerActive(tester), isTrue);
+    await _answer(
+      tester,
+      h.service.lookupAnswers.single,
+      ProductFound(_product),
+    );
+    expect(find.byKey(ProductFinderSheet.applyKey), findsNothing);
+    expect(_scannerActive(tester), isTrue);
+  });
+
+  testWidgets('while looking up a search hit: Zurück zur Suche goes back to '
+      'the hits', (tester) async {
+    final h = _Harness();
+    await h.pump(tester);
+    await searchAndPick(tester, h);
+    expect(find.text('Suche Produkt …'), findsOneWidget);
+
+    await tester.tap(find.text('Zurück zur Suche'));
+    await tester.pumpAndSettle();
+    expect(find.text('Joghurt Natur'), findsOneWidget);
+    expect(fieldText(tester), 'Joghurt');
+  });
+
   testWidgets('Nochmal scannen from the hits goes to the camera and keeps '
       'the field text', (tester) async {
     final h = _Harness();
