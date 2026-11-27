@@ -140,13 +140,10 @@ class _BbScrollPickerState extends State<BbScrollPicker> {
             childDelegate: ListWheelChildBuilderDelegate(
               childCount: widget.items.length,
               builder: (context, index) {
-                final item = widget.items[index];
-                final isSelected = item == widget.selectedValue;
-                final label =
-                    widget.labelBuilder?.call(item) ?? item.toString();
+                final isSelected = widget.items[index] == widget.selectedValue;
                 return Center(
                   child: Text(
-                    label,
+                    _label(index),
                     style: TextStyle(
                       fontSize: isSelected ? 20 : 16,
                       fontWeight: isSelected

@@ -7,6 +7,8 @@ import '../../../../providers/drink_tracker_provider.dart';
 import '../../../../services/haptic_service.dart';
 import '../../../../widgets/common/bb_labeled_field.dart';
 import '../../../../utils/drink_helpers.dart';
+import '../../../../utils/reduced_motion.dart';
+import '../../../../widgets/common/bb_tap_area.dart';
 
 class DrinkSizeSelector extends ConsumerStatefulWidget {
   const DrinkSizeSelector({super.key});
@@ -170,30 +172,27 @@ class _SizeButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // One size at a time: a radio-like group to assistive tech.
-    return Semantics(
-      container: true,
-      button: true,
+    return BbTapArea(
       selected: isSelected,
-      inMutuallyExclusiveGroup: true,
-      child: GestureDetector(
-        onTap: onTap,
-        child: AnimatedContainer(
-          duration: AppConstants.animFast,
-          padding: const EdgeInsets.symmetric(vertical: AppConstants.spacingMd),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? AppTheme.infoText
-                : AppTheme.muted.withValues(alpha: 0.5),
-            borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-          ),
-          alignment: Alignment.center,
-          child: Text(
-            '$ml ml',
-            style: TextStyle(
-              fontSize: AppTheme.fontSizeBody,
-              fontWeight: FontWeight.w500,
-              color: isSelected ? Colors.white : AppTheme.foreground,
-            ),
+      exclusive: true,
+      tapTarget: false,
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: ReducedMotion.duration(context, AppConstants.animFast),
+        padding: const EdgeInsets.symmetric(vertical: AppConstants.spacingMd),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppTheme.infoText
+              : AppTheme.muted.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+        ),
+        alignment: Alignment.center,
+        child: Text(
+          '$ml ml',
+          style: TextStyle(
+            fontSize: AppTheme.fontSizeBody,
+            fontWeight: FontWeight.w500,
+            color: isSelected ? Colors.white : AppTheme.foreground,
           ),
         ),
       ),

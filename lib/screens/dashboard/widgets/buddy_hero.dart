@@ -230,6 +230,10 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   /// `TickerMode` of the hero (false until the first dependency update).
   bool _visible = false;
 
+  /// A screen reader is on (`MediaQuery.accessibleNavigationOf`, read in
+  /// [didChangeDependencies]).
+  bool _screenReader = false;
+
   /// A cue's sheet or page (the new goal, the weekly-tips offer, a day's
   /// reward, „Muster frei!") that came due while the hero was hidden or
   /// Home was covered ([homeCoveredProvider]); shown once Home is free
@@ -278,6 +282,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _screenReader = MediaQuery.accessibleNavigationOf(context);
     final router = GoRouter.maybeOf(context);
     if (router != _router) {
       _router?.routerDelegate.removeListener(_onRoute);
@@ -576,8 +581,7 @@ class _BuddyHeroState extends ConsumerState<BuddyHero> {
 
   /// [_cueLineDuration], twice as long while a screen reader is on (a slow
   /// listener keeps up with the next line).
-  Duration get _lineHold =>
-      _cueLineDuration * (MediaQuery.accessibleNavigationOf(context) ? 2 : 1);
+  Duration get _lineHold => _cueLineDuration * (_screenReader ? 2 : 1);
 
   void _say(String line) => _speak(line, duration: _lineHold);
 

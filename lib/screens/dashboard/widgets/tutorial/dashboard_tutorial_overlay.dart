@@ -6,6 +6,7 @@ import '../../../../config/app_theme.dart';
 import '../../../../config/constants.dart';
 import '../../../../utils/logger.dart';
 import '../../../../utils/reduced_motion.dart';
+import '../../../../widgets/common/bb_tap_area.dart';
 import 'connector_line.dart';
 import 'spotlight_painter.dart';
 import 'tooltip_bubble.dart';
@@ -274,40 +275,36 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
                 Positioned(
                   top: safe.top + AppConstants.spacingSm,
                   right: AppConstants.spacingMd,
-                  child: Semantics(
-                    container: true,
-                    button: true,
-                    child: GestureDetector(
-                      key: DashboardTutorialOverlay.skipKey,
-                      behavior: HitTestBehavior.opaque,
-                      onTap: _finish,
-                      child: Container(
-                        key: _skipBox,
-                        constraints: BoxConstraints(
-                          minHeight: AppConstants.minTapTarget,
-                          maxWidth: screenSize.width * _skipMaxWidth,
+                  child: BbTapArea(
+                    tapKey: DashboardTutorialOverlay.skipKey,
+                    tapTarget: false,
+                    onTap: _finish,
+                    child: Container(
+                      key: _skipBox,
+                      constraints: BoxConstraints(
+                        minHeight: AppConstants.minTapTarget,
+                        maxWidth: screenSize.width * _skipMaxWidth,
+                      ),
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppConstants.spacingMd,
+                        vertical: AppConstants.spacingMd,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppTheme.background.withValues(alpha: 0.9),
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.radiusRound,
                         ),
-                        alignment: Alignment.center,
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppConstants.spacingMd,
-                          vertical: AppConstants.spacingMd,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppTheme.background.withValues(alpha: 0.9),
-                          borderRadius: BorderRadius.circular(
-                            AppConstants.radiusRound,
-                          ),
-                        ),
-                        child: const FittedBox(
-                          fit: BoxFit.scaleDown,
-                          child: Text(
-                            'Überspringen',
-                            maxLines: 1,
-                            style: TextStyle(
-                              fontSize: AppTheme.fontSizeBody,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.foreground,
-                            ),
+                      ),
+                      child: const FittedBox(
+                        fit: BoxFit.scaleDown,
+                        child: Text(
+                          'Überspringen',
+                          maxLines: 1,
+                          style: TextStyle(
+                            fontSize: AppTheme.fontSizeBody,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.foreground,
                           ),
                         ),
                       ),

@@ -15,6 +15,7 @@ import '../../utils/date_format_utils.dart';
 import '../../screens/dashboard/widgets/tutorial/tutorial_keys.dart';
 import '../../services/haptic_service.dart';
 import '../log_sheet/log_sheet.dart';
+import 'bb_tap_area.dart';
 
 /// The bottom bar: Home · Tagebuch · (+) · Entdecken · Ich. The tabs are the
 /// shell's branches (in that order); the plus in the middle opens the
@@ -239,18 +240,15 @@ class _NavItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // One node per tab: its name, selected when shown, „neu" with the dot.
-    return Semantics(
-      container: true,
-      button: true,
+    return BbTapArea(
+      tapKey: tapKey,
+      onTap: onTap,
       selected: isActive,
       label: label,
       value: badge ? 'neu' : null,
-      child: GestureDetector(
-        key: tapKey,
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: ExcludeSemantics(child: _content()),
-      ),
+      tapTarget: false,
+      excludeChild: true,
+      child: _content(),
     );
   }
 

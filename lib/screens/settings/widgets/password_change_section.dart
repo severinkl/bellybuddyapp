@@ -7,6 +7,8 @@ import '../../../providers/auth_provider.dart';
 import '../../../utils/password_validator.dart';
 import '../../../widgets/common/bb_button.dart';
 import '../../../widgets/common/bb_password_hint.dart';
+import '../../../widgets/common/bb_password_field.dart';
+import '../../../widgets/common/bb_tap_area.dart';
 import '../../../widgets/common/tap_target.dart';
 import '../../../config/constants.dart';
 
@@ -101,10 +103,6 @@ class _PasswordChangeSectionState extends ConsumerState<PasswordChangeSection> {
     }
   }
 
-  /// What the eye of a password field says it does (as `BbPasswordField`).
-  static String _eyeTooltip(bool shown) =>
-      shown ? 'Passwort verbergen' : 'Passwort anzeigen';
-
   String _mapForgotPasswordError(Object e) {
     if (e is AuthApiException && e.code == 'over_email_send_rate_limit') {
       return 'Zu viele Anfragen. Bitte warte einen Moment und versuche es erneut.';
@@ -120,36 +118,30 @@ class _PasswordChangeSectionState extends ConsumerState<PasswordChangeSection> {
         const Divider(height: 1, color: AppTheme.border),
         // No gap: the row's 48 px hit area keeps the text 12 below the line.
         // A disclosure row: says to assistive tech whether it is open.
-        Semantics(
-          button: true,
+        BbTapArea(
           expanded: _expanded,
-          child: GestureDetector(
-            onTap: () => setState(() => _expanded = !_expanded),
-            behavior: HitTestBehavior.opaque,
-            child: TapTarget(
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.lock_outline,
-                    size: 20,
-                    color: AppTheme.mutedForeground,
-                  ),
-                  const SizedBox(width: AppConstants.spacingSm),
-                  const Text(
-                    'Passwort ändern',
-                    style: TextStyle(
-                      fontSize: AppTheme.fontSizeBody,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const Spacer(),
-                  Icon(
-                    _expanded ? Icons.expand_less : Icons.expand_more,
-                    color: AppTheme.mutedForeground,
-                  ),
-                ],
+          onTap: () => setState(() => _expanded = !_expanded),
+          child: Row(
+            children: [
+              const Icon(
+                Icons.lock_outline,
+                size: 20,
+                color: AppTheme.mutedForeground,
               ),
-            ),
+              const SizedBox(width: AppConstants.spacingSm),
+              const Text(
+                'Passwort ändern',
+                style: TextStyle(
+                  fontSize: AppTheme.fontSizeBody,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const Spacer(),
+              Icon(
+                _expanded ? Icons.expand_less : Icons.expand_more,
+                color: AppTheme.mutedForeground,
+              ),
+            ],
           ),
         ),
         AnimatedCrossFade(
@@ -179,7 +171,7 @@ class _PasswordChangeSectionState extends ConsumerState<PasswordChangeSection> {
                 labelText: 'Aktuelles Passwort',
                 prefixIcon: const Icon(Icons.lock_outline),
                 suffixIcon: IconButton(
-                  tooltip: _eyeTooltip(_showCurrentPassword),
+                  tooltip: BbPasswordField.eyeTooltip(!_showCurrentPassword),
                   icon: Icon(
                     _showCurrentPassword
                         ? Icons.visibility_off
@@ -200,7 +192,7 @@ class _PasswordChangeSectionState extends ConsumerState<PasswordChangeSection> {
                 labelText: 'Neues Passwort',
                 prefixIcon: const Icon(Icons.lock_outline),
                 suffixIcon: IconButton(
-                  tooltip: _eyeTooltip(_showNewPassword),
+                  tooltip: BbPasswordField.eyeTooltip(!_showNewPassword),
                   icon: Icon(
                     _showNewPassword ? Icons.visibility_off : Icons.visibility,
                   ),
@@ -235,7 +227,7 @@ class _PasswordChangeSectionState extends ConsumerState<PasswordChangeSection> {
                 labelText: 'Passwort bestätigen',
                 prefixIcon: const Icon(Icons.lock_outline),
                 suffixIcon: IconButton(
-                  tooltip: _eyeTooltip(_showConfirmPassword),
+                  tooltip: BbPasswordField.eyeTooltip(!_showConfirmPassword),
                   icon: Icon(
                     _showConfirmPassword
                         ? Icons.visibility_off

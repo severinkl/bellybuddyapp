@@ -2,7 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../services/haptic_service.dart';
-import '../../../widgets/common/tap_target.dart';
+import '../../../widgets/common/bb_tap_area.dart';
 
 class DietSelector extends StatelessWidget {
   final String? currentDiet;
@@ -28,37 +28,30 @@ class DietSelector extends StatelessWidget {
       runSpacing: AppConstants.spacingSm,
       children: _options.map((diet) {
         final isSelected = (currentDiet ?? 'alles') == diet;
-        return Semantics(
-          container: true,
-          button: true,
+        // The 40 px chip keeps its look inside a 48 px hit area.
+        return BbTapArea(
           selected: isSelected,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () {
-              HapticService.selection();
-              onChanged(diet);
-            },
-            // The 40 px chip keeps its look inside a 48 px hit area.
-            child: TapTarget(
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.spacing20,
-                  vertical: AppConstants.spacing10,
-                ),
-                decoration: BoxDecoration(
-                  color: isSelected ? AppTheme.primary : AppTheme.secondary,
-                  borderRadius: BorderRadius.circular(AppConstants.radiusFull),
-                ),
-                child: Text(
-                  _labels[diet]!,
-                  style: TextStyle(
-                    fontSize: AppTheme.fontSizeBody,
-                    fontWeight: FontWeight.w500,
-                    color: isSelected
-                        ? AppTheme.primaryForeground
-                        : AppTheme.foreground,
-                  ),
-                ),
+          onTap: () {
+            HapticService.selection();
+            onChanged(diet);
+          },
+          child: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppConstants.spacing20,
+              vertical: AppConstants.spacing10,
+            ),
+            decoration: BoxDecoration(
+              color: isSelected ? AppTheme.primary : AppTheme.secondary,
+              borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+            ),
+            child: Text(
+              _labels[diet]!,
+              style: TextStyle(
+                fontSize: AppTheme.fontSizeBody,
+                fontWeight: FontWeight.w500,
+                color: isSelected
+                    ? AppTheme.primaryForeground
+                    : AppTheme.foreground,
               ),
             ),
           ),

@@ -4,6 +4,7 @@ import '../../../config/constants.dart';
 import '../../../services/haptic_service.dart';
 import '../../../widgets/common/bb_icon_tap.dart';
 import '../../../widgets/common/tap_target.dart';
+import '../../../widgets/common/bb_tap_area.dart';
 
 class ReminderTimePicker extends StatelessWidget {
   final List<String> selectedTimes;
@@ -84,62 +85,54 @@ class ReminderTimePicker extends StatelessWidget {
           runSpacing: AppConstants.spacingSm,
           children: [
             for (var i = 0; i < selectedTimes.length; i++)
-              Semantics(
-                container: true,
-                button: true,
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => _editTime(context, i),
-                  child: _Pill(
-                    color: AppTheme.primary,
-                    trailing: selectedTimes.length > 1
-                        ? BbIconTap(
-                            icon: Icons.close,
-                            semanticLabel:
-                                'Uhrzeit ${selectedTimes[i]} entfernen',
-                            iconSize: AppConstants.iconSizeXs,
-                            color: AppTheme.primaryForeground,
-                            onTap: () => _removeTime(i),
-                          )
-                        : null,
-                    child: Text(
-                      selectedTimes[i],
-                      style: const TextStyle(
-                        fontSize: AppTheme.fontSizeBody,
-                        fontWeight: FontWeight.w500,
-                        color: AppTheme.primaryForeground,
-                      ),
+              BbTapArea(
+                tapTarget: false,
+                onTap: () => _editTime(context, i),
+                child: _Pill(
+                  color: AppTheme.primary,
+                  trailing: selectedTimes.length > 1
+                      ? BbIconTap(
+                          icon: Icons.close,
+                          semanticLabel:
+                              'Uhrzeit ${selectedTimes[i]} entfernen',
+                          iconSize: AppConstants.iconSizeXs,
+                          color: AppTheme.primaryForeground,
+                          onTap: () => _removeTime(i),
+                        )
+                      : null,
+                  child: Text(
+                    selectedTimes[i],
+                    style: const TextStyle(
+                      fontSize: AppTheme.fontSizeBody,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.primaryForeground,
                     ),
                   ),
                 ),
               ),
-            Semantics(
-              container: true,
-              button: true,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => _addTime(context),
-                child: const _Pill(
-                  color: AppTheme.secondary,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Icons.add,
-                        size: AppConstants.spacingMd,
+            BbTapArea(
+              tapTarget: false,
+              onTap: () => _addTime(context),
+              child: const _Pill(
+                color: AppTheme.secondary,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.add,
+                      size: AppConstants.spacingMd,
+                      color: AppTheme.foreground,
+                    ),
+                    SizedBox(width: AppConstants.spacingXs),
+                    Text(
+                      'Hinzufügen',
+                      style: TextStyle(
+                        fontSize: AppTheme.fontSizeBody,
+                        fontWeight: FontWeight.w500,
                         color: AppTheme.foreground,
                       ),
-                      SizedBox(width: AppConstants.spacingXs),
-                      Text(
-                        'Hinzufügen',
-                        style: TextStyle(
-                          fontSize: AppTheme.fontSizeBody,
-                          fontWeight: FontWeight.w500,
-                          color: AppTheme.foreground,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),

@@ -6,6 +6,7 @@ import '../../config/constants.dart';
 import '../../models/ingredient_search_result.dart';
 import 'bb_icon_tap.dart';
 import 'bb_labeled_field.dart';
+import 'bb_tap_area.dart';
 import 'tap_target.dart';
 
 /// The „Zutaten" card: the added ingredients as chips, and „+ Hinzufügen",
@@ -254,32 +255,28 @@ class _IngredientSearchState extends State<IngredientSearch> {
                 // Wraps rather than overflows at a large text size.
                 Flexible(
                   // One button; its name says what it adds.
-                  child: Semantics(
-                    container: true,
-                    button: true,
+                  child: BbTapArea(
                     label: 'Zutat hinzufügen',
-                    child: GestureDetector(
-                      onTap: () {
-                        setState(() => _isAdding = true);
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          _focusNode.requestFocus();
-                          // Delay to let the keyboard fully animate in before
-                          // scrolling, otherwise the scroll target is wrong.
-                          Future.delayed(AppConstants.animSlow, _scrollToField);
-                        });
-                      },
-                      // 48 high to tap; the text stays where it was.
-                      child: const TapTarget(
-                        alignment: AlignmentDirectional.centerStart,
-                        child: ExcludeSemantics(
-                          child: Text(
-                            '+ Hinzufügen',
-                            style: TextStyle(
-                              fontSize: AppTheme.fontSizeBody,
-                              color: AppTheme.primaryText,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
+                    tapTarget: false,
+                    excludeChild: true,
+                    onTap: () {
+                      setState(() => _isAdding = true);
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        _focusNode.requestFocus();
+                        // Delay to let the keyboard fully animate in before
+                        // scrolling, otherwise the scroll target is wrong.
+                        Future.delayed(AppConstants.animSlow, _scrollToField);
+                      });
+                    },
+                    // 48 high to tap; the text stays where it was.
+                    child: const TapTarget(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Text(
+                        '+ Hinzufügen',
+                        style: TextStyle(
+                          fontSize: AppTheme.fontSizeBody,
+                          color: AppTheme.primaryText,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ),

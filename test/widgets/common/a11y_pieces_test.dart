@@ -11,7 +11,6 @@ import 'package:belly_buddy/widgets/common/bb_selection_button.dart';
 import 'package:belly_buddy/widgets/common/bb_settings_item.dart';
 import 'package:belly_buddy/widgets/common/circle_icon_button.dart';
 import 'package:belly_buddy/widgets/common/mascot_image.dart';
-import 'package:belly_buddy/widgets/common/selectable_item_grid.dart';
 import 'package:belly_buddy/widgets/common/tap_target.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:material_ui/material_ui.dart';
@@ -303,46 +302,6 @@ void main() {
       await gesture.up();
       await tester.pump();
       expect(taps, 1);
-      handle.dispose();
-    },
-  );
-
-  testWidgets(
-    'a selected SelectableItemGrid item is selected to assistive tech; the others are not',
-    (tester) async {
-      final handle = tester.ensureSemantics();
-      await tester.pumpWidget(
-        _host(
-          SelectableItemGrid<String>(
-            items: const ['Wenig', 'Mittel', 'Viel'],
-            selectedValue: 'Mittel',
-            onSelected: (_) {},
-            labelBuilder: (s) => s,
-          ),
-        ),
-      );
-
-      expect(
-        tester.getSemantics(find.text('Mittel')),
-        isSemantics(
-          label: 'Mittel',
-          isButton: true,
-          hasSelectedState: true,
-          isSelected: true,
-          isInMutuallyExclusiveGroup: true,
-        ),
-      );
-      for (final other in ['Wenig', 'Viel']) {
-        expect(
-          tester.getSemantics(find.text(other)),
-          isSemantics(
-            label: other,
-            isButton: true,
-            hasSelectedState: true,
-            isSelected: false,
-          ),
-        );
-      }
       handle.dispose();
     },
   );

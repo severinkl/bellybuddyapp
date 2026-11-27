@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../utils/date_format_utils.dart';
-import 'tap_target.dart';
+import 'bb_tap_area.dart';
 
 class DateTimeChips extends StatelessWidget {
   const DateTimeChips({
@@ -101,46 +101,38 @@ class _DateTimeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      container: true,
-      button: true,
+    return BbTapArea(
       label: semanticLabel,
       value: semanticValue,
-      child: GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: TapTarget(
-          child: ExcludeSemantics(
-            child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppConstants.spacingMd,
-                vertical: AppConstants.spacing10,
-              ),
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(AppConstants.radiusXl),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    label,
-                    style: const TextStyle(
-                      fontSize: AppTheme.fontSizeSubtitle,
-                      fontWeight: FontWeight.w500,
-                      color: AppTheme.foreground,
-                    ),
-                  ),
-                  const SizedBox(width: AppConstants.spacingSm),
-                  Icon(
-                    icon,
-                    size: AppConstants.iconSizeSm,
-                    color: AppTheme.mutedForeground,
-                  ),
-                ],
+      onTap: onTap,
+      excludeChild: true,
+      child: Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppConstants.spacingMd,
+          vertical: AppConstants.spacing10,
+        ),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(AppConstants.radiusXl),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: AppTheme.fontSizeSubtitle,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.foreground,
               ),
             ),
-          ),
+            const SizedBox(width: AppConstants.spacingSm),
+            Icon(
+              icon,
+              size: AppConstants.iconSizeSm,
+              color: AppTheme.mutedForeground,
+            ),
+          ],
         ),
       ),
     );
