@@ -129,7 +129,10 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     }
   }
 
-  /// The share list is on its way or open: a second tap opens nothing.
+  /// The share list is on its way: a second tap in the same frame opens
+  /// nothing. From the next frame the pushed route covers this screen and
+  /// takes the taps, so the flag is cleared then, not when the push
+  /// completes: a `go` that replaces the stack never completes it.
   bool _openingShare = false;
 
   /// The share row: the list; with no share (or no list) the create screen
@@ -139,9 +142,8 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     _openingShare = true;
     unawaited(ref.read(shareRowBadgeProvider.notifier).markTapped());
     final shares = ref.read(sharesProvider).value;
-    unawaited(
-      context.push(RoutePaths.shares).whenComplete(() => _openingShare = false),
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) => _openingShare = false);
+    unawaited(context.push(RoutePaths.shares));
     // Without a share the create screen goes on top of the list at once.
     if (shares == null || shares.isEmpty) {
       unawaited(context.push(RoutePaths.shareCreate));

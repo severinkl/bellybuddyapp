@@ -239,6 +239,21 @@ void main() {
       expect(find.byKey(MeScreen.shareKey), findsOneWidget);
     });
 
+    testWidgets('after leaving the list by go, the row opens it again', (
+      tester,
+    ) async {
+      shareService.shares = [testShare()];
+      await pump(tester);
+      await tapRow(tester, MeScreen.shareKey);
+      expect(find.text('page:/shares'), findsOneWidget);
+      // A deep link or a tab switch replaces the stack: the push never
+      // completes.
+      router.go(RoutePaths.me);
+      await tester.pumpAndSettle();
+      await tapRow(tester, MeScreen.shareKey);
+      expect(find.text('page:/shares'), findsOneWidget);
+    });
+
     testWidgets('failed list: opens the create screen', (tester) async {
       shareService.failList = true;
       await pump(tester);
