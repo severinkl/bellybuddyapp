@@ -876,6 +876,14 @@ class FakeNotificationRepository implements NotificationRepository {
     String? buddyName,
   }) async => syncCount++;
   @override
+  Future<void> scheduleDailyReview({
+    required int hour,
+    required int minute,
+    String? buddyName,
+  }) async {}
+  @override
+  Future<void> cancelDailyReview() async {}
+  @override
   Future<void> cancelAll() async {}
   @override
   Stream<RemoteMessage> get onForegroundMessage => const Stream.empty();

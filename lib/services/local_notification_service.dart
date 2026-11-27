@@ -6,7 +6,9 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'package:flutter_timezone/flutter_timezone.dart';
 
+import '../router/route_names.dart';
 import '../utils/logger.dart';
+import 'daily_review/daily_review_copy.dart';
 import 'reminder_copy.dart';
 
 class LocalNotificationService {
@@ -17,6 +19,7 @@ class LocalNotificationService {
   // Notification ID ranges
   static const _mealReminderIdBase = 1000;
   static const _moodReminderIdBase = 2000;
+  static const _dailyReviewId = 3000;
 
   // Android channels
   static const _mealReminderChannel = AndroidNotificationChannel(
@@ -30,6 +33,13 @@ class LocalNotificationService {
     'mood_reminders',
     'Bauchgefühl-Erinnerungen',
     description: 'Erinnert dich daran, dein Bauchgefühl einzutragen',
+    importance: Importance.high,
+  );
+
+  static const _dailyReviewChannel = AndroidNotificationChannel(
+    'daily_review',
+    'Tagesrückblick',
+    description: 'Sagt dir Bescheid, wenn dein Tagesrückblick da ist',
     importance: Importance.high,
   );
 
@@ -84,6 +94,14 @@ class LocalNotificationService {
         _moodReminderChannel.name,
         description: _moodReminderChannel.description,
         importance: _moodReminderChannel.importance,
+      ),
+    );
+    await androidPlugin?.createNotificationChannel(
+      AndroidNotificationChannel(
+        _dailyReviewChannel.id,
+        _dailyReviewChannel.name,
+        description: _dailyReviewChannel.description,
+        importance: _dailyReviewChannel.importance,
       ),
     );
 
@@ -264,10 +282,71 @@ class LocalNotificationService {
     _log.debug('cancelled all mood reminders');
   }
 
+  /// Schedules the evening notice that the daily review is there: once,
+  /// today at [hour]:[minute] in [timezone] (it does not repeat), opening
+  /// Home. Replaces a pending one; a time already passed schedules none.
+  static Future<void> scheduleDailyReview({
+    required int hour,
+    required int minute,
+    required String timezone,
+    String? buddyName,
+  }) async {
+    await _plugin.cancel(id: _dailyReviewId);
+    final scheduledDate = todayAt(
+      hour,
+      minute,
+      tz.TZDateTime.now(tz.getLocation(timezone)),
+    );
+    if (scheduledDate == null) {
+      _log.debug('daily review notice: $hour:$minute already passed');
+      return;
+    }
+    await _plugin.zonedSchedule(
+      id: _dailyReviewId,
+      title: 'Belly Buddy',
+      body: DailyReviewCopy.notificationBody(buddyName),
+      scheduledDate: scheduledDate,
+      notificationDetails: NotificationDetails(
+        android: AndroidNotificationDetails(
+          _dailyReviewChannel.id,
+          _dailyReviewChannel.name,
+          channelDescription: _dailyReviewChannel.description,
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: const DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      payload: RoutePaths.dashboard,
+    );
+    _log.debug('daily review notice scheduled for $scheduledDate');
+  }
+
+  /// Cancels the pending daily review notice, if any.
+  static Future<void> cancelDailyReview() async {
+    await _plugin.cancel(id: _dailyReviewId);
+    _log.debug('cancelled the daily review notice');
+  }
+
   /// Cancel all notifications.
   static Future<void> cancelAll() async {
     await _plugin.cancelAll();
     _log.debug('cancelled all notifications');
+  }
+
+  /// Today's [hour]:[minute] in [now]'s time zone, or null once it is not
+  /// after [now] (a one-shot never moves to tomorrow).
+  @visibleForTesting
+  static tz.TZDateTime? todayAt(int hour, int minute, tz.TZDateTime now) {
+    final at = tz.TZDateTime(
+      now.location,
+      now.year,
+      now.month,
+      now.day,
+      hour,
+      minute,
+    );
+    return at.isAfter(now) ? at : null;
   }
 
   /// The next [hour]:[minute] from [now] on, in [now]'s time zone: today,
