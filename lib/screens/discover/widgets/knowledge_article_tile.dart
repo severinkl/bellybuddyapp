@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart';
@@ -27,21 +29,25 @@ Future<void> openArticle(
 
 const _log = AppLogger('KnowledgeArticle');
 
-/// Marks [article] opened („Für dich" leaves it out), then [openArticle]s
-/// it. A failed mark is logged and never keeps it from opening.
+/// Marks [article] opened („Für dich" leaves it out) and [openArticle]s it
+/// right away, without waiting for the mark to be stored. A failed mark is
+/// logged and never keeps it from opening.
 Future<void> markOpenedAndOpen(
   BuildContext context,
   WidgetRef ref,
   KnowledgeArticle article, {
   UrlOpener open = launchUrl,
-}) async {
-  try {
-    await ref.read(knowledgeOpenedProvider.notifier).markOpened(article.link);
-  } catch (e, st) {
-    _log.error('Marking an article opened failed', e, st);
-  }
-  if (!context.mounted) return;
-  await openArticle(context, article, open: open);
+}) {
+  unawaited(
+    ref
+        .read(knowledgeOpenedProvider.notifier)
+        .markOpened(article.link)
+        .catchError(
+          (Object e, StackTrace st) =>
+              _log.error('Marking an article opened failed', e, st),
+        ),
+  );
+  return openArticle(context, article, open: open);
 }
 
 /// One article in the Wissen list: thumbnail, title, „Rezepte · 13. Mär 2025"

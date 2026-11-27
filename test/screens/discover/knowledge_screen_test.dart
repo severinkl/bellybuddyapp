@@ -1,5 +1,8 @@
 import 'package:cached_network_image/cached_network_image.dart';
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -10,6 +13,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/knowledge_article.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
+import 'package:belly_buddy/providers/knowledge_opened_provider.dart';
 import 'package:belly_buddy/providers/knowledge_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/repositories/entry_repository.dart';
@@ -40,6 +44,7 @@ void main() {
     bool settle = true,
     // Seeds a signed-in user's profile with these (the „Für dich" source).
     List<String>? intolerances,
+    List<Override> overrides = const [],
   }) async {
     final router = GoRouter(
       initialLocation: RoutePaths.knowledge,
@@ -62,6 +67,7 @@ void main() {
           profileProviderSeededWith(
             testUserProfile(intolerances: intolerances),
           ),
+        ...overrides,
       ],
     );
     await tester.pumpWidget(
@@ -285,6 +291,29 @@ void main() {
         'Laktose im Alltag',
       ]);
     });
+
+    testWidgets('a pick opens without waiting for the opened write', (
+      tester,
+    ) async {
+      repo = FakeKnowledgeRepository(
+        articles: [...testKnowledgeArticles(), laktose],
+      );
+      final write = Completer<void>();
+      await pump(
+        tester,
+        intolerances: const ['Laktose'],
+        overrides: [
+          knowledgeOpenedProvider.overrideWith(() => _SlowWrite(write.future)),
+        ],
+      );
+
+      await tester.tap(tile(laktose));
+      await tester.pump();
+
+      expect(launches.urls, [laktose.link]);
+      write.complete();
+      await tester.pumpAndSettle();
+    });
   });
 
   testWidgets('error without a copy offers a retry', (tester) async {
@@ -428,4 +457,19 @@ void main() {
 
     expect(tester.takeException(), isNull);
   });
+}
+
+/// Marks at once, but its write waits for [_write].
+class _SlowWrite extends KnowledgeOpenedNotifier {
+  _SlowWrite(this._write);
+  final Future<void> _write;
+
+  @override
+  Future<Set<String>> build() async => const {};
+
+  @override
+  Future<void> markOpened(Uri link) async {
+    state = AsyncData({...?state.value, link.toString()});
+    await _write;
+  }
 }
