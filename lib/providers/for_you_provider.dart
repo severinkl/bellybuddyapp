@@ -7,6 +7,7 @@ import '../utils/settled_value.dart';
 import 'insights_provider.dart';
 import 'knowledge_opened_provider.dart';
 import 'knowledge_provider.dart';
+import 'plus_provider.dart';
 import 'profile_provider.dart';
 import 'progress_provider.dart';
 
@@ -22,9 +23,10 @@ import 'progress_provider.dart';
 /// and a value is left out while it is the previous user's (reloading
 /// after a user change) or failed.
 ///
-/// Subscription seam: `includePatterns` is `true` until the subscription
-/// track replaces it with „Plus access is open", so a locked user's reason
-/// line never leaks the paid Muster result. Knowledge itself stays free.
+/// The Muster are a Belly Buddy Plus feature: they shape the picks only
+/// while Plus is not locked ([plusLockedProvider]; switch off or status
+/// unknown counts as open), so a locked user's reason line never leaks the
+/// paid Muster result. Knowledge itself stays free.
 final forYouProvider = Provider<List<ForYouPick>>((ref) {
   final feed = ref.watch(knowledgeFeedProvider).value;
   final profile = ref.watch(_forYouProfileProvider);
@@ -33,7 +35,10 @@ final forYouProvider = Provider<List<ForYouPick>>((ref) {
     return const [];
   }
   // Watched only once the rest is there, so they load only when needed.
-  final insights = ref.watch(insightsProvider).currentValue;
+  final includePatterns = !ref.watch(plusLockedProvider);
+  final insights = includePatterns
+      ? ref.watch(insightsProvider).currentValue
+      : null;
   final progress = ref.watch(progressProvider).currentValue;
   return pickForYou(
     feed.articles,
@@ -41,7 +46,7 @@ final forYouProvider = Provider<List<ForYouPick>>((ref) {
       profile: profile.value,
       insights: insights,
       recent: progress?.recent,
-      includePatterns: true,
+      includePatterns: includePatterns,
     ),
     opened: opened,
   );
