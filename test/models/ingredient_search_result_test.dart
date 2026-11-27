@@ -39,6 +39,32 @@ void main() {
       expect(result, hasLength(1));
     });
 
+    test('the own row wins over a shared row with the same matched word', () {
+      final result = IngredientSearchResult.rank(
+        [
+          _r('1', 'Tomate', 'Paradeiser'),
+          const IngredientSearchResult(
+            id: '2',
+            name: 'Paradeiser',
+            matchedName: ' paradeiser ',
+            isOwn: true,
+          ),
+        ],
+        query: 'parad',
+        limit: 10,
+      );
+      expect(result.map((r) => r.id), ['2']);
+    });
+
+    test('a word after a comma or dot is a word start', () {
+      final result = IngredientSearchResult.rank(
+        [_r('1', 'a', 'Xraps'), _r('2', 'b', 'Öl, Raps')],
+        query: 'raps',
+        limit: 10,
+      );
+      expect(result.map((r) => r.id), ['2', '1']);
+    });
+
     test('exact, then prefix, then word start, then contains', () {
       final result = IngredientSearchResult.rank(
         [

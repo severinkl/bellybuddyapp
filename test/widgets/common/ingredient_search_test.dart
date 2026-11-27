@@ -169,6 +169,7 @@ void main() {
     await pump(tester, synonyms: const {'haferkleie ': 'Haferkleie'});
     await type(tester, 'haferk');
 
+    expect(find.text('Haferkleie'), findsWidgets);
     expect(find.textContaining('='), findsNothing);
   });
 

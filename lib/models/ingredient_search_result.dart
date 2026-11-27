@@ -24,8 +24,10 @@ class IngredientSearchResult {
   bool get showsCanonicalName =>
       matchedName.trim().toLowerCase() != name.trim().toLowerCase();
 
-  /// [results] whose [matchedName] contains [query], without duplicates (by id), best
-  /// matches first, at most [limit]: the exact word, then words starting
+  /// [results] whose [matchedName] contains [query], without duplicates (by
+  /// id; a shared row found under the same word as the user's own row, ignoring
+  /// case and outer spaces, is dropped: the own row wins), best matches
+  /// first, at most [limit]: the exact word, then words starting
   /// with it, then words with a word starting with it, then any other word
   /// containing it (ignoring case). Within each, shorter words first, then
   /// alphabetically.
@@ -35,7 +37,7 @@ class IngredientSearchResult {
     required int limit,
   }) {
     final q = query.trim().toLowerCase();
-    final wordStart = RegExp('(^|[\\s\\-(/])${RegExp.escape(q)}');
+    final wordStart = RegExp('(^|[\\s\\-/(),.])${RegExp.escape(q)}');
     int tier(IngredientSearchResult r) {
       final name = r.matchedName.toLowerCase();
       if (name == q) return 0;
@@ -44,10 +46,19 @@ class IngredientSearchResult {
       return 3;
     }
 
-    final matches = {
+    String word(IngredientSearchResult r) => r.matchedName.trim().toLowerCase();
+    final found = {
       for (final r in results)
         if (r.matchedName.toLowerCase().contains(q)) r.id: r,
     }.values.toList();
+    final ownWords = {
+      for (final r in found)
+        if (r.isOwn) word(r),
+    };
+    final matches = [
+      for (final r in found)
+        if (r.isOwn || !ownWords.contains(word(r))) r,
+    ];
     matches.sort((a, b) {
       final byTier = tier(a).compareTo(tier(b));
       if (byTier != 0) return byTier;
