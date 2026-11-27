@@ -246,6 +246,26 @@ void main() {
     expect(router.canPop(), isFalse);
   });
 
+  testWidgets('the name holds at most 40 code points, as core counts', (
+    tester,
+  ) async {
+    await pump(tester);
+    // One grapheme, five code points: 44 for core, 40 for Flutter's
+    // maxLength.
+    const family = '\u{1F468}\u200D\u{1F469}\u200D\u{1F467}';
+    await typeName(tester, '${'x' * 39}$family');
+    final text = tester
+        .widget<TextField>(find.byType(TextField))
+        .controller!
+        .text;
+    expect(text.runes.length, lessThanOrEqualTo(40));
+    await typeName(tester, 'x' * 45);
+    expect(
+      tester.widget<TextField>(find.byType(TextField)).controller!.text,
+      'x' * 40,
+    );
+  });
+
   testWidgets('a 409 message is shown and the form is kept', (tester) async {
     await pump(tester);
     service.failWith = const ShareException(

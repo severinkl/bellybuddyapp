@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
@@ -141,14 +142,7 @@ class _ShareCreateScreenState extends ConsumerState<ShareCreateScreen> {
                     textField: true,
                     child: TextField(
                       controller: _name,
-                      maxLength: _maxNameLength,
-                      buildCounter:
-                          (
-                            _, {
-                            required currentLength,
-                            required isFocused,
-                            maxLength,
-                          }) => null,
+                      inputFormatters: const [_CodePointLimit(_maxNameLength)],
                       textCapitalization: TextCapitalization.words,
                       onChanged: (_) => setState(() {}),
                     ),
@@ -291,6 +285,35 @@ class _Heading extends StatelessWidget {
           color: AppTheme.foreground,
         ),
       ),
+    );
+  }
+}
+
+/// Keeps a text at [max] code points, as core counts its `char_length`
+/// (Flutter's maxLength counts graphemes: one emoji can be several code
+/// points). Cuts whole graphemes only.
+class _CodePointLimit extends TextInputFormatter {
+  const _CodePointLimit(this.max);
+
+  final int max;
+
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    if (newValue.text.runes.length <= max) return newValue;
+    final kept = StringBuffer();
+    var count = 0;
+    for (final grapheme in newValue.text.characters) {
+      count += grapheme.runes.length;
+      if (count > max) break;
+      kept.write(grapheme);
+    }
+    final text = kept.toString();
+    return TextEditingValue(
+      text: text,
+      selection: TextSelection.collapsed(offset: text.length),
     );
   }
 }
