@@ -19,6 +19,7 @@ import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
+import 'package:belly_buddy/services/purchases/purchases_gateway.dart';
 import 'package:belly_buddy/services/share_service.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
 import 'package:belly_buddy/providers/upgrade_gate_provider.dart';
@@ -35,6 +36,7 @@ import 'package:belly_buddy/widgets/buddy/streak_chip.dart';
 import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
+import '../../helpers/purchases_fakes.dart';
 import '../../helpers/riverpod_helpers.dart';
 import '../../helpers/share_fakes.dart';
 
@@ -288,6 +290,64 @@ void main() {
       ]) {
         expect(rowText(t), findsNothing);
       }
+    });
+
+    testWidgets('account switch: no line while the next user loads, then '
+        'theirs', (tester) async {
+      tester.view.physicalSize = const Size(393, 852);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final gateway = FakePurchasesGateway(
+        statusAnswer: PlusStatus(
+          state: PlusState.trial,
+          expiresAt: DateTime(2026, 12, 10, 12).toUtc(),
+        ),
+      );
+      addTearDown(gateway.dispose);
+      final user = SwitchableUserId('a');
+      final c = ProviderContainer.test(
+        overrides: [
+          buddyProvider.overrideWith(() => FakeBuddyNotifier(_status)),
+          buddyClockProvider.overrideWithValue(() => today),
+          user.override,
+          currentVersionProvider.overrideWith((_) async => '1.2.3'),
+          shareServiceProvider.overrideWithValue(shareService),
+          _switch(true),
+          purchasesGatewayProvider.overrideWithValue(gateway),
+        ],
+      );
+      final r = GoRouter(
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (_, _) => MeScreen(openUrl: launches.call),
+          ),
+        ],
+      );
+      addTearDown(r.dispose);
+      await tester.pumpWidget(
+        UncontrolledProviderScope(container: c, child: germanRouterApp(r)),
+      );
+      await tester.pumpAndSettle();
+      expect(rowText('Gratis-Test endet am 10.12.'), findsOneWidget);
+
+      final bStatus = gateway.holdNextStatus();
+      user.set(c, 'b');
+      await tester.pump();
+      await tester.pump();
+      expect(c.read(plusProvider).isLoading, isTrue);
+      expect(find.byKey(MeScreen.plusKey), findsOneWidget);
+      for (final t in [
+        'Alle Funktionen freischalten',
+        'Gratis-Test endet am 10.12.',
+      ]) {
+        expect(rowText(t), findsNothing);
+      }
+
+      bStatus.complete(const PlusStatus(state: PlusState.lapsed));
+      await tester.pumpAndSettle();
+      expect(rowText('Abgelaufen · Wieder abonnieren'), findsOneWidget);
     });
 
     testWidgets('tap pushes /plus', (tester) async {

@@ -174,9 +174,15 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     ref.watch(sharesProvider.select((s) => s.value?.isEmpty));
     final paywallOn = ref.watch(paywallEnabledProvider);
     // While the status loads or fails the row shows without a subtitle: any
-    // line could be wrong for a subscriber.
+    // line could be wrong for a subscriber. The value is not enough: after
+    // an account switch Riverpod keeps the previous (blanked) value while
+    // the next user's status loads.
     final plusSubtitle = paywallOn
-        ? ref.watch(plusProvider.select((p) => p.value))
+        ? ref.watch(
+            plusProvider.select(
+              (p) => p.isLoading || p.hasError ? null : p.value,
+            ),
+          )
         : null;
     final showShareBadge = ref.watch(shareRowBadgeProvider).value ?? false;
 

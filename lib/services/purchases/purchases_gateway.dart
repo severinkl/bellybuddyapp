@@ -60,8 +60,9 @@ class PurchasesUnavailable implements Exception {
 
 /// The store purchase SDK, behind an interface so nothing else depends on it.
 ///
-/// Callers configure once with the signed-in user's id (never anonymously),
-/// switch users with [logIn] and sign out with [logOut]. Every other call
+/// Callers configure once with the signed-in user's id (never anonymously)
+/// and switch users with [logIn]; a sign-out calls nothing (R12). [logOut]
+/// is used only after a successful account deletion (R18). Every other call
 /// before [configure] throws [PurchasesUnavailable].
 abstract interface class PurchasesGateway {
   /// False when this build has no SDK key for the platform.

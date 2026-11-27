@@ -24,8 +24,9 @@ final paywallEnabledProvider = Provider<bool>(
 /// SDK call (no anonymous customers, decision 13). The first user configures
 /// the SDK with their Supabase id, a later different user switches with
 /// `logIn`; sign-out calls nothing (R12: `logOut` would create an anonymous
-/// customer) — the next user's `logIn` switches the identity. A result for a
-/// user who is no longer signed in lands nowhere.
+/// customer) — the next user's `logIn` switches the identity. Only a
+/// successful account deletion logs the SDK out ([forgetDevice], R18). A
+/// result for a user who is no longer signed in lands nowhere.
 class PlusNotifier extends AsyncNotifier<PlusStatus> {
   /// The SDK has been configured in this app run (only once ever).
   bool _configured = false;
@@ -98,6 +99,26 @@ class PlusNotifier extends AsyncNotifier<PlusStatus> {
       return ref.isCurrentUser(userId);
     });
     _identifying = run.then<void>((_) {}, onError: (Object _) {});
+    return run;
+  }
+
+  /// After a successful account deletion: logs the SDK out (R18), so its
+  /// foreground refresh (get-or-create) cannot re-create the deleted user's
+  /// customer. Only when the SDK was configured in this run; queued behind a
+  /// running configure/logIn. A failure is logged and ignored.
+  Future<void> forgetDevice() {
+    final gateway = ref.read(purchasesGatewayProvider);
+    final run = _identifying.then((_) async {
+      if (!_configured) return;
+      _identity = null;
+      try {
+        await gateway.logOut();
+        _log.debug('logOut: done');
+      } catch (e) {
+        _log.warn('logOut: failed (${e.runtimeType})');
+      }
+    });
+    _identifying = run;
     return run;
   }
 

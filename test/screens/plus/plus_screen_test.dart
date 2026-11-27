@@ -194,6 +194,18 @@ void main() {
     expect(find.text('Willkommen bei Belly Buddy Plus!'), findsOneWidget);
   });
 
+  testWidgets('purchase done but not granted: stays with the pending line, '
+      'no welcome', (tester) async {
+    gateway.purchaseAnswer = const PurchaseDone(PlusStatus.none);
+    await pump(tester);
+    await tapVisible(tester, find.byKey(PlusScreen.buyKey));
+    await tester.pumpAndSettle();
+    expect(gateway.callsNamed('purchase'), ['purchase:6,90 €']);
+    expect(find.byType(PlusScreen), findsOneWidget);
+    expect(find.text(PlusCopy.pending), findsOneWidget);
+    expect(find.text('Willkommen bei Belly Buddy Plus!'), findsNothing);
+  });
+
   testWidgets('double tap on buy runs one purchase', (tester) async {
     await pump(tester);
     final sheet = gateway.holdNextPurchase();

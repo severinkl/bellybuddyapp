@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../repositories/auth_repository.dart';
 import '../services/share_secrets_store.dart';
 import '../utils/logger.dart';
+import 'plus_provider.dart';
 
 /// Stream of auth state changes
 final authStateProvider = StreamProvider<AuthState>((ref) {
@@ -55,6 +56,13 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
     } catch (e, st) {
       _log.error('clearing share secrets failed', e, st);
     }
+  }
+
+  /// Logs the purchases SDK out after a successful deletion (R18). Never
+  /// built in this run → the SDK was never configured, nothing to do.
+  Future<void> _forgetPurchases() async {
+    if (!ref.read(plusProvider.exists)) return;
+    await ref.read(plusProvider.notifier).forgetDevice();
   }
 
   @override
@@ -135,6 +143,7 @@ class AuthNotifier extends Notifier<AsyncValue<void>> {
     try {
       await _repo.deleteAccount();
       await _clearShareSecrets(userId);
+      await _forgetPurchases();
       state = const AsyncValue.data(null);
     } catch (e, st) {
       // gotrue drops the local session before its server call: signed out

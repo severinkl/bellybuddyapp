@@ -75,8 +75,13 @@ class _PlusScreenState extends ConsumerState<PlusScreen> {
     switch (outcome) {
       case null || PurchaseCancelled():
         break;
-      case PurchaseDone():
+      case PurchaseDone(:final status) when status.granted:
         _welcome();
+      case PurchaseDone():
+        // The store charged, but the entitlement is not there (yet): no
+        // welcome to Plus the user can't use; the webhook catches up.
+        _log.warn('purchase: done, not granted');
+        _say(PlusCopy.pending);
       case PurchasePending():
         _say(PlusCopy.pending);
       case PurchaseFailed():

@@ -973,6 +973,46 @@ void main() {
       expect(find.text('page:/plus'), findsOneWidget);
     });
 
+    testWidgets('locked and empty: „Aktualisieren" below the card loads the '
+        'free first tip', (tester) async {
+      final repo = MockRecommendationRepository();
+      var answers = <List<Recommendation>>[
+        const [],
+        [_rec('1', summary: 'Erster Tipp')],
+      ];
+      when(() => repo.fetchByUserId(any())).thenAnswer((_) async {
+        final next = answers.first;
+        if (answers.length > 1) answers = answers.sublist(1);
+        return next;
+      });
+      when(() => repo.markSeen(any(), any())).thenAnswer((_) async {});
+      await tester.pumpWithProviders(
+        const RecommendationsScreen(),
+        overrides: [
+          recommendationRepositoryProvider.overrideWithValue(repo),
+          currentUserIdProvider.overrideWithValue('test-user'),
+          locked,
+        ],
+      );
+      await tester.pumpAndSettle();
+
+      final refresh = find.byKey(RecommendationsScreen.emptyStateRefreshKey);
+      expect(find.byType(PlusLockedCard), findsOneWidget);
+      expect(refresh, findsOneWidget);
+      expect(find.text('Aktualisieren'), findsOneWidget);
+      expect(
+        tester.getTopLeft(refresh).dy,
+        greaterThan(tester.getTopLeft(find.byType(PlusLockedCard)).dy),
+      );
+
+      await tester.ensureVisible(refresh);
+      await tester.pumpAndSettle();
+      await tester.tap(refresh);
+      await tester.pumpAndSettle();
+      verify(() => repo.fetchByUserId('test-user')).called(2);
+      expect(find.text('Erster Tipp'), findsOneWidget);
+    });
+
     for (final (name, plus) in [('open', open), ('switch off', switchOff)]) {
       testWidgets('$name with sets: no card', (tester) async {
         await pumpRouted(tester, [_rec('1', summary: 'Mein Tipp')], plus);

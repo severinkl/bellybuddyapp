@@ -4,11 +4,14 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:belly_buddy/models/app_config.dart';
 import 'package:belly_buddy/models/plus_status.dart';
 import 'package:belly_buddy/providers/app_config_provider.dart';
+import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/plus_provider.dart';
+import 'package:belly_buddy/repositories/auth_repository.dart';
 import 'package:belly_buddy/services/edge_function_service.dart';
 import 'package:belly_buddy/services/purchases/purchases_gateway.dart';
 
@@ -37,6 +40,7 @@ void main() {
   late FakePurchasesGateway gateway;
   late MockEdgeFunctionService edge;
   late SwitchableUserId user;
+  late MockAuthRepository authRepo;
 
   setUpAll(() => registerFallbackValue(<String, dynamic>{}));
 
@@ -47,6 +51,7 @@ void main() {
       () => edge.invoke(any(), body: any(named: 'body')),
     ).thenAnswer((_) async => {'plus': true, 'expires_at': null});
     user = SwitchableUserId(_a);
+    authRepo = MockAuthRepository();
   });
 
   tearDown(() => gateway.dispose());
@@ -60,6 +65,7 @@ void main() {
     final c = createContainer(
       overrides: [
         user.override,
+        authRepositoryProvider.overrideWithValue(authRepo),
         purchasesGatewayProvider.overrideWithValue(gateway),
         edgeFunctionServiceProvider.overrideWithValue(edge),
         appConfigProvider.overrideWith((ref) async {
@@ -576,6 +582,88 @@ void main() {
       final offer = await c.read(plusOfferProvider.future);
       sub.close();
       expect(offer?.trialDays, isNull);
+    });
+  });
+
+  group('account deletion logs the SDK out (R18)', () {
+    setUp(() => SharedPreferences.setMockInitialValues({}));
+
+    /// Deletes the account the way the app does: the auth call succeeds
+    /// (or throws [error]) and the session ends.
+    Future<void> delete(ProviderContainer c, {Object? error}) async {
+      when(() => authRepo.deleteAccount()).thenAnswer((_) async {
+        if (error != null) throw error;
+        user.set(c, null);
+      });
+      when(() => authRepo.currentUser).thenReturn(null);
+      final future = c.read(authNotifierProvider.notifier).deleteAccount();
+      if (error != null) {
+        await expectLater(future, throwsA(error));
+      } else {
+        await future;
+      }
+      await _settle();
+    }
+
+    test('configured: logOut once after a successful deletion', () async {
+      gateway.statusAnswer = _active;
+      final c = make();
+      await statusOf(c);
+
+      await delete(c);
+      expect(gateway.callsNamed('logOut'), ['logOut']);
+      expect(c.read(authNotifierProvider), isA<AsyncData<void>>());
+
+      // The next user is logged in again (the identity was forgotten).
+      user.set(c, _b);
+      await c.read(plusProvider.future);
+      expect(gateway.callsNamed('logIn'), ['logIn:$_b']);
+    });
+
+    test('a failing logOut is ignored: the deletion still succeeds', () async {
+      gateway.logOutError = Exception('offline');
+      final c = make();
+      await statusOf(c);
+
+      await delete(c);
+      expect(gateway.callsNamed('logOut'), ['logOut']);
+      expect(c.read(authNotifierProvider), isA<AsyncData<void>>());
+    });
+
+    test('never configured (switch off): no logOut', () async {
+      final c = make(on: false);
+      await statusOf(c);
+
+      await delete(c);
+      expect(gateway.calls, isEmpty);
+    });
+
+    test('never configured (no SDK key): no logOut', () async {
+      gateway.available = false;
+      final c = make();
+      await statusOf(c);
+
+      await delete(c);
+      expect(gateway.calls, isEmpty);
+    });
+
+    test('failed deletion: no logOut', () async {
+      final c = make();
+      await statusOf(c);
+
+      await delete(c, error: Exception('offline'));
+      expect(gateway.callsNamed('logOut'), isEmpty);
+    });
+
+    test('plain sign-out: still no logOut (R12)', () async {
+      final c = make();
+      await statusOf(c);
+      when(() => authRepo.signOut()).thenAnswer((_) async => user.set(c, null));
+      when(() => authRepo.currentUser).thenReturn(null);
+
+      await c.read(authNotifierProvider.notifier).signOut();
+      await _settle();
+      expect(gateway.callsNamed('logOut'), isEmpty);
     });
   });
 }

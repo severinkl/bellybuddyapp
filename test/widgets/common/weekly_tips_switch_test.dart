@@ -147,24 +147,39 @@ void main() {
     final open = [plusAccessProvider.overrideWithValue(PlusAccess.open)];
     final switchOff = [paywallEnabledProvider.overrideWithValue(false)];
 
-    for (final stored in [false, true]) {
-      testWidgets('locked, stored $stored: the Plus subline, the stored value; '
-          'a tap opens /plus and saves nothing', (tester) async {
-        await pump(tester, plus: locked, weeklyTips: stored);
+    testWidgets('locked, off: the Plus subline; turning it on opens /plus '
+        'and saves nothing', (tester) async {
+      await pump(tester, plus: locked);
 
-        expect(find.text('Wöchentliche Tipps'), findsOneWidget);
-        expect(find.text('Mit Belly Buddy Plus'), findsOneWidget);
-        expect(find.text('Jeden Montag 2–3 Tipps'), findsNothing);
-        expect(find.text(WeeklyTipsSwitch.sentence), findsOneWidget);
-        expect(isOn(tester), stored);
+      expect(find.text('Wöchentliche Tipps'), findsOneWidget);
+      expect(find.text('Mit Belly Buddy Plus'), findsOneWidget);
+      expect(find.text('Jeden Montag 2–3 Tipps'), findsNothing);
+      expect(find.text(WeeklyTipsSwitch.sentence), findsOneWidget);
+      expect(isOn(tester), isFalse);
 
-        await tester.tap(find.byKey(WeeklyTipsSwitch.switchKey));
-        await tester.pumpAndSettle();
+      await tester.tap(find.byKey(WeeklyTipsSwitch.switchKey));
+      await tester.pumpAndSettle();
 
-        expect(find.text('page:/plus'), findsOneWidget);
-        expect(repo.weeklyTipsWrites, isEmpty);
-      });
-    }
+      expect(find.text('page:/plus'), findsOneWidget);
+      expect(repo.weeklyTipsWrites, isEmpty);
+    });
+
+    testWidgets('locked, on: the Plus subline; turning it off saves false '
+        '(R19), no /plus', (tester) async {
+      await pump(tester, plus: locked, weeklyTips: true);
+
+      expect(find.text('Mit Belly Buddy Plus'), findsOneWidget);
+      expect(isOn(tester), isTrue);
+
+      await tester.tap(find.byKey(WeeklyTipsSwitch.switchKey));
+      await tester.pumpAndSettle();
+
+      expect(find.text('page:/plus'), findsNothing);
+      expect(repo.weeklyTipsWrites, [false]);
+      expect(isOn(tester), isFalse);
+      // Still locked: the subline stays.
+      expect(find.text('Mit Belly Buddy Plus'), findsOneWidget);
+    });
 
     for (final (name, overrides) in [
       ('open', open),

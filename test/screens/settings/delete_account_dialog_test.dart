@@ -7,11 +7,13 @@ import 'package:belly_buddy/models/plus_status.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/services/plus/plus_copy.dart';
+import 'package:belly_buddy/services/purchases/purchases_gateway.dart';
 import 'package:belly_buddy/repositories/auth_repository.dart';
 import 'package:belly_buddy/repositories/profile_repository.dart';
 import 'package:belly_buddy/screens/settings/widgets/delete_account_dialog.dart';
 
 import '../../helpers/fakes.dart';
+import '../../helpers/purchases_fakes.dart';
 import '../../helpers/riverpod_helpers.dart';
 
 class _FakePlus extends PlusNotifier {
@@ -44,7 +46,11 @@ void main() {
 
   setUp(() => auth = _CountingAuthRepository());
 
-  Future<void> openDialog(WidgetTester tester, {PlusStatus? plus}) async {
+  Future<void> openDialog(
+    WidgetTester tester, {
+    PlusStatus? plus,
+    List<Override>? plusOverrides,
+  }) async {
     await tester.pumpWithProviders(
       Scaffold(
         body: Builder(
@@ -55,9 +61,12 @@ void main() {
         ),
       ),
       overrides: [
-        ...overrides(),
-        paywallEnabledProvider.overrideWithValue(plus != null),
-        if (plus != null) plusProvider.overrideWith(() => _FakePlus(plus)),
+        ...?plusOverrides,
+        if (plusOverrides == null) ...[
+          ...overrides(),
+          paywallEnabledProvider.overrideWithValue(plus != null),
+          if (plus != null) plusProvider.overrideWith(() => _FakePlus(plus)),
+        ],
       ],
     );
     await tester.tap(find.text('open'));
@@ -149,9 +158,27 @@ void main() {
       });
     }
 
-    testWidgets('switch off: not shown', (tester) async {
-      await openDialog(tester);
+    testWidgets('switch off: not shown, even for a store subscriber', (
+      tester,
+    ) async {
+      // The real provider with a signed-in user whose store says active:
+      // with the switch off it never asks the store and answers none.
+      final gateway = FakePurchasesGateway(
+        statusAnswer: const PlusStatus(state: PlusState.active),
+      );
+      addTearDown(gateway.dispose);
+      await openDialog(
+        tester,
+        plusOverrides: [
+          authRepositoryProvider.overrideWithValue(auth),
+          profileRepositoryProvider.overrideWithValue(FakeProfileRepository()),
+          currentUserIdProvider.overrideWithValue('u1'),
+          paywallEnabledProvider.overrideWithValue(false),
+          purchasesGatewayProvider.overrideWithValue(gateway),
+        ],
+      );
       expect(find.text(PlusCopy.deleteWarning), findsNothing);
+      expect(gateway.calls, isEmpty);
     });
 
     test('wording', () {

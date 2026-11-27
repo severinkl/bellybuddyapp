@@ -218,6 +218,9 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
             title: PlusCopy.tipsTitle,
             line: PlusCopy.tipsLine,
           ),
+          AppConstants.gap16,
+          // The free first tip may still be on its way.
+          Center(child: _refreshButton()),
         ],
       );
     }
@@ -248,20 +251,21 @@ class _RecommendationsScreenState extends ConsumerState<RecommendationsScreen> {
                 ),
               ),
               AppConstants.gap16,
-              TextButton.icon(
-                key: RecommendationsScreen.emptyStateRefreshKey,
-                onPressed: () => ref
-                    .read(recommendationProvider.notifier)
-                    .fetchRecommendations(),
-                icon: const Icon(Icons.refresh, size: AppConstants.iconSizeSm),
-                label: const Text('Aktualisieren'),
-              ),
+              _refreshButton(),
             ],
           ),
         ),
       ],
     );
   }
+
+  Widget _refreshButton() => TextButton.icon(
+    key: RecommendationsScreen.emptyStateRefreshKey,
+    onPressed: () =>
+        ref.read(recommendationProvider.notifier).fetchRecommendations(),
+    icon: const Icon(Icons.refresh, size: AppConstants.iconSizeSm),
+    label: const Text('Aktualisieren'),
+  );
 }
 
 /// AppBar title — watches both providers so the position updates as the

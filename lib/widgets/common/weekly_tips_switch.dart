@@ -12,8 +12,9 @@ import '../../utils/logger.dart';
 /// The „Wöchentliche Tipps" opt-in, with what it sends. It controls whether
 /// the tips are made, not whether a push arrives. Shows nothing while the
 /// profile is unknown. While Belly Buddy Plus is locked it shows the stored
-/// value with „Mit Belly Buddy Plus", and a tap opens `/plus` without
-/// changing it.
+/// value with „Mit Belly Buddy Plus": turning it on opens `/plus` without
+/// writing, turning it off still saves false (R19: withdrawing consent to
+/// send entries to the AI never needs a purchase).
 class WeeklyTipsSwitch extends ConsumerStatefulWidget {
   const WeeklyTipsSwitch({super.key});
 
@@ -68,7 +69,8 @@ class _WeeklyTipsSwitchState extends ConsumerState<WeeklyTipsSwitch> {
           value: enabled,
           activeThumbColor: AppTheme.primary,
           contentPadding: EdgeInsets.zero,
-          onChanged: plusLocked ? (_) => context.push(RoutePaths.plus) : _set,
+          onChanged: (on) =>
+              plusLocked && on ? context.push(RoutePaths.plus) : _set(on),
         ),
         const Text(
           WeeklyTipsSwitch.sentence,

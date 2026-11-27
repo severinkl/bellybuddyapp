@@ -20,7 +20,7 @@ PlusOffer testPlusOffer({
 /// e.g. to prove a late answer for the previous user is dropped. Use
 /// [holdNextStatus] for that. [statusError] makes [status] throw.
 ///
-/// [configureError] / [logInError] make those calls throw (recorded first);
+/// [configureError] / [logInError] / [logOutError] make those calls throw (recorded first);
 /// [holdNextConfigure], [holdNextLogIn], [holdNextOffer], [holdNextPurchase]
 /// and [holdNextRestore] make the next such call answer only when the
 /// returned completer completes (a purchase sheet still open, a slow
@@ -50,6 +50,7 @@ class FakePurchasesGateway implements PurchasesGateway {
 
   Object? configureError;
   Object? logInError;
+  Object? logOutError;
   final _configureQueue = <Future<void>>[];
   final _logInQueue = <Future<void>>[];
   final _offerQueue = <Future<PlusOffer?>>[];
@@ -105,7 +106,11 @@ class FakePurchasesGateway implements PurchasesGateway {
   }
 
   @override
-  Future<void> logOut() async => calls.add('logOut');
+  Future<void> logOut() async {
+    calls.add('logOut');
+    final error = logOutError;
+    if (error != null) throw error;
+  }
 
   @override
   Future<PlusStatus> status() {
