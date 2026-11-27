@@ -52,6 +52,32 @@ void main() {
     expect(at3.width, greaterThan(at0.width));
   });
 
+  testWidgets('pausing mid-animation keeps the circle where it is', (
+    tester,
+  ) async {
+    Widget host(bool running) => MaterialApp(
+      home: Scaffold(
+        body: Center(
+          child: BreathPacer(
+            pattern: pattern,
+            secondInStep: 0,
+            running: running,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpWidget(host(false));
+    await tester.pumpWidget(host(true));
+    await tester.pump(const Duration(milliseconds: 1));
+    await tester.pump(const Duration(milliseconds: 500));
+    final before = tester.getSize(find.byKey(BreathPacer.circleKey));
+    await tester.pumpWidget(host(false));
+    final after = tester.getSize(find.byKey(BreathPacer.circleKey));
+    expect(after.width, greaterThanOrEqualTo(before.width));
+    await tester.pump(const Duration(seconds: 2));
+    expect(tester.getSize(find.byKey(BreathPacer.circleKey)), after);
+  });
+
   testWidgets('the exhale follows the inhale', (tester) async {
     await pumpAt(tester, 4);
     expect(find.text('Ausatmen'), findsOneWidget);

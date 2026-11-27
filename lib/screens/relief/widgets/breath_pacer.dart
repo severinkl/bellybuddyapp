@@ -63,7 +63,12 @@ class _BreathPacerState extends State<BreathPacer>
     if (widget.running) {
       _fill.animateTo(_target, duration: AppConstants.reliefPacerTick);
     } else {
-      _fill.value = _target;
+      // Hold where the circle is, not where the second began.
+      if (old.running) {
+        _fill.stop();
+      } else {
+        _fill.value = _target;
+      }
     }
   }
 

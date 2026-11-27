@@ -28,6 +28,8 @@ GutFeelingEntry _entry(
   bodyFeel: bodyFeel,
 );
 
+final _ids = {for (final e in reliefExercises) e.id};
+
 void main() {
   group('orderedExercises', () {
     test('yes first, no last, rest in content order', () {
@@ -50,20 +52,23 @@ void main() {
 
   group('tryParseReliefAnswers', () {
     test('corrupt json gives null, no json an empty map', () {
-      expect(tryParseReliefAnswers('not json'), isNull);
-      expect(tryParseReliefAnswers(null), isEmpty);
-      expect(tryParseReliefAnswers('[1]'), isNull);
+      expect(tryParseReliefAnswers('not json', knownIds: _ids), isNull);
+      expect(tryParseReliefAnswers(null, knownIds: _ids), isEmpty);
+      expect(tryParseReliefAnswers('[1]', knownIds: _ids), isNull);
     });
 
     test('unknown ids and answers are dropped', () {
       expect(
-        tryParseReliefAnswers('{"x":"yes","waerme":"maybe","waerme2":1}'),
+        tryParseReliefAnswers(
+          '{"x":"yes","waerme":"maybe","waerme2":1}',
+          knownIds: _ids,
+        ),
         isEmpty,
       );
     });
 
     test('valid entries are kept', () {
-      expect(tryParseReliefAnswers('{"waerme":"little"}'), {
+      expect(tryParseReliefAnswers('{"waerme":"little"}', knownIds: _ids), {
         'waerme': ReliefAnswer.little,
       });
     });

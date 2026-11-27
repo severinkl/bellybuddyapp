@@ -571,6 +571,23 @@ void main() {
         expect(find.text('page:${RoutePaths.relief}'), findsNothing);
       });
 
+      testWidgets('the whole pill is the target, edge included', (
+        tester,
+      ) async {
+        await pumpRouted(tester);
+        await tapMascot(tester, AppConstants.mascotCramp);
+        await goToStimmungAndSave(tester);
+
+        final pill = find.ancestor(of: offer, matching: find.byType(Container));
+        final rect = tester.getRect(pill.first);
+        expect(rect.height, greaterThanOrEqualTo(AppConstants.minTapTarget));
+        await tester.tapAt(rect.topCenter + const Offset(0, 3));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(find.text('page:${RoutePaths.relief}'), findsOneWidget);
+      });
+
       testWidgets('every symptom at 2: no offer', (tester) async {
         await pumpRouted(tester);
 

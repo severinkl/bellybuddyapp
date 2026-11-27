@@ -51,6 +51,12 @@ ProviderContainer _feedback(String? userId) {
   return container;
 }
 
+class _FailingBuild extends ReliefFeedbackNotifier {
+  @override
+  Future<Map<String, ReliefAnswer>> build() async =>
+      throw StateError('no storage');
+}
+
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
@@ -149,6 +155,52 @@ void main() {
       final c = _feedback('u');
       expect(await c.read(reliefFeedbackProvider.future), isEmpty);
       expect(logs.where((l) => l.contains('corrupt')), hasLength(1));
+    });
+
+    test('ids come from the injected content', () async {
+      SharedPreferences.setMockInitialValues({
+        'relief_feedback_u': '{"neu":"yes","waerme":"no"}',
+      });
+      final extra = ReliefExercise(
+        id: 'neu',
+        title: 'Neu',
+        subtitle: 's',
+        steps: reliefExercises.first.steps,
+        reviewed: false,
+      );
+      final c = ProviderContainer(
+        overrides: [
+          currentUserIdProvider.overrideWithValue('u'),
+          reliefContentProvider.overrideWithValue([extra]),
+        ],
+      );
+      addTearDown(c.dispose);
+      expect(await c.read(reliefFeedbackProvider.future), {
+        'neu': ReliefAnswer.yes,
+      });
+    });
+
+    test('record survives a failed load and keeps the answer', () async {
+      final logs = captureLogs();
+      final c = ProviderContainer(
+        overrides: [
+          currentUserIdProvider.overrideWithValue('secret-user'),
+          reliefFeedbackProvider.overrideWith(_FailingBuild.new),
+        ],
+      );
+      addTearDown(c.dispose);
+      c.listen(reliefFeedbackProvider, (_, _) {});
+      await expectLater(
+        c
+            .read(reliefFeedbackProvider.notifier)
+            .record('waerme', ReliefAnswer.yes),
+        completes,
+      );
+      expect(c.read(reliefFeedbackProvider).value, {
+        'waerme': ReliefAnswer.yes,
+      });
+      expect(logs.where((l) => l.contains('Could not load')), hasLength(1));
+      expect(logs.any((l) => l.contains('waerme')), isFalse);
     });
 
     test('no user stores nothing', () async {

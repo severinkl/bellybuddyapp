@@ -258,6 +258,19 @@ void main() {
   });
 
   group('done', () {
+    testWidgets('the info icon pauses the running step', (tester) async {
+      await pumpPlayer(tester, 'bauchmassage');
+      await tapAndPump(tester, ReliefCopy.start);
+      await tester.tap(find.byTooltip(ReliefCopy.safetySheetTitle));
+      await tester.pumpAndSettle();
+      expect(find.text(ReliefCopy.safetySheetTitle), findsWidgets);
+      await tester.pump(const Duration(seconds: 3));
+      await tester.tapAt(const Offset(5, 5)); // dismiss the sheet
+      await tester.pumpAndSettle();
+      expect(find.text(ReliefCopy.resume), findsOneWidget);
+      expect(find.text('0:20'), findsOneWidget);
+    });
+
     testWidgets('„Nein" is stored and offers the safety sheet', (tester) async {
       await pumpPlayer(tester, 'bauchatmung');
       await finish(tester, 'bauchatmung');

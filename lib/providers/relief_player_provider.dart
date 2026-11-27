@@ -66,8 +66,12 @@ class ReliefPlayer extends Notifier<ReliefPlayerState> {
   ReliefExercise? _exercise;
   Timer? _timer;
 
-  /// Seconds in the step counted before [_resumedAt].
-  int _baseSeconds = 0;
+  /// Milliseconds in the step counted before [_resumedAt]; whole seconds
+  /// would drop up to a second on every pause.
+  int _baseMs = 0;
+
+  /// Milliseconds in the step as of the last recompute.
+  int _progressMs = 0;
   DateTime? _resumedAt;
 
   /// Between [appHidden] and [appShown]. On Android the timer keeps firing
@@ -120,13 +124,12 @@ class ReliefPlayer extends Notifier<ReliefPlayerState> {
     _recompute();
     if (state.status != ReliefPlayerStatus.running) return;
     _stopTimer();
-    _baseSeconds = state.secondInStep;
+    _baseMs = _progressMs;
     state = state.copyWith(status: ReliefPlayerStatus.paused);
   }
 
   void resume() {
     if (state.status != ReliefPlayerStatus.paused) return;
-    _baseSeconds = state.secondInStep;
     _resumedAt = _now();
     state = state.copyWith(status: ReliefPlayerStatus.running);
     _startTimer();
@@ -167,7 +170,8 @@ class ReliefPlayer extends Notifier<ReliefPlayerState> {
       return;
     }
     if (state.status == ReliefPlayerStatus.paused) {
-      _baseSeconds = 0;
+      _baseMs = 0;
+      _progressMs = 0;
       state = state.copyWith(stepIndex: index, secondInStep: 0);
     } else {
       _runStep(index);
@@ -175,7 +179,8 @@ class ReliefPlayer extends Notifier<ReliefPlayerState> {
   }
 
   void _runStep(int index) {
-    _baseSeconds = 0;
+    _baseMs = 0;
+    _progressMs = 0;
     _resumedAt = _now();
     state = ReliefPlayerState(
       status: ReliefPlayerStatus.running,
@@ -202,24 +207,27 @@ class ReliefPlayer extends Notifier<ReliefPlayerState> {
       return;
     }
     final now = _now();
-    final elapsed = now.difference(resumedAt).inSeconds;
+    final elapsed = now.difference(resumedAt).inMilliseconds;
     if (elapsed < 0) {
       // The clock went back: count on from here.
       _resumedAt = now;
-      _baseSeconds = state.secondInStep;
+      _baseMs = _progressMs;
       return;
     }
-    final second = _baseSeconds + elapsed;
+    final ms = _baseMs + elapsed;
+    final second = ms ~/ 1000;
     if (second >= step.seconds) {
       if (_hidden) {
         // Hold at the end; appShown moves on.
         _stopTimer();
+        _progressMs = step.seconds * 1000;
         state = state.copyWith(secondInStep: step.seconds);
         return;
       }
       _goTo(state.stepIndex + 1);
       return;
     }
+    _progressMs = ms;
     state = state.copyWith(secondInStep: second);
   }
 

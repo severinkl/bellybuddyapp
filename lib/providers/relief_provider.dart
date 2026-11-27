@@ -64,6 +64,7 @@ class ReliefFeedbackNotifier extends AsyncNotifier<Map<String, ReliefAnswer>> {
     try {
       final parsed = tryParseReliefAnswers(
         prefs.getString('${AppConstants.keyReliefFeedbackPrefix}$userId'),
+        knownIds: {for (final e in ref.watch(reliefContentProvider)) e.id},
       );
       if (parsed != null) return parsed;
     } catch (_) {
@@ -80,7 +81,14 @@ class ReliefFeedbackNotifier extends AsyncNotifier<Map<String, ReliefAnswer>> {
   Future<void> record(String exerciseId, ReliefAnswer answer) async {
     final userId = ref.read(currentUserIdProvider);
     if (userId == null) return;
-    final current = await future;
+    Map<String, ReliefAnswer> current;
+    try {
+      current = await future;
+    } catch (e) {
+      // The load failed (no storage): keep this answer on its own.
+      _log.error('Could not load the stored answers', e);
+      current = const {};
+    }
     if (!ref.mounted) return;
     final next = {...current, exerciseId: answer};
     state = AsyncData(next);

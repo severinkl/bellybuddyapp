@@ -63,6 +63,19 @@ void main() {
     });
   });
 
+  test('a pause keeps the fraction of a second', () {
+    run('bauchatmung', (h) {
+      h.player().start();
+      h.async.elapse(const Duration(milliseconds: 3900));
+      h.player().pause();
+      expect(h.state().secondInStep, 3);
+      h.player().resume();
+      h.async.elapse(const Duration(milliseconds: 200));
+      h.player().appShown(); // recompute without waiting for the tick
+      expect(h.state().secondInStep, 4);
+    });
+  });
+
   test('next on the last step finishes', () {
     run('bauchatmung', (h) {
       h.player().start();

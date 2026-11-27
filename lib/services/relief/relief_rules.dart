@@ -23,9 +23,12 @@ List<ReliefExercise> orderedExercises(
 }
 
 /// The answers stored as JSON, or null when [json] is corrupt (not JSON, or
-/// not a map); null input is simply empty. Unknown ids and answers are
-/// dropped.
-Map<String, ReliefAnswer>? tryParseReliefAnswers(String? json) {
+/// not a map); null input is simply empty. Ids not in [knownIds] and unknown
+/// answers are dropped.
+Map<String, ReliefAnswer>? tryParseReliefAnswers(
+  String? json, {
+  required Set<String> knownIds,
+}) {
   if (json == null) return {};
   try {
     final decoded = jsonDecode(json);
@@ -36,7 +39,7 @@ Map<String, ReliefAnswer>? tryParseReliefAnswers(String? json) {
       final answer = ReliefAnswer.values
           .where((a) => a.name == entry.value)
           .firstOrNull;
-      if (id is String && answer != null && reliefExerciseById(id) != null) {
+      if (id is String && answer != null && knownIds.contains(id)) {
         result[id] = answer;
       }
     }

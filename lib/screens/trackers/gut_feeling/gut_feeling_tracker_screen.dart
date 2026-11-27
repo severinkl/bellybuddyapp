@@ -183,16 +183,11 @@ class _GutFeelingTrackerScreenState
         illustration: LogSuccessHero(moment: moment),
         actions: _offerRelief
             ? [
-                // Tappable, it is a button to assistive tech too.
-                Semantics(
-                  button: true,
-                  child: GestureDetector(
-                    behavior: HitTestBehavior.opaque,
-                    onTap: () => context.pushReplacement(RoutePaths.relief),
-                    child: const Text(
-                      ReliefCopy.gutFeelingOffer,
-                      textAlign: TextAlign.center,
-                    ),
+                BbPillAction(
+                  onTap: () => context.pushReplacement(RoutePaths.relief),
+                  child: const Text(
+                    ReliefCopy.gutFeelingOffer,
+                    textAlign: TextAlign.center,
                   ),
                 ),
               ]

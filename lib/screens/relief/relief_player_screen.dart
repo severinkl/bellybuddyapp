@@ -138,7 +138,11 @@ class _ReliefPlayerScreenState extends ConsumerState<ReliefPlayerScreen> {
             IconButton(
               icon: const Icon(Icons.info_outline),
               tooltip: ReliefCopy.safetySheetTitle,
-              onPressed: () => showReliefSafetySheet(context),
+              onPressed: () {
+                // Nothing moves on under the sheet; Fortsetzen resumes.
+                player.pause();
+                showReliefSafetySheet(context);
+              },
             ),
         ],
       ),
