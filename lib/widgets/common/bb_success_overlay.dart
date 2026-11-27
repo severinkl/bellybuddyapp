@@ -1,7 +1,9 @@
+import 'package:flutter/rendering.dart' show RenderProxyBox;
 import 'package:material_ui/material_ui.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../services/haptic_service.dart';
+import 'bb_tap_area.dart';
 import 'mascot_image.dart';
 
 class BbSuccessOverlay extends StatefulWidget {
@@ -173,118 +175,142 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
         // The page covers the whole screen; its content keeps clear of the
         // status bar and the home indicator.
         child: SafeArea(
-          child: Center(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppConstants.spacingXl,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Illustration, mascot or checkmark
-                  if (illustration != null)
-                    Flexible(child: illustration)
-                  else if (widget.mascotAsset != null)
-                    AnimatedBuilder(
-                      animation: _mascotController,
-                      builder: (context, child) {
-                        return Transform.scale(
-                          scale: _mascotScaleAnimation.value,
-                          child: child,
-                        );
-                      },
-                      child: MascotImage(
-                        assetPath: widget.mascotAsset!,
-                        width: 160,
-                        height: 160,
-                      ),
-                    )
-                  else
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: const BoxDecoration(
-                        color: AppTheme.success,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.check,
-                        color: Colors.white,
-                        size: 40,
-                      ),
+          // At large text the page scrolls; otherwise the illustration
+          // takes the height the texts and actions leave.
+          child: LayoutBuilder(
+            builder: (context, constraints) => SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: IntrinsicHeight(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppConstants.spacingXl,
                     ),
-                  AppConstants.gap24,
-
-                  // Message + sub-message with slide-up animation
-                  SlideTransition(
-                    position: _textSlideAnimation,
-                    child: FadeTransition(
-                      opacity: _textOpacityAnimation,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            widget.message,
-                            style: TextStyle(
-                              fontSize: AppTheme.fontSizeHeadingLG,
-                              fontWeight: FontWeight.w600,
-                              color: textColor,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        // Illustration, mascot or checkmark
+                        if (illustration != null)
+                          Flexible(child: _HeroSlot(child: illustration))
+                        else if (widget.mascotAsset != null)
+                          AnimatedBuilder(
+                            animation: _mascotController,
+                            builder: (context, child) {
+                              return Transform.scale(
+                                scale: _mascotScaleAnimation.value,
+                                child: child,
+                              );
+                            },
+                            child: MascotImage(
+                              assetPath: widget.mascotAsset!,
+                              width: 160,
+                              height: 160,
                             ),
-                            textAlign: TextAlign.center,
+                          )
+                        else
+                          Container(
+                            width: 80,
+                            height: 80,
+                            decoration: const BoxDecoration(
+                              color: AppTheme.success,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.check,
+                              color: Colors.white,
+                              size: 40,
+                            ),
                           ),
-                          if (widget.subMessage != null) ...[
-                            AppConstants.gap8,
-                            Text(
-                              widget.subMessage!,
-                              style: TextStyle(
-                                fontSize: AppTheme.fontSizeSubtitle,
-                                color: textColor.withValues(alpha: 0.8),
-                              ),
-                              textAlign: TextAlign.center,
+                        AppConstants.gap24,
+
+                        // Message + sub-message with slide-up animation
+                        SlideTransition(
+                          position: _textSlideAnimation,
+                          child: FadeTransition(
+                            opacity: _textOpacityAnimation,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Semantics(
+                                  container: true,
+                                  header: true,
+                                  child: Text(
+                                    widget.message,
+                                    style: TextStyle(
+                                      fontSize: AppTheme.fontSizeHeadingLG,
+                                      fontWeight: FontWeight.w600,
+                                      color: textColor,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                                if (widget.subMessage != null) ...[
+                                  AppConstants.gap8,
+                                  Text(
+                                    widget.subMessage!,
+                                    style: TextStyle(
+                                      fontSize: AppTheme.fontSizeSubtitle,
+                                      color: textColor.withValues(alpha: 0.8),
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ],
+                              ],
                             ),
-                          ],
+                          ),
+                        ),
+
+                        // Action buttons
+                        if (widget.actions != null &&
+                            widget.actions!.isNotEmpty) ...[
+                          AppConstants.gap24,
+                          if (hasHero)
+                            _PillActionButton(children: widget.actions!)
+                          else
+                            Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                for (
+                                  int i = 0;
+                                  i < widget.actions!.length;
+                                  i++
+                                ) ...[
+                                  if (i > 0) AppConstants.gap8,
+                                  widget.actions![i],
+                                ],
+                              ],
+                            ),
                         ],
-                      ),
+
+                        if (widget.bottomCallout != null) ...[
+                          AppConstants.gap16,
+                          widget.bottomCallout!,
+                        ],
+
+                        // Tap hint. For screen readers the page's one way out:
+                        // the tap-anywhere layer below has no node of its own.
+                        if (hasHero) ...[
+                          const SizedBox(height: AppConstants.spacingXl),
+                          BbTapArea(
+                            onTap: widget.onDismissed,
+                            label: 'Schließen',
+                            excludeChild: true,
+                            child: FadeTransition(
+                              opacity: _textOpacityAnimation,
+                              child: const Text(
+                                'Tippen zum Fortfahren',
+                                style: TextStyle(
+                                  fontSize: AppTheme.fontSizeBody,
+                                  color: AppTheme.primaryForegroundMuted,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-
-                  // Action buttons
-                  if (widget.actions != null && widget.actions!.isNotEmpty) ...[
-                    AppConstants.gap24,
-                    if (hasHero)
-                      _PillActionButton(children: widget.actions!)
-                    else
-                      Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          for (int i = 0; i < widget.actions!.length; i++) ...[
-                            if (i > 0) AppConstants.gap8,
-                            widget.actions![i],
-                          ],
-                        ],
-                      ),
-                  ],
-
-                  if (widget.bottomCallout != null) ...[
-                    AppConstants.gap16,
-                    widget.bottomCallout!,
-                  ],
-
-                  // Tap hint
-                  if (hasHero) ...[
-                    const SizedBox(height: AppConstants.spacingXxl),
-                    FadeTransition(
-                      opacity: _textOpacityAnimation,
-                      child: const Text(
-                        'Tippen zum Fortfahren',
-                        style: TextStyle(
-                          fontSize: AppTheme.fontSizeBody,
-                          color: AppTheme.primaryForegroundMuted,
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
+                ),
               ),
             ),
           ),
@@ -293,7 +319,13 @@ class _BbSuccessOverlayState extends State<BbSuccessOverlay>
     );
 
     if (hasHero) {
-      content = GestureDetector(onTap: widget.onDismissed, child: content);
+      // A tap anywhere dismisses; screen readers get the „Schließen"
+      // button above instead of a nameless full-screen node.
+      content = GestureDetector(
+        onTap: widget.onDismissed,
+        excludeFromSemantics: true,
+        child: content,
+      );
     }
 
     return Material(type: MaterialType.transparency, child: content);
@@ -311,6 +343,8 @@ class _PillActionButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {}, // absorb tap to prevent dismiss
+      // Not a control of its own: the actions inside are.
+      excludeFromSemantics: true,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -339,4 +373,25 @@ class _PillActionButton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// The illustration's slot: it takes the height the page leaves, and to the
+/// page's large-text layout ([IntrinsicHeight]) it claims
+/// [AppConstants.successHeroMinHeight] — an illustration sized by its slot
+/// (a [LayoutBuilder]) can't answer intrinsic sizes itself.
+class _HeroSlot extends SingleChildRenderObjectWidget {
+  const _HeroSlot({required super.child});
+
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderHeroSlot();
+}
+
+class _RenderHeroSlot extends RenderProxyBox {
+  @override
+  double computeMinIntrinsicHeight(double width) =>
+      AppConstants.successHeroMinHeight;
+
+  @override
+  double computeMaxIntrinsicHeight(double width) =>
+      AppConstants.successHeroMinHeight;
 }

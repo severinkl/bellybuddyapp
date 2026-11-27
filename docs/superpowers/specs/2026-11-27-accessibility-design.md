@@ -248,3 +248,10 @@ None. No new data, processor or purpose.
 7. Snackbars („Passwort geändert!") and the login error banner are read aloud on iOS too. If VoiceOver stays silent, report
    it: a follow-up adds `SemanticsService.sendAnnouncement` on iOS.
 8. The new colours of §4.3 in daylight.
+
+## 10. Decisions after the first review (Severin, 2026-11-27)
+- **Success overlay (`BbSuccessOverlay`, every tracker's success page and „Muster frei!"), 2026-11-27:** the tap-anywhere
+  layer and the action pill's tap-absorber have no semantics node; the page's one named way out for screen readers is the
+  „Tippen zum Fortfahren" hint, now a button named „Schließen" with a 48 px hit area. The title is a heading. The page
+  scrolls when its texts need more than the screen (200 % text); the illustration then gets at least 160 px, otherwise the
+  height left over as before. „Muster frei!" now runs all guardrail checks.

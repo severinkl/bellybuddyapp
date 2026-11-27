@@ -279,6 +279,10 @@ class AppConstants {
   /// „Tag n" stand side by side, so the Buddy keeps a body below them.
   static const double logSuccessHeroStackedMinHeight = 320.0;
 
+  /// The least a success page's hero (illustration) gets when the page's
+  /// texts need more than the screen (large text): the page then scrolls.
+  static const double successHeroMinHeight = 160.0;
+
   // Buddy onboarding (/buddy-onboarding): stage (bubble slot + Buddy) and
   // progress dots
   static const double buddyOnboardingStageHeight = 240.0;

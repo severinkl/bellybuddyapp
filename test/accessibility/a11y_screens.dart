@@ -228,15 +228,7 @@ const a11yScreens = <A11yScreen>[
     base: _patternsLockedBase,
   ),
   A11yScreen('Muster (frei)', RoutePaths.patterns, base: _patternsUnlockedBase),
-  A11yScreen(
-    'Muster frei!',
-    RoutePaths.patternsUnlocked,
-    // An unlabelled tap area (32–370 × 601–681); the success overlay's
-    // Column overflows 184 px at 200 %. Both come from
-    // lib/widgets/common/bb_success_overlay.dart — the same overlay is every
-    // tracker's success screen, so they share these failures.
-    pending: {A11yCheck.labeledTapTarget: 'XA8', A11yCheck.textScale200: 'XA8'},
-  ),
+  A11yScreen('Muster frei!', RoutePaths.patternsUnlocked),
 
   // Ich.
   A11yScreen('Einstellungen', RoutePaths.settings),
