@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/screens/trackers/drink/drink_tracker_screen.dart';
 import 'package:belly_buddy/screens/trackers/drink/widgets/drink_search.dart';
@@ -524,6 +525,22 @@ void main() {
         await tester.pump(const Duration(milliseconds: 200));
         return container;
       }
+
+      testWidgets('„Heute: " and the create row\'s text use the text tokens '
+          'that meet 4.5:1', (tester) async {
+        await pumpWithDrink(tester);
+        expect(
+          tester.widget<Text>(find.text('Heute: ')).style?.color,
+          AppTheme.infoText,
+        );
+        await tester.tap(find.byKey(DrinkSearch.searchFieldKey));
+        await tester.enterText(find.byKey(DrinkSearch.searchFieldKey), 'Mate');
+        await tester.pump();
+        expect(
+          tester.widget<Text>(find.text('„Mate" hinzufügen')).style?.color,
+          AppTheme.primaryText,
+        );
+      });
 
       testWidgets('the search field keeps „Getränk suchen" with text entered', (
         tester,

@@ -6,6 +6,7 @@ import '../../../../models/drink.dart';
 import '../../../../providers/drink_tracker_provider.dart';
 import '../../../../providers/core_providers.dart';
 import '../../../../services/haptic_service.dart';
+import '../../../../widgets/common/bb_labeled_field.dart';
 
 /// Drink autocomplete. Suggestions render inline under the TextField in the
 /// normal widget tree — not in an OverlayPortal — so dragging inside the
@@ -105,46 +106,43 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // The hint goes once the user types; the name stays.
-        MergeSemantics(
-          child: Semantics(
-            label: 'Getränk suchen',
-            textField: true,
-            child: TextField(
-              key: DrinkSearch.searchFieldKey,
-              controller: _controller,
-              focusNode: _focusNode,
-              // The inline suggestion list replaces the old onTapOutside-to-
-              // dismiss path. Expose an explicit keyboard submit so the user
-              // can collapse the dropdown without selecting an item.
-              textInputAction: TextInputAction.done,
-              onSubmitted: (_) => _focusNode.unfocus(),
-              decoration: InputDecoration(
-                hintText: 'Getränk suchen...',
-                prefixIcon: const Icon(
-                  Icons.search,
-                  size: AppConstants.iconSizeClose,
-                ),
-                filled: true,
-                fillColor: AppTheme.muted.withValues(alpha: 0.5),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.spacing20,
-                  vertical: AppConstants.spacing14,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppConstants.radiusFull),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppConstants.radiusFull),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppConstants.radiusFull),
-                  borderSide: BorderSide.none,
-                ),
+        BbLabeledField(
+          label: 'Getränk suchen',
+          child: TextField(
+            key: DrinkSearch.searchFieldKey,
+            controller: _controller,
+            focusNode: _focusNode,
+            // The inline suggestion list replaces the old onTapOutside-to-
+            // dismiss path. Expose an explicit keyboard submit so the user
+            // can collapse the dropdown without selecting an item.
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _focusNode.unfocus(),
+            decoration: InputDecoration(
+              hintText: 'Getränk suchen...',
+              prefixIcon: const Icon(
+                Icons.search,
+                size: AppConstants.iconSizeClose,
               ),
-              onChanged: ref.read(drinkTrackerProvider.notifier).searchDrinks,
+              filled: true,
+              fillColor: AppTheme.muted.withValues(alpha: 0.5),
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: AppConstants.spacing20,
+                vertical: AppConstants.spacing14,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+                borderSide: BorderSide.none,
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+                borderSide: BorderSide.none,
+              ),
             ),
+            onChanged: ref.read(drinkTrackerProvider.notifier).searchDrinks,
           ),
         ),
         if (showSuggestions)
@@ -203,7 +201,7 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
                         '„${_controller.text.trim()}" hinzufügen',
                         style: const TextStyle(
                           fontSize: AppTheme.fontSizeBody,
-                          color: AppTheme.primary,
+                          color: AppTheme.primaryText,
                         ),
                       ),
                       onTap: _createDrink,

@@ -218,12 +218,7 @@ const a11yScreens = <A11yScreen>[
   ),
   A11yScreen('Klo', RoutePaths.toiletTracker),
   A11yScreen('Bauchgefühl', RoutePaths.gutFeelingTracker),
-  A11yScreen(
-    'Getränk',
-    RoutePaths.drinkTracker,
-    // „Heute: " 4.30:1 (mutedForeground on the info tint).
-    pending: {A11yCheck.textContrast: 'XA5'},
-  ),
+  A11yScreen('Getränk', RoutePaths.drinkTracker),
 
   // Entdecken.
   A11yScreen('Tipps', RoutePaths.recommendations),

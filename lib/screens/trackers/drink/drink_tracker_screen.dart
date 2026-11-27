@@ -159,7 +159,7 @@ class _DrinkTrackerScreenState extends ConsumerState<DrinkTrackerScreen>
             dayLabel,
             style: const TextStyle(
               fontSize: AppTheme.fontSizeBody,
-              color: AppTheme.mutedForeground,
+              color: AppTheme.infoText,
             ),
           ),
           Text(

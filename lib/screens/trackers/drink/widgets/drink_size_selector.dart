@@ -5,6 +5,7 @@ import '../../../../config/app_theme.dart';
 import '../../../../config/constants.dart';
 import '../../../../providers/drink_tracker_provider.dart';
 import '../../../../services/haptic_service.dart';
+import '../../../../widgets/common/bb_labeled_field.dart';
 import '../../../../utils/drink_helpers.dart';
 
 class DrinkSizeSelector extends ConsumerStatefulWidget {
@@ -81,69 +82,62 @@ class _DrinkSizeSelectorState extends ConsumerState<DrinkSizeSelector> {
             Expanded(
               // The hint goes once the user types; the name (with the
               // unit shown beside the field) stays.
-              child: MergeSemantics(
-                child: Semantics(
-                  label: 'Andere Menge in ml',
-                  textField: true,
-                  child: TextField(
-                    key: DrinkSizeSelector.customAmountKey,
-                    controller: _customController,
-                    keyboardType: TextInputType.number,
-                    // Scrolls the hint under the field into view with the
-                    // field, not just the digits.
-                    scrollPadding: AppConstants.fieldWithHintScrollPadding,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(5),
-                    ],
-                    decoration: InputDecoration(
-                      hintText: 'Andere Menge',
-                      errorText: DrinkHelpers.amountError(customAmount),
-                      filled: true,
-                      fillColor: AppTheme.muted.withValues(alpha: 0.5),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: AppConstants.spacing20,
-                        vertical: AppConstants.spacing14,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(
-                          AppConstants.radiusFull,
-                        ),
-                        borderSide: BorderSide.none,
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(
-                          AppConstants.radiusFull,
-                        ),
-                        borderSide: BorderSide.none,
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(
-                          AppConstants.radiusFull,
-                        ),
-                        borderSide: BorderSide.none,
-                      ),
-                      errorBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(
-                          AppConstants.radiusFull,
-                        ),
-                        borderSide: const BorderSide(
-                          color: AppTheme.destructive,
-                        ),
-                      ),
-                      focusedErrorBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(
-                          AppConstants.radiusFull,
-                        ),
-                        borderSide: const BorderSide(
-                          color: AppTheme.destructive,
-                        ),
-                      ),
+              child: BbLabeledField(
+                label: 'Andere Menge in ml',
+                child: TextField(
+                  key: DrinkSizeSelector.customAmountKey,
+                  controller: _customController,
+                  keyboardType: TextInputType.number,
+                  // Scrolls the hint under the field into view with the
+                  // field, not just the digits.
+                  scrollPadding: AppConstants.fieldWithHintScrollPadding,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly,
+                    LengthLimitingTextInputFormatter(5),
+                  ],
+                  decoration: InputDecoration(
+                    hintText: 'Andere Menge',
+                    errorText: DrinkHelpers.amountError(customAmount),
+                    filled: true,
+                    fillColor: AppTheme.muted.withValues(alpha: 0.5),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: AppConstants.spacing20,
+                      vertical: AppConstants.spacing14,
                     ),
-                    onChanged: ref
-                        .read(drinkTrackerProvider.notifier)
-                        .setCustomAmount,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.radiusFull,
+                      ),
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.radiusFull,
+                      ),
+                      borderSide: BorderSide.none,
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.radiusFull,
+                      ),
+                      borderSide: BorderSide.none,
+                    ),
+                    errorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.radiusFull,
+                      ),
+                      borderSide: const BorderSide(color: AppTheme.destructive),
+                    ),
+                    focusedErrorBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.radiusFull,
+                      ),
+                      borderSide: const BorderSide(color: AppTheme.destructive),
+                    ),
                   ),
+                  onChanged: ref
+                      .read(drinkTrackerProvider.notifier)
+                      .setCustomAmount,
                 ),
               ),
             ),

@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../../../config/app_theme.dart';
 import '../../../../config/constants.dart';
+import '../../../../widgets/common/bb_labeled_field.dart';
 
 /// Public keys for the sheet's interactive elements. Exposed so test code
 /// can target them without duplicating the string literal.
@@ -113,21 +114,17 @@ class _MealTitleSheetState extends State<_MealTitleSheet> {
             ),
           ),
           AppConstants.gap16,
-          // The hint goes once the user types; the name stays (merged into
-          // the field's own node, not a second one around it).
-          MergeSemantics(
-            child: Semantics(
-              label: 'Name der Mahlzeit',
-              textField: true,
-              child: TextField(
-                key: kMealTitleSheetFieldKey,
-                controller: _controller,
-                autofocus: true,
-                textInputAction: TextInputAction.done,
-                onSubmitted: (_) => _submit(),
-                decoration: const InputDecoration(
-                  hintText: 'z.B. Pasta mit Tomaten',
-                ),
+          // The hint goes once the user types; the name stays.
+          BbLabeledField(
+            label: 'Name der Mahlzeit',
+            child: TextField(
+              key: kMealTitleSheetFieldKey,
+              controller: _controller,
+              autofocus: true,
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _submit(),
+              decoration: const InputDecoration(
+                hintText: 'z.B. Pasta mit Tomaten',
               ),
             ),
           ),
