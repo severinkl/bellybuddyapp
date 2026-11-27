@@ -34,7 +34,10 @@ Future<bool> openExternalUrl(
   } catch (e, st) {
     // Scheme and host only: a path can hold what the user scanned.
     final uri = Uri.tryParse(url);
-    _log.error('Opening ${uri?.scheme}://${uri?.host} failed', e, st);
+    final where = uri == null
+        ? 'an unparsable url'
+        : '${uri.scheme}://${uri.host}';
+    _log.error('Opening $where failed', e, st);
   }
   if (!opened) {
     messenger?.showSnackBar(SnackBar(content: Text(failureMessage)));

@@ -126,6 +126,7 @@ void main() {
     );
     await pumpEventQueue();
     expect((state() as Failed).message, 'Zu viele Anfragen.');
+    expect((state() as Failed).search, isFalse);
 
     notifier().retry();
     expect(state(), isA<LookingUp>());

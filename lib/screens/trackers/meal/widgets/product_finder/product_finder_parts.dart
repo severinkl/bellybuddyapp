@@ -152,7 +152,7 @@ class CameraProblemView extends StatelessWidget {
 class RescanButton extends StatelessWidget {
   const RescanButton({super.key, required this.tapKey, required this.onTap});
 
-  final Key tapKey;
+  final Key? tapKey;
   final VoidCallback onTap;
 
   @override
@@ -460,22 +460,25 @@ class ProductNotFoundView extends StatelessWidget {
   );
 }
 
-/// A call failed: the message, „Nochmal versuchen" and „Nochmal scannen".
+/// A call failed: the message, „Nochmal versuchen" and maybe „Nochmal
+/// scannen".
 class ProductFailedView extends StatelessWidget {
   const ProductFailedView({
     super.key,
     required this.message,
     required this.retryKey,
-    required this.rescanKey,
+    this.rescanKey,
     required this.onRetry,
-    required this.onRescan,
+    this.onRescan,
   });
 
   final String message;
   final Key retryKey;
-  final Key rescanKey;
+  final Key? rescanKey;
   final VoidCallback onRetry;
-  final VoidCallback onRescan;
+
+  /// „Nochmal scannen" below the retry, unless null.
+  final VoidCallback? onRescan;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -500,8 +503,10 @@ class ProductFailedView extends StatelessWidget {
         label: 'Nochmal versuchen',
         onPressed: onRetry,
       ),
-      AppConstants.gap8,
-      RescanButton(tapKey: rescanKey, onTap: onRescan),
+      if (onRescan case final onRescan?) ...[
+        AppConstants.gap8,
+        RescanButton(tapKey: rescanKey, onTap: onRescan),
+      ],
     ],
   );
 }

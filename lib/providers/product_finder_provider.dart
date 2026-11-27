@@ -43,12 +43,14 @@ final class NotFound extends ProductFinderState {
   final String barcode;
 }
 
-/// A call failed: [message] says so, [retry] repeats that call.
+/// A call failed: [message] says so, [retry] repeats that call; [search]
+/// when it was a search (the sheet keeps the search field then).
 final class Failed extends ProductFinderState {
-  const Failed(this.message, this.retry);
+  const Failed(this.message, this.retry, {this.search = false});
 
   final String message;
   final void Function() retry;
+  final bool search;
 }
 
 /// Shown when a failed call carries no German text from core.
@@ -110,21 +112,27 @@ class ProductFinderNotifier extends Notifier<ProductFinderState> {
     () => _service.search(query),
     SearchResults.new,
     () => _search(query),
+    search: true,
   );
 
   Future<void> _run<T>(
     ProductFinderState loading,
     Future<T> Function() call,
     ProductFinderState Function(T) done,
-    void Function() again,
-  ) async {
+    void Function() again, {
+    bool search = false,
+  }) async {
     final id = ++_call;
     state = loading;
     ProductFinderState next;
     try {
       next = done(await call());
     } on ProductException catch (e) {
-      next = Failed(e.message ?? productFinderFallbackError, again);
+      next = Failed(
+        e.message ?? productFinderFallbackError,
+        again,
+        search: search,
+      );
     }
     if (!ref.mounted || id != _call) return;
     state = next;

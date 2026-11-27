@@ -64,7 +64,7 @@ class AppConstants {
     spacingXl,
     spacingXl,
     spacingXl,
-    64,
+    spacingXxl + spacingMd,
   );
 
   /// The relief breathing pacer's circle: smallest (empty lungs) and

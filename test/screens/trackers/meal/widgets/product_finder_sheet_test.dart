@@ -8,6 +8,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/product.dart';
+import 'package:belly_buddy/providers/product_finder_provider.dart';
 import 'package:belly_buddy/screens/trackers/meal/widgets/product_finder_sheet.dart';
 import 'package:belly_buddy/services/product_service.dart';
 import 'package:belly_buddy/widgets/scanner/barcode_scanner.dart';
@@ -422,6 +423,53 @@ void main() {
       ProductFound(_product),
     );
     expect(_scannerActive(tester), isFalse);
+    expect(find.byType(_FakeScanner), findsNothing);
+  });
+
+  testWidgets('a failed search keeps the field with the query; a failed '
+      'lookup does not', (tester) async {
+    final h = _Harness();
+    await h.pump(tester);
+    await _submitSearch(tester, 'Joghurt');
+    h.service.searchAnswers.single.completeError(const ProductException());
+    await tester.pumpAndSettle();
+    expect(find.text(productFinderFallbackError), findsOneWidget);
+    expect(find.byKey(ProductFinderSheet.retryKey), findsOneWidget);
+    expect(find.byKey(ProductFinderSheet.rescanKey), findsOneWidget);
+    final field = tester.widget<TextField>(
+      find.byKey(ProductFinderSheet.searchFieldKey),
+    );
+    expect(field.controller!.text, 'Joghurt');
+
+    // A changed term searches again from here.
+    await _submitSearch(tester, 'Käse');
+    expect(h.service.searches, ['Joghurt', 'Käse']);
+
+    await tester.tap(find.byKey(ProductFinderSheet.rescanKey));
+    await tester.pumpAndSettle();
+    await _scan(tester, h);
+    h.service.lookupAnswers.single.completeError(const ProductException());
+    await tester.pumpAndSettle();
+    expect(find.byKey(ProductFinderSheet.searchFieldKey), findsNothing);
+    expect(find.byKey(ProductFinderSheet.retryKey), findsOneWidget);
+  });
+
+  testWidgets('clearing the field while a search runs drops its results', (
+    tester,
+  ) async {
+    final h = _Harness();
+    await h.pump(tester);
+    await _submitSearch(tester, 'Joghurt');
+    await tester.tap(find.byTooltip('Suche löschen'));
+    await tester.pump();
+    expect(find.text('Halte den Barcode in den Rahmen'), findsOneWidget);
+
+    h.service.searchAnswers.single.complete(const [
+      ProductHit(barcode: '4000000000020', name: 'Joghurt Natur'),
+    ]);
+    await tester.pumpAndSettle();
+    expect(find.text('Joghurt Natur'), findsNothing);
+    expect(_scannerActive(tester), isTrue);
   });
 
   testWidgets('scanner inactive while the app is in the background', (

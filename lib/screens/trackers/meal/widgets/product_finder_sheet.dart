@@ -131,7 +131,11 @@ class _ProductFinderSheetState extends ConsumerState<ProductFinderSheet> {
 
   void _clearQuery() {
     _query.clear();
-    if (ref.read(productFinderProvider) is SearchResults) _finder.reset();
+    // A pending or shown search of the cleared term goes too.
+    if (ref.read(productFinderProvider)
+        case SearchResults() || Searching() || Failed(search: true)) {
+      _finder.reset();
+    }
   }
 
   Future<void> _open(String url, String failureMessage) => openExternalUrl(
@@ -179,7 +183,10 @@ class _ProductFinderSheetState extends ConsumerState<ProductFinderSheet> {
               AppConstants.spacingMd,
             ),
             children: switch (state) {
-              Scanning() || Searching() || SearchResults() => [
+              Scanning() ||
+              Searching() ||
+              SearchResults() ||
+              Failed(search: true) => [
                 _scannerArea(scanning: state is Scanning),
                 AppConstants.gap16,
                 ProductSearchField(
@@ -193,6 +200,13 @@ class _ProductFinderSheetState extends ConsumerState<ProductFinderSheet> {
                 if (state is Searching) const ProductFinderLoading(),
                 if (state is SearchResults)
                   ProductSearchResults(hits: state.hits, onPick: _finder.pick),
+                // „Nochmal scannen" is the scanner area's already.
+                if (state is Failed)
+                  ProductFailedView(
+                    message: state.message,
+                    retryKey: ProductFinderSheet.retryKey,
+                    onRetry: _finder.retry,
+                  ),
               ],
               LookingUp() => [const ProductFinderLoading()],
               Found(:final product) => [
