@@ -6,6 +6,7 @@ import '../models/toilet_entry.dart';
 import '../models/gut_feeling_entry.dart';
 import '../models/drink_entry.dart';
 import '../models/insight_source.dart';
+import '../models/progress.dart';
 import '../providers/core_providers.dart';
 import '../utils/date_format_utils.dart';
 import '../utils/logger.dart';
@@ -255,6 +256,46 @@ class EntryQueryService {
       );
     } catch (e, st) {
       _log.error('fetchInsightSource failed', e, st);
+      rethrow;
+    }
+  }
+
+  /// „Dein Verlauf"'s data since [since], one select per table: whole
+  /// gut-feeling entries, Klo entries' times and stool types, and the times
+  /// of meals and drinks.
+  Future<ProgressSource> fetchProgressSource({
+    required String userId,
+    required DateTime since,
+  }) async {
+    try {
+      final sinceIso = wallClockToWire(since);
+      final [gutFeelings, toilets, meals, drinks] = await Future.wait([
+        _fetchPaged('gut_feeling_entries', '*', userId, sinceIso),
+        _fetchPaged(
+          'toilet_entries',
+          'tracked_at, stool_type',
+          userId,
+          sinceIso,
+        ),
+        _fetchPaged('meal_entries', 'tracked_at', userId, sinceIso),
+        _fetchPaged('drink_entries', 'tracked_at', userId, sinceIso),
+      ]);
+      DateTime trackedAt(Map<String, dynamic> row) =>
+          wallClockFromWire(row['tracked_at'] as String);
+      return ProgressSource(
+        gutFeelings: [
+          for (final row in gutFeelings) GutFeelingEntry.fromJson(row),
+        ],
+        toilets: [
+          for (final row in toilets)
+            (trackedAt: trackedAt(row), stoolType: row['stool_type'] as int),
+        ],
+        otherTimes: [
+          for (final row in [...meals, ...drinks]) trackedAt(row),
+        ],
+      );
+    } catch (e, st) {
+      _log.error('fetchProgressSource failed', e, st);
       rethrow;
     }
   }

@@ -14,6 +14,7 @@ import 'package:belly_buddy/models/insight_rules.dart';
 import 'package:belly_buddy/models/insight_source.dart';
 import 'package:belly_buddy/models/intolerance_rules.dart';
 import 'package:belly_buddy/models/meal_entry.dart';
+import 'package:belly_buddy/models/progress.dart';
 import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/models/recommendation.dart';
 import 'package:belly_buddy/models/user_profile.dart';
@@ -366,6 +367,40 @@ class FakeEntryRepository implements EntryRepository {
     final error = insightSourceError;
     if (error != null) throw error;
     return insightSource;
+  }
+
+  /// What [fetchProgressSource] returns.
+  ProgressSource progressSource = const ProgressSource(
+    gutFeelings: [],
+    toilets: [],
+    otherTimes: [],
+  );
+
+  /// When set, [fetchProgressSource] throws it.
+  Object? progressSourceError;
+
+  /// The `userId` and `now` of each [fetchProgressSource] call, in order.
+  final progressSourceRequests = <({String userId, DateTime now})>[];
+
+  /// While true, each [fetchProgressSource] call waits for its own
+  /// completer, added to [heldProgressSources].
+  bool holdProgressSource = false;
+  final heldProgressSources = <Completer<ProgressSource>>[];
+
+  @override
+  Future<ProgressSource> fetchProgressSource({
+    required String userId,
+    required DateTime now,
+  }) async {
+    progressSourceRequests.add((userId: userId, now: now));
+    if (holdProgressSource) {
+      final held = Completer<ProgressSource>();
+      heldProgressSources.add(held);
+      return held.future;
+    }
+    final error = progressSourceError;
+    if (error != null) throw error;
+    return progressSource;
   }
 
   @override

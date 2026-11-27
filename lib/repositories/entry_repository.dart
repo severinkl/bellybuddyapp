@@ -2,6 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/insight_rules.dart';
 import '../models/insight_source.dart';
 import '../models/meal_entry.dart';
+import '../models/progress.dart';
+import '../models/progress_rules.dart';
 import '../services/entry_crud_service.dart';
 import '../services/entry_query_service.dart';
 import '../utils/date_format_utils.dart';
@@ -62,6 +64,16 @@ class EntryRepository {
       mealsSince: since.subtract(InsightRules.mealsBefore),
     );
   }
+
+  /// „Dein Verlauf"'s window as of [now]: since the Monday of [now]'s
+  /// local week minus [ProgressRules.weeks] − 1 weeks.
+  Future<ProgressSource> fetchProgressSource({
+    required String userId,
+    required DateTime now,
+  }) => _queryService.fetchProgressSource(
+    userId: userId,
+    since: addDays(mondayOf(startOfDay(now)), -7 * (ProgressRules.weeks - 1)),
+  );
 
   Future<void> insertEntry(
     String table,
