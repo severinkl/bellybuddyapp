@@ -375,6 +375,35 @@ void main() {
       expect(await flags(), {'buddy_announced_u1_saverUsed_2026-11-22': true});
     });
 
+    test('announcementShown: marked shown counts at once, also when its flag '
+        'did not land', () async {
+      buddyRepo.store['u1'] = const BuddyState(userId: 'u1', savers: 1);
+      entryRepo.seedActivityDays({...novDays(16, 20), nov(22)});
+      final c = makeContainer();
+      await load(c);
+      final notifier = c.read(buddyProvider.notifier);
+      expect(
+        await notifier.announcementShown(
+          BuddyAnnouncement.saverUsed,
+          '2026-11-22',
+        ),
+        isFalse,
+      );
+
+      await notifier.markAnnouncementsShown(const [
+        BuddyAnnouncement.saverUsed,
+      ]);
+      // The flags gone (a failed write).
+      SharedPreferences.setMockInitialValues({});
+      expect(
+        await notifier.announcementShown(
+          BuddyAnnouncement.saverUsed,
+          '2026-11-22',
+        ),
+        isTrue,
+      );
+    });
+
     test('marking during a running refresh: the refresh does not bring it '
         'back', () async {
       buddyRepo.store['u1'] = const BuddyState(userId: 'u1');
