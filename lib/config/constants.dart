@@ -381,6 +381,15 @@ class AppConstants {
   // Opacity
   static const double disabledOpacity = 0.4;
 
+  /// The picture of an alternative that does not fit („Passt nicht für
+  /// mich"); its name stays readable.
+  static const double skippedAlternativeOpacity = 0.45;
+
+  // Alternative tiles in the suggestion detail
+  static const double alternativeTileWidth = 80.0;
+  static const double alternativeTileHeight = 100.0;
+  static const double alternativeTileImage = 56.0;
+
   // Spinner
   static const double spinnerSize = 20.0;
 

@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:belly_buddy/models/alternative_choice.dart';
 import 'package:belly_buddy/models/ranked_replacement.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart';
@@ -767,6 +768,56 @@ void main() {
       ),
       findsNothing,
     );
+  });
+
+  testWidgets('„Stattdessen:" leaves out the ones that do not fit', (
+    tester,
+  ) async {
+    await pump(
+      tester,
+      groups: [
+        const IngredientSuggestionGroup(
+          ingredientId: 'ing-1',
+          ingredientName: 'Zwiebel',
+          mealCount: 1,
+          isNew: false,
+          suggestionIds: ['sug-1'],
+          replacements: [
+            RankedReplacement(
+              replacement: ReplacementIngredient(id: 'r2', name: 'Lauchgrün'),
+            ),
+            RankedReplacement(
+              replacement: ReplacementIngredient(
+                id: 'r1',
+                name: 'Schnittlauch',
+              ),
+              verdict: AlternativeChoiceKind.skip,
+              tier: 4,
+            ),
+          ],
+        ),
+        const IngredientSuggestionGroup(
+          ingredientId: 'ing-2',
+          ingredientName: 'Knoblauch',
+          mealCount: 1,
+          isNew: false,
+          suggestionIds: ['sug-2'],
+          replacements: [
+            RankedReplacement(
+              replacement: ReplacementIngredient(id: 'r3', name: 'Asafoetida'),
+              verdict: AlternativeChoiceKind.skip,
+              tier: 4,
+            ),
+          ],
+        ),
+      ],
+    );
+
+    expect(find.text('Stattdessen: Lauchgrün'), findsOneWidget);
+    expect(find.textContaining('Schnittlauch'), findsNothing);
+    // Every one skipped: no line.
+    expect(find.text('Knoblauch'), findsOneWidget);
+    expect(find.textContaining('Asafoetida'), findsNothing);
   });
 
   testWidgets('no alternatives: a line, no „Alle ›"', (tester) async {
