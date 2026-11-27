@@ -154,11 +154,6 @@ List<Override> _mealToEdit() => [
 
 // -- Pending checks -----------------------------------------------------------
 
-const _tapTargets5 = {
-  A11yCheck.androidTapTarget: 'XA5',
-  A11yCheck.iosTapTarget: 'XA5',
-};
-
 const _tapTargets7 = {
   A11yCheck.androidTapTarget: 'XA7',
   A11yCheck.iosTapTarget: 'XA7',
@@ -212,8 +207,8 @@ const a11yScreens = <A11yScreen>[
   A11yScreen('Ich', RoutePaths.me),
 
   // Trackers.
-  // The date/time chips (43 px) and the title (18 px) are XA5's, the
-  // ingredient search's „+ Hinzufügen" (20 px) XA7's, which lands last.
+  // The ingredient search's „+ Hinzufügen" (20 px), XA7's, which lands
+  // last.
   A11yScreen('Mahlzeit', RoutePaths.mealTracker, pending: _tapTargets7),
   A11yScreen(
     'Mahlzeit bearbeiten',
@@ -221,21 +216,13 @@ const a11yScreens = <A11yScreen>[
     seed: _mealToEdit,
     pending: _tapTargets7,
   ),
-  // The date/time chips, 43 px.
-  A11yScreen('Klo', RoutePaths.toiletTracker, pending: _tapTargets5),
-  A11yScreen(
-    'Bauchgefühl',
-    RoutePaths.gutFeelingTracker,
-    // The date/time chips (43 px), the Bauchgefühl/Stimmung tabs (35 px);
-    // the eight slider mascots are unlabelled taps.
-    pending: {..._tapTargets5, A11yCheck.labeledTapTarget: 'XA5'},
-  ),
+  A11yScreen('Klo', RoutePaths.toiletTracker),
+  A11yScreen('Bauchgefühl', RoutePaths.gutFeelingTracker),
   A11yScreen(
     'Getränk',
     RoutePaths.drinkTracker,
-    // The date/time chips (43 px), the quick drinks (40 px); „Heute: "
-    // 4.30:1.
-    pending: {..._tapTargets5, A11yCheck.textContrast: 'XA5'},
+    // „Heute: " 4.30:1 (mutedForeground on the info tint).
+    pending: {A11yCheck.textContrast: 'XA5'},
   ),
 
   // Entdecken.

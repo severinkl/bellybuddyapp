@@ -113,14 +113,22 @@ class _MealTitleSheetState extends State<_MealTitleSheet> {
             ),
           ),
           AppConstants.gap16,
-          TextField(
-            key: kMealTitleSheetFieldKey,
-            controller: _controller,
-            autofocus: true,
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) => _submit(),
-            decoration: const InputDecoration(
-              hintText: 'z.B. Pasta mit Tomaten',
+          // The hint goes once the user types; the name stays (merged into
+          // the field's own node, not a second one around it).
+          MergeSemantics(
+            child: Semantics(
+              label: 'Name der Mahlzeit',
+              textField: true,
+              child: TextField(
+                key: kMealTitleSheetFieldKey,
+                controller: _controller,
+                autofocus: true,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _submit(),
+                decoration: const InputDecoration(
+                  hintText: 'z.B. Pasta mit Tomaten',
+                ),
+              ),
             ),
           ),
           AppConstants.gap16,

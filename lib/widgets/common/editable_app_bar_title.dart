@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
+import 'tap_target.dart';
 
 /// AppBar title that flips between a tappable label and an inline TextField.
 ///
@@ -121,25 +122,28 @@ class _EditableAppBarTitleState extends State<EditableAppBarTitle> {
     return GestureDetector(
       onTap: _enterEdit,
       behavior: HitTestBehavior.opaque,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Flexible(
-            child: Text(
-              isEmpty ? widget.placeholder : text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: AppTheme.fontSizeTitle,
-                fontWeight: FontWeight.w600,
-                color: isEmpty ? AppTheme.mutedForeground : null,
+      // 48 high within the app bar's toolbar: nothing moves.
+      child: TapTarget(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Flexible(
+              child: Text(
+                isEmpty ? widget.placeholder : text,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: AppTheme.fontSizeTitle,
+                  fontWeight: FontWeight.w600,
+                  color: isEmpty ? AppTheme.mutedForeground : null,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: AppConstants.spacingXs),
-          const Icon(Icons.edit, size: AppConstants.iconSizeXs),
-        ],
+            const SizedBox(width: AppConstants.spacingXs),
+            const Icon(Icons.edit, size: AppConstants.iconSizeXs),
+          ],
+        ),
       ),
     );
   }

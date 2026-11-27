@@ -79,60 +79,72 @@ class _DrinkSizeSelectorState extends ConsumerState<DrinkSizeSelector> {
         Row(
           children: [
             Expanded(
-              child: TextField(
-                key: DrinkSizeSelector.customAmountKey,
-                controller: _customController,
-                keyboardType: TextInputType.number,
-                // Scrolls the hint under the field into view with the
-                // field, not just the digits.
-                scrollPadding: AppConstants.fieldWithHintScrollPadding,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(5),
-                ],
-                decoration: InputDecoration(
-                  hintText: 'Andere Menge',
-                  errorText: DrinkHelpers.amountError(customAmount),
-                  filled: true,
-                  fillColor: AppTheme.muted.withValues(alpha: 0.5),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 20,
-                    vertical: 14,
-                  ),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(
-                      AppConstants.radiusFull,
+              // The hint goes once the user types; the name (with the
+              // unit shown beside the field) stays.
+              child: MergeSemantics(
+                child: Semantics(
+                  label: 'Andere Menge in ml',
+                  textField: true,
+                  child: TextField(
+                    key: DrinkSizeSelector.customAmountKey,
+                    controller: _customController,
+                    keyboardType: TextInputType.number,
+                    // Scrolls the hint under the field into view with the
+                    // field, not just the digits.
+                    scrollPadding: AppConstants.fieldWithHintScrollPadding,
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                      LengthLimitingTextInputFormatter(5),
+                    ],
+                    decoration: InputDecoration(
+                      hintText: 'Andere Menge',
+                      errorText: DrinkHelpers.amountError(customAmount),
+                      filled: true,
+                      fillColor: AppTheme.muted.withValues(alpha: 0.5),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: AppConstants.spacing20,
+                        vertical: AppConstants.spacing14,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.radiusFull,
+                        ),
+                        borderSide: BorderSide.none,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.radiusFull,
+                        ),
+                        borderSide: BorderSide.none,
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.radiusFull,
+                        ),
+                        borderSide: BorderSide.none,
+                      ),
+                      errorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.radiusFull,
+                        ),
+                        borderSide: const BorderSide(
+                          color: AppTheme.destructive,
+                        ),
+                      ),
+                      focusedErrorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(
+                          AppConstants.radiusFull,
+                        ),
+                        borderSide: const BorderSide(
+                          color: AppTheme.destructive,
+                        ),
+                      ),
                     ),
-                    borderSide: BorderSide.none,
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(
-                      AppConstants.radiusFull,
-                    ),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(
-                      AppConstants.radiusFull,
-                    ),
-                    borderSide: BorderSide.none,
-                  ),
-                  errorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(
-                      AppConstants.radiusFull,
-                    ),
-                    borderSide: const BorderSide(color: AppTheme.destructive),
-                  ),
-                  focusedErrorBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(
-                      AppConstants.radiusFull,
-                    ),
-                    borderSide: const BorderSide(color: AppTheme.destructive),
+                    onChanged: ref
+                        .read(drinkTrackerProvider.notifier)
+                        .setCustomAmount,
                   ),
                 ),
-                onChanged: ref
-                    .read(drinkTrackerProvider.notifier)
-                    .setCustomAmount,
               ),
             ),
             const SizedBox(width: 8),
@@ -163,24 +175,31 @@ class _SizeButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: AppConstants.animFast,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppTheme.info
-              : AppTheme.muted.withValues(alpha: 0.5),
-          borderRadius: BorderRadius.circular(AppConstants.radiusMd),
-        ),
-        alignment: Alignment.center,
-        child: Text(
-          '$ml ml',
-          style: TextStyle(
-            fontSize: AppTheme.fontSizeBody,
-            fontWeight: FontWeight.w500,
-            color: isSelected ? Colors.white : AppTheme.foreground,
+    // One size at a time: a radio-like group to assistive tech.
+    return Semantics(
+      container: true,
+      button: true,
+      selected: isSelected,
+      inMutuallyExclusiveGroup: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: AppConstants.animFast,
+          padding: const EdgeInsets.symmetric(vertical: AppConstants.spacingMd),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? AppTheme.info
+                : AppTheme.muted.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(AppConstants.radiusMd),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            '$ml ml',
+            style: TextStyle(
+              fontSize: AppTheme.fontSizeBody,
+              fontWeight: FontWeight.w500,
+              color: isSelected ? Colors.white : AppTheme.foreground,
+            ),
           ),
         ),
       ),

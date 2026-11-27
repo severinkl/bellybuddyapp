@@ -1,5 +1,6 @@
 // ignore_for_file: invalid_use_of_internal_member
 import 'package:material_ui/material_ui.dart';
+import 'package:flutter/rendering.dart' show SemanticsNode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -9,6 +10,8 @@ import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/screens/trackers/drink/drink_tracker_screen.dart';
 import 'package:belly_buddy/screens/trackers/drink/widgets/drink_search.dart';
 import 'package:belly_buddy/screens/trackers/drink/widgets/drink_size_selector.dart';
+import 'package:belly_buddy/screens/trackers/drink/widgets/quick_drink_grid.dart';
+import 'package:belly_buddy/widgets/common/tap_target.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
@@ -501,6 +504,136 @@ void main() {
 
       expect(result, isTrue);
       expect(find.text('open'), findsOneWidget);
+    });
+
+    group('for assistive tech', () {
+      Future<ProviderContainer> pumpWithDrink(
+        WidgetTester tester, {
+        FakeDrinkRepository? drinkRepo,
+      }) async {
+        final container = ProviderContainer.test(
+          overrides: _overrides(drinkRepo: drinkRepo),
+        );
+        addTearDown(container.dispose);
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: const MaterialApp(home: DrinkTrackerScreen()),
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 200));
+        return container;
+      }
+
+      testWidgets('the search field keeps „Getränk suchen" with text entered', (
+        tester,
+      ) async {
+        final handle = tester.ensureSemantics();
+        await pumpWithDrink(tester);
+        await tester.enterText(find.byKey(DrinkSearch.searchFieldKey), 'Tee');
+        await tester.pump();
+
+        final field = tester.getSemantics(
+          find.byKey(DrinkSearch.searchFieldKey),
+        );
+        expect(field.label, contains('Getränk suchen'));
+        expect(field, isSemantics(isTextField: true, value: 'Tee'));
+        handle.dispose();
+      });
+
+      testWidgets('an own drink\'s delete button is „Getränk löschen"', (
+        tester,
+      ) async {
+        final repo = FakeDrinkRepository()
+          ..seedDrinks([
+            testDrink(id: 'own', name: 'Eistee', addedByUserId: 'test-user'),
+          ]);
+        final container = await pumpWithDrink(tester, drinkRepo: repo);
+        await tester.tap(find.byKey(DrinkSearch.searchFieldKey));
+        await tester.enterText(find.byKey(DrinkSearch.searchFieldKey), 'Eis');
+        container.read(drinkTrackerProvider.notifier).searchDrinks('Eis');
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(find.byTooltip('Getränk löschen'), findsOneWidget);
+      });
+
+      testWidgets('the custom amount field keeps „Andere Menge in ml" with '
+          '„300" entered', (tester) async {
+        final handle = tester.ensureSemantics();
+        final container = await pumpWithDrink(tester);
+        container.read(drinkTrackerProvider.notifier).toggleDrink(testDrink());
+        await tester.pump();
+
+        final field = find.byKey(DrinkSizeSelector.customAmountKey);
+        await tester.ensureVisible(field);
+        await tester.enterText(field, '300');
+        await tester.pump();
+
+        final node = tester.getSemantics(field);
+        expect(node.label, contains('Andere Menge in ml'));
+        expect(node, isSemantics(isTextField: true, value: '300'));
+        handle.dispose();
+      });
+
+      testWidgets('the chosen quick drink and size are selected to assistive '
+          'tech', (tester) async {
+        final handle = tester.ensureSemantics();
+        final container = await pumpWithDrink(tester);
+        container.read(drinkTrackerProvider.notifier)
+          ..toggleDrink(testDrink())
+          ..selectAmount(250);
+        await tester.pump();
+
+        SemanticsNode nodeOf(Type of, String text) => tester.getSemantics(
+          find.descendant(of: find.byType(of), matching: find.text(text)),
+        );
+
+        expect(
+          nodeOf(QuickDrinkGrid, 'Wasser'),
+          isSemantics(
+            label: 'Wasser',
+            isButton: true,
+            hasSelectedState: true,
+            isSelected: true,
+            hasTapAction: true,
+          ),
+        );
+        expect(
+          nodeOf(DrinkSizeSelector, '250 ml'),
+          isSemantics(
+            label: '250 ml',
+            isButton: true,
+            hasSelectedState: true,
+            isSelected: true,
+            hasTapAction: true,
+          ),
+        );
+        expect(
+          nodeOf(DrinkSizeSelector, '500 ml'),
+          isSemantics(
+            label: '500 ml',
+            isButton: true,
+            hasSelectedState: true,
+            isSelected: false,
+            hasTapAction: true,
+          ),
+        );
+        expect(
+          tester
+              .getSize(
+                find.ancestor(
+                  of: find.descendant(
+                    of: find.byType(QuickDrinkGrid),
+                    matching: find.text('Wasser'),
+                  ),
+                  matching: find.byType(TapTarget),
+                ),
+              )
+              .height,
+          greaterThanOrEqualTo(48),
+        );
+        handle.dispose();
+      });
     });
   });
 }

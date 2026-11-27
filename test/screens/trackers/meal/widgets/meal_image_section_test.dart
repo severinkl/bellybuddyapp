@@ -1,9 +1,14 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'package:belly_buddy/repositories/meal_media_repository.dart';
 import 'package:belly_buddy/screens/trackers/meal/widgets/meal_image_section.dart';
+
+import '../../../../helpers/fakes.dart';
 
 Widget _wrap(Widget child) => MaterialApp(
   home: Scaffold(body: SingleChildScrollView(child: child)),
@@ -145,6 +150,79 @@ void main() {
         find.text('Das Bild konnte nicht geladen werden.'),
         findsOneWidget,
       );
+    });
+  });
+
+  group('MealImageSection for assistive tech', () {
+    const onePixelPng = <int>[
+      0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D, //
+      0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+      0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00,
+      0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
+      0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
+      0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+    ];
+
+    Future<void> pumpPreview(
+      WidgetTester tester, {
+      required bool saved,
+      required VoidCallback onClear,
+    }) => tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          mealMediaRepositoryProvider.overrideWithValue(
+            FakeMealMediaRepository(),
+          ),
+        ],
+        child: _wrap(
+          MealImageSection(
+            imageBytes: saved ? null : Uint8List.fromList(onePixelPng),
+            initialImageUrl: saved ? 'user/meal.jpg' : null,
+            isAnalyzing: false,
+            onImagePicked: (_, _) async {},
+            onClearImage: onClear,
+          ),
+        ),
+      ),
+    );
+
+    for (final saved in [false, true]) {
+      testWidgets('the photo\'s ✕ is „Foto entfernen", 48 × 48, and removes '
+          'the photo (${saved ? 'saved' : 'picked'})', (tester) async {
+        final handle = tester.ensureSemantics();
+        var cleared = 0;
+        await pumpPreview(tester, saved: saved, onClear: () => cleared++);
+
+        final close = find.bySemanticsLabel('Foto entfernen');
+        expect(close, findsOneWidget);
+        expect(
+          tester.getSemantics(close),
+          isSemantics(
+            label: 'Foto entfernen',
+            isButton: true,
+            hasEnabledState: true,
+            isEnabled: true,
+            hasTapAction: true,
+          ),
+        );
+        expect(tester.getSize(close), const Size(48, 48));
+
+        tester.semantics.tap(find.semantics.byLabel('Foto entfernen'));
+        expect(cleared, 1);
+        handle.dispose();
+      });
+    }
+
+    testWidgets('with reduced motion the saved photo\'s placeholder does not '
+        'shimmer', (tester) async {
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      await pumpPreview(tester, saved: true, onClear: () {});
+
+      expect(find.byType(Shimmer), findsNothing);
     });
   });
 }

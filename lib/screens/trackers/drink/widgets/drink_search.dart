@@ -104,38 +104,48 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        TextField(
-          key: DrinkSearch.searchFieldKey,
-          controller: _controller,
-          focusNode: _focusNode,
-          // The inline suggestion list replaces the old onTapOutside-to-
-          // dismiss path. Expose an explicit keyboard submit so the user
-          // can collapse the dropdown without selecting an item.
-          textInputAction: TextInputAction.done,
-          onSubmitted: (_) => _focusNode.unfocus(),
-          decoration: InputDecoration(
-            hintText: 'Getränk suchen...',
-            prefixIcon: const Icon(Icons.search, size: 20),
-            filled: true,
-            fillColor: AppTheme.muted.withValues(alpha: 0.5),
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 20,
-              vertical: 14,
-            ),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppConstants.radiusFull),
-              borderSide: BorderSide.none,
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppConstants.radiusFull),
-              borderSide: BorderSide.none,
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(AppConstants.radiusFull),
-              borderSide: BorderSide.none,
+        // The hint goes once the user types; the name stays.
+        MergeSemantics(
+          child: Semantics(
+            label: 'Getränk suchen',
+            textField: true,
+            child: TextField(
+              key: DrinkSearch.searchFieldKey,
+              controller: _controller,
+              focusNode: _focusNode,
+              // The inline suggestion list replaces the old onTapOutside-to-
+              // dismiss path. Expose an explicit keyboard submit so the user
+              // can collapse the dropdown without selecting an item.
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) => _focusNode.unfocus(),
+              decoration: InputDecoration(
+                hintText: 'Getränk suchen...',
+                prefixIcon: const Icon(
+                  Icons.search,
+                  size: AppConstants.iconSizeClose,
+                ),
+                filled: true,
+                fillColor: AppTheme.muted.withValues(alpha: 0.5),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppConstants.spacing20,
+                  vertical: AppConstants.spacing14,
+                ),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+                  borderSide: BorderSide.none,
+                ),
+                enabledBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+                  borderSide: BorderSide.none,
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppConstants.radiusFull),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              onChanged: ref.read(drinkTrackerProvider.notifier).searchDrinks,
             ),
           ),
-          onChanged: ref.read(drinkTrackerProvider.notifier).searchDrinks,
         ),
         if (showSuggestions)
           Container(
@@ -168,6 +178,7 @@ class _DrinkSearchState extends ConsumerState<DrinkSearch> {
                       onTap: () => _selectDrink(drink),
                       trailing: isOwn
                           ? IconButton(
+                              tooltip: 'Getränk löschen',
                               icon: Icon(
                                 Icons.delete_outline,
                                 size: AppConstants.iconSizeSm,

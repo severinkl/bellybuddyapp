@@ -445,6 +445,7 @@ class AppConstants {
 
   // Shadow
   static const double shadowBlurSm = 8.0;
+  static const Offset shadowOffsetSm = Offset(0, 2);
 
   // Button
   static const double buttonHeight = 56.0;
@@ -481,6 +482,12 @@ class AppConstants {
   static const Duration animMedium = Duration(milliseconds: 300);
   static const Duration animSlow = Duration(milliseconds: 500);
   static const Duration animSlower = Duration(milliseconds: 600);
+
+  /// A slider mascot's bounce when it becomes the active end.
+  static const Duration mascotBounceDuration = Duration(milliseconds: 400);
+
+  /// A paged tab switch (the Bauchgefühl/Stimmung pages).
+  static const Duration pageSwitchDuration = Duration(milliseconds: 350);
 
   // Asset paths
   static const String appIconPath = 'assets/images/app-icon.png';

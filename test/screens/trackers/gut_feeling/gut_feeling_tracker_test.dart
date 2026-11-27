@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:belly_buddy/screens/trackers/gut_feeling/gut_feeling_tracker_screen.dart';
+import 'package:belly_buddy/screens/trackers/gut_feeling/widgets/mood_tab_selector.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/care_log_provider.dart';
@@ -497,6 +498,100 @@ void main() {
       await tester.ensureVisible(find.text('unwohl'));
       await tester.pump();
       expect(tester.getRect(find.text('unwohl')).bottom, lessThan(buttonTop));
+    });
+
+    testWidgets('with disableAnimations the screen enters without animating', (
+      tester,
+    ) async {
+      tester.platformDispatcher.accessibilityFeaturesTestValue =
+          const FakeAccessibilityFeatures(disableAnimations: true);
+      addTearDown(
+        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+      );
+      await tester.pumpWithProviders(
+        const GutFeelingTrackerScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pump();
+
+      for (final content in [
+        find.byType(MoodTabSelector),
+        find.byType(PageView),
+      ]) {
+        final fade = tester.widget<FadeTransition>(
+          find
+              .ancestor(of: content, matching: find.byType(FadeTransition))
+              .first,
+        );
+        final slide = tester.widget<SlideTransition>(
+          find
+              .ancestor(of: content, matching: find.byType(SlideTransition))
+              .first,
+        );
+        expect(fade.opacity.value, 1);
+        expect(slide.position.value, Offset.zero);
+      }
+
+      // „Weiter" switches the page without sliding.
+      await tester.tap(find.text('Weiter'));
+      await tester.pump();
+      expect(find.text('Speichern'), findsOneWidget);
+      expect(
+        tester.widget<PageView>(find.byType(PageView)).controller!.page,
+        1,
+      );
+    });
+
+    testWidgets('the tabs are selected/unselected buttons, each ≥ 48 high', (
+      tester,
+    ) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWithProviders(
+        const GutFeelingTrackerScreen(),
+        overrides: _overrides(),
+      );
+      await tester.pump(const Duration(seconds: 1));
+
+      for (final (label, selected) in [
+        ('Bauchgefühl', true),
+        ('Stimmung', false),
+      ]) {
+        final tab = find.descendant(
+          of: find.byType(MoodTabSelector),
+          matching: find.text(label),
+        );
+        final node = tester.getSemantics(tab);
+        expect(
+          node,
+          isSemantics(
+            label: label,
+            isButton: true,
+            hasSelectedState: true,
+            isSelected: selected,
+            hasTapAction: true,
+          ),
+        );
+        expect(node.rect.height, greaterThanOrEqualTo(48), reason: label);
+      }
+
+      tester.semantics.tap(find.semantics.byLabel('Stimmung'));
+      await tester.pump(const Duration(seconds: 1));
+      expect(
+        tester.getSemantics(
+          find.descendant(
+            of: find.byType(MoodTabSelector),
+            matching: find.text('Stimmung'),
+          ),
+        ),
+        isSemantics(
+          label: 'Stimmung',
+          isSelected: true,
+          hasSelectedState: true,
+          isButton: true,
+          hasTapAction: true,
+        ),
+      );
+      handle.dispose();
     });
   });
 }

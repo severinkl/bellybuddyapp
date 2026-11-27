@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import '../../config/constants.dart';
 import '../../services/haptic_service.dart';
+import '../../utils/reduced_motion.dart';
 import 'bb_slider.dart';
 import 'mascot_image.dart';
 
@@ -32,20 +33,24 @@ class MoodSliderRow extends StatelessWidget {
     final value = this.value;
     final leftActive = value == 1;
     final rightActive = value != null && value > 1;
+    // The mascots are a shortcut for sighted users; to assistive tech the
+    // slider is the one control of the row.
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppConstants.spacing12),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: () {
-              HapticService.selection();
-              onChanged(1);
-            },
-            child: _AnimatedMascot(
-              assetPath: leftMascot,
-              size: mascotSize,
-              isActive: leftActive,
-              fit: mascotFit,
+          ExcludeSemantics(
+            child: GestureDetector(
+              onTap: () {
+                HapticService.selection();
+                onChanged(1);
+              },
+              child: _AnimatedMascot(
+                assetPath: leftMascot,
+                size: mascotSize,
+                isActive: leftActive,
+                fit: mascotFit,
+              ),
             ),
           ),
           const SizedBox(width: AppConstants.spacing6),
@@ -62,16 +67,18 @@ class MoodSliderRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppConstants.spacing6),
-          GestureDetector(
-            onTap: () {
-              HapticService.selection();
-              onChanged(5);
-            },
-            child: _AnimatedMascot(
-              assetPath: rightMascot,
-              size: mascotSize,
-              isActive: rightActive,
-              fit: mascotFit,
+          ExcludeSemantics(
+            child: GestureDetector(
+              onTap: () {
+                HapticService.selection();
+                onChanged(5);
+              },
+              child: _AnimatedMascot(
+                assetPath: rightMascot,
+                size: mascotSize,
+                isActive: rightActive,
+                fit: mascotFit,
+              ),
             ),
           ),
         ],
@@ -107,10 +114,7 @@ class _AnimatedMascotState extends State<_AnimatedMascot>
   void initState() {
     super.initState();
     _wasActive = widget.isActive;
-    _bounceController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 400),
-    );
+    _bounceController = AnimationController(vsync: this);
     _bounceAnimation = TweenSequence<double>([
       TweenSequenceItem(
         tween: Tween(
@@ -127,6 +131,16 @@ class _AnimatedMascotState extends State<_AnimatedMascot>
         weight: 60,
       ),
     ]).animate(_bounceController);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // No bounce with reduced motion: a zero-length run ends at once.
+    _bounceController.duration = ReducedMotion.duration(
+      context,
+      AppConstants.mascotBounceDuration,
+    );
   }
 
   @override
@@ -148,18 +162,19 @@ class _AnimatedMascotState extends State<_AnimatedMascot>
   Widget build(BuildContext context) {
     final targetScale = widget.isActive ? 1.1 : 0.9;
     final targetOpacity = widget.isActive ? 1.0 : 0.4;
+    final settle = ReducedMotion.duration(context, AppConstants.animMedium);
 
     return AnimatedBuilder(
       animation: _bounceController,
       builder: (context, child) {
         return AnimatedOpacity(
           opacity: targetOpacity,
-          duration: AppConstants.animMedium,
+          duration: settle,
           child: AnimatedScale(
             scale: _bounceController.isAnimating
                 ? _bounceAnimation.value
                 : targetScale,
-            duration: AppConstants.animMedium,
+            duration: settle,
             child: child,
           ),
         );

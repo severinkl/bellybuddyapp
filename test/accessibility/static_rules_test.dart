@@ -164,8 +164,6 @@ const _rules = [
           'XA7', // clear the search
       'lib/widgets/common/ingredient_search.dart:IconButton#1':
           'XA7', // delete an own ingredient
-      'lib/screens/trackers/drink/widgets/drink_search.dart:IconButton#1':
-          'XA5', // delete an own drink
       'lib/screens/settings/widgets/password_change_section.dart:IconButton#1':
           'XA9', // current password eye
       'lib/screens/settings/widgets/password_change_section.dart:IconButton#2':
@@ -187,10 +185,6 @@ const _rules = [
     allowed: {
       'lib/screens/settings/widgets/reminder_time_picker.dart:GestureDetector#2':
           'XA9', // ✕ remove a time
-      'lib/screens/trackers/meal/widgets/meal_image_section.dart:GestureDetector#2':
-          'XA5', // ✕ remove the picked photo
-      'lib/screens/trackers/meal/widgets/meal_image_section.dart:GestureDetector#3':
-          'XA5', // ✕ remove the saved photo
       'lib/widgets/common/ingredient_search.dart:GestureDetector#1':
           'XA7', // ✕ close the search
       'lib/widgets/common/circle_icon_button.dart:GestureDetector#1':

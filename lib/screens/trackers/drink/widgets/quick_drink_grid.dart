@@ -4,6 +4,7 @@ import '../../../../config/app_theme.dart';
 import '../../../../config/constants.dart';
 import '../../../../providers/drink_tracker_provider.dart';
 import '../../../../services/haptic_service.dart';
+import '../../../../widgets/common/tap_target.dart';
 
 class QuickDrinkGrid extends ConsumerWidget {
   const QuickDrinkGrid({super.key});
@@ -34,34 +35,45 @@ class QuickDrinkGrid extends ConsumerWidget {
           ),
         ),
         AppConstants.gap8,
+        // Each drink's hit area is padded to 48 high; the rows lose their
+        // run spacing for it, so the pills keep their 8 px gaps.
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: AppConstants.spacingSm,
           children: quickDrinks.map((drink) {
             final isSelected = selectedDrink?.id == drink.id;
-            return GestureDetector(
-              onTap: () {
-                HapticService.selection();
-                ref.read(drinkTrackerProvider.notifier).toggleDrink(drink);
-              },
-              child: AnimatedContainer(
-                duration: AppConstants.animFast,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
-                ),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppTheme.info
-                      : AppTheme.muted.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(AppConstants.radiusFull),
-                ),
-                child: Text(
-                  drink.name,
-                  style: TextStyle(
-                    fontSize: AppTheme.fontSizeBody,
-                    fontWeight: FontWeight.w500,
-                    color: isSelected ? Colors.white : AppTheme.foreground,
+            return Semantics(
+              container: true,
+              button: true,
+              selected: isSelected,
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: () {
+                  HapticService.selection();
+                  ref.read(drinkTrackerProvider.notifier).toggleDrink(drink);
+                },
+                child: TapTarget(
+                  child: AnimatedContainer(
+                    duration: AppConstants.animFast,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppConstants.spacing14,
+                      vertical: AppConstants.spacing10,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? AppTheme.info
+                          : AppTheme.muted.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(
+                        AppConstants.radiusFull,
+                      ),
+                    ),
+                    child: Text(
+                      drink.name,
+                      style: TextStyle(
+                        fontSize: AppTheme.fontSizeBody,
+                        fontWeight: FontWeight.w500,
+                        color: isSelected ? Colors.white : AppTheme.foreground,
+                      ),
+                    ),
                   ),
                 ),
               ),
