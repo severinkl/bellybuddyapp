@@ -24,28 +24,40 @@ class SelectableItemGrid<T> extends StatelessWidget {
       runSpacing: 8,
       children: items.map((item) {
         final isSelected = item == selectedValue;
-        return GestureDetector(
-          onTap: () {
-            HapticService.selection();
-            onSelected(item);
-          },
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? AppTheme.primary.withValues(alpha: 0.2)
-                  : AppTheme.card,
-              borderRadius: BorderRadius.circular(AppConstants.radiusRound),
-              border: Border.all(
-                color: isSelected ? AppTheme.primary : AppTheme.border,
-                width: isSelected ? 2 : 1,
+        // One value at a time: a radio-like group to assistive tech.
+        return Semantics(
+          container: true,
+          button: true,
+          selected: isSelected,
+          inMutuallyExclusiveGroup: true,
+          child: GestureDetector(
+            onTap: () {
+              HapticService.selection();
+              onSelected(item);
+            },
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppConstants.spacingMd,
+                vertical: AppConstants.spacing10,
               ),
-            ),
-            child: Text(
-              labelBuilder(item),
-              style: TextStyle(
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                color: AppTheme.foreground,
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? AppTheme.primary.withValues(alpha: 0.2)
+                    : AppTheme.card,
+                borderRadius: BorderRadius.circular(AppConstants.radiusRound),
+                border: Border.all(
+                  color: isSelected ? AppTheme.primary : AppTheme.border,
+                  width: isSelected
+                      ? AppConstants.borderWidthLg
+                      : AppConstants.borderWidthDefault,
+                ),
+              ),
+              child: Text(
+                labelBuilder(item),
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                  color: AppTheme.foreground,
+                ),
               ),
             ),
           ),

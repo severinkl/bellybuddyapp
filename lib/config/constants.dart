@@ -50,8 +50,8 @@ class AppConstants {
   static const double iconBadgeLg = 48.0;
   static const double iconBadgeXl = 56.0;
 
-  /// The smallest tap target (Apple's 44 pt).
-  static const double minTapTarget = 44.0;
+  /// The smallest tap target (Android's 48 dp; covers Apple's 44 pt).
+  static const double minTapTarget = 48.0;
 
   /// The smallest tap target on Home.
   static const double homeTapTarget = 48.0;
@@ -73,6 +73,7 @@ class AppConstants {
 
   // Border widths
   static const double borderWidthSm = 0.5;
+  static const double borderWidthDefault = 1.0;
   static const double borderWidthMd = 1.5;
   static const double borderWidthLg = 2.0;
 

@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 import '../../config/constants.dart';
 import '../../services/haptic_service.dart';
+import '../../utils/reduced_motion.dart';
 
 class PressScaleWrapper extends StatefulWidget {
   final Widget child;
@@ -8,12 +9,16 @@ class PressScaleWrapper extends StatefulWidget {
   final double scaleValue;
   final bool enableHaptic;
 
+  /// Whether assistive tech reads the wrapped child as one button.
+  final bool semanticsButton;
+
   const PressScaleWrapper({
     super.key,
     required this.child,
     this.onTap,
     this.scaleValue = 0.98,
     this.enableHaptic = true,
+    this.semanticsButton = true,
   });
 
   @override
@@ -46,8 +51,10 @@ class _PressScaleWrapperState extends State<PressScaleWrapper>
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => _controller.forward(),
+    // With reduced motion the row doesn't shrink while pressed.
+    final calm = ReducedMotion.of(context);
+    final detector = GestureDetector(
+      onTapDown: calm ? null : (_) => _controller.forward(),
       onTapUp: (_) {
         _controller.reverse();
         if (widget.enableHaptic) HapticService.light();
@@ -56,5 +63,7 @@ class _PressScaleWrapperState extends State<PressScaleWrapper>
       onTapCancel: () => _controller.reverse(),
       child: ScaleTransition(scale: _scale, child: widget.child),
     );
+    if (!widget.semanticsButton) return detector;
+    return Semantics(container: true, button: true, child: detector);
   }
 }

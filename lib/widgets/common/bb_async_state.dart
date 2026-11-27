@@ -22,12 +22,16 @@ class BbLoadingState extends StatelessWidget {
         children: [
           MascotImage(assetPath: mascotAsset, width: 96, height: 96),
           AppConstants.gap16,
-          Text(
-            message,
-            style: const TextStyle(
-              fontSize: AppTheme.fontSizeSubtitle,
-              color: AppTheme.mutedForeground,
-              fontWeight: FontWeight.w500,
+          Semantics(
+            liveRegion: true,
+            container: true,
+            child: Text(
+              message,
+              style: const TextStyle(
+                fontSize: AppTheme.fontSizeSubtitle,
+                color: AppTheme.mutedForeground,
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
         ],
@@ -61,12 +65,16 @@ class BbErrorState extends StatelessWidget {
           AppConstants.gap16,
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              message,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: AppTheme.fontSizeBodyLG,
-                color: AppTheme.mutedForeground,
+            child: Semantics(
+              liveRegion: true,
+              container: true,
+              child: Text(
+                message,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: AppTheme.fontSizeBodyLG,
+                  color: AppTheme.mutedForeground,
+                ),
               ),
             ),
           ),

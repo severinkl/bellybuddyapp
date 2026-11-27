@@ -17,7 +17,7 @@ class CircleIconButton extends StatelessWidget {
     this.tapKey,
     required this.icon,
     required this.semanticLabel,
-    this.size = AppConstants.iconBadgeMd,
+    this.size = AppConstants.iconBadgeLg,
     this.backgroundColor,
     this.onPressed,
   });
