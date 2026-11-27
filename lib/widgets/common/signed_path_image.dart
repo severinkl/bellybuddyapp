@@ -9,6 +9,9 @@ import '../../repositories/meal_media_repository.dart';
 /// signed URL via [MealMediaRepository.resolveSignedUrl] before handing it to
 /// [CachedNetworkImage]. Used anywhere a persisted meal/recipe image needs to
 /// render — recipe list tiles, recipe detail hero, recipe editor preview.
+///
+/// Decorative at every use (its title is next to it): left out of
+/// semantics, so a screen reader doesn't stop on an unnamed „Bild".
 class SignedPathImage extends ConsumerStatefulWidget {
   const SignedPathImage({
     super.key,
@@ -66,7 +69,9 @@ class _SignedPathImageState extends ConsumerState<SignedPathImage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => ExcludeSemantics(child: _buildImage());
+
+  Widget _buildImage() {
     if (_loading) {
       return widget.placeholder ?? const SizedBox.shrink();
     }

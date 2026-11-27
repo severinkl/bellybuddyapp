@@ -1,8 +1,11 @@
 import 'package:belly_buddy/config/constants.dart';
+import 'package:belly_buddy/widgets/common/bb_button.dart';
 import 'package:belly_buddy/widgets/common/bb_success_overlay.dart';
 import 'package:belly_buddy/widgets/common/mascot_image.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../helpers/layout_checks.dart';
 
 Widget _wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
 
@@ -229,6 +232,113 @@ void main() {
           reason: text,
         );
       }
+    });
+  });
+
+  group('BbSuccessOverlay for screen readers', () {
+    /// Sized by what it is given, like the Buddy's success hero; it can't
+    /// answer intrinsic sizes (a [LayoutBuilder]).
+    const heroKey = Key('hero');
+    Widget hero() => LayoutBuilder(
+      key: heroKey,
+      builder: (context, constraints) => SizedBox(
+        height: constraints.maxHeight.isFinite ? constraints.maxHeight : 100,
+        width: 100,
+      ),
+    );
+
+    BbSuccessOverlay overlay({VoidCallback? onDismissed}) => BbSuccessOverlay(
+      message: 'Muster frei!',
+      subMessage: 'Deine Muster-Seite ist jetzt frei. ' * 3,
+      onDismissed: onDismissed ?? () {},
+      illustration: hero(),
+      actions: [BbButton(label: 'Muster ansehen', onPressed: () {})],
+    );
+
+    testWidgets('one named „Schließen" button dismisses it', (tester) async {
+      final handle = tester.ensureSemantics();
+      var dismissed = 0;
+      await _pumpOverlay(tester, overlay(onDismissed: () => dismissed++));
+
+      final close = find.bySemanticsLabel('Schließen');
+      expect(close, findsOneWidget);
+      expect(
+        tester.getSemantics(close),
+        isSemantics(
+          label: 'Schließen',
+          isButton: true,
+          hasTapAction: true,
+          hasEnabledState: true,
+          isEnabled: true,
+        ),
+      );
+      tester.semantics.tap(find.semantics.byLabel('Schließen'));
+      expect(dismissed, 1);
+      await expectLater(tester, meetsGuideline(labeledTapTargetGuideline));
+      await expectLater(tester, meetsGuideline(androidTapTargetGuideline));
+      handle.dispose();
+    });
+
+    testWidgets('the title is a heading', (tester) async {
+      final handle = tester.ensureSemantics();
+      await _pumpOverlay(tester, overlay());
+      // Past the text's fade-in (it starts on the frame after its delay).
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(
+        tester.getSemantics(find.bySemanticsLabel('Muster frei!')),
+        isSemantics(label: 'Muster frei!', isHeader: true),
+      );
+      handle.dispose();
+    });
+
+    testWidgets('a tap anywhere still dismisses it', (tester) async {
+      var dismissed = 0;
+      await _pumpOverlay(tester, overlay(onDismissed: () => dismissed++));
+
+      await tester.tapAt(const Offset(5, 5));
+      expect(dismissed, 1);
+    });
+
+    testWidgets('scrolls at 200 % text instead of overflowing', (tester) async {
+      tester.view
+        ..physicalSize = const Size(402, 874)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final errors = await collectFlutterErrors(() async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: MediaQuery.withClampedTextScaling(
+              minScaleFactor: 2,
+              maxScaleFactor: 2,
+              child: Scaffold(body: overlay()),
+            ),
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 700));
+      });
+
+      expect(verticalOverflows(errors), isEmpty);
+      expect(find.byType(Scrollable), findsOneWidget);
+      await tester.scrollUntilVisible(find.text('Tippen zum Fortfahren'), 100);
+      expect(find.text('Tippen zum Fortfahren').hitTestable(), findsOneWidget);
+    });
+
+    testWidgets('gives the hero the height left over at 100 % text', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(402, 874)
+        ..devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await _pumpOverlay(tester, overlay());
+
+      // The page fills the screen and the hero takes what the texts and
+      // the button leave (more than the minimum it gets when it scrolls).
+      expect(
+        tester.getSize(find.byKey(heroKey)).height,
+        greaterThan(AppConstants.successHeroMinHeight),
+      );
     });
   });
 }

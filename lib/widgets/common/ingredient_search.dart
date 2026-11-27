@@ -4,6 +4,10 @@ import 'package:material_ui/material_ui.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../models/ingredient_search_result.dart';
+import 'bb_icon_tap.dart';
+import 'bb_labeled_field.dart';
+import 'bb_tap_area.dart';
+import 'tap_target.dart';
 
 /// The „Zutaten" card: the added ingredients as chips, and „+ Hinzufügen",
 /// a search field with the catalog's best matches ([suggestions], ranked by
@@ -208,47 +212,53 @@ class _IngredientSearchState extends State<IngredientSearch> {
               const SizedBox(width: AppConstants.spacing12),
               if (_isAdding)
                 Expanded(
-                  child: TextField(
-                    controller: _controller,
-                    focusNode: _focusNode,
-                    style: const TextStyle(fontSize: AppTheme.fontSizeBody),
-                    decoration: InputDecoration(
-                      hintText: 'Zutat suchen…',
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: AppConstants.spacing12,
-                        vertical: AppConstants.spacingSm,
-                      ),
-                      suffixIcon: GestureDetector(
-                        onTap: _close,
-                        child: const Icon(
-                          Icons.close,
-                          size: AppConstants.iconSizeSm,
+                  child: BbLabeledField(
+                    label: 'Zutat suchen',
+                    child: TextField(
+                      controller: _controller,
+                      focusNode: _focusNode,
+                      style: const TextStyle(fontSize: AppTheme.fontSizeBody),
+                      decoration: InputDecoration(
+                        hintText: 'z. B. Haferflocken',
+                        isDense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: AppConstants.spacing12,
+                          vertical: AppConstants.spacingSm,
+                        ),
+                        suffixIcon: BbIconTap(
+                          icon: Icons.close,
+                          iconSize: AppConstants.iconSizeSm,
+                          semanticLabel: 'Suche schließen',
+                          onTap: _close,
+                        ),
+                        suffixIconConstraints: const BoxConstraints(
+                          minWidth: AppConstants.minTapTarget,
+                          minHeight: AppConstants.minTapTarget,
                         ),
                       ),
-                      suffixIconConstraints: const BoxConstraints(
-                        minWidth: 32,
-                        minHeight: 32,
-                      ),
+                      textInputAction: TextInputAction.done,
+                      onChanged: (value) {
+                        _addExactOnResults = false;
+                        // for the „hinzufügen" row and the Return hint
+                        setState(() => _showSubmitHint = false);
+                        _onQueryChanged(value);
+                        _revealSuggestions();
+                      },
+                      // Return must not close the keyboard by itself:
+                      // [_onSubmitted] decides.
+                      onEditingComplete: () {},
+                      onSubmitted: _onSubmitted,
                     ),
-                    textInputAction: TextInputAction.done,
-                    onChanged: (value) {
-                      _addExactOnResults = false;
-                      // for the „hinzufügen" row and the Return hint
-                      setState(() => _showSubmitHint = false);
-                      _onQueryChanged(value);
-                      _revealSuggestions();
-                    },
-                    // Return must not close the keyboard by itself:
-                    // [_onSubmitted] decides.
-                    onEditingComplete: () {},
-                    onSubmitted: _onSubmitted,
                   ),
                 )
               else
                 // Wraps rather than overflows at a large text size.
                 Flexible(
-                  child: GestureDetector(
+                  // One button; its name says what it adds.
+                  child: BbTapArea(
+                    label: 'Zutat hinzufügen',
+                    tapTarget: false,
+                    excludeChild: true,
                     onTap: () {
                       setState(() => _isAdding = true);
                       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -258,12 +268,16 @@ class _IngredientSearchState extends State<IngredientSearch> {
                         Future.delayed(AppConstants.animSlow, _scrollToField);
                       });
                     },
-                    child: const Text(
-                      '+ Hinzufügen',
-                      style: TextStyle(
-                        fontSize: AppTheme.fontSizeBody,
-                        color: AppTheme.primary,
-                        fontWeight: FontWeight.w500,
+                    // 48 high to tap; the text stays where it was.
+                    child: const TapTarget(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: Text(
+                        '+ Hinzufügen',
+                        style: TextStyle(
+                          fontSize: AppTheme.fontSizeBody,
+                          color: AppTheme.primaryText,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                   ),
@@ -308,6 +322,7 @@ class _IngredientSearchState extends State<IngredientSearch> {
                         onTap: () => _add(s.name),
                         trailing: s.isOwn
                             ? IconButton(
+                                tooltip: 'Zutat löschen',
                                 icon: const Icon(
                                   Icons.delete_outline,
                                   size: AppConstants.iconSizeClose,

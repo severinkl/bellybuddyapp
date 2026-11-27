@@ -185,7 +185,12 @@ void main() {
         'Tagebuch',
         'Ich',
       ]) {
-        expect(find.bySemanticsLabel(label), findsOneWidget, reason: label);
+        // „Home" is the screen's heading and the bar's tab.
+        expect(
+          find.bySemanticsLabel(label),
+          findsNWidgets(label == 'Home' ? 2 : 1),
+          reason: label,
+        );
       }
       semantics.dispose();
     }, variant: platforms);

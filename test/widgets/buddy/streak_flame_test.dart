@@ -8,6 +8,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../helpers/ambient_animations.dart';
 import '../../helpers/flames.dart';
 import '../../helpers/pixels.dart';
+import '../../helpers/reduce_motion.dart';
 
 Widget _wrap(Widget flame, {bool ticking = true}) => MaterialApp(
   theme: AppTheme.theme,
@@ -548,9 +549,7 @@ void main() {
     tearDown(disableAmbientAnimationsForTests);
 
     testWidgets('lit at once, no burst, no flicker', (t) async {
-      t.platformDispatcher.accessibilityFeaturesTestValue =
-          const FakeAccessibilityFeatures(disableAnimations: true);
-      addTearDown(t.platformDispatcher.clearAccessibilityFeaturesTestValue);
+      reduceMotion(t);
 
       await t.pumpWidget(_wrap(_flame(streak: 30, lit: false)));
       expect(_breath(t), 1);

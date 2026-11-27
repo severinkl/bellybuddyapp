@@ -1,4 +1,5 @@
 // ignore_for_file: invalid_use_of_internal_member
+import 'package:belly_buddy/config/app_theme.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -132,6 +133,11 @@ void main() {
       );
 
       expect(find.textContaining('Danke'), findsOneWidget);
+      // Readable text colour, not the lime fill (about 1.9:1).
+      expect(
+        tester.widget<Text>(find.textContaining('Danke')).style?.color,
+        AppTheme.primaryText,
+      );
     });
 
     testWidgets('tapping Nicht hilfreich opens the dislike sheet', (
@@ -216,6 +222,30 @@ void main() {
         expect(find.byType(RecommendationDislikeSheet), findsOneWidget);
       },
     );
+
+    testWidgets('the tip feedback „Bearbeiten" is at least 48 high', (
+      tester,
+    ) async {
+      final rec = testRecommendation(
+        id: 'r1',
+      ).copyWith(state: RecommendationState.disliked);
+      await _pump(
+        tester,
+        rec: rec,
+        overrides: [
+          recommendationRepositoryProvider.overrideWithValue(
+            MockRecommendationRepository(),
+          ),
+          currentUserIdProvider.overrideWithValue('test-user'),
+        ],
+      );
+
+      final button = find.ancestor(
+        of: find.text('Bearbeiten'),
+        matching: find.byType(TextButton),
+      );
+      expect(tester.getSize(button).height, greaterThanOrEqualTo(48));
+    });
 
     testWidgets('repo error shows SnackBar', (tester) async {
       final repo = MockRecommendationRepository();

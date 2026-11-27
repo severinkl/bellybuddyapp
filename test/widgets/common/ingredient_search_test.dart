@@ -5,17 +5,26 @@ import 'package:belly_buddy/models/ingredient_search_result.dart';
 import 'package:belly_buddy/widgets/common/ingredient_search.dart';
 
 import '../../helpers/riverpod_helpers.dart';
+import '../../helpers/semantics_checks.dart';
 
-IngredientSearchResult _result(String name) =>
-    IngredientSearchResult(id: 'id-$name', name: name, isOwn: false);
+IngredientSearchResult _result(String name, {bool isOwn = false}) =>
+    IngredientSearchResult(id: 'id-$name', name: name, isOwn: isOwn);
 
 /// Hosts an [IngredientSearch] whose suggestions answer each search with
 /// the [catalog] names containing the query (in catalog order), like the
 /// autocomplete provider does after its debounce.
 class _Host extends StatefulWidget {
-  const _Host({required this.catalog, required this.added, this.topSpace = 0});
+  const _Host({
+    required this.catalog,
+    required this.added,
+    this.topSpace = 0,
+    this.own = const {},
+  });
 
   final List<String> catalog;
+
+  /// The [catalog] names that are the user's own ingredients.
+  final Set<String> own;
   final List<String> added;
 
   /// Room above the search, so it sits low on the screen.
@@ -35,7 +44,8 @@ class _HostState extends State<_Host> {
           ? const []
           : [
               for (final name in widget.catalog)
-                if (name.toLowerCase().contains(q)) _result(name),
+                if (name.toLowerCase().contains(q))
+                  _result(name, isOwn: widget.own.contains(name)),
             ];
     });
   }
@@ -220,5 +230,92 @@ void main() {
     final addTyped = find.byKey(IngredientSearch.addTypedKey);
     expect(addTyped.hitTestable(), findsOneWidget);
     expect(tester.getRect(addTyped).bottom, lessThanOrEqualTo(800 - 300));
+  });
+
+  testWidgets('the ingredient search ✕ is „Suche schließen", 48 × 48; an own '
+      'ingredient\'s delete is „Zutat löschen"', (tester) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWithProviders(
+      _Host(catalog: catalog, added: added, own: const {'Haferkleie'}),
+    );
+    await tester.tap(find.text('+ Hinzufügen'));
+    await tester.pumpAndSettle();
+    await type(tester, 'Hafer');
+
+    final close = find.bySemanticsLabel('Suche schließen');
+    expect(close, findsOneWidget);
+    expect(tester.getSize(close), const Size(48, 48));
+    expect(
+      find.semantics
+          .byLabel('Suche schließen')
+          .evaluate()
+          .single
+          .isMergedIntoParent,
+      isFalse,
+    );
+    expect(find.byTooltip('Zutat löschen'), findsOneWidget);
+
+    // The field keeps its name with text in it, beside its own ✕.
+    expect(
+      tester.getSemantics(find.byType(EditableText)).getSemanticsData().label,
+      contains('Zutat suchen'),
+    );
+
+    tester.semantics.tap(find.semantics.byLabel('Suche schließen'));
+    await tester.pumpAndSettle();
+    expect(field(), findsNothing);
+    handle.dispose();
+  });
+
+  testWidgets('while empty, „Zutat suchen" is read once, with an example', (
+    tester,
+  ) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWithProviders(_Host(catalog: catalog, added: added));
+    await tester.tap(find.text('+ Hinzufügen'));
+    await tester.pumpAndSettle();
+
+    expectSearchFieldReadOnce(
+      tester,
+      name: 'Zutat suchen',
+      example: 'z. B. Haferflocken',
+    );
+    // The scroll to the field waits for the keyboard.
+    await tester.pump(const Duration(seconds: 1));
+    handle.dispose();
+  });
+
+  testWidgets('„+ Hinzufügen" is at least 48 high', (tester) async {
+    await tester.pumpWithProviders(_Host(catalog: catalog, added: added));
+
+    final add = find.ancestor(
+      of: find.text('+ Hinzufügen'),
+      matching: find.byType(GestureDetector),
+    );
+    expect(tester.getSize(add.first).height, greaterThanOrEqualTo(48));
+  });
+
+  testWidgets('„+ Hinzufügen" is one button „Zutat hinzufügen" that opens '
+      'the search', (tester) async {
+    final handle = tester.ensureSemantics();
+    await tester.pumpWithProviders(_Host(catalog: catalog, added: added));
+
+    final add = find.semantics.byLabel('Zutat hinzufügen');
+    expect(add, findsOne);
+    expect(find.semantics.byLabel('+ Hinzufügen'), findsNothing);
+    expect(
+      tester.getSemantics(find.text('+ Hinzufügen')),
+      isSemantics(
+        label: 'Zutat hinzufügen',
+        isButton: true,
+        hasTapAction: true,
+      ),
+    );
+    tester.semantics.tap(add);
+    await tester.pumpAndSettle();
+    expect(find.byType(TextField), findsOneWidget);
+    // The scroll to the field waits for the keyboard.
+    await tester.pump(const Duration(seconds: 1));
+    handle.dispose();
   });
 }

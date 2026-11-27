@@ -7,7 +7,11 @@ import '../../../repositories/meal_media_repository.dart';
 
 class MealImage extends ConsumerStatefulWidget {
   final String imageUrl;
-  const MealImage({super.key, required this.imageUrl});
+
+  /// What a screen reader calls the photo; null leaves it out (a list's
+  /// decoration).
+  final String? semanticLabel;
+  const MealImage({super.key, required this.imageUrl, this.semanticLabel});
 
   @override
   ConsumerState<MealImage> createState() => _MealImageState();
@@ -49,43 +53,52 @@ class _MealImageState extends ConsumerState<MealImage> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    if (_loading) {
-      return Container(
-        height: AppConstants.mealImageHeight,
-        margin: const EdgeInsets.only(bottom: 16),
-        decoration: BoxDecoration(
-          color: AppTheme.muted,
-          borderRadius: BorderRadius.circular(AppConstants.radiusXl),
-        ),
-        child: const Center(
-          child: CircularProgressIndicator(
-            color: AppTheme.primary,
-            strokeWidth: 2,
-          ),
-        ),
-      );
-    }
+  Widget build(BuildContext context) => _content();
 
-    if (_resolvedUrl == null) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 16),
+  /// Only the loaded photo is an image named [MealImage.semanticLabel]:
+  /// loading and the not-available fallback are no image to a screen reader.
+  Widget _content() {
+    if (_loading) {
+      return ExcludeSemantics(
         child: Container(
           height: AppConstants.mealImageHeight,
+          margin: const EdgeInsets.only(bottom: 16),
           decoration: BoxDecoration(
             color: AppTheme.muted,
             borderRadius: BorderRadius.circular(AppConstants.radiusXl),
           ),
           child: const Center(
-            child: Icon(
-              Icons.image_not_supported,
-              color: AppTheme.mutedForeground,
+            child: CircularProgressIndicator(
+              color: AppTheme.primary,
+              strokeWidth: 2,
             ),
           ),
         ),
       );
     }
 
+    if (_resolvedUrl == null) {
+      return ExcludeSemantics(
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Container(
+            height: AppConstants.mealImageHeight,
+            decoration: BoxDecoration(
+              color: AppTheme.muted,
+              borderRadius: BorderRadius.circular(AppConstants.radiusXl),
+            ),
+            child: const Center(
+              child: Icon(
+                Icons.image_not_supported,
+                color: AppTheme.mutedForeground,
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    final label = widget.semanticLabel;
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: ClipRRect(
@@ -95,6 +108,14 @@ class _MealImageState extends ConsumerState<MealImage> {
           height: AppConstants.mealImageHeight,
           width: double.infinity,
           fit: BoxFit.cover,
+          imageBuilder: (_, image) => Image(
+            image: image,
+            height: AppConstants.mealImageHeight,
+            width: double.infinity,
+            fit: BoxFit.cover,
+            semanticLabel: label,
+            excludeFromSemantics: label == null,
+          ),
           placeholder: (_, _) => Container(
             height: AppConstants.mealImageHeight,
             color: AppTheme.muted,

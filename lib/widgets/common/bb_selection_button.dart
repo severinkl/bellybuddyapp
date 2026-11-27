@@ -11,6 +11,10 @@ class BbSelectionButton extends StatelessWidget {
   final double? height;
   final Key? selectionKey;
 
+  /// Whether this button is one of a group where only one can be picked
+  /// (a radio-like group to assistive tech); false for multiple choice.
+  final bool singleChoice;
+
   const BbSelectionButton({
     super.key,
     required this.label,
@@ -19,6 +23,7 @@ class BbSelectionButton extends StatelessWidget {
     this.leading,
     this.height,
     this.selectionKey,
+    this.singleChoice = true,
   });
 
   @override
@@ -49,33 +54,41 @@ class BbSelectionButton extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppConstants.radiusLg),
             ),
           ),
-          child: leading != null
-              ? Row(
-                  children: [
-                    leading!,
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        label,
-                        style: TextStyle(
-                          fontSize: AppTheme.fontSizeSubtitle,
-                          fontWeight: isSelected
-                              ? FontWeight.w600
-                              : FontWeight.w400,
-                          color: AppTheme.foreground,
+          // Merges into the button's own node (already a button), which
+          // then carries the selection.
+          child: Semantics(
+            selected: isSelected,
+            inMutuallyExclusiveGroup: singleChoice,
+            child: leading != null
+                ? Row(
+                    children: [
+                      leading!,
+                      const SizedBox(width: AppConstants.spacing12),
+                      Expanded(
+                        child: Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: AppTheme.fontSizeSubtitle,
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.w400,
+                            color: AppTheme.foreground,
+                          ),
                         ),
                       ),
+                    ],
+                  )
+                : Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: AppTheme.fontSizeSubtitle,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.w400,
+                      color: AppTheme.foreground,
                     ),
-                  ],
-                )
-              : Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: AppTheme.fontSizeSubtitle,
-                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                    color: AppTheme.foreground,
                   ),
-                ),
+          ),
         ),
       ),
     );

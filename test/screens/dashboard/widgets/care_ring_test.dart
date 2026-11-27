@@ -14,6 +14,7 @@ import 'package:belly_buddy/widgets/buddy/need_icon.dart';
 import 'package:belly_buddy/widgets/buddy/need_meter.dart';
 
 import '../../../helpers/widget_tester_helpers.dart';
+import '../../../helpers/reduce_motion.dart';
 
 DateTime _t(int h, [int m = 0, int d = 23]) => DateTime(2026, 11, d, h, m);
 
@@ -583,9 +584,7 @@ void main() {
   });
 
   testWidgets('reduced motion: a new level shows at once', (tester) async {
-    tester.platformDispatcher.accessibilityFeaturesTestValue =
-        const FakeAccessibilityFeatures(disableAnimations: true);
-    addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
+    reduceMotion(tester);
     await pump(tester, log: CareLog(lastMealAt: _t(13)));
     expect(needMeterLevel(tester, CareNeed.food), _foodAt14(_t(13)));
 
@@ -727,11 +726,7 @@ void main() {
     });
 
     testWidgets('reduced motion: a full glow that holds still', (tester) async {
-      tester.platformDispatcher.accessibilityFeaturesTestValue =
-          const FakeAccessibilityFeatures(disableAnimations: true);
-      addTearDown(
-        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
-      );
+      reduceMotion(tester);
       await pump(tester, highlight: CareNeed.drink);
 
       expect(glow(tester, CareNeed.drink), AppConstants.careNeedGlow);

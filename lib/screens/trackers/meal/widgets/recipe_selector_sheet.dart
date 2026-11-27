@@ -238,7 +238,7 @@ class _NewRecipeRow extends StatelessWidget {
         style: TextStyle(
           fontSize: AppTheme.fontSizeBody,
           fontWeight: FontWeight.w600,
-          color: AppTheme.primary,
+          color: AppTheme.primaryText,
         ),
       ),
     );

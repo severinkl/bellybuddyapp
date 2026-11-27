@@ -12,6 +12,7 @@ import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tooltip_bubble.da
 import 'package:belly_buddy/screens/dashboard/widgets/tutorial/tutorial_step.dart';
 
 import '../../helpers/riverpod_helpers.dart';
+import '../../helpers/reduce_motion.dart';
 
 /// The rect the spotlight cuts out.
 Rect _spotlight(WidgetTester tester) => tester
@@ -117,6 +118,73 @@ void main() {
       await tester.tap(find.byKey(DashboardTutorialOverlay.advanceKey));
       await tester.pumpAndSettle();
 
+      expect(finished, isTrue);
+    });
+
+    testWidgets('the tour can be stepped with the „Weiter" action and closed '
+        'with „Überspringen"', (tester) async {
+      final handle = tester.ensureSemantics();
+      var finished = false;
+      await tester.pumpWithProviders(
+        harness(
+          overlay: DashboardTutorialOverlay(
+            steps: twoSteps(),
+            onFinish: () => finished = true,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final weiter = find.semantics.byLabel('Weiter');
+      expect(
+        tester.getSemantics(find.byKey(DashboardTutorialOverlay.advanceKey)),
+        isSemantics(label: 'Weiter', isButton: true, hasTapAction: true),
+      );
+      tester.semantics.tap(weiter);
+      await tester.pumpAndSettle();
+      expect(find.text('step b', findRichText: true), findsOneWidget);
+
+      // The last step's action finishes the tour.
+      expect(find.semantics.byLabel('Weiter'), findsNothing);
+      expect(find.semantics.byLabel('Fertig'), findsOne);
+
+      expect(
+        tester.getSemantics(find.byKey(DashboardTutorialOverlay.skipKey)),
+        isSemantics(label: 'Überspringen', isButton: true, hasTapAction: true),
+      );
+      tester.semantics.tap(find.semantics.byLabel('Überspringen'));
+      await tester.pumpAndSettle();
+      expect(finished, isTrue);
+      handle.dispose();
+    });
+
+    testWidgets('the tour shows without fading with disableAnimations', (
+      tester,
+    ) async {
+      reduceMotion(tester);
+      var finished = false;
+      await tester.pumpWithProviders(
+        harness(
+          overlay: DashboardTutorialOverlay(
+            steps: twoSteps(),
+            onFinish: () => finished = true,
+          ),
+        ),
+      );
+
+      FadeTransition fade() => tester.widget<FadeTransition>(
+        find
+            .descendant(
+              of: find.byType(DashboardTutorialOverlay),
+              matching: find.byType(FadeTransition),
+            )
+            .first,
+      );
+      // Fully there on its first frame, gone without a fade.
+      expect(fade().opacity.value, 1);
+      await tester.pump();
+      await tester.tap(find.text('Überspringen'));
+      await tester.pump();
       expect(finished, isTrue);
     });
 
@@ -366,6 +434,52 @@ void main() {
       expect(find.text('step b', findRichText: true), findsOneWidget);
       // Measured once the scroll has landed, not a frame before.
       expect(_spotlight(tester), target.inflate(AppConstants.spacingXs));
+    });
+
+    testWidgets('with reduce motion the off-screen target is jumped to, '
+        'not scrolled to', (tester) async {
+      reduceMotion(tester);
+      final scroll = ScrollController();
+      addTearDown(scroll.dispose);
+      await tester.pumpWithProviders(
+        Scaffold(
+          body: Stack(
+            children: [
+              CustomScrollView(
+                controller: scroll,
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Column(
+                      children: [
+                        Container(key: keyA, height: 80, color: Colors.blue),
+                        const SizedBox(height: 1500),
+                        Container(key: keyB, height: 80, color: Colors.green),
+                        const SizedBox(height: 300),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              Positioned.fill(
+                child: DashboardTutorialOverlay(
+                  steps: twoSteps(),
+                  onFinish: () {},
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(scroll.offset, 0);
+
+      await tester.tap(find.byKey(DashboardTutorialOverlay.advanceKey));
+      // One frame: a jump lands at once; an animated scroll would not.
+      await tester.pump();
+      final landed = scroll.offset;
+      expect(landed, greaterThan(0));
+      await tester.pumpAndSettle();
+      expect(scroll.offset, landed);
     });
 
     testWidgets('follows a target that is still moving when its step starts', (

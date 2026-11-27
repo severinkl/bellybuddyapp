@@ -76,7 +76,7 @@ void main() {
 
     expect(find.byType(RecipesSearchField), findsOneWidget);
     expect(find.byType(RecipeCard), findsNWidgets(2));
-    expect(find.byType(GridView), findsOneWidget);
+    expect(find.byType(ListView), findsOneWidget);
   });
 
   testWidgets(
@@ -214,7 +214,7 @@ void main() {
     await pump(tester, recipes: const []);
 
     expect(find.text('Noch keine Rezepte'), findsNothing);
-    expect(find.byType(GridView), findsOneWidget);
+    expect(find.byType(ListView), findsOneWidget);
     expect(find.byType(RecipeCollectionCard), findsOneWidget);
   });
 

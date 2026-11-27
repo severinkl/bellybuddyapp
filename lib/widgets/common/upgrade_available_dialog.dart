@@ -19,7 +19,7 @@ Future<void> showUpgradeAvailableDialog(BuildContext context, WidgetRef ref) {
           child: const Text('Später'),
         ),
         TextButton(
-          style: TextButton.styleFrom(foregroundColor: AppTheme.primary),
+          style: TextButton.styleFrom(foregroundColor: AppTheme.primaryText),
           onPressed: () {
             Navigator.of(ctx).pop();
             ref.read(appVersionServiceProvider).openStore();

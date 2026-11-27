@@ -106,7 +106,7 @@ class _DiaryScreenState extends ConsumerState<DiaryScreen> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             if (isFirstDay)
-              const SizedBox(width: AppConstants.iconBadgeMd)
+              const SizedBox(width: AppConstants.iconBadgeLg)
             else
               CircleIconButton(
                 tapKey: DiaryScreen.previousDayKey,
@@ -120,7 +120,7 @@ class _DiaryScreenState extends ConsumerState<DiaryScreen> {
                 },
               ),
             if (isToday)
-              const SizedBox(width: AppConstants.iconBadgeMd)
+              const SizedBox(width: AppConstants.iconBadgeLg)
             else
               CircleIconButton(
                 tapKey: DiaryScreen.nextDayKey,

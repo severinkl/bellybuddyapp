@@ -74,7 +74,8 @@ FakeBuddyRepository onboardedBuddyRepository() => FakeBuddyRepository()
 
 /// Every repository the real router's screens reach, faked: signed in
 /// ([auth]), [testUserProfile] ([profiles]), an onboarded Buddy
-/// ([buddies]), no entries ([entries]), one seen tip set ([tips]), and the
+/// ([buddies]), one entry of each kind ([entries]), no own recipes
+/// ([userRecipes]), one seen tip set ([tips]), and the
 /// upgrade [decision].
 List<Override> baseOverrides({
   FakeAuthRepository? auth,
@@ -83,6 +84,7 @@ List<Override> baseOverrides({
   FakeEntryRepository? entries,
   FakeIngredientRepository? ingredients,
   FakeRecommendationRepository? tips,
+  FakeUserRecipeRepository? userRecipes,
   UpgradeDecision decision = UpgradeDecision.ok,
 }) => [
   authRepositoryProvider.overrideWithValue(auth ?? FakeAuthRepository()),
@@ -100,7 +102,9 @@ List<Override> baseOverrides({
   recommendationRepositoryProvider.overrideWithValue(
     tips ?? FakeRecommendationRepository(),
   ),
-  userRecipeRepositoryProvider.overrideWithValue(FakeUserRecipeRepository()),
+  userRecipeRepositoryProvider.overrideWithValue(
+    userRecipes ?? FakeUserRecipeRepository(),
+  ),
   recipeRepositoryProvider.overrideWithValue(FakeRecipeRepository()),
   mealMediaRepositoryProvider.overrideWithValue(FakeMealMediaRepository()),
   notificationRepositoryProvider.overrideWithValue(
@@ -118,11 +122,12 @@ List<Override> baseOverrides({
 /// [BellyBuddyApp], and loading the profile on start when signed in,
 /// without the splash overlay. With [followAuth] it also loads the profile
 /// on sign-in and resets it on sign-out, listening after the router like
-/// the app.
+/// the app. Text is scaled by [textScale] ([germanRouterApp]).
 class AppTestHost extends ConsumerStatefulWidget {
-  const AppTestHost({super.key, this.followAuth = false});
+  const AppTestHost({super.key, this.followAuth = false, this.textScale = 1});
 
   final bool followAuth;
+  final double textScale;
 
   @override
   ConsumerState<AppTestHost> createState() => _AppTestHostState();
@@ -148,6 +153,6 @@ class _AppTestHostState extends ConsumerState<AppTestHost> {
         signedIn ? profile.fetchProfile() : profile.reset();
       });
     }
-    return germanRouterApp(router);
+    return germanRouterApp(router, textScale: widget.textScale);
   }
 }

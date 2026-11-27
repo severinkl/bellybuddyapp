@@ -15,6 +15,7 @@ import '../../utils/date_format_utils.dart';
 import '../../screens/dashboard/widgets/tutorial/tutorial_keys.dart';
 import '../../services/haptic_service.dart';
 import '../log_sheet/log_sheet.dart';
+import 'bb_tap_area.dart';
 
 /// The bottom bar: Home · Tagebuch · (+) · Entdecken · Ich. The tabs are the
 /// shell's branches (in that order); the plus in the middle opens the
@@ -238,66 +239,74 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      key: tapKey,
+    // One node per tab: its name, selected when shown, „neu" with the dot.
+    return BbTapArea(
+      tapKey: tapKey,
       onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Always a Stack, so the dot coming or going keeps the icon.
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              Icon(
-                isActive ? activeIcon : icon,
-                color: isActive
-                    ? AppTheme.foreground
-                    : AppTheme.foreground.withValues(alpha: 0.6),
-                size: AppConstants.iconSizeLg,
-              ),
-              if (badge)
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  child: Semantics(
-                    label: 'Neues',
-                    child: SizedBox(
-                      key: badgeKey,
-                      width: AppConstants.navBadgeSize,
-                      height: AppConstants.navBadgeSize,
-                      child: const DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: AppTheme.navBadge,
-                          shape: BoxShape.circle,
-                          border: Border.fromBorderSide(
-                            BorderSide(
-                              color: Colors.white,
-                              width: AppConstants.borderWidthLg,
-                            ),
-                          ),
+      selected: isActive,
+      label: label,
+      value: badge ? 'neu' : null,
+      tapTarget: false,
+      excludeChild: true,
+      child: _content(),
+    );
+  }
+
+  /// The icon (with the dot) over the label, centred in the bar's full
+  /// height, so the whole slot is the tab's tap target.
+  Widget _content() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        // Always a Stack, so the dot coming or going keeps the icon.
+        Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Icon(
+              isActive ? activeIcon : icon,
+              color: isActive
+                  ? AppTheme.foreground
+                  : AppTheme.foregroundInactive,
+              size: AppConstants.iconSizeLg,
+            ),
+            if (badge)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: SizedBox(
+                  key: badgeKey,
+                  width: AppConstants.navBadgeSize,
+                  height: AppConstants.navBadgeSize,
+                  child: const DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: AppTheme.navBadge,
+                      shape: BoxShape.circle,
+                      border: Border.fromBorderSide(
+                        BorderSide(
+                          color: Colors.white,
+                          width: AppConstants.borderWidthLg,
                         ),
                       ),
                     ),
                   ),
                 ),
-            ],
-          ),
-          AppConstants.gap4,
-          Flexible(
-            child: _BarLabel(
-              label,
-              style: TextStyle(
-                fontSize: AppTheme.fontSizeBody,
-                fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                color: isActive
-                    ? AppTheme.foreground
-                    : AppTheme.foreground.withValues(alpha: 0.6),
               ),
+          ],
+        ),
+        AppConstants.gap4,
+        Flexible(
+          child: _BarLabel(
+            label,
+            style: TextStyle(
+              fontSize: AppTheme.fontSizeBody,
+              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+              color: isActive
+                  ? AppTheme.foreground
+                  : AppTheme.foregroundInactive,
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -310,56 +319,66 @@ class _CenterButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      key: tapKey,
-      onTap: onTap,
-      child: SizedBox(
-        height: 64,
-        child: Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.bottomCenter,
-          children: [
-            // Circle button — positioned to overflow upward
-            Positioned(
-              top: -26,
-              child: Container(
-                key: TutorialKeys.plus,
-                width: 72,
-                height: 72,
-                decoration: const BoxDecoration(
-                  color: AppTheme.primary,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.shadow,
-                      blurRadius: 8,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.add,
-                  color: AppTheme.primaryForeground,
-                  size: 36,
-                ),
+    return Semantics(
+      container: true,
+      button: true,
+      label: 'Eintragen',
+      child: GestureDetector(
+        key: tapKey,
+        onTap: onTap,
+        child: ExcludeSemantics(child: _content()),
+      ),
+    );
+  }
+
+  /// The plus circle rising above the bar, „Eintragen" at the bottom.
+  Widget _content() {
+    return SizedBox(
+      height: 64,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.bottomCenter,
+        children: [
+          // Circle button — positioned to overflow upward
+          Positioned(
+            top: -26,
+            child: Container(
+              key: TutorialKeys.plus,
+              width: 72,
+              height: 72,
+              decoration: const BoxDecoration(
+                color: AppTheme.primary,
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.shadow,
+                    blurRadius: 8,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.add,
+                color: AppTheme.primaryForeground,
+                size: 36,
               ),
             ),
-            // Label at bottom
-            const Positioned(
-              left: 0,
-              right: 0,
-              bottom: 0,
-              child: _BarLabel(
-                'Eintragen',
-                style: TextStyle(
-                  fontSize: AppTheme.fontSizeBody,
-                  fontWeight: FontWeight.w500,
-                  color: AppTheme.foreground,
-                ),
+          ),
+          // Label at bottom
+          const Positioned(
+            left: 0,
+            right: 0,
+            bottom: 0,
+            child: _BarLabel(
+              'Eintragen',
+              style: TextStyle(
+                fontSize: AppTheme.fontSizeBody,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.foreground,
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

@@ -44,6 +44,28 @@ void main() {
     );
   });
 
+  testWidgets('a step field is „Schritt 2"', (tester) async {
+    final handle = tester.ensureSemantics();
+    await pump(tester, const ['Kochen.', 'Essen.']);
+
+    final named = find.semantics.byPredicate(
+      (n) => n.label.contains('Schritt 2'),
+    );
+    expect(named, findsOneWidget);
+    expect(
+      tester.getSemantics(find.byKey(RecipeStepsEditor.fieldKey(1))),
+      isSemantics(isTextField: true, value: 'Essen.', hasTapAction: true),
+    );
+    expect(
+      tester
+          .getSemantics(find.byKey(RecipeStepsEditor.fieldKey(1)))
+          .getSemanticsData()
+          .label,
+      contains('Schritt 2'),
+    );
+    handle.dispose();
+  });
+
   testWidgets('add, type and remove steps; onChanged gets the raw texts', (
     tester,
   ) async {

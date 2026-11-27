@@ -268,6 +268,81 @@ void main() {
       );
     });
 
+    testWidgets('the chosen diet is selected to assistive tech', (
+      tester,
+    ) async {
+      await pump(tester);
+      final handle = tester.ensureSemantics();
+
+      await tester.ensureVisible(find.text('Vegan'));
+      await tester.tap(find.text('Vegan'));
+      await tester.pump(AppConstants.debounceDuration);
+      await tester.pump();
+
+      expect(repo.updates.single.diet, 'vegan');
+      for (final (diet, chosen) in [
+        ('Alles', false),
+        ('Vegetarisch', false),
+        ('Vegan', true),
+      ]) {
+        // Centred, so the viewport doesn't clip the hit area.
+        await Scrollable.ensureVisible(
+          tester.element(find.text(diet)),
+          alignment: 0.5,
+        );
+        await tester.pump();
+        final node = tester.getSemantics(find.text(diet));
+        expect(
+          node,
+          isSemantics(
+            isButton: true,
+            hasSelectedState: true,
+            isSelected: chosen,
+            isInMutuallyExclusiveGroup: true,
+            hasTapAction: true,
+          ),
+          reason: diet,
+        );
+        expect(node.rect.height, greaterThanOrEqualTo(48), reason: diet);
+      }
+      await tester.pump(const Duration(seconds: 2));
+      handle.dispose();
+    });
+
+    testWidgets('the height field keeps „Größe in cm" with „172" entered; '
+        '„Gespeichert" is a live region', (tester) async {
+      await pump(tester);
+      final handle = tester.ensureSemantics();
+
+      await tester.enterText(field('Größe (cm)'), '172');
+      await tester.pump();
+      final height = tester.getSemantics(
+        find.descendant(
+          of: field('Größe (cm)'),
+          matching: find.byType(EditableText),
+        ),
+      );
+      expect(height.label, 'Größe in cm');
+      expect(height, isSemantics(isTextField: true, value: '172'));
+      final weight = tester.getSemantics(
+        find.descendant(
+          of: field('Gewicht (kg)'),
+          matching: find.byType(EditableText),
+        ),
+      );
+      expect(weight.label, 'Gewicht in kg');
+
+      await tester.pump(AppConstants.debounceDuration);
+      await tester.pump();
+      expect(repo.updates.single.height, 172);
+      expect(
+        tester.getSemantics(find.text('Gespeichert')),
+        isSemantics(label: 'Gespeichert', isLiveRegion: true),
+      );
+      await tester.pump(const Duration(seconds: 2));
+      handle.dispose();
+    });
+
     testWidgets('tapping outside closes the number keypad and saves at once', (
       tester,
     ) async {

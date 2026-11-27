@@ -151,7 +151,13 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  SvgPicture.asset(AppConstants.logoSvg, width: 96, height: 96),
+                  // „Belly Buddy" below says it: decorative.
+                  SvgPicture.asset(
+                    AppConstants.logoSvg,
+                    width: AppConstants.splashLogoSize,
+                    height: AppConstants.splashLogoSize,
+                    excludeFromSemantics: true,
+                  ),
                   AppConstants.gap16,
                   const Text(
                     'Belly Buddy',

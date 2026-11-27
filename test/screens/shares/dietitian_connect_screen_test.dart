@@ -17,6 +17,7 @@ import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/providers/share_launcher_provider.dart';
 import 'package:belly_buddy/router/route_names.dart';
+import 'package:belly_buddy/config/app_theme.dart';
 import 'package:belly_buddy/screens/shares/dietitian_connect_screen.dart';
 import 'package:belly_buddy/screens/shares/shares_screen.dart';
 import 'package:belly_buddy/screens/shares/widgets/practice_code_scanner.dart';
@@ -479,6 +480,22 @@ void main() {
       // A rejected QR code says so; the scanner keeps running.
       expect(find.byType(PracticeCodeScanner), findsOneWidget);
       expect(find.text(PracticeCodeScanner.rejectedLine), findsOneWidget);
+      // It sits on the scrim, so it reads at ≥ 4.5:1 even over a white
+      // camera picture.
+      final box = tester.widget<DecoratedBox>(
+        find
+            .ancestor(
+              of: find.text(PracticeCodeScanner.rejectedLine),
+              matching: find.byType(DecoratedBox),
+            )
+            .first,
+      );
+      expect((box.decoration as BoxDecoration).color, AppTheme.scrim);
+      final behind = Color.alphaBlend(AppTheme.scrim, Colors.white);
+      expect(
+        1.05 / (behind.computeLuminance() + 0.05),
+        greaterThanOrEqualTo(4.5),
+      );
       feed(['https://connect.bellybuddy.at/c/berger-7k2', 'ANNA-ABC']);
       // A second detection while popping is ignored.
       feed(['ANNA-ABC']);

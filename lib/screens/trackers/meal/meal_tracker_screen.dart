@@ -242,7 +242,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen>
                 SizedBox(width: AppConstants.spacingSm),
                 Text(
                   'Trinken eintragen',
-                  style: TextStyle(color: AppTheme.info),
+                  style: TextStyle(color: AppTheme.infoText),
                 ),
               ],
             ),
@@ -454,7 +454,7 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen>
             label: const Text('Trinken eintragen'),
             style: OutlinedButton.styleFrom(
               backgroundColor: Colors.white,
-              foregroundColor: AppTheme.info,
+              foregroundColor: AppTheme.infoText,
               side: const BorderSide(color: AppTheme.info),
             ),
           ),

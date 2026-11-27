@@ -172,6 +172,7 @@ BuddyStatus _status({
   announcementKeys: announcementKeys,
 );
 
+const _halfSecond = Duration(milliseconds: 500);
 const _saverUsedLine = 'Puh! Dein Streak-Saver hat uns gestern gerettet 🛡';
 const _streakBrokenLine = 'Neuer Anlauf — ich bin dabei!';
 const _saverEarnedLine = 'Du hast einen Streak-Saver verdient! 🛡';
@@ -1077,6 +1078,33 @@ void main() {
       await tester.pump(const Duration(seconds: 5));
       expect(buddy.shown, [BuddyAnnouncement.saverUsed]);
     });
+
+    for (final (navigation, hold) in [(true, 8), (false, 4)]) {
+      testWidgets('with accessibleNavigation a cue line stays 8 s, without it '
+          '4 s (${navigation ? 'on' : 'off'}: $hold s)', (tester) async {
+        tester.platformDispatcher.accessibilityFeaturesTestValue =
+            FakeAccessibilityFeatures(accessibleNavigation: navigation);
+        addTearDown(
+          tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+        );
+        buddy = _FakeBuddy(
+          () => _status(announcements: const [BuddyAnnouncement.saverUsed]),
+        );
+        await pumpHero(tester);
+        await tick(tester);
+        final c = controller(tester);
+        expect(c.bubble, _saverUsedLine);
+
+        // Just before its hold ends: still up, still pending.
+        await advance(tester, Duration(seconds: hold) - _halfSecond);
+        expect(c.bubble, _saverUsedLine);
+        expect(buddy.shown, isEmpty);
+
+        await advance(tester, _halfSecond * 2);
+        expect(c.bubble, isNot(_saverUsedLine));
+        expect(buddy.shown, [BuddyAnnouncement.saverUsed]);
+      });
+    }
 
     testWidgets('a status update while an announcement plays does not '
         'replay it', (tester) async {

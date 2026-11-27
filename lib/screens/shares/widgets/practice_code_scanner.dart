@@ -104,14 +104,26 @@ class _PracticeCodeScannerState extends State<PracticeCodeScanner> {
               left: AppConstants.spacingMd,
               right: AppConstants.spacingMd,
               bottom: AppConstants.spacingLg,
+              // On the scrim: white text stays readable over any picture.
               child: SafeArea(
-                child: Text(
-                  PracticeCodeScanner.rejectedLine,
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: AppTheme.fontSizeBodyLG,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: AppTheme.scrim,
+                    borderRadius: BorderRadius.all(
+                      Radius.circular(AppConstants.radiusMd),
+                    ),
+                  ),
+                  child: Padding(
+                    padding: AppConstants.paddingSm,
+                    child: Text(
+                      PracticeCodeScanner.rejectedLine,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: AppTheme.fontSizeBodyLG,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
                 ),
               ),

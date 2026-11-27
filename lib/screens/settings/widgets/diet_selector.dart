@@ -2,6 +2,7 @@ import 'package:material_ui/material_ui.dart';
 import '../../../config/app_theme.dart';
 import '../../../config/constants.dart';
 import '../../../services/haptic_service.dart';
+import '../../../widgets/common/bb_tap_area.dart';
 
 class DietSelector extends StatelessWidget {
   final String? currentDiet;
@@ -27,7 +28,10 @@ class DietSelector extends StatelessWidget {
       runSpacing: AppConstants.spacingSm,
       children: _options.map((diet) {
         final isSelected = (currentDiet ?? 'alles') == diet;
-        return GestureDetector(
+        // The 40 px chip keeps its look inside a 48 px hit area.
+        return BbTapArea(
+          selected: isSelected,
+          exclusive: true,
           onTap: () {
             HapticService.selection();
             onChanged(diet);

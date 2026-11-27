@@ -5,6 +5,8 @@ import 'package:material_ui/material_ui.dart';
 import '../../../../config/app_theme.dart';
 import '../../../../config/constants.dart';
 import '../../../../utils/logger.dart';
+import '../../../../utils/reduced_motion.dart';
+import '../../../../widgets/common/bb_tap_area.dart';
 import 'connector_line.dart';
 import 'spotlight_painter.dart';
 import 'tooltip_bubble.dart';
@@ -13,7 +15,9 @@ import 'tutorial_step.dart';
 /// Full-screen overlay widget driving the dashboard tour.
 ///
 /// Displayed by inserting it into the root [Overlay] (see
-/// `show_dashboard_tutorial.dart`). Tapping anywhere advances a step.
+/// `show_dashboard_tutorial.dart`). Tapping anywhere advances a step; to
+/// a screen reader that layer is the button „Weiter" („Fertig" on the last
+/// step). It shows and leaves without a fade when motion is reduced.
 /// Tapping the "Überspringen" link in the top-right finishes immediately.
 /// Calls [onFinish] exactly once when the last step is advanced past OR
 /// when the user skips.
@@ -59,13 +63,27 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
   late final AnimationController _fade = AnimationController(
     vsync: this,
     duration: AppConstants.animFast,
-  )..forward();
+  );
+
+  /// The fade in has started (on the first dependencies, where the motion
+  /// setting can be read).
+  bool _shown = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _showStep());
     WidgetsBinding.instance.addPostFrameCallback(_follow);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _fade.duration = ReducedMotion.duration(context, AppConstants.animFast);
+    if (!_shown) {
+      _shown = true;
+      _fade.forward();
+    }
   }
 
   @override
@@ -85,7 +103,7 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
       await Scrollable.ensureVisible(
         ctx,
         alignment: 0.5,
-        duration: AppConstants.animFast,
+        duration: ReducedMotion.duration(context, AppConstants.animFast),
       );
       // The scroll lands in a frame's animation phase; slivers only move in
       // its layout, so measure once that frame is done.
@@ -216,17 +234,28 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
               children: [
                 // Advance-on-tap layer + dim + cutout painter
                 Positioned.fill(
-                  child: GestureDetector(
-                    key: DashboardTutorialOverlay.advanceKey,
-                    behavior: HitTestBehavior.opaque,
+                  child: Semantics(
+                    container: true,
+                    button: true,
+                    label: _index >= widget.steps.length - 1
+                        ? 'Fertig'
+                        : 'Weiter',
                     onTap: _advance,
-                    child: CustomPaint(
-                      painter: rect == null
-                          ? null
-                          : SpotlightPainter(
-                              targetRect: rect.inflate(AppConstants.spacingXs),
-                              targetRadius: step.targetRadius,
-                            ),
+                    child: GestureDetector(
+                      key: DashboardTutorialOverlay.advanceKey,
+                      behavior: HitTestBehavior.opaque,
+                      excludeFromSemantics: true,
+                      onTap: _advance,
+                      child: CustomPaint(
+                        painter: rect == null
+                            ? null
+                            : SpotlightPainter(
+                                targetRect: rect.inflate(
+                                  AppConstants.spacingXs,
+                                ),
+                                targetRadius: step.targetRadius,
+                              ),
+                      ),
                     ),
                   ),
                 ),
@@ -246,9 +275,9 @@ class _DashboardTutorialOverlayState extends State<DashboardTutorialOverlay>
                 Positioned(
                   top: safe.top + AppConstants.spacingSm,
                   right: AppConstants.spacingMd,
-                  child: GestureDetector(
-                    key: DashboardTutorialOverlay.skipKey,
-                    behavior: HitTestBehavior.opaque,
+                  child: BbTapArea(
+                    tapKey: DashboardTutorialOverlay.skipKey,
+                    tapTarget: false,
                     onTap: _finish,
                     child: Container(
                       key: _skipBox,

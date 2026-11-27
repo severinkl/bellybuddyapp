@@ -80,6 +80,43 @@ void main() {
 
       expect(find.text('E-Mail ist erforderlich'), findsOneWidget);
     });
+
+    testWidgets('a wrong password puts „E-Mail oder Passwort ist falsch." in '
+        'a live region', (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWithProviders(
+        const AuthScreen(),
+        overrides: [
+          authRepositoryProvider.overrideWithValue(
+            FakeAuthRepository(signedIn: false, shouldFailEmailSignIn: true),
+          ),
+          profileRepositoryProvider.overrideWithValue(FakeProfileRepository()),
+          currentUserIdProvider.overrideWithValue(null),
+        ],
+      );
+      await tester.pump();
+
+      await tester.enterText(
+        find.byKey(AuthScreen.emailFieldKey),
+        'du@example.com',
+      );
+      await tester.enterText(
+        find.byKey(AuthScreen.passwordFieldKey),
+        'falschesPasswort1',
+      );
+      await tester.tap(find.byKey(AuthScreen.submitLoginButtonKey));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.semantics.byPredicate(
+          (n) =>
+              n.label == 'E-Mail oder Passwort ist falsch.' &&
+              n.flagsCollection.isLiveRegion,
+        ),
+        findsOneWidget,
+      );
+      handle.dispose();
+    });
   });
 
   group('AuthScreen navigation', () {

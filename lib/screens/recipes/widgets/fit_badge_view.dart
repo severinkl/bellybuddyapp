@@ -16,8 +16,8 @@ class FitBadgeView extends StatelessWidget {
   Widget build(BuildContext context) {
     final fits = badge is FitsBadge;
     final color = fits
-        ? AppTheme.gutFeelingGoodIcon
-        : AppTheme.gutFeelingNeutralIcon;
+        ? AppTheme.gutFeelingGoodText
+        : AppTheme.gutFeelingNeutralText;
     return DecoratedBox(
       decoration: BoxDecoration(
         color: fits

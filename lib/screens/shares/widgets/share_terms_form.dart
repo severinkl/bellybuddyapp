@@ -11,6 +11,7 @@ import '../../../services/share_secrets_store.dart';
 import '../../../utils/logger.dart';
 import '../../../widgets/common/bb_card.dart';
 import '../../../widgets/common/bb_chip_selector.dart';
+import '../../../widgets/common/bb_labeled_field.dart';
 
 /// The name, period and switches of a share, with the stage 1 rules:
 /// photos need meals, patterns need gut, and one of the five data switches
@@ -189,9 +190,8 @@ class _ShareTermsFormState extends ConsumerState<ShareTermsForm> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const ShareFormHeading('Dein Name in der Ansicht'),
-          Semantics(
+          BbLabeledField(
             label: 'Dein Name in der Ansicht',
-            textField: true,
             child: TextField(
               controller: c.name,
               inputFormatters: const [_CodePointLimit(_maxNameLength)],

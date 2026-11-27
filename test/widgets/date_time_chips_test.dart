@@ -62,5 +62,36 @@ void main() {
         greaterThan(tester.getBottomLeft(find.text('15.03.2024')).dy),
       );
     });
+
+    testWidgets('date and time chips read „Datum, Donnerstag, 26. November '
+        '2026" and „Uhrzeit, 14:30", each ≥ 48 high', (tester) async {
+      final handle = tester.ensureSemantics();
+      await tester.pumpWithProviders(
+        Scaffold(
+          body: DateTimeChips(
+            value: DateTime(2026, 11, 26, 14, 30),
+            onChanged: (_) {},
+          ),
+        ),
+      );
+
+      for (final (shown, label, value) in [
+        ('26.11.2026', 'Datum', 'Donnerstag, 26. November 2026'),
+        ('14:30', 'Uhrzeit', '14:30'),
+      ]) {
+        final node = tester.getSemantics(find.text(shown));
+        expect(
+          node,
+          isSemantics(
+            label: label,
+            value: value,
+            isButton: true,
+            hasTapAction: true,
+          ),
+        );
+        expect(node.rect.height, greaterThanOrEqualTo(48), reason: label);
+      }
+      handle.dispose();
+    });
   });
 }

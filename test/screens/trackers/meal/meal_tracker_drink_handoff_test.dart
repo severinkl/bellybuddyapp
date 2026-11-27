@@ -2,6 +2,7 @@
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:belly_buddy/config/app_theme.dart';
 import 'package:go_router/go_router.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 
@@ -61,6 +62,15 @@ Future<ProviderContainer> _pumpMealTracker(WidgetTester tester) async {
 
 void main() {
   group('MealTrackerScreen → DrinkTrackerScreen handoff', () {
+    testWidgets('the form button draws its text in infoText', (tester) async {
+      await _pumpMealTracker(tester);
+
+      final button = tester.widget<OutlinedButton>(
+        find.byKey(MealTrackerScreen.drinkTrackerButtonKey),
+      );
+      expect(button.style!.foregroundColor!.resolve({}), AppTheme.infoText);
+    });
+
     testWidgets(
       'form-button "Trinken eintragen" forwards state.trackedAt as extra',
       (tester) async {

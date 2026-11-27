@@ -4,6 +4,7 @@ import '../../../../config/app_theme.dart';
 import '../../../../config/constants.dart';
 import '../../../../models/drink_entry.dart';
 import '../../../../utils/drink_helpers.dart';
+import '../../../../widgets/common/bb_labeled_field.dart';
 
 class DrinkDetail extends StatelessWidget {
   final DrinkEntry drink;
@@ -33,20 +34,23 @@ class DrinkDetail extends StatelessWidget {
           AppConstants.gap8,
           ValueListenableBuilder<TextEditingValue>(
             valueListenable: amountController,
-            builder: (context, amount, _) => TextField(
-              controller: amountController,
-              keyboardType: TextInputType.number,
-              scrollPadding: AppConstants.fieldWithHintScrollPadding,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                LengthLimitingTextInputFormatter(5),
-              ],
-              decoration: InputDecoration(
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+            builder: (context, amount, _) => BbLabeledField(
+              label: 'Menge in ml',
+              child: TextField(
+                controller: amountController,
+                keyboardType: TextInputType.number,
+                scrollPadding: AppConstants.fieldWithHintScrollPadding,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  LengthLimitingTextInputFormatter(5),
+                ],
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+                  ),
+                  suffixText: 'ml',
+                  errorText: DrinkHelpers.amountError(amount.text),
                 ),
-                suffixText: 'ml',
-                errorText: DrinkHelpers.amountError(amount.text),
               ),
             ),
           ),

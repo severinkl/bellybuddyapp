@@ -112,6 +112,26 @@ final _noticedTitle = find.text(InsightCopy.noticedTitle.toUpperCase());
 
 void main() {
   group('calendar', () {
+    testWidgets('each day reads its date and class, e.g. „23. Nov: gut"', (
+      tester,
+    ) async {
+      await _pump(tester, _insights());
+      // Pins InsightCopy.daySemantics: day, short month, class word.
+      final cell = InsightDay(
+        day: DateTime(2026, 11, 23),
+        dayClass: DayClass.good,
+      );
+      expect(InsightCopy.daySemantics(cell), '23. Nov: gut');
+      for (final label in [
+        '25. Okt: schwer',
+        '26. Okt: gut',
+        '27. Okt: mittel',
+      ]) {
+        expect(find.bySemanticsLabel(label), findsOneWidget);
+      }
+      expect(find.bySemanticsLabel('1. Nov: kein Eintrag'), findsOneWidget);
+    });
+
     testWidgets('has 30 day cells aligned to weekdays', (tester) async {
       await _pump(tester, _insights());
 

@@ -92,23 +92,10 @@ class _MyRecipesTabState extends ConsumerState<MyRecipesTab> {
             Expanded(
               child: recipes.isEmpty
                   ? const _EmptySearchResults()
-                  : GridView.builder(
-                      padding: const EdgeInsets.fromLTRB(
-                        AppConstants.spacingMd,
-                        0,
-                        AppConstants.spacingMd,
-                        AppConstants.spacingMd,
-                      ),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: AppConstants.spacingSm,
-                            mainAxisSpacing: AppConstants.spacingSm,
-                            childAspectRatio: 0.78,
-                          ),
-                      itemCount: recipes.length,
-                      itemBuilder: (context, i) => MyRecipeCard(
-                        item: recipes[i],
+                  : _RecipeGrid(
+                      recipes: recipes,
+                      card: (item) => MyRecipeCard(
+                        item: item,
                         onOpenOwn: (recipe) =>
                             context.push(RoutePaths.recipeDetailFor(recipe.id)),
                         onOpenSaved: (id) => unawaited(context.openRecipe(id)),
@@ -116,6 +103,60 @@ class _MyRecipesTabState extends ConsumerState<MyRecipesTab> {
                     ),
             ),
           ],
+        );
+      },
+    );
+  }
+}
+
+/// The recipes two to a row. A row is as tall as a card at
+/// [AppConstants.recipeGridCardAspect], or taller when its texts need it
+/// (larger text sizes), so a card never cuts its title or badge off.
+class _RecipeGrid extends StatelessWidget {
+  const _RecipeGrid({required this.recipes, required this.card});
+
+  final List<MyRecipeItem> recipes;
+  final Widget Function(MyRecipeItem item) card;
+
+  static const _columns = 2;
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final cardWidth =
+            (constraints.maxWidth -
+                2 * AppConstants.spacingMd -
+                (_columns - 1) * AppConstants.spacingSm) /
+            _columns;
+        final rowHeight = cardWidth / AppConstants.recipeGridCardAspect;
+        return ListView.separated(
+          padding: const EdgeInsets.fromLTRB(
+            AppConstants.spacingMd,
+            0,
+            AppConstants.spacingMd,
+            AppConstants.spacingMd,
+          ),
+          itemCount: (recipes.length + _columns - 1) ~/ _columns,
+          separatorBuilder: (_, _) => AppConstants.gap8,
+          itemBuilder: (context, row) => ConstrainedBox(
+            constraints: BoxConstraints(minHeight: rowHeight),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  for (var c = 0; c < _columns; c++) ...[
+                    if (c > 0) const SizedBox(width: AppConstants.spacingSm),
+                    Expanded(
+                      child: row * _columns + c < recipes.length
+                          ? card(recipes[row * _columns + c])
+                          : const SizedBox.shrink(),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
         );
       },
     );

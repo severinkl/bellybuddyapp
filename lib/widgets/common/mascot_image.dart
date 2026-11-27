@@ -7,12 +7,16 @@ class MascotImage extends StatelessWidget {
   final double height;
   final BoxFit fit;
 
+  /// What VoiceOver/TalkBack call the image; null leaves it out (decorative).
+  final String? semanticLabel;
+
   const MascotImage({
     super.key,
     required this.assetPath,
     this.width = 48,
     this.height = 48,
     this.fit = BoxFit.contain,
+    this.semanticLabel,
   });
 
   @override
@@ -22,6 +26,8 @@ class MascotImage extends StatelessWidget {
       width: width,
       height: height,
       fit: fit,
+      // A label is given below so it also covers the error fallback.
+      excludeFromSemantics: true,
       errorBuilder: (context, error, stackTrace) {
         return SizedBox(
           width: width,
@@ -31,12 +37,14 @@ class MascotImage extends StatelessWidget {
       },
     );
 
-    if (fit == BoxFit.cover) {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(AppConstants.radiusSm),
-        child: image,
-      );
-    }
-    return image;
+    final drawn = fit == BoxFit.cover
+        ? ClipRRect(
+            borderRadius: BorderRadius.circular(AppConstants.radiusSm),
+            child: image,
+          )
+        : image;
+    final label = semanticLabel;
+    if (label == null) return drawn;
+    return Semantics(container: true, image: true, label: label, child: drawn);
   }
 }

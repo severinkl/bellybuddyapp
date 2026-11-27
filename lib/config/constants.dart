@@ -50,8 +50,8 @@ class AppConstants {
   static const double iconBadgeLg = 48.0;
   static const double iconBadgeXl = 56.0;
 
-  /// The smallest tap target (Apple's 44 pt).
-  static const double minTapTarget = 44.0;
+  /// The smallest tap target (Android's 48 dp; covers Apple's 44 pt).
+  static const double minTapTarget = 48.0;
   static const Size minTapSize = Size(minTapTarget, minTapTarget);
 
   /// The relief breathing pacer's circle: smallest (empty lungs) and
@@ -89,6 +89,7 @@ class AppConstants {
 
   // Border widths
   static const double borderWidthSm = 0.5;
+  static const double borderWidthDefault = 1.0;
   static const double borderWidthMd = 1.5;
   static const double borderWidthLg = 2.0;
 
@@ -262,6 +263,9 @@ class AppConstants {
   // most steps and characters a recipe's steps may have
   static const double recipePageImageAspect = 16 / 9;
   static const double recipeCardImageAspect = 1.1;
+
+  /// Meine Rezepte: a card's width / its least height in the two-column grid.
+  static const double recipeGridCardAspect = 0.78;
   static const double recipeListThumbSize = 88.0;
   static const double recipeMarkSize = 24.0;
   static const double recipeNeutralDotSize = 6.0;
@@ -308,6 +312,10 @@ class AppConstants {
   /// In a success-page slot shorter than this, the charging circle and
   /// „Tag n" stand side by side, so the Buddy keeps a body below them.
   static const double logSuccessHeroStackedMinHeight = 320.0;
+
+  /// The least a success page's hero (illustration) gets when the page's
+  /// texts need more than the screen (large text): the page then scrolls.
+  static const double successHeroMinHeight = 160.0;
 
   // Buddy onboarding (/buddy-onboarding): stage (bubble slot + Buddy) and
   // progress dots
@@ -357,6 +365,7 @@ class AppConstants {
   static const double mascotSizeSm = 80.0;
   static const double mascotSizeMd = 96.0;
   static const double mascotSizeLg = 160.0;
+  static const double splashLogoSize = 96.0;
 
   // Divider
   static const double dividerThickness = 0.5;
@@ -521,6 +530,7 @@ class AppConstants {
 
   // Shadow
   static const double shadowBlurSm = 8.0;
+  static const Offset shadowOffsetSm = Offset(0, 2);
 
   // Button
   static const double buttonHeight = 56.0;
@@ -554,9 +564,18 @@ class AppConstants {
   // Animation durations
   static const Duration animFast = Duration(milliseconds: 150);
   static const Duration animNormal = Duration(milliseconds: 200);
+
+  /// A folded section opening or closing (e.g. „Passwort ändern").
+  static const Duration animDisclosure = Duration(milliseconds: 250);
   static const Duration animMedium = Duration(milliseconds: 300);
   static const Duration animSlow = Duration(milliseconds: 500);
   static const Duration animSlower = Duration(milliseconds: 600);
+
+  /// A slider mascot's bounce when it becomes the active end.
+  static const Duration mascotBounceDuration = Duration(milliseconds: 400);
+
+  /// A paged tab switch (the Bauchgefühl/Stimmung pages).
+  static const Duration pageSwitchDuration = Duration(milliseconds: 350);
 
   // Asset paths
   static const String appIconPath = 'assets/images/app-icon.png';

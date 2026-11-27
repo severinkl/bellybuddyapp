@@ -235,6 +235,20 @@ void main() {
       expect(data['notes'], 'mit Zitrone');
     });
 
+    testWidgets('the drink amount field is „Menge in ml" with „250" entered', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await startEditing(tester, DiaryEntryType.drink);
+
+      final node = tester
+          .getSemantics(find.byType(TextField))
+          .getSemanticsData();
+      expect(node.label, contains('Menge in ml'));
+      expect(node.value, '250');
+      semantics.dispose();
+    });
+
     testWidgets('a drink amount over 3000 ml cannot be saved', (tester) async {
       await startEditing(tester, DiaryEntryType.drink);
 

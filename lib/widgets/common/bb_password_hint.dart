@@ -23,7 +23,7 @@ class BbPasswordHint extends StatelessWidget {
             text,
             style: TextStyle(
               fontSize: AppTheme.fontSizeCaptionLG,
-              color: isValid ? AppTheme.success : AppTheme.mutedForeground,
+              color: isValid ? AppTheme.successText : AppTheme.mutedForeground,
             ),
           ),
         ],

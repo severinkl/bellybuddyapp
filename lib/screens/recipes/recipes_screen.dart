@@ -27,6 +27,7 @@ class RecipesScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
+            tooltip: 'Rezept hinzufügen',
             onPressed: () => showAddRecipeChooserSheet(context),
           ),
         ],

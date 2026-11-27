@@ -36,6 +36,7 @@ import '../../helpers/ambient_animations.dart';
 import '../../helpers/app_host.dart';
 import '../../helpers/fakes.dart';
 import '../../helpers/fixtures.dart';
+import '../../helpers/reduce_motion.dart';
 
 typedef _Step = BuddyOnboardingStep;
 
@@ -242,14 +243,6 @@ void main() {
 
   group('BuddyOnboardingScreen', () {
     setUp(() => SharedPreferences.setMockInitialValues({}));
-
-    void reduceMotion(WidgetTester tester) {
-      tester.platformDispatcher.accessibilityFeaturesTestValue =
-          const FakeAccessibilityFeatures(disableAnimations: true);
-      addTearDown(
-        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
-      );
-    }
 
     /// Lets step switches, route transitions and Buddy reactions play.
     /// The Buddy ticks forever, so never `pumpAndSettle`.

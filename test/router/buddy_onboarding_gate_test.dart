@@ -33,6 +33,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../helpers/app_host.dart';
 import '../helpers/fakes.dart';
 import '../helpers/fixtures.dart';
+import '../helpers/reduce_motion.dart';
 
 const _introLine = 'Hi! Ich bin neu hier — dein Belly Buddy.';
 const _streakTitle = 'Wie viele Tage schaffen wir zusammen?';
@@ -68,14 +69,6 @@ String _topPath(ProviderContainer container) => container
 FakeProfileRepository _profilesWith(UserProfile profile) =>
     FakeProfileRepository()..seedProfile(profile);
 
-/// Reduced motion: the onboarding's step changes and the Buddy's bubble
-/// show at once, so `pumpAndSettle` settles quickly on every step.
-void _reduceMotion(WidgetTester tester) {
-  tester.platformDispatcher.accessibilityFeaturesTestValue =
-      const FakeAccessibilityFeatures(disableAnimations: true);
-  addTearDown(tester.platformDispatcher.clearAccessibilityFeaturesTestValue);
-}
-
 Future<ProviderContainer> _pumpHost(
   WidgetTester tester, {
   required FakeProfileRepository profiles,
@@ -89,7 +82,7 @@ Future<ProviderContainer> _pumpHost(
     ..physicalSize = screen
     ..devicePixelRatio = 1;
   addTearDown(tester.view.reset);
-  _reduceMotion(tester);
+  reduceMotion(tester);
 
   final container = ProviderContainer.test(
     overrides: baseOverrides(

@@ -105,7 +105,7 @@ class _AlternativeRow extends StatelessWidget {
             AppConstants.gap4,
             Text(
               'Stattdessen: $replacements',
-              maxLines: 1,
+              maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
                 fontSize: AppTheme.fontSizeCaptionLG,

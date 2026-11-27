@@ -34,6 +34,7 @@ class SymptomsStep extends StatelessWidget {
             return BbSelectionButton(
               label: option.label,
               isSelected: isSelected,
+              singleChoice: false,
               onPressed: () {
                 final newSelected = List<String>.from(selected);
                 if (isSelected) {

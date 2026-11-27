@@ -2,6 +2,8 @@ import 'package:material_ui/material_ui.dart';
 import 'package:intl/intl.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
+import '../../utils/date_format_utils.dart';
+import 'bb_tap_area.dart';
 
 class DateTimeChips extends StatelessWidget {
   const DateTimeChips({
@@ -57,12 +59,16 @@ class DateTimeChips extends StatelessWidget {
         children: [
           _DateTimeChip(
             label: DateFormat('dd.MM.yyyy').format(value),
+            semanticLabel: 'Datum',
+            semanticValue: formatDateWeekdayLong(value),
             icon: Icons.calendar_today_outlined,
             color: chipColor,
             onTap: () => _pickDate(context),
           ),
           _DateTimeChip(
-            label: DateFormat('HH:mm').format(value),
+            label: formatTime(value),
+            semanticLabel: 'Uhrzeit',
+            semanticValue: formatTime(value),
             icon: Icons.access_time_outlined,
             color: chipColor,
             onTap: () => _pickTime(context),
@@ -75,12 +81,19 @@ class DateTimeChips extends StatelessWidget {
 
 class _DateTimeChip extends StatelessWidget {
   final String label;
+
+  /// What the chip is („Datum"), read before [semanticValue], the spelled-out
+  /// date or time, instead of the short digits shown.
+  final String semanticLabel;
+  final String semanticValue;
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
 
   const _DateTimeChip({
     required this.label,
+    required this.semanticLabel,
+    required this.semanticValue,
     required this.icon,
     required this.color,
     required this.onTap,
@@ -88,8 +101,11 @@ class _DateTimeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return BbTapArea(
+      label: semanticLabel,
+      value: semanticValue,
       onTap: onTap,
+      excludeChild: true,
       child: Container(
         padding: const EdgeInsets.symmetric(
           horizontal: AppConstants.spacingMd,
@@ -111,7 +127,11 @@ class _DateTimeChip extends StatelessWidget {
               ),
             ),
             const SizedBox(width: AppConstants.spacingSm),
-            Icon(icon, size: 18, color: AppTheme.mutedForeground),
+            Icon(
+              icon,
+              size: AppConstants.iconSizeSm,
+              color: AppTheme.mutedForeground,
+            ),
           ],
         ),
       ),

@@ -8,6 +8,11 @@ class BbPasswordField extends StatefulWidget {
   final ValueChanged<String>? onChanged;
   static const passwordFieldKey = Key('password_field');
 
+  /// What a password field's eye says it does while the password is
+  /// [obscured] or shown (every password field in the app).
+  static String eyeTooltip(bool obscured) =>
+      obscured ? 'Passwort anzeigen' : 'Passwort verbergen';
+
   const BbPasswordField({
     super.key,
     required this.controller,
@@ -32,7 +37,7 @@ class _BbPasswordFieldState extends State<BbPasswordField> {
       decoration: InputDecoration(
         labelText: widget.labelText,
         suffixIcon: IconButton(
-          tooltip: _obscure ? 'Passwort anzeigen' : 'Passwort verbergen',
+          tooltip: BbPasswordField.eyeTooltip(_obscure),
           icon: Icon(
             _obscure ? Icons.visibility_off : Icons.visibility,
             color: AppTheme.mutedForeground,

@@ -2,6 +2,8 @@ import 'package:material_ui/material_ui.dart';
 
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
+import 'bb_labeled_field.dart';
+import 'tap_target.dart';
 
 /// AppBar title that flips between a tappable label and an inline TextField.
 ///
@@ -97,49 +99,67 @@ class _EditableAppBarTitleState extends State<EditableAppBarTitle> {
   @override
   Widget build(BuildContext context) {
     if (_isEditing) {
-      return TextField(
-        controller: _controller,
-        focusNode: _focusNode,
-        autofocus: true,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          fontSize: AppTheme.fontSizeTitle,
-          fontWeight: FontWeight.w600,
+      return BbLabeledField(
+        label: 'Titel',
+        child: TextField(
+          controller: _controller,
+          focusNode: _focusNode,
+          autofocus: true,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: AppTheme.fontSizeTitle,
+            fontWeight: FontWeight.w600,
+          ),
+          decoration: InputDecoration(
+            border: InputBorder.none,
+            contentPadding: EdgeInsets.zero,
+            hintText: widget.placeholder,
+          ),
+          onChanged: widget.onTextChanged,
+          onSubmitted: (_) => _commit(),
         ),
-        decoration: InputDecoration(
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.zero,
-          hintText: widget.placeholder,
-        ),
-        onChanged: widget.onTextChanged,
-        onSubmitted: (_) => _commit(),
       );
     }
 
     final text = _controller.text.trim();
     final isEmpty = text.isEmpty;
-    return GestureDetector(
-      onTap: _enterEdit,
-      behavior: HitTestBehavior.opaque,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Flexible(
-            child: Text(
-              isEmpty ? widget.placeholder : text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: AppTheme.fontSizeTitle,
-                fontWeight: FontWeight.w600,
-                color: isEmpty ? AppTheme.mutedForeground : null,
-              ),
+    // The shown title names the app bar heading (and the route) it merges
+    // into; the edit button is its own node, named for what it does.
+    return Semantics(
+      label: isEmpty ? widget.placeholder : text,
+      child: Semantics(
+        container: true,
+        button: true,
+        label: 'Titel bearbeiten',
+        onTap: _enterEdit,
+        excludeSemantics: true,
+        child: GestureDetector(
+          onTap: _enterEdit,
+          behavior: HitTestBehavior.opaque,
+          // 48 high within the app bar's toolbar: nothing moves.
+          child: TapTarget(
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Flexible(
+                  child: Text(
+                    isEmpty ? widget.placeholder : text,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: AppTheme.fontSizeTitle,
+                      fontWeight: FontWeight.w600,
+                      color: isEmpty ? AppTheme.mutedForeground : null,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppConstants.spacingXs),
+                const Icon(Icons.edit, size: AppConstants.iconSizeXs),
+              ],
             ),
           ),
-          const SizedBox(width: AppConstants.spacingXs),
-          const Icon(Icons.edit, size: AppConstants.iconSizeXs),
-        ],
+        ),
       ),
     );
   }

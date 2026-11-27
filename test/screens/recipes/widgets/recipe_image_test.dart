@@ -8,6 +8,7 @@ import 'package:belly_buddy/models/recipe.dart';
 import 'package:belly_buddy/screens/recipes/widgets/recipe_image.dart';
 
 import '../../../helpers/fixtures.dart';
+import '../../../helpers/reduce_motion.dart';
 
 void main() {
   Future<void> pump(WidgetTester tester, Widget child) => tester.pumpWidget(
@@ -120,11 +121,7 @@ void main() {
     });
 
     testWidgets('with reduced motion the shimmer is disabled', (tester) async {
-      tester.platformDispatcher.accessibilityFeaturesTestValue =
-          const FakeAccessibilityFeatures(disableAnimations: true);
-      addTearDown(
-        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
-      );
+      reduceMotion(tester);
       await pump(
         tester,
         RecipeImage(recipe: withImage('https://x.test/a.jpg')),
