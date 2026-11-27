@@ -195,6 +195,13 @@ class _NoScreenAwake implements ScreenAwake {
   Future<void> set(bool on) async {}
 }
 
+/// No drink yet and no recent ones: the screen without „Wie zuletzt".
+List<Override> _drinkNoHistoryBase() => baseOverrides(
+  drinks: FakeDrinkRepository()
+    ..recentDrinkIds = []
+    ..lastEntry = null,
+);
+
 List<Override> _mealToEdit() => [
   entriesProviderSeededWith([testMealEntry()]),
 ];
@@ -250,6 +257,11 @@ const a11yScreens = <A11yScreen>[
   A11yScreen('Klo', RoutePaths.toiletTracker),
   A11yScreen('Bauchgefühl', RoutePaths.gutFeelingTracker),
   A11yScreen('Getränk', RoutePaths.drinkTracker),
+  A11yScreen(
+    'Getränk (ohne Verlauf)',
+    RoutePaths.drinkTracker,
+    base: _drinkNoHistoryBase,
+  ),
 
   // Entdecken.
   A11yScreen('Tipps', RoutePaths.recommendations),
