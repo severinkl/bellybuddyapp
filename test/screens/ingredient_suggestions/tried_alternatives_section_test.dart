@@ -141,5 +141,24 @@ void main() {
         lessThan(tester.getTopLeft(find.byType(TextField)).dy),
       );
     });
+
+    testWidgets('on the screen, Plus open: the section is shown', (
+      tester,
+    ) async {
+      await tester.pumpWithProviders(
+        const IngredientSuggestionsScreen(),
+        overrides: [
+          ..._overrides(_Service(_rows)),
+          ingredientRepositoryProvider.overrideWithValue(
+            FakeIngredientRepository(),
+          ),
+          ...plusOpenOverrides,
+        ],
+      );
+      await tester.pump(const Duration(milliseconds: 200));
+
+      expect(find.text('Probiere ich'), findsOneWidget);
+      expect(find.text('Lauch statt Knoblauch'), findsOneWidget);
+    });
   });
 }

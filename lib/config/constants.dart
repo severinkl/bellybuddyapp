@@ -3,6 +3,9 @@ import 'package:material_ui/material_ui.dart';
 class AppConstants {
   AppConstants._();
 
+  // Share of the screen height a scrolling list may take beside other content.
+  static const double listMaxHeightFraction = 0.3;
+
   // Spacing
   static const double spacing2 = 2.0;
   static const double spacingXs = 4.0;

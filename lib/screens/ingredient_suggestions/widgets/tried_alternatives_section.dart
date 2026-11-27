@@ -17,7 +17,8 @@ class TriedAlternativesSection extends ConsumerWidget {
     if (tried.isEmpty) return const SizedBox.shrink();
 
     // Many rows scroll within a share of the screen, not push the list away.
-    final maxHeight = MediaQuery.sizeOf(context).height * 0.3;
+    final maxHeight =
+        MediaQuery.sizeOf(context).height * AppConstants.listMaxHeightFraction;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(
