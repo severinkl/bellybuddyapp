@@ -52,9 +52,12 @@ Widget _mobileScanner(
 );
 
 /// A full-screen QR scanner that pops with the first practice code
-/// [practiceCodeFromScan] accepts. Nothing scanned is logged.
+/// [practiceCodeFromScan] accepts. A QR code it rejects shows
+/// [rejectedLine] and the scanner keeps running. Nothing scanned is logged.
 class PracticeCodeScanner extends StatefulWidget {
   const PracticeCodeScanner({super.key, this.camera = _mobileScanner});
+
+  static const rejectedLine = 'Das ist kein Praxis-Code.';
 
   final ScannerCamera camera;
 
@@ -66,6 +69,9 @@ class _PracticeCodeScannerState extends State<PracticeCodeScanner> {
   /// A code was taken: later detections while popping are dropped.
   bool _done = false;
 
+  /// A QR code was read that is no practice code.
+  bool _rejected = false;
+
   void _onScan(List<String?> values) {
     if (_done || !mounted) return;
     for (final raw in values) {
@@ -74,6 +80,9 @@ class _PracticeCodeScannerState extends State<PracticeCodeScanner> {
       _done = true;
       Navigator.of(context).pop(code);
       return;
+    }
+    if (!_rejected && values.any((raw) => raw != null)) {
+      setState(() => _rejected = true);
     }
   }
 
@@ -86,7 +95,29 @@ class _PracticeCodeScannerState extends State<PracticeCodeScanner> {
         foregroundColor: Colors.white,
         title: const Text('QR-Code scannen'),
       ),
-      body: widget.camera(context, _onScan),
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          widget.camera(context, _onScan),
+          if (_rejected)
+            const Positioned(
+              left: AppConstants.spacingMd,
+              right: AppConstants.spacingMd,
+              bottom: AppConstants.spacingLg,
+              child: SafeArea(
+                child: Text(
+                  PracticeCodeScanner.rejectedLine,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: AppTheme.fontSizeBodyLG,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }
