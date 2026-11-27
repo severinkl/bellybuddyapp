@@ -110,4 +110,74 @@ void main() {
       expect(find.widgetWithText(SnackBar, 'Geht nicht.'), findsOneWidget);
     });
   });
+
+  group('openAppSettings', () {
+    late RecordingUrlOpener opener;
+    late List<String> calls;
+    Object? channelAnswer;
+
+    setUp(() {
+      opener = RecordingUrlOpener();
+      calls = [];
+      channelAnswer = true;
+    });
+
+    Future<bool> open(WidgetTester tester, TargetPlatform platform) async {
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        appSettingsChannel,
+        (call) async {
+          calls.add(call.method);
+          return channelAnswer;
+        },
+      );
+      addTearDown(
+        () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+          appSettingsChannel,
+          null,
+        ),
+      );
+      await tester.pumpWidget(const MaterialApp(home: Scaffold()));
+      final context = tester.element(find.byType(Scaffold));
+      final opened = await openAppSettings(
+        context,
+        open: opener.call,
+        platform: platform,
+      );
+      await tester.pump();
+      return opened;
+    }
+
+    testWidgets('iOS opens app-settings:', (tester) async {
+      expect(await open(tester, TargetPlatform.iOS), isTrue);
+      expect(opener.urls, [Uri.parse('app-settings:')]);
+      expect(calls, isEmpty);
+    });
+
+    testWidgets('Android opens the app details page through the channel', (
+      tester,
+    ) async {
+      expect(await open(tester, TargetPlatform.android), isTrue);
+      expect(calls, ['openAppSettings']);
+      expect(opener.urls, isEmpty);
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('Android: a page that did not open reports false and shows '
+        'the failure message', (tester) async {
+      channelAnswer = false;
+      expect(await open(tester, TargetPlatform.android), isFalse);
+      expect(
+        find.widgetWithText(
+          SnackBar,
+          'Die Einstellungen konnten nicht geöffnet werden.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('Android: a missing handler reports false', (tester) async {
+      channelAnswer = null;
+      expect(await open(tester, TargetPlatform.android), isFalse);
+    });
+  });
 }

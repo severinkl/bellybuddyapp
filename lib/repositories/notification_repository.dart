@@ -1,6 +1,5 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:url_launcher/url_launcher.dart';
@@ -8,6 +7,7 @@ import '../models/user_profile.dart';
 import '../services/local_notification_service.dart';
 import '../services/push_notification_service.dart';
 import '../utils/logger.dart';
+import '../utils/url_utils.dart';
 
 /// Abstract interface for scheduling/cancelling local notifications.
 /// Inject this into [NotificationRepository] to enable testability.
@@ -140,12 +140,6 @@ class NotificationRepository {
   final NotificationScheduler _scheduler;
   static const _log = AppLogger('NotificationRepository');
 
-  /// The iOS Settings page of the app (`UIApplication.openSettingsURLString`).
-  static const _iosAppSettingsUrl = 'app-settings:';
-
-  /// Android's way to the app's notification settings (`MainActivity`).
-  static const _androidSettings = MethodChannel('belly_buddy/app_settings');
-
   NotificationRepository(this._scheduler);
 
   /// Schedules or cancels local notifications based on the user's profile
@@ -268,11 +262,11 @@ class NotificationRepository {
     try {
       return switch (defaultTargetPlatform) {
         TargetPlatform.iOS => await launchUrl(
-          Uri.parse(_iosAppSettingsUrl),
+          Uri.parse(appSettingsUrl),
           mode: LaunchMode.externalApplication,
         ),
         TargetPlatform.android =>
-          await _androidSettings.invokeMethod<bool>(
+          await appSettingsChannel.invokeMethod<bool>(
                 'openNotificationSettings',
               ) ??
               false,

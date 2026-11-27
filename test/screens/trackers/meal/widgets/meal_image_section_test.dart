@@ -103,7 +103,7 @@ void main() {
 
       expect(opened, [Uri.parse('app-settings:')]);
       expect(find.text('Kein Zugriff auf die Kamera'), findsNothing);
-    });
+    }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
     testWidgets('on a 393 pt phone the two buttons stack evenly: centered, '
         '„Einstellungen öffnen" on top', (tester) async {

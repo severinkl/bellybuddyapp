@@ -12,6 +12,7 @@ import '../../../providers/plus_provider.dart';
 import '../../../repositories/meal_media_repository.dart';
 import '../../../utils/date_format_utils.dart';
 import '../../../utils/url_utils.dart';
+import '../../../widgets/common/bb_sheet_messenger.dart';
 import 'alternative_feedback_sheet.dart';
 import 'ingredient_placeholder.dart';
 
@@ -52,20 +53,15 @@ class SuggestionDetailModal extends ConsumerWidget {
       minChildSize: 0.4,
       maxChildSize: 0.9,
       expand: false,
-      // The modal's own messenger, so the verdict sheet's failure SnackBar
-      // shows in it: the page's messenger paints under this sheet.
-      builder: (context, scrollController) => ScaffoldMessenger(
-        child: Scaffold(
-          backgroundColor: Colors.transparent,
-          resizeToAvoidBottomInset: false,
-          body: _content(
-            context,
-            live,
-            visible,
-            skipped,
-            canRate,
-            scrollController,
-          ),
+      // The verdict sheet's failure SnackBar shows in the modal.
+      builder: (context, scrollController) => BbSheetMessenger(
+        child: _content(
+          context,
+          live,
+          visible,
+          skipped,
+          canRate,
+          scrollController,
         ),
       ),
     );

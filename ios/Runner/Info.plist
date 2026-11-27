@@ -40,7 +40,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Belly Buddy braucht die Kamera, um Mahlzeiten zu fotografieren und den QR-Code deiner Berater:in zu scannen.</string>
+	<string>Belly Buddy braucht die Kamera, um Mahlzeiten zu fotografieren und Barcodes von Produkten oder den QR-Code deiner Berater:in zu scannen.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>BellyBuddy benötigt Zugriff auf die Fotogalerie, um Bilder von Mahlzeiten auszuwählen.</string>
 	<key>UIApplicationSceneManifest</key>

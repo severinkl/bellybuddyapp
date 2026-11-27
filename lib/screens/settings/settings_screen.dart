@@ -4,10 +4,16 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 import '../../router/route_names.dart';
+import '../../utils/url_utils.dart';
 import '../../widgets/common/bb_settings_item.dart';
 
 class SettingsScreen extends StatelessWidget {
-  const SettingsScreen({super.key});
+  const SettingsScreen({super.key, this.openUrl = launchUrl});
+
+  static const productDataKey = Key('settings_product_data');
+
+  /// Opens the links of the product-data dialog.
+  final UrlOpener openUrl;
 
   @override
   Widget build(BuildContext context) {
@@ -51,8 +57,62 @@ class SettingsScreen extends StatelessWidget {
                 mode: LaunchMode.externalApplication,
               ),
             ),
+            AppConstants.gap12,
+            BbSettingsItem(
+              key: productDataKey,
+              icon: Icons.inventory_2_outlined,
+              title: 'Produktdaten',
+              subtitle: 'Open Food Facts, Lizenz ODbL',
+              onTap: () => _showProductDataDialog(context),
+            ),
           ],
         ),
+      ),
+    );
+  }
+
+  /// Closes the dialog first: a failure SnackBar would sit behind its
+  /// barrier otherwise.
+  Future<void> _openLink(
+    BuildContext context,
+    BuildContext dialogContext,
+    String url,
+  ) {
+    Navigator.of(dialogContext).pop();
+    return openExternalUrl(
+      context,
+      url,
+      failureMessage: 'Link konnte nicht geöffnet werden.',
+      open: openUrl,
+    );
+  }
+
+  Future<void> _showProductDataDialog(BuildContext context) {
+    return showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Produktdaten von Open Food Facts'),
+        content: const Text(
+          'Name, Marke und Zutaten von Produkten, die du scannst oder '
+          'suchst, stammen aus Open Food Facts, einer freien '
+          'Lebensmitteldatenbank. Die Daten stehen unter der Open '
+          'Database License (ODbL).',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => _openLink(context, ctx, AppConstants.offHomeUrl),
+            child: const Text('Open Food Facts öffnen'),
+          ),
+          TextButton(
+            onPressed: () =>
+                _openLink(context, ctx, AppConstants.odblLicenseUrl),
+            child: const Text('Lizenz ansehen'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Schließen'),
+          ),
+        ],
       ),
     );
   }

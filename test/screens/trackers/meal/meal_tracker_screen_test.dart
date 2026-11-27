@@ -1,8 +1,17 @@
 // ignore_for_file: invalid_use_of_internal_member
 import 'package:belly_buddy/models/ingredient_suggestion_group.dart' as model;
 import 'package:belly_buddy/models/meal_entry.dart';
+import 'dart:async';
+import 'dart:typed_data';
+
 import 'package:belly_buddy/models/meal_prefill.dart';
+import 'package:belly_buddy/models/product.dart';
+import 'package:belly_buddy/services/product_service.dart';
+import 'package:belly_buddy/widgets/scanner/barcode_scanner.dart';
+import 'package:belly_buddy/screens/trackers/meal/widgets/product_finder_sheet.dart';
 import 'package:belly_buddy/providers/user_recipes_provider.dart';
+import 'package:belly_buddy/screens/trackers/meal/widgets/meal_image_section.dart';
+import 'package:belly_buddy/widgets/common/ingredient_search.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/core_providers.dart';
 import 'package:belly_buddy/providers/ingredient_suggestion_provider.dart';
@@ -74,7 +83,218 @@ MealEntry _seededMeal({
   ingredients: ingredients,
 );
 
+const _barcode = '4000000000013';
+
+const _product = ProductPrefill(
+  barcode: _barcode,
+  title: 'Testjoghurt',
+  brand: 'Testmarke',
+  ingredients: [
+    ProductIngredient(name: 'Milch', ingredientId: 'i-1'),
+    ProductIngredient(name: 'Zucker'),
+  ],
+);
+
+class _FoundProductService implements ProductService {
+  @override
+  Future<ProductLookup> lookup(String barcode) async => ProductFound(_product);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+Widget _scannerStub(
+  BuildContext context, {
+  required bool active,
+  required ValueChanged<String> onBarcode,
+  required ValueChanged<ScannerFailure> onFailure,
+}) => ElevatedButton(
+  onPressed: () => onBarcode(_barcode),
+  child: const Text('emit'),
+);
+
+/// Holds the meal insert until [answer] completes: the screen stays saving.
+class _HangingEntryRepository extends FakeEntryRepository {
+  final answer = Completer<void>();
+
+  @override
+  Future<void> insertEntry(
+    String table,
+    Map<String, dynamic> data, {
+    required String userId,
+  }) async {
+    await answer.future;
+    return super.insertEntry(table, data, userId: userId);
+  }
+}
+
+class _HangingMediaRepository extends FakeMealMediaRepository {
+  final answer = Completer<Map<String, dynamic>>();
+
+  @override
+  Future<Map<String, dynamic>> analyzeMealImage(
+    Uint8List bytes,
+    String filename,
+  ) => answer.future;
+}
+
+List<Override> _productOverrides({
+  List<MealEntry> meals = const [],
+  FakeEntryRepository? entries,
+  FakeMealMediaRepository? media,
+}) => [
+  entriesProviderSeededWith(meals),
+  entryRepositoryProvider.overrideWithValue(entries ?? FakeEntryRepository()),
+  ingredientRepositoryProvider.overrideWithValue(FakeIngredientRepository()),
+  mealMediaRepositoryProvider.overrideWithValue(
+    media ?? FakeMealMediaRepository(),
+  ),
+  currentUserIdProvider.overrideWithValue('user-1'),
+  productServiceProvider.overrideWithValue(_FoundProductService()),
+  barcodeScannerProvider.overrideWithValue(_scannerStub),
+];
+
+Future<void> _scanAndTake(WidgetTester tester) async {
+  await tester.ensureVisible(find.byKey(MealTrackerScreen.productButtonKey));
+  await tester.tap(find.byKey(MealTrackerScreen.productButtonKey));
+  await tester.pumpAndSettle();
+  await tester.tap(find.text('emit'));
+  await tester.pumpAndSettle();
+  await tester.tap(find.byKey(ProductFinderSheet.applyKey));
+  await tester.pumpAndSettle();
+}
+
+void _productTests() {
+  group('MealTrackerScreen product button', () {
+    for (final edit in [false, true]) {
+      testWidgets(
+        'sits between the photo area and the ingredients (${edit ? 'edit' : 'create'})',
+        (tester) async {
+          await _pumpEditScreen(
+            tester,
+            mealId: edit ? 'meal-42' : null,
+            overrides: _productOverrides(meals: [_seededMeal()]),
+          );
+          final button = find.byKey(MealTrackerScreen.productButtonKey);
+          expect(button, findsOneWidget);
+          expect(find.text('Barcode scannen oder suchen'), findsOneWidget);
+          final y = tester.getTopLeft(button).dy;
+          expect(
+            tester.getTopLeft(find.byType(MealImageSection)).dy,
+            lessThan(y),
+          );
+          expect(
+            tester.getTopLeft(find.byType(IngredientSearch)).dy,
+            greaterThan(y),
+          );
+        },
+      );
+    }
+
+    testWidgets('a product fills title and chips; Speichern saves a normal '
+        'meal', (tester) async {
+      tester.view
+        ..physicalSize = const Size(1170, 2532)
+        ..devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      final entries = FakeEntryRepository();
+      await _pumpEditScreen(
+        tester,
+        mealId: null,
+        overrides: _productOverrides(entries: entries),
+      );
+      await _scanAndTake(tester);
+      expect(find.text('Milch'), findsOneWidget);
+      expect(find.text('Zucker'), findsOneWidget);
+      expect(find.text('Testjoghurt'), findsWidgets);
+
+      await tester.ensureVisible(find.byKey(MealTrackerScreen.mealEditSaveKey));
+      await tester.tap(find.byKey(MealTrackerScreen.mealEditSaveKey));
+      await tester.pumpAndSettle();
+      expect(entries.addedMeals, hasLength(1));
+      final saved = entries.addedMeals.single;
+      expect(saved.title, 'Testjoghurt');
+      expect(saved.ingredients, ['Milch', 'Zucker']);
+      expect(saved.imageUrl, isNull);
+    });
+
+    testWidgets('dismissing the sheet changes nothing', (tester) async {
+      tester.view
+        ..physicalSize = const Size(1170, 2532)
+        ..devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      await _pumpEditScreen(
+        tester,
+        mealId: null,
+        overrides: _productOverrides(),
+      );
+      await tester.tap(find.byKey(MealTrackerScreen.productButtonKey));
+      await tester.pumpAndSettle();
+      await tester.tapAt(const Offset(10, 10));
+      await tester.pumpAndSettle();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MealTrackerScreen)),
+        listen: false,
+      );
+      final state = container.read(mealTrackerProvider);
+      expect(state.ingredients, isEmpty);
+      expect(state.title, kDefaultMealTitle);
+    });
+
+    testWidgets('disabled while a photo is analysed', (tester) async {
+      final media = _HangingMediaRepository();
+      await _pumpEditScreen(
+        tester,
+        mealId: null,
+        overrides: _productOverrides(media: media),
+      );
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MealTrackerScreen)),
+        listen: false,
+      );
+      final analysis = container
+          .read(mealTrackerProvider.notifier)
+          .analyzeImage(Uint8List(1), 'a.jpg');
+      await tester.pump();
+      final button = tester.widget<OutlinedButton>(
+        find.byKey(MealTrackerScreen.productButtonKey),
+      );
+      expect(button.onPressed, isNull);
+      media.answer.complete({'title': 'X', 'ingredients': <String>[]});
+      await analysis;
+      await tester.pump();
+    });
+
+    testWidgets('disabled while the meal is saved', (tester) async {
+      final entries = _HangingEntryRepository();
+      await _pumpEditScreen(
+        tester,
+        mealId: null,
+        overrides: _productOverrides(entries: entries),
+      );
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(MealTrackerScreen)),
+        listen: false,
+      );
+      OutlinedButton button() => tester.widget<OutlinedButton>(
+        find.byKey(MealTrackerScreen.productButtonKey),
+      );
+      expect(button().onPressed, isNotNull);
+
+      final saving = container.read(mealTrackerProvider.notifier).save();
+      await tester.pump();
+      expect(container.read(mealTrackerProvider).isSaving, isTrue);
+      expect(button().onPressed, isNull);
+
+      entries.answer.complete();
+      await saving;
+      await tester.pumpAndSettle();
+    });
+  });
+}
+
 void main() {
+  _productTests();
   group('MealTrackerScreen edit mode', () {
     testWidgets('seeds the form from the meal', (tester) async {
       final meal = _seededMeal();

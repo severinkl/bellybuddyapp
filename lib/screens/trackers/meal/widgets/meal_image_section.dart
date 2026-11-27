@@ -18,9 +18,6 @@ typedef MealImagePicker = Future<XFile?> Function(ImageSource source);
 Future<XFile?> _pickWithImagePicker(ImageSource source) =>
     ImagePicker().pickImage(source: source, maxWidth: 1024, imageQuality: 85);
 
-/// The iOS Settings page of the app (`UIApplication.openSettingsURLString`).
-const _appSettingsUrl = 'app-settings:';
-
 const _log = AppLogger('MealImageSection');
 
 class MealImageSection extends StatelessWidget {
@@ -117,12 +114,7 @@ class MealImageSection extends StatelessWidget {
       ),
     );
     if (openSettings != true || !context.mounted) return;
-    await openExternalUrl(
-      context,
-      _appSettingsUrl,
-      failureMessage: 'Die Einstellungen konnten nicht geöffnet werden.',
-      open: openUrl,
-    );
+    await openAppSettings(context, open: openUrl);
   }
 
   @override

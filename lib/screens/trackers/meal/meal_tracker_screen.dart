@@ -29,6 +29,7 @@ import '../../../widgets/common/ingredient_search.dart';
 import '../entry_logger.dart';
 import 'widgets/meal_image_section.dart';
 import 'widgets/meal_title_sheet.dart';
+import 'widgets/product_finder_sheet.dart';
 import 'widgets/recipe_selector_sheet.dart';
 
 const _log = AppLogger('MealTrackerScreen');
@@ -64,6 +65,7 @@ class MealTrackerScreen extends ConsumerStatefulWidget {
 
   static const drinkTrackerButtonKey = Key('drink_tracker_button');
   static const mealTrackerTitleKey = Key('meal_tracker_title');
+  static const productButtonKey = Key('meal_tracker_product_button');
   static const mealEditSaveKey = Key('meal_tracker_save_button');
 
   @override
@@ -447,6 +449,15 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen>
             },
           ),
           AppConstants.gap16,
+          OutlinedButton.icon(
+            key: MealTrackerScreen.productButtonKey,
+            onPressed: state.isAnalyzing || state.isSaving
+                ? null
+                : _openProductFinder,
+            icon: const Icon(Icons.qr_code_scanner),
+            label: const Text('Barcode scannen oder suchen'),
+          ),
+          AppConstants.gap16,
           Consumer(
             builder: (context, ref, _) {
               final ingredients = ref.watch(mealTrackerProvider).ingredients;
@@ -490,6 +501,12 @@ class _MealTrackerScreenState extends ConsumerState<MealTrackerScreen>
         ],
       ),
     );
+  }
+
+  Future<void> _openProductFinder() async {
+    final product = await showProductFinderSheet(context);
+    if (product == null || !mounted) return;
+    ref.read(mealTrackerProvider.notifier).applyProduct(product);
   }
 
   Future<void> _openRecipeSelector() async {
