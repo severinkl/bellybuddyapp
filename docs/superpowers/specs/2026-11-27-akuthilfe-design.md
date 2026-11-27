@@ -58,6 +58,14 @@ which follows the colon. Susi please confirm the wording.
 excluded.value;` — after a release whose content has every exercise `reviewed: true`. Off again: set it to `'false'`;
 takes effect at the next app start.
 
+### 2.4 Teaser until reviewed (decision 2026-11-27)
+Until Susi has reviewed the texts, the app already shows the feature as coming soon. While the gate (4.1, unchanged) is
+off, Entdecken shows `DiscoverReliefCard.teaser()` in the card's place: zen Buddy, „Ruhe für den Bauch", „Kleine Übungen
+für Momente, in denen der Bauch drückt." and the pill „Kommt bald" instead of the chevron. Not tappable, opens nothing,
+one screen-reader item (title, line, „Kommt bald"), no button role. The routes stay guarded, so no exercise text is
+reachable. The offer after a Bauchgefühl entry stays absent while off: a „Kommt bald" right after a hard moment would
+promise help that isn't there.
+
 ## 3. Approaches
 
 - **Bundled text exercises with a step player (picked).** Works offline, one content file for Susi, no processor, no audio
@@ -81,7 +89,7 @@ tests set it. When the remote switch is on but content is unreviewed, log one wa
   `DateTime`s, never `toLocal()`), **and** the gate is on. Then the success page gets one action pill:
   „Brauchst du gerade etwas Ruhe für deinen Bauch?". Tap → `pushReplacement('/relief')` (back returns to where the user
   logged from). Tapping anywhere else dismisses as today. No other change to the success page.
-- **Entdecken:** while the gate is on, the first child is `DiscoverReliefCard`: zen Buddy icon, title „Ruhe für den Bauch",
+- **Entdecken:** while the gate is on (off: its teaser, 2.4), the first child is `DiscoverReliefCard`: zen Buddy icon, title „Ruhe für den Bauch",
   subtitle „Atmen, entspannen, Wärme – für den Moment", chevron; whole card one tap target → `/relief`.
 - **Home:** nothing.
 

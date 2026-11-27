@@ -28,7 +28,8 @@ import 'widgets/discover_tips_section.dart';
 import 'widgets/knowledge_article_tile.dart';
 
 /// The Entdecken tab: the hub over the app's content. Top to bottom:
-/// „Ruhe für den Bauch" (while [reliefEnabledProvider]), Tipps (the newest
+/// „Ruhe für den Bauch" (the card while [reliefEnabledProvider], else its
+/// „Kommt bald" teaser), Tipps (the newest
 /// recommendation set), Alternativen (the newest ingredient suggestions), Rezepte (Für dich from the collection, and
 /// Meine Rezepte: own and saved) and Wissen (the newest myfodmap
 /// blog articles).
@@ -42,6 +43,9 @@ class DiscoverScreen extends ConsumerStatefulWidget {
 
   /// The „Ruhe für den Bauch" card, on top while the feature is on.
   static const reliefKey = DiscoverReliefCard.cardKey;
+
+  /// Its „Kommt bald" teaser, in the same place while the feature is off.
+  static const reliefTeaserKey = DiscoverReliefCard.teaserKey;
 
   /// The Tipps card; opens the Tipps.
   static const tipsKey = DiscoverTipsCard.cardKey;
@@ -119,12 +123,13 @@ class _DiscoverScreenState extends ConsumerState<DiscoverScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (relief) ...[
+              if (relief)
                 DiscoverReliefCard(
                   onOpen: () => context.push(RoutePaths.relief),
-                ),
-                AppConstants.gap24,
-              ],
+                )
+              else
+                const DiscoverReliefCard.teaser(),
+              AppConstants.gap24,
               if (tipSet != null) ...[
                 DiscoverSection(
                   title: 'Tipps',

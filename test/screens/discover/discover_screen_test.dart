@@ -201,7 +201,7 @@ void main() {
       ),
     ];
 
-    /// No Tipps section at all, Alternativen at the top.
+    /// No Tipps section at all, Alternativen right under the relief teaser.
     void expectNoTipps(WidgetTester tester) {
       expect(find.text('Tipps'), findsNothing);
       expect(find.byKey(DiscoverScreen.tipsKey), findsNothing);
@@ -209,8 +209,8 @@ void main() {
       expect(find.byKey(WeeklyTipsSwitch.switchKey), findsNothing);
       expect(
         tester.getTopLeft(find.byKey(DiscoverScreen.alternativesKey)).dy,
-        tester.getTopLeft(find.byType(RefreshIndicator)).dy +
-            AppConstants.spacingSm,
+        tester.getBottomLeft(find.byKey(DiscoverScreen.reliefTeaserKey)).dy +
+            AppConstants.spacingLg,
       );
     }
 
@@ -396,11 +396,61 @@ void main() {
       expect(find.text('page:${RoutePaths.relief}'), findsOneWidget);
     });
 
-    testWidgets('off: no card', (tester) async {
+    testWidgets('on: no teaser, no „Kommt bald"', (tester) async {
+      await pump(tester, relief: true);
+
+      expect(find.byKey(DiscoverScreen.reliefTeaserKey), findsNothing);
+      expect(find.text(ReliefCopy.comingSoon), findsNothing);
+    });
+
+    testWidgets('off: the teaser on top instead of the card', (tester) async {
       await pump(tester, tips: [testRecommendation()]);
 
       expect(find.byKey(DiscoverScreen.reliefKey), findsNothing);
-      expect(find.text(ReliefCopy.title), findsNothing);
+      final teaser = find.byKey(DiscoverScreen.reliefTeaserKey);
+      expect(teaser, findsOneWidget);
+      for (final text in [
+        ReliefCopy.title,
+        ReliefCopy.teaserLine,
+        ReliefCopy.comingSoon,
+      ]) {
+        expect(
+          find.descendant(of: teaser, matching: find.text(text)),
+          findsOneWidget,
+        );
+      }
+      expect(find.text(ReliefCopy.cardSubtitle), findsNothing);
+      expect(
+        tester.getTopLeft(teaser).dy,
+        lessThan(tester.getTopLeft(find.byKey(DiscoverScreen.tipsKey)).dy),
+      );
+    });
+
+    testWidgets('off: a tap on the teaser opens nothing', (tester) async {
+      await pump(tester);
+
+      await tester.tapVisible(find.byKey(DiscoverScreen.reliefTeaserKey));
+      await tester.pumpAndSettle();
+
+      expect(find.text('page:${RoutePaths.relief}'), findsNothing);
+      expect(find.byKey(DiscoverScreen.reliefTeaserKey), findsOneWidget);
+    });
+
+    testWidgets('off: the teaser reads as one item, not a button', (
+      tester,
+    ) async {
+      final semantics = tester.ensureSemantics();
+      await pump(tester);
+
+      expect(
+        tester.getSemantics(find.byKey(DiscoverScreen.reliefTeaserKey)),
+        matchesSemantics(
+          label:
+              '${ReliefCopy.title}\n${ReliefCopy.teaserLine}\n'
+              '${ReliefCopy.comingSoon}',
+        ),
+      );
+      semantics.dispose();
     });
   });
 

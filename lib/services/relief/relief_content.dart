@@ -108,6 +108,9 @@ class ReliefDial {
 class ReliefCopy {
   static const title = 'Ruhe für den Bauch';
   static const cardSubtitle = 'Atmen, entspannen, Wärme – für den Moment';
+  static const teaserLine =
+      'Kleine Übungen für Momente, in denen der Bauch drückt.';
+  static const comingSoon = 'Kommt bald';
   static const listIntro = 'Ich bin da. Such dir aus, was dir gerade guttut.';
   static const gutFeelingOffer =
       'Brauchst du gerade etwas Ruhe für deinen Bauch?';

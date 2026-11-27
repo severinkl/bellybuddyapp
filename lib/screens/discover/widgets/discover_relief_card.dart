@@ -5,35 +5,49 @@ import '../../../config/constants.dart';
 import '../../../services/relief/relief_content.dart';
 import '../../../widgets/common/bb_card.dart';
 import '../../../widgets/common/mascot_image.dart';
+import 'discover_section.dart';
 
 /// „Ruhe für den Bauch" on top of Entdecken: the zen Buddy, the title, the
 /// subtitle and a chevron; the whole card opens the exercises.
+///
+/// [DiscoverReliefCard.teaser], while the feature is off: the same card with
+/// a short line and „Kommt bald" instead of the chevron. It opens nothing
+/// and reads as one item, not a button.
 class DiscoverReliefCard extends StatelessWidget {
-  const DiscoverReliefCard({super.key, required this.onOpen});
+  const DiscoverReliefCard({super.key, required VoidCallback this.onOpen});
+
+  const DiscoverReliefCard.teaser({super.key}) : onOpen = null;
 
   static const cardKey = ValueKey('discover-relief');
+  static const teaserKey = ValueKey('discover-relief-teaser');
 
-  final VoidCallback onOpen;
+  /// Null for the teaser.
+  final VoidCallback? onOpen;
 
   @override
   Widget build(BuildContext context) {
-    return BbCard(
-      key: cardKey,
+    final teaser = onOpen == null;
+    final card = BbCard(
+      key: teaser ? teaserKey : cardKey,
       onTap: onOpen,
       constraints: const BoxConstraints(minHeight: AppConstants.minTapTarget),
-      child: const Row(
+      child: Row(
         children: [
-          MascotImage(
-            assetPath: AppConstants.mascotZen,
-            width: AppConstants.discoverReliefBuddySize,
-            height: AppConstants.discoverReliefBuddySize,
+          // Decorative; in the teaser it would make the one item an image.
+          ExcludeSemantics(
+            excluding: teaser,
+            child: const MascotImage(
+              assetPath: AppConstants.mascotZen,
+              width: AppConstants.discoverReliefBuddySize,
+              height: AppConstants.discoverReliefBuddySize,
+            ),
           ),
-          SizedBox(width: AppConstants.spacing12),
+          const SizedBox(width: AppConstants.spacing12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
+                const Text(
                   ReliefCopy.title,
                   style: TextStyle(
                     fontSize: AppTheme.fontSizeSubtitle,
@@ -43,8 +57,8 @@ class DiscoverReliefCard extends StatelessWidget {
                 ),
                 AppConstants.gap4,
                 Text(
-                  ReliefCopy.cardSubtitle,
-                  style: TextStyle(
+                  teaser ? ReliefCopy.teaserLine : ReliefCopy.cardSubtitle,
+                  style: const TextStyle(
                     fontSize: AppTheme.fontSizeBody,
                     color: AppTheme.mutedForeground,
                     height: AppTheme.lineHeightBody,
@@ -53,9 +67,14 @@ class DiscoverReliefCard extends StatelessWidget {
               ],
             ),
           ),
-          Icon(Icons.chevron_right, color: AppTheme.mutedForeground),
+          if (teaser) ...[
+            const SizedBox(width: AppConstants.spacingSm),
+            const DiscoverPill(ReliefCopy.comingSoon),
+          ] else
+            const Icon(Icons.chevron_right, color: AppTheme.mutedForeground),
         ],
       ),
     );
+    return teaser ? MergeSemantics(child: card) : card;
   }
 }
