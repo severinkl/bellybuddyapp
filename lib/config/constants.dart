@@ -57,6 +57,16 @@ class AppConstants {
   static const double minTapTarget = 48.0;
   static const Size minTapSize = Size(minTapTarget, minTapTarget);
 
+  /// The product scanner's preview: width to height, and the frame's inset
+  /// (wide and low like a barcode, clear of the hint line at the bottom).
+  static const double scannerAspectRatio = 4 / 3;
+  static const EdgeInsets scanFrameInset = EdgeInsets.fromLTRB(
+    spacingXl,
+    spacingXl,
+    spacingXl,
+    64,
+  );
+
   /// The relief breathing pacer's circle: smallest (empty lungs) and
   /// largest (full) diameter.
   static const double reliefPacerMin = 120.0;
@@ -431,6 +441,21 @@ class AppConstants {
   /// Belly Buddy Connect, the dietitian portal; a practice QR code holds
   /// `<connectUrl>/c/<code>`.
   static const String connectUrl = 'https://connect.bellybuddy.at';
+
+  /// Open Food Facts, where scanned and searched product data comes from.
+  static const String offHomeUrl = 'https://world.openfoodfacts.org';
+
+  /// The Open Food Facts page of the product [barcode] (the attribution).
+  static String offProductUrl(String barcode) => '$offHomeUrl/product/$barcode';
+
+  /// Where a user adds the unknown product [barcode] to Open Food Facts.
+  static String offAddProductUrl(String barcode) =>
+      '$offHomeUrl/cgi/product.pl?type=search_or_add&action=display'
+      '&code=$barcode';
+
+  /// The Open Database License Open Food Facts' data is under.
+  static const String odblLicenseUrl =
+      'https://opendatacommons.org/licenses/odbl/1-0/';
 
   /// Version of the privacy policy the health-data consent refers to. Bump it
   /// when the policy changes materially: every user whose stored

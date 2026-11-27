@@ -32,7 +32,9 @@ Future<bool> openExternalUrl(
   try {
     opened = await open(Uri.parse(url), mode: mode);
   } catch (e, st) {
-    _log.error('Opening $url failed', e, st);
+    // Scheme and host only: a path can hold what the user scanned.
+    final uri = Uri.tryParse(url);
+    _log.error('Opening ${uri?.scheme}://${uri?.host} failed', e, st);
   }
   if (!opened) {
     messenger?.showSnackBar(SnackBar(content: Text(failureMessage)));
