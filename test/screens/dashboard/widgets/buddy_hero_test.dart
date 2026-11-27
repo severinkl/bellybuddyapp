@@ -18,6 +18,7 @@ import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_events_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/buddy_welcome_provider.dart';
+import 'package:belly_buddy/providers/daily_review_provider.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/providers/first_tip_provider.dart';
 import 'package:belly_buddy/providers/home_cover_provider.dart';
@@ -45,6 +46,8 @@ import 'package:belly_buddy/services/app_version_service.dart';
 import 'package:belly_buddy/services/buddy/buddy_copy.dart';
 import 'package:belly_buddy/services/buddy/buddy_mood_logic.dart';
 import 'package:belly_buddy/services/buddy/daily_care.dart';
+import 'package:belly_buddy/services/daily_review/daily_review_copy.dart';
+import 'package:belly_buddy/services/daily_review/daily_review_rules.dart';
 import 'package:belly_buddy/services/entry_query_service.dart';
 import 'package:belly_buddy/services/journey/journey_copy.dart';
 import 'package:belly_buddy/utils/date_format_utils.dart';
@@ -182,6 +185,16 @@ const _rewardsButton = Key('open_rewards');
 const _logButton = Key('open_log_sheet');
 const _pickTitle = 'Neues Streak-Ziel';
 
+/// An open daily review of [day] with one meal.
+DailyReview _review(DateTime day) => DailyReview(
+  day: ReviewDay(day, yesterday: false),
+  meals: 1,
+  lastGut: null,
+  alternative: null,
+  alternativeLocked: false,
+  extras: const [],
+);
+
 /// The first tip's failure line while the weekly tips are off (the hero's
 /// default here).
 final _firstTipFailedLine = JourneyCopy.firstTipFailed(weeklyTipsOn: false);
@@ -219,6 +232,11 @@ void main() {
   /// Whether Home lets his bubble show (false while its tour is up).
   late bool showsBubble;
 
+  /// The open daily review ([dailyReviewProvider]); switchable once pumped
+  /// ([reviewSwitch]).
+  late DailyReview? review;
+  late NotifierProvider<Switchable<DailyReview?>, DailyReview?> reviewSwitch;
+
   // The hero's bubble and actions need ticking Buddies.
   tickBuddiesInTests();
 
@@ -236,6 +254,7 @@ void main() {
     opener = RecordingUrlOpener();
     redirectUnlocked = false;
     showsBubble = true;
+    review = null;
   });
 
   tearDown(() {
@@ -254,6 +273,9 @@ void main() {
     weeklyTipsSwitch = NotifierProvider<Switchable<bool?>, bool?>(
       () => Switchable(weeklyTips),
     );
+    reviewSwitch = NotifierProvider<Switchable<DailyReview?>, DailyReview?>(
+      () => Switchable(review),
+    );
     final container = ProviderContainer.test(
       overrides: [
         buddyClockProvider.overrideWithValue(() => now),
@@ -268,6 +290,7 @@ void main() {
         journeyRewardsSeededWith(rewards),
         firstTipProvider.overrideWith(() => firstTip),
         recipeRepositoryProvider.overrideWithValue(FakeRecipeRepository()),
+        dailyReviewProvider.overrideWith((ref) => ref.watch(reviewSwitch)),
         ...extra,
       ],
     );
@@ -3669,6 +3692,183 @@ void main() {
       expect(find.byType(RemindersAskSheet), findsOneWidget);
     });
   });
+  group('the Buddy\'s line to the daily review', () {
+    const saidKey = '${AppConstants.keyDailyReviewSaidPrefix}u1';
+
+    setUp(() {
+      review = _review(DateTime(2026, 11, 22));
+      SharedPreferences.setMockInitialValues({});
+    });
+
+    Future<String?> saidOn() async =>
+        (await SharedPreferences.getInstance()).getString(saidKey);
+
+    /// Leaves Home and comes back.
+    Future<void> revisit(WidgetTester tester) async {
+      visible.value = false;
+      await tester.pump();
+      visible.value = true;
+      await tester.pump();
+      await tick(tester);
+    }
+
+    /// Advances [d] and collects every line the hero's Buddy said meanwhile
+    /// (a sheet over Home may hold a Buddy of its own).
+    Future<List<String>> said(WidgetTester tester, Duration d) async {
+      final lines = <String>[];
+      const step = Duration(milliseconds: 50);
+      for (var t = Duration.zero; t < d; t += step) {
+        await tester.pump(step);
+        final line = tester
+            .widget<AnimatedBuddy>(
+              find.byType(AnimatedBuddy, skipOffstage: false).first,
+            )
+            .controller
+            .bubble;
+        if (line != null && (lines.isEmpty || lines.last != line)) {
+          lines.add(line);
+        }
+      }
+      return lines;
+    }
+
+    testWidgets('review open: the Buddy says the line once; a second Home '
+        'visit the same evening: silent', (tester) async {
+      await pumpHero(tester);
+      await tick(tester);
+      expect(controller(tester).bubble, DailyReviewCopy.cueLine);
+      expect(await saidOn(), '2026-11-22');
+
+      // Held like an announcement line.
+      await advance(tester, const Duration(seconds: 3));
+      expect(controller(tester).bubble, DailyReviewCopy.cueLine);
+      await advance(tester, const Duration(seconds: 2));
+
+      await revisit(tester);
+      expect(
+        await said(tester, const Duration(seconds: 6)),
+        isNot(contains(DailyReviewCopy.cueLine)),
+      );
+    });
+
+    testWidgets('the reminders ask and a day\'s reward are due: they play '
+        'first; the line is skipped this visit and said on the next', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        AppConstants.keyNotificationModalShown: true,
+      });
+      journey = true;
+      rewards = const JourneyRewards(
+        earnedDay: 1,
+        picks: {1: RecipePick(id: 'r1', title: 'Apfel-Reis')},
+      );
+      buddy = _FakeBuddy(
+        () => _status(announcements: const [BuddyAnnouncement.journeyReward]),
+      );
+      final profile = testUserProfile().withNotifications(false);
+      await pumpHero(
+        tester,
+        extra: [
+          notificationRepositoryProvider.overrideWithValue(
+            FakeNotificationRepository(),
+          ),
+          profileRepositoryProvider.overrideWithValue(
+            FakeProfileRepository()..seedProfile(profile),
+          ),
+          profileProviderSeededWith(profile),
+          insightsProviderSeededWith(lockedInsights(activeDays: 2)),
+        ],
+      );
+      await tick(tester);
+
+      // The reward first.
+      await afterCelebration(tester);
+      expect(find.byType(JourneyDaySheet), findsOneWidget);
+      await closeOffer(tester, JourneyDaySheet.laterKey);
+
+      // After the reward's sheet neither the reminders ask nor the line
+      // follow this visit.
+      var lines = await said(tester, const Duration(seconds: 6));
+      expect(lines, isNot(contains(DailyReviewCopy.cueLine)));
+      expect(find.byType(RemindersAskSheet), findsNothing);
+      expect(await saidOn(), isNull);
+
+      // Next visit: the reminders ask, ahead of the line, which waits again.
+      await revisit(tester);
+      await afterWave(tester);
+      expect(find.byType(RemindersAskSheet), findsOneWidget);
+      await closeOffer(tester, RemindersAskSheet.laterKey);
+      lines = await said(tester, const Duration(seconds: 6));
+      expect(lines, isNot(contains(DailyReviewCopy.cueLine)));
+      expect(await saidOn(), isNull);
+
+      // Next visit: nothing else due, the line.
+      await revisit(tester);
+      expect(controller(tester).bubble, DailyReviewCopy.cueLine);
+      expect(await saidOn(), '2026-11-22');
+    });
+
+    testWidgets('„Neue Tipps" (no sheet) is due: it plays first, then the '
+        'line', (tester) async {
+      unseenTipSet = testRecommendation();
+      buddy = _FakeBuddy(
+        () => _status(announcements: const [BuddyAnnouncement.tipsArrived]),
+      );
+      await pumpHero(tester);
+      await tick(tester);
+      expect(controller(tester).bubble, _tipsArrivedLine);
+      expect(await saidOn(), isNull);
+
+      final lines = await said(tester, const Duration(seconds: 6));
+      expect(lines, [_tipsArrivedLine, DailyReviewCopy.cueLine]);
+      expect(await saidOn(), '2026-11-22');
+    });
+
+    testWidgets('the review closes while the line waits: nothing said, '
+        'nothing recorded', (tester) async {
+      unseenTipSet = testRecommendation();
+      buddy = _FakeBuddy(
+        () => _status(announcements: const [BuddyAnnouncement.tipsArrived]),
+      );
+      final container = await pumpHero(tester);
+      await tick(tester);
+      expect(controller(tester).bubble, _tipsArrivedLine);
+
+      container.read(reviewSwitch.notifier).set(null);
+      await tester.pump();
+      final lines = await said(tester, const Duration(seconds: 8));
+      expect(lines, isNot(contains(DailyReviewCopy.cueLine)));
+      expect(await saidOn(), isNull);
+    });
+
+    testWidgets('the next evening: said again', (tester) async {
+      SharedPreferences.setMockInitialValues({saidKey: '2026-11-21'});
+      final container = await pumpHero(tester);
+      await tick(tester);
+      expect(controller(tester).bubble, DailyReviewCopy.cueLine);
+      expect(await saidOn(), '2026-11-22');
+      await advance(tester, const Duration(seconds: 5));
+
+      // Home left open into the next evening's review.
+      container
+          .read(reviewSwitch.notifier)
+          .set(_review(DateTime(2026, 11, 23)));
+      await tester.pump();
+      await tick(tester);
+      expect(controller(tester).bubble, DailyReviewCopy.cueLine);
+      expect(await saidOn(), '2026-11-23');
+    });
+
+    testWidgets('said for this review day already: silent', (tester) async {
+      SharedPreferences.setMockInitialValues({saidKey: '2026-11-22'});
+      await pumpHero(tester);
+      expect(
+        await said(tester, const Duration(seconds: 6)),
+        isNot(contains(DailyReviewCopy.cueLine)),
+      );
+    });
+  });
   group('the rating request after „Muster frei!"', () {
     late FakeRatingLauncher launcher;
     late FakeAppVersionService version;
@@ -4051,6 +4251,34 @@ void main() {
       expect(launcher.requests, 0);
 
       await advance(tester, const Duration(seconds: 4));
+      await tick(tester);
+      await afterCelebration(tester);
+      expect(launcher.requests, 1);
+    });
+
+    testWidgets('the review line is due: it plays first, the request follows '
+        'once it is said', (tester) async {
+      celebratedBefore();
+      review = _review(DateTime(2026, 11, 22));
+      await pumpRating(tester);
+      await tick(tester);
+      expect(controller(tester).bubble, DailyReviewCopy.cueLine);
+      expect(controller(tester).currentAction, isNot(BuddyAction.celebrate));
+      expect(launcher.requests, 0);
+
+      await advance(tester, const Duration(seconds: 4));
+      await tick(tester);
+      await afterCelebration(tester);
+      expect(launcher.requests, 1);
+    });
+
+    testWidgets('the review line was said already: the request is not held '
+        'back', (tester) async {
+      celebratedBefore({
+        '${AppConstants.keyDailyReviewSaidPrefix}u1': '2026-11-22',
+      });
+      review = _review(DateTime(2026, 11, 22));
+      await pumpRating(tester);
       await tick(tester);
       await afterCelebration(tester);
       expect(launcher.requests, 1);
