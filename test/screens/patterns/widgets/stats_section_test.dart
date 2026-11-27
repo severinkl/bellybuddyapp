@@ -302,6 +302,17 @@ void main() {
     );
   });
 
+  testWidgets('opening the page again refetches once; the first load is not '
+      'fetched twice', (tester) async {
+    final fake = await _pump(tester, _ready());
+    expect(fake.refreshes, 0);
+
+    GoRouter.of(tester.element(find.byType(StatsSection))).push('/');
+    await tester.pumpAndSettle();
+
+    expect(fake.refreshes, 1);
+  });
+
   testWidgets('retry calls refresh', (tester) async {
     final fake = await _pump(tester, Exception('offline'));
     await tester.tap(find.byKey(StatsSection.retryKey));

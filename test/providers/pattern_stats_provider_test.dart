@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:belly_buddy/models/pattern_stats.dart';
 import 'package:belly_buddy/providers/entries_provider.dart';
 import 'package:belly_buddy/providers/pattern_stats_provider.dart';
+import 'package:belly_buddy/providers/today_provider.dart';
 import 'package:belly_buddy/services/pattern_stats_service.dart';
 
 import '../helpers/logs.dart';
@@ -26,6 +27,13 @@ class _Revision extends EntriesRevision {
   void bump() => state++;
 }
 
+class _Today extends TodayNotifier {
+  @override
+  DateTime build() => DateTime(2026, 11, 27);
+
+  void next() => state = state.add(const Duration(days: 1));
+}
+
 Future<void> settle() async {
   for (var i = 0; i < 20; i++) {
     await Future<void>.delayed(Duration.zero);
@@ -42,6 +50,7 @@ void main() {
     overrides: [
       patternStatsServiceProvider.overrideWithValue(service),
       entriesRevisionProvider.overrideWith(_Revision.new),
+      todayProvider.overrideWith(_Today.new),
       user.override,
     ],
   );
@@ -64,6 +73,18 @@ void main() {
     expect((await c.read(patternStatsProvider.future))?.ratedDays, 1);
 
     (c.read(entriesRevisionProvider.notifier) as _Revision).bump();
+    await settle();
+
+    expect(service.calls, 2);
+    expect(c.read(patternStatsProvider).value?.ratedDays, 2);
+  });
+
+  test('a new day refetches', () async {
+    final c = make();
+    c.listen(patternStatsProvider, (_, _) {});
+    expect((await c.read(patternStatsProvider.future))?.ratedDays, 1);
+
+    (c.read(todayProvider.notifier) as _Today).next();
     await settle();
 
     expect(service.calls, 2);

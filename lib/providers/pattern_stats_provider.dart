@@ -8,6 +8,7 @@ import '../utils/logger.dart';
 import '../utils/retry_helper.dart';
 import 'auth_provider.dart';
 import 'entries_provider.dart';
+import 'today_provider.dart';
 
 extension PatternStatsStateX on AsyncValue<PatternStats?> {
   /// The server answered 402 `plus_required`: show the lock, not an error.
@@ -15,7 +16,9 @@ extension PatternStatsStateX on AsyncValue<PatternStats?> {
 }
 
 /// The signed-in user's 90-day pattern comparison; null while signed out.
-/// Fetched on first read, after every entry write and on [refresh]. A 402
+/// Fetched on first read, after every entry write, when the day changes
+/// ([todayProvider]), when a page showing them opens ([refreshOnOpen]) and
+/// on [refresh]. A 402
 /// `plus_required` is an [AsyncError] holding a
 /// [PatternStatsLockedException] (see [PatternStatsStateX.isLocked]); any
 /// other failure is an ordinary [AsyncError]. Not persisted.
@@ -28,7 +31,11 @@ class PatternStatsNotifier extends AsyncNotifier<PatternStats?> {
   @override
   Future<PatternStats?> build() async {
     final userId = ref.watch(currentUserIdProvider);
-    ref.listen(entriesRevisionProvider, (_, _) => unawaited(refresh()));
+    ref
+      ..listen(entriesRevisionProvider, (_, _) => unawaited(refresh()))
+      // The window and a test's phase follow the day; the provider lives
+      // app-wide, so a resume on a later day must not keep yesterday's.
+      ..listen(todayProvider, (_, _) => unawaited(refresh()));
     if (userId == null) return null;
     try {
       return await ref.read(patternStatsServiceProvider).fetch();
@@ -36,6 +43,12 @@ class PatternStatsNotifier extends AsyncNotifier<PatternStats?> {
       _logFailure('Loading', e, st);
       rethrow;
     }
+  }
+
+  /// A page that shows the stats opened (spec §4.7): fetches again, unless
+  /// a load is running (the first read's, which is fresh anyway).
+  void refreshOnOpen() {
+    if (!state.isLoading) unawaited(refresh());
   }
 
   /// Fetches again, after a running load. Never throws: a failure keeps the last value (an error

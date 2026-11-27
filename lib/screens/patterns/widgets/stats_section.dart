@@ -20,8 +20,9 @@ typedef StatsRowTrailing = Widget? Function(StatItem item);
 /// collapsed limits and the closing line. Not ready: how many rated days
 /// there are. Failed: a line and „Nochmal versuchen". Locked by the server
 /// (402) or signed out: nothing. Only built where the 30-day Muster show,
-/// so Plus gating is the page's ([PatternsUnlocked]).
-class StatsSection extends ConsumerWidget {
+/// so Plus gating is the page's ([PatternsUnlocked]). Fetched again when it
+/// opens with the Muster page (spec §4.7).
+class StatsSection extends ConsumerStatefulWidget {
   const StatsSection({super.key, this.trailing, this.closingAction});
 
   /// Per shown row (groups and ingredients, not calm ones).
@@ -38,7 +39,18 @@ class StatsSection extends ConsumerWidget {
   static const limitsKey = Key('stats_limits');
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<StatsSection> createState() => _StatsSectionState();
+}
+
+class _StatsSectionState extends ConsumerState<StatsSection> {
+  @override
+  void initState() {
+    super.initState();
+    ref.read(patternStatsProvider.notifier).refreshOnOpen();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(patternStatsProvider);
     if (state.isLocked) return const SizedBox.shrink();
     final Widget body;
@@ -48,8 +60,8 @@ class StatsSection extends ConsumerWidget {
       body = stats.ready
           ? _Ready(
               stats: stats,
-              trailing: trailing,
-              closingAction: closingAction,
+              trailing: widget.trailing,
+              closingAction: widget.closingAction,
             )
           : _Line(StatsCopy.notReady(stats.ratedDays));
     } else if (state.hasError) {

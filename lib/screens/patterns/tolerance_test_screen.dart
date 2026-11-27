@@ -78,6 +78,12 @@ class _ToleranceTestScreenState extends ConsumerState<ToleranceTestScreen> {
   bool _starting = false;
 
   @override
+  void initState() {
+    super.initState();
+    ref.read(patternStatsProvider.notifier).refreshOnOpen();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final plusLocked = ref.watch(plusLockedProvider);
     final state = ref.watch(patternStatsProvider);

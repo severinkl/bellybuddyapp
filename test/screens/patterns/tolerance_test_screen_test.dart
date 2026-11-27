@@ -173,6 +173,20 @@ Future<_FakeRepo> _pump(
 final _start = find.byKey(ToleranceTestScreen.startKey);
 
 void main() {
+  testWidgets('opening the page refetches loaded stats once; the first load '
+      'is not fetched twice', (tester) async {
+    final svc = FakePatternStatsService();
+    await _pump(tester, _stats(), service: svc);
+    expect(svc.calls, 1);
+
+    GoRouter.of(
+      tester.element(find.byType(ToleranceTestScreen)),
+    ).push(RoutePaths.toleranceTest);
+    await tester.pumpAndSettle();
+
+    expect(svc.calls, 2);
+  });
+
   testWidgets('intro shows both phases with dates starting tomorrow and '
       'starts the test', (tester) async {
     final repo = await _pump(tester, _stats(), extra: _zwiebel);
