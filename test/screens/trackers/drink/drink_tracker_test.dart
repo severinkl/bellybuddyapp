@@ -1,4 +1,6 @@
 // ignore_for_file: invalid_use_of_internal_member
+import 'dart:math' as math;
+
 import 'package:material_ui/material_ui.dart';
 import 'package:flutter/rendering.dart' show SemanticsNode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -540,6 +542,37 @@ void main() {
           tester.widget<Text>(find.text('„Mate" hinzufügen')).style?.color,
           AppTheme.primaryText,
         );
+      });
+
+      testWidgets('at 200 % text the quick-drink rows keep an 8 px gap', (
+        tester,
+      ) async {
+        final repo = FakeDrinkRepository()
+          ..seedDrinks([
+            for (final n in ['Wasser', 'Kaffee', 'Tee', 'Saft', 'Milch'])
+              testDrink(id: n, name: n),
+          ]);
+        tester.platformDispatcher.textScaleFactorTestValue = 2;
+        addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+        await pumpWithDrink(tester, drinkRepo: repo);
+
+        final pills = find
+            .descendant(
+              of: find.byType(QuickDrinkGrid),
+              matching: find.byType(AnimatedContainer),
+            )
+            .evaluate()
+            .map((e) => tester.getRect(find.byWidget(e.widget)))
+            .toList();
+        final rows = <double>{for (final r in pills) r.top}.toList()..sort();
+        expect(rows.length, greaterThan(1), reason: 'needs two rows');
+        for (var i = 1; i < rows.length; i++) {
+          final above = pills.where((r) => r.top == rows[i - 1]);
+          final below = pills.where((r) => r.top == rows[i]);
+          final gap =
+              below.first.top - above.map((r) => r.bottom).reduce(math.max);
+          expect(gap, greaterThanOrEqualTo(8), reason: 'row $i');
+        }
       });
 
       testWidgets('the search field keeps „Getränk suchen" with text entered', (
