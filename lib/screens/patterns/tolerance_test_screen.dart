@@ -50,7 +50,8 @@ class ToleranceTestProposed {
 /// and picker. „Test starten" only per [canOfferTest].
 ///
 /// While Plus is locked (or the server says so, 402) it shows the Muster
-/// page's Plus lock instead.
+/// page's Plus lock instead. „Nochmal testen" and the picker replace the
+/// page with the intro (never a stack of test pages).
 class ToleranceTestScreen extends ConsumerStatefulWidget {
   const ToleranceTestScreen({super.key, this.extra});
 
@@ -239,7 +240,8 @@ class _ToleranceTestScreenState extends ConsumerState<ToleranceTestScreen> {
             tapKey: ToleranceTestScreen.retestKey,
             label: TestCopy.retest,
             isOutlined: true,
-            onPressed: () => context.push(RoutePaths.toleranceTest, extra: s),
+            onPressed: () =>
+                context.pushReplacement(RoutePaths.toleranceTest, extra: s),
           ),
       ];
     }
@@ -339,7 +341,8 @@ class _ToleranceTestScreenState extends ConsumerState<ToleranceTestScreen> {
           for (final g in TestCopy.groups)
             BbTapArea(
               tapKey: ToleranceTestScreen.groupKey(g.key),
-              onTap: () => context.push(RoutePaths.toleranceTest, extra: g),
+              onTap: () =>
+                  context.pushReplacement(RoutePaths.toleranceTest, extra: g),
               child: Row(
                 children: [
                   Expanded(child: Text(g.name, style: _strongStyle)),

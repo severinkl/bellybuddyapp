@@ -451,6 +451,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Verträglichkeits-Test: Laktose'), findsOneWidget);
     expect(_start, findsOneWidget);
+    // Replaced, not stacked.
+    expect(
+      find.byType(ToleranceTestScreen, skipOffstage: false),
+      findsOneWidget,
+    );
   });
 
   testWidgets('a finished test shows its result with both notes; unclear '
@@ -475,6 +480,11 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text(TestCopy.introBody(_zwiebel, 5, 3)), findsOneWidget);
     expect(_start, findsOneWidget);
+    // Replaced, not stacked.
+    expect(
+      find.byType(ToleranceTestScreen, skipOffstage: false),
+      findsOneWidget,
+    );
   });
 
   testWidgets('active past its end: the result, no start, no stop', (
