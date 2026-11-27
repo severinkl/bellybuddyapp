@@ -19,6 +19,7 @@ import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/providers/rating_provider.dart';
+import 'package:belly_buddy/providers/share_launcher_provider.dart';
 import 'package:belly_buddy/services/purchases/purchases_gateway.dart';
 import 'package:belly_buddy/services/share_service.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
@@ -807,6 +808,75 @@ void main() {
     expect(find.text('page:${RoutePaths.feedback}'), findsOneWidget);
     expect(router.canPop(), isTrue);
     expect(find.byType(SnackBar), findsNothing);
+  });
+
+  group('Freund:innen einladen', () {
+    testWidgets('is the last row, after „Feedback geben"', (tester) async {
+      await pump(tester);
+
+      expect(find.text('Freund:innen einladen'), findsOneWidget);
+      expect(find.text('Erzähl anderen von Belly Buddy'), findsOneWidget);
+      final invite = tester.getRect(find.byKey(MeScreen.inviteKey));
+      final feedback = tester.getRect(find.byKey(MeScreen.feedbackKey));
+      expect(invite.top, greaterThan(feedback.bottom));
+      expect(invite.top - feedback.bottom, lessThan(AppConstants.spacingLg));
+      for (final key in [
+        MeScreen.streakKey,
+        MeScreen.progressKey,
+        MeScreen.shareKey,
+        MeScreen.settingsKey,
+        MeScreen.tutorialKey,
+        MeScreen.rateKey,
+      ]) {
+        expect(
+          tester.getRect(find.byKey(key)).bottom,
+          lessThan(invite.top),
+          reason: '$key',
+        );
+      }
+    });
+
+    testWidgets('a tap shares the invite text once, anchored at the row', (
+      tester,
+    ) async {
+      final calls = <(String, Rect)>[];
+      await pump(
+        tester,
+        extra: [
+          shareLauncherProvider.overrideWithValue((text, origin) async {
+            calls.add((text, origin));
+          }),
+        ],
+      );
+
+      await tapRow(tester, MeScreen.inviteKey);
+
+      expect(calls, hasLength(1));
+      expect(calls.single.$1, AppConstants.inviteShareText);
+      final origin = calls.single.$2;
+      expect(origin, isNot(Rect.zero));
+      expect(origin, tester.getRect(find.byKey(MeScreen.inviteKey)));
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('a failing launcher says so and the screen stays usable', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        extra: [
+          shareLauncherProvider.overrideWithValue(
+            (text, origin) async => throw StateError('no share sheet'),
+          ),
+        ],
+      );
+
+      await tapRow(tester, MeScreen.inviteKey);
+
+      expect(find.text('Das Teilen hat nicht geklappt.'), findsOneWidget);
+      await tapRow(tester, MeScreen.feedbackKey);
+      expect(find.text('page:${RoutePaths.feedback}'), findsOneWidget);
+    });
   });
 
   group('Belly Buddy bewerten', () {

@@ -10,6 +10,7 @@ import '../../providers/buddy_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/plus_provider.dart';
 import '../../providers/rating_provider.dart';
+import '../../providers/share_launcher_provider.dart';
 import '../../providers/shares_provider.dart';
 import '../../providers/tutorial_provider.dart';
 import '../../providers/upgrade_gate_provider.dart';
@@ -21,6 +22,7 @@ import '../../services/progress/progress_copy.dart';
 import '../../services/purchases/purchases_gateway.dart';
 import '../../utils/buddy_name.dart';
 import '../../utils/logger.dart';
+import '../../utils/share_origin.dart';
 import '../../widgets/buddy/buddy.dart';
 import '../../widgets/buddy/streak_chip.dart';
 import '../../widgets/common/bb_settings_item.dart';
@@ -34,7 +36,8 @@ import 'widgets/rename_buddy_dialog.dart';
 /// while notifications are off ([remindersOffProvider]; „Einschalten"),
 /// Streak & Ziel („Dein Streak"), Dein Verlauf (always), Mit Berater:in
 /// teilen, Einstellungen, Tutorial wiederholen, „Belly Buddy bewerten" and
-/// Feedback geben (the in-app form), and the app version in small print.
+/// Feedback geben (the in-app form), „Freund:innen einladen" (the system
+/// share sheet with a fixed text) as the last row, and the app version in small print.
 ///
 /// Without a Buddy status (loading, error) the Buddy shows as 'Buddy',
 /// without the chip, „Umbenennen" and the Streak row.
@@ -51,6 +54,7 @@ class MeScreen extends ConsumerStatefulWidget {
   static const tutorialKey = Key('me_tutorial');
   static const rateKey = Key('me_rate');
   static const feedbackKey = Key('me_feedback');
+  static const inviteKey = Key('me_invite');
 
   @override
   ConsumerState<MeScreen> createState() => _MeScreenState();
@@ -181,6 +185,22 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     }
   }
 
+  /// „Freund:innen einladen": the share sheet with the invite text, anchored
+  /// at the row ([rowContext]); a failing launcher says so (the text stays out of the log).
+  Future<void> _invite(BuildContext rowContext) async {
+    final origin = shareOriginOf(rowContext);
+    final launcher = ref.read(shareLauncherProvider);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      await launcher(AppConstants.inviteShareText, origin);
+    } catch (e, st) {
+      _log.error('Opening the share sheet for the invite failed', e, st);
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Das Teilen hat nicht geklappt.')),
+      );
+    }
+  }
+
   /// The share list is on its way: a second tap in the same frame opens
   /// nothing. From the next frame the pushed route covers this screen and
   /// takes the taps, so the flag is cleared then, not when the push
@@ -299,6 +319,16 @@ class _MeScreenState extends ConsumerState<MeScreen> {
         title: 'Feedback geben',
         subtitle: 'Teile uns deine Ideen und Wünsche mit',
         onTap: () => context.push(RoutePaths.feedback),
+      ),
+      // The Builder's context is the row's: its box anchors the share popover.
+      Builder(
+        builder: (rowContext) => BbSettingsItem(
+          key: MeScreen.inviteKey,
+          icon: Icons.share_outlined,
+          title: 'Freund:innen einladen',
+          subtitle: 'Erzähl anderen von Belly Buddy',
+          onTap: () => unawaited(_invite(rowContext)),
+        ),
       ),
     ];
 

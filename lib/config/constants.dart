@@ -397,6 +397,16 @@ class AppConstants {
   static const String privacyPolicyUrl =
       'https://app.bellybuddy.at/datenschutz';
 
+  /// The public Belly Buddy site, linked in the invite text.
+  static const String inviteUrl = 'https://bellybuddy.at';
+
+  /// The text „Freund:innen einladen" shares: it describes the app, not the
+  /// sender, so forwarding it reveals nothing about their health.
+  static const String inviteShareText =
+      'Schau dir mal Belly Buddy an: Damit schreibst du auf, was du isst und '
+      'wie es deinem Bauch geht, und ein kleiner Buddy begleitet dich dabei. '
+      '$inviteUrl';
+
   /// Terms of use (Nutzungsbedingungen) of Belly Buddy Plus on the web app.
   static const String termsUrl =
       'https://app.bellybuddy.at/nutzungsbedingungen';
