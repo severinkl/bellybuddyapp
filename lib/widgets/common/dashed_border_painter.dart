@@ -5,6 +5,21 @@ import 'package:material_ui/material_ui.dart';
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
 
+/// [source] cut into [dash]-long pieces with [gap] between them, each
+/// contour starting with a dash.
+Path dashPath(Path source, {required double dash, required double gap}) {
+  final dashes = Path();
+  for (final metric in source.computeMetrics()) {
+    for (var d = 0.0; d < metric.length; d += dash + gap) {
+      dashes.addPath(
+        metric.extractPath(d, math.min(d + dash, metric.length)),
+        Offset.zero,
+      );
+    }
+  }
+  return dashes;
+}
+
 /// Strokes a rounded rect's outline as dashes, inset by half its width so
 /// all of it lies inside the box. Use it as a `foregroundPainter`, so a
 /// card's fill doesn't cover it.
@@ -32,17 +47,8 @@ class DashedBorderPainter extends CustomPainter {
           Radius.circular(radius),
         ),
       );
-    final dashes = Path();
-    for (final metric in outline.computeMetrics()) {
-      for (var d = 0.0; d < metric.length; d += dashLength + dashGap) {
-        dashes.addPath(
-          metric.extractPath(d, math.min(d + dashLength, metric.length)),
-          Offset.zero,
-        );
-      }
-    }
     canvas.drawPath(
-      dashes,
+      dashPath(outline, dash: dashLength, gap: dashGap),
       Paint()
         ..color = color
         ..style = PaintingStyle.stroke
