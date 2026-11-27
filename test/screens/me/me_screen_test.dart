@@ -14,7 +14,6 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/data_share.dart';
 import 'package:belly_buddy/models/plus_status.dart';
-import 'package:belly_buddy/services/plus/plus_copy.dart';
 import 'package:belly_buddy/models/user_profile.dart';
 import 'package:belly_buddy/providers/auth_provider.dart';
 import 'package:belly_buddy/providers/buddy_provider.dart';
