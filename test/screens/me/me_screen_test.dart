@@ -9,7 +9,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
-import 'package:url_launcher/url_launcher.dart';
 
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/data_share.dart';
@@ -20,6 +19,7 @@ import 'package:belly_buddy/providers/buddy_provider.dart';
 import 'package:belly_buddy/providers/plus_provider.dart';
 import 'package:belly_buddy/providers/profile_provider.dart';
 import 'package:belly_buddy/providers/rating_provider.dart';
+import 'package:belly_buddy/providers/share_launcher_provider.dart';
 import 'package:belly_buddy/services/purchases/purchases_gateway.dart';
 import 'package:belly_buddy/services/share_service.dart';
 import 'package:belly_buddy/providers/tutorial_provider.dart';
@@ -54,13 +54,11 @@ const _renameError = 'Bitte gib einen Namen mit 1 bis 20 Zeichen ein.';
 
 void main() {
   final today = DateTime(2026, 11, 23, 13);
-  late RecordingUrlOpener launches;
   late GoRouter router;
   late ProviderContainer container;
   late FakeShareService shareService;
 
   setUp(() {
-    launches = RecordingUrlOpener();
     shareService = FakeShareService();
     SharedPreferences.setMockInitialValues({});
   });
@@ -101,10 +99,7 @@ void main() {
     router = GoRouter(
       initialLocation: RoutePaths.me,
       routes: [
-        GoRoute(
-          path: RoutePaths.me,
-          builder: (_, _) => MeScreen(openUrl: launches.call),
-        ),
+        GoRoute(path: RoutePaths.me, builder: (_, _) => const MeScreen()),
         ...stubRoutes([
           RoutePaths.settings,
           RoutePaths.dashboard,
@@ -112,6 +107,7 @@ void main() {
           RoutePaths.shares,
           RoutePaths.shareCreate,
           RoutePaths.plus,
+          RoutePaths.feedback,
         ]),
       ],
     );
@@ -313,12 +309,7 @@ void main() {
         ],
       );
       final r = GoRouter(
-        routes: [
-          GoRoute(
-            path: '/',
-            builder: (_, _) => MeScreen(openUrl: launches.call),
-          ),
-        ],
+        routes: [GoRoute(path: '/', builder: (_, _) => const MeScreen())],
       );
       addTearDown(r.dispose);
       await tester.pumpWidget(
@@ -360,12 +351,7 @@ void main() {
         ],
       );
       final r = GoRouter(
-        routes: [
-          GoRoute(
-            path: '/',
-            builder: (_, _) => MeScreen(openUrl: launches.call),
-          ),
-        ],
+        routes: [GoRoute(path: '/', builder: (_, _) => const MeScreen())],
       );
       addTearDown(r.dispose);
       await tester.pumpWidget(
@@ -814,26 +800,123 @@ void main() {
     expect(router.canPop(), isFalse);
   });
 
-  testWidgets('Feedback opens the form', (tester) async {
+  testWidgets('Feedback geben opens the in-app form', (tester) async {
     await pump(tester);
 
     await tapRow(tester, MeScreen.feedbackKey);
 
-    expect(launches.urls, [Uri.parse(AppConstants.feedbackFormUrl)]);
-    expect(launches.modes, [LaunchMode.externalApplication]);
+    expect(find.text('page:${RoutePaths.feedback}'), findsOneWidget);
+    expect(router.canPop(), isTrue);
     expect(find.byType(SnackBar), findsNothing);
   });
 
-  testWidgets('Feedback: a form that does not open says so', (tester) async {
-    launches.result = false;
+  testWidgets('a double tap on „Feedback geben" opens one form', (
+    tester,
+  ) async {
     await pump(tester);
+    await tester.ensureVisible(find.byKey(MeScreen.feedbackKey));
+    await tester.tap(find.byKey(MeScreen.feedbackKey));
+    await tester.tap(find.byKey(MeScreen.feedbackKey));
+    await tester.pumpAndSettle();
+    expect(find.text('page:${RoutePaths.feedback}'), findsOneWidget);
+    router.pop();
+    await tester.pumpAndSettle();
+    expect(find.text('page:${RoutePaths.feedback}'), findsNothing);
+    expect(find.byKey(MeScreen.feedbackKey), findsOneWidget);
+  });
 
-    await tapRow(tester, MeScreen.feedbackKey);
+  group('Freund:innen einladen', () {
+    testWidgets('two quick taps start one share request', (tester) async {
+      final hold = Completer<void>();
+      var calls = 0;
+      await pump(
+        tester,
+        extra: [
+          shareLauncherProvider.overrideWithValue((text, origin) {
+            calls++;
+            return hold.future;
+          }),
+        ],
+      );
+      await tester.ensureVisible(find.byKey(MeScreen.inviteKey));
+      await tester.tap(find.byKey(MeScreen.inviteKey));
+      await tester.pump();
+      await tester.tap(find.byKey(MeScreen.inviteKey));
+      await tester.pump();
+      expect(calls, 1);
 
-    expect(
-      find.text('Das Feedback-Formular konnte nicht geöffnet werden.'),
-      findsOneWidget,
-    );
+      hold.complete();
+      await tester.pumpAndSettle();
+      await tapRow(tester, MeScreen.inviteKey);
+      expect(calls, 2);
+    });
+
+    testWidgets('is the last row, after „Feedback geben"', (tester) async {
+      await pump(tester);
+
+      expect(find.text('Freund:innen einladen'), findsOneWidget);
+      expect(find.text('Erzähl anderen von Belly Buddy'), findsOneWidget);
+      final invite = tester.getRect(find.byKey(MeScreen.inviteKey));
+      final feedback = tester.getRect(find.byKey(MeScreen.feedbackKey));
+      expect(invite.top, greaterThan(feedback.bottom));
+      expect(invite.top - feedback.bottom, lessThan(AppConstants.spacingLg));
+      for (final key in [
+        MeScreen.streakKey,
+        MeScreen.progressKey,
+        MeScreen.shareKey,
+        MeScreen.settingsKey,
+        MeScreen.tutorialKey,
+        MeScreen.rateKey,
+      ]) {
+        expect(
+          tester.getRect(find.byKey(key)).bottom,
+          lessThan(invite.top),
+          reason: '$key',
+        );
+      }
+    });
+
+    testWidgets('a tap shares the invite text once, anchored at the row', (
+      tester,
+    ) async {
+      final calls = <(String, Rect)>[];
+      await pump(
+        tester,
+        extra: [
+          shareLauncherProvider.overrideWithValue((text, origin) async {
+            calls.add((text, origin));
+          }),
+        ],
+      );
+
+      await tapRow(tester, MeScreen.inviteKey);
+
+      expect(calls, hasLength(1));
+      expect(calls.single.$1, AppConstants.inviteShareText);
+      final origin = calls.single.$2;
+      expect(origin, isNot(Rect.zero));
+      expect(origin, tester.getRect(find.byKey(MeScreen.inviteKey)));
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    testWidgets('a failing launcher says so and the screen stays usable', (
+      tester,
+    ) async {
+      await pump(
+        tester,
+        extra: [
+          shareLauncherProvider.overrideWithValue(
+            (text, origin) async => throw StateError('no share sheet'),
+          ),
+        ],
+      );
+
+      await tapRow(tester, MeScreen.inviteKey);
+
+      expect(find.text('Das Teilen hat nicht geklappt.'), findsOneWidget);
+      await tapRow(tester, MeScreen.feedbackKey);
+      expect(find.text('page:${RoutePaths.feedback}'), findsOneWidget);
+    });
   });
 
   group('Belly Buddy bewerten', () {

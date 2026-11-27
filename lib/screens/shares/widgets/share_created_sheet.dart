@@ -9,6 +9,7 @@ import '../../../config/constants.dart';
 import '../../../models/data_share.dart';
 import '../../../providers/share_launcher_provider.dart';
 import '../../../utils/logger.dart';
+import '../../../utils/share_origin.dart';
 import '../../../widgets/common/bb_bottom_sheet.dart';
 import '../../../widgets/common/bb_button.dart';
 
@@ -59,10 +60,7 @@ class _ShareSecretSheetState extends ConsumerState<_ShareSecretSheet> {
   }
 
   Future<void> _send() async {
-    final box = _sendKey.currentContext?.findRenderObject() as RenderBox?;
-    final origin = box == null
-        ? Rect.zero
-        : box.localToGlobal(Offset.zero) & box.size;
+    final origin = shareOriginOf(_sendKey.currentContext);
     final launcher = ref.read(shareLauncherProvider);
     try {
       await launcher(
