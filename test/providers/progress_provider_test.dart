@@ -131,6 +131,45 @@ void main() {
     }
   });
 
+  test('a change in the Buddy saved days recomputes', () async {
+    final source = _source(now, klo: 1);
+    entryRepo.progressSource = source;
+    BuddyStatus status(List<DateTime> saved) => BuddyStatus(
+      state: BuddyState(userId: 'u1', savedDays: saved),
+      hasRow: true,
+      streak: 0,
+      todayCounted: false,
+    );
+    final c = makeContainer(
+      overrides: [
+        buddyProvider.overrideWith(() => FakeBuddyNotifier(() => status([]))),
+      ],
+    );
+    c.listen(progressProvider, (_, _) {});
+    expect((await c.read(progressProvider.future))!.longestStreak, 2);
+    await settle();
+    expect(entryRepo.progressSourceRequests, hasLength(1));
+
+    // The new-day sync spends a saver on the 24th.
+    final saved = [DateTime(2026, 11, 24)];
+    c.read(buddyProvider.notifier).state = AsyncData(status(saved));
+    await settle();
+
+    expect(entryRepo.progressSourceRequests, hasLength(2));
+    final progress = c.read(progressProvider);
+    expect(progress, isA<AsyncData<Progress?>>());
+    expect(
+      progress.value,
+      computeProgress(source, now: now, savedDays: saved.toSet()),
+    );
+    expect(progress.value!.longestStreak, 3);
+
+    // The same saved days again: no refetch.
+    c.read(buddyProvider.notifier).state = AsyncData(status(saved));
+    await settle();
+    expect(entryRepo.progressSourceRequests, hasLength(2));
+  });
+
   test('an entry write recomputes', () async {
     final c = makeContainer();
     c.listen(progressProvider, (_, _) {});

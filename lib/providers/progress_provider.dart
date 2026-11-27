@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../models/progress.dart';
@@ -13,7 +15,9 @@ import 'entry_window_notifier.dart';
 /// ([buddyClockProvider]); null while signed out. The Buddy's saved days
 /// count for the longest streak (none without a Buddy or when it fails).
 ///
-/// Computed again after every entry write, on a new day and on [refresh];
+/// Computed again after every entry write, on a new day, when the Buddy's
+/// saved days change (e.g. its new-day sync spends a saver) and on
+/// [refresh];
 /// see [EntryWindowNotifier]. How a screen reads the state:
 /// 1. [AsyncValue.hasError]: the error state.
 /// 2. [AsyncValue.isReloading] (a user change): loading.
@@ -27,6 +31,30 @@ class ProgressNotifier extends EntryWindowNotifier<Progress?> {
 
   @override
   String get subject => 'progress';
+
+  /// The saved days the last computation used; null before one read them.
+  Set<DateTime>? _usedSavedDays;
+
+  @override
+  void listenForRefetch(void Function() refetch) {
+    _usedSavedDays = null;
+    ref.listen(buddyProvider.select((b) => b.value?.state.savedDays), (
+      _,
+      next,
+    ) {
+      final used = _usedSavedDays;
+      // No value (loading, failed, no Buddy), or the running first
+      // computation still reads them: nothing to catch up.
+      if (next == null || used == null) return;
+      if (next.length == used.length && used.containsAll(next)) return;
+      // Inside the Buddy's state change its future may still be the old
+      // one: read it after the change.
+      final opRef = ref;
+      scheduleMicrotask(() {
+        if (opRef.mounted) refetch();
+      });
+    });
+  }
 
   @override
   Future<Progress?> compute(String? userId) async {
@@ -44,9 +72,9 @@ class ProgressNotifier extends EntryWindowNotifier<Progress?> {
   Future<Set<DateTime>> _savedDays() async {
     try {
       final buddy = await ref.read(buddyProvider.future);
-      return {...?buddy?.state.savedDays};
+      return _usedSavedDays = {...?buddy?.state.savedDays};
     } catch (_) {
-      return const {};
+      return _usedSavedDays = const {};
     }
   }
 }

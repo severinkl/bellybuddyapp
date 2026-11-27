@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter/foundation.dart' show protected;
 
 import '../utils/coalesced_runner.dart';
 import '../utils/logger.dart';
@@ -17,6 +18,7 @@ import 'today_provider.dart';
 ///   the foreground after the device slept through it), so the window
 ///   moves on; a new day while unwatched (e.g. on a hidden tab) is caught
 ///   up once watched again;
+/// - when a source a subclass listens to changes ([listenForRefetch]);
 /// - on [refresh].
 ///
 /// A write or a new day during a load is fetched after it. Those refetches
@@ -35,6 +37,11 @@ abstract class EntryWindowNotifier<T> extends AsyncNotifier<T> {
 
   /// The value for [userId] (null: signed out) as of now.
   Future<T> compute(String? userId);
+
+  /// Called in each build: listen to further sources here and call
+  /// [refetch] when one changes (refetched like an entry write).
+  @protected
+  void listenForRefetch(void Function() refetch) {}
 
   /// Counts computations outside build, in the order they start.
   int _seq = 0;
@@ -67,6 +74,7 @@ abstract class EntryWindowNotifier<T> extends AsyncNotifier<T> {
     ref
       ..onCancel(newDay.pause)
       ..onResume(newDay.resume);
+    listenForRefetch(() => unawaited(_refetch()));
     try {
       return await compute(userId);
     } catch (e, st) {
