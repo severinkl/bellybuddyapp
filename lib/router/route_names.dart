@@ -16,6 +16,7 @@ class RouteNames {
   static const String knowledge = 'knowledge';
   static const String discoverRecipes = 'discover-recipes';
   static const String me = 'me';
+  static const String feedback = 'feedback';
   static const String settings = 'settings';
   static const String settingsProfile = 'settings-profile';
   static const String settingsNotifications = 'settings-notifications';
@@ -63,6 +64,7 @@ class RoutePaths {
   static const String knowledge = '/discover/knowledge';
   static const String discoverRecipes = '/discover/recipes';
   static const String me = '/me';
+  static const String feedback = '/me/feedback';
   static const String settings = '/settings';
   static const String settingsProfile = '/settings/profile';
   static const String settingsNotifications = '/settings/notifications';

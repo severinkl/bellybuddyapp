@@ -9,6 +9,7 @@ export 'discover/knowledge_screen.dart';
 export 'health_consent/health_consent_screen.dart';
 export 'ingredient_suggestions/ingredient_suggestions_screen.dart';
 export 'loading_screen.dart';
+export 'me/feedback_screen.dart';
 export 'me/me_screen.dart';
 export 'patterns/patterns_screen.dart';
 export 'patterns/patterns_unlocked_screen.dart';

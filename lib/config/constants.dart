@@ -387,8 +387,6 @@ class AppConstants {
   static const int feedbackMaxLength = 2000;
 
   // External URLs
-  static const String feedbackFormUrl =
-      'https://us20.list-manage.com/survey?u=526bdf1360ec4bf225504e006&id=d47032793c&attribution=false';
 
   /// Where the password-reset email link lands: the reset-password page of the
   /// Belly Buddy web app, where the user sets the new password.

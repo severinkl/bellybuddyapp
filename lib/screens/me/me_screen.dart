@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_ui/material_ui.dart';
-import 'package:url_launcher/url_launcher.dart';
 
 import '../../config/app_theme.dart';
 import '../../config/constants.dart';
@@ -22,7 +21,6 @@ import '../../services/progress/progress_copy.dart';
 import '../../services/purchases/purchases_gateway.dart';
 import '../../utils/buddy_name.dart';
 import '../../utils/logger.dart';
-import '../../utils/url_utils.dart';
 import '../../widgets/buddy/buddy.dart';
 import '../../widgets/buddy/streak_chip.dart';
 import '../../widgets/common/bb_settings_item.dart';
@@ -36,12 +34,12 @@ import 'widgets/rename_buddy_dialog.dart';
 /// while notifications are off ([remindersOffProvider]; „Einschalten"),
 /// Streak & Ziel („Dein Streak"), Dein Verlauf (always), Mit Berater:in
 /// teilen, Einstellungen, Tutorial wiederholen, „Belly Buddy bewerten" and
-/// Feedback geben, and the app version in small print.
+/// Feedback geben (the in-app form), and the app version in small print.
 ///
 /// Without a Buddy status (loading, error) the Buddy shows as 'Buddy',
 /// without the chip, „Umbenennen" and the Streak row.
 class MeScreen extends ConsumerStatefulWidget {
-  const MeScreen({super.key, this.openUrl = launchUrl});
+  const MeScreen({super.key});
 
   static const renameKey = Key('me_rename');
   static const remindersKey = Key('me_reminders');
@@ -53,9 +51,6 @@ class MeScreen extends ConsumerStatefulWidget {
   static const tutorialKey = Key('me_tutorial');
   static const rateKey = Key('me_rate');
   static const feedbackKey = Key('me_feedback');
-
-  /// Opens the feedback form.
-  final UrlOpener openUrl;
 
   @override
   ConsumerState<MeScreen> createState() => _MeScreenState();
@@ -210,13 +205,6 @@ class _MeScreenState extends ConsumerState<MeScreen> {
     }
   }
 
-  Future<void> _openFeedback() => openExternalUrl(
-    context,
-    AppConstants.feedbackFormUrl,
-    failureMessage: 'Das Feedback-Formular konnte nicht geöffnet werden.',
-    open: widget.openUrl,
-  );
-
   @override
   Widget build(BuildContext context) {
     final status = ref.watch(buddyProvider).value;
@@ -310,7 +298,7 @@ class _MeScreenState extends ConsumerState<MeScreen> {
         icon: Icons.feedback_outlined,
         title: 'Feedback geben',
         subtitle: 'Teile uns deine Ideen und Wünsche mit',
-        onTap: () => unawaited(_openFeedback()),
+        onTap: () => context.push(RoutePaths.feedback),
       ),
     ];
 

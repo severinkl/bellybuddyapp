@@ -9,7 +9,6 @@ import 'package:material_ui/material_ui.dart';
 import 'package:riverpod/src/internals.dart' show Override;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' show PostgrestException;
-import 'package:url_launcher/url_launcher.dart';
 
 import 'package:belly_buddy/config/constants.dart';
 import 'package:belly_buddy/models/data_share.dart';
@@ -54,13 +53,11 @@ const _renameError = 'Bitte gib einen Namen mit 1 bis 20 Zeichen ein.';
 
 void main() {
   final today = DateTime(2026, 11, 23, 13);
-  late RecordingUrlOpener launches;
   late GoRouter router;
   late ProviderContainer container;
   late FakeShareService shareService;
 
   setUp(() {
-    launches = RecordingUrlOpener();
     shareService = FakeShareService();
     SharedPreferences.setMockInitialValues({});
   });
@@ -101,10 +98,7 @@ void main() {
     router = GoRouter(
       initialLocation: RoutePaths.me,
       routes: [
-        GoRoute(
-          path: RoutePaths.me,
-          builder: (_, _) => MeScreen(openUrl: launches.call),
-        ),
+        GoRoute(path: RoutePaths.me, builder: (_, _) => const MeScreen()),
         ...stubRoutes([
           RoutePaths.settings,
           RoutePaths.dashboard,
@@ -112,6 +106,7 @@ void main() {
           RoutePaths.shares,
           RoutePaths.shareCreate,
           RoutePaths.plus,
+          RoutePaths.feedback,
         ]),
       ],
     );
@@ -313,12 +308,7 @@ void main() {
         ],
       );
       final r = GoRouter(
-        routes: [
-          GoRoute(
-            path: '/',
-            builder: (_, _) => MeScreen(openUrl: launches.call),
-          ),
-        ],
+        routes: [GoRoute(path: '/', builder: (_, _) => const MeScreen())],
       );
       addTearDown(r.dispose);
       await tester.pumpWidget(
@@ -360,12 +350,7 @@ void main() {
         ],
       );
       final r = GoRouter(
-        routes: [
-          GoRoute(
-            path: '/',
-            builder: (_, _) => MeScreen(openUrl: launches.call),
-          ),
-        ],
+        routes: [GoRoute(path: '/', builder: (_, _) => const MeScreen())],
       );
       addTearDown(r.dispose);
       await tester.pumpWidget(
@@ -814,26 +799,14 @@ void main() {
     expect(router.canPop(), isFalse);
   });
 
-  testWidgets('Feedback opens the form', (tester) async {
+  testWidgets('Feedback geben opens the in-app form', (tester) async {
     await pump(tester);
 
     await tapRow(tester, MeScreen.feedbackKey);
 
-    expect(launches.urls, [Uri.parse(AppConstants.feedbackFormUrl)]);
-    expect(launches.modes, [LaunchMode.externalApplication]);
+    expect(find.text('page:${RoutePaths.feedback}'), findsOneWidget);
+    expect(router.canPop(), isTrue);
     expect(find.byType(SnackBar), findsNothing);
-  });
-
-  testWidgets('Feedback: a form that does not open says so', (tester) async {
-    launches.result = false;
-    await pump(tester);
-
-    await tapRow(tester, MeScreen.feedbackKey);
-
-    expect(
-      find.text('Das Feedback-Formular konnte nicht geöffnet werden.'),
-      findsOneWidget,
-    );
   });
 
   group('Belly Buddy bewerten', () {
